@@ -5,6 +5,7 @@ from src.embeddings import Embeddings
 from src.data_validators import CreateIndexModel, SimilaritySearchModel
 from pydantic import ValidationError
 
+
 class GenAIClient:
     def __init__(self, driver: Driver, embeddings: Optional[Embeddings] = None) -> None:
         # Verify if the version supports vector index
@@ -81,7 +82,7 @@ class GenAIClient:
             index_data = CreateIndexModel(**index_data)
         except ValidationError as e:
             raise ValueError(f"Error for inputs to create_index {str(e)}")
-    
+
         index_query = (
             "CALL db.index.vector.createNodeIndex("
             "$name,"
@@ -116,19 +117,23 @@ class GenAIClient:
         """
         try:
             if query_vector:
-                validated_data = SimilaritySearchModel(index_name=name, top_k=top_k, vector=query_vector)
+                validated_data = SimilaritySearchModel(
+                    index_name=name, top_k=top_k, vector=query_vector
+                )
             elif query_text:
                 if not self.embeddings:
                     raise ValueError("Embedding method required for text query.")
                 vector_embedding = self.embeddings.embed_query(query_text)
-                validated_data = SimilaritySearchModel(index_name=name, top_k=top_k, vector=vector_embedding)
+                validated_data = SimilaritySearchModel(
+                    index_name=name, top_k=top_k, vector=vector_embedding
+                )
             else:
                 raise ValueError("Either query_vector or query_text must be provided.")
-            
+
             parameters = validated_data.dict(exclude_none=True)
         except ValidationError as e:
             error_details = e.errors()
             raise ValueError(f"Validation failed: {error_details}")
-        
+
         db_query_string = "CALL db.index.vector.queryNodes($index_name, $top_k, $vector) YIELD node, score"
         return self.database_query(driver, db_query_string, params=parameters)

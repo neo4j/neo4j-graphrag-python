@@ -10,6 +10,7 @@ class CreateIndexModel(BaseModel):
     dimensions: PositiveInt
     similarity_fn: Literal["euclidean", "cosine"]
 
+
 class SimilaritySearchModel(BaseModel):
     index_name: str
     top_k: PositiveInt = 5
@@ -20,5 +21,7 @@ class SimilaritySearchModel(BaseModel):
     def check_query(cls, values):
         vector, query_text = values.get("vector"), values.get("query_text")
         if bool(vector) == bool(query_text):
-            raise ValueError("You must provide exactly one of query_vector or query_text.")
+            raise ValueError(
+                "You must provide exactly one of query_vector or query_text."
+            )
         return values

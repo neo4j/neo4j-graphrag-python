@@ -14,10 +14,12 @@ DIMENSION = 1536
 # Connect to Neo4j database
 driver = GraphDatabase.driver(URI, auth=AUTH)
 
+
 # Create Embeddings object
 class CustomEmbeddings(Embeddings):
     def embed_query(self, text: str) -> List[float]:
         return [random() for _ in range(1536)]
+
 
 embeddings = CustomEmbeddings()
 
@@ -51,6 +53,4 @@ client.database_query(driver, insert_query, params=parameters)
 
 # Perform the similarity search for a text query
 query_text = "hello world"
-print(client.similarity_search(
-    driver, INDEX_NAME, query_text=query_text, top_k=5
-))
+print(client.similarity_search(driver, INDEX_NAME, query_text=query_text, top_k=5))

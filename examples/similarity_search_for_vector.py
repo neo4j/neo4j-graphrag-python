@@ -42,6 +42,4 @@ client.database_query(driver, insert_query, params=parameters)
 
 # Perform the similarity search for a vector query
 query_vector = [random() for _ in range(DIMENSION)]
-print(client.similarity_search(
-    driver, INDEX_NAME, query_vector=query_vector, top_k=5
-))
+print(client.similarity_search(driver, INDEX_NAME, query_vector=query_vector, top_k=5))
