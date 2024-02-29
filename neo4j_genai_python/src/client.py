@@ -112,6 +112,7 @@ class GenAIClient:
         if not ((query_vector is not None) ^ (query_text is not None)):
             raise ValueError("You must provide one of query_vector or query_text.")
 
+        # TODO: add query over vectors functionality
         if query_vector:
             parameters = {
                 "index_name": name,
