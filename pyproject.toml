@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "neo4j-genai-python"
+name = "neo4j-genai"
 version = "0.1.0"
 description = "Python package to allow easy integration to Neo4j's GenAI features"
 authors = ["Neo4j, Inc <team-gen-ai@neo4j.com>"]

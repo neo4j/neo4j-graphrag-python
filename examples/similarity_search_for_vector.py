@@ -1,5 +1,5 @@
 from neo4j import GraphDatabase
-from neo4j_genai_python.src.client import GenAIClient
+from neo4j_genai.src.client import GenAIClient
 
 from random import random
 
@@ -10,6 +10,7 @@ INDEX_NAME = "embedding-name"
 DIMENSION = 1536
 driver = GraphDatabase.driver(URI, auth=AUTH)
 
+# Initialize the client
 client = GenAIClient(driver)
 
 client.drop_index(driver, INDEX_NAME)
@@ -37,7 +38,7 @@ parameters = {
 }
 client.database_query(driver, insert_query, params=parameters)
 
-# Perform the similarity search
+# Perform the similarity search for a vector query
 query_vector = [random() for _ in range(DIMENSION)]
 print(client.similarity_search(
     driver, INDEX_NAME, query_vector=query_vector, top_k=5

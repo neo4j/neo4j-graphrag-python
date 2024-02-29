@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional
 from neo4j import Driver
 from neo4j.exceptions import CypherSyntaxError
-from neo4j_genai_python.src.embeddings import Embeddings
+from neo4j_genai.src.embeddings import Embeddings
 
 
 class GenAIClient:
@@ -112,7 +112,6 @@ class GenAIClient:
         if not ((query_vector is not None) ^ (query_text is not None)):
             raise ValueError("You must provide one of query_vector or query_text.")
 
-        # TODO: add query over vectors functionality
         if query_vector:
             parameters = {
                 "index_name": name,
