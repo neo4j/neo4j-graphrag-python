@@ -1,18 +1,7 @@
-import neo4j
-
 from typing import List, Dict, Any, Optional
-from neo4j import Driver, GraphDatabase
+from neo4j import Driver
 from neo4j.exceptions import CypherSyntaxError
-
-from abc import ABC, abstractmethod
-
-
-class Embeddings(ABC):
-    """Interface for embedding models."""
-
-    @abstractmethod
-    def embed_query(self, text: str) -> List[float]:
-        """Embed query text."""
+from neo4j_genai_python.src.embeddings import Embeddings
 
 
 class GenAIClient:
@@ -60,8 +49,7 @@ class GenAIClient:
             List[Dict[str, Any]]: List of dictionaries containing the query results.
         """
         params = params or {}
-        # TODO: how do we pass this database variable
-        with driver.session(database="neo4j") as session:
+        with driver.session() as session:
             try:
                 data = session.run(query, params)
                 return [r.data() for r in data]
@@ -142,7 +130,7 @@ class GenAIClient:
                 }
             else:
                 raise ValueError(
-                    "Embedding method required to perform search for query_text"
+                    "Embedding method required to perform search for text query."
                 )
 
         db_query_string = "CALL db.index.vector.queryNodes($index_name, $top_k, $vector) YIELD node, score"
