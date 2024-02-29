@@ -15,7 +15,7 @@ driver = GraphDatabase.driver(URI, auth=AUTH)
 # Create Embeddings object
 class CustomEmbeddings(Embeddings):
     def embed_query(self, text: str) -> List[float]:
-        return [float(ord(c)) for c in text]
+        return [random() for _ in range(1536)]
 
 embeddings = CustomEmbeddings()
 
