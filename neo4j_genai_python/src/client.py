@@ -16,7 +16,7 @@ class Embeddings(ABC):
 
 
 class GenAIClient:
-    def __init__(self, driver: Driver, embeddings: Optional[Embeddings]) -> None:
+    def __init__(self, driver: Driver, embeddings: Optional[Embeddings] = None) -> None:
         # Verify if the version supports vector index
         self._verify_version(driver)
         self.embeddings = embeddings if embeddings else None
@@ -92,10 +92,21 @@ class GenAIClient:
 
         parameters = {
             "name": name,
-            "node_label": label,
+            "label": label,
             "property": property,
             "dimensions": dimensions,
             "similarity_fn": similarity_fn,
+        }
+        self.database_query(driver, index_query, params=parameters)
+
+    def drop_index(self, driver, name: str) -> None:
+        """
+        This method constructs a Cypher query and executes it
+        to drop a vector index in Neo4j.
+        """
+        index_query = "DROP INDEX $name"
+        parameters = {
+            "name": name,
         }
         self.database_query(driver, index_query, params=parameters)
 
@@ -103,9 +114,9 @@ class GenAIClient:
         self,
         driver: Driver,
         name: str,
-        query_vector: Optional[List[float]],
-        query_text: Optional[str],
-        top_k: int,
+        query_vector: Optional[List[float]] = None,
+        query_text: Optional[str] = None,
+        top_k: int = 5,
     ) -> List[Dict[str, Any]]:
         """
         Performs the similarity search
@@ -131,7 +142,7 @@ class GenAIClient:
                 }
             else:
                 raise ValueError(
-                    "Embeddings required in definition to perform search for query_text"
+                    "Embedding method required to perform search for query_text"
                 )
 
         db_query_string = "CALL db.index.vector.queryNodes($index_name, $top_k, $vector) YIELD node, score"
