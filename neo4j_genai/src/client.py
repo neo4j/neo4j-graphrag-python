@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional
 from neo4j import Driver
 from neo4j.exceptions import CypherSyntaxError
-from neo4j_genai.src.embeddings import Embeddings
+from src.embeddings import Embeddings
 
 
 class GenAIClient:

@@ -1,5 +1,5 @@
 from neo4j import GraphDatabase
-from neo4j_genai.src.client import GenAIClient
+from src.client import GenAIClient
 
 from random import random
 
