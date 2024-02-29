@@ -2,7 +2,8 @@ from typing import List, Dict, Any, Optional
 from neo4j import Driver
 from neo4j.exceptions import CypherSyntaxError
 from src.embeddings import Embeddings
-
+from src.data_validators import CreateIndexModel, SimilaritySearchModel
+from pydantic import ValidationError
 
 class GenAIClient:
     def __init__(self, driver: Driver, embeddings: Optional[Embeddings] = None) -> None:
@@ -69,6 +70,18 @@ class GenAIClient:
         This method constructs a Cypher query and executes it
         to create a new vector index in Neo4j.
         """
+        index_data = {
+            "name": name,
+            "label": label,
+            "property": property,
+            "dimensions": dimensions,
+            "similarity_fn": similarity_fn,
+        }
+        try:
+            index_data = CreateIndexModel(**index_data)
+        except ValidationError as e:
+            raise ValueError(f"Error for inputs to create_index {str(e)}")
+    
         index_query = (
             "CALL db.index.vector.createNodeIndex("
             "$name,"
@@ -77,15 +90,7 @@ class GenAIClient:
             "toInteger($dimensions),"
             "$similarity_fn )"
         )
-
-        parameters = {
-            "name": name,
-            "label": label,
-            "property": property,
-            "dimensions": dimensions,
-            "similarity_fn": similarity_fn,
-        }
-        self.database_query(driver, index_query, params=parameters)
+        self.database_query(driver, index_query, params=index_data.dict())
 
     def drop_index(self, driver, name: str) -> None:
         """
@@ -109,29 +114,21 @@ class GenAIClient:
         """
         Performs the similarity search
         """
-        if not ((query_vector is not None) ^ (query_text is not None)):
-            raise ValueError("You must provide one of query_vector or query_text.")
-
-        if query_vector:
-            parameters = {
-                "index_name": name,
-                "top_k": top_k,
-                "vector": query_vector,
-            }
-
-        if query_text:
-            # TODO: do we need to validate embeddings? Normalizing etc.
-            if self.embeddings:
+        try:
+            if query_vector:
+                validated_data = SimilaritySearchModel(index_name=name, top_k=top_k, vector=query_vector)
+            elif query_text:
+                if not self.embeddings:
+                    raise ValueError("Embedding method required for text query.")
                 vector_embedding = self.embeddings.embed_query(query_text)
-                parameters = {
-                    "index_name": name,
-                    "top_k": top_k,
-                    "vector": vector_embedding,
-                }
+                validated_data = SimilaritySearchModel(index_name=name, top_k=top_k, vector=vector_embedding)
             else:
-                raise ValueError(
-                    "Embedding method required to perform search for text query."
-                )
-
+                raise ValueError("Either query_vector or query_text must be provided.")
+            
+            parameters = validated_data.dict(exclude_none=True)
+        except ValidationError as e:
+            error_details = e.errors()
+            raise ValueError(f"Validation failed: {error_details}")
+        
         db_query_string = "CALL db.index.vector.queryNodes($index_name, $top_k, $vector) YIELD node, score"
         return self.database_query(driver, db_query_string, params=parameters)
