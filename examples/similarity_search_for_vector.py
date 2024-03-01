@@ -42,4 +42,8 @@ client.database_query(driver, insert_query, params=parameters)
 
 # Perform the similarity search for a vector query
 query_vector = [random() for _ in range(DIMENSION)]
-print(client.similarity_search(driver, INDEX_NAME, query_vector=query_vector, top_k=5))
+# retriever_query
+client.similarity_search(driver, INDEX_NAME, query_vector=query_vector, top_k=5)
+
+retriever_query = "WITH node, score MATCH (node)-->(parent) RETURN parent.text"
+client.similarity_search(driver, retriever_query, INDEX_NAME, query_vector=query_vector, top_k=5)

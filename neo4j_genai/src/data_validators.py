@@ -1,6 +1,9 @@
 from pydantic import BaseModel, PositiveInt, root_validator
-from src.embeddings import EmbeddingVector
 from typing import List, Literal, Optional
+
+
+class EmbeddingVector(BaseModel):
+    vector: List[float]
 
 
 class CreateIndexModel(BaseModel):
@@ -20,7 +23,7 @@ class SimilaritySearchModel(BaseModel):
     @root_validator(pre=True)
     def check_query(cls, values):
         vector, query_text = values.get("vector"), values.get("query_text")
-        if bool(vector) == bool(query_text):
+        if vector and query_text:
             raise ValueError(
                 "You must provide exactly one of query_vector or query_text."
             )

@@ -1,10 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List
-from pydantic import BaseModel
-
-
-class EmbeddingVector(BaseModel):
-    vector: List[float]
+from src.data_validators import EmbeddingVector
 
 
 class Embeddings(ABC):

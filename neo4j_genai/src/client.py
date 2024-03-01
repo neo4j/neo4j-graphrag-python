@@ -10,7 +10,7 @@ class GenAIClient:
     def __init__(self, driver: Driver, embeddings: Optional[Embeddings] = None) -> None:
         # Verify if the version supports vector index
         self._verify_version(driver)
-        self.embeddings = embeddings if embeddings else None
+        self.embeddings = embeddings
 
     def _verify_version(self, driver: Driver) -> None:
         """
@@ -37,7 +37,7 @@ class GenAIClient:
             )
 
     def database_query(
-        self, driver: Driver, query: str, params: Optional[Dict] = None
+        self, driver: Driver, query: str, params: Dict ={}
     ) -> List[Dict[str, Any]]:
         """
         This method sends a Cypher query to the connected Neo4j database
@@ -50,7 +50,6 @@ class GenAIClient:
         Returns:
             List[Dict[str, Any]]: List of dictionaries containing the query results.
         """
-        params = params or {}
         with driver.session() as session:
             try:
                 data = session.run(query, params)
