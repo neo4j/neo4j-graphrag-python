@@ -22,9 +22,7 @@ class GenAIClient:
         indexing. Raises a ValueError if the connected Neo4j version is
         not supported.
         """
-        version = self.database_query("CALL dbms.components()")[0]["versions"][
-            0
-        ]
+        version = self.database_query("CALL dbms.components()")[0]["versions"][0]
         if "aura" in version:
             version_tuple = (*tuple(map(int, version.split("-")[0].split("."))), 0)
         else:
@@ -37,9 +35,7 @@ class GenAIClient:
                 "Version index is only supported in Neo4j version 5.11 or greater"
             )
 
-    def database_query(
-        self, query: str, params: Dict = {}
-    ) -> List[Dict[str, Any]]:
+    def database_query(self, query: str, params: Dict = {}) -> List[Dict[str, Any]]:
         """
         This method sends a Cypher query to the connected Neo4j database
         and returns the results as a list of dictionaries.
@@ -115,17 +111,20 @@ class GenAIClient:
         """
         try:
             validated_data = SimilaritySearchModel(
-                index_name=name, top_k=top_k, query_vector=query_vector, query_text=query_text
+                index_name=name,
+                top_k=top_k,
+                query_vector=query_vector,
+                query_text=query_text,
             )
         except ValidationError as e:
             error_details = e.errors()
             raise ValueError(f"Validation failed: {error_details}")
-        
+
         if query_text:
             if not self.embeddings:
                 raise ValueError("Embedding method required for text query.")
             query_vector = self.embeddings.embed_query(query_text)
-            
+
         parameters = validated_data.dict(exclude_none=True)
         db_query_string = "CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector) YIELD node, score"
         return self.database_query(db_query_string, params=parameters)
