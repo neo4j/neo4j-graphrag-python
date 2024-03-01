@@ -26,11 +26,10 @@ embeddings = CustomEmbeddings()
 # Initialize the client
 client = GenAIClient(driver, embeddings)
 
-client.drop_index(driver, INDEX_NAME)
+client.drop_index(INDEX_NAME)
 
 # Creating the index
 client.create_index(
-    driver,
     INDEX_NAME,
     label="label",
     property="property",
@@ -49,8 +48,8 @@ parameters = {
     "id": 1,
     "vector": vector,
 }
-client.database_query(driver, insert_query, params=parameters)
+client.database_query(insert_query, params=parameters)
 
 # Perform the similarity search for a text query
 query_text = "hello world"
-print(client.similarity_search(driver, INDEX_NAME, query_text=query_text, top_k=5))
+print(client.similarity_search(INDEX_NAME, query_text=query_text, top_k=5))

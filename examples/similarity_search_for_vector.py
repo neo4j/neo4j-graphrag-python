@@ -15,11 +15,10 @@ driver = GraphDatabase.driver(URI, auth=AUTH)
 # Initialize the client
 client = GenAIClient(driver)
 
-client.drop_index(driver, INDEX_NAME)
+client.drop_index(INDEX_NAME)
 
 # Creating the index
 client.create_index(
-    driver,
     INDEX_NAME,
     label="label",
     property="property",
@@ -38,13 +37,8 @@ parameters = {
     "id": 1,
     "vector": vector,
 }
-client.database_query(driver, insert_query, params=parameters)
+client.database_query(insert_query, params=parameters)
 
 # Perform the similarity search for a vector query
 query_vector = [random() for _ in range(DIMENSION)]
-# retriever_query
-client.similarity_search(driver, INDEX_NAME, query_vector=query_vector, top_k=5)
-
-client.similarity_search(
-    driver, retriever_query, INDEX_NAME, query_vector=query_vector, top_k=5
-)
+client.similarity_search(INDEX_NAME, query_vector=query_vector, top_k=5)

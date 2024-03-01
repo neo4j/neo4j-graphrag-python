@@ -2,10 +2,10 @@ from pydantic import BaseModel, PositiveInt, root_validator
 from typing import List, Literal, Optional
 
 
-class DatabaseQueryResult:
-    node
-    score: float
-    id: str
+# class DatabaseQueryResult:
+#     node
+#     score: float
+#     id: str
 
 
 class EmbeddingVector(BaseModel):
@@ -23,13 +23,13 @@ class CreateIndexModel(BaseModel):
 class SimilaritySearchModel(BaseModel):
     index_name: str
     top_k: PositiveInt = 5
-    vector: Optional[EmbeddingVector] = None
+    query_vector: Optional[EmbeddingVector] = None
     query_text: Optional[str] = None
 
     @root_validator(pre=True)
     def check_query(cls, values):
-        vector, query_text = values.get("vector"), values.get("query_text")
-        if vector and query_text:
+        query_vector, query_text = values.get("query_vector"), values.get("query_text")
+        if bool(query_vector) ^ bool(query_text):
             raise ValueError(
                 "You must provide exactly one of query_vector or query_text."
             )
