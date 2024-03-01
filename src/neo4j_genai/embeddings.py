@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List
-from src.data_validators import EmbeddingVector
+from neo4j_genai.types import EmbeddingVector
 
 
 class Embeddings(ABC):

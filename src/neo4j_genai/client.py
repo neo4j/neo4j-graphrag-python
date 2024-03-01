@@ -1,8 +1,8 @@
 from typing import List, Dict, Any, Optional
 from neo4j import Driver
 from neo4j.exceptions import CypherSyntaxError
-from src.embeddings import Embeddings
-from src.data_validators import CreateIndexModel, SimilaritySearchModel
+from neo4j_genai.embeddings import Embeddings
+from neo4j_genai.types import CreateIndexModel, SimilaritySearchModel
 from pydantic import ValidationError
 
 
@@ -37,7 +37,7 @@ class GenAIClient:
             )
 
     def database_query(
-        self, driver: Driver, query: str, params: Dict ={}
+        self, driver: Driver, query: str, params: Dict = {}
     ) -> List[Dict[str, Any]]:
         """
         This method sends a Cypher query to the connected Neo4j database
@@ -130,9 +130,10 @@ class GenAIClient:
                 raise ValueError("Either query_vector or query_text must be provided.")
 
             parameters = validated_data.dict(exclude_none=True)
+
         except ValidationError as e:
             error_details = e.errors()
             raise ValueError(f"Validation failed: {error_details}")
 
-        db_query_string = "CALL db.index.vector.queryNodes($index_name, $top_k, $vector) YIELD node, score"
+        db_query_string = "CALL db.index.vector.queryNodes($index_name, $top_k, $vector) YIELD node, score, node.id AS id"
         return self.database_query(driver, db_query_string, params=parameters)

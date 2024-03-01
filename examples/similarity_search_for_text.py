@@ -1,9 +1,9 @@
 from typing import List
 from neo4j import GraphDatabase
-from src.client import GenAIClient
+from neo4j_genai.client import GenAIClient
 
 from random import random
-from src.embeddings import Embeddings
+from neo4j_genai.embeddings import Embeddings
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")

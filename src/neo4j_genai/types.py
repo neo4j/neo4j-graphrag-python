@@ -2,6 +2,12 @@ from pydantic import BaseModel, PositiveInt, root_validator
 from typing import List, Literal, Optional
 
 
+class DatabaseQueryResult:
+    node
+    score: float
+    id: str
+
+
 class EmbeddingVector(BaseModel):
     vector: List[float]
 

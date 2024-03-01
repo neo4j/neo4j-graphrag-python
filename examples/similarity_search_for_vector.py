@@ -1,5 +1,5 @@
 from neo4j import GraphDatabase
-from src.client import GenAIClient
+from neo4j_genai.client import GenAIClient
 
 from random import random
 
@@ -45,5 +45,6 @@ query_vector = [random() for _ in range(DIMENSION)]
 # retriever_query
 client.similarity_search(driver, INDEX_NAME, query_vector=query_vector, top_k=5)
 
-retriever_query = "WITH node, score MATCH (node)-->(parent) RETURN parent.text"
-client.similarity_search(driver, retriever_query, INDEX_NAME, query_vector=query_vector, top_k=5)
+client.similarity_search(
+    driver, retriever_query, INDEX_NAME, query_vector=query_vector, top_k=5
+)
