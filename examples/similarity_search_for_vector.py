@@ -7,18 +7,13 @@ URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
 
 INDEX_NAME = "embedding-name"
-DIMENSION = 1536
+DIMENSION = 2049
 
 # Connect to Neo4j database
 driver = GraphDatabase.driver(URI, auth=AUTH)
 
 # Initialize the client
 client = GenAIClient(driver)
-
-try:
-    client.drop_index(INDEX_NAME)
-except DatabaseError as e:
-    print(e)
 
 # Creating the index
 client.create_index(

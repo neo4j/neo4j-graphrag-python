@@ -27,11 +27,6 @@ embeddings = CustomEmbeddings()
 # Initialize the client
 client = GenAIClient(driver, embeddings)
 
-try:
-    client.drop_index(INDEX_NAME)
-except DatabaseError as e:
-    print(e)
-
 # Creating the index
 client.create_index(
     INDEX_NAME,
