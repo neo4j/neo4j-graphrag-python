@@ -16,7 +16,6 @@ class GenAIClient:
         self.driver = driver
         self._verify_version()
         self.embeddings = embeddings
-        self.embeddings = embeddings
 
     def _verify_version(self) -> None:
         """
