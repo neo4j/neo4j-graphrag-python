@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import List
 from neo4j_genai.types import EmbeddingVector
 
 
@@ -9,4 +8,3 @@ class Embeddings(ABC):
     @abstractmethod
     def embed_query(self, text: str) -> EmbeddingVector:
         """Embed query text."""
-        pass

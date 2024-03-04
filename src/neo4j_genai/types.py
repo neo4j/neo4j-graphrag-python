@@ -1,6 +1,10 @@
+from typing import List, Any, Literal, Optional
 from pydantic import BaseModel, PositiveInt, root_validator
-from typing import List, Literal, Optional
 
+
+class Neo4jRecord(BaseModel):
+    node: Any
+    score: float
 
 
 class EmbeddingVector(BaseModel):

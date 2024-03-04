@@ -18,7 +18,7 @@ driver = GraphDatabase.driver(URI, auth=AUTH)
 # Create Embeddings object
 class CustomEmbeddings(Embeddings):
     def embed_query(self, text: str) -> List[float]:
-        return [random() for _ in range(1536)]
+        return [random() for _ in range(DIMENSION)]
 
 
 embeddings = CustomEmbeddings()
@@ -32,7 +32,7 @@ client.drop_index(INDEX_NAME)
 client.create_index(
     INDEX_NAME,
     label="label",
-    property="property",
+    property="propertyKey",
     dimensions=DIMENSION,
     similarity_fn="euclidean",
 )

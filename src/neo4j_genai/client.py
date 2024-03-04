@@ -1,16 +1,21 @@
 from typing import List, Dict, Any, Optional
+from pydantic import ValidationError
 from neo4j import Driver
 from neo4j.exceptions import CypherSyntaxError
 from neo4j_genai.embeddings import Embeddings
-from neo4j_genai.types import CreateIndexModel, SimilaritySearchModel
-from pydantic import ValidationError
+from neo4j_genai.types import CreateIndexModel, SimilaritySearchModel, Neo4jRecord
 
 
 class GenAIClient:
-    def __init__(self, driver: Driver, embeddings: Optional[Embeddings] = None) -> None:
+    def __init__(
+        self,
+        driver: Driver,
+        embeddings: Optional[Embeddings] = None,
+    ) -> None:
         # Verify if the version supports vector index
         self.driver = driver
         self._verify_version()
+        self.embeddings = embeddings
         self.embeddings = embeddings
 
     def _verify_version(self) -> None:
@@ -105,7 +110,7 @@ class GenAIClient:
         query_vector: Optional[List[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
-    ) -> List[Dict[str, Any]]:
+    ) -> List[Neo4jRecord]:
         """
         Performs the similarity search
         """
@@ -128,5 +133,10 @@ class GenAIClient:
             query_vector = self.embeddings.embed_query(query_text)
             parameters["query_vector"] = query_vector
 
-        db_query_string = "CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector) YIELD node, score"
-        return self.database_query(db_query_string, params=parameters)
+        db_query_string = """
+        CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector) 
+        YIELD node, score
+        """
+        records = self.database_query(db_query_string, params=parameters)
+
+        return [Neo4jRecord(node=record.node, score=record.score) for record in records]

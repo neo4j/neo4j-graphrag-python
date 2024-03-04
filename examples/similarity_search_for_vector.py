@@ -21,7 +21,7 @@ client.drop_index(INDEX_NAME)
 client.create_index(
     INDEX_NAME,
     label="label",
-    property="property",
+    property="propertyKey",
     dimensions=DIMENSION,
     similarity_fn="euclidean",
 )
@@ -41,4 +41,4 @@ client.database_query(insert_query, params=parameters)
 
 # Perform the similarity search for a vector query
 query_vector = [random() for _ in range(DIMENSION)]
-client.similarity_search(INDEX_NAME, query_vector=query_vector, top_k=5)
+print(client.similarity_search(INDEX_NAME, query_vector=query_vector, top_k=5))
