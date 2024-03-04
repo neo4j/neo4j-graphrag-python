@@ -7,4 +7,11 @@ class Embeddings(ABC):
 
     @abstractmethod
     def embed_query(self, text: str) -> EmbeddingVector:
-        """Embed query text."""
+        """Embed query text.
+
+        Args:
+            text (str): Text to convert to vector embedding
+
+        Returns:
+            EmbeddingVector: A vector embedding.
+        """

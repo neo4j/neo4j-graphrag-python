@@ -7,12 +7,15 @@ from neo4j_genai.types import CreateIndexModel, SimilaritySearchModel, Neo4jReco
 
 
 class GenAIClient:
+    """
+    Provides functionality to use Neo4j's GenAI features
+    """
+
     def __init__(
         self,
         driver: Driver,
         embeddings: Optional[Embeddings] = None,
     ) -> None:
-        # Verify if the version supports vector index
         self.driver = driver
         self._verify_version()
         self.embeddings = embeddings
@@ -69,6 +72,19 @@ class GenAIClient:
         """
         This method constructs a Cypher query and executes it
         to create a new vector index in Neo4j.
+
+        See Cypher manual on [Create node index](https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_createNodeIndex)
+
+        Args:
+            name (str): The unique name of the index.
+            label (str): The node label to be indexed.
+            property (str): The property key of a node which contains embedding values.
+            dimensions (int): Vector embedding dimension
+            similarity_fn (str): case-insensitive values for the vector similarity function:
+                ``euclidean`` or ``cosine``.
+
+        Raises:
+            ValueError: If validation of the input arguments fail.
         """
         index_data = {
             "name": name,
@@ -96,6 +112,10 @@ class GenAIClient:
         """
         This method constructs a Cypher query and executes it
         to drop a vector index in Neo4j.
+        See Cypher manual on [Drop vector indexes](https://neo4j.com/docs/cypher-manual/current/indexes-for-vector-search/#indexes-vector-drop)
+
+        Args:
+            name (str): The name of the index to delete.
         """
         query = "DROP INDEX $name"
         parameters = {
@@ -110,8 +130,24 @@ class GenAIClient:
         query_text: Optional[str] = None,
         top_k: int = 5,
     ) -> List[Neo4jRecord]:
-        """
-        Performs the similarity search
+        """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
+        See the following documentation for more details:
+
+        - [Query a vector index](https://neo4j.com/docs/cypher-manual/current/indexes-for-vector-search/#indexes-vector-query)
+        - [db.index.vector.queryNodes()](https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_queryNodes)
+
+        Args:
+            name (str): Refers to the unique name of the vector index to query.
+            query_vector (Optional[List[float]], optional): The vector embeddings to get the closest neighbors of. Defaults to None.
+            query_text (Optional[str], optional): The text to get the closest neighbors of. Defaults to None.
+            top_k (int, optional): The number of neighbors to return. Defaults to 5.
+
+        Raises:
+            ValueError: If validation of the input arguments fail.
+            ValueError: If no embeddings is provided.
+
+        Returns:
+            List[Neo4jRecord]: The `top_k` neighbors found in vector search with their nodes and scores.
         """
         try:
             validated_data = SimilaritySearchModel(
