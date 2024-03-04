@@ -2,8 +2,8 @@ from typing import List, Dict, Any, Optional
 from pydantic import ValidationError
 from neo4j import Driver
 from neo4j.exceptions import CypherSyntaxError
-from neo4j_genai.embeddings import Embeddings
-from neo4j_genai.types import CreateIndexModel, SimilaritySearchModel, Neo4jRecord
+from .embeddings import Embeddings
+from .types import CreateIndexModel, SimilaritySearchModel, Neo4jRecord
 
 
 class GenAIClient:
@@ -31,7 +31,10 @@ class GenAIClient:
         """
         version = self.database_query("CALL dbms.components()")[0]["versions"][0]
         if "aura" in version:
-            version_tuple = (*tuple(map(int, version.split("-")[0].split("."))), 0)
+            version_tuple = (
+                *tuple(map(int, version.split("-")[0].split("."))),
+                0,
+            )
         else:
             version_tuple = tuple(map(int, version.split(".")))
 
@@ -106,7 +109,7 @@ class GenAIClient:
             "toInteger($dimensions),"
             "$similarity_fn )"
         )
-        self.database_query(query, params=index_data.dict())
+        self.database_query(query, params=index_data.model_dump())
 
     def drop_index(self, name: str) -> None:
         """
@@ -160,7 +163,7 @@ class GenAIClient:
             error_details = e.errors()
             raise ValueError(f"Validation failed: {error_details}")
 
-        parameters = validated_data.dict(exclude_none=True)
+        parameters = validated_data.model_dump(exclude_none=True)
 
         if query_text:
             if not self.embeddings:
@@ -169,7 +172,7 @@ class GenAIClient:
             parameters["query_vector"] = query_vector
 
         db_query_string = """
-        CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector) 
+        CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
         YIELD node, score
         """
         records = self.database_query(db_query_string, params=parameters)

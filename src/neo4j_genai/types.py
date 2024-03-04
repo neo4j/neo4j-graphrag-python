@@ -1,5 +1,5 @@
 from typing import List, Any, Literal, Optional
-from pydantic import BaseModel, PositiveInt, Field, root_validator
+from pydantic import BaseModel, PositiveInt, Field, model_validator
 
 
 class Neo4jRecord(BaseModel):
@@ -25,7 +25,7 @@ class SimilaritySearchModel(BaseModel):
     query_vector: Optional[List[float]] = None
     query_text: Optional[str] = None
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
     def check_query(cls, values):
         """
         Validates that one of either query_vector or query_text is provided exclusively.
