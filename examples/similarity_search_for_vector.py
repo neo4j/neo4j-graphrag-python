@@ -15,12 +15,15 @@ driver = GraphDatabase.driver(URI, auth=AUTH)
 # Initialize the client
 client = GenAIClient(driver)
 
-client.drop_index(INDEX_NAME)
+try:
+    client.drop_index(INDEX_NAME)
+except DatabaseError as e:
+    print(e)
 
 # Creating the index
 client.create_index(
     INDEX_NAME,
-    label="label",
+    label="Document",
     property="propertyKey",
     dimensions=DIMENSION,
     similarity_fn="euclidean",
@@ -29,12 +32,12 @@ client.create_index(
 # Upsert the vector
 vector = [random() for _ in range(DIMENSION)]
 insert_query = (
-    "MATCH (n:Node {id: $id})"
+    "MERGE (n:Document)"
+    "WITH n "
     "CALL db.create.setNodeVectorProperty(n, 'propertyKey', $vector)"
     "RETURN n"
 )
 parameters = {
-    "id": 1,
     "vector": vector,
 }
 client.database_query(insert_query, params=parameters)

@@ -15,7 +15,7 @@ class CreateIndexModel(BaseModel):
     name: str
     label: str
     property: str
-    dimensions: int = Field(ge=1, le=20)
+    dimensions: int = Field(ge=1, le=2048)
     similarity_fn: Literal["euclidean", "cosine"]
 
 

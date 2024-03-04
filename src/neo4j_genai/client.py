@@ -174,4 +174,8 @@ class GenAIClient:
         """
         records = self.database_query(db_query_string, params=parameters)
 
-        return [Neo4jRecord(node=record.node, score=record.score) for record in records]
+        try:
+            return [Neo4jRecord(node=record["node"], score=record["score"]) for record in records]
+        except ValidationError as e:
+            error_details = e.errors()
+            raise ValueError(f"Validation failed while constructing output: {error_details}")
