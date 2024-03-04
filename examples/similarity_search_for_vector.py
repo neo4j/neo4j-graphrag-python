@@ -7,7 +7,7 @@ URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
 
 INDEX_NAME = "embedding-name"
-DIMENSION = 2049
+DIMENSION = 1536
 
 # Connect to Neo4j database
 driver = GraphDatabase.driver(URI, auth=AUTH)
