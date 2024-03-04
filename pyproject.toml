@@ -1,18 +1,42 @@
 [tool.poetry]
 name = "neo4j-genai"
 version = "0.1.0"
-description = ""
+description = "Python package to allow easy integration to Neo4j's GenAI features"
 authors = ["Neo4j, Inc <team-gen-ai@neo4j.com>"]
 license = "Apache License, Version 2.0"
 readme = "README.md"
 
-[tool.poetry.dependencies]
-python = ">=3.7"
-neo4j = "^5.17.0"
+[[tool.poetry.packages]]
+include = "neo4j_genai"
+from = "src"
 
+[tool.poetry.dependencies]
+python = "^3.8"
+neo4j = "^5.17.0"
+types-requests = "^2.31.0.20240218"
+pytest = "^8.0.2"
+pytest-mock = "^3.12.0"
+pydantic = "^2.6.3"
+
+[tool.poetry.group.dev.dependencies]
+pylint = "^3.1.0"
+mypy = "^1.8.0"
+black = "^24.2.0"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 exclude = ["**/tests/"]
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+exclude = '''
+/(
+    .git
+  | .venv
+  | build
+  | dist
+)/
+'''
