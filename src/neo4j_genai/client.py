@@ -1,8 +1,13 @@
-from typing import List, Optional
+from typing import List, Optional, Any, Dict
 from pydantic import ValidationError
 from neo4j import Driver
 from .embedder import Embedder
-from .types import CreateIndexModel, SimilaritySearchModel, Neo4jRecord
+from .types import (
+    CreateIndexModel,
+    SimilaritySearchModel,
+    Neo4jRecord,
+    CustomSimilaritySearchModel,
+)
 
 
 class GenAIClient:
@@ -41,7 +46,6 @@ class GenAIClient:
             version_tuple = tuple(map(int, version.split(".")))
             target_version = (5, 18, 1)
 
-
         if version_tuple < target_version:
             raise ValueError(
                 "This package only supports Neo4j version 5.18.1 or greater"
@@ -73,13 +77,15 @@ class GenAIClient:
             ValueError: If validation of the input arguments fail.
         """
         try:
-            CreateIndexModel(**{
-                "name": name,
-                "label": label,
-                "property": property,
-                "dimensions": dimensions,
-                "similarity_fn": similarity_fn,
-        })
+            CreateIndexModel(
+                **{
+                    "name": name,
+                    "label": label,
+                    "property": property,
+                    "dimensions": dimensions,
+                    "similarity_fn": similarity_fn,
+                }
+            )
         except ValidationError as e:
             raise ValueError(f"Error for inputs to create_index {str(e)}")
 
@@ -87,7 +93,10 @@ class GenAIClient:
             f"CREATE VECTOR INDEX $name IF NOT EXISTS FOR (n:{label}) ON n.{property} OPTIONS "
             "{ indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }"
         )
-        self.driver.execute_query(query, {"name": name, "dimensions": dimensions, "similarity_fn": similarity_fn})
+        self.driver.execute_query(
+            query,
+            {"name": name, "dimensions": dimensions, "similarity_fn": similarity_fn},
+        )
 
     def drop_index(self, name: str) -> None:
         """
@@ -104,13 +113,13 @@ class GenAIClient:
         }
         self.driver.execute_query(query, parameters)
 
-    def similarity_search(
+    def search_similar_vectors(
         self,
         name: str,
         query_vector: Optional[List[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
-    ) -> List[Neo4jRecord]:
+    ) -> Any:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         See the following documentation for more details:
 
@@ -128,7 +137,8 @@ class GenAIClient:
             ValueError: If no embedder is provided.
 
         Returns:
-            List[Neo4jRecord]: The `top_k` neighbors found in vector search with their nodes and scores.
+            Any: The `top_k` neighbors found in vector search with their nodes and scores.
+            If custom_retrieval_query is provided, this is changed.
         """
         try:
             validated_data = SimilaritySearchModel(
@@ -138,23 +148,21 @@ class GenAIClient:
                 query_text=query_text,
             )
         except ValidationError as e:
-            error_details = e.errors()
-            raise ValueError(f"Validation failed: {error_details}")
+            raise ValueError(f"Validation failed: {e.errors()}")
 
         parameters = validated_data.model_dump(exclude_none=True)
 
         if query_text:
             if not self.embedder:
                 raise ValueError("Embedding method required for text query.")
-            query_vector = self.embedder.embed_query(query_text)
-            parameters["query_vector"] = query_vector
+            parameters["query_vector"] = self.embedder.embed_query(query_text)
             del parameters["query_text"]
 
-        db_query_string = """
+        search_query = """
         CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
         YIELD node, score
         """
-        records, _, _ = self.driver.execute_query(db_query_string, parameters)
+        records, _, _ = self.driver.execute_query(search_query, parameters)
 
         try:
             return [
@@ -166,3 +174,64 @@ class GenAIClient:
             raise ValueError(
                 f"Validation failed while constructing output: {error_details}"
             )
+
+    def custom_search_similar_vectors(
+        self,
+        name: str,
+        custom_retrieval_query: str,
+        query_vector: Optional[List[float]] = None,
+        query_text: Optional[str] = None,
+        top_k: int = 5,
+        custom_params: Optional[Dict[str, Any]] = None,
+    ) -> Any:
+        """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
+        See the following documentation for more details:
+
+        - [Query a vector index](https://neo4j.com/docs/cypher-manual/current/indexes-for-vector-search/#indexes-vector-query)
+        - [db.index.vector.queryNodes()](https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_queryNodes)
+
+        Args:
+            name (str): Refers to the unique name of the vector index to query.
+            query_vector (Optional[List[float]], optional): The vector embeddings to get the closest neighbors of. Defaults to None.
+            query_text (Optional[str], optional): The text to get the closest neighbors of. Defaults to None.
+            top_k (int, optional): The number of neighbors to return. Defaults to 5.
+            custom_retrieval_query (Optional[str], optional: Custom query to use as suffix for retrieval query. Defaults to None
+            custom_params (Optional[str], optional: Custom query to use as suffix for retrieval query. Defaults to None
+
+        Raises:
+            ValueError: If validation of the input arguments fail.
+            ValueError: If no embedder is provided.
+
+        Returns:
+            Any: The `top_k` neighbors found in vector search with their nodes and scores.
+            If custom_retrieval_query is provided, this is changed.
+        """
+        try:
+            validated_data = CustomSimilaritySearchModel(
+                index_name=name,
+                top_k=top_k,
+                query_vector=query_vector,
+                query_text=query_text,
+                custom_retrieval_query=custom_retrieval_query,
+                custom_params=custom_params,
+            )
+        except ValidationError as e:
+            raise ValueError(f"Validation failed: {e.errors()}")
+
+        parameters = validated_data.model_dump(exclude_none=True)
+
+        if query_text:
+            if not self.embedder:
+                raise ValueError("Embedding method required for text query.")
+            parameters["query_vector"] = self.embedder.embed_query(query_text)
+            del parameters["query_text"]
+
+        query_prefix = """
+        CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
+        YIELD node, score
+        """
+        search_query = query_prefix + parameters["custom_retrieval_query"]
+        del parameters["custom_retrieval_query"]
+
+        records, _, _ = self.driver.execute_query(search_query, parameters)
+        return records

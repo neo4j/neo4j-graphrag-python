@@ -40,4 +40,4 @@ driver.execute_query(insert_query, parameters)
 
 # Perform the similarity search for a vector query
 query_vector = [random() for _ in range(DIMENSION)]
-print(client.similarity_search(INDEX_NAME, query_vector=query_vector, top_k=5))
+print(client.search_similar_vectors(INDEX_NAME, query_vector=query_vector, top_k=5))
