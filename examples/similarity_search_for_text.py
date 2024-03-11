@@ -1,6 +1,5 @@
 from typing import List
 from neo4j import GraphDatabase
-from neo4j.exceptions import DatabaseError
 from neo4j_genai.client import GenAIClient
 
 from random import random

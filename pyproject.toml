@@ -6,6 +6,10 @@ authors = ["Neo4j, Inc <team-gen-ai@neo4j.com>"]
 license = "Apache License, Version 2.0"
 readme = "README.md"
 
+[[tool.poetry.packages]]
+include = "neo4j_genai"
+from = "src"
+
 [tool.poetry.dependencies]
 python = "^3.8"
 neo4j = "^5.17.0"
