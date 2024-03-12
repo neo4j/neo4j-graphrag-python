@@ -1,5 +1,5 @@
 from typing import List, Any, Literal, Optional
-from pydantic import BaseModel, PositiveInt, Field, model_validator
+from pydantic import BaseModel, PositiveInt, model_validator
 
 
 class Neo4jRecord(BaseModel):
@@ -15,7 +15,7 @@ class CreateIndexModel(BaseModel):
     name: str
     label: str
     property: str
-    dimensions: int = Field(ge=1, le=2048)
+    dimensions: int = PositiveInt
     similarity_fn: Literal["euclidean", "cosine"]
 
 

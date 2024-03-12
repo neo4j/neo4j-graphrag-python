@@ -35,7 +35,7 @@ insert_query = (
 parameters = {
     "vector": vector,
 }
-client.database_query(insert_query, params=parameters)
+client._database_query(insert_query, params=parameters)
 
 # Perform the similarity search for a vector query
 query_vector = [random() for _ in range(DIMENSION)]

@@ -1,49 +1,45 @@
 import pytest
 from neo4j_genai import GenAIClient
-from unittest.mock import Mock, patch
 from neo4j.exceptions import CypherSyntaxError
 
 
-@patch(
-    "neo4j_genai.GenAIClient.database_query",
-    return_value=[{"versions": ["5.11-aura"]}],
-)
-def test_genai_client_supported_aura_version(mock_database_query, driver):
-    GenAIClient(driver)
-    mock_database_query.assert_called_once()
+def test_genai_client_supported_aura_version(driver):
+    driver.execute_query.return_value = [[{"versions": ["5.11-aura"]}], None, None]
+
+    GenAIClient(driver=driver)
 
 
-@patch(
-    "neo4j_genai.GenAIClient.database_query",
-    return_value=[{"versions": ["5.3-aura"]}],
-)
 def test_genai_client_no_supported_aura_version(driver):
-    with pytest.raises(ValueError):
-        GenAIClient(driver)
+    driver.execute_query.return_value = [[{"versions": ["5.3-aura"]}], None, None]
+
+    with pytest.raises(ValueError) as excinfo:
+        GenAIClient(driver=driver)
+
+    assert "Version index is only supported in Neo4j version 5.11 or greater" in str(
+        excinfo
+    )
 
 
-@patch(
-    "neo4j_genai.GenAIClient.database_query",
-    return_value=[{"versions": ["5.11.5"]}],
-)
-def test_genai_client_supported_version(mock_database_query, driver):
-    GenAIClient(driver)
-    mock_database_query.assert_called_once()
+def test_genai_client_supported_version(driver):
+    driver.execute_query.return_value = [[{"versions": ["5.11.5"]}], None, None]
+
+    GenAIClient(driver=driver)
 
 
-@patch(
-    "neo4j_genai.GenAIClient.database_query",
-    return_value=[{"versions": ["4.3.5"]}],
-)
 def test_genai_client_no_supported_version(driver):
-    with pytest.raises(ValueError):
-        GenAIClient(driver)
+    driver.execute_query.return_value = [[{"versions": ["4.3.5"]}], None, None]
+
+    with pytest.raises(ValueError) as excinfo:
+        GenAIClient(driver=driver)
+
+    assert "Version index is only supported in Neo4j version 5.11 or greater" in str(
+        excinfo
+    )
 
 
-@patch("neo4j_genai.GenAIClient.database_query")
-def test_create_index_happy_path(mock_database_query, client):
-    client.create_index("my-index", "People", "name", 2048, "cosine")
-    query = (
+def test_create_index_happy_path(driver, client):
+    driver.execute_query.return_value = [None, None, None]
+    create_query = (
         "CALL db.index.vector.createNodeIndex("
         "$name,"
         "$label,"
@@ -51,9 +47,12 @@ def test_create_index_happy_path(mock_database_query, client):
         "toInteger($dimensions),"
         "$similarity_fn )"
     )
-    mock_database_query.assert_called_once_with(
-        query,
-        params={
+
+    client.create_index("my-index", "People", "name", 2048, "cosine")
+
+    driver.execute_query.assert_called_once_with(
+        create_query,
+        {
             "name": "my-index",
             "label": "People",
             "property": "name",
@@ -61,11 +60,6 @@ def test_create_index_happy_path(mock_database_query, client):
             "similarity_fn": "cosine",
         },
     )
-
-
-def test_create_index_too_big_dimension(client):
-    with pytest.raises(ValueError):
-        client.create_index("my-index", "People", "name", 5024, "cosine")
 
 
 def test_create_index_validation_error_dimensions(client):
@@ -80,69 +74,56 @@ def test_create_index_validation_error_similarity_fn(client):
     assert "Error for inputs to create_index" in str(excinfo)
 
 
-@patch("neo4j_genai.GenAIClient.database_query")
-def test_drop_index(mock_database_query, client):
+def test_drop_index(driver, client):
+    driver.execute_query.return_value = [None, None, None]
+    drop_query = "DROP INDEX $name"
+
     client.drop_index("my-index")
 
-    query = "DROP INDEX $name"
-
-    mock_database_query.assert_called_with(query, params={"name": "my-index"})
+    driver.execute_query.assert_called_once_with(
+        drop_query,
+        {"name": "my-index"},
+    )
 
 
 def test_database_query_happy(client, driver):
-    class Session:
-        def __enter__(self):
-            return self
+    expected_db_result = [0, 1, 2]
+    driver.execute_query.return_value = [expected_db_result, None, None]
 
-        def __exit__(self, exc_type, exc_value, traceback):
-            pass
+    res = client._database_query("MATCH (p:$label) RETURN p", {"label": "People"})
 
-        def run(self, query, params):
-            m_list = []
-            for i in range(3):
-                mock = Mock()
-                mock.data.return_value = i
-                m_list.append(mock)
-
-            return m_list
-
-    driver.session = Session
-    res = client.database_query("MATCH (p:$label) RETURN p", {"label": "People"})
-    assert res == [0, 1, 2]
+    assert res == expected_db_result
 
 
 def test_database_query_cypher_error(client, driver):
-    class Session:
-        def __enter__(self):
-            return self
+    driver.execute_query.side_effect = CypherSyntaxError
 
-        def __exit__(self, exc_type, exc_value, traceback):
-            pass
+    with pytest.raises(ValueError) as excinfo:
+        client._database_query("MATCH (p:$label) RETURN p", {"label": "People"})
 
-        def run(self, query, params):
-            raise CypherSyntaxError
-
-    driver.session = Session
-
-    with pytest.raises(ValueError):
-        client.database_query("MATCH (p:$label) RETURN p", {"label": "People"})
+    assert "Cypher Statement is not valid" in str(excinfo)
 
 
-@patch("neo4j_genai.GenAIClient.database_query")
-def test_similarity_search_vector_happy_path(mock_database_query, client):
+def test_similarity_search_vector_happy_path(driver, client):
     index_name = "my-index"
-    query_vector = [1.1, 2.2, 3.3]
+    dimensions = 1536
+    query_vector = [1.0 for _ in range(dimensions)]
     top_k = 5
-
-    client.similarity_search(name=index_name, query_vector=query_vector, top_k=top_k)
-
-    query = """
+    driver.execute_query.return_value = [
+        [{"node": "dummy-node", "score": 1.0}],
+        None,
+        None,
+    ]
+    search_query = """
         CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
         YIELD node, score
         """
-    mock_database_query.assert_called_once_with(
-        query,
-        params={
+
+    client.similarity_search(name=index_name, query_vector=query_vector, top_k=top_k)
+
+    driver.execute_query.assert_called_once_with(
+        search_query,
+        {
             "index_name": index_name,
             "top_k": top_k,
             "query_vector": query_vector,
@@ -150,24 +131,29 @@ def test_similarity_search_vector_happy_path(mock_database_query, client):
     )
 
 
-@patch("neo4j_genai.GenAIClient.database_query")
-def test_similarity_search_text_happy_path(mock_database_query, client_with_embedder):
+def test_similarity_search_text_happy_path(driver, client_with_embedder):
+    client, embedder = client_with_embedder
     index_name = "my-index"
     query_text = "may thy knife chip and shatter"
-    query_vector = [1.0 for _ in range(1536)]
+    dimensions = 1536
+    query_vector = [1.0 for _ in range(dimensions)]
     top_k = 5
-
-    client_with_embedder.similarity_search(
-        name=index_name, query_text=query_text, top_k=top_k
-    )
-
-    query = """
+    driver.execute_query.return_value = [
+        [{"node": "dummy-node", "score": 1.0}],
+        None,
+        None,
+    ]
+    embedder.set_dimension(dimensions)
+    search_query = """
         CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
         YIELD node, score
         """
-    mock_database_query.assert_called_once_with(
-        query,
-        params={
+
+    client.similarity_search(name=index_name, query_text=query_text, top_k=top_k)
+
+    driver.execute_query.assert_called_once_with(
+        search_query,
+        {
             "index_name": index_name,
             "top_k": top_k,
             "query_vector": query_vector,
@@ -180,7 +166,7 @@ def test_similarity_search_missing_embedder_for_text(client):
     query_text = "may thy knife chip and shatter"
     top_k = 5
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Embedding method required for text query"):
         client.similarity_search(name=index_name, query_text=query_text, top_k=top_k)
 
 
@@ -190,7 +176,9 @@ def test_similarity_search_both_text_and_vector(client):
     query_vector = [1.1, 2.2, 3.3]
     top_k = 5
 
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match="You must provide exactly one of query_vector or query_text."
+    ):
         client.similarity_search(
             name=index_name,
             query_text=query_text,

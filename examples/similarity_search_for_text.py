@@ -46,7 +46,7 @@ insert_query = (
 parameters = {
     "vector": vector,
 }
-client.database_query(insert_query, params=parameters)
+client._database_query(insert_query, params=parameters)
 
 # Perform the similarity search for a text query
 query_text = "hello world"
