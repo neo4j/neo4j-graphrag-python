@@ -26,6 +26,7 @@ embedder = CustomEmbedder()
 # Initialize the client
 client = GenAIClient(driver, embedder)
 
+client.drop_index(INDEX_NAME)
 # Creating the index
 client.create_index(
     INDEX_NAME,
