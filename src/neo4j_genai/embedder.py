@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from .types import EmbeddingVector
 
 
-class Embeddings(ABC):
+class Embedder(ABC):
     """Interface for embedding models."""
 
     @abstractmethod

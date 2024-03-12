@@ -76,7 +76,7 @@ def test_create_index_validation_error_dimensions(client):
 
 def test_create_index_validation_error_similarity_fn(client):
     with pytest.raises(ValueError) as excinfo:
-        client.create_index("my-index", "People", "name", "no-dim", "algebra")
+        client.create_index("my-index", "People", "name", 1536, "algebra")
     assert "Error for inputs to create_index" in str(excinfo)
 
 
@@ -128,5 +128,72 @@ def test_database_query_cypher_error(client, driver):
         client.database_query("MATCH (p:$label) RETURN p", {"label": "People"})
 
 
-def test_similarity_search():
-    pass
+@patch("neo4j_genai.GenAIClient.database_query")
+def test_similarity_search_vector_happy_path(mock_database_query, client):
+    index_name = "my-index"
+    query_vector = [1.1, 2.2, 3.3]
+    top_k = 5
+
+    client.similarity_search(name=index_name, query_vector=query_vector, top_k=top_k)
+
+    query = """
+        CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
+        YIELD node, score
+        """
+    mock_database_query.assert_called_once_with(
+        query,
+        params={
+            "index_name": index_name,
+            "top_k": top_k,
+            "query_vector": query_vector,
+        },
+    )
+
+
+@patch("neo4j_genai.GenAIClient.database_query")
+def test_similarity_search_text_happy_path(mock_database_query, client_with_embedder):
+    index_name = "my-index"
+    query_text = "may thy knife chip and shatter"
+    query_vector = [1.0 for _ in range(1536)]
+    top_k = 5
+
+    client_with_embedder.similarity_search(
+        name=index_name, query_text=query_text, top_k=top_k
+    )
+
+    query = """
+        CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
+        YIELD node, score
+        """
+    mock_database_query.assert_called_once_with(
+        query,
+        params={
+            "index_name": index_name,
+            "top_k": top_k,
+            "query_vector": query_vector,
+        },
+    )
+
+
+def test_similarity_search_missing_embedder_for_text(client):
+    index_name = "my-index"
+    query_text = "may thy knife chip and shatter"
+    top_k = 5
+
+    with pytest.raises(ValueError):
+        client.similarity_search(name=index_name, query_text=query_text, top_k=top_k)
+
+
+def test_similarity_search_both_text_and_vector(client):
+    index_name = "my-index"
+    query_text = "may thy knife chip and shatter"
+    query_vector = [1.1, 2.2, 3.3]
+    top_k = 5
+
+    with pytest.raises(ValueError):
+        client.similarity_search(
+            name=index_name,
+            query_text=query_text,
+            query_vector=query_vector,
+            top_k=top_k,
+        )

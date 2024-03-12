@@ -2,7 +2,7 @@ from typing import List, Dict, Any, Optional
 from pydantic import ValidationError
 from neo4j import Driver
 from neo4j.exceptions import CypherSyntaxError
-from .embeddings import Embeddings
+from .embedder import Embedder
 from .types import CreateIndexModel, SimilaritySearchModel, Neo4jRecord
 
 
@@ -14,11 +14,11 @@ class GenAIClient:
     def __init__(
         self,
         driver: Driver,
-        embeddings: Optional[Embeddings] = None,
+        embedder: Optional[Embedder] = None,
     ) -> None:
         self.driver = driver
         self._verify_version()
-        self.embeddings = embeddings
+        self.embedder = embedder
 
     def _verify_version(self) -> None:
         """
@@ -147,7 +147,7 @@ class GenAIClient:
 
         Raises:
             ValueError: If validation of the input arguments fail.
-            ValueError: If no embeddings is provided.
+            ValueError: If no embedder is provided.
 
         Returns:
             List[Neo4jRecord]: The `top_k` neighbors found in vector search with their nodes and scores.
@@ -166,10 +166,11 @@ class GenAIClient:
         parameters = validated_data.model_dump(exclude_none=True)
 
         if query_text:
-            if not self.embeddings:
+            if not self.embedder:
                 raise ValueError("Embedding method required for text query.")
-            query_vector = self.embeddings.embed_query(query_text)
+            query_vector = self.embedder.embed_query(query_text)
             parameters["query_vector"] = query_vector
+            del parameters["query_text"]
 
         db_query_string = """
         CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
