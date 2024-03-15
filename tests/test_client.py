@@ -185,3 +185,38 @@ def test_similarity_search_both_text_and_vector(client):
             query_vector=query_vector,
             top_k=top_k,
         )
+
+@patch("neo4j_genai.GenAIClient._verify_version")
+def test_similarity_search_vector_bad_results(_verify_version_mock, driver):
+    custom_embeddings = MagicMock()
+
+    client = GenAIClient(driver, custom_embeddings)
+
+    index_name = "my-index"
+    dimensions = 1536
+    query_vector = [1.0 for _ in range(dimensions)]
+    top_k = 5
+
+    client.driver.execute_query.return_value = [
+        [{"node": "dummy-node", "score": "adsa"}],
+        None,
+        None,
+    ]
+    search_query = """
+        CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
+        YIELD node, score
+        """
+
+    with pytest.raises(ValueError):
+        client.similarity_search(name=index_name, query_vector=query_vector, top_k=top_k)
+
+    custom_embeddings.embed_query.assert_not_called()
+
+    client.driver.execute_query.assert_called_once_with(
+        search_query,
+        {
+            "index_name": index_name,
+            "top_k": top_k,
+            "query_vector": query_vector,
+        },
+    )
