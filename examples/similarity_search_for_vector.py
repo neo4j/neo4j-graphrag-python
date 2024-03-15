@@ -35,7 +35,8 @@ insert_query = (
 parameters = {
     "vector": vector,
 }
-client._database_query(insert_query, params=parameters)
+
+driver.execute_query(insert_query, parameters)
 
 # Perform the similarity search for a vector query
 query_vector = [random() for _ in range(DIMENSION)]

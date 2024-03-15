@@ -46,7 +46,7 @@ insert_query = (
 parameters = {
     "vector": vector,
 }
-client._database_query(insert_query, params=parameters)
+driver.execute_query(insert_query, parameters)
 
 # Perform the similarity search for a text query
 query_text = "hello world"
