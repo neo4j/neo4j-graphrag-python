@@ -1,8 +1,6 @@
 import pytest
 from neo4j_genai import GenAIClient
 from unittest.mock import MagicMock, patch
-from typing import List
-from neo4j_genai.embedder import Embedder
 
 
 @pytest.fixture

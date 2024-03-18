@@ -3,6 +3,7 @@ from neo4j_genai import GenAIClient
 from neo4j_genai.types import Neo4jRecord
 from unittest.mock import patch, MagicMock
 
+
 def test_genai_client_supported_aura_version(driver):
     driver.execute_query.return_value = [[{"versions": ["5.11-aura"]}], None, None]
 
@@ -85,6 +86,7 @@ def test_drop_index(client):
         {"name": "my-index"},
     )
 
+
 @patch("neo4j_genai.GenAIClient._verify_version")
 def test_similarity_search_vector_happy_path(_verify_version_mock, driver):
     custom_embeddings = MagicMock()
@@ -106,7 +108,9 @@ def test_similarity_search_vector_happy_path(_verify_version_mock, driver):
         YIELD node, score
         """
 
-    records = client.similarity_search(name=index_name, query_vector=query_vector, top_k=top_k)
+    records = client.similarity_search(
+        name=index_name, query_vector=query_vector, top_k=top_k
+    )
 
     custom_embeddings.embed_query.assert_not_called()
 
@@ -145,7 +149,9 @@ def test_similarity_search_text_happy_path(_verify_version_mock, driver):
         YIELD node, score
         """
 
-    records = client.similarity_search(name=index_name, query_text=query_text, top_k=top_k)
+    records = client.similarity_search(
+        name=index_name, query_text=query_text, top_k=top_k
+    )
 
     custom_embeddings.embed_query.assert_called_once_with(query_text)
 
@@ -186,6 +192,7 @@ def test_similarity_search_both_text_and_vector(client):
             top_k=top_k,
         )
 
+
 @patch("neo4j_genai.GenAIClient._verify_version")
 def test_similarity_search_vector_bad_results(_verify_version_mock, driver):
     custom_embeddings = MagicMock()
@@ -208,7 +215,9 @@ def test_similarity_search_vector_bad_results(_verify_version_mock, driver):
         """
 
     with pytest.raises(ValueError):
-        client.similarity_search(name=index_name, query_vector=query_vector, top_k=top_k)
+        client.similarity_search(
+            name=index_name, query_vector=query_vector, top_k=top_k
+        )
 
     custom_embeddings.embed_query.assert_not_called()
 
