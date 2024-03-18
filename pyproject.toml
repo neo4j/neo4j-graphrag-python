@@ -29,8 +29,6 @@ ruff = "^0.3.0"
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-exclude = ["**/tests/"]
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 filterwarnings = [
