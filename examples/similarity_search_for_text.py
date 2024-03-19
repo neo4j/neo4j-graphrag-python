@@ -1,10 +1,9 @@
 from typing import List
 from neo4j import GraphDatabase
-from neo4j.exceptions import DatabaseError
 from neo4j_genai.client import GenAIClient
 
 from random import random
-from neo4j_genai.embeddings import Embeddings
+from neo4j_genai.embedder import Embedder
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
@@ -16,16 +15,16 @@ DIMENSION = 1536
 driver = GraphDatabase.driver(URI, auth=AUTH)
 
 
-# Create Embeddings object
-class CustomEmbeddings(Embeddings):
+# Create Embedder object
+class CustomEmbedder(Embedder):
     def embed_query(self, text: str) -> List[float]:
         return [random() for _ in range(DIMENSION)]
 
 
-embeddings = CustomEmbeddings()
+embedder = CustomEmbedder()
 
 # Initialize the client
-client = GenAIClient(driver, embeddings)
+client = GenAIClient(driver, embedder)
 
 # Creating the index
 client.create_index(
@@ -47,7 +46,7 @@ insert_query = (
 parameters = {
     "vector": vector,
 }
-client.database_query(insert_query, params=parameters)
+driver.execute_query(insert_query, parameters)
 
 # Perform the similarity search for a text query
 query_text = "hello world"

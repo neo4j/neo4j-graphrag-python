@@ -1,9 +1,8 @@
-from typing import List, Dict, Any, Optional
+from typing import List, Optional
 from pydantic import ValidationError
 from neo4j import Driver
-from neo4j.exceptions import CypherSyntaxError
-from neo4j_genai.embeddings import Embeddings
-from neo4j_genai.types import CreateIndexModel, SimilaritySearchModel, Neo4jRecord
+from .embedder import Embedder
+from .types import CreateIndexModel, SimilaritySearchModel, Neo4jRecord
 
 
 class GenAIClient:
@@ -14,11 +13,11 @@ class GenAIClient:
     def __init__(
         self,
         driver: Driver,
-        embeddings: Optional[Embeddings] = None,
+        embedder: Optional[Embedder] = None,
     ) -> None:
         self.driver = driver
         self._verify_version()
-        self.embeddings = embeddings
+        self.embedder = embedder
 
     def _verify_version(self) -> None:
         """
@@ -29,9 +28,14 @@ class GenAIClient:
         indexing. Raises a ValueError if the connected Neo4j version is
         not supported.
         """
-        version = self.database_query("CALL dbms.components()")[0]["versions"][0]
+        records, _, _ = self.driver.execute_query("CALL dbms.components()")
+        version = records[0]["versions"][0]
+
         if "aura" in version:
-            version_tuple = (*tuple(map(int, version.split("-")[0].split("."))), 0)
+            version_tuple = (
+                *tuple(map(int, version.split("-")[0].split("."))),
+                0,
+            )
         else:
             version_tuple = tuple(map(int, version.split(".")))
 
@@ -41,25 +45,6 @@ class GenAIClient:
             raise ValueError(
                 "Version index is only supported in Neo4j version 5.11 or greater"
             )
-
-    def database_query(self, query: str, params: Dict = {}) -> List[Dict[str, Any]]:
-        """
-        This method sends a Cypher query to the connected Neo4j database
-        and returns the results as a list of dictionaries.
-
-        Args:
-            query (str): The Cypher query to execute.
-            params (Dict, optional): Dictionary of query parameters. Defaults to {}.
-
-        Returns:
-            List[Dict[str, Any]]: List of dictionaries containing the query results.
-        """
-        with self.driver.session() as session:
-            try:
-                data = session.run(query, params)
-                return [r.data() for r in data]
-            except CypherSyntaxError as e:
-                raise ValueError(f"Cypher Statement is not valid\n{e}")
 
     def create_index(
         self,
@@ -106,7 +91,7 @@ class GenAIClient:
             "toInteger($dimensions),"
             "$similarity_fn )"
         )
-        self.database_query(query, params=index_data.dict())
+        self.driver.execute_query(query, index_data.model_dump())
 
     def drop_index(self, name: str) -> None:
         """
@@ -121,7 +106,7 @@ class GenAIClient:
         parameters = {
             "name": name,
         }
-        self.database_query(query, params=parameters)
+        self.driver.execute_query(query, parameters)
 
     def similarity_search(
         self,
@@ -144,7 +129,7 @@ class GenAIClient:
 
         Raises:
             ValueError: If validation of the input arguments fail.
-            ValueError: If no embeddings is provided.
+            ValueError: If no embedder is provided.
 
         Returns:
             List[Neo4jRecord]: The `top_k` neighbors found in vector search with their nodes and scores.
@@ -160,22 +145,28 @@ class GenAIClient:
             error_details = e.errors()
             raise ValueError(f"Validation failed: {error_details}")
 
-        parameters = validated_data.dict(exclude_none=True)
+        parameters = validated_data.model_dump(exclude_none=True)
 
         if query_text:
-            if not self.embeddings:
+            if not self.embedder:
                 raise ValueError("Embedding method required for text query.")
-            query_vector = self.embeddings.embed_query(query_text)
+            query_vector = self.embedder.embed_query(query_text)
             parameters["query_vector"] = query_vector
+            del parameters["query_text"]
 
         db_query_string = """
-        CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector) 
+        CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
         YIELD node, score
         """
-        records = self.database_query(db_query_string, params=parameters)
+        records, _, _ = self.driver.execute_query(db_query_string, parameters)
 
         try:
-            return [Neo4jRecord(node=record["node"], score=record["score"]) for record in records]
+            return [
+                Neo4jRecord(node=record["node"], score=record["score"])
+                for record in records
+            ]
         except ValidationError as e:
             error_details = e.errors()
-            raise ValueError(f"Validation failed while constructing output: {error_details}")
+            raise ValueError(
+                f"Validation failed while constructing output: {error_details}"
+            )
