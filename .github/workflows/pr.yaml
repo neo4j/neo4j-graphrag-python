@@ -31,4 +31,4 @@ jobs:
       - name: Run tests and check coverage
         run: |
           poetry run coverage run -m pytest
-          poetry run coverage report --fail-under=85
+          poetry run coverage report --fail-under=90
