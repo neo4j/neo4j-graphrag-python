@@ -15,7 +15,7 @@ class CreateIndexModel(BaseModel):
     name: str
     label: str
     property: str
-    dimensions: int = PositiveInt
+    dimensions: PositiveInt
     similarity_fn: Literal["euclidean", "cosine"]
 
 

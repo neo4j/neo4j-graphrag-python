@@ -5,7 +5,7 @@ from unittest.mock import patch, MagicMock
 
 
 def test_genai_client_supported_aura_version(driver):
-    driver.execute_query.return_value = [[{"versions": ["5.11-aura"]}], None, None]
+    driver.execute_query.return_value = [[{"versions": ["5.18-aura"]}], None, None]
 
     GenAIClient(driver=driver)
 
@@ -16,13 +16,13 @@ def test_genai_client_no_supported_aura_version(driver):
     with pytest.raises(ValueError) as excinfo:
         GenAIClient(driver=driver)
 
-    assert "Version index is only supported in Neo4j version 5.11 or greater" in str(
+    assert "This package only supports Neo4j version 5.18.1 or greater" in str(
         excinfo
     )
 
 
 def test_genai_client_supported_version(driver):
-    driver.execute_query.return_value = [[{"versions": ["5.11.5"]}], None, None]
+    driver.execute_query.return_value = [[{"versions": ["5.19.0"]}], None, None]
 
     GenAIClient(driver=driver)
 
@@ -33,34 +33,34 @@ def test_genai_client_no_supported_version(driver):
     with pytest.raises(ValueError) as excinfo:
         GenAIClient(driver=driver)
 
-    assert "Version index is only supported in Neo4j version 5.11 or greater" in str(
+    assert "This package only supports Neo4j version 5.18.1 or greater" in str(
         excinfo
     )
 
 
 def test_create_index_happy_path(driver, client):
     driver.execute_query.return_value = [None, None, None]
-    create_query = (
-        "CALL db.index.vector.createNodeIndex("
-        "$name,"
-        "$label,"
-        "$property,"
-        "toInteger($dimensions),"
-        "$similarity_fn )"
-    )
+    create_query = ("CREATE VECTOR INDEX $name IF NOT EXISTS FOR (n:People) ON n.name OPTIONS "
+    "{ indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }")
 
     client.create_index("my-index", "People", "name", 2048, "cosine")
 
-    driver.execute_query.assert_called_once_with(
-        create_query,
-        {
-            "name": "my-index",
-            "label": "People",
-            "property": "name",
-            "dimensions": 2048,
-            "similarity_fn": "cosine",
-        },
-    )
+    driver.execute_query.assert_called_once_with(create_query, {"name": "my-index", "dimensions": 2048, "similarity_fn": "cosine"})
+
+def test_create_index_ensure_escaping(driver, client):
+    driver.execute_query.return_value = [None, None, None]
+    create_query = ("CREATE VECTOR INDEX $name IF NOT EXISTS FOR (n:People) ON n.name OPTIONS "
+    "{ indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }")
+
+    client.create_index("my-complicated-`-index", "People", "name", 2048, "cosine")
+
+    driver.execute_query.assert_called_once_with(create_query, {"name": "my-complicated-`-index", "dimensions": 2048, "similarity_fn": "cosine"})
+
+
+def test_create_index_validation_error_dimensions_negative_integer(client):
+    with pytest.raises(ValueError) as excinfo:
+        client.create_index("my-index", "People", "name", -5, "cosine")
+    assert "Error for inputs to create_index" in str(excinfo)
 
 
 def test_create_index_validation_error_dimensions(client):
