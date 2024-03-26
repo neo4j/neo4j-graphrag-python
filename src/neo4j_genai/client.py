@@ -24,7 +24,7 @@ class GenAIClient:
         Check if the connected Neo4j database version supports vector indexing.
 
         Queries the Neo4j database to retrieve its version and compares it
-        against a target version (5.11.0) that is known to support vector
+        against a target version (5.18.1) that is known to support vector
         indexing. Raises a ValueError if the connected Neo4j version is
         not supported.
         """
@@ -36,14 +36,15 @@ class GenAIClient:
                 *tuple(map(int, version.split("-")[0].split("."))),
                 0,
             )
+            target_version = (5, 18, 0)
         else:
             version_tuple = tuple(map(int, version.split(".")))
+            target_version = (5, 18, 1)
 
-        target_version = (5, 11, 0)
 
         if version_tuple < target_version:
             raise ValueError(
-                "Version index is only supported in Neo4j version 5.11 or greater"
+                "This package only supports Neo4j version 5.18.1 or greater"
             )
 
     def create_index(
@@ -71,27 +72,22 @@ class GenAIClient:
         Raises:
             ValueError: If validation of the input arguments fail.
         """
-        index_data = {
-            "name": name,
-            "label": label,
-            "property": property,
-            "dimensions": dimensions,
-            "similarity_fn": similarity_fn,
-        }
         try:
-            index_data = CreateIndexModel(**index_data)
+            CreateIndexModel(**{
+                "name": name,
+                "label": label,
+                "property": property,
+                "dimensions": dimensions,
+                "similarity_fn": similarity_fn,
+        })
         except ValidationError as e:
             raise ValueError(f"Error for inputs to create_index {str(e)}")
 
         query = (
-            "CALL db.index.vector.createNodeIndex("
-            "$name,"
-            "$label,"
-            "$property,"
-            "toInteger($dimensions),"
-            "$similarity_fn )"
+            f"CREATE VECTOR INDEX $name IF NOT EXISTS FOR (n:{label}) ON n.{property} OPTIONS "
+            "{ indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }"
         )
-        self.driver.execute_query(query, index_data.model_dump())
+        self.driver.execute_query(query, {"name": name, "dimensions": dimensions, "similarity_fn": similarity_fn})
 
     def drop_index(self, name: str) -> None:
         """
