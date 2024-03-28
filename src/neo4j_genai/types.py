@@ -41,14 +41,3 @@ class SimilaritySearchModel(BaseModel):
 class CustomSimilaritySearchModel(SimilaritySearchModel):
     custom_retrieval_query: str
     custom_params: Optional[Dict[str, Any]] = None
-
-    @model_validator(mode="before")
-    def combine_custom_params(cls, values):
-        """
-        Combine custom_params dict into the main model's fields.
-        """
-        custom_params = values.pop("custom_params", None) or {}
-        for key, value in custom_params.items():
-            if key not in values:
-                values[key] = value
-        return values

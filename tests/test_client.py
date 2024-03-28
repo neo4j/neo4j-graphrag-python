@@ -265,7 +265,7 @@ def test_custom_retrieval_query_happy_path(_verify_version_mock, driver):
         YIELD node, score
         """
     custom_retrieval_query = """
-        RETURN node.id as node_id, node.text as text, score
+        RETURN node.id AS node_id, node.text AS text, score
         """
 
     records = client.custom_search_similar_vectors(
@@ -283,6 +283,58 @@ def test_custom_retrieval_query_happy_path(_verify_version_mock, driver):
             "index_name": index_name,
             "top_k": top_k,
             "query_vector": embed_query_vector,
+        },
+    )
+
+    assert records == [{"node_id": 123, "text": "dummy-text", "score": 1.0}]
+
+
+@patch("neo4j_genai.GenAIClient._verify_version")
+def test_custom_retrieval_query_with_params(_verify_version_mock, driver):
+    embed_query_vector = [1.0 for _ in range(1536)]
+    custom_embeddings = MagicMock()
+    custom_embeddings.embed_query.return_value = embed_query_vector
+
+    client = GenAIClient(driver, custom_embeddings)
+
+    index_name = "my-index"
+    query_text = "may thy knife chip and shatter"
+    top_k = 5
+
+    driver.execute_query.return_value = [
+        [{"node_id": 123, "text": "dummy-text", "score": 1.0}],
+        None,
+        None,
+    ]
+
+    search_query = """
+        CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
+        YIELD node, score
+        """
+    custom_retrieval_query = """
+        RETURN node.id AS node_id, node.text AS text, score, {test: $param} AS metadata
+        """
+    custom_params = {
+        "param": "dummy-param",
+    }
+
+    records = client.custom_search_similar_vectors(
+        name=index_name,
+        query_text=query_text,
+        top_k=top_k,
+        custom_retrieval_query=custom_retrieval_query,
+        custom_params=custom_params,
+    )
+
+    custom_embeddings.embed_query.assert_called_once_with(query_text)
+
+    driver.execute_query.assert_called_once_with(
+        search_query + custom_retrieval_query,
+        {
+            "index_name": index_name,
+            "top_k": top_k,
+            "query_vector": embed_query_vector,
+            "param": "dummy-param",
         },
     )
 

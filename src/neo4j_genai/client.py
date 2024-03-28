@@ -119,7 +119,7 @@ class GenAIClient:
         query_vector: Optional[List[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
-    ) -> Any:
+    ) -> List[Neo4jRecord]:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         See the following documentation for more details:
 
@@ -137,8 +137,7 @@ class GenAIClient:
             ValueError: If no embedder is provided.
 
         Returns:
-            Any: The `top_k` neighbors found in vector search with their nodes and scores.
-            If custom_retrieval_query is provided, this is changed.
+            List[Neo4jRecord]: The `top_k` neighbors found in vector search with their nodes and scores.
         """
         try:
             validated_data = SimilaritySearchModel(
@@ -196,7 +195,7 @@ class GenAIClient:
             query_text (Optional[str], optional): The text to get the closest neighbors of. Defaults to None.
             top_k (int, optional): The number of neighbors to return. Defaults to 5.
             custom_retrieval_query (Optional[str], optional: Custom query to use as suffix for retrieval query. Defaults to None
-            custom_params (Optional[str], optional: Custom query to use as suffix for retrieval query. Defaults to None
+            custom_params (Optional[Dict[str, Any]], optional: Query parameters to provide for the custom query. Defaults to None
 
         Raises:
             ValueError: If validation of the input arguments fail.
@@ -204,7 +203,6 @@ class GenAIClient:
 
         Returns:
             Any: The `top_k` neighbors found in vector search with their nodes and scores.
-            If custom_retrieval_query is provided, this is changed.
         """
         try:
             validated_data = CustomSimilaritySearchModel(
@@ -226,12 +224,17 @@ class GenAIClient:
             parameters["query_vector"] = self.embedder.embed_query(query_text)
             del parameters["query_text"]
 
+        if custom_params:
+            for key, value in custom_params.items():
+                if key not in parameters:
+                    parameters[key] = value
+            del parameters["custom_params"]
+
         query_prefix = """
         CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
         YIELD node, score
         """
         search_query = query_prefix + parameters["custom_retrieval_query"]
         del parameters["custom_retrieval_query"]
-
         records, _, _ = self.driver.execute_query(search_query, parameters)
         return records
