@@ -1,5 +1,6 @@
 from typing import List, Any, Literal, Optional
-from pydantic import BaseModel, PositiveInt, model_validator
+from pydantic import BaseModel, PositiveInt, model_validator, field_validator
+from neo4j import Driver
 
 
 class Neo4jRecord(BaseModel):
@@ -11,12 +12,34 @@ class EmbeddingVector(BaseModel):
     vector: List[float]
 
 
-class CreateIndexModel(BaseModel):
+class IndexModel(BaseModel):
+    driver: Any
+
+    @field_validator("driver")
+    def check_driver_is_valid(cls, v):
+        if not isinstance(v, Driver):
+            raise ValueError("driver must be an instance of neo4j.Driver")
+        return v
+
+
+class VectorIndexModel(IndexModel):
     name: str
     label: str
     property: str
     dimensions: PositiveInt
     similarity_fn: Literal["euclidean", "cosine"]
+
+
+class FulltextIndexModel(IndexModel):
+    name: str
+    label: str
+    node_properties: List[str]
+
+    @field_validator("node_properties")
+    def check_node_properties_not_empty(cls, v):
+        if len(v) == 0:
+            raise ValueError("node_properties cannot be an empty list")
+        return v
 
 
 class SimilaritySearchModel(BaseModel):

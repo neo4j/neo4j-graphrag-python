@@ -2,7 +2,7 @@ from typing import List
 
 from neo4j import Driver
 from pydantic import ValidationError
-from .types import CreateIndexModel
+from .types import VectorIndexModel, FulltextIndexModel
 
 
 def create_vector_index(
@@ -17,7 +17,7 @@ def create_vector_index(
     This method constructs a Cypher query and executes it
     to create a new vector index in Neo4j.
 
-    See Cypher manual on [Create node index](https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_createNodeIndex)
+    See Cypher manual on [Create vector index](https://neo4j.com/docs/cypher-manual/current/indexes/semantic-indexes/vector-indexes/#indexes-vector-create)
 
     Args:
         driver (Driver): Neo4j Python driver instance.
@@ -32,8 +32,9 @@ def create_vector_index(
         ValueError: If validation of the input arguments fail.
     """
     try:
-        CreateIndexModel(
+        VectorIndexModel(
             **{
+                "driver": driver,
                 "name": name,
                 "label": label,
                 "property": property,
@@ -42,7 +43,7 @@ def create_vector_index(
             }
         )
     except ValidationError as e:
-        raise ValueError(f"Error for inputs to create_index {str(e)}")
+        raise ValueError(f"Error for inputs to create_vector_index {str(e)}")
 
     query = (
         f"CREATE VECTOR INDEX $name IF NOT EXISTS FOR (n:{label}) ON n.{property} OPTIONS "
@@ -54,18 +55,44 @@ def create_vector_index(
 
 
 def create_fulltext_index(
-    driver: Driver, name: str, label: str, text_node_properties: List[str] = []
+    driver: Driver, name: str, label: str, node_properties: List[str]
 ) -> None:
-    """ """
+    """
+    This method constructs a Cypher query and executes it
+    to create a new fulltext index in Neo4j.
+
+    See Cypher manual on [Create fulltext index](https://neo4j.com/docs/cypher-manual/current/indexes/semantic-indexes/full-text-indexes/#create-full-text-indexes)
+
+    Args:
+        driver (Driver): Neo4j Python driver instance.
+        name (str): The unique name of the index.
+        label (str): The node label to be indexed.
+        node_properties (List[str]): The node properties to create the fulltext index on.
+
+    Raises:
+        ValueError: If validation of the input arguments fail.
+    """
+    try:
+        FulltextIndexModel(
+            **{
+                "driver": driver,
+                "name": name,
+                "label": label,
+                "node_properties": node_properties,
+            }
+        )
+    except ValidationError as e:
+        raise ValueError(f"Error for inputs to create_fulltext_index {str(e)}")
+
     query = (
         "CREATE FULLTEXT INDEX $name"
         f"FOR (n:`{label}`) ON EACH "
-        f"[{', '.join(['n.`' + property + '`' for property in text_node_properties])}]"
+        f"[{', '.join(['n.`' + prop + '`' for prop in node_properties])}]"
     )
     driver.execute_query(query, {"name": name})
 
 
-def drop_vector_index(driver: Driver, name: str) -> None:
+def drop_index(driver: Driver, name: str) -> None:
     """
     This method constructs a Cypher query and executes it
     to drop a vector index in Neo4j.

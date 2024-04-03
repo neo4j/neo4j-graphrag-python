@@ -2,7 +2,7 @@ from typing import List, Optional
 from pydantic import ValidationError
 from neo4j import Driver
 from .embedder import Embedder
-from .types import CreateIndexModel, SimilaritySearchModel, Neo4jRecord
+from .types import VectorIndexModel, SimilaritySearchModel, Neo4jRecord
 
 
 class GenAIClient:
@@ -72,7 +72,7 @@ class GenAIClient:
             ValueError: If validation of the input arguments fail.
         """
         try:
-            CreateIndexModel(
+            VectorIndexModel(
                 **{
                     "name": name,
                     "label": label,
