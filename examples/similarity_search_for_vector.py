@@ -1,7 +1,9 @@
 from neo4j import GraphDatabase
-from neo4j_genai.client import GenAIClient
+from neo4j_genai import VectorRetriever
 
 from random import random
+
+from neo4j_genai.indexes import create_vector_index
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
@@ -12,11 +14,12 @@ DIMENSION = 1536
 # Connect to Neo4j database
 driver = GraphDatabase.driver(URI, auth=AUTH)
 
-# Initialize the client
-client = GenAIClient(driver)
+# Initialize the retriever
+retriever = VectorRetriever(driver)
 
 # Creating the index
-client.create_index(
+create_vector_index(
+    driver,
     INDEX_NAME,
     label="Document",
     property="propertyKey",
@@ -40,4 +43,4 @@ driver.execute_query(insert_query, parameters)
 
 # Perform the similarity search for a vector query
 query_vector = [random() for _ in range(DIMENSION)]
-print(client.similarity_search(INDEX_NAME, query_vector=query_vector, top_k=5))
+print(retriever.search(INDEX_NAME, query_vector=query_vector, top_k=5))

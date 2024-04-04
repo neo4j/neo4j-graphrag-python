@@ -1,4 +1,4 @@
-from .client import GenAIClient
+from .retrievers import VectorRetriever
 
 
-__all__ = ["GenAIClient"]
+__all__ = ["VectorRetriever"]

@@ -2,12 +2,12 @@ from typing import List, Optional
 from pydantic import ValidationError
 from neo4j import Driver
 from .embedder import Embedder
-from .types import VectorIndexModel, SimilaritySearchModel, Neo4jRecord
+from .types import SimilaritySearchModel, Neo4jRecord
 
 
-class GenAIClient:
+class VectorRetriever:
     """
-    Provides functionality to use Neo4j's GenAI features
+    Provides retrieval methods using vector search over embeddings
     """
 
     def __init__(
@@ -46,69 +46,7 @@ class GenAIClient:
                 "This package only supports Neo4j version 5.18.1 or greater"
             )
 
-    def create_index(
-        self,
-        name: str,
-        label: str,
-        property: str,
-        dimensions: int,
-        similarity_fn: str,
-    ) -> None:
-        """
-        This method constructs a Cypher query and executes it
-        to create a new vector index in Neo4j.
-
-        See Cypher manual on [Create node index](https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_createNodeIndex)
-
-        Args:
-            name (str): The unique name of the index.
-            label (str): The node label to be indexed.
-            property (str): The property key of a node which contains embedding values.
-            dimensions (int): Vector embedding dimension
-            similarity_fn (str): case-insensitive values for the vector similarity function:
-                ``euclidean`` or ``cosine``.
-
-        Raises:
-            ValueError: If validation of the input arguments fail.
-        """
-        try:
-            VectorIndexModel(
-                **{
-                    "name": name,
-                    "label": label,
-                    "property": property,
-                    "dimensions": dimensions,
-                    "similarity_fn": similarity_fn,
-                }
-            )
-        except ValidationError as e:
-            raise ValueError(f"Error for inputs to create_index {str(e)}")
-
-        query = (
-            f"CREATE VECTOR INDEX $name IF NOT EXISTS FOR (n:{label}) ON n.{property} OPTIONS "
-            "{ indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }"
-        )
-        self.driver.execute_query(
-            query,
-            {"name": name, "dimensions": dimensions, "similarity_fn": similarity_fn},
-        )
-
-    def drop_index(self, name: str) -> None:
-        """
-        This method constructs a Cypher query and executes it
-        to drop a vector index in Neo4j.
-        See Cypher manual on [Drop vector indexes](https://neo4j.com/docs/cypher-manual/current/indexes-for-vector-search/#indexes-vector-drop)
-
-        Args:
-            name (str): The name of the index to delete.
-        """
-        query = "DROP INDEX $name"
-        parameters = {
-            "name": name,
-        }
-        self.driver.execute_query(query, parameters)
-
-    def similarity_search(
+    def search(
         self,
         name: str,
         query_vector: Optional[List[float]] = None,

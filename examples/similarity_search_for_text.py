@@ -1,9 +1,10 @@
 from typing import List
 from neo4j import GraphDatabase
-from neo4j_genai.client import GenAIClient
+from neo4j_genai import VectorRetriever
 
 from random import random
 from neo4j_genai.embedder import Embedder
+from neo4j_genai.indexes import create_vector_index
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
@@ -23,11 +24,12 @@ class CustomEmbedder(Embedder):
 
 embedder = CustomEmbedder()
 
-# Initialize the client
-client = GenAIClient(driver, embedder)
+# Initialize the retriever
+retriever = VectorRetriever(driver, embedder)
 
 # Creating the index
-client.create_index(
+create_vector_index(
+    driver,
     INDEX_NAME,
     label="Document",
     property="propertyKey",
@@ -50,4 +52,4 @@ driver.execute_query(insert_query, parameters)
 
 # Perform the similarity search for a text query
 query_text = "hello world"
-print(client.similarity_search(INDEX_NAME, query_text=query_text, top_k=5))
+print(retriever.search(INDEX_NAME, query_text=query_text, top_k=5))
