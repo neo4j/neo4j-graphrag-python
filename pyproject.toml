@@ -15,6 +15,7 @@ python = "^3.8.1"
 neo4j = "^5.17.0"
 types-requests = "^2.31.0.20240218"
 pydantic = "^2.6.3"
+langchain-openai = "^0.1.1"
 
 [tool.poetry.group.dev.dependencies]
 pylint = "^3.1.0"
