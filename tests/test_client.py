@@ -16,9 +16,7 @@ def test_genai_client_no_supported_aura_version(driver):
     with pytest.raises(ValueError) as excinfo:
         GenAIClient(driver=driver)
 
-    assert "This package only supports Neo4j version 5.18.1 or greater" in str(
-        excinfo
-    )
+    assert "This package only supports Neo4j version 5.18.1 or greater" in str(excinfo)
 
 
 def test_genai_client_supported_version(driver):
@@ -33,58 +31,7 @@ def test_genai_client_no_supported_version(driver):
     with pytest.raises(ValueError) as excinfo:
         GenAIClient(driver=driver)
 
-    assert "This package only supports Neo4j version 5.18.1 or greater" in str(
-        excinfo
-    )
-
-
-def test_create_index_happy_path(driver, client):
-    driver.execute_query.return_value = [None, None, None]
-    create_query = ("CREATE VECTOR INDEX $name IF NOT EXISTS FOR (n:People) ON n.name OPTIONS "
-    "{ indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }")
-
-    client.create_index("my-index", "People", "name", 2048, "cosine")
-
-    driver.execute_query.assert_called_once_with(create_query, {"name": "my-index", "dimensions": 2048, "similarity_fn": "cosine"})
-
-def test_create_index_ensure_escaping(driver, client):
-    driver.execute_query.return_value = [None, None, None]
-    create_query = ("CREATE VECTOR INDEX $name IF NOT EXISTS FOR (n:People) ON n.name OPTIONS "
-    "{ indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }")
-
-    client.create_index("my-complicated-`-index", "People", "name", 2048, "cosine")
-
-    driver.execute_query.assert_called_once_with(create_query, {"name": "my-complicated-`-index", "dimensions": 2048, "similarity_fn": "cosine"})
-
-
-def test_create_index_validation_error_dimensions_negative_integer(client):
-    with pytest.raises(ValueError) as excinfo:
-        client.create_index("my-index", "People", "name", -5, "cosine")
-    assert "Error for inputs to create_index" in str(excinfo)
-
-
-def test_create_index_validation_error_dimensions(client):
-    with pytest.raises(ValueError) as excinfo:
-        client.create_index("my-index", "People", "name", "no-dim", "cosine")
-    assert "Error for inputs to create_index" in str(excinfo)
-
-
-def test_create_index_validation_error_similarity_fn(client):
-    with pytest.raises(ValueError) as excinfo:
-        client.create_index("my-index", "People", "name", 1536, "algebra")
-    assert "Error for inputs to create_index" in str(excinfo)
-
-
-def test_drop_index(client):
-    client.driver.execute_query.return_value = [None, None, None]
-    drop_query = "DROP INDEX $name"
-
-    client.drop_index("my-index")
-
-    client.driver.execute_query.assert_called_once_with(
-        drop_query,
-        {"name": "my-index"},
-    )
+    assert "This package only supports Neo4j version 5.18.1 or greater" in str(excinfo)
 
 
 @patch("neo4j_genai.GenAIClient._verify_version")

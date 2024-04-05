@@ -2,7 +2,7 @@ from typing import List, Optional
 from pydantic import ValidationError
 from neo4j import Driver
 from .embedder import Embedder
-from .types import CreateIndexModel, SimilaritySearchModel, Neo4jRecord
+from .types import VectorIndexModel, SimilaritySearchModel, Neo4jRecord
 
 
 class GenAIClient:
@@ -41,7 +41,6 @@ class GenAIClient:
             version_tuple = tuple(map(int, version.split(".")))
             target_version = (5, 18, 1)
 
-
         if version_tuple < target_version:
             raise ValueError(
                 "This package only supports Neo4j version 5.18.1 or greater"
@@ -73,13 +72,15 @@ class GenAIClient:
             ValueError: If validation of the input arguments fail.
         """
         try:
-            CreateIndexModel(**{
-                "name": name,
-                "label": label,
-                "property": property,
-                "dimensions": dimensions,
-                "similarity_fn": similarity_fn,
-        })
+            VectorIndexModel(
+                **{
+                    "name": name,
+                    "label": label,
+                    "property": property,
+                    "dimensions": dimensions,
+                    "similarity_fn": similarity_fn,
+                }
+            )
         except ValidationError as e:
             raise ValueError(f"Error for inputs to create_index {str(e)}")
 
@@ -87,7 +88,10 @@ class GenAIClient:
             f"CREATE VECTOR INDEX $name IF NOT EXISTS FOR (n:{label}) ON n.{property} OPTIONS "
             "{ indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }"
         )
-        self.driver.execute_query(query, {"name": name, "dimensions": dimensions, "similarity_fn": similarity_fn})
+        self.driver.execute_query(
+            query,
+            {"name": name, "dimensions": dimensions, "similarity_fn": similarity_fn},
+        )
 
     def drop_index(self, name: str) -> None:
         """
