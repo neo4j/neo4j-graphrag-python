@@ -24,9 +24,6 @@ class CustomEmbedder(Embedder):
 
 embedder = CustomEmbedder()
 
-# Initialize the retriever
-retriever = VectorRetriever(driver, embedder)
-
 # Creating the index
 create_vector_index(
     driver,
@@ -36,6 +33,9 @@ create_vector_index(
     dimensions=DIMENSION,
     similarity_fn="euclidean",
 )
+
+# Initialize the retriever
+retriever = VectorRetriever(driver, INDEX_NAME, embedder)
 
 # Upsert the query
 vector = [random() for _ in range(DIMENSION)]
@@ -52,4 +52,4 @@ driver.execute_query(insert_query, parameters)
 
 # Perform the similarity search for a text query
 query_text = "hello world"
-print(retriever.search(INDEX_NAME, query_text=query_text, top_k=5))
+print(retriever.search(query_text=query_text, top_k=5))

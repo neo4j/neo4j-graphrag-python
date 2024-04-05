@@ -46,7 +46,7 @@ def create_vector_index(
         raise ValueError(f"Error for inputs to create_vector_index {str(e)}")
 
     query = (
-        f"CREATE VECTOR INDEX $name IF NOT EXISTS FOR (n:{label}) ON n.{property} OPTIONS "
+        f"CREATE VECTOR INDEX $name FOR (n:{label}) ON n.{property} OPTIONS "
         "{ indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }"
     )
     driver.execute_query(

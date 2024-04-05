@@ -20,7 +20,7 @@ driver = GraphDatabase.driver(URI, auth=AUTH)
 embedder = OpenAIEmbeddings(model="text-embedding-3-large")
 
 # Initialize the retriever
-retriever = VectorRetriever(driver, embedder)
+retriever = VectorRetriever(driver, INDEX_NAME, embedder)
 
 # Creating the index
 create_vector_index(
@@ -47,4 +47,4 @@ driver.execute_query(insert_query, parameters)
 
 # Perform the similarity search for a text query
 query_text = "hello world"
-print(retriever.search(INDEX_NAME, query_text=query_text, top_k=5))
+print(retriever.search(query_text=query_text, top_k=5))

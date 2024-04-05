@@ -14,9 +14,6 @@ DIMENSION = 1536
 # Connect to Neo4j database
 driver = GraphDatabase.driver(URI, auth=AUTH)
 
-# Initialize the retriever
-retriever = VectorRetriever(driver)
-
 # Creating the index
 create_vector_index(
     driver,
@@ -26,6 +23,9 @@ create_vector_index(
     dimensions=DIMENSION,
     similarity_fn="euclidean",
 )
+
+# Initialize the retriever
+retriever = VectorRetriever(driver, INDEX_NAME)
 
 # Upsert the vector
 vector = [random() for _ in range(DIMENSION)]
@@ -43,4 +43,4 @@ driver.execute_query(insert_query, parameters)
 
 # Perform the similarity search for a vector query
 query_vector = [random() for _ in range(DIMENSION)]
-print(retriever.search(INDEX_NAME, query_vector=query_vector, top_k=5))
+print(retriever.search(query_vector=query_vector, top_k=5))

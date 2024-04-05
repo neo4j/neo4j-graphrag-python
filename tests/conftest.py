@@ -12,4 +12,4 @@ def driver():
 @pytest.fixture
 @patch("neo4j_genai.VectorRetriever._verify_version")
 def retriever(_verify_version_mock, driver):
-    return VectorRetriever(driver)
+    return VectorRetriever(driver, "my-index")

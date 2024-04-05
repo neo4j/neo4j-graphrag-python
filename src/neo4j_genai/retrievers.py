@@ -13,10 +13,12 @@ class VectorRetriever:
     def __init__(
         self,
         driver: Driver,
+        index_name: str,
         embedder: Optional[Embedder] = None,
     ) -> None:
         self.driver = driver
         self._verify_version()
+        self.index_name = index_name
         self.embedder = embedder
 
     def _verify_version(self) -> None:
@@ -48,7 +50,6 @@ class VectorRetriever:
 
     def search(
         self,
-        name: str,
         query_vector: Optional[List[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
@@ -74,7 +75,7 @@ class VectorRetriever:
         """
         try:
             validated_data = SimilaritySearchModel(
-                index_name=name,
+                index_name=self.index_name,
                 top_k=top_k,
                 query_vector=query_vector,
                 query_text=query_text,
