@@ -45,9 +45,11 @@ weaviate-client = "^4.6.1"
 sentence-transformers = "^2.7.0"
 langchain-community = "^0.2.0"
 requests = "^2.32.0"
+sphinx = { version = "^7.2.6", python = "^3.9" }
 
 [tool.poetry.extras]
 external_clients = ["weaviate-client"]
+
 
 [build-system]
 requires = ["poetry-core"]
