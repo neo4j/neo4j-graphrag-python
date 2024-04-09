@@ -9,7 +9,7 @@ from neo4j_genai.indexes import (
 
 def test_create_vector_index_happy_path(driver):
     create_query = (
-        "CREATE VECTOR INDEX $name IF NOT EXISTS FOR (n:People) ON n.name OPTIONS "
+        "CREATE VECTOR INDEX $name FOR (n:People) ON n.name OPTIONS "
         "{ indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }"
     )
 
@@ -21,9 +21,9 @@ def test_create_vector_index_happy_path(driver):
     )
 
 
-def test_create_vector_index_ensure_escaping(driver, client):
+def test_create_vector_index_ensure_escaping(driver):
     create_query = (
-        "CREATE VECTOR INDEX $name IF NOT EXISTS FOR (n:People) ON n.name OPTIONS "
+        "CREATE VECTOR INDEX $name FOR (n:People) ON n.name OPTIONS "
         "{ indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }"
     )
 
@@ -97,7 +97,7 @@ def test_create_fulltext_index_empty_node_properties(driver):
     assert "Error for inputs to create_fulltext_index" in str(excinfo)
 
 
-def test_create_fulltext_index_ensure_escaping(driver, client):
+def test_create_fulltext_index_ensure_escaping(driver):
     label = "node-label"
     text_node_properties = ["property-1", "property-2"]
     create_query = (
