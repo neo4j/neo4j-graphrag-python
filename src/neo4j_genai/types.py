@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import List, Any, Literal, Optional
+from typing import Any, Literal, Optional
 from pydantic import BaseModel, PositiveInt, model_validator, field_validator
 from neo4j import Driver
 
@@ -24,7 +24,7 @@ class Neo4jRecord(BaseModel):
 
 
 class EmbeddingVector(BaseModel):
-    vector: List[float]
+    vector: list[float]
 
 
 class IndexModel(BaseModel):
@@ -48,7 +48,7 @@ class VectorIndexModel(IndexModel):
 class FulltextIndexModel(IndexModel):
     name: str
     label: str
-    node_properties: List[str]
+    node_properties: list[str]
 
     @field_validator("node_properties")
     def check_node_properties_not_empty(cls, v):
@@ -60,7 +60,7 @@ class FulltextIndexModel(IndexModel):
 class SimilaritySearchModel(BaseModel):
     index_name: str
     top_k: PositiveInt = 5
-    query_vector: Optional[List[float]] = None
+    query_vector: Optional[list[float]] = None
     query_text: Optional[str] = None
 
     @model_validator(mode="before")
