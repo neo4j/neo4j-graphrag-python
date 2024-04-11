@@ -34,13 +34,15 @@ create_vector_index(
 
 # Upsert the query
 vector = [random() for _ in range(DIMENSION)]
+
 insert_query = (
-    "MERGE (n:Document)"
+    "MERGE (n:Document {id: $id})"
     "WITH n "
     "CALL db.create.setNodeVectorProperty(n, 'propertyKey', $vector)"
     "RETURN n"
 )
 parameters = {
+    "id": 0,
     "vector": vector,
 }
 driver.execute_query(insert_query, parameters)
