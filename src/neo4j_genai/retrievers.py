@@ -160,6 +160,7 @@ class VectorCypherRetriever(VectorRetriever):
             query_vector (Optional[list[float]], optional): The vector embeddings to get the closest neighbors of. Defaults to None.
             query_text (Optional[str], optional): The text to get the closest neighbors of. Defaults to None.
             top_k (int, optional): The number of neighbors to return. Defaults to 5.
+            query_params (Optional[dict[str, Any]], optional): Parameters for the Cypher query. Defaults to None.
 
         Raises:
             ValueError: If validation of the input arguments fail.
