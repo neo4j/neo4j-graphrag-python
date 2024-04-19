@@ -13,7 +13,9 @@ pip install neo4j-genai
 ```
 
 ## Example
+
 After setting up a Neo4j database instance:
+
 ```python
 from neo4j import GraphDatabase
 from neo4j_genai import VectorRetriever
@@ -64,6 +66,24 @@ print(retriever.search(query_vector=query_vector, top_k=5))
 
 ```
 
+# Development
+
+## Install dependencies
+
+```bash
+poetry install
+```
+
+## Run tests
+
+Open a new virtual enviroment and then run the tests.
+
+```bash
+poetry shell
+pytest
+```
+
 ## Further information
-- [The official Neo4j Python driver](https://github.com/neo4j/neo4j-python-driver)
-- [Neo4j GenAI integrations](https://neo4j.com/docs/cypher-manual/current/genai-integrations/)
+
+-   [The official Neo4j Python driver](https://github.com/neo4j/neo4j-python-driver)
+-   [Neo4j GenAI integrations](https://neo4j.com/docs/cypher-manual/current/genai-integrations/)
