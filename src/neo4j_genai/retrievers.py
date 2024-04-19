@@ -167,7 +167,7 @@ class VectorCypherRetriever(VectorRetriever):
             ValueError: If no embedder is provided.
 
         Returns:
-            Any: The results of the search query
+            list[Neo4jRecord]: The results of the search query
         """
         try:
             validated_data = VectorCypherSearchModel(
