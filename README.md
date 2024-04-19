@@ -76,7 +76,7 @@ poetry install
 
 ## Run tests
 
-Open a new virtual enviroment and then run the tests.
+Open a new virtual environment and then run the tests.
 
 ```bash
 poetry shell
