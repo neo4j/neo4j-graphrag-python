@@ -13,8 +13,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import List
-
 from neo4j import Driver
 from pydantic import ValidationError
 from .types import VectorIndexModel, FulltextIndexModel
@@ -70,7 +68,7 @@ def create_vector_index(
 
 
 def create_fulltext_index(
-    driver: Driver, name: str, label: str, node_properties: List[str]
+    driver: Driver, name: str, label: str, node_properties: list[str]
 ) -> None:
     """
     This method constructs a Cypher query and executes it
@@ -82,7 +80,7 @@ def create_fulltext_index(
         driver (Driver): Neo4j Python driver instance.
         name (str): The unique name of the index.
         label (str): The node label to be indexed.
-        node_properties (List[str]): The node properties to create the fulltext index on.
+        node_properties (list[str]): The node properties to create the fulltext index on.
 
     Raises:
         ValueError: If validation of the input arguments fail.

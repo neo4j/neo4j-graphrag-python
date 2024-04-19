@@ -13,11 +13,11 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import List, Optional
+from typing import Optional, Any
 from pydantic import ValidationError
 from neo4j import Driver
 from .embedder import Embedder
-from .types import SimilaritySearchModel, Neo4jRecord
+from .types import SimilaritySearchModel, Neo4jRecord, VectorCypherSearchModel
 
 
 class VectorRetriever:
@@ -65,10 +65,10 @@ class VectorRetriever:
 
     def search(
         self,
-        query_vector: Optional[List[float]] = None,
+        query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
-    ) -> List[Neo4jRecord]:
+    ) -> list[Neo4jRecord]:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         See the following documentation for more details:
 
@@ -76,8 +76,7 @@ class VectorRetriever:
         - [db.index.vector.queryNodes()](https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_queryNodes)
 
         Args:
-            name (str): Refers to the unique name of the vector index to query.
-            query_vector (Optional[List[float]], optional): The vector embeddings to get the closest neighbors of. Defaults to None.
+            query_vector (Optional[list[float]], optional): The vector embeddings to get the closest neighbors of. Defaults to None.
             query_text (Optional[str], optional): The text to get the closest neighbors of. Defaults to None.
             top_k (int, optional): The number of neighbors to return. Defaults to 5.
 
@@ -86,7 +85,7 @@ class VectorRetriever:
             ValueError: If no embedder is provided.
 
         Returns:
-            List[Neo4jRecord]: The `top_k` neighbors found in vector search with their nodes and scores.
+            list[Neo4jRecord]: The `top_k` neighbors found in vector search with their nodes and scores.
         """
         try:
             validated_data = SimilaritySearchModel(
@@ -124,3 +123,81 @@ class VectorRetriever:
             raise ValueError(
                 f"Validation failed while constructing output: {error_details}"
             )
+
+
+class VectorCypherRetriever(VectorRetriever):
+    """
+    Provides retrieval method using vector similarity and custom Cypher query
+    """
+
+    def __init__(
+        self,
+        driver: Driver,
+        index_name: str,
+        retrieval_query: str,
+        embedder: Optional[Embedder] = None,
+    ) -> None:
+        self.driver = driver
+        self._verify_version()
+        self.index_name = index_name
+        self.retrieval_query = retrieval_query
+        self.embedder = embedder
+
+    def search(
+        self,
+        query_vector: Optional[list[float]] = None,
+        query_text: Optional[str] = None,
+        top_k: int = 5,
+        query_params: Optional[dict[str, Any]] = None,
+    ) -> list[Neo4jRecord]:
+        """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
+        See the following documentation for more details:
+
+        - [Query a vector index](https://neo4j.com/docs/cypher-manual/current/indexes-for-vector-search/#indexes-vector-query)
+        - [db.index.vector.queryNodes()](https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_queryNodes)
+
+        Args:
+            query_vector (Optional[list[float]], optional): The vector embeddings to get the closest neighbors of. Defaults to None.
+            query_text (Optional[str], optional): The text to get the closest neighbors of. Defaults to None.
+            top_k (int, optional): The number of neighbors to return. Defaults to 5.
+            query_params (Optional[dict[str, Any]], optional): Parameters for the Cypher query. Defaults to None.
+
+        Raises:
+            ValueError: If validation of the input arguments fail.
+            ValueError: If no embedder is provided.
+
+        Returns:
+            Any: The results of the search query
+        """
+        try:
+            validated_data = VectorCypherSearchModel(
+                index_name=self.index_name,
+                top_k=top_k,
+                query_vector=query_vector,
+                query_text=query_text,
+                query_params=query_params,
+            )
+        except ValidationError as e:
+            raise ValueError(f"Validation failed: {e.errors()}")
+
+        parameters = validated_data.model_dump(exclude_none=True)
+
+        if query_text:
+            if not self.embedder:
+                raise ValueError("Embedding method required for text query.")
+            parameters["query_vector"] = self.embedder.embed_query(query_text)
+            del parameters["query_text"]
+
+        if query_params:
+            for key, value in query_params.items():
+                if key not in parameters:
+                    parameters[key] = value
+            del parameters["query_params"]
+
+        query_prefix = """
+                CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
+                YIELD node, score
+                """
+        search_query = query_prefix + self.retrieval_query
+        records, _, _ = self.driver.execute_query(search_query, parameters)
+        return records

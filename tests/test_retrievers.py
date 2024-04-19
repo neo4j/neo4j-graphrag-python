@@ -15,7 +15,11 @@
 
 import pytest
 from unittest.mock import patch, MagicMock
+
+from neo4j.exceptions import CypherSyntaxError
+
 from neo4j_genai import VectorRetriever
+from neo4j_genai.retrievers import VectorCypherRetriever
 from neo4j_genai.types import Neo4jRecord
 
 
@@ -125,15 +129,15 @@ def test_similarity_search_text_happy_path(_verify_version_mock, driver):
     assert records == [Neo4jRecord(node="dummy-node", score=1.0)]
 
 
-def test_similarity_search_missing_embedder_for_text(retriever):
+def test_vector_retriever_search_missing_embedder_for_text(vector_retriever):
     query_text = "may thy knife chip and shatter"
     top_k = 5
 
     with pytest.raises(ValueError, match="Embedding method required for text query"):
-        retriever.search(query_text=query_text, top_k=top_k)
+        vector_retriever.search(query_text=query_text, top_k=top_k)
 
 
-def test_similarity_search_both_text_and_vector(retriever):
+def test_vector_retriever_search_both_text_and_vector(vector_retriever):
     query_text = "may thy knife chip and shatter"
     query_vector = [1.1, 2.2, 3.3]
     top_k = 5
@@ -141,7 +145,32 @@ def test_similarity_search_both_text_and_vector(retriever):
     with pytest.raises(
         ValueError, match="You must provide exactly one of query_vector or query_text."
     ):
-        retriever.search(
+        vector_retriever.search(
+            query_text=query_text,
+            query_vector=query_vector,
+            top_k=top_k,
+        )
+
+
+def test_vector_cypher_retriever_search_missing_embedder_for_text(
+    vector_cypher_retriever,
+):
+    query_text = "may thy knife chip and shatter"
+    top_k = 5
+
+    with pytest.raises(ValueError, match="Embedding method required for text query"):
+        vector_cypher_retriever.search(query_text=query_text, top_k=top_k)
+
+
+def test_vector_cypher_retriever_search_both_text_and_vector(vector_cypher_retriever):
+    query_text = "may thy knife chip and shatter"
+    query_vector = [1.1, 2.2, 3.3]
+    top_k = 5
+
+    with pytest.raises(
+        ValueError, match="You must provide exactly one of query_vector or query_text."
+    ):
+        vector_cypher_retriever.search(
             query_text=query_text,
             query_vector=query_vector,
             top_k=top_k,
@@ -182,3 +211,118 @@ def test_similarity_search_vector_bad_results(_verify_version_mock, driver):
             "query_vector": query_vector,
         },
     )
+
+
+@patch("neo4j_genai.VectorCypherRetriever._verify_version")
+def test_retrieval_query_happy_path(_verify_version_mock, driver):
+    embed_query_vector = [1.0 for _ in range(1536)]
+    custom_embeddings = MagicMock()
+    custom_embeddings.embed_query.return_value = embed_query_vector
+    index_name = "my-index"
+    retrieval_query = """
+        RETURN node.id AS node_id, node.text AS text, score
+        """
+    retriever = VectorCypherRetriever(
+        driver, index_name, retrieval_query, embedder=custom_embeddings
+    )
+    query_text = "may thy knife chip and shatter"
+    top_k = 5
+    driver.execute_query.return_value = [
+        [{"node_id": 123, "text": "dummy-text", "score": 1.0}],
+        None,
+        None,
+    ]
+    search_query = """
+                CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
+                YIELD node, score
+                """
+
+    records = retriever.search(
+        query_text=query_text,
+        top_k=top_k,
+    )
+
+    custom_embeddings.embed_query.assert_called_once_with(query_text)
+    driver.execute_query.assert_called_once_with(
+        search_query + retrieval_query,
+        {
+            "index_name": index_name,
+            "top_k": top_k,
+            "query_vector": embed_query_vector,
+        },
+    )
+    assert records == [{"node_id": 123, "text": "dummy-text", "score": 1.0}]
+
+
+@patch("neo4j_genai.VectorCypherRetriever._verify_version")
+def test_retrieval_query_with_params(_verify_version_mock, driver):
+    embed_query_vector = [1.0 for _ in range(1536)]
+    custom_embeddings = MagicMock()
+    custom_embeddings.embed_query.return_value = embed_query_vector
+    index_name = "my-index"
+    retrieval_query = """
+        RETURN node.id AS node_id, node.text AS text, score, {test: $param} AS metadata
+        """
+    query_params = {
+        "param": "dummy-param",
+    }
+    retriever = VectorCypherRetriever(
+        driver,
+        index_name,
+        retrieval_query,
+        embedder=custom_embeddings,
+    )
+    query_text = "may thy knife chip and shatter"
+    top_k = 5
+    driver.execute_query.return_value = [
+        [{"node_id": 123, "text": "dummy-text", "score": 1.0}],
+        None,
+        None,
+    ]
+    search_query = """
+                CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
+                YIELD node, score
+                """
+
+    records = retriever.search(
+        query_text=query_text,
+        top_k=top_k,
+        query_params=query_params,
+    )
+
+    custom_embeddings.embed_query.assert_called_once_with(query_text)
+
+    driver.execute_query.assert_called_once_with(
+        search_query + retrieval_query,
+        {
+            "index_name": index_name,
+            "top_k": top_k,
+            "query_vector": embed_query_vector,
+            "param": "dummy-param",
+        },
+    )
+
+    assert records == [{"node_id": 123, "text": "dummy-text", "score": 1.0}]
+
+
+@patch("neo4j_genai.VectorCypherRetriever._verify_version")
+def test_retrieval_query_cypher_error(_verify_version_mock, driver):
+    embed_query_vector = [1.0 for _ in range(1536)]
+    custom_embeddings = MagicMock()
+    custom_embeddings.embed_query.return_value = embed_query_vector
+    index_name = "my-index"
+    retrieval_query = """
+        this is not a cypher query
+        """
+    retriever = VectorCypherRetriever(
+        driver, index_name, retrieval_query, embedder=custom_embeddings
+    )
+    query_text = "may thy knife chip and shatter"
+    top_k = 5
+    driver.execute_query.side_effect = CypherSyntaxError
+
+    with pytest.raises(CypherSyntaxError):
+        retriever.search(
+            query_text=query_text,
+            top_k=top_k,
+        )
