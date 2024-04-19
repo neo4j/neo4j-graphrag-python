@@ -17,7 +17,7 @@ from typing import Optional, Any
 from pydantic import ValidationError
 from neo4j import Driver
 from .embedder import Embedder
-from .types import SimilaritySearchModel, Neo4jRecord
+from .types import SimilaritySearchModel, Neo4jRecord, VectorCypherSearchModel
 
 
 class VectorRetriever:
@@ -134,15 +134,13 @@ class VectorCypherRetriever(VectorRetriever):
         self,
         driver: Driver,
         index_name: str,
-        custom_retrieval_query: str,
-        custom_query_params: Optional[dict[str, Any]] = None,
+        retrieval_query: str,
         embedder: Optional[Embedder] = None,
     ) -> None:
         self.driver = driver
         self._verify_version()
         self.index_name = index_name
-        self.custom_retrieval_query = custom_retrieval_query
-        self.custom_query_params = custom_query_params
+        self.retrieval_query = retrieval_query
         self.embedder = embedder
 
     def search(
@@ -150,6 +148,7 @@ class VectorCypherRetriever(VectorRetriever):
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
+        query_params: Optional[dict[str, Any]] = None,
     ) -> list[Neo4jRecord]:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         See the following documentation for more details:
@@ -170,11 +169,12 @@ class VectorCypherRetriever(VectorRetriever):
             Any: The results of the search query
         """
         try:
-            validated_data = SimilaritySearchModel(
+            validated_data = VectorCypherSearchModel(
                 index_name=self.index_name,
                 top_k=top_k,
                 query_vector=query_vector,
                 query_text=query_text,
+                query_params=query_params,
             )
         except ValidationError as e:
             raise ValueError(f"Validation failed: {e.errors()}")
@@ -187,15 +187,16 @@ class VectorCypherRetriever(VectorRetriever):
             parameters["query_vector"] = self.embedder.embed_query(query_text)
             del parameters["query_text"]
 
-        if self.custom_query_params:
-            for key, value in self.custom_query_params.items():
+        if query_params:
+            for key, value in query_params.items():
                 if key not in parameters:
                     parameters[key] = value
+            del parameters["query_params"]
 
         query_prefix = """
                 CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
                 YIELD node, score
                 """
-        search_query = query_prefix + self.custom_retrieval_query
+        search_query = query_prefix + self.retrieval_query
         records, _, _ = self.driver.execute_query(search_query, parameters)
         return records

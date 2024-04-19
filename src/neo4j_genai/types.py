@@ -74,3 +74,7 @@ class SimilaritySearchModel(BaseModel):
                 "You must provide exactly one of query_vector or query_text."
             )
         return values
+
+
+class VectorCypherSearchModel(SimilaritySearchModel):
+    query_params: Optional[dict[str, Any]] = None
