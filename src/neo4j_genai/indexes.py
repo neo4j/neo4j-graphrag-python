@@ -98,7 +98,7 @@ def create_fulltext_index(
         raise ValueError(f"Error for inputs to create_fulltext_index {str(e)}")
 
     query = (
-        "CREATE FULLTEXT INDEX $name"
+        "CREATE FULLTEXT INDEX $name "
         f"FOR (n:`{label}`) ON EACH "
         f"[{', '.join(['n.`' + prop + '`' for prop in node_properties])}]"
     )
