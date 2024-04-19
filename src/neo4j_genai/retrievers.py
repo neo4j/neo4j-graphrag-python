@@ -30,10 +30,12 @@ class VectorRetriever:
         driver: Driver,
         index_name: str,
         embedder: Optional[Embedder] = None,
+        pluck: Optional[list[str]] = None,
     ) -> None:
         self.driver = driver
         self._verify_version()
         self.index_name = index_name
+        self.pluck = pluck
         self.embedder = embedder
 
     def _verify_version(self) -> None:
@@ -111,6 +113,11 @@ class VectorRetriever:
         CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
         YIELD node, score
         """
+
+        if self.pluck:
+            pluck_properties = ", ".join([f".{prop}" for prop in self.pluck])
+            db_query_string += f"RETURN node {{{pluck_properties}}} as node, score"
+
         records, _, _ = self.driver.execute_query(db_query_string, parameters)
 
         try:
