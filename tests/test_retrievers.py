@@ -129,6 +129,49 @@ def test_similarity_search_text_happy_path(_verify_version_mock, driver):
     assert records == [Neo4jRecord(node="dummy-node", score=1.0)]
 
 
+@patch("neo4j_genai.VectorRetriever._verify_version")
+def test_similarity_search_text_return_properties(_verify_version_mock, driver):
+    embed_query_vector = [1.0 for _ in range(3)]
+    custom_embeddings = MagicMock()
+    custom_embeddings.embed_query.return_value = embed_query_vector
+
+    index_name = "my-index"
+    query_text = "may thy knife chip and shatter"
+    top_k = 5
+    return_properties = ["node-property-1", "node-property-2"]
+
+    retriever = VectorRetriever(
+        driver, index_name, custom_embeddings, return_properties=return_properties
+    )
+
+    driver.execute_query.return_value = [
+        [{"node": "dummy-node", "score": 1.0}],
+        None,
+        None,
+    ]
+
+    search_query = """
+        CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
+        YIELD node, score
+        RETURN node {.node-property-1, .node-property-2} as node, score
+        """
+
+    records = retriever.search(query_text=query_text, top_k=top_k)
+
+    custom_embeddings.embed_query.assert_called_once_with(query_text)
+
+    driver.execute_query.assert_called_once_with(
+        search_query.rstrip(),
+        {
+            "index_name": index_name,
+            "top_k": top_k,
+            "query_vector": embed_query_vector,
+        },
+    )
+
+    assert records == [Neo4jRecord(node="dummy-node", score=1.0)]
+
+
 def test_vector_retriever_search_missing_embedder_for_text(vector_retriever):
     query_text = "may thy knife chip and shatter"
     top_k = 5
