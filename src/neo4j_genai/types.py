@@ -18,7 +18,7 @@ from pydantic import BaseModel, PositiveInt, model_validator, field_validator
 from neo4j import Driver
 
 
-class Neo4jRecord(BaseModel):
+class VectorSearchRecord(BaseModel):
     node: Any
     score: float
 

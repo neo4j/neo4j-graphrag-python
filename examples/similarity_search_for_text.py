@@ -3,7 +3,7 @@ from neo4j_genai import VectorRetriever
 
 from random import random
 from neo4j_genai.embedder import Embedder
-from neo4j_genai.indexes import create_vector_index
+from neo4j_genai.indexes import create_vector_index, drop_index
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
@@ -52,4 +52,4 @@ driver.execute_query(insert_query, parameters)
 
 # Perform the similarity search for a text query
 query_text = "hello world"
-print(retriever.search(query_text=query_text, top_k=5))
+# print(retriever.search(query_text=query_text, top_k=5))
