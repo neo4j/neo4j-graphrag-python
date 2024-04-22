@@ -66,7 +66,8 @@ class Retriever(ABC):
 
 class VectorRetriever(Retriever):
     """
-    Provides retrieval method using vector search over embeddings
+    Provides retrieval method using vector search over embeddings.
+    If an embedder is provided, it needs to have the required Embedder type.
     """
 
     def __init__(
@@ -80,11 +81,6 @@ class VectorRetriever(Retriever):
         self._verify_version()
         self.index_name = index_name
         self.return_properties = return_properties
-
-        if embedder and not isinstance(embedder, Embedder):
-            raise TypeError(
-                "Provided 'embedder' must be an instance of Embedder with an 'embed_query' method."
-            )
         self.embedder = embedder
 
     def search(
@@ -160,7 +156,8 @@ class VectorRetriever(Retriever):
 
 class VectorCypherRetriever(Retriever):
     """
-    Provides retrieval method using vector similarity and custom Cypher query
+    Provides retrieval method using vector similarity and custom Cypher query.
+    If an embedder is provided, it needs to have the required Embedder type.
     """
 
     def __init__(
@@ -174,11 +171,6 @@ class VectorCypherRetriever(Retriever):
         self._verify_version()
         self.index_name = index_name
         self.retrieval_query = retrieval_query
-
-        if embedder and not isinstance(embedder, Embedder):
-            raise TypeError(
-                "Provided 'embedder' must be an instance of Embedder with an 'embed_query' method."
-            )
         self.embedder = embedder
 
     def search(

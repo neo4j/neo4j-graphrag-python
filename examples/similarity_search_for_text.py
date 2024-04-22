@@ -3,7 +3,7 @@ from neo4j_genai import VectorRetriever
 
 from random import random
 from neo4j_genai.embedder import Embedder
-from neo4j_genai.indexes import create_vector_index, drop_index
+from neo4j_genai.indexes import create_vector_index
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
@@ -15,7 +15,7 @@ DIMENSION = 1536
 driver = GraphDatabase.driver(URI, auth=AUTH)
 
 
-# Create Embedder object
+# Create CustomEmbedder object with the required Embedder type
 class CustomEmbedder(Embedder):
     def embed_query(self, text: str) -> list[float]:
         return [random() for _ in range(DIMENSION)]
@@ -52,4 +52,4 @@ driver.execute_query(insert_query, parameters)
 
 # Perform the similarity search for a text query
 query_text = "hello world"
-# print(retriever.search(query_text=query_text, top_k=5))
+print(retriever.search(query_text=query_text, top_k=5))
