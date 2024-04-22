@@ -127,7 +127,14 @@ class VectorRetriever:
 
 class VectorCypherRetriever(VectorRetriever):
     """
-    Provides retrieval method using vector similarity and custom Cypher query
+    Provides retrieval method using vector similarity and custom Cypher query.
+    When providing the custom query, note that the existing variable `node` can be used.
+    The query prefix:
+    ```
+    CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
+    YIELD node, score
+    ```
+
     """
 
     def __init__(
