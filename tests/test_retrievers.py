@@ -130,7 +130,7 @@ def test_similarity_search_text_happy_path(_verify_version_mock, driver):
 
 
 @patch("neo4j_genai.VectorRetriever._verify_version")
-def test_similarity_search_text_pluck(_verify_version_mock, driver):
+def test_similarity_search_text_return_properties(_verify_version_mock, driver):
     embed_query_vector = [1.0 for _ in range(3)]
     custom_embeddings = MagicMock()
     custom_embeddings.embed_query.return_value = embed_query_vector
@@ -138,9 +138,11 @@ def test_similarity_search_text_pluck(_verify_version_mock, driver):
     index_name = "my-index"
     query_text = "may thy knife chip and shatter"
     top_k = 5
-    pluck = ["node-property-1", "node-property-2"]
+    return_properties = ["node-property-1", "node-property-2"]
 
-    retriever = VectorRetriever(driver, index_name, custom_embeddings, pluck=pluck)
+    retriever = VectorRetriever(
+        driver, index_name, custom_embeddings, return_properties=return_properties
+    )
 
     driver.execute_query.return_value = [
         [{"node": "dummy-node", "score": 1.0}],

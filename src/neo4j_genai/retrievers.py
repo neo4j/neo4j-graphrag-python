@@ -30,12 +30,12 @@ class VectorRetriever:
         driver: Driver,
         index_name: str,
         embedder: Optional[Embedder] = None,
-        pluck: Optional[list[str]] = None,
+        return_properties: Optional[list[str]] = None,
     ) -> None:
         self.driver = driver
         self._verify_version()
         self.index_name = index_name
-        self.pluck = pluck
+        self.return_properties = return_properties
         self.embedder = embedder
 
     def _verify_version(self) -> None:
@@ -114,9 +114,13 @@ class VectorRetriever:
         YIELD node, score
         """
 
-        if self.pluck:
-            pluck_properties = ", ".join([f".{prop}" for prop in self.pluck])
-            db_query_string += f"RETURN node {{{pluck_properties}}} as node, score"
+        if self.return_properties:
+            return_properties_cypher = ", ".join(
+                [f".{prop}" for prop in self.return_properties]
+            )
+            db_query_string += (
+                f"RETURN node {{{return_properties_cypher}}} as node, score"
+            )
 
         records, _, _ = self.driver.execute_query(db_query_string, parameters)
 
