@@ -15,7 +15,7 @@ DIMENSION = 1536
 driver = GraphDatabase.driver(URI, auth=AUTH)
 
 
-# Create Embedder object
+# Create CustomEmbedder object with the required Embedder type
 class CustomEmbedder(Embedder):
     def embed_query(self, text: str) -> list[float]:
         return [random() for _ in range(DIMENSION)]

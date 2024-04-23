@@ -20,7 +20,7 @@ from neo4j.exceptions import CypherSyntaxError
 
 from neo4j_genai import VectorRetriever
 from neo4j_genai.retrievers import VectorCypherRetriever
-from neo4j_genai.types import Neo4jRecord
+from neo4j_genai.types import VectorSearchRecord
 
 
 def test_vector_retriever_supported_aura_version(driver):
@@ -87,7 +87,7 @@ def test_similarity_search_vector_happy_path(_verify_version_mock, driver):
         },
     )
 
-    assert records == [Neo4jRecord(node="dummy-node", score=1.0)]
+    assert records == [VectorSearchRecord(node="dummy-node", score=1.0)]
 
 
 @patch("neo4j_genai.VectorRetriever._verify_version")
@@ -126,7 +126,7 @@ def test_similarity_search_text_happy_path(_verify_version_mock, driver):
         },
     )
 
-    assert records == [Neo4jRecord(node="dummy-node", score=1.0)]
+    assert records == [VectorSearchRecord(node="dummy-node", score=1.0)]
 
 
 @patch("neo4j_genai.VectorRetriever._verify_version")
@@ -169,7 +169,7 @@ def test_similarity_search_text_return_properties(_verify_version_mock, driver):
         },
     )
 
-    assert records == [Neo4jRecord(node="dummy-node", score=1.0)]
+    assert records == [VectorSearchRecord(node="dummy-node", score=1.0)]
 
 
 def test_vector_retriever_search_missing_embedder_for_text(vector_retriever):

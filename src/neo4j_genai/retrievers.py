@@ -12,31 +12,25 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
+from abc import abstractmethod, ABC
 from typing import Optional, Any
 from pydantic import ValidationError
-from neo4j import Driver
+from neo4j import Driver, Record
 from .embedder import Embedder
-from .types import SimilaritySearchModel, Neo4jRecord, VectorCypherSearchModel
+from .types import (
+    SimilaritySearchModel,
+    VectorSearchRecord,
+    VectorCypherSearchModel,
+)
 
 
-class VectorRetriever:
+class Retriever(ABC):
     """
-    Provides retrieval methods using vector search over embeddings
+    Abstract class for Neo4j retrievers
     """
 
-    def __init__(
-        self,
-        driver: Driver,
-        index_name: str,
-        embedder: Optional[Embedder] = None,
-        return_properties: Optional[list[str]] = None,
-    ) -> None:
+    def __init__(self, driver: Driver):
         self.driver = driver
-        self._verify_version()
-        self.index_name = index_name
-        self.return_properties = return_properties
-        self.embedder = embedder
 
     def _verify_version(self) -> None:
         """
@@ -65,12 +59,36 @@ class VectorRetriever:
                 "This package only supports Neo4j version 5.18.1 or greater"
             )
 
+    @abstractmethod
+    def search(self, *args, **kwargs) -> Any:
+        pass
+
+
+class VectorRetriever(Retriever):
+    """
+    Provides retrieval method using vector search over embeddings.
+    If an embedder is provided, it needs to have the required Embedder type.
+    """
+
+    def __init__(
+        self,
+        driver: Driver,
+        index_name: str,
+        embedder: Optional[Embedder] = None,
+        return_properties: Optional[list[str]] = None,
+    ) -> None:
+        super().__init__(driver)
+        self._verify_version()
+        self.index_name = index_name
+        self.return_properties = return_properties
+        self.embedder = embedder
+
     def search(
         self,
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
-    ) -> list[Neo4jRecord]:
+    ) -> list[VectorSearchRecord]:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         See the following documentation for more details:
 
@@ -87,7 +105,7 @@ class VectorRetriever:
             ValueError: If no embedder is provided.
 
         Returns:
-            list[Neo4jRecord]: The `top_k` neighbors found in vector search with their nodes and scores.
+            list[VectorSearchRecord]: The `top_k` neighbors found in vector search with their nodes and scores.
         """
         try:
             validated_data = SimilaritySearchModel(
@@ -126,7 +144,7 @@ class VectorRetriever:
 
         try:
             return [
-                Neo4jRecord(node=record["node"], score=record["score"])
+                VectorSearchRecord(node=record["node"], score=record["score"])
                 for record in records
             ]
         except ValidationError as e:
@@ -136,16 +154,10 @@ class VectorRetriever:
             )
 
 
-class VectorCypherRetriever(VectorRetriever):
+class VectorCypherRetriever(Retriever):
     """
     Provides retrieval method using vector similarity and custom Cypher query.
-    When providing the custom query, note that the existing variable `node` can be used.
-    The query prefix:
-    ```
-    CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
-    YIELD node, score
-    ```
-
+    If an embedder is provided, it needs to have the required Embedder type.
     """
 
     def __init__(
@@ -155,7 +167,7 @@ class VectorCypherRetriever(VectorRetriever):
         retrieval_query: str,
         embedder: Optional[Embedder] = None,
     ) -> None:
-        self.driver = driver
+        super().__init__(driver)
         self._verify_version()
         self.index_name = index_name
         self.retrieval_query = retrieval_query
@@ -167,7 +179,7 @@ class VectorCypherRetriever(VectorRetriever):
         query_text: Optional[str] = None,
         top_k: int = 5,
         query_params: Optional[dict[str, Any]] = None,
-    ) -> list[Neo4jRecord]:
+    ) -> list[Record]:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         See the following documentation for more details:
 
@@ -185,7 +197,7 @@ class VectorCypherRetriever(VectorRetriever):
             ValueError: If no embedder is provided.
 
         Returns:
-            list[Neo4jRecord]: The results of the search query
+            list[Record]: The results of the search query
         """
         try:
             validated_data = VectorCypherSearchModel(
