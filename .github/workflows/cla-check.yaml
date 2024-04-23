@@ -27,6 +27,6 @@ jobs:
           owner=$(echo "$GITHUB_REPOSITORY" | cut -d/ -f1)
           repository=$(echo "$GITHUB_REPOSITORY" | cut -d/ -f2)
 
-          ./bin/examine-pull-request "$owner" "$repository" "${{ secrets.NEO4J_TEAM_GRAPHQL_PERSONAL_ACCESS_TOKEN }}" "$PULL_REQUEST_NUMBER" cla-database.csv
+          ./bin/examine-pull-request "$owner" "$repository" "${{ secrets.NEO4J_TEAM_GENAI_PERSONAL_ACCESS_TOKEN }}" "$PULL_REQUEST_NUMBER" cla-database.csv
         env:
           PULL_REQUEST_NUMBER: ${{ github.event.number }}

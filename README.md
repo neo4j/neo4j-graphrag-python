@@ -94,9 +94,9 @@ and/or [Discord](https://discord.gg/neo4j).
 
 ### Make changes
 
-1. Fork the respository.
-2. Install Node.js and Yarn. For more information, see [the development guide](./docs/contributing/DEVELOPING.md).
-3. Create a working branch from `dev` and start with your changes!
+1. Fork the repository.
+2. Install Python and Poetry. For more information, see [the development guide](./docs/contributing/DEVELOPING.md).
+3. Create a working branch from `main` and start with your changes!
 
 ### Pull request
 
@@ -104,8 +104,6 @@ When you're finished with your changes, create a pull request, also known as a P
 
 * Ensure that you have [signed the CLA](https://neo4j.com/developer/contributing-code/#sign-cla).
 * Ensure that the base of your PR is set to `main`.
-* Fill out the template so that we can easily review your PR. The template helps
-reviewers understand your changes as well as the purpose of the pull request.
 * Don't forget to [link your PR to an issue](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue)
 if you are solving one.
 * Enable the checkbox to [allow maintainer edits](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/allowing-changes-to-a-pull-request-branch-created-from-a-fork)
