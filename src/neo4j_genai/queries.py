@@ -17,12 +17,16 @@ from typing import Optional
 from neo4j_genai.types import SearchType
 
 
-def get_search_query(search_type: SearchType, return_properties: Optional[list[str]] = None,):
+def get_search_query(
+    search_type: SearchType,
+    return_properties: Optional[list[str]] = None,
+    retrieval_query: Optional[str] = None,
+):
     query_map = {
-        SearchType.Vector: (
-            "CALL db.index.vector.queryNodes($index, $k, $embedding) YIELD node, score "
+        SearchType.VECTOR: (
+            "CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector) "
         ),
-        SearchType.Hybrid: (
+        SearchType.HYBRID: (
             "CALL { "
             "CALL db.index.vector.queryNodes($vector_index_name, $top_k, $query_vector) "
             "YIELD node, score "
@@ -37,14 +41,16 @@ def get_search_query(search_type: SearchType, return_properties: Optional[list[s
         ),
     }
 
-    search_query = query_map[search_type]
+    base_query = query_map[search_type]
+    additional_query = ""
 
-    if return_properties:
-        return_properties_cypher = ", ".join(
-            [f".{prop}" for prop in return_properties]
-        )
-        search_query += "YIELD node, score "
-        search_query += f"RETURN node {{{return_properties_cypher}}} as node, score"
+    if retrieval_query:
+        additional_query += retrieval_query
+    elif return_properties:
+        return_properties_cypher = ", ".join([f".{prop}" for prop in return_properties])
+        additional_query += "YIELD node, score "
+        additional_query += f"RETURN node {{{return_properties_cypher}}} as node, score"
     else:
-        search_query += "RETURN node, score"
-    return search_query
+        additional_query += "RETURN node, score"
+
+    return base_query + additional_query
