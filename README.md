@@ -2,6 +2,10 @@
 
 This repository contains the official Neo4j GenAI features for Python.
 
+The purpose of this package is to provide a first party package to developers,
+where Neo4j can guarantee long term commitment and maintenance as well as being
+fast to ship new features and high performing patterns and methods.
+
 # Usage
 
 ## Installation
@@ -14,23 +18,48 @@ To install the latest stable version, use:
 pip install neo4j-genai
 ```
 
-## Example
+## Examples
 
-After setting up a Neo4j database instance:
+While the library has more retrievers than shown here, the following examples should be able to get you started.
+
+### Performing a simple similarity search
+
+Assumption: Neo4j running with populated vector index in place.
 
 ```python
 from neo4j import GraphDatabase
 from neo4j_genai import VectorRetriever
 
-from random import random
+URI = "neo4j://localhost:7687"
+AUTH = ("neo4j", "password")
 
+INDEX_NAME = "embedding-name"
+
+# Connect to Neo4j database
+driver = GraphDatabase.driver(URI, auth=AUTH)
+
+# Initialize the retriever
+retriever = VectorRetriever(driver, INDEX_NAME)
+
+# Perform the similarity search for a vector query
+query_text = "How do I do similarity search in Neo4j?"
+response = retriever.search(query_text=query_text, top_k=5)
+```
+
+### Creating a vector index
+
+When creating a vector index, make sure you match the number of dimensions in the index with the number of dimensions the embeddings have.
+
+Assumption: Neo4j running
+
+```python
+from neo4j import GraphDatabase
 from neo4j_genai.indexes import create_vector_index
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
 
-INDEX_NAME = "embedding-name"
-DIMENSION = 1536
+INDEX_NAME = "chunk-index"
 
 # Connect to Neo4j database
 driver = GraphDatabase.driver(URI, auth=AUTH)
@@ -40,20 +69,36 @@ create_vector_index(
     driver,
     INDEX_NAME,
     label="Document",
-    property="propertyKey",
-    dimensions=DIMENSION,
+    property="textProperty",
+    dimensions=1536,
     similarity_fn="euclidean",
 )
 
-# Initialize the retriever
-retriever = VectorRetriever(driver, INDEX_NAME)
+```
+
+### Populating the Neo4j Vector Index
+
+This library does not write to the database, that is up to you.  
+See below for how to write using Cypher via the Neo4j driver.
+
+Assumption: Neo4j running with a defined vector index
+
+```python
+from neo4j import GraphDatabase
+from random import random
+
+URI = "neo4j://localhost:7687"
+AUTH = ("neo4j", "password")
+
+# Connect to Neo4j database
+driver = GraphDatabase.driver(URI, auth=AUTH)
 
 # Upsert the vector
 vector = [random() for _ in range(DIMENSION)]
 insert_query = (
     "MERGE (n:Document {id: $id})"
     "WITH n "
-    "CALL db.create.setNodeVectorProperty(n, 'propertyKey', $vector)"
+    "CALL db.create.setNodeVectorProperty(n, 'textProperty', $vector)"
     "RETURN n"
 )
 parameters = {
@@ -61,11 +106,6 @@ parameters = {
     "vector": vector,
 }
 driver.execute_query(insert_query, parameters)
-
-# Perform the similarity search for a vector query
-query_vector = [random() for _ in range(DIMENSION)]
-print(retriever.search(query_vector=query_vector, top_k=5))
-
 ```
 
 # Development
@@ -75,7 +115,6 @@ print(retriever.search(query_vector=query_vector, top_k=5))
 ```bash
 poetry install
 ```
-
 
 ## Getting started
 
@@ -102,18 +141,17 @@ and/or [Discord](https://discord.gg/neo4j).
 
 When you're finished with your changes, create a pull request, also known as a PR.
 
-* Ensure that you have [signed the CLA](https://neo4j.com/developer/contributing-code/#sign-cla).
-* Ensure that the base of your PR is set to `main`.
-* Don't forget to [link your PR to an issue](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue)
-if you are solving one.
-* Enable the checkbox to [allow maintainer edits](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/allowing-changes-to-a-pull-request-branch-created-from-a-fork)
-so that maintainers can make any necessary tweaks and update your branch for merge.
-* Reviewers may ask for changes to be made before a PR can be merged, either using
-[suggested changes](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/incorporating-feedback-in-your-pull-request)
-or normal pull request comments. You can apply suggested changes directly through
-the UI, and any other changes can be made in your fork and committed to the PR branch.
-* As you update your PR and apply changes, mark each conversation as [resolved](https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/commenting-on-a-pull-request#resolving-conversations).
-
+-   Ensure that you have [signed the CLA](https://neo4j.com/developer/contributing-code/#sign-cla).
+-   Ensure that the base of your PR is set to `main`.
+-   Don't forget to [link your PR to an issue](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue)
+    if you are solving one.
+-   Enable the checkbox to [allow maintainer edits](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/allowing-changes-to-a-pull-request-branch-created-from-a-fork)
+    so that maintainers can make any necessary tweaks and update your branch for merge.
+-   Reviewers may ask for changes to be made before a PR can be merged, either using
+    [suggested changes](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/incorporating-feedback-in-your-pull-request)
+    or normal pull request comments. You can apply suggested changes directly through
+    the UI, and any other changes can be made in your fork and committed to the PR branch.
+-   As you update your PR and apply changes, mark each conversation as [resolved](https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/commenting-on-a-pull-request#resolving-conversations).
 
 ## Run tests
 
