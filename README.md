@@ -24,7 +24,7 @@ While the library has more retrievers than shown here, the following examples sh
 
 ### Performing a simple similarity search
 
-Assumptions: Neo4j running with populated vector index in place.
+Assumption: Neo4j running with populated vector index in place.
 
 ```python
 from neo4j import GraphDatabase
