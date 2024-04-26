@@ -74,3 +74,11 @@ class SimilaritySearchModel(BaseModel):
 
 class VectorCypherSearchModel(SimilaritySearchModel):
     query_params: Optional[dict[str, Any]] = None
+
+
+class HybridModel(BaseModel):
+    vector_index_name: str
+    fulltext_index_name: str
+    query_text: str
+    top_k: PositiveInt = 5
+    query_vector: Optional[list[float]] = None

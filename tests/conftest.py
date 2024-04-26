@@ -14,7 +14,7 @@
 #  limitations under the License.
 
 import pytest
-from neo4j_genai import VectorRetriever, VectorCypherRetriever
+from neo4j_genai import VectorRetriever, VectorCypherRetriever, HybridRetriever
 from neo4j import Driver
 from unittest.mock import MagicMock, patch
 
@@ -37,3 +37,9 @@ def vector_cypher_retriever(_verify_version_mock, driver):
         RETURN node.id AS node_id, node.text AS text, score
         """
     return VectorCypherRetriever(driver, "my-index", retrieval_query)
+
+
+@pytest.fixture
+@patch("neo4j_genai.HybridRetriever._verify_version")
+def hybrid_retriever(_verify_version_mock, driver):
+    return HybridRetriever(driver, "my-index", "my-fulltext-index")

@@ -89,7 +89,7 @@ def test_create_fulltext_index_happy_path(driver):
     label = "node-label"
     text_node_properties = ["property-1", "property-2"]
     create_query = (
-        "CREATE FULLTEXT INDEX $name"
+        "CREATE FULLTEXT INDEX $name "
         f"FOR (n:`{label}`) ON EACH "
         f"[{', '.join(['n.`' + property + '`' for property in text_node_properties])}]"
     )
@@ -116,7 +116,7 @@ def test_create_fulltext_index_ensure_escaping(driver):
     label = "node-label"
     text_node_properties = ["property-1", "property-2"]
     create_query = (
-        "CREATE FULLTEXT INDEX $name"
+        "CREATE FULLTEXT INDEX $name "
         f"FOR (n:`{label}`) ON EACH "
         f"[{', '.join(['n.`' + property + '`' for property in text_node_properties])}]"
     )
