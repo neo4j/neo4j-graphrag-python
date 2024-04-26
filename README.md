@@ -81,7 +81,7 @@ create_vector_index(
 This library does not write to the database, that is up to you.  
 See below for how to write using Cypher via the Neo4j driver.
 
-Assumptions: Neo4j running with a defined vector index
+Assumption: Neo4j running with a defined vector index
 
 ```python
 from neo4j import GraphDatabase
