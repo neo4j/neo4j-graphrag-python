@@ -14,19 +14,18 @@
 #  limitations under the License.
 
 from abc import ABC, abstractmethod
-from .types import EmbeddingVector
 
 
 class Embedder(ABC):
     """Interface for embedding models."""
 
     @abstractmethod
-    def embed_query(self, text: str) -> EmbeddingVector:
+    def embed_query(self, text: str) -> list[float]:
         """Embed query text.
 
         Args:
             text (str): Text to convert to vector embedding
 
         Returns:
-            EmbeddingVector: A vector embedding.
+            list[float]: A vector embedding.
         """
