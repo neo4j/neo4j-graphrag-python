@@ -25,6 +25,7 @@ class Retriever(ABC):
 
     def __init__(self, driver: Driver):
         self.driver = driver
+        self._verify_version()
 
     def _verify_version(self) -> None:
         """

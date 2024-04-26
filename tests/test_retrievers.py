@@ -21,7 +21,7 @@ from neo4j.exceptions import CypherSyntaxError
 from neo4j_genai import VectorRetriever, VectorCypherRetriever, HybridRetriever
 from neo4j_genai.retrievers.hybrid import HybridCypherRetriever
 from neo4j_genai.types import VectorSearchRecord, SearchType
-from neo4j_genai.queries import get_search_query
+from neo4j_genai.neo4j_queries import get_search_query
 
 
 def test_vector_retriever_supported_aura_version(driver):

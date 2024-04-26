@@ -6,6 +6,8 @@ The purpose of this package is to provide a first party package to developers,
 where Neo4j can guarantee long term commitment and maintenance as well as being
 fast to ship new features and high performing patterns and methods.
 
+Docs are coming soon!
+
 # Usage
 
 ## Installation
@@ -22,7 +24,7 @@ pip install neo4j-genai
 
 While the library has more retrievers than shown here, the following examples should be able to get you started.
 
-### Performing a simple similarity search
+### Performing a similarity search
 
 Assumption: Neo4j running with populated vector index in place.
 
@@ -41,7 +43,7 @@ driver = GraphDatabase.driver(URI, auth=AUTH)
 # Initialize the retriever
 retriever = VectorRetriever(driver, INDEX_NAME)
 
-# Perform the similarity search for a vector query
+# Run the similarity search
 query_text = "How do I do similarity search in Neo4j?"
 response = retriever.search(query_text=query_text, top_k=5)
 ```

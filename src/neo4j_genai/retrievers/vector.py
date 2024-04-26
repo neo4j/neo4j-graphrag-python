@@ -25,7 +25,7 @@ from neo4j_genai.types import (
     VectorCypherSearchModel,
     SearchType,
 )
-from neo4j_genai.queries import get_search_query
+from neo4j_genai.neo4j_queries import get_search_query
 
 
 class VectorRetriever(Retriever):
@@ -42,7 +42,6 @@ class VectorRetriever(Retriever):
         return_properties: Optional[list[str]] = None,
     ) -> None:
         super().__init__(driver)
-        self._verify_version()
         self.index_name = index_name
         self.return_properties = return_properties
         self.embedder = embedder
@@ -121,7 +120,6 @@ class VectorCypherRetriever(Retriever):
         embedder: Optional[Embedder] = None,
     ) -> None:
         super().__init__(driver)
-        self._verify_version()
         self.index_name = index_name
         self.retrieval_query = retrieval_query
         self.embedder = embedder

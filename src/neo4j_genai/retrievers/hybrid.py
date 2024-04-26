@@ -20,7 +20,7 @@ from pydantic import ValidationError
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.retrievers.base import Retriever
 from neo4j_genai.types import HybridSearchModel, SearchType, HybridCypherSearchModel
-from neo4j_genai.queries import get_search_query
+from neo4j_genai.neo4j_queries import get_search_query
 
 
 class HybridRetriever(Retriever):
@@ -33,7 +33,6 @@ class HybridRetriever(Retriever):
         return_properties: Optional[list[str]] = None,
     ) -> None:
         super().__init__(driver)
-        self._verify_version()
         self.vector_index_name = vector_index_name
         self.fulltext_index_name = fulltext_index_name
         self.embedder = embedder
@@ -98,7 +97,6 @@ class HybridCypherRetriever(Retriever):
         embedder: Optional[Embedder] = None,
     ) -> None:
         super().__init__(driver)
-        self._verify_version()
         self.vector_index_name = vector_index_name
         self.fulltext_index_name = fulltext_index_name
         self.retrieval_query = retrieval_query
