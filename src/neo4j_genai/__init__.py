@@ -14,7 +14,11 @@
 #  limitations under the License.
 
 from .retrievers.vector import VectorRetriever, VectorCypherRetriever
-from .retrievers.hybrid import HybridRetriever
+from .retrievers.hybrid import HybridRetriever, HybridCypherRetriever
 
-
-__all__ = ["VectorRetriever", "VectorCypherRetriever", "HybridRetriever"]
+__all__ = [
+    "VectorRetriever",
+    "VectorCypherRetriever",
+    "HybridRetriever",
+    "HybridCypherRetriever",
+]

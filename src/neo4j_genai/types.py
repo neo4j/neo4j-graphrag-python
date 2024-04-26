@@ -53,7 +53,7 @@ class FulltextIndexModel(IndexModel):
         return v
 
 
-class SimilaritySearchModel(BaseModel):
+class VectorSearchModel(BaseModel):
     index_name: str
     top_k: PositiveInt = 5
     query_vector: Optional[list[float]] = None
@@ -72,11 +72,11 @@ class SimilaritySearchModel(BaseModel):
         return values
 
 
-class VectorCypherSearchModel(SimilaritySearchModel):
+class VectorCypherSearchModel(VectorSearchModel):
     query_params: Optional[dict[str, Any]] = None
 
 
-class HybridModel(BaseModel):
+class HybridSearchModel(BaseModel):
     vector_index_name: str
     fulltext_index_name: str
     query_text: str
@@ -84,8 +84,12 @@ class HybridModel(BaseModel):
     query_vector: Optional[list[float]] = None
 
 
+class HybridCypherSearchModel(HybridSearchModel):
+    query_params: Optional[dict[str, Any]] = None
+
+
 class SearchType(str, Enum):
     """Enumerator of the search strategies."""
 
-    Vector = "vector"
-    Hybrid = "hybrid"
+    VECTOR = "vector"
+    HYBRID = "hybrid"

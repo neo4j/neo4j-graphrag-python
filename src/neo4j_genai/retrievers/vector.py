@@ -21,7 +21,7 @@ from pydantic import ValidationError
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.types import (
     VectorSearchRecord,
-    SimilaritySearchModel,
+    VectorSearchModel,
     VectorCypherSearchModel,
     SearchType,
 )
@@ -72,7 +72,7 @@ class VectorRetriever(Retriever):
             list[VectorSearchRecord]: The `top_k` neighbors found in vector search with their nodes and scores.
         """
         try:
-            validated_data = SimilaritySearchModel(
+            validated_data = VectorSearchModel(
                 index_name=self.index_name,
                 top_k=top_k,
                 query_vector=query_vector,
@@ -91,7 +91,7 @@ class VectorRetriever(Retriever):
             parameters["query_vector"] = query_vector
             del parameters["query_text"]
 
-        search_query = get_search_query(SearchType.Vector, self.return_properties)
+        search_query = get_search_query(SearchType.VECTOR, self.return_properties)
 
         records, _, _ = self.driver.execute_query(search_query, parameters)
 
@@ -177,6 +177,8 @@ class VectorCypherRetriever(Retriever):
                     parameters[key] = value
             del parameters["query_params"]
 
-        search_query = get_search_query(SearchType.Vector) + self.retrieval_query
+        search_query = get_search_query(
+            SearchType.VECTOR, retrieval_query=self.retrieval_query
+        )
         records, _, _ = self.driver.execute_query(search_query, parameters)
         return records
