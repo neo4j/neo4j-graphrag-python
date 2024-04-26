@@ -50,7 +50,7 @@ response = retriever.search(query_text=query_text, top_k=5)
 
 When creating a vector index, make sure you match the number of dimensions in the index with the number of dimensions the embeddings have.
 
-Assumptions: Neo4j running
+Assumption: Neo4j running
 
 ```python
 from neo4j import GraphDatabase
