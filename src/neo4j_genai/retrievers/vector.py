@@ -12,57 +12,20 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from abc import abstractmethod, ABC
 from typing import Optional, Any
-from pydantic import ValidationError
+
 from neo4j import Driver, Record
-from .embedder import Embedder
-from .types import (
-    SimilaritySearchModel,
+from neo4j_genai.retrievers.base import Retriever
+from pydantic import ValidationError
+
+from neo4j_genai.embedder import Embedder
+from neo4j_genai.types import (
     VectorSearchRecord,
+    SimilaritySearchModel,
     VectorCypherSearchModel,
-    HybridModel,
+    SearchType,
 )
-
-
-class Retriever(ABC):
-    """
-    Abstract class for Neo4j retrievers
-    """
-
-    def __init__(self, driver: Driver):
-        self.driver = driver
-
-    def _verify_version(self) -> None:
-        """
-        Check if the connected Neo4j database version supports vector indexing.
-
-        Queries the Neo4j database to retrieve its version and compares it
-        against a target version (5.18.1) that is known to support vector
-        indexing. Raises a ValueError if the connected Neo4j version is
-        not supported.
-        """
-        records, _, _ = self.driver.execute_query("CALL dbms.components()")
-        version = records[0]["versions"][0]
-
-        if "aura" in version:
-            version_tuple = (
-                *tuple(map(int, version.split("-")[0].split("."))),
-                0,
-            )
-            target_version = (5, 18, 0)
-        else:
-            version_tuple = tuple(map(int, version.split(".")))
-            target_version = (5, 18, 1)
-
-        if version_tuple < target_version:
-            raise ValueError(
-                "This package only supports Neo4j version 5.18.1 or greater"
-            )
-
-    @abstractmethod
-    def search(self, *args, **kwargs) -> Any:
-        pass
+from neo4j_genai.queries import get_search_query
 
 
 class VectorRetriever(Retriever):
@@ -128,20 +91,9 @@ class VectorRetriever(Retriever):
             parameters["query_vector"] = query_vector
             del parameters["query_text"]
 
-        db_query_string = """
-        CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
-        YIELD node, score
-        """
+        search_query = get_search_query(SearchType.Vector, self.return_properties)
 
-        if self.return_properties:
-            return_properties_cypher = ", ".join(
-                [f".{prop}" for prop in self.return_properties]
-            )
-            db_query_string += (
-                f"RETURN node {{{return_properties_cypher}}} as node, score"
-            )
-
-        records, _, _ = self.driver.execute_query(db_query_string, parameters)
+        records, _, _ = self.driver.execute_query(search_query, parameters)
 
         try:
             return [
@@ -225,96 +177,6 @@ class VectorCypherRetriever(Retriever):
                     parameters[key] = value
             del parameters["query_params"]
 
-        query_prefix = """
-                CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
-                YIELD node, score
-                """
-        search_query = query_prefix + self.retrieval_query
-        records, _, _ = self.driver.execute_query(search_query, parameters)
-        return records
-
-
-class HybridRetriever(Retriever):
-    def __init__(
-        self,
-        driver: Driver,
-        vector_index_name: str,
-        fulltext_index_name: str,
-        embedder: Optional[Embedder] = None,
-        return_properties: Optional[list[str]] = None,
-    ) -> None:
-        super().__init__(driver)
-        self._verify_version()
-        self.vector_index_name = vector_index_name
-        self.fulltext_index_name = fulltext_index_name
-        self.embedder = embedder
-        self.return_properties = return_properties
-
-    def search(
-        self,
-        query_text: str,
-        query_vector: Optional[list[float]] = None,
-        top_k: int = 5,
-    ) -> list[Record]:
-        """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
-        Both query_vector and query_text can be provided.
-        If query_vector is provided, then it will be preferred over the embedded query_text
-        for the vector search.
-        See the following documentation for more details:
-        - [Query a vector index](https://neo4j.com/docs/cypher-manual/current/indexes-for-vector-search/#indexes-vector-query)
-        - [db.index.vector.queryNodes()](https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_queryNodes)
-        - [db.index.fulltext.queryNodes()](https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_fulltext_querynodes)
-        Args:
-            query_text (str): The text to get the closest neighbors of.
-            query_vector (Optional[list[float]], optional): The vector embeddings to get the closest neighbors of. Defaults to None.
-            top_k (int, optional): The number of neighbors to return. Defaults to 5.
-        Raises:
-            ValueError: If validation of the input arguments fail.
-            ValueError: If no embedder is provided.
-        Returns:
-            list[Record]: The results of the search query
-        """
-        try:
-            validated_data = HybridModel(
-                vector_index_name=self.vector_index_name,
-                fulltext_index_name=self.fulltext_index_name,
-                top_k=top_k,
-                query_vector=query_vector,
-                query_text=query_text,
-            )
-        except ValidationError as e:
-            raise ValueError(f"Validation failed: {e.errors()}")
-
-        parameters = validated_data.model_dump(exclude_none=True)
-
-        if query_text and not query_vector:
-            if not self.embedder:
-                raise ValueError("Embedding method required for text query.")
-            query_vector = self.embedder.embed_query(query_text)
-            parameters["query_vector"] = query_vector
-
-        search_query = (
-            "CALL { "
-            "CALL db.index.vector.queryNodes($vector_index_name, $top_k, $query_vector) "
-            "YIELD node, score "
-            "RETURN node, score UNION "
-            "CALL db.index.fulltext.queryNodes($fulltext_index_name, $query_text, {limit: $top_k}) "
-            "YIELD node, score "
-            "WITH collect({node:node, score:score}) AS nodes, max(score) AS max "
-            "UNWIND nodes AS n "
-            "RETURN n.node AS node, (n.score / max) AS score "
-            "} "
-            "WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k "
-        )
-
-        if self.return_properties:
-            return_properties_cypher = ", ".join(
-                [f".{prop}" for prop in self.return_properties]
-            )
-            search_query += "YIELD node, score "
-            search_query += f"RETURN node {{{return_properties_cypher}}} as node, score"
-        else:
-            search_query += "RETURN node, score"
-
+        search_query = get_search_query(SearchType.Vector) + self.retrieval_query
         records, _, _ = self.driver.execute_query(search_query, parameters)
         return records

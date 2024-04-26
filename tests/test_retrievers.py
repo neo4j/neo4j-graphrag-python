@@ -18,9 +18,9 @@ from unittest.mock import patch, MagicMock
 
 from neo4j.exceptions import CypherSyntaxError
 
-from neo4j_genai import VectorRetriever
-from neo4j_genai.retrievers import VectorCypherRetriever, HybridRetriever
-from neo4j_genai.types import VectorSearchRecord
+from neo4j_genai import VectorRetriever, VectorCypherRetriever, HybridRetriever
+from neo4j_genai.types import VectorSearchRecord, SearchType
+from neo4j_genai.queries import get_search_query
 
 
 def test_vector_retriever_supported_aura_version(driver):
@@ -59,18 +59,13 @@ def test_similarity_search_vector_happy_path(_verify_version_mock, driver):
     dimensions = 1536
     query_vector = [1.0 for _ in range(dimensions)]
     top_k = 5
-
     retriever = VectorRetriever(driver, index_name)
-
     retriever.driver.execute_query.return_value = [
         [{"node": "dummy-node", "score": 1.0}],
         None,
         None,
     ]
-    search_query = """
-        CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
-        YIELD node, score
-        """
+    search_query = get_search_query(SearchType.Vector)
 
     records = retriever.search(query_vector=query_vector, top_k=top_k)
 
@@ -82,7 +77,6 @@ def test_similarity_search_vector_happy_path(_verify_version_mock, driver):
             "query_vector": query_vector,
         },
     )
-
     assert records == [VectorSearchRecord(node="dummy-node", score=1.0)]
 
 
@@ -91,28 +85,20 @@ def test_similarity_search_text_happy_path(_verify_version_mock, driver):
     embed_query_vector = [1.0 for _ in range(1536)]
     custom_embeddings = MagicMock()
     custom_embeddings.embed_query.return_value = embed_query_vector
-
     index_name = "my-index"
     query_text = "may thy knife chip and shatter"
     top_k = 5
-
     retriever = VectorRetriever(driver, index_name, custom_embeddings)
-
     driver.execute_query.return_value = [
         [{"node": "dummy-node", "score": 1.0}],
         None,
         None,
     ]
-
-    search_query = """
-        CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
-        YIELD node, score
-        """
+    search_query = get_search_query(SearchType.Vector)
 
     records = retriever.search(query_text=query_text, top_k=top_k)
 
     custom_embeddings.embed_query.assert_called_once_with(query_text)
-
     driver.execute_query.assert_called_once_with(
         search_query,
         {
@@ -130,7 +116,6 @@ def test_similarity_search_text_return_properties(_verify_version_mock, driver):
     embed_query_vector = [1.0 for _ in range(3)]
     custom_embeddings = MagicMock()
     custom_embeddings.embed_query.return_value = embed_query_vector
-
     index_name = "my-index"
     query_text = "may thy knife chip and shatter"
     top_k = 5
@@ -145,17 +130,11 @@ def test_similarity_search_text_return_properties(_verify_version_mock, driver):
         None,
         None,
     ]
-
-    search_query = """
-        CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
-        YIELD node, score
-        RETURN node {.node-property-1, .node-property-2} as node, score
-        """
+    search_query = get_search_query(SearchType.Vector, return_properties)
 
     records = retriever.search(query_text=query_text, top_k=top_k)
 
     custom_embeddings.embed_query.assert_called_once_with(query_text)
-
     driver.execute_query.assert_called_once_with(
         search_query.rstrip(),
         {
@@ -164,7 +143,6 @@ def test_similarity_search_text_return_properties(_verify_version_mock, driver):
             "query_vector": embed_query_vector,
         },
     )
-
     assert records == [VectorSearchRecord(node="dummy-node", score=1.0)]
 
 
@@ -222,18 +200,13 @@ def test_similarity_search_vector_bad_results(_verify_version_mock, driver):
     dimensions = 1536
     query_vector = [1.0 for _ in range(dimensions)]
     top_k = 5
-
     retriever = VectorRetriever(driver, index_name)
-
     retriever.driver.execute_query.return_value = [
         [{"node": "dummy-node", "score": "adsa"}],
         None,
         None,
     ]
-    search_query = """
-        CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
-        YIELD node, score
-        """
+    search_query = get_search_query(SearchType.Vector)
 
     with pytest.raises(ValueError):
         retriever.search(query_vector=query_vector, top_k=top_k)
@@ -267,10 +240,7 @@ def test_retrieval_query_happy_path(_verify_version_mock, driver):
         None,
         None,
     ]
-    search_query = """
-                CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
-                YIELD node, score
-                """
+    search_query = get_search_query(SearchType.Vector)
 
     records = retriever.search(
         query_text=query_text,
@@ -314,10 +284,7 @@ def test_retrieval_query_with_params(_verify_version_mock, driver):
         None,
         None,
     ]
-    search_query = """
-                CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector)
-                YIELD node, score
-                """
+    search_query = get_search_query(SearchType.Vector)
 
     records = retriever.search(
         query_text=query_text,
@@ -372,30 +339,15 @@ def test_hybrid_search_text_happy_path(_verify_version_mock, driver):
     fulltext_index_name = "my-fulltext-index"
     query_text = "may thy knife chip and shatter"
     top_k = 5
-
     retriever = HybridRetriever(
         driver, vector_index_name, fulltext_index_name, custom_embeddings
     )
-
     retriever.driver.execute_query.return_value = [
         [{"node": "dummy-node", "score": 1.0}],
         None,
         None,
     ]
-    search_query = (
-        "CALL { "
-        "CALL db.index.vector.queryNodes($vector_index_name, $top_k, $query_vector) "
-        "YIELD node, score "
-        "RETURN node, score UNION "
-        "CALL db.index.fulltext.queryNodes($fulltext_index_name, $query_text, {limit: $top_k}) "
-        "YIELD node, score "
-        "WITH collect({node:node, score:score}) AS nodes, max(score) AS max "
-        "UNWIND nodes AS n "
-        "RETURN n.node AS node, (n.score / max) AS score "
-        "} "
-        "WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k "
-        "RETURN node, score"
-    )
+    search_query = get_search_query(SearchType.Hybrid)
 
     records = retriever.search(query_text=query_text, top_k=top_k)
 
@@ -425,30 +377,15 @@ def test_hybrid_search_favors_query_vector_over_embedding_vector(
     fulltext_index_name = "my-fulltext-index"
     query_text = "may thy knife chip and shatter"
     top_k = 5
-
     retriever = HybridRetriever(
         driver, vector_index_name, fulltext_index_name, custom_embeddings
     )
-
     retriever.driver.execute_query.return_value = [
         [{"node": "dummy-node", "score": 1.0}],
         None,
         None,
     ]
-    search_query = (
-        "CALL { "
-        "CALL db.index.vector.queryNodes($vector_index_name, $top_k, $query_vector) "
-        "YIELD node, score "
-        "RETURN node, score UNION "
-        "CALL db.index.fulltext.queryNodes($fulltext_index_name, $query_text, {limit: $top_k}) "
-        "YIELD node, score "
-        "WITH collect({node:node, score:score}) AS nodes, max(score) AS max "
-        "UNWIND nodes AS n "
-        "RETURN n.node AS node, (n.score / max) AS score "
-        "} "
-        "WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k "
-        "RETURN node, score"
-    )
+    search_query = get_search_query(SearchType.Hybrid)
 
     retriever.search(query_text=query_text, query_vector=query_vector, top_k=top_k)
 
@@ -511,28 +448,13 @@ def test_hybrid_retriever_return_properties(_verify_version_mock, driver):
         None,
         None,
     ]
-    search_query = (
-        "CALL { "
-        "CALL db.index.vector.queryNodes($vector_index_name, $top_k, $query_vector) "
-        "YIELD node, score "
-        "RETURN node, score UNION "
-        "CALL db.index.fulltext.queryNodes($fulltext_index_name, $query_text, {limit: $top_k}) "
-        "YIELD node, score "
-        "WITH collect({node:node, score:score}) AS nodes, max(score) AS max "
-        "UNWIND nodes AS n "
-        "RETURN n.node AS node, (n.score / max) AS score "
-        "} "
-        "WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k "
-        "YIELD node, score "
-        "RETURN node {.node-property-1, .node-property-2} as node, score"
-    )
+    search_query = get_search_query(SearchType.Hybrid, return_properties)
 
     records = retriever.search(query_text=query_text, top_k=top_k)
 
     custom_embeddings.embed_query.assert_called_once_with(query_text)
-
     driver.execute_query.assert_called_once_with(
-        search_query.rstrip(),
+        search_query,
         {
             "vector_index_name": vector_index_name,
             "top_k": top_k,
@@ -541,5 +463,4 @@ def test_hybrid_retriever_return_properties(_verify_version_mock, driver):
             "query_vector": embed_query_vector,
         },
     )
-
     assert records == [{"node": "dummy-node", "score": 1.0}]

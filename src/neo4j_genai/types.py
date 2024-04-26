@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
+from enum import Enum
 from typing import Any, Literal, Optional
 from pydantic import BaseModel, PositiveInt, model_validator, field_validator
 from neo4j import Driver
@@ -82,3 +82,10 @@ class HybridModel(BaseModel):
     query_text: str
     top_k: PositiveInt = 5
     query_vector: Optional[list[float]] = None
+
+
+class SearchType(str, Enum):
+    """Enumerator of the search strategies."""
+
+    Vector = "vector"
+    Hybrid = "hybrid"
