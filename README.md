@@ -20,7 +20,7 @@ pip install neo4j-genai
 
 ## Examples
 
-While the library have more retrievers than shown here, the following examples should be able to get you started.
+While the library has more retrievers than shown here, the following examples should be able to get you started.
 
 ### Performing a simple similarity search
 
