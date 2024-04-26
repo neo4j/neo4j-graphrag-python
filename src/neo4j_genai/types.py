@@ -23,10 +23,6 @@ class VectorSearchRecord(BaseModel):
     score: float
 
 
-class EmbeddingVector(BaseModel):
-    vector: list[float]
-
-
 class IndexModel(BaseModel):
     driver: Any
 
