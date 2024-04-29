@@ -140,7 +140,7 @@ and/or [Discord](https://discord.gg/neo4j).
 ### Make changes
 
 1. Fork the repository.
-2. Install Python and Poetry. For more information, see [the development guide](./docs/contributing/DEVELOPING.md).
+2. Install Python and Poetry.
 3. Create a working branch from `main` and start with your changes!
 
 ### Pull request

@@ -35,6 +35,33 @@ logger = logging.getLogger(__name__)
 
 
 class HybridRetriever(Retriever):
+    """
+    Provides retrieval method using combination of vector search over embeddings and
+    fulltext search.
+    If an embedder is provided, it needs to have the required Embedder type.
+
+    Example:
+
+    .. code-block:: python
+
+      import neo4j
+      from neo4j_genai import HybridRetriever
+
+      driver = neo4j.GraphDatabase.driver(URI, auth=AUTH)
+
+      retriever = HybridRetriever(
+          driver, "vector-index-name", "fulltext-index-name", custom_embedder
+      )
+      retriever.search(query_text="Find me a book about Fremen", top_k=5)
+
+    Args:
+        driver (Driver): The Neo4j Python driver.
+        vector_index_name (str): Vector index name.
+        fulltext_index_name (str): Fulltext index name.
+        embedder (Optional[Embedder]): Embedder object to embed query text.
+        return_properties (Optional[list[str]]): List of node properties to return.
+    """
+
     def __init__(
         self,
         driver: neo4j.Driver,
@@ -76,17 +103,22 @@ class HybridRetriever(Retriever):
         Both query_vector and query_text can be provided.
         If query_vector is provided, then it will be preferred over the embedded query_text
         for the vector search.
+
         See the following documentation for more details:
-        - [Query a vector index](https://neo4j.com/docs/cypher-manual/current/indexes-for-vector-search/#indexes-vector-query)
-        - [db.index.vector.queryNodes()](https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_queryNodes)
-        - [db.index.fulltext.queryNodes()](https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_fulltext_querynodes)
+
+        - `Query a vector index <https://neo4j.com/docs/cypher-manual/current/indexes-for-vector-search/#indexes-vector-query>`_
+        - `db.index.vector.queryNodes() <https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_queryNodes>`_
+        - `db.index.fulltext.queryNodes() <https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_fulltext_querynodes>`_
+
         Args:
             query_text (str): The text to get the closest neighbors of.
             query_vector (Optional[list[float]], optional): The vector embeddings to get the closest neighbors of. Defaults to None.
             top_k (int, optional): The number of neighbors to return. Defaults to 5.
+
         Raises:
             ValueError: If validation of the input arguments fail.
             ValueError: If no embedder is provided.
+
         Returns:
             list[neo4j.Record]: The results of the search query
         """
@@ -119,6 +151,35 @@ class HybridRetriever(Retriever):
 
 
 class HybridCypherRetriever(Retriever):
+    """
+    Provides retrieval method using combination of vector search over embeddings and
+    fulltext search, augmented by a Cypher query.
+    This retriever builds on HybridRetriever.
+    If an embedder is provided, it needs to have the required Embedder type.
+
+    Example:
+
+    .. code-block:: python
+
+      import neo4j
+      from neo4j_genai import HybridCypherRetriever
+
+      driver = neo4j.GraphDatabase.driver(URI, auth=AUTH)
+
+      retrieval_query = "MATCH (node)-[:AUTHORED_BY]->(author:Author)" "RETURN author.name"
+      retriever = HybridCypherRetriever(
+          driver, "vector-index-name", "fulltext-index-name", retrieval_query, custom_embedder
+      )
+      retriever.search(query_text="Find me a book about Fremen", top_k=5)
+
+    Args:
+        driver (Driver): The Neo4j Python driver.
+        vector_index_name (str): Vector index name.
+        fulltext_index_name (str): Fulltext index name.
+        retrieval_query (str): Cypher query that gets appended.
+        embedder (Optional[Embedder]): Embedder object to embed query text.
+    """
+
     def __init__(
         self,
         driver: neo4j.Driver,
@@ -161,18 +222,23 @@ class HybridCypherRetriever(Retriever):
         Both query_vector and query_text can be provided.
         If query_vector is provided, then it will be preferred over the embedded query_text
         for the vector search.
+
         See the following documentation for more details:
-        - [Query a vector index](https://neo4j.com/docs/cypher-manual/current/indexes-for-vector-search/#indexes-vector-query)
-        - [db.index.vector.queryNodes()](https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_queryNodes)
-        - [db.index.fulltext.queryNodes()](https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_fulltext_querynodes)
+
+        - `Query a vector index <https://neo4j.com/docs/cypher-manual/current/indexes-for-vector-search/#indexes-vector-query>`_
+        - `db.index.vector.queryNodes() <https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_queryNodes>`_
+        - `db.index.fulltext.queryNodes() <https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_fulltext_querynodes>`_
+
         Args:
             query_text (str): The text to get the closest neighbors of.
-            query_vector (Optional[list[float]], optional): The vector embeddings to get the closest neighbors of. Defaults to None.
-            top_k (int, optional): The number of neighbors to return. Defaults to 5.
-            query_params (Optional[dict[str, Any]], optional): Parameters for the Cypher query. Defaults to None.
+            query_vector (Optional[list[float]]): The vector embeddings to get the closest neighbors of. Defaults to None.
+            top_k (int): The number of neighbors to return. Defaults to 5.
+            query_params (Optional[dict[str, Any]]): Parameters for the Cypher query. Defaults to None.
+
         Raises:
             ValueError: If validation of the input arguments fail.
             ValueError: If no embedder is provided.
+
         Returns:
             list[neo4j.Record]: The results of the search query
         """

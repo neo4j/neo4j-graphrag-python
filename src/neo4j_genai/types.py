@@ -26,6 +26,14 @@ from neo4j_genai.retrievers.utils import validate_search_query_input
 
 
 class VectorSearchRecord(BaseModel):
+    """
+    Represents a record returned from a vector search.
+
+    Attributes:
+        node (Any): The node data retrieved by the search.
+        score (float): The similarity score of the retrieved embedding.
+    """
+
     node: Any
     score: float
 
