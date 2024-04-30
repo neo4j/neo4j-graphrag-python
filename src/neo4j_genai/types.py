@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
+from enum import Enum
 from typing import Any, Literal, Optional
 from pydantic import BaseModel, PositiveInt, model_validator, field_validator
 from neo4j import Driver
@@ -53,7 +53,7 @@ class FulltextIndexModel(IndexModel):
         return v
 
 
-class SimilaritySearchModel(BaseModel):
+class VectorSearchModel(BaseModel):
     index_name: str
     top_k: PositiveInt = 5
     query_vector: Optional[list[float]] = None
@@ -72,13 +72,24 @@ class SimilaritySearchModel(BaseModel):
         return values
 
 
-class VectorCypherSearchModel(SimilaritySearchModel):
+class VectorCypherSearchModel(VectorSearchModel):
     query_params: Optional[dict[str, Any]] = None
 
 
-class HybridModel(BaseModel):
+class HybridSearchModel(BaseModel):
     vector_index_name: str
     fulltext_index_name: str
     query_text: str
     top_k: PositiveInt = 5
     query_vector: Optional[list[float]] = None
+
+
+class HybridCypherSearchModel(HybridSearchModel):
+    query_params: Optional[dict[str, Any]] = None
+
+
+class SearchType(str, Enum):
+    """Enumerator of the search strategies."""
+
+    VECTOR = "vector"
+    HYBRID = "hybrid"

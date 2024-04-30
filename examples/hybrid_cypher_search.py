@@ -1,7 +1,7 @@
 from neo4j import GraphDatabase
 
 from random import random
-from neo4j_genai import HybridRetriever
+from neo4j_genai import HybridCypherRetriever
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.indexes import create_vector_index, create_fulltext_index
 
@@ -38,7 +38,10 @@ create_fulltext_index(
 )
 
 # Initialize the retriever
-retriever = HybridRetriever(driver, INDEX_NAME, FULLTEXT_INDEX_NAME, embedder)
+retrieval_query = "MATCH (node)-[:AUTHORED_BY]->(author:Author)" "RETURN author.name"
+retriever = HybridCypherRetriever(
+    driver, INDEX_NAME, FULLTEXT_INDEX_NAME, retrieval_query, embedder
+)
 
 # Upsert the query
 vector = [random() for _ in range(DIMENSION)]

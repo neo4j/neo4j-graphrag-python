@@ -13,7 +13,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from .retrievers import VectorRetriever, VectorCypherRetriever, HybridRetriever
+from .retrievers.vector import VectorRetriever, VectorCypherRetriever
+from .retrievers.hybrid import HybridRetriever, HybridCypherRetriever
 
-
-__all__ = ["VectorRetriever", "VectorCypherRetriever", "HybridRetriever"]
+__all__ = [
+    "VectorRetriever",
+    "VectorCypherRetriever",
+    "HybridRetriever",
+    "HybridCypherRetriever",
+]
