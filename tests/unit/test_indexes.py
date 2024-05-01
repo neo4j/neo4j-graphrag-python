@@ -75,7 +75,7 @@ def test_create_vector_index_validation_error_similarity_fn(driver):
 
 
 def test_drop_index(driver):
-    drop_query = "DROP INDEX $name"
+    drop_query = "DROP INDEX $name IF EXISTS"
 
     drop_index(driver, "my-index")
 

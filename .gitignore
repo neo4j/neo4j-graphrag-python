@@ -6,3 +6,4 @@ dist/
 htmlcov/
 .idea/
 .env
+docs/build/

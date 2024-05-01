@@ -25,6 +25,7 @@ def get_search_query(
     query_map = {
         SearchType.VECTOR: (
             "CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector) "
+            "YIELD node, score "
         ),
         SearchType.HYBRID: (
             "CALL { "
@@ -44,13 +45,27 @@ def get_search_query(
     base_query = query_map[search_type]
     additional_query = ""
 
-    if retrieval_query:
-        additional_query += retrieval_query
-    elif return_properties:
-        return_properties_cypher = ", ".join([f".{prop}" for prop in return_properties])
-        additional_query += "YIELD node, score "
-        additional_query += f"RETURN node {{{return_properties_cypher}}} as node, score"
-    else:
-        additional_query += "RETURN node, score"
+    if search_type == SearchType.VECTOR:
+        if retrieval_query:
+            additional_query += retrieval_query
+        elif return_properties:
+            return_properties_cypher = ", ".join(
+                [f".{prop}" for prop in return_properties]
+            )
+            additional_query += (
+                f"RETURN node {{{return_properties_cypher}}} as node, score"
+            )
+    elif search_type == SearchType.HYBRID:
+        if retrieval_query:
+            additional_query += retrieval_query
+        elif return_properties:
+            return_properties_cypher = ", ".join(
+                [f".{prop}" for prop in return_properties]
+            )
+            additional_query += (
+                f"RETURN node {{{return_properties_cypher}}} as node, score"
+            )
+        else:
+            additional_query += "RETURN node, score"
 
     return base_query + additional_query

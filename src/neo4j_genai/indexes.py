@@ -115,7 +115,7 @@ def drop_index(driver: Driver, name: str) -> None:
         driver (Driver): Neo4j Python driver instance.
         name (str): The name of the index to delete.
     """
-    query = "DROP INDEX $name"
+    query = "DROP INDEX $name IF EXISTS"
     parameters = {
         "name": name,
     }

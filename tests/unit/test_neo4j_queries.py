@@ -20,10 +20,10 @@ from neo4j_genai.types import SearchType
 def test_vector_search_basic():
     expected = (
         "CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector) "
-        "RETURN node, score"
+        "YIELD node, score"
     )
     result = get_search_query(SearchType.VECTOR)
-    assert result == expected
+    assert result.strip() == expected.strip()
 
 
 def test_hybrid_search_basic():
@@ -42,7 +42,7 @@ def test_hybrid_search_basic():
         "RETURN node, score"
     )
     result = get_search_query(SearchType.HYBRID)
-    assert result == expected
+    assert result.strip() == expected.strip()
 
 
 def test_vector_search_with_properties():
@@ -53,7 +53,17 @@ def test_vector_search_with_properties():
         "RETURN node {.name, .age} as node, score"
     )
     result = get_search_query(SearchType.VECTOR, return_properties=properties)
-    assert result == expected
+    assert result.strip() == expected.strip()
+
+
+def test_vector_search_with_retrieval_query():
+    retrieval_query = "MATCH (n) RETURN n LIMIT 10"
+    expected = (
+        "CALL db.index.vector.queryNodes($index_name, $top_k, $query_vector) "
+        "YIELD node, score " + retrieval_query
+    )
+    result = get_search_query(SearchType.VECTOR, retrieval_query=retrieval_query)
+    assert result.strip() == expected.strip()
 
 
 def test_hybrid_search_with_retrieval_query():
@@ -73,4 +83,24 @@ def test_hybrid_search_with_retrieval_query():
         + retrieval_query
     )
     result = get_search_query(SearchType.HYBRID, retrieval_query=retrieval_query)
-    assert result == expected
+    assert result.strip() == expected.strip()
+
+
+def test_hybrid_search_with_properties():
+    properties = ["name", "age"]
+    expected = (
+        "CALL { "
+        "CALL db.index.vector.queryNodes($vector_index_name, $top_k, $query_vector) "
+        "YIELD node, score "
+        "RETURN node, score UNION "
+        "CALL db.index.fulltext.queryNodes($fulltext_index_name, $query_text, {limit: $top_k}) "
+        "YIELD node, score "
+        "WITH collect({node:node, score:score}) AS nodes, max(score) AS max "
+        "UNWIND nodes AS n "
+        "RETURN n.node AS node, (n.score / max) AS score "
+        "} "
+        "WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k "
+        "RETURN node {.name, .age} as node, score"
+    )
+    result = get_search_query(SearchType.HYBRID, return_properties=properties)
+    assert result.strip() == expected.strip()

@@ -28,7 +28,7 @@ jobs:
         run: |
           poetry run ruff format --check .
           poetry run ruff check .
-      - name: Run tests and check coverage
+      - name: Run unit tests and check coverage
         run: |
-          poetry run coverage run -m pytest
+          poetry run coverage run -m pytest tests/unit
           poetry run coverage report --fail-under=90

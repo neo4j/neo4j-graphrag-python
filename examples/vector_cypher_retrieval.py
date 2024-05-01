@@ -63,5 +63,5 @@ parameters = {
 driver.execute_query(insert_query, parameters)
 
 # Perform the search
-query_text = "Find me the closest text"
+query_text = "Find me a book about Fremen"
 print(retriever.search(query_text=query_text, top_k=1))

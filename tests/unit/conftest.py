@@ -19,18 +19,18 @@ from neo4j import Driver
 from unittest.mock import MagicMock, patch
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def driver():
     return MagicMock(spec=Driver)
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 @patch("neo4j_genai.VectorRetriever._verify_version")
 def vector_retriever(_verify_version_mock, driver):
     return VectorRetriever(driver, "my-index")
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 @patch("neo4j_genai.VectorCypherRetriever._verify_version")
 def vector_cypher_retriever(_verify_version_mock, driver):
     retrieval_query = """
@@ -39,7 +39,7 @@ def vector_cypher_retriever(_verify_version_mock, driver):
     return VectorCypherRetriever(driver, "my-index", retrieval_query)
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 @patch("neo4j_genai.HybridRetriever._verify_version")
 def hybrid_retriever(_verify_version_mock, driver):
     return HybridRetriever(driver, "my-index", "my-fulltext-index")

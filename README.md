@@ -80,7 +80,7 @@ create_vector_index(
 
 ### Populating the Neo4j Vector Index
 
-This library does not write to the database, that is up to you.  
+This library does not write to the database, that is up to you.
 See below for how to write using Cypher via the Neo4j driver.
 
 Assumption: Neo4j running with a defined vector index
@@ -161,7 +161,7 @@ Open a new virtual environment and then run the tests.
 
 ```bash
 poetry shell
-pytest
+pytest tests/unit
 ```
 
 ## Further information

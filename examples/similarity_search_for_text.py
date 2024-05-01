@@ -51,5 +51,5 @@ parameters = {
 driver.execute_query(insert_query, parameters)
 
 # Perform the similarity search for a text query
-query_text = "hello world"
+query_text = "Find me a book about Fremen"
 print(retriever.search(query_text=query_text, top_k=5))
