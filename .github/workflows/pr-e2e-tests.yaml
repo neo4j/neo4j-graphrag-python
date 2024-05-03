@@ -1,0 +1,51 @@
+name: 'Neo4j-GenAI PR E2E Tests'
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  e2e-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        neo4j-version:
+          - 5
+        neo4j-edition:
+          - community
+          - enterprise
+    services:
+      neo4j:
+        image: neo4j:${{ matrix.neo4j-version }}-${{ matrix.neo4j-edition }}
+        env:
+          NEO4J_AUTH: neo4j/password
+          NEO4J_ACCEPT_LICENSE_AGREEMENT: yes
+        ports:
+          - 7687:7687
+          - 7474:7474
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      -   name: Install Poetry
+          run: |
+              curl -sSL https://install.python-poetry.org | python3 -
+
+      -   name: Configure Poetry
+          run: |
+              echo "$HOME/.local/bin" >> $GITHUB_PATH
+              poetry config virtualenvs.create false
+
+      -   name: Install dependencies
+          run: poetry install
+
+      -   name: Run tests
+          run: poetry run pytest ./tests/e2e
