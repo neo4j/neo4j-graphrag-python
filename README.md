@@ -31,6 +31,7 @@ Assumption: Neo4j running with populated vector index in place.
 ```python
 from neo4j import GraphDatabase
 from neo4j_genai import VectorRetriever
+from langchain_openai import OpenAIEmbeddings
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
@@ -40,8 +41,11 @@ INDEX_NAME = "embedding-name"
 # Connect to Neo4j database
 driver = GraphDatabase.driver(URI, auth=AUTH)
 
+# Create Embedder object
+embedder = OpenAIEmbeddings(model="text-embedding-3-large")
+
 # Initialize the retriever
-retriever = VectorRetriever(driver, INDEX_NAME)
+retriever = VectorRetriever(driver, INDEX_NAME, embedder)
 
 # Run the similarity search
 query_text = "How do I do similarity search in Neo4j?"
