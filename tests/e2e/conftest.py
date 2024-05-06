@@ -60,7 +60,7 @@ def setup_neo4j(driver):
         vector_index_name,
         label="Document",
         property="propertyKey",
-        dimensions=10,
+        dimensions=1536,
         similarity_fn="euclidean",
     )
 
@@ -70,7 +70,7 @@ def setup_neo4j(driver):
     )
 
     # Insert 10 vectors and authors
-    vector = [random.random() for _ in range(10)]
+    vector = [random.random() for _ in range(1536)]
 
     def random_str(n: int) -> str:
         return "".join([random.choice(string.ascii_letters) for _ in range(n)])
