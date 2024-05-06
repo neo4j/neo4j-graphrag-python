@@ -54,7 +54,7 @@ class FulltextIndexModel(IndexModel):
 
 
 class VectorSearchModel(BaseModel):
-    index_name: str
+    vector_index_name: str
     top_k: PositiveInt = 5
     query_vector: Optional[list[float]] = None
     query_text: Optional[str] = None

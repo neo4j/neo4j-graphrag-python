@@ -102,3 +102,24 @@ def test_vector_retriever_return_properties(driver):
     assert len(results) == 5
     for result in results:
         assert isinstance(result, VectorSearchRecord)
+
+
+@pytest.mark.usefixtures("setup_neo4j")
+def test_vector_retriever_filters(driver):
+    retriever = VectorRetriever(
+        driver,
+        "vector-index-name",
+    )
+
+    top_k = 2
+    results = retriever.search(
+        query_vector=[1.0 for _ in range(10)],
+        filters={"int_property": {"$gt": 2}},
+        top_k=top_k,
+    )
+
+    assert isinstance(results, list)
+    assert len(results) == 2
+    for result in results:
+        assert isinstance(result, VectorSearchRecord)
+        assert result.node["int_property"] > 2
