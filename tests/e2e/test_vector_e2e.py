@@ -113,7 +113,7 @@ def test_vector_retriever_filters(driver):
 
     top_k = 2
     results = retriever.search(
-        query_vector=[1.0 for _ in range(10)],
+        query_vector=[1.0 for _ in range(1536)],
         filters={"int_property": {"$gt": 2}},
         top_k=top_k,
     )
