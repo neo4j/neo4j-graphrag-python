@@ -60,6 +60,18 @@ def _get_filtered_vector_query(
     embedding_node_property: str,
     embedding_dimension: int,
 ) -> tuple[str, dict[str, Any]]:
+    """Build Cypher query for vector search with filters
+    Uses exact KNN.
+
+    Args:
+        filters (dict[str, Any]): filters used to pre-filter the nodes before vector search
+        node_label (str): node label we want to search for
+        embedding_node_property (str): the name of the property holding the embeddings
+        embedding_dimension (int): the dimension of the embeddings
+
+    Returns:
+        tuple[str, dict[str, Any]]: query and parameters
+    """
     where_filters, query_params = construct_metadata_filter(filters, node_alias="node")
     base_query = BASE_VECTOR_EXACT_QUERY.format(
         node_label=node_label,
@@ -71,19 +83,31 @@ def _get_filtered_vector_query(
     query_params["embedding_dimension"] = embedding_dimension
     return (
         f"""{base_query}
-    AND ({where_filters})
-    {vector_query}
+        AND ({where_filters})
+        {vector_query}
     """,
         query_params,
     )
 
 
 def _get_vector_query(
-    filters: dict[str, Any],
+    filters: Optional[dict[str, Any]],
     node_label: str,
     embedding_node_property: str,
     embedding_dimension: int,
 ) -> tuple[str, dict[str, Any]]:
+    """Build the vector query with or without filters
+
+    Args:
+        filters (dict[str, Any]): filters used to pre-filter the nodes before vector search
+        node_label (str): node label we want to search for
+        embedding_node_property (str): the name of the property holding the embeddings
+        embedding_dimension (int): the dimension of the embeddings
+
+    Returns:
+        tuple[str, dict[str, Any]]: query and parameters
+
+    """
     if filters:
         return _get_filtered_vector_query(
             filters, node_label, embedding_node_property, embedding_dimension
@@ -100,6 +124,23 @@ def get_search_query(
     embedding_dimension: Optional[int] = None,
     filters: Optional[dict[str, Any]] = None,
 ) -> tuple[str, dict[str, Any]]:
+    """Build the search query, including pre-filtering if needed, and return clause.
+
+    Args
+        search_type: Search type we want to search for:
+        return_properties (list[str]): list of property names to return.
+            It can't be provided together with retrieval_query.
+        retrieval_query (str): the query to use to retrieve the search results
+            It can't be provided together with return_properties.
+        node_label (str): node label we want to search for
+        embedding_node_property (str): the name of the property holding the embeddings
+        embedding_dimension (int): the dimension of the embeddings
+        filters (dict[str, Any]): filters used to pre-filter the nodes before vector search
+
+    Returns:
+        tuple[str, dict[str, Any]]: query and parameters
+
+    """
     if search_type == SearchType.HYBRID:
         if filters:
             raise Exception("Filters is not supported with Hybrid Search")
@@ -122,6 +163,18 @@ def _get_query_tail(
     return_properties: Optional[list[str]] = None,
     fallback_return: Optional[str] = None,
 ) -> str:
+    """Build the RETURN statement after the search is performed
+
+    Args
+        return_properties (list[str]): list of property names to return.
+            It can't be provided together with retrieval_query.
+        retrieval_query (str): the query to use to retrieve the search results
+            It can't be provided together with return_properties.
+        fallback_return (str): the fallback return statement to use to retrieve the search results
+
+    Returns:
+       str: the RETURN statement
+    """
     if retrieval_query:
         return retrieval_query
     if return_properties:
