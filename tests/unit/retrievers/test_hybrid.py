@@ -206,7 +206,9 @@ def test_hybrid_cypher_retrieval_query_with_params(_verify_version_mock, driver)
         None,
         None,
     ]
-    search_query, _ = get_search_query(SearchType.HYBRID, retrieval_query=retrieval_query)
+    search_query, _ = get_search_query(
+        SearchType.HYBRID, retrieval_query=retrieval_query
+    )
 
     records = retriever.search(
         query_text=query_text,
