@@ -15,7 +15,7 @@
 from typing import Optional, Any
 
 from neo4j_genai.types import SearchType
-from neo4j_genai.filters import get_metadata_filter
+from neo4j_genai.retrievers.filters import get_metadata_filter
 
 
 VECTOR_INDEX_QUERY = (
@@ -54,25 +54,8 @@ def _get_hybrid_query() -> str:
     )
 
 
-def _get_filtered_vector_query(
-    filters: dict[str, Any],
-    node_label: str,
-    embedding_node_property: str,
-    embedding_dimension: int,
-) -> tuple[str, dict[str, Any]]:
-    """Build Cypher query for vector search with filters
-    Uses exact KNN.
-
-    Args:
-        filters (dict[str, Any]): filters used to pre-filter the nodes before vector search
-        node_label (str): node label we want to search for
-        embedding_node_property (str): the name of the property holding the embeddings
-        embedding_dimension (int): the dimension of the embeddings
-
-    Returns:
-        tuple[str, dict[str, Any]]: query and parameters
-    """
-    where_filters, query_params = get_metadata_filter(filters, node_alias="node")
+def _get_filtered_vector_query(filters: dict[str, Any], node_label: str, embedding_node_property: str, embedding_dimension: int) -> tuple[str, dict[str, Any]]:
+    where_filters, query_params = construct_metadata_filter(filters, node_alias="node")
     base_query = BASE_VECTOR_EXACT_QUERY.format(
         node_label=node_label,
         embedding_node_property=embedding_node_property,
@@ -81,37 +64,15 @@ def _get_filtered_vector_query(
         embedding_node_property=embedding_node_property,
     )
     query_params["embedding_dimension"] = embedding_dimension
-    return (
-        f"""{base_query}
-        AND ({where_filters})
-        {vector_query}
-    """,
-        query_params,
-    )
+    return f"""{base_query}
+    AND ({where_filters})
+    {vector_query}
+    """, query_params
 
 
-def _get_vector_query(
-    filters: Optional[dict[str, Any]],
-    node_label: str,
-    embedding_node_property: str,
-    embedding_dimension: int,
-) -> tuple[str, dict[str, Any]]:
-    """Build the vector query with or without filters
-
-    Args:
-        filters (dict[str, Any]): filters used to pre-filter the nodes before vector search
-        node_label (str): node label we want to search for
-        embedding_node_property (str): the name of the property holding the embeddings
-        embedding_dimension (int): the dimension of the embeddings
-
-    Returns:
-        tuple[str, dict[str, Any]]: query and parameters
-
-    """
+def _get_vector_query(filters: dict[str, Any], node_label: str, embedding_node_property: str, embedding_dimension: int) -> tuple[str, dict[str, Any]]:
     if filters:
-        return _get_filtered_vector_query(
-            filters, node_label, embedding_node_property, embedding_dimension
-        )
+        return _get_filtered_vector_query(filters, node_label, embedding_node_property, embedding_dimension)
     return VECTOR_INDEX_QUERY, {}
 
 
