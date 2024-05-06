@@ -36,7 +36,9 @@ def test_vector_cypher_retriever_initialization(driver):
 
 @patch("neo4j_genai.VectorRetriever._fetch_index_infos")
 @patch("neo4j_genai.VectorRetriever._verify_version")
-def test_similarity_search_vector_happy_path(_verify_version_mock, _fetch_index_infos, driver):
+def test_similarity_search_vector_happy_path(
+    _verify_version_mock, _fetch_index_infos, driver
+):
     index_name = "my-index"
     dimensions = 1536
     query_vector = [1.0 for _ in range(dimensions)]
@@ -64,7 +66,9 @@ def test_similarity_search_vector_happy_path(_verify_version_mock, _fetch_index_
 
 @patch("neo4j_genai.VectorRetriever._fetch_index_infos")
 @patch("neo4j_genai.VectorRetriever._verify_version")
-def test_similarity_search_text_happy_path(_verify_version_mock, _fetch_index_infos, driver):
+def test_similarity_search_text_happy_path(
+    _verify_version_mock, _fetch_index_infos, driver
+):
     embed_query_vector = [1.0 for _ in range(1536)]
     custom_embeddings = MagicMock()
     custom_embeddings.embed_query.return_value = embed_query_vector
@@ -96,7 +100,9 @@ def test_similarity_search_text_happy_path(_verify_version_mock, _fetch_index_in
 
 @patch("neo4j_genai.VectorRetriever._fetch_index_infos")
 @patch("neo4j_genai.VectorRetriever._verify_version")
-def test_similarity_search_text_return_properties(_verify_version_mock, _fetch_index_infos, driver):
+def test_similarity_search_text_return_properties(
+    _verify_version_mock, _fetch_index_infos, driver
+):
     embed_query_vector = [1.0 for _ in range(3)]
     custom_embeddings = MagicMock()
     custom_embeddings.embed_query.return_value = embed_query_vector
@@ -180,7 +186,9 @@ def test_vector_cypher_retriever_search_both_text_and_vector(vector_cypher_retri
 
 @patch("neo4j_genai.VectorRetriever._fetch_index_infos")
 @patch("neo4j_genai.VectorRetriever._verify_version")
-def test_similarity_search_vector_bad_results(_verify_version_mock, _fetch_index_infos, driver):
+def test_similarity_search_vector_bad_results(
+    _verify_version_mock, _fetch_index_infos, driver
+):
     index_name = "my-index"
     dimensions = 1536
     query_vector = [1.0 for _ in range(dimensions)]
@@ -226,7 +234,9 @@ def test_retrieval_query_happy_path(_verify_version_mock, _fetch_index_infos, dr
         None,
         None,
     ]
-    search_query, _ = get_search_query(SearchType.VECTOR, retrieval_query=retrieval_query)
+    search_query, _ = get_search_query(
+        SearchType.VECTOR, retrieval_query=retrieval_query
+    )
 
     records = retriever.search(
         query_text=query_text,
@@ -271,7 +281,9 @@ def test_retrieval_query_with_params(_verify_version_mock, _fetch_index_infos, d
         None,
         None,
     ]
-    search_query, _ = get_search_query(SearchType.VECTOR, retrieval_query=retrieval_query)
+    search_query, _ = get_search_query(
+        SearchType.VECTOR, retrieval_query=retrieval_query
+    )
 
     records = retriever.search(
         query_text=query_text,

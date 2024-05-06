@@ -54,7 +54,12 @@ def _get_hybrid_query() -> str:
     )
 
 
-def _get_filtered_vector_query(filters: dict[str, Any], node_label: str, embedding_node_property: str, embedding_dimension: int) -> tuple[str, dict[str, Any]]:
+def _get_filtered_vector_query(
+    filters: dict[str, Any],
+    node_label: str,
+    embedding_node_property: str,
+    embedding_dimension: int,
+) -> tuple[str, dict[str, Any]]:
     where_filters, query_params = construct_metadata_filter(filters, node_alias="node")
     base_query = BASE_VECTOR_EXACT_QUERY.format(
         node_label=node_label,
@@ -64,15 +69,25 @@ def _get_filtered_vector_query(filters: dict[str, Any], node_label: str, embeddi
         embedding_node_property=embedding_node_property,
     )
     query_params["embedding_dimension"] = embedding_dimension
-    return f"""{base_query}
+    return (
+        f"""{base_query}
     AND ({where_filters})
     {vector_query}
-    """, query_params
+    """,
+        query_params,
+    )
 
 
-def _get_vector_query(filters: dict[str, Any], node_label: str, embedding_node_property: str, embedding_dimension: int) -> tuple[str, dict[str, Any]]:
+def _get_vector_query(
+    filters: dict[str, Any],
+    node_label: str,
+    embedding_node_property: str,
+    embedding_dimension: int,
+) -> tuple[str, dict[str, Any]]:
     if filters:
-        return _get_filtered_vector_query(filters, node_label, embedding_node_property, embedding_dimension)
+        return _get_filtered_vector_query(
+            filters, node_label, embedding_node_property, embedding_dimension
+        )
     return VECTOR_INDEX_QUERY, {}
 
 
@@ -91,10 +106,14 @@ def get_search_query(
         query = _get_hybrid_query()
         params = {}
     elif search_type == SearchType.VECTOR:
-        query, params = _get_vector_query(filters, node_label, embedding_node_property, embedding_dimension)
+        query, params = _get_vector_query(
+            filters, node_label, embedding_node_property, embedding_dimension
+        )
     else:
         raise ValueError(f"Search type is not supported: {search_type}")
-    query_tail = _get_query_tail(retrieval_query, return_properties, fallback_return="RETURN node, score")
+    query_tail = _get_query_tail(
+        retrieval_query, return_properties, fallback_return="RETURN node, score"
+    )
     return " ".join([query, query_tail]), params
 
 
