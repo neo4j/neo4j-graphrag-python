@@ -60,7 +60,7 @@ def test_hybrid_search_text_happy_path(_verify_version_mock, driver):
         None,
         None,
     ]
-    search_query = get_search_query(SearchType.HYBRID)
+    search_query, _ = get_search_query(SearchType.HYBRID)
 
     records = retriever.search(query_text=query_text, top_k=top_k)
 
@@ -98,7 +98,7 @@ def test_hybrid_search_favors_query_vector_over_embedding_vector(
         None,
         None,
     ]
-    search_query = get_search_query(SearchType.HYBRID)
+    search_query, _ = get_search_query(SearchType.HYBRID)
 
     retriever.search(query_text=query_text, query_vector=query_vector, top_k=top_k)
 
@@ -161,7 +161,7 @@ def test_hybrid_retriever_return_properties(_verify_version_mock, driver):
         None,
         None,
     ]
-    search_query = get_search_query(SearchType.HYBRID, return_properties)
+    search_query, _ = get_search_query(SearchType.HYBRID, return_properties)
 
     records = retriever.search(query_text=query_text, top_k=top_k)
 
@@ -206,7 +206,7 @@ def test_hybrid_cypher_retrieval_query_with_params(_verify_version_mock, driver)
         None,
         None,
     ]
-    search_query = get_search_query(SearchType.HYBRID, retrieval_query=retrieval_query)
+    search_query, _ = get_search_query(SearchType.HYBRID, retrieval_query=retrieval_query)
 
     records = retriever.search(
         query_text=query_text,

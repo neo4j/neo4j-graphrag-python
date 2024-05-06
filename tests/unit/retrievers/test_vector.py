@@ -34,8 +34,9 @@ def test_vector_cypher_retriever_initialization(driver):
         mock_verify.assert_called_once()
 
 
+@patch("neo4j_genai.VectorRetriever._fetch_index_infos")
 @patch("neo4j_genai.VectorRetriever._verify_version")
-def test_similarity_search_vector_happy_path(_verify_version_mock, driver):
+def test_similarity_search_vector_happy_path(_verify_version_mock, _fetch_index_infos, driver):
     index_name = "my-index"
     dimensions = 1536
     query_vector = [1.0 for _ in range(dimensions)]
@@ -46,14 +47,14 @@ def test_similarity_search_vector_happy_path(_verify_version_mock, driver):
         None,
         None,
     ]
-    search_query = get_search_query(SearchType.VECTOR)
+    search_query, _ = get_search_query(SearchType.VECTOR)
 
     records = retriever.search(query_vector=query_vector, top_k=top_k)
 
     retriever.driver.execute_query.assert_called_once_with(
         search_query,
         {
-            "index_name": index_name,
+            "vector_index_name": index_name,
             "top_k": top_k,
             "query_vector": query_vector,
         },
@@ -61,8 +62,9 @@ def test_similarity_search_vector_happy_path(_verify_version_mock, driver):
     assert records == [VectorSearchRecord(node="dummy-node", score=1.0)]
 
 
+@patch("neo4j_genai.VectorRetriever._fetch_index_infos")
 @patch("neo4j_genai.VectorRetriever._verify_version")
-def test_similarity_search_text_happy_path(_verify_version_mock, driver):
+def test_similarity_search_text_happy_path(_verify_version_mock, _fetch_index_infos, driver):
     embed_query_vector = [1.0 for _ in range(1536)]
     custom_embeddings = MagicMock()
     custom_embeddings.embed_query.return_value = embed_query_vector
@@ -75,7 +77,7 @@ def test_similarity_search_text_happy_path(_verify_version_mock, driver):
         None,
         None,
     ]
-    search_query = get_search_query(SearchType.VECTOR)
+    search_query, _ = get_search_query(SearchType.VECTOR)
 
     records = retriever.search(query_text=query_text, top_k=top_k)
 
@@ -83,7 +85,7 @@ def test_similarity_search_text_happy_path(_verify_version_mock, driver):
     driver.execute_query.assert_called_once_with(
         search_query,
         {
-            "index_name": index_name,
+            "vector_index_name": index_name,
             "top_k": top_k,
             "query_vector": embed_query_vector,
         },
@@ -92,8 +94,9 @@ def test_similarity_search_text_happy_path(_verify_version_mock, driver):
     assert records == [VectorSearchRecord(node="dummy-node", score=1.0)]
 
 
+@patch("neo4j_genai.VectorRetriever._fetch_index_infos")
 @patch("neo4j_genai.VectorRetriever._verify_version")
-def test_similarity_search_text_return_properties(_verify_version_mock, driver):
+def test_similarity_search_text_return_properties(_verify_version_mock, _fetch_index_infos, driver):
     embed_query_vector = [1.0 for _ in range(3)]
     custom_embeddings = MagicMock()
     custom_embeddings.embed_query.return_value = embed_query_vector
@@ -111,7 +114,7 @@ def test_similarity_search_text_return_properties(_verify_version_mock, driver):
         None,
         None,
     ]
-    search_query = get_search_query(SearchType.VECTOR, return_properties)
+    search_query, _ = get_search_query(SearchType.VECTOR, return_properties)
 
     records = retriever.search(query_text=query_text, top_k=top_k)
 
@@ -119,7 +122,7 @@ def test_similarity_search_text_return_properties(_verify_version_mock, driver):
     driver.execute_query.assert_called_once_with(
         search_query.rstrip(),
         {
-            "index_name": index_name,
+            "vector_index_name": index_name,
             "top_k": top_k,
             "query_vector": embed_query_vector,
         },
@@ -175,8 +178,9 @@ def test_vector_cypher_retriever_search_both_text_and_vector(vector_cypher_retri
         )
 
 
+@patch("neo4j_genai.VectorRetriever._fetch_index_infos")
 @patch("neo4j_genai.VectorRetriever._verify_version")
-def test_similarity_search_vector_bad_results(_verify_version_mock, driver):
+def test_similarity_search_vector_bad_results(_verify_version_mock, _fetch_index_infos, driver):
     index_name = "my-index"
     dimensions = 1536
     query_vector = [1.0 for _ in range(dimensions)]
@@ -187,7 +191,7 @@ def test_similarity_search_vector_bad_results(_verify_version_mock, driver):
         None,
         None,
     ]
-    search_query = get_search_query(SearchType.VECTOR)
+    search_query, _ = get_search_query(SearchType.VECTOR)
 
     with pytest.raises(ValueError):
         retriever.search(query_vector=query_vector, top_k=top_k)
@@ -195,15 +199,16 @@ def test_similarity_search_vector_bad_results(_verify_version_mock, driver):
     retriever.driver.execute_query.assert_called_once_with(
         search_query,
         {
-            "index_name": index_name,
+            "vector_index_name": index_name,
             "top_k": top_k,
             "query_vector": query_vector,
         },
     )
 
 
+@patch("neo4j_genai.VectorCypherRetriever._fetch_index_infos")
 @patch("neo4j_genai.VectorCypherRetriever._verify_version")
-def test_retrieval_query_happy_path(_verify_version_mock, driver):
+def test_retrieval_query_happy_path(_verify_version_mock, _fetch_index_infos, driver):
     embed_query_vector = [1.0 for _ in range(1536)]
     custom_embeddings = MagicMock()
     custom_embeddings.embed_query.return_value = embed_query_vector
@@ -221,7 +226,7 @@ def test_retrieval_query_happy_path(_verify_version_mock, driver):
         None,
         None,
     ]
-    search_query = get_search_query(SearchType.VECTOR, retrieval_query=retrieval_query)
+    search_query, _ = get_search_query(SearchType.VECTOR, retrieval_query=retrieval_query)
 
     records = retriever.search(
         query_text=query_text,
@@ -232,7 +237,7 @@ def test_retrieval_query_happy_path(_verify_version_mock, driver):
     driver.execute_query.assert_called_once_with(
         search_query,
         {
-            "index_name": index_name,
+            "vector_index_name": index_name,
             "top_k": top_k,
             "query_vector": embed_query_vector,
         },
@@ -240,8 +245,9 @@ def test_retrieval_query_happy_path(_verify_version_mock, driver):
     assert records == [{"node_id": 123, "text": "dummy-text", "score": 1.0}]
 
 
+@patch("neo4j_genai.VectorCypherRetriever._fetch_index_infos")
 @patch("neo4j_genai.VectorCypherRetriever._verify_version")
-def test_retrieval_query_with_params(_verify_version_mock, driver):
+def test_retrieval_query_with_params(_verify_version_mock, _fetch_index_infos, driver):
     embed_query_vector = [1.0 for _ in range(1536)]
     custom_embeddings = MagicMock()
     custom_embeddings.embed_query.return_value = embed_query_vector
@@ -265,7 +271,7 @@ def test_retrieval_query_with_params(_verify_version_mock, driver):
         None,
         None,
     ]
-    search_query = get_search_query(SearchType.VECTOR, retrieval_query=retrieval_query)
+    search_query, _ = get_search_query(SearchType.VECTOR, retrieval_query=retrieval_query)
 
     records = retriever.search(
         query_text=query_text,
@@ -278,7 +284,7 @@ def test_retrieval_query_with_params(_verify_version_mock, driver):
     driver.execute_query.assert_called_once_with(
         search_query,
         {
-            "index_name": index_name,
+            "vector_index_name": index_name,
             "top_k": top_k,
             "query_vector": embed_query_vector,
             "param": "dummy-param",
@@ -288,8 +294,9 @@ def test_retrieval_query_with_params(_verify_version_mock, driver):
     assert records == [{"node_id": 123, "text": "dummy-text", "score": 1.0}]
 
 
+@patch("neo4j_genai.VectorCypherRetriever._fetch_index_infos")
 @patch("neo4j_genai.VectorCypherRetriever._verify_version")
-def test_retrieval_query_cypher_error(_verify_version_mock, driver):
+def test_retrieval_query_cypher_error(_verify_version_mock, _fetch_index_infos, driver):
     embed_query_vector = [1.0 for _ in range(1536)]
     custom_embeddings = MagicMock()
     custom_embeddings.embed_query.return_value = embed_query_vector

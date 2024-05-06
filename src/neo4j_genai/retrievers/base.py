@@ -57,3 +57,19 @@ class Retriever(ABC):
     @abstractmethod
     def search(self, *args, **kwargs) -> Any:
         pass
+
+    def _fetch_index_infos(self):
+        """Fetch the node label and embedding property from the index definition"""
+        query = """SHOW VECTOR INDEXES
+YIELD name, labelsOrTypes, properties, options
+WHERE name = $index_name
+RETURN labelsOrTypes as labels, properties, options.indexConfig.`vector.dimensions` as dimensions
+        """
+        result = self.driver.execute_query(query, {"index_name": self.index_name})
+        try:
+            result = result.records[0]
+        except IndexError:
+            raise Exception(f"No index with name {self.index_name} found")
+        self._node_label = result["labels"][0]
+        self._embedding_node_property = result["properties"][0]
+        self._embedding_dimension = result["dimensions"]
