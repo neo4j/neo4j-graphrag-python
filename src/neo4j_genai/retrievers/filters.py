@@ -148,8 +148,11 @@ class ParameterStore:
         self.params = {}
 
     def _get_params_name(self, key="param"):
-        """NB: the counter parameter is there in purpose, will be modified in the function
-        to remember the count of each parameter
+        """Find parameter name so that param names are unique.
+        This function adds a suffix to the key corresponding to the number
+        of times the key have been used in the query.
+        E.g.
+        node.age >= $param_0 AND node.age <= $param_1
 
         :param p:
         :param counter:
@@ -161,6 +164,9 @@ class ParameterStore:
         return param_name
 
     def add(self, key, value):
+        """This function adds a new parameter to the param dict.
+        It returns the name of the parameter to be used as a placeholder
+        in the cypher query, e.g. $param_0"""
         param_name = self._get_params_name()
         self.params[param_name] = value
         return param_name
@@ -173,10 +179,21 @@ def _single_condition_cypher(
     param_store: ParameterStore,
     node_alias: str,
 ) -> str:
-    """Return Cypher for field operator value
+    """Return Cypher for field operator value.
+
+    Args:
+        field: the name of the field being filtered
+        native_operator_class: the operator class that will be used to generate
+            the Cypher query
+        value: filtered value
+        param_store: ParameterStore objet that will be updated in this function
+        node_alias: name of the node being filtered in the Cypher query
+    Returns:
+        str: the Cypher condition, e.g. node.`property` = $param_0
+
     NB: the param_store argument is mutable, it will be updated in this function
     """
-    native_op = native_operator_class()
+    native_op = native_operator_class(node_alias=node_alias)
     param_name = param_store.add(field, native_op.cleaned_value(value))
     query_snippet = f"{native_op.lhs(field)} {native_op.CYPHER_OPERATOR} ${param_name}"
     return query_snippet
@@ -196,11 +213,11 @@ def _handle_field_filter(
             If provided as is then this will be an equality filter
             If provided as a dictionary then this will be a filter, the key
             will be the operator and the value will be the value to filter by
-        param_store:
-        node_alias:
+        param_store: ParameterStore objet that will be updated in this function
+        node_alias: name of the node being filtered in the Cypher query
 
     Returns
-        - Cypher filter snippet*
+        str: Cypher filter snippet
 
     NB: the param_store argument is mutable, it will be updated in this function
     """
@@ -266,11 +283,11 @@ def _construct_metadata_filter(
 
     Args:
         filter: A dictionary representing the filter condition.
-        param_store: A ParamStore object that will deal with parameter naming and saving along the process
-        node_alias: a string used as alias for the node the filters will be applied to (must come from earlier in the query)
+        param_store: ParameterStore objet that will be updated in this function
+        node_alias: name of the node being filtered in the Cypher query
 
     Returns:
-        str
+        str: the Cypher WHERE clause
 
     NB: the param_store argument is mutable, it will be updated in this function
     """
