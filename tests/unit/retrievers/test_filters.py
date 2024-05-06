@@ -137,9 +137,17 @@ def test_filter_or_condition():
 
 
 def test_filter_and_or_combined():
-    filters = {"$and": [{"$or": [{"field_1": "string_value"}, {"field_2": True}]}, {"field_3": 11}]}
+    filters = {
+        "$and": [
+            {"$or": [{"field_1": "string_value"}, {"field_2": True}]},
+            {"field_3": 11},
+        ]
+    }
     query, params = construct_metadata_filter(filters)
-    assert query == "((node.`field_1` = $param_0) OR (node.`field_2` = $param_1)) AND (node.`field_3` = $param_2)"
+    assert (
+        query
+        == "((node.`field_1` = $param_0) OR (node.`field_2` = $param_1)) AND (node.`field_3` = $param_2)"
+    )
     assert params == {"param_0": "string_value", "param_1": True, "param_2": 11}
 
 
@@ -147,16 +155,16 @@ def test_filter_and_or_combined():
 def test_field_name_with_dollar_sign():
     filters = {"$field": "value"}
     with pytest.raises(ValueError):
-       construct_metadata_filter(filters)
+        construct_metadata_filter(filters)
 
 
 def test_and_no_list():
     filters = {"$and": {}}
     with pytest.raises(ValueError):
-       construct_metadata_filter(filters)
+        construct_metadata_filter(filters)
 
 
 def test_unsupported_operator():
     filters = {"field": {"$unsupported": "value"}}
     with pytest.raises(ValueError):
-       construct_metadata_filter(filters)
+        construct_metadata_filter(filters)
