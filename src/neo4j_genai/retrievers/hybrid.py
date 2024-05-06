@@ -21,6 +21,10 @@ from neo4j_genai.embedder import Embedder
 from neo4j_genai.retrievers.base import Retriever
 from neo4j_genai.types import HybridSearchModel, SearchType, HybridCypherSearchModel
 from neo4j_genai.neo4j_queries import get_search_query
+import logging
+import json
+
+logger = logging.getLogger(__name__)
 
 
 class HybridRetriever(Retriever):
@@ -82,6 +86,9 @@ class HybridRetriever(Retriever):
             parameters["query_vector"] = query_vector
 
         search_query = get_search_query(SearchType.HYBRID, self.return_properties)
+
+        logger.debug(f"HybridRetriever Cypher parameters: {json.dumps(parameters)}")
+        logger.debug(f"HybridRetriever Cypher query: {search_query}")
 
         records, _, _ = self.driver.execute_query(search_query, parameters)
         return records
@@ -157,5 +164,11 @@ class HybridCypherRetriever(Retriever):
         search_query = get_search_query(
             SearchType.HYBRID, retrieval_query=self.retrieval_query
         )
+
+        logger.debug(
+            f"HybridCypherRetriever Cypher parameters: {json.dumps(parameters)}"
+        )
+        logger.debug(f"HybridCypherRetriever Cypher query: {search_query}")
+
         records, _, _ = self.driver.execute_query(search_query, parameters)
         return records
