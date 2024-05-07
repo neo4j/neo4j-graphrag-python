@@ -71,9 +71,7 @@ class InOperator(Operator):
     def cleaned_value(self, value):
         for val in value:
             if not isinstance(val, (str, int, float)):
-                raise NotImplementedError(
-                    f"Unsupported type: {type(val)} for value: {val}"
-                )
+                raise ValueError(f"Unsupported type: {type(val)} for value: {val}")
         return value
 
 
@@ -178,7 +176,7 @@ def _single_condition_cypher(
     native_operator_class: Type[Operator],
     value: Any,
     param_store: ParameterStore,
-    node_alias: str,
+    node_alias: str = DEFAULT_NODE_ALIAS,
 ) -> str:
     """Return Cypher for field operator value.
 
@@ -263,6 +261,10 @@ def _handle_field_filter(
     # special case for the BETWEEN operator that requires
     # two tests (lower_bound <= value <= higher_bound)
     if operator == OPERATOR_BETWEEN:
+        if len(filter_value) != 2:
+            raise ValueError(
+                f"Expected lower and upper bounds in a list, got {filter_value}"
+            )
         low, high = filter_value
         param_name_low = param_store.add(field, low)
         param_name_high = param_store.add(field, high)
