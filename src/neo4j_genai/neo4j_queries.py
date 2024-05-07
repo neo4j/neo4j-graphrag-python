@@ -81,13 +81,7 @@ def _get_filtered_vector_query(
         embedding_node_property=embedding_node_property,
     )
     query_params["embedding_dimension"] = embedding_dimension
-    return (
-        f"""{base_query}
-        AND ({where_filters})
-        {vector_query}
-    """,
-        query_params,
-    )
+    return f"{base_query} AND ({where_filters}) {vector_query}", query_params
 
 
 def _get_vector_query(
@@ -155,7 +149,7 @@ def get_search_query(
     query_tail = _get_query_tail(
         retrieval_query, return_properties, fallback_return="RETURN node, score"
     )
-    return " ".join([query, query_tail]), params
+    return f"{query} {query_tail}", params
 
 
 def _get_query_tail(

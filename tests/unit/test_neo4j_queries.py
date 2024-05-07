@@ -12,6 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from unittest.mock import patch
 
 from neo4j_genai.neo4j_queries import get_search_query, _get_query_tail
 from neo4j_genai.types import SearchType
@@ -66,6 +67,55 @@ def test_vector_search_with_retrieval_query():
     )
     result, _ = get_search_query(SearchType.VECTOR, retrieval_query=retrieval_query)
     assert result.strip() == expected.strip()
+
+
+@patch("neo4j_genai.neo4j_queries.get_metadata_filter", return_value=["True", {}])
+def test_vector_search_with_filters(_mock):
+    expected = (
+        "MATCH (node:`Label`) "
+        "WHERE node.`vector` IS NOT NULL "
+        "AND size(node.`vector`) = toInteger($embedding_dimension)"
+        " AND (True) "
+        "WITH node, "
+        "vector.similarity.cosine(node.`vector`, $query_vector) AS score "
+        "ORDER BY score DESC LIMIT $top_k"
+        " RETURN node, score"
+    )
+    result, params = get_search_query(
+        SearchType.VECTOR,
+        node_label="Label",
+        embedding_node_property="vector",
+        embedding_dimension=1,
+        filters={"field": "value"},
+    )
+    assert result.strip() == expected.strip()
+    assert params == {"embedding_dimension": 1}
+
+
+@patch(
+    "neo4j_genai.neo4j_queries.get_metadata_filter",
+    return_value=["True", {"param": "value"}],
+)
+def test_vector_search_with_params_from_filters(_mock):
+    expected = (
+        "MATCH (node:`Label`) "
+        "WHERE node.`vector` IS NOT NULL "
+        "AND size(node.`vector`) = toInteger($embedding_dimension)"
+        " AND (True) "
+        "WITH node, "
+        "vector.similarity.cosine(node.`vector`, $query_vector) AS score "
+        "ORDER BY score DESC LIMIT $top_k"
+        " RETURN node, score"
+    )
+    result, params = get_search_query(
+        SearchType.VECTOR,
+        node_label="Label",
+        embedding_node_property="vector",
+        embedding_dimension=1,
+        filters={"field": "value"},
+    )
+    assert result.strip() == expected.strip()
+    assert params == {"embedding_dimension": 1, "param": "value"}
 
 
 def test_hybrid_search_with_retrieval_query():

@@ -333,14 +333,18 @@ def test_handle_field_filter_ilike(_single_condition_cypher_mocked, param_store_
 
 
 @patch("neo4j_genai.filters._handle_field_filter")
-def test_construct_metadata_filter_filter_is_not_a_dict(_handle_field_filter_mock, param_store_empty):
+def test_construct_metadata_filter_filter_is_not_a_dict(
+    _handle_field_filter_mock, param_store_empty
+):
     with pytest.raises(ValueError) as excinfo:
         _construct_metadata_filter([], param_store_empty, node_alias="n")
     assert "Filter must be a dictionary, got <class 'list'>" in str(excinfo)
 
 
 @patch("neo4j_genai.filters._handle_field_filter")
-def test_construct_metadata_filter_no_operator(_handle_field_filter_mock, param_store_empty):
+def test_construct_metadata_filter_no_operator(
+    _handle_field_filter_mock, param_store_empty
+):
     _construct_metadata_filter({"field": "value"}, param_store_empty, node_alias="n")
     _handle_field_filter_mock.assert_called_once_with(
         "field", "value", param_store_empty, node_alias="n"
@@ -348,36 +352,68 @@ def test_construct_metadata_filter_no_operator(_handle_field_filter_mock, param_
 
 
 @patch("neo4j_genai.filters._construct_metadata_filter")
-def test_construct_metadata_filter_implicit_and(_construct_metadata_filter_mock, param_store_empty):
-    _construct_metadata_filter({"field_1": "value_1", "field_2": "value_2"}, param_store_empty, node_alias="n")
-    _construct_metadata_filter_mock.assert_has_calls([
-        call({"$and": [{"field_1": "value_1"}, {"field_2": "value_2"}]}, param_store_empty, "n"),
-    ])
+def test_construct_metadata_filter_implicit_and(
+    _construct_metadata_filter_mock, param_store_empty
+):
+    _construct_metadata_filter(
+        {"field_1": "value_1", "field_2": "value_2"}, param_store_empty, node_alias="n"
+    )
+    _construct_metadata_filter_mock.assert_has_calls(
+        [
+            call(
+                {"$and": [{"field_1": "value_1"}, {"field_2": "value_2"}]},
+                param_store_empty,
+                "n",
+            ),
+        ]
+    )
 
 
-@patch("neo4j_genai.filters._construct_metadata_filter", side_effect=["filter1", "filter2"])
-def test_construct_metadata_filter_explicit_and(_construct_metadata_filter_mock, param_store_empty):
-    generated = _construct_metadata_filter({"$and": [{"field_1": "value_1"}, {"field_2": "value_2"}]}, param_store_empty, node_alias="n")
-    _construct_metadata_filter_mock.assert_has_calls([
-        call({"field_1": "value_1"}, param_store_empty, "n"),
-        call({"field_2": "value_2"}, param_store_empty, "n")
-    ])
+@patch(
+    "neo4j_genai.filters._construct_metadata_filter", side_effect=["filter1", "filter2"]
+)
+def test_construct_metadata_filter_explicit_and(
+    _construct_metadata_filter_mock, param_store_empty
+):
+    generated = _construct_metadata_filter(
+        {"$and": [{"field_1": "value_1"}, {"field_2": "value_2"}]},
+        param_store_empty,
+        node_alias="n",
+    )
+    _construct_metadata_filter_mock.assert_has_calls(
+        [
+            call({"field_1": "value_1"}, param_store_empty, "n"),
+            call({"field_2": "value_2"}, param_store_empty, "n"),
+        ]
+    )
     assert generated == "(filter1) AND (filter2)"
 
 
-@patch("neo4j_genai.filters._construct_metadata_filter", side_effect=["filter1", "filter2"])
-def test_construct_metadata_filter_or(_construct_metadata_filter_mock, param_store_empty):
-    generated = _construct_metadata_filter({"$or": [{"field_1": "value_1"}, {"field_2": "value_2"}]}, param_store_empty, node_alias="n")
-    _construct_metadata_filter_mock.assert_has_calls([
-        call({"field_1": "value_1"}, param_store_empty, "n"),
-        call({"field_2": "value_2"}, param_store_empty, "n")
-    ])
+@patch(
+    "neo4j_genai.filters._construct_metadata_filter", side_effect=["filter1", "filter2"]
+)
+def test_construct_metadata_filter_or(
+    _construct_metadata_filter_mock, param_store_empty
+):
+    generated = _construct_metadata_filter(
+        {"$or": [{"field_1": "value_1"}, {"field_2": "value_2"}]},
+        param_store_empty,
+        node_alias="n",
+    )
+    _construct_metadata_filter_mock.assert_has_calls(
+        [
+            call({"field_1": "value_1"}, param_store_empty, "n"),
+            call({"field_2": "value_2"}, param_store_empty, "n"),
+        ]
+    )
     assert generated == "(filter1) OR (filter2)"
 
 
 def test_construct_metadata_filter_invalid_operator(param_store_empty):
     with pytest.raises(ValueError) as excinfo:
-        _construct_metadata_filter({"$invalid": [{}, {}]}, param_store_empty, node_alias="n")
+        _construct_metadata_filter(
+            {"$invalid": [{}, {}]}, param_store_empty, node_alias="n"
+        )
     assert "Unsupported operator: $invalid" in str(excinfo)
 
 
