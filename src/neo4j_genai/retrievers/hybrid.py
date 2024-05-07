@@ -86,8 +86,8 @@ class HybridRetriever(Retriever):
 
         search_query = get_search_query(SearchType.HYBRID, self.return_properties)
 
-        logger.debug("HybridRetriever Cypher parameters", parameters)
-        logger.debug("HybridRetriever Cypher query", search_query)
+        logger.debug("HybridRetriever Cypher parameters %s", parameters)
+        logger.debug("HybridRetriever Cypher query %s", search_query)
 
         records, _, _ = self.driver.execute_query(search_query, parameters)
         return records
@@ -164,8 +164,8 @@ class HybridCypherRetriever(Retriever):
             SearchType.HYBRID, retrieval_query=self.retrieval_query
         )
 
-        logger.debug("HybridCypherRetriever Cypher parameters", parameters)
-        logger.debug("HybridCypherRetriever Cypher query", search_query)
+        logger.debug("HybridCypherRetriever Cypher parameters %s", parameters)
+        logger.debug("HybridCypherRetriever Cypher query %s", search_query)
 
         records, _, _ = self.driver.execute_query(search_query, parameters)
         return records
