@@ -43,9 +43,9 @@ def param_store_empty():
 def test_param_store():
     ps = ParameterStore()
     assert ps.params == {}
-    ps.add("", 1)
+    ps.add(1)
     assert ps.params == {"param_0": 1}
-    ps.add("", "some value")
+    ps.add("some value")
     assert ps.params == {"param_0": 1, "param_1": "some value"}
 
 
@@ -166,6 +166,13 @@ def test_single_condition_cypher_like_not_a_string(param_store_empty):
     assert "Expected string value, got <class 'int'>" in str(excinfo)
 
 
+def test_single_condition_cypher_escaped_field_name(param_store_empty):
+    generated = _single_condition_cypher(
+        "na`me", EqOperator, "value", param_store=param_store_empty
+    )
+    assert generated == "node.`na``me` = $param_0"
+
+
 def test_handle_field_filter_not_a_string(param_store_empty):
     with pytest.raises(ValueError) as excinfo:
         _handle_field_filter(1, "value", param_store=param_store_empty)
@@ -180,14 +187,6 @@ def test_handle_field_filter_field_start_with_dollar_sign(param_store_empty):
     assert (
         "Invalid filter condition. Expected a field but got an operator: $field_name"
         in str(excinfo)
-    )
-
-
-def test_handle_field_filter_bad_field_name(param_store_empty):
-    with pytest.raises(ValueError) as excinfo:
-        _handle_field_filter("bad+field?name", "value", param_store=param_store_empty)
-    assert "Invalid field name: bad+field?name. Expected a valid identifier." in str(
-        excinfo
     )
 
 

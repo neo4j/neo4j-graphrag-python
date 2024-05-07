@@ -35,7 +35,8 @@ class Operator:
         self.node_alias = node_alias
 
     def lhs(self, field):
-        return f"{self.node_alias}.`{field}`"
+        escaped_field = field.replace("`", "``")
+        return f"{self.node_alias}.`{escaped_field}`"
 
     def cleaned_value(self, value):
         return value
@@ -145,7 +146,7 @@ class ParameterStore:
         self._counter = Counter()
         self.params = {}
 
-    def _get_params_name(self, key="param"):
+    def _get_params_name(self):
         """Find parameter name so that param names are unique.
         This function adds a suffix to the key corresponding to the number
         of times the key have been used in the query.
@@ -157,12 +158,12 @@ class ParameterStore:
         Returns:
             The full unique parameter name
         """
-        # key = slugify(key.replace(".", "_"), separator="_")
+        key = "param"
         param_name = f"{key}_{self._counter[key]}"
         self._counter[key] += 1
         return param_name
 
-    def add(self, key, value):
+    def add(self, value):
         """This function adds a new parameter to the param dict.
         It returns the name of the parameter to be used as a placeholder
         in the cypher query, e.g. $param_0"""
@@ -193,7 +194,7 @@ def _single_condition_cypher(
     NB: the param_store argument is mutable, it will be updated in this function
     """
     native_op = native_operator_class(node_alias=node_alias)
-    param_name = param_store.add(field, native_op.cleaned_value(value))
+    param_name = param_store.add(native_op.cleaned_value(value))
     query_snippet = f"{native_op.lhs(field)} {native_op.CYPHER_OPERATOR} ${param_name}"
     return query_snippet
 
@@ -232,10 +233,6 @@ def _handle_field_filter(
             f"{field}"
         )
 
-    # Allow [a-zA-Z0-9_], disallow $ for now until we support escape characters
-    if not field.isidentifier():
-        raise ValueError(f"Invalid field name: {field}. Expected a valid identifier.")
-
     if isinstance(value, dict):
         # This is a filter specification e.g. {"$gte": 0}
         if len(value) != 1:
@@ -266,8 +263,8 @@ def _handle_field_filter(
                 f"Expected lower and upper bounds in a list, got {filter_value}"
             )
         low, high = filter_value
-        param_name_low = param_store.add(field, low)
-        param_name_high = param_store.add(field, high)
+        param_name_low = param_store.add(low)
+        param_name_high = param_store.add(high)
         query_snippet = (
             f"${param_name_low} <= {DEFAULT_NODE_ALIAS}.`{field}` <= ${param_name_high}"
         )
