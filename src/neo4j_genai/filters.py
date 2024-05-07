@@ -296,7 +296,7 @@ def _construct_metadata_filter(
     """
 
     if not isinstance(filter, dict):
-        raise ValueError(f"Filter must be a dictionary, received {type(filter)}")
+        raise ValueError(f"Filter must be a dictionary, got {type(filter)}")
     # if we have more than one entry, this is an implicit "AND" filter
     if len(filter) > 1:
         return _construct_metadata_filter(
@@ -319,7 +319,7 @@ def _construct_metadata_filter(
     elif key.lower() == OPERATOR_OR:
         cypher_operator = " OR "
     else:
-        raise ValueError(f"Unsupported filter {filter}")
+        raise ValueError(f"Unsupported operator: {key}")
     query = cypher_operator.join(
         [
             f"({ _construct_metadata_filter(el, param_store, node_alias)})"

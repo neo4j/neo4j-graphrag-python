@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from unittest.mock import patch
+from unittest.mock import patch, call
 
 import pytest
 
@@ -332,119 +332,168 @@ def test_handle_field_filter_ilike(_single_condition_cypher_mocked, param_store_
     )
 
 
-def test_filter_single_field_string():
+@patch("neo4j_genai.filters._handle_field_filter")
+def test_construct_metadata_filter_filter_is_not_a_dict(_handle_field_filter_mock, param_store_empty):
+    with pytest.raises(ValueError) as excinfo:
+        _construct_metadata_filter([], param_store_empty, node_alias="n")
+    assert "Filter must be a dictionary, got <class 'list'>" in str(excinfo)
+
+
+@patch("neo4j_genai.filters._handle_field_filter")
+def test_construct_metadata_filter_no_operator(_handle_field_filter_mock, param_store_empty):
+    _construct_metadata_filter({"field": "value"}, param_store_empty, node_alias="n")
+    _handle_field_filter_mock.assert_called_once_with(
+        "field", "value", param_store_empty, node_alias="n"
+    )
+
+
+@patch("neo4j_genai.filters._construct_metadata_filter")
+def test_construct_metadata_filter_implicit_and(_construct_metadata_filter_mock, param_store_empty):
+    _construct_metadata_filter({"field_1": "value_1", "field_2": "value_2"}, param_store_empty, node_alias="n")
+    _construct_metadata_filter_mock.assert_has_calls([
+        call({"$and": [{"field_1": "value_1"}, {"field_2": "value_2"}]}, param_store_empty, "n"),
+    ])
+
+
+@patch("neo4j_genai.filters._construct_metadata_filter", side_effect=["filter1", "filter2"])
+def test_construct_metadata_filter_explicit_and(_construct_metadata_filter_mock, param_store_empty):
+    generated = _construct_metadata_filter({"$and": [{"field_1": "value_1"}, {"field_2": "value_2"}]}, param_store_empty, node_alias="n")
+    _construct_metadata_filter_mock.assert_has_calls([
+        call({"field_1": "value_1"}, param_store_empty, "n"),
+        call({"field_2": "value_2"}, param_store_empty, "n")
+    ])
+    assert generated == "(filter1) AND (filter2)"
+
+
+@patch("neo4j_genai.filters._construct_metadata_filter", side_effect=["filter1", "filter2"])
+def test_construct_metadata_filter_or(_construct_metadata_filter_mock, param_store_empty):
+    generated = _construct_metadata_filter({"$or": [{"field_1": "value_1"}, {"field_2": "value_2"}]}, param_store_empty, node_alias="n")
+    _construct_metadata_filter_mock.assert_has_calls([
+        call({"field_1": "value_1"}, param_store_empty, "n"),
+        call({"field_2": "value_2"}, param_store_empty, "n")
+    ])
+    assert generated == "(filter1) OR (filter2)"
+
+
+def test_construct_metadata_filter_invalid_operator(param_store_empty):
+    with pytest.raises(ValueError) as excinfo:
+        _construct_metadata_filter({"$invalid": [{}, {}]}, param_store_empty, node_alias="n")
+    assert "Unsupported operator: $invalid" in str(excinfo)
+
+
+def test_get_metadata_filter_single_field_string():
     filters = {"field": "string_value"}
     query, params = get_metadata_filter(filters)
     assert query == "node.`field` = $param_0"
     assert params == {"param_0": "string_value"}
 
 
-def test_filter_single_field_int():
+def test_get_metadata_filter_single_field_int():
     filters = {"field": 28}
     query, params = get_metadata_filter(filters)
     assert query == "node.`field` = $param_0"
     assert params == {"param_0": 28}
 
 
-def test_filter_single_field_bool():
+def test_get_metadata_filter_single_field_bool():
     filters = {"field": False}
     query, params = get_metadata_filter(filters)
     assert query == "node.`field` = $param_0"
     assert params == {"param_0": False}
 
 
-def test_filter_explicit_eq_operator():
+def test_get_metadata_filter_explicit_eq_operator():
     filters = {"field": {"$eq": "string_value"}}
     query, params = get_metadata_filter(filters)
     assert query == "node.`field` = $param_0"
     assert params == {"param_0": "string_value"}
 
 
-def test_filter_neq_operator():
+def test_get_metadata_filter_neq_operator():
     filters = {"field": {"$ne": "string_value"}}
     query, params = get_metadata_filter(filters)
     assert query == "node.`field` <> $param_0"
     assert params == {"param_0": "string_value"}
 
 
-def test_filter_lt_operator():
+def test_get_metadata_filter_lt_operator():
     filters = {"field": {"$lt": 1}}
     query, params = get_metadata_filter(filters)
     assert query == "node.`field` < $param_0"
     assert params == {"param_0": 1}
 
 
-def test_filter_gt_operator():
+def test_get_metadata_filter_gt_operator():
     filters = {"field": {"$gt": 1}}
     query, params = get_metadata_filter(filters)
     assert query == "node.`field` > $param_0"
     assert params == {"param_0": 1}
 
 
-def test_filter_lte_operator():
+def test_get_metadata_filter_lte_operator():
     filters = {"field": {"$lte": 1}}
     query, params = get_metadata_filter(filters)
     assert query == "node.`field` <= $param_0"
     assert params == {"param_0": 1}
 
 
-def test_filter_gte_operator():
+def test_get_metadata_filter_gte_operator():
     filters = {"field": {"$gte": 1}}
     query, params = get_metadata_filter(filters)
     assert query == "node.`field` >= $param_0"
     assert params == {"param_0": 1}
 
 
-def test_filter_in_operator():
+def test_get_metadata_filter_in_operator():
     filters = {"field": {"$in": ["a", "b"]}}
     query, params = get_metadata_filter(filters)
     assert query == "node.`field` IN $param_0"
     assert params == {"param_0": ["a", "b"]}
 
 
-def test_filter_not_in_operator():
+def test_get_metadata_filter_not_in_operator():
     filters = {"field": {"$nin": ["a", "b"]}}
     query, params = get_metadata_filter(filters)
     assert query == "node.`field` NOT IN $param_0"
     assert params == {"param_0": ["a", "b"]}
 
 
-def test_filter_like_operator():
+def test_get_metadata_filter_like_operator():
     filters = {"field": {"$like": "some_value"}}
     query, params = get_metadata_filter(filters)
     assert query == "node.`field` CONTAINS $param_0"
     assert params == {"param_0": "some_value"}
 
 
-def test_filter_ilike_operator():
+def test_get_metadata_filter_ilike_operator():
     filters = {"field": {"$ilike": "Some Value"}}
     query, params = get_metadata_filter(filters)
     assert query == "toLower(node.`field`) CONTAINS $param_0"
     assert params == {"param_0": "some value"}
 
 
-def test_filter_between_operator():
+def test_get_metadata_filter_between_operator():
     filters = {"field": {"$between": [0, 1]}}
     query, params = get_metadata_filter(filters)
     assert query == "$param_0 <= node.`field` <= $param_1"
     assert params == {"param_0": 0, "param_1": 1}
 
 
-def test_filter_implicit_and_condition():
+def test_get_metadata_filter_implicit_and_condition():
     filters = {"field_1": "string_value", "field_2": True}
     query, params = get_metadata_filter(filters)
     assert query == "(node.`field_1` = $param_0) AND (node.`field_2` = $param_1)"
     assert params == {"param_0": "string_value", "param_1": True}
 
 
-def test_filter_explicit_and_condition():
+def test_get_metadata_filter_explicit_and_condition():
     filters = {"$and": [{"field_1": "string_value"}, {"field_2": True}]}
     query, params = get_metadata_filter(filters)
     assert query == "(node.`field_1` = $param_0) AND (node.`field_2` = $param_1)"
     assert params == {"param_0": "string_value", "param_1": True}
 
 
-def test_filter_explicit_and_condition_with_operator():
+def test_get_metadata_filter_explicit_and_condition_with_operator():
     filters = {
         "$and": [{"field_1": {"$ne": "string_value"}}, {"field_2": {"$in": [1, 2]}}]
     }
@@ -453,14 +502,14 @@ def test_filter_explicit_and_condition_with_operator():
     assert params == {"param_0": "string_value", "param_1": [1, 2]}
 
 
-def test_filter_or_condition():
+def test_get_metadata_filter_or_condition():
     filters = {"$or": [{"field_1": "string_value"}, {"field_2": True}]}
     query, params = get_metadata_filter(filters)
     assert query == "(node.`field_1` = $param_0) OR (node.`field_2` = $param_1)"
     assert params == {"param_0": "string_value", "param_1": True}
 
 
-def test_filter_and_or_combined():
+def test_get_metadata_filter_and_or_combined():
     filters = {
         "$and": [
             {"$or": [{"field_1": "string_value"}, {"field_2": True}]},
@@ -476,19 +525,19 @@ def test_filter_and_or_combined():
 
 
 # now testing bad filters
-def test_field_name_with_dollar_sign():
+def test_get_metadata_filter_field_name_with_dollar_sign():
     filters = {"$field": "value"}
     with pytest.raises(ValueError):
         get_metadata_filter(filters)
 
 
-def test_and_no_list():
+def test_get_metadata_filter_and_no_list():
     filters = {"$and": {}}
     with pytest.raises(ValueError):
         get_metadata_filter(filters)
 
 
-def test_unsupported_operator():
+def test_get_metadata_filter_unsupported_operator():
     filters = {"field": {"$unsupported": "value"}}
     with pytest.raises(ValueError):
         get_metadata_filter(filters)
