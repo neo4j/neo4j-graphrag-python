@@ -154,9 +154,10 @@ class ParameterStore:
         E.g.
         node.age >= $param_0 AND node.age <= $param_1
 
-        :param p:
-        :param counter:
-        :return:
+        Args:
+            key (str): The prefix for the parameter name
+        Returns:
+            The full unique parameter name
         """
         # key = slugify(key.replace(".", "_"), separator="_")
         param_name = f"{key}_{self._counter[key]}"
@@ -182,14 +183,14 @@ def _single_condition_cypher(
     """Return Cypher for field operator value.
 
     Args:
-        field: the name of the field being filtered
-        native_operator_class: the operator class that will be used to generate
+        field: The name of the field being filtered
+        native_operator_class: The operator class that will be used to generate
             the Cypher query
         value: filtered value
         param_store: ParameterStore objet that will be updated in this function
-        node_alias: name of the node being filtered in the Cypher query
+        node_alias: Name of the node being filtered in the Cypher query
     Returns:
-        str: the Cypher condition, e.g. node.`property` = $param_0
+        str: The Cypher condition, e.g. node.`property` = $param_0
 
     NB: the param_store argument is mutable, it will be updated in this function
     """
@@ -208,13 +209,13 @@ def _handle_field_filter(
     """Create a filter for a specific field.
 
     Args:
-        field: name of field
-        value: value to filter
+        field: Name of field
+        value: Value to filter
             If provided as is then this will be an equality filter
             If provided as a dictionary then this will be a filter, the key
             will be the operator and the value will be the value to filter by
         param_store: ParameterStore objet that will be updated in this function
-        node_alias: name of the node being filtered in the Cypher query
+        node_alias: Name of the node being filtered in the Cypher query
 
     Returns
         str: Cypher filter snippet
@@ -284,16 +285,16 @@ def _construct_metadata_filter(
     Args:
         filter: A dictionary representing the filter condition.
         param_store: ParameterStore objet that will be updated in this function
-        node_alias: name of the node being filtered in the Cypher query
+        node_alias: Name of the node being filtered in the Cypher query
 
     Returns:
-        str: the Cypher WHERE clause
+        str: The Cypher WHERE clause
 
     NB: the param_store argument is mutable, it will be updated in this function
     """
 
     if not isinstance(filter, dict):
-        raise ValueError()
+        raise ValueError(f"Filter must be a dictionary, received {type(filter)}")
     # if we have more than one entry, this is an implicit "AND" filter
     if len(filter) > 1:
         return _construct_metadata_filter(
@@ -326,14 +327,15 @@ def _construct_metadata_filter(
     return query
 
 
-def construct_metadata_filter(
+def get_metadata_filter(
     filter: dict[str, Any], node_alias: str = DEFAULT_NODE_ALIAS
 ) -> tuple[str, dict]:
     """Construct the cypher filter snippet based on a filter dict
 
     Args:
-        filter: a dict of filters
-        node_alias: the node the filters must be applied on
+        filter (dict): The filters to be converted to Cypher
+        node_alias (str): The alias of node the filters must be applied on
+            in the Cypher query
 
     Return:
         A tuple of str, dict where the string is the cypher query and the dict
