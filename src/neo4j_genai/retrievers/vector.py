@@ -27,7 +27,6 @@ from neo4j_genai.types import (
 )
 from neo4j_genai.neo4j_queries import get_search_query
 import logging
-import json
 
 logger = logging.getLogger(__name__)
 
@@ -96,8 +95,8 @@ class VectorRetriever(Retriever):
 
         search_query = get_search_query(SearchType.VECTOR, self.return_properties)
 
-        logger.debug(f"VectorRetriever Cypher parameters: {json.dumps(parameters)}")
-        logger.debug(f"VectorRetriever Cypher query: {search_query}")
+        logger.debug("VectorRetriever Cypher parameters", parameters)
+        logger.debug("VectorRetriever Cypher query", search_query)
 
         records, _, _ = self.driver.execute_query(search_query, parameters)
 
@@ -186,10 +185,8 @@ class VectorCypherRetriever(Retriever):
             SearchType.VECTOR, retrieval_query=self.retrieval_query
         )
 
-        logger.debug(
-            f"VectorCypherRetriever Cypher parameters: {json.dumps(parameters)}"
-        )
-        logger.debug(f"VectorCypherRetriever Cypher query: {search_query}")
+        logger.debug("VectorCypherRetriever Cypher parameters", parameters)
+        logger.debug("VectorCypherRetriever Cypher query", search_query)
 
         records, _, _ = self.driver.execute_query(search_query, parameters)
         return records
