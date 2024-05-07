@@ -15,7 +15,7 @@
 from typing import Optional, Any
 
 from neo4j_genai.types import SearchType
-from neo4j_genai.retrievers.filters import construct_metadata_filter
+from neo4j_genai.filters import get_metadata_filter
 
 
 VECTOR_INDEX_QUERY = (
@@ -72,7 +72,7 @@ def _get_filtered_vector_query(
     Returns:
         tuple[str, dict[str, Any]]: query and parameters
     """
-    where_filters, query_params = construct_metadata_filter(filters, node_alias="node")
+    where_filters, query_params = get_metadata_filter(filters, node_alias="node")
     base_query = BASE_VECTOR_EXACT_QUERY.format(
         node_label=node_label,
         embedding_node_property=embedding_node_property,

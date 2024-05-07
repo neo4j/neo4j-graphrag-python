@@ -14,124 +14,124 @@
 #  limitations under the License.
 import pytest
 
-from neo4j_genai.retrievers.filters import construct_metadata_filter
+from neo4j_genai.filters import get_metadata_filter
 
 
 def test_filter_single_field_string():
     filters = {"field": "string_value"}
-    query, params = construct_metadata_filter(filters)
+    query, params = get_metadata_filter(filters)
     assert query == "node.`field` = $param_0"
     assert params == {"param_0": "string_value"}
 
 
 def test_filter_single_field_int():
     filters = {"field": 28}
-    query, params = construct_metadata_filter(filters)
+    query, params = get_metadata_filter(filters)
     assert query == "node.`field` = $param_0"
     assert params == {"param_0": 28}
 
 
 def test_filter_single_field_bool():
     filters = {"field": False}
-    query, params = construct_metadata_filter(filters)
+    query, params = get_metadata_filter(filters)
     assert query == "node.`field` = $param_0"
     assert params == {"param_0": False}
 
 
 def test_filter_explicit_eq_operator():
     filters = {"field": {"$eq": "string_value"}}
-    query, params = construct_metadata_filter(filters)
+    query, params = get_metadata_filter(filters)
     assert query == "node.`field` = $param_0"
     assert params == {"param_0": "string_value"}
 
 
 def test_filter_neq_operator():
     filters = {"field": {"$ne": "string_value"}}
-    query, params = construct_metadata_filter(filters)
+    query, params = get_metadata_filter(filters)
     assert query == "node.`field` <> $param_0"
     assert params == {"param_0": "string_value"}
 
 
 def test_filter_lt_operator():
     filters = {"field": {"$lt": 1}}
-    query, params = construct_metadata_filter(filters)
+    query, params = get_metadata_filter(filters)
     assert query == "node.`field` < $param_0"
     assert params == {"param_0": 1}
 
 
 def test_filter_gt_operator():
     filters = {"field": {"$gt": 1}}
-    query, params = construct_metadata_filter(filters)
+    query, params = get_metadata_filter(filters)
     assert query == "node.`field` > $param_0"
     assert params == {"param_0": 1}
 
 
 def test_filter_lte_operator():
     filters = {"field": {"$lte": 1}}
-    query, params = construct_metadata_filter(filters)
+    query, params = get_metadata_filter(filters)
     assert query == "node.`field` <= $param_0"
     assert params == {"param_0": 1}
 
 
 def test_filter_gte_operator():
     filters = {"field": {"$gte": 1}}
-    query, params = construct_metadata_filter(filters)
+    query, params = get_metadata_filter(filters)
     assert query == "node.`field` >= $param_0"
     assert params == {"param_0": 1}
 
 
 def test_filter_in_operator():
     filters = {"field": {"$in": ["a", "b"]}}
-    query, params = construct_metadata_filter(filters)
+    query, params = get_metadata_filter(filters)
     assert query == "node.`field` IN $param_0"
     assert params == {"param_0": ["a", "b"]}
 
 
 def test_filter_not_in_operator():
     filters = {"field": {"$nin": ["a", "b"]}}
-    query, params = construct_metadata_filter(filters)
+    query, params = get_metadata_filter(filters)
     assert query == "node.`field` NOT IN $param_0"
     assert params == {"param_0": ["a", "b"]}
 
 
 def test_filter_like_operator():
     filters = {"field": {"$like": "some_value"}}
-    query, params = construct_metadata_filter(filters)
+    query, params = get_metadata_filter(filters)
     assert query == "node.`field` CONTAINS $param_0"
     assert params == {"param_0": "some_value"}
 
 
 def test_filter_ilike_operator():
     filters = {"field": {"$ilike": "Some Value"}}
-    query, params = construct_metadata_filter(filters)
+    query, params = get_metadata_filter(filters)
     assert query == "toLower(node.`field`) CONTAINS $param_0"
     assert params == {"param_0": "some value"}
 
 
 def test_filter_between_operator():
     filters = {"field": {"$between": [0, 1]}}
-    query, params = construct_metadata_filter(filters)
+    query, params = get_metadata_filter(filters)
     assert query == "$param_0 <= node.`field` <= $param_1"
     assert params == {"param_0": 0, "param_1": 1}
 
 
 def test_filter_implicit_and_condition():
     filters = {"field_1": "string_value", "field_2": True}
-    query, params = construct_metadata_filter(filters)
+    query, params = get_metadata_filter(filters)
     assert query == "(node.`field_1` = $param_0) AND (node.`field_2` = $param_1)"
     assert params == {"param_0": "string_value", "param_1": True}
 
 
 def test_filter_explicit_and_condition():
     filters = {"$and": [{"field_1": "string_value"}, {"field_2": True}]}
-    query, params = construct_metadata_filter(filters)
+    query, params = get_metadata_filter(filters)
     assert query == "(node.`field_1` = $param_0) AND (node.`field_2` = $param_1)"
     assert params == {"param_0": "string_value", "param_1": True}
 
 
 def test_filter_or_condition():
     filters = {"$or": [{"field_1": "string_value"}, {"field_2": True}]}
-    query, params = construct_metadata_filter(filters)
+    query, params = get_metadata_filter(filters)
     assert query == "(node.`field_1` = $param_0) OR (node.`field_2` = $param_1)"
     assert params == {"param_0": "string_value", "param_1": True}
 
@@ -143,7 +143,7 @@ def test_filter_and_or_combined():
             {"field_3": 11},
         ]
     }
-    query, params = construct_metadata_filter(filters)
+    query, params = get_metadata_filter(filters)
     assert (
         query
         == "((node.`field_1` = $param_0) OR (node.`field_2` = $param_1)) AND (node.`field_3` = $param_2)"
@@ -155,16 +155,16 @@ def test_filter_and_or_combined():
 def test_field_name_with_dollar_sign():
     filters = {"$field": "value"}
     with pytest.raises(ValueError):
-        construct_metadata_filter(filters)
+        get_metadata_filter(filters)
 
 
 def test_and_no_list():
     filters = {"$and": {}}
     with pytest.raises(ValueError):
-        construct_metadata_filter(filters)
+        get_metadata_filter(filters)
 
 
 def test_unsupported_operator():
     filters = {"field": {"$unsupported": "value"}}
     with pytest.raises(ValueError):
-        construct_metadata_filter(filters)
+        get_metadata_filter(filters)
