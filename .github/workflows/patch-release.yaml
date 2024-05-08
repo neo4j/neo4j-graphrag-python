@@ -24,7 +24,7 @@ jobs:
                   installer-parallel: true
 
             - name: Bump version
-              run: poetry version patch
+              run: poetry version prerelease
 
             - name: Get version
               id: get-version
