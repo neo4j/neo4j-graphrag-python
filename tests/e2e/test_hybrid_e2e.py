@@ -16,7 +16,7 @@
 
 import pytest
 
-from neo4j import Record
+import neo4j
 
 from neo4j_genai import (
     HybridRetriever,
@@ -36,7 +36,7 @@ def test_hybrid_retriever_search_text(driver, custom_embedder):
     assert isinstance(results, list)
     assert len(results) == 5
     for result in results:
-        assert isinstance(result, Record)
+        assert isinstance(result, neo4j.Record)
 
 
 @pytest.mark.usefixtures("setup_neo4j")
@@ -58,7 +58,7 @@ def test_hybrid_cypher_retriever_search_text(driver, custom_embedder):
     assert isinstance(results, list)
     assert len(results) == 5
     for record in results:
-        assert isinstance(record, Record)
+        assert isinstance(record, neo4j.Record)
         assert "author.name" in record.keys()
 
 
@@ -80,7 +80,7 @@ def test_hybrid_retriever_search_vector(driver):
     assert isinstance(results, list)
     assert len(results) == 5
     for result in results:
-        assert isinstance(result, Record)
+        assert isinstance(result, neo4j.Record)
 
 
 @pytest.mark.usefixtures("setup_neo4j")
@@ -105,7 +105,7 @@ def test_hybrid_cypher_retriever_search_vector(driver):
     assert isinstance(results, list)
     assert len(results) == 5
     for record in results:
-        assert isinstance(record, Record)
+        assert isinstance(record, neo4j.Record)
         assert "author.name" in record.keys()
 
 
@@ -129,4 +129,4 @@ def test_hybrid_retriever_return_properties(driver):
     assert isinstance(results, list)
     assert len(results) == 5
     for result in results:
-        assert isinstance(result, Record)
+        assert isinstance(result, neo4j.Record)

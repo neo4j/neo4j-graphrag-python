@@ -14,7 +14,7 @@
 #  limitations under the License.
 from typing import Optional, Any
 
-from neo4j import Driver, Record
+import neo4j
 from neo4j_genai.retrievers.base import Retriever
 from pydantic import ValidationError
 
@@ -39,7 +39,7 @@ class VectorRetriever(Retriever):
 
     def __init__(
         self,
-        driver: Driver,
+        driver: neo4j.Driver,
         index_name: str,
         embedder: Optional[Embedder] = None,
         return_properties: Optional[list[str]] = None,
@@ -120,7 +120,7 @@ class VectorCypherRetriever(Retriever):
 
     def __init__(
         self,
-        driver: Driver,
+        driver: neo4j.Driver,
         index_name: str,
         retrieval_query: str,
         embedder: Optional[Embedder] = None,
@@ -136,7 +136,7 @@ class VectorCypherRetriever(Retriever):
         query_text: Optional[str] = None,
         top_k: int = 5,
         query_params: Optional[dict[str, Any]] = None,
-    ) -> list[Record]:
+    ) -> list[neo4j.Record]:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         See the following documentation for more details:
 
@@ -154,7 +154,7 @@ class VectorCypherRetriever(Retriever):
             ValueError: If no embedder is provided.
 
         Returns:
-            list[Record]: The results of the search query
+            list[neo4j.Record]: The results of the search query
         """
         try:
             validated_data = VectorCypherSearchModel(

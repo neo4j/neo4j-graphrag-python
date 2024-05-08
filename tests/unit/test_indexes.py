@@ -12,12 +12,12 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
+import neo4j.exceptions
 import pytest
 
 from neo4j_genai.indexes import (
     create_vector_index,
-    drop_index,
+    drop_index_if_exists,
     create_fulltext_index,
 )
 
@@ -68,16 +68,33 @@ def test_create_vector_index_validation_error_dimensions(driver):
     assert "Error for inputs to create_vector_index" in str(excinfo)
 
 
+def test_create_vector_index_raises_error_with_neo4j_client_error(driver):
+    driver.execute_query.side_effect = neo4j.exceptions.ClientError
+    with pytest.raises(neo4j.exceptions.ClientError):
+        create_vector_index(driver, "my-index", "People", "name", 2048, "cosine")
+
+
 def test_create_vector_index_validation_error_similarity_fn(driver):
     with pytest.raises(ValueError) as excinfo:
         create_vector_index(driver, "my-index", "People", "name", 1536, "algebra")
     assert "Error for inputs to create_vector_index" in str(excinfo)
 
 
-def test_drop_index(driver):
+def test_drop_index_if_exists(driver):
     drop_query = "DROP INDEX $name IF EXISTS"
 
-    drop_index(driver, "my-index")
+    drop_index_if_exists(driver, "my-index")
+
+    driver.execute_query.assert_called_once_with(
+        drop_query,
+        {"name": "my-index"},
+    )
+
+
+def test_drop_index_if_exists_raises_error_with_neo4j_client_error(driver):
+    drop_query = "DROP INDEX $name IF EXISTS"
+
+    drop_index_if_exists(driver, "my-index")
 
     driver.execute_query.assert_called_once_with(
         drop_query,
@@ -100,6 +117,15 @@ def test_create_fulltext_index_happy_path(driver):
         create_query,
         {"name": "my-index"},
     )
+
+
+def test_create_fulltext_index_raises_error_with_neo4j_client_error(driver):
+    label = "node-label"
+    text_node_properties = ["property-1", "property-2"]
+    driver.execute_query.side_effect = neo4j.exceptions.ClientError
+
+    with pytest.raises(neo4j.exceptions.ClientError):
+        create_fulltext_index(driver, "my-index", label, text_node_properties)
 
 
 def test_create_fulltext_index_empty_node_properties(driver):

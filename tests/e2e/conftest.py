@@ -19,7 +19,11 @@ import uuid
 import pytest
 from neo4j import GraphDatabase
 from neo4j_genai.embedder import Embedder
-from neo4j_genai.indexes import drop_index, create_vector_index, create_fulltext_index
+from neo4j_genai.indexes import (
+    drop_index_if_exists,
+    create_vector_index,
+    create_fulltext_index,
+)
 
 
 @pytest.fixture(scope="module")
@@ -47,8 +51,8 @@ def setup_neo4j(driver):
 
     # Delete data and drop indexes to prevent data leakage
     driver.execute_query("MATCH (n) DETACH DELETE n")
-    drop_index(driver, vector_index_name)
-    drop_index(driver, fulltext_index_name)
+    drop_index_if_exists(driver, vector_index_name)
+    drop_index_if_exists(driver, fulltext_index_name)
 
     # Create a vector index
     create_vector_index(

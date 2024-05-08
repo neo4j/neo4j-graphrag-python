@@ -15,7 +15,7 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
-from neo4j import Driver
+import neo4j
 
 
 class Retriever(ABC):
@@ -23,7 +23,7 @@ class Retriever(ABC):
     Abstract class for Neo4j retrievers
     """
 
-    def __init__(self, driver: Driver):
+    def __init__(self, driver: neo4j.Driver):
         self.driver = driver
         self._verify_version()
 
