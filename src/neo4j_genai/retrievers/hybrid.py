@@ -19,7 +19,15 @@ from pydantic import ValidationError
 
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.retrievers.base import Retriever
-from neo4j_genai.types import HybridSearchModel, SearchType, HybridCypherSearchModel
+from neo4j_genai.types import (
+    HybridSearchModel,
+    SearchType,
+    HybridCypherSearchModel,
+    Neo4jDriverModel,
+    EmbedderModel,
+    HybridRetrieverModel,
+    HybridCypherRetrieverModel,
+)
 from neo4j_genai.neo4j_queries import get_search_query
 import logging
 
@@ -35,11 +43,28 @@ class HybridRetriever(Retriever):
         embedder: Optional[Embedder] = None,
         return_properties: Optional[list[str]] = None,
     ) -> None:
-        super().__init__(driver)
-        self.vector_index_name = vector_index_name
-        self.fulltext_index_name = fulltext_index_name
-        self.embedder = embedder
-        self.return_properties = return_properties
+        try:
+            driver_model = Neo4jDriverModel(driver=driver)
+            embedder_model = EmbedderModel(embedder=embedder) if embedder else None
+            validated_data = HybridRetrieverModel(
+                driver_model=driver_model,
+                vector_index_name=vector_index_name,
+                fulltext_index_name=fulltext_index_name,
+                embedder_model=embedder_model,
+                return_properties=return_properties,
+            )
+        except ValidationError as e:
+            raise ValueError(f"Validation failed: {e.errors()}")
+
+        super().__init__(validated_data.driver_model.driver)
+        self.vector_index_name = validated_data.vector_index_name
+        self.fulltext_index_name = validated_data.fulltext_index_name
+        self.return_properties = validated_data.return_properties
+        self.embedder = (
+            validated_data.embedder_model.embedder
+            if validated_data.embedder_model
+            else None
+        )
 
     def search(
         self,
@@ -102,11 +127,28 @@ class HybridCypherRetriever(Retriever):
         retrieval_query: str,
         embedder: Optional[Embedder] = None,
     ) -> None:
-        super().__init__(driver)
-        self.vector_index_name = vector_index_name
-        self.fulltext_index_name = fulltext_index_name
-        self.retrieval_query = retrieval_query
-        self.embedder = embedder
+        try:
+            driver_model = Neo4jDriverModel(driver=driver)
+            embedder_model = EmbedderModel(embedder=embedder) if embedder else None
+            validated_data = HybridCypherRetrieverModel(
+                driver_model=driver_model,
+                vector_index_name=vector_index_name,
+                fulltext_index_name=fulltext_index_name,
+                retrieval_query=retrieval_query,
+                embedder_model=embedder_model,
+            )
+        except ValidationError as e:
+            raise ValueError(f"Validation failed: {e.errors()}")
+
+        super().__init__(validated_data.driver_model.driver)
+        self.vector_index_name = validated_data.vector_index_name
+        self.fulltext_index_name = validated_data.fulltext_index_name
+        self.retrieval_query = validated_data.retrieval_query
+        self.embedder = (
+            validated_data.embedder_model.embedder
+            if validated_data.embedder_model
+            else None
+        )
 
     def search(
         self,

@@ -18,6 +18,7 @@ import pytest
 from neo4j.exceptions import CypherSyntaxError
 
 from neo4j_genai import VectorRetriever, VectorCypherRetriever
+from neo4j_genai.embedder import Embedder
 from neo4j_genai.neo4j_queries import get_search_query
 from neo4j_genai.types import SearchType, VectorSearchRecord
 
@@ -26,6 +27,16 @@ def test_vector_retriever_initialization(driver):
     with patch("neo4j_genai.retrievers.base.Retriever._verify_version") as mock_verify:
         VectorRetriever(driver=driver, index_name="my-index")
         mock_verify.assert_called_once()
+
+
+def test_vector_retriever_bad_data_validation(driver):
+    with pytest.raises(ValueError):
+        VectorRetriever(driver=driver, index_name=42)
+
+
+def test_vector_cypher_retriever_bad_data_validation(driver):
+    with pytest.raises(ValueError):
+        VectorCypherRetriever(driver=driver, index_name="my-index", retrieval_query=42)
 
 
 def test_vector_cypher_retriever_initialization(driver):
@@ -70,7 +81,7 @@ def test_similarity_search_text_happy_path(
     _verify_version_mock, _fetch_index_infos, driver
 ):
     embed_query_vector = [1.0 for _ in range(1536)]
-    custom_embeddings = MagicMock()
+    custom_embeddings = MagicMock(spec=Embedder)
     custom_embeddings.embed_query.return_value = embed_query_vector
     index_name = "my-index"
     query_text = "may thy knife chip and shatter"
@@ -104,7 +115,7 @@ def test_similarity_search_text_return_properties(
     _verify_version_mock, _fetch_index_infos, driver
 ):
     embed_query_vector = [1.0 for _ in range(3)]
-    custom_embeddings = MagicMock()
+    custom_embeddings = MagicMock(spec=Embedder)
     custom_embeddings.embed_query.return_value = embed_query_vector
     index_name = "my-index"
     query_text = "may thy knife chip and shatter"
