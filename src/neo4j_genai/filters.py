@@ -34,9 +34,26 @@ class Operator:
     def __init__(self, node_alias=DEFAULT_NODE_ALIAS):
         self.node_alias = node_alias
 
+    @staticmethod
+    def safe_field_cypher(field_name: str) -> str:
+        """This method must be used to escape a field name if
+        necessary to build a valid Cypher query. See:
+        https://neo4j.com/docs/cypher-manual/current/syntax/naming/
+
+        Args:
+            field_name (str): The initial unescaped field name
+
+        Returns:
+            The field name potentially surrounded with backticks if needed
+        """
+        if field_name.isidentifier():
+            return field_name
+        escaped_field = field_name.replace("`", "``")
+        return f"`{escaped_field}`"
+
     def lhs(self, field):
-        escaped_field = field.replace("`", "``")
-        return f"{self.node_alias}.`{escaped_field}`"
+        safe_field_cypher = self.safe_field_cypher(field)
+        return f"{self.node_alias}.{safe_field_cypher}"
 
     def cleaned_value(self, value):
         return value
@@ -91,7 +108,8 @@ class LikeOperator(Operator):
 
 class ILikeOperator(LikeOperator):
     def lhs(self, field):
-        return f"toLower({self.node_alias}.`{field}`)"
+        safe_field_cypher = self.safe_field_cypher(field)
+        return f"toLower({self.node_alias}.{safe_field_cypher})"
 
     def cleaned_value(self, value):
         value = super().cleaned_value(value)
@@ -266,7 +284,7 @@ def _handle_field_filter(
         param_name_low = param_store.add(low)
         param_name_high = param_store.add(high)
         query_snippet = (
-            f"${param_name_low} <= {DEFAULT_NODE_ALIAS}.`{field}` <= ${param_name_high}"
+            f"${param_name_low} <= {DEFAULT_NODE_ALIAS}.{Operator.safe_field_cypher(field)} <= ${param_name_high}"
         )
         return query_snippet
     # all the other operators are handled through their own classes:

@@ -21,6 +21,7 @@ from neo4j_genai.filters import (
     _single_condition_cypher,
     _handle_field_filter,
     _construct_metadata_filter,
+    Operator,
     EqOperator,
     NeqOperator,
     LtOperator,
@@ -49,11 +50,30 @@ def test_param_store():
     assert ps.params == {"param_0": 1, "param_1": "some value"}
 
 
+def test_operator_field_escape():
+    assert Operator.safe_field_cypher("name") == "name"
+    assert Operator.safe_field_cypher("_name") == "_name"
+    assert Operator.safe_field_cypher("na_me123") == "na_me123"
+    # escape if using separators different from underscore
+    assert Operator.safe_field_cypher("na-me") == "`na-me`"
+    assert Operator.safe_field_cypher("na me") == "`na me`"
+    assert Operator.safe_field_cypher("na.me") == "`na.me`"
+    # escape if name starts with a non alpha character
+    assert Operator.safe_field_cypher("1name") == "`1name`"
+    assert Operator.safe_field_cypher("?name") == "`?name`"
+    # escape if name contains special characters
+    assert Operator.safe_field_cypher("n*ame") == "`n*ame`"
+    assert Operator.safe_field_cypher("na_me123%") == "`na_me123%`"
+    assert Operator.safe_field_cypher("\name") == "`\name`"
+    # escape the escape character
+    assert Operator.safe_field_cypher("na`me") == "`na``me`"
+
+
 def test_single_condition_cypher_eq(param_store_empty):
     generated = _single_condition_cypher(
         "field", EqOperator, "value", param_store=param_store_empty
     )
-    assert generated == "node.`field` = $param_0"
+    assert generated == "node.field = $param_0"
     assert param_store_empty.params == {"param_0": "value"}
 
 
@@ -61,7 +81,7 @@ def test_single_condition_cypher_eq_node_alias(param_store_empty):
     generated = _single_condition_cypher(
         "field", EqOperator, "value", node_alias="n", param_store=param_store_empty
     )
-    assert generated == "n.`field` = $param_0"
+    assert generated == "n.field = $param_0"
     assert param_store_empty.params == {"param_0": "value"}
 
 
@@ -69,7 +89,7 @@ def test_single_condition_cypher_neq(param_store_empty):
     generated = _single_condition_cypher(
         "field", NeqOperator, "value", param_store=param_store_empty
     )
-    assert generated == "node.`field` <> $param_0"
+    assert generated == "node.field <> $param_0"
     assert param_store_empty.params == {"param_0": "value"}
 
 
@@ -77,7 +97,7 @@ def test_single_condition_cypher_lt(param_store_empty):
     generated = _single_condition_cypher(
         "field", LtOperator, 10, param_store=param_store_empty
     )
-    assert generated == "node.`field` < $param_0"
+    assert generated == "node.field < $param_0"
     assert param_store_empty.params == {"param_0": 10}
 
 
@@ -85,7 +105,7 @@ def test_single_condition_cypher_gt(param_store_empty):
     generated = _single_condition_cypher(
         "field", GtOperator, 10, param_store=param_store_empty
     )
-    assert generated == "node.`field` > $param_0"
+    assert generated == "node.field > $param_0"
     assert param_store_empty.params == {"param_0": 10}
 
 
@@ -93,7 +113,7 @@ def test_single_condition_cypher_lte(param_store_empty):
     generated = _single_condition_cypher(
         "field", LteOperator, 10, param_store=param_store_empty
     )
-    assert generated == "node.`field` <= $param_0"
+    assert generated == "node.field <= $param_0"
     assert param_store_empty.params == {"param_0": 10}
 
 
@@ -101,7 +121,7 @@ def test_single_condition_cypher_gte(param_store_empty):
     generated = _single_condition_cypher(
         "field", GteOperator, 10, param_store=param_store_empty
     )
-    assert generated == "node.`field` >= $param_0"
+    assert generated == "node.field >= $param_0"
     assert param_store_empty.params == {"param_0": 10}
 
 
@@ -109,7 +129,7 @@ def test_single_condition_cypher_in_int(param_store_empty):
     generated = _single_condition_cypher(
         "field", InOperator, [1, 2, 3], param_store=param_store_empty
     )
-    assert generated == "node.`field` IN $param_0"
+    assert generated == "node.field IN $param_0"
     assert param_store_empty.params == {"param_0": [1, 2, 3]}
 
 
@@ -117,7 +137,7 @@ def test_single_condition_cypher_in_str(param_store_empty):
     generated = _single_condition_cypher(
         "field", InOperator, ["a", "b", "c"], param_store=param_store_empty
     )
-    assert generated == "node.`field` IN $param_0"
+    assert generated == "node.field IN $param_0"
     assert param_store_empty.params == {"param_0": ["a", "b", "c"]}
 
 
@@ -138,7 +158,7 @@ def test_single_condition_cypher_nin(param_store_empty):
     generated = _single_condition_cypher(
         "field", NinOperator, ["a", "b", "c"], param_store=param_store_empty
     )
-    assert generated == "node.`field` NOT IN $param_0"
+    assert generated == "node.field NOT IN $param_0"
     assert param_store_empty.params == {"param_0": ["a", "b", "c"]}
 
 
@@ -146,7 +166,7 @@ def test_single_condition_cypher_like(param_store_empty):
     generated = _single_condition_cypher(
         "field", LikeOperator, "value", param_store=param_store_empty
     )
-    assert generated == "node.`field` CONTAINS $param_0"
+    assert generated == "node.field CONTAINS $param_0"
     assert param_store_empty.params == {"param_0": "value"}
 
 
@@ -154,7 +174,7 @@ def test_single_condition_cypher_ilike(param_store_empty):
     generated = _single_condition_cypher(
         "field", ILikeOperator, "My Value", param_store=param_store_empty
     )
-    assert generated == "toLower(node.`field`) CONTAINS $param_0"
+    assert generated == "toLower(node.field) CONTAINS $param_0"
     assert param_store_empty.params == {"param_0": "my value"}
 
 
@@ -212,7 +232,7 @@ def test_handle_field_filter_operator_between(param_store_empty):
     generated = _handle_field_filter(
         "field", value={"$between": [0, 1]}, param_store=param_store_empty
     )
-    assert generated == "$param_0 <= node.`field` <= $param_1"
+    assert generated == "$param_0 <= node.field <= $param_1"
     assert param_store_empty.params == {"param_0": 0, "param_1": 1}
 
 
@@ -419,112 +439,112 @@ def test_construct_metadata_filter_invalid_operator(param_store_empty):
 def test_get_metadata_filter_single_field_string():
     filters = {"field": "string_value"}
     query, params = get_metadata_filter(filters)
-    assert query == "node.`field` = $param_0"
+    assert query == "node.field = $param_0"
     assert params == {"param_0": "string_value"}
 
 
 def test_get_metadata_filter_single_field_int():
     filters = {"field": 28}
     query, params = get_metadata_filter(filters)
-    assert query == "node.`field` = $param_0"
+    assert query == "node.field = $param_0"
     assert params == {"param_0": 28}
 
 
 def test_get_metadata_filter_single_field_bool():
     filters = {"field": False}
     query, params = get_metadata_filter(filters)
-    assert query == "node.`field` = $param_0"
+    assert query == "node.field = $param_0"
     assert params == {"param_0": False}
 
 
 def test_get_metadata_filter_explicit_eq_operator():
     filters = {"field": {"$eq": "string_value"}}
     query, params = get_metadata_filter(filters)
-    assert query == "node.`field` = $param_0"
+    assert query == "node.field = $param_0"
     assert params == {"param_0": "string_value"}
 
 
 def test_get_metadata_filter_neq_operator():
     filters = {"field": {"$ne": "string_value"}}
     query, params = get_metadata_filter(filters)
-    assert query == "node.`field` <> $param_0"
+    assert query == "node.field <> $param_0"
     assert params == {"param_0": "string_value"}
 
 
 def test_get_metadata_filter_lt_operator():
     filters = {"field": {"$lt": 1}}
     query, params = get_metadata_filter(filters)
-    assert query == "node.`field` < $param_0"
+    assert query == "node.field < $param_0"
     assert params == {"param_0": 1}
 
 
 def test_get_metadata_filter_gt_operator():
     filters = {"field": {"$gt": 1}}
     query, params = get_metadata_filter(filters)
-    assert query == "node.`field` > $param_0"
+    assert query == "node.field > $param_0"
     assert params == {"param_0": 1}
 
 
 def test_get_metadata_filter_lte_operator():
     filters = {"field": {"$lte": 1}}
     query, params = get_metadata_filter(filters)
-    assert query == "node.`field` <= $param_0"
+    assert query == "node.field <= $param_0"
     assert params == {"param_0": 1}
 
 
 def test_get_metadata_filter_gte_operator():
     filters = {"field": {"$gte": 1}}
     query, params = get_metadata_filter(filters)
-    assert query == "node.`field` >= $param_0"
+    assert query == "node.field >= $param_0"
     assert params == {"param_0": 1}
 
 
 def test_get_metadata_filter_in_operator():
     filters = {"field": {"$in": ["a", "b"]}}
     query, params = get_metadata_filter(filters)
-    assert query == "node.`field` IN $param_0"
+    assert query == "node.field IN $param_0"
     assert params == {"param_0": ["a", "b"]}
 
 
 def test_get_metadata_filter_not_in_operator():
     filters = {"field": {"$nin": ["a", "b"]}}
     query, params = get_metadata_filter(filters)
-    assert query == "node.`field` NOT IN $param_0"
+    assert query == "node.field NOT IN $param_0"
     assert params == {"param_0": ["a", "b"]}
 
 
 def test_get_metadata_filter_like_operator():
     filters = {"field": {"$like": "some_value"}}
     query, params = get_metadata_filter(filters)
-    assert query == "node.`field` CONTAINS $param_0"
+    assert query == "node.field CONTAINS $param_0"
     assert params == {"param_0": "some_value"}
 
 
 def test_get_metadata_filter_ilike_operator():
     filters = {"field": {"$ilike": "Some Value"}}
     query, params = get_metadata_filter(filters)
-    assert query == "toLower(node.`field`) CONTAINS $param_0"
+    assert query == "toLower(node.field) CONTAINS $param_0"
     assert params == {"param_0": "some value"}
 
 
 def test_get_metadata_filter_between_operator():
     filters = {"field": {"$between": [0, 1]}}
     query, params = get_metadata_filter(filters)
-    assert query == "$param_0 <= node.`field` <= $param_1"
+    assert query == "$param_0 <= node.field <= $param_1"
     assert params == {"param_0": 0, "param_1": 1}
 
 
 def test_get_metadata_filter_implicit_and_condition():
     filters = {"field_1": "string_value", "field_2": True}
     query, params = get_metadata_filter(filters)
-    assert query == "(node.`field_1` = $param_0) AND (node.`field_2` = $param_1)"
+    assert query == "(node.field_1 = $param_0) AND (node.field_2 = $param_1)"
     assert params == {"param_0": "string_value", "param_1": True}
 
 
 def test_get_metadata_filter_explicit_and_condition():
     filters = {"$and": [{"field_1": "string_value"}, {"field_2": True}]}
     query, params = get_metadata_filter(filters)
-    assert query == "(node.`field_1` = $param_0) AND (node.`field_2` = $param_1)"
+    assert query == "(node.field_1 = $param_0) AND (node.field_2 = $param_1)"
     assert params == {"param_0": "string_value", "param_1": True}
 
 
@@ -533,14 +553,14 @@ def test_get_metadata_filter_explicit_and_condition_with_operator():
         "$and": [{"field_1": {"$ne": "string_value"}}, {"field_2": {"$in": [1, 2]}}]
     }
     query, params = get_metadata_filter(filters)
-    assert query == "(node.`field_1` <> $param_0) AND (node.`field_2` IN $param_1)"
+    assert query == "(node.field_1 <> $param_0) AND (node.field_2 IN $param_1)"
     assert params == {"param_0": "string_value", "param_1": [1, 2]}
 
 
 def test_get_metadata_filter_or_condition():
     filters = {"$or": [{"field_1": "string_value"}, {"field_2": True}]}
     query, params = get_metadata_filter(filters)
-    assert query == "(node.`field_1` = $param_0) OR (node.`field_2` = $param_1)"
+    assert query == "(node.field_1 = $param_0) OR (node.field_2 = $param_1)"
     assert params == {"param_0": "string_value", "param_1": True}
 
 
@@ -553,8 +573,8 @@ def test_get_metadata_filter_and_or_combined():
     }
     query, params = get_metadata_filter(filters)
     assert query == (
-        "((node.`field_1` = $param_0) OR (node.`field_2` = $param_1)) "
-        "AND (node.`field_3` = $param_2)"
+        "((node.field_1 = $param_0) OR (node.field_2 = $param_1)) "
+        "AND (node.field_3 = $param_2)"
     )
     assert params == {"param_0": "string_value", "param_1": True, "param_2": 11}
 
