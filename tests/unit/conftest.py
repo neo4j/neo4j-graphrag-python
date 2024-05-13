@@ -14,14 +14,14 @@
 #  limitations under the License.
 
 import pytest
+import neo4j
 from neo4j_genai import VectorRetriever, VectorCypherRetriever, HybridRetriever
-from neo4j import Driver
 from unittest.mock import MagicMock, patch
 
 
 @pytest.fixture(scope="function")
 def driver():
-    return MagicMock(spec=Driver)
+    return MagicMock(spec=neo4j.Driver)
 
 
 @pytest.fixture(scope="function")

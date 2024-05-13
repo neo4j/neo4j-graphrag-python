@@ -15,7 +15,7 @@
 from enum import Enum
 from typing import Any, Literal, Optional
 from pydantic import BaseModel, PositiveInt, model_validator, field_validator
-from neo4j import Driver
+import neo4j
 
 
 class VectorSearchRecord(BaseModel):
@@ -28,7 +28,7 @@ class IndexModel(BaseModel):
 
     @field_validator("driver")
     def check_driver_is_valid(cls, v):
-        if not isinstance(v, Driver):
+        if not isinstance(v, neo4j.Driver):
             raise ValueError("driver must be an instance of neo4j.Driver")
         return v
 

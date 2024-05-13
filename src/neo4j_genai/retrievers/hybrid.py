@@ -14,7 +14,7 @@
 #  limitations under the License.
 from typing import Optional, Any
 
-from neo4j import Record, Driver
+import neo4j
 from pydantic import ValidationError
 
 from neo4j_genai.embedder import Embedder
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 class HybridRetriever(Retriever):
     def __init__(
         self,
-        driver: Driver,
+        driver: neo4j.Driver,
         vector_index_name: str,
         fulltext_index_name: str,
         embedder: Optional[Embedder] = None,
@@ -46,7 +46,7 @@ class HybridRetriever(Retriever):
         query_text: str,
         query_vector: Optional[list[float]] = None,
         top_k: int = 5,
-    ) -> list[Record]:
+    ) -> list[neo4j.Record]:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         Both query_vector and query_text can be provided.
         If query_vector is provided, then it will be preferred over the embedded query_text
@@ -63,7 +63,7 @@ class HybridRetriever(Retriever):
             ValueError: If validation of the input arguments fail.
             ValueError: If no embedder is provided.
         Returns:
-            list[Record]: The results of the search query
+            list[neo4j.Record]: The results of the search query
         """
         try:
             validated_data = HybridSearchModel(
@@ -96,7 +96,7 @@ class HybridRetriever(Retriever):
 class HybridCypherRetriever(Retriever):
     def __init__(
         self,
-        driver: Driver,
+        driver: neo4j.Driver,
         vector_index_name: str,
         fulltext_index_name: str,
         retrieval_query: str,
@@ -114,7 +114,7 @@ class HybridCypherRetriever(Retriever):
         query_vector: Optional[list[float]] = None,
         top_k: int = 5,
         query_params: Optional[dict[str, Any]] = None,
-    ) -> list[Record]:
+    ) -> list[neo4j.Record]:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         Both query_vector and query_text can be provided.
         If query_vector is provided, then it will be preferred over the embedded query_text
@@ -132,7 +132,7 @@ class HybridCypherRetriever(Retriever):
             ValueError: If validation of the input arguments fail.
             ValueError: If no embedder is provided.
         Returns:
-            list[Record]: The results of the search query
+            list[neo4j.Record]: The results of the search query
         """
         try:
             validated_data = HybridCypherSearchModel(
