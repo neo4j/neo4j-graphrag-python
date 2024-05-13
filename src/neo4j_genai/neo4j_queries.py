@@ -15,7 +15,7 @@
 from typing import Optional, Any
 
 from neo4j_genai.types import SearchType
-from neo4j_genai.retrievers.filters import get_metadata_filter
+from neo4j_genai.filters import get_metadata_filter
 
 
 VECTOR_INDEX_QUERY = (
