@@ -161,11 +161,34 @@ When you're finished with your changes, create a pull request, also known as a P
 
 ## Run tests
 
-Open a new virtual environment and then run the tests.
+### Unit tests
+
+This should run out of the box once the dependencies are installed.
 
 ```bash
-poetry shell
-pytest tests/unit
+poetry run pytest tests/unit
+```
+
+### E2E tests
+
+To run e2e tests you'd need to have some services running locally:
+
+-   neo4j
+-   weaviate
+-   weaviate-text2vec-transformers
+
+The easiest way to get it up and running is via Docker compose:
+
+```bash
+docker compose -f tests/e2e/docker-compose.yml up
+```
+
+_(pro tip: if you suspect something in the databases are cached, run `docker compose -f tests/e2e/docker-compose.yml down` to remove them completely)_
+
+Once the services are running, execute the following command to run the e2e tests.
+
+```bash
+poetry run pytest tests/e2e
 ```
 
 ## Further information

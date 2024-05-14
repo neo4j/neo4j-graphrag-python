@@ -146,13 +146,13 @@ def get_search_query(
         )
     else:
         raise ValueError(f"Search type is not supported: {search_type}")
-    query_tail = _get_query_tail(
+    query_tail = get_query_tail(
         retrieval_query, return_properties, fallback_return="RETURN node, score"
     )
     return f"{query} {query_tail}", params
 
 
-def _get_query_tail(
+def get_query_tail(
     retrieval_query: Optional[str] = None,
     return_properties: Optional[list[str]] = None,
     fallback_return: Optional[str] = None,

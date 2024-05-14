@@ -19,33 +19,53 @@ jobs:
           - community
           - enterprise
     services:
+      weaviate:
+        image: cr.weaviate.io/semitechnologies/weaviate:1.25.1
+        env:
+          TRANSFORMERS_INFERENCE_API: 'http://t2v-transformers:8080'
+          AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+          DEFAULT_VECTORIZER_MODULE: 'text2vec-transformers'
+          ENABLE_MODULES: 'text2vec-transformers'
+          CLUSTER_HOSTNAME: 'node1'
+        ports:
+          - 8080:8080
+          - 50051:50051
+      t2v-transformers:
+        image: cr.weaviate.io/semitechnologies/transformers-inference:sentence-transformers-all-MiniLM-L6-v2-onnx
+        env:
+          ENABLE_CUDA: '0'
       neo4j:
         image: neo4j:${{ matrix.neo4j-version }}-${{ matrix.neo4j-edition }}
         env:
           NEO4J_AUTH: neo4j/password
-          NEO4J_ACCEPT_LICENSE_AGREEMENT: yes
+          NEO4J_ACCEPT_LICENSE_AGREEMENT: 'eval'
         ports:
           - 7687:7687
           - 7474:7474
 
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
-
+      - name: Check out repository code
+        uses: actions/checkout@v4
       - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-
-      - name: Configure Poetry
-        run: |
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-          poetry config virtualenvs.create false
-
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
       - name: Install dependencies
-        run: poetry install
-
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
+      - name: Install root project
+        run: poetry install --no-interaction
+      - name: Install dependencies
+        run: poetry install --with dev
+      - name: Wait for Weaviate to start
+        run: count=0; until curl --fail -s localhost:8080/v1/.well-known/ready; do ((count++)); [ $count -ge 10 ] && echo "Reached maximum retry limit" && exit 1; sleep 15; done
       - name: Run tests
         run: poetry run pytest ./tests/e2e
