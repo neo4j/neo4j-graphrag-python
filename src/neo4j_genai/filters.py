@@ -48,7 +48,7 @@ class Operator:
             The field name potentially surrounded with backticks if needed,
             ready to be inserted into a Cypher query.
         """
-        pattern = r'^[a-z_][0-9a-z_]*$'
+        pattern = r"^[a-z_][0-9a-z_]*$"
         if re.match(pattern, field_name, re.IGNORECASE):
             return field_name
         escaped_field = field_name.replace("`", "``")
