@@ -84,7 +84,7 @@ class HybridRetriever(Retriever):
             query_vector = self.embedder.embed_query(query_text)
             parameters["query_vector"] = query_vector
 
-        search_query = get_search_query(SearchType.HYBRID, self.return_properties)
+        search_query, _ = get_search_query(SearchType.HYBRID, self.return_properties)
 
         logger.debug("HybridRetriever Cypher parameters: %s", parameters)
         logger.debug("HybridRetriever Cypher query: %s", search_query)
@@ -160,7 +160,7 @@ class HybridCypherRetriever(Retriever):
                     parameters[key] = value
             del parameters["query_params"]
 
-        search_query = get_search_query(
+        search_query, _ = get_search_query(
             SearchType.HYBRID, retrieval_query=self.retrieval_query
         )
 

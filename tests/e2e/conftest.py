@@ -78,6 +78,8 @@ def setup_neo4j(driver):
     for i in range(10):
         insert_query = (
             "MERGE (doc:Document {id: $id})"
+            "ON CREATE SET  doc.int_property = $i, "
+            "               doc.short_text_property = toString($i)"
             "WITH doc "
             "CALL db.create.setNodeVectorProperty(doc, 'propertyKey', $vector)"
             "WITH doc "
@@ -88,7 +90,8 @@ def setup_neo4j(driver):
 
         parameters = {
             "id": str(uuid.uuid4()),
+            "i": i,
             "vector": vector,
-            "authorName": random_str(10),
+            "authorName": random_str(1536),
         }
         driver.execute_query(insert_query, parameters)

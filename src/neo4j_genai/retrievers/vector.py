@@ -48,12 +48,17 @@ class VectorRetriever(Retriever):
         self.index_name = index_name
         self.return_properties = return_properties
         self.embedder = embedder
+        self._node_label = None
+        self._embedding_node_property = None
+        self._embedding_dimension = None
+        self._fetch_index_infos()
 
     def search(
         self,
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
+        filters: Optional[dict[str, Any]] = None,
     ) -> list[VectorSearchRecord]:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         See the following documentation for more details:
@@ -75,7 +80,7 @@ class VectorRetriever(Retriever):
         """
         try:
             validated_data = VectorSearchModel(
-                index_name=self.index_name,
+                vector_index_name=self.index_name,
                 top_k=top_k,
                 query_vector=query_vector,
                 query_text=query_text,
@@ -93,7 +98,15 @@ class VectorRetriever(Retriever):
             parameters["query_vector"] = query_vector
             del parameters["query_text"]
 
-        search_query = get_search_query(SearchType.VECTOR, self.return_properties)
+        search_query, search_params = get_search_query(
+            SearchType.VECTOR,
+            self.return_properties,
+            node_label=self._node_label,
+            embedding_node_property=self._embedding_node_property,
+            embedding_dimension=self._embedding_dimension,
+            filters=filters,
+        )
+        parameters.update(search_params)
 
         logger.debug("VectorRetriever Cypher parameters: %s", parameters)
         logger.debug("VectorRetriever Cypher query: %s", search_query)
@@ -129,6 +142,10 @@ class VectorCypherRetriever(Retriever):
         self.index_name = index_name
         self.retrieval_query = retrieval_query
         self.embedder = embedder
+        self._node_label = None
+        self._node_embedding_property = None
+        self._embedding_dimension = None
+        self._fetch_index_infos()
 
     def search(
         self,
@@ -136,6 +153,7 @@ class VectorCypherRetriever(Retriever):
         query_text: Optional[str] = None,
         top_k: int = 5,
         query_params: Optional[dict[str, Any]] = None,
+        filters: Optional[dict[str, Any]] = None,
     ) -> list[neo4j.Record]:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         See the following documentation for more details:
@@ -158,7 +176,7 @@ class VectorCypherRetriever(Retriever):
         """
         try:
             validated_data = VectorCypherSearchModel(
-                index_name=self.index_name,
+                vector_index_name=self.index_name,
                 top_k=top_k,
                 query_vector=query_vector,
                 query_text=query_text,
@@ -181,9 +199,15 @@ class VectorCypherRetriever(Retriever):
                     parameters[key] = value
             del parameters["query_params"]
 
-        search_query = get_search_query(
-            SearchType.VECTOR, retrieval_query=self.retrieval_query
+        search_query, search_params = get_search_query(
+            SearchType.VECTOR,
+            retrieval_query=self.retrieval_query,
+            node_label=self._node_label,
+            embedding_node_property=self._node_embedding_property,
+            embedding_dimension=self._embedding_dimension,
+            filters=filters,
         )
+        parameters.update(search_params)
 
         logger.debug("VectorCypherRetriever Cypher parameters: %s", parameters)
         logger.debug("VectorCypherRetriever Cypher query: %s", search_query)
