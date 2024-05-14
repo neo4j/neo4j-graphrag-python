@@ -19,6 +19,14 @@ jobs:
           - community
           - enterprise
     services:
+      weaviate:
+        image: cr.weaviate.io/semitechnologies/weaviate:1.25.1
+        env:
+          ENABLE_MODULES: text2vec-openai
+          DEFAULT_VECTORIZER_MODULE: text2vec-openai
+        ports:
+          - 8080:8080
+          - 50051:50051
       neo4j:
         image: neo4j:${{ matrix.neo4j-version }}-${{ matrix.neo4j-edition }}
         env:
@@ -43,6 +51,11 @@ jobs:
           run: |
               echo "$HOME/.local/bin" >> $GITHUB_PATH
               poetry config virtualenvs.create false
+
+      -   name: Create .env file
+          run: |
+              touch .env
+              echo OPENAI_API_KEY_E2E_TESTS=${{ secrets.OPENAI_API_KEY_E2E_TESTS }} >> .env
 
       -   name: Install dependencies
           run: poetry install

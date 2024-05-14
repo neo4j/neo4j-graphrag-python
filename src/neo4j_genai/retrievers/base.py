@@ -13,8 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from abc import ABC, abstractmethod
-from typing import Any
-
+from typing import Optional, Any
 import neo4j
 
 
@@ -75,3 +74,38 @@ class Retriever(ABC):
         self._node_label = result["labels"][0]
         self._embedding_node_property = result["properties"][0]
         self._embedding_dimension = result["dimensions"]
+
+
+class ExternalRetriever(ABC):
+    """
+    Abstract class for External Vector Stores
+    """
+
+    def __init__(self):
+        pass
+
+    @property
+    @abstractmethod
+    def id_property_external(self):
+        pass
+
+    @property
+    @abstractmethod
+    def id_property_neo4j(self):
+        pass
+
+    @abstractmethod
+    def search(
+        self,
+        query_vector: Optional[list[float]] = None,
+        query_text: Optional[str] = None,
+        top_k: int = 5,
+        **kwargs,
+    ) -> list[neo4j.Record]:
+        """
+
+        Returns:
+                list[neo4j.Record]: List of Neo4j Records
+
+        """
+        pass

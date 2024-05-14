@@ -24,6 +24,12 @@ from neo4j_genai.indexes import (
     create_vector_index,
     create_fulltext_index,
 )
+from dotenv import load_dotenv
+
+
+@pytest.fixture(scope="module", autouse=True)
+def load_env():
+    load_dotenv()
 
 
 @pytest.fixture(scope="module")

@@ -161,11 +161,20 @@ When you're finished with your changes, create a pull request, also known as a P
 
 ## Run tests
 
-Open a new virtual environment and then run the tests.
+### Unit tests
+
+This should run out of the box once the dependencies are installed.
 
 ```bash
-poetry shell
-pytest tests/unit
+poetry run pytest tests/unit
+```
+### E2E tests
+For these to run, you'd need to have an environment variable  named `OPENAI_API_KEY_E2E_TESTS` with the value of a valid OpenAI API key.
+
+A common way is to create a file named `.env` in the project root and place `OPENAI_API_KEY_E2E_TESTS=<your-api-key>` inside of it.
+
+```bash
+poetry run pytest tests/e2e
 ```
 
 ## Further information

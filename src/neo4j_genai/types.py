@@ -22,6 +22,7 @@ from pydantic import (
     ConfigDict,
 )
 import neo4j
+from neo4j_genai.retrievers.utils import validate_search_query_input
 
 
 class VectorSearchRecord(BaseModel):
@@ -71,10 +72,7 @@ class VectorSearchModel(BaseModel):
         Validates that one of either query_vector or query_text is provided exclusively.
         """
         query_vector, query_text = values.get("query_vector"), values.get("query_text")
-        if not (bool(query_vector) ^ bool(query_text)):
-            raise ValueError(
-                "You must provide exactly one of query_vector or query_text."
-            )
+        validate_search_query_input(query_text, query_vector)
         return values
 
 
