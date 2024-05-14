@@ -350,6 +350,9 @@ def get_metadata_filter(
 ) -> tuple[str, dict]:
     """Construct the cypher filter snippet based on a filter dict
 
+    Note: the _construct_metadata_filter function is not thread-safe because
+    of the ParameterStore object.
+
     Args:
         filter (dict): The filters to be converted to Cypher
         node_alias (str): The alias of node the filters must be applied on
