@@ -12,6 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import re
 from typing import Any, Type
 from collections import Counter
 
@@ -44,9 +45,11 @@ class Operator:
             field_name (str): The initial unescaped field name
 
         Returns:
-            The field name potentially surrounded with backticks if needed
+            The field name potentially surrounded with backticks if needed,
+            ready to be inserted into a Cypher query.
         """
-        if field_name.isidentifier():
+        pattern = r'^[a-z_][0-9a-z_]*$'
+        if re.match(pattern, field_name, re.IGNORECASE):
             return field_name
         escaped_field = field_name.replace("`", "``")
         return f"`{escaped_field}`"
