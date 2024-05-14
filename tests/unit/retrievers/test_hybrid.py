@@ -43,6 +43,21 @@ def test_vector_cypher_retriever_initialization(driver):
         mock_verify.assert_called_once()
 
 
+def test_hybrid_retriever_bad_data_validation(driver):
+    with pytest.raises(ValueError):
+        HybridRetriever(driver=driver, vector_index_name=42, fulltext_index_name=42)
+
+
+def test_hybrid_cypher_retriever_bad_data_validation(driver):
+    with pytest.raises(ValueError):
+        HybridCypherRetriever(
+            driver=driver,
+            vector_index_name="my-index",
+            fulltext_index_name="fulltext-index",
+            retrieval_query=42,
+        )
+
+
 @patch("neo4j_genai.HybridRetriever._verify_version")
 def test_hybrid_search_text_happy_path(_verify_version_mock, driver):
     embed_query_vector = [1.0 for _ in range(1536)]

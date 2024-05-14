@@ -14,7 +14,13 @@
 #  limitations under the License.
 from enum import Enum
 from typing import Any, Literal, Optional
-from pydantic import BaseModel, PositiveInt, model_validator, field_validator
+from pydantic import (
+    BaseModel,
+    PositiveInt,
+    model_validator,
+    field_validator,
+    ConfigDict,
+)
 import neo4j
 
 
@@ -93,3 +99,59 @@ class SearchType(str, Enum):
 
     VECTOR = "vector"
     HYBRID = "hybrid"
+
+
+class EmbedderModel(BaseModel):
+    embedder: Optional[Any]
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_validator("embedder")
+    def check_embedder(cls, value):
+        if not hasattr(value, "embed_query") or not callable(
+            getattr(value, "embed_query", None)
+        ):
+            raise ValueError(
+                "Provided embedder object must have an 'embed_query' callable method."
+            )
+        return value
+
+
+class Neo4jDriverModel(BaseModel):
+    driver: neo4j.Driver
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_validator("driver")
+    def check_driver(cls, value):
+        if not isinstance(value, neo4j.Driver):
+            raise ValueError("Provided driver needs to be of type neo4j.Driver")
+        return value
+
+
+class VectorRetrieverModel(BaseModel):
+    driver_model: Neo4jDriverModel
+    index_name: str
+    embedder_model: Optional[EmbedderModel] = None
+    return_properties: Optional[list[str]] = None
+
+
+class VectorCypherRetrieverModel(BaseModel):
+    driver_model: Neo4jDriverModel
+    index_name: str
+    retrieval_query: str
+    embedder_model: Optional[EmbedderModel] = None
+
+
+class HybridRetrieverModel(BaseModel):
+    driver_model: Neo4jDriverModel
+    vector_index_name: str
+    fulltext_index_name: str
+    embedder_model: Optional[EmbedderModel] = None
+    return_properties: Optional[list[str]] = None
+
+
+class HybridCypherRetrieverModel(BaseModel):
+    driver_model: Neo4jDriverModel
+    vector_index_name: str
+    fulltext_index_name: str
+    retrieval_query: str
+    embedder_model: Optional[EmbedderModel] = None
