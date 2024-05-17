@@ -115,7 +115,7 @@ class VectorRetriever(Retriever):
 
         Returns:
             list[VectorSearchRecord]: The `top_k` neighbors found in vector search with their nodes and scores.
-       """
+        """
         try:
             validated_data = VectorSearchModel(
                 vector_index_name=self.index_name,

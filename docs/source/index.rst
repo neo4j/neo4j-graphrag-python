@@ -62,6 +62,7 @@ Performing a similarity search
 
     from neo4j import GraphDatabase
     from neo4j_genai import VectorRetriever
+    from langchain_openai import OpenAIEmbeddings
 
     URI = "neo4j://localhost:7687"
     AUTH = ("neo4j", "password")
@@ -71,8 +72,11 @@ Performing a similarity search
     # Connect to Neo4j database
     driver = GraphDatabase.driver(URI, auth=AUTH)
 
+    # Create Embedder object
+    embedder = OpenAIEmbeddings(model="text-embedding-3-large")
+
     # Initialize the retriever
-    retriever = VectorRetriever(driver, INDEX_NAME)
+    retriever = VectorRetriever(driver, INDEX_NAME, embedder)
 
     # Run the similarity search
     query_text = "How do I do similarity search in Neo4j?"
@@ -219,6 +223,42 @@ Open a new virtual environment and then run the tests.
     poetry shell
     pytest
 
+~~~~~~~~~~
+Unit tests
+~~~~~~~~~~
+
+This should run out of the box once the dependencies are installed.
+
+.. code:: bash
+
+    poetry run pytest tests/unit
+
+~~~~~~~~~
+E2E tests
+~~~~~~~~~
+
+To run e2e tests you'd need to have some services running locally:
+
+-   neo4j
+-   weaviate
+-   weaviate-text2vec-transformers
+
+The easiest way to get it up and running is via Docker compose:
+
+.. code:: bash
+
+    docker compose -f tests/e2e/docker-compose.yml up
+
+
+.. note::
+
+    If you suspect something in the databases are cached, run `docker compose -f tests/e2e/docker-compose.yml down` to remove them completely
+
+Once the services are running, execute the following command to run the e2e tests.
+
+.. code:: bash
+
+    poetry run pytest tests/e2e
 
 *******************
 Further information
