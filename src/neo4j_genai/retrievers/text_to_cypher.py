@@ -22,23 +22,29 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# TODO: Add Pydantic input validation like other retrievers
+# TODO: Add unit tests
 class TextToCypherRetriever(Retriever):
 
     def __init__(self, driver: neo4j.Driver, llm: LLM, schema: str):
         super().__init__(driver)
         self.llm = llm
+        # TODO: Decide if the schema should be provided as an input when creating an instance of the class
+        #       or should be retrieved by the class itself
         self.schema = schema
 
     def search(self, query_text: str, examples: Optional[list[str]] = None) -> list[neo4j.Record]:
 
+        # TODO: Decide if we want a full prompt template class similar to LangChain or if
+        #       string formatting is enough
         prompt = TEXT_TO_CYPHER_PROMPT.format(
             schema=self.schema, examples="\n".join(examples) if examples else "", input=query_text
         )
+        logger.debug("TextToCypherRetriever prompt:\n%s", t2c_query)
 
         # TODO: Fail here if the LLM doesn't generate a valid Cypher query
         t2c_query = self.llm.invoke(prompt)
-
-        logger.debug("Text2CypherRetriever Cypher query: %s", t2c_query)
+        logger.debug("TextToCypherRetriever Cypher query: %s", t2c_query)
 
         # TODO: Fail here if the query isn't valid for the specific database
         records, _, _ = self.driver.execute_query(query_=t2c_query)
