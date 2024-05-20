@@ -58,7 +58,7 @@ jobs:
               echo OPENAI_API_KEY_E2E_TESTS=${{ secrets.OPENAI_API_KEY_E2E_TESTS }} >> .env
 
       -   name: Install dependencies
-          run: poetry install
+          run: poetry install --with dev
 
       -   name: Run tests
           run: poetry run pytest ./tests/e2e
