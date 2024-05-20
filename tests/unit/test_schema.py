@@ -69,7 +69,7 @@ def test_get_schema_happy_path(driver):
     )
 
 
-@patch("neo4j_genai.schema._query", side_effect=_query_return_value)
+@patch("neo4j_genai.schema._query_database", side_effect=_query_return_value)
 def test_get_schema_ensure_formatted_response(driver):
     result = get_schema(driver)
     assert (

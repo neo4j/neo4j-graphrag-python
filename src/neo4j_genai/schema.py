@@ -50,7 +50,9 @@ RETURN {start: label, type: property, end: toString(other_node)} AS output
 """
 
 
-def _query(driver: neo4j.Driver, query: str, params: dict = {}) -> list[dict[str, Any]]:
+def _query_database(
+    driver: neo4j.Driver, query: str, params: dict = {}
+) -> list[dict[str, Any]]:
     """
     Queries the database.
 
@@ -79,8 +81,8 @@ def get_schema(
         str: the graph schema information in a serialized format.
     """
     node_properties = [
-        el["output"]
-        for el in _query(
+        data["output"]
+        for data in _query_database(
             driver,
             NODE_PROPERTIES_QUERY,
             params={"EXCLUDED_LABELS": EXCLUDED_LABELS + [BASE_ENTITY_LABEL]},
@@ -88,14 +90,14 @@ def get_schema(
     ]
 
     rel_properties = [
-        el["output"]
-        for el in _query(
+        data["output"]
+        for data in _query_database(
             driver, REL_PROPERTIES_QUERY, params={"EXCLUDED_LABELS": EXCLUDED_RELS}
         )
     ]
     relationships = [
-        el["output"]
-        for el in _query(
+        data["output"]
+        for data in _query_database(
             driver,
             REL_QUERY,
             params={"EXCLUDED_LABELS": EXCLUDED_LABELS + [BASE_ENTITY_LABEL]},
@@ -104,23 +106,24 @@ def get_schema(
 
     # Format node properties
     formatted_node_props = []
-    for el in node_properties:
+    for element in node_properties:
         props_str = ", ".join(
-            [f"{prop['property']}: {prop['type']}" for prop in el["properties"]]
+            [f"{prop['property']}: {prop['type']}" for prop in element["properties"]]
         )
-        formatted_node_props.append(f"{el['labels']} {{{props_str}}}")
+        formatted_node_props.append(f"{element['labels']} {{{props_str}}}")
 
     # Format relationship properties
     formatted_rel_props = []
-    for el in rel_properties:
+    for element in rel_properties:
         props_str = ", ".join(
-            [f"{prop['property']}: {prop['type']}" for prop in el["properties"]]
+            [f"{prop['property']}: {prop['type']}" for prop in element["properties"]]
         )
-        formatted_rel_props.append(f"{el['type']} {{{props_str}}}")
+        formatted_rel_props.append(f"{element['type']} {{{props_str}}}")
 
     # Format relationships
     formatted_rels = [
-        f"(:{el['start']})-[:{el['type']}]->(:{el['end']})" for el in relationships
+        f"(:{element['start']})-[:{element['type']}]->(:{element['end']})"
+        for element in relationships
     ]
 
     return "\n".join(
