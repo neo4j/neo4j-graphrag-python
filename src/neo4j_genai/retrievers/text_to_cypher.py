@@ -54,7 +54,7 @@ class TextToCypherRetriever(Retriever):
 
         super().__init__(validated_data.driver_model.driver)
         self.llm = validated_data.llm_model.llm
-        self.schema = (
+        self.neo4j_schema = (
             validated_data.neo4j_schema_model.neo4j_schema
             if validated_data.neo4j_schema_model
             else get_schema(validated_data.driver_model.driver)
@@ -71,7 +71,7 @@ class TextToCypherRetriever(Retriever):
             raise ValueError(f"Validation failed: {e.errors()}")
 
         prompt = TEXT_TO_CYPHER_PROMPT.format(
-            schema=self.schema,
+            schema=self.neo4j_schema,
             examples="\n".join(validated_data.examples)
             if validated_data.examples
             else "",
@@ -79,11 +79,9 @@ class TextToCypherRetriever(Retriever):
         )
         logger.debug("TextToCypherRetriever prompt:\n%s", prompt)
 
-        # TODO: Fail here if the LLM doesn't generate a valid Cypher query
         t2c_query = self.llm.invoke(prompt)
         logger.debug("TextToCypherRetriever Cypher query: %s", t2c_query)
 
-        # TODO: Fail here if the query isn't valid for the specific database
         records, _, _ = self.driver.execute_query(query_=t2c_query)
 
         return records
