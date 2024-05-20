@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Any
+from typing import Any, Optional
 
 import neo4j
 
@@ -50,8 +50,8 @@ RETURN {start: label, type: property, end: toString(other_node)} AS output
 """
 
 
-def _query_database(
-    driver: neo4j.Driver, query: str, params: dict = {}
+def query_database(
+    driver: neo4j.Driver, query: str, params: Optional[dict] = None
 ) -> list[dict[str, Any]]:
     """
     Queries the database.
@@ -59,11 +59,13 @@ def _query_database(
     Args:
         driver (neo4j.Driver):  Neo4j Python driver instance.
         query (str): The cypher query.
-        params (dict, optional): The query parameters. Defaults to {}.
+        params (dict, optional): The query parameters. Defaults to None.
 
     Returns:
         List[Dict[str, Any]]: the result of the query in json format.
     """
+    if params is None:
+        params = {}
     data = driver.execute_query(query, params)
     return [r.data() for r in data.records]
 
@@ -82,7 +84,7 @@ def get_schema(
     """
     node_properties = [
         data["output"]
-        for data in _query_database(
+        for data in query_database(
             driver,
             NODE_PROPERTIES_QUERY,
             params={"EXCLUDED_LABELS": EXCLUDED_LABELS + [BASE_ENTITY_LABEL]},
@@ -91,13 +93,13 @@ def get_schema(
 
     rel_properties = [
         data["output"]
-        for data in _query_database(
+        for data in query_database(
             driver, REL_PROPERTIES_QUERY, params={"EXCLUDED_LABELS": EXCLUDED_RELS}
         )
     ]
     relationships = [
         data["output"]
-        for data in _query_database(
+        for data in query_database(
             driver,
             REL_QUERY,
             params={"EXCLUDED_LABELS": EXCLUDED_LABELS + [BASE_ENTITY_LABEL]},
