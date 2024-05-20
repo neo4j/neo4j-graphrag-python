@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 
@@ -43,13 +43,20 @@ def test_vector_cypher_retriever_initialization(driver):
         mock_verify.assert_called_once()
 
 
-def test_hybrid_retriever_bad_data_validation(driver):
-    with pytest.raises(ValueError):
-        HybridRetriever(driver=driver, vector_index_name=42, fulltext_index_name=42)
+@patch("neo4j_genai.HybridRetriever._verify_version")
+def test_hybrid_retriever_invalid_fulltext_index_name(_verify_version_mock, driver):
+    with pytest.raises(ValueError) as exc_info:
+        HybridRetriever(
+            driver=driver, vector_index_name="my-index", fulltext_index_name=42
+        )
+
+    assert "fulltext_index_name" in str(exc_info.value)
+    assert "Input should be a valid string" in str(exc_info.value)
 
 
-def test_hybrid_cypher_retriever_bad_data_validation(driver):
-    with pytest.raises(ValueError):
+@patch("neo4j_genai.HybridCypherRetriever._verify_version")
+def test_hybrid_cypher_retriever_invalid_retrieval_query(_verify_version_mock, driver):
+    with pytest.raises(ValueError) as exc_info:
         HybridCypherRetriever(
             driver=driver,
             vector_index_name="my-index",
@@ -57,18 +64,20 @@ def test_hybrid_cypher_retriever_bad_data_validation(driver):
             retrieval_query=42,
         )
 
+    assert "retrieval_query" in str(exc_info.value)
+    assert "Input should be a valid string" in str(exc_info.value)
+
 
 @patch("neo4j_genai.HybridRetriever._verify_version")
-def test_hybrid_search_text_happy_path(_verify_version_mock, driver):
+def test_hybrid_search_text_happy_path(_verify_version_mock, driver, embedder):
     embed_query_vector = [1.0 for _ in range(1536)]
-    custom_embeddings = MagicMock()
-    custom_embeddings.embed_query.return_value = embed_query_vector
+    embedder.embed_query.return_value = embed_query_vector
     vector_index_name = "my-index"
     fulltext_index_name = "my-fulltext-index"
     query_text = "may thy knife chip and shatter"
     top_k = 5
     retriever = HybridRetriever(
-        driver, vector_index_name, fulltext_index_name, custom_embeddings
+        driver, vector_index_name, fulltext_index_name, embedder
     )
     retriever.driver.execute_query.return_value = [
         [{"node": "dummy-node", "score": 1.0}],
@@ -89,24 +98,24 @@ def test_hybrid_search_text_happy_path(_verify_version_mock, driver):
             "query_vector": embed_query_vector,
         },
     )
-    custom_embeddings.embed_query.assert_called_once_with(query_text)
+    embedder.embed_query.assert_called_once_with(query_text)
     assert records == [{"node": "dummy-node", "score": 1.0}]
 
 
 @patch("neo4j_genai.HybridRetriever._verify_version")
 def test_hybrid_search_favors_query_vector_over_embedding_vector(
-    _verify_version_mock, driver
+    _verify_version_mock, driver, embedder
 ):
     embed_query_vector = [1.0 for _ in range(1536)]
     query_vector = [2.0 for _ in range(1536)]
-    custom_embeddings = MagicMock()
-    custom_embeddings.embed_query.return_value = embed_query_vector
+
+    embedder.embed_query.return_value = embed_query_vector
     vector_index_name = "my-index"
     fulltext_index_name = "my-fulltext-index"
     query_text = "may thy knife chip and shatter"
     top_k = 5
     retriever = HybridRetriever(
-        driver, vector_index_name, fulltext_index_name, custom_embeddings
+        driver, vector_index_name, fulltext_index_name, embedder
     )
     retriever.driver.execute_query.return_value = [
         [{"node": "dummy-node", "score": 1.0}],
@@ -127,7 +136,7 @@ def test_hybrid_search_favors_query_vector_over_embedding_vector(
             "query_vector": query_vector,
         },
     )
-    custom_embeddings.embed_query.assert_not_called()
+    embedder.embed_query.assert_not_called()
 
 
 def test_error_when_hybrid_search_only_text_no_embedder(hybrid_retriever):
@@ -155,10 +164,9 @@ def test_hybrid_search_retriever_search_missing_embedder_for_text(
 
 
 @patch("neo4j_genai.HybridRetriever._verify_version")
-def test_hybrid_retriever_return_properties(_verify_version_mock, driver):
+def test_hybrid_retriever_return_properties(_verify_version_mock, driver, embedder):
     embed_query_vector = [1.0 for _ in range(1536)]
-    custom_embeddings = MagicMock()
-    custom_embeddings.embed_query.return_value = embed_query_vector
+    embedder.embed_query.return_value = embed_query_vector
     vector_index_name = "my-index"
     fulltext_index_name = "my-fulltext-index"
     query_text = "may thy knife chip and shatter"
@@ -168,7 +176,7 @@ def test_hybrid_retriever_return_properties(_verify_version_mock, driver):
         driver,
         vector_index_name,
         fulltext_index_name,
-        custom_embeddings,
+        embedder,
         return_properties,
     )
     driver.execute_query.return_value = [
@@ -180,7 +188,7 @@ def test_hybrid_retriever_return_properties(_verify_version_mock, driver):
 
     records = retriever.search(query_text=query_text, top_k=top_k)
 
-    custom_embeddings.embed_query.assert_called_once_with(query_text)
+    embedder.embed_query.assert_called_once_with(query_text)
     driver.execute_query.assert_called_once_with(
         search_query,
         {
@@ -195,10 +203,11 @@ def test_hybrid_retriever_return_properties(_verify_version_mock, driver):
 
 
 @patch("neo4j_genai.HybridCypherRetriever._verify_version")
-def test_hybrid_cypher_retrieval_query_with_params(_verify_version_mock, driver):
+def test_hybrid_cypher_retrieval_query_with_params(
+    _verify_version_mock, driver, embedder
+):
     embed_query_vector = [1.0 for _ in range(1536)]
-    custom_embeddings = MagicMock()
-    custom_embeddings.embed_query.return_value = embed_query_vector
+    embedder.embed_query.return_value = embed_query_vector
     vector_index_name = "my-index"
     fulltext_index_name = "my-fulltext-index"
     query_text = "may thy knife chip and shatter"
@@ -214,7 +223,7 @@ def test_hybrid_cypher_retrieval_query_with_params(_verify_version_mock, driver)
         vector_index_name,
         fulltext_index_name,
         retrieval_query,
-        custom_embeddings,
+        embedder,
     )
     driver.execute_query.return_value = [
         [{"node_id": 123, "text": "dummy-text", "score": 1.0}],
@@ -231,7 +240,7 @@ def test_hybrid_cypher_retrieval_query_with_params(_verify_version_mock, driver)
         query_params=query_params,
     )
 
-    custom_embeddings.embed_query.assert_called_once_with(query_text)
+    embedder.embed_query.assert_called_once_with(query_text)
 
     driver.execute_query.assert_called_once_with(
         search_query,

@@ -18,10 +18,17 @@ import neo4j
 from neo4j_genai import VectorRetriever, VectorCypherRetriever, HybridRetriever
 from unittest.mock import MagicMock, patch
 
+from neo4j_genai.embedder import Embedder
+
 
 @pytest.fixture(scope="function")
 def driver():
     return MagicMock(spec=neo4j.Driver)
+
+
+@pytest.fixture(scope="function")
+def embedder():
+    return MagicMock(spec=Embedder)
 
 
 @pytest.fixture(scope="function")
