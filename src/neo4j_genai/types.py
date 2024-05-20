@@ -14,12 +14,14 @@
 #  limitations under the License.
 from enum import Enum
 from typing import Any, Literal, Optional
+
+import neo4j
 from pydantic import (
     BaseModel,
-    PositiveInt,
-    model_validator,
-    field_validator,
     ConfigDict,
+    PositiveInt,
+    field_validator,
+    model_validator,
 )
 import neo4j
 from neo4j_genai.retrievers.utils import validate_search_query_input
@@ -36,6 +38,10 @@ class VectorSearchRecord(BaseModel):
 
     node: Any
     score: float
+
+
+class Neo4jSchemaModel(BaseModel):
+    neo4j_schema: str
 
 
 class IndexModel(BaseModel):
@@ -100,6 +106,11 @@ class HybridCypherSearchModel(HybridSearchModel):
     query_params: Optional[dict[str, Any]] = None
 
 
+class TextToCypherSearchModel(BaseModel):
+    query_text: str
+    examples: Optional[list[str]] = None
+
+
 class SearchType(str, Enum):
     """Enumerator of the search strategies."""
 
@@ -118,6 +129,19 @@ class EmbedderModel(BaseModel):
         ):
             raise ValueError(
                 "Provided embedder object must have an 'embed_query' callable method."
+            )
+        return value
+
+
+class LLMModel(BaseModel):
+    llm: Any
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_validator("llm")
+    def check_llm(cls, value):
+        if not hasattr(value, "invoke") or not callable(getattr(value, "invoke", None)):
+            raise ValueError(
+                "Provided llm object must have an 'invoke' callable method."
             )
         return value
 
@@ -161,3 +185,9 @@ class HybridCypherRetrieverModel(BaseModel):
     fulltext_index_name: str
     retrieval_query: str
     embedder_model: Optional[EmbedderModel] = None
+
+
+class TextToCypherRetrieverModel(BaseModel):
+    driver_model: Neo4jDriverModel
+    llm_model: LLMModel
+    neo4j_schema_model: Optional[Neo4jSchemaModel] = None

@@ -12,35 +12,72 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import logging
+from typing import Optional
+
 import neo4j
-from neo4j_genai.retrievers.base import Retriever
+from pydantic import ValidationError
+
 from neo4j_genai.llm import LLM
 from neo4j_genai.prompts import TEXT_TO_CYPHER_PROMPT
-from typing import Optional
-import logging
-
+from neo4j_genai.retrievers.base import Retriever
+from neo4j_genai.schema import get_schema
+from neo4j_genai.types import (
+    LLMModel,
+    Neo4jDriverModel,
+    Neo4jSchemaModel,
+    TextToCypherRetrieverModel,
+    TextToCypherSearchModel,
+)
 
 logger = logging.getLogger(__name__)
 
-# TODO: Add Pydantic input validation like other retrievers
+
 # TODO: Add unit tests
 class TextToCypherRetriever(Retriever):
+    def __init__(
+        self, driver: neo4j.Driver, llm: LLM, neo4j_schema: Optional[str] = None
+    ) -> None:
+        try:
+            driver_model = Neo4jDriverModel(driver=driver)
+            llm_model = LLMModel(llm=llm)
+            neo4j_schema_model = (
+                Neo4jSchemaModel(neo4j_schema=neo4j_schema) if neo4j_schema else None
+            )
+            validated_data = TextToCypherRetrieverModel(
+                driver_model=driver_model,
+                llm_model=llm_model,
+                neo4j_schema_model=neo4j_schema_model,
+            )
+        except ValidationError as e:
+            raise ValueError(f"Validation failed: {e.errors()}")
 
-    def __init__(self, driver: neo4j.Driver, llm: LLM, schema: str):
-        super().__init__(driver)
-        self.llm = llm
-        # TODO: Decide if the schema should be provided as an input when creating an instance of the class
-        #       or should be retrieved by the class itself
-        self.schema = schema
-
-    def search(self, query_text: str, examples: Optional[list[str]] = None) -> list[neo4j.Record]:
-
-        # TODO: Decide if we want a full prompt template class similar to LangChain or if
-        #       string formatting is enough
-        prompt = TEXT_TO_CYPHER_PROMPT.format(
-            schema=self.schema, examples="\n".join(examples) if examples else "", input=query_text
+        super().__init__(validated_data.driver_model.driver)
+        self.llm = validated_data.llm_model.llm
+        self.schema = (
+            validated_data.neo4j_schema_model.neo4j_schema
+            if validated_data.neo4j_schema_model
+            else get_schema(validated_data.driver_model.driver)
         )
-        logger.debug("TextToCypherRetriever prompt:\n%s", t2c_query)
+
+    def search(
+        self, query_text: str, examples: Optional[list[str]] = None
+    ) -> list[neo4j.Record]:
+        try:
+            validated_data = TextToCypherSearchModel(
+                query_text=query_text, examples=examples
+            )
+        except ValidationError as e:
+            raise ValueError(f"Validation failed: {e.errors()}")
+
+        prompt = TEXT_TO_CYPHER_PROMPT.format(
+            schema=self.schema,
+            examples="\n".join(validated_data.examples)
+            if validated_data.examples
+            else "",
+            input=validated_data.query_text,
+        )
+        logger.debug("TextToCypherRetriever prompt:\n%s", prompt)
 
         # TODO: Fail here if the LLM doesn't generate a valid Cypher query
         t2c_query = self.llm.invoke(prompt)

@@ -14,6 +14,7 @@
 #  limitations under the License.
 from abc import ABC, abstractmethod
 
+
 class LLM(ABC):
     """Interface for large language models."""
 
