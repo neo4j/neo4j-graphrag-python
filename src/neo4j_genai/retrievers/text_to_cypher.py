@@ -34,6 +34,11 @@ logger = logging.getLogger(__name__)
 
 
 class TextToCypherRetriever(Retriever):
+    """
+    Allows for the retrieval of records from a Neo4j database using natural language.
+    Converts a user's natural language query to a Cypher query using an LLM,
+    then retrieves records from a Neo4j database using the generated Cypher query
+    """
     def __init__(
         self, driver: neo4j.Driver, llm: LLM, neo4j_schema: Optional[str] = None
     ) -> None:
@@ -62,6 +67,19 @@ class TextToCypherRetriever(Retriever):
     def search(
         self, query_text: str, examples: Optional[list[str]] = None
     ) -> list[neo4j.Record]:
+        """Converts query_text to a Cypher query using an LLM.
+           Retrieve records from a Neo4j database using the generated Cypher query.
+
+        Args:
+            query_text (str): The natural language query used to search the Neo4j database.
+            examples (Optional[list[str], optional): Optional user input/query pairs for the LLM to use as examples.
+
+        Raises:
+            ValidationError: If validation of the input arguments fail.
+
+        Returns:
+            list[neo4j.Record]: The results of the search query.
+        """
         try:
             validated_data = TextToCypherSearchModel(
                 query_text=query_text, examples=examples
