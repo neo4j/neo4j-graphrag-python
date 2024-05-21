@@ -1,41 +1,41 @@
 name: Patch release 🚀
 
 on:
-    workflow_dispatch:
+  workflow_dispatch:
 
 jobs:
-    bump-version:
-        outputs:
-            version: ${{ steps.get-version.outputs.version }}
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v3
-            - name: Set up Python
-              uses: actions/setup-python@v4
-              with:
-                  python-version: "3.9"
+  bump-version:
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
 
-            - name: Install and configure Poetry
-              uses: snok/install-poetry@v1
-              with:
-                  version: 1.8.2
-                  virtualenvs-create: false
-                  virtualenvs-in-project: false
-                  installer-parallel: true
+      - name: Install and configure Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.8.2
+          virtualenvs-create: false
+          virtualenvs-in-project: false
+          installer-parallel: true
 
-            - name: Bump version
-              run: poetry version prerelease
+      - name: Bump version
+        run: poetry version prerelease
 
-            - name: Get version
-              id: get-version
-              run: echo version=`poetry version -s` >> "$GITHUB_OUTPUT"
-            - name: Print varaibles
-              run: |
-                  echo Version: ${{ steps.get-version.outputs.version }}
-            - uses: EndBug/add-and-commit@v9
-              with:
-                  author_name: "Neo4j-GenAI GitHub Action"
-                  author_email: "team-gen-ai@neo4j.com"
-                  message: "Bump version to ${{ steps.get-version.outputs.version }}"
-                  add: "pyproject.toml"
-                  tag: "${{ steps.get-version.outputs.version }}"
+      - name: Get version
+        id: get-version
+        run: echo version=`poetry version -s` >> "$GITHUB_OUTPUT"
+      - name: Print varaibles
+        run: |
+          echo Version: ${{ steps.get-version.outputs.version }}
+      - uses: EndBug/add-and-commit@v9
+        with:
+          author_name: "Neo4j-GenAI GitHub Action"
+          author_email: "team-gen-ai@neo4j.com"
+          message: "Bump version to ${{ steps.get-version.outputs.version }}"
+          add: "pyproject.toml"
+          tag: "${{ steps.get-version.outputs.version }}"

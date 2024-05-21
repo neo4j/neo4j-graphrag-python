@@ -35,17 +35,17 @@ jobs:
         with:
           python-version: '3.9'
 
-      -   name: Install Poetry
-          run: |
-              curl -sSL https://install.python-poetry.org | python3 -
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
 
-      -   name: Configure Poetry
-          run: |
-              echo "$HOME/.local/bin" >> $GITHUB_PATH
-              poetry config virtualenvs.create false
+      - name: Configure Poetry
+        run: |
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          poetry config virtualenvs.create false
 
-      -   name: Install dependencies
-          run: poetry install
+      - name: Install dependencies
+        run: poetry install
 
-      -   name: Run tests
-          run: poetry run pytest ./tests/e2e
+      - name: Run tests
+        run: poetry run pytest ./tests/e2e
