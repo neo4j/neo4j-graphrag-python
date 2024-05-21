@@ -18,7 +18,7 @@ from neo4j import Record
 import weaviate
 from neo4j_genai.retrievers.external.weaviate import WeaviateNeo4jRetriever
 from langchain_community.embeddings import HuggingFaceEmbeddings
-from .utils import get_query_vector
+from .utils import EMBEDDING_BIOLOGY
 from .populate_dbs import populate_dbs
 
 
@@ -53,7 +53,7 @@ def test_weaviate_neo4j_vector_input(driver, weaviate_client):
     )
 
     top_k = 2
-    results = retriever.search(query_vector=get_query_vector(), top_k=top_k)
+    results = retriever.search(query_vector=EMBEDDING_BIOLOGY, top_k=top_k)
 
     assert isinstance(results, list)
     assert len(results) == top_k

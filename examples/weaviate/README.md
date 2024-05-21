@@ -20,11 +20,11 @@ poetry run python tests/e2e/weaviate_e2e/populate_dbs.py
 
 ```
 # search by vector
-poetry run python src/neo4j_genai/retrievers/external/weaviate/examples/vector_search.py
+poetry run python examples/weaviate/vector_search.py
 
 # search by text, with embeddings generated locally (via embedder argument)
-poetry run python src/neo4j_genai/retrievers/external/weaviate/examples/text_search_local_embedder.py
+poetry run python examples/weaviate/text_search_local_embedder.py
 
 # search by text, with embeddings generated on the Weaviate side, via configured vectorizer
-poetry run python src/neo4j_genai/retrievers/external/weaviate/examples/text_search_remote_embedder.py
+poetry run python examples/weaviate/text_search_remote_embedder.py
 ```
