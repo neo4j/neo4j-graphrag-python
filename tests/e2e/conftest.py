@@ -12,18 +12,20 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-import string
 import random
+import string
 import uuid
+from unittest.mock import MagicMock
 
 import pytest
 from neo4j import GraphDatabase
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.indexes import (
-    drop_index_if_exists,
-    create_vector_index,
     create_fulltext_index,
+    create_vector_index,
+    drop_index_if_exists,
 )
+from neo4j_genai.llm import LLM
 
 
 @pytest.fixture(scope="module")
@@ -33,6 +35,11 @@ def driver():
     driver = GraphDatabase.driver(uri, auth=auth)
     yield driver
     driver.close()
+
+
+@pytest.fixture(scope="module")
+def llm():
+    return MagicMock(spec=LLM)
 
 
 @pytest.fixture(scope="module")
