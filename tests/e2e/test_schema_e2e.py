@@ -20,6 +20,8 @@ from neo4j_genai.schema import (
     query_database,
     NODE_PROPERTIES_QUERY,
     BASE_ENTITY_LABEL,
+    EXCLUDED_LABELS,
+    EXCLUDED_RELS,
     REL_PROPERTIES_QUERY,
     REL_QUERY,
 )
@@ -96,17 +98,25 @@ def test_get_schema_filtering_labels(driver):
     """Test that the excluded labels and relationships are correctly filtered."""
     # Delete all nodes in the graph
     driver.execute_query("MATCH (n) DETACH DELETE n")
-    # Create two labels and a relationship
+    # Create two labels and a relationship to be excluded
     driver.execute_query(
-        "CREATE (:`_Bloom_Scene_`{property_b: 'b'})-[:_Bloom_HAS_SCENE_]->(:`_Bloom_Perspective_`)"
+        "CREATE (:_Bloom_Scene_{property_a: 'a'})-[:_Bloom_HAS_SCENE_{property_b: 'b'}]->(:_Bloom_Perspective_)"
     )
 
-    node_properties = query_database(
-        driver, NODE_PROPERTIES_QUERY, params={"EXCLUDED_LABELS": [BASE_ENTITY_LABEL]}
-    )
-    relationships_properties = query_database(
-        driver, REL_PROPERTIES_QUERY, params={"EXCLUDED_LABELS": [BASE_ENTITY_LABEL]}
-    )
+    node_properties = [
+        data["output"]
+        for data in query_database(
+            driver,
+            NODE_PROPERTIES_QUERY,
+            params={"EXCLUDED_LABELS": EXCLUDED_LABELS},
+        )
+    ]
+    relationship_properties = [
+        data["output"]
+        for data in query_database(
+            driver, REL_PROPERTIES_QUERY, params={"EXCLUDED_LABELS": EXCLUDED_RELS}
+        )
+    ]
 
     assert node_properties == []
-    assert relationships_properties == []
+    assert relationship_properties == []
