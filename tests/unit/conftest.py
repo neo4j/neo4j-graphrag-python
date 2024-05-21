@@ -17,7 +17,12 @@ from unittest.mock import MagicMock, patch
 
 import neo4j
 import pytest
-from neo4j_genai import HybridRetriever, VectorCypherRetriever, VectorRetriever, TextToCypherRetriever
+from neo4j_genai import (
+    HybridRetriever,
+    TextToCypherRetriever,
+    VectorCypherRetriever,
+    VectorRetriever,
+)
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.llm import LLM
 
@@ -56,6 +61,7 @@ def vector_cypher_retriever(_verify_version_mock, driver):
 @patch("neo4j_genai.HybridRetriever._verify_version")
 def hybrid_retriever(_verify_version_mock, driver):
     return HybridRetriever(driver, "my-index", "my-fulltext-index")
+
 
 @pytest.fixture(scope="function")
 @patch("neo4j_genai.TextToCypherRetriever._verify_version")
