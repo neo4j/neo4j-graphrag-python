@@ -62,7 +62,7 @@ def query_database(
         params (dict, optional): The query parameters. Defaults to None.
 
     Returns:
-        List[Dict[str, Any]]: the result of the query in json format.
+        list[dict[str, Any]]: the result of the query in json format.
     """
     if params is None:
         params = {}
