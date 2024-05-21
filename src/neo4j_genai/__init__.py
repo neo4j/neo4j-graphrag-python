@@ -15,10 +15,12 @@
 
 from .retrievers.vector import VectorRetriever, VectorCypherRetriever
 from .retrievers.hybrid import HybridRetriever, HybridCypherRetriever
+from .retrievers.text_to_cypher import TextToCypherRetriever
 
 __all__ = [
     "VectorRetriever",
     "VectorCypherRetriever",
     "HybridRetriever",
     "HybridCypherRetriever",
+    "TextToCypherRetriever"
 ]

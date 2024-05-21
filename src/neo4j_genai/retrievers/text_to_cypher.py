@@ -33,7 +33,6 @@ from neo4j_genai.types import (
 logger = logging.getLogger(__name__)
 
 
-# TODO: Add unit tests
 class TextToCypherRetriever(Retriever):
     def __init__(
         self, driver: neo4j.Driver, llm: LLM, neo4j_schema: Optional[str] = None
@@ -77,7 +76,7 @@ class TextToCypherRetriever(Retriever):
             else "",
             input=validated_data.query_text,
         )
-        logger.debug("TextToCypherRetriever prompt:\n%s", prompt)
+        logger.debug("TextToCypherRetriever prompt: %s", prompt)
 
         t2c_query = self.llm.invoke(prompt)
         logger.debug("TextToCypherRetriever Cypher query: %s", t2c_query)
