@@ -14,7 +14,7 @@
 #  limitations under the License.
 from unittest.mock import patch
 
-from neo4j_genai.neo4j_queries import get_search_query, _get_query_tail
+from neo4j_genai.neo4j_queries import get_search_query, get_query_tail
 from neo4j_genai.types import SearchType
 
 
@@ -161,21 +161,21 @@ def test_hybrid_search_with_properties():
 def test_get_query_tail_with_retrieval_query():
     retrieval_query = "MATCH (n) RETURN n LIMIT 10"
     expected = retrieval_query
-    result = _get_query_tail(retrieval_query=retrieval_query)
+    result = get_query_tail(retrieval_query=retrieval_query)
     assert result.strip() == expected.strip()
 
 
 def test_get_query_tail_with_properties():
     properties = ["name", "age"]
     expected = "RETURN node {.name, .age} as node, score"
-    result = _get_query_tail(return_properties=properties)
+    result = get_query_tail(return_properties=properties)
     assert result.strip() == expected.strip()
 
 
 def test_get_query_tail_with_fallback():
     fallback = "HELLO"
     expected = fallback
-    result = _get_query_tail(fallback_return=fallback)
+    result = get_query_tail(fallback_return=fallback)
     assert result.strip() == expected.strip()
 
 
@@ -185,7 +185,7 @@ def test_get_query_tail_ordering_all():
     fallback = "HELLO"
 
     expected = retrieval_query
-    result = _get_query_tail(
+    result = get_query_tail(
         retrieval_query=retrieval_query,
         return_properties=properties,
         fallback_return=fallback,
@@ -198,7 +198,7 @@ def test_get_query_tail_ordering_no_retrieval_query():
     fallback = "HELLO"
 
     expected = "RETURN node {.name, .age} as node, score"
-    result = _get_query_tail(
+    result = get_query_tail(
         return_properties=properties,
         fallback_return=fallback,
     )

@@ -30,6 +30,7 @@ python = "^3.8.1"
 neo4j = "^5.17.0"
 types-requests = "^2.31.0.20240218"
 pydantic = "^2.6.3"
+weaviate-client = {version = "^4.6.1", optional = true}
 
 [tool.poetry.group.dev.dependencies]
 pylint = "^3.1.0"
@@ -40,6 +41,13 @@ pre-commit = { version = "^3.6.2", python = "^3.9" }
 coverage = "^7.4.3"
 ruff = "^0.3.0"
 langchain-openai = "^0.1.1"
+weaviate-client = "^4.6.1"
+sentence-transformers = "^2.7.0"
+langchain-community = "^0.2.0"
+requests = "^2.32.0"
+
+[tool.poetry.extras]
+external_clients = ["weaviate-client"]
 
 [build-system]
 requires = ["poetry-core"]
