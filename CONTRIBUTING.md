@@ -54,7 +54,7 @@ Remember that many community members have become regular contributors and some a
 ## Specifically for this project
 Setting up the development environment:
 
-1. Install Python 3.9.1+
+1. Install Python 3.8.1+
 2. Install poetry (see https://python-poetry.org/docs/#installation)
 3. Install dependencies:
 

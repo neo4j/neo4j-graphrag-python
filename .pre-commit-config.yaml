@@ -4,3 +4,11 @@ repos:
     hooks:
     - id: trailing-whitespace
     - id: end-of-file-fixer
+  - repo: local
+    hooks:
+      - id: ruff-lint
+        name: Ruff Lint Check
+        entry: poetry run ruff format --check
+        language: system
+        types: [ python ]
+        stages: [ commit, push ]

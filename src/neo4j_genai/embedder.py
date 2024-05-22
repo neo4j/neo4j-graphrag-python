@@ -17,7 +17,10 @@ from abc import ABC, abstractmethod
 
 
 class Embedder(ABC):
-    """Interface for embedding models."""
+    """
+    Interface for embedding models.
+    An embedder passed into a retriever must implement this interface.
+    """
 
     @abstractmethod
     def embed_query(self, text: str) -> list[float]:

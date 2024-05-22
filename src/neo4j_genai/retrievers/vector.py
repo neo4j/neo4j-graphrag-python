@@ -39,6 +39,24 @@ class VectorRetriever(Retriever):
     """
     Provides retrieval method using vector search over embeddings.
     If an embedder is provided, it needs to have the required Embedder type.
+
+    Example:
+
+    .. code-block:: python
+
+      import neo4j
+      from neo4j_genai import VectorRetriever
+
+      driver = neo4j.GraphDatabase.driver(URI, auth=AUTH)
+
+      retriever = VectorRetriever(driver, "vector-index-name", custom_embedder)
+      retriever.search(query_text="Find me a book about Fremen", top_k=5)
+
+    Args:
+        driver (Driver): The Neo4j Python driver.
+        index_name (str): Vector index name.
+        embedder (Optional[Embedder]): Embedder object to embed query text.
+        return_properties (Optional[list[str]]): List of node properties to return.
     """
 
     def __init__(
@@ -83,13 +101,14 @@ class VectorRetriever(Retriever):
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         See the following documentation for more details:
 
-        - [Query a vector index](https://neo4j.com/docs/cypher-manual/current/indexes-for-vector-search/#indexes-vector-query)
-        - [db.index.vector.queryNodes()](https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_queryNodes)
+        - `Query a vector index <https://neo4j.com/docs/cypher-manual/current/indexes-for-vector-search/#indexes-vector-query>`_
+        - `db.index.vector.queryNodes() <https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_queryNodes>`_
 
         Args:
-            query_vector (Optional[list[float]], optional): The vector embeddings to get the closest neighbors of. Defaults to None.
-            query_text (Optional[str], optional): The text to get the closest neighbors of. Defaults to None.
-            top_k (int, optional): The number of neighbors to return. Defaults to 5.
+            query_vector (Optional[list[float]]): The vector embeddings to get the closest neighbors of. Defaults to None.
+            query_text (Optional[str]): The text to get the closest neighbors of. Defaults to None.
+            top_k (int): The number of neighbors to return. Defaults to 5.
+            filters (Optional[dict[str, Any]]): Filters for metadata pre-filtering. Defaults to None.
 
         Raises:
             ValueError: If validation of the input arguments fail.
@@ -147,8 +166,30 @@ class VectorRetriever(Retriever):
 
 class VectorCypherRetriever(Retriever):
     """
-    Provides retrieval method using vector similarity and custom Cypher query.
+    Provides retrieval method using vector similarity augmented by a Cypher query.
+    This retriever builds on VectorRetriever.
     If an embedder is provided, it needs to have the required Embedder type.
+
+    Example:
+
+    .. code-block:: python
+
+      import neo4j
+      from neo4j_genai import VectorCypherRetriever
+
+      driver = neo4j.GraphDatabase.driver(URI, auth=AUTH)
+
+      retrieval_query = "MATCH (node)-[:AUTHORED_BY]->(author:Author)" "RETURN author.name"
+      retriever = VectorCypherRetriever(
+        driver, "vector-index-name", retrieval_query, custom_embedder
+      )
+      retriever.search(query_text="Find me a book about Fremen", top_k=5)
+
+    Args:
+        driver (Driver): The Neo4j Python driver.
+        index_name (str): Vector index name.
+        retrieval_query (str): Cypher query that
+        embedder (Optional[Embedder]): Embedder object to embed query text.
     """
 
     def __init__(
@@ -194,22 +235,22 @@ class VectorCypherRetriever(Retriever):
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         See the following documentation for more details:
 
-        - [Query a vector index](https://neo4j.com/docs/cypher-manual/current/indexes-for-vector-search/#indexes-vector-query)
-        - [db.index.vector.queryNodes()](https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_queryNodes)
+        - `Query a vector index <https://neo4j.com/docs/cypher-manual/current/indexes-for-vector-search/#indexes-vector-query>`_
+        - `db.index.vector.queryNodes() <https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_queryNodes>`_
 
         Args:
-            query_vector (Optional[list[float]], optional): The vector embeddings to get the closest neighbors of. Defaults to None.
-            query_text (Optional[str], optional): The text to get the closest neighbors of. Defaults to None.
-            top_k (int, optional): The number of neighbors to return. Defaults to 5.
-            query_params (Optional[dict[str, Any]], optional): Parameters for the Cypher query. Defaults to None.
-            filters (Optional[dict[str, Any]], optional): Filters for metadata pre-filtering.. Defaults to None.
+            query_vector (Optional[list[float]]): The vector embeddings to get the closest neighbors of. Defaults to None.
+            query_text (Optional[str]): The text to get the closest neighbors of. Defaults to None.
+            top_k (int): The number of neighbors to return. Defaults to 5.
+            query_params (Optional[dict[str, Any]]): Parameters for the Cypher query. Defaults to None.
+            filters (Optional[dict[str, Any]]): Filters for metadata pre-filtering. Defaults to None.
 
         Raises:
             ValueError: If validation of the input arguments fail.
             ValueError: If no embedder is provided.
 
         Returns:
-            list[neo4j.Record]: The results of the search query
+            list[VectorSearchRecord]: The `top_k` neighbors found in vector search with their nodes and scores.
         """
         try:
             validated_data = VectorCypherSearchModel(

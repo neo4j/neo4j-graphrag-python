@@ -1,0 +1,62 @@
+{%- extends "basic/layout.html" %}
+
+{% set favicon_url = 'https://neo4j.com/wp-content/themes/neo4jweb/favicon.ico' %}
+
+{# removed existing top+bottom related nav #}
+{%- block relbar1 %}{% endblock %}
+{%- block relbar2 %}{% endblock %}
+
+{% block extrahead %}
+<link href="{{ pathto('_static/css/nunito-sans.css', 1)|e }}" rel="stylesheet">
+{% endblock %}
+
+{%- block content %}
+<body class="article docs sphinx">
+
+{%- block document %}
+
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="/docs/source/themes/themes/neo4j/static">
+        <img class="navbar-logo" src="https://dist.neo4j.com/wp-content/uploads/20210422142941/neo4j-logo-2020.svg" alt="Neo4j Logo">
+      </a>
+      <a href="{{ pathto(root_doc)|e }}" class="navbar-item no-left-padding" aria-label="{{ html_title }}">
+          {{ html_title }}
+      </a>
+    </div>
+  </nav>
+</header>
+
+
+<div class="body">
+  {% block sidebar1 %}{{ sidebar() }}{% endblock %}
+  <main class="article">
+    <div class="toolbar" role="navigation">
+      <div class="toolbar-wrapper">
+        <button class="nav-toggle" aria-label="Toggle Table of Contents"></button>
+      </div>
+    </div>
+    <div class="content">
+      <article class="doc">
+        {% block body %} {% endblock %}
+        <!-- {%- if show_source and has_source and sourcename %}
+        <a href="{{ pathto('_sources/' + sourcename, true)|e }}"
+        rel="nofollow">{{ _('Page source') }}</a>
+        {%- endif %} -->
+      </article>
+    </div>
+
+  </main>
+</div>
+{%- endblock %}
+
+{%- endblock %}
+
+{%- block footer %}
+  {% include "footer.html" %}
+  {% if disable_tracking != false %}
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-WK23PSS');</script>
+  {% endif %}
+{%- endblock %}
+</body>
