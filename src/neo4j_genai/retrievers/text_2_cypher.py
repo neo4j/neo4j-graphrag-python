@@ -16,6 +16,7 @@ import logging
 from typing import Optional
 
 import neo4j
+from neo4j.exceptions import CypherSyntaxError
 from pydantic import ValidationError
 
 from neo4j_genai.llm import LLM
@@ -97,9 +98,12 @@ class Text2CypherRetriever(Retriever):
         )
         logger.debug("Text2CypherRetriever prompt: %s", prompt)
 
-        t2c_query = self.llm.invoke(prompt)
-        logger.debug("Text2CypherRetriever Cypher query: %s", t2c_query)
-
-        records, _, _ = self.driver.execute_query(query_=t2c_query)
+        try:
+            t2c_query = self.llm.invoke(prompt)
+            logger.debug("Text2CypherRetriever Cypher query: %s", t2c_query)
+            records, _, _ = self.driver.execute_query(query_=t2c_query)
+        except CypherSyntaxError as e:
+            logger.error("Cypher query generation failed: %s", e.message)
+            raise RuntimeError(f"Cypher query generation failed: {e.message}")
 
         return records
