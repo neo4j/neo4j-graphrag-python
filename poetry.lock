@@ -1121,6 +1121,20 @@ files = [
 ]
 
 [[package]]
+name = "intel-openmp"
+version = "2021.4.0"
+description = "Intel OpenMP* Runtime Library"
+optional = false
+python-versions = "*"
+files = [
+    {file = "intel_openmp-2021.4.0-py2.py3-none-macosx_10_15_x86_64.macosx_11_0_x86_64.whl", hash = "sha256:41c01e266a7fdb631a7609191709322da2bbf24b252ba763f125dd651bcc7675"},
+    {file = "intel_openmp-2021.4.0-py2.py3-none-manylinux1_i686.whl", hash = "sha256:3b921236a38384e2016f0f3d65af6732cf2c12918087128a9163225451e776f2"},
+    {file = "intel_openmp-2021.4.0-py2.py3-none-manylinux1_x86_64.whl", hash = "sha256:e2240ab8d01472fed04f3544a878cda5da16c26232b7ea1b59132dbfb48b186e"},
+    {file = "intel_openmp-2021.4.0-py2.py3-none-win32.whl", hash = "sha256:6e863d8fd3d7e8ef389d52cf97a50fe2afe1a19247e8c0d168ce021546f96fc9"},
+    {file = "intel_openmp-2021.4.0-py2.py3-none-win_amd64.whl", hash = "sha256:eef4c8bcc8acefd7f5cd3b9384dbf73d59e2c99fc56545712ded913f43c4a94f"},
+]
+
+[[package]]
 name = "isort"
 version = "5.13.2"
 description = "A Python utility / library to sort Python imports."
@@ -1310,13 +1324,13 @@ extended-testing = ["beautifulsoup4 (>=4.12.3,<5.0.0)", "lxml (>=4.9.3,<6.0)"]
 
 [[package]]
 name = "langsmith"
-version = "0.1.60"
+version = "0.1.62"
 description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langsmith-0.1.60-py3-none-any.whl", hash = "sha256:3c3520ea473de0a984237b3e9d638fdf23ef3acc5aec89a42e693225e72d6120"},
-    {file = "langsmith-0.1.60.tar.gz", hash = "sha256:6a145b5454437f9e0f81525f23c4dcdbb8c07b1c91553b8f697456c418d6a599"},
+    {file = "langsmith-0.1.62-py3-none-any.whl", hash = "sha256:3a9f112643f64d736b8c875390c750fe6485804ea53aeae4edebce0afa4383a5"},
+    {file = "langsmith-0.1.62.tar.gz", hash = "sha256:7ef894c14e6d4175fce88ec3bcd5a9c8cf9a456ea77e26e361f519ad082f34a8"},
 ]
 
 [package.dependencies]
@@ -1422,6 +1436,24 @@ files = [
     {file = "mccabe-0.7.0-py2.py3-none-any.whl", hash = "sha256:6c2d30ab6be0e4a46919781807b4f0d834ebdd6c6e3dca0bda5a15f863427b6e"},
     {file = "mccabe-0.7.0.tar.gz", hash = "sha256:348e0240c33b60bbdf4e523192ef919f28cb2c3d7d5c7794f74009290f236325"},
 ]
+
+[[package]]
+name = "mkl"
+version = "2021.4.0"
+description = "Intel® oneAPI Math Kernel Library"
+optional = false
+python-versions = "*"
+files = [
+    {file = "mkl-2021.4.0-py2.py3-none-macosx_10_15_x86_64.macosx_11_0_x86_64.whl", hash = "sha256:67460f5cd7e30e405b54d70d1ed3ca78118370b65f7327d495e9c8847705e2fb"},
+    {file = "mkl-2021.4.0-py2.py3-none-manylinux1_i686.whl", hash = "sha256:636d07d90e68ccc9630c654d47ce9fdeb036bb46e2b193b3a9ac8cfea683cce5"},
+    {file = "mkl-2021.4.0-py2.py3-none-manylinux1_x86_64.whl", hash = "sha256:398dbf2b0d12acaf54117a5210e8f191827f373d362d796091d161f610c1ebfb"},
+    {file = "mkl-2021.4.0-py2.py3-none-win32.whl", hash = "sha256:439c640b269a5668134e3dcbcea4350459c4a8bc46469669b2d67e07e3d330e8"},
+    {file = "mkl-2021.4.0-py2.py3-none-win_amd64.whl", hash = "sha256:ceef3cafce4c009dd25f65d7ad0d833a0fbadc3d8903991ec92351fe5de1e718"},
+]
+
+[package.dependencies]
+intel-openmp = "==2021.*"
+tbb = "==2021.*"
 
 [[package]]
 name = "mpmath"
@@ -1801,6 +1833,17 @@ optional = false
 python-versions = ">=3"
 files = [
     {file = "nvidia_nccl_cu12-2.19.3-py3-none-manylinux1_x86_64.whl", hash = "sha256:a9734707a2c96443331c1e48c717024aa6678a0e2a4cb66b2c364d18cee6b48d"},
+]
+
+[[package]]
+name = "nvidia-nccl-cu12"
+version = "2.20.5"
+description = "NVIDIA Collective Communication Library (NCCL) Runtime"
+optional = false
+python-versions = ">=3"
+files = [
+    {file = "nvidia_nccl_cu12-2.20.5-py3-none-manylinux2014_aarch64.whl", hash = "sha256:1fc150d5c3250b170b29410ba682384b14581db722b2531b0d8d33c595f33d01"},
+    {file = "nvidia_nccl_cu12-2.20.5-py3-none-manylinux2014_x86_64.whl", hash = "sha256:057f6bf9685f75215d0c53bf3ac4a10b3e6578351de307abad9e18a99182af56"},
 ]
 
 [[package]]
@@ -2979,6 +3022,19 @@ files = [
 mpmath = ">=0.19"
 
 [[package]]
+name = "tbb"
+version = "2021.12.0"
+description = "Intel® oneAPI Threading Building Blocks (oneTBB)"
+optional = false
+python-versions = "*"
+files = [
+    {file = "tbb-2021.12.0-py2.py3-none-manylinux1_i686.whl", hash = "sha256:f2cc9a7f8ababaa506cbff796ce97c3bf91062ba521e15054394f773375d81d8"},
+    {file = "tbb-2021.12.0-py2.py3-none-manylinux1_x86_64.whl", hash = "sha256:a925e9a7c77d3a46ae31c34b0bb7f801c4118e857d137b68f68a8e458fcf2bd7"},
+    {file = "tbb-2021.12.0-py3-none-win32.whl", hash = "sha256:b1725b30c174048edc8be70bd43bb95473f396ce895d91151a474d0fa9f450a8"},
+    {file = "tbb-2021.12.0-py3-none-win_amd64.whl", hash = "sha256:fc2772d850229f2f3df85f1109c4844c495a2db7433d38200959ee9265b34789"},
+]
+
+[[package]]
 name = "tenacity"
 version = "8.3.0"
 description = "Retry code until it succeeds"
@@ -3197,30 +3253,6 @@ files = [
 
 [[package]]
 name = "torch"
-version = "2.0.0+cpu"
-description = "Tensors and Dynamic neural networks in Python with strong GPU acceleration"
-optional = false
-python-versions = ">=3.8.0"
-files = [
-    {file = "torch-2.0.0+cpu-cp311-cp311-linux_x86_64.whl", hash = "sha256:09b32f2fae68b98a7a4f1fc64013e2144ea0147b6d075745599b237eff767b2b"},
-]
-
-[package.dependencies]
-filelock = "*"
-jinja2 = "*"
-networkx = "*"
-sympy = "*"
-typing-extensions = "*"
-
-[package.extras]
-opt-einsum = ["opt-einsum (>=3.3)"]
-
-[package.source]
-type = "url"
-url = "https://download.pytorch.org/whl/cpu/torch-2.0.0%2Bcpu-cp311-cp311-linux_x86_64.whl"
-
-[[package]]
-name = "torch"
 version = "2.2.2"
 description = "Tensors and Dynamic neural networks in Python with strong GPU acceleration"
 optional = false
@@ -3284,29 +3316,57 @@ url = "https://download.pytorch.org/whl/cpu/torch-2.2.2-cp311-none-macosx_11_0_a
 
 [[package]]
 name = "torch"
-version = "2.2.2+cpu"
+version = "2.3.0"
 description = "Tensors and Dynamic neural networks in Python with strong GPU acceleration"
 optional = false
 python-versions = ">=3.8.0"
 files = [
-    {file = "torch-2.2.2+cpu-cp311-cp311-linux_x86_64.whl", hash = "sha256:90089cae572672fb449c8ff1dc1b29daaffa117bf97ede7463dcd2fd1b991e4c"},
+    {file = "torch-2.3.0-cp310-cp310-manylinux1_x86_64.whl", hash = "sha256:d8ea5a465dbfd8501f33c937d1f693176c9aef9d1c1b0ca1d44ed7b0a18c52ac"},
+    {file = "torch-2.3.0-cp310-cp310-manylinux2014_aarch64.whl", hash = "sha256:09c81c5859a5b819956c6925a405ef1cdda393c9d8a01ce3851453f699d3358c"},
+    {file = "torch-2.3.0-cp310-cp310-win_amd64.whl", hash = "sha256:1bf023aa20902586f614f7682fedfa463e773e26c58820b74158a72470259459"},
+    {file = "torch-2.3.0-cp310-none-macosx_11_0_arm64.whl", hash = "sha256:758ef938de87a2653bba74b91f703458c15569f1562bf4b6c63c62d9c5a0c1f5"},
+    {file = "torch-2.3.0-cp311-cp311-manylinux1_x86_64.whl", hash = "sha256:493d54ee2f9df100b5ce1d18c96dbb8d14908721f76351e908c9d2622773a788"},
+    {file = "torch-2.3.0-cp311-cp311-manylinux2014_aarch64.whl", hash = "sha256:bce43af735c3da16cc14c7de2be7ad038e2fbf75654c2e274e575c6c05772ace"},
+    {file = "torch-2.3.0-cp311-cp311-win_amd64.whl", hash = "sha256:729804e97b7cf19ae9ab4181f91f5e612af07956f35c8b2c8e9d9f3596a8e877"},
+    {file = "torch-2.3.0-cp311-none-macosx_11_0_arm64.whl", hash = "sha256:d24e328226d8e2af7cf80fcb1d2f1d108e0de32777fab4aaa2b37b9765d8be73"},
+    {file = "torch-2.3.0-cp312-cp312-manylinux1_x86_64.whl", hash = "sha256:b0de2bdc0486ea7b14fc47ff805172df44e421a7318b7c4d92ef589a75d27410"},
+    {file = "torch-2.3.0-cp312-cp312-manylinux2014_aarch64.whl", hash = "sha256:a306c87a3eead1ed47457822c01dfbd459fe2920f2d38cbdf90de18f23f72542"},
+    {file = "torch-2.3.0-cp312-cp312-win_amd64.whl", hash = "sha256:f9b98bf1a3c8af2d4c41f0bf1433920900896c446d1ddc128290ff146d1eb4bd"},
+    {file = "torch-2.3.0-cp312-none-macosx_11_0_arm64.whl", hash = "sha256:dca986214267b34065a79000cee54232e62b41dff1ec2cab9abc3fc8b3dee0ad"},
+    {file = "torch-2.3.0-cp38-cp38-manylinux1_x86_64.whl", hash = "sha256:20572f426965dd8a04e92a473d7e445fa579e09943cc0354f3e6fef6130ce061"},
+    {file = "torch-2.3.0-cp38-cp38-manylinux2014_aarch64.whl", hash = "sha256:e65ba85ae292909cde0dde6369826d51165a3fc8823dc1854cd9432d7f79b932"},
+    {file = "torch-2.3.0-cp38-cp38-win_amd64.whl", hash = "sha256:5515503a193781fd1b3f5c474e89c9dfa2faaa782b2795cc4a7ab7e67de923f6"},
+    {file = "torch-2.3.0-cp38-none-macosx_11_0_arm64.whl", hash = "sha256:6ae9f64b09516baa4ef890af0672dc981c20b1f0d829ce115d4420a247e88fba"},
+    {file = "torch-2.3.0-cp39-cp39-manylinux1_x86_64.whl", hash = "sha256:cd0dc498b961ab19cb3f8dbf0c6c50e244f2f37dbfa05754ab44ea057c944ef9"},
+    {file = "torch-2.3.0-cp39-cp39-manylinux2014_aarch64.whl", hash = "sha256:e05f836559251e4096f3786ee99f4a8cbe67bc7fbedba8ad5e799681e47c5e80"},
+    {file = "torch-2.3.0-cp39-cp39-win_amd64.whl", hash = "sha256:4fb27b35dbb32303c2927da86e27b54a92209ddfb7234afb1949ea2b3effffea"},
+    {file = "torch-2.3.0-cp39-none-macosx_11_0_arm64.whl", hash = "sha256:760f8bedff506ce9e6e103498f9b1e9e15809e008368594c3a66bf74a8a51380"},
 ]
 
 [package.dependencies]
 filelock = "*"
 fsspec = "*"
 jinja2 = "*"
+mkl = {version = ">=2021.1.1,<=2021.4.0", markers = "platform_system == \"Windows\""}
 networkx = "*"
+nvidia-cublas-cu12 = {version = "12.1.3.1", markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
+nvidia-cuda-cupti-cu12 = {version = "12.1.105", markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
+nvidia-cuda-nvrtc-cu12 = {version = "12.1.105", markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
+nvidia-cuda-runtime-cu12 = {version = "12.1.105", markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
+nvidia-cudnn-cu12 = {version = "8.9.2.26", markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
+nvidia-cufft-cu12 = {version = "11.0.2.54", markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
+nvidia-curand-cu12 = {version = "10.3.2.106", markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
+nvidia-cusolver-cu12 = {version = "11.4.5.107", markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
+nvidia-cusparse-cu12 = {version = "12.1.0.106", markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
+nvidia-nccl-cu12 = {version = "2.20.5", markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
+nvidia-nvtx-cu12 = {version = "12.1.105", markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 sympy = "*"
+triton = {version = "2.3.0", markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\" and python_version < \"3.12\""}
 typing-extensions = ">=4.8.0"
 
 [package.extras]
 opt-einsum = ["opt-einsum (>=3.3)"]
 optree = ["optree (>=0.9.1)"]
-
-[package.source]
-type = "url"
-url = "https://download.pytorch.org/whl/cpu/torch-2.2.2%2Bcpu-cp311-cp311-linux_x86_64.whl"
 
 [[package]]
 name = "tqdm"
@@ -3330,13 +3390,13 @@ telegram = ["requests"]
 
 [[package]]
 name = "transformers"
-version = "4.41.0"
+version = "4.41.1"
 description = "State-of-the-art Machine Learning for JAX, PyTorch and TensorFlow"
 optional = false
 python-versions = ">=3.8.0"
 files = [
-    {file = "transformers-4.41.0-py3-none-any.whl", hash = "sha256:edcbc48fc7ec26b23c86a7b17a516c0c882b289df0a260f61af6d9c11bfbc3f3"},
-    {file = "transformers-4.41.0.tar.gz", hash = "sha256:5971737e7c2e4d5ae1495f9d48af0351c0fb7c7c650b96508ac5996cd7f44f49"},
+    {file = "transformers-4.41.1-py3-none-any.whl", hash = "sha256:f0680e0b1a01067eccd11f62f0522409422c7d6f91d532fe0f50b136a406129d"},
+    {file = "transformers-4.41.1.tar.gz", hash = "sha256:fa859e4c66f0896633a3bf534e0d9a29a9a88478a49f94c5d8270537dc61cc42"},
 ]
 
 [package.dependencies]
@@ -3395,14 +3455,37 @@ video = ["av (==9.2.0)", "decord (==0.6.0)"]
 vision = ["Pillow (>=10.0.1,<=15.0)"]
 
 [[package]]
+name = "triton"
+version = "2.3.0"
+description = "A language and compiler for custom Deep Learning operations"
+optional = false
+python-versions = "*"
+files = [
+    {file = "triton-2.3.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5ce4b8ff70c48e47274c66f269cce8861cf1dc347ceeb7a67414ca151b1822d8"},
+    {file = "triton-2.3.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3c3d9607f85103afdb279938fc1dd2a66e4f5999a58eb48a346bd42738f986dd"},
+    {file = "triton-2.3.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:218d742e67480d9581bafb73ed598416cc8a56f6316152e5562ee65e33de01c0"},
+    {file = "triton-2.3.0-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:381ec6b3dac06922d3e4099cfc943ef032893b25415de295e82b1a82b0359d2c"},
+    {file = "triton-2.3.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:038e06a09c06a164fef9c48de3af1e13a63dc1ba3c792871e61a8e79720ea440"},
+    {file = "triton-2.3.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6d8f636e0341ac348899a47a057c3daea99ea7db31528a225a3ba4ded28ccc65"},
+]
+
+[package.dependencies]
+filelock = "*"
+
+[package.extras]
+build = ["cmake (>=3.20)", "lit"]
+tests = ["autopep8", "flake8", "isort", "numpy", "pytest", "scipy (>=1.7.1)", "torch"]
+tutorials = ["matplotlib", "pandas", "tabulate", "torch"]
+
+[[package]]
 name = "types-requests"
-version = "2.32.0.20240521"
+version = "2.32.0.20240523"
 description = "Typing stubs for requests"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "types-requests-2.32.0.20240521.tar.gz", hash = "sha256:c5c4a0ae95aad51f1bf6dae9eed04a78f7f2575d4b171da37b622e08b93eb5d3"},
-    {file = "types_requests-2.32.0.20240521-py3-none-any.whl", hash = "sha256:ab728ba43ffb073db31f21202ecb97db8753ded4a9dc49cb480d8a5350c5c421"},
+    {file = "types-requests-2.32.0.20240523.tar.gz", hash = "sha256:26b8a6de32d9f561192b9942b41c0ab2d8010df5677ca8aa146289d11d505f57"},
+    {file = "types_requests-2.32.0.20240523-py3-none-any.whl", hash = "sha256:f19ed0e2daa74302069bbbbf9e82902854ffa780bc790742a810a9aaa52f65ec"},
 ]
 
 [package.dependencies]
@@ -3627,4 +3710,4 @@ external-clients = ["weaviate-client"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8.1"
-content-hash = "c9acf8fc829fcdcaa6e9b7ca0177b1b82cb8cef54099f9bfbc6cb766aa3b548d"
+content-hash = "486cb3213ed2486cbbb3bc8e7e4ae0fe790478a4539ef420488e9e7b811797eb"
