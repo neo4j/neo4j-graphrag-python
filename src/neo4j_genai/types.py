@@ -23,7 +23,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-import neo4j
+
 from neo4j_genai.retrievers.utils import validate_search_query_input
 
 
