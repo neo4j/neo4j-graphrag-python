@@ -1,6 +1,6 @@
 from langchain_openai import OpenAI
 from neo4j import GraphDatabase
-from neo4j_genai.retrievers.text_2_cypher import Text2CypherRetriever
+from neo4j_genai.retrievers.text2cypher import Text2CypherRetriever
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")

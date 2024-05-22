@@ -17,7 +17,7 @@ from unittest.mock import patch
 import pytest
 from neo4j.exceptions import CypherSyntaxError
 from neo4j_genai import Text2CypherRetriever
-from neo4j_genai.prompts import TEXT_2_CYPHER_PROMPT
+from neo4j_genai.prompts import TEXT2CYPHER_PROMPT
 
 
 def test_t2c_retriever_initialization(driver, llm):
@@ -27,7 +27,7 @@ def test_t2c_retriever_initialization(driver, llm):
 
 
 @patch("neo4j_genai.retrievers.base.Retriever._verify_version")
-@patch("neo4j_genai.retrievers.text_2_cypher.get_schema")
+@patch("neo4j_genai.retrievers.text2cypher.get_schema")
 def test_t2c_retriever_schema_retrieval(
     _verify_version_mock, get_schema_mock, driver, llm
 ):
@@ -81,7 +81,7 @@ def test_t2c_retriever_happy_path(_verify_version_mock, driver, llm):
         None,
         None,
     )
-    prompt = TEXT_2_CYPHER_PROMPT.format(
+    prompt = TEXT2CYPHER_PROMPT.format(
         schema=neo4j_schema,
         examples="\n".join(examples),
         input=query_text,
@@ -101,5 +101,6 @@ def test_t2c_retriever_cypher_error(_verify_version_mock, driver, llm):
     retriever.llm.invoke.return_value = t2c_query
     query_text = "may thy knife chip and shatter"
     driver.execute_query.side_effect = CypherSyntaxError
-    with pytest.raises(CypherSyntaxError):
+    with pytest.raises(RuntimeError) as e:
         retriever.search(query_text=query_text, examples=examples)
+    assert "Cypher query generation failed" in str(e)

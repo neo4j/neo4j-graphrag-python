@@ -20,7 +20,7 @@ from neo4j.exceptions import CypherSyntaxError
 from pydantic import ValidationError
 
 from neo4j_genai.llm import LLM
-from neo4j_genai.prompts import TEXT_2_CYPHER_PROMPT
+from neo4j_genai.prompts import TEXT2CYPHER_PROMPT
 from neo4j_genai.retrievers.base import Retriever
 from neo4j_genai.schema import get_schema
 from neo4j_genai.types import (
@@ -89,7 +89,7 @@ class Text2CypherRetriever(Retriever):
         except ValidationError as e:
             raise ValueError(f"Validation failed: {e.errors()}")
 
-        prompt = TEXT_2_CYPHER_PROMPT.format(
+        prompt = TEXT2CYPHER_PROMPT.format(
             schema=self.neo4j_schema,
             examples="\n".join(validated_data.examples)
             if validated_data.examples
