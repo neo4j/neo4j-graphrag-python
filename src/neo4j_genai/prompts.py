@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-TEXT_TO_CYPHER_PROMPT = """
+TEXT_2_CYPHER_PROMPT = """
 Task: Generate a Cypher statement for querying a Neo4j graph database from a user input.
 
 Schema:

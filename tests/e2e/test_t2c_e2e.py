@@ -1,6 +1,6 @@
 import neo4j
 import pytest
-from neo4j_genai import TextToCypherRetriever
+from neo4j_genai import Text2CypherRetriever
 
 
 @pytest.mark.usefixtures("setup_neo4j")
@@ -9,7 +9,7 @@ def test_t2c_retriever_search(driver, llm):
     MATCH (p:Person {name: "Hugo Weaving"})-[:ACTED_IN]->(m:Movie)
     RETURN m.title
     """
-    retriever = TextToCypherRetriever(driver=driver, llm=llm)
+    retriever = Text2CypherRetriever(driver=driver, llm=llm)
     retriever.llm.invoke.return_value = t2c_query
     query_text = "Which movies did Hugo Weaving star in?"
     results = retriever.search(query_text=query_text)

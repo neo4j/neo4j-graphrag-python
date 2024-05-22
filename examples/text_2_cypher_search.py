@@ -1,6 +1,6 @@
 from langchain_openai import OpenAI
 from neo4j import GraphDatabase
-from neo4j_genai.retrievers.text_to_cypher import TextToCypherRetriever
+from neo4j_genai.retrievers.text_2_cypher import Text2CypherRetriever
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
@@ -29,7 +29,7 @@ The relationships:
 """
 
 # Initialize the retriever
-retriever = TextToCypherRetriever(driver=driver, llm=llm, neo4j_schema=neo4j_schema)
+retriever = Text2CypherRetriever(driver=driver, llm=llm, neo4j_schema=neo4j_schema)
 
 # (Optional) Provide user input/query pairs for the LLM to use as examples
 examples = [

@@ -106,7 +106,7 @@ class HybridCypherSearchModel(HybridSearchModel):
     query_params: Optional[dict[str, Any]] = None
 
 
-class TextToCypherSearchModel(BaseModel):
+class Text2CypherSearchModel(BaseModel):
     query_text: str
     examples: Optional[list[str]] = None
 
@@ -187,7 +187,7 @@ class HybridCypherRetrieverModel(BaseModel):
     embedder_model: Optional[EmbedderModel] = None
 
 
-class TextToCypherRetrieverModel(BaseModel):
+class Text2CypherRetrieverModel(BaseModel):
     driver_model: Neo4jDriverModel
     llm_model: LLMModel
     neo4j_schema_model: Optional[Neo4jSchemaModel] = None

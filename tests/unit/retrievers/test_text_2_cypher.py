@@ -16,38 +16,38 @@ from unittest.mock import patch
 
 import pytest
 from neo4j.exceptions import CypherSyntaxError
-from neo4j_genai import TextToCypherRetriever
-from neo4j_genai.prompts import TEXT_TO_CYPHER_PROMPT
+from neo4j_genai import Text2CypherRetriever
+from neo4j_genai.prompts import TEXT_2_CYPHER_PROMPT
 
 
 def test_t2c_retriever_initialization(driver, llm):
     with patch("neo4j_genai.retrievers.base.Retriever._verify_version") as mock_verify:
-        TextToCypherRetriever(driver, llm, neo4j_schema="dummy-text")
+        Text2CypherRetriever(driver, llm, neo4j_schema="dummy-text")
         mock_verify.assert_called_once()
 
 
 @patch("neo4j_genai.retrievers.base.Retriever._verify_version")
-@patch("neo4j_genai.retrievers.text_to_cypher.get_schema")
+@patch("neo4j_genai.retrievers.text_2_cypher.get_schema")
 def test_t2c_retriever_schema_retrieval(
     _verify_version_mock, get_schema_mock, driver, llm
 ):
-    TextToCypherRetriever(driver, llm)
+    Text2CypherRetriever(driver, llm)
     get_schema_mock.assert_called_once()
 
 
-@patch("neo4j_genai.TextToCypherRetriever._verify_version")
+@patch("neo4j_genai.Text2CypherRetriever._verify_version")
 def test_t2c_retriever_invalid_neo4j_schema(_verify_version_mock, driver, llm):
     with pytest.raises(ValueError) as exc_info:
-        TextToCypherRetriever(driver=driver, llm=llm, neo4j_schema=42)
+        Text2CypherRetriever(driver=driver, llm=llm, neo4j_schema=42)
 
     assert "neo4j_schema" in str(exc_info.value)
     assert "Input should be a valid string" in str(exc_info.value)
 
 
-@patch("neo4j_genai.TextToCypherRetriever._verify_version")
+@patch("neo4j_genai.Text2CypherRetriever._verify_version")
 def test_t2c_retriever_invalid_search_query(_verify_version_mock, driver, llm):
     with pytest.raises(ValueError) as exc_info:
-        retriever = TextToCypherRetriever(
+        retriever = Text2CypherRetriever(
             driver=driver, llm=llm, neo4j_schema="dummy-text"
         )
         retriever.search(query_text=42)
@@ -56,10 +56,10 @@ def test_t2c_retriever_invalid_search_query(_verify_version_mock, driver, llm):
     assert "Input should be a valid string" in str(exc_info.value)
 
 
-@patch("neo4j_genai.TextToCypherRetriever._verify_version")
+@patch("neo4j_genai.Text2CypherRetriever._verify_version")
 def test_t2c_retriever_invalid_search_examples(_verify_version_mock, driver, llm):
     with pytest.raises(ValueError) as exc_info:
-        retriever = TextToCypherRetriever(
+        retriever = Text2CypherRetriever(
             driver=driver, llm=llm, neo4j_schema="dummy-text"
         )
         retriever.search(query_text="dummy-text", examples=42)
@@ -68,20 +68,20 @@ def test_t2c_retriever_invalid_search_examples(_verify_version_mock, driver, llm
     assert "Input should be a valid list" in str(exc_info.value)
 
 
-@patch("neo4j_genai.TextToCypherRetriever._verify_version")
+@patch("neo4j_genai.Text2CypherRetriever._verify_version")
 def test_t2c_retriever_happy_path(_verify_version_mock, driver, llm):
     t2c_query = "MATCH (n) RETURN n;"
     query_text = "may thy knife chip and shatter"
     neo4j_schema = "dummy-schema"
     examples = ["example-1", "example-2"]
-    retriever = TextToCypherRetriever(driver=driver, llm=llm, neo4j_schema=neo4j_schema)
+    retriever = Text2CypherRetriever(driver=driver, llm=llm, neo4j_schema=neo4j_schema)
     retriever.llm.invoke.return_value = t2c_query
     retriever.driver.execute_query.return_value = (
         [{"node_id": 123, "text": "dummy-text"}],
         None,
         None,
     )
-    prompt = TEXT_TO_CYPHER_PROMPT.format(
+    prompt = TEXT_2_CYPHER_PROMPT.format(
         schema=neo4j_schema,
         examples="\n".join(examples),
         input=query_text,
@@ -91,13 +91,13 @@ def test_t2c_retriever_happy_path(_verify_version_mock, driver, llm):
     retriever.driver.execute_query.assert_called_once_with(query_=t2c_query)
 
 
-@patch("neo4j_genai.TextToCypherRetriever._verify_version")
+@patch("neo4j_genai.Text2CypherRetriever._verify_version")
 def test_t2c_retriever_cypher_error(_verify_version_mock, driver, llm):
     t2c_query = "this is not a cypher query"
     query_text = "may thy knife chip and shatter"
     neo4j_schema = "dummy-schema"
     examples = ["example-1", "example-2"]
-    retriever = TextToCypherRetriever(driver=driver, llm=llm, neo4j_schema=neo4j_schema)
+    retriever = Text2CypherRetriever(driver=driver, llm=llm, neo4j_schema=neo4j_schema)
     retriever.llm.invoke.return_value = t2c_query
     query_text = "may thy knife chip and shatter"
     driver.execute_query.side_effect = CypherSyntaxError

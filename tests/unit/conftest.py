@@ -19,7 +19,7 @@ import neo4j
 import pytest
 from neo4j_genai import (
     HybridRetriever,
-    TextToCypherRetriever,
+    Text2CypherRetriever,
     VectorCypherRetriever,
     VectorRetriever,
 )
@@ -64,6 +64,6 @@ def hybrid_retriever(_verify_version_mock, driver):
 
 
 @pytest.fixture(scope="function")
-@patch("neo4j_genai.TextToCypherRetriever._verify_version")
+@patch("neo4j_genai.Text2CypherRetriever._verify_version")
 def t2c_retriever(_verify_version_mock, driver, llm):
-    return TextToCypherRetriever(driver, llm)
+    return Text2CypherRetriever(driver, llm)
