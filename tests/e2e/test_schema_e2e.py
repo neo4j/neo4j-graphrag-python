@@ -13,8 +13,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import pytest
-
 from neo4j_genai.schema import (
     query_database,
     NODE_PROPERTIES_QUERY,
