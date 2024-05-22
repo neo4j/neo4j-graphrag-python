@@ -26,7 +26,6 @@ from neo4j_genai.schema import (
 )
 
 
-@pytest.mark.usefixtures("setup_neo4j")
 def test_cypher_returns_correct_schema(driver):
     # Delete all nodes in the graph
     driver.execute_query("MATCH (n) DETACH DELETE n")
@@ -79,7 +78,6 @@ def test_cypher_returns_correct_schema(driver):
     )
 
 
-@pytest.mark.usefixtures("setup_neo4j")
 def test_get_schema_filtering_labels(driver):
     """Test that the excluded labels and relationships are correctly filtered."""
     # Delete all nodes in the graph
