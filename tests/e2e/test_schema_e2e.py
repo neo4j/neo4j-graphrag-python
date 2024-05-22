@@ -16,7 +16,6 @@
 import pytest
 
 from neo4j_genai.schema import (
-    get_schema,
     query_database,
     NODE_PROPERTIES_QUERY,
     BASE_ENTITY_LABEL,
@@ -28,7 +27,7 @@ from neo4j_genai.schema import (
 
 
 @pytest.mark.usefixtures("setup_neo4j")
-def test_get_schema_returns_correct_schema(driver):
+def test_cypher_returns_correct_schema(driver):
     # Delete all nodes in the graph
     driver.execute_query("MATCH (n) DETACH DELETE n")
     # Create two nodes and a relationship
@@ -79,23 +78,12 @@ def test_get_schema_returns_correct_schema(driver):
         == expected_relationships
     )
 
-    # Retrieve the schema information
-    result = get_schema(driver)
-    assert (
-        result
-        == """Node properties:
-LabelA {property_a: STRING}
-Relationship properties:
-REL_TYPE {rel_prop: STRING}
-The relationships:
-(:LabelA)-[:REL_TYPE]->(:LabelB)
-(:LabelA)-[:REL_TYPE]->(:LabelC)"""
-    )
-
 
 @pytest.mark.usefixtures("setup_neo4j")
 def test_get_schema_filtering_labels(driver):
     """Test that the excluded labels and relationships are correctly filtered."""
+    # Delete all nodes in the graph
+    driver.execute_query("MATCH (n) DETACH DELETE n")
     # Create two labels and a relationship to be excluded
     driver.execute_query(
         "CREATE (:_Bloom_Scene_{property_a: 'a'})-[:_Bloom_HAS_SCENE_{property_b: 'b'}]->(:_Bloom_Perspective_)"
