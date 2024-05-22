@@ -108,6 +108,7 @@ class VectorRetriever(Retriever):
             query_vector (Optional[list[float]]): The vector embeddings to get the closest neighbors of. Defaults to None.
             query_text (Optional[str]): The text to get the closest neighbors of. Defaults to None.
             top_k (int): The number of neighbors to return. Defaults to 5.
+            filters (Optional[dict[str, Any]]): Filters for metadata pre-filtering. Defaults to None.
 
         Raises:
             ValueError: If validation of the input arguments fail.
