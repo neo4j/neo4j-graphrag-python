@@ -45,7 +45,7 @@ def custom_embedder():
 
 
 @pytest.fixture(scope="module")
-def setup_neo4j(driver):
+def setup_neo4j_for_retrieval(driver):
     vector_index_name = "vector-index-name"
     fulltext_index_name = "fulltext-index-name"
 
@@ -95,3 +95,29 @@ def setup_neo4j(driver):
             "authorName": random_str(1536),
         }
         driver.execute_query(insert_query, parameters)
+
+
+@pytest.fixture(scope="module")
+def setup_neo4j_for_schema_query(driver):
+    # Delete all nodes in the graph
+    driver.execute_query("MATCH (n) DETACH DELETE n")
+    # Create two nodes and a relationship
+    driver.execute_query(
+        """
+        CREATE (la:LabelA {property_a: 'a'})
+        CREATE (lb:LabelB)
+        CREATE (lc:LabelC)
+        MERGE (la)-[:REL_TYPE]-> (lb)
+        MERGE (la)-[:REL_TYPE {rel_prop: 'abc'}]-> (lc)
+        """
+    )
+
+
+@pytest.fixture(scope="module")
+def ssetup_neo4j_for_schema_query_with_excluded_labels(driver):
+    # Delete all nodes in the graph
+    driver.execute_query("MATCH (n) DETACH DELETE n")
+    # Create two labels and a relationship to be excluded
+    driver.execute_query(
+        "CREATE (:_Bloom_Scene_{property_a: 'a'})-[:_Bloom_HAS_SCENE_{property_b: 'b'}]->(:_Bloom_Perspective_)"
+    )
