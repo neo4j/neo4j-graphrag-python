@@ -2,7 +2,7 @@ from neo4j_genai.embedder import Embedder
 
 
 class SentenceTransformerEmbeddings(Embedder):
-    def __init__(self, model="all-MiniLM-L6-v2"):
+    def __init__(self, model="all-MiniLM-L6-v2", *args, **kwargs):
         try:
             from sentence_transformers import SentenceTransformer
         except ImportError:
@@ -11,7 +11,7 @@ class SentenceTransformerEmbeddings(Embedder):
                 "Please install it with `pip install sentence-transformers`."
             )
 
-        self.model = SentenceTransformer(model)
+        self.model = SentenceTransformer(model, *args, **kwargs)
 
     def embed_query(self, text: str) -> list[float]:
-        return self.model.encode([text])
+        return self.model.encode([text]).tolist()
