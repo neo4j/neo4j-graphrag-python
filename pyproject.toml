@@ -42,11 +42,6 @@ coverage = "^7.4.3"
 ruff = "^0.3.0"
 langchain-openai = "^0.1.1"
 weaviate-client = "^4.6.1"
-torch = [
-  {version = "^2.2.2", markers = "sys_platform == 'linux'"},
-  {url = "https://download.pytorch.org/whl/cpu/torch-2.2.2-cp311-none-macosx_11_0_arm64.whl", markers = "sys_platform == 'darwin' and platform_machine == 'arm64'"},
-  {url = "https://download.pytorch.org/whl/cpu/torch-2.2.2-cp311-none-macosx_10_9_x86_64.whl", markers = "sys_platform == 'darwin' and platform_machine == 'x86_64'"},
-]
 sentence-transformers = "^2.7.0"
 langchain-community = "^0.2.0"
 requests = "^2.32.0"
