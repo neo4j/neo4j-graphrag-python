@@ -25,7 +25,7 @@ from neo4j_genai.schema import (
 )
 
 
-@pytest.mark.usefixtures("setup_schema")
+@pytest.mark.usefixtures("setup_neo4j_for_schema_query")
 def test_cypher_returns_correct_node_properties(driver):
     node_properties = query_database(
         driver, NODE_PROPERTIES_QUERY, params={"EXCLUDED_LABELS": [BASE_ENTITY_LABEL]}
@@ -43,7 +43,7 @@ def test_cypher_returns_correct_node_properties(driver):
     assert node_properties == expected_node_properties
 
 
-@pytest.mark.usefixtures("setup_schema")
+@pytest.mark.usefixtures("setup_neo4j_for_schema_query")
 def test_cypher_returns_correct_relationship_properties(driver):
     relationships_properties = query_database(
         driver, REL_PROPERTIES_QUERY, params={"EXCLUDED_LABELS": [BASE_ENTITY_LABEL]}
@@ -61,7 +61,7 @@ def test_cypher_returns_correct_relationship_properties(driver):
     assert relationships_properties == expected_relationships_properties
 
 
-@pytest.mark.usefixtures("setup_schema")
+@pytest.mark.usefixtures("setup_neo4j_for_schema_query")
 def test_cypher_returns_correct_relationships(driver):
     relationships = query_database(
         driver, REL_QUERY, params={"EXCLUDED_LABELS": [BASE_ENTITY_LABEL]}
@@ -78,7 +78,7 @@ def test_cypher_returns_correct_relationships(driver):
     )
 
 
-@pytest.mark.usefixtures("setup_excluded_labels")
+@pytest.mark.usefixtures("ssetup_neo4j_for_schema_query_with_excluded_labels")
 def test_filtering_labels_node_properties(driver):
     node_properties = [
         data["output"]
@@ -92,8 +92,8 @@ def test_filtering_labels_node_properties(driver):
     assert node_properties == []
 
 
-@pytest.mark.usefixtures("setup_excluded_labels")
-def test_get_schema_filtering_labels(driver):
+@pytest.mark.usefixtures("ssetup_neo4j_for_schema_query_with_excluded_labels")
+def test_get_schema_filtering_labels_relationship_properties(driver):
     relationship_properties = [
         data["output"]
         for data in query_database(
@@ -104,7 +104,7 @@ def test_get_schema_filtering_labels(driver):
     assert relationship_properties == []
 
 
-@pytest.mark.usefixtures("setup_excluded_labels")
+@pytest.mark.usefixtures("ssetup_neo4j_for_schema_query_with_excluded_labels")
 def test_filtering_labels_relationships(driver):
     relationships = [
         data["output"]

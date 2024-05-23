@@ -45,7 +45,7 @@ def custom_embedder():
 
 
 @pytest.fixture(scope="module")
-def setup_neo4j(driver):
+def setup_neo4j_for_retrieval(driver):
     vector_index_name = "vector-index-name"
     fulltext_index_name = "fulltext-index-name"
 
@@ -98,7 +98,7 @@ def setup_neo4j(driver):
 
 
 @pytest.fixture(scope="module")
-def setup_schema(driver):
+def setup_neo4j_for_schema_query(driver):
     # Delete all nodes in the graph
     driver.execute_query("MATCH (n) DETACH DELETE n")
     # Create two nodes and a relationship
@@ -114,7 +114,7 @@ def setup_schema(driver):
 
 
 @pytest.fixture(scope="module")
-def setup_excluded_labels(driver):
+def ssetup_neo4j_for_schema_query_with_excluded_labels(driver):
     # Delete all nodes in the graph
     driver.execute_query("MATCH (n) DETACH DELETE n")
     # Create two labels and a relationship to be excluded

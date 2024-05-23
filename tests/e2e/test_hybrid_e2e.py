@@ -24,7 +24,7 @@ from neo4j_genai import (
 )
 
 
-@pytest.mark.usefixtures("setup_neo4j")
+@pytest.mark.usefixtures("setup_neo4j_for_retrieval")
 def test_hybrid_retriever_search_text(driver, custom_embedder):
     retriever = HybridRetriever(
         driver, "vector-index-name", "fulltext-index-name", custom_embedder
@@ -39,7 +39,7 @@ def test_hybrid_retriever_search_text(driver, custom_embedder):
         assert isinstance(result, neo4j.Record)
 
 
-@pytest.mark.usefixtures("setup_neo4j")
+@pytest.mark.usefixtures("setup_neo4j_for_retrieval")
 def test_hybrid_cypher_retriever_search_text(driver, custom_embedder):
     retrieval_query = (
         "MATCH (node)-[:AUTHORED_BY]->(author:Author) " "RETURN author.name"
@@ -62,7 +62,7 @@ def test_hybrid_cypher_retriever_search_text(driver, custom_embedder):
         assert "author.name" in record.keys()
 
 
-@pytest.mark.usefixtures("setup_neo4j")
+@pytest.mark.usefixtures("setup_neo4j_for_retrieval")
 def test_hybrid_retriever_search_vector(driver):
     retriever = HybridRetriever(
         driver,
@@ -83,7 +83,7 @@ def test_hybrid_retriever_search_vector(driver):
         assert isinstance(result, neo4j.Record)
 
 
-@pytest.mark.usefixtures("setup_neo4j")
+@pytest.mark.usefixtures("setup_neo4j_for_retrieval")
 def test_hybrid_cypher_retriever_search_vector(driver):
     retrieval_query = (
         "MATCH (node)-[:AUTHORED_BY]->(author:Author) " "RETURN author.name"
@@ -109,7 +109,7 @@ def test_hybrid_cypher_retriever_search_vector(driver):
         assert "author.name" in record.keys()
 
 
-@pytest.mark.usefixtures("setup_neo4j")
+@pytest.mark.usefixtures("setup_neo4j_for_retrieval")
 def test_hybrid_retriever_return_properties(driver):
     properties = ["name", "age"]
     retriever = HybridRetriever(
