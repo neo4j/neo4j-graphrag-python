@@ -16,7 +16,7 @@ import logging
 from typing import Optional
 
 import neo4j
-from neo4j.exceptions import BoltError, CypherSyntaxError, DriverError, Neo4jError
+from neo4j.exceptions import CypherSyntaxError, DriverError, Neo4jError
 from pydantic import ValidationError
 
 from neo4j_genai.llm import LLM
@@ -66,7 +66,7 @@ class Text2CypherRetriever(Retriever):
                 if validated_data.neo4j_schema_model
                 else get_schema(validated_data.driver_model.driver)
             )
-        except (Neo4jError, DriverError, BoltError) as e:
+        except (Neo4jError, DriverError) as e:
             logger.error("Failed to get schema for Text2CypherRetriever: %s", e.message)
             raise RuntimeError(
                 f"Failed to get schema for Text2CypherRetriever: {e.message}"
