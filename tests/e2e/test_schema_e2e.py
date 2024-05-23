@@ -15,13 +15,13 @@
 
 import pytest
 from neo4j_genai.schema import (
-    query_database,
-    NODE_PROPERTIES_QUERY,
     BASE_ENTITY_LABEL,
     EXCLUDED_LABELS,
     EXCLUDED_RELS,
+    NODE_PROPERTIES_QUERY,
     REL_PROPERTIES_QUERY,
     REL_QUERY,
+    query_database,
 )
 
 
@@ -92,8 +92,8 @@ def test_filtering_labels_node_properties(driver):
     assert node_properties == []
 
 
-@pytest.mark.usefixtures("setup_neo4j_for_schema_query_with_excluded_labels")
-def test_filtering_labels_relationship_properties(driver):
+@pytest.mark.usefixtures("ssetup_neo4j_for_schema_query_with_excluded_labels")
+def test_get_schema_filtering_labels_relationship_properties(driver):
     relationship_properties = [
         data["output"]
         for data in query_database(
