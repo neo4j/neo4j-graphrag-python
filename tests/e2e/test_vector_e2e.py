@@ -21,7 +21,7 @@ from neo4j_genai import VectorRetriever, VectorCypherRetriever
 from neo4j_genai.types import VectorSearchRecord
 
 
-@pytest.mark.usefixtures("setup_neo4j")
+@pytest.mark.usefixtures("setup_neo4j_for_retrieval")
 def test_vector_retriever_search_text(driver, custom_embedder):
     retriever = VectorRetriever(driver, "vector-index-name", custom_embedder)
 
@@ -34,7 +34,7 @@ def test_vector_retriever_search_text(driver, custom_embedder):
         assert isinstance(result, VectorSearchRecord)
 
 
-@pytest.mark.usefixtures("setup_neo4j")
+@pytest.mark.usefixtures("setup_neo4j_for_retrieval")
 def test_vector_cypher_retriever_search_text(driver, custom_embedder):
     retrieval_query = (
         "MATCH (node)-[:AUTHORED_BY]->(author:Author) " "RETURN author.name"
@@ -53,7 +53,7 @@ def test_vector_cypher_retriever_search_text(driver, custom_embedder):
         assert "author.name" in record.keys()
 
 
-@pytest.mark.usefixtures("setup_neo4j")
+@pytest.mark.usefixtures("setup_neo4j_for_retrieval")
 def test_vector_retriever_search_vector(driver):
     retriever = VectorRetriever(driver, "vector-index-name")
 
@@ -66,7 +66,7 @@ def test_vector_retriever_search_vector(driver):
         assert isinstance(result, VectorSearchRecord)
 
 
-@pytest.mark.usefixtures("setup_neo4j")
+@pytest.mark.usefixtures("setup_neo4j_for_retrieval")
 def test_vector_cypher_retriever_search_vector(driver):
     retrieval_query = (
         "MATCH (node)-[:AUTHORED_BY]->(author:Author) " "RETURN author.name"
@@ -83,7 +83,7 @@ def test_vector_cypher_retriever_search_vector(driver):
         assert "author.name" in record.keys()
 
 
-@pytest.mark.usefixtures("setup_neo4j")
+@pytest.mark.usefixtures("setup_neo4j_for_retrieval")
 def test_vector_retriever_return_properties(driver):
     properties = ["name", "age"]
     retriever = VectorRetriever(
@@ -104,7 +104,7 @@ def test_vector_retriever_return_properties(driver):
         assert isinstance(result, VectorSearchRecord)
 
 
-@pytest.mark.usefixtures("setup_neo4j")
+@pytest.mark.usefixtures("setup_neo4j_for_retrieval")
 def test_vector_retriever_filters(driver):
     retriever = VectorRetriever(
         driver,
