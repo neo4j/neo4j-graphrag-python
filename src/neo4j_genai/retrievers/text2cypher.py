@@ -78,6 +78,7 @@ class Text2CypherRetriever(Retriever):
 
         Raises:
             ValidationError: If validation of the input arguments fail.
+            RuntimeError: If the LLM fails to generate a correct Cypher query.
 
         Returns:
             list[neo4j.Record]: The results of the search query.
