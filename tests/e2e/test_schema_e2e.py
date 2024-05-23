@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+import pytest
 from neo4j_genai.schema import (
     query_database,
     NODE_PROPERTIES_QUERY,
@@ -24,28 +25,10 @@ from neo4j_genai.schema import (
 )
 
 
-def test_cypher_returns_correct_schema(driver):
-    # Delete all nodes in the graph
-    driver.execute_query("MATCH (n) DETACH DELETE n")
-    # Create two nodes and a relationship
-    driver.execute_query(
-        """
-        CREATE (la:LabelA {property_a: 'a'})
-        CREATE (lb:LabelB)
-        CREATE (lc:LabelC)
-        MERGE (la)-[:REL_TYPE]-> (lb)
-        MERGE (la)-[:REL_TYPE {rel_prop: 'abc'}]-> (lc)
-        """
-    )
-
+@pytest.mark.usefixtures("setup_schema")
+def test_cypher_returns_correct_node_properties(driver):
     node_properties = query_database(
         driver, NODE_PROPERTIES_QUERY, params={"EXCLUDED_LABELS": [BASE_ENTITY_LABEL]}
-    )
-    relationships_properties = query_database(
-        driver, REL_PROPERTIES_QUERY, params={"EXCLUDED_LABELS": [BASE_ENTITY_LABEL]}
-    )
-    relationships = query_database(
-        driver, REL_QUERY, params={"EXCLUDED_LABELS": [BASE_ENTITY_LABEL]}
     )
 
     expected_node_properties = [
@@ -56,6 +39,16 @@ def test_cypher_returns_correct_schema(driver):
             }
         }
     ]
+
+    assert node_properties == expected_node_properties
+
+
+@pytest.mark.usefixtures("setup_schema")
+def test_cypher_returns_correct_relationship_properties(driver):
+    relationships_properties = query_database(
+        driver, REL_PROPERTIES_QUERY, params={"EXCLUDED_LABELS": [BASE_ENTITY_LABEL]}
+    )
+
     expected_relationships_properties = [
         {
             "output": {
@@ -64,12 +57,21 @@ def test_cypher_returns_correct_schema(driver):
             }
         }
     ]
+
+    assert relationships_properties == expected_relationships_properties
+
+
+@pytest.mark.usefixtures("setup_schema")
+def test_cypher_returns_correct_relationships(driver):
+    relationships = query_database(
+        driver, REL_QUERY, params={"EXCLUDED_LABELS": [BASE_ENTITY_LABEL]}
+    )
+
     expected_relationships = [
         {"output": {"start": "LabelA", "type": "REL_TYPE", "end": "LabelB"}},
         {"output": {"start": "LabelA", "type": "REL_TYPE", "end": "LabelC"}},
     ]
-    assert node_properties == expected_node_properties
-    assert relationships_properties == expected_relationships_properties
+
     assert (
         sorted(relationships, key=lambda x: x["output"]["end"])
         == expected_relationships
