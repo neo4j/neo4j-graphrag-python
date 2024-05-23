@@ -16,6 +16,14 @@ Run this from the project root to write data to both dbs.
 poetry run python tests/e2e/weaviate_e2e/populate_dbs.py
 ```
 
+### Install Weaviate client
+
+You need to install the `weaviate-client` package to use this retriever.
+
+```bash
+pip install weaviate-client
+```
+
 ### Search
 
 ```
