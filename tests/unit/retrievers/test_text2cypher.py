@@ -15,7 +15,7 @@
 from unittest.mock import patch
 
 import pytest
-from neo4j.exceptions import CypherSyntaxError
+from neo4j.exceptions import CypherSyntaxError, Neo4jError
 from neo4j_genai import Text2CypherRetriever
 from neo4j_genai.prompts import TEXT2CYPHER_PROMPT
 
@@ -33,6 +33,16 @@ def test_t2c_retriever_schema_retrieval(
 ):
     Text2CypherRetriever(driver, llm)
     get_schema_mock.assert_called_once()
+
+
+@patch("neo4j_genai.retrievers.base.Retriever._verify_version")
+@patch("neo4j_genai.retrievers.text2cypher.get_schema")
+def test_t2c_retriever_schema_retrieval_failure(
+    _verify_version_mock, get_schema_mock, driver, llm
+):
+    get_schema_mock.side_effect = Neo4jError
+    with pytest.raises(Neo4jError):
+        Text2CypherRetriever(driver, llm)
 
 
 @patch("neo4j_genai.Text2CypherRetriever._verify_version")

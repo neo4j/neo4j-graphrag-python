@@ -66,11 +66,15 @@ class Text2CypherRetriever(Retriever):
                 if validated_data.neo4j_schema_model
                 else get_schema(validated_data.driver_model.driver)
             )
-        except (Neo4jError, DriverError) as e:
+        except Neo4jError as e:
             logger.error("Failed to get schema for Text2CypherRetriever: %s", e.message)
             raise RuntimeError(
                 f"Failed to get schema for Text2CypherRetriever: {e.message}"
             )
+        except DriverError as e:
+            logger.error("Failed to get schema for Text2CypherRetriever:")
+            logger.exception(e)
+            raise e
 
     def search(
         self, query_text: str, examples: Optional[list[str]] = None
