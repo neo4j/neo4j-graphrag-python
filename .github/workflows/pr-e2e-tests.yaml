@@ -30,6 +30,11 @@ jobs:
         ports:
           - 8080:8080
           - 50051:50051
+        options: >-
+          --health-cmd "curl -f localhost:8080/v1/.well-known/ready"
+          --health-interval 15s
+          --health-retries 10
+          --health-start-period 5s
       t2v-transformers:
         image: cr.weaviate.io/semitechnologies/transformers-inference:sentence-transformers-all-MiniLM-L6-v2-onnx
         env:
@@ -66,8 +71,5 @@ jobs:
         run: poetry install --no-interaction
       - name: Install dependencies
         run: poetry install --with dev
-      - name: Wait for Weaviate to start
-        run: |
-          count=0; until curl -v --fail localhost:8080/v1/.well-known/ready; do ((count++)); [ $count -ge 10 ] && echo "Reached maximum retry limit" && exit 1; sleep 15; done
       - name: Run tests
         run: poetry run pytest ./tests/e2e
