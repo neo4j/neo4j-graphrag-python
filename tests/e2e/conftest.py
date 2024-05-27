@@ -114,7 +114,7 @@ def setup_neo4j_for_schema_query(driver):
 
 
 @pytest.fixture(scope="module")
-def ssetup_neo4j_for_schema_query_with_excluded_labels(driver):
+def setup_neo4j_for_schema_query_with_excluded_labels(driver):
     # Delete all nodes in the graph
     driver.execute_query("MATCH (n) DETACH DELETE n")
     # Create two labels and a relationship to be excluded

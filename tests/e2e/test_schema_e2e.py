@@ -78,7 +78,7 @@ def test_cypher_returns_correct_relationships(driver):
     )
 
 
-@pytest.mark.usefixtures("ssetup_neo4j_for_schema_query_with_excluded_labels")
+@pytest.mark.usefixtures("setup_neo4j_for_schema_query_with_excluded_labels")
 def test_filtering_labels_node_properties(driver):
     node_properties = [
         data["output"]
@@ -92,8 +92,8 @@ def test_filtering_labels_node_properties(driver):
     assert node_properties == []
 
 
-@pytest.mark.usefixtures("ssetup_neo4j_for_schema_query_with_excluded_labels")
-def test_get_schema_filtering_labels_relationship_properties(driver):
+@pytest.mark.usefixtures("setup_neo4j_for_schema_query_with_excluded_labels")
+def test_filtering_labels_relationship_properties(driver):
     relationship_properties = [
         data["output"]
         for data in query_database(
@@ -104,7 +104,7 @@ def test_get_schema_filtering_labels_relationship_properties(driver):
     assert relationship_properties == []
 
 
-@pytest.mark.usefixtures("ssetup_neo4j_for_schema_query_with_excluded_labels")
+@pytest.mark.usefixtures("setup_neo4j_for_schema_query_with_excluded_labels")
 def test_filtering_labels_relationships(driver):
     relationships = [
         data["output"]
