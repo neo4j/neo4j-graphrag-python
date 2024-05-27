@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from typing import Any, Optional
+from neo4j.exceptions import ClientError
 
 import neo4j
 
@@ -47,6 +48,12 @@ UNWIND other AS other_node
 WITH * WHERE NOT label IN $EXCLUDED_LABELS
     AND NOT other_node IN $EXCLUDED_LABELS
 RETURN {start: label, type: property, end: toString(other_node)} AS output
+"""
+
+INDEX_QUERY = """
+CALL apoc.schema.nodes() YIELD label, properties, type, size, valuesSelectivity 
+WHERE type = "RANGE" RETURN *, 
+size * valuesSelectivity as distinctValues
 """
 
 
@@ -138,3 +145,54 @@ def get_schema(
             "\n".join(formatted_rels),
         ]
     )
+
+
+def get_structured_schema(driver: neo4j.Driver) -> dict[str, Any]:
+    """
+    Returns the structured schema of the graph.
+
+    Args:
+        driver (neo4j.Driver): Neo4j Python driver instance.
+
+    Returns:
+        dict[str, Any]: the graph schema information in a structured format.
+    """
+    node_properties = [
+        data["output"]
+        for data in query_database(
+            driver,
+            NODE_PROPERTIES_QUERY,
+            params={"EXCLUDED_LABELS": EXCLUDED_LABELS + [BASE_ENTITY_LABEL]},
+        )
+    ]
+
+    rel_properties = [
+        data["output"]
+        for data in query_database(
+            driver, REL_PROPERTIES_QUERY, params={"EXCLUDED_LABELS": EXCLUDED_RELS}
+        )
+    ]
+
+    relationships = [
+        data["output"]
+        for data in query_database(
+            driver,
+            REL_QUERY,
+            params={"EXCLUDED_LABELS": EXCLUDED_LABELS + [BASE_ENTITY_LABEL]},
+        )
+    ]
+
+    # Get constraints and indexes
+    try:
+        constraint = query_database(driver, "SHOW CONSTRAINTS")
+        index = query_database(driver, INDEX_QUERY)
+    except ClientError:
+        constraint = []
+        index = []
+
+    return {
+        "node_props": {el["labels"]: el["properties"] for el in node_properties},
+        "rel_props": {el["type"]: el["properties"] for el in rel_properties},
+        "relationships": relationships,
+        "metadata": {"constraint": constraint, "index": index},
+    }
