@@ -15,13 +15,13 @@
 
 import pytest
 from neo4j_genai.schema import (
-    query_database,
-    NODE_PROPERTIES_QUERY,
     BASE_ENTITY_LABEL,
     EXCLUDED_LABELS,
     EXCLUDED_RELS,
+    NODE_PROPERTIES_QUERY,
     REL_PROPERTIES_QUERY,
     REL_QUERY,
+    query_database,
 )
 
 

@@ -12,15 +12,19 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from abc import ABC, abstractmethod
 
-from .retrievers.hybrid import HybridCypherRetriever, HybridRetriever
-from .retrievers.text2cypher import Text2CypherRetriever
-from .retrievers.vector import VectorCypherRetriever, VectorRetriever
 
-__all__ = [
-    "VectorRetriever",
-    "VectorCypherRetriever",
-    "HybridRetriever",
-    "HybridCypherRetriever",
-    "Text2CypherRetriever",
-]
+class LLM(ABC):
+    """Interface for large language models."""
+
+    @abstractmethod
+    def invoke(self, input: str) -> str:
+        """Sends a text input to the LLM and retrieves a response.
+
+        Args:
+            input (str): Text sent to the LLM
+
+        Returns:
+            str: The response from the LLM.
+        """

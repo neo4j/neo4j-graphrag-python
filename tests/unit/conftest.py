@@ -13,12 +13,18 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import pytest
-import neo4j
-from neo4j_genai import VectorRetriever, VectorCypherRetriever, HybridRetriever
 from unittest.mock import MagicMock, patch
 
+import neo4j
+import pytest
+from neo4j_genai import (
+    HybridRetriever,
+    Text2CypherRetriever,
+    VectorCypherRetriever,
+    VectorRetriever,
+)
 from neo4j_genai.embedder import Embedder
+from neo4j_genai.llm import LLM
 
 
 @pytest.fixture(scope="function")
@@ -29,6 +35,11 @@ def driver():
 @pytest.fixture(scope="function")
 def embedder():
     return MagicMock(spec=Embedder)
+
+
+@pytest.fixture(scope="function")
+def llm():
+    return MagicMock(spec=LLM)
 
 
 @pytest.fixture(scope="function")
@@ -50,3 +61,9 @@ def vector_cypher_retriever(_verify_version_mock, driver):
 @patch("neo4j_genai.HybridRetriever._verify_version")
 def hybrid_retriever(_verify_version_mock, driver):
     return HybridRetriever(driver, "my-index", "my-fulltext-index")
+
+
+@pytest.fixture(scope="function")
+@patch("neo4j_genai.Text2CypherRetriever._verify_version")
+def t2c_retriever(_verify_version_mock, driver, llm):
+    return Text2CypherRetriever(driver, llm)

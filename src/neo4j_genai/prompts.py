@@ -13,14 +13,20 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from .retrievers.hybrid import HybridCypherRetriever, HybridRetriever
-from .retrievers.text2cypher import Text2CypherRetriever
-from .retrievers.vector import VectorCypherRetriever, VectorRetriever
+TEXT2CYPHER_PROMPT = """
+Task: Generate a Cypher statement for querying a Neo4j graph database from a user input.
 
-__all__ = [
-    "VectorRetriever",
-    "VectorCypherRetriever",
-    "HybridRetriever",
-    "HybridCypherRetriever",
-    "Text2CypherRetriever",
-]
+Schema:
+{schema}
+
+Examples (optional):
+{examples}
+
+Input:
+{input}
+
+Do not use any properties or relationships not included in the schema.
+Do not include triple backticks ``` or any additional text except the generated Cypher statement in your response.
+
+Cypher query:
+"""
