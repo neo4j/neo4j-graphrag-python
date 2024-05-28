@@ -14,12 +14,18 @@
 #  limitations under the License.
 from unittest.mock import patch
 
+import neo4j
 import pytest
 from neo4j.exceptions import CypherSyntaxError
 
 from neo4j_genai import VectorRetriever, VectorCypherRetriever
 from neo4j_genai.neo4j_queries import get_search_query
-from neo4j_genai.types import SearchType, VectorSearchRecord
+from neo4j_genai.types import (
+    SearchType,
+    RetrieverRawResult,
+    RetrieverResult,
+    RetrieverResultItem,
+)
 
 
 def test_vector_retriever_initialization(driver):
@@ -62,8 +68,9 @@ def test_similarity_search_vector_happy_path(
     query_vector = [1.0 for _ in range(dimensions)]
     top_k = 5
     retriever = VectorRetriever(driver, index_name)
+    expected_records = [neo4j.Record({"node": {"text": "dummy-node"}, "score": 1.0})]
     retriever.driver.execute_query.return_value = [
-        [{"node": "dummy-node", "score": 1.0}],
+        expected_records,
         None,
         None,
     ]
@@ -79,7 +86,12 @@ def test_similarity_search_vector_happy_path(
             "query_vector": query_vector,
         },
     )
-    assert records == [VectorSearchRecord(node="dummy-node", score=1.0)]
+    assert records == RetrieverResult(
+        items=[
+            RetrieverResultItem(content="dummy-node")
+        ],
+        metadata={'__retriever': 'VectorRetriever'}
+    )
 
 
 @patch("neo4j_genai.VectorRetriever._fetch_index_infos")
@@ -112,7 +124,7 @@ def test_similarity_search_text_happy_path(
         },
     )
 
-    assert records == [VectorSearchRecord(node="dummy-node", score=1.0)]
+    assert records == RetrieverRawResult(records=[{"node": "dummy-node", "score": 1.0}])
 
 
 @patch("neo4j_genai.VectorRetriever._fetch_index_infos")
@@ -149,7 +161,7 @@ def test_similarity_search_text_return_properties(
             "query_vector": embed_query_vector,
         },
     )
-    assert records == [VectorSearchRecord(node="dummy-node", score=1.0)]
+    assert records == RetrieverRawResult(records=[{"node": "dummy-node", "score": 1.0}])
 
 
 def test_vector_retriever_search_missing_embedder_for_text(vector_retriever):
