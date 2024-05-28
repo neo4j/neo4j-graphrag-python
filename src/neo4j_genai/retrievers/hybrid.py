@@ -18,6 +18,11 @@ import neo4j
 from pydantic import ValidationError
 
 from neo4j_genai.embedder import Embedder
+from neo4j_genai.exceptions import (
+    RetrieverInitializationError,
+    SearchValidationError,
+    EmbeddingRequiredError,
+)
 from neo4j_genai.retrievers.base import Retriever
 from neo4j_genai.types import (
     HybridSearchModel,
@@ -81,7 +86,7 @@ class HybridRetriever(Retriever):
                 return_properties=return_properties,
             )
         except ValidationError as e:
-            raise ValueError(f"Validation failed: {e.errors()}")
+            raise RetrieverInitializationError(e.errors())
 
         super().__init__(validated_data.driver_model.driver)
         self.vector_index_name = validated_data.vector_index_name
@@ -131,13 +136,15 @@ class HybridRetriever(Retriever):
                 query_text=query_text,
             )
         except ValidationError as e:
-            raise ValueError(f"Validation failed: {e.errors()}")
+            raise SearchValidationError(e.errors())
 
         parameters = validated_data.model_dump(exclude_none=True)
 
         if query_text and not query_vector:
             if not self.embedder:
-                raise ValueError("Embedding method required for text query.")
+                raise EmbeddingRequiredError(
+                    "Embedding method required for text query."
+                )
             query_vector = self.embedder.embed_query(query_text)
             parameters["query_vector"] = query_vector
 
@@ -199,7 +206,7 @@ class HybridCypherRetriever(Retriever):
                 embedder_model=embedder_model,
             )
         except ValidationError as e:
-            raise ValueError(f"Validation failed: {e.errors()}")
+            raise RetrieverInitializationError(e.errors())
 
         super().__init__(validated_data.driver_model.driver)
         self.vector_index_name = validated_data.vector_index_name
@@ -252,13 +259,15 @@ class HybridCypherRetriever(Retriever):
                 query_params=query_params,
             )
         except ValidationError as e:
-            raise ValueError(f"Validation failed: {e.errors()}")
+            raise SearchValidationError(e.errors())
 
         parameters = validated_data.model_dump(exclude_none=True)
 
         if query_text and not query_vector:
             if not self.embedder:
-                raise ValueError("Embedding method required for text query.")
+                raise EmbeddingRequiredError(
+                    "Embedding method required for text query."
+                )
             query_vector = self.embedder.embed_query(query_text)
             parameters["query_vector"] = query_vector
 
