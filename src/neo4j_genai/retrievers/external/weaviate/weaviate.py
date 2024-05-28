@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Optional
+from typing import Optional, Callable
 from neo4j_genai.retrievers.base import ExternalRetriever
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.retrievers.utils import validate_search_query_input
@@ -23,6 +23,7 @@ from weaviate.collections.classes.filters import _Filters
 import neo4j
 import logging
 from neo4j_genai.neo4j_queries import get_query_tail
+from neo4j_genai.types import RetrieverRawResult
 
 logger = logging.getLogger(__name__)
 
@@ -38,22 +39,23 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         embedder: Optional[Embedder] = None,
         return_properties: Optional[list[str]] = None,
         retrieval_query: Optional[str] = None,
+        format_record_function: Optional[Callable] = None,
     ):
-        super().__init__(id_property_external, id_property_neo4j)
-        self.driver = driver
+        super().__init__(driver, id_property_external, id_property_neo4j)
         self.client = client
         self.search_collection = client.collections.get(collection)
         self.embedder = embedder
         self.return_properties = return_properties
         self.retrieval_query = retrieval_query
+        self.format_record_function = format_record_function
 
-    def search(
+    def get_search_results(
         self,
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
         weaviate_filters: Optional[_Filters] = None,
-    ) -> list[neo4j.Record]:
+    ) -> RetrieverRawResult:
         """Get the top_k nearest neighbor embeddings using Weaviate for either provided query_vector or query_text.
         Both query_vector and query_text can be provided.
         If query_vector is provided, then it will be preferred over the embedded query_text
@@ -128,7 +130,9 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
 
         records, _, _ = self.driver.execute_query(search_query, parameters)
 
-        return records
+        return RetrieverRawResult(
+            records=records
+        )
 
 
 def get_match_query(
