@@ -89,50 +89,27 @@ def get_schema(
     Returns:
         str: the graph schema information in a serialized format.
     """
-    node_properties = [
-        data["output"]
-        for data in query_database(
-            driver,
-            NODE_PROPERTIES_QUERY,
-            params={"EXCLUDED_LABELS": EXCLUDED_LABELS + [BASE_ENTITY_LABEL]},
-        )
-    ]
+    structured_schema = get_structured_schema(driver)
 
-    rel_properties = [
-        data["output"]
-        for data in query_database(
-            driver, REL_PROPERTIES_QUERY, params={"EXCLUDED_LABELS": EXCLUDED_RELS}
-        )
-    ]
-    relationships = [
-        data["output"]
-        for data in query_database(
-            driver,
-            REL_QUERY,
-            params={"EXCLUDED_LABELS": EXCLUDED_LABELS + [BASE_ENTITY_LABEL]},
-        )
-    ]
+    def _format_props(props):
+        return ", ".join([f"{prop['property']}: {prop['type']}" for prop in props])
 
     # Format node properties
-    formatted_node_props = []
-    for element in node_properties:
-        props_str = ", ".join(
-            [f"{prop['property']}: {prop['type']}" for prop in element["properties"]]
-        )
-        formatted_node_props.append(f"{element['labels']} {{{props_str}}}")
+    formatted_node_props = [
+        f"{label} {{{_format_props(props)}}}"
+        for label, props in structured_schema["node_props"].items()
+    ]
 
     # Format relationship properties
-    formatted_rel_props = []
-    for element in rel_properties:
-        props_str = ", ".join(
-            [f"{prop['property']}: {prop['type']}" for prop in element["properties"]]
-        )
-        formatted_rel_props.append(f"{element['type']} {{{props_str}}}")
+    formatted_rel_props = [
+        f"{rel_type} {{{_format_props(props)}}}"
+        for rel_type, props in structured_schema["rel_props"].items()
+    ]
 
     # Format relationships
     formatted_rels = [
         f"(:{element['start']})-[:{element['type']}]->(:{element['end']})"
-        for element in relationships
+        for element in structured_schema["relationships"]
     ]
 
     return "\n".join(
