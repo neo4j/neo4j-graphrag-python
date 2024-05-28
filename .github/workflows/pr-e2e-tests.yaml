@@ -75,7 +75,7 @@ jobs:
         run: |
           if [[ "${{ matrix.neo4j-edition }}" == "community" ]]; then
               poetry run pytest -m 'not enterprise_only' ./tests/e2e
-          elif [[ "${{ matrix.neo4j-edition }}" == "enterprise" ]]; then
-              poetry run pytest -m 'not community_only' ./tests/e2e
+          else
+              poetry run pytest ./tests/e2e
           fi
 
