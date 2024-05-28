@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from typing import Any, Optional
+from neo4j.exceptions import ClientError
 
 import neo4j
 
@@ -49,6 +50,12 @@ WITH * WHERE NOT label IN $EXCLUDED_LABELS
 RETURN {start: label, type: property, end: toString(other_node)} AS output
 """
 
+INDEX_QUERY = """
+CALL apoc.schema.nodes() YIELD label, properties, type, size, valuesSelectivity 
+WHERE type = "RANGE" RETURN *, 
+size * valuesSelectivity as distinctValues
+"""
+
 
 def query_database(
     driver: neo4j.Driver, query: str, params: Optional[dict] = None
@@ -82,6 +89,51 @@ def get_schema(
     Returns:
         str: the graph schema information in a serialized format.
     """
+    structured_schema = get_structured_schema(driver)
+
+    def _format_props(props):
+        return ", ".join([f"{prop['property']}: {prop['type']}" for prop in props])
+
+    # Format node properties
+    formatted_node_props = [
+        f"{label} {{{_format_props(props)}}}"
+        for label, props in structured_schema["node_props"].items()
+    ]
+
+    # Format relationship properties
+    formatted_rel_props = [
+        f"{rel_type} {{{_format_props(props)}}}"
+        for rel_type, props in structured_schema["rel_props"].items()
+    ]
+
+    # Format relationships
+    formatted_rels = [
+        f"(:{element['start']})-[:{element['type']}]->(:{element['end']})"
+        for element in structured_schema["relationships"]
+    ]
+
+    return "\n".join(
+        [
+            "Node properties:",
+            "\n".join(formatted_node_props),
+            "Relationship properties:",
+            "\n".join(formatted_rel_props),
+            "The relationships:",
+            "\n".join(formatted_rels),
+        ]
+    )
+
+
+def get_structured_schema(driver: neo4j.Driver) -> dict[str, Any]:
+    """
+    Returns the structured schema of the graph.
+
+    Args:
+        driver (neo4j.Driver): Neo4j Python driver instance.
+
+    Returns:
+        dict[str, Any]: the graph schema information in a structured format.
+    """
     node_properties = [
         data["output"]
         for data in query_database(
@@ -97,6 +149,7 @@ def get_schema(
             driver, REL_PROPERTIES_QUERY, params={"EXCLUDED_LABELS": EXCLUDED_RELS}
         )
     ]
+
     relationships = [
         data["output"]
         for data in query_database(
@@ -106,35 +159,17 @@ def get_schema(
         )
     ]
 
-    # Format node properties
-    formatted_node_props = []
-    for element in node_properties:
-        props_str = ", ".join(
-            [f"{prop['property']}: {prop['type']}" for prop in element["properties"]]
-        )
-        formatted_node_props.append(f"{element['labels']} {{{props_str}}}")
+    # Get constraints and indexes
+    try:
+        constraint = query_database(driver, "SHOW CONSTRAINTS")
+        index = query_database(driver, INDEX_QUERY)
+    except ClientError:
+        constraint = []
+        index = []
 
-    # Format relationship properties
-    formatted_rel_props = []
-    for element in rel_properties:
-        props_str = ", ".join(
-            [f"{prop['property']}: {prop['type']}" for prop in element["properties"]]
-        )
-        formatted_rel_props.append(f"{element['type']} {{{props_str}}}")
-
-    # Format relationships
-    formatted_rels = [
-        f"(:{element['start']})-[:{element['type']}]->(:{element['end']})"
-        for element in relationships
-    ]
-
-    return "\n".join(
-        [
-            "Node properties:",
-            "\n".join(formatted_node_props),
-            "Relationship properties:",
-            "\n".join(formatted_rel_props),
-            "The relationships:",
-            "\n".join(formatted_rels),
-        ]
-    )
+    return {
+        "node_props": {el["labels"]: el["properties"] for el in node_properties},
+        "rel_props": {el["type"]: el["properties"] for el in rel_properties},
+        "relationships": relationships,
+        "metadata": {"constraint": constraint, "index": index},
+    }

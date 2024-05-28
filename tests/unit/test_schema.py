@@ -15,17 +15,20 @@
 from unittest.mock import patch
 from neo4j_genai.schema import (
     get_schema,
+    get_structured_schema,
     NODE_PROPERTIES_QUERY,
     REL_PROPERTIES_QUERY,
     REL_QUERY,
     EXCLUDED_LABELS,
     BASE_ENTITY_LABEL,
     EXCLUDED_RELS,
+    INDEX_QUERY,
 )
 
 
 def _query_return_value(*args, **kwargs):
-    if NODE_PROPERTIES_QUERY in args[1]:
+    query = args[1]
+    if NODE_PROPERTIES_QUERY in query:
         return [
             {
                 "output": {
@@ -34,7 +37,7 @@ def _query_return_value(*args, **kwargs):
                 }
             }
         ]
-    if REL_PROPERTIES_QUERY in args[1]:
+    if REL_PROPERTIES_QUERY in query:
         return [
             {
                 "output": {
@@ -43,30 +46,17 @@ def _query_return_value(*args, **kwargs):
                 }
             }
         ]
-    if REL_QUERY in args[1]:
+    if REL_QUERY in query:
         return [
             {"output": {"start": "LabelA", "type": "REL_TYPE", "end": "LabelB"}},
             {"output": {"start": "LabelA", "type": "REL_TYPE", "end": "LabelC"}},
         ]
+    if "SHOW CONSTRAINTS" == query:
+        return ["fake constraints"]
+    if INDEX_QUERY == query:
+        return ["fake indexes"]
 
     raise AssertionError("Unexpected query")
-
-
-def test_get_schema_happy_path(driver):
-    get_schema(driver)
-    assert 3 == driver.execute_query.call_count
-    driver.execute_query.assert_any_call(
-        NODE_PROPERTIES_QUERY,
-        {"EXCLUDED_LABELS": EXCLUDED_LABELS + [BASE_ENTITY_LABEL]},
-    )
-    driver.execute_query.assert_any_call(
-        REL_PROPERTIES_QUERY,
-        {"EXCLUDED_LABELS": EXCLUDED_RELS},
-    )
-    driver.execute_query.assert_any_call(
-        REL_QUERY,
-        {"EXCLUDED_LABELS": EXCLUDED_LABELS + [BASE_ENTITY_LABEL]},
-    )
 
 
 @patch("neo4j_genai.schema.query_database", side_effect=_query_return_value)
@@ -82,3 +72,40 @@ The relationships:
 (:LabelA)-[:REL_TYPE]->(:LabelB)
 (:LabelA)-[:REL_TYPE]->(:LabelC)"""
     )
+
+
+def test_get_structured_schema_happy_path(driver):
+    get_structured_schema(driver)
+    assert 5 == driver.execute_query.call_count
+    driver.execute_query.assert_any_call(
+        NODE_PROPERTIES_QUERY,
+        {"EXCLUDED_LABELS": EXCLUDED_LABELS + [BASE_ENTITY_LABEL]},
+    )
+    driver.execute_query.assert_any_call(
+        REL_PROPERTIES_QUERY,
+        {"EXCLUDED_LABELS": EXCLUDED_RELS},
+    )
+    driver.execute_query.assert_any_call(
+        REL_QUERY,
+        {"EXCLUDED_LABELS": EXCLUDED_LABELS + [BASE_ENTITY_LABEL]},
+    )
+    driver.execute_query.assert_any_call("SHOW CONSTRAINTS", {})
+    driver.execute_query.assert_any_call(INDEX_QUERY, {})
+
+
+@patch("neo4j_genai.schema.query_database", side_effect=_query_return_value)
+def test_get_schema_ensure_structured_response(driver):
+    result = get_structured_schema(driver)
+
+    assert result["node_props"]["LabelA"] == [
+        {"property": "property_a", "type": "STRING"}
+    ]
+    assert result["rel_props"]["REL_TYPE"] == [
+        {"property": "rel_prop", "type": "STRING"}
+    ]
+    assert result["relationships"] == [
+        {"end": "LabelB", "start": "LabelA", "type": "REL_TYPE"},
+        {"end": "LabelC", "start": "LabelA", "type": "REL_TYPE"},
+    ]
+    assert result["metadata"]["constraint"] == ["fake constraints"]
+    assert result["metadata"]["index"] == ["fake indexes"]
