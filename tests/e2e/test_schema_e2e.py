@@ -93,7 +93,7 @@ def test_filtering_labels_node_properties(driver):
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_schema_query_with_excluded_labels")
-def test_get_schema_filtering_labels_relationship_properties(driver):
+def test_filtering_labels_relationship_properties(driver):
     relationship_properties = [
         data["output"]
         for data in query_database(
