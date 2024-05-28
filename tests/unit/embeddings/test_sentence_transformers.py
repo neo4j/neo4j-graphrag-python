@@ -29,7 +29,7 @@ def test_embed_query(MockSentenceTransformer):
 
     mock_model.encode.assert_called_with(["test query"])
     assert result == [0.1, 0.2, 0.3]
-    assert type(result) is list
+    assert isinstance(result, list)
 
 
 @patch("sentence_transformers.SentenceTransformer", side_effect=ImportError)
