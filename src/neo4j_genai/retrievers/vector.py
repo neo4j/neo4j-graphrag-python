@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Optional, Any
+from typing import Optional, Any, Callable
 
 import neo4j
 from neo4j_genai.retrievers.base import Retriever
@@ -20,14 +20,13 @@ from pydantic import ValidationError
 
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.types import (
-    VectorSearchRecord,
     VectorSearchModel,
     VectorCypherSearchModel,
     SearchType,
     Neo4jDriverModel,
     EmbedderModel,
     VectorRetrieverModel,
-    VectorCypherRetrieverModel,
+    VectorCypherRetrieverModel, RetrieverRawResult, RetrieverResultItem,
 )
 from neo4j_genai.neo4j_queries import get_search_query
 import logging
@@ -91,13 +90,27 @@ class VectorRetriever(Retriever):
         self._embedding_dimension = None
         self._fetch_index_infos()
 
-    def search(
+    def default_format_record(self, record: neo4j.Record) -> RetrieverResultItem:
+        """
+        Best effort to guess the node to text method. Inherited classes
+        can override this method to implement custom text formatting.
+        """
+        metadata = {
+            "score": record.get("score"),
+        }
+        node = record.get("node")
+        return RetrieverResultItem(
+            content=str(node),
+            metadata=metadata,
+        )
+
+    def get_search_results(
         self,
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
         filters: Optional[dict[str, Any]] = None,
-    ) -> list[VectorSearchRecord]:
+    ) -> RetrieverRawResult:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         See the following documentation for more details:
 
@@ -115,7 +128,7 @@ class VectorRetriever(Retriever):
             ValueError: If no embedder is provided.
 
         Returns:
-            list[VectorSearchRecord]: The `top_k` neighbors found in vector search with their nodes and scores.
+            RetrieverRawResult: The `top_k` neighbors found in vector search with their nodes and scores.
         """
         try:
             validated_data = VectorSearchModel(
@@ -151,17 +164,9 @@ class VectorRetriever(Retriever):
         logger.debug("VectorRetriever Cypher query: %s", search_query)
 
         records, _, _ = self.driver.execute_query(search_query, parameters)
-
-        try:
-            return [
-                VectorSearchRecord(node=record["node"], score=record["score"])
-                for record in records
-            ]
-        except ValidationError as e:
-            error_details = e.errors()
-            raise ValueError(
-                f"Validation failed while constructing output: {error_details}"
-            )
+        return RetrieverRawResult(
+            records=records
+        )
 
 
 class VectorCypherRetriever(Retriever):
@@ -198,6 +203,7 @@ class VectorCypherRetriever(Retriever):
         index_name: str,
         retrieval_query: str,
         embedder: Optional[Embedder] = None,
+        format_record_function: Optional[Callable] = None,
     ) -> None:
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -219,19 +225,20 @@ class VectorCypherRetriever(Retriever):
             if validated_data.embedder_model
             else None
         )
+        self.format_record_function = format_record_function
         self._node_label = None
         self._node_embedding_property = None
         self._embedding_dimension = None
         self._fetch_index_infos()
 
-    def search(
+    def get_search_results(
         self,
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
         query_params: Optional[dict[str, Any]] = None,
         filters: Optional[dict[str, Any]] = None,
-    ) -> list[neo4j.Record]:
+    ) -> RetrieverRawResult:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         See the following documentation for more details:
 
@@ -250,7 +257,7 @@ class VectorCypherRetriever(Retriever):
             ValueError: If no embedder is provided.
 
         Returns:
-            list[VectorSearchRecord]: The `top_k` neighbors found in vector search with their nodes and scores.
+            RetrieverRawResult: The `top_k` neighbors found in vector search with their nodes and scores.
         """
         try:
             validated_data = VectorCypherSearchModel(
@@ -291,4 +298,6 @@ class VectorCypherRetriever(Retriever):
         logger.debug("VectorCypherRetriever Cypher query: %s", search_query)
 
         records, _, _ = self.driver.execute_query(search_query, parameters)
-        return records
+        return RetrieverRawResult(
+            records=records,
+        )

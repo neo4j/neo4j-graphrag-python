@@ -13,8 +13,10 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from abc import ABC, abstractmethod
-from typing import Optional, Any
+from typing import Optional, Callable
 import neo4j
+
+from neo4j_genai.types import RetrieverRawResult, RetrieverResult, RetrieverResultItem
 
 
 class Retriever(ABC):
@@ -53,10 +55,6 @@ class Retriever(ABC):
                 "This package only supports Neo4j version 5.18.1 or greater"
             )
 
-    @abstractmethod
-    def search(self, *args, **kwargs) -> Any:
-        pass
-
     def _fetch_index_infos(self):
         """Fetch the node label and embedding property from the index definition"""
         query = (
@@ -75,24 +73,63 @@ class Retriever(ABC):
         self._embedding_node_property = result["properties"][0]
         self._embedding_dimension = result["dimensions"]
 
+    def search(self, *args, **kwargs) -> RetrieverResult:
+        """
+        Search method. Call the get_search_result method that returns
+        a list of neo4j.Record, and format them to return RetrieverResult.
+        """
+        raw_result = self.get_search_results(*args, **kwargs)
+        formatter = self.get_result_formatter()
+        search_items = [
+            formatter(record)
+            for record in raw_result.records
+        ]
+        metadata = raw_result.metadata or {}
+        metadata["__retriever"] = self.__class__.__name__
+        return RetrieverResult(
+            items=search_items,
+            metadata=metadata,
+        )
 
-class ExternalRetriever(ABC):
+    @abstractmethod
+    def get_search_results(self, *args, **kwargs) -> RetrieverRawResult:
+        pass
+
+    def get_result_formatter(self) -> Callable[[neo4j.Record], RetrieverResultItem]:
+        """
+        Returns the function to use to transform a neo4j.Record to aRetrieverResultItem.
+        """
+        return getattr(self, "format_record_function", self.default_format_record)
+
+    def default_format_record(self, record: neo4j.Record) -> RetrieverResultItem:
+        """
+        Best effort to guess the node to text method. Inherited classes
+        can override this method to implement custom text formatting.
+        """
+        return RetrieverResultItem(
+            content=str(record),
+            metadata=record.get("metadata")
+        )
+
+
+class ExternalRetriever(Retriever, ABC):
     """
     Abstract class for External Vector Stores
     """
 
-    def __init__(self, id_property_external: str, id_property_neo4j: str):
+    def __init__(self, driver, id_property_external: str, id_property_neo4j: str):
+        super().__init__(driver)
         self.id_property_external = id_property_external
         self.id_property_neo4j = id_property_neo4j
 
     @abstractmethod
-    def search(
+    def get_search_results(
         self,
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
         **kwargs,
-    ) -> list[neo4j.Record]:
+    ) -> RetrieverResult:
         """
 
         Returns:
