@@ -14,4 +14,4 @@ class SentenceTransformerEmbeddings(Embedder):
         self.model = SentenceTransformer(model, *args, **kwargs)
 
     def embed_query(self, text: str) -> list[float]:
-        return self.model.encode([text]).tolist()
+        return self.model.encode([text]).flatten().tolist()
