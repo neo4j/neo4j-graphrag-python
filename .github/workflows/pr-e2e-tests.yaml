@@ -71,4 +71,11 @@ jobs:
         run: |
           count=0; until curl -s --fail localhost:8080/v1/.well-known/ready; do ((count++)); [ $count -ge 10 ] && echo "Reached maximum retry limit" && exit 1; sleep 15; done
       - name: Run tests
-        run: poetry run pytest ./tests/e2e
+        shell: bash
+        run: |
+          if [[ "${{ matrix.neo4j-edition }}" == "community" ]]; then
+              poetry run pytest -m 'not enterprise_only' ./tests/e2e
+          elif [[ "${{ matrix.neo4j-edition }}" == "enterprise" ]]; then
+              poetry run pytest -m 'not community_only' ./tests/e2e
+          fi
+

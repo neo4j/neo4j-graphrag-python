@@ -103,6 +103,7 @@ def test_get_structured_schema_returns_correct_relationships(driver):
     ]
 
 
+@pytest.mark.enterprise_only
 @pytest.mark.usefixtures("setup_neo4j_for_schema_query")
 def test_get_structured_schema_returns_correct_constraints(driver):
     query_database(driver, "DROP CONSTRAINT test_constraint IF EXISTS")
