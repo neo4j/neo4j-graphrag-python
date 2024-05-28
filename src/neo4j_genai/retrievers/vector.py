@@ -118,8 +118,8 @@ class VectorRetriever(Retriever):
             filters (Optional[dict[str, Any]]): Filters for metadata pre-filtering. Defaults to None.
 
         Raises:
-            ValueError: If validation of the input arguments fail.
-            ValueError: If no embedder is provided.
+            SearchValidationError: If validation of the input arguments fail.
+            EmbeddingRequiredError: If no embedder is provided.
 
         Returns:
             list[VectorSearchRecord]: The `top_k` neighbors found in vector search with their nodes and scores.
@@ -253,8 +253,8 @@ class VectorCypherRetriever(Retriever):
             filters (Optional[dict[str, Any]]): Filters for metadata pre-filtering. Defaults to None.
 
         Raises:
-            ValueError: If validation of the input arguments fail.
-            ValueError: If no embedder is provided.
+            SearchValidationError: If validation of the input arguments fail.
+            EmbeddingRequiredError: If no embedder is provided.
 
         Returns:
             list[VectorSearchRecord]: The `top_k` neighbors found in vector search with their nodes and scores.

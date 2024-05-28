@@ -30,6 +30,12 @@ class SearchValidationError(Exception):
         self.errors = errors
 
 
+class FilterValidationError(Exception):
+    """Exception raised when an embedding method is required but not provided."""
+
+    pass
+
+
 class EmbeddingRequiredError(Exception):
     """Exception raised when an embedding method is required but not provided."""
 
@@ -40,3 +46,16 @@ class RecordCreationError(Exception):
     """Exception raised when valid Record fails to be created."""
 
     pass
+
+
+class Neo4jIndexError(Exception):
+    """Exception raised when handling Neo4j indexes fails."""
+
+    pass
+
+
+class Neo4jVersionError(Exception):
+    """Exception raised when Neo4j version does not meet minimum requirements."""
+
+    def __init__(self):
+        super().__init__("This package only supports Neo4j version 5.18.1 or greater")

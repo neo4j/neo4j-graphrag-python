@@ -121,8 +121,8 @@ class HybridRetriever(Retriever):
             top_k (int, optional): The number of neighbors to return. Defaults to 5.
 
         Raises:
-            ValueError: If validation of the input arguments fail.
-            ValueError: If no embedder is provided.
+            EmbeddingRequiredError: If validation of the input arguments fail.
+            EmbeddingRequiredError: If no embedder is provided.
 
         Returns:
             list[neo4j.Record]: The results of the search query
@@ -243,8 +243,8 @@ class HybridCypherRetriever(Retriever):
             query_params (Optional[dict[str, Any]]): Parameters for the Cypher query. Defaults to None.
 
         Raises:
-            ValueError: If validation of the input arguments fail.
-            ValueError: If no embedder is provided.
+            SearchValidationError: If validation of the input arguments fail.
+            EmbeddingRequiredError: If no embedder is provided.
 
         Returns:
             list[neo4j.Record]: The results of the search query

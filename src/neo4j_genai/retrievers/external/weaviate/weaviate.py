@@ -14,15 +14,24 @@
 #  limitations under the License.
 
 from typing import Optional
+
+from pydantic import ValidationError
+
+from neo4j_genai.exceptions import RetrieverInitializationError, SearchValidationError
 from neo4j_genai.retrievers.base import ExternalRetriever
 from neo4j_genai.embedder import Embedder
-from neo4j_genai.retrievers.utils import validate_search_query_input
+from neo4j_genai.retrievers.external.weaviate.types import (
+    WeaviateModel,
+    WeaviateNeo4jRetrieverModel,
+    WeaviateNeo4jSearchModel,
+)
 import weaviate.classes as wvc
 from weaviate.client import WeaviateClient
 from weaviate.collections.classes.filters import _Filters
 import neo4j
 import logging
 from neo4j_genai.neo4j_queries import get_query_tail
+from neo4j_genai.types import Neo4jDriverModel, EmbedderModel
 
 logger = logging.getLogger(__name__)
 
@@ -39,13 +48,36 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         return_properties: Optional[list[str]] = None,
         retrieval_query: Optional[str] = None,
     ):
+        try:
+            driver_model = Neo4jDriverModel(driver=driver)
+            weaviate_model = WeaviateModel(client=client)
+            embedder_model = EmbedderModel(embedder=embedder) if embedder else None
+            print("embedder_model", embedder_model)
+            validated_data = WeaviateNeo4jRetrieverModel(
+                driver_model=driver_model,
+                client_model=weaviate_model,
+                collection=collection,
+                id_property_external=id_property_external,
+                id_property_neo4j=id_property_neo4j,
+                embedder_model=embedder_model,
+                return_properties=return_properties,
+                retrieval_query=retrieval_query,
+            )
+        except ValidationError as e:
+            raise RetrieverInitializationError(e.errors())
+
         super().__init__(id_property_external, id_property_neo4j)
-        self.driver = driver
-        self.client = client
-        self.search_collection = client.collections.get(collection)
-        self.embedder = embedder
-        self.return_properties = return_properties
-        self.retrieval_query = retrieval_query
+        self.driver = validated_data.driver_model.driver
+        self.client = validated_data.client_model.client
+        collection = validated_data.collection
+        self.search_collection = self.client.collections.get(collection)
+        self.embedder = (
+            validated_data.embedder_model.embedder
+            if validated_data.embedder_model
+            else None
+        )
+        self.return_properties = validated_data.return_properties
+        self.retrieval_query = validated_data.retrieval_query
 
     def search(
         self,
@@ -71,12 +103,23 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
             top_k (int, optional): The number of neighbors to return. Defaults to 5.
             weaviate_filters (Optional[_Filters], optional): The filters to apply to the search query in Weaviate. Defaults to None.
         Raises:
-            ValueError: If validation of the input arguments fail.
+            SearchValidationError: If validation of the input arguments fail.
         Returns:
             list[neo4j.Record]: The results of the search query
         """
-
-        validate_search_query_input(query_text=query_text, query_vector=query_vector)
+        try:
+            validated_data = WeaviateNeo4jSearchModel(
+                top_k=top_k,
+                query_vector=query_vector,
+                query_text=query_text,
+                weaviate_filters=weaviate_filters,
+            )
+            query_text = validated_data.query_text
+            query_vector = validated_data.query_vector
+            top_k = validated_data.top_k
+            weaviate_filters = validated_data.weaviate_filters
+        except ValidationError as e:
+            raise SearchValidationError(e.errors())
 
         # If we want to use a local embedder, we still want to call the near_vector method
         # so we want to create the vector as early as possible here

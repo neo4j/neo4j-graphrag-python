@@ -15,6 +15,8 @@
 
 import neo4j
 from pydantic import ValidationError
+
+from .exceptions import Neo4jIndexError
 from .types import VectorIndexModel, FulltextIndexModel
 import logging
 
@@ -64,7 +66,7 @@ def create_vector_index(
             }
         )
     except ValidationError as e:
-        raise ValueError(f"Error for inputs to create_vector_index {str(e)}")
+        raise Neo4jIndexError(f"Error for inputs to create_vector_index {str(e)}")
 
     try:
         query = (
@@ -77,8 +79,7 @@ def create_vector_index(
             {"name": name, "dimensions": dimensions, "similarity_fn": similarity_fn},
         )
     except neo4j.exceptions.ClientError as e:
-        logger.error(f"Neo4j vector index creation failed {e}")
-        raise
+        raise Neo4jIndexError(f"Neo4j vector index creation failed: {e}")
 
 
 def create_fulltext_index(
@@ -113,7 +114,7 @@ def create_fulltext_index(
             }
         )
     except ValidationError as e:
-        raise ValueError(f"Error for inputs to create_fulltext_index {str(e)}")
+        raise Neo4jIndexError(f"Error for inputs to create_fulltext_index: {str(e)}")
 
     try:
         query = (
@@ -124,8 +125,7 @@ def create_fulltext_index(
         logger.info(f"Creating fulltext index named '{name}'")
         driver.execute_query(query, {"name": name})
     except neo4j.exceptions.ClientError as e:
-        logger.error(f"Neo4j fulltext index creation failed {e}")
-        raise
+        raise Neo4jIndexError(f"Neo4j fulltext index creation failed {e}")
 
 
 def drop_index_if_exists(driver: neo4j.Driver, name: str) -> None:
@@ -149,5 +149,4 @@ def drop_index_if_exists(driver: neo4j.Driver, name: str) -> None:
         logger.info(f"Dropping index named '{name}'")
         driver.execute_query(query, parameters)
     except neo4j.exceptions.ClientError as e:
-        logger.error(f"Dropping Neo4j index failed {e}")
-        raise
+        raise Neo4jIndexError(f"Dropping Neo4j index failed: {e}")
