@@ -21,7 +21,6 @@ from neo4j_genai.schema import (
     BASE_ENTITY_LABEL,
     REL_PROPERTIES_QUERY,
     REL_QUERY,
-    query_database,
 )
 
 
