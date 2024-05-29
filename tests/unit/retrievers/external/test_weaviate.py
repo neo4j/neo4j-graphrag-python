@@ -15,10 +15,14 @@
 
 from unittest.mock import MagicMock
 from types import SimpleNamespace
+
+import neo4j
+
 from neo4j_genai.retrievers.external.weaviate import (
     WeaviateNeo4jRetriever,
     get_match_query,
 )
+from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 
 
 # Weaviate class with fake methods
@@ -54,7 +58,7 @@ def test_text_search_remote_vector_store_happy_path(driver):
         id_property_external="neo4j_id",
     )
     driver.execute_query.return_value = [
-        [{"node": {"sync_id": node_id_value}, "score": node_match_score}],
+        [neo4j.Record({"node": {"sync_id": node_id_value}, "score": node_match_score})],
         None,
         None,
     ]
@@ -71,8 +75,12 @@ def test_text_search_remote_vector_store_happy_path(driver):
             "id_property": "sync_id",
         },
     )
-
-    assert records == [{"node": {"sync_id": node_id_value}, "score": node_match_score}]
+    assert records == RetrieverResult(
+        items=[
+            RetrieverResultItem(content="<Record node={'sync_id': 'node-test-id'} score=0.9>", metadata=None),
+        ],
+        metadata={'__retriever': 'WeaviateNeo4jRetriever'}
+    )
 
 
 def test_text_search_remote_vector_store_return_properties(driver):
@@ -92,7 +100,7 @@ def test_text_search_remote_vector_store_return_properties(driver):
         return_properties=["sync_id"],
     )
     driver.execute_query.return_value = [
-        [{"node": {"sync_id": node_id_value}, "score": node_match_score}],
+        [neo4j.Record({"node": {"sync_id": node_id_value}, "score": node_match_score})],
         None,
         None,
     ]
@@ -109,8 +117,12 @@ def test_text_search_remote_vector_store_return_properties(driver):
             "id_property": "sync_id",
         },
     )
-
-    assert records == [{"node": {"sync_id": node_id_value}, "score": node_match_score}]
+    assert records == RetrieverResult(
+        items=[
+            RetrieverResultItem(content="<Record node={'sync_id': 'node-test-id'} score=0.9>", metadata=None),
+        ],
+        metadata={'__retriever': 'WeaviateNeo4jRetriever'}
+    )
 
 
 def test_text_search_remote_vector_store_retrieval_query(driver):
@@ -131,7 +143,7 @@ def test_text_search_remote_vector_store_retrieval_query(driver):
         retrieval_query=retrieval_query,
     )
     driver.execute_query.return_value = [
-        [{"node": {"sync_id": node_id_value}, "score": node_match_score}],
+        [neo4j.Record({"node": {"sync_id": node_id_value}, "score": node_match_score})],
         None,
         None,
     ]
@@ -149,7 +161,12 @@ def test_text_search_remote_vector_store_retrieval_query(driver):
         },
     )
 
-    assert records == [{"node": {"sync_id": node_id_value}, "score": node_match_score}]
+    assert records == RetrieverResult(
+        items=[
+            RetrieverResultItem(content="<Record node={'sync_id': 'node-test-id'} score=0.9>", metadata=None),
+        ],
+        metadata={'__retriever': 'WeaviateNeo4jRetriever'}
+    )
 
 
 def test_match_query():

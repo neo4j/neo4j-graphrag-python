@@ -23,10 +23,12 @@ class Retriever(ABC):
     """
     Abstract class for Neo4j retrievers
     """
+    VERIFY_NEO4J_VERSION = True
 
     def __init__(self, driver: neo4j.Driver):
         self.driver = driver
-        self._verify_version()
+        if self.VERIFY_NEO4J_VERSION:
+            self._verify_version()
 
     def _verify_version(self) -> None:
         """
@@ -99,7 +101,9 @@ class Retriever(ABC):
         """
         Returns the function to use to transform a neo4j.Record to aRetrieverResultItem.
         """
-        return getattr(self, "format_record_function", self.default_format_record)
+        if hasattr(self, "format_record_function"):
+            return self.format_record_function or self.default_format_record
+        return self.default_format_record
 
     def default_format_record(self, record: neo4j.Record) -> RetrieverResultItem:
         """
@@ -116,6 +120,8 @@ class ExternalRetriever(Retriever, ABC):
     """
     Abstract class for External Vector Stores
     """
+
+    VERIFY_NEO4J_VERSION = False
 
     def __init__(self, driver, id_property_external: str, id_property_neo4j: str):
         super().__init__(driver)

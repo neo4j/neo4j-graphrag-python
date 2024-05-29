@@ -79,7 +79,7 @@ def test_t2c_retriever_invalid_search_examples(_verify_version_mock, driver, llm
 
 
 @patch("neo4j_genai.Text2CypherRetriever._verify_version")
-def test_t2c_retriever_happy_path(_verify_version_mock, driver, llm):
+def test_t2c_retriever_happy_path(_verify_version_mock, driver, llm, neo4j_record):
     t2c_query = "MATCH (n) RETURN n;"
     query_text = "may thy knife chip and shatter"
     neo4j_schema = "dummy-schema"
@@ -87,7 +87,7 @@ def test_t2c_retriever_happy_path(_verify_version_mock, driver, llm):
     retriever = Text2CypherRetriever(driver=driver, llm=llm, neo4j_schema=neo4j_schema)
     retriever.llm.invoke.return_value = t2c_query
     retriever.driver.execute_query.return_value = (
-        [{"node_id": 123, "text": "dummy-text"}],
+        [neo4j_record],
         None,
         None,
     )
@@ -104,7 +104,6 @@ def test_t2c_retriever_happy_path(_verify_version_mock, driver, llm):
 @patch("neo4j_genai.Text2CypherRetriever._verify_version")
 def test_t2c_retriever_cypher_error(_verify_version_mock, driver, llm):
     t2c_query = "this is not a cypher query"
-    query_text = "may thy knife chip and shatter"
     neo4j_schema = "dummy-schema"
     examples = ["example-1", "example-2"]
     retriever = Text2CypherRetriever(driver=driver, llm=llm, neo4j_schema=neo4j_schema)
