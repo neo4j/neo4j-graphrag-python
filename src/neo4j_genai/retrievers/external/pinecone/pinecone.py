@@ -23,11 +23,10 @@ from pydantic import ValidationError
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.retrievers.base import ExternalRetriever
 from neo4j_genai.retrievers.external.utils import get_match_query
-from neo4j_genai.retrievers.utils import validate_search_query_input
 from neo4j_genai.types import (
     EmbedderModel,
     Neo4jDriverModel,
-    PineconeModel,
+    PineconeClientModel,
     PineconeNeo4jRetrieverModel,
     PineconeSearchModel,
 )
@@ -48,7 +47,7 @@ class PineconeNeo4jRetriever(ExternalRetriever):
     ):
         try:
             driver_model = Neo4jDriverModel(driver=driver)
-            client_model = PineconeModel(client=client)
+            client_model = PineconeClientModel(client=client)
             embedder_model = EmbedderModel(embedder=embedder) if embedder else None
             validated_data = PineconeNeo4jRetrieverModel(
                 driver_model=driver_model,

@@ -202,7 +202,7 @@ class Neo4jDriverModel(BaseModel):
         return value
 
 
-class PineconeModel(BaseModel):
+class PineconeClientModel(BaseModel):
     client: Pinecone
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -251,7 +251,7 @@ class Text2CypherRetrieverModel(BaseModel):
 
 class PineconeNeo4jRetrieverModel(BaseModel):
     driver_model: Neo4jDriverModel
-    client_model: PineconeModel
+    client_model: PineconeClientModel
     index_name: str
     id_property_neo4j: str
     embedder_model: Optional[EmbedderModel] = None
