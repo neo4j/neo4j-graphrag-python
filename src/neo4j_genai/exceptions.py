@@ -17,7 +17,7 @@
 class RetrieverInitializationError(Exception):
     """Exception raised when initialization of a retriever fails."""
 
-    def __init__(self, errors):
+    def __init__(self, errors: str):
         super().__init__(f"Initialization failed: {errors}")
         self.errors = errors
 
@@ -31,7 +31,7 @@ class SearchValidationError(Exception):
 
 
 class FilterValidationError(Exception):
-    """Exception raised when an embedding method is required but not provided."""
+    """Exception raised when input validation for metadata filtering fails."""
 
     pass
 

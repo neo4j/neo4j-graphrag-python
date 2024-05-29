@@ -121,7 +121,7 @@ class HybridRetriever(Retriever):
             top_k (int, optional): The number of neighbors to return. Defaults to 5.
 
         Raises:
-            EmbeddingRequiredError: If validation of the input arguments fail.
+            SearchValidationError: If validation of the input arguments fail.
             EmbeddingRequiredError: If no embedder is provided.
 
         Returns:
