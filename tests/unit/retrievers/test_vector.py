@@ -67,7 +67,7 @@ def test_similarity_search_vector_happy_path(
     query_vector = [1.0 for _ in range(dimensions)]
     top_k = 5
     retriever = VectorRetriever(driver, index_name)
-    expected_records = [neo4j_record]
+    expected_records = [neo4j.Record({"node": {"text": "dummy-node"}, "score": 1.0})]
     retriever.driver.execute_query.return_value = [
         expected_records,
         None,
