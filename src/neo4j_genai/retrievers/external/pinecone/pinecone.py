@@ -14,15 +14,23 @@
 #  limitations under the License.
 
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 import neo4j
 from pinecone import Pinecone
+from pydantic import ValidationError
 
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.retrievers.base import ExternalRetriever
 from neo4j_genai.retrievers.external.utils import get_match_query
 from neo4j_genai.retrievers.utils import validate_search_query_input
+from neo4j_genai.types import (
+    EmbedderModel,
+    Neo4jDriverModel,
+    PineconeModel,
+    PineconeNeo4jRetrieverModel,
+    PineconeSearchModel,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -38,20 +46,37 @@ class PineconeNeo4jRetriever(ExternalRetriever):
         return_properties: Optional[list[str]] = None,
         retrieval_query: Optional[str] = None,
     ):
-        super().__init__("id", id_property_neo4j)
-        self.driver = driver
-        self.client = client
-        self.index = client.Index(index_name)
-        self.embedder = embedder
-        self.return_properties = return_properties
-        self.retrieval_query = retrieval_query
+        try:
+            driver_model = Neo4jDriverModel(driver=driver)
+            client_model = PineconeModel(client=client)
+            embedder_model = EmbedderModel(embedder=embedder) if embedder else None
+            validated_data = PineconeNeo4jRetrieverModel(
+                driver_model=driver_model,
+                client_model=client_model,
+                index_name=index_name,
+                id_property_neo4j=id_property_neo4j,
+                embedder_model=embedder_model,
+                return_properties=return_properties,
+                retrieval_query=retrieval_query,
+            )
+        except ValidationError as e:
+            raise ValueError(f"Validation failed: {e.errors()}")
+
+        super().__init__("id", validated_data.id_property_neo4j)
+        self.driver = validated_data.driver_model.driver
+        self.client = validated_data.client_model.client
+        self.index_name = validated_data.index_name
+        self.index = self.client.Index(index_name)
+        self.embedder = validated_data.embedder_model.embedder
+        self.return_properties = validated_data.return_properties
+        self.retrieval_query = validated_data.retrieval_query
 
     def search(
         self,
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
-        pinecone_filter: Optional[dict] = None,
+        pinecone_filter: Optional[dict[str, Any]] = None,
     ) -> list[neo4j.Record]:
         """Get the top_k nearest neighbor embeddings using Pinecone for either provided query_vector or query_text.
         Both query_vector and query_text can be provided.
@@ -67,27 +92,36 @@ class PineconeNeo4jRetriever(ExternalRetriever):
             query_text (str): The text to get the closest neighbors of.
             query_vector (Optional[list[float]], optional): The vector embeddings to get the closest neighbors of. Defaults to None.
             top_k (int, optional): The number of neighbors to return. Defaults to 5.
-            pinecone_filter (Optional[dict], optional): The filters to apply to the search query in Pinecone. Defaults to None.
+            pinecone_filter (Optional[dict[str, Any]], optional): The filters to apply to the search query in Pinecone. Defaults to None.
         Raises:
             ValueError: If validation of the input arguments fail.
         Returns:
             list[neo4j.Record]: The results of the search query
         """
 
-        validate_search_query_input(query_text=query_text, query_vector=query_vector)
+        try:
+            validated_data = PineconeSearchModel(
+                vector_index_name=self.index_name,
+                query_vector=query_vector,
+                query_text=query_text,
+                top_k=top_k,
+                pinecone_filter=pinecone_filter,
+            )
+        except ValidationError as e:
+            raise ValueError(f"Validation failed: {e.errors()}")
 
-        # If we want to use a local embedder, we still want to call the near_vector method
-        # so we want to create the vector as early as possible here
-        if query_text:
+        if validated_data.query_text:
             if self.embedder:
-                query_vector = self.embedder.embed_query(query_text)
+                query_vector = self.embedder.embed_query(validated_data.query_text)
                 logger.debug("Locally generated query vector: %s", query_vector)
             else:
                 logger.error("No embedder provided for query_text.")
                 raise RuntimeError("No embedder provided for query_text.")
 
         response = self.index.query(
-            vector=query_vector, top_k=top_k, filter=pinecone_filter
+            vector=query_vector,
+            top_k=validated_data.top_k,
+            filter=validated_data.pinecone_filter,
         )
 
         result_tuples = [
