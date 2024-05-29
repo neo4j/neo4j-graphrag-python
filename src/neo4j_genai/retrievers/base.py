@@ -129,7 +129,7 @@ class ExternalRetriever(Retriever, ABC):
         self.id_property_neo4j = id_property_neo4j
 
     @abstractmethod
-    def search(
+    def get_search_results(
         self,
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,

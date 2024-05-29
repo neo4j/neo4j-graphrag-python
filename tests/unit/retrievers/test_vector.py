@@ -87,7 +87,7 @@ def test_similarity_search_vector_happy_path(
     )
     assert records == RetrieverResult(
         items=[
-            RetrieverResultItem(content="dummy-node", metadata={"score": 1.0}),
+            RetrieverResultItem(content="{'text': 'dummy-node'}", metadata={"score": 1.0}),
         ],
         metadata={'__retriever': 'VectorRetriever'}
     )
