@@ -42,6 +42,21 @@ HybridCypherRetriever
    :members:
 
 
+
+*******************
+External Retrievers
+*******************
+
+This section includes retrievers that integrate with databases external to Neo4j.
+
+
+WeaviateNeo4jRetriever
+======================
+
+.. autoclass:: neo4j_genai.retrievers.external.weaviate.WeaviateNeo4jRetriever
+   :members:
+
+
 ******
 Errors
 ******

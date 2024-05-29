@@ -95,14 +95,37 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         If no embedder is provided, then it will assume that the vectorizer is used in Weaviate.
 
         See the following documentation for more details:
-        - [Query a vector index](https://neo4j.com/docs/cypher-manual/current/indexes-for-vector-search/#indexes-vector-query)
-        - [db.index.vector.queryNodes()](https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_queryNodes)
-        - [db.index.fulltext.queryNodes()](https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_fulltext_querynodes)
+        - `Query a vector index <https://neo4j.com/docs/cypher-manual/current/indexes-for-vector-search/#indexes-vector-query>`_
+        - `db.index.vector.queryNodes() <https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_queryNodes>`_
+        - `db.index.fulltext.queryNodes() <https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_fulltext_querynodes>`_
+
+
+        Example:
+
+        .. code-block:: python
+
+          import neo4j
+          from neo4j_genai.retrievers import WeaviateNeo4jRetriever
+
+          driver = neo4j.GraphDatabase.driver(URI, auth=AUTH)
+
+          retriever = WeaviateNeo4jRetriever(
+              driver=driver,
+              client=weaviate_client,
+              collection="Jeopardy",
+              id_property_external="neo4j_id",
+              id_property_neo4j="id",
+          )
+
+          biology_embedding = ...
+          retriever.search(query_vector=biology_embedding, top_k=2)
+
+
         Args:
-            query_text (str): The text to get the closest neighbors of.
-            query_vector (Optional[list[float]], optional): The vector embeddings to get the closest neighbors of. Defaults to None.
-            top_k (int, optional): The number of neighbors to return. Defaults to 5.
-            weaviate_filters (Optional[_Filters], optional): The filters to apply to the search query in Weaviate. Defaults to None.
+            query_text (Optional[str]): The text to get the closest neighbors of.
+            query_vector (Optional[list[float]]): The vector embeddings to get the closest neighbors of. Defaults to None.
+            top_k (int): The number of neighbors to return. Defaults to 5.
+            weaviate_filters (Optional[_Filters]): The filters to apply to the search query in Weaviate. Defaults to None.
         Raises:
             SearchValidationError: If validation of the input arguments fail.
         Returns:
