@@ -12,32 +12,28 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
-import weaviate.classes as wvc
-import weaviate
-from neo4j import GraphDatabase
-import os.path
-import json
 import hashlib
+import json
+import os.path
+
+from neo4j import GraphDatabase
+from pinecone import Pinecone, ServerlessSpec
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-def populate_dbs(neo4j_driver, w_client, collection_name="Jeopardy"):
-    neo4j_objects, w_question_objs = build_data_objects()
-    w_client.collections.create(
-        collection_name,
-        vectorizer_config=wvc.config.Configure.Vectorizer.text2vec_transformers(),
-        vector_index_config=wvc.config.Configure.VectorIndex.hnsw(
-            distance_metric=wvc.config.VectorDistances.COSINE  # select prefered distance metric
-        ),
-        properties=[
-            wvc.config.Property(name="neo4j_id", data_type=wvc.config.DataType.TEXT),
-        ],
+def populate_dbs(neo4j_driver, pc_client, index_name="jeopardy"):
+    neo4j_objects, pc_question_objs = build_data_objects()
+
+    pc_client.create_index(
+        name=index_name,
+        dimension=384,
+        metric="cosine",
+        spec=ServerlessSpec(cloud="aws", region="us-east-1"),
     )
 
-    # Populate Weaviate
-    populate_weaviate(w_client, w_question_objs, collection_name)
+    # Populate Pinecone
+    populate_pinecone(pc_client, pc_question_objs, index_name)
 
     # Populate Neo4j
     populate_neo4j(neo4j_driver, neo4j_objects)
@@ -76,9 +72,9 @@ def populate_neo4j(neo4j_driver, neo4j_objs):
     return res
 
 
-def populate_weaviate(w_client, w_question_objs, collection_name):
-    questions = w_client.collections.get(collection_name)
-    questions.data.insert_many(w_question_objs)
+def populate_pinecone(pc_client, pc_question_objs, index_name):
+    index = pc_client.Index(index_name)
+    index.upsert(vectors=pc_question_objs)
 
 
 def build_data_objects():
@@ -87,12 +83,12 @@ def build_data_objects():
     # MIT License
     file_name = os.path.join(
         BASE_DIR,
-        "./data/jeopardy_tiny_with_vectors_all-MiniLM-L6-v2.json",
+        "../data/jeopardy_tiny_with_vectors_all-MiniLM-L6-v2.json",
     )
     with open(file_name, "r") as f:
         data = json.load(f)
 
-    w_question_objs = list()
+    pc_question_objs = list()
     neo4j_objs = {"nodes": [], "relationships": []}
 
     # only unique categories and ids for them
@@ -138,21 +134,15 @@ def build_data_objects():
                 "properties": {},
             }
         )
-        w_question_objs.append(
-            wvc.data.DataObject(
-                properties={
-                    "neo4j_id": f"question_{id}",
-                },
-                vector=d["vector"],
-            )
-        )
+        pc_question_objs.append({"id": f"question_{id}", "values": d["vector"]})
 
-    return neo4j_objs, w_question_objs
+    return neo4j_objs, pc_question_objs
 
 
 if __name__ == "__main__":
     neo4j_auth = ("neo4j", "password")
     neo4j_url = "neo4j://localhost:7687"
+    pc_api_key = "API_KEY"
     with GraphDatabase.driver(neo4j_url, auth=neo4j_auth) as neo4j_driver:
-        with weaviate.connect_to_local() as w_client:
-            populate_dbs(neo4j_driver, w_client)
+        pc_client = Pinecone(pc_api_key)
+        populate_dbs(neo4j_driver, pc_client)

@@ -97,7 +97,7 @@ def build_data_objects() -> tuple[dict[str, Any], list[wvc.data.DataObject]]:
     # MIT License
     file_name = os.path.join(
         BASE_DIR,
-        "./data/jeopardy_tiny_with_vectors_all-MiniLM-L6-v2.json",
+        "../data/jeopardy_tiny_with_vectors_all-MiniLM-L6-v2.json",
     )
     with open(file_name, "r") as f:
         data = json.load(f)
