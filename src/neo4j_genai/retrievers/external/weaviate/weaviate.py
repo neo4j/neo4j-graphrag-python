@@ -13,24 +13,24 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Optional, Any, Callable
+import logging
+from typing import Any, Callable, Optional
 
+import neo4j
+import weaviate.classes as wvc
 from pydantic import ValidationError
+from weaviate.client import WeaviateClient
+from weaviate.collections.classes.filters import _Filters
 
+from neo4j_genai.embedder import Embedder
 from neo4j_genai.exceptions import RetrieverInitializationError, SearchValidationError
 from neo4j_genai.retrievers.base import ExternalRetriever
-from neo4j_genai.embedder import Embedder
 from neo4j_genai.retrievers.external.weaviate.types import (
     WeaviateModel,
     WeaviateNeo4jRetrieverModel,
     WeaviateNeo4jSearchModel,
 )
-import weaviate.classes as wvc
-from weaviate.client import WeaviateClient
-import neo4j
-import logging
-from neo4j_genai.neo4j_queries import get_query_tail
-from neo4j_genai.types import RawSearchResult, Neo4jDriverModel, EmbedderModel
+from neo4j_genai.types import EmbedderModel, Neo4jDriverModel, RawSearchResult
 
 logger = logging.getLogger(__name__)
 
@@ -198,19 +198,3 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         records, _, _ = self.driver.execute_query(search_query, parameters)
 
         return RawSearchResult(records=records)
-
-
-def get_match_query(
-    return_properties: Optional[list[str]] = None, retrieval_query: Optional[str] = None
-) -> str:
-    match_query = (
-        "UNWIND $match_params AS match_param "
-        "WITH match_param[0] AS match_id_value, match_param[1] AS score "
-        "MATCH (node) "
-        "WHERE node[$id_property] = match_id_value "
-    )
-    return match_query + get_query_tail(
-        return_properties=return_properties,
-        retrieval_query=retrieval_query,
-        fallback_return="RETURN node, score",
-    )

@@ -13,6 +13,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from .pinecone import PineconeNeo4jRetriever
+from .utils import get_match_query
 
-__all__ = ["PineconeNeo4jRetriever"]
+__all__ = ["get_match_query"]

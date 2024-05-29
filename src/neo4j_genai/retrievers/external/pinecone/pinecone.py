@@ -13,36 +13,35 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Optional
-from neo4j_genai.retrievers.base import ExternalRetriever
-from neo4j_genai.embedder import Embedder
-from neo4j_genai.retrievers.utils import validate_search_query_input
-import weaviate.classes as wvc
-from weaviate.client import WeaviateClient
-from weaviate.collections.classes.filters import _Filters
-import neo4j
 import logging
-from neo4j_genai.neo4j_queries import get_query_tail
+from typing import Optional
+
+import neo4j
+from pinecone import Pinecone
+
+from neo4j_genai.embedder import Embedder
+from neo4j_genai.retrievers.base import ExternalRetriever
+from neo4j_genai.retrievers.external.utils import get_match_query
+from neo4j_genai.retrievers.utils import validate_search_query_input
 
 logger = logging.getLogger(__name__)
 
 
-class WeaviateNeo4jRetriever(ExternalRetriever):
+class PineconeNeo4jRetriever(ExternalRetriever):
     def __init__(
         self,
         driver: neo4j.Driver,
-        client: WeaviateClient,
-        collection: str,
-        id_property_external: str,
+        client: Pinecone,
+        index_name: str,
         id_property_neo4j: str,
         embedder: Optional[Embedder] = None,
         return_properties: Optional[list[str]] = None,
         retrieval_query: Optional[str] = None,
     ):
-        super().__init__(id_property_external, id_property_neo4j)
+        super().__init__("id", id_property_neo4j)
         self.driver = driver
         self.client = client
-        self.search_collection = client.collections.get(collection)
+        self.index = client.Index(index_name)
         self.embedder = embedder
         self.return_properties = return_properties
         self.retrieval_query = retrieval_query
@@ -52,14 +51,13 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
-        weaviate_filters: Optional[_Filters] = None,
+        pinecone_filter: Optional[dict] = None,
     ) -> list[neo4j.Record]:
-        """Get the top_k nearest neighbor embeddings using Weaviate for either provided query_vector or query_text.
+        """Get the top_k nearest neighbor embeddings using Pinecone for either provided query_vector or query_text.
         Both query_vector and query_text can be provided.
         If query_vector is provided, then it will be preferred over the embedded query_text
         for the vector search.
         If query_text is provided, then it will check if an embedder is provided and use it to generate the query_vector.
-        If no embedder is provided, then it will assume that the vectorizer is used in Weaviate.
 
         See the following documentation for more details:
         - [Query a vector index](https://neo4j.com/docs/cypher-manual/current/indexes-for-vector-search/#indexes-vector-query)
@@ -69,7 +67,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
             query_text (str): The text to get the closest neighbors of.
             query_vector (Optional[list[float]], optional): The vector embeddings to get the closest neighbors of. Defaults to None.
             top_k (int, optional): The number of neighbors to return. Defaults to 5.
-            weaviate_filters (Optional[_Filters], optional): The filters to apply to the search query in Weaviate. Defaults to None.
+            pinecone_filter (Optional[dict], optional): The filters to apply to the search query in Pinecone. Defaults to None.
         Raises:
             ValueError: If validation of the input arguments fail.
         Returns:
@@ -85,32 +83,16 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
                 query_vector = self.embedder.embed_query(query_text)
                 logger.debug("Locally generated query vector: %s", query_vector)
             else:
-                logger.debug(
-                    "No embedder provided, assuming vectorizer is used in Weaviate."
-                )
+                logger.error("No embedder provided for query_text.")
+                raise RuntimeError("No embedder provided for query_text.")
 
-        if query_vector:
-            response = self.search_collection.query.near_vector(
-                near_vector=query_vector,
-                limit=top_k,
-                filters=weaviate_filters,
-                return_metadata=wvc.query.MetadataQuery(certainty=True),
-            )
-            logger.debug("Weaviate query vector: %s", query_vector)
-            logger.debug("Response: %s", response)
-        else:
-            response = self.search_collection.query.near_text(
-                query=query_text,
-                limit=top_k,
-                filters=weaviate_filters,
-                return_metadata=wvc.query.MetadataQuery(certainty=True),
-            )
-            logger.debug("Query text: %s", query_text)
-            logger.debug("Response: %s", response)
+        response = self.index.query(
+            vector=query_vector, top_k=top_k, filter=pinecone_filter
+        )
 
         result_tuples = [
-            [f"{o.properties[self.id_property_external]}", o.metadata.certainty or 0.0]
-            for o in response.objects
+            [f"{o[self.id_property_external]}", o["score"] or 0.0]
+            for o in response["matches"]
         ]
 
         search_query = get_match_query(
@@ -123,25 +105,9 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
             "id_property": self.id_property_neo4j,
         }
 
-        logger.debug("Weaviate Store Cypher parameters: %s", parameters)
-        logger.debug("Weaviate Store Cypher query: %s", search_query)
+        logger.debug("Pinecone Store Cypher parameters: %s", parameters)
+        logger.debug("Pinecone Store Cypher query: %s", search_query)
 
         records, _, _ = self.driver.execute_query(search_query, parameters)
 
         return records
-
-
-def get_match_query(
-    return_properties: Optional[str] = None, retrieval_query: Optional[str] = None
-):
-    match_query = (
-        "UNWIND $match_params AS match_param "
-        "WITH match_param[0] AS match_id_value, match_param[1] AS score "
-        "MATCH (node) "
-        "WHERE node[$id_property] = match_id_value "
-    )
-    return match_query + get_query_tail(
-        return_properties=return_properties,
-        retrieval_query=retrieval_query,
-        fallback_return="RETURN node, score",
-    )
