@@ -15,8 +15,6 @@
 
 import pytest
 
-from neo4j import Record
-
 from neo4j_genai import VectorRetriever, VectorCypherRetriever
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 

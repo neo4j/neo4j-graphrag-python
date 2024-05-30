@@ -16,8 +16,6 @@
 
 import pytest
 
-import neo4j
-
 from neo4j_genai import (
     HybridRetriever,
     HybridCypherRetriever,

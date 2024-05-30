@@ -15,8 +15,6 @@
 
 from typing import Optional
 
-import neo4j
-
 
 def validate_search_query_input(
     query_text: Optional[str] = None, query_vector: Optional[list[float]] = None

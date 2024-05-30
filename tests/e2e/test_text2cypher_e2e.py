@@ -1,4 +1,3 @@
-import neo4j
 import pytest
 from neo4j_genai import Text2CypherRetriever
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
