@@ -14,7 +14,13 @@
 #  limitations under the License.
 
 
-class RetrieverInitializationError(Exception):
+class Neo4jGenAiError(Exception):
+    """Global exception used for the neo4j-genai package"""
+
+    pass
+
+
+class RetrieverInitializationError(Neo4jGenAiError):
     """Exception raised when initialization of a retriever fails."""
 
     def __init__(self, errors: str):
@@ -22,7 +28,7 @@ class RetrieverInitializationError(Exception):
         self.errors = errors
 
 
-class SearchValidationError(Exception):
+class SearchValidationError(Neo4jGenAiError):
     """Exception raised for validation errors during search."""
 
     def __init__(self, errors):
@@ -30,31 +36,31 @@ class SearchValidationError(Exception):
         self.errors = errors
 
 
-class FilterValidationError(Exception):
+class FilterValidationError(Neo4jGenAiError):
     """Exception raised when input validation for metadata filtering fails."""
 
     pass
 
 
-class EmbeddingRequiredError(Exception):
+class EmbeddingRequiredError(Neo4jGenAiError):
     """Exception raised when an embedding method is required but not provided."""
 
     pass
 
 
-class RecordCreationError(Exception):
-    """Exception raised when valid Record fails to be created."""
+class InvalidRetrieverResultError(Neo4jGenAiError):
+    """Exception raised when the Retriever fails to return a result."""
 
     pass
 
 
-class Neo4jIndexError(Exception):
-    """Exception raised when handling Neo4j indexes fails."""
+class Neo4jIndexError(Neo4jGenAiError):
+    """Exception raised when handling Neo4j indeails."""
 
     pass
 
 
-class Neo4jVersionError(Exception):
+class Neo4jVersionError(Neo4jGenAiError):
     """Exception raised when Neo4j version does not meet minimum requirements."""
 
     def __init__(self):

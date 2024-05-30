@@ -20,7 +20,7 @@ from neo4j_genai.exceptions import (
     RetrieverInitializationError,
     SearchValidationError,
     EmbeddingRequiredError,
-    RecordCreationError,
+    InvalidRetrieverResultError,
 )
 from neo4j_genai.retrievers.base import Retriever
 from pydantic import ValidationError
@@ -166,7 +166,7 @@ class VectorRetriever(Retriever):
                 for record in records
             ]
         except ValidationError as e:
-            raise RecordCreationError(
+            raise InvalidRetrieverResultError(
                 f"Failed constructing VectorSearchRecord output: {e.errors()}"
             )
 

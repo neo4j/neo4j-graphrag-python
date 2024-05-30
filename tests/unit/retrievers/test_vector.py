@@ -22,7 +22,7 @@ from neo4j_genai.exceptions import (
     RetrieverInitializationError,
     EmbeddingRequiredError,
     SearchValidationError,
-    RecordCreationError,
+    InvalidRetrieverResultError,
 )
 from neo4j_genai.neo4j_queries import get_search_query
 from neo4j_genai.types import SearchType, VectorSearchRecord
@@ -229,7 +229,7 @@ def test_similarity_search_vector_bad_results(
     ]
     search_query, _ = get_search_query(SearchType.VECTOR)
 
-    with pytest.raises(RecordCreationError):
+    with pytest.raises(InvalidRetrieverResultError):
         retriever.search(query_vector=query_vector, top_k=top_k)
 
     retriever.driver.execute_query.assert_called_once_with(
