@@ -15,7 +15,7 @@
 
 
 class Neo4jGenAiError(Exception):
-    """Global exception used for the neo4j-genai package"""
+    """Global exception used for the neo4j-genai package."""
 
     pass
 
@@ -55,7 +55,7 @@ class InvalidRetrieverResultError(Neo4jGenAiError):
 
 
 class Neo4jIndexError(Neo4jGenAiError):
-    """Exception raised when handling Neo4j indeails."""
+    """Exception raised when handling Neo4j index fails."""
 
     pass
 
