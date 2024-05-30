@@ -28,7 +28,7 @@ from neo4j_genai.retrievers.base import Retriever
 )
 def test_retriever_version_support(driver, db_version, expected_exception):
     class MockRetriever(Retriever):
-        def get_search_results(self, *args, **kwargs):
+        def _get_search_results(self, *args, **kwargs):
             pass
 
     driver.execute_query.return_value = [[{"versions": db_version}], None, None]

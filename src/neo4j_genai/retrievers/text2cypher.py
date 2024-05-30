@@ -77,7 +77,7 @@ class Text2CypherRetriever(Retriever):
             logger.exception(e)
             raise e
 
-    def get_search_results(
+    def _get_search_results(
         self, query_text: str, examples: Optional[list[str]] = None
     ) -> RetrieverRawResult:
         """Converts query_text to a Cypher query using an LLM.
@@ -92,7 +92,7 @@ class Text2CypherRetriever(Retriever):
             RuntimeError: If the LLM fails to generate a correct Cypher query.
 
         Returns:
-            list[neo4j.Record]: The results of the search query.
+            RetrieverRawResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
         """
         try:
             validated_data = Text2CypherSearchModel(

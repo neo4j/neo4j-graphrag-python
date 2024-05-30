@@ -49,7 +49,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         self.retrieval_query = retrieval_query
         self.format_record_function = format_record_function
 
-    def get_search_results(
+    def _get_search_results(
         self,
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
@@ -75,7 +75,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         Raises:
             ValueError: If validation of the input arguments fail.
         Returns:
-            list[neo4j.Record]: The results of the search query
+            RetrieverRawResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
         """
 
         validate_search_query_input(query_text=query_text, query_vector=query_vector)

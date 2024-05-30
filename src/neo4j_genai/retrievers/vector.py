@@ -106,7 +106,7 @@ class VectorRetriever(Retriever):
             metadata=metadata,
         )
 
-    def get_search_results(
+    def _get_search_results(
         self,
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
@@ -130,7 +130,7 @@ class VectorRetriever(Retriever):
             ValueError: If no embedder is provided.
 
         Returns:
-            RetrieverRawResult: The `top_k` neighbors found in vector search with their nodes and scores.
+            RetrieverRawResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
         """
         try:
             validated_data = VectorSearchModel(
@@ -231,7 +231,7 @@ class VectorCypherRetriever(Retriever):
         self._embedding_dimension = None
         self._fetch_index_infos()
 
-    def get_search_results(
+    def _get_search_results(
         self,
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
@@ -257,7 +257,7 @@ class VectorCypherRetriever(Retriever):
             ValueError: If no embedder is provided.
 
         Returns:
-            RetrieverRawResult: The `top_k` neighbors found in vector search with their nodes and scores.
+            RetrieverRawResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
         """
         try:
             validated_data = VectorCypherSearchModel(

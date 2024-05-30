@@ -109,7 +109,7 @@ class HybridRetriever(Retriever):
             metadata=metadata,
         )
 
-    def get_search_results(
+    def _get_search_results(
         self,
         query_text: str,
         query_vector: Optional[list[float]] = None,
@@ -136,7 +136,7 @@ class HybridRetriever(Retriever):
             ValueError: If no embedder is provided.
 
         Returns:
-            list[neo4j.Record]: The results of the search query
+            RetrieverRawResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
         """
         try:
             validated_data = HybridSearchModel(
@@ -231,7 +231,7 @@ class HybridCypherRetriever(Retriever):
         )
         self.format_record_function = format_record_function
 
-    def get_search_results(
+    def _get_search_results(
         self,
         query_text: str,
         query_vector: Optional[list[float]] = None,
@@ -260,7 +260,7 @@ class HybridCypherRetriever(Retriever):
             ValueError: If no embedder is provided.
 
         Returns:
-            list[neo4j.Record]: The results of the search query
+            RetrieverRawResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
         """
         try:
             validated_data = HybridCypherSearchModel(

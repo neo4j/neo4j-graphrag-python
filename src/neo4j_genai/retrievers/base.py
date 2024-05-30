@@ -81,7 +81,7 @@ class Retriever(ABC):
         Search method. Call the get_search_result method that returns
         a list of neo4j.Record, and format them to return RetrieverResult.
         """
-        raw_result = self.get_search_results(*args, **kwargs)
+        raw_result = self._get_search_results(*args, **kwargs)
         formatter = self.get_result_formatter()
         search_items = [formatter(record) for record in raw_result.records]
         metadata = raw_result.metadata or {}
@@ -92,7 +92,7 @@ class Retriever(ABC):
         )
 
     @abstractmethod
-    def get_search_results(self, *args, **kwargs) -> RetrieverRawResult:
+    def _get_search_results(self, *args, **kwargs) -> RetrieverRawResult:
         pass
 
     def get_result_formatter(self) -> Callable[[neo4j.Record], RetrieverResultItem]:
@@ -124,7 +124,7 @@ class ExternalRetriever(Retriever, ABC):
         self.id_property_neo4j = id_property_neo4j
 
     @abstractmethod
-    def get_search_results(
+    def _get_search_results(
         self,
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
