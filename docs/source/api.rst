@@ -47,50 +47,74 @@ Errors
 ******
 
 
+* :class:`neo4j_genai.exceptions.Neo4jGenAiError`
+
+  * :class:`neo4j_genai.exceptions.RetrieverInitializationError`
+
+  * :class:`neo4j_genai.exceptions.SearchValidationError`
+
+  * :class:`neo4j_genai.exceptions.FilterValidationError`
+
+  * :class:`neo4j_genai.exceptions.EmbeddingRequiredError`
+
+  * :class:`neo4j_genai.exceptions.InvalidRetrieverResultError`
+
+  * :class:`neo4j_genai.exceptions.Neo4jIndexError`
+
+  * :class:`neo4j_genai.exceptions.Neo4jVersionError`
+
+
+Neo4jGenAiError
+===============
+
+.. autoclass:: neo4j_genai.exceptions.Neo4jGenAiError
+   :show-inheritance:
+
+
 RetrieverInitializationError
 ============================
 
 .. autoclass:: neo4j_genai.exceptions.RetrieverInitializationError
-   :members:
+   :show-inheritance:
 
 
 SearchValidationError
 =====================
 
 .. autoclass:: neo4j_genai.exceptions.SearchValidationError
-   :members:
+   :show-inheritance:
 
 
 FilterValidationError
 =====================
 
 .. autoclass:: neo4j_genai.exceptions.FilterValidationError
-   :members:
+   :show-inheritance:
 
 
 EmbeddingRequiredError
 ======================
 
 .. autoclass:: neo4j_genai.exceptions.EmbeddingRequiredError
-   :members:
+   :show-inheritance:
 
 
-RecordCreationError
-===================
+InvalidRetrieverResultError
+===========================
 
-.. autoclass:: neo4j_genai.exceptions.RecordCreationError
-   :members:
+.. autoclass:: neo4j_genai.exceptions.InvalidRetrieverResultError
+   :show-inheritance:
 
 
 Neo4jIndexError
 ===============
 
 .. autoclass:: neo4j_genai.exceptions.Neo4jIndexError
-   :members:
+   :show-inheritance:
 
 
 Neo4jVersionError
 =================
 
 .. autoclass:: neo4j_genai.exceptions.Neo4jVersionError
-   :members:
+   :show-inheritance:
