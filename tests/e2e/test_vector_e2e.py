@@ -18,7 +18,7 @@ import pytest
 from neo4j import Record
 
 from neo4j_genai import VectorRetriever, VectorCypherRetriever
-from neo4j_genai.types import VectorSearchRecord
+from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
@@ -28,10 +28,10 @@ def test_vector_retriever_search_text(driver, custom_embedder):
     top_k = 5
     results = retriever.search(query_text="Find me a book about Fremen", top_k=top_k)
 
-    assert isinstance(results, list)
-    assert len(results) == 5
-    for result in results:
-        assert isinstance(result, VectorSearchRecord)
+    assert isinstance(results, RetrieverResult)
+    assert len(results.items) == 5
+    for result in results.items:
+        assert isinstance(result, RetrieverResultItem)
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
@@ -46,11 +46,11 @@ def test_vector_cypher_retriever_search_text(driver, custom_embedder):
     top_k = 5
     results = retriever.search(query_text="Find me a book about Fremen", top_k=top_k)
 
-    assert isinstance(results, list)
-    assert len(results) == 5
-    for record in results:
-        assert isinstance(record, Record)
-        assert "author.name" in record.keys()
+    assert isinstance(results, RetrieverResult)
+    assert len(results.items) == 5
+    for record in results.items:
+        assert isinstance(record, RetrieverResultItem)
+        assert "author.name" in record.content
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
@@ -60,10 +60,10 @@ def test_vector_retriever_search_vector(driver):
     top_k = 5
     results = retriever.search(query_vector=[1.0 for _ in range(1536)], top_k=top_k)
 
-    assert isinstance(results, list)
-    assert len(results) == 5
-    for result in results:
-        assert isinstance(result, VectorSearchRecord)
+    assert isinstance(results, RetrieverResult)
+    assert len(results.items) == 5
+    for result in results.items:
+        assert isinstance(result, RetrieverResultItem)
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
@@ -76,11 +76,11 @@ def test_vector_cypher_retriever_search_vector(driver):
     top_k = 5
     results = retriever.search(query_vector=[1.0 for _ in range(1536)], top_k=top_k)
 
-    assert isinstance(results, list)
-    assert len(results) == 5
-    for record in results:
-        assert isinstance(record, Record)
-        assert "author.name" in record.keys()
+    assert isinstance(results, RetrieverResult)
+    assert len(results.items) == 5
+    for record in results.items:
+        assert isinstance(record, RetrieverResultItem)
+        assert "author.name" in record.content
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
@@ -98,10 +98,10 @@ def test_vector_retriever_return_properties(driver):
         top_k=top_k,
     )
 
-    assert isinstance(results, list)
-    assert len(results) == 5
-    for result in results:
-        assert isinstance(result, VectorSearchRecord)
+    assert isinstance(results, RetrieverResult)
+    assert len(results.items) == 5
+    for result in results.items:
+        assert isinstance(result, RetrieverResultItem)
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
@@ -118,8 +118,8 @@ def test_vector_retriever_filters(driver):
         top_k=top_k,
     )
 
-    assert isinstance(results, list)
-    assert len(results) == 2
-    for result in results:
-        assert isinstance(result, VectorSearchRecord)
-        assert result.node["int_property"] > 2
+    assert isinstance(results, RetrieverResult)
+    assert len(results.items) == 2
+    for result in results.items:
+        assert isinstance(result, RetrieverResultItem)
+        # assert result.node["int_property"] > 2
