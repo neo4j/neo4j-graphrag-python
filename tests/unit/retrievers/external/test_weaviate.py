@@ -77,9 +77,12 @@ def test_text_search_remote_vector_store_happy_path(driver):
     )
     assert records == RetrieverResult(
         items=[
-            RetrieverResultItem(content="<Record node={'sync_id': 'node-test-id'} score=0.9>", metadata=None),
+            RetrieverResultItem(
+                content="<Record node={'sync_id': 'node-test-id'} score=0.9>",
+                metadata=None,
+            ),
         ],
-        metadata={'__retriever': 'WeaviateNeo4jRetriever'}
+        metadata={"__retriever": "WeaviateNeo4jRetriever"},
     )
 
 
@@ -119,9 +122,12 @@ def test_text_search_remote_vector_store_return_properties(driver):
     )
     assert records == RetrieverResult(
         items=[
-            RetrieverResultItem(content="<Record node={'sync_id': 'node-test-id'} score=0.9>", metadata=None),
+            RetrieverResultItem(
+                content="<Record node={'sync_id': 'node-test-id'} score=0.9>",
+                metadata=None,
+            ),
         ],
-        metadata={'__retriever': 'WeaviateNeo4jRetriever'}
+        metadata={"__retriever": "WeaviateNeo4jRetriever"},
     )
 
 
@@ -163,9 +169,12 @@ def test_text_search_remote_vector_store_retrieval_query(driver):
 
     assert records == RetrieverResult(
         items=[
-            RetrieverResultItem(content="<Record node={'sync_id': 'node-test-id'} score=0.9>", metadata=None),
+            RetrieverResultItem(
+                content="<Record node={'sync_id': 'node-test-id'} score=0.9>",
+                metadata=None,
+            ),
         ],
-        metadata={'__retriever': 'WeaviateNeo4jRetriever'}
+        metadata={"__retriever": "WeaviateNeo4jRetriever"},
     )
 
 

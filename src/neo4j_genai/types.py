@@ -36,6 +36,7 @@ class RetrieverResultItem(BaseModel):
         metadata (Optional[dict]): Any metadata that can be included together
             with the text, related to that record (e.g. another node property)
     """
+
     content: str
     metadata: Optional[dict] = None
 
@@ -49,6 +50,7 @@ class RetrieverRawResult(BaseModel):
         records (list[neo4j.Record]): A list of records from neo4j.
         metadata: Record-related metadata, such as score.
     """
+
     records: list[neo4j.Record]
     metadata: Optional[dict] = None
 
@@ -73,6 +75,7 @@ class RetrieverResult(BaseModel):
         metadata: Context-related metadata such as generated Cypher query
          in the Text2CypherRetriever.
     """
+
     items: list[RetrieverResultItem]
     metadata: Optional[dict] = None
 

@@ -23,6 +23,7 @@ class Retriever(ABC):
     """
     Abstract class for Neo4j retrievers
     """
+
     VERIFY_NEO4J_VERSION = True
 
     def __init__(self, driver: neo4j.Driver):
@@ -82,10 +83,7 @@ class Retriever(ABC):
         """
         raw_result = self.get_search_results(*args, **kwargs)
         formatter = self.get_result_formatter()
-        search_items = [
-            formatter(record)
-            for record in raw_result.records
-        ]
+        search_items = [formatter(record) for record in raw_result.records]
         metadata = raw_result.metadata or {}
         metadata["__retriever"] = self.__class__.__name__
         return RetrieverResult(
@@ -110,10 +108,7 @@ class Retriever(ABC):
         Best effort to guess the node to text method. Inherited classes
         can override this method to implement custom text formatting.
         """
-        return RetrieverResultItem(
-            content=str(record),
-            metadata=record.get("metadata")
-        )
+        return RetrieverResultItem(content=str(record), metadata=record.get("metadata"))
 
 
 class ExternalRetriever(Retriever, ABC):

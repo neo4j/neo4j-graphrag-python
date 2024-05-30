@@ -130,9 +130,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
 
         records, _, _ = self.driver.execute_query(search_query, parameters)
 
-        return RetrieverRawResult(
-            records=records
-        )
+        return RetrieverRawResult(records=records)
 
 
 def get_match_query(

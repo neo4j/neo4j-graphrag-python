@@ -26,7 +26,9 @@ from neo4j_genai.types import (
     Neo4jDriverModel,
     EmbedderModel,
     VectorRetrieverModel,
-    VectorCypherRetrieverModel, RetrieverRawResult, RetrieverResultItem,
+    VectorCypherRetrieverModel,
+    RetrieverRawResult,
+    RetrieverResultItem,
 )
 from neo4j_genai.neo4j_queries import get_search_query
 import logging
@@ -164,9 +166,7 @@ class VectorRetriever(Retriever):
         logger.debug("VectorRetriever Cypher query: %s", search_query)
 
         records, _, _ = self.driver.execute_query(search_query, parameters)
-        return RetrieverRawResult(
-            records=records
-        )
+        return RetrieverRawResult(records=records)
 
 
 class VectorCypherRetriever(Retriever):

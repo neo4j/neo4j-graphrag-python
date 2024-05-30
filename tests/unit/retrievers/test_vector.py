@@ -87,16 +87,22 @@ def test_similarity_search_vector_happy_path(
     )
     assert records == RetrieverResult(
         items=[
-            RetrieverResultItem(content="{'text': 'dummy-node'}", metadata={"score": 1.0}),
+            RetrieverResultItem(
+                content="{'text': 'dummy-node'}", metadata={"score": 1.0}
+            ),
         ],
-        metadata={'__retriever': 'VectorRetriever'}
+        metadata={"__retriever": "VectorRetriever"},
     )
 
 
 @patch("neo4j_genai.VectorRetriever._fetch_index_infos")
 @patch("neo4j_genai.VectorRetriever._verify_version")
 def test_similarity_search_text_happy_path(
-    _verify_version_mock, _fetch_index_infos, driver, embedder, neo4j_record,
+    _verify_version_mock,
+    _fetch_index_infos,
+    driver,
+    embedder,
+    neo4j_record,
 ):
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
@@ -126,14 +132,18 @@ def test_similarity_search_text_happy_path(
         items=[
             RetrieverResultItem(content="dummy-node", metadata={"score": 1.0}),
         ],
-        metadata={'__retriever': 'VectorRetriever'}
+        metadata={"__retriever": "VectorRetriever"},
     )
 
 
 @patch("neo4j_genai.VectorRetriever._fetch_index_infos")
 @patch("neo4j_genai.VectorRetriever._verify_version")
 def test_similarity_search_text_return_properties(
-    _verify_version_mock, _fetch_index_infos, driver, embedder, neo4j_record,
+    _verify_version_mock,
+    _fetch_index_infos,
+    driver,
+    embedder,
+    neo4j_record,
 ):
     embed_query_vector = [1.0 for _ in range(3)]
     embedder.embed_query.return_value = embed_query_vector
@@ -147,7 +157,9 @@ def test_similarity_search_text_return_properties(
     )
 
     driver.execute_query.return_value = [
-        [neo4j_record, ],
+        [
+            neo4j_record,
+        ],
         None,
         None,
     ]
@@ -168,7 +180,7 @@ def test_similarity_search_text_return_properties(
         items=[
             RetrieverResultItem(content="dummy-node", metadata={"score": 1.0}),
         ],
-        metadata={'__retriever': 'VectorRetriever'}
+        metadata={"__retriever": "VectorRetriever"},
     )
 
 
@@ -223,7 +235,9 @@ def test_vector_cypher_retriever_search_both_text_and_vector(vector_cypher_retri
 @patch("neo4j_genai.VectorRetriever._fetch_index_infos")
 @patch("neo4j_genai.VectorRetriever._verify_version")
 def test_similarity_search_vector_bad_results(
-    _verify_version_mock, _fetch_index_infos, driver,
+    _verify_version_mock,
+    _fetch_index_infos,
+    driver,
 ):
     index_name = "my-index"
     dimensions = 1536
@@ -292,9 +306,12 @@ def test_retrieval_query_happy_path(
     )
     assert records == RetrieverResult(
         items=[
-            RetrieverResultItem(content="<Record node_id=123 text='dummy-text' score=1.0>", metadata=None),
+            RetrieverResultItem(
+                content="<Record node_id=123 text='dummy-text' score=1.0>",
+                metadata=None,
+            ),
         ],
-        metadata={'__retriever': 'VectorCypherRetriever'}
+        metadata={"__retriever": "VectorCypherRetriever"},
     )
 
 
@@ -317,8 +334,11 @@ def test_retrieval_query_with_result_format_function(
         )
 
     retriever = VectorCypherRetriever(
-        driver, index_name, retrieval_query, embedder=embedder,
-        format_record_function=format_function
+        driver,
+        index_name,
+        retrieval_query,
+        embedder=embedder,
+        format_record_function=format_function,
     )
     query_text = "may thy knife chip and shatter"
     top_k = 5
@@ -348,9 +368,11 @@ def test_retrieval_query_with_result_format_function(
     )
     assert records == RetrieverResult(
         items=[
-            RetrieverResultItem(content="dummy-text", metadata={"score": 1.0, "node_id": 123}),
+            RetrieverResultItem(
+                content="dummy-text", metadata={"score": 1.0, "node_id": 123}
+            ),
         ],
-        metadata={'__retriever': 'VectorCypherRetriever'}
+        metadata={"__retriever": "VectorCypherRetriever"},
     )
 
 
@@ -405,9 +427,12 @@ def test_retrieval_query_with_params(
 
     assert records == RetrieverResult(
         items=[
-            RetrieverResultItem(content="<Record node_id=123 text='dummy-text' score=1.0>", metadata=None),
+            RetrieverResultItem(
+                content="<Record node_id=123 text='dummy-text' score=1.0>",
+                metadata=None,
+            ),
         ],
-        metadata={'__retriever': 'VectorCypherRetriever'}
+        metadata={"__retriever": "VectorCypherRetriever"},
     )
 
 

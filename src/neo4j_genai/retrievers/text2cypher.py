@@ -122,5 +122,5 @@ class Text2CypherRetriever(Retriever):
             records=records,
             metadata={
                 "cypher": t2c_query,
-            }
+            },
         )
