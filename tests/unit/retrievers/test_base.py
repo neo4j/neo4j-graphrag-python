@@ -14,6 +14,7 @@
 #  limitations under the License.
 import pytest
 
+from neo4j_genai.exceptions import Neo4jVersionError
 from neo4j_genai.retrievers.base import Retriever
 
 
@@ -21,9 +22,9 @@ from neo4j_genai.retrievers.base import Retriever
     "db_version,expected_exception",
     [
         (["5.18-aura"], None),
-        (["5.3-aura"], ValueError),
+        (["5.3-aura"], Neo4jVersionError),
         (["5.19.0"], None),
-        (["4.3.5"], ValueError),
+        (["4.3.5"], Neo4jVersionError),
     ],
 )
 def test_retriever_version_support(driver, db_version, expected_exception):

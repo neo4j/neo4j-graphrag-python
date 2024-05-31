@@ -16,6 +16,7 @@ import re
 from typing import Any, Type
 from collections import Counter
 
+from neo4j_genai.exceptions import FilterValidationError
 
 DEFAULT_NODE_ALIAS = "node"
 
@@ -244,12 +245,12 @@ def _handle_field_filter(
     """
     # first, perform some sanity checks
     if not isinstance(field, str):
-        raise ValueError(
+        raise FilterValidationError(
             f"Field should be a string but got: {type(field)} with value: {field}"
         )
 
     if field.startswith(OPERATOR_PREFIX):
-        raise ValueError(
+        raise FilterValidationError(
             f"Invalid filter condition. Expected a field but got an operator: "
             f"{field}"
         )
@@ -257,7 +258,7 @@ def _handle_field_filter(
     if isinstance(value, dict):
         # This is a filter specification e.g. {"$gte": 0}
         if len(value) != 1:
-            raise ValueError(
+            raise FilterValidationError(
                 "Invalid filter condition. Expected a value which "
                 "is a dictionary with a single key that corresponds to an operator "
                 f"but got a dictionary with {len(value)} keys. The first few "
@@ -267,7 +268,7 @@ def _handle_field_filter(
         operator = operator.lower()
         # Verify that that operator is an operator
         if operator not in SUPPORTED_OPERATORS:
-            raise ValueError(
+            raise FilterValidationError(
                 f"Invalid operator: {operator}. "
                 f"Expected one of {SUPPORTED_OPERATORS}"
             )
@@ -280,7 +281,7 @@ def _handle_field_filter(
     # two tests (lower_bound <= value <= higher_bound)
     if operator == OPERATOR_BETWEEN:
         if len(filter_value) != 2:
-            raise ValueError(
+            raise FilterValidationError(
                 f"Expected lower and upper bounds in a list, got {filter_value}"
             )
         low, high = filter_value
@@ -312,7 +313,7 @@ def _construct_metadata_filter(
     """
 
     if not isinstance(filter, dict):
-        raise ValueError(f"Filter must be a dictionary, got {type(filter)}")
+        raise FilterValidationError(f"Filter must be a dictionary, got {type(filter)}")
     # if we have more than one entry, this is an implicit "AND" filter
     if len(filter) > 1:
         return _construct_metadata_filter(
@@ -329,13 +330,15 @@ def _construct_metadata_filter(
 
     # Here we handle the $and and $or operators
     if not isinstance(value, list):
-        raise ValueError(f"Expected a list, but got {type(value)} for value: {value}")
+        raise FilterValidationError(
+            f"Expected a list, but got {type(value)} for value: {value}"
+        )
     if key.lower() == OPERATOR_AND:
         cypher_operator = " AND "
     elif key.lower() == OPERATOR_OR:
         cypher_operator = " OR "
     else:
-        raise ValueError(f"Unsupported operator: {key}")
+        raise FilterValidationError(f"Unsupported operator: {key}")
     query = cypher_operator.join(
         [
             f"({ _construct_metadata_filter(el, param_store, node_alias)})"

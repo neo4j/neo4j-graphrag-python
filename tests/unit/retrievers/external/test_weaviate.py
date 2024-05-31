@@ -18,6 +18,9 @@ from types import SimpleNamespace
 
 import neo4j
 
+
+from weaviate import WeaviateClient
+
 from neo4j_genai.retrievers.external.weaviate import (
     WeaviateNeo4jRetriever,
     get_match_query,
@@ -26,7 +29,7 @@ from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 
 
 # Weaviate class with fake methods
-class WClient:
+class WClient(WeaviateClient):
     def __init__(self, node_id_value=None, node_match_score=None):
         self.collections = MagicMock()
         self.collections.get = MagicMock()

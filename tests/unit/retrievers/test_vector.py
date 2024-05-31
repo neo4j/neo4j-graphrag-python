@@ -19,6 +19,12 @@ import pytest
 from neo4j.exceptions import CypherSyntaxError
 
 from neo4j_genai import VectorRetriever, VectorCypherRetriever
+from neo4j_genai.exceptions import (
+    RetrieverInitializationError,
+    EmbeddingRequiredError,
+    SearchValidationError,
+    InvalidRetrieverResultError,
+)
 from neo4j_genai.neo4j_queries import get_search_query
 from neo4j_genai.types import (
     SearchType,
@@ -35,7 +41,7 @@ def test_vector_retriever_initialization(driver):
 
 @patch("neo4j_genai.VectorRetriever._verify_version")
 def test_vector_retriever_invalid_index_name(_verify_version_mock, driver):
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(RetrieverInitializationError) as exc_info:
         VectorRetriever(driver=driver, index_name=42)
 
     assert "index_name" in str(exc_info.value)
@@ -44,7 +50,7 @@ def test_vector_retriever_invalid_index_name(_verify_version_mock, driver):
 
 @patch("neo4j_genai.VectorCypherRetriever._verify_version")
 def test_vector_cypher_retriever_invalid_retrieval_query(_verify_version_mock, driver):
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(RetrieverInitializationError) as exc_info:
         VectorCypherRetriever(driver=driver, index_name="my-index", retrieval_query=42)
 
         assert "retrieval_query" in str(exc_info.value)
@@ -188,7 +194,9 @@ def test_vector_retriever_search_missing_embedder_for_text(vector_retriever):
     query_text = "may thy knife chip and shatter"
     top_k = 5
 
-    with pytest.raises(ValueError, match="Embedding method required for text query"):
+    with pytest.raises(
+        EmbeddingRequiredError, match="Embedding method required for text query"
+    ):
         vector_retriever.search(query_text=query_text, top_k=top_k)
 
 
@@ -198,7 +206,8 @@ def test_vector_retriever_search_both_text_and_vector(vector_retriever):
     top_k = 5
 
     with pytest.raises(
-        ValueError, match="You must provide exactly one of query_vector or query_text."
+        SearchValidationError,
+        match="You must provide exactly one of query_vector or query_text.",
     ):
         vector_retriever.search(
             query_text=query_text,
@@ -213,7 +222,9 @@ def test_vector_cypher_retriever_search_missing_embedder_for_text(
     query_text = "may thy knife chip and shatter"
     top_k = 5
 
-    with pytest.raises(ValueError, match="Embedding method required for text query"):
+    with pytest.raises(
+        EmbeddingRequiredError, match="Embedding method required for text query"
+    ):
         vector_cypher_retriever.search(query_text=query_text, top_k=top_k)
 
 
@@ -223,7 +234,8 @@ def test_vector_cypher_retriever_search_both_text_and_vector(vector_cypher_retri
     top_k = 5
 
     with pytest.raises(
-        ValueError, match="You must provide exactly one of query_vector or query_text."
+        SearchValidationError,
+        match="You must provide exactly one of query_vector or query_text.",
     ):
         vector_cypher_retriever.search(
             query_text=query_text,
@@ -251,7 +263,7 @@ def test_similarity_search_vector_bad_results(
     ]
     search_query, _ = get_search_query(SearchType.VECTOR)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidRetrieverResultError):
         retriever.search(query_vector=query_vector, top_k=top_k)
 
     retriever.driver.execute_query.assert_called_once_with(

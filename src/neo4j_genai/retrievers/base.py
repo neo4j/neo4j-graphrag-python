@@ -17,6 +17,7 @@ from typing import Optional, Callable
 import neo4j
 
 from neo4j_genai.types import RawSearchResult, RetrieverResult, RetrieverResultItem
+from neo4j_genai.exceptions import Neo4jVersionError
 
 
 class Retriever(ABC):
@@ -37,7 +38,7 @@ class Retriever(ABC):
 
         Queries the Neo4j database to retrieve its version and compares it
         against a target version (5.18.1) that is known to support vector
-        indexing. Raises a ValueError if the connected Neo4j version is
+        indexing. Raises a Neo4jMinVersionError if the connected Neo4j version is
         not supported.
         """
         records, _, _ = self.driver.execute_query("CALL dbms.components()")
@@ -54,9 +55,7 @@ class Retriever(ABC):
             target_version = (5, 18, 1)
 
         if version_tuple < target_version:
-            raise ValueError(
-                "This package only supports Neo4j version 5.18.1 or greater"
-            )
+            raise Neo4jVersionError()
 
     def _fetch_index_infos(self):
         """Fetch the node label and embedding property from the index definition"""

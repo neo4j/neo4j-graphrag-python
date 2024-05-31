@@ -18,6 +18,7 @@ from unittest.mock import patch
 import pytest
 
 from neo4j_genai import HybridRetriever, HybridCypherRetriever
+from neo4j_genai.exceptions import RetrieverInitializationError, EmbeddingRequiredError
 from neo4j_genai.neo4j_queries import get_search_query
 from neo4j_genai.types import SearchType, RetrieverResult, RetrieverResultItem
 
@@ -45,7 +46,7 @@ def test_vector_cypher_retriever_initialization(driver):
 
 @patch("neo4j_genai.HybridRetriever._verify_version")
 def test_hybrid_retriever_invalid_fulltext_index_name(_verify_version_mock, driver):
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(RetrieverInitializationError) as exc_info:
         HybridRetriever(
             driver=driver, vector_index_name="my-index", fulltext_index_name=42
         )
@@ -56,7 +57,7 @@ def test_hybrid_retriever_invalid_fulltext_index_name(_verify_version_mock, driv
 
 @patch("neo4j_genai.HybridCypherRetriever._verify_version")
 def test_hybrid_cypher_retriever_invalid_retrieval_query(_verify_version_mock, driver):
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(RetrieverInitializationError) as exc_info:
         HybridCypherRetriever(
             driver=driver,
             vector_index_name="my-index",
@@ -153,7 +154,9 @@ def test_error_when_hybrid_search_only_text_no_embedder(hybrid_retriever):
     query_text = "may thy knife chip and shatter"
     top_k = 5
 
-    with pytest.raises(ValueError, match="Embedding method required for text query."):
+    with pytest.raises(
+        EmbeddingRequiredError, match="Embedding method required for text query."
+    ):
         hybrid_retriever.search(
             query_text=query_text,
             top_k=top_k,
@@ -166,7 +169,9 @@ def test_hybrid_search_retriever_search_missing_embedder_for_text(
     query_text = "may thy knife chip and shatter"
     top_k = 5
 
-    with pytest.raises(ValueError, match="Embedding method required for text query"):
+    with pytest.raises(
+        EmbeddingRequiredError, match="Embedding method required for text query"
+    ):
         hybrid_retriever.search(
             query_text=query_text,
             top_k=top_k,
