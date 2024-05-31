@@ -66,7 +66,11 @@ class PineconeNeo4jRetriever(ExternalRetriever):
         self.client = validated_data.client_model.client
         self.index_name = validated_data.index_name
         self.index = self.client.Index(index_name)
-        self.embedder = validated_data.embedder_model.embedder
+        self.embedder = (
+            validated_data.embedder_model.embedder
+            if validated_data.embedder_model
+            else None
+        )
         self.return_properties = validated_data.return_properties
         self.retrieval_query = validated_data.retrieval_query
 
