@@ -56,7 +56,7 @@ class WeaviateNeo4jSearchModel(BaseModel):
     top_k: PositiveInt = 5
     query_vector: Optional[list[float]] = None
     query_text: Optional[str] = None
-    weaviate_filters: Optional[_Filters] = (None,)
+    weaviate_filters: Optional[_Filters] = None
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @field_validator("weaviate_filters")

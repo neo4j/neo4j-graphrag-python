@@ -52,7 +52,6 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
             driver_model = Neo4jDriverModel(driver=driver)
             weaviate_model = WeaviateModel(client=client)
             embedder_model = EmbedderModel(embedder=embedder) if embedder else None
-            print("embedder_model", embedder_model)
             validated_data = WeaviateNeo4jRetrieverModel(
                 driver_model=driver_model,
                 client_model=weaviate_model,
