@@ -62,13 +62,12 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
                 embedder_model=embedder_model,
                 return_properties=return_properties,
                 retrieval_query=retrieval_query,
+                format_record_function=format_record_function,
             )
         except ValidationError as e:
             raise RetrieverInitializationError(e.errors())
 
-        super().__init__(id_property_external, id_property_neo4j)
-        self.format_record_function = format_record_function
-        self.driver = validated_data.driver_model.driver
+        super().__init__(driver, id_property_external, id_property_neo4j)
         self.client = validated_data.client_model.client
         collection = validated_data.collection
         self.search_collection = self.client.collections.get(collection)
@@ -79,6 +78,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         )
         self.return_properties = validated_data.return_properties
         self.retrieval_query = validated_data.retrieval_query
+        self.format_record_function = validated_data.format_record_function
 
     def _get_search_results(
         self,

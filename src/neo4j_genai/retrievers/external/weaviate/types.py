@@ -12,8 +12,9 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Optional
+from typing import Optional, Callable
 
+import neo4j
 from pydantic import (
     field_validator,
     BaseModel,
@@ -50,6 +51,7 @@ class WeaviateNeo4jRetrieverModel(BaseModel):
     embedder_model: Optional[EmbedderModel]
     return_properties: Optional[list[str]] = None
     retrieval_query: Optional[str] = None
+    format_record_function: Optional[Callable[[neo4j.Record], str]] = None
 
 
 class WeaviateNeo4jSearchModel(BaseModel):

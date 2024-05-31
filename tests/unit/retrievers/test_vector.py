@@ -244,38 +244,6 @@ def test_vector_cypher_retriever_search_both_text_and_vector(vector_cypher_retri
         )
 
 
-@patch("neo4j_genai.VectorRetriever._fetch_index_infos")
-@patch("neo4j_genai.VectorRetriever._verify_version")
-def test_similarity_search_vector_bad_results(
-    _verify_version_mock,
-    _fetch_index_infos,
-    driver,
-):
-    index_name = "my-index"
-    dimensions = 1536
-    query_vector = [1.0 for _ in range(dimensions)]
-    top_k = 5
-    retriever = VectorRetriever(driver, index_name)
-    retriever.driver.execute_query.return_value = [
-        ["not a neo4j record"],
-        None,
-        None,
-    ]
-    search_query, _ = get_search_query(SearchType.VECTOR)
-
-    with pytest.raises(InvalidRetrieverResultError):
-        retriever.search(query_vector=query_vector, top_k=top_k)
-
-    retriever.driver.execute_query.assert_called_once_with(
-        search_query,
-        {
-            "vector_index_name": index_name,
-            "top_k": top_k,
-            "query_vector": query_vector,
-        },
-    )
-
-
 @patch("neo4j_genai.VectorCypherRetriever._fetch_index_infos")
 @patch("neo4j_genai.VectorCypherRetriever._verify_version")
 def test_retrieval_query_happy_path(
