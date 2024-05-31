@@ -16,6 +16,7 @@ from unittest.mock import patch, call
 
 import pytest
 
+from neo4j_genai.exceptions import FilterValidationError
 from neo4j_genai.filters import (
     get_metadata_filter,
     _single_condition_cypher,
@@ -194,7 +195,7 @@ def test_single_condition_cypher_escaped_field_name(param_store_empty):
 
 
 def test_handle_field_filter_not_a_string(param_store_empty):
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(FilterValidationError) as excinfo:
         _handle_field_filter(1, "value", param_store=param_store_empty)
     assert "Field should be a string but got: <class 'int'> with value: 1" in str(
         excinfo
@@ -202,7 +203,7 @@ def test_handle_field_filter_not_a_string(param_store_empty):
 
 
 def test_handle_field_filter_field_start_with_dollar_sign(param_store_empty):
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(FilterValidationError) as excinfo:
         _handle_field_filter("$field_name", "value", param_store=param_store_empty)
     assert (
         "Invalid filter condition. Expected a field but got an operator: $field_name"
@@ -211,7 +212,7 @@ def test_handle_field_filter_field_start_with_dollar_sign(param_store_empty):
 
 
 def test_handle_field_filter_bad_value(param_store_empty):
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(FilterValidationError) as excinfo:
         _handle_field_filter(
             "field",
             value={"operator1": "value1", "operator2": "value2"},
@@ -221,7 +222,7 @@ def test_handle_field_filter_bad_value(param_store_empty):
 
 
 def test_handle_field_filter_bad_operator_name(param_store_empty):
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(FilterValidationError) as excinfo:
         _handle_field_filter(
             "field", value={"$invalid": "value"}, param_store=param_store_empty
         )
@@ -237,7 +238,7 @@ def test_handle_field_filter_operator_between(param_store_empty):
 
 
 def test_handle_field_filter_operator_between_not_enough_parameters(param_store_empty):
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(FilterValidationError) as excinfo:
         _handle_field_filter(
             "field",
             value={
@@ -355,7 +356,7 @@ def test_handle_field_filter_ilike(_single_condition_cypher_mocked, param_store_
 def test_construct_metadata_filter_filter_is_not_a_dict(
     _handle_field_filter_mock, param_store_empty
 ):
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(FilterValidationError) as excinfo:
         _construct_metadata_filter([], param_store_empty, node_alias="n")
     assert "Filter must be a dictionary, got <class 'list'>" in str(excinfo)
 
@@ -429,7 +430,7 @@ def test_construct_metadata_filter_or(
 
 
 def test_construct_metadata_filter_invalid_operator(param_store_empty):
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(FilterValidationError) as excinfo:
         _construct_metadata_filter(
             {"$invalid": [{}, {}]}, param_store_empty, node_alias="n"
         )
@@ -582,17 +583,17 @@ def test_get_metadata_filter_and_or_combined():
 # now testing bad filters
 def test_get_metadata_filter_field_name_with_dollar_sign():
     filters = {"$field": "value"}
-    with pytest.raises(ValueError):
+    with pytest.raises(FilterValidationError):
         get_metadata_filter(filters)
 
 
 def test_get_metadata_filter_and_no_list():
     filters = {"$and": {}}
-    with pytest.raises(ValueError):
+    with pytest.raises(FilterValidationError):
         get_metadata_filter(filters)
 
 
 def test_get_metadata_filter_unsupported_operator():
     filters = {"field": {"$unsupported": "value"}}
-    with pytest.raises(ValueError):
+    with pytest.raises(FilterValidationError):
         get_metadata_filter(filters)

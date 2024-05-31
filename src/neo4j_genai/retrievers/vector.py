@@ -15,6 +15,13 @@
 from typing import Optional, Any
 
 import neo4j
+
+from neo4j_genai.exceptions import (
+    RetrieverInitializationError,
+    SearchValidationError,
+    EmbeddingRequiredError,
+    InvalidRetrieverResultError,
+)
 from neo4j_genai.retrievers.base import Retriever
 from pydantic import ValidationError
 
@@ -76,7 +83,7 @@ class VectorRetriever(Retriever):
                 return_properties=return_properties,
             )
         except ValidationError as e:
-            raise ValueError(f"Validation failed: {e.errors()}")
+            raise RetrieverInitializationError(e.errors())
 
         super().__init__(driver)
         self.index_name = validated_data.index_name
@@ -111,8 +118,8 @@ class VectorRetriever(Retriever):
             filters (Optional[dict[str, Any]]): Filters for metadata pre-filtering. Defaults to None.
 
         Raises:
-            ValueError: If validation of the input arguments fail.
-            ValueError: If no embedder is provided.
+            SearchValidationError: If validation of the input arguments fail.
+            EmbeddingRequiredError: If no embedder is provided.
 
         Returns:
             list[VectorSearchRecord]: The `top_k` neighbors found in vector search with their nodes and scores.
@@ -125,14 +132,15 @@ class VectorRetriever(Retriever):
                 query_text=query_text,
             )
         except ValidationError as e:
-            error_details = e.errors()
-            raise ValueError(f"Validation failed: {error_details}")
+            raise SearchValidationError(e.errors())
 
         parameters = validated_data.model_dump(exclude_none=True)
 
         if query_text:
             if not self.embedder:
-                raise ValueError("Embedding method required for text query.")
+                raise EmbeddingRequiredError(
+                    "Embedding method required for text query."
+                )
             query_vector = self.embedder.embed_query(query_text)
             parameters["query_vector"] = query_vector
             del parameters["query_text"]
@@ -158,9 +166,8 @@ class VectorRetriever(Retriever):
                 for record in records
             ]
         except ValidationError as e:
-            error_details = e.errors()
-            raise ValueError(
-                f"Validation failed while constructing output: {error_details}"
+            raise InvalidRetrieverResultError(
+                f"Failed constructing VectorSearchRecord output: {e.errors()}"
             )
 
 
@@ -209,7 +216,7 @@ class VectorCypherRetriever(Retriever):
                 embedder_model=embedder_model,
             )
         except ValidationError as e:
-            raise ValueError(f"Validation failed: {e.errors()}")
+            raise RetrieverInitializationError(e.errors())
 
         super().__init__(driver)
         self.index_name = validated_data.index_name
@@ -246,8 +253,8 @@ class VectorCypherRetriever(Retriever):
             filters (Optional[dict[str, Any]]): Filters for metadata pre-filtering. Defaults to None.
 
         Raises:
-            ValueError: If validation of the input arguments fail.
-            ValueError: If no embedder is provided.
+            SearchValidationError: If validation of the input arguments fail.
+            EmbeddingRequiredError: If no embedder is provided.
 
         Returns:
             list[VectorSearchRecord]: The `top_k` neighbors found in vector search with their nodes and scores.
@@ -261,13 +268,15 @@ class VectorCypherRetriever(Retriever):
                 query_params=query_params,
             )
         except ValidationError as e:
-            raise ValueError(f"Validation failed: {e.errors()}")
+            raise SearchValidationError(e.errors())
 
         parameters = validated_data.model_dump(exclude_none=True)
 
         if query_text:
             if not self.embedder:
-                raise ValueError("Embedding method required for text query.")
+                raise EmbeddingRequiredError(
+                    "Embedding method required for text query."
+                )
             parameters["query_vector"] = self.embedder.embed_query(query_text)
             del parameters["query_text"]
 
