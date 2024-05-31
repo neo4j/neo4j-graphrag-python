@@ -1,0 +1,39 @@
+name: Changelog Generator
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  generate-and-pr:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+
+    - name: Generate Changelog
+      uses: github-changelog-generator/github-changelog-generator@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        output: CHANGELOG.md
+
+    - name: Create Commit
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add CHANGELOG.md
+        git commit -m "Update CHANGELOG.md" || echo "No changes to commit"
+        git push
+
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: Update CHANGELOG.md
+        title: Update Changelog
+        body: "Automatically generated changelog for new release"
+        branch: "auto-update-changelog-${{ github.ref }}"
