@@ -23,7 +23,7 @@ from weaviate.collections.classes.filters import _Filters
 import neo4j
 import logging
 from neo4j_genai.neo4j_queries import get_query_tail
-from neo4j_genai.types import RetrieverRawResult
+from neo4j_genai.types import RawSearchResult
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +55,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         query_text: Optional[str] = None,
         top_k: int = 5,
         weaviate_filters: Optional[_Filters] = None,
-    ) -> RetrieverRawResult:
+    ) -> RawSearchResult:
         """Get the top_k nearest neighbor embeddings using Weaviate for either provided query_vector or query_text.
         Both query_vector and query_text can be provided.
         If query_vector is provided, then it will be preferred over the embedded query_text
@@ -75,7 +75,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         Raises:
             ValueError: If validation of the input arguments fail.
         Returns:
-            RetrieverRawResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
+            RawSearchResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
         """
 
         validate_search_query_input(query_text=query_text, query_vector=query_vector)
@@ -130,7 +130,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
 
         records, _, _ = self.driver.execute_query(search_query, parameters)
 
-        return RetrieverRawResult(records=records)
+        return RawSearchResult(records=records)
 
 
 def get_match_query(

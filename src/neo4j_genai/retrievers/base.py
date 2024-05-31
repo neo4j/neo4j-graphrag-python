@@ -16,7 +16,7 @@ from abc import ABC, abstractmethod
 from typing import Optional, Callable
 import neo4j
 
-from neo4j_genai.types import RetrieverRawResult, RetrieverResult, RetrieverResultItem
+from neo4j_genai.types import RawSearchResult, RetrieverResult, RetrieverResultItem
 
 
 class Retriever(ABC):
@@ -92,7 +92,7 @@ class Retriever(ABC):
         )
 
     @abstractmethod
-    def _get_search_results(self, *args, **kwargs) -> RetrieverRawResult:
+    def _get_search_results(self, *args, **kwargs) -> RawSearchResult:
         pass
 
     def get_result_formatter(self) -> Callable[[neo4j.Record], RetrieverResultItem]:

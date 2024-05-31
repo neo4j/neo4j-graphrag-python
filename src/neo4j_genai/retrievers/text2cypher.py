@@ -29,7 +29,7 @@ from neo4j_genai.types import (
     Neo4jSchemaModel,
     Text2CypherRetrieverModel,
     Text2CypherSearchModel,
-    RetrieverRawResult,
+    RawSearchResult,
 )
 
 logger = logging.getLogger(__name__)
@@ -79,7 +79,7 @@ class Text2CypherRetriever(Retriever):
 
     def _get_search_results(
         self, query_text: str, examples: Optional[list[str]] = None
-    ) -> RetrieverRawResult:
+    ) -> RawSearchResult:
         """Converts query_text to a Cypher query using an LLM.
            Retrieve records from a Neo4j database using the generated Cypher query.
 
@@ -92,7 +92,7 @@ class Text2CypherRetriever(Retriever):
             RuntimeError: If the LLM fails to generate a correct Cypher query.
 
         Returns:
-            RetrieverRawResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
+            RawSearchResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
         """
         try:
             validated_data = Text2CypherSearchModel(
@@ -118,7 +118,7 @@ class Text2CypherRetriever(Retriever):
             logger.error("Cypher query generation failed: %s", e.message)
             raise RuntimeError(f"Cypher query generation failed: {e.message}")
 
-        return RetrieverRawResult(
+        return RawSearchResult(
             records=records,
             metadata={
                 "cypher": t2c_query,

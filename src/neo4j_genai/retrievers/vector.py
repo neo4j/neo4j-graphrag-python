@@ -27,7 +27,7 @@ from neo4j_genai.types import (
     EmbedderModel,
     VectorRetrieverModel,
     VectorCypherRetrieverModel,
-    RetrieverRawResult,
+    RawSearchResult,
     RetrieverResultItem,
 )
 from neo4j_genai.neo4j_queries import get_search_query
@@ -112,7 +112,7 @@ class VectorRetriever(Retriever):
         query_text: Optional[str] = None,
         top_k: int = 5,
         filters: Optional[dict[str, Any]] = None,
-    ) -> RetrieverRawResult:
+    ) -> RawSearchResult:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         See the following documentation for more details:
 
@@ -130,7 +130,7 @@ class VectorRetriever(Retriever):
             ValueError: If no embedder is provided.
 
         Returns:
-            RetrieverRawResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
+            RawSearchResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
         """
         try:
             validated_data = VectorSearchModel(
@@ -166,7 +166,7 @@ class VectorRetriever(Retriever):
         logger.debug("VectorRetriever Cypher query: %s", search_query)
 
         records, _, _ = self.driver.execute_query(search_query, parameters)
-        return RetrieverRawResult(records=records)
+        return RawSearchResult(records=records)
 
 
 class VectorCypherRetriever(Retriever):
@@ -238,7 +238,7 @@ class VectorCypherRetriever(Retriever):
         top_k: int = 5,
         query_params: Optional[dict[str, Any]] = None,
         filters: Optional[dict[str, Any]] = None,
-    ) -> RetrieverRawResult:
+    ) -> RawSearchResult:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         See the following documentation for more details:
 
@@ -257,7 +257,7 @@ class VectorCypherRetriever(Retriever):
             ValueError: If no embedder is provided.
 
         Returns:
-            RetrieverRawResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
+            RawSearchResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
         """
         try:
             validated_data = VectorCypherSearchModel(
@@ -298,6 +298,6 @@ class VectorCypherRetriever(Retriever):
         logger.debug("VectorCypherRetriever Cypher query: %s", search_query)
 
         records, _, _ = self.driver.execute_query(search_query, parameters)
-        return RetrieverRawResult(
+        return RawSearchResult(
             records=records,
         )

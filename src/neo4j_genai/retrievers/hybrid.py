@@ -27,7 +27,7 @@ from neo4j_genai.types import (
     EmbedderModel,
     HybridRetrieverModel,
     HybridCypherRetrieverModel,
-    RetrieverRawResult,
+    RawSearchResult,
     RetrieverResultItem,
 )
 from neo4j_genai.neo4j_queries import get_search_query
@@ -114,7 +114,7 @@ class HybridRetriever(Retriever):
         query_text: str,
         query_vector: Optional[list[float]] = None,
         top_k: int = 5,
-    ) -> RetrieverRawResult:
+    ) -> RawSearchResult:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         Both query_vector and query_text can be provided.
         If query_vector is provided, then it will be preferred over the embedded query_text
@@ -136,7 +136,7 @@ class HybridRetriever(Retriever):
             ValueError: If no embedder is provided.
 
         Returns:
-            RetrieverRawResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
+            RawSearchResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
         """
         try:
             validated_data = HybridSearchModel(
@@ -163,7 +163,7 @@ class HybridRetriever(Retriever):
         logger.debug("HybridRetriever Cypher query: %s", search_query)
 
         records, _, _ = self.driver.execute_query(search_query, parameters)
-        return RetrieverRawResult(
+        return RawSearchResult(
             records=records,
         )
 
@@ -237,7 +237,7 @@ class HybridCypherRetriever(Retriever):
         query_vector: Optional[list[float]] = None,
         top_k: int = 5,
         query_params: Optional[dict[str, Any]] = None,
-    ) -> RetrieverRawResult:
+    ) -> RawSearchResult:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         Both query_vector and query_text can be provided.
         If query_vector is provided, then it will be preferred over the embedded query_text
@@ -260,7 +260,7 @@ class HybridCypherRetriever(Retriever):
             ValueError: If no embedder is provided.
 
         Returns:
-            RetrieverRawResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
+            RawSearchResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
         """
         try:
             validated_data = HybridCypherSearchModel(
@@ -296,6 +296,6 @@ class HybridCypherRetriever(Retriever):
         logger.debug("HybridCypherRetriever Cypher query: %s", search_query)
 
         records, _, _ = self.driver.execute_query(search_query, parameters)
-        return RetrieverRawResult(
+        return RawSearchResult(
             records=records,
         )

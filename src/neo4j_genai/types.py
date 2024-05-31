@@ -27,21 +27,7 @@ from pydantic import (
 from neo4j_genai.retrievers.utils import validate_search_query_input
 
 
-class RetrieverResultItem(BaseModel):
-    """
-    A single record returned from a retriever.
-
-    Attributes:
-        content (str): The context as will be provided to the LLM
-        metadata (Optional[dict]): Any metadata that can be included together
-            with the text, related to that record (e.g. another node property)
-    """
-
-    content: str
-    metadata: Optional[dict] = None
-
-
-class RetrieverRawResult(BaseModel):
+class RawSearchResult(BaseModel):
     """
     Represents the raw result returned from the retriever get_search_result
     method. It needs to be formatted further before being returned as a RetrieverResult.
@@ -64,6 +50,20 @@ class RetrieverRawResult(BaseModel):
                     "Type mismatch, expected neo4j.Record, got {}".format(type(v))
                 )
         return value
+
+
+class RetrieverResultItem(BaseModel):
+    """
+    A single record returned from a retriever.
+
+    Attributes:
+        content (str): The context as will be provided to the LLM
+        metadata (Optional[dict]): Any metadata that can be included together
+            with the text, related to that record (e.g. another node property)
+    """
+
+    content: str
+    metadata: Optional[dict] = None
 
 
 class RetrieverResult(BaseModel):
