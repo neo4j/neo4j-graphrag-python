@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Optional
+from typing import Optional, Callable
 
 from pydantic import ValidationError
 
@@ -31,7 +31,7 @@ from weaviate.collections.classes.filters import _Filters
 import neo4j
 import logging
 from neo4j_genai.neo4j_queries import get_query_tail
-from neo4j_genai.types import Neo4jDriverModel, EmbedderModel
+from neo4j_genai.types import RawSearchResult, Neo4jDriverModel, EmbedderModel
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +47,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         embedder: Optional[Embedder] = None,
         return_properties: Optional[list[str]] = None,
         retrieval_query: Optional[str] = None,
+        format_record_function: Optional[Callable] = None,
     ):
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -61,12 +62,12 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
                 embedder_model=embedder_model,
                 return_properties=return_properties,
                 retrieval_query=retrieval_query,
+                format_record_function=format_record_function,
             )
         except ValidationError as e:
             raise RetrieverInitializationError(e.errors())
 
-        super().__init__(id_property_external, id_property_neo4j)
-        self.driver = validated_data.driver_model.driver
+        super().__init__(driver, id_property_external, id_property_neo4j)
         self.client = validated_data.client_model.client
         collection = validated_data.collection
         self.search_collection = self.client.collections.get(collection)
@@ -77,14 +78,15 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         )
         self.return_properties = validated_data.return_properties
         self.retrieval_query = validated_data.retrieval_query
+        self.format_record_function = validated_data.format_record_function
 
-    def search(
+    def _get_search_results(
         self,
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
         weaviate_filters: Optional[_Filters] = None,
-    ) -> list[neo4j.Record]:
+    ) -> RawSearchResult:
         """Get the top_k nearest neighbor embeddings using Weaviate for either provided query_vector or query_text.
         Both query_vector and query_text can be provided.
         If query_vector is provided, then it will be preferred over the embedded query_text
@@ -104,7 +106,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         Raises:
             SearchValidationError: If validation of the input arguments fail.
         Returns:
-            list[neo4j.Record]: The results of the search query
+            RawSearchResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
         """
         try:
             validated_data = WeaviateNeo4jSearchModel(
@@ -170,7 +172,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
 
         records, _, _ = self.driver.execute_query(search_query, parameters)
 
-        return records
+        return RawSearchResult(records=records)
 
 
 def get_match_query(

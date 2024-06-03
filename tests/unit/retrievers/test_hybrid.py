@@ -20,7 +20,7 @@ import pytest
 from neo4j_genai import HybridRetriever, HybridCypherRetriever
 from neo4j_genai.exceptions import RetrieverInitializationError, EmbeddingRequiredError
 from neo4j_genai.neo4j_queries import get_search_query
-from neo4j_genai.types import SearchType
+from neo4j_genai.types import SearchType, RetrieverResult, RetrieverResultItem
 
 
 def test_vector_retriever_initialization(driver):
@@ -70,7 +70,9 @@ def test_hybrid_cypher_retriever_invalid_retrieval_query(_verify_version_mock, d
 
 
 @patch("neo4j_genai.HybridRetriever._verify_version")
-def test_hybrid_search_text_happy_path(_verify_version_mock, driver, embedder):
+def test_hybrid_search_text_happy_path(
+    _verify_version_mock, driver, embedder, neo4j_record
+):
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
     vector_index_name = "my-index"
@@ -81,7 +83,7 @@ def test_hybrid_search_text_happy_path(_verify_version_mock, driver, embedder):
         driver, vector_index_name, fulltext_index_name, embedder
     )
     retriever.driver.execute_query.return_value = [
-        [{"node": "dummy-node", "score": 1.0}],
+        [neo4j_record],
         None,
         None,
     ]
@@ -100,12 +102,20 @@ def test_hybrid_search_text_happy_path(_verify_version_mock, driver, embedder):
         },
     )
     embedder.embed_query.assert_called_once_with(query_text)
-    assert records == [{"node": "dummy-node", "score": 1.0}]
+    assert records == RetrieverResult(
+        items=[
+            RetrieverResultItem(content="dummy-node", metadata={"score": 1.0}),
+        ],
+        metadata={"__retriever": "HybridRetriever"},
+    )
 
 
 @patch("neo4j_genai.HybridRetriever._verify_version")
 def test_hybrid_search_favors_query_vector_over_embedding_vector(
-    _verify_version_mock, driver, embedder
+    _verify_version_mock,
+    driver,
+    embedder,
+    neo4j_record,
 ):
     embed_query_vector = [1.0 for _ in range(1536)]
     query_vector = [2.0 for _ in range(1536)]
@@ -119,7 +129,7 @@ def test_hybrid_search_favors_query_vector_over_embedding_vector(
         driver, vector_index_name, fulltext_index_name, embedder
     )
     retriever.driver.execute_query.return_value = [
-        [{"node": "dummy-node", "score": 1.0}],
+        [neo4j_record],
         None,
         None,
     ]
@@ -169,7 +179,9 @@ def test_hybrid_search_retriever_search_missing_embedder_for_text(
 
 
 @patch("neo4j_genai.HybridRetriever._verify_version")
-def test_hybrid_retriever_return_properties(_verify_version_mock, driver, embedder):
+def test_hybrid_retriever_return_properties(
+    _verify_version_mock, driver, embedder, neo4j_record
+):
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
     vector_index_name = "my-index"
@@ -185,7 +197,7 @@ def test_hybrid_retriever_return_properties(_verify_version_mock, driver, embedd
         return_properties,
     )
     driver.execute_query.return_value = [
-        [{"node": "dummy-node", "score": 1.0}],
+        [neo4j_record],
         None,
         None,
     ]
@@ -204,12 +216,20 @@ def test_hybrid_retriever_return_properties(_verify_version_mock, driver, embedd
             "query_vector": embed_query_vector,
         },
     )
-    assert records == [{"node": "dummy-node", "score": 1.0}]
+    assert records == RetrieverResult(
+        items=[
+            RetrieverResultItem(content="dummy-node", metadata={"score": 1.0}),
+        ],
+        metadata={"__retriever": "HybridRetriever"},
+    )
 
 
 @patch("neo4j_genai.HybridCypherRetriever._verify_version")
 def test_hybrid_cypher_retrieval_query_with_params(
-    _verify_version_mock, driver, embedder
+    _verify_version_mock,
+    driver,
+    embedder,
+    neo4j_record,
 ):
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
@@ -231,7 +251,7 @@ def test_hybrid_cypher_retrieval_query_with_params(
         embedder,
     )
     driver.execute_query.return_value = [
-        [{"node_id": 123, "text": "dummy-text", "score": 1.0}],
+        [neo4j_record],
         None,
         None,
     ]
@@ -259,4 +279,11 @@ def test_hybrid_cypher_retrieval_query_with_params(
         },
     )
 
-    assert records == [{"node_id": 123, "text": "dummy-text", "score": 1.0}]
+    assert records == RetrieverResult(
+        items=[
+            RetrieverResultItem(
+                content="<Record node='dummy-node' score=1.0>", metadata=None
+            ),
+        ],
+        metadata={"__retriever": "HybridCypherRetriever"},
+    )

@@ -67,3 +67,8 @@ def hybrid_retriever(_verify_version_mock, driver):
 @patch("neo4j_genai.Text2CypherRetriever._verify_version")
 def t2c_retriever(_verify_version_mock, driver, llm):
     return Text2CypherRetriever(driver, llm)
+
+
+@pytest.fixture(scope="function")
+def neo4j_record():
+    return neo4j.Record({"node": "dummy-node", "score": 1.0})

@@ -27,17 +27,57 @@ from pydantic import (
 from neo4j_genai.retrievers.utils import validate_search_query_input
 
 
-class VectorSearchRecord(BaseModel):
+class RawSearchResult(BaseModel):
     """
-    Represents a record returned from a vector search.
+    Represents the raw result returned from the retriever get_search_result
+    method. It needs to be formatted further before being returned as a RetrieverResult.
 
     Attributes:
-        node (Any): The node data retrieved by the search.
-        score (float): The similarity score of the retrieved embedding.
+        records (list[neo4j.Record]): A list of records from neo4j.
+        metadata: Record-related metadata, such as score.
     """
 
-    node: Any
-    score: float
+    records: list[neo4j.Record]
+    metadata: Optional[dict] = None
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_validator("records")
+    def check_records(cls, value):
+        for v in value:
+            if not isinstance(v, neo4j.Record):
+                raise TypeError(
+                    "Type mismatch, expected neo4j.Record, got {}".format(type(v))
+                )
+        return value
+
+
+class RetrieverResultItem(BaseModel):
+    """
+    A single record returned from a retriever.
+
+    Attributes:
+        content (str): The context as will be provided to the LLM
+        metadata (Optional[dict]): Any metadata that can be included together
+            with the text, related to that record (e.g. another node property)
+    """
+
+    content: str
+    metadata: Optional[dict] = None
+
+
+class RetrieverResult(BaseModel):
+    """
+    Represents a result returned from a retriever.
+
+    Attributes:
+        items (list[RetrieverResultItem]): A list of retrieved items.
+        metadata: Context-related metadata such as generated Cypher query
+         in the Text2CypherRetriever.
+    """
+
+    items: list[RetrieverResultItem]
+    metadata: Optional[dict] = None
 
 
 class Neo4jSchemaModel(BaseModel):
