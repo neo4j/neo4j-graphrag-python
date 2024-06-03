@@ -13,10 +13,9 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from enum import Enum
-from typing import Any, Callable, Literal, Optional
+from typing import Any, Literal, Optional
 
 import neo4j
-from pinecone import Pinecone
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -131,10 +130,6 @@ class VectorSearchModel(BaseModel):
         return values
 
 
-class PineconeSearchModel(VectorSearchModel):
-    pinecone_filter: Optional[dict[str, Any]] = None
-
-
 class VectorCypherSearchModel(VectorSearchModel):
     query_params: Optional[dict[str, Any]] = None
 
@@ -202,17 +197,6 @@ class Neo4jDriverModel(BaseModel):
         return value
 
 
-class PineconeClientModel(BaseModel):
-    client: Pinecone
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    @field_validator("client")
-    def check_client(cls, value):
-        if not isinstance(value, Pinecone):
-            raise ValueError("Provided client needs to be of type Pinecone")
-        return value
-
-
 class VectorRetrieverModel(BaseModel):
     driver_model: Neo4jDriverModel
     index_name: str
@@ -247,14 +231,3 @@ class Text2CypherRetrieverModel(BaseModel):
     driver_model: Neo4jDriverModel
     llm_model: LLMModel
     neo4j_schema_model: Optional[Neo4jSchemaModel] = None
-
-
-class PineconeNeo4jRetrieverModel(BaseModel):
-    driver_model: Neo4jDriverModel
-    client_model: PineconeClientModel
-    index_name: str
-    id_property_neo4j: str
-    embedder_model: Optional[EmbedderModel] = None
-    return_properties: Optional[list[str]] = None
-    retrieval_query: Optional[str] = None
-    format_record_function: Optional[Callable[[neo4j.Record], str]] = None

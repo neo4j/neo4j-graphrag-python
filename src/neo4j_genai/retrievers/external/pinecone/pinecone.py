@@ -27,13 +27,15 @@ from neo4j_genai.exceptions import (
     SearchValidationError,
 )
 from neo4j_genai.retrievers.base import ExternalRetriever
+from neo4j_genai.retrievers.external.pinecone.types import (
+    PineconeClientModel,
+    PineconeNeo4jRetrieverModel,
+    PineconeSearchModel,
+)
 from neo4j_genai.retrievers.external.utils import get_match_query
 from neo4j_genai.types import (
     EmbedderModel,
     Neo4jDriverModel,
-    PineconeClientModel,
-    PineconeNeo4jRetrieverModel,
-    PineconeSearchModel,
     RawSearchResult,
 )
 
