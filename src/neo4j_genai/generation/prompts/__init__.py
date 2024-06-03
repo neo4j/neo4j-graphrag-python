@@ -5,7 +5,11 @@ class PromptTemplate:
     DEFAULT_TEMPLATE: str = ""
     EXPECTED_INPUTS: Optional[list] = None
 
-    def __init__(self, template: Optional[str] = None, expected_inputs: Optional[list[str]] = None):
+    def __init__(
+        self,
+        template: Optional[str] = None,
+        expected_inputs: Optional[list[str]] = None,
+    ):
         self.template = template or self.DEFAULT_TEMPLATE
         self.expected_inputs = expected_inputs or self.EXPECTED_INPUTS or []
 
