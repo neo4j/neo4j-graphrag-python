@@ -43,7 +43,10 @@ class Text2CypherRetriever(Retriever):
     """
 
     def __init__(
-        self, driver: neo4j.Driver, llm: LLMInterface, neo4j_schema: Optional[str] = None
+        self,
+        driver: neo4j.Driver,
+        llm: LLMInterface,
+        neo4j_schema: Optional[str] = None,
     ) -> None:
         try:
             driver_model = Neo4jDriverModel(driver=driver)

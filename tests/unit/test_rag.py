@@ -9,7 +9,9 @@ def test_rag_prompt_template():
         context="my context",
         query="user's query",
     )
-    assert prompt == """Answer the user question using the following context
+    assert (
+        prompt
+        == """Answer the user question using the following context
 
     Context:
     my context
@@ -19,6 +21,7 @@ def test_rag_prompt_template():
 
     Answer:
     """
+    )
 
 
 def test_rag_happy_path(driver, retriever_mock, llm):
@@ -33,10 +36,8 @@ def test_rag_happy_path(driver, retriever_mock, llm):
 
     res = rag.search("question")
 
-    retriever_mock.search.assert_called_once_with(
-        query_text="question"
-    )
-    llm.invoke.assert_called_once_with( """Answer the user question using the following context
+    retriever_mock.search.assert_called_once_with(query_text="question")
+    llm.invoke.assert_called_once_with("""Answer the user question using the following context
 
     Context:
     item content 1
