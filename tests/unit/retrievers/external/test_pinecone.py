@@ -15,9 +15,11 @@
 from unittest import mock
 from unittest.mock import MagicMock
 
+import neo4j
 import pytest
 from neo4j_genai.retrievers.external.pinecone import PineconeNeo4jRetriever
 from neo4j_genai.retrievers.external.utils import get_match_query
+from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 from pinecone import Pinecone
 
 
@@ -73,7 +75,7 @@ def test_pinecone_retriever_search_happy_path(driver, client):
         }
         retriever.driver.execute_query.return_value = (
             [
-                {"node": {"sync_id": f"node_{i}"}, "score": i / top_k}
+                neo4j.Record({"node": {"sync_id": f"node_{i}"}, "score": i / top_k})
                 for i in range(top_k)
             ],
             None,
@@ -91,9 +93,19 @@ def test_pinecone_retriever_search_happy_path(driver, client):
             },
         )
 
-    assert records == [
-        {"node": {"sync_id": f"node_{i}"}, "score": i / top_k} for i in range(top_k)
-    ]
+    assert records == RetrieverResult(
+        items=[
+            RetrieverResultItem(
+                content="<Record node={'sync_id': "
+                + f"'node_{i}'"
+                + "} "
+                + f"score={i / top_k}>",
+                metadata=None,
+            )
+            for i in range(top_k)
+        ],
+        metadata={"__retriever": "PineconeNeo4jRetriever"},
+    )
 
 
 def test_pinecone_retriever_search_return_properties(driver, client):
@@ -116,7 +128,7 @@ def test_pinecone_retriever_search_return_properties(driver, client):
         }
         retriever.driver.execute_query.return_value = (
             [
-                {"node": {"sync_id": f"node_{i}"}, "score": i / top_k}
+                neo4j.Record({"node": {"sync_id": f"node_{i}"}, "score": i / top_k})
                 for i in range(top_k)
             ],
             None,
@@ -136,9 +148,19 @@ def test_pinecone_retriever_search_return_properties(driver, client):
             },
         )
 
-    assert records == [
-        {"node": {"sync_id": f"node_{i}"}, "score": i / top_k} for i in range(top_k)
-    ]
+    assert records == RetrieverResult(
+        items=[
+            RetrieverResultItem(
+                content="<Record node={'sync_id': "
+                + f"'node_{i}'"
+                + "} "
+                + f"score={i / top_k}>",
+                metadata=None,
+            )
+            for i in range(top_k)
+        ],
+        metadata={"__retriever": "PineconeNeo4jRetriever"},
+    )
 
 
 def test_pinecone_retriever_search_retrieval_query(driver, client):
@@ -162,7 +184,7 @@ def test_pinecone_retriever_search_retrieval_query(driver, client):
         }
         retriever.driver.execute_query.return_value = (
             [
-                {"node": {"sync_id": f"node_{i}"}, "score": i / top_k}
+                neo4j.Record({"node": {"sync_id": f"node_{i}"}, "score": i / top_k})
                 for i in range(top_k)
             ],
             None,
@@ -182,6 +204,16 @@ def test_pinecone_retriever_search_retrieval_query(driver, client):
             },
         )
 
-    assert records == [
-        {"node": {"sync_id": f"node_{i}"}, "score": i / top_k} for i in range(top_k)
-    ]
+    assert records == RetrieverResult(
+        items=[
+            RetrieverResultItem(
+                content="<Record node={'sync_id': "
+                + f"'node_{i}'"
+                + "} "
+                + f"score={i / top_k}>",
+                metadata=None,
+            )
+            for i in range(top_k)
+        ],
+        metadata={"__retriever": "PineconeNeo4jRetriever"},
+    )

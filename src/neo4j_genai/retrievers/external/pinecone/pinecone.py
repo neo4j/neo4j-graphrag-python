@@ -14,7 +14,7 @@
 #  limitations under the License.
 
 import logging
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 import neo4j
 from pinecone import Pinecone
@@ -29,6 +29,7 @@ from neo4j_genai.types import (
     PineconeClientModel,
     PineconeNeo4jRetrieverModel,
     PineconeSearchModel,
+    RawSearchResult,
 )
 
 logger = logging.getLogger(__name__)
@@ -44,6 +45,7 @@ class PineconeNeo4jRetriever(ExternalRetriever):
         embedder: Optional[Embedder] = None,
         return_properties: Optional[list[str]] = None,
         retrieval_query: Optional[str] = None,
+        format_record_function: Optional[Callable] = None,
     ):
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -57,11 +59,16 @@ class PineconeNeo4jRetriever(ExternalRetriever):
                 embedder_model=embedder_model,
                 return_properties=return_properties,
                 retrieval_query=retrieval_query,
+                format_record_function=format_record_function,
             )
         except ValidationError as e:
             raise ValueError(f"Validation failed: {e.errors()}")
 
-        super().__init__("id", validated_data.id_property_neo4j)
+        super().__init__(
+            driver=driver,
+            id_property_external="id",
+            id_property_neo4j=validated_data.id_property_neo4j,
+        )
         self.driver = validated_data.driver_model.driver
         self.client = validated_data.client_model.client
         self.index_name = validated_data.index_name
@@ -74,13 +81,13 @@ class PineconeNeo4jRetriever(ExternalRetriever):
         self.return_properties = validated_data.return_properties
         self.retrieval_query = validated_data.retrieval_query
 
-    def search(
+    def _get_search_results(
         self,
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
         pinecone_filter: Optional[dict[str, Any]] = None,
-    ) -> list[neo4j.Record]:
+    ) -> RawSearchResult:
         """Get the top_k nearest neighbor embeddings using Pinecone for either provided query_vector or query_text.
         Both query_vector and query_text can be provided.
         If query_vector is provided, then it will be preferred over the embedded query_text
@@ -99,7 +106,7 @@ class PineconeNeo4jRetriever(ExternalRetriever):
         Raises:
             ValueError: If validation of the input arguments fail.
         Returns:
-            list[neo4j.Record]: The results of the search query
+            RawSearchResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
         """
 
         try:
@@ -147,4 +154,4 @@ class PineconeNeo4jRetriever(ExternalRetriever):
 
         records, _, _ = self.driver.execute_query(search_query, parameters)
 
-        return records
+        return RawSearchResult(records=records)

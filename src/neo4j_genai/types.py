@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from enum import Enum
-from typing import Any, Literal, Optional
+from typing import Any, Callable, Literal, Optional
 
 import neo4j
 from pinecone import Pinecone
@@ -257,3 +257,4 @@ class PineconeNeo4jRetrieverModel(BaseModel):
     embedder_model: Optional[EmbedderModel] = None
     return_properties: Optional[list[str]] = None
     retrieval_query: Optional[str] = None
+    format_record_function: Optional[Callable[[neo4j.Record], str]] = None

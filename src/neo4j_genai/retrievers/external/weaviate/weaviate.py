@@ -25,6 +25,7 @@ from weaviate.collections.classes.filters import _Filters
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.exceptions import RetrieverInitializationError, SearchValidationError
 from neo4j_genai.retrievers.base import ExternalRetriever
+from neo4j_genai.retrievers.external.utils import get_match_query
 from neo4j_genai.retrievers.external.weaviate.types import (
     WeaviateModel,
     WeaviateNeo4jRetrieverModel,
