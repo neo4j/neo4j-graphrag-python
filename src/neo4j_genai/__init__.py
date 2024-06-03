@@ -17,6 +17,10 @@ from .retrievers.hybrid import HybridCypherRetriever, HybridRetriever
 from .retrievers.text2cypher import Text2CypherRetriever
 from .retrievers.vector import VectorCypherRetriever, VectorRetriever
 from .retrievers.external.weaviate import WeaviateNeo4jRetriever
+from .generation.rag import RAG
+from .generation.llm.openai_llm import LLMInterface, OpenAILLM
+from .generation.prompts import PromptTemplate, RagTemplate
+
 
 __all__ = [
     "VectorRetriever",
@@ -25,4 +29,9 @@ __all__ = [
     "HybridCypherRetriever",
     "Text2CypherRetriever",
     "WeaviateNeo4jRetriever",
+    "LLMInterface",
+    "OpenAILLM",
+    "PromptTemplate",
+    "RagTemplate",
+    "RAG",
 ]
