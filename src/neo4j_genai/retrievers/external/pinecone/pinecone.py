@@ -118,7 +118,7 @@ class PineconeNeo4jRetriever(ExternalRetriever):
                 pinecone_filter=pinecone_filter,
             )
         except ValidationError as e:
-            raise ValueError(f"Validation failed: {e.errors()}")
+            raise SearchValidationError(e.errors())
 
         if validated_data.query_text:
             if self.embedder:
