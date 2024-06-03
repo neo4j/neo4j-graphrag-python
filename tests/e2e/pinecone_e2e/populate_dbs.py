@@ -29,7 +29,7 @@ def populate_dbs(neo4j_driver, pc_client, index_name="jeopardy"):
         name=index_name,
         dimension=384,
         metric="cosine",
-        spec=ServerlessSpec(cloud="aws", region="eu-west-1"),
+        spec=ServerlessSpec(cloud="aws", region="us-east-1"),
     )
 
     # Populate Pinecone
