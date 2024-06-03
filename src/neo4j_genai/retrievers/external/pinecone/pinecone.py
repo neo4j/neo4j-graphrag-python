@@ -102,13 +102,35 @@ class PineconeNeo4jRetriever(ExternalRetriever):
         If query_text is provided, then it will check if an embedder is provided and use it to generate the query_vector.
 
         See the following documentation for more details:
-        - [Query a vector index](https://neo4j.com/docs/cypher-manual/current/indexes-for-vector-search/#indexes-vector-query)
-        - [db.index.vector.queryNodes()](https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_queryNodes)
-        - [db.index.fulltext.queryNodes()](https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_fulltext_querynodes)
+        - `Query a vector index <https://neo4j.com/docs/cypher-manual/current/indexes-for-vector-search/#indexes-vector-query>`_
+        - `db.index.vector.queryNodes() <https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_queryNodes>`_
+        - `db.index.fulltext.queryNodes() <https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_fulltext_querynodes>`_
+
+
+        Example:
+
+        .. code-block:: python
+
+          from neo4j import GraphDatabase
+          from neo4j_genai.retrievers.external.pinecone import PineconeNeo4jRetriever
+          from pinecone import Pinecone
+
+          with GraphDatabase.driver(NEO4J_URL, auth=NEO4J_AUTH) as neo4j_driver:
+              pc_client = Pinecone(PC_API_KEY)
+              retriever = PineconeNeo4jRetriever(
+                  driver=neo4j_driver,
+                  client=pc_client,
+                  index_name="jeopardy",
+                  id_property_neo4j="id"
+              )
+              embedding = ...
+              retriever.search(query_vector=biology_embedding, top_k=2)
+
+
         Args:
             query_text (str): The text to get the closest neighbors of.
             query_vector (Optional[list[float]], optional): The vector embeddings to get the closest neighbors of. Defaults to None.
-            top_k (int, optional): The number of neighbors to return. Defaults to 5.
+            top_k (Optional[int]): The number of neighbors to return. Defaults to 5.
             pinecone_filter (Optional[dict[str, Any]], optional): The filters to apply to the search query in Pinecone. Defaults to None.
         Raises:
             SearchValidationError: If validation of the input arguments fail.
