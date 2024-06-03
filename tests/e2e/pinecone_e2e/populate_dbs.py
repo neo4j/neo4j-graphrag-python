@@ -140,9 +140,9 @@ def build_data_objects():
 
 
 if __name__ == "__main__":
-    neo4j_auth = ("neo4j", "password")
-    neo4j_url = "neo4j://localhost:7687"
-    pc_api_key = "API_KEY"
-    with GraphDatabase.driver(neo4j_url, auth=neo4j_auth) as neo4j_driver:
-        pc_client = Pinecone(pc_api_key)
+    NEO4J_AUTH = ("neo4j", "password")
+    NEO4J_URL = "neo4j://localhost:7687"
+    PC_API_KEY = "API_KEY"
+    with GraphDatabase.driver(NEO4J_URL, auth=NEO4J_AUTH) as neo4j_driver:
+        pc_client = Pinecone(PC_API_KEY)
         populate_dbs(neo4j_driver, pc_client)
