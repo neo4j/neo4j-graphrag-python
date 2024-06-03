@@ -74,7 +74,7 @@ def test_pinecone_neo4j_vector_input(driver, client):
 
         assert isinstance(results, RetrieverResult)
         assert len(results.items) == top_k
-        for result in results:
+        for result in results.items:
             assert isinstance(result, RetrieverResultItem)
         pattern = (
             r"<Record node=<Node element_id='.+' "
@@ -118,7 +118,7 @@ def test_pinecone_neo4j_text_input(driver, client, sentence_transformer_embedder
 
         assert isinstance(results, RetrieverResult)
         assert len(results.items) == top_k
-        for result in results:
+        for result in results.items:
             assert isinstance(result, RetrieverResultItem)
         pattern = (
             r"<Record node=<Node element_id='.+' "
