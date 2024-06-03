@@ -18,6 +18,7 @@ Topics
 
 + :ref:`api-documentation`
 + :ref:`types-documentation`
++ :ref:`rag-documentation`
 
 .. toctree::
     :maxdepth: 3
@@ -25,6 +26,7 @@ Topics
     :hidden:
 
     api.rst
+    rag.rst
     types.rst
 
 
