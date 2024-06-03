@@ -19,8 +19,8 @@ import neo4j
 from neo4j.exceptions import CypherSyntaxError, DriverError, Neo4jError
 from pydantic import ValidationError
 
-from neo4j_genai.llm import LLM
-from neo4j_genai.prompts import TEXT2CYPHER_PROMPT
+from neo4j_genai.generation.llm import LLMInterface
+from neo4j_genai.generation.prompts import Text2CypherTemplate
 from neo4j_genai.retrievers.base import Retriever
 from neo4j_genai.schema import get_schema
 from neo4j_genai.types import (
@@ -43,7 +43,7 @@ class Text2CypherRetriever(Retriever):
     """
 
     def __init__(
-        self, driver: neo4j.Driver, llm: LLM, neo4j_schema: Optional[str] = None
+        self, driver: neo4j.Driver, llm: LLMInterface, neo4j_schema: Optional[str] = None
     ) -> None:
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -101,12 +101,13 @@ class Text2CypherRetriever(Retriever):
         except ValidationError as e:
             raise ValueError(f"Validation failed: {e.errors()}")
 
-        prompt = TEXT2CYPHER_PROMPT.format(
+        prompt = Text2CypherTemplate()
+        prompt = prompt.format(
             schema=self.neo4j_schema,
             examples="\n".join(validated_data.examples)
             if validated_data.examples
             else "",
-            input=validated_data.query_text,
+            query=validated_data.query_text,
         )
         logger.debug("Text2CypherRetriever prompt: %s", prompt)
 

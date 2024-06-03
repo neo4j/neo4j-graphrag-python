@@ -25,7 +25,7 @@ from neo4j_genai.indexes import (
     create_vector_index,
     drop_index_if_exists,
 )
-from neo4j_genai.llm import LLM
+from neo4j_genai.generation.llm import LLMInterface
 
 
 @pytest.fixture(scope="module")
@@ -39,7 +39,7 @@ def driver():
 
 @pytest.fixture(scope="module")
 def llm():
-    return MagicMock(spec=LLM)
+    return MagicMock(spec=LLMInterface)
 
 
 @pytest.fixture(scope="module")

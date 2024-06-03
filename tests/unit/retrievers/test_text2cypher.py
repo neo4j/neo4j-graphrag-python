@@ -17,7 +17,7 @@ from unittest.mock import patch
 import pytest
 from neo4j.exceptions import CypherSyntaxError, Neo4jError
 from neo4j_genai import Text2CypherRetriever
-from neo4j_genai.prompts import TEXT2CYPHER_PROMPT
+from neo4j_genai.generation.prompts import Text2CypherTemplate
 
 
 def test_t2c_retriever_initialization(driver, llm):
@@ -91,10 +91,11 @@ def test_t2c_retriever_happy_path(_verify_version_mock, driver, llm, neo4j_recor
         None,
         None,
     )
-    prompt = TEXT2CYPHER_PROMPT.format(
+    template = Text2CypherTemplate()
+    prompt = template.format(
         schema=neo4j_schema,
         examples="\n".join(examples),
-        input=query_text,
+        query=query_text,
     )
     retriever.search(query_text=query_text, examples=examples)
     retriever.llm.invoke.assert_called_once_with(prompt)
