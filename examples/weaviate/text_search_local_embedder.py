@@ -13,9 +13,10 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from neo4j_genai.retrievers.external.weaviate import WeaviateNeo4jRetriever
+import weaviate
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from neo4j import GraphDatabase
+from neo4j_genai.retrievers.external.weaviate import WeaviateNeo4jRetriever
 from weaviate.connect.helpers import connect_to_local
 
 NEO4J_URL = "neo4j://localhost:7687"
