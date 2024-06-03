@@ -18,6 +18,6 @@ from typing import Optional
 
 def validate_search_query_input(
     query_text: Optional[str] = None, query_vector: Optional[list[float]] = None
-):
+) -> None:
     if not (bool(query_vector) ^ bool(query_text)):
         raise ValueError("You must provide exactly one of query_vector or query_text.")

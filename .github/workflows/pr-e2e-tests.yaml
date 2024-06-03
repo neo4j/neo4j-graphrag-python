@@ -78,4 +78,3 @@ jobs:
           else
               poetry run pytest ./tests/e2e
           fi
-

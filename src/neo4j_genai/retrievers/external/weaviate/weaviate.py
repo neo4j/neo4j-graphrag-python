@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Optional
+from typing import Optional, Any
 
 from pydantic import ValidationError
 
@@ -27,7 +27,6 @@ from neo4j_genai.retrievers.external.weaviate.types import (
 )
 import weaviate.classes as wvc
 from weaviate.client import WeaviateClient
-from weaviate.collections.classes.filters import _Filters
 import neo4j
 import logging
 from neo4j_genai.neo4j_queries import get_query_tail
@@ -83,7 +82,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
-        weaviate_filters: Optional[_Filters] = None,
+        **kwargs: Any,
     ) -> list[neo4j.Record]:
         """Get the top_k nearest neighbor embeddings using Weaviate for either provided query_vector or query_text.
         Both query_vector and query_text can be provided.
@@ -106,6 +105,9 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         Returns:
             list[neo4j.Record]: The results of the search query
         """
+
+        weaviate_filters = kwargs.get("weaviate_filters")
+
         try:
             validated_data = WeaviateNeo4jSearchModel(
                 top_k=top_k,
@@ -130,6 +132,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
                 logger.debug(
                     "No embedder provided, assuming vectorizer is used in Weaviate."
                 )
+        weaviate_filters = kwargs.get("weaviate_filters")
 
         if query_vector:
             response = self.search_collection.query.near_vector(
@@ -174,8 +177,8 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
 
 
 def get_match_query(
-    return_properties: Optional[str] = None, retrieval_query: Optional[str] = None
-):
+    return_properties: Optional[list[str]] = None, retrieval_query: Optional[str] = None
+) -> str:
     match_query = (
         "UNWIND $match_params AS match_param "
         "WITH match_param[0] AS match_id_value, match_param[1] AS score "

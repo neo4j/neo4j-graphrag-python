@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Optional
+from typing import Optional, Any
 
 from pydantic import (
     field_validator,
@@ -33,7 +33,7 @@ class WeaviateModel(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @field_validator("client")
-    def check_client(cls, value):
+    def check_client(cls, value: WeaviateClient) -> WeaviateClient:
         if not isinstance(value, WeaviateClient):
             raise TypeError(
                 "Provided client needs to be of type weaviate.client.WeaviateClient"
@@ -60,7 +60,7 @@ class WeaviateNeo4jSearchModel(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @field_validator("weaviate_filters")
-    def check_weaviate_filters(cls, value):
+    def check_weaviate_filters(cls, value: _Filters) -> _Filters:
         if value and not isinstance(value, _Filters):
             raise TypeError(
                 "Provided filters need to be of type weaviate.collections.classes.filters._Filters"
@@ -68,7 +68,7 @@ class WeaviateNeo4jSearchModel(BaseModel):
         return value
 
     @model_validator(mode="before")
-    def check_query(cls, values):
+    def check_query(cls, values: dict[str, Any]) -> dict[str, Any]:
         """
         Validates that one of either query_vector or query_text is provided exclusively.
         """

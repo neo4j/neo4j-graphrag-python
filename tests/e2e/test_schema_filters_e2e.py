@@ -14,6 +14,7 @@
 #  limitations under the License.
 
 import pytest
+from neo4j import Driver
 from neo4j_genai.schema import (
     query_database,
     NODE_PROPERTIES_QUERY,
@@ -26,7 +27,7 @@ from neo4j_genai.schema import (
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_schema_query_with_excluded_labels")
-def test_filtering_labels_node_properties(driver):
+def test_filtering_labels_node_properties(driver: Driver) -> None:
     node_properties = [
         data["output"]
         for data in query_database(
@@ -40,7 +41,7 @@ def test_filtering_labels_node_properties(driver):
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_schema_query_with_excluded_labels")
-def test_filtering_labels_relationship_properties(driver):
+def test_filtering_labels_relationship_properties(driver: Driver) -> None:
     relationship_properties = [
         data["output"]
         for data in query_database(
@@ -52,7 +53,7 @@ def test_filtering_labels_relationship_properties(driver):
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_schema_query_with_excluded_labels")
-def test_filtering_labels_relationships(driver):
+def test_filtering_labels_relationships(driver: Driver) -> None:
     relationships = [
         data["output"]
         for data in query_database(

@@ -14,6 +14,7 @@
 #  limitations under the License.
 
 import pytest
+from neo4j import Driver
 from neo4j_genai.schema import (
     query_database,
     get_structured_schema,
@@ -25,7 +26,7 @@ from neo4j_genai.schema import (
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_schema_query")
-def test_cypher_returns_correct_node_properties(driver):
+def test_cypher_returns_correct_node_properties(driver: Driver) -> None:
     node_properties = query_database(
         driver, NODE_PROPERTIES_QUERY, params={"EXCLUDED_LABELS": [BASE_ENTITY_LABEL]}
     )
@@ -43,7 +44,7 @@ def test_cypher_returns_correct_node_properties(driver):
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_schema_query")
-def test_cypher_returns_correct_relationship_properties(driver):
+def test_cypher_returns_correct_relationship_properties(driver: Driver) -> None:
     relationships_properties = query_database(
         driver, REL_PROPERTIES_QUERY, params={"EXCLUDED_LABELS": [BASE_ENTITY_LABEL]}
     )
@@ -61,7 +62,7 @@ def test_cypher_returns_correct_relationship_properties(driver):
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_schema_query")
-def test_cypher_returns_correct_relationships(driver):
+def test_cypher_returns_correct_relationships(driver: Driver) -> None:
     relationships = query_database(
         driver, REL_QUERY, params={"EXCLUDED_LABELS": [BASE_ENTITY_LABEL]}
     )
@@ -78,7 +79,7 @@ def test_cypher_returns_correct_relationships(driver):
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_schema_query")
-def test_get_structured_schema_returns_correct_node_properties(driver):
+def test_get_structured_schema_returns_correct_node_properties(driver: Driver) -> None:
     result = get_structured_schema(driver)
     assert result["node_props"]["LabelA"] == [
         {"property": "property_a", "type": "STRING"}
@@ -86,7 +87,9 @@ def test_get_structured_schema_returns_correct_node_properties(driver):
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_schema_query")
-def test_get_structured_schema_returns_correct_relationship_properties(driver):
+def test_get_structured_schema_returns_correct_relationship_properties(
+    driver: Driver,
+) -> None:
     result = get_structured_schema(driver)
     assert result["rel_props"]["REL_TYPE"] == [
         {"property": "rel_prop", "type": "STRING"}
@@ -94,7 +97,7 @@ def test_get_structured_schema_returns_correct_relationship_properties(driver):
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_schema_query")
-def test_get_structured_schema_returns_correct_relationships(driver):
+def test_get_structured_schema_returns_correct_relationships(driver: Driver) -> None:
     result = get_structured_schema(driver)
     assert sorted(result["relationships"], key=lambda x: x["end"]) == [
         {"end": "LabelB", "start": "LabelA", "type": "REL_TYPE"},
@@ -104,7 +107,7 @@ def test_get_structured_schema_returns_correct_relationships(driver):
 
 @pytest.mark.enterprise_only
 @pytest.mark.usefixtures("setup_neo4j_for_schema_query")
-def test_get_structured_schema_returns_correct_constraints(driver):
+def test_get_structured_schema_returns_correct_constraints(driver: Driver) -> None:
     query_database(driver, "DROP CONSTRAINT test_constraint IF EXISTS")
     query_database(
         driver,
@@ -120,7 +123,7 @@ def test_get_structured_schema_returns_correct_constraints(driver):
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_schema_query")
-def test_get_structured_schema_returns_correct_indexes(driver):
+def test_get_structured_schema_returns_correct_indexes(driver: Driver) -> None:
     query_database(driver, "DROP INDEX node_range_index IF EXISTS")
     query_database(
         driver, "CREATE INDEX node_range_index FOR (n:LabelA) ON (n.property_a)"

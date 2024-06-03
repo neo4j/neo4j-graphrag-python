@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pytest
 from neo4j.exceptions import CypherSyntaxError, Neo4jError
@@ -20,7 +20,7 @@ from neo4j_genai import Text2CypherRetriever
 from neo4j_genai.prompts import TEXT2CYPHER_PROMPT
 
 
-def test_t2c_retriever_initialization(driver, llm):
+def test_t2c_retriever_initialization(driver: MagicMock, llm: MagicMock) -> None:
     with patch("neo4j_genai.retrievers.base.Retriever._verify_version") as mock_verify:
         Text2CypherRetriever(driver, llm, neo4j_schema="dummy-text")
         mock_verify.assert_called_once()
@@ -29,8 +29,11 @@ def test_t2c_retriever_initialization(driver, llm):
 @patch("neo4j_genai.retrievers.base.Retriever._verify_version")
 @patch("neo4j_genai.retrievers.text2cypher.get_schema")
 def test_t2c_retriever_schema_retrieval(
-    _verify_version_mock, get_schema_mock, driver, llm
-):
+    _verify_version_mock: MagicMock,
+    get_schema_mock: MagicMock,
+    driver: MagicMock,
+    llm: MagicMock,
+) -> None:
     Text2CypherRetriever(driver, llm)
     get_schema_mock.assert_called_once()
 
@@ -38,55 +41,66 @@ def test_t2c_retriever_schema_retrieval(
 @patch("neo4j_genai.retrievers.base.Retriever._verify_version")
 @patch("neo4j_genai.retrievers.text2cypher.get_schema")
 def test_t2c_retriever_schema_retrieval_failure(
-    _verify_version_mock, get_schema_mock, driver, llm
-):
+    _verify_version_mock: MagicMock,
+    get_schema_mock: MagicMock,
+    driver: MagicMock,
+    llm: MagicMock,
+) -> None:
     get_schema_mock.side_effect = Neo4jError
     with pytest.raises(Neo4jError):
         Text2CypherRetriever(driver, llm)
 
 
 @patch("neo4j_genai.Text2CypherRetriever._verify_version")
-def test_t2c_retriever_invalid_neo4j_schema(_verify_version_mock, driver, llm):
+def test_t2c_retriever_invalid_neo4j_schema(
+    _verify_version_mock: MagicMock, driver: MagicMock, llm: MagicMock
+) -> None:
     with pytest.raises(ValueError) as exc_info:
-        Text2CypherRetriever(driver=driver, llm=llm, neo4j_schema=42)
+        Text2CypherRetriever(driver=driver, llm=llm, neo4j_schema=42)  # type: ignore
 
     assert "neo4j_schema" in str(exc_info.value)
     assert "Input should be a valid string" in str(exc_info.value)
 
 
 @patch("neo4j_genai.Text2CypherRetriever._verify_version")
-def test_t2c_retriever_invalid_search_query(_verify_version_mock, driver, llm):
+def test_t2c_retriever_invalid_search_query(
+    _verify_version_mock: MagicMock, driver: MagicMock, llm: MagicMock
+) -> None:
     with pytest.raises(ValueError) as exc_info:
         retriever = Text2CypherRetriever(
             driver=driver, llm=llm, neo4j_schema="dummy-text"
         )
-        retriever.search(query_text=42)
+        retriever.search(query_text=42)  # type: ignore
 
     assert "query_text" in str(exc_info.value)
     assert "Input should be a valid string" in str(exc_info.value)
 
 
 @patch("neo4j_genai.Text2CypherRetriever._verify_version")
-def test_t2c_retriever_invalid_search_examples(_verify_version_mock, driver, llm):
+def test_t2c_retriever_invalid_search_examples(
+    _verify_version_mock: MagicMock, driver: MagicMock, llm: MagicMock
+) -> None:
     with pytest.raises(ValueError) as exc_info:
         retriever = Text2CypherRetriever(
             driver=driver, llm=llm, neo4j_schema="dummy-text"
         )
-        retriever.search(query_text="dummy-text", examples=42)
+        retriever.search(query_text="dummy-text", examples=42)  # type: ignore
 
     assert "examples" in str(exc_info.value)
     assert "Input should be a valid list" in str(exc_info.value)
 
 
 @patch("neo4j_genai.Text2CypherRetriever._verify_version")
-def test_t2c_retriever_happy_path(_verify_version_mock, driver, llm):
+def test_t2c_retriever_happy_path(
+    _verify_version_mock: MagicMock, driver: MagicMock, llm: MagicMock
+) -> None:
     t2c_query = "MATCH (n) RETURN n;"
     query_text = "may thy knife chip and shatter"
     neo4j_schema = "dummy-schema"
     examples = ["example-1", "example-2"]
     retriever = Text2CypherRetriever(driver=driver, llm=llm, neo4j_schema=neo4j_schema)
     retriever.llm.invoke.return_value = t2c_query
-    retriever.driver.execute_query.return_value = (
+    retriever.driver.execute_query.return_value = (  # type: ignore
         [{"node_id": 123, "text": "dummy-text"}],
         None,
         None,
@@ -98,11 +112,13 @@ def test_t2c_retriever_happy_path(_verify_version_mock, driver, llm):
     )
     retriever.search(query_text=query_text, examples=examples)
     retriever.llm.invoke.assert_called_once_with(prompt)
-    retriever.driver.execute_query.assert_called_once_with(query_=t2c_query)
+    retriever.driver.execute_query.assert_called_once_with(query_=t2c_query)  # type: ignore
 
 
 @patch("neo4j_genai.Text2CypherRetriever._verify_version")
-def test_t2c_retriever_cypher_error(_verify_version_mock, driver, llm):
+def test_t2c_retriever_cypher_error(
+    _verify_version_mock: MagicMock, driver: MagicMock, llm: MagicMock
+) -> None:
     t2c_query = "this is not a cypher query"
     query_text = "may thy knife chip and shatter"
     neo4j_schema = "dummy-schema"

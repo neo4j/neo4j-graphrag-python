@@ -15,9 +15,9 @@
 
 from unittest.mock import MagicMock
 from types import SimpleNamespace
+from typing import Optional
 
-from weaviate import WeaviateClient
-
+from weaviate.client import WeaviateClient
 from neo4j_genai.retrievers.external.weaviate import (
     WeaviateNeo4jRetriever,
     get_match_query,
@@ -26,7 +26,11 @@ from neo4j_genai.retrievers.external.weaviate import (
 
 # Weaviate class with fake methods
 class WClient(WeaviateClient):
-    def __init__(self, node_id_value=None, node_match_score=None):
+    def __init__(
+        self,
+        node_id_value: Optional[str] = None,
+        node_match_score: Optional[float] = None,
+    ) -> None:
         self.collections = MagicMock()
         self.collections.get = MagicMock()
         query = MagicMock()
@@ -41,7 +45,7 @@ class WClient(WeaviateClient):
         )
 
 
-def test_text_search_remote_vector_store_happy_path(driver):
+def test_text_search_remote_vector_store_happy_path(driver: MagicMock) -> None:
     query_text = "may thy knife chip and shatter"
     top_k = 5
     node_id_value = "node-test-id"
@@ -78,7 +82,7 @@ def test_text_search_remote_vector_store_happy_path(driver):
     assert records == [{"node": {"sync_id": node_id_value}, "score": node_match_score}]
 
 
-def test_text_search_remote_vector_store_return_properties(driver):
+def test_text_search_remote_vector_store_return_properties(driver: MagicMock) -> None:
     query_text = "may thy knife chip and shatter"
     top_k = 5
     node_id_value = "node-test-id"
@@ -116,7 +120,7 @@ def test_text_search_remote_vector_store_return_properties(driver):
     assert records == [{"node": {"sync_id": node_id_value}, "score": node_match_score}]
 
 
-def test_text_search_remote_vector_store_retrieval_query(driver):
+def test_text_search_remote_vector_store_retrieval_query(driver: MagicMock) -> None:
     query_text = "may thy knife chip and shatter"
     top_k = 5
     node_id_value = "node-test-id"
@@ -155,7 +159,7 @@ def test_text_search_remote_vector_store_retrieval_query(driver):
     assert records == [{"node": {"sync_id": node_id_value}, "score": node_match_score}]
 
 
-def test_match_query():
+def test_match_query() -> None:
     match_query = get_match_query()
     expected = (
         "UNWIND $match_params AS match_param "
@@ -167,7 +171,7 @@ def test_match_query():
     assert match_query.strip() == expected.strip()
 
 
-def test_match_query_with_return_properties():
+def test_match_query_with_return_properties() -> None:
     match_query = get_match_query(return_properties=["name", "age"])
     expected = (
         "UNWIND $match_params AS match_param "
@@ -179,7 +183,7 @@ def test_match_query_with_return_properties():
     assert match_query.strip() == expected.strip()
 
 
-def test_match_query_with_retrieval_query():
+def test_match_query_with_retrieval_query() -> None:
     retrieval_query = "WITH node MATCH (node)--(m) RETURN node, m LIMIT 10"
     match_query = get_match_query(retrieval_query=retrieval_query)
     expected = (
@@ -191,7 +195,7 @@ def test_match_query_with_retrieval_query():
     assert match_query.strip() == expected.strip()
 
 
-def test_match_query_with_both_return_properties_and_retrieval_query():
+def test_match_query_with_both_return_properties_and_retrieval_query() -> None:
     # Should ignore return_properties
     retrieval_query = "WITH node MATCH (node)--(m) RETURN node, m LIMIT 10"
     match_query = get_match_query(

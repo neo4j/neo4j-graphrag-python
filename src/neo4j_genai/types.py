@@ -48,7 +48,7 @@ class IndexModel(BaseModel):
     driver: Any
 
     @field_validator("driver")
-    def check_driver_is_valid(cls, v):
+    def check_driver_is_valid(cls, v: Any) -> neo4j.Driver:
         if not isinstance(v, neo4j.Driver):
             raise ValueError("driver must be an instance of neo4j.Driver")
         return v
@@ -68,7 +68,7 @@ class FulltextIndexModel(IndexModel):
     node_properties: list[str]
 
     @field_validator("node_properties")
-    def check_node_properties_not_empty(cls, v):
+    def check_node_properties_not_empty(cls, v: list[Any]) -> list[Any]:
         if len(v) == 0:
             raise ValueError("node_properties cannot be an empty list")
         return v
@@ -81,7 +81,7 @@ class VectorSearchModel(BaseModel):
     query_text: Optional[str] = None
 
     @model_validator(mode="before")
-    def check_query(cls, values):
+    def check_query(cls, values: dict[str, Any]) -> dict[str, Any]:
         """
         Validates that one of either query_vector or query_text is provided exclusively.
         """
@@ -123,7 +123,7 @@ class EmbedderModel(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @field_validator("embedder")
-    def check_embedder(cls, value):
+    def check_embedder(cls, value: dict[str, Any]) -> dict[str, Any]:
         if not hasattr(value, "embed_query") or not callable(
             getattr(value, "embed_query", None)
         ):
@@ -138,7 +138,7 @@ class LLMModel(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @field_validator("llm")
-    def check_llm(cls, value):
+    def check_llm(cls, value: object) -> object:
         if not hasattr(value, "invoke") or not callable(getattr(value, "invoke", None)):
             raise ValueError(
                 "Provided llm object must have an 'invoke' callable method."
@@ -151,7 +151,7 @@ class Neo4jDriverModel(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @field_validator("driver")
-    def check_driver(cls, value):
+    def check_driver(cls, value: neo4j.Driver) -> neo4j.Driver:
         if not isinstance(value, neo4j.Driver):
             raise ValueError("Provided driver needs to be of type neo4j.Driver")
         return value

@@ -24,6 +24,8 @@ class Retriever(ABC):
     Abstract class for Neo4j retrievers
     """
 
+    index_name: str
+
     def __init__(self, driver: neo4j.Driver):
         self.driver = driver
         self._verify_version()
@@ -54,10 +56,10 @@ class Retriever(ABC):
             raise Neo4jVersionError()
 
     @abstractmethod
-    def search(self, *args, **kwargs) -> Any:
+    def search(self, *args: Any, **kwargs: Any) -> Any:
         pass
 
-    def _fetch_index_infos(self):
+    def _fetch_index_infos(self) -> None:
         """Fetch the node label and embedding property from the index definition"""
         query = (
             "SHOW VECTOR INDEXES "
@@ -66,14 +68,14 @@ class Retriever(ABC):
             "RETURN labelsOrTypes as labels, properties, "
             "options.indexConfig.`vector.dimensions` as dimensions"
         )
-        result = self.driver.execute_query(query, {"index_name": self.index_name})
+        query_result = self.driver.execute_query(query, {"index_name": self.index_name})
         try:
-            result = result.records[0]
+            result = query_result.records[0]
+            self._node_label = result["labels"][0]
+            self._embedding_node_property = result["properties"][0]
+            self._embedding_dimension = result["dimensions"]
         except IndexError:
             raise Exception(f"No index with name {self.index_name} found")
-        self._node_label = result["labels"][0]
-        self._embedding_node_property = result["properties"][0]
-        self._embedding_dimension = result["dimensions"]
 
 
 class ExternalRetriever(ABC):
@@ -81,7 +83,7 @@ class ExternalRetriever(ABC):
     Abstract class for External Vector Stores
     """
 
-    def __init__(self, id_property_external: str, id_property_neo4j: str):
+    def __init__(self, id_property_external: str, id_property_neo4j: str) -> None:
         self.id_property_external = id_property_external
         self.id_property_neo4j = id_property_neo4j
 
@@ -91,7 +93,7 @@ class ExternalRetriever(ABC):
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
-        **kwargs,
+        **kwargs: Any,
     ) -> list[neo4j.Record]:
         """
 
