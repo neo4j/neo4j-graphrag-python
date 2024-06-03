@@ -21,6 +21,11 @@ from pinecone import Pinecone
 from pydantic import ValidationError
 
 from neo4j_genai.embedder import Embedder
+from neo4j_genai.exceptions import (
+    EmbeddingRequiredError,
+    RetrieverInitializationError,
+    SearchValidationError,
+)
 from neo4j_genai.retrievers.base import ExternalRetriever
 from neo4j_genai.retrievers.external.utils import get_match_query
 from neo4j_genai.types import (
@@ -62,7 +67,7 @@ class PineconeNeo4jRetriever(ExternalRetriever):
                 format_record_function=format_record_function,
             )
         except ValidationError as e:
-            raise ValueError(f"Validation failed: {e.errors()}")
+            raise RetrieverInitializationError(e.errors())
 
         super().__init__(
             driver=driver,
@@ -104,7 +109,8 @@ class PineconeNeo4jRetriever(ExternalRetriever):
             top_k (int, optional): The number of neighbors to return. Defaults to 5.
             pinecone_filter (Optional[dict[str, Any]], optional): The filters to apply to the search query in Pinecone. Defaults to None.
         Raises:
-            ValueError: If validation of the input arguments fail.
+            SearchValidationError: If validation of the input arguments fail.
+            EmbeddingRequiredError: If no embedder is provided when using text as an input.
         Returns:
             RawSearchResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
         """
@@ -126,7 +132,7 @@ class PineconeNeo4jRetriever(ExternalRetriever):
                 logger.debug("Locally generated query vector: %s", query_vector)
             else:
                 logger.error("No embedder provided for query_text.")
-                raise RuntimeError("No embedder provided for query_text.")
+                raise EmbeddingRequiredError("No embedder provided for query_text.")
 
         response = self.index.query(
             vector=query_vector,

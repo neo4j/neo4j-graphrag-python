@@ -17,6 +17,7 @@ from unittest.mock import MagicMock
 
 import neo4j
 import pytest
+from neo4j_genai.exceptions import RetrieverInitializationError
 from neo4j_genai.retrievers.external.pinecone import PineconeNeo4jRetriever
 from neo4j_genai.retrievers.external.utils import get_match_query
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
@@ -29,7 +30,7 @@ def client():
 
 
 def test_pinecone_retriever_invalid_return_properties(driver, client):
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(RetrieverInitializationError) as exc_info:
         PineconeNeo4jRetriever(
             driver=driver,
             client=client,
@@ -43,7 +44,7 @@ def test_pinecone_retriever_invalid_return_properties(driver, client):
 
 
 def test_pinecone_retriever_invalid_retrieval_query(driver, client):
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(RetrieverInitializationError) as exc_info:
         PineconeNeo4jRetriever(
             driver=driver,
             client=client,
