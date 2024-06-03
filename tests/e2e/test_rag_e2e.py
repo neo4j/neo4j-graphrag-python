@@ -6,9 +6,7 @@ from neo4j_genai.generation.rag import RAG
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
 def test_rag_happy_path(driver, custom_embedder, llm):
-    retriever = VectorRetriever(
-        driver, "vector-index-name", custom_embedder
-    )
+    retriever = VectorRetriever(driver, "vector-index-name", custom_embedder)
     rag = RAG(
         retriever=retriever,
         llm=llm,
@@ -19,7 +17,7 @@ def test_rag_happy_path(driver, custom_embedder, llm):
         query="Find me a book about Fremen",
         retriever_config={
             "top_k": 5,
-        }
+        },
     )
 
     llm.invoke.assert_called_once()
