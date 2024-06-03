@@ -12,13 +12,14 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import re
 from unittest import mock
 from unittest.mock import MagicMock
 
 import pytest
 from langchain_community.embeddings import HuggingFaceEmbeddings
-from neo4j import Record
 from neo4j_genai.retrievers.external.pinecone import PineconeNeo4jRetriever
+from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 from pinecone import Pinecone
 
 from ..utils import EMBEDDING_BIOLOGY
@@ -67,13 +68,22 @@ def test_pinecone_neo4j_vector_input(driver, client):
             "usage": {"read_units": 5},
         }
 
-        results = retriever.search(query_vector=EMBEDDING_BIOLOGY, top_k=top_k)
+        results = retriever._get_search_results(
+            query_vector=EMBEDDING_BIOLOGY, top_k=top_k
+        )
 
-        assert isinstance(results, list)
-        assert len(results) == top_k
+        assert isinstance(results, RetrieverResult)
+        assert len(results.items) == top_k
         for result in results:
-            assert isinstance(result, Record)
-            assert result.get("node").get("id").startswith("question_")
+            assert isinstance(result, RetrieverResultItem)
+        pattern = (
+            r"<Record node=<Node element_id='.+' "
+            "labels=frozenset\({'Question'}\) properties={'question': 'In 1953 Watson \& "
+            "Crick built a model of the molecular structure of this, the gene-carrying "
+            "substance', 'id': 'question_c458c6f64d8d47429636bc5a94c97f51'}> "
+            r"score=0.232427984[0-9]+>"
+        )
+        assert re.match(pattern, results.items[0].content)
 
 
 @pytest.mark.usefixtures("populate_neo4j_db")
@@ -106,8 +116,15 @@ def test_pinecone_neo4j_text_input(driver, client, sentence_transformer_embedder
 
         results = retriever.search(query_text="biology", top_k=top_k)
 
-        assert isinstance(results, list)
-        assert len(results) == top_k
+        assert isinstance(results, RetrieverResult)
+        assert len(results.items) == top_k
         for result in results:
-            assert isinstance(result, Record)
-            assert result.get("node").get("id").startswith("question_")
+            assert isinstance(result, RetrieverResultItem)
+        pattern = (
+            r"<Record node=<Node element_id='.+' "
+            "labels=frozenset\({'Question'}\) properties={'question': 'In 1953 Watson \& "
+            "Crick built a model of the molecular structure of this, the gene-carrying "
+            "substance', 'id': 'question_c458c6f64d8d47429636bc5a94c97f51'}> "
+            r"score=0.232427984[0-9]+>"
+        )
+        assert re.match(pattern, results.items[0].content)
