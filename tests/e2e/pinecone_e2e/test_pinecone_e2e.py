@@ -68,9 +68,7 @@ def test_pinecone_neo4j_vector_input(driver, client):
             "usage": {"read_units": 5},
         }
 
-        results = retriever._get_search_results(
-            query_vector=EMBEDDING_BIOLOGY, top_k=top_k
-        )
+        results = retriever.search(query_vector=EMBEDDING_BIOLOGY, top_k=top_k)
 
         assert isinstance(results, RetrieverResult)
         assert len(results.items) == top_k
