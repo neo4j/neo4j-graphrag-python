@@ -23,7 +23,6 @@ from neo4j_genai.exceptions import (
     RetrieverInitializationError,
     EmbeddingRequiredError,
     SearchValidationError,
-    InvalidRetrieverResultError,
 )
 from neo4j_genai.neo4j_queries import get_search_query
 from neo4j_genai.types import (

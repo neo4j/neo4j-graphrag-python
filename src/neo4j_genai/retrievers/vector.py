@@ -20,7 +20,6 @@ from neo4j_genai.exceptions import (
     RetrieverInitializationError,
     SearchValidationError,
     EmbeddingRequiredError,
-    InvalidRetrieverResultError,
 )
 from neo4j_genai.retrievers.base import Retriever
 from pydantic import ValidationError
