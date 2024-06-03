@@ -24,7 +24,7 @@ class PromptTemplate:
         self,
         template: Optional[str] = None,
         expected_inputs: Optional[list[str]] = None,
-    ):
+    ) -> None:
         self.template = template or self.DEFAULT_TEMPLATE
         self.expected_inputs = expected_inputs or self.EXPECTED_INPUTS or []
 
