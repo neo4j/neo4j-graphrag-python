@@ -44,7 +44,7 @@ def test_vector_retriever_invalid_index_name(
     _verify_version_mock: MagicMock, driver: MagicMock
 ) -> None:
     with pytest.raises(RetrieverInitializationError) as exc_info:
-        VectorRetriever(driver=driver, index_name=42)
+        VectorRetriever(driver=driver, index_name=42)  # type: ignore
 
     assert "index_name" in str(exc_info.value)
     assert "Input should be a valid string" in str(exc_info.value)
@@ -55,7 +55,7 @@ def test_vector_cypher_retriever_invalid_retrieval_query(
     _verify_version_mock: MagicMock, driver: MagicMock
 ) -> None:
     with pytest.raises(RetrieverInitializationError) as exc_info:
-        VectorCypherRetriever(driver=driver, index_name="my-index", retrieval_query=42)
+        VectorCypherRetriever(driver=driver, index_name="my-index", retrieval_query=42)  # type: ignore
 
         assert "retrieval_query" in str(exc_info.value)
         assert "Input should be a valid string" in str(exc_info.value)
@@ -81,7 +81,7 @@ def test_similarity_search_vector_happy_path(
     top_k = 5
     retriever = VectorRetriever(driver, index_name)
     expected_records = [neo4j.Record({"node": {"text": "dummy-node"}, "score": 1.0})]
-    retriever.driver.execute_query.return_value = [
+    retriever.driver.execute_query.return_value = [  # type: ignore
         expected_records,
         None,
         None,
@@ -90,7 +90,7 @@ def test_similarity_search_vector_happy_path(
 
     records = retriever.search(query_vector=query_vector, top_k=top_k)
 
-    retriever.driver.execute_query.assert_called_once_with(
+    retriever.driver.execute_query.assert_called_once_with(  # type: ignore
         search_query,
         {
             "vector_index_name": index_name,
