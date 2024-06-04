@@ -87,6 +87,7 @@ class PineconeNeo4jRetriever(ExternalRetriever):
         )
         self.return_properties = validated_data.return_properties
         self.retrieval_query = validated_data.retrieval_query
+        self.format_record_function = validated_data.format_record_function
 
     def _get_search_results(
         self,
