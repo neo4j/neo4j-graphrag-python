@@ -22,8 +22,7 @@ from neo4j_genai import PineconeNeo4jRetriever
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 from pinecone import Pinecone
 
-from ..utils import EMBEDDING_BIOLOGY, populate_neo4j
-from .populate_dbs import build_data_objects
+from ..utils import EMBEDDING_BIOLOGY, build_data_objects, populate_neo4j
 
 
 @pytest.fixture(scope="module")
@@ -40,7 +39,7 @@ def client():
 @pytest.fixture(scope="module")
 def populate_neo4j_db(driver):
     driver.execute_query("MATCH (n) DETACH DELETE n")
-    neo4j_objects, _ = build_data_objects()
+    neo4j_objects, _ = build_data_objects("pinecone")
     populate_neo4j(driver, neo4j_objects)
 
 

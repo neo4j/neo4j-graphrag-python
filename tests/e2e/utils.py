@@ -13,6 +13,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+import hashlib
+import json
+import os.path
+
+import weaviate.classes as wvc
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # biology
 EMBEDDING_BIOLOGY = [
@@ -434,3 +441,77 @@ def populate_neo4j(neo4j_driver, neo4j_objs):
         has_answer_relationships_cypher, {"relationships": has_answer_relationships}
     )
     return res
+
+
+def build_data_objects(q_vector_fmt):
+    # read file from disk
+    # this file is from https://github.com/weaviate-tutorials/quickstart/tree/main/data
+    # MIT License
+    file_name = os.path.join(
+        BASE_DIR,
+        "./data/jeopardy_tiny_with_vectors_all-MiniLM-L6-v2.json",
+    )
+    with open(file_name, "r") as f:
+        data = json.load(f)
+
+    question_objs = list()
+    neo4j_objs = {"nodes": [], "relationships": []}
+
+    # only unique categories and ids for them
+    unique_categories_list = list(set([c["Category"] for c in data]))
+    unique_categories = [
+        {"label": "Category", "name": c, "id": c} for c in unique_categories_list
+    ]
+    neo4j_objs["nodes"] += unique_categories
+
+    for _, d in data:
+        id = hashlib.md5(d["Question"].encode()).hexdigest()
+        neo4j_objs["nodes"].append(
+            {
+                "label": "Question",
+                "properties": {
+                    "id": f"question_{id}",
+                    "question": d["Question"],
+                },
+            }
+        )
+        neo4j_objs["nodes"].append(
+            {
+                "label": "Answer",
+                "properties": {
+                    "id": f"answer_{id}",
+                    "answer": d["Answer"],
+                },
+            }
+        )
+        neo4j_objs["relationships"].append(
+            {
+                "start_node_id": f"question_{id}",
+                "end_node_id": f"answer_{id}",
+                "type": "HAS_ANSWER",
+                "properties": {},
+            }
+        )
+        neo4j_objs["relationships"].append(
+            {
+                "start_node_id": f"question_{id}",
+                "end_node_id": d["Category"],
+                "type": "BELONGS_TO",
+                "properties": {},
+            }
+        )
+        if q_vector_fmt == "weaviate":
+            question_objs.append(
+                wvc.data.DataObject(
+                    properties={
+                        "neo4j_id": f"question_{id}",
+                    },
+                    vector=d["vector"],
+                )
+            )
+        elif q_vector_fmt == "pinecone":
+            question_objs.append({"id": f"question_{id}", "values": d["vector"]})
+        else:
+            raise ValueError("q_vector_fmt must be either weaviate or pinecone")
+
+    return neo4j_objs, question_objs
