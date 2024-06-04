@@ -20,16 +20,16 @@ from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 
 def test_rag_prompt_template():
     template = RagTemplate()
-    prompt = template.format(
-        context="my context",
-        query="user's query",
-    )
+    prompt = template.format(context="my context", query="user's query", examples="")
     assert (
         prompt
         == """Answer the user question using the following context
 
     Context:
     my context
+
+    Examples:
+
 
     Question:
     user's query
@@ -45,7 +45,10 @@ def test_rag_happy_path(driver, retriever_mock, llm):
         llm=llm,
     )
     retriever_mock.search.return_value = RetrieverResult(
-        items=[RetrieverResultItem(content="item content 1")]
+        items=[
+            RetrieverResultItem(content="item content 1"),
+            RetrieverResultItem(content="item content 2"),
+        ]
     )
     llm.invoke.return_value = "llm generated text"
 
@@ -56,6 +59,10 @@ def test_rag_happy_path(driver, retriever_mock, llm):
 
     Context:
     item content 1
+item content 2
+
+    Examples:
+
 
     Question:
     question
