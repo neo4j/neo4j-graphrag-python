@@ -20,7 +20,7 @@ import os.path
 from neo4j import GraphDatabase
 from pinecone import Pinecone, ServerlessSpec
 
-from ..populate_neo4j import populate_neo4j
+from ..utils import populate_neo4j
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 

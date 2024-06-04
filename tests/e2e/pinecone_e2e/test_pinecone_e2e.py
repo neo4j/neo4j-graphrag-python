@@ -22,7 +22,7 @@ from neo4j_genai.retrievers.external.pinecone import PineconeNeo4jRetriever
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 from pinecone import Pinecone
 
-from ..populate_neo4j import populate_neo4j
+from ..utils import populate_neo4j
 from ..utils import EMBEDDING_BIOLOGY
 from .populate_dbs import build_data_objects
 

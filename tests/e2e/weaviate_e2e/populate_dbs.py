@@ -23,7 +23,7 @@ from neo4j import Driver, GraphDatabase
 from weaviate.client import Client
 from weaviate.connect.helpers import connect_to_local
 
-from ..populate_neo4j import populate_neo4j
+from ..utils import populate_neo4j
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
