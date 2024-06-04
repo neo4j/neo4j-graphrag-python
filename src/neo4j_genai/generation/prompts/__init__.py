@@ -41,15 +41,18 @@ class RagTemplate(PromptTemplate):
     Context:
     {context}
 
+    Examples:
+    {examples}
+
     Question:
     {query}
 
     Answer:
     """
-    EXPECTED_INPUTS = ["context", "query"]
+    EXPECTED_INPUTS = ["context", "query", "examples"]
 
-    def format(self, query: str, context: str) -> str:
-        return super().format(query=query, context=context)
+    def format(self, query: str, context: str, examples: str) -> str:
+        return super().format(query=query, context=context, examples=examples)
 
 
 class Text2CypherTemplate(PromptTemplate):
