@@ -16,6 +16,7 @@
 from .retrievers.hybrid import HybridCypherRetriever, HybridRetriever
 from .retrievers.text2cypher import Text2CypherRetriever
 from .retrievers.vector import VectorCypherRetriever, VectorRetriever
+from .retrievers.external.weaviate import WeaviateNeo4jRetriever
 
 __all__ = [
     "VectorRetriever",
@@ -23,4 +24,5 @@ __all__ = [
     "HybridRetriever",
     "HybridCypherRetriever",
     "Text2CypherRetriever",
+    "WeaviateNeo4jRetriever",
 ]

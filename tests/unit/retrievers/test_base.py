@@ -35,7 +35,7 @@ def test_retriever_version_support(
     expected_exception: Union[type[ValueError], None],
 ) -> None:
     class MockRetriever(Retriever):
-        def search(self, *args: Any, **kwargs: Any) -> None:
+        def _get_search_results(self, *args: Any, **kwargs: Any) -> None:  # type: ignore
             pass
 
     driver.execute_query.return_value = [[{"versions": db_version}], None, None]

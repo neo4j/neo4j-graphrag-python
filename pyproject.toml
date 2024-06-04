@@ -72,6 +72,7 @@ disable="C0114,C0115"
 strict = true
 ignore_missing_imports = true
 allow_subclassing_any = true
+disallow_untyped_calls = false
 
 [[tool.mypy.overrides]]
 module = [

@@ -75,3 +75,8 @@ def t2c_retriever(
     _verify_version_mock: MagicMock, driver: MagicMock, llm: MagicMock
 ) -> Text2CypherRetriever:
     return Text2CypherRetriever(driver, llm)
+
+
+@pytest.fixture(scope="function")
+def neo4j_record() -> neo4j.Record:
+    return neo4j.Record({"node": "dummy-node", "score": 1.0})

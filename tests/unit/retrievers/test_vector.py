@@ -13,7 +13,10 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from unittest.mock import patch
+
+import neo4j
 import pytest
+from typing import Any
 from neo4j.exceptions import CypherSyntaxError
 from unittest.mock import MagicMock
 from neo4j_genai import VectorRetriever, VectorCypherRetriever
@@ -21,10 +24,14 @@ from neo4j_genai.exceptions import (
     RetrieverInitializationError,
     EmbeddingRequiredError,
     SearchValidationError,
-    InvalidRetrieverResultError,
 )
 from neo4j_genai.neo4j_queries import get_search_query
-from neo4j_genai.types import SearchType, VectorSearchRecord
+from neo4j_genai.types import (
+    SearchType,
+    RetrieverResult,
+    RetrieverResultItem,
+)
+from neo4j_genai.types import RawSearchResult, RetrieverResult, RetrieverResultItem
 
 
 def test_vector_retriever_initialization(driver: MagicMock) -> None:
@@ -64,15 +71,19 @@ def test_vector_cypher_retriever_initialization(driver: MagicMock) -> None:
 @patch("neo4j_genai.VectorRetriever._fetch_index_infos")
 @patch("neo4j_genai.VectorRetriever._verify_version")
 def test_similarity_search_vector_happy_path(
-    _verify_version_mock: MagicMock, _fetch_index_infos: MagicMock, driver: MagicMock
+    _verify_version_mock: MagicMock,
+    _fetch_index_infos: MagicMock,
+    driver: MagicMock,
+    neo4j_record: MagicMock,
 ) -> None:
     index_name = "my-index"
     dimensions = 1536
     query_vector = [1.0 for _ in range(dimensions)]
     top_k = 5
     retriever = VectorRetriever(driver, index_name)
+    expected_records = [neo4j.Record({"node": {"text": "dummy-node"}, "score": 1.0})]
     retriever.driver.execute_query.return_value = [  # type: ignore
-        [{"node": "dummy-node", "score": 1.0}],
+        expected_records,
         None,
         None,
     ]
@@ -88,7 +99,14 @@ def test_similarity_search_vector_happy_path(
             "query_vector": query_vector,
         },
     )
-    assert records == [VectorSearchRecord(node="dummy-node", score=1.0)]
+    assert records == RetrieverResult(
+        items=[
+            RetrieverResultItem(
+                content="{'text': 'dummy-node'}", metadata={"score": 1.0}
+            ),
+        ],
+        metadata={"__retriever": "VectorRetriever"},
+    )
 
 
 @patch("neo4j_genai.VectorRetriever._fetch_index_infos")
@@ -98,6 +116,7 @@ def test_similarity_search_text_happy_path(
     _fetch_index_infos: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
+    neo4j_record: MagicMock,
 ) -> None:
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
@@ -106,7 +125,7 @@ def test_similarity_search_text_happy_path(
     top_k = 5
     retriever = VectorRetriever(driver, index_name, embedder)
     driver.execute_query.return_value = [
-        [{"node": "dummy-node", "score": 1.0}],
+        [neo4j_record],
         None,
         None,
     ]
@@ -123,8 +142,12 @@ def test_similarity_search_text_happy_path(
             "query_vector": embed_query_vector,
         },
     )
-
-    assert records == [VectorSearchRecord(node="dummy-node", score=1.0)]
+    assert records == RetrieverResult(
+        items=[
+            RetrieverResultItem(content="dummy-node", metadata={"score": 1.0}),
+        ],
+        metadata={"__retriever": "VectorRetriever"},
+    )
 
 
 @patch("neo4j_genai.VectorRetriever._fetch_index_infos")
@@ -134,6 +157,7 @@ def test_similarity_search_text_return_properties(
     _fetch_index_infos: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
+    neo4j_record: MagicMock,
 ) -> None:
     embed_query_vector = [1.0 for _ in range(3)]
     embedder.embed_query.return_value = embed_query_vector
@@ -147,7 +171,9 @@ def test_similarity_search_text_return_properties(
     )
 
     driver.execute_query.return_value = [
-        [{"node": "dummy-node", "score": 1.0}],
+        [
+            neo4j_record,
+        ],
         None,
         None,
     ]
@@ -164,7 +190,12 @@ def test_similarity_search_text_return_properties(
             "query_vector": embed_query_vector,
         },
     )
-    assert records == [VectorSearchRecord(node="dummy-node", score=1.0)]
+    assert records == RetrieverResult(
+        items=[
+            RetrieverResultItem(content="dummy-node", metadata={"score": 1.0}),
+        ],
+        metadata={"__retriever": "VectorRetriever"},
+    )
 
 
 def test_vector_retriever_search_missing_embedder_for_text(
@@ -227,36 +258,6 @@ def test_vector_cypher_retriever_search_both_text_and_vector(
         )
 
 
-@patch("neo4j_genai.VectorRetriever._fetch_index_infos")
-@patch("neo4j_genai.VectorRetriever._verify_version")
-def test_similarity_search_vector_bad_results(
-    _verify_version_mock: MagicMock, _fetch_index_infos: MagicMock, driver: MagicMock
-) -> None:
-    index_name = "my-index"
-    dimensions = 1536
-    query_vector = [1.0 for _ in range(dimensions)]
-    top_k = 5
-    retriever = VectorRetriever(driver, index_name)
-    retriever.driver.execute_query.return_value = [  # type: ignore
-        [{"node": "dummy-node", "score": "adsa"}],
-        None,
-        None,
-    ]
-    search_query, _ = get_search_query(SearchType.VECTOR)
-
-    with pytest.raises(InvalidRetrieverResultError):
-        retriever.search(query_vector=query_vector, top_k=top_k)
-
-    retriever.driver.execute_query.assert_called_once_with(  # type: ignore
-        search_query,
-        {
-            "vector_index_name": index_name,
-            "top_k": top_k,
-            "query_vector": query_vector,
-        },
-    )
-
-
 @patch("neo4j_genai.VectorCypherRetriever._fetch_index_infos")
 @patch("neo4j_genai.VectorCypherRetriever._verify_version")
 def test_retrieval_query_happy_path(
@@ -276,8 +277,9 @@ def test_retrieval_query_happy_path(
     )
     query_text = "may thy knife chip and shatter"
     top_k = 5
+    record = neo4j.Record({"node_id": 123, "text": "dummy-text", "score": 1.0})
     driver.execute_query.return_value = [
-        [{"node_id": 123, "text": "dummy-text", "score": 1.0}],
+        [record],
         None,
         None,
     ]
@@ -299,7 +301,79 @@ def test_retrieval_query_happy_path(
             "query_vector": embed_query_vector,
         },
     )
-    assert records == [{"node_id": 123, "text": "dummy-text", "score": 1.0}]
+    assert records == RetrieverResult(
+        items=[
+            RetrieverResultItem(
+                content="<Record node_id=123 text='dummy-text' score=1.0>",
+                metadata=None,
+            ),
+        ],
+        metadata={"__retriever": "VectorCypherRetriever"},
+    )
+
+
+@patch("neo4j_genai.VectorCypherRetriever._fetch_index_infos")
+@patch("neo4j_genai.VectorCypherRetriever._verify_version")
+def test_retrieval_query_with_result_format_function(
+    _verify_version_mock: MagicMock,
+    _fetch_index_infos: MagicMock,
+    driver: MagicMock,
+    embedder: MagicMock,
+) -> None:
+    embed_query_vector = [1.0 for _ in range(1536)]
+    embedder.embed_query.return_value = embed_query_vector
+    index_name = "my-index"
+    retrieval_query = """
+        RETURN node.id AS node_id, node.text AS text, score
+        """
+
+    def format_function(record: dict[str, Any]) -> RetrieverResultItem:
+        return RetrieverResultItem(
+            content=record.get("text"),
+            metadata={"score": record.get("score"), "node_id": record.get("node_id")},
+        )
+
+    retriever = VectorCypherRetriever(
+        driver,
+        index_name,
+        retrieval_query,
+        embedder=embedder,
+        format_record_function=format_function,
+    )
+    query_text = "may thy knife chip and shatter"
+    top_k = 5
+    record = neo4j.Record({"node_id": 123, "text": "dummy-text", "score": 1.0})
+    driver.execute_query.return_value = [
+        [record],
+        None,
+        None,
+    ]
+    search_query, _ = get_search_query(
+        SearchType.VECTOR, retrieval_query=retrieval_query
+    )
+
+    records = retriever.search(
+        query_text=query_text,
+        top_k=top_k,
+    )
+
+    embedder.embed_query.assert_called_once_with(query_text)
+    driver.execute_query.assert_called_once_with(
+        search_query,
+        {
+            "vector_index_name": index_name,
+            "top_k": top_k,
+            "query_vector": embed_query_vector,
+        },
+    )
+    assert records == RetrieverResult(
+        items=[
+            RetrieverResultItem(
+                content="dummy-text", metadata={"score": 1.0, "node_id": 123}
+            ),
+        ],
+        metadata={"__retriever": "VectorCypherRetriever"},
+    )
 
 
 @patch("neo4j_genai.VectorCypherRetriever._fetch_index_infos")
@@ -328,7 +402,7 @@ def test_retrieval_query_with_params(
     query_text = "may thy knife chip and shatter"
     top_k = 5
     driver.execute_query.return_value = [
-        [{"node_id": 123, "text": "dummy-text", "score": 1.0}],
+        [neo4j.Record({"node_id": 123, "text": "dummy-text", "score": 1.0})],
         None,
         None,
     ]
@@ -354,7 +428,15 @@ def test_retrieval_query_with_params(
         },
     )
 
-    assert records == [{"node_id": 123, "text": "dummy-text", "score": 1.0}]
+    assert records == RetrieverResult(
+        items=[
+            RetrieverResultItem(
+                content="<Record node_id=123 text='dummy-text' score=1.0>",
+                metadata=None,
+            ),
+        ],
+        metadata={"__retriever": "VectorCypherRetriever"},
+    )
 
 
 @patch("neo4j_genai.VectorCypherRetriever._fetch_index_infos")

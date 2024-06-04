@@ -13,7 +13,7 @@ repos:
         language: python
         types: [ python ]
         stages: [ commit, push ]
-        args: [--strict, --ignore-missing-imports, --allow-subclassing-any]
+        args: [--strict, --ignore-missing-imports, --allow-subclassing-any, --allow-untyped-calls]
         additional_dependencies:
           - pytest
           - pydantic

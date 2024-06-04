@@ -70,7 +70,7 @@ def test_t2c_retriever_invalid_search_query(
         retriever = Text2CypherRetriever(
             driver=driver, llm=llm, neo4j_schema="dummy-text"
         )
-        retriever.search(query_text=42)  # type: ignore
+        retriever.search(query_text=42)
 
     assert "query_text" in str(exc_info.value)
     assert "Input should be a valid string" in str(exc_info.value)
@@ -84,7 +84,7 @@ def test_t2c_retriever_invalid_search_examples(
         retriever = Text2CypherRetriever(
             driver=driver, llm=llm, neo4j_schema="dummy-text"
         )
-        retriever.search(query_text="dummy-text", examples=42)  # type: ignore
+        retriever.search(query_text="dummy-text", examples=42)
 
     assert "examples" in str(exc_info.value)
     assert "Input should be a valid list" in str(exc_info.value)
@@ -92,7 +92,10 @@ def test_t2c_retriever_invalid_search_examples(
 
 @patch("neo4j_genai.Text2CypherRetriever._verify_version")
 def test_t2c_retriever_happy_path(
-    _verify_version_mock: MagicMock, driver: MagicMock, llm: MagicMock
+    _verify_version_mock: MagicMock,
+    driver: MagicMock,
+    llm: MagicMock,
+    neo4j_record: MagicMock,
 ) -> None:
     t2c_query = "MATCH (n) RETURN n;"
     query_text = "may thy knife chip and shatter"
@@ -101,7 +104,7 @@ def test_t2c_retriever_happy_path(
     retriever = Text2CypherRetriever(driver=driver, llm=llm, neo4j_schema=neo4j_schema)
     retriever.llm.invoke.return_value = t2c_query
     retriever.driver.execute_query.return_value = (  # type: ignore
-        [{"node_id": 123, "text": "dummy-text"}],
+        [neo4j_record],
         None,
         None,
     )
@@ -120,7 +123,6 @@ def test_t2c_retriever_cypher_error(
     _verify_version_mock: MagicMock, driver: MagicMock, llm: MagicMock
 ) -> None:
     t2c_query = "this is not a cypher query"
-    query_text = "may thy knife chip and shatter"
     neo4j_schema = "dummy-schema"
     examples = ["example-1", "example-2"]
     retriever = Text2CypherRetriever(driver=driver, llm=llm, neo4j_schema=neo4j_schema)

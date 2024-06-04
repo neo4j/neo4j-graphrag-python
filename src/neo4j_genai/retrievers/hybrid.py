@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Optional, Any
+from typing import Optional, Any, Callable
 
 import neo4j
 from pydantic import ValidationError
@@ -32,6 +32,8 @@ from neo4j_genai.types import (
     EmbedderModel,
     HybridRetrieverModel,
     HybridCypherRetrieverModel,
+    RawSearchResult,
+    RetrieverResultItem,
 )
 from neo4j_genai.neo4j_queries import get_search_query
 import logging
@@ -98,12 +100,26 @@ class HybridRetriever(Retriever):
             else None
         )
 
-    def search(
+    def default_format_record(self, record: neo4j.Record) -> RetrieverResultItem:
+        """
+        Best effort to guess the node to text method. Inherited classes
+        can override this method to implement custom text formatting.
+        """
+        metadata = {
+            "score": record.get("score"),
+        }
+        node = record.get("node")
+        return RetrieverResultItem(
+            content=str(node),
+            metadata=metadata,
+        )
+
+    def _get_search_results(
         self,
         query_text: str,
         query_vector: Optional[list[float]] = None,
         top_k: int = 5,
-    ) -> list[neo4j.Record]:
+    ) -> RawSearchResult:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         Both query_vector and query_text can be provided.
         If query_vector is provided, then it will be preferred over the embedded query_text
@@ -125,7 +141,7 @@ class HybridRetriever(Retriever):
             EmbeddingRequiredError: If no embedder is provided.
 
         Returns:
-            list[neo4j.Record]: The results of the search query
+            RawSearchResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
         """
         try:
             validated_data = HybridSearchModel(
@@ -154,7 +170,9 @@ class HybridRetriever(Retriever):
         logger.debug("HybridRetriever Cypher query: %s", search_query)
 
         records, _, _ = self.driver.execute_query(search_query, parameters)
-        return records
+        return RawSearchResult(
+            records=records,
+        )
 
 
 class HybridCypherRetriever(Retriever):
@@ -194,6 +212,7 @@ class HybridCypherRetriever(Retriever):
         fulltext_index_name: str,
         retrieval_query: str,
         embedder: Optional[Embedder] = None,
+        format_record_function: Optional[Callable[[Any], Any]] = None,
     ) -> None:
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -217,14 +236,15 @@ class HybridCypherRetriever(Retriever):
             if validated_data.embedder_model
             else None
         )
+        self.format_record_function = format_record_function
 
-    def search(
+    def _get_search_results(
         self,
         query_text: str,
         query_vector: Optional[list[float]] = None,
         top_k: int = 5,
         query_params: Optional[dict[str, Any]] = None,
-    ) -> list[neo4j.Record]:
+    ) -> RawSearchResult:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         Both query_vector and query_text can be provided.
         If query_vector is provided, then it will be preferred over the embedded query_text
@@ -247,7 +267,7 @@ class HybridCypherRetriever(Retriever):
             EmbeddingRequiredError: If no embedder is provided.
 
         Returns:
-            list[neo4j.Record]: The results of the search query
+            RawSearchResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
         """
         try:
             validated_data = HybridCypherSearchModel(
@@ -285,4 +305,6 @@ class HybridCypherRetriever(Retriever):
         logger.debug("HybridCypherRetriever Cypher query: %s", search_query)
 
         records, _, _ = self.driver.execute_query(search_query, parameters)
-        return records
+        return RawSearchResult(
+            records=records,
+        )

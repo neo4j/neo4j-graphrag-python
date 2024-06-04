@@ -1,0 +1,11 @@
+[pr_update_changelog]
+extra_instructions="""
+    The current date is unimportant for the output.
+    Override this format that you will see later in the prompt:
+        Current date:
+        ```
+        {{today}}
+        ```
+    and replace it with
+        <next-release-version>
+"""

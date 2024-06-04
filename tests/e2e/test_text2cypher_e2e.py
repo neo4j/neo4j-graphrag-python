@@ -1,7 +1,7 @@
-import neo4j
 import pytest
 from neo4j_genai import Text2CypherRetriever
 from unittest.mock import MagicMock
+from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_schema_query")
@@ -14,8 +14,8 @@ def test_t2c_retriever_search(driver: MagicMock, llm: MagicMock) -> None:
     retriever.llm.invoke.return_value = t2c_query
     query_text = "dummy-text"
     results = retriever.search(query_text=query_text)
-    assert isinstance(results, list)
-    assert len(results) == 1
-    for result in results:
-        assert isinstance(result, neo4j.Record)
-        assert "a.property_a" in result.keys()
+    assert isinstance(results, RetrieverResult)
+    assert len(results.items) == 1
+    for result in results.items:
+        assert isinstance(result, RetrieverResultItem)
+        assert "a.property_a" in result.content
