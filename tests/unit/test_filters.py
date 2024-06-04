@@ -214,7 +214,7 @@ def test_handle_field_filter_field_start_with_dollar_sign(
     param_store_empty: ParameterStore,
 ) -> None:
     with pytest.raises(FilterValidationError) as excinfo:
-        _handle_field_filter("$field_name", "value", param_store=param_store_empty)
+        _handle_field_filter("$field_name", {"value": 1}, param_store=param_store_empty)
     assert (
         "Invalid filter condition. Expected a field but got an operator: $field_name"
         in str(excinfo)
@@ -272,7 +272,7 @@ def test_handle_field_filter_implicit_eq(
     _single_condition_cypher_mocked: MagicMock, param_store_empty: ParameterStore
 ) -> None:
     generated = _handle_field_filter(
-        "field", value="some_value", param_store=param_store_empty
+        "field", value={"some_value": 1}, param_store=param_store_empty
     )
     _single_condition_cypher_mocked.assert_called_once_with(
         "field", EqOperator, "some_value", param_store_empty, "node"

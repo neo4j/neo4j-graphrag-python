@@ -88,7 +88,7 @@ class IndexModel(BaseModel):
     driver: Any
 
     @field_validator("driver")
-    def check_driver_is_valid(cls, v: Any) -> neo4j.Driver:
+    def check_driver_is_valid(cls, v: neo4j.Driver) -> neo4j.Driver:
         if not isinstance(v, neo4j.Driver):
             raise ValueError("driver must be an instance of neo4j.Driver")
         return v

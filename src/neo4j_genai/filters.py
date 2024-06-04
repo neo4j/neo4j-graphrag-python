@@ -90,7 +90,7 @@ class GteOperator(Operator):
 class InOperator(Operator):
     CYPHER_OPERATOR = "IN"
 
-    def cleaned_value(self, value: Any) -> Any:
+    def cleaned_value(self, value: list[Union[str, int, float]]) -> Any:
         for val in value:
             if not isinstance(val, (str, int, float)):
                 raise ValueError(f"Unsupported type: {type(val)} for value: {val}")
@@ -223,7 +223,7 @@ def _single_condition_cypher(
 
 def _handle_field_filter(
     field: str,
-    value: Any,
+    value: dict[str, Any],
     param_store: ParameterStore,
     node_alias: str = DEFAULT_NODE_ALIAS,
 ) -> str:
