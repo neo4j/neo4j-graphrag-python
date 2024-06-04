@@ -223,7 +223,7 @@ def _single_condition_cypher(
 
 def _handle_field_filter(
     field: str,
-    value: dict[str, Any],
+    value: Any,
     param_store: ParameterStore,
     node_alias: str = DEFAULT_NODE_ALIAS,
 ) -> str:
