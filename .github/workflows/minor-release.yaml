@@ -1,4 +1,4 @@
-name: Publish a new prerelease 🚀
+name: Publish a new minor release 🚀
 
 on:
   workflow_dispatch:
@@ -26,12 +26,12 @@ jobs:
           installer-parallel: true
 
       - name: Bump version
-        run: poetry version prerelease
+        run: poetry version minor
 
       - name: Get version
         id: get-version
         run: echo version=`poetry version -s` >> "$GITHUB_OUTPUT"
-      - name: Print varaibles
+      - name: Print version
         run: |
           echo Version: ${{ steps.get-version.outputs.version }}
       - name: Update CHANGELOG.md (cross platform supported)
