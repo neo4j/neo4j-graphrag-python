@@ -28,7 +28,7 @@ class PromptTemplate:
         self.template = template or self.DEFAULT_TEMPLATE
         self.expected_inputs = expected_inputs or self.EXPECTED_INPUTS or []
 
-    def format(self, *args, **kwargs):
+    def format(self, **kwargs):
         for e in self.EXPECTED_INPUTS:
             if e not in kwargs:
                 raise Exception(f"Missing input {e}")
@@ -38,17 +38,17 @@ class PromptTemplate:
 class RagTemplate(PromptTemplate):
     DEFAULT_TEMPLATE = """Answer the user question using the following context
 
-    Context:
-    {context}
+Context:
+{context}
 
-    Examples:
-    {examples}
+Examples:
+{examples}
 
-    Question:
-    {query}
+Question:
+{query}
 
-    Answer:
-    """
+Answer:
+"""
     EXPECTED_INPUTS = ["context", "query", "examples"]
 
     def format(self, query: str, context: str, examples: str) -> str:
