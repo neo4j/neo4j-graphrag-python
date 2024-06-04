@@ -33,14 +33,29 @@ class RAG:
         self.llm = llm
         self.prompt_template = prompt_template
 
-    def search(self, query: str, retriever_config: Optional[dict] = None) -> str:
-        """
+    def search(
+        self, query: str, retriever_config: Optional[dict] = None, examples: str = ""
+    ) -> str:
+        """This method performs a full RAG search:
+        1. Context retrieval
+        2. Prompt formatting
+        3. Answer generation with LLM
+
         Args:
             query (str): The user question
+            retriever_config (Optional[dict]): Parameters passed to the retriever
+                search method; e.g.: top_k
+            examples: Examples added to the LLM prompt.
+
+        Returns:
+            str: The LLM-generated answer
+
         """
         retriever_config = retriever_config or {}
         retriever_result = self.retriever.search(query_text=query, **retriever_config)
         context = "\n".join(item.content for item in retriever_result.items)
-        prompt = self.prompt_template.format(query=query, context=context)
-        logger.debug(f"RAG: context={context}, prompt={prompt}")
+        prompt = self.prompt_template.format(
+            query=query, context=context, examples=examples
+        )
+        logger.debug(f"RAG: retriever_result={retriever_result}, prompt={prompt}")
         return self.llm.invoke(prompt)
