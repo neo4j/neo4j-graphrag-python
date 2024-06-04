@@ -19,7 +19,6 @@ from neo4j import Driver
 
 from neo4j_genai import VectorRetriever, VectorCypherRetriever
 from conftest import CustomEmbedder
-from neo4j_genai import VectorRetriever, VectorCypherRetriever
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 
 

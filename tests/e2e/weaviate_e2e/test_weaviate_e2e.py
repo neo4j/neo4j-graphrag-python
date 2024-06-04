@@ -22,7 +22,6 @@ from weaviate.client import Client
 from weaviate.connect.helpers import connect_to_local
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.retrievers.external.weaviate import WeaviateNeo4jRetriever
-from neo4j_genai import WeaviateNeo4jRetriever
 from langchain_community.embeddings import HuggingFaceEmbeddings
 
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem

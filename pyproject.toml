@@ -43,7 +43,7 @@ coverage = "^7.4.3"
 ruff = "^0.3.0"
 langchain-openai = "^0.1.1"
 weaviate-client = "^4.6.1"
-sentence-transformers = "^2.7.0"
+sentence-transformers = "^3.0.0"
 langchain-community = "^0.2.0"
 requests = "^2.32.0"
 sphinx = { version = "^7.2.6", python = "^3.9" }
