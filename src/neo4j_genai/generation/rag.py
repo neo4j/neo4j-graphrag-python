@@ -12,10 +12,14 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import logging
 from typing import Optional
 from ..retrievers.base import Retriever
 from .llm import LLMInterface
 from .prompts import RagTemplate
+
+
+logger = logging.getLogger(__name__)
 
 
 class RAG:
@@ -38,4 +42,5 @@ class RAG:
         retriever_result = self.retriever.search(query_text=query, **retriever_config)
         context = "\n".join(item.content for item in retriever_result.items)
         prompt = self.prompt_template.format(query=query, context=context)
+        logger.debug(f"RAG: context={context}, prompt={prompt}")
         return self.llm.invoke(prompt)
