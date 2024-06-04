@@ -1,8 +1,11 @@
 from neo4j_genai.embedder import Embedder
+from typing import Any
 
 
 class SentenceTransformerEmbeddings(Embedder):
-    def __init__(self, model="all-MiniLM-L6-v2", *args, **kwargs):
+    def __init__(
+        self, model: str = "all-MiniLM-L6-v2", *args: Any, **kwargs: Any
+    ) -> None:
         try:
             from sentence_transformers import SentenceTransformer
         except ImportError:
@@ -13,5 +16,5 @@ class SentenceTransformerEmbeddings(Embedder):
 
         self.model = SentenceTransformer(model, *args, **kwargs)
 
-    def embed_query(self, text: str) -> list[float]:
+    def embed_query(self, text: str) -> Any:
         return self.model.encode([text]).flatten().tolist()

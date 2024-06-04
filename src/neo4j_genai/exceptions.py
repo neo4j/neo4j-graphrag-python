@@ -12,6 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from pydantic_core import ErrorDetails
 
 
 class Neo4jGenAiError(Exception):
@@ -23,7 +24,7 @@ class Neo4jGenAiError(Exception):
 class RetrieverInitializationError(Neo4jGenAiError):
     """Exception raised when initialization of a retriever fails."""
 
-    def __init__(self, errors: str):
+    def __init__(self, errors: list[ErrorDetails]) -> None:
         super().__init__(f"Initialization failed: {errors}")
         self.errors = errors
 
@@ -31,7 +32,7 @@ class RetrieverInitializationError(Neo4jGenAiError):
 class SearchValidationError(Neo4jGenAiError):
     """Exception raised for validation errors during search."""
 
-    def __init__(self, errors):
+    def __init__(self, errors: list[ErrorDetails]) -> None:
         super().__init__(f"Search validation failed: {errors}")
         self.errors = errors
 
@@ -63,5 +64,5 @@ class Neo4jIndexError(Neo4jGenAiError):
 class Neo4jVersionError(Neo4jGenAiError):
     """Exception raised when Neo4j version does not meet minimum requirements."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("This package only supports Neo4j version 5.18.1 or greater")

@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import re
-from typing import Any, Type
+from typing import Any, Type, Union
 from collections import Counter
 
 from neo4j_genai.exceptions import FilterValidationError
@@ -31,9 +31,9 @@ class Operator:
         consistent with the operator (e.g. LIKE operator only works with string values)
     """
 
-    CYPHER_OPERATOR = None
+    CYPHER_OPERATOR: str
 
-    def __init__(self, node_alias=DEFAULT_NODE_ALIAS):
+    def __init__(self, node_alias: str = DEFAULT_NODE_ALIAS):
         self.node_alias = node_alias
 
     @staticmethod
@@ -55,11 +55,11 @@ class Operator:
         escaped_field = field_name.replace("`", "``")
         return f"`{escaped_field}`"
 
-    def lhs(self, field):
+    def lhs(self, field: str) -> str:
         safe_field_cypher = self.safe_field_cypher(field)
         return f"{self.node_alias}.{safe_field_cypher}"
 
-    def cleaned_value(self, value):
+    def cleaned_value(self, value: Any) -> Any:
         return value
 
 
@@ -90,7 +90,7 @@ class GteOperator(Operator):
 class InOperator(Operator):
     CYPHER_OPERATOR = "IN"
 
-    def cleaned_value(self, value):
+    def cleaned_value(self, value: list[Union[str, int, float]]) -> Any:
         for val in value:
             if not isinstance(val, (str, int, float)):
                 raise ValueError(f"Unsupported type: {type(val)} for value: {val}")
@@ -104,18 +104,18 @@ class NinOperator(InOperator):
 class LikeOperator(Operator):
     CYPHER_OPERATOR = "CONTAINS"
 
-    def cleaned_value(self, value):
+    def cleaned_value(self, value: str) -> str:
         if not isinstance(value, str):
             raise ValueError(f"Expected string value, got {type(value)}: {value}")
         return value.rstrip("%")
 
 
 class ILikeOperator(LikeOperator):
-    def lhs(self, field):
+    def lhs(self, field: str) -> str:
         safe_field_cypher = self.safe_field_cypher(field)
         return f"toLower({self.node_alias}.{safe_field_cypher})"
 
-    def cleaned_value(self, value):
+    def cleaned_value(self, value: str) -> str:
         value = super().cleaned_value(value)
         return value.lower()
 
@@ -164,11 +164,11 @@ class ParameterStore:
     Determine the parameter name depending on a parameter counter
     """
 
-    def __init__(self):
-        self._counter = Counter()
-        self.params = {}
+    def __init__(self) -> None:
+        self._counter: Counter[str] = Counter()
+        self.params: dict[str, Any] = {}
 
-    def _get_params_name(self):
+    def _get_params_name(self) -> str:
         """Find parameter name so that param names are unique.
         This function adds a suffix to the key corresponding to the number
         of times the key have been used in the query.
@@ -185,7 +185,7 @@ class ParameterStore:
         self._counter[key] += 1
         return param_name
 
-    def add(self, value):
+    def add(self, value: Any) -> str:
         """This function adds a new parameter to the param dict.
         It returns the name of the parameter to be used as a placeholder
         in the cypher query, e.g. $param_0"""
@@ -350,7 +350,7 @@ def _construct_metadata_filter(
 
 def get_metadata_filter(
     filter: dict[str, Any], node_alias: str = DEFAULT_NODE_ALIAS
-) -> tuple[str, dict]:
+) -> tuple[str, dict[str, Any]]:
     """Construct the cypher filter snippet based on a filter dict
 
     Note: the _construct_metadata_filter function is not thread-safe because

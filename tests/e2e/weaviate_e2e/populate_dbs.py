@@ -14,8 +14,10 @@
 #  limitations under the License.
 
 import weaviate.classes as wvc
-import weaviate
-from neo4j import GraphDatabase
+from weaviate.client import Client
+from weaviate.connect.helpers import connect_to_local
+from typing import Any
+from neo4j import GraphDatabase, Driver, EagerResult
 import os.path
 import json
 import hashlib
@@ -23,7 +25,9 @@ import hashlib
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-def populate_dbs(neo4j_driver, w_client, collection_name="Jeopardy"):
+def populate_dbs(
+    neo4j_driver: Driver, w_client: Client, collection_name: str = "Jeopardy"
+) -> None:
     neo4j_objects, w_question_objs = build_data_objects()
     w_client.collections.create(
         collection_name,
@@ -43,7 +47,9 @@ def populate_dbs(neo4j_driver, w_client, collection_name="Jeopardy"):
     populate_neo4j(neo4j_driver, neo4j_objects)
 
 
-def populate_neo4j(neo4j_driver, neo4j_objs):
+def populate_neo4j(
+    neo4j_driver: Driver, neo4j_objs: dict[str, list[wvc.data.DataObject]]
+) -> EagerResult:
     question_nodes = list(
         filter(lambda x: x["label"] == "Question", neo4j_objs["nodes"])
     )
@@ -76,12 +82,16 @@ def populate_neo4j(neo4j_driver, neo4j_objs):
     return res
 
 
-def populate_weaviate(w_client, w_question_objs, collection_name):
+def populate_weaviate(
+    w_client: Client,
+    w_question_objs: list[wvc.data.DataObject],
+    collection_name: str,
+) -> None:
     questions = w_client.collections.get(collection_name)
     questions.data.insert_many(w_question_objs)
 
 
-def build_data_objects():
+def build_data_objects() -> tuple[dict[str, Any], list[wvc.data.DataObject]]:
     # read file from disk
     # this file is from https://github.com/weaviate-tutorials/quickstart/tree/main/data
     # MIT License
@@ -93,7 +103,7 @@ def build_data_objects():
         data = json.load(f)
 
     w_question_objs = list()
-    neo4j_objs = {"nodes": [], "relationships": []}
+    neo4j_objs: dict[str, Any] = {"nodes": [], "relationships": []}
 
     # only unique categories and ids for them
     unique_categories_list = list(set([c["Category"] for c in data]))
@@ -154,5 +164,5 @@ if __name__ == "__main__":
     neo4j_auth = ("neo4j", "password")
     neo4j_url = "neo4j://localhost:7687"
     with GraphDatabase.driver(neo4j_url, auth=neo4j_auth) as neo4j_driver:
-        with weaviate.connect_to_local() as w_client:
+        with connect_to_local() as w_client:
             populate_dbs(neo4j_driver, w_client)

@@ -13,8 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from unittest.mock import patch
-
+from unittest.mock import patch, MagicMock
 import pytest
 
 from neo4j_genai import HybridRetriever, HybridCypherRetriever
@@ -23,7 +22,7 @@ from neo4j_genai.neo4j_queries import get_search_query
 from neo4j_genai.types import SearchType, RetrieverResult, RetrieverResultItem
 
 
-def test_vector_retriever_initialization(driver):
+def test_vector_retriever_initialization(driver: MagicMock) -> None:
     with patch("neo4j_genai.retrievers.base.Retriever._verify_version") as mock_verify:
         HybridRetriever(
             driver=driver,
@@ -33,7 +32,7 @@ def test_vector_retriever_initialization(driver):
         mock_verify.assert_called_once()
 
 
-def test_vector_cypher_retriever_initialization(driver):
+def test_vector_cypher_retriever_initialization(driver: MagicMock) -> None:
     with patch("neo4j_genai.retrievers.base.Retriever._verify_version") as mock_verify:
         HybridCypherRetriever(
             driver=driver,
@@ -45,10 +44,14 @@ def test_vector_cypher_retriever_initialization(driver):
 
 
 @patch("neo4j_genai.HybridRetriever._verify_version")
-def test_hybrid_retriever_invalid_fulltext_index_name(_verify_version_mock, driver):
+def test_hybrid_retriever_invalid_fulltext_index_name(
+    _verify_version_mock: MagicMock, driver: MagicMock
+) -> None:
     with pytest.raises(RetrieverInitializationError) as exc_info:
         HybridRetriever(
-            driver=driver, vector_index_name="my-index", fulltext_index_name=42
+            driver=driver,
+            vector_index_name="my-index",
+            fulltext_index_name=42,  # type: ignore
         )
 
     assert "fulltext_index_name" in str(exc_info.value)
@@ -56,13 +59,15 @@ def test_hybrid_retriever_invalid_fulltext_index_name(_verify_version_mock, driv
 
 
 @patch("neo4j_genai.HybridCypherRetriever._verify_version")
-def test_hybrid_cypher_retriever_invalid_retrieval_query(_verify_version_mock, driver):
+def test_hybrid_cypher_retriever_invalid_retrieval_query(
+    _verify_version_mock: MagicMock, driver: MagicMock
+) -> None:
     with pytest.raises(RetrieverInitializationError) as exc_info:
         HybridCypherRetriever(
             driver=driver,
             vector_index_name="my-index",
             fulltext_index_name="fulltext-index",
-            retrieval_query=42,
+            retrieval_query=42,  # type: ignore
         )
 
     assert "retrieval_query" in str(exc_info.value)
@@ -71,18 +76,22 @@ def test_hybrid_cypher_retriever_invalid_retrieval_query(_verify_version_mock, d
 
 @patch("neo4j_genai.HybridRetriever._verify_version")
 def test_hybrid_search_text_happy_path(
-    _verify_version_mock, driver, embedder, neo4j_record
-):
+    _verify_version_mock: MagicMock,
+    driver: MagicMock,
+    embedder: MagicMock,
+    neo4j_record: MagicMock,
+) -> None:
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
     vector_index_name = "my-index"
     fulltext_index_name = "my-fulltext-index"
     query_text = "may thy knife chip and shatter"
     top_k = 5
+
     retriever = HybridRetriever(
         driver, vector_index_name, fulltext_index_name, embedder
     )
-    retriever.driver.execute_query.return_value = [
+    retriever.driver.execute_query.return_value = [  # type: ignore
         [neo4j_record],
         None,
         None,
@@ -91,7 +100,7 @@ def test_hybrid_search_text_happy_path(
 
     records = retriever.search(query_text=query_text, top_k=top_k)
 
-    retriever.driver.execute_query.assert_called_once_with(
+    retriever.driver.execute_query.assert_called_once_with(  # type: ignore
         search_query,
         {
             "vector_index_name": vector_index_name,
@@ -112,11 +121,11 @@ def test_hybrid_search_text_happy_path(
 
 @patch("neo4j_genai.HybridRetriever._verify_version")
 def test_hybrid_search_favors_query_vector_over_embedding_vector(
-    _verify_version_mock,
-    driver,
-    embedder,
-    neo4j_record,
-):
+    _verify_version_mock: MagicMock,
+    driver: MagicMock,
+    embedder: MagicMock,
+    neo4j_record: MagicMock,
+) -> None:
     embed_query_vector = [1.0 for _ in range(1536)]
     query_vector = [2.0 for _ in range(1536)]
 
@@ -128,7 +137,7 @@ def test_hybrid_search_favors_query_vector_over_embedding_vector(
     retriever = HybridRetriever(
         driver, vector_index_name, fulltext_index_name, embedder
     )
-    retriever.driver.execute_query.return_value = [
+    retriever.driver.execute_query.return_value = [  # type: ignore
         [neo4j_record],
         None,
         None,
@@ -137,7 +146,7 @@ def test_hybrid_search_favors_query_vector_over_embedding_vector(
 
     retriever.search(query_text=query_text, query_vector=query_vector, top_k=top_k)
 
-    retriever.driver.execute_query.assert_called_once_with(
+    retriever.driver.execute_query.assert_called_once_with(  # type: ignore
         search_query,
         {
             "vector_index_name": vector_index_name,
@@ -150,7 +159,9 @@ def test_hybrid_search_favors_query_vector_over_embedding_vector(
     embedder.embed_query.assert_not_called()
 
 
-def test_error_when_hybrid_search_only_text_no_embedder(hybrid_retriever):
+def test_error_when_hybrid_search_only_text_no_embedder(
+    hybrid_retriever: HybridRetriever,
+) -> None:
     query_text = "may thy knife chip and shatter"
     top_k = 5
 
@@ -164,8 +175,8 @@ def test_error_when_hybrid_search_only_text_no_embedder(hybrid_retriever):
 
 
 def test_hybrid_search_retriever_search_missing_embedder_for_text(
-    hybrid_retriever,
-):
+    hybrid_retriever: HybridRetriever,
+) -> None:
     query_text = "may thy knife chip and shatter"
     top_k = 5
 
@@ -180,8 +191,11 @@ def test_hybrid_search_retriever_search_missing_embedder_for_text(
 
 @patch("neo4j_genai.HybridRetriever._verify_version")
 def test_hybrid_retriever_return_properties(
-    _verify_version_mock, driver, embedder, neo4j_record
-):
+    _verify_version_mock: MagicMock,
+    driver: MagicMock,
+    embedder: MagicMock,
+    neo4j_record: MagicMock,
+) -> None:
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
     vector_index_name = "my-index"
@@ -226,11 +240,11 @@ def test_hybrid_retriever_return_properties(
 
 @patch("neo4j_genai.HybridCypherRetriever._verify_version")
 def test_hybrid_cypher_retrieval_query_with_params(
-    _verify_version_mock,
-    driver,
-    embedder,
-    neo4j_record,
-):
+    _verify_version_mock: MagicMock,
+    driver: MagicMock,
+    embedder: MagicMock,
+    neo4j_record: MagicMock,
+) -> None:
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
     vector_index_name = "my-index"

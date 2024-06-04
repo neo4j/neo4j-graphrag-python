@@ -16,8 +16,9 @@ from unittest.mock import patch
 
 import neo4j
 import pytest
+from typing import Any
 from neo4j.exceptions import CypherSyntaxError
-
+from unittest.mock import MagicMock
 from neo4j_genai import VectorRetriever, VectorCypherRetriever
 from neo4j_genai.exceptions import (
     RetrieverInitializationError,
@@ -32,31 +33,35 @@ from neo4j_genai.types import (
 )
 
 
-def test_vector_retriever_initialization(driver):
+def test_vector_retriever_initialization(driver: MagicMock) -> None:
     with patch("neo4j_genai.retrievers.base.Retriever._verify_version") as mock_verify:
         VectorRetriever(driver=driver, index_name="my-index")
         mock_verify.assert_called_once()
 
 
 @patch("neo4j_genai.VectorRetriever._verify_version")
-def test_vector_retriever_invalid_index_name(_verify_version_mock, driver):
+def test_vector_retriever_invalid_index_name(
+    _verify_version_mock: MagicMock, driver: MagicMock
+) -> None:
     with pytest.raises(RetrieverInitializationError) as exc_info:
-        VectorRetriever(driver=driver, index_name=42)
+        VectorRetriever(driver=driver, index_name=42)  # type: ignore
 
     assert "index_name" in str(exc_info.value)
     assert "Input should be a valid string" in str(exc_info.value)
 
 
 @patch("neo4j_genai.VectorCypherRetriever._verify_version")
-def test_vector_cypher_retriever_invalid_retrieval_query(_verify_version_mock, driver):
+def test_vector_cypher_retriever_invalid_retrieval_query(
+    _verify_version_mock: MagicMock, driver: MagicMock
+) -> None:
     with pytest.raises(RetrieverInitializationError) as exc_info:
-        VectorCypherRetriever(driver=driver, index_name="my-index", retrieval_query=42)
+        VectorCypherRetriever(driver=driver, index_name="my-index", retrieval_query=42)  # type: ignore
 
         assert "retrieval_query" in str(exc_info.value)
         assert "Input should be a valid string" in str(exc_info.value)
 
 
-def test_vector_cypher_retriever_initialization(driver):
+def test_vector_cypher_retriever_initialization(driver: MagicMock) -> None:
     with patch("neo4j_genai.retrievers.base.Retriever._verify_version") as mock_verify:
         VectorCypherRetriever(driver=driver, index_name="my-index", retrieval_query="")
         mock_verify.assert_called_once()
@@ -65,15 +70,18 @@ def test_vector_cypher_retriever_initialization(driver):
 @patch("neo4j_genai.VectorRetriever._fetch_index_infos")
 @patch("neo4j_genai.VectorRetriever._verify_version")
 def test_similarity_search_vector_happy_path(
-    _verify_version_mock, _fetch_index_infos, driver, neo4j_record
-):
+    _verify_version_mock: MagicMock,
+    _fetch_index_infos: MagicMock,
+    driver: MagicMock,
+    neo4j_record: MagicMock,
+) -> None:
     index_name = "my-index"
     dimensions = 1536
     query_vector = [1.0 for _ in range(dimensions)]
     top_k = 5
     retriever = VectorRetriever(driver, index_name)
     expected_records = [neo4j.Record({"node": {"text": "dummy-node"}, "score": 1.0})]
-    retriever.driver.execute_query.return_value = [
+    retriever.driver.execute_query.return_value = [  # type: ignore
         expected_records,
         None,
         None,
@@ -82,7 +90,7 @@ def test_similarity_search_vector_happy_path(
 
     records = retriever.search(query_vector=query_vector, top_k=top_k)
 
-    retriever.driver.execute_query.assert_called_once_with(
+    retriever.driver.execute_query.assert_called_once_with(  # type: ignore
         search_query,
         {
             "vector_index_name": index_name,
@@ -103,12 +111,12 @@ def test_similarity_search_vector_happy_path(
 @patch("neo4j_genai.VectorRetriever._fetch_index_infos")
 @patch("neo4j_genai.VectorRetriever._verify_version")
 def test_similarity_search_text_happy_path(
-    _verify_version_mock,
-    _fetch_index_infos,
-    driver,
-    embedder,
-    neo4j_record,
-):
+    _verify_version_mock: MagicMock,
+    _fetch_index_infos: MagicMock,
+    driver: MagicMock,
+    embedder: MagicMock,
+    neo4j_record: MagicMock,
+) -> None:
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
     index_name = "my-index"
@@ -144,12 +152,12 @@ def test_similarity_search_text_happy_path(
 @patch("neo4j_genai.VectorRetriever._fetch_index_infos")
 @patch("neo4j_genai.VectorRetriever._verify_version")
 def test_similarity_search_text_return_properties(
-    _verify_version_mock,
-    _fetch_index_infos,
-    driver,
-    embedder,
-    neo4j_record,
-):
+    _verify_version_mock: MagicMock,
+    _fetch_index_infos: MagicMock,
+    driver: MagicMock,
+    embedder: MagicMock,
+    neo4j_record: MagicMock,
+) -> None:
     embed_query_vector = [1.0 for _ in range(3)]
     embedder.embed_query.return_value = embed_query_vector
     index_name = "my-index"
@@ -189,7 +197,9 @@ def test_similarity_search_text_return_properties(
     )
 
 
-def test_vector_retriever_search_missing_embedder_for_text(vector_retriever):
+def test_vector_retriever_search_missing_embedder_for_text(
+    vector_retriever: VectorRetriever,
+) -> None:
     query_text = "may thy knife chip and shatter"
     top_k = 5
 
@@ -199,7 +209,9 @@ def test_vector_retriever_search_missing_embedder_for_text(vector_retriever):
         vector_retriever.search(query_text=query_text, top_k=top_k)
 
 
-def test_vector_retriever_search_both_text_and_vector(vector_retriever):
+def test_vector_retriever_search_both_text_and_vector(
+    vector_retriever: VectorRetriever,
+) -> None:
     query_text = "may thy knife chip and shatter"
     query_vector = [1.1, 2.2, 3.3]
     top_k = 5
@@ -216,8 +228,8 @@ def test_vector_retriever_search_both_text_and_vector(vector_retriever):
 
 
 def test_vector_cypher_retriever_search_missing_embedder_for_text(
-    vector_cypher_retriever,
-):
+    vector_cypher_retriever: VectorCypherRetriever,
+) -> None:
     query_text = "may thy knife chip and shatter"
     top_k = 5
 
@@ -227,7 +239,9 @@ def test_vector_cypher_retriever_search_missing_embedder_for_text(
         vector_cypher_retriever.search(query_text=query_text, top_k=top_k)
 
 
-def test_vector_cypher_retriever_search_both_text_and_vector(vector_cypher_retriever):
+def test_vector_cypher_retriever_search_both_text_and_vector(
+    vector_cypher_retriever: VectorCypherRetriever,
+) -> None:
     query_text = "may thy knife chip and shatter"
     query_vector = [1.1, 2.2, 3.3]
     top_k = 5
@@ -246,8 +260,11 @@ def test_vector_cypher_retriever_search_both_text_and_vector(vector_cypher_retri
 @patch("neo4j_genai.VectorCypherRetriever._fetch_index_infos")
 @patch("neo4j_genai.VectorCypherRetriever._verify_version")
 def test_retrieval_query_happy_path(
-    _verify_version_mock, _fetch_index_infos, driver, embedder
-):
+    _verify_version_mock: MagicMock,
+    _fetch_index_infos: MagicMock,
+    driver: MagicMock,
+    embedder: MagicMock,
+) -> None:
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
     index_name = "my-index"
@@ -297,8 +314,11 @@ def test_retrieval_query_happy_path(
 @patch("neo4j_genai.VectorCypherRetriever._fetch_index_infos")
 @patch("neo4j_genai.VectorCypherRetriever._verify_version")
 def test_retrieval_query_with_result_format_function(
-    _verify_version_mock, _fetch_index_infos, driver, embedder
-):
+    _verify_version_mock: MagicMock,
+    _fetch_index_infos: MagicMock,
+    driver: MagicMock,
+    embedder: MagicMock,
+) -> None:
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
     index_name = "my-index"
@@ -306,7 +326,7 @@ def test_retrieval_query_with_result_format_function(
         RETURN node.id AS node_id, node.text AS text, score
         """
 
-    def format_function(record) -> RetrieverResultItem:
+    def format_function(record: dict[str, Any]) -> RetrieverResultItem:
         return RetrieverResultItem(
             content=record.get("text"),
             metadata={"score": record.get("score"), "node_id": record.get("node_id")},
@@ -358,8 +378,11 @@ def test_retrieval_query_with_result_format_function(
 @patch("neo4j_genai.VectorCypherRetriever._fetch_index_infos")
 @patch("neo4j_genai.VectorCypherRetriever._verify_version")
 def test_retrieval_query_with_params(
-    _verify_version_mock, _fetch_index_infos, driver, embedder
-):
+    _verify_version_mock: MagicMock,
+    _fetch_index_infos: MagicMock,
+    driver: MagicMock,
+    embedder: MagicMock,
+) -> None:
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
     index_name = "my-index"
@@ -418,8 +441,11 @@ def test_retrieval_query_with_params(
 @patch("neo4j_genai.VectorCypherRetriever._fetch_index_infos")
 @patch("neo4j_genai.VectorCypherRetriever._verify_version")
 def test_retrieval_query_cypher_error(
-    _verify_version_mock, _fetch_index_infos, driver, embedder
-):
+    _verify_version_mock: MagicMock,
+    _fetch_index_infos: MagicMock,
+    driver: MagicMock,
+    embedder: MagicMock,
+) -> None:
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
     index_name = "my-index"

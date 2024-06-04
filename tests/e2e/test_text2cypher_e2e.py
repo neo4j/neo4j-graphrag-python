@@ -1,10 +1,11 @@
 import pytest
 from neo4j_genai import Text2CypherRetriever
+from unittest.mock import MagicMock
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_schema_query")
-def test_t2c_retriever_search(driver, llm):
+def test_t2c_retriever_search(driver: MagicMock, llm: MagicMock) -> None:
     t2c_query = """
     MATCH (a:LabelA {property_a: 'a'})-[:REL_TYPE]->(b:LabelB)
     RETURN a.property_a

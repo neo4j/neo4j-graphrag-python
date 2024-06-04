@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Optional, Callable
+from typing import Optional, Any, Callable
 
 from pydantic import ValidationError
 
@@ -27,7 +27,6 @@ from neo4j_genai.retrievers.external.weaviate.types import (
 )
 import weaviate.classes as wvc
 from weaviate.client import WeaviateClient
-from weaviate.collections.classes.filters import _Filters
 import neo4j
 import logging
 from neo4j_genai.neo4j_queries import get_query_tail
@@ -47,7 +46,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         embedder: Optional[Embedder] = None,
         return_properties: Optional[list[str]] = None,
         retrieval_query: Optional[str] = None,
-        format_record_function: Optional[Callable] = None,
+        format_record_function: Optional[Callable[[Any], Any]] = None,
     ):
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -85,7 +84,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
-        weaviate_filters: Optional[_Filters] = None,
+        **kwargs: Any,
     ) -> RawSearchResult:
         """Get the top_k nearest neighbor embeddings using Weaviate for either provided query_vector or query_text.
         Both query_vector and query_text can be provided.
@@ -131,6 +130,9 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         Returns:
             RawSearchResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
         """
+
+        weaviate_filters = kwargs.get("weaviate_filters")
+
         try:
             validated_data = WeaviateNeo4jSearchModel(
                 top_k=top_k,
@@ -199,8 +201,8 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
 
 
 def get_match_query(
-    return_properties: Optional[str] = None, retrieval_query: Optional[str] = None
-):
+    return_properties: Optional[list[str]] = None, retrieval_query: Optional[str] = None
+) -> str:
     match_query = (
         "UNWIND $match_params AS match_param "
         "WITH match_param[0] AS match_id_value, match_param[1] AS score "

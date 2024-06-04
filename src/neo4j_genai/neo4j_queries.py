@@ -56,9 +56,9 @@ def _get_hybrid_query() -> str:
 
 def _get_filtered_vector_query(
     filters: dict[str, Any],
-    node_label: str,
-    embedding_node_property: str,
-    embedding_dimension: int,
+    node_label: Optional[str],
+    embedding_node_property: Optional[str],
+    embedding_dimension: Optional[int],
 ) -> tuple[str, dict[str, Any]]:
     """Build Cypher query for vector search with filters
     Uses exact KNN.
@@ -86,9 +86,9 @@ def _get_filtered_vector_query(
 
 def _get_vector_query(
     filters: Optional[dict[str, Any]],
-    node_label: str,
-    embedding_node_property: str,
-    embedding_dimension: int,
+    node_label: Optional[str],
+    embedding_node_property: Optional[str],
+    embedding_dimension: Optional[int],
 ) -> tuple[str, dict[str, Any]]:
     """Build the vector query with or without filters
 
@@ -139,7 +139,7 @@ def get_search_query(
         if filters:
             raise Exception("Filters is not supported with Hybrid Search")
         query = _get_hybrid_query()
-        params = {}
+        params: dict[str, Any] = {}
     elif search_type == SearchType.VECTOR:
         query, params = _get_vector_query(
             filters, node_label, embedding_node_property, embedding_dimension
