@@ -18,12 +18,11 @@ from unittest.mock import MagicMock
 
 import pytest
 from langchain_community.embeddings import HuggingFaceEmbeddings
-from neo4j_genai.retrievers.external.pinecone import PineconeNeo4jRetriever
+from neo4j_genai import PineconeNeo4jRetriever
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 from pinecone import Pinecone
 
-from ..utils import populate_neo4j
-from ..utils import EMBEDDING_BIOLOGY
+from ..utils import EMBEDDING_BIOLOGY, populate_neo4j
 from .populate_dbs import build_data_objects
 
 
