@@ -25,17 +25,17 @@ def test_rag_prompt_template():
         prompt
         == """Answer the user question using the following context
 
-    Context:
-    my context
+Context:
+my context
 
-    Examples:
+Examples:
 
 
-    Question:
-    user's query
+Question:
+user's query
 
-    Answer:
-    """
+Answer:
+"""
     )
 
 
@@ -57,17 +57,17 @@ def test_rag_happy_path(driver, retriever_mock, llm):
     retriever_mock.search.assert_called_once_with(query_text="question")
     llm.invoke.assert_called_once_with("""Answer the user question using the following context
 
-    Context:
-    item content 1
+Context:
+item content 1
 item content 2
 
-    Examples:
+Examples:
 
 
-    Question:
-    question
+Question:
+question
 
-    Answer:
-    """)
+Answer:
+""")
 
     assert res == "llm generated text"
