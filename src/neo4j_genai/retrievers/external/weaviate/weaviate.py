@@ -132,7 +132,6 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
                 logger.debug(
                     "No embedder provided, assuming vectorizer is used in Weaviate."
                 )
-        weaviate_filters = kwargs.get("weaviate_filters")
 
         if query_vector:
             response = self.search_collection.query.near_vector(

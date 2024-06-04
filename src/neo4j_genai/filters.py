@@ -59,7 +59,7 @@ class Operator:
         safe_field_cypher = self.safe_field_cypher(field)
         return f"{self.node_alias}.{safe_field_cypher}"
 
-    def cleaned_value(self, value: str) -> str:
+    def cleaned_value(self, value: Any) -> Any:
         return value
 
 
@@ -90,7 +90,7 @@ class GteOperator(Operator):
 class InOperator(Operator):
     CYPHER_OPERATOR = "IN"
 
-    def cleaned_value(self, value: str) -> str:
+    def cleaned_value(self, value: Any) -> Any:
         for val in value:
             if not isinstance(val, (str, int, float)):
                 raise ValueError(f"Unsupported type: {type(val)} for value: {val}")
@@ -166,7 +166,7 @@ class ParameterStore:
 
     def __init__(self) -> None:
         self._counter: Counter[str] = Counter()
-        self.params: dict[str, Union[str, int, list[Any]]] = {}
+        self.params: dict[str, Any] = {}
 
     def _get_params_name(self) -> str:
         """Find parameter name so that param names are unique.
@@ -185,7 +185,7 @@ class ParameterStore:
         self._counter[key] += 1
         return param_name
 
-    def add(self, value: Union[str, int, list[Any]]) -> Union[str, int, list[Any]]:
+    def add(self, value: Any) -> str:
         """This function adds a new parameter to the param dict.
         It returns the name of the parameter to be used as a placeholder
         in the cypher query, e.g. $param_0"""
