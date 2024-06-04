@@ -464,7 +464,7 @@ def build_data_objects(q_vector_fmt):
     ]
     neo4j_objs["nodes"] += unique_categories
 
-    for _, d in data:
+    for d in data:
         id = hashlib.md5(d["Question"].encode()).hexdigest()
         neo4j_objs["nodes"].append(
             {
