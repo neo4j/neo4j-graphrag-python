@@ -15,7 +15,7 @@
 
 [tool.poetry]
 name = "neo4j-genai"
-version = "0.2.0a2"
+version = "0.2.0a3"
 description = "Python package to allow easy integration to Neo4j's GenAI features"
 authors = ["Neo4j, Inc <team-gen-ai@neo4j.com>"]
 license = "Apache License, Version 2.0"
