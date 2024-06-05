@@ -2,7 +2,7 @@
 #
 
 # You can set these variables from the command line.
-VERSION       = 0.1.2
+VERSION       = SNAPSHOT
 PRODUCT       = neo4j-genai-python
 SPHINXOPTS    =
 SPHINXBUILD   = poetry run sphinx-build

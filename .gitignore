@@ -10,3 +10,4 @@ docs/build/
 .vscode/
 .python-version
 .DS_Store
+.venv

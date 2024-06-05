@@ -13,18 +13,22 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from .retrievers.external.pinecone import PineconeNeo4jRetriever
-from .retrievers.external.weaviate import WeaviateNeo4jRetriever
-from .retrievers.hybrid import HybridCypherRetriever, HybridRetriever
-from .retrievers.text2cypher import Text2CypherRetriever
-from .retrievers.vector import VectorCypherRetriever, VectorRetriever
+from typing import Optional
 
-__all__ = [
-    "VectorRetriever",
-    "VectorCypherRetriever",
-    "HybridRetriever",
-    "HybridCypherRetriever",
-    "Text2CypherRetriever",
-    "WeaviateNeo4jRetriever",
-    "PineconeNeo4jRetriever",
-]
+from neo4j_genai.neo4j_queries import get_query_tail
+
+
+def get_match_query(
+    return_properties: Optional[list[str]] = None, retrieval_query: Optional[str] = None
+) -> str:
+    match_query = (
+        "UNWIND $match_params AS match_param "
+        "WITH match_param[0] AS match_id_value, match_param[1] AS score "
+        "MATCH (node) "
+        "WHERE node[$id_property] = match_id_value "
+    )
+    return match_query + get_query_tail(
+        return_properties=return_properties,
+        retrieval_query=retrieval_query,
+        fallback_return="RETURN node, score",
+    )

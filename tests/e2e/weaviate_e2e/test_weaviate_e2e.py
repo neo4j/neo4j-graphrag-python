@@ -14,18 +14,18 @@
 #  limitations under the License.
 
 import re
-import pytest
-from typing import Generator, Any
-from neo4j import Driver
+from typing import Any, Generator
 
-from weaviate.client import Client
-from weaviate.connect.helpers import connect_to_local
+import pytest
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from neo4j import Driver
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.retrievers.external.weaviate import WeaviateNeo4jRetriever
-from langchain_community.embeddings import HuggingFaceEmbeddings
-
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
-from .utils import EMBEDDING_BIOLOGY
+from weaviate.client import Client
+from weaviate.connect.helpers import connect_to_local
+
+from ..utils import EMBEDDING_BIOLOGY
 from .populate_dbs import populate_dbs
 
 

@@ -19,6 +19,10 @@ jobs:
           - community
           - enterprise
     services:
+      t2v-transformers:
+        image: cr.weaviate.io/semitechnologies/transformers-inference:sentence-transformers-all-MiniLM-L6-v2-onnx
+        env:
+          ENABLE_CUDA: '0'
       weaviate:
         image: cr.weaviate.io/semitechnologies/weaviate:1.25.1
         env:
@@ -30,16 +34,12 @@ jobs:
         ports:
           - 8080:8080
           - 50051:50051
-      t2v-transformers:
-        image: cr.weaviate.io/semitechnologies/transformers-inference:sentence-transformers-all-MiniLM-L6-v2-onnx
-        env:
-          ENABLE_CUDA: '0'
       neo4j:
         image: neo4j:${{ matrix.neo4j-version }}-${{ matrix.neo4j-edition }}
         env:
           NEO4J_AUTH: neo4j/password
           NEO4J_ACCEPT_LICENSE_AGREEMENT: 'eval'
-          NEO4J_PLUGINS: "[\"apoc\"]"
+          NEO4J_PLUGINS: '["apoc"]'
         ports:
           - 7687:7687
           - 7474:7474
@@ -69,6 +69,7 @@ jobs:
       - name: Wait for Weaviate to start
         shell: bash
         run: |
+          set +e
           count=0; until curl -s --fail localhost:8080/v1/.well-known/ready; do ((count++)); [ $count -ge 10 ] && echo "Reached maximum retry limit" && exit 1; sleep 15; done
       - name: Run tests
         shell: bash

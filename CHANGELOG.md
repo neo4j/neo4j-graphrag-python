@@ -2,6 +2,8 @@
 
 ## Next
 
+## 0.2.0a3
+
 ### Added
 
 - Introduced custom exceptions for improved error handling, including `RetrieverInitializationError`, `SearchValidationError`, `FilterValidationError`, `EmbeddingRequiredError`, `RecordCreationError`, `Neo4jIndexError`, and `Neo4jVersionError`.

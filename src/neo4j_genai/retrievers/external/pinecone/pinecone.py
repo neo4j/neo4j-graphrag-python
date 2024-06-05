@@ -17,31 +17,37 @@ import logging
 from typing import Any, Callable, Optional
 
 import neo4j
-import weaviate.classes as wvc
+from pinecone import Pinecone
 from pydantic import ValidationError
-from weaviate.client import WeaviateClient
 
 from neo4j_genai.embedder import Embedder
-from neo4j_genai.exceptions import RetrieverInitializationError, SearchValidationError
-from neo4j_genai.retrievers.base import ExternalRetriever
-from neo4j_genai.retrievers.external.utils import get_match_query
-from neo4j_genai.retrievers.external.weaviate.types import (
-    WeaviateModel,
-    WeaviateNeo4jRetrieverModel,
-    WeaviateNeo4jSearchModel,
+from neo4j_genai.exceptions import (
+    EmbeddingRequiredError,
+    RetrieverInitializationError,
+    SearchValidationError,
 )
-from neo4j_genai.types import EmbedderModel, Neo4jDriverModel, RawSearchResult
+from neo4j_genai.retrievers.base import ExternalRetriever
+from neo4j_genai.retrievers.external.pinecone.types import (
+    PineconeClientModel,
+    PineconeNeo4jRetrieverModel,
+    PineconeSearchModel,
+)
+from neo4j_genai.retrievers.external.utils import get_match_query
+from neo4j_genai.types import (
+    EmbedderModel,
+    Neo4jDriverModel,
+    RawSearchResult,
+)
 
 logger = logging.getLogger(__name__)
 
 
-class WeaviateNeo4jRetriever(ExternalRetriever):
+class PineconeNeo4jRetriever(ExternalRetriever):
     def __init__(
         self,
         driver: neo4j.Driver,
-        client: WeaviateClient,
-        collection: str,
-        id_property_external: str,
+        client: Pinecone,
+        index_name: str,
         id_property_neo4j: str,
         embedder: Optional[Embedder] = None,
         return_properties: Optional[list[str]] = None,
@@ -50,13 +56,12 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
     ):
         try:
             driver_model = Neo4jDriverModel(driver=driver)
-            weaviate_model = WeaviateModel(client=client)
+            client_model = PineconeClientModel(client=client)
             embedder_model = EmbedderModel(embedder=embedder) if embedder else None
-            validated_data = WeaviateNeo4jRetrieverModel(
+            validated_data = PineconeNeo4jRetrieverModel(
                 driver_model=driver_model,
-                client_model=weaviate_model,
-                collection=collection,
-                id_property_external=id_property_external,
+                client_model=client_model,
+                index_name=index_name,
                 id_property_neo4j=id_property_neo4j,
                 embedder_model=embedder_model,
                 return_properties=return_properties,
@@ -66,10 +71,15 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         except ValidationError as e:
             raise RetrieverInitializationError(e.errors())
 
-        super().__init__(driver, id_property_external, id_property_neo4j)
+        super().__init__(
+            driver=driver,
+            id_property_external="id",
+            id_property_neo4j=validated_data.id_property_neo4j,
+        )
+        self.driver = validated_data.driver_model.driver
         self.client = validated_data.client_model.client
-        collection = validated_data.collection
-        self.search_collection = self.client.collections.get(collection)
+        self.index_name = validated_data.index_name
+        self.index = self.client.Index(index_name)
         self.embedder = (
             validated_data.embedder_model.embedder
             if validated_data.embedder_model
@@ -86,12 +96,11 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         top_k: int = 5,
         **kwargs: Any,
     ) -> RawSearchResult:
-        """Get the top_k nearest neighbor embeddings using Weaviate for either provided query_vector or query_text.
+        """Get the top_k nearest neighbor embeddings using Pinecone for either provided query_vector or query_text.
         Both query_vector and query_text can be provided.
         If query_vector is provided, then it will be preferred over the embedded query_text
         for the vector search.
         If query_text is provided, then it will check if an embedder is provided and use it to generate the query_vector.
-        If no embedder is provided, then it will assume that the vectorizer is used in Weaviate.
 
         See the following documentation for more details:
         - `Query a vector index <https://neo4j.com/docs/cypher-manual/current/indexes-for-vector-search/#indexes-vector-query>`_
@@ -103,82 +112,63 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
 
         .. code-block:: python
 
-          import neo4j
-          from neo4j_genai.retrievers import WeaviateNeo4jRetriever
+          from neo4j import GraphDatabase
+          from neo4j_genai.retrievers.external.pinecone import PineconeNeo4jRetriever
+          from pinecone import Pinecone
 
-          driver = neo4j.GraphDatabase.driver(URI, auth=AUTH)
-
-          retriever = WeaviateNeo4jRetriever(
-              driver=driver,
-              client=weaviate_client,
-              collection="Jeopardy",
-              id_property_external="neo4j_id",
-              id_property_neo4j="id",
-          )
-
-          biology_embedding = ...
-          retriever.search(query_vector=biology_embedding, top_k=2)
+          with GraphDatabase.driver(NEO4J_URL, auth=NEO4J_AUTH) as neo4j_driver:
+              pc_client = Pinecone(PC_API_KEY)
+              retriever = PineconeNeo4jRetriever(
+                  driver=neo4j_driver,
+                  client=pc_client,
+                  index_name="jeopardy",
+                  id_property_neo4j="id"
+              )
+              embedding = ...
+              retriever.search(query_vector=biology_embedding, top_k=2)
 
 
         Args:
-            query_text (Optional[str]): The text to get the closest neighbors of.
-            query_vector (Optional[list[float]]): The vector embeddings to get the closest neighbors of. Defaults to None.
-            top_k (int): The number of neighbors to return. Defaults to 5.
+            query_text (str): The text to get the closest neighbors of.
+            query_vector (Optional[list[float]], optional): The vector embeddings to get the closest neighbors of. Defaults to None.
+            top_k (Optional[int]): The number of neighbors to return. Defaults to 5.
         Raises:
             SearchValidationError: If validation of the input arguments fail.
+            EmbeddingRequiredError: If no embedder is provided when using text as an input.
         Returns:
             RawSearchResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
         """
 
-        weaviate_filters = kwargs.get("weaviate_filters")
+        pinecone_filters = kwargs.get("pinecone_filters")
 
         try:
-            validated_data = WeaviateNeo4jSearchModel(
-                top_k=top_k,
+            validated_data = PineconeSearchModel(
+                vector_index_name=self.index_name,
                 query_vector=query_vector,
                 query_text=query_text,
-                weaviate_filters=weaviate_filters,
+                top_k=top_k,
+                pinecone_filter=pinecone_filters,
             )
-            query_text = validated_data.query_text
-            query_vector = validated_data.query_vector
-            top_k = validated_data.top_k
-            weaviate_filters = validated_data.weaviate_filters
         except ValidationError as e:
             raise SearchValidationError(e.errors())
 
-        # If we want to use a local embedder, we still want to call the near_vector method
-        # so we want to create the vector as early as possible here
-        if query_text:
+        if validated_data.query_text:
             if self.embedder:
-                query_vector = self.embedder.embed_query(query_text)
+                query_vector = self.embedder.embed_query(validated_data.query_text)
                 logger.debug("Locally generated query vector: %s", query_vector)
             else:
-                logger.debug(
-                    "No embedder provided, assuming vectorizer is used in Weaviate."
-                )
+                logger.error("No embedder provided for query_text.")
+                raise EmbeddingRequiredError("No embedder provided for query_text.")
 
-        if query_vector:
-            response = self.search_collection.query.near_vector(
-                near_vector=query_vector,
-                limit=top_k,
-                filters=weaviate_filters,
-                return_metadata=wvc.query.MetadataQuery(certainty=True),
-            )
-            logger.debug("Weaviate query vector: %s", query_vector)
-            logger.debug("Response: %s", response)
-        else:
-            response = self.search_collection.query.near_text(
-                query=query_text,
-                limit=top_k,
-                filters=weaviate_filters,
-                return_metadata=wvc.query.MetadataQuery(certainty=True),
-            )
-            logger.debug("Query text: %s", query_text)
-            logger.debug("Response: %s", response)
+        response = self.index.query(
+            vector=query_vector,
+            top_k=validated_data.top_k,
+            filter=validated_data.pinecone_filter,
+        )
 
         result_tuples = [
-            [f"{o.properties[self.id_property_external]}", o.metadata.certainty or 0.0]
-            for o in response.objects
+            [f"{o[self.id_property_external]}", o["score"] or 0.0]
+            for o in response["matches"]
         ]
 
         search_query = get_match_query(
@@ -191,8 +181,8 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
             "id_property": self.id_property_neo4j,
         }
 
-        logger.debug("Weaviate Store Cypher parameters: %s", parameters)
-        logger.debug("Weaviate Store Cypher query: %s", search_query)
+        logger.debug("Pinecone Store Cypher parameters: %s", parameters)
+        logger.debug("Pinecone Store Cypher query: %s", search_query)
 
         records, _, _ = self.driver.execute_query(search_query, parameters)
 
