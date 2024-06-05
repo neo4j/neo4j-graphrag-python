@@ -82,8 +82,9 @@ class Text2CypherRetriever(Retriever):
                 else get_schema(validated_data.driver_model.driver)
             )
         except (Neo4jError, DriverError) as e:
+            error_message = getattr(e, "message", str(e))
             raise SchemaFetchError(
-                f"Failed to fetch schema for Text2CypherRetriever: {e}"
+                f"Failed to fetch schema for Text2CypherRetriever: {error_message}"
             )
 
     def _get_search_results(
