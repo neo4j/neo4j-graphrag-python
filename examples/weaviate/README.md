@@ -28,11 +28,11 @@ pip install weaviate-client
 
 ```
 # search by vector
-poetry run python examples/weaviate/vector_search.py
+poetry run python -m examples.weaviate.vector_search
 
 # search by text, with embeddings generated locally (via embedder argument)
-poetry run python examples/weaviate/text_search_local_embedder.py
+poetry run python -m examples.weaviate.text_search_local_embedder
 
 # search by text, with embeddings generated on the Weaviate side, via configured vectorizer
-poetry run python examples/weaviate/text_search_remote_embedder.py
+poetry run python -m examples.weaviate.text_search_remote_embedder
 ```

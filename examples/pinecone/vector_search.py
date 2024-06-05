@@ -1,14 +1,15 @@
-from embedding_biology import EMBEDDING_BIOLOGY
 from neo4j import GraphDatabase
 from neo4j_genai.retrievers.external.pinecone import PineconeNeo4jRetriever
 from pinecone import Pinecone
+
+from examples.embedding_biology import EMBEDDING_BIOLOGY
 
 NEO4J_AUTH = ("neo4j", "password")
 NEO4J_URL = "neo4j://localhost:7687"
 PC_API_KEY = "API_KEY"
 
 
-def main():
+def main() -> None:
     with GraphDatabase.driver(NEO4J_URL, auth=NEO4J_AUTH) as neo4j_driver:
         pc_client = Pinecone(PC_API_KEY)
         retriever = PineconeNeo4jRetriever(

@@ -23,8 +23,8 @@ Update the `NEO4J_AUTH`, `NEO4J_URL`, and `PC_API_KEY` variables in each file th
 
 ```
 # Search by vector
-poetry run python examples/weaviate/vector_search.py
+poetry run python -m examples.pinecone.vector_search
 
 # Search by text, with embeddings generated locally
-poetry run python examples/weaviate/text_search.py
+poetry run python -m examples.pinecone.text_search
 ```
