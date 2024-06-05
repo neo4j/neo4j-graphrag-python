@@ -69,7 +69,7 @@ jobs:
       - name: Wait for Weaviate to start
         shell: bash
         run: |
-          count=0; until curl -s --fail localhost:8080/v1/.well-known/ready; do ((count++)); [ $count -ge 10 ] && echo "Reached maximum retry limit" && exit 1; sleep 15; done
+          count=0; until curl -v --fail localhost:8080/v1/.well-known/ready; do ((count++)); [ $count -ge 10 ] && echo "Reached maximum retry limit" && exit 1; sleep 15; done
       - name: Run tests
         shell: bash
         run: |
