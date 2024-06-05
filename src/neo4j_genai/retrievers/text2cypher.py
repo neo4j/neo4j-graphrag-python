@@ -104,8 +104,8 @@ class Text2CypherRetriever(Retriever):
         except ValidationError as e:
             raise ValueError(f"Validation failed: {e.errors()}")
 
-        prompt = Text2CypherTemplate()
-        prompt = prompt.format(
+        prompt_template = Text2CypherTemplate()
+        prompt = prompt_template.format(
             schema=self.neo4j_schema,
             examples="\n".join(validated_data.examples)
             if validated_data.examples

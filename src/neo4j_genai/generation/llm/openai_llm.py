@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Optional
+from typing import Optional, Any
 
 from openai import OpenAI
 
@@ -23,7 +23,7 @@ class OpenAILLM(LLMInterface):
     def __init__(
         self,
         model_name: str,
-        model_params: Optional[dict] = None,
+        model_params: Optional[dict[str, Any]] = None,
     ):
         """
 
@@ -39,16 +39,16 @@ class OpenAILLM(LLMInterface):
     def get_messages(
         self,
         input: str,
-    ) -> list:
+    ) -> list[dict[str, str]]:
         return [
             {"role": "system", "content": input},
         ]
 
     def invoke(self, input: str) -> str:
         response = self.client.chat.completions.create(
-            messages=self.get_messages(input),
+            messages=self.get_messages(input),  # type: ignore
             model=self.model_name,
             **self.model_params,
         )
         # TODO: deal with errors
-        return response.choices[0].message.content
+        return response.choices[0].message.content or ""

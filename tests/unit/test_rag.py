@@ -12,6 +12,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from unittest.mock import MagicMock
+
 import pytest
 
 from neo4j_genai.generation.prompts import RagTemplate
@@ -20,7 +22,7 @@ from neo4j_genai.generation.types import RagResultModel
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 
 
-def test_rag_prompt_template():
+def test_rag_prompt_template() -> None:
     template = RagTemplate()
     prompt = template.format(context="my context", query="user's query", examples="")
     assert (
@@ -41,7 +43,7 @@ Answer:
     )
 
 
-def test_rag_happy_path(driver, retriever_mock, llm):
+def test_rag_happy_path(retriever_mock: MagicMock, llm: MagicMock) -> None:
     rag = RAG(
         retriever=retriever_mock,
         llm=llm,
@@ -77,20 +79,20 @@ Answer:
     assert res.retriever_result is None
 
 
-def test_rag_initialization_error(llm):
+def test_rag_initialization_error(llm: MagicMock) -> None:
     with pytest.raises(ValueError) as excinfo:
         RAG(
-            retriever="not a retriever object",
+            retriever="not a retriever object",  # type: ignore
             llm=llm,
         )
     assert "Input should be an instance of Retriever" in str(excinfo)
 
 
-def test_rag_search_error(driver, retriever_mock, llm):
+def test_rag_search_error(retriever_mock: MagicMock, llm: MagicMock) -> None:
     rag = RAG(
         retriever=retriever_mock,
         llm=llm,
     )
     with pytest.raises(ValueError) as excinfo:
-        rag.search(10)
+        rag.search(10)  # type: ignore
     assert "Input should be a valid string" in str(excinfo)

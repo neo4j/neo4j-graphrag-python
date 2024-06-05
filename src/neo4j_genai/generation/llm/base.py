@@ -13,15 +13,20 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, Any
 
 
 class LLMInterface(ABC):
     """Interface for large language models."""
 
-    def __init__(self, model_name: str, model_params: Optional[dict] = None, **kwargs):
+    def __init__(
+        self,
+        model_name: str,
+        model_params: Optional[dict[str, Any]] = None,
+        **kwargs: Any,
+    ):
         self.model_name = model_name
-        self.model_params = model_params
+        self.model_params = model_params or {}
 
     @abstractmethod
     def invoke(self, input: str) -> str:

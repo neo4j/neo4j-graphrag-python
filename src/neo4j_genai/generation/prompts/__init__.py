@@ -13,12 +13,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Optional
+from typing import Optional, Any
 
 
 class PromptTemplate:
     DEFAULT_TEMPLATE: str = ""
-    EXPECTED_INPUTS: Optional[list] = None
+    EXPECTED_INPUTS: list[str] = []
 
     def __init__(
         self,
@@ -26,13 +26,18 @@ class PromptTemplate:
         expected_inputs: Optional[list[str]] = None,
     ) -> None:
         self.template = template or self.DEFAULT_TEMPLATE
-        self.expected_inputs = expected_inputs or self.EXPECTED_INPUTS or []
+        self.expected_inputs = expected_inputs or self.EXPECTED_INPUTS
 
-    def format(self, **kwargs):
+    def _format(self, **kwargs: Any) -> str:
         for e in self.EXPECTED_INPUTS:
             if e not in kwargs:
                 raise Exception(f"Missing input {e}")
         return self.template.format(**kwargs)
+
+    def format(self, *args: Any, **kwargs: Any) -> str:
+        data = kwargs
+        data.update({k: v for k, v in zip(self.expected_inputs, args)})
+        return self._format(**data)
 
 
 class RagTemplate(PromptTemplate):

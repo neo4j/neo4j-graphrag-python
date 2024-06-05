@@ -41,7 +41,7 @@ logging.basicConfig(format="%(asctime)s - %(message)s")
 logger.setLevel(logging.DEBUG)
 
 
-def formatter(record):
+def formatter(record: neo4j.Record) -> RetrieverResultItem:
     return RetrieverResultItem(content=f'{record.get("title")}: {record.get("plot")}')
 
 

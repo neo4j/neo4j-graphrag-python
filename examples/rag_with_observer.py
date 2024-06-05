@@ -44,7 +44,7 @@ logger = logging.getLogger("my_logger")
 logger.setLevel(logging.DEBUG)
 
 
-def formatter(record):
+def formatter(record: neo4j.Record) -> RetrieverResultItem:
     return RetrieverResultItem(content=f'{record.get("title")}: {record.get("plot")}')
 
 

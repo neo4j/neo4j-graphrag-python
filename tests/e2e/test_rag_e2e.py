@@ -12,6 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -20,13 +21,15 @@ from neo4j_genai.generation.rag import RAG
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
-def test_rag_happy_path(driver, custom_embedder, llm):
+def test_rag_happy_path(
+    driver: MagicMock, custom_embedder: MagicMock, llm: MagicMock
+) -> None:
     retriever = VectorRetriever(driver, "vector-index-name", custom_embedder)
     rag = RAG(
         retriever=retriever,
         llm=llm,
     )
-    rag.llm.invoke.return_value = "some text"
+    rag.llm.invoke.return_value = "some text"  # type: ignore
 
     result = rag.search(
         query="Find me a book about Fremen",
