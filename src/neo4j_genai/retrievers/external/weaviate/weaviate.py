@@ -65,7 +65,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         client (WeaviateClient): The Weaviate client object.
         collection (str): Name of a set of Weaviate objects that share the same data structure.
         id_property_external (str): Weaviate property identifier that refers to a corresponding Neo4j node id.
-        id_property_neo4j (str): Neo4j node id that refers to a corresponding `id_property_external`.
+        id_property_neo4j (str): The name of the Neo4j node property that's used as the identifier for relating matches from Weaviate to Neo4j nodes.
         embedder (Optional[Embedder]): Embedder object to embed query text.
         return_properties (Optional[list[str]]): List of node properties to return.
         format_record_function (Optional[Callable[[Any], Any]]): Function that transforms a `neo4j.Record` to a `RetrieverResultItem`.
