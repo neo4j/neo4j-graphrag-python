@@ -18,6 +18,7 @@ import pytest
 
 from neo4j_genai import VectorRetriever
 from neo4j_genai.generation.rag import RAG
+from neo4j_genai.generation.types import RagResultModel
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
@@ -29,7 +30,7 @@ def test_rag_happy_path(
         retriever=retriever,
         llm=llm,
     )
-    rag.llm.invoke.return_value = "some text"  # type: ignore
+    llm.invoke.return_value = "some text"
 
     result = rag.search(
         query="Find me a book about Fremen",
@@ -39,5 +40,5 @@ def test_rag_happy_path(
     )
 
     llm.invoke.assert_called_once()
-    assert isinstance(result, str)
-    assert result == "some text"
+    assert isinstance(result, RagResultModel)
+    assert result.answer == "some text"
