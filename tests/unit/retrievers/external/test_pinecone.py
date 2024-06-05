@@ -38,7 +38,7 @@ def test_pinecone_retriever_invalid_return_properties(
             client=client,
             index_name="dummy-text",
             id_property_neo4j="dummy-text",
-            return_properties=42,
+            return_properties=42,  # type: ignore
         )
 
     assert "return_properties" in str(exc_info.value)
@@ -54,7 +54,7 @@ def test_pinecone_retriever_invalid_retrieval_query(
             client=client,
             index_name="dummy-text",
             id_property_neo4j="dummy-text",
-            retrieval_query=42,
+            retrieval_query=42,  # type: ignore
         )
 
     assert "retrieval_query" in str(exc_info.value)
@@ -80,7 +80,7 @@ def test_pinecone_retriever_search_happy_path(
             "namespace": "",
             "usage": {"read_units": top_k},
         }
-        retriever.driver.execute_query.return_value = (
+        driver.execute_query.return_value = (
             [
                 neo4j.Record({"node": {"sync_id": f"node_{i}"}, "score": i / top_k})
                 for i in range(top_k)
@@ -135,7 +135,7 @@ def test_pinecone_retriever_search_return_properties(
             "namespace": "",
             "usage": {"read_units": top_k},
         }
-        retriever.driver.execute_query.return_value = (
+        driver.execute_query.return_value = (
             [
                 neo4j.Record({"node": {"sync_id": f"node_{i}"}, "score": i / top_k})
                 for i in range(top_k)
@@ -193,7 +193,7 @@ def test_pinecone_retriever_search_retrieval_query(
             "namespace": "",
             "usage": {"read_units": top_k},
         }
-        retriever.driver.execute_query.return_value = (
+        driver.execute_query.return_value = (
             [
                 neo4j.Record({"node": {"sync_id": f"node_{i}"}, "score": i / top_k})
                 for i in range(top_k)
