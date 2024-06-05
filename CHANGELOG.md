@@ -1,6 +1,6 @@
 # @neo4j/neo4j-genai-python
 
-## 0.2.0
+## Next
 
 ### Added
 
