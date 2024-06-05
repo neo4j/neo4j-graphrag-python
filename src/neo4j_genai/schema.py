@@ -25,7 +25,7 @@ EXCLUDED_RELS = ["_Bloom_HAS_SCENE_"]
 NODE_PROPERTIES_QUERY = """
 CALL apoc.meta.data()
 YIELD label, other, elementType, type, property
-WHERE NOT type = "RELATIONSHIP" AND elementType = "node" 
+WHERE NOT type = "RELATIONSHIP" AND elementType = "node"
     AND NOT label IN $EXCLUDED_LABELS
 WITH label AS nodeLabels, collect({property:property, type:type}) AS properties
 RETURN {labels: nodeLabels, properties: properties} AS output
@@ -51,14 +51,14 @@ RETURN {start: label, type: property, end: toString(other_node)} AS output
 """
 
 INDEX_QUERY = """
-CALL apoc.schema.nodes() YIELD label, properties, type, size, valuesSelectivity 
-WHERE type = "RANGE" RETURN *, 
+CALL apoc.schema.nodes() YIELD label, properties, type, size, valuesSelectivity
+WHERE type = "RANGE" RETURN *,
 size * valuesSelectivity as distinctValues
 """
 
 
 def query_database(
-    driver: neo4j.Driver, query: str, params: Optional[dict] = None
+    driver: neo4j.Driver, query: str, params: Optional[dict[str, Any]] = None
 ) -> list[dict[str, Any]]:
     """
     Queries the database.
@@ -91,7 +91,7 @@ def get_schema(
     """
     structured_schema = get_structured_schema(driver)
 
-    def _format_props(props):
+    def _format_props(props: list[dict[str, Any]]) -> str:
         return ", ".join([f"{prop['property']}: {prop['type']}" for prop in props])
 
     # Format node properties

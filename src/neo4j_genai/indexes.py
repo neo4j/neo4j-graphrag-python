@@ -19,7 +19,7 @@ from pydantic import ValidationError
 from .exceptions import Neo4jIndexError
 from .types import VectorIndexModel, FulltextIndexModel
 import logging
-
+from typing import Literal
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ def create_vector_index(
     label: str,
     property: str,
     dimensions: int,
-    similarity_fn: str,
+    similarity_fn: Literal["euclidean", "cosine"],
 ) -> None:
     """
     This method constructs a Cypher query and executes it
@@ -56,14 +56,12 @@ def create_vector_index(
     """
     try:
         VectorIndexModel(
-            **{
-                "driver": driver,
-                "name": name,
-                "label": label,
-                "property": property,
-                "dimensions": dimensions,
-                "similarity_fn": similarity_fn,
-            }
+            driver=driver,
+            name=name,
+            label=label,
+            property=property,
+            dimensions=dimensions,
+            similarity_fn=similarity_fn,
         )
     except ValidationError as e:
         raise Neo4jIndexError(f"Error for inputs to create_vector_index {str(e)}")
@@ -106,12 +104,7 @@ def create_fulltext_index(
     """
     try:
         FulltextIndexModel(
-            **{
-                "driver": driver,
-                "name": name,
-                "label": label,
-                "node_properties": node_properties,
-            }
+            driver=driver, name=name, label=label, node_properties=node_properties
         )
     except ValidationError as e:
         raise Neo4jIndexError(f"Error for inputs to create_fulltext_index: {str(e)}")

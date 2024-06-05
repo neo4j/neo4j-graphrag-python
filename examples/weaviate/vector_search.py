@@ -15,16 +15,16 @@
 
 from neo4j_genai.retrievers.external.weaviate import WeaviateNeo4jRetriever
 from neo4j import GraphDatabase
-import weaviate
+from weaviate.connect.helpers import connect_to_local
 from embedding_biology import EMBEDDING_BIOLOGY
 
 NEO4J_URL = "neo4j://localhost:7687"
 NEO4J_AUTH = ("neo4j", "password")
 
 
-def main():
+def main() -> None:
     with GraphDatabase.driver(NEO4J_URL, auth=NEO4J_AUTH) as neo4j_driver:
-        with weaviate.connect_to_local() as w_client:
+        with connect_to_local() as w_client:
             retriever = WeaviateNeo4jRetriever(
                 driver=neo4j_driver,
                 client=w_client,

@@ -28,29 +28,33 @@ from neo4j_genai.llm import LLM
 
 
 @pytest.fixture(scope="function")
-def driver():
+def driver() -> MagicMock:
     return MagicMock(spec=neo4j.Driver)
 
 
 @pytest.fixture(scope="function")
-def embedder():
+def embedder() -> MagicMock:
     return MagicMock(spec=Embedder)
 
 
 @pytest.fixture(scope="function")
-def llm():
+def llm() -> MagicMock:
     return MagicMock(spec=LLM)
 
 
 @pytest.fixture(scope="function")
 @patch("neo4j_genai.VectorRetriever._verify_version")
-def vector_retriever(_verify_version_mock, driver):
+def vector_retriever(
+    _verify_version_mock: MagicMock, driver: MagicMock
+) -> VectorRetriever:
     return VectorRetriever(driver, "my-index")
 
 
 @pytest.fixture(scope="function")
 @patch("neo4j_genai.VectorCypherRetriever._verify_version")
-def vector_cypher_retriever(_verify_version_mock, driver):
+def vector_cypher_retriever(
+    _verify_version_mock: MagicMock, driver: MagicMock
+) -> VectorCypherRetriever:
     retrieval_query = """
         RETURN node.id AS node_id, node.text AS text, score
         """
@@ -59,16 +63,20 @@ def vector_cypher_retriever(_verify_version_mock, driver):
 
 @pytest.fixture(scope="function")
 @patch("neo4j_genai.HybridRetriever._verify_version")
-def hybrid_retriever(_verify_version_mock, driver):
+def hybrid_retriever(
+    _verify_version_mock: MagicMock, driver: MagicMock
+) -> HybridRetriever:
     return HybridRetriever(driver, "my-index", "my-fulltext-index")
 
 
 @pytest.fixture(scope="function")
 @patch("neo4j_genai.Text2CypherRetriever._verify_version")
-def t2c_retriever(_verify_version_mock, driver, llm):
+def t2c_retriever(
+    _verify_version_mock: MagicMock, driver: MagicMock, llm: MagicMock
+) -> Text2CypherRetriever:
     return Text2CypherRetriever(driver, llm)
 
 
 @pytest.fixture(scope="function")
-def neo4j_record():
+def neo4j_record() -> neo4j.Record:
     return neo4j.Record({"node": "dummy-node", "score": 1.0})

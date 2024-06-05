@@ -210,7 +210,7 @@ class VectorCypherRetriever(Retriever):
         index_name: str,
         retrieval_query: str,
         embedder: Optional[Embedder] = None,
-        format_record_function: Optional[Callable] = None,
+        format_record_function: Optional[Callable[[Any], Any]] = None,
     ) -> None:
         try:
             driver_model = Neo4jDriverModel(driver=driver)

@@ -16,6 +16,7 @@ import neo4j.exceptions
 import pytest
 
 from neo4j_genai.exceptions import Neo4jIndexError
+from unittest.mock import MagicMock
 from neo4j_genai.indexes import (
     create_vector_index,
     drop_index_if_exists,
@@ -23,7 +24,7 @@ from neo4j_genai.indexes import (
 )
 
 
-def test_create_vector_index_happy_path(driver):
+def test_create_vector_index_happy_path(driver: MagicMock) -> None:
     create_query = (
         "CREATE VECTOR INDEX $name FOR (n:People) ON n.name OPTIONS "
         "{ indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }"
@@ -37,7 +38,7 @@ def test_create_vector_index_happy_path(driver):
     )
 
 
-def test_create_vector_index_ensure_escaping(driver):
+def test_create_vector_index_ensure_escaping(driver: MagicMock) -> None:
     create_query = (
         "CREATE VECTOR INDEX $name FOR (n:People) ON n.name OPTIONS "
         "{ indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }"
@@ -57,31 +58,33 @@ def test_create_vector_index_ensure_escaping(driver):
     )
 
 
-def test_create_vector_index_negative_dimension(driver):
+def test_create_vector_index_negative_dimension(driver: MagicMock) -> None:
     with pytest.raises(Neo4jIndexError) as excinfo:
         create_vector_index(driver, "my-index", "People", "name", -5, "cosine")
     assert "Error for inputs to create_vector_index" in str(excinfo)
 
 
-def test_create_vector_index_validation_error_dimensions(driver):
+def test_create_vector_index_validation_error_dimensions(driver: MagicMock) -> None:
     with pytest.raises(Neo4jIndexError) as excinfo:
-        create_vector_index(driver, "my-index", "People", "name", "no-dim", "cosine")
+        create_vector_index(driver, "my-index", "People", "name", "no-dim", "cosine")  # type: ignore
     assert "Error for inputs to create_vector_index" in str(excinfo)
 
 
-def test_create_vector_index_raises_error_with_neo4j_client_error(driver):
+def test_create_vector_index_raises_error_with_neo4j_client_error(
+    driver: MagicMock,
+) -> None:
     driver.execute_query.side_effect = neo4j.exceptions.ClientError
     with pytest.raises(Neo4jIndexError):
         create_vector_index(driver, "my-index", "People", "name", 2048, "cosine")
 
 
-def test_create_vector_index_validation_error_similarity_fn(driver):
+def test_create_vector_index_validation_error_similarity_fn(driver: MagicMock) -> None:
     with pytest.raises(Neo4jIndexError) as excinfo:
-        create_vector_index(driver, "my-index", "People", "name", 1536, "algebra")
+        create_vector_index(driver, "my-index", "People", "name", 1536, "algebra")  # type: ignore
     assert "Error for inputs to create_vector_index" in str(excinfo)
 
 
-def test_drop_index_if_exists(driver):
+def test_drop_index_if_exists(driver: MagicMock) -> None:
     drop_query = "DROP INDEX $name IF EXISTS"
 
     drop_index_if_exists(driver, "my-index")
@@ -92,7 +95,9 @@ def test_drop_index_if_exists(driver):
     )
 
 
-def test_drop_index_if_exists_raises_error_with_neo4j_client_error(driver):
+def test_drop_index_if_exists_raises_error_with_neo4j_client_error(
+    driver: MagicMock,
+) -> None:
     drop_query = "DROP INDEX $name IF EXISTS"
 
     drop_index_if_exists(driver, "my-index")
@@ -103,7 +108,7 @@ def test_drop_index_if_exists_raises_error_with_neo4j_client_error(driver):
     )
 
 
-def test_create_fulltext_index_happy_path(driver):
+def test_create_fulltext_index_happy_path(driver: MagicMock) -> None:
     label = "node-label"
     text_node_properties = ["property-1", "property-2"]
     create_query = (
@@ -120,7 +125,9 @@ def test_create_fulltext_index_happy_path(driver):
     )
 
 
-def test_create_fulltext_index_raises_error_with_neo4j_client_error(driver):
+def test_create_fulltext_index_raises_error_with_neo4j_client_error(
+    driver: MagicMock,
+) -> None:
     label = "node-label"
     text_node_properties = ["property-1", "property-2"]
     driver.execute_query.side_effect = neo4j.exceptions.ClientError
@@ -129,9 +136,9 @@ def test_create_fulltext_index_raises_error_with_neo4j_client_error(driver):
         create_fulltext_index(driver, "my-index", label, text_node_properties)
 
 
-def test_create_fulltext_index_empty_node_properties(driver):
+def test_create_fulltext_index_empty_node_properties(driver: MagicMock) -> None:
     label = "node-label"
-    node_properties = []
+    node_properties: list[str] = []
 
     with pytest.raises(Neo4jIndexError) as excinfo:
         create_fulltext_index(driver, "my-index", label, node_properties)
@@ -139,7 +146,7 @@ def test_create_fulltext_index_empty_node_properties(driver):
     assert "Error for inputs to create_fulltext_index" in str(excinfo)
 
 
-def test_create_fulltext_index_ensure_escaping(driver):
+def test_create_fulltext_index_ensure_escaping(driver: MagicMock) -> None:
     label = "node-label"
     text_node_properties = ["property-1", "property-2"]
     create_query = (

@@ -12,7 +12,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
+from neo4j import Driver
 from neo4j_genai.schema import (
     get_schema,
     get_structured_schema,
@@ -24,9 +25,10 @@ from neo4j_genai.schema import (
     EXCLUDED_RELS,
     INDEX_QUERY,
 )
+from typing import Any
 
 
-def _query_return_value(*args, **kwargs):
+def _query_return_value(*args: Any, **kwargs: Any) -> list[Any]:
     query = args[1]
     if NODE_PROPERTIES_QUERY in query:
         return [
@@ -60,7 +62,7 @@ def _query_return_value(*args, **kwargs):
 
 
 @patch("neo4j_genai.schema.query_database", side_effect=_query_return_value)
-def test_get_schema_ensure_formatted_response(driver):
+def test_get_schema_ensure_formatted_response(driver: Driver) -> None:
     result = get_schema(driver)
     assert (
         result
@@ -74,7 +76,7 @@ The relationships:
     )
 
 
-def test_get_structured_schema_happy_path(driver):
+def test_get_structured_schema_happy_path(driver: MagicMock) -> None:
     get_structured_schema(driver)
     assert 5 == driver.execute_query.call_count
     driver.execute_query.assert_any_call(
@@ -94,7 +96,7 @@ def test_get_structured_schema_happy_path(driver):
 
 
 @patch("neo4j_genai.schema.query_database", side_effect=_query_return_value)
-def test_get_schema_ensure_structured_response(driver):
+def test_get_schema_ensure_structured_response(driver: MagicMock) -> None:
     result = get_structured_schema(driver)
 
     assert result["node_props"]["LabelA"] == [

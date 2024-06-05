@@ -16,9 +16,9 @@ import random
 import string
 import uuid
 from unittest.mock import MagicMock
-
+from typing import Generator, Any
 import pytest
-from neo4j import GraphDatabase
+from neo4j import GraphDatabase, Driver
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.indexes import (
     create_fulltext_index,
@@ -29,7 +29,7 @@ from neo4j_genai.llm import LLM
 
 
 @pytest.fixture(scope="module")
-def driver():
+def driver() -> Generator[Any, Any, Any]:
     uri = "neo4j://localhost:7687"
     auth = ("neo4j", "password")
     driver = GraphDatabase.driver(uri, auth=auth)
@@ -38,21 +38,22 @@ def driver():
 
 
 @pytest.fixture(scope="module")
-def llm():
+def llm() -> MagicMock:
     return MagicMock(spec=LLM)
 
 
-@pytest.fixture(scope="module")
-def custom_embedder():
-    class CustomEmbedder(Embedder):
-        def embed_query(self, text: str) -> list[float]:
-            return [random.random() for _ in range(1536)]
+class CustomEmbedder(Embedder):
+    def embed_query(self, text: str) -> list[float]:
+        return [random.random() for _ in range(1536)]
 
+
+@pytest.fixture(scope="module")
+def custom_embedder() -> CustomEmbedder:
     return CustomEmbedder()
 
 
 @pytest.fixture(scope="module")
-def setup_neo4j_for_retrieval(driver):
+def setup_neo4j_for_retrieval(driver: Driver) -> None:
     vector_index_name = "vector-index-name"
     fulltext_index_name = "fulltext-index-name"
 
@@ -105,7 +106,7 @@ def setup_neo4j_for_retrieval(driver):
 
 
 @pytest.fixture(scope="module")
-def setup_neo4j_for_schema_query(driver):
+def setup_neo4j_for_schema_query(driver: Driver) -> None:
     # Delete all nodes in the graph
     driver.execute_query("MATCH (n) DETACH DELETE n")
     # Create two nodes and a relationship
@@ -121,7 +122,7 @@ def setup_neo4j_for_schema_query(driver):
 
 
 @pytest.fixture(scope="module")
-def setup_neo4j_for_schema_query_with_excluded_labels(driver):
+def setup_neo4j_for_schema_query_with_excluded_labels(driver: Driver) -> None:
     # Delete all nodes in the graph
     driver.execute_query("MATCH (n) DETACH DELETE n")
     # Create two labels and a relationship to be excluded

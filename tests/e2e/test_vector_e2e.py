@@ -15,12 +15,17 @@
 
 import pytest
 
+from neo4j import Driver
+
 from neo4j_genai import VectorRetriever, VectorCypherRetriever
+from conftest import CustomEmbedder
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
-def test_vector_retriever_search_text(driver, custom_embedder):
+def test_vector_retriever_search_text(
+    driver: Driver, custom_embedder: CustomEmbedder
+) -> None:
     retriever = VectorRetriever(driver, "vector-index-name", custom_embedder)
 
     top_k = 5
@@ -33,7 +38,9 @@ def test_vector_retriever_search_text(driver, custom_embedder):
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
-def test_vector_cypher_retriever_search_text(driver, custom_embedder):
+def test_vector_cypher_retriever_search_text(
+    driver: Driver, custom_embedder: CustomEmbedder
+) -> None:
     retrieval_query = (
         "MATCH (node)-[:AUTHORED_BY]->(author:Author) " "RETURN author.name"
     )
@@ -52,7 +59,7 @@ def test_vector_cypher_retriever_search_text(driver, custom_embedder):
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
-def test_vector_retriever_search_vector(driver):
+def test_vector_retriever_search_vector(driver: Driver) -> None:
     retriever = VectorRetriever(driver, "vector-index-name")
 
     top_k = 5
@@ -65,7 +72,7 @@ def test_vector_retriever_search_vector(driver):
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
-def test_vector_cypher_retriever_search_vector(driver):
+def test_vector_cypher_retriever_search_vector(driver: Driver) -> None:
     retrieval_query = (
         "MATCH (node)-[:AUTHORED_BY]->(author:Author) " "RETURN author.name"
     )
@@ -82,7 +89,7 @@ def test_vector_cypher_retriever_search_vector(driver):
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
-def test_vector_retriever_return_properties(driver):
+def test_vector_retriever_return_properties(driver: Driver) -> None:
     properties = ["name", "age"]
     retriever = VectorRetriever(
         driver,
@@ -103,7 +110,7 @@ def test_vector_retriever_return_properties(driver):
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
-def test_vector_retriever_filters(driver):
+def test_vector_retriever_filters(driver: Driver) -> None:
     retriever = VectorRetriever(
         driver,
         "vector-index-name",

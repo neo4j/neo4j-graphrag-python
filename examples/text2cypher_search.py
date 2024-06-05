@@ -9,7 +9,7 @@ AUTH = ("neo4j", "password")
 driver = GraphDatabase.driver(URI, auth=AUTH)
 
 # Create LLM object
-llm = OpenAI(model_name="gpt-3.5-turbo-instruct")
+llm = OpenAI(model="gpt-3.5-turbo-instruct")
 
 # (Optional) Specify your own Neo4j schema
 neo4j_schema = """
@@ -29,7 +29,7 @@ The relationships:
 """
 
 # Initialize the retriever
-retriever = Text2CypherRetriever(driver=driver, llm=llm, neo4j_schema=neo4j_schema)
+retriever = Text2CypherRetriever(driver=driver, llm=llm, neo4j_schema=neo4j_schema)  # type: ignore
 
 # (Optional) Provide user input/query pairs for the LLM to use as examples
 examples = [

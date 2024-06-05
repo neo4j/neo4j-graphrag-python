@@ -20,7 +20,7 @@ driver = GraphDatabase.driver(URI, auth=AUTH)
 embedder = OpenAIEmbeddings(model="text-embedding-3-large")
 
 # Initialize the retriever
-retriever = VectorRetriever(driver, INDEX_NAME, embedder)
+retriever = VectorRetriever(driver, INDEX_NAME, embedder)  # type: ignore
 
 # Creating the index
 create_vector_index(

@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from abc import ABC, abstractmethod
-from typing import Optional, Callable
+from typing import Optional, Callable, Any
 import neo4j
 
 from neo4j_genai.types import RawSearchResult, RetrieverResult, RetrieverResultItem
@@ -25,6 +25,7 @@ class Retriever(ABC):
     Abstract class for Neo4j retrievers
     """
 
+    index_name: str
     VERIFY_NEO4J_VERSION = True
 
     def __init__(self, driver: neo4j.Driver):
@@ -57,7 +58,7 @@ class Retriever(ABC):
         if version_tuple < target_version:
             raise Neo4jVersionError()
 
-    def _fetch_index_infos(self):
+    def _fetch_index_infos(self) -> None:
         """Fetch the node label and embedding property from the index definition"""
         query = (
             "SHOW VECTOR INDEXES "
@@ -66,16 +67,16 @@ class Retriever(ABC):
             "RETURN labelsOrTypes as labels, properties, "
             "options.indexConfig.`vector.dimensions` as dimensions"
         )
-        result = self.driver.execute_query(query, {"index_name": self.index_name})
+        query_result = self.driver.execute_query(query, {"index_name": self.index_name})
         try:
-            result = result.records[0]
+            result = query_result.records[0]
+            self._node_label = result["labels"][0]
+            self._embedding_node_property = result["properties"][0]
+            self._embedding_dimension = result["dimensions"]
         except IndexError:
             raise Exception(f"No index with name {self.index_name} found")
-        self._node_label = result["labels"][0]
-        self._embedding_node_property = result["properties"][0]
-        self._embedding_dimension = result["dimensions"]
 
-    def search(self, *args, **kwargs) -> RetrieverResult:
+    def search(self, *args: Any, **kwargs: Any) -> RetrieverResult:
         """
         Search method. Call the get_search_result method that returns
         a list of neo4j.Record, and format them to return RetrieverResult.
@@ -91,7 +92,7 @@ class Retriever(ABC):
         )
 
     @abstractmethod
-    def _get_search_results(self, *args, **kwargs) -> RawSearchResult:
+    def _get_search_results(self, *args: Any, **kwargs: Any) -> RawSearchResult:
         pass
 
     def get_result_formatter(self) -> Callable[[neo4j.Record], RetrieverResultItem]:
@@ -117,7 +118,9 @@ class ExternalRetriever(Retriever, ABC):
 
     VERIFY_NEO4J_VERSION = False
 
-    def __init__(self, driver, id_property_external: str, id_property_neo4j: str):
+    def __init__(
+        self, driver: neo4j.Driver, id_property_external: str, id_property_neo4j: str
+    ):
         super().__init__(driver)
         self.id_property_external = id_property_external
         self.id_property_neo4j = id_property_neo4j
@@ -128,8 +131,8 @@ class ExternalRetriever(Retriever, ABC):
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
-        **kwargs,
-    ) -> RetrieverResult:
+        **kwargs: Any,
+    ) -> RawSearchResult:
         """
 
         Returns:
