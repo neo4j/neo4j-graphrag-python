@@ -16,18 +16,17 @@
 Requires OPENAI_API_KEY to be in the env var.
 
 This example illustrates:
-- VectorCypherRetriever with a custom formatter function to extract relevant
-    context from neo4j result
-- Use of a custom prompt for RAG
+- Log observer
 - Logging configuration
 """
 
 import logging
 import neo4j
 
-from neo4j_genai.types import RetrieverResultItem
 from neo4j_genai.embeddings.openai import OpenAIEmbeddings
-from neo4j_genai import VectorCypherRetriever, RAG, OpenAILLM, RagTemplate
+from neo4j_genai.types import RetrieverResultItem
+from neo4j_genai import VectorCypherRetriever, RAG, OpenAILLM
+from neo4j_genai.observers import LogObserver
 
 URI = "neo4j://localhost:7689"
 AUTH = ("neo4j", "admin1234")
@@ -36,8 +35,12 @@ INDEX = "moviePlotsEmbedding"
 
 
 # setup logger config
-logger = logging.getLogger("neo4j_genai")
-logging.basicConfig(format="%(asctime)s - %(message)s")
+logging.basicConfig(format="%(asctime)s - %(levelname)s: %(message)s")
+
+internal_logger = logging.getLogger("neo4j_genai")
+internal_logger.setLevel(logging.WARNING)
+
+logger = logging.getLogger("my_logger")
 logger.setLevel(logging.DEBUG)
 
 
@@ -63,22 +66,12 @@ retriever = VectorCypherRetriever(
 
 llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0})
 
-template = RagTemplate(
-    template="""You are an exert about movies and actors. Your task is to
-    answer the user's question based on the provided context. Use only the
-    information within that context.
-
-    Context:
-    {context}
-
-    Question:
-    {query}
-
-    Answer:
-    """
+observer = LogObserver(
+    logger=logger,
+    level=logging.INFO,
 )
 
-rag = RAG(retriever=retriever, llm=llm, prompt_template=template)
+rag = RAG(retriever=retriever, llm=llm, observers=[observer])
 
 result = rag.search("Tell me more about Avatar movies")
 print(result)

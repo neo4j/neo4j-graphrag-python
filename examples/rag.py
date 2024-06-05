@@ -66,3 +66,5 @@ rag = RAG(retriever=retriever, llm=llm)
 
 result = rag.search("Tell me more about Avatar movies")
 print(result)
+
+driver.close()
