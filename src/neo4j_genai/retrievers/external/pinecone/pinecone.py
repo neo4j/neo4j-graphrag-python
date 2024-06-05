@@ -52,7 +52,7 @@ class PineconeNeo4jRetriever(ExternalRetriever):
         embedder: Optional[Embedder] = None,
         return_properties: Optional[list[str]] = None,
         retrieval_query: Optional[str] = None,
-        format_record_function: Optional[Callable] = None,
+        format_record_function: Optional[Callable[[Any], Any]] = None,
     ):
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -94,7 +94,7 @@ class PineconeNeo4jRetriever(ExternalRetriever):
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
-        pinecone_filter: Optional[dict[str, Any]] = None,
+        **kwargs: Any,
     ) -> RawSearchResult:
         """Get the top_k nearest neighbor embeddings using Pinecone for either provided query_vector or query_text.
         Both query_vector and query_text can be provided.
@@ -132,7 +132,6 @@ class PineconeNeo4jRetriever(ExternalRetriever):
             query_text (str): The text to get the closest neighbors of.
             query_vector (Optional[list[float]], optional): The vector embeddings to get the closest neighbors of. Defaults to None.
             top_k (Optional[int]): The number of neighbors to return. Defaults to 5.
-            pinecone_filter (Optional[dict[str, Any]], optional): The filters to apply to the search query in Pinecone. Defaults to None.
         Raises:
             SearchValidationError: If validation of the input arguments fail.
             EmbeddingRequiredError: If no embedder is provided when using text as an input.
@@ -140,13 +139,15 @@ class PineconeNeo4jRetriever(ExternalRetriever):
             RawSearchResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
         """
 
+        pinecone_filters = kwargs.get("pinecone_filters")
+
         try:
             validated_data = PineconeSearchModel(
                 vector_index_name=self.index_name,
                 query_vector=query_vector,
                 query_text=query_text,
                 top_k=top_k,
-                pinecone_filter=pinecone_filter,
+                pinecone_filter=pinecone_filters,
             )
         except ValidationError as e:
             raise SearchValidationError(e.errors())

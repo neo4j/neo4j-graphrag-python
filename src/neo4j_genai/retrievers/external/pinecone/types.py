@@ -34,7 +34,7 @@ class PineconeClientModel(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @field_validator("client")
-    def check_client(cls, value):
+    def check_client(cls, value: Pinecone) -> Pinecone:
         if not isinstance(value, Pinecone):
             raise ValueError("Provided client needs to be of type Pinecone")
         return value

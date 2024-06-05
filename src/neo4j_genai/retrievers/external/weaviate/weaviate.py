@@ -20,7 +20,6 @@ import neo4j
 import weaviate.classes as wvc
 from pydantic import ValidationError
 from weaviate.client import WeaviateClient
-from weaviate.collections.classes.filters import _Filters
 
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.exceptions import RetrieverInitializationError, SearchValidationError
@@ -125,7 +124,6 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
             query_text (Optional[str]): The text to get the closest neighbors of.
             query_vector (Optional[list[float]]): The vector embeddings to get the closest neighbors of. Defaults to None.
             top_k (int): The number of neighbors to return. Defaults to 5.
-            weaviate_filters (Optional[_Filters]): The filters to apply to the search query in Weaviate. Defaults to None.
         Raises:
             SearchValidationError: If validation of the input arguments fail.
         Returns:

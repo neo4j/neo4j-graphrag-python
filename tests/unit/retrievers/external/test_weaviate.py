@@ -21,7 +21,6 @@ import neo4j
 from neo4j_genai.retrievers.external.utils import get_match_query
 from neo4j_genai.retrievers.external.weaviate import WeaviateNeo4jRetriever
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
-from weaviate import WeaviateClient
 from weaviate.client import WeaviateClient
 
 
