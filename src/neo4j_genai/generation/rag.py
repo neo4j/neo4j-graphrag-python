@@ -14,41 +14,54 @@
 #  limitations under the License.
 import logging
 from typing import Optional
-from ..retrievers.base import Retriever
-from .llm import LLMInterface
-from .prompts import RagTemplate
+from pydantic import validate_call, ConfigDict
+
+from neo4j_genai.observers import ObserverInterface
+from neo4j_genai.retrievers.base import Retriever
+from neo4j_genai.generation.types import RagResultModel
+from neo4j_genai.generation.llm import LLMInterface
+from neo4j_genai.generation.prompts import RagTemplate
 
 
 logger = logging.getLogger(__name__)
 
 
 class RAG:
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def __init__(
         self,
         retriever: Retriever,
         llm: LLMInterface,
         prompt_template: RagTemplate = RagTemplate(),
+        observers: Optional[list[ObserverInterface]] = None,
     ):
         self.retriever = retriever
         self.llm = llm
         self.prompt_template = prompt_template
+        self.observers = observers or []
 
+    @validate_call(validate_return=True)
     def search(
-        self, query: str, retriever_config: Optional[dict] = None, examples: str = ""
-    ) -> str:
+        self,
+        query: str,
+        examples: str = "",
+        retriever_config: Optional[dict] = None,
+        return_context: bool = False,
+    ) -> RagResultModel:
         """This method performs a full RAG search:
-        1. Context retrieval
-        2. Prompt formatting
-        3. Answer generation with LLM
+        1. Retrieval: context retrieval
+        2. Augmentation: prompt formatting
+        3. Generation: answer generation with LLM
 
         Args:
             query (str): The user question
+            examples: Examples added to the LLM prompt.
             retriever_config (Optional[dict]): Parameters passed to the retriever
                 search method; e.g.: top_k
-            examples: Examples added to the LLM prompt.
+            return_context (bool): Whether to return the retriever result (default: False)
 
         Returns:
-            str: The LLM-generated answer
+            RagResultModel: The LLM-generated answer
 
         """
         retriever_config = retriever_config or {}
@@ -57,5 +70,14 @@ class RAG:
         prompt = self.prompt_template.format(
             query=query, context=context, examples=examples
         )
-        logger.debug(f"RAG: retriever_result={retriever_result}, prompt={prompt}")
-        return self.llm.invoke(prompt)
+        for observer in self.observers:
+            observer.observe(
+                self, data={"query": query, "contex": context, "prompt": prompt}
+            )
+        logger.debug(f"RAG: retriever_result={retriever_result}")
+        logger.debug(f"RAG: prompt={prompt}")
+        answer = self.llm.invoke(prompt)
+        result = {"answer": answer}
+        if return_context:
+            result["retriever_result"] = retriever_result
+        return RagResultModel(**result)

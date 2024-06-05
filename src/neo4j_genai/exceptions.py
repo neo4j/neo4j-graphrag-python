@@ -28,6 +28,12 @@ class RetrieverInitializationError(Neo4jGenAiError):
         self.errors = errors
 
 
+class RagInitializationError(Neo4jGenAiError):
+    def __init__(self, errors: str):
+        super().__init__(f"Initialization failed: {errors}")
+        self.errors = errors
+
+
 class SearchValidationError(Neo4jGenAiError):
     """Exception raised for validation errors during search."""
 

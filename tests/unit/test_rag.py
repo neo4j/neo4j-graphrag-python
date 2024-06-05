@@ -12,9 +12,11 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import pytest
 
 from neo4j_genai.generation.prompts import RagTemplate
 from neo4j_genai.generation.rag import RAG
+from neo4j_genai.generation.types import RagResultModel
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 
 
@@ -70,4 +72,25 @@ question
 Answer:
 """)
 
-    assert res == "llm generated text"
+    assert isinstance(res, RagResultModel)
+    assert res.answer == "llm generated text"
+    assert res.retriever_result is None
+
+
+def test_rag_initialization_error(llm):
+    with pytest.raises(ValueError) as excinfo:
+        RAG(
+            retriever="not a retriever object",
+            llm=llm,
+        )
+    assert "Input should be an instance of Retriever" in str(excinfo)
+
+
+def test_rag_search_error(driver, retriever_mock, llm):
+    rag = RAG(
+        retriever=retriever_mock,
+        llm=llm,
+    )
+    with pytest.raises(ValueError) as excinfo:
+        rag.search(10)
+    assert "Input should be a valid string" in str(excinfo)
