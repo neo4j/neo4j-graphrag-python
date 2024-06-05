@@ -85,6 +85,10 @@ Errors
 
   * :class:`neo4j_genai.exceptions.Neo4jVersionError`
 
+  * :class:`neo4j_genai.exceptions.Text2CypherGenerationError`
+
+  * :class:`neo4j_genai.exceptions.SchemaFetchError`
+
 
 Neo4jGenAiError
 ===============
@@ -139,4 +143,18 @@ Neo4jVersionError
 =================
 
 .. autoclass:: neo4j_genai.exceptions.Neo4jVersionError
+   :show-inheritance:
+
+
+Text2CypherGenerationError
+==========================
+
+.. autoclass:: neo4j_genai.exceptions.Text2CypherGenerationError
+   :show-inheritance:
+
+
+SchemaFetchError
+================
+
+.. autoclass:: neo4j_genai.exceptions.SchemaFetchError
    :show-inheritance:

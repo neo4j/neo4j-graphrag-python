@@ -62,7 +62,7 @@ class HybridRetriever(Retriever):
       retriever.search(query_text="Find me a book about Fremen", top_k=5)
 
     Args:
-        driver (Driver): The Neo4j Python driver.
+        driver (neo4j.Driver): The Neo4j Python driver.
         vector_index_name (str): Vector index name.
         fulltext_index_name (str): Fulltext index name.
         embedder (Optional[Embedder]): Embedder object to embed query text.
@@ -198,11 +198,14 @@ class HybridCypherRetriever(Retriever):
       retriever.search(query_text="Find me a book about Fremen", top_k=5)
 
     Args:
-        driver (Driver): The Neo4j Python driver.
+        driver (neo4j.Driver): The Neo4j Python driver.
         vector_index_name (str): Vector index name.
         fulltext_index_name (str): Fulltext index name.
         retrieval_query (str): Cypher query that gets appended.
         embedder (Optional[Embedder]): Embedder object to embed query text.
+
+    Raises:
+        RetrieverInitializationError: If validation of the input arguments fail.
     """
 
     def __init__(
