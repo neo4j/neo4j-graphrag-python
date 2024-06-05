@@ -2273,8 +2273,8 @@ astroid = ">=3.2.2,<=3.3.0-dev0"
 colorama = {version = ">=0.4.5", markers = "sys_platform == \"win32\""}
 dill = [
     {version = ">=0.2", markers = "python_version < \"3.11\""},
-    {version = ">=0.3.6", markers = "python_version >= \"3.11\" and python_version < \"3.12\""},
     {version = ">=0.3.7", markers = "python_version >= \"3.12\""},
+    {version = ">=0.3.6", markers = "python_version >= \"3.11\" and python_version < \"3.12\""},
 ]
 isort = ">=4.2.5,<5.13.0 || >5.13.0,<6"
 mccabe = ">=0.6,<0.8"
@@ -3669,4 +3669,4 @@ external-clients = ["pinecone-client", "weaviate-client"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8.1"
-content-hash = "619d006dde1d64ad659385d579e1da04291deae2b3995ceb044ae6155743908d"
+content-hash = "24528ca57a0acb6bfb0bc1b8968ce5a32ee2718e8e5f7e930f417ad1aa6791fb"
