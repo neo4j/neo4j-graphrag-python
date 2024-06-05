@@ -22,7 +22,7 @@ from weaviate.connect.helpers import connect_to_local
 
 from ..utils import build_data_objects, populate_neo4j
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))å
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def populate_dbs(
@@ -47,7 +47,9 @@ def populate_dbs(
     populate_neo4j(neo4j_driver, neo4j_objects)
 
 
-def populate_weaviate(w_client, w_question_objs, collection_name):
+def populate_weaviate(
+    w_client: Client, w_question_objs: list[wvc.data.DataObject], collection_name: str
+) -> None:
     questions = w_client.collections.get(collection_name)
     questions.data.insert_many(w_question_objs)
 

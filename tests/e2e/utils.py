@@ -16,7 +16,9 @@
 import hashlib
 import json
 import os.path
+from typing import Any, Tuple
 
+import neo4j
 import weaviate.classes as wvc
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -410,7 +412,9 @@ EMBEDDING_BIOLOGY = [
 ]
 
 
-def populate_neo4j(neo4j_driver, neo4j_objs):
+def populate_neo4j(
+    neo4j_driver: neo4j.Driver, neo4j_objs: dict[str, Any]
+) -> neo4j.EagerResult:
     question_nodes = list(
         filter(lambda x: x["label"] == "Question", neo4j_objs["nodes"])
     )
@@ -443,7 +447,7 @@ def populate_neo4j(neo4j_driver, neo4j_objs):
     return res
 
 
-def build_data_objects(q_vector_fmt):
+def build_data_objects(q_vector_fmt: str) -> Tuple[dict[str, Any], list[Any]]:
     # read file from disk
     # this file is from https://github.com/weaviate-tutorials/quickstart/tree/main/data
     # MIT License
@@ -455,7 +459,7 @@ def build_data_objects(q_vector_fmt):
         data = json.load(f)
 
     question_objs = list()
-    neo4j_objs = {"nodes": [], "relationships": []}
+    neo4j_objs = {"nodes": [], "relationships": []}  # type: dict[str, Any]
 
     # only unique categories and ids for them
     unique_categories_list = list(set([c["Category"] for c in data]))
