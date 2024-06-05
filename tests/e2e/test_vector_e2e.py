@@ -14,17 +14,15 @@
 #  limitations under the License.
 
 import pytest
-
 from neo4j import Driver
-
-from neo4j_genai import VectorRetriever, VectorCypherRetriever
-from conftest import CustomEmbedder
+from neo4j_genai import VectorCypherRetriever, VectorRetriever
+from neo4j_genai.embedder import Embedder
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
 def test_vector_retriever_search_text(
-    driver: Driver, custom_embedder: CustomEmbedder
+    driver: Driver, custom_embedder: Embedder
 ) -> None:
     retriever = VectorRetriever(driver, "vector-index-name", custom_embedder)
 
@@ -39,7 +37,7 @@ def test_vector_retriever_search_text(
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
 def test_vector_cypher_retriever_search_text(
-    driver: Driver, custom_embedder: CustomEmbedder
+    driver: Driver, custom_embedder: Embedder
 ) -> None:
     retrieval_query = (
         "MATCH (node)-[:AUTHORED_BY]->(author:Author) " "RETURN author.name"
