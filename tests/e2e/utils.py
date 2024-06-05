@@ -16,11 +16,10 @@
 import hashlib
 import json
 import os.path
-from typing import Any, List, Tuple, Union
+from typing import Any, List, Tuple
 
 import neo4j
 import weaviate.classes as wvc
-from pinecone import Vector
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 

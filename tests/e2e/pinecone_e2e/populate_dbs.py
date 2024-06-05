@@ -14,8 +14,7 @@
 #  limitations under the License.
 
 import os.path
-from typing import Union, List, Any
-from pinecone import Vector
+from typing import Any, List
 
 import neo4j
 from neo4j import GraphDatabase
