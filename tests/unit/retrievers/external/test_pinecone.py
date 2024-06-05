@@ -25,11 +25,13 @@ from pinecone import Pinecone
 
 
 @pytest.fixture(scope="function")
-def client():
+def client() -> MagicMock:
     return MagicMock(spec=Pinecone)
 
 
-def test_pinecone_retriever_invalid_return_properties(driver, client):
+def test_pinecone_retriever_invalid_return_properties(
+    driver: MagicMock, client: MagicMock
+) -> None:
     with pytest.raises(RetrieverInitializationError) as exc_info:
         PineconeNeo4jRetriever(
             driver=driver,
@@ -43,7 +45,9 @@ def test_pinecone_retriever_invalid_return_properties(driver, client):
     assert "Input should be a valid list" in str(exc_info.value)
 
 
-def test_pinecone_retriever_invalid_retrieval_query(driver, client):
+def test_pinecone_retriever_invalid_retrieval_query(
+    driver: MagicMock, client: MagicMock
+) -> None:
     with pytest.raises(RetrieverInitializationError) as exc_info:
         PineconeNeo4jRetriever(
             driver=driver,
@@ -57,7 +61,9 @@ def test_pinecone_retriever_invalid_retrieval_query(driver, client):
     assert "Input should be a valid string" in str(exc_info.value)
 
 
-def test_pinecone_retriever_search_happy_path(driver, client):
+def test_pinecone_retriever_search_happy_path(
+    driver: MagicMock, client: MagicMock
+) -> None:
     retriever = PineconeNeo4jRetriever(
         driver=driver,
         client=client,
@@ -109,7 +115,9 @@ def test_pinecone_retriever_search_happy_path(driver, client):
     )
 
 
-def test_pinecone_retriever_search_return_properties(driver, client):
+def test_pinecone_retriever_search_return_properties(
+    driver: MagicMock, client: MagicMock
+) -> None:
     retriever = PineconeNeo4jRetriever(
         driver=driver,
         client=client,
@@ -164,7 +172,9 @@ def test_pinecone_retriever_search_return_properties(driver, client):
     )
 
 
-def test_pinecone_retriever_search_retrieval_query(driver, client):
+def test_pinecone_retriever_search_retrieval_query(
+    driver: MagicMock, client: MagicMock
+) -> None:
     retrieval_query = "WITH node MATCH (node)--(m) RETURN n, m LIMIT 10"
     retriever = PineconeNeo4jRetriever(
         driver=driver,

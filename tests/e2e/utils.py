@@ -16,10 +16,11 @@
 import hashlib
 import json
 import os.path
-from typing import Any, Tuple
+from typing import Any, List, Tuple, Union
 
 import neo4j
 import weaviate.classes as wvc
+from pinecone import Vector
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -447,7 +448,7 @@ def populate_neo4j(
     return res
 
 
-def build_data_objects(q_vector_fmt: str) -> Tuple[dict[str, Any], list[Any]]:
+def build_data_objects(q_vector_fmt: str) -> Tuple[dict[str, Any], List[Any]]:
     # read file from disk
     # this file is from https://github.com/weaviate-tutorials/quickstart/tree/main/data
     # MIT License

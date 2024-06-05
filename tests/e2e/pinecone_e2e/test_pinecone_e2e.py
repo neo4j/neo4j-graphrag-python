@@ -13,12 +13,14 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import re
+from typing import Any, Generator
 from unittest import mock
 from unittest.mock import MagicMock
 
 import pytest
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from neo4j_genai import PineconeNeo4jRetriever
+from neo4j_genai.embedder import Embedder
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 from pinecone import Pinecone
 
@@ -26,25 +28,25 @@ from ..utils import EMBEDDING_BIOLOGY, build_data_objects, populate_neo4j
 
 
 @pytest.fixture(scope="module")
-def sentence_transformer_embedder():
+def sentence_transformer_embedder() -> Generator[HuggingFaceEmbeddings, Any, Any]:
     embedder = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     yield embedder
 
 
 @pytest.fixture(scope="module")
-def client():
+def client() -> MagicMock:
     return MagicMock(spec=Pinecone)
 
 
 @pytest.fixture(scope="module")
-def populate_neo4j_db(driver):
+def populate_neo4j_db(driver: MagicMock) -> None:
     driver.execute_query("MATCH (n) DETACH DELETE n")
     neo4j_objects, _ = build_data_objects("pinecone")
     populate_neo4j(driver, neo4j_objects)
 
 
 @pytest.mark.usefixtures("populate_neo4j_db")
-def test_pinecone_neo4j_vector_input(driver, client):
+def test_pinecone_neo4j_vector_input(driver: MagicMock, client: MagicMock) -> None:
     retriever = PineconeNeo4jRetriever(
         driver=driver, client=client, index_name="jeopardy", id_property_neo4j="id"
     )
@@ -84,7 +86,9 @@ def test_pinecone_neo4j_vector_input(driver, client):
 
 
 @pytest.mark.usefixtures("populate_neo4j_db")
-def test_pinecone_neo4j_text_input(driver, client, sentence_transformer_embedder):
+def test_pinecone_neo4j_text_input(
+    driver: MagicMock, client: MagicMock, sentence_transformer_embedder: Embedder
+) -> None:
     retriever = PineconeNeo4jRetriever(
         driver=driver,
         client=client,

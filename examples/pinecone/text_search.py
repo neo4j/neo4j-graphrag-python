@@ -8,7 +8,7 @@ NEO4J_URL = "neo4j://localhost:7687"
 PC_API_KEY = "API_KEY"
 
 
-def main():
+def main() -> None:
     with GraphDatabase.driver(NEO4J_URL, auth=NEO4J_AUTH) as neo4j_driver:
         pc_client = Pinecone(PC_API_KEY)
         embedder = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")

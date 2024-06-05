@@ -14,7 +14,10 @@
 #  limitations under the License.
 
 import os.path
+from typing import Union, List, Any
+from pinecone import Vector
 
+import neo4j
 from neo4j import GraphDatabase
 from pinecone import Pinecone, ServerlessSpec
 
@@ -23,7 +26,9 @@ from ..utils import build_data_objects, populate_neo4j
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-def populate_dbs(neo4j_driver, pc_client, index_name="jeopardy"):
+def populate_dbs(
+    neo4j_driver: neo4j.Driver, pc_client: Pinecone, index_name: str = "jeopardy"
+) -> None:
     neo4j_objects, pc_question_objs = build_data_objects("pinecone")
 
     pc_client.create_index(
@@ -40,7 +45,9 @@ def populate_dbs(neo4j_driver, pc_client, index_name="jeopardy"):
     populate_neo4j(neo4j_driver, neo4j_objects)
 
 
-def populate_pinecone(pc_client, pc_question_objs, index_name):
+def populate_pinecone(
+    pc_client: Pinecone, pc_question_objs: List[Any], index_name: str
+) -> None:
     index = pc_client.Index(index_name)
     index.upsert(vectors=pc_question_objs)
 
