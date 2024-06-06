@@ -1,0 +1,7 @@
+{%- extends "layout.html" %}
+{% set title = _('Tree') %}
+
+{% block body %}
+<h1>{{ _('Tree') }}</h1>
+{{ toctree(includehidden=True, collapse=False, maxdepth=-1) }}
+{% endblock %}
