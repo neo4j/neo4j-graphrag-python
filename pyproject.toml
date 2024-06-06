@@ -75,6 +75,7 @@ strict = true
 ignore_missing_imports = true
 allow_subclassing_any = true
 disallow_untyped_calls = false
+exclude = ["docs"]
 
 [[tool.mypy.overrides]]
 module = [
