@@ -203,6 +203,7 @@ class HybridCypherRetriever(Retriever):
         fulltext_index_name (str): Fulltext index name.
         retrieval_query (str): Cypher query that gets appended.
         embedder (Optional[Embedder]): Embedder object to embed query text.
+        format_record_function (Optional[Callable[[Any], Any]]): Function to transform a neo4j.Record to a RetrieverResultItem.
 
     Raises:
         RetrieverInitializationError: If validation of the input arguments fail.

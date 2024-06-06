@@ -205,6 +205,7 @@ class VectorCypherRetriever(Retriever):
         index_name (str): Vector index name.
         retrieval_query (str): Cypher query that gets appended.
         embedder (Optional[Embedder]): Embedder object to embed query text.
+        format_record_function (Optional[Callable[[Any], Any]]): Function to transform a neo4j.Record to a RetrieverResultItem.
     """
 
     def __init__(
