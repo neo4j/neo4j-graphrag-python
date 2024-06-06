@@ -13,21 +13,19 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-
 import pytest
-
-from conftest import CustomEmbedder
 from neo4j import Driver
 from neo4j_genai import (
-    HybridRetriever,
     HybridCypherRetriever,
+    HybridRetriever,
 )
+from neo4j_genai.embedder import Embedder
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
 def test_hybrid_retriever_search_text(
-    driver: Driver, custom_embedder: CustomEmbedder
+    driver: Driver, custom_embedder: Embedder
 ) -> None:
     retriever = HybridRetriever(
         driver, "vector-index-name", "fulltext-index-name", custom_embedder
@@ -44,7 +42,7 @@ def test_hybrid_retriever_search_text(
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
 def test_hybrid_cypher_retriever_search_text(
-    driver: Driver, custom_embedder: CustomEmbedder
+    driver: Driver, custom_embedder: Embedder
 ) -> None:
     retrieval_query = (
         "MATCH (node)-[:AUTHORED_BY]->(author:Author) " "RETURN author.name"

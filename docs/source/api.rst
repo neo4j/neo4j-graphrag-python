@@ -57,6 +57,13 @@ WeaviateNeo4jRetriever
    :members:
 
 
+PineconeNeo4jRetriever
+======================
+
+.. autoclass:: neo4j_genai.retrievers.external.pinecone.PineconeNeo4jRetriever
+   :members:
+
+
 ******
 Errors
 ******

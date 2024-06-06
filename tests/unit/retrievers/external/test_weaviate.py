@@ -13,18 +13,15 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from unittest.mock import MagicMock
 from types import SimpleNamespace
 from typing import Optional
+from unittest.mock import MagicMock
 
-from weaviate.client import WeaviateClient
 import neo4j
-
-from neo4j_genai.retrievers.external.weaviate import (
-    WeaviateNeo4jRetriever,
-    get_match_query,
-)
+from neo4j_genai.retrievers.external.utils import get_match_query
+from neo4j_genai.retrievers.external.weaviate import WeaviateNeo4jRetriever
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
+from weaviate.client import WeaviateClient
 
 
 # Weaviate class with fake methods

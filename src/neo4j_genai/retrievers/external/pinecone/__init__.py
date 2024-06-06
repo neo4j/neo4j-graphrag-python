@@ -13,6 +13,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from .weaviate import WeaviateNeo4jRetriever
+from .pinecone import PineconeNeo4jRetriever
 
-__all__ = ["WeaviateNeo4jRetriever"]
+__all__ = ["PineconeNeo4jRetriever"]

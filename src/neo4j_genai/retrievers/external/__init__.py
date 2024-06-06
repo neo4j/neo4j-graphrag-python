@@ -13,6 +13,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from .weaviate import WeaviateNeo4jRetriever
+from .utils import get_match_query
 
-__all__ = ["WeaviateNeo4jRetriever"]
+__all__ = ["get_match_query"]
