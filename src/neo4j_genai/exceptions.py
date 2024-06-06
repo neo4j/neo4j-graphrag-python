@@ -68,8 +68,8 @@ class Neo4jVersionError(Neo4jGenAiError):
         super().__init__("This package only supports Neo4j version 5.18.1 or greater")
 
 
-class Text2CypherGenerationError(Neo4jGenAiError):
-    """Exception raised when text-to-cypher query generation fails."""
+class Text2CypherRetrievalError(Neo4jGenAiError):
+    """Exception raised when text-to-cypher retrieval fails."""
 
     pass
 

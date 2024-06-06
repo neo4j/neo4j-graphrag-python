@@ -22,7 +22,7 @@ from pydantic import ValidationError
 from neo4j_genai.exceptions import (
     RetrieverInitializationError,
     SearchValidationError,
-    Text2CypherGenerationError,
+    Text2CypherRetrievalError,
     SchemaFetchError,
 )
 from neo4j_genai.llm import LLM
@@ -99,7 +99,7 @@ class Text2CypherRetriever(Retriever):
 
         Raises:
             SearchValidationError: If validation of the input arguments fail.
-            Text2CypherGenerationError: If the LLM fails to generate a correct Cypher query.
+            Text2CypherRetrievalError: If the LLM fails to generate a correct Cypher query.
 
         Returns:
             RawSearchResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
@@ -125,9 +125,7 @@ class Text2CypherRetriever(Retriever):
             logger.debug("Text2CypherRetriever Cypher query: %s", t2c_query)
             records, _, _ = self.driver.execute_query(query_=t2c_query)
         except CypherSyntaxError as e:
-            raise Text2CypherGenerationError(
-                f"Cypher query generation failed: {e.message}"
-            )
+            raise Text2CypherRetrievalError(f"Failed to get search result: {e.message}")
 
         return RawSearchResult(
             records=records,

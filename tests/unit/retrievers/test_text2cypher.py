@@ -20,7 +20,7 @@ from neo4j_genai import Text2CypherRetriever
 from neo4j_genai.exceptions import (
     SearchValidationError,
     RetrieverInitializationError,
-    Text2CypherGenerationError,
+    Text2CypherRetrievalError,
 )
 from neo4j_genai.prompts import TEXT2CYPHER_PROMPT
 
@@ -134,6 +134,6 @@ def test_t2c_retriever_cypher_error(
     retriever.llm.invoke.return_value = t2c_query
     query_text = "may thy knife chip and shatter"
     driver.execute_query.side_effect = CypherSyntaxError
-    with pytest.raises(Text2CypherGenerationError) as e:
+    with pytest.raises(Text2CypherRetrievalError) as e:
         retriever.search(query_text=query_text, examples=examples)
-    assert "Cypher query generation failed" in str(e)
+    assert "Failed to get search result" in str(e)
