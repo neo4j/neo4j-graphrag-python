@@ -36,6 +36,44 @@ logger = logging.getLogger(__name__)
 
 
 class WeaviateNeo4jRetriever(ExternalRetriever):
+    """
+    Provides retrieval method using vector search over embeddings with a Weaviate database.
+    If an embedder is provided, it needs to have the required Embedder type.
+
+    Example:
+
+    .. code-block:: python
+
+      from neo4j import GraphDatabase
+      from neo4j_genai import WeaviateNeo4jRetriever
+      from weaviate.connect.helpers import connect_to_local
+
+      with GraphDatabase.driver(NEO4J_URL, auth=NEO4J_AUTH) as neo4j_driver:
+          with connect_to_local() as w_client:
+              retriever = WeaviateNeo4jRetriever(
+                  driver=neo4j_driver,
+                  client=w_client,
+                  collection="Jeopardy",
+                  id_property_external="neo4j_id",
+                  id_property_neo4j="id"
+              )
+
+              result = retriever.search(query_text="biology", top_k=2)
+
+    Args:
+        driver (neo4j.Driver): The Neo4j Python driver.
+        client (WeaviateClient): The Weaviate client object.
+        collection (str): Name of a set of Weaviate objects that share the same data structure.
+        id_property_external (str): The name of the Weaviate property that has the identifier that refers to a corresponding Neo4j node id property.
+        id_property_neo4j (str): The name of the Neo4j node property that's used as the identifier for relating matches from Weaviate to Neo4j nodes.
+        embedder (Optional[Embedder]): Embedder object to embed query text.
+        return_properties (Optional[list[str]]): List of node properties to return.
+        format_record_function (Optional[Callable[[Any], Any]]): Function to transform a neo4j.Record to a RetrieverResultItem.
+
+    Raises:
+        RetrieverInitializationError: If validation of the input arguments fail.
+    """
+
     def __init__(
         self,
         driver: neo4j.Driver,
@@ -92,12 +130,6 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         for the vector search.
         If query_text is provided, then it will check if an embedder is provided and use it to generate the query_vector.
         If no embedder is provided, then it will assume that the vectorizer is used in Weaviate.
-
-        See the following documentation for more details:
-        - `Query a vector index <https://neo4j.com/docs/cypher-manual/current/indexes-for-vector-search/#indexes-vector-query>`_
-        - `db.index.vector.queryNodes() <https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_queryNodes>`_
-        - `db.index.fulltext.queryNodes() <https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_fulltext_querynodes>`_
-
 
         Example:
 

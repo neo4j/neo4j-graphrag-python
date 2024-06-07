@@ -17,6 +17,11 @@ from unittest.mock import patch, MagicMock
 import pytest
 from neo4j.exceptions import CypherSyntaxError, Neo4jError
 from neo4j_genai import Text2CypherRetriever
+from neo4j_genai.exceptions import (
+    SearchValidationError,
+    RetrieverInitializationError,
+    Text2CypherRetrievalError,
+)
 from neo4j_genai.prompts import TEXT2CYPHER_PROMPT
 
 
@@ -55,7 +60,7 @@ def test_t2c_retriever_schema_retrieval_failure(
 def test_t2c_retriever_invalid_neo4j_schema(
     _verify_version_mock: MagicMock, driver: MagicMock, llm: MagicMock
 ) -> None:
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(RetrieverInitializationError) as exc_info:
         Text2CypherRetriever(driver=driver, llm=llm, neo4j_schema=42)  # type: ignore
 
     assert "neo4j_schema" in str(exc_info.value)
@@ -66,7 +71,7 @@ def test_t2c_retriever_invalid_neo4j_schema(
 def test_t2c_retriever_invalid_search_query(
     _verify_version_mock: MagicMock, driver: MagicMock, llm: MagicMock
 ) -> None:
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(SearchValidationError) as exc_info:
         retriever = Text2CypherRetriever(
             driver=driver, llm=llm, neo4j_schema="dummy-text"
         )
@@ -80,7 +85,7 @@ def test_t2c_retriever_invalid_search_query(
 def test_t2c_retriever_invalid_search_examples(
     _verify_version_mock: MagicMock, driver: MagicMock, llm: MagicMock
 ) -> None:
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(SearchValidationError) as exc_info:
         retriever = Text2CypherRetriever(
             driver=driver, llm=llm, neo4j_schema="dummy-text"
         )
@@ -129,6 +134,6 @@ def test_t2c_retriever_cypher_error(
     retriever.llm.invoke.return_value = t2c_query
     query_text = "may thy knife chip and shatter"
     driver.execute_query.side_effect = CypherSyntaxError
-    with pytest.raises(RuntimeError) as e:
+    with pytest.raises(Text2CypherRetrievalError) as e:
         retriever.search(query_text=query_text, examples=examples)
-    assert "Cypher query generation failed" in str(e)
+    assert "Failed to get search result" in str(e)

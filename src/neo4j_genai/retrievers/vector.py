@@ -60,10 +60,13 @@ class VectorRetriever(Retriever):
       retriever.search(query_text="Find me a book about Fremen", top_k=5)
 
     Args:
-        driver (Driver): The Neo4j Python driver.
+        driver (neo4j.Driver): The Neo4j Python driver.
         index_name (str): Vector index name.
         embedder (Optional[Embedder]): Embedder object to embed query text.
         return_properties (Optional[list[str]]): List of node properties to return.
+
+    Raises:
+        RetrieverInitializationError: If validation of the input arguments fail.
     """
 
     def __init__(
@@ -198,10 +201,11 @@ class VectorCypherRetriever(Retriever):
       retriever.search(query_text="Find me a book about Fremen", top_k=5)
 
     Args:
-        driver (Driver): The Neo4j Python driver.
+        driver (neo4j.Driver): The Neo4j Python driver.
         index_name (str): Vector index name.
-        retrieval_query (str): Cypher query that
+        retrieval_query (str): Cypher query that gets appended.
         embedder (Optional[Embedder]): Embedder object to embed query text.
+        format_record_function (Optional[Callable[[Any], Any]]): Function to transform a neo4j.Record to a RetrieverResultItem.
     """
 
     def __init__(

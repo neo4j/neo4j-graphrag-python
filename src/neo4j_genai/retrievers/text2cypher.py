@@ -19,6 +19,12 @@ import neo4j
 from neo4j.exceptions import CypherSyntaxError, DriverError, Neo4jError
 from pydantic import ValidationError
 
+from neo4j_genai.exceptions import (
+    RetrieverInitializationError,
+    SearchValidationError,
+    Text2CypherRetrievalError,
+    SchemaFetchError,
+)
 from neo4j_genai.llm import LLM
 from neo4j_genai.prompts import TEXT2CYPHER_PROMPT
 from neo4j_genai.retrievers.base import Retriever
@@ -40,6 +46,14 @@ class Text2CypherRetriever(Retriever):
     Allows for the retrieval of records from a Neo4j database using natural language.
     Converts a user's natural language query to a Cypher query using an LLM,
     then retrieves records from a Neo4j database using the generated Cypher query
+
+    Args:
+        driver (neo4j.driver): The Neo4j Python driver.
+        llm (neo4j_genai.llm.LLM): LLM object to generate the Cypher query.
+        neo4j_schema (Optional[str]): Neo4j schema used to generate the Cypher query.
+
+    Raises:
+        RetrieverInitializationError: If validation of the input arguments fail.
     """
 
     def __init__(
@@ -57,7 +71,7 @@ class Text2CypherRetriever(Retriever):
                 neo4j_schema_model=neo4j_schema_model,
             )
         except ValidationError as e:
-            raise ValueError(f"Validation failed: {e.errors()}")
+            raise RetrieverInitializationError(e.errors())
 
         super().__init__(validated_data.driver_model.driver)
         self.llm = validated_data.llm_model.llm
@@ -67,15 +81,11 @@ class Text2CypherRetriever(Retriever):
                 if validated_data.neo4j_schema_model
                 else get_schema(validated_data.driver_model.driver)
             )
-        except Neo4jError as e:
-            logger.error("Failed to get schema for Text2CypherRetriever: %s", e.message)
-            raise RuntimeError(
-                f"Failed to get schema for Text2CypherRetriever: {e.message}"
+        except (Neo4jError, DriverError) as e:
+            error_message = getattr(e, "message", str(e))
+            raise SchemaFetchError(
+                f"Failed to fetch schema for Text2CypherRetriever: {error_message}"
             )
-        except DriverError as e:
-            logger.error("Failed to get schema for Text2CypherRetriever:")
-            logger.exception(e)
-            raise e
 
     def _get_search_results(
         self, query_text: str, examples: Optional[list[str]] = None
@@ -88,8 +98,8 @@ class Text2CypherRetriever(Retriever):
             examples (Optional[list[str], optional): Optional user input/query pairs for the LLM to use as examples.
 
         Raises:
-            ValidationError: If validation of the input arguments fail.
-            RuntimeError: If the LLM fails to generate a correct Cypher query.
+            SearchValidationError: If validation of the input arguments fail.
+            Text2CypherRetrievalError: If the LLM fails to generate a correct Cypher query.
 
         Returns:
             RawSearchResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
@@ -99,7 +109,7 @@ class Text2CypherRetriever(Retriever):
                 query_text=query_text, examples=examples
             )
         except ValidationError as e:
-            raise ValueError(f"Validation failed: {e.errors()}")
+            raise SearchValidationError(e.errors())
 
         prompt = TEXT2CYPHER_PROMPT.format(
             schema=self.neo4j_schema,
@@ -115,8 +125,7 @@ class Text2CypherRetriever(Retriever):
             logger.debug("Text2CypherRetriever Cypher query: %s", t2c_query)
             records, _, _ = self.driver.execute_query(query_=t2c_query)
         except CypherSyntaxError as e:
-            logger.error("Cypher query generation failed: %s", e.message)
-            raise RuntimeError(f"Cypher query generation failed: {e.message}")
+            raise Text2CypherRetrievalError(f"Failed to get search result: {e.message}")
 
         return RawSearchResult(
             records=records,

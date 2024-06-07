@@ -43,6 +43,46 @@ logger = logging.getLogger(__name__)
 
 
 class PineconeNeo4jRetriever(ExternalRetriever):
+    """
+    Provides retrieval method using vector search over embeddings with a Pinecone database.
+    If an embedder is provided, it needs to have the required Embedder type.
+
+    Example:
+
+    .. code-block:: python
+
+      from neo4j import GraphDatabase
+      from neo4j_genai import PineconeNeo4jRetriever
+      from pinecone import Pinecone
+
+      with GraphDatabase.driver(NEO4J_URL, auth=NEO4J_AUTH) as neo4j_driver:
+          pc_client = Pinecone(PC_API_KEY)
+          embedder = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+
+          retriever = PineconeNeo4jRetriever(
+              driver=neo4j_driver,
+              client=pc_client,
+              index_name="jeopardy",
+              id_property_neo4j="id",
+              embedder=embedder,  # type: ignore
+          )
+
+          result = retriever.search(query_text="biology", top_k=2)
+
+    Args:
+        driver (neo4j.Driver): The Neo4j Python driver.
+        client (Pinecone): The Pinecone client object.
+        collection (str): Name of a set of Weaviate objects that share the same data structure.
+        id_property_external (str): The name of the Weaviate property that has the identifier that refers to a corresponding Neo4j node id property.
+        id_property_neo4j (str): The name of the Neo4j node property that's used as the identifier for relating matches from Weaviate to Neo4j nodes.
+        embedder (Optional[Embedder]): Embedder object to embed query text.
+        return_properties (Optional[list[str]]): List of node properties to return.
+        format_record_function (Optional[Callable[[Any], Any]]): Function to transform a neo4j.Record to a RetrieverResultItem.
+
+    Raises:
+        RetrieverInitializationError: If validation of the input arguments fail.
+    """
+
     def __init__(
         self,
         driver: neo4j.Driver,
@@ -113,7 +153,7 @@ class PineconeNeo4jRetriever(ExternalRetriever):
         .. code-block:: python
 
           from neo4j import GraphDatabase
-          from neo4j_genai.retrievers.external.pinecone import PineconeNeo4jRetriever
+          from neo4j_genai import PineconeNeo4jRetriever
           from pinecone import Pinecone
 
           with GraphDatabase.driver(NEO4J_URL, auth=NEO4J_AUTH) as neo4j_driver:
@@ -124,7 +164,7 @@ class PineconeNeo4jRetriever(ExternalRetriever):
                   index_name="jeopardy",
                   id_property_neo4j="id"
               )
-              embedding = ...
+              biology_embedding = ...
               retriever.search(query_vector=biology_embedding, top_k=2)
 
 
