@@ -84,3 +84,15 @@ class Neo4jVersionError(Neo4jGenAiError):
 
     def __init__(self) -> None:
         super().__init__("This package only supports Neo4j version 5.18.1 or greater")
+
+
+class Text2CypherRetrievalError(Neo4jGenAiError):
+    """Exception raised when text-to-cypher retrieval fails."""
+
+    pass
+
+
+class SchemaFetchError(Neo4jGenAiError):
+    """Exception raised when a Neo4jSchema cannot be fetched."""
+
+    pass

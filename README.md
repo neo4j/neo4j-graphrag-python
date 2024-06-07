@@ -159,14 +159,14 @@ When you're finished with your changes, create a pull request, also known as a P
     the UI, and any other changes can be made in your fork and committed to the PR branch.
 -   As you update your PR and apply changes, mark each conversation as [resolved](https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/commenting-on-a-pull-request#resolving-conversations).
 -   Update the `CHANGELOG.md` if you have made significant changes to the project, these include:
-  - Major changes:
-    - New features
-    - Bug fixes with high impact
-    - Breaking changes
-  - Minor changes:
-    - Documentation improvements
-    - Code refactoring without functional impact
-    - Minor bug fixes
+    - Major changes:
+      - New features
+      - Bug fixes with high impact
+      - Breaking changes
+    - Minor changes:
+      - Documentation improvements
+      - Code refactoring without functional impact
+      - Minor bug fixes
 - Keep `CHANGELOG.md` changes brief and focus on the most important changes.
 
 ### Updating the `CHANGELOG.md`

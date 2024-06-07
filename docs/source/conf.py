@@ -68,6 +68,18 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 html_theme = "neo4j"
 html_theme_path = ["themes"]
 
+
+# 01-nav.js is a copy of a js file of the same name that is included in the
+# docs-ui bundle
+def setup(app):
+    app.add_js_file("https://neo4j.com/docs/assets/js/site.js", loading_method="defer")
+    app.add_js_file("js/12-fragment-jumper.js", loading_method="defer")
+
+
+# Additional templates that should be rendered to pages, maps page names to
+# template names.
+html_additional_pages = {"gentree": "gentree.html"}
+
 # The name of the Pygments (syntax highlighting) style to use.
 # pygments_style = "sphinx"
 pygments_style = "friendly"

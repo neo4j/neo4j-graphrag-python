@@ -97,7 +97,7 @@ class Retriever(ABC):
 
     def get_result_formatter(self) -> Callable[[neo4j.Record], RetrieverResultItem]:
         """
-        Returns the function to use to transform a neo4j.Record to aRetrieverResultItem.
+        Returns the function to use to transform a neo4j.Record to a RetrieverResultItem.
         """
         if hasattr(self, "format_record_function"):
             return self.format_record_function or self.default_format_record
