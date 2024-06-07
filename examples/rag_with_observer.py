@@ -14,9 +14,9 @@ from neo4j_genai.types import RetrieverResultItem
 from neo4j_genai import VectorCypherRetriever, RAG, OpenAILLM
 from neo4j_genai.observers import LogObserver
 
-URI = "neo4j://localhost:7689"
-AUTH = ("neo4j", "admin1234")
-DATABASE = "movie-recommendations-v5.18"
+URI = "neo4j://localhost:7687"
+AUTH = ("neo4j", "password")
+DATABASE = "neo4j"
 INDEX = "moviePlotsEmbedding"
 
 

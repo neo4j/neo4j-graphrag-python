@@ -22,9 +22,9 @@ from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
 def test_vector_retriever_search_text(
-    driver: Driver, custom_embedder: Embedder
+    driver: Driver, random_embedder: Embedder
 ) -> None:
-    retriever = VectorRetriever(driver, "vector-index-name", custom_embedder)
+    retriever = VectorRetriever(driver, "vector-index-name", random_embedder)
 
     top_k = 5
     results = retriever.search(query_text="Find me a book about Fremen", top_k=top_k)
@@ -37,13 +37,13 @@ def test_vector_retriever_search_text(
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
 def test_vector_cypher_retriever_search_text(
-    driver: Driver, custom_embedder: Embedder
+    driver: Driver, random_embedder: Embedder
 ) -> None:
     retrieval_query = (
         "MATCH (node)-[:AUTHORED_BY]->(author:Author) " "RETURN author.name"
     )
     retriever = VectorCypherRetriever(
-        driver, "vector-index-name", retrieval_query, custom_embedder
+        driver, "vector-index-name", retrieval_query, random_embedder
     )
 
     top_k = 5

@@ -14,6 +14,7 @@
 #  limitations under the License.
 
 from typing import Optional, Any
+from neo4j_genai.exceptions import MissingInputError
 
 
 class PromptTemplate:
@@ -31,7 +32,7 @@ class PromptTemplate:
     def _format(self, **kwargs: Any) -> str:
         for e in self.EXPECTED_INPUTS:
             if e not in kwargs:
-                raise Exception(f"Missing input {e}")
+                raise MissingInputError(f"Missing input '{e}'")
         return self.template.format(**kwargs)
 
     def format(self, *args: Any, **kwargs: Any) -> str:

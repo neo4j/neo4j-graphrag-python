@@ -14,8 +14,10 @@
 #  limitations under the License.
 import logging
 from typing import Optional, Any
+
 from pydantic import validate_call, ConfigDict
 
+from neo4j_genai.exceptions import LLMGenerationError
 from neo4j_genai.observers import ObserverInterface
 from neo4j_genai.retrievers.base import Retriever
 from neo4j_genai.generation.types import RagResultModel
@@ -78,7 +80,11 @@ class RAG:
             )
         logger.debug(f"RAG: retriever_result={retriever_result}")
         logger.debug(f"RAG: prompt={prompt}")
-        answer = self.llm.invoke(prompt)
+        try:
+            answer = self.llm.invoke(prompt)
+        except Exception as e:
+            logger.exception(e)
+            raise LLMGenerationError(e)
         result: dict[str, Any] = {"answer": answer}
         if return_context:
             result["retriever_result"] = retriever_result

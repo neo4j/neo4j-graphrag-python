@@ -35,6 +35,18 @@ class RagInitializationError(Neo4jGenAiError):
         self.errors = errors
 
 
+class MissingInputError(Neo4jGenAiError):
+    """Exception raised when a prompt required input is missing."""
+
+    pass
+
+
+class LLMGenerationError(Neo4jGenAiError):
+    """Exception raised when answer generation from LLM fails."""
+
+    pass
+
+
 class SearchValidationError(Neo4jGenAiError):
     """Exception raised for validation errors during search."""
 
