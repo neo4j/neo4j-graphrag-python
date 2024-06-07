@@ -18,7 +18,6 @@ from .retrievers.external.weaviate import WeaviateNeo4jRetriever
 from .retrievers.hybrid import HybridCypherRetriever, HybridRetriever
 from .retrievers.text2cypher import Text2CypherRetriever
 from .retrievers.vector import VectorCypherRetriever, VectorRetriever
-from .retrievers.external.weaviate import WeaviateNeo4jRetriever
 from .generation.rag import RAG
 from .generation.llm.base import LLMInterface
 from .generation.llm.openai_llm import OpenAILLM
