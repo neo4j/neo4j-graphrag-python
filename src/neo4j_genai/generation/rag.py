@@ -18,7 +18,6 @@ from typing import Optional, Any
 from pydantic import validate_call, ConfigDict
 
 from neo4j_genai.exceptions import LLMGenerationError
-from neo4j_genai.observers import ObserverInterface
 from neo4j_genai.retrievers.base import Retriever
 from neo4j_genai.generation.types import RagResultModel
 from neo4j_genai.generation.llm import LLMInterface
@@ -35,12 +34,10 @@ class RAG:
         retriever: Retriever,
         llm: LLMInterface,
         prompt_template: RagTemplate = RagTemplate(),
-        observers: Optional[list[ObserverInterface]] = None,
     ):
         self.retriever = retriever
         self.llm = llm
         self.prompt_template = prompt_template
-        self.observers = observers or []
 
     @validate_call(validate_return=True)
     def search(
@@ -74,10 +71,6 @@ class RAG:
         prompt = self.prompt_template.format(
             query=query, context=context, examples=examples
         )
-        for observer in self.observers:
-            observer.observe(
-                self, data={"query": query, "contex": context, "prompt": prompt}
-            )
         logger.debug(f"RAG: retriever_result={retriever_result}")
         logger.debug(f"RAG: prompt={prompt}")
         try:
