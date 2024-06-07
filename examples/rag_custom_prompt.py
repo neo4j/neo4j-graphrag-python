@@ -50,7 +50,7 @@ retriever = VectorCypherRetriever(
 llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0})
 
 template = RagTemplate(
-    template="""You are an exert about movies and actors. Your task is to
+    template="""You are an expert at movies and actors. Your task is to
     answer the user's question based on the provided context. Use only the
     information within that context.
 
