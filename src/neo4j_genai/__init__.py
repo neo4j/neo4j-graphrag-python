@@ -17,19 +17,6 @@ from .retrievers.hybrid import HybridCypherRetriever, HybridRetriever
 from .retrievers.text2cypher import Text2CypherRetriever
 from .retrievers.vector import VectorCypherRetriever, VectorRetriever
 
-try:
-    from .retrievers.external.weaviate import WeaviateNeo4jRetriever
-
-    raise ImportError
-except ImportError:
-    WeaviateNeo4jRetriever = None
-
-try:
-    from .retrievers.external.pinecone import PineconeNeo4jRetriever
-
-    raise ImportError
-except ImportError:
-    PineconeNeo4jRetriever = None
 
 __all__ = [
     "VectorRetriever",
@@ -37,6 +24,4 @@ __all__ = [
     "HybridRetriever",
     "HybridCypherRetriever",
     "Text2CypherRetriever",
-    "WeaviateNeo4jRetriever",
-    "PineconeNeo4jRetriever",
 ]
