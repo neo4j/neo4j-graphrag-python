@@ -16,7 +16,7 @@
 import hashlib
 import json
 import os.path
-from typing import Any, List, Tuple
+from typing import Any, Literal
 
 import neo4j
 import weaviate.classes as wvc
@@ -465,7 +465,9 @@ def populate_neo4j(
     return res
 
 
-def build_data_objects(q_vector_fmt: str) -> Tuple[dict[str, Any], List[Any]]:
+def build_data_objects(
+    q_vector_fmt: Literal["weaviate", "pinecone", "neo4j"],
+) -> tuple[dict[str, Any], list[Any]]:
     # read file from disk
     # this file is from https://github.com/weaviate-tutorials/quickstart/tree/main/data
     # MIT License
@@ -476,8 +478,8 @@ def build_data_objects(q_vector_fmt: str) -> Tuple[dict[str, Any], List[Any]]:
     with open(file_name, "r") as f:
         data = json.load(f)
 
-    question_objs = list()
-    neo4j_objs = {"nodes": [], "relationships": []}  # type: dict[str, Any]
+    question_objs = []
+    neo4j_objs = {"nodes": [], "relationships": []}  # type: dict[str, list[Any]]
 
     # only unique categories and ids for them
     unique_categories_list = list(set([c["Category"] for c in data]))
