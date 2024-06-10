@@ -25,7 +25,7 @@ from neo4j_genai.exceptions import (
     Text2CypherRetrievalError,
     SchemaFetchError,
 )
-from neo4j_genai.generation.llm import LLMInterface
+from neo4j_genai.llm import LLMInterface
 from neo4j_genai.generation.prompts import Text2CypherTemplate
 from neo4j_genai.retrievers.base import Retriever
 from neo4j_genai.schema import get_schema

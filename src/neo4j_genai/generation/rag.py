@@ -15,12 +15,16 @@
 import logging
 from typing import Optional, Any
 
-from pydantic import validate_call, ConfigDict
+from pydantic import ValidationError
 
-from neo4j_genai.exceptions import LLMGenerationError
+from neo4j_genai.exceptions import (
+    LLMGenerationError,
+    SearchValidationError,
+    RagInitializationError,
+)
 from neo4j_genai.retrievers.base import Retriever
-from neo4j_genai.generation.types import RagResultModel
-from neo4j_genai.generation.llm import LLMInterface
+from neo4j_genai.generation.types import RagResultModel, RagInitModel, RagSearchModel
+from neo4j_genai.llm import LLMInterface
 from neo4j_genai.generation.prompts import RagTemplate
 from neo4j_genai.types import RetrieverResult
 
@@ -28,18 +32,24 @@ logger = logging.getLogger(__name__)
 
 
 class RAG:
-    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def __init__(
         self,
         retriever: Retriever,
         llm: LLMInterface,
         prompt_template: RagTemplate = RagTemplate(),
     ):
-        self.retriever = retriever
-        self.llm = llm
-        self.prompt_template = prompt_template
+        try:
+            validated_data = RagInitModel(
+                retriever=retriever,
+                llm=llm,
+                prompt_template=prompt_template,
+            )
+        except ValidationError as e:
+            raise RagInitializationError(e.errors())
+        self.retriever = validated_data.retriever
+        self.llm = validated_data.llm
+        self.prompt_template = validated_data.prompt_template
 
-    @validate_call(validate_return=True)
     def search(
         self,
         query: str,
@@ -63,13 +73,22 @@ class RAG:
             RagResultModel: The LLM-generated answer
 
         """
-        retriever_config = retriever_config or {}
+        try:
+            validated_data = RagSearchModel(
+                query=query,
+                examples=examples,
+                retriever_config=retriever_config or {},
+                return_context=return_context,
+            )
+        except ValidationError as e:
+            raise SearchValidationError(e.errors())
+        query = validated_data.query
         retriever_result: RetrieverResult = self.retriever.search(
-            query_text=query, **retriever_config
+            query_text=query, **validated_data.retriever_config
         )
         context = "\n".join(item.content for item in retriever_result.items)
         prompt = self.prompt_template.format(
-            query=query, context=context, examples=examples
+            query=query, context=context, examples=validated_data.examples
         )
         logger.debug(f"RAG: retriever_result={retriever_result}")
         logger.debug(f"RAG: prompt={prompt}")

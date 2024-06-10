@@ -16,6 +16,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from neo4j_genai.exceptions import RagInitializationError, SearchValidationError
 from neo4j_genai.generation.prompts import RagTemplate
 from neo4j_genai.generation.rag import RAG
 from neo4j_genai.generation.types import RagResultModel
@@ -80,12 +81,12 @@ Answer:
 
 
 def test_rag_initialization_error(llm: MagicMock) -> None:
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(RagInitializationError) as excinfo:
         RAG(
             retriever="not a retriever object",  # type: ignore
             llm=llm,
         )
-    assert "Input should be an instance of Retriever" in str(excinfo)
+    assert "retriever" in str(excinfo)
 
 
 def test_rag_search_error(retriever_mock: MagicMock, llm: MagicMock) -> None:
@@ -93,6 +94,6 @@ def test_rag_search_error(retriever_mock: MagicMock, llm: MagicMock) -> None:
         retriever=retriever_mock,
         llm=llm,
     )
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(SearchValidationError) as excinfo:
         rag.search(10)  # type: ignore
     assert "Input should be a valid string" in str(excinfo)

@@ -12,8 +12,28 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from pydantic import BaseModel, ConfigDict
+from typing import Optional, Any
+from pydantic import BaseModel, ConfigDict, field_validator
+
+from neo4j_genai.llm import LLMInterface
+from neo4j_genai.generation.prompts import RagTemplate
+from neo4j_genai.retrievers.base import Retriever
 from neo4j_genai.types import RetrieverResult
+
+
+class RagInitModel(BaseModel):
+    retriever: Retriever
+    llm: LLMInterface
+    prompt_template: RagTemplate
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
+class RagSearchModel(BaseModel):
+    query: str
+    examples: str = ""
+    retriever_config: dict[str, Any] = {}
+    return_context: bool = False
 
 
 class RagResultModel(BaseModel):

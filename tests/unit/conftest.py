@@ -24,7 +24,7 @@ from neo4j_genai import (
     VectorRetriever,
 )
 from neo4j_genai.embedder import Embedder
-from neo4j_genai.generation.llm import LLMInterface
+from neo4j_genai.llm import LLMInterface
 
 
 @pytest.fixture(scope="function")

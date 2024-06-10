@@ -18,7 +18,8 @@ from .retrievers.external.weaviate import WeaviateNeo4jRetriever
 from .retrievers.hybrid import HybridCypherRetriever, HybridRetriever
 from .retrievers.text2cypher import Text2CypherRetriever
 from .retrievers.vector import VectorCypherRetriever, VectorRetriever
-from .generation import RAG, PromptTemplate, RagTemplate, LLMInterface, OpenAILLM
+from .generation import RAG, PromptTemplate, RagTemplate
+from .llm import LLMInterface, OpenAILLM
 
 
 __all__ = [

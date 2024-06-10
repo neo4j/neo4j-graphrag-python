@@ -26,7 +26,7 @@ from neo4j_genai.indexes import (
     create_vector_index,
     drop_index_if_exists,
 )
-from neo4j_genai.generation.llm import LLMInterface
+from neo4j_genai.llm import LLMInterface
 from ..e2e.utils import EMBEDDING_BIOLOGY
 
 

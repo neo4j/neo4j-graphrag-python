@@ -30,7 +30,7 @@ class RetrieverInitializationError(Neo4jGenAiError):
 
 
 class RagInitializationError(Neo4jGenAiError):
-    def __init__(self, errors: str):
+    def __init__(self, errors: list[ErrorDetails]):
         super().__init__(f"Initialization failed: {errors}")
         self.errors = errors
 
