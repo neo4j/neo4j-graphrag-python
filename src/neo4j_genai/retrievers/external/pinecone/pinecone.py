@@ -52,7 +52,7 @@ class PineconeNeo4jRetriever(ExternalRetriever):
     .. code-block:: python
 
       from neo4j import GraphDatabase
-      from neo4j_genai import PineconeNeo4jRetriever
+      from neo4j_genai.retrievers.external.pinecone import PineconeNeo4jRetriever
       from pinecone import Pinecone
 
       with GraphDatabase.driver(NEO4J_URL, auth=NEO4J_AUTH) as neo4j_driver:
@@ -153,7 +153,7 @@ class PineconeNeo4jRetriever(ExternalRetriever):
         .. code-block:: python
 
           from neo4j import GraphDatabase
-          from neo4j_genai import PineconeNeo4jRetriever
+          from neo4j_genai.retrievers.external.pinecone import PineconeNeo4jRetriever
           from pinecone import Pinecone
 
           with GraphDatabase.driver(NEO4J_URL, auth=NEO4J_AUTH) as neo4j_driver:
