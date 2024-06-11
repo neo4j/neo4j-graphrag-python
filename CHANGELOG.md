@@ -20,3 +20,4 @@
 ### Fixed
 - Updated documentation to include new custom exceptions.
 - Improved the use of Pydantic for input data validation for retriever objects.
+- Removed Pinecone and Weaviate retrievers from __init__.py to prevent ImportError when optional dependencies are not installed.
