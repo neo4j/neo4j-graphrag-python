@@ -20,7 +20,6 @@ from .generation import RAG, PromptTemplate, RagTemplate
 from .llm import LLMInterface, OpenAILLM
 
 
-
 __all__ = [
     "VectorRetriever",
     "VectorCypherRetriever",
