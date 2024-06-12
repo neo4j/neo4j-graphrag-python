@@ -18,7 +18,7 @@ import pytest
 
 from neo4j_genai.exceptions import RagInitializationError, SearchValidationError
 from neo4j_genai.generation.prompts import RagTemplate
-from neo4j_genai.generation.rag import RAG
+from neo4j_genai.generation.rag import GraphRAG
 from neo4j_genai.generation.types import RagResultModel
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 
@@ -45,7 +45,7 @@ Answer:
 
 
 def test_rag_happy_path(retriever_mock: MagicMock, llm: MagicMock) -> None:
-    rag = RAG(
+    rag = GraphRAG(
         retriever=retriever_mock,
         llm=llm,
     )
@@ -82,7 +82,7 @@ Answer:
 
 def test_rag_initialization_error(llm: MagicMock) -> None:
     with pytest.raises(RagInitializationError) as excinfo:
-        RAG(
+        GraphRAG(
             retriever="not a retriever object",  # type: ignore
             llm=llm,
         )
@@ -90,7 +90,7 @@ def test_rag_initialization_error(llm: MagicMock) -> None:
 
 
 def test_rag_search_error(retriever_mock: MagicMock, llm: MagicMock) -> None:
-    rag = RAG(
+    rag = GraphRAG(
         retriever=retriever_mock,
         llm=llm,
     )

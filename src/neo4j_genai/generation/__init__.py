@@ -1,8 +1,8 @@
-from .rag import RAG
+from .rag import GraphRAG
 from .prompts import PromptTemplate, RagTemplate
 
 __all__ = [
-    "RAG",
+    "GraphRAG",
     "PromptTemplate",
     "RagTemplate",
 ]

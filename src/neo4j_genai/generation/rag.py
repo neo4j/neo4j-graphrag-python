@@ -31,7 +31,7 @@ from neo4j_genai.types import RetrieverResult
 logger = logging.getLogger(__name__)
 
 
-class RAG:
+class GraphRAG:
     def __init__(
         self,
         retriever: Retriever,

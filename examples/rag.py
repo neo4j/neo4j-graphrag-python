@@ -12,7 +12,7 @@ import neo4j
 
 from neo4j_genai.embeddings.openai import OpenAIEmbeddings
 from neo4j_genai.types import RetrieverResultItem
-from neo4j_genai import VectorCypherRetriever, RAG, OpenAILLM
+from neo4j_genai import VectorCypherRetriever, GraphRAG, OpenAILLM
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
@@ -48,7 +48,7 @@ retriever = VectorCypherRetriever(
 
 llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0})
 
-rag = RAG(retriever=retriever, llm=llm)
+rag = GraphRAG(retriever=retriever, llm=llm)
 
 result = rag.search("Tell me more about Avatar movies")
 print(result)

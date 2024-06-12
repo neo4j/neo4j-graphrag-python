@@ -19,7 +19,7 @@ import neo4j
 from unittest.mock import MagicMock
 
 from neo4j_genai import VectorCypherRetriever
-from neo4j_genai.generation.rag import RAG
+from neo4j_genai.generation.rag import GraphRAG
 from neo4j_genai.generation.types import RagResultModel
 from neo4j_genai.types import RetrieverResult
 from neo4j_genai.exceptions import LLMGenerationError
@@ -44,7 +44,7 @@ def test_rag_happy_path(
         index_name="vector-index-name",
         embedder=biology_embedder,
     )
-    rag = RAG(
+    rag = GraphRAG(
         retriever=retriever,
         llm=llm,
     )
@@ -88,7 +88,7 @@ def test_rag_happy_path_return_context(
         index_name="vector-index-name",
         embedder=biology_embedder,
     )
-    rag = RAG(
+    rag = GraphRAG(
         retriever=retriever,
         llm=llm,
     )
@@ -134,7 +134,7 @@ def test_rag_happy_path_examples(
         index_name="vector-index-name",
         embedder=biology_embedder,
     )
-    rag = RAG(
+    rag = GraphRAG(
         retriever=retriever,
         llm=llm,
     )
@@ -177,7 +177,7 @@ def test_rag_llm_error(
         index_name="vector-index-name",
         embedder=biology_embedder,
     )
-    rag = RAG(
+    rag = GraphRAG(
         retriever=retriever,
         llm=llm,
     )
@@ -193,7 +193,7 @@ def test_rag_llm_error(
 def test_rag_retrieval_error(
     driver: MagicMock, llm: MagicMock, retriever_mock: MagicMock
 ) -> None:
-    rag = RAG(
+    rag = GraphRAG(
         retriever=retriever_mock,
         llm=llm,
     )
