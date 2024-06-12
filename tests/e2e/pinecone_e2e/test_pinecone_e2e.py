@@ -19,7 +19,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from langchain_community.embeddings import HuggingFaceEmbeddings
-from neo4j_genai import PineconeNeo4jRetriever
+from neo4j_genai.retrievers.external.pinecone import PineconeNeo4jRetriever
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 from pinecone import Pinecone

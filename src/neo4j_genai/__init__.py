@@ -13,13 +13,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from .retrievers.external.pinecone import PineconeNeo4jRetriever
-from .retrievers.external.weaviate import WeaviateNeo4jRetriever
 from .retrievers.hybrid import HybridCypherRetriever, HybridRetriever
 from .retrievers.text2cypher import Text2CypherRetriever
 from .retrievers.vector import VectorCypherRetriever, VectorRetriever
 from .generation import RAG, PromptTemplate, RagTemplate
 from .llm import LLMInterface, OpenAILLM
+
 
 
 __all__ = [
@@ -28,8 +27,6 @@ __all__ = [
     "HybridRetriever",
     "HybridCypherRetriever",
     "Text2CypherRetriever",
-    "WeaviateNeo4jRetriever",
-    "PineconeNeo4jRetriever",
     "LLMInterface",
     "OpenAILLM",
     "PromptTemplate",
