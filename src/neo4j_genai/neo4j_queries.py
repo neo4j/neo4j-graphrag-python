@@ -149,7 +149,7 @@ def get_search_query(
     query_tail = get_query_tail(
         retrieval_query,
         return_properties,
-        fallback_return=f"RETURN apoc.map.removeKeys(node, ['{embedding_node_property}']) AS node, score",
+        fallback_return=f"RETURN node {{ .*, `{embedding_node_property}`: null }} AS node, score",
     )
     return f"{query} {query_tail}", params
 
