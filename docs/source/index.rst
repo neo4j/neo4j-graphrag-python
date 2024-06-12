@@ -16,17 +16,17 @@ fast to ship new features and high performing patterns and methods.
 Topics
 ******
 
++ :ref:`rag-documentation`
 + :ref:`api-documentation`
 + :ref:`types-documentation`
-+ :ref:`rag-documentation`
 
 .. toctree::
     :maxdepth: 3
     :caption: Contents:
     :hidden:
 
-    api.rst
     rag.rst
+    api.rst
     types.rst
 
 

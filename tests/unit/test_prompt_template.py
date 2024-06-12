@@ -1,6 +1,6 @@
 import pytest
 
-from neo4j_genai.exceptions import MissingInputError
+from neo4j_genai.exceptions import PromptMissingInputError
 from neo4j_genai.generation.prompts import PromptTemplate
 
 
@@ -39,7 +39,7 @@ def test_prompt_template_format_missing_value() -> None:
         EXPECTED_INPUTS = ["question", "other"]
 
     template = MyTemplate()
-    with pytest.raises(MissingInputError) as excinfo:
+    with pytest.raises(PromptMissingInputError) as excinfo:
         template.format(question="question")
     assert "Missing input 'other'" in str(excinfo)
 

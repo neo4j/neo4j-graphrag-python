@@ -35,7 +35,7 @@ class RagInitializationError(Neo4jGenAiError):
         self.errors = errors
 
 
-class MissingInputError(Neo4jGenAiError):
+class PromptMissingInputError(Neo4jGenAiError):
     """Exception raised when a prompt required input is missing."""
 
     pass

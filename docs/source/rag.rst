@@ -4,6 +4,15 @@ RAG Documentation
 #################
 
 ************************************
+Retrieval-Augmented Generation (RAG)
+************************************
+RAG is a technique that enhances Large Language Model (LLM) responses by retrieving
+source information from external data stores to augment generated responses.
+
+This package enables Python developers to perform RAG using Neo4j.
+
+
+************************************
 Overview
 ************************************
 
@@ -38,7 +47,7 @@ Overview
     response = rag.search(query_text=query_text, retriever_config={"top_k": 5})
 
 
-The retriever can be any of the supported retriever, or any class
+The retriever can be any of the :ref:`supported retrievers<retrievers>`, or any class
 inheriting from the `Retriever` interface.
 
 ***************
@@ -52,7 +61,7 @@ Using another LLM
 This package only provide support for OpenAI LLM. If you need to use another LLM,
 you need to subclass the `LLMInterface`:
 
-.. autoclass:: neo4j_genai.generation.llm.LLMInterface
+.. autoclass:: neo4j_genai.llm.LLMInterface
     :members:
     :show-inheritance:
 

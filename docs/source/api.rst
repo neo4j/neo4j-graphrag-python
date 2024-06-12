@@ -3,17 +3,16 @@
 API Documentation
 #################
 
-************************************
-Retrieval-Augmented Generation (RAG)
-************************************
-RAG is a technique that enhances Large Language Model (LLM) responses by retrieving
-source information from external data stores to augment generated responses.
-
-This package enables Python developers to perform RAG using Neo4j.
-
 **********
 Retrievers
 **********
+
+RetrieverInterface
+===================
+
+.. autoclass:: neo4j_genai.retrievers.base.Retriever
+    :members:
+
 
 VectorRetriever
 ===============
@@ -89,6 +88,12 @@ Errors
 
   * :class:`neo4j_genai.exceptions.SchemaFetchError`
 
+  * :class:`neo4j_genai.exceptions.RagInitializationError`
+
+  * :class:`neo4j_genai.exceptions.PromptMissingInputError`
+
+  * :class:`neo4j_genai.exceptions.LLMGenerationError`
+
 
 Neo4jGenAiError
 ===============
@@ -157,4 +162,25 @@ SchemaFetchError
 ================
 
 .. autoclass:: neo4j_genai.exceptions.SchemaFetchError
+   :show-inheritance:
+
+
+RagInitializationError
+==========================
+
+.. autoclass:: neo4j_genai.exceptions.RagInitializationError
+   :show-inheritance:
+
+
+PromptMissingInputError
+==========================
+
+.. autoclass:: neo4j_genai.exceptions.PromptMissingInputError
+   :show-inheritance:
+
+
+LLMGenerationError
+==========================
+
+.. autoclass:: neo4j_genai.exceptions.LLMGenerationError
    :show-inheritance:
