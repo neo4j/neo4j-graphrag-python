@@ -6,7 +6,7 @@ The purpose of this package is to provide a first party package to developers,
 where Neo4j can guarantee long term commitment and maintenance as well as being
 fast to ship new features and high performing patterns and methods.
 
-Docs are coming soon!
+Documentation: https://neo4j.com/docs/neo4j-genai-python/
 
 # Usage
 
@@ -159,17 +159,18 @@ When you're finished with your changes, create a pull request, also known as a P
     the UI, and any other changes can be made in your fork and committed to the PR branch.
 -   As you update your PR and apply changes, mark each conversation as [resolved](https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/commenting-on-a-pull-request#resolving-conversations).
 -   Update the `CHANGELOG.md` if you have made significant changes to the project, these include:
-    - Major changes:
-      - New features
-      - Bug fixes with high impact
-      - Breaking changes
-    - Minor changes:
-      - Documentation improvements
-      - Code refactoring without functional impact
-      - Minor bug fixes
-- Keep `CHANGELOG.md` changes brief and focus on the most important changes.
+    -   Major changes:
+        -   New features
+        -   Bug fixes with high impact
+        -   Breaking changes
+    -   Minor changes:
+        -   Documentation improvements
+        -   Code refactoring without functional impact
+        -   Minor bug fixes
+-   Keep `CHANGELOG.md` changes brief and focus on the most important changes.
 
 ### Updating the `CHANGELOG.md`
+
 1. When opening a PR, you can generate an edit suggestion by commenting on the GitHub PR [using CodiumAI](https://github.com/CodiumAI-Agent):
 
 ```
