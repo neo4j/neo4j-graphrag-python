@@ -19,7 +19,7 @@ Overview
 .. code:: python
 
     from neo4j import GraphDatabase
-    from neo4j_genai import VectorRetriever, OpenAILLM, RAG
+    from neo4j_genai import VectorRetriever, OpenAILLM, GraphRAG
 
     URI = "neo4j://localhost:7687"
     AUTH = ("neo4j", "password")
@@ -40,7 +40,7 @@ Overview
     llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0})
 
     # Initialize the RAG pipeline
-    rag = RAG(retriever=vector_retriever, llm=llm)
+    rag = GraphRAG(retriever=vector_retriever, llm=llm)
 
     # Query the graph
     query_text = "How do I do similarity search in Neo4j?"
@@ -76,7 +76,7 @@ object during initialization:
 
 .. code:: python
 
-    from neo4j_genai import RagTemplate, RAG
+    from neo4j_genai import RagTemplate, GraphRAG
 
     # ...
 
@@ -84,7 +84,7 @@ object during initialization:
         prompt="Answer the question {question} using context {context} and examples {examples}",
         expected_inputs=["context", "question", "examples"]
     )
-    rag = RAG(retriever=vector_retriever, llm=llm, prompt_template=prompt_template)
+    rag = GraphRAG(retriever=vector_retriever, llm=llm, prompt_template=prompt_template)
 
     # ...
 
