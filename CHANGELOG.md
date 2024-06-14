@@ -19,6 +19,7 @@
 -   New return types that help with getting retriever results: `RetrieverResult` and `RetrieverResultItem`.
 -   Supported wrapper embedder object for sentence-transformers embeddings: `SentenceTransformerEmbeddings`.
 -   `Text2CypherRetriever` object which allows for the retrieval of records from a Neo4j database using natural language.
+-   Stopped embeddings from being returned when searching with `VectorRetriever`. Added `nodeLabels` and `id` to the metadata of `VectorRetriever` results.
 
 ### Changed
 
