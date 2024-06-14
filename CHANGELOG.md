@@ -2,6 +2,9 @@
 
 ## Next
 
+### Added
+-   Stopped embeddings from being returned when searching with `VectorRetriever`. Added `nodeLabels` and `id` to the metadata of `VectorRetriever` results.
+
 ## 0.2.0
 
 ### Fixed

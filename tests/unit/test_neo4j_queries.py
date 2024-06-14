@@ -22,7 +22,7 @@ def test_vector_search_basic() -> None:
     expected = (
         "CALL db.index.vector.queryNodes($vector_index_name, $top_k, $query_vector) "
         "YIELD node, score "
-        "RETURN node, score"
+        "RETURN node { .*, `None`: null } AS node, labels(node) AS nodeLabels, elementId(node) AS id, score"
     )
     result, params = get_search_query(SearchType.VECTOR)
     assert result.strip() == expected.strip()
@@ -42,7 +42,7 @@ def test_hybrid_search_basic() -> None:
         "RETURN n.node AS node, (n.score / max) AS score "
         "} "
         "WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k "
-        "RETURN node, score"
+        "RETURN node { .*, `None`: null } AS node, labels(node) AS nodeLabels, elementId(node) AS id, score"
     )
     result, _ = get_search_query(SearchType.HYBRID)
     assert result.strip() == expected.strip()
@@ -78,8 +78,8 @@ def test_vector_search_with_filters(_mock: Any) -> None:
         " AND (True) "
         "WITH node, "
         "vector.similarity.cosine(node.`vector`, $query_vector) AS score "
-        "ORDER BY score DESC LIMIT $top_k"
-        " RETURN node, score"
+        "ORDER BY score DESC LIMIT $top_k "
+        "RETURN node { .*, `vector`: null } AS node, labels(node) AS nodeLabels, elementId(node) AS id, score"
     )
     result, params = get_search_query(
         SearchType.VECTOR,
@@ -104,8 +104,8 @@ def test_vector_search_with_params_from_filters(_mock: Any) -> None:
         " AND (True) "
         "WITH node, "
         "vector.similarity.cosine(node.`vector`, $query_vector) AS score "
-        "ORDER BY score DESC LIMIT $top_k"
-        " RETURN node, score"
+        "ORDER BY score DESC LIMIT $top_k "
+        "RETURN node { .*, `vector`: null } AS node, labels(node) AS nodeLabels, elementId(node) AS id, score"
     )
     result, params = get_search_query(
         SearchType.VECTOR,

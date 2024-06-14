@@ -32,6 +32,7 @@ def test_vector_retriever_search_text(
     assert isinstance(results, RetrieverResult)
     assert len(results.items) == 5
     for result in results.items:
+        assert f"'{retriever._embedding_node_property}': None" in result.content
         assert isinstance(result, RetrieverResultItem)
 
 
@@ -66,6 +67,7 @@ def test_vector_retriever_search_vector(driver: Driver) -> None:
     assert isinstance(results, RetrieverResult)
     assert len(results.items) == 5
     for result in results.items:
+        assert f"'{retriever._embedding_node_property}': None" in result.content
         assert isinstance(result, RetrieverResultItem)
 
 

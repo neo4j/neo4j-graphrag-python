@@ -147,7 +147,9 @@ def get_search_query(
     else:
         raise ValueError(f"Search type is not supported: {search_type}")
     query_tail = get_query_tail(
-        retrieval_query, return_properties, fallback_return="RETURN node, score"
+        retrieval_query,
+        return_properties,
+        fallback_return=f"RETURN node {{ .*, `{embedding_node_property}`: null }} AS node, labels(node) AS nodeLabels, elementId(node) AS id, score",
     )
     return f"{query} {query_tail}", params
 

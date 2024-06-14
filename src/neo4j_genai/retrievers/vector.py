@@ -108,6 +108,8 @@ class VectorRetriever(Retriever):
         """
         metadata = {
             "score": record.get("score"),
+            "nodeLabels": record.get("nodeLabels"),
+            "id": record.get("id"),
         }
         node = record.get("node")
         return RetrieverResultItem(
