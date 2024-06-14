@@ -67,7 +67,7 @@ def test_create_vector_index_negative_dimension(driver: MagicMock) -> None:
 
 def test_create_vector_index_validation_error_dimensions(driver: MagicMock) -> None:
     with pytest.raises(Neo4jIndexError) as excinfo:
-        create_vector_index(driver, "my-index", "People", "name", "no-dim", "cosine")
+        create_vector_index(driver, "my-index", "People", "name", "no-dim", "cosine")  # type: ignore
     assert "Error for inputs to create_vector_index" in str(excinfo)
 
 
@@ -81,7 +81,7 @@ def test_create_vector_index_raises_error_with_neo4j_client_error(
 
 def test_create_vector_index_validation_error_similarity_fn(driver: MagicMock) -> None:
     with pytest.raises(Neo4jIndexError) as excinfo:
-        create_vector_index(driver, "my-index", "People", "name", 1536, "algebra")
+        create_vector_index(driver, "my-index", "People", "name", 1536, "algebra")  # type: ignore
     assert "Error for inputs to create_vector_index" in str(excinfo)
 
 
