@@ -13,13 +13,14 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+import logging
+from typing import Literal
+
 import neo4j
 from pydantic import ValidationError
 
-from .exceptions import Neo4jIndexError
-from .types import VectorIndexModel, FulltextIndexModel
-import logging
-from typing import Literal
+from .exceptions import Neo4jIndexError, Neo4jInsertionError
+from .types import FulltextIndexModel, VectorIndexModel
 
 logger = logging.getLogger(__name__)
 
@@ -143,3 +144,41 @@ def drop_index_if_exists(driver: neo4j.Driver, name: str) -> None:
         driver.execute_query(query, parameters)
     except neo4j.exceptions.ClientError as e:
         raise Neo4jIndexError(f"Dropping Neo4j index failed: {e}")
+
+
+def upsert_vector(
+    driver: neo4j.Driver,
+    node_label: str,
+    node_id: int,
+    vector_prop: str,
+    vector: list[float],
+) -> None:
+    """
+    This method constructs a Cypher query and executes it to upsert (insert or update) a vector property on a specific node.
+
+    Args:
+        driver (neo4j.Driver): Neo4j Python driver instance.
+        node_label (str): The label of the node.
+        node_id (int): The id of the node.
+        vector_prop (str): The name of the property to store the vector in.
+        vector (list[float]): The vector to store.
+
+    Raises:
+        Neo4jInsertError: If upserting of the vector fails.
+    """
+    try:
+        query = f"""
+        MATCH (n: {node_label})
+        WHERE elementId(n) = $id
+        WITH n
+        CALL db.create.setNodeVectorProperty(n, $vector_prop, $vector)
+        RETURN n
+        """
+        parameters = {
+            "id": node_id,
+            "vector_prop": vector_prop,
+            "vector": vector,
+        }
+        driver.execute_query(query, parameters)
+    except neo4j.exceptions.ClientError as e:
+        raise Neo4jInsertionError(f"Upserting vector to Neo4j failed: {e}")
