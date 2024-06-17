@@ -28,14 +28,19 @@ The relationships:
 (:Person)-[:REVIEWED]->(:Movie)
 """
 
-# Initialize the retriever
-retriever = Text2CypherRetriever(driver=driver, llm=llm, neo4j_schema=neo4j_schema)  # type: ignore
-
 # (Optional) Provide user input/query pairs for the LLM to use as examples
 examples = [
     "USER INPUT: 'Which actors starred in the Matrix?' QUERY: MATCH (p:Person)-[:ACTED_IN]->(m:Movie) WHERE m.title = 'The Matrix' RETURN p.name"
 ]
 
+# Initialize the retriever
+retriever = Text2CypherRetriever(
+    driver=driver,
+    llm=llm,  # type: ignore
+    neo4j_schema=neo4j_schema,
+    examples=examples,
+)
+
 # Generate a Cypher query using the LLM, send it to the Neo4j database, and return the results
 query_text = "Which movies did Hugo Weaving star in?"
-print(retriever.search(query_text=query_text, examples=examples))
+print(retriever.search(query_text=query_text))
