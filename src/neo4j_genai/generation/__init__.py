@@ -1,4 +1,4 @@
-from .rag import GraphRAG
+from .graphrag import GraphRAG
 from .prompts import PromptTemplate, RagTemplate
 
 __all__ = [
