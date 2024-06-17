@@ -15,6 +15,8 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Any
 
+from .types import LLMResponse
+
 
 class LLMInterface(ABC):
     """Interface for large language models."""
@@ -29,12 +31,15 @@ class LLMInterface(ABC):
         self.model_params = model_params or {}
 
     @abstractmethod
-    def invoke(self, input: str) -> str:
+    def invoke(self, input: str) -> LLMResponse:
         """Sends a text input to the LLM and retrieves a response.
 
         Args:
             input (str): Text sent to the LLM
 
         Returns:
-            str: The response from the LLM.
+            LLMResponse: The response from the LLM.
+
+        Raises:
+            LLMGenerationError: If anything goes wrong.
         """

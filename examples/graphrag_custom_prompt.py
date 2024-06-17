@@ -67,6 +67,6 @@ template = RagTemplate(
 rag = GraphRAG(retriever=retriever, llm=llm, prompt_template=template)
 
 result = rag.search("Tell me more about Avatar movies")
-print(result)
+print(result.content)
 
 driver.close()

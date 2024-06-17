@@ -21,10 +21,11 @@ from unittest.mock import MagicMock
 from neo4j_genai import VectorCypherRetriever
 from neo4j_genai.generation.graphrag import GraphRAG
 from neo4j_genai.generation.types import RagResultModel
+from neo4j_genai.llm import LLMResponse
 from neo4j_genai.types import RetrieverResult
 from neo4j_genai.exceptions import LLMGenerationError
-from ..conftest import BiologyEmbedder
-from ..utils import build_data_objects, populate_neo4j
+from tests.e2e.conftest import BiologyEmbedder
+from tests.e2e.utils import build_data_objects, populate_neo4j
 
 
 @pytest.fixture(scope="module")
@@ -48,7 +49,7 @@ def test_graphrag_happy_path(
         retriever=retriever,
         llm=llm,
     )
-    llm.invoke.return_value = "some text"
+    llm.invoke.return_value = LLMResponse(content="some text")
 
     result = rag.search(
         query="biology",
@@ -92,7 +93,7 @@ def test_graphrag_happy_path_return_context(
         retriever=retriever,
         llm=llm,
     )
-    llm.invoke.return_value = "some text"
+    llm.invoke.return_value = LLMResponse(content="some text")
 
     result = rag.search(
         query="biology",
@@ -138,7 +139,7 @@ def test_graphrag_happy_path_examples(
         retriever=retriever,
         llm=llm,
     )
-    llm.invoke.return_value = "some text"
+    llm.invoke.return_value = LLMResponse(content="some text")
 
     result = rag.search(
         query="biology",
@@ -181,7 +182,7 @@ def test_graphrag_llm_error(
         retriever=retriever,
         llm=llm,
     )
-    llm.invoke.side_effect = Exception("error")
+    llm.invoke.side_effect = LLMGenerationError("error")
 
     with pytest.raises(LLMGenerationError):
         rag.search(

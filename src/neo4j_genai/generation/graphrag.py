@@ -18,7 +18,6 @@ from typing import Optional, Any
 from pydantic import ValidationError
 
 from neo4j_genai.exceptions import (
-    LLMGenerationError,
     SearchValidationError,
     RagInitializationError,
 )
@@ -92,12 +91,8 @@ class GraphRAG:
         )
         logger.debug(f"RAG: retriever_result={retriever_result}")
         logger.debug(f"RAG: prompt={prompt}")
-        try:
-            answer = self.llm.invoke(prompt)
-        except Exception as e:
-            logger.exception(e)
-            raise LLMGenerationError(e)
-        result: dict[str, Any] = {"answer": answer}
+        answer = self.llm.invoke(prompt)
+        result: dict[str, Any] = {"answer": answer.content}
         if return_context:
             result["retriever_result"] = retriever_result
         return RagResultModel(**result)

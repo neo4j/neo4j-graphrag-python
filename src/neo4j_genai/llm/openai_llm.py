@@ -14,9 +14,14 @@
 #  limitations under the License.
 from typing import Optional, Any
 
-from openai import OpenAI
-
 from .base import LLMInterface
+from .types import LLMResponse
+from ..exceptions import LLMGenerationError
+
+try:
+    import openai
+except ImportError:
+    openai = None
 
 
 class OpenAILLM(LLMInterface):
@@ -24,6 +29,7 @@ class OpenAILLM(LLMInterface):
         self,
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
+        **kwargs: Any,
     ):
         """
 
@@ -31,10 +37,16 @@ class OpenAILLM(LLMInterface):
             model_name (str):
             model_params (str): Parameters like temperature and such  that will be
              passed to the model
+            kwargs: All other parameters will be passed to the openai.OpenAI init.
 
         """
+        if openai is None:
+            raise ImportError(
+                "Could not import openai python client. "
+                "Please install it with `pip install openai`."
+            )
         super().__init__(model_name, model_params)
-        self.client = OpenAI()  # reading the API-KEY from env var OPENAI_API_KEY
+        self.client = openai.OpenAI(**kwargs)
 
     def get_messages(
         self,
@@ -44,11 +56,26 @@ class OpenAILLM(LLMInterface):
             {"role": "system", "content": input},
         ]
 
-    def invoke(self, input: str) -> str:
-        response = self.client.chat.completions.create(
-            messages=self.get_messages(input),  # type: ignore
-            model=self.model_name,
-            **self.model_params,
-        )
-        # TODO: deal with errors
-        return response.choices[0].message.content or ""
+    def invoke(self, input: str) -> LLMResponse:
+        """Sends a text input to the OpenAI chat completion model
+        and return the response's content.
+
+        Args:
+            input (str): Text sent to the LLM
+
+        Returns:
+            LLMResponse: The response from OpenAI.
+
+        Raises:
+            LLMGenerationError: If anything goes wrong.
+        """
+        try:
+            response = self.client.chat.completions.create(
+                messages=self.get_messages(input),  # type: ignore
+                model=self.model_name,
+                **self.model_params,
+            )
+            content = response.choices[0].message.content or ""
+            return LLMResponse(content=content)
+        except openai.OpenAIError as e:
+            raise LLMGenerationError(e)

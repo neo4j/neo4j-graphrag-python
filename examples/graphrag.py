@@ -51,6 +51,6 @@ llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0})
 rag = GraphRAG(retriever=retriever, llm=llm)
 
 result = rag.search("Tell me more about Avatar movies")
-print(result)
+print(result.content)
 
 driver.close()
