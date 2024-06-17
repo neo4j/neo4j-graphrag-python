@@ -3,7 +3,11 @@
 ## Next
 
 ### Added
--   Stopped embeddings from being returned when searching with `VectorRetriever`. Added `nodeLabels` and `id` to the metadata of `VectorRetriever` results.
+
+- Introduced the GraphRAG object, enabling a full RAG (Retrieval-Augmented Generation) pipeline with context retrieval, prompt formatting, and answer generation.
+- Added PromptTemplate and RagTemplate for customizable prompt generation.
+- Added LLMInterface with implementation for OpenAI LLM.
+- Stopped embeddings from being returned when searching with `VectorRetriever`. Added `nodeLabels` and `id` to the metadata of `VectorRetriever` results.
 
 ## 0.2.0
 
