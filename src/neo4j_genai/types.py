@@ -148,7 +148,6 @@ class HybridCypherSearchModel(HybridSearchModel):
 
 class Text2CypherSearchModel(BaseModel):
     query_text: str
-    examples: Optional[list[str]] = None
 
 
 class SearchType(str, Enum):
@@ -231,3 +230,4 @@ class Text2CypherRetrieverModel(BaseModel):
     driver_model: Neo4jDriverModel
     llm_model: LLMModel
     neo4j_schema_model: Optional[Neo4jSchemaModel] = None
+    examples: Optional[list[str]] = None
