@@ -21,7 +21,7 @@ from ..exceptions import LLMGenerationError
 try:
     import openai
 except ImportError:
-    openai = None
+    openai = None  # type: ignore
 
 
 class OpenAILLM(LLMInterface):
