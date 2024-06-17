@@ -79,6 +79,12 @@ class Neo4jIndexError(Neo4jGenAiError):
     pass
 
 
+class Neo4jInsertionError(Neo4jGenAiError):
+    """Exception raised when inserting data into the Neo4j database fails."""
+
+    pass
+
+
 class Neo4jVersionError(Neo4jGenAiError):
     """Exception raised when Neo4j version does not meet minimum requirements."""
 

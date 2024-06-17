@@ -12,15 +12,16 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from unittest.mock import MagicMock
+
 import neo4j.exceptions
 import pytest
-
-from neo4j_genai.exceptions import Neo4jIndexError
-from unittest.mock import MagicMock
+from neo4j_genai.exceptions import Neo4jIndexError, Neo4jInsertionError
 from neo4j_genai.indexes import (
+    create_fulltext_index,
     create_vector_index,
     drop_index_if_exists,
-    create_fulltext_index,
+    upsert_vector,
 )
 
 
@@ -161,3 +162,38 @@ def test_create_fulltext_index_ensure_escaping(driver: MagicMock) -> None:
         create_query,
         {"name": "my-complicated-`-index"},
     )
+
+
+def test_upsert_vector_happy_path(driver: MagicMock) -> None:
+    id = 1
+    vector_prop = "embedding"
+    vector = [1.0, 2.0, 3.0]
+
+    upsert_vector(driver, id, vector_prop, vector)
+
+    upsert_query = """
+        MATCH (n)
+        WHERE elementId(n) = $id
+        WITH n
+        CALL db.create.setNodeVectorProperty(n, $vector_prop, $vector)
+        RETURN n
+        """
+
+    driver.execute_query.assert_called_once_with(
+        upsert_query,
+        {"id": id, "vector_prop": vector_prop, "vector": vector},
+    )
+
+
+def test_upsert_vector_raises_error_with_neo4j_insertion_error(
+    driver: MagicMock,
+) -> None:
+    id = 1
+    vector_prop = "embedding"
+    vector = [1.0, 2.0, 3.0]
+    driver.execute_query.side_effect = neo4j.exceptions.ClientError
+
+    with pytest.raises(Neo4jInsertionError) as excinfo:
+        upsert_vector(driver, id, vector_prop, vector)
+
+    assert "Upserting vector to Neo4j failed" in str(excinfo)
