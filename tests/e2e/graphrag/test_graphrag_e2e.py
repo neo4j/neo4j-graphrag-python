@@ -35,7 +35,7 @@ def populate_neo4j_db(driver: neo4j.Driver) -> None:
 
 
 @pytest.mark.usefixtures("populate_neo4j_db")
-def test_rag_happy_path(
+def test_graphrag_happy_path(
     driver: MagicMock, llm: MagicMock, biology_embedder: BiologyEmbedder
 ) -> None:
     retriever = VectorCypherRetriever(
@@ -79,7 +79,7 @@ Answer:
 
 
 @pytest.mark.usefixtures("populate_neo4j_db")
-def test_rag_happy_path_return_context(
+def test_graphrag_happy_path_return_context(
     driver: MagicMock, llm: MagicMock, biology_embedder: BiologyEmbedder
 ) -> None:
     retriever = VectorCypherRetriever(
@@ -125,7 +125,7 @@ Answer:
 
 
 @pytest.mark.usefixtures("populate_neo4j_db")
-def test_rag_happy_path_examples(
+def test_graphrag_happy_path_examples(
     driver: MagicMock, llm: MagicMock, biology_embedder: BiologyEmbedder
 ) -> None:
     retriever = VectorCypherRetriever(
@@ -168,7 +168,7 @@ Answer:
 
 
 @pytest.mark.usefixtures("populate_neo4j_db")
-def test_rag_llm_error(
+def test_graphrag_llm_error(
     driver: MagicMock, llm: MagicMock, biology_embedder: BiologyEmbedder
 ) -> None:
     retriever = VectorCypherRetriever(
@@ -190,7 +190,7 @@ def test_rag_llm_error(
 
 
 @pytest.mark.usefixtures("populate_neo4j_db")
-def test_rag_retrieval_error(
+def test_graphrag_retrieval_error(
     driver: MagicMock, llm: MagicMock, retriever_mock: MagicMock
 ) -> None:
     rag = GraphRAG(

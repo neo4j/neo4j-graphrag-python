@@ -23,7 +23,7 @@ from neo4j_genai.generation.types import RagResultModel
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 
 
-def test_rag_prompt_template() -> None:
+def test_graphrag_prompt_template() -> None:
     template = RagTemplate()
     prompt = template.format(context="my context", query="user's query", examples="")
     assert (
@@ -44,7 +44,7 @@ Answer:
     )
 
 
-def test_rag_happy_path(retriever_mock: MagicMock, llm: MagicMock) -> None:
+def test_graphrag_happy_path(retriever_mock: MagicMock, llm: MagicMock) -> None:
     rag = GraphRAG(
         retriever=retriever_mock,
         llm=llm,
@@ -80,7 +80,7 @@ Answer:
     assert res.retriever_result is None
 
 
-def test_rag_initialization_error(llm: MagicMock) -> None:
+def test_graphrag_initialization_error(llm: MagicMock) -> None:
     with pytest.raises(RagInitializationError) as excinfo:
         GraphRAG(
             retriever="not a retriever object",  # type: ignore
@@ -89,7 +89,7 @@ def test_rag_initialization_error(llm: MagicMock) -> None:
     assert "retriever" in str(excinfo)
 
 
-def test_rag_search_error(retriever_mock: MagicMock, llm: MagicMock) -> None:
+def test_graphrag_search_error(retriever_mock: MagicMock, llm: MagicMock) -> None:
     rag = GraphRAG(
         retriever=retriever_mock,
         llm=llm,
