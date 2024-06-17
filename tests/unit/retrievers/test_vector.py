@@ -101,7 +101,8 @@ def test_similarity_search_vector_happy_path(
     assert records == RetrieverResult(
         items=[
             RetrieverResultItem(
-                content="{'text': 'dummy-node'}", metadata={"score": 1.0}
+                content="{'text': 'dummy-node'}",
+                metadata={"score": 1.0, "nodeLabels": None, "id": None},
             ),
         ],
         metadata={"__retriever": "VectorRetriever"},
@@ -143,7 +144,10 @@ def test_similarity_search_text_happy_path(
     )
     assert records == RetrieverResult(
         items=[
-            RetrieverResultItem(content="dummy-node", metadata={"score": 1.0}),
+            RetrieverResultItem(
+                content="dummy-node",
+                metadata={"score": 1.0, "nodeLabels": None, "id": None},
+            ),
         ],
         metadata={"__retriever": "VectorRetriever"},
     )
@@ -191,7 +195,10 @@ def test_similarity_search_text_return_properties(
     )
     assert records == RetrieverResult(
         items=[
-            RetrieverResultItem(content="dummy-node", metadata={"score": 1.0}),
+            RetrieverResultItem(
+                content="dummy-node",
+                metadata={"score": 1.0, "nodeLabels": None, "id": None},
+            ),
         ],
         metadata={"__retriever": "VectorRetriever"},
     )
