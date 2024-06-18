@@ -17,7 +17,7 @@ import re
 from typing import Any, Generator
 
 import pytest
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from neo4j import Driver
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.retrievers.external.weaviate import WeaviateNeo4jRetriever
