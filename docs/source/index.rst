@@ -61,7 +61,7 @@ Performing a similarity search
 .. code:: python
 
     from neo4j import GraphDatabase
-    from neo4j_genai import VectorRetriever
+    from neo4j_genai.retrievers import VectorRetriever
     from langchain_openai import OpenAIEmbeddings
 
     URI = "neo4j://localhost:7687"

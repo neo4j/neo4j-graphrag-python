@@ -16,7 +16,7 @@
 from unittest.mock import patch, MagicMock
 import pytest
 
-from neo4j_genai import HybridRetriever, HybridCypherRetriever
+from neo4j_genai.retrievers import HybridRetriever, HybridCypherRetriever
 from neo4j_genai.exceptions import RetrieverInitializationError, EmbeddingRequiredError
 from neo4j_genai.neo4j_queries import get_search_query
 from neo4j_genai.types import SearchType, RetrieverResult, RetrieverResultItem
@@ -43,7 +43,7 @@ def test_vector_cypher_retriever_initialization(driver: MagicMock) -> None:
         mock_verify.assert_called_once()
 
 
-@patch("neo4j_genai.HybridRetriever._verify_version")
+@patch("neo4j_genai.retrievers.HybridRetriever._verify_version")
 def test_hybrid_retriever_invalid_fulltext_index_name(
     _verify_version_mock: MagicMock, driver: MagicMock
 ) -> None:
@@ -58,7 +58,7 @@ def test_hybrid_retriever_invalid_fulltext_index_name(
     assert "Input should be a valid string" in str(exc_info.value)
 
 
-@patch("neo4j_genai.HybridCypherRetriever._verify_version")
+@patch("neo4j_genai.retrievers.HybridCypherRetriever._verify_version")
 def test_hybrid_cypher_retriever_invalid_retrieval_query(
     _verify_version_mock: MagicMock, driver: MagicMock
 ) -> None:
@@ -74,7 +74,7 @@ def test_hybrid_cypher_retriever_invalid_retrieval_query(
     assert "Input should be a valid string" in str(exc_info.value)
 
 
-@patch("neo4j_genai.HybridRetriever._verify_version")
+@patch("neo4j_genai.retrievers.HybridRetriever._verify_version")
 def test_hybrid_search_text_happy_path(
     _verify_version_mock: MagicMock,
     driver: MagicMock,
@@ -119,7 +119,7 @@ def test_hybrid_search_text_happy_path(
     )
 
 
-@patch("neo4j_genai.HybridRetriever._verify_version")
+@patch("neo4j_genai.retrievers.HybridRetriever._verify_version")
 def test_hybrid_search_favors_query_vector_over_embedding_vector(
     _verify_version_mock: MagicMock,
     driver: MagicMock,
@@ -189,7 +189,7 @@ def test_hybrid_search_retriever_search_missing_embedder_for_text(
         )
 
 
-@patch("neo4j_genai.HybridRetriever._verify_version")
+@patch("neo4j_genai.retrievers.HybridRetriever._verify_version")
 def test_hybrid_retriever_return_properties(
     _verify_version_mock: MagicMock,
     driver: MagicMock,
@@ -238,7 +238,7 @@ def test_hybrid_retriever_return_properties(
     )
 
 
-@patch("neo4j_genai.HybridCypherRetriever._verify_version")
+@patch("neo4j_genai.retrievers.HybridCypherRetriever._verify_version")
 def test_hybrid_cypher_retrieval_query_with_params(
     _verify_version_mock: MagicMock,
     driver: MagicMock,

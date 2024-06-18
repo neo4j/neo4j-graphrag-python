@@ -24,7 +24,7 @@ from pydantic import (
     model_validator,
 )
 
-from neo4j_genai.retrievers.utils import validate_search_query_input
+from neo4j_genai.utils import validate_search_query_input
 
 
 class RawSearchResult(BaseModel):

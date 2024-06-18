@@ -1,5 +1,5 @@
 from neo4j import GraphDatabase
-from neo4j_genai import VectorRetriever
+from neo4j_genai.retrievers import VectorRetriever
 
 from random import random
 

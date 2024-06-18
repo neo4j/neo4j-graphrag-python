@@ -52,7 +52,7 @@ class VectorRetriever(Retriever):
     .. code-block:: python
 
       import neo4j
-      from neo4j_genai import VectorRetriever
+      from neo4j_genai.retrievers import VectorRetriever
 
       driver = neo4j.GraphDatabase.driver(URI, auth=AUTH)
 
@@ -192,7 +192,7 @@ class VectorCypherRetriever(Retriever):
     .. code-block:: python
 
       import neo4j
-      from neo4j_genai import VectorCypherRetriever
+      from neo4j_genai.retrievers import VectorCypherRetriever
 
       driver = neo4j.GraphDatabase.driver(URI, auth=AUTH)
 
