@@ -125,7 +125,8 @@ class Text2CypherRetriever(Retriever):
         logger.debug("Text2CypherRetriever prompt: %s", prompt)
 
         try:
-            t2c_query = self.llm.invoke(prompt)
+            llm_result = self.llm.invoke(prompt)
+            t2c_query = llm_result.content
             logger.debug("Text2CypherRetriever Cypher query: %s", t2c_query)
             records, _, _ = self.driver.execute_query(query_=t2c_query)
         except CypherSyntaxError as e:
