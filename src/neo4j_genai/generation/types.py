@@ -15,7 +15,6 @@
 from typing import Any
 from pydantic import BaseModel, ConfigDict, field_validator
 
-from neo4j_genai.llm import LLMInterface
 from neo4j_genai.generation.prompts import RagTemplate
 from neo4j_genai.retrievers.base import Retriever
 from neo4j_genai.types import RetrieverResult
