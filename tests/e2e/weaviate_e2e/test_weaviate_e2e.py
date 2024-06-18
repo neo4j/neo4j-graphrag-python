@@ -20,7 +20,7 @@ import pytest
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from neo4j import Driver
 from neo4j_genai.embedder import Embedder
-from neo4j_genai.retrievers.external.weaviate import WeaviateNeo4jRetriever
+from neo4j_genai.retrievers import WeaviateNeo4jRetriever
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 from weaviate.client import Client
 from weaviate.connect.helpers import connect_to_local

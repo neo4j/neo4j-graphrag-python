@@ -25,3 +25,20 @@ __all__ = [
     "HybridCypherRetriever",
     "Text2CypherRetriever",
 ]
+
+
+try:
+    import pinecone
+    from .external.pinecone.pinecone import PineconeNeo4jRetriever
+    __all__.append("PineconeNeo4jRetriever")
+except ImportError:
+    pass
+
+
+try:
+    import weaviate
+    from .external.weaviate.weaviate import WeaviateNeo4jRetriever
+    __all__.append("WeaviateNeo4jRetriever")
+except ImportError:
+    pass
+
