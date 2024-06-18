@@ -28,17 +28,16 @@ __all__ = [
 
 
 try:
-    import pinecone
-    from .external.pinecone.pinecone import PineconeNeo4jRetriever
+    from .external.pinecone.pinecone import PineconeNeo4jRetriever  # noqa: F401
+
     __all__.append("PineconeNeo4jRetriever")
 except ImportError:
     pass
 
 
 try:
-    import weaviate
-    from .external.weaviate.weaviate import WeaviateNeo4jRetriever
+    from .external.weaviate.weaviate import WeaviateNeo4jRetriever  # noqa: F401
+
     __all__.append("WeaviateNeo4jRetriever")
 except ImportError:
     pass
-
