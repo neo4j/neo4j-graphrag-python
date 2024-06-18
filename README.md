@@ -24,19 +24,23 @@ pip install neo4j-genai
 
 While the library has more retrievers than shown here, the following examples should be able to get you started.
 
-### Performing a similarity search
+### Performing a GraphRAG search
 
 Assumption: Neo4j running with populated vector index in place.
 
+In the following example, we use a simple vector search as retriever,
+that will perform a similarity search over the `index-name` vector index
+in Neo4j.
+
 ```python
 from neo4j import GraphDatabase
-from neo4j_genai import VectorRetriever
-from langchain_openai import OpenAIEmbeddings
+from neo4j_genai import VectorRetriever, OpenAILLM, GraphRAG
+from neo4j_genai.embeddings.openai import OpenAIEmbeddings
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
 
-INDEX_NAME = "embedding-name"
+INDEX_NAME = "index-name"
 
 # Connect to Neo4j database
 driver = GraphDatabase.driver(URI, auth=AUTH)
@@ -47,9 +51,17 @@ embedder = OpenAIEmbeddings(model="text-embedding-3-large")
 # Initialize the retriever
 retriever = VectorRetriever(driver, INDEX_NAME, embedder)
 
-# Run the similarity search
+# Initialize the LLM
+# Note: the OPENAI_API_KEY must be in the env vars
+llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0})
+
+# Initialize the RAG pipeline
+rag = GraphRAG(retriever=retriever, llm=llm)
+
+# Query the graph
 query_text = "How do I do similarity search in Neo4j?"
-response = retriever.search(query_text=query_text, top_k=5)
+response = rag.search(query_text=query_text, retriever_config={"top_k": 5})
+print(response.answer)
 ```
 
 ### Creating a vector index

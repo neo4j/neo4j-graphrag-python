@@ -20,11 +20,12 @@ Overview
 
     from neo4j import GraphDatabase
     from neo4j_genai import VectorRetriever, OpenAILLM, GraphRAG
+    from neo4j_genai.embeddings.openai import OpenAIEmbeddings
 
     URI = "neo4j://localhost:7687"
     AUTH = ("neo4j", "password")
 
-    INDEX_NAME = "embedding-name"
+    INDEX_NAME = "index-name"
 
     # Connect to Neo4j database
     driver = GraphDatabase.driver(URI, auth=AUTH)
@@ -40,11 +41,12 @@ Overview
     llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0})
 
     # Initialize the RAG pipeline
-    rag = GraphRAG(retriever=vector_retriever, llm=llm)
+    rag = GraphRAG(retriever=retriever, llm=llm)
 
     # Query the graph
     query_text = "How do I do similarity search in Neo4j?"
     response = rag.search(query_text=query_text, retriever_config={"top_k": 5})
+    print(response.answer)
 
 
 The retriever can be any of the :ref:`supported retrievers<retrievers>`, or any class
