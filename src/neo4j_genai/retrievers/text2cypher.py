@@ -21,9 +21,9 @@ from pydantic import ValidationError
 
 from neo4j_genai.exceptions import (
     RetrieverInitializationError,
+    SchemaFetchError,
     SearchValidationError,
     Text2CypherRetrievalError,
-    SchemaFetchError,
 )
 from neo4j_genai.llm import LLMInterface
 from neo4j_genai.generation.prompts import Text2CypherTemplate
@@ -33,9 +33,9 @@ from neo4j_genai.types import (
     LLMModel,
     Neo4jDriverModel,
     Neo4jSchemaModel,
+    RawSearchResult,
     Text2CypherRetrieverModel,
     Text2CypherSearchModel,
-    RawSearchResult,
 )
 
 logger = logging.getLogger(__name__)
@@ -51,6 +51,7 @@ class Text2CypherRetriever(Retriever):
         driver (neo4j.driver): The Neo4j Python driver.
         llm (neo4j_genai.generation.llm.LLMInterface): LLM object to generate the Cypher query.
         neo4j_schema (Optional[str]): Neo4j schema used to generate the Cypher query.
+        examples (Optional[list[str], optional): Optional user input/query pairs for the LLM to use as examples.
 
     Raises:
         RetrieverInitializationError: If validation of the input arguments fail.
@@ -61,6 +62,7 @@ class Text2CypherRetriever(Retriever):
         driver: neo4j.Driver,
         llm: LLMInterface,
         neo4j_schema: Optional[str] = None,
+        examples: Optional[list[str]] = None,
     ) -> None:
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -72,12 +74,14 @@ class Text2CypherRetriever(Retriever):
                 driver_model=driver_model,
                 llm_model=llm_model,
                 neo4j_schema_model=neo4j_schema_model,
+                examples=examples,
             )
         except ValidationError as e:
             raise RetrieverInitializationError(e.errors())
 
         super().__init__(validated_data.driver_model.driver)
         self.llm = validated_data.llm_model.llm
+        self.examples = validated_data.examples
         try:
             self.neo4j_schema = (
                 validated_data.neo4j_schema_model.neo4j_schema
@@ -91,14 +95,14 @@ class Text2CypherRetriever(Retriever):
             )
 
     def _get_search_results(
-        self, query_text: str, examples: Optional[list[str]] = None
+        self,
+        query_text: str,
     ) -> RawSearchResult:
         """Converts query_text to a Cypher query using an LLM.
            Retrieve records from a Neo4j database using the generated Cypher query.
 
         Args:
             query_text (str): The natural language query used to search the Neo4j database.
-            examples (Optional[list[str], optional): Optional user input/query pairs for the LLM to use as examples.
 
         Raises:
             SearchValidationError: If validation of the input arguments fail.
@@ -108,18 +112,14 @@ class Text2CypherRetriever(Retriever):
             RawSearchResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
         """
         try:
-            validated_data = Text2CypherSearchModel(
-                query_text=query_text, examples=examples
-            )
+            validated_data = Text2CypherSearchModel(query_text=query_text)
         except ValidationError as e:
             raise SearchValidationError(e.errors())
 
         prompt_template = Text2CypherTemplate()
         prompt = prompt_template.format(
             schema=self.neo4j_schema,
-            examples="\n".join(validated_data.examples)
-            if validated_data.examples
-            else "",
+            examples="\n".join(self.examples) if self.examples else "",
             query=validated_data.query_text,
         )
         logger.debug("Text2CypherRetriever prompt: %s", prompt)

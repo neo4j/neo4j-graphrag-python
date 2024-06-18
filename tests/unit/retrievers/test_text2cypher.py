@@ -12,14 +12,14 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from neo4j.exceptions import CypherSyntaxError, Neo4jError
 from neo4j_genai import Text2CypherRetriever
 from neo4j_genai.exceptions import (
-    SearchValidationError,
     RetrieverInitializationError,
+    SearchValidationError,
     Text2CypherRetrievalError,
 )
 from neo4j_genai.generation.prompts import Text2CypherTemplate
@@ -85,14 +85,16 @@ def test_t2c_retriever_invalid_search_query(
 def test_t2c_retriever_invalid_search_examples(
     _verify_version_mock: MagicMock, driver: MagicMock, llm: MagicMock
 ) -> None:
-    with pytest.raises(SearchValidationError) as exc_info:
-        retriever = Text2CypherRetriever(
-            driver=driver, llm=llm, neo4j_schema="dummy-text"
+    with pytest.raises(RetrieverInitializationError) as exc_info:
+        Text2CypherRetriever(
+            driver=driver,
+            llm=llm,
+            neo4j_schema="dummy-text",
+            examples=42,  # type: ignore
         )
-        retriever.search(query_text="dummy-text", examples=42)
 
     assert "examples" in str(exc_info.value)
-    assert "Input should be a valid list" in str(exc_info.value)
+    assert "Initialization failed" in str(exc_info.value)
 
 
 @patch("neo4j_genai.Text2CypherRetriever._verify_version")
@@ -106,7 +108,9 @@ def test_t2c_retriever_happy_path(
     query_text = "may thy knife chip and shatter"
     neo4j_schema = "dummy-schema"
     examples = ["example-1", "example-2"]
-    retriever = Text2CypherRetriever(driver=driver, llm=llm, neo4j_schema=neo4j_schema)
+    retriever = Text2CypherRetriever(
+        driver=driver, llm=llm, neo4j_schema=neo4j_schema, examples=examples
+    )
     retriever.llm.invoke.return_value = t2c_query
     retriever.driver.execute_query.return_value = (  # type: ignore
         [neo4j_record],
@@ -119,7 +123,7 @@ def test_t2c_retriever_happy_path(
         examples="\n".join(examples),
         query=query_text,
     )
-    retriever.search(query_text=query_text, examples=examples)
+    retriever.search(query_text=query_text)
     retriever.llm.invoke.assert_called_once_with(prompt)
     retriever.driver.execute_query.assert_called_once_with(query_=t2c_query)  # type: ignore
 
@@ -131,10 +135,12 @@ def test_t2c_retriever_cypher_error(
     t2c_query = "this is not a cypher query"
     neo4j_schema = "dummy-schema"
     examples = ["example-1", "example-2"]
-    retriever = Text2CypherRetriever(driver=driver, llm=llm, neo4j_schema=neo4j_schema)
+    retriever = Text2CypherRetriever(
+        driver=driver, llm=llm, neo4j_schema=neo4j_schema, examples=examples
+    )
     retriever.llm.invoke.return_value = t2c_query
     query_text = "may thy knife chip and shatter"
     driver.execute_query.side_effect = CypherSyntaxError
     with pytest.raises(Text2CypherRetrievalError) as e:
-        retriever.search(query_text=query_text, examples=examples)
+        retriever.search(query_text=query_text)
     assert "Failed to get search result" in str(e)
