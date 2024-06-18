@@ -13,6 +13,9 @@
 
 -   Removed Pinecone and Weaviate retrievers from **init**.py to prevent ImportError when optional dependencies are not installed.
 -   Moved few-shot examples in `Text2CypherRetriever` to the constructor for better initialization and usage. Updated unit tests and example script accordingly.
+-   Fixed regex warnings in E2E tests for Weaviate and Pinecone retrievers.
+-   Corrected HuggingFaceEmbeddings import in E2E tests.
+
 
 ## 0.2.0a5
 

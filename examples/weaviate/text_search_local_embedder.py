@@ -1,4 +1,4 @@
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from neo4j import GraphDatabase
 from neo4j_genai.retrievers.external.weaviate import WeaviateNeo4jRetriever
 from weaviate.connect.helpers import connect_to_local
