@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from typing import Any
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from neo4j_genai.llm import LLMInterface
 from neo4j_genai.generation.prompts import RagTemplate
@@ -23,10 +23,17 @@ from neo4j_genai.types import RetrieverResult
 
 class RagInitModel(BaseModel):
     retriever: Retriever
-    llm: LLMInterface
+    llm: Any
     prompt_template: RagTemplate
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_validator("llm")
+    def check_llm(cls, value: Any) -> Any:
+        invoke = getattr(value, "invoke", None)
+        if invoke and callable(invoke):
+            return value
+        raise ValueError("llm must be callable")
 
 
 class RagSearchModel(BaseModel):
