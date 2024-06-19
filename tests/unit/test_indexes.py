@@ -166,10 +166,10 @@ def test_create_fulltext_index_ensure_escaping(driver: MagicMock) -> None:
 
 def test_upsert_vector_happy_path(driver: MagicMock) -> None:
     id = 1
-    vector_prop = "embedding"
+    embedding_property = "embedding"
     vector = [1.0, 2.0, 3.0]
 
-    upsert_vector(driver, id, vector_prop, vector)
+    upsert_vector(driver, id, embedding_property, vector)
 
     upsert_query = """
         MATCH (n)
@@ -181,7 +181,7 @@ def test_upsert_vector_happy_path(driver: MagicMock) -> None:
 
     driver.execute_query.assert_called_once_with(
         upsert_query,
-        {"id": id, "vector_prop": vector_prop, "vector": vector},
+        {"id": id, "embedding_property": embedding_property, "vector": vector},
     )
 
 

@@ -86,7 +86,7 @@ def setup_neo4j_for_retrieval(driver: Driver) -> None:
         driver,
         vector_index_name,
         label="Document",
-        property="propertyKey",
+        embedding_property="propertyKey",
         dimensions=1536,
         similarity_fn="euclidean",
     )

@@ -35,7 +35,7 @@ create_vector_index(
     driver,
     INDEX_NAME,
     label="Document",
-    property="propertyKey",
+    embedding_property="propertyKey",
     dimensions=DIMENSION,
     similarity_fn="euclidean",
 )

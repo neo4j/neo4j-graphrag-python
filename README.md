@@ -89,7 +89,7 @@ create_vector_index(
     driver,
     INDEX_NAME,
     label="Document",
-    property="textProperty",
+    embedding_property="textProperty",
     dimensions=1536,
     similarity_fn="euclidean",
 )

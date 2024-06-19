@@ -112,7 +112,7 @@ When creating a vector index, make sure you match the number of dimensions in th
         driver,
         INDEX_NAME,
         label="Document",
-        property="textProperty",
+        embedding_property="textProperty",
         dimensions=1536,
         similarity_fn="euclidean",
     )
