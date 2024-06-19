@@ -6,6 +6,10 @@
 -   Stopped embeddings from being returned when searching with `VectorRetriever`. Added `nodeLabels` and `id` to the metadata of `VectorRetriever` results.
 -   Added `upsert_vector` utility function for attaching vectors to node properties.
 -   Introduced `Neo4jInsertionError` for handling insertion failures in Neo4j.
+-   Included Pinecone and Weaviate retrievers in neo4j_genai.retrievers.
+
+### Changed
+-   Refactored import paths for retrievers to neo4j_genai.retrievers.
 
 ## 0.2.0
 

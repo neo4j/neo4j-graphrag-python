@@ -140,7 +140,7 @@ Neo4jIndexError
 
 
 Neo4jInsertionError
-===============
+===================
 
 .. autoclass:: neo4j_genai.exceptions.Neo4jInsertionError
    :show-inheritance:

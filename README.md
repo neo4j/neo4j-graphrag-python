@@ -30,7 +30,7 @@ Assumption: Neo4j running with populated vector index in place.
 
 ```python
 from neo4j import GraphDatabase
-from neo4j_genai import VectorRetriever
+from neo4j_genai.retrievers import VectorRetriever
 from langchain_openai import OpenAIEmbeddings
 
 URI = "neo4j://localhost:7687"

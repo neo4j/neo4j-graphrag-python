@@ -15,7 +15,7 @@
 
 import pytest
 from neo4j import Driver
-from neo4j_genai import VectorCypherRetriever, VectorRetriever
+from neo4j_genai.retrievers import VectorCypherRetriever, VectorRetriever
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 
