@@ -88,7 +88,7 @@ class HybridRetriever(Retriever):
                 return_properties=return_properties,
             )
         except ValidationError as e:
-            raise RetrieverInitializationError(e.errors())
+            raise RetrieverInitializationError(e.errors()) from e
 
         super().__init__(validated_data.driver_model.driver)
         self.vector_index_name = validated_data.vector_index_name
@@ -152,7 +152,7 @@ class HybridRetriever(Retriever):
                 query_text=query_text,
             )
         except ValidationError as e:
-            raise SearchValidationError(e.errors())
+            raise SearchValidationError(e.errors()) from e
 
         parameters = validated_data.model_dump(exclude_none=True)
 
@@ -229,7 +229,7 @@ class HybridCypherRetriever(Retriever):
                 embedder_model=embedder_model,
             )
         except ValidationError as e:
-            raise RetrieverInitializationError(e.errors())
+            raise RetrieverInitializationError(e.errors()) from e
 
         super().__init__(validated_data.driver_model.driver)
         self.vector_index_name = validated_data.vector_index_name
@@ -283,7 +283,7 @@ class HybridCypherRetriever(Retriever):
                 query_params=query_params,
             )
         except ValidationError as e:
-            raise SearchValidationError(e.errors())
+            raise SearchValidationError(e.errors()) from e
 
         parameters = validated_data.model_dump(exclude_none=True)
 

@@ -77,7 +77,7 @@ class Text2CypherRetriever(Retriever):
                 examples=examples,
             )
         except ValidationError as e:
-            raise RetrieverInitializationError(e.errors())
+            raise RetrieverInitializationError(e.errors()) from e
 
         super().__init__(validated_data.driver_model.driver)
         self.llm = validated_data.llm_model.llm
@@ -92,7 +92,7 @@ class Text2CypherRetriever(Retriever):
             error_message = getattr(e, "message", str(e))
             raise SchemaFetchError(
                 f"Failed to fetch schema for Text2CypherRetriever: {error_message}"
-            )
+            ) from e
 
     def _get_search_results(
         self,
@@ -114,7 +114,7 @@ class Text2CypherRetriever(Retriever):
         try:
             validated_data = Text2CypherSearchModel(query_text=query_text)
         except ValidationError as e:
-            raise SearchValidationError(e.errors())
+            raise SearchValidationError(e.errors()) from e
 
         prompt_template = Text2CypherTemplate()
         prompt = prompt_template.format(
@@ -130,7 +130,9 @@ class Text2CypherRetriever(Retriever):
             logger.debug("Text2CypherRetriever Cypher query: %s", t2c_query)
             records, _, _ = self.driver.execute_query(query_=t2c_query)
         except CypherSyntaxError as e:
-            raise Text2CypherRetrievalError(f"Failed to get search result: {e.message}")
+            raise Text2CypherRetrievalError(
+                f"Failed to get search result: {e.message}"
+            ) from e
 
         return RawSearchResult(
             records=records,

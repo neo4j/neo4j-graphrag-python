@@ -10,11 +10,11 @@ class SentenceTransformerEmbeddings(Embedder):
     ) -> None:
         try:
             from sentence_transformers import SentenceTransformer
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
                 "Could not import sentence_transformers python package. "
                 "Please install it with `pip install sentence-transformers`."
-            )
+            ) from e
 
         self.model = SentenceTransformer(model, *args, **kwargs)
 

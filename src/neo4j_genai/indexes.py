@@ -65,7 +65,9 @@ def create_vector_index(
             similarity_fn=similarity_fn,
         )
     except ValidationError as e:
-        raise Neo4jIndexError(f"Error for inputs to create_vector_index {str(e)}")
+        raise Neo4jIndexError(
+            f"Error for inputs to create_vector_index {str(e)}"
+        ) from e
 
     try:
         query = (
@@ -78,7 +80,7 @@ def create_vector_index(
             {"name": name, "dimensions": dimensions, "similarity_fn": similarity_fn},
         )
     except neo4j.exceptions.ClientError as e:
-        raise Neo4jIndexError(f"Neo4j vector index creation failed: {e}")
+        raise Neo4jIndexError(f"Neo4j vector index creation failed: {e}") from e
 
 
 def create_fulltext_index(
@@ -108,7 +110,9 @@ def create_fulltext_index(
             driver=driver, name=name, label=label, node_properties=node_properties
         )
     except ValidationError as e:
-        raise Neo4jIndexError(f"Error for inputs to create_fulltext_index: {str(e)}")
+        raise Neo4jIndexError(
+            f"Error for inputs to create_fulltext_index: {str(e)}"
+        ) from e
 
     try:
         query = (
@@ -119,7 +123,7 @@ def create_fulltext_index(
         logger.info(f"Creating fulltext index named '{name}'")
         driver.execute_query(query, {"name": name})
     except neo4j.exceptions.ClientError as e:
-        raise Neo4jIndexError(f"Neo4j fulltext index creation failed {e}")
+        raise Neo4jIndexError(f"Neo4j fulltext index creation failed {e}") from e
 
 
 def drop_index_if_exists(driver: neo4j.Driver, name: str) -> None:
@@ -143,7 +147,7 @@ def drop_index_if_exists(driver: neo4j.Driver, name: str) -> None:
         logger.info(f"Dropping index named '{name}'")
         driver.execute_query(query, parameters)
     except neo4j.exceptions.ClientError as e:
-        raise Neo4jIndexError(f"Dropping Neo4j index failed: {e}")
+        raise Neo4jIndexError(f"Dropping Neo4j index failed: {e}") from e
 
 
 def upsert_vector(
@@ -179,4 +183,4 @@ def upsert_vector(
         }
         driver.execute_query(query, parameters)
     except neo4j.exceptions.ClientError as e:
-        raise Neo4jInsertionError(f"Upserting vector to Neo4j failed: {e}")
+        raise Neo4jInsertionError(f"Upserting vector to Neo4j failed: {e}") from e
