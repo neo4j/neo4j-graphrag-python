@@ -207,7 +207,7 @@ class VectorCypherRetriever(Retriever):
         index_name (str): Vector index name.
         retrieval_query (str): Cypher query that gets appended.
         embedder (Optional[Embedder]): Embedder object to embed query text.
-        format_record_function (Optional[Callable[[Any], Any]]): Function to transform a neo4j.Record to a RetrieverResultItem.
+        result_formatter (Optional[Callable[[Any], Any]]): Function to transform a neo4j.Record to a RetrieverResultItem.
     """
 
     def __init__(
@@ -216,7 +216,7 @@ class VectorCypherRetriever(Retriever):
         index_name: str,
         retrieval_query: str,
         embedder: Optional[Embedder] = None,
-        format_record_function: Optional[Callable[[Any], Any]] = None,
+        result_formatter: Optional[Callable[[Any], Any]] = None,
     ) -> None:
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -238,7 +238,7 @@ class VectorCypherRetriever(Retriever):
             if validated_data.embedder_model
             else None
         )
-        self.format_record_function = format_record_function
+        self.result_formatter = result_formatter
         self._node_label = None
         self._node_embedding_property = None
         self._embedding_dimension = None

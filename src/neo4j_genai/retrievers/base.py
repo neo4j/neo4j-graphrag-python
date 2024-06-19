@@ -99,8 +99,8 @@ class Retriever(ABC):
         """
         Returns the function to use to transform a neo4j.Record to a RetrieverResultItem.
         """
-        if hasattr(self, "format_record_function"):
-            return self.format_record_function or self.default_format_record
+        if hasattr(self, "result_formatter"):
+            return self.result_formatter or self.default_format_record
         return self.default_format_record
 
     def default_format_record(self, record: neo4j.Record) -> RetrieverResultItem:
