@@ -6,9 +6,13 @@
 -   Stopped embeddings from being returned when searching with `VectorRetriever`. Added `nodeLabels` and `id` to the metadata of `VectorRetriever` results.
 -   Added `upsert_vector` utility function for attaching vectors to node properties.
 -   Introduced `Neo4jInsertionError` for handling insertion failures in Neo4j.
+-   Included Pinecone and Weaviate retrievers in neo4j_genai.retrievers.
 -   Introduced the GraphRAG object, enabling a full RAG (Retrieval-Augmented Generation) pipeline with context retrieval, prompt formatting, and answer generation.
 -   Added PromptTemplate and RagTemplate for customizable prompt generation.
 -   Added LLMInterface with implementation for OpenAI LLM.
+
+### Changed
+-   Refactored import paths for retrievers to neo4j_genai.retrievers.
 
 ## 0.2.0
 
@@ -16,6 +20,9 @@
 
 -   Removed Pinecone and Weaviate retrievers from **init**.py to prevent ImportError when optional dependencies are not installed.
 -   Moved few-shot examples in `Text2CypherRetriever` to the constructor for better initialization and usage. Updated unit tests and example script accordingly.
+-   Fixed regex warnings in E2E tests for Weaviate and Pinecone retrievers.
+-   Corrected HuggingFaceEmbeddings import in E2E tests.
+
 
 ## 0.2.0a5
 

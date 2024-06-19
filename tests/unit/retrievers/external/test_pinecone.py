@@ -18,7 +18,7 @@ from unittest.mock import MagicMock
 import neo4j
 import pytest
 from neo4j_genai.exceptions import RetrieverInitializationError
-from neo4j_genai.retrievers.external.pinecone import PineconeNeo4jRetriever
+from neo4j_genai.retrievers import PineconeNeo4jRetriever
 from neo4j_genai.retrievers.external.utils import get_match_query
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 from pinecone import Pinecone

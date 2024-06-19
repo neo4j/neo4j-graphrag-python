@@ -18,8 +18,8 @@ from unittest import mock
 from unittest.mock import MagicMock
 
 import pytest
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from neo4j_genai.retrievers.external.pinecone import PineconeNeo4jRetriever
+from langchain_huggingface.embeddings import HuggingFaceEmbeddings
+from neo4j_genai.retrievers import PineconeNeo4jRetriever
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 from pinecone import Pinecone
@@ -77,7 +77,7 @@ def test_pinecone_neo4j_vector_input(driver: MagicMock, client: MagicMock) -> No
             assert isinstance(result, RetrieverResultItem)
         pattern = (
             r"<Record node=<Node element_id='.+' "
-            "labels=frozenset\({'Question'}\) properties={'question': 'In 1953 Watson \& "
+            r"labels=frozenset\({'Question'}\) properties={'question': 'In 1953 Watson \& "
             "Crick built a model of the molecular structure of this, the gene-carrying "
             "substance', 'id': 'question_c458c6f64d8d47429636bc5a94c97f51'}> "
             r"score=0.232427984>"
@@ -123,7 +123,7 @@ def test_pinecone_neo4j_text_input(
             assert isinstance(result, RetrieverResultItem)
         pattern = (
             r"<Record node=<Node element_id='.+' "
-            "labels=frozenset\({'Question'}\) properties={'question': 'In 1953 Watson \& "
+            r"labels=frozenset\({'Question'}\) properties={'question': 'In 1953 Watson \& "
             "Crick built a model of the molecular structure of this, the gene-carrying "
             "substance', 'id': 'question_c458c6f64d8d47429636bc5a94c97f51'}> "
             r"score=0.232427984>"

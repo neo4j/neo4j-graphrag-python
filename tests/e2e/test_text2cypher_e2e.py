@@ -1,5 +1,5 @@
 import pytest
-from neo4j_genai import Text2CypherRetriever
+from neo4j_genai.retrievers import Text2CypherRetriever
 from unittest.mock import MagicMock
 
 from neo4j_genai.llm import LLMResponse

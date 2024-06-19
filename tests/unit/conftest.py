@@ -17,7 +17,7 @@ from unittest.mock import MagicMock, patch
 
 import neo4j
 import pytest
-from neo4j_genai import (
+from neo4j_genai.retrievers import (
     HybridRetriever,
     Text2CypherRetriever,
     VectorCypherRetriever,
@@ -48,7 +48,7 @@ def retriever_mock() -> MagicMock:
 
 
 @pytest.fixture(scope="function")
-@patch("neo4j_genai.VectorRetriever._verify_version")
+@patch("neo4j_genai.retrievers.VectorRetriever._verify_version")
 def vector_retriever(
     _verify_version_mock: MagicMock, driver: MagicMock
 ) -> VectorRetriever:
@@ -56,7 +56,7 @@ def vector_retriever(
 
 
 @pytest.fixture(scope="function")
-@patch("neo4j_genai.VectorCypherRetriever._verify_version")
+@patch("neo4j_genai.retrievers.VectorCypherRetriever._verify_version")
 def vector_cypher_retriever(
     _verify_version_mock: MagicMock, driver: MagicMock
 ) -> VectorCypherRetriever:
@@ -67,7 +67,7 @@ def vector_cypher_retriever(
 
 
 @pytest.fixture(scope="function")
-@patch("neo4j_genai.HybridRetriever._verify_version")
+@patch("neo4j_genai.retrievers.HybridRetriever._verify_version")
 def hybrid_retriever(
     _verify_version_mock: MagicMock, driver: MagicMock
 ) -> HybridRetriever:
@@ -75,7 +75,7 @@ def hybrid_retriever(
 
 
 @pytest.fixture(scope="function")
-@patch("neo4j_genai.Text2CypherRetriever._verify_version")
+@patch("neo4j_genai.retrievers.Text2CypherRetriever._verify_version")
 def t2c_retriever(
     _verify_version_mock: MagicMock, driver: MagicMock, llm: MagicMock
 ) -> Text2CypherRetriever:

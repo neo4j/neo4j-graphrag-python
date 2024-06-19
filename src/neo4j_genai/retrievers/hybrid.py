@@ -52,7 +52,7 @@ class HybridRetriever(Retriever):
     .. code-block:: python
 
       import neo4j
-      from neo4j_genai import HybridRetriever
+      from neo4j_genai.retrievers import HybridRetriever
 
       driver = neo4j.GraphDatabase.driver(URI, auth=AUTH)
 
@@ -187,7 +187,7 @@ class HybridCypherRetriever(Retriever):
     .. code-block:: python
 
       import neo4j
-      from neo4j_genai import HybridCypherRetriever
+      from neo4j_genai.retrievers import HybridCypherRetriever
 
       driver = neo4j.GraphDatabase.driver(URI, auth=AUTH)
 

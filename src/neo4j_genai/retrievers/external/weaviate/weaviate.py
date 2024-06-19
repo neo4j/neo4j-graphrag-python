@@ -45,7 +45,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
     .. code-block:: python
 
       from neo4j import GraphDatabase
-      from neo4j_genai.retrievers.external.weaviate import WeaviateNeo4jRetriever
+      from neo4j_genai.retrievers import WeaviateNeo4jRetriever
       from weaviate.connect.helpers import connect_to_local
 
       with GraphDatabase.driver(NEO4J_URL, auth=NEO4J_AUTH) as neo4j_driver:
@@ -136,7 +136,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         .. code-block:: python
 
           import neo4j
-          from neo4j_genai.retrievers.external.weaviate import WeaviateNeo4jRetriever
+          from neo4j_genai.retrievers import WeaviateNeo4jRetriever
 
           driver = neo4j.GraphDatabase.driver(URI, auth=AUTH)
 

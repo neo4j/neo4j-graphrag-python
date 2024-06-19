@@ -24,7 +24,7 @@ pip install neo4j-genai
 
 While the library has more retrievers than shown here, the following examples should be able to get you started.
 
-### Performing a GraphRAG search
+### Performing a similarity search
 
 Assumption: Neo4j running with populated vector index in place.
 

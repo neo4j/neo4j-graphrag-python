@@ -1,7 +1,7 @@
 from neo4j import GraphDatabase
 
 from random import random
-from neo4j_genai import HybridCypherRetriever
+from neo4j_genai.retrievers import HybridCypherRetriever
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.indexes import create_vector_index, create_fulltext_index
 
