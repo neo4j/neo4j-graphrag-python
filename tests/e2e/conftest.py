@@ -20,7 +20,7 @@ from typing import Generator, Any
 import pytest
 from neo4j import GraphDatabase, Driver
 from neo4j_genai.embedder import Embedder
-from neo4j_genai import VectorRetriever
+from neo4j_genai.retrievers import VectorRetriever
 from neo4j_genai.indexes import (
     create_fulltext_index,
     create_vector_index,

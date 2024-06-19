@@ -18,7 +18,7 @@ import neo4j
 
 from unittest.mock import MagicMock
 
-from neo4j_genai import VectorCypherRetriever
+from neo4j_genai.retrievers import VectorCypherRetriever
 from neo4j_genai.generation.graphrag import GraphRAG
 from neo4j_genai.generation.types import RagResultModel
 from neo4j_genai.llm import LLMResponse
