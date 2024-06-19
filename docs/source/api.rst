@@ -52,14 +52,14 @@ This section includes retrievers that integrate with databases external to Neo4j
 WeaviateNeo4jRetriever
 ======================
 
-.. autoclass:: neo4j_genai.retrievers.external.weaviate.WeaviateNeo4jRetriever
+.. autoclass:: neo4j_genai.retrievers.external.weaviate.weaviate.WeaviateNeo4jRetriever
    :members:
 
 
 PineconeNeo4jRetriever
 ======================
 
-.. autoclass:: neo4j_genai.retrievers.external.pinecone.PineconeNeo4jRetriever
+.. autoclass:: neo4j_genai.retrievers.external.pinecone.pinecone.PineconeNeo4jRetriever
    :members:
 
 

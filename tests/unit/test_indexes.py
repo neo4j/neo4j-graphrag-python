@@ -175,7 +175,7 @@ def test_upsert_vector_happy_path(driver: MagicMock) -> None:
         MATCH (n)
         WHERE elementId(n) = $id
         WITH n
-        CALL db.create.setNodeVectorProperty(n, $vector_prop, $vector)
+        CALL db.create.setNodeVectorProperty(n, $embedding_property, $vector)
         RETURN n
         """
 
@@ -189,11 +189,11 @@ def test_upsert_vector_raises_error_with_neo4j_insertion_error(
     driver: MagicMock,
 ) -> None:
     id = 1
-    vector_prop = "embedding"
+    embedding_property = "embedding"
     vector = [1.0, 2.0, 3.0]
     driver.execute_query.side_effect = neo4j.exceptions.ClientError
 
     with pytest.raises(Neo4jInsertionError) as excinfo:
-        upsert_vector(driver, id, vector_prop, vector)
+        upsert_vector(driver, id, embedding_property, vector)
 
     assert "Upserting vector to Neo4j failed" in str(excinfo)

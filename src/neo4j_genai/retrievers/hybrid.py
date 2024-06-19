@@ -100,7 +100,7 @@ class HybridRetriever(Retriever):
             else None
         )
 
-    def default_format_record(self, record: neo4j.Record) -> RetrieverResultItem:
+    def default_record_formatter(self, record: neo4j.Record) -> RetrieverResultItem:
         """
         Best effort to guess the node to text method. Inherited classes
         can override this method to implement custom text formatting.
@@ -203,7 +203,7 @@ class HybridCypherRetriever(Retriever):
         fulltext_index_name (str): Fulltext index name.
         retrieval_query (str): Cypher query that gets appended.
         embedder (Optional[Embedder]): Embedder object to embed query text.
-        result_formatter (Optional[Callable[[Any], Any]]): Function to transform a neo4j.Record to a RetrieverResultItem.
+        result_formatter (Optional[Callable[[Any], Any]]): Provided custom function to transform a neo4j.Record to a RetrieverResultItem.
 
     Raises:
         RetrieverInitializationError: If validation of the input arguments fail.

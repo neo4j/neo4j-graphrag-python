@@ -100,10 +100,10 @@ class Retriever(ABC):
         Returns the function to use to transform a neo4j.Record to a RetrieverResultItem.
         """
         if hasattr(self, "result_formatter"):
-            return self.result_formatter or self.default_format_record
-        return self.default_format_record
+            return self.result_formatter or self.default_record_formatter
+        return self.default_record_formatter
 
-    def default_format_record(self, record: neo4j.Record) -> RetrieverResultItem:
+    def default_record_formatter(self, record: neo4j.Record) -> RetrieverResultItem:
         """
         Best effort to guess the node to text method. Inherited classes
         can override this method to implement custom text formatting.
