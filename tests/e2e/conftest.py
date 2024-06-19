@@ -20,12 +20,14 @@ from typing import Generator, Any
 import pytest
 from neo4j import GraphDatabase, Driver
 from neo4j_genai.embedder import Embedder
+from neo4j_genai.retrievers import VectorRetriever
 from neo4j_genai.indexes import (
     create_fulltext_index,
     create_vector_index,
     drop_index_if_exists,
 )
-from neo4j_genai.llm import LLM
+from neo4j_genai.llm import LLMInterface
+from ..e2e.utils import EMBEDDING_BIOLOGY
 
 
 @pytest.fixture(scope="module")
@@ -37,19 +39,36 @@ def driver() -> Generator[Any, Any, Any]:
     driver.close()
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def llm() -> MagicMock:
-    return MagicMock(spec=LLM)
+    return MagicMock(spec=LLMInterface)
 
 
-class CustomEmbedder(Embedder):
+class RandomEmbedder(Embedder):
     def embed_query(self, text: str) -> list[float]:
         return [random.random() for _ in range(1536)]
 
 
+class BiologyEmbedder(Embedder):
+    def embed_query(self, text: str) -> list[float]:
+        if text == "biology":
+            return EMBEDDING_BIOLOGY
+        raise ValueError(f"Unknown embedding text: {text}")
+
+
 @pytest.fixture(scope="module")
-def custom_embedder() -> CustomEmbedder:
-    return CustomEmbedder()
+def random_embedder() -> RandomEmbedder:
+    return RandomEmbedder()
+
+
+@pytest.fixture(scope="module")
+def biology_embedder() -> BiologyEmbedder:
+    return BiologyEmbedder()
+
+
+@pytest.fixture(scope="function")
+def retriever_mock() -> MagicMock:
+    return MagicMock(spec=VectorRetriever)
 
 
 @pytest.fixture(scope="module")

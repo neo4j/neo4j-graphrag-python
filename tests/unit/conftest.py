@@ -24,7 +24,7 @@ from neo4j_genai.retrievers import (
     VectorRetriever,
 )
 from neo4j_genai.embedder import Embedder
-from neo4j_genai.llm import LLM
+from neo4j_genai.llm import LLMInterface
 
 
 @pytest.fixture(scope="function")
@@ -39,7 +39,12 @@ def embedder() -> MagicMock:
 
 @pytest.fixture(scope="function")
 def llm() -> MagicMock:
-    return MagicMock(spec=LLM)
+    return MagicMock(spec=LLMInterface)
+
+
+@pytest.fixture(scope="function")
+def retriever_mock() -> MagicMock:
+    return MagicMock(spec=VectorRetriever)
 
 
 @pytest.fixture(scope="function")

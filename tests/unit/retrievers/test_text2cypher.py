@@ -22,7 +22,8 @@ from neo4j_genai.exceptions import (
     SearchValidationError,
     Text2CypherRetrievalError,
 )
-from neo4j_genai.prompts import TEXT2CYPHER_PROMPT
+from neo4j_genai.generation.prompts import Text2CypherTemplate
+from neo4j_genai.llm import LLMResponse
 
 
 def test_t2c_retriever_initialization(driver: MagicMock, llm: MagicMock) -> None:
@@ -111,16 +112,17 @@ def test_t2c_retriever_happy_path(
     retriever = Text2CypherRetriever(
         driver=driver, llm=llm, neo4j_schema=neo4j_schema, examples=examples
     )
-    retriever.llm.invoke.return_value = t2c_query
+    retriever.llm.invoke.return_value = LLMResponse(content=t2c_query)
     retriever.driver.execute_query.return_value = (  # type: ignore
         [neo4j_record],
         None,
         None,
     )
-    prompt = TEXT2CYPHER_PROMPT.format(
+    template = Text2CypherTemplate()
+    prompt = template.format(
         schema=neo4j_schema,
         examples="\n".join(examples),
-        input=query_text,
+        query=query_text,
     )
     retriever.search(query_text=query_text)
     retriever.llm.invoke.assert_called_once_with(prompt)
@@ -137,7 +139,7 @@ def test_t2c_retriever_cypher_error(
     retriever = Text2CypherRetriever(
         driver=driver, llm=llm, neo4j_schema=neo4j_schema, examples=examples
     )
-    retriever.llm.invoke.return_value = t2c_query
+    retriever.llm.invoke.return_value = LLMResponse(content=t2c_query)
     query_text = "may thy knife chip and shatter"
     driver.execute_query.side_effect = CypherSyntaxError
     with pytest.raises(Text2CypherRetrievalError) as e:

@@ -7,6 +7,9 @@
 -   Added `upsert_vector` utility function for attaching vectors to node properties.
 -   Introduced `Neo4jInsertionError` for handling insertion failures in Neo4j.
 -   Included Pinecone and Weaviate retrievers in neo4j_genai.retrievers.
+-   Introduced the GraphRAG object, enabling a full RAG (Retrieval-Augmented Generation) pipeline with context retrieval, prompt formatting, and answer generation.
+-   Added PromptTemplate and RagTemplate for customizable prompt generation.
+-   Added LLMInterface with implementation for OpenAI LLM.
 
 ### Changed
 -   Refactored import paths for retrievers to neo4j_genai.retrievers.

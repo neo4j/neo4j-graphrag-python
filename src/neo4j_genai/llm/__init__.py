@@ -12,19 +12,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from abc import ABC, abstractmethod
+from .types import LLMResponse
+from .base import LLMInterface
+from .openai_llm import OpenAILLM
 
-
-class LLM(ABC):
-    """Interface for large language models."""
-
-    @abstractmethod
-    def invoke(self, input: str) -> str:
-        """Sends a text input to the LLM and retrieves a response.
-
-        Args:
-            input (str): Text sent to the LLM
-
-        Returns:
-            str: The response from the LLM.
-        """
+__all__ = ["LLMResponse", "LLMInterface", "OpenAILLM"]
