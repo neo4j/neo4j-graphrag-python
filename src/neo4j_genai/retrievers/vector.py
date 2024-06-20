@@ -13,32 +13,31 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
-from typing import Optional, Any, Callable
+
+import logging
+from typing import Any, Callable, Optional
 
 import neo4j
-
-from neo4j_genai.exceptions import (
-    RetrieverInitializationError,
-    SearchValidationError,
-    EmbeddingRequiredError,
-)
-from neo4j_genai.retrievers.base import Retriever
 from pydantic import ValidationError
 
 from neo4j_genai.embedder import Embedder
-from neo4j_genai.types import (
-    VectorSearchModel,
-    VectorCypherSearchModel,
-    SearchType,
-    Neo4jDriverModel,
-    EmbedderModel,
-    VectorRetrieverModel,
-    VectorCypherRetrieverModel,
-    RawSearchResult,
-    RetrieverResultItem,
+from neo4j_genai.exceptions import (
+    EmbeddingRequiredError,
+    RetrieverInitializationError,
+    SearchValidationError,
 )
 from neo4j_genai.neo4j_queries import get_search_query
-import logging
+from neo4j_genai.retrievers.base import Retriever
+from neo4j_genai.types import (
+    EmbedderModel,
+    Neo4jDriverModel,
+    RawSearchResult,
+    RetrieverResultItem,
+    SearchType,
+    VectorCypherRetrieverModel,
+    VectorRetrieverModel,
+    VectorSearchModel,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -146,15 +145,16 @@ class VectorRetriever(Retriever):
         """
         try:
             validated_data = VectorSearchModel(
-                vector_index_name=self.index_name,
-                top_k=top_k,
                 query_vector=query_vector,
                 query_text=query_text,
+                top_k=top_k,
+                filters=filters,
             )
         except ValidationError as e:
             raise SearchValidationError(e.errors()) from e
 
         parameters = validated_data.model_dump(exclude_none=True)
+        parameters["vector_index_name"] = self.index_name
 
         if query_text:
             if not self.embedder:
@@ -274,17 +274,18 @@ class VectorCypherRetriever(Retriever):
             RawSearchResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
         """
         try:
-            validated_data = VectorCypherSearchModel(
-                vector_index_name=self.index_name,
-                top_k=top_k,
+            validated_data = VectorSearchModel(
                 query_vector=query_vector,
                 query_text=query_text,
+                top_k=top_k,
                 query_params=query_params,
+                filters=filters,
             )
         except ValidationError as e:
             raise SearchValidationError(e.errors()) from e
 
         parameters = validated_data.model_dump(exclude_none=True)
+        parameters["vector_index_name"] = self.index_name
 
         if query_text:
             if not self.embedder:

@@ -116,10 +116,11 @@ class FulltextIndexModel(IndexModel):
 
 
 class VectorSearchModel(BaseModel):
-    vector_index_name: str
-    top_k: PositiveInt = 5
     query_vector: Optional[list[float]] = None
     query_text: Optional[str] = None
+    top_k: PositiveInt = 5
+    query_params: Optional[dict[str, Any]] = None
+    filters: Optional[dict[str, Any]] = None
 
     @model_validator(mode="before")
     def check_query(cls, values: dict[str, Any]) -> dict[str, Any]:
@@ -131,19 +132,10 @@ class VectorSearchModel(BaseModel):
         return values
 
 
-class VectorCypherSearchModel(VectorSearchModel):
-    query_params: Optional[dict[str, Any]] = None
-
-
 class HybridSearchModel(BaseModel):
-    vector_index_name: str
-    fulltext_index_name: str
     query_text: str
-    top_k: PositiveInt = 5
     query_vector: Optional[list[float]] = None
-
-
-class HybridCypherSearchModel(HybridSearchModel):
+    top_k: PositiveInt = 5
     query_params: Optional[dict[str, Any]] = None
 
 

@@ -13,21 +13,21 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
-from typing import Optional, Any, Callable
+
+from typing import Any, Callable, Optional
 
 import neo4j
 from pydantic import (
-    field_validator,
     BaseModel,
-    PositiveInt,
-    model_validator,
     ConfigDict,
+    field_validator,
+    model_validator,
 )
 from weaviate.client import WeaviateClient
 from weaviate.collections.classes.filters import _Filters
 
+from neo4j_genai.types import EmbedderModel, Neo4jDriverModel, VectorSearchModel
 from neo4j_genai.utils import validate_search_query_input
-from neo4j_genai.types import Neo4jDriverModel, EmbedderModel
 
 
 class WeaviateModel(BaseModel):
@@ -55,10 +55,7 @@ class WeaviateNeo4jRetrieverModel(BaseModel):
     result_formatter: Optional[Callable[[neo4j.Record], str]] = None
 
 
-class WeaviateNeo4jSearchModel(BaseModel):
-    top_k: PositiveInt = 5
-    query_vector: Optional[list[float]] = None
-    query_text: Optional[str] = None
+class WeaviateNeo4jSearchModel(VectorSearchModel):
     weaviate_filters: Optional[_Filters] = None
     model_config = ConfigDict(arbitrary_types_allowed=True)
 

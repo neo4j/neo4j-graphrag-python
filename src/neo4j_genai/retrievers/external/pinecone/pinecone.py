@@ -183,7 +183,6 @@ class PineconeNeo4jRetriever(ExternalRetriever):
 
         try:
             validated_data = PineconeSearchModel(
-                vector_index_name=self.index_name,
                 query_vector=query_vector,
                 query_text=query_text,
                 top_k=top_k,
