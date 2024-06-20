@@ -344,7 +344,7 @@ def test_retrieval_query_with_result_format_function(
         index_name,
         retrieval_query,
         embedder=embedder,
-        format_record_function=format_function,
+        result_formatter=format_function,
     )
     query_text = "may thy knife chip and shatter"
     top_k = 5

@@ -44,7 +44,7 @@ retriever = VectorCypherRetriever(
     driver,
     index_name=INDEX,
     retrieval_query="with node, score return node.title as title, node.plot as plot",
-    format_record_function=formatter,
+    result_formatter=formatter,
     embedder=embedder,
 )
 

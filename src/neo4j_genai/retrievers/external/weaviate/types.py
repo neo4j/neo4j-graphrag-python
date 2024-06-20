@@ -51,7 +51,7 @@ class WeaviateNeo4jRetrieverModel(BaseModel):
     embedder_model: Optional[EmbedderModel]
     return_properties: Optional[list[str]] = None
     retrieval_query: Optional[str] = None
-    format_record_function: Optional[Callable[[neo4j.Record], str]] = None
+    result_formatter: Optional[Callable[[neo4j.Record], str]] = None
 
 
 class WeaviateNeo4jSearchModel(BaseModel):

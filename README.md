@@ -89,7 +89,7 @@ create_vector_index(
     driver,
     INDEX_NAME,
     label="Document",
-    property="textProperty",
+    embedding_property="vectorProperty",
     dimensions=1536,
     similarity_fn="euclidean",
 )
@@ -118,7 +118,7 @@ vector = [random() for _ in range(DIMENSION)]
 insert_query = (
     "MERGE (n:Document {id: $id})"
     "WITH n "
-    "CALL db.create.setNodeVectorProperty(n, 'textProperty', $vector)"
+    "CALL db.create.setNodeVectorProperty(n, 'vectorProperty', $vector)"
     "RETURN n"
 )
 parameters = {

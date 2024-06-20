@@ -86,14 +86,17 @@ def setup_neo4j_for_retrieval(driver: Driver) -> None:
         driver,
         vector_index_name,
         label="Document",
-        property="propertyKey",
+        embedding_property="vectorProperty",
         dimensions=1536,
         similarity_fn="euclidean",
     )
 
     # Create a fulltext index
     create_fulltext_index(
-        driver, fulltext_index_name, label="Document", node_properties=["propertyKey"]
+        driver,
+        fulltext_index_name,
+        label="Document",
+        node_properties=["vectorProperty"],
     )
 
     # Insert 10 vectors and authors
@@ -108,7 +111,7 @@ def setup_neo4j_for_retrieval(driver: Driver) -> None:
             "ON CREATE SET  doc.int_property = $i, "
             "               doc.short_text_property = toString($i)"
             "WITH doc "
-            "CALL db.create.setNodeVectorProperty(doc, 'propertyKey', $vector)"
+            "CALL db.create.setNodeVectorProperty(doc, 'vectorProperty', $vector)"
             "WITH doc "
             "MERGE (author:Author {name: $authorName})"
             "MERGE (doc)-[:AUTHORED_BY]->(author)"

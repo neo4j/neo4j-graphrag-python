@@ -26,7 +26,7 @@ def test_vector_retriever_initialization(driver: MagicMock) -> None:
     with patch("neo4j_genai.retrievers.base.Retriever._verify_version") as mock_verify:
         HybridRetriever(
             driver=driver,
-            vector_index_name="my-index",
+            vector_index_name="vector-index",
             fulltext_index_name="fulltext-index",
         )
         mock_verify.assert_called_once()
@@ -36,7 +36,7 @@ def test_vector_cypher_retriever_initialization(driver: MagicMock) -> None:
     with patch("neo4j_genai.retrievers.base.Retriever._verify_version") as mock_verify:
         HybridCypherRetriever(
             driver=driver,
-            vector_index_name="my-index",
+            vector_index_name="vector-index",
             fulltext_index_name="fulltext-index",
             retrieval_query="",
         )
@@ -50,7 +50,7 @@ def test_hybrid_retriever_invalid_fulltext_index_name(
     with pytest.raises(RetrieverInitializationError) as exc_info:
         HybridRetriever(
             driver=driver,
-            vector_index_name="my-index",
+            vector_index_name="vector-index",
             fulltext_index_name=42,  # type: ignore
         )
 
@@ -65,7 +65,7 @@ def test_hybrid_cypher_retriever_invalid_retrieval_query(
     with pytest.raises(RetrieverInitializationError) as exc_info:
         HybridCypherRetriever(
             driver=driver,
-            vector_index_name="my-index",
+            vector_index_name="vector-index",
             fulltext_index_name="fulltext-index",
             retrieval_query=42,  # type: ignore
         )
@@ -83,8 +83,8 @@ def test_hybrid_search_text_happy_path(
 ) -> None:
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
-    vector_index_name = "my-index"
-    fulltext_index_name = "my-fulltext-index"
+    vector_index_name = "vector-index"
+    fulltext_index_name = "fulltext-index"
     query_text = "may thy knife chip and shatter"
     top_k = 5
 
@@ -130,8 +130,8 @@ def test_hybrid_search_favors_query_vector_over_embedding_vector(
     query_vector = [2.0 for _ in range(1536)]
 
     embedder.embed_query.return_value = embed_query_vector
-    vector_index_name = "my-index"
-    fulltext_index_name = "my-fulltext-index"
+    vector_index_name = "vector-index"
+    fulltext_index_name = "fulltext-index"
     query_text = "may thy knife chip and shatter"
     top_k = 5
     retriever = HybridRetriever(
@@ -198,8 +198,8 @@ def test_hybrid_retriever_return_properties(
 ) -> None:
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
-    vector_index_name = "my-index"
-    fulltext_index_name = "my-fulltext-index"
+    vector_index_name = "vector-index"
+    fulltext_index_name = "fulltext-index"
     query_text = "may thy knife chip and shatter"
     top_k = 5
     return_properties = ["node-property-1", "node-property-2"]
@@ -247,8 +247,8 @@ def test_hybrid_cypher_retrieval_query_with_params(
 ) -> None:
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
-    vector_index_name = "my-index"
-    fulltext_index_name = "my-fulltext-index"
+    vector_index_name = "vector-index"
+    fulltext_index_name = "fulltext-index"
     query_text = "may thy knife chip and shatter"
     top_k = 5
     retrieval_query = """

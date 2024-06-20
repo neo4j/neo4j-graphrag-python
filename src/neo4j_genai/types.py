@@ -97,7 +97,7 @@ class IndexModel(BaseModel):
 class VectorIndexModel(IndexModel):
     name: str
     label: str
-    property: str
+    embedding_property: str
     dimensions: PositiveInt
     similarity_fn: Literal["euclidean", "cosine"]
 

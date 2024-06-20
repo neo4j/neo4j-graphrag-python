@@ -29,7 +29,7 @@ def create_vector_index(
     driver: neo4j.Driver,
     name: str,
     label: str,
-    property: str,
+    embedding_property: str,
     dimensions: int,
     similarity_fn: Literal["euclidean", "cosine"],
 ) -> None:
@@ -46,7 +46,7 @@ def create_vector_index(
         driver (neo4j.Driver): Neo4j Python driver instance.
         name (str): The unique name of the index.
         label (str): The node label to be indexed.
-        property (str): The property key of a node which contains embedding values.
+        embedding_property (str): The property key of a node which contains embedding values.
         dimensions (int): Vector embedding dimension
         similarity_fn (str): case-insensitive values for the vector similarity function:
             ``euclidean`` or ``cosine``.
@@ -60,7 +60,7 @@ def create_vector_index(
             driver=driver,
             name=name,
             label=label,
-            property=property,
+            embedding_property=embedding_property,
             dimensions=dimensions,
             similarity_fn=similarity_fn,
         )
@@ -69,7 +69,7 @@ def create_vector_index(
 
     try:
         query = (
-            f"CREATE VECTOR INDEX $name FOR (n:{label}) ON n.{property} OPTIONS "
+            f"CREATE VECTOR INDEX $name FOR (n:{label}) ON n.{embedding_property} OPTIONS "
             "{ indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }"
         )
         logger.info(f"Creating vector index named '{name}'")
@@ -149,7 +149,7 @@ def drop_index_if_exists(driver: neo4j.Driver, name: str) -> None:
 def upsert_vector(
     driver: neo4j.Driver,
     node_id: int,
-    vector_prop: str,
+    embedding_property: str,
     vector: list[float],
 ) -> None:
     """
@@ -158,7 +158,7 @@ def upsert_vector(
     Args:
         driver (neo4j.Driver): Neo4j Python driver instance.
         node_id (int): The id of the node.
-        vector_prop (str): The name of the property to store the vector in.
+        embedding_property (str): The name of the property to store the vector in.
         vector (list[float]): The vector to store.
 
     Raises:
@@ -169,12 +169,12 @@ def upsert_vector(
         MATCH (n)
         WHERE elementId(n) = $id
         WITH n
-        CALL db.create.setNodeVectorProperty(n, $vector_prop, $vector)
+        CALL db.create.setNodeVectorProperty(n, $embedding_property, $vector)
         RETURN n
         """
         parameters = {
             "id": node_id,
-            "vector_prop": vector_prop,
+            "embedding_property": embedding_property,
             "vector": vector,
         }
         driver.execute_query(query, parameters)
