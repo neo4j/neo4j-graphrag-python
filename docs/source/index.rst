@@ -112,7 +112,7 @@ When creating a vector index, make sure you match the number of dimensions in th
         driver,
         INDEX_NAME,
         label="Document",
-        embedding_property="textProperty",
+        embedding_property="vectorProperty",
         dimensions=1536,
         similarity_fn="euclidean",
     )
@@ -144,7 +144,7 @@ See below for how to write using Cypher via the Neo4j driver.
     insert_query = (
         "MERGE (n:Document {id: $id})"
         "WITH n "
-        "CALL db.create.setNodeVectorProperty(n, 'textProperty', $vector)"
+        "CALL db.create.setNodeVectorProperty(n, 'vectorProperty', $vector)"
         "RETURN n"
     )
     parameters = {

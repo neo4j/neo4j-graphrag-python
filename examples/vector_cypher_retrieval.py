@@ -35,7 +35,7 @@ create_vector_index(
     driver,
     INDEX_NAME,
     label="Document",
-    embedding_property="propertyKey",
+    embedding_property="vectorProperty",
     dimensions=DIMENSION,
     similarity_fn="euclidean",
 )
@@ -49,7 +49,7 @@ vector = [random.random() for _ in range(DIMENSION)]
 insert_query = (
     "MERGE (doc:Document {id: $id})"
     "WITH doc "
-    "CALL db.create.setNodeVectorProperty(doc, 'propertyKey', $vector)"
+    "CALL db.create.setNodeVectorProperty(doc, 'vectorProperty', $vector)"
     "WITH doc "
     "MERGE (author:Author {name: $authorName})"
     "MERGE (doc)-[:AUTHORED_BY]->(author)"
