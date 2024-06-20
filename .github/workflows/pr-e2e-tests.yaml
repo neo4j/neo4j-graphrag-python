@@ -3,6 +3,9 @@ name: 'Neo4j-GenAI PR E2E Tests'
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+    branches:
+      - main
+      - dev
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
@@ -13,6 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
+        python-versions: [3.8, 3.9, 3.10, 3.11, 3.12]
         neo4j-version:
           - 5
         neo4j-edition:
