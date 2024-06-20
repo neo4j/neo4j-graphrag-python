@@ -109,7 +109,7 @@ class PineconeNeo4jRetriever(ExternalRetriever):
                 result_formatter=result_formatter,
             )
         except ValidationError as e:
-            raise RetrieverInitializationError(e.errors())
+            raise RetrieverInitializationError(e.errors()) from e
 
         super().__init__(
             driver=driver,
@@ -190,7 +190,7 @@ class PineconeNeo4jRetriever(ExternalRetriever):
                 pinecone_filter=pinecone_filters,
             )
         except ValidationError as e:
-            raise SearchValidationError(e.errors())
+            raise SearchValidationError(e.errors()) from e
 
         if validated_data.query_text:
             if self.embedder:

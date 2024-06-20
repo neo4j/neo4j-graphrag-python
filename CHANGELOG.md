@@ -13,6 +13,8 @@
 
 ### Changed
 -   Refactored import paths for retrievers to neo4j_genai.retrievers.
+-   Implemented exception chaining for all re-raised exceptions to improve stack trace readability.
+-   Made error messages in `index.py` more consistent.
 
 ## 0.2.0
 

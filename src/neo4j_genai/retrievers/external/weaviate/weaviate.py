@@ -102,7 +102,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
                 result_formatter=result_formatter,
             )
         except ValidationError as e:
-            raise RetrieverInitializationError(e.errors())
+            raise RetrieverInitializationError(e.errors()) from e
 
         super().__init__(driver, id_property_external, id_property_neo4j)
         self.client = validated_data.client_model.client
@@ -176,7 +176,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
             top_k = validated_data.top_k
             weaviate_filters = validated_data.weaviate_filters
         except ValidationError as e:
-            raise SearchValidationError(e.errors())
+            raise SearchValidationError(e.errors()) from e
 
         # If we want to use a local embedder, we still want to call the near_vector method
         # so we want to create the vector as early as possible here

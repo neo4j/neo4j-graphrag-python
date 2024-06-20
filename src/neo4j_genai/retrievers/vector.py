@@ -86,7 +86,7 @@ class VectorRetriever(Retriever):
                 return_properties=return_properties,
             )
         except ValidationError as e:
-            raise RetrieverInitializationError(e.errors())
+            raise RetrieverInitializationError(e.errors()) from e
 
         super().__init__(driver)
         self.index_name = validated_data.index_name
@@ -151,7 +151,7 @@ class VectorRetriever(Retriever):
                 query_text=query_text,
             )
         except ValidationError as e:
-            raise SearchValidationError(e.errors())
+            raise SearchValidationError(e.errors()) from e
 
         parameters = validated_data.model_dump(exclude_none=True)
 
@@ -228,7 +228,7 @@ class VectorCypherRetriever(Retriever):
                 embedder_model=embedder_model,
             )
         except ValidationError as e:
-            raise RetrieverInitializationError(e.errors())
+            raise RetrieverInitializationError(e.errors()) from e
 
         super().__init__(driver)
         self.index_name = validated_data.index_name
@@ -281,7 +281,7 @@ class VectorCypherRetriever(Retriever):
                 query_params=query_params,
             )
         except ValidationError as e:
-            raise SearchValidationError(e.errors())
+            raise SearchValidationError(e.errors()) from e
 
         parameters = validated_data.model_dump(exclude_none=True)
 
