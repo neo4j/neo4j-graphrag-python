@@ -457,7 +457,7 @@ def populate_neo4j(
             neo4j_driver,
             vector_index_name,
             label="Question",
-            property="vector",
+            embedding_property="vector",
             dimensions=384,
             similarity_fn="cosine",
         )
