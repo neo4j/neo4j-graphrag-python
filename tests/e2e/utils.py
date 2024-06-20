@@ -478,7 +478,7 @@ def build_data_objects(
     with open(file_name, "r") as f:
         data = json.load(f)
 
-    question_objs = []
+    question_objs = []  # type: list[Any]
     neo4j_objs = {"nodes": [], "relationships": []}  # type: dict[str, list[Any]]
 
     # only unique categories and ids for them
