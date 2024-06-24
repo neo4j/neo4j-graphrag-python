@@ -26,7 +26,7 @@ include = "neo4j_genai"
 from = "src"
 
 [tool.poetry.dependencies]
-python = "^3.8.1"
+python = "^3.9"
 neo4j = "^5.17.0"
 types-requests = "^2.31.0.20240218"
 pydantic = "^2.6.3"

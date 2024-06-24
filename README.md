@@ -12,7 +12,7 @@ Documentation: https://neo4j.com/docs/neo4j-genai-python/
 
 ## Installation
 
-This package requires Python (>=3.8.1).
+This package requires Python (>=3.9).
 
 To install the latest stable version, use:
 
