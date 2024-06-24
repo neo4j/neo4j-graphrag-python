@@ -25,10 +25,10 @@ from neo4j_genai.schema import (
     EXCLUDED_RELS,
     INDEX_QUERY,
 )
-from typing import Any
+from typing import Any, List
 
 
-def _query_return_value(*args: Any, **kwargs: Any) -> list[Any]:
+def _query_return_value(*args: Any, **kwargs: Any) -> List[Any]:
     query = args[1]
     if NODE_PROPERTIES_QUERY in query:
         return [

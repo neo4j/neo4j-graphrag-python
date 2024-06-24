@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import logging
-from typing import Optional, Any
+from typing import Optional, Any, Dict
 
 from pydantic import ValidationError
 
@@ -53,7 +53,7 @@ class GraphRAG:
         self,
         query: str,
         examples: str = "",
-        retriever_config: Optional[dict[str, Any]] = None,
+        retriever_config: Optional[Dict[str, Any]] = None,
         return_context: bool = False,
     ) -> RagResultModel:
         """This method performs a full RAG search:
@@ -92,7 +92,7 @@ class GraphRAG:
         logger.debug(f"RAG: retriever_result={retriever_result}")
         logger.debug(f"RAG: prompt={prompt}")
         answer = self.llm.invoke(prompt)
-        result: dict[str, Any] = {"answer": answer.content}
+        result: Dict[str, Any] = {"answer": answer.content}
         if return_context:
             result["retriever_result"] = retriever_result
         return RagResultModel(**result)

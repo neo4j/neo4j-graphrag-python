@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Any, Union
+from typing import Any, Union, Dict
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from neo4j_genai.generation.prompts import RagTemplate
@@ -38,7 +38,7 @@ class RagInitModel(BaseModel):
 class RagSearchModel(BaseModel):
     query: str
     examples: str = ""
-    retriever_config: dict[str, Any] = {}
+    retriever_config: Dict[str, Any] = {}
     return_context: bool = False
 
 

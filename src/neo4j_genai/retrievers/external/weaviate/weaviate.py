@@ -14,7 +14,7 @@
 #  limitations under the License.
 
 import logging
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, List
 
 import neo4j
 import weaviate.classes as wvc
@@ -67,7 +67,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         id_property_external (str): The name of the Weaviate property that has the identifier that refers to a corresponding Neo4j node id property.
         id_property_neo4j (str): The name of the Neo4j node property that's used as the identifier for relating matches from Weaviate to Neo4j nodes.
         embedder (Optional[Embedder]): Embedder object to embed query text.
-        return_properties (Optional[list[str]]): List of node properties to return.
+        return_properties (Optional[List[str]]): List of node properties to return.
         result_formatter (Optional[Callable[[Any], Any]]): Function to transform a neo4j.Record to a RetrieverResultItem.
 
     Raises:
@@ -82,7 +82,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         id_property_external: str,
         id_property_neo4j: str,
         embedder: Optional[Embedder] = None,
-        return_properties: Optional[list[str]] = None,
+        return_properties: Optional[List[str]] = None,
         retrieval_query: Optional[str] = None,
         result_formatter: Optional[Callable[[Any], Any]] = None,
     ):
@@ -119,7 +119,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
 
     def _get_search_results(
         self,
-        query_vector: Optional[list[float]] = None,
+        query_vector: Optional[List[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
         **kwargs: Any,
@@ -154,7 +154,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
 
         Args:
             query_text (Optional[str]): The text to get the closest neighbors of.
-            query_vector (Optional[list[float]]): The vector embeddings to get the closest neighbors of. Defaults to None.
+            query_vector (Optional[List[float]]): The vector embeddings to get the closest neighbors of. Defaults to None.
             top_k (int): The number of neighbors to return. Defaults to 5.
         Raises:
             SearchValidationError: If validation of the input arguments fail.

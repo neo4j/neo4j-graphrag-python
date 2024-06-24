@@ -16,7 +16,7 @@ from unittest.mock import patch
 
 import neo4j
 import pytest
-from typing import Any
+from typing import Any, Dict
 from neo4j.exceptions import CypherSyntaxError
 from unittest.mock import MagicMock
 from neo4j_genai.retrievers import VectorRetriever, VectorCypherRetriever
@@ -333,7 +333,7 @@ def test_retrieval_query_with_result_format_function(
         RETURN node.id AS node_id, node.text AS text, score
         """
 
-    def format_function(record: dict[str, Any]) -> RetrieverResultItem:
+    def format_function(record: Dict[str, Any]) -> RetrieverResultItem:
         return RetrieverResultItem(
             content=record.get("text"),
             metadata={"score": record.get("score"), "node_id": record.get("node_id")},

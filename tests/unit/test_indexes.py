@@ -23,6 +23,7 @@ from neo4j_genai.indexes import (
     drop_index_if_exists,
     upsert_vector,
 )
+from typing import List
 
 
 def test_create_vector_index_happy_path(driver: MagicMock) -> None:
@@ -139,7 +140,7 @@ def test_create_fulltext_index_raises_error_with_neo4j_client_error(
 
 def test_create_fulltext_index_empty_node_properties(driver: MagicMock) -> None:
     label = "node-label"
-    node_properties: list[str] = []
+    node_properties: List[str] = []
 
     with pytest.raises(Neo4jIndexError) as excinfo:
         create_fulltext_index(driver, "my-index", label, node_properties)

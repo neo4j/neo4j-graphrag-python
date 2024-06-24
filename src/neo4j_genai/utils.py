@@ -13,11 +13,11 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Optional
+from typing import Optional, List
 
 
 def validate_search_query_input(
-    query_text: Optional[str] = None, query_vector: Optional[list[float]] = None
+    query_text: Optional[str] = None, query_vector: Optional[List[float]] = None
 ) -> None:
     if not (bool(query_vector) ^ bool(query_text)):
         raise ValueError("You must provide exactly one of query_vector or query_text.")

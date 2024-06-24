@@ -37,7 +37,7 @@ Usage
 Installation
 ************
 
-This package requires Python (>=3.9).
+This package requires Python (>=3.8.1).
 
 To install the latest stable version, use:
 

@@ -20,6 +20,7 @@ from neo4j import Driver, GraphDatabase
 from weaviate.client import WeaviateClient
 from weaviate.collections.classes.types import WeaviateField
 from weaviate.connect.helpers import connect_to_local
+from typing import List, Dict
 
 from ..utils import build_data_objects, populate_neo4j
 
@@ -50,7 +51,7 @@ def populate_dbs(
 
 def populate_weaviate(
     w_client: WeaviateClient,
-    w_question_objs: list[wvc.data.DataObject[dict[str, WeaviateField]]],
+    w_question_objs: List[wvc.data.DataObject[Dict[str, WeaviateField]]],
     collection_name: str,
 ) -> None:
     questions = w_client.collections.get(collection_name)

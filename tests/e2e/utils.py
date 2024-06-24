@@ -16,7 +16,7 @@
 import hashlib
 import json
 import os.path
-from typing import Any, Literal
+from typing import Any, Literal, List, Dict, Tuple
 
 import neo4j
 import weaviate.classes as wvc
@@ -416,7 +416,7 @@ EMBEDDING_BIOLOGY = [
 
 def populate_neo4j(
     neo4j_driver: neo4j.Driver,
-    neo4j_objs: dict[str, Any],
+    neo4j_objs: Dict[str, Any],
     should_create_vector_index: bool = False,
 ) -> neo4j.EagerResult:
     question_nodes = list(
@@ -467,7 +467,7 @@ def populate_neo4j(
 
 def build_data_objects(
     q_vector_fmt: Literal["weaviate", "pinecone", "neo4j"],
-) -> tuple[dict[str, Any], list[Any]]:
+) -> Tuple[Dict[str, Any], List[Any]]:
     # read file from disk
     # this file is from https://github.com/weaviate-tutorials/quickstart/tree/main/data
     # MIT License
@@ -478,8 +478,8 @@ def build_data_objects(
     with open(file_name, "r") as f:
         data = json.load(f)
 
-    question_objs = []  # type: list[Any]
-    neo4j_objs = {"nodes": [], "relationships": []}  # type: dict[str, list[Any]]
+    question_objs = []  # type: List[Any]
+    neo4j_objs = {"nodes": [], "relationships": []}  # type: Dict[str, List[Any]]
 
     # only unique categories and ids for them
     unique_categories_list = list(set([c["Category"] for c in data]))

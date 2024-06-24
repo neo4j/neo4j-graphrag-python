@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Optional, Any
+from typing import Optional, Any, List, Dict
 
 from .base import LLMInterface
 from .types import LLMResponse
@@ -28,7 +28,7 @@ class OpenAILLM(LLMInterface):
     def __init__(
         self,
         model_name: str,
-        model_params: Optional[dict[str, Any]] = None,
+        model_params: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ):
         """
@@ -51,7 +51,7 @@ class OpenAILLM(LLMInterface):
     def get_messages(
         self,
         input: str,
-    ) -> list[dict[str, str]]:
+    ) -> List[Dict[str, str]]:
         return [
             {"role": "system", "content": input},
         ]

@@ -12,12 +12,14 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from __future__ import annotations  # Reminder: May be removed after Python 3.9 is EOL.
+
 import pytest
 
 from neo4j_genai.exceptions import Neo4jVersionError
 from neo4j_genai.retrievers.base import Retriever
 from unittest.mock import MagicMock
-from typing import Union, Any
+from typing import Union, Any, List
 
 
 @pytest.mark.parametrize(
@@ -31,7 +33,7 @@ from typing import Union, Any
 )
 def test_retriever_version_support(
     driver: MagicMock,
-    db_version: list[str],
+    db_version: List[str],
     expected_exception: Union[type[ValueError], None],
 ) -> None:
     class MockRetriever(Retriever):

@@ -13,18 +13,18 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Optional, Any
+from typing import Optional, Any, List
 from neo4j_genai.exceptions import PromptMissingInputError
 
 
 class PromptTemplate:
     DEFAULT_TEMPLATE: str = ""
-    EXPECTED_INPUTS: list[str] = []
+    EXPECTED_INPUTS: List[str] = []
 
     def __init__(
         self,
         template: Optional[str] = None,
-        expected_inputs: Optional[list[str]] = None,
+        expected_inputs: Optional[List[str]] = None,
     ) -> None:
         self.template = template or self.DEFAULT_TEMPLATE
         self.expected_inputs = expected_inputs or self.EXPECTED_INPUTS

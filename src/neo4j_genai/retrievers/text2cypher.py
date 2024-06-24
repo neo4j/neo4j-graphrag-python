@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import logging
-from typing import Optional
+from typing import Optional, List
 
 import neo4j
 from neo4j.exceptions import CypherSyntaxError, DriverError, Neo4jError
@@ -51,7 +51,7 @@ class Text2CypherRetriever(Retriever):
         driver (neo4j.driver): The Neo4j Python driver.
         llm (neo4j_genai.generation.llm.LLMInterface): LLM object to generate the Cypher query.
         neo4j_schema (Optional[str]): Neo4j schema used to generate the Cypher query.
-        examples (Optional[list[str], optional): Optional user input/query pairs for the LLM to use as examples.
+        examples (Optional[List[str], optional): Optional user input/query pairs for the LLM to use as examples.
 
     Raises:
         RetrieverInitializationError: If validation of the input arguments fail.
@@ -62,7 +62,7 @@ class Text2CypherRetriever(Retriever):
         driver: neo4j.Driver,
         llm: LLMInterface,
         neo4j_schema: Optional[str] = None,
-        examples: Optional[list[str]] = None,
+        examples: Optional[List[str]] = None,
     ) -> None:
         try:
             driver_model = Neo4jDriverModel(driver=driver)

@@ -5,7 +5,6 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - main
-      - dev
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
@@ -16,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
         neo4j-version:
           - 5
         neo4j-edition:
@@ -63,8 +62,6 @@ jobs:
           installer-parallel: true
       - name: Set Python version for Poetry
         run: poetry env use python${{ matrix.python-version }}
-      - name: Verify Poetry's Python version
-        run: poetry run python -c "import sys; print(sys.version)"
       - name: Load cached venv
         id: cached-poetry-dependencies
         uses: actions/cache@v4

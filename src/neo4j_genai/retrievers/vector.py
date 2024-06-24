@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Optional, Any, Callable
+from typing import Optional, Any, Callable, List, Dict
 
 import neo4j
 
@@ -63,7 +63,7 @@ class VectorRetriever(Retriever):
         driver (neo4j.Driver): The Neo4j Python driver.
         index_name (str): Vector index name.
         embedder (Optional[Embedder]): Embedder object to embed query text.
-        return_properties (Optional[list[str]]): List of node properties to return.
+        return_properties (Optional[List[str]]): List of node properties to return.
 
     Raises:
         RetrieverInitializationError: If validation of the input arguments fail.
@@ -74,7 +74,7 @@ class VectorRetriever(Retriever):
         driver: neo4j.Driver,
         index_name: str,
         embedder: Optional[Embedder] = None,
-        return_properties: Optional[list[str]] = None,
+        return_properties: Optional[List[str]] = None,
     ) -> None:
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -119,10 +119,10 @@ class VectorRetriever(Retriever):
 
     def _get_search_results(
         self,
-        query_vector: Optional[list[float]] = None,
+        query_vector: Optional[List[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
-        filters: Optional[dict[str, Any]] = None,
+        filters: Optional[Dict[str, Any]] = None,
     ) -> RawSearchResult:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         See the following documentation for more details:
@@ -131,10 +131,10 @@ class VectorRetriever(Retriever):
         - `db.index.vector.queryNodes() <https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_queryNodes>`_
 
         Args:
-            query_vector (Optional[list[float]]): The vector embeddings to get the closest neighbors of. Defaults to None.
+            query_vector (Optional[List[float]]): The vector embeddings to get the closest neighbors of. Defaults to None.
             query_text (Optional[str]): The text to get the closest neighbors of. Defaults to None.
             top_k (int): The number of neighbors to return. Defaults to 5.
-            filters (Optional[dict[str, Any]]): Filters for metadata pre-filtering. Defaults to None.
+            filters (Optional[Dict[str, Any]]): Filters for metadata pre-filtering. Defaults to None.
 
         Raises:
             SearchValidationError: If validation of the input arguments fail.
@@ -246,11 +246,11 @@ class VectorCypherRetriever(Retriever):
 
     def _get_search_results(
         self,
-        query_vector: Optional[list[float]] = None,
+        query_vector: Optional[List[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
-        query_params: Optional[dict[str, Any]] = None,
-        filters: Optional[dict[str, Any]] = None,
+        query_params: Optional[Dict[str, Any]] = None,
+        filters: Optional[Dict[str, Any]] = None,
     ) -> RawSearchResult:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         See the following documentation for more details:
@@ -259,11 +259,11 @@ class VectorCypherRetriever(Retriever):
         - `db.index.vector.queryNodes() <https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_queryNodes>`_
 
         Args:
-            query_vector (Optional[list[float]]): The vector embeddings to get the closest neighbors of. Defaults to None.
+            query_vector (Optional[List[float]]): The vector embeddings to get the closest neighbors of. Defaults to None.
             query_text (Optional[str]): The text to get the closest neighbors of. Defaults to None.
             top_k (int): The number of neighbors to return. Defaults to 5.
-            query_params (Optional[dict[str, Any]]): Parameters for the Cypher query. Defaults to None.
-            filters (Optional[dict[str, Any]]): Filters for metadata pre-filtering. Defaults to None.
+            query_params (Optional[Dict[str, Any]]): Parameters for the Cypher query. Defaults to None.
+            filters (Optional[Dict[str, Any]]): Filters for metadata pre-filtering. Defaults to None.
 
         Raises:
             SearchValidationError: If validation of the input arguments fail.

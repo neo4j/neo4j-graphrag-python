@@ -15,7 +15,7 @@
 from unittest.mock import patch, call, MagicMock
 
 import pytest
-from typing import Any
+from typing import Any, Dict
 from neo4j_genai.exceptions import FilterValidationError
 from neo4j_genai.filters import (
     get_metadata_filter,
@@ -626,7 +626,7 @@ def test_get_metadata_filter_field_name_with_dollar_sign() -> None:
 
 
 def test_get_metadata_filter_and_no_list() -> None:
-    filters: dict[str, Any] = {"$and": {}}
+    filters: Dict[str, Any] = {"$and": {}}
     with pytest.raises(FilterValidationError):
         get_metadata_filter(filters)
 

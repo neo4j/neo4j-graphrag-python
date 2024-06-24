@@ -13,13 +13,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Optional
+from typing import Optional, List
 
 from neo4j_genai.neo4j_queries import get_query_tail
 
 
 def get_match_query(
-    return_properties: Optional[list[str]] = None, retrieval_query: Optional[str] = None
+    return_properties: Optional[List[str]] = None, retrieval_query: Optional[str] = None
 ) -> str:
     match_query = (
         "UNWIND $match_params AS match_param "

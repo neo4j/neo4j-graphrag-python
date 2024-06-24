@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Optional, Any, Callable
+from typing import Optional, Any, Callable, List, Dict
 
 import neo4j
 from pydantic import ValidationError
@@ -66,7 +66,7 @@ class HybridRetriever(Retriever):
         vector_index_name (str): Vector index name.
         fulltext_index_name (str): Fulltext index name.
         embedder (Optional[Embedder]): Embedder object to embed query text.
-        return_properties (Optional[list[str]]): List of node properties to return.
+        return_properties (Optional[List[str]]): List of node properties to return.
     """
 
     def __init__(
@@ -75,7 +75,7 @@ class HybridRetriever(Retriever):
         vector_index_name: str,
         fulltext_index_name: str,
         embedder: Optional[Embedder] = None,
-        return_properties: Optional[list[str]] = None,
+        return_properties: Optional[List[str]] = None,
     ) -> None:
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -117,7 +117,7 @@ class HybridRetriever(Retriever):
     def _get_search_results(
         self,
         query_text: str,
-        query_vector: Optional[list[float]] = None,
+        query_vector: Optional[List[float]] = None,
         top_k: int = 5,
     ) -> RawSearchResult:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
@@ -133,7 +133,7 @@ class HybridRetriever(Retriever):
 
         Args:
             query_text (str): The text to get the closest neighbors of.
-            query_vector (Optional[list[float]], optional): The vector embeddings to get the closest neighbors of. Defaults to None.
+            query_vector (Optional[List[float]], optional): The vector embeddings to get the closest neighbors of. Defaults to None.
             top_k (int, optional): The number of neighbors to return. Defaults to 5.
 
         Raises:
@@ -245,9 +245,9 @@ class HybridCypherRetriever(Retriever):
     def _get_search_results(
         self,
         query_text: str,
-        query_vector: Optional[list[float]] = None,
+        query_vector: Optional[List[float]] = None,
         top_k: int = 5,
-        query_params: Optional[dict[str, Any]] = None,
+        query_params: Optional[Dict[str, Any]] = None,
     ) -> RawSearchResult:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         Both query_vector and query_text can be provided.
@@ -262,9 +262,9 @@ class HybridCypherRetriever(Retriever):
 
         Args:
             query_text (str): The text to get the closest neighbors of.
-            query_vector (Optional[list[float]]): The vector embeddings to get the closest neighbors of. Defaults to None.
+            query_vector (Optional[List[float]]): The vector embeddings to get the closest neighbors of. Defaults to None.
             top_k (int): The number of neighbors to return. Defaults to 5.
-            query_params (Optional[dict[str, Any]]): Parameters for the Cypher query. Defaults to None.
+            query_params (Optional[Dict[str, Any]]): Parameters for the Cypher query. Defaults to None.
 
         Raises:
             SearchValidationError: If validation of the input arguments fail.

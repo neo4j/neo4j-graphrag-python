@@ -14,6 +14,7 @@
 #  limitations under the License.
 
 from abc import ABC, abstractmethod
+from typing import List
 
 
 class Embedder(ABC):
@@ -23,12 +24,12 @@ class Embedder(ABC):
     """
 
     @abstractmethod
-    def embed_query(self, text: str) -> list[float]:
+    def embed_query(self, text: str) -> List[float]:
         """Embed query text.
 
         Args:
             text (str): Text to convert to vector embedding
 
         Returns:
-            list[float]: A vector embedding.
+            List[float]: A vector embedding.
         """
