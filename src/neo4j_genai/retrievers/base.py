@@ -12,15 +12,65 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from abc import ABC, abstractmethod
-from typing import Optional, Callable, Any
+import types
+import inspect
+from abc import ABC, abstractmethod, ABCMeta
+from typing import Optional, Callable, Any, TypeVar, ParamSpec, Dict, Tuple
+
 import neo4j
 
 from neo4j_genai.types import RawSearchResult, RetrieverResult, RetrieverResultItem
 from neo4j_genai.exceptions import Neo4jVersionError
 
+T = ParamSpec("T")
+P = TypeVar("P")
 
-class Retriever(ABC):
+
+def copy_function(f: Callable[T, P]) -> Callable[T, P]:
+    """Based on https://stackoverflow.com/a/30714299"""
+    g = types.FunctionType(
+        f.__code__,
+        f.__globals__,
+        name=f.__name__,
+        argdefs=f.__defaults__,
+        closure=f.__closure__,
+    )
+    # in case f was given attrs (note this dict is a shallow copy):
+    g.__dict__.update(f.__dict__)
+    return g
+
+
+class RetrieverMetaclass(ABCMeta):
+    """This metaclass is used to copy the docstring from the
+    `_get_search_results` method, instantiated in all subclasses,
+    to the `search` method in the base class.
+    """
+
+    def __new__(
+        meta, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any]
+    ) -> type:
+        if "search" in attrs:
+            # search method was explicitly overridden, do nothing
+            return type.__new__(meta, name, bases, attrs)
+        # otherwise, we copy the signature and doc of the _get_search_results
+        # method to a copy of the search method
+        get_search_results_method = attrs.get("_get_search_results")
+        search_method = None
+        for b in bases:
+            search_method = getattr(b, "search", None)
+            if search_method is not None:
+                break
+        if search_method and get_search_results_method:
+            new_search_method = copy_function(search_method)
+            new_search_method.__doc__ = get_search_results_method.__doc__
+            new_search_method.__signature__ = inspect.signature(  # type: ignore
+                get_search_results_method
+            )
+            attrs["search"] = new_search_method
+        return type.__new__(meta, name, bases, attrs)
+
+
+class Retriever(ABC, metaclass=RetrieverMetaclass):
     """
     Abstract class for Neo4j retrievers
     """
@@ -77,9 +127,9 @@ class Retriever(ABC):
             raise Exception(f"No index with name {self.index_name} found") from e
 
     def search(self, *args: Any, **kwargs: Any) -> RetrieverResult:
-        """
-        Search method. Call the get_search_result method that returns
-        a list of neo4j.Record, and format them to return RetrieverResult.
+        """Search method. Call the `_get_search_results` method that returns
+        a list of `neo4j.Record`, and format them using the function returned by
+        `get_result_formatter` to return `RetrieverResult`.
         """
         raw_result = self._get_search_results(*args, **kwargs)
         formatter = self.get_result_formatter()
