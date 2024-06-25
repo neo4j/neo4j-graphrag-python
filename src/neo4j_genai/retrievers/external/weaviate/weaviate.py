@@ -45,7 +45,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
     .. code-block:: python
 
       from neo4j import GraphDatabase
-      from neo4j_genai.retrievers.external.weaviate import WeaviateNeo4jRetriever
+      from neo4j_genai.retrievers import WeaviateNeo4jRetriever
       from weaviate.connect.helpers import connect_to_local
 
       with GraphDatabase.driver(NEO4J_URL, auth=NEO4J_AUTH) as neo4j_driver:
@@ -68,7 +68,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         id_property_neo4j (str): The name of the Neo4j node property that's used as the identifier for relating matches from Weaviate to Neo4j nodes.
         embedder (Optional[Embedder]): Embedder object to embed query text.
         return_properties (Optional[list[str]]): List of node properties to return.
-        format_record_function (Optional[Callable[[Any], Any]]): Function to transform a neo4j.Record to a RetrieverResultItem.
+        result_formatter (Optional[Callable[[Any], Any]]): Function to transform a neo4j.Record to a RetrieverResultItem.
 
     Raises:
         RetrieverInitializationError: If validation of the input arguments fail.
@@ -84,7 +84,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         embedder: Optional[Embedder] = None,
         return_properties: Optional[list[str]] = None,
         retrieval_query: Optional[str] = None,
-        format_record_function: Optional[Callable[[Any], Any]] = None,
+        result_formatter: Optional[Callable[[Any], Any]] = None,
     ):
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -99,10 +99,10 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
                 embedder_model=embedder_model,
                 return_properties=return_properties,
                 retrieval_query=retrieval_query,
-                format_record_function=format_record_function,
+                result_formatter=result_formatter,
             )
         except ValidationError as e:
-            raise RetrieverInitializationError(e.errors())
+            raise RetrieverInitializationError(e.errors()) from e
 
         super().__init__(driver, id_property_external, id_property_neo4j)
         self.client = validated_data.client_model.client
@@ -115,7 +115,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         )
         self.return_properties = validated_data.return_properties
         self.retrieval_query = validated_data.retrieval_query
-        self.format_record_function = validated_data.format_record_function
+        self.result_formatter = validated_data.result_formatter
 
     def _get_search_results(
         self,
@@ -136,7 +136,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         .. code-block:: python
 
           import neo4j
-          from neo4j_genai.retrievers.external.weaviate import WeaviateNeo4jRetriever
+          from neo4j_genai.retrievers import WeaviateNeo4jRetriever
 
           driver = neo4j.GraphDatabase.driver(URI, auth=AUTH)
 
@@ -176,7 +176,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
             top_k = validated_data.top_k
             weaviate_filters = validated_data.weaviate_filters
         except ValidationError as e:
-            raise SearchValidationError(e.errors())
+            raise SearchValidationError(e.errors()) from e
 
         # If we want to use a local embedder, we still want to call the near_vector method
         # so we want to create the vector as early as possible here

@@ -1,7 +1,7 @@
 from neo4j import GraphDatabase
 
 from random import random
-from neo4j_genai import HybridCypherRetriever
+from neo4j_genai.retrievers import HybridCypherRetriever
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.indexes import create_vector_index, create_fulltext_index
 
@@ -29,12 +29,12 @@ create_vector_index(
     driver,
     INDEX_NAME,
     label="Document",
-    property="propertyKey",
+    embedding_property="vectorProperty",
     dimensions=DIMENSION,
     similarity_fn="euclidean",
 )
 create_fulltext_index(
-    driver, FULLTEXT_INDEX_NAME, label="Document", node_properties=["propertyKey"]
+    driver, FULLTEXT_INDEX_NAME, label="Document", node_properties=["vectorProperty"]
 )
 
 # Initialize the retriever
@@ -48,7 +48,7 @@ vector = [random() for _ in range(DIMENSION)]
 insert_query = (
     "MERGE (n:Document {id: $id})"
     "WITH n "
-    "CALL db.create.setNodeVectorProperty(n, 'propertyKey', $vector)"
+    "CALL db.create.setNodeVectorProperty(n, 'vectorProperty', $vector)"
     "RETURN n"
 )
 parameters = {

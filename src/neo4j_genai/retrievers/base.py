@@ -73,8 +73,8 @@ class Retriever(ABC):
             self._node_label = result["labels"][0]
             self._embedding_node_property = result["properties"][0]
             self._embedding_dimension = result["dimensions"]
-        except IndexError:
-            raise Exception(f"No index with name {self.index_name} found")
+        except IndexError as e:
+            raise Exception(f"No index with name {self.index_name} found") from e
 
     def search(self, *args: Any, **kwargs: Any) -> RetrieverResult:
         """
@@ -99,11 +99,11 @@ class Retriever(ABC):
         """
         Returns the function to use to transform a neo4j.Record to a RetrieverResultItem.
         """
-        if hasattr(self, "format_record_function"):
-            return self.format_record_function or self.default_format_record
-        return self.default_format_record
+        if hasattr(self, "result_formatter"):
+            return self.result_formatter or self.default_record_formatter
+        return self.default_record_formatter
 
-    def default_format_record(self, record: neo4j.Record) -> RetrieverResultItem:
+    def default_record_formatter(self, record: neo4j.Record) -> RetrieverResultItem:
         """
         Best effort to guess the node to text method. Inherited classes
         can override this method to implement custom text formatting.

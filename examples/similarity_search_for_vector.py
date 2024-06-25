@@ -1,5 +1,5 @@
 from neo4j import GraphDatabase
-from neo4j_genai import VectorRetriever
+from neo4j_genai.retrievers import VectorRetriever
 
 from random import random
 
@@ -19,7 +19,7 @@ create_vector_index(
     driver,
     INDEX_NAME,
     label="Document",
-    property="propertyKey",
+    embedding_property="vectorProperty",
     dimensions=DIMENSION,
     similarity_fn="euclidean",
 )
@@ -32,7 +32,7 @@ vector = [random() for _ in range(DIMENSION)]
 insert_query = (
     "MERGE (n:Document {id: $id})"
     "WITH n "
-    "CALL db.create.setNodeVectorProperty(n, 'propertyKey', $vector)"
+    "CALL db.create.setNodeVectorProperty(n, 'vectorProperty', $vector)"
     "RETURN n"
 )
 parameters = {

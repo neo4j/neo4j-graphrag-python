@@ -15,7 +15,7 @@
 
 import pytest
 from neo4j import Driver
-from neo4j_genai import (
+from neo4j_genai.retrievers import (
     HybridCypherRetriever,
     HybridRetriever,
 )
@@ -25,10 +25,10 @@ from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
 def test_hybrid_retriever_search_text(
-    driver: Driver, custom_embedder: Embedder
+    driver: Driver, random_embedder: Embedder
 ) -> None:
     retriever = HybridRetriever(
-        driver, "vector-index-name", "fulltext-index-name", custom_embedder
+        driver, "vector-index-name", "fulltext-index-name", random_embedder
     )
 
     top_k = 5
@@ -42,7 +42,7 @@ def test_hybrid_retriever_search_text(
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
 def test_hybrid_cypher_retriever_search_text(
-    driver: Driver, custom_embedder: Embedder
+    driver: Driver, random_embedder: Embedder
 ) -> None:
     retrieval_query = (
         "MATCH (node)-[:AUTHORED_BY]->(author:Author) " "RETURN author.name"
@@ -52,7 +52,7 @@ def test_hybrid_cypher_retriever_search_text(
         "vector-index-name",
         "fulltext-index-name",
         retrieval_query,
-        custom_embedder,
+        random_embedder,
     )
 
     top_k = 5

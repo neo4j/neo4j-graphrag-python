@@ -1,4 +1,4 @@
-from neo4j_genai.retrievers.external.weaviate import WeaviateNeo4jRetriever
+from neo4j_genai.retrievers import WeaviateNeo4jRetriever
 from neo4j import GraphDatabase
 from weaviate.connect.helpers import connect_to_local
 

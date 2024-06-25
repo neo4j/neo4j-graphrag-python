@@ -29,6 +29,24 @@ class RetrieverInitializationError(Neo4jGenAiError):
         self.errors = errors
 
 
+class RagInitializationError(Neo4jGenAiError):
+    def __init__(self, errors: list[ErrorDetails]):
+        super().__init__(f"Initialization failed: {errors}")
+        self.errors = errors
+
+
+class PromptMissingInputError(Neo4jGenAiError):
+    """Exception raised when a prompt required input is missing."""
+
+    pass
+
+
+class LLMGenerationError(Neo4jGenAiError):
+    """Exception raised when answer generation from LLM fails."""
+
+    pass
+
+
 class SearchValidationError(Neo4jGenAiError):
     """Exception raised for validation errors during search."""
 

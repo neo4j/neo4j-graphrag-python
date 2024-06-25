@@ -44,6 +44,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
+    "sphinx.ext.autosectionlabel",
 ]
 
 # The suffix(es) of source filenames.

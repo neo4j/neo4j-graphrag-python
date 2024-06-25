@@ -16,10 +16,12 @@
 import hashlib
 import json
 import os.path
-from typing import Any, List, Tuple
+from typing import Any, Literal
 
 import neo4j
 import weaviate.classes as wvc
+
+from neo4j_genai.indexes import drop_index_if_exists, create_vector_index
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -413,7 +415,9 @@ EMBEDDING_BIOLOGY = [
 
 
 def populate_neo4j(
-    neo4j_driver: neo4j.Driver, neo4j_objs: dict[str, Any]
+    neo4j_driver: neo4j.Driver,
+    neo4j_objs: dict[str, Any],
+    should_create_vector_index: bool = False,
 ) -> neo4j.EagerResult:
     question_nodes = list(
         filter(lambda x: x["label"] == "Question", neo4j_objs["nodes"])
@@ -444,10 +448,26 @@ def populate_neo4j(
     res = neo4j_driver.execute_query(
         has_answer_relationships_cypher, {"relationships": has_answer_relationships}
     )
+
+    if should_create_vector_index:
+        vector_index_name = "vector-index-name"
+        drop_index_if_exists(neo4j_driver, vector_index_name)
+        # Create a vector index
+        create_vector_index(
+            neo4j_driver,
+            vector_index_name,
+            label="Question",
+            embedding_property="vector",
+            dimensions=384,
+            similarity_fn="cosine",
+        )
+
     return res
 
 
-def build_data_objects(q_vector_fmt: str) -> Tuple[dict[str, Any], List[Any]]:
+def build_data_objects(
+    q_vector_fmt: Literal["weaviate", "pinecone", "neo4j"],
+) -> tuple[dict[str, Any], list[Any]]:
     # read file from disk
     # this file is from https://github.com/weaviate-tutorials/quickstart/tree/main/data
     # MIT License
@@ -458,8 +478,8 @@ def build_data_objects(q_vector_fmt: str) -> Tuple[dict[str, Any], List[Any]]:
     with open(file_name, "r") as f:
         data = json.load(f)
 
-    question_objs = list()
-    neo4j_objs = {"nodes": [], "relationships": []}  # type: dict[str, Any]
+    question_objs = []
+    neo4j_objs = {"nodes": [], "relationships": []}  # type: dict[str, list[Any]]
 
     # only unique categories and ids for them
     unique_categories_list = list(set([c["Category"] for c in data]))
@@ -470,13 +490,16 @@ def build_data_objects(q_vector_fmt: str) -> Tuple[dict[str, Any], List[Any]]:
 
     for d in data:
         id = hashlib.md5(d["Question"].encode()).hexdigest()
+        question_properties = {
+            "id": f"question_{id}",
+            "question": d["Question"],
+        }
+        if q_vector_fmt == "neo4j":
+            question_properties["vector"] = d["vector"]
         neo4j_objs["nodes"].append(
             {
                 "label": "Question",
-                "properties": {
-                    "id": f"question_{id}",
-                    "question": d["Question"],
-                },
+                "properties": question_properties,
             }
         )
         neo4j_objs["nodes"].append(
@@ -515,7 +538,10 @@ def build_data_objects(q_vector_fmt: str) -> Tuple[dict[str, Any], List[Any]]:
             )
         elif q_vector_fmt == "pinecone":
             question_objs.append({"id": f"question_{id}", "values": d["vector"]})
+        elif q_vector_fmt == "neo4j":
+            # vector inserted into the neo4j object, nothing to do here
+            pass
         else:
-            raise ValueError("q_vector_fmt must be either weaviate or pinecone")
+            raise ValueError("q_vector_fmt must be either weaviate, pinecone or neo4j")
 
     return neo4j_objs, question_objs

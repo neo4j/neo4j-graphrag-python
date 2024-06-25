@@ -25,8 +25,8 @@ from neo4j_genai.exceptions import (
     SearchValidationError,
     Text2CypherRetrievalError,
 )
-from neo4j_genai.llm import LLM
-from neo4j_genai.prompts import TEXT2CYPHER_PROMPT
+from neo4j_genai.llm import LLMInterface
+from neo4j_genai.generation.prompts import Text2CypherTemplate
 from neo4j_genai.retrievers.base import Retriever
 from neo4j_genai.schema import get_schema
 from neo4j_genai.types import (
@@ -49,7 +49,7 @@ class Text2CypherRetriever(Retriever):
 
     Args:
         driver (neo4j.driver): The Neo4j Python driver.
-        llm (neo4j_genai.llm.LLM): LLM object to generate the Cypher query.
+        llm (neo4j_genai.generation.llm.LLMInterface): LLM object to generate the Cypher query.
         neo4j_schema (Optional[str]): Neo4j schema used to generate the Cypher query.
         examples (Optional[list[str], optional): Optional user input/query pairs for the LLM to use as examples.
 
@@ -60,7 +60,7 @@ class Text2CypherRetriever(Retriever):
     def __init__(
         self,
         driver: neo4j.Driver,
-        llm: LLM,
+        llm: LLMInterface,
         neo4j_schema: Optional[str] = None,
         examples: Optional[list[str]] = None,
     ) -> None:
@@ -77,7 +77,7 @@ class Text2CypherRetriever(Retriever):
                 examples=examples,
             )
         except ValidationError as e:
-            raise RetrieverInitializationError(e.errors())
+            raise RetrieverInitializationError(e.errors()) from e
 
         super().__init__(validated_data.driver_model.driver)
         self.llm = validated_data.llm_model.llm
@@ -92,7 +92,7 @@ class Text2CypherRetriever(Retriever):
             error_message = getattr(e, "message", str(e))
             raise SchemaFetchError(
                 f"Failed to fetch schema for Text2CypherRetriever: {error_message}"
-            )
+            ) from e
 
     def _get_search_results(
         self,
@@ -114,21 +114,25 @@ class Text2CypherRetriever(Retriever):
         try:
             validated_data = Text2CypherSearchModel(query_text=query_text)
         except ValidationError as e:
-            raise SearchValidationError(e.errors())
+            raise SearchValidationError(e.errors()) from e
 
-        prompt = TEXT2CYPHER_PROMPT.format(
+        prompt_template = Text2CypherTemplate()
+        prompt = prompt_template.format(
             schema=self.neo4j_schema,
             examples="\n".join(self.examples) if self.examples else "",
-            input=validated_data.query_text,
+            query=validated_data.query_text,
         )
         logger.debug("Text2CypherRetriever prompt: %s", prompt)
 
         try:
-            t2c_query = self.llm.invoke(prompt)
+            llm_result = self.llm.invoke(prompt)
+            t2c_query = llm_result.content
             logger.debug("Text2CypherRetriever Cypher query: %s", t2c_query)
             records, _, _ = self.driver.execute_query(query_=t2c_query)
         except CypherSyntaxError as e:
-            raise Text2CypherRetrievalError(f"Failed to get search result: {e.message}")
+            raise Text2CypherRetrievalError(
+                f"Failed to get search result: {e.message}"
+            ) from e
 
         return RawSearchResult(
             records=records,

@@ -16,6 +16,7 @@ fast to ship new features and high performing patterns and methods.
 Topics
 ******
 
++ :ref:`rag-documentation`
 + :ref:`api-documentation`
 + :ref:`types-documentation`
 
@@ -24,6 +25,7 @@ Topics
     :caption: Contents:
     :hidden:
 
+    rag.rst
     api.rst
     types.rst
 
@@ -61,7 +63,7 @@ Performing a similarity search
 .. code:: python
 
     from neo4j import GraphDatabase
-    from neo4j_genai import VectorRetriever
+    from neo4j_genai.retrievers import VectorRetriever
     from langchain_openai import OpenAIEmbeddings
 
     URI = "neo4j://localhost:7687"
@@ -110,7 +112,7 @@ When creating a vector index, make sure you match the number of dimensions in th
         driver,
         INDEX_NAME,
         label="Document",
-        property="textProperty",
+        embedding_property="vectorProperty",
         dimensions=1536,
         similarity_fn="euclidean",
     )
@@ -142,7 +144,7 @@ See below for how to write using Cypher via the Neo4j driver.
     insert_query = (
         "MERGE (n:Document {id: $id})"
         "WITH n "
-        "CALL db.create.setNodeVectorProperty(n, 'textProperty', $vector)"
+        "CALL db.create.setNodeVectorProperty(n, 'vectorProperty', $vector)"
         "RETURN n"
     )
     parameters = {

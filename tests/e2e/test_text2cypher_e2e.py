@@ -1,6 +1,8 @@
 import pytest
-from neo4j_genai import Text2CypherRetriever
+from neo4j_genai.retrievers import Text2CypherRetriever
 from unittest.mock import MagicMock
+
+from neo4j_genai.llm import LLMResponse
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 
 
@@ -11,7 +13,7 @@ def test_t2c_retriever_search(driver: MagicMock, llm: MagicMock) -> None:
     RETURN a.property_a
     """
     retriever = Text2CypherRetriever(driver=driver, llm=llm)
-    retriever.llm.invoke.return_value = t2c_query
+    retriever.llm.invoke.return_value = LLMResponse(content=t2c_query)
     query_text = "dummy-text"
     results = retriever.search(query_text=query_text)
     assert isinstance(results, RetrieverResult)
