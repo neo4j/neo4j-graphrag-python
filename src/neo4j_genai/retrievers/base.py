@@ -12,10 +12,11 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from __future__ import annotations
 import types
 import inspect
 from abc import ABC, abstractmethod, ABCMeta
-from typing import Optional, Callable, Any, TypeVar, ParamSpec, Dict, Tuple
+from typing import Optional, Callable, Any, TypeVar, ParamSpec
 
 import neo4j
 
@@ -47,7 +48,7 @@ class RetrieverMetaclass(ABCMeta):
     """
 
     def __new__(
-        meta, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any]
+        meta, name: str, bases: tuple[type, ...], attrs: dict[str, Any]
     ) -> type:
         if "search" in attrs:
             # search method was explicitly overridden, do nothing
