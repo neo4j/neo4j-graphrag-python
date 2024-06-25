@@ -12,12 +12,13 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
+from __future__ import annotations
 import os.path
 
 import weaviate.classes as wvc
 from neo4j import Driver, GraphDatabase
-from weaviate.client import Client
+from weaviate.client import WeaviateClient
+from weaviate.collections.classes.types import WeaviateField
 from weaviate.connect.helpers import connect_to_local
 
 from ..utils import build_data_objects, populate_neo4j
@@ -26,7 +27,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def populate_dbs(
-    neo4j_driver: Driver, w_client: Client, collection_name: str = "Jeopardy"
+    neo4j_driver: Driver, w_client: WeaviateClient, collection_name: str = "Jeopardy"
 ) -> None:
     neo4j_objects, w_question_objs = build_data_objects("weaviate")
     w_client.collections.create(
@@ -48,7 +49,9 @@ def populate_dbs(
 
 
 def populate_weaviate(
-    w_client: Client, w_question_objs: list[wvc.data.DataObject], collection_name: str
+    w_client: WeaviateClient,
+    w_question_objs: list[wvc.data.DataObject[dict[str, WeaviateField]]],
+    collection_name: str,
 ) -> None:
     questions = w_client.collections.get(collection_name)
     questions.data.insert_many(w_question_objs)

@@ -22,7 +22,7 @@ from neo4j import Driver
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.retrievers import WeaviateNeo4jRetriever
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
-from weaviate.client import Client
+from weaviate.client import WeaviateClient
 from weaviate.connect.helpers import connect_to_local
 
 from ..utils import EMBEDDING_BIOLOGY
@@ -43,14 +43,16 @@ def weaviate_client() -> Generator[Any, Any, Any]:
 
 
 @pytest.fixture(scope="module")
-def populate_weaviate_neo4j(driver: Driver, weaviate_client: Client) -> None:
+def populate_weaviate_neo4j(driver: Driver, weaviate_client: WeaviateClient) -> None:
     driver.execute_query("MATCH (n) DETACH DELETE n")
     weaviate_client.collections.delete_all()
     populate_dbs(driver, weaviate_client, "Jeopardy")
 
 
 @pytest.mark.usefixtures("populate_weaviate_neo4j")
-def test_weaviate_neo4j_vector_input(driver: Driver, weaviate_client: Client) -> None:
+def test_weaviate_neo4j_vector_input(
+    driver: Driver, weaviate_client: WeaviateClient
+) -> None:
     retriever = WeaviateNeo4jRetriever(
         driver=driver,
         client=weaviate_client,
@@ -78,7 +80,7 @@ def test_weaviate_neo4j_vector_input(driver: Driver, weaviate_client: Client) ->
 @pytest.mark.usefixtures("populate_weaviate_neo4j")
 def test_weaviate_neo4j_text_input_local_embedder(
     driver: Driver,
-    weaviate_client: Client,
+    weaviate_client: WeaviateClient,
     sentence_transformer_embedder: Embedder,
 ) -> None:
     retriever = WeaviateNeo4jRetriever(
@@ -108,7 +110,7 @@ def test_weaviate_neo4j_text_input_local_embedder(
 
 @pytest.mark.usefixtures("populate_weaviate_neo4j")
 def test_weaviate_neo4j_text_input_remote_embedder(
-    driver: Driver, weaviate_client: Client
+    driver: Driver, weaviate_client: WeaviateClient
 ) -> None:
     retriever = WeaviateNeo4jRetriever(
         driver=driver,

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from neo4j import GraphDatabase
 
 from random import random
