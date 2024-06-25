@@ -16,7 +16,11 @@ from __future__ import annotations
 import types
 import inspect
 from abc import ABC, abstractmethod, ABCMeta
-from typing import Optional, Callable, Any, TypeVar, ParamSpec
+from typing import Optional, Callable, Any, TypeVar
+try:
+    from typing import ParamSpec
+except ImportError:
+    from typing_extensions import ParamSpec
 
 import neo4j
 
