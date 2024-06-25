@@ -68,11 +68,11 @@ def test_retriever_search_docstring_copied(
     assert "query" in signature.parameters
     query_param = signature.parameters["query"]
     assert query_param.default == query_param.empty
-    assert query_param.annotation == str
+    assert query_param.annotation == "str"
     assert "top_k" in signature.parameters
     top_k_param = signature.parameters["top_k"]
     assert top_k_param.default == 10
-    assert top_k_param.annotation == int
+    assert top_k_param.annotation == "int"
 
 
 @patch("neo4j_genai.retrievers.base.Retriever._verify_version")
