@@ -12,8 +12,9 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from __future__ import annotations
 import re
-from typing import Any, Type, Union, List, Dict, Tuple
+from typing import Any, Type, Union
 from collections import Counter
 
 from neo4j_genai.exceptions import FilterValidationError
@@ -90,7 +91,7 @@ class GteOperator(Operator):
 class InOperator(Operator):
     CYPHER_OPERATOR = "IN"
 
-    def cleaned_value(self, value: List[Union[str, int, float]]) -> Any:
+    def cleaned_value(self, value: list[Union[str, int, float]]) -> Any:
         for val in value:
             if not isinstance(val, (str, int, float)):
                 raise ValueError(f"Unsupported type: {type(val)} for value: {val}")
@@ -166,7 +167,7 @@ class ParameterStore:
 
     def __init__(self) -> None:
         self._counter: Counter[str] = Counter()
-        self.params: Dict[str, Any] = {}
+        self.params: dict[str, Any] = {}
 
     def _get_params_name(self) -> str:
         """Find parameter name so that param names are unique.
@@ -297,7 +298,7 @@ def _handle_field_filter(
 
 
 def _construct_metadata_filter(
-    filter: Dict[str, Any], param_store: ParameterStore, node_alias: str
+    filter: dict[str, Any], param_store: ParameterStore, node_alias: str
 ) -> str:
     """Construct a metadata filter. This is a recursive function parsing the filter dict
 
@@ -349,8 +350,8 @@ def _construct_metadata_filter(
 
 
 def get_metadata_filter(
-    filter: Dict[str, Any], node_alias: str = DEFAULT_NODE_ALIAS
-) -> Tuple[str, Dict[str, Any]]:
+    filter: dict[str, Any], node_alias: str = DEFAULT_NODE_ALIAS
+) -> tuple[str, dict[str, Any]]:
     """Construct the cypher filter snippet based on a filter dict
 
     Note: the _construct_metadata_filter function is not thread-safe because

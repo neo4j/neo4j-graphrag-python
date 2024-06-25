@@ -12,6 +12,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from __future__ import annotations
+
 from unittest.mock import patch, MagicMock
 from neo4j import Driver
 from neo4j_genai.schema import (
@@ -25,10 +27,10 @@ from neo4j_genai.schema import (
     EXCLUDED_RELS,
     INDEX_QUERY,
 )
-from typing import Any, List
+from typing import Any
 
 
-def _query_return_value(*args: Any, **kwargs: Any) -> List[Any]:
+def _query_return_value(*args: Any, **kwargs: Any) -> list[Any]:
     query = args[1]
     if NODE_PROPERTIES_QUERY in query:
         return [

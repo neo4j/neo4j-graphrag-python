@@ -12,8 +12,9 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Optional, Any, Dict
+from typing import Optional, Any
 
 from .types import LLMResponse
 
@@ -24,7 +25,7 @@ class LLMInterface(ABC):
     def __init__(
         self,
         model_name: str,
-        model_params: Optional[Dict[str, Any]] = None,
+        model_params: Optional[dict[str, Any]] = None,
         **kwargs: Any,
     ):
         self.model_name = model_name

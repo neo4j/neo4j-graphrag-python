@@ -19,7 +19,7 @@ import pytest
 from neo4j_genai.exceptions import Neo4jVersionError
 from neo4j_genai.retrievers.base import Retriever
 from unittest.mock import MagicMock
-from typing import Union, Any, List
+from typing import Union, Any
 
 
 @pytest.mark.parametrize(
@@ -33,7 +33,7 @@ from typing import Union, Any, List
 )
 def test_retriever_version_support(
     driver: MagicMock,
-    db_version: List[str],
+    db_version: list[str],
     expected_exception: Union[type[ValueError], None],
 ) -> None:
     class MockRetriever(Retriever):

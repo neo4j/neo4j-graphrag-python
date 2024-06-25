@@ -12,12 +12,12 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
-from typing import Optional, List
+from __future__ import annotations
+from typing import Optional
 
 
 def validate_search_query_input(
-    query_text: Optional[str] = None, query_vector: Optional[List[float]] = None
+    query_text: Optional[str] = None, query_vector: Optional[list[float]] = None
 ) -> None:
     if not (bool(query_vector) ^ bool(query_text)):
         raise ValueError("You must provide exactly one of query_vector or query_text.")

@@ -12,11 +12,12 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from __future__ import annotations
 import random
 import string
 import uuid
 from unittest.mock import MagicMock
-from typing import Generator, Any, List
+from typing import Generator, Any
 import pytest
 from neo4j import GraphDatabase, Driver
 from neo4j_genai.embedder import Embedder
@@ -45,12 +46,12 @@ def llm() -> MagicMock:
 
 
 class RandomEmbedder(Embedder):
-    def embed_query(self, text: str) -> List[float]:
+    def embed_query(self, text: str) -> list[float]:
         return [random.random() for _ in range(1536)]
 
 
 class BiologyEmbedder(Embedder):
-    def embed_query(self, text: str) -> List[float]:
+    def embed_query(self, text: str) -> list[float]:
         if text == "biology":
             return EMBEDDING_BIOLOGY
         raise ValueError(f"Unknown embedding text: {text}")

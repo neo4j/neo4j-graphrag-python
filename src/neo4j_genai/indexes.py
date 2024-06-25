@@ -12,9 +12,9 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
+from __future__ import annotations
 import logging
-from typing import Literal, List
+from typing import Literal
 
 import neo4j
 from pydantic import ValidationError
@@ -84,7 +84,7 @@ def create_vector_index(
 
 
 def create_fulltext_index(
-    driver: neo4j.Driver, name: str, label: str, node_properties: List[str]
+    driver: neo4j.Driver, name: str, label: str, node_properties: list[str]
 ) -> None:
     """
     This method constructs a Cypher query and executes it
@@ -99,7 +99,7 @@ def create_fulltext_index(
         driver (neo4j.Driver): Neo4j Python driver instance.
         name (str): The unique name of the index.
         label (str): The node label to be indexed.
-        node_properties (List[str]): The node properties to create the fulltext index on.
+        node_properties (list[str]): The node properties to create the fulltext index on.
 
     Raises:
         ValueError: If validation of the input arguments fail.
@@ -156,7 +156,7 @@ def upsert_vector(
     driver: neo4j.Driver,
     node_id: int,
     embedding_property: str,
-    vector: List[float],
+    vector: list[float],
 ) -> None:
     """
     This method constructs a Cypher query and executes it to upsert (insert or update) a vector property on a specific node.
@@ -165,7 +165,7 @@ def upsert_vector(
         driver (neo4j.Driver): Neo4j Python driver instance.
         node_id (int): The id of the node.
         embedding_property (str): The name of the property to store the vector in.
-        vector (List[float]): The vector to store.
+        vector (list[float]): The vector to store.
 
     Raises:
         Neo4jInsertError: If upserting of the vector fails.

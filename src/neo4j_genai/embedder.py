@@ -12,9 +12,9 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import List
 
 
 class Embedder(ABC):
@@ -24,12 +24,12 @@ class Embedder(ABC):
     """
 
     @abstractmethod
-    def embed_query(self, text: str) -> List[float]:
+    def embed_query(self, text: str) -> list[float]:
         """Embed query text.
 
         Args:
             text (str): Text to convert to vector embedding
 
         Returns:
-            List[float]: A vector embedding.
+            list[float]: A vector embedding.
         """

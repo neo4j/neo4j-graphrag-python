@@ -12,8 +12,9 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from __future__ import annotations
 import logging
-from typing import Optional, Any, Dict
+from typing import Optional, Any
 
 from pydantic import ValidationError
 
@@ -53,7 +54,7 @@ class GraphRAG:
         self,
         query: str,
         examples: str = "",
-        retriever_config: Optional[Dict[str, Any]] = None,
+        retriever_config: Optional[dict[str, Any]] = None,
         return_context: bool = False,
     ) -> RagResultModel:
         """This method performs a full RAG search:
@@ -92,7 +93,7 @@ class GraphRAG:
         logger.debug(f"RAG: retriever_result={retriever_result}")
         logger.debug(f"RAG: prompt={prompt}")
         answer = self.llm.invoke(prompt)
-        result: Dict[str, Any] = {"answer": answer.content}
+        result: dict[str, Any] = {"answer": answer.content}
         if return_context:
             result["retriever_result"] = retriever_result
         return RagResultModel(**result)

@@ -4,7 +4,6 @@ from random import random
 from neo4j_genai.retrievers import HybridRetriever
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.indexes import create_vector_index, create_fulltext_index
-from typing import List
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
@@ -19,7 +18,7 @@ driver = GraphDatabase.driver(URI, auth=AUTH)
 
 # Create Embedder object
 class CustomEmbedder(Embedder):
-    def embed_query(self, text: str) -> List[float]:
+    def embed_query(self, text: str) -> list[float]:
         return [random() for _ in range(DIMENSION)]
 
 

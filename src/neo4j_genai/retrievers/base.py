@@ -12,8 +12,9 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Optional, Callable, Any, List
+from typing import Optional, Callable, Any
 import neo4j
 
 from neo4j_genai.types import RawSearchResult, RetrieverResult, RetrieverResultItem
@@ -128,7 +129,7 @@ class ExternalRetriever(Retriever, ABC):
     @abstractmethod
     def _get_search_results(
         self,
-        query_vector: Optional[List[float]] = None,
+        query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
         **kwargs: Any,
@@ -136,7 +137,7 @@ class ExternalRetriever(Retriever, ABC):
         """
 
         Returns:
-                List[neo4j.Record]: List of Neo4j Records
+                list[neo4j.Record]: List of Neo4j Records
 
         """
         pass

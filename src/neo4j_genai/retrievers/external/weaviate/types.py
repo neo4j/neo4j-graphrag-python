@@ -12,7 +12,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Optional, Any, Callable, List, Dict
+from __future__ import annotations
+from typing import Optional, Any, Callable
 
 import neo4j
 from pydantic import (
@@ -49,14 +50,14 @@ class WeaviateNeo4jRetrieverModel(BaseModel):
     id_property_external: str
     id_property_neo4j: str
     embedder_model: Optional[EmbedderModel]
-    return_properties: Optional[List[str]] = None
+    return_properties: Optional[list[str]] = None
     retrieval_query: Optional[str] = None
     result_formatter: Optional[Callable[[neo4j.Record], str]] = None
 
 
 class WeaviateNeo4jSearchModel(BaseModel):
     top_k: PositiveInt = 5
-    query_vector: Optional[List[float]] = None
+    query_vector: Optional[list[float]] = None
     query_text: Optional[str] = None
     weaviate_filters: Optional[_Filters] = None
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -70,7 +71,7 @@ class WeaviateNeo4jSearchModel(BaseModel):
         return value
 
     @model_validator(mode="before")
-    def check_query(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+    def check_query(cls, values: dict[str, Any]) -> dict[str, Any]:
         """
         Validates that one of either query_vector or query_text is provided exclusively.
         """

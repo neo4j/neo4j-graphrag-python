@@ -14,7 +14,7 @@
 #  limitations under the License.
 
 import os.path
-from typing import Any, List
+from typing import Any
 
 import neo4j
 from neo4j import GraphDatabase
@@ -45,7 +45,7 @@ def populate_dbs(
 
 
 def populate_pinecone(
-    pc_client: Pinecone, pc_question_objs: List[Any], index_name: str
+    pc_client: Pinecone, pc_question_objs: list[Any], index_name: str
 ) -> None:
     index = pc_client.Index(index_name)
     index.upsert(vectors=pc_question_objs)

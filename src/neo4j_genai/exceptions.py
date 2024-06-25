@@ -12,8 +12,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from __future__ import annotations
 from pydantic_core import ErrorDetails
-from typing import List
 
 
 class Neo4jGenAiError(Exception):
@@ -25,13 +25,13 @@ class Neo4jGenAiError(Exception):
 class RetrieverInitializationError(Neo4jGenAiError):
     """Exception raised when initialization of a retriever fails."""
 
-    def __init__(self, errors: List[ErrorDetails]) -> None:
+    def __init__(self, errors: list[ErrorDetails]) -> None:
         super().__init__(f"Initialization failed: {errors}")
         self.errors = errors
 
 
 class RagInitializationError(Neo4jGenAiError):
-    def __init__(self, errors: List[ErrorDetails]):
+    def __init__(self, errors: list[ErrorDetails]):
         super().__init__(f"Initialization failed: {errors}")
         self.errors = errors
 
@@ -51,7 +51,7 @@ class LLMGenerationError(Neo4jGenAiError):
 class SearchValidationError(Neo4jGenAiError):
     """Exception raised for validation errors during search."""
 
-    def __init__(self, errors: List[ErrorDetails]) -> None:
+    def __init__(self, errors: list[ErrorDetails]) -> None:
         super().__init__(f"Search validation failed: {errors}")
         self.errors = errors
 

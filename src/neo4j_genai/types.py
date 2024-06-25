@@ -12,8 +12,9 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from __future__ import annotations
 from enum import Enum
-from typing import Any, Literal, Optional, List, Dict
+from typing import Any, Literal, Optional
 
 import neo4j
 from pydantic import (
@@ -33,12 +34,12 @@ class RawSearchResult(BaseModel):
     method. It needs to be formatted further before being returned as a RetrieverResult.
 
     Attributes:
-        records (List[neo4j.Record]): A list of records from neo4j.
+        records (list[neo4j.Record]): A list of records from neo4j.
         metadata: Record-related metadata, such as score.
     """
 
-    records: List[neo4j.Record]
-    metadata: Optional[Dict[str, Any]] = None
+    records: list[neo4j.Record]
+    metadata: Optional[dict[str, Any]] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -63,7 +64,7 @@ class RetrieverResultItem(BaseModel):
     """
 
     content: Any
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: Optional[dict[str, Any]] = None
 
 
 class RetrieverResult(BaseModel):
@@ -71,13 +72,13 @@ class RetrieverResult(BaseModel):
     Represents a result returned from a retriever.
 
     Attributes:
-        items (List[RetrieverResultItem]): A list of retrieved items.
+        items (list[RetrieverResultItem]): A list of retrieved items.
         metadata: Context-related metadata such as generated Cypher query
          in the Text2CypherRetriever.
     """
 
-    items: List[RetrieverResultItem]
-    metadata: Optional[Dict[str, Any]] = None
+    items: list[RetrieverResultItem]
+    metadata: Optional[dict[str, Any]] = None
 
 
 class Neo4jSchemaModel(BaseModel):
@@ -105,10 +106,10 @@ class VectorIndexModel(IndexModel):
 class FulltextIndexModel(IndexModel):
     name: str
     label: str
-    node_properties: List[str]
+    node_properties: list[str]
 
     @field_validator("node_properties")
-    def check_node_properties_not_empty(cls, v: List[Any]) -> List[Any]:
+    def check_node_properties_not_empty(cls, v: list[Any]) -> list[Any]:
         if len(v) == 0:
             raise ValueError("node_properties cannot be an empty list")
         return v
@@ -117,11 +118,11 @@ class FulltextIndexModel(IndexModel):
 class VectorSearchModel(BaseModel):
     vector_index_name: str
     top_k: PositiveInt = 5
-    query_vector: Optional[List[float]] = None
+    query_vector: Optional[list[float]] = None
     query_text: Optional[str] = None
 
     @model_validator(mode="before")
-    def check_query(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+    def check_query(cls, values: dict[str, Any]) -> dict[str, Any]:
         """
         Validates that one of either query_vector or query_text is provided exclusively.
         """
@@ -131,7 +132,7 @@ class VectorSearchModel(BaseModel):
 
 
 class VectorCypherSearchModel(VectorSearchModel):
-    query_params: Optional[Dict[str, Any]] = None
+    query_params: Optional[dict[str, Any]] = None
 
 
 class HybridSearchModel(BaseModel):
@@ -139,11 +140,11 @@ class HybridSearchModel(BaseModel):
     fulltext_index_name: str
     query_text: str
     top_k: PositiveInt = 5
-    query_vector: Optional[List[float]] = None
+    query_vector: Optional[list[float]] = None
 
 
 class HybridCypherSearchModel(HybridSearchModel):
-    query_params: Optional[Dict[str, Any]] = None
+    query_params: Optional[dict[str, Any]] = None
 
 
 class Text2CypherSearchModel(BaseModel):
@@ -162,7 +163,7 @@ class EmbedderModel(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @field_validator("embedder")
-    def check_embedder(cls, value: Dict[str, Any]) -> Dict[str, Any]:
+    def check_embedder(cls, value: dict[str, Any]) -> dict[str, Any]:
         if not hasattr(value, "embed_query") or not callable(
             getattr(value, "embed_query", None)
         ):
@@ -200,7 +201,7 @@ class VectorRetrieverModel(BaseModel):
     driver_model: Neo4jDriverModel
     index_name: str
     embedder_model: Optional[EmbedderModel] = None
-    return_properties: Optional[List[str]] = None
+    return_properties: Optional[list[str]] = None
 
 
 class VectorCypherRetrieverModel(BaseModel):
@@ -215,7 +216,7 @@ class HybridRetrieverModel(BaseModel):
     vector_index_name: str
     fulltext_index_name: str
     embedder_model: Optional[EmbedderModel] = None
-    return_properties: Optional[List[str]] = None
+    return_properties: Optional[list[str]] = None
 
 
 class HybridCypherRetrieverModel(BaseModel):
@@ -230,4 +231,4 @@ class Text2CypherRetrieverModel(BaseModel):
     driver_model: Neo4jDriverModel
     llm_model: LLMModel
     neo4j_schema_model: Optional[Neo4jSchemaModel] = None
-    examples: Optional[List[str]] = None
+    examples: Optional[list[str]] = None

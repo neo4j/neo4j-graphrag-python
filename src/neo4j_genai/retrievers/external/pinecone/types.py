@@ -12,7 +12,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Any, Callable, Optional, List, Dict
+from __future__ import annotations
+from typing import Any, Callable, Optional
 
 import neo4j
 from pinecone import Pinecone
@@ -26,7 +27,7 @@ from neo4j_genai.types import EmbedderModel, Neo4jDriverModel, VectorSearchModel
 
 
 class PineconeSearchModel(VectorSearchModel):
-    pinecone_filter: Optional[Dict[str, Any]] = None
+    pinecone_filter: Optional[dict[str, Any]] = None
 
 
 class PineconeClientModel(BaseModel):
@@ -46,6 +47,6 @@ class PineconeNeo4jRetrieverModel(BaseModel):
     index_name: str
     id_property_neo4j: str
     embedder_model: Optional[EmbedderModel] = None
-    return_properties: Optional[List[str]] = None
+    return_properties: Optional[list[str]] = None
     retrieval_query: Optional[str] = None
     result_formatter: Optional[Callable[[neo4j.Record], str]] = None

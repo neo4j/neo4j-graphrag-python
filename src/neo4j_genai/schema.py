@@ -12,7 +12,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Any, Optional, List, Dict
+from __future__ import annotations
+from typing import Any, Optional
 from neo4j.exceptions import ClientError
 
 import neo4j
@@ -58,8 +59,8 @@ size * valuesSelectivity as distinctValues
 
 
 def query_database(
-    driver: neo4j.Driver, query: str, params: Optional[Dict[str, Any]] = None
-) -> List[Dict[str, Any]]:
+    driver: neo4j.Driver, query: str, params: Optional[dict[str, Any]] = None
+) -> list[dict[str, Any]]:
     """
     Queries the database.
 
@@ -69,7 +70,7 @@ def query_database(
         params (dict, optional): The query parameters. Defaults to None.
 
     Returns:
-        List[Dict[str, Any]]: the result of the query in json format.
+        list[dict[str, Any]]: the result of the query in json format.
     """
     if params is None:
         params = {}
@@ -91,7 +92,7 @@ def get_schema(
     """
     structured_schema = get_structured_schema(driver)
 
-    def _format_props(props: List[Dict[str, Any]]) -> str:
+    def _format_props(props: list[dict[str, Any]]) -> str:
         return ", ".join([f"{prop['property']}: {prop['type']}" for prop in props])
 
     # Format node properties
@@ -124,7 +125,7 @@ def get_schema(
     )
 
 
-def get_structured_schema(driver: neo4j.Driver) -> Dict[str, Any]:
+def get_structured_schema(driver: neo4j.Driver) -> dict[str, Any]:
     """
     Returns the structured schema of the graph.
 
@@ -132,7 +133,7 @@ def get_structured_schema(driver: neo4j.Driver) -> Dict[str, Any]:
         driver (neo4j.Driver): Neo4j Python driver instance.
 
     Returns:
-        Dict[str, Any]: the graph schema information in a structured format.
+        dict[str, Any]: the graph schema information in a structured format.
     """
     node_properties = [
         data["output"]
