@@ -95,7 +95,7 @@ class Text2CypherRetriever(Retriever):
                 f"Failed to fetch schema for Text2CypherRetriever: {error_message}"
             ) from e
 
-    def _get_search_results(
+    def get_search_results(
         self,
         query_text: str,
     ) -> RawSearchResult:

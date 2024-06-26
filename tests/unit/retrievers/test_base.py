@@ -41,7 +41,7 @@ def test_retriever_version_support(
     expected_exception: Union[type[ValueError], None],
 ) -> None:
     class MockRetriever(Retriever):
-        def _get_search_results(self, *args: Any, **kwargs: Any) -> RawSearchResult:
+        def get_search_results(self, *args: Any, **kwargs: Any) -> RawSearchResult:
             return RawSearchResult(records=[])
 
     driver.execute_query.return_value = [[{"versions": db_version}], None, None]
@@ -58,7 +58,7 @@ def test_retriever_search_docstring_copied(
     driver: MagicMock,
 ) -> None:
     class MockRetriever(Retriever):
-        def _get_search_results(self, query: str, top_k: int = 10) -> RawSearchResult:
+        def get_search_results(self, query: str, top_k: int = 10) -> RawSearchResult:
             """My fabulous docstring"""
             return RawSearchResult(records=[])
 
@@ -81,12 +81,12 @@ def test_retriever_search_docstring_unchanged(
     driver: MagicMock,
 ) -> None:
     class MockRetrieverForNoise(Retriever):
-        def _get_search_results(self, query: str, top_k: int = 10) -> RawSearchResult:
+        def get_search_results(self, query: str, top_k: int = 10) -> RawSearchResult:
             """My fabulous docstring"""
             return RawSearchResult(records=[])
 
     class MockRetriever(Retriever):
-        def _get_search_results(self, *args: Any, **kwargs: Any) -> RawSearchResult:
+        def get_search_results(self, *args: Any, **kwargs: Any) -> RawSearchResult:
             return RawSearchResult(records=[])
 
         def search(self, query: str, top_k: int = 10) -> RetrieverResult:

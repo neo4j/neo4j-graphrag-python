@@ -21,7 +21,7 @@ from typing import Optional, Callable, Any, TypeVar
 try:
     from typing import ParamSpec
 except ImportError:
-    from typing_extensions import ParamSpec
+    from typing_extensions import ParamSpec  # type: ignore
 
 import neo4j
 
@@ -48,7 +48,7 @@ def copy_function(f: Callable[T, P]) -> Callable[T, P]:
 
 class RetrieverMetaclass(ABCMeta):
     """This metaclass is used to copy the docstring from the
-    `_get_search_results` method, instantiated in all subclasses,
+    `get_search_results` method, instantiated in all subclasses,
     to the `search` method in the base class.
     """
 
@@ -58,9 +58,9 @@ class RetrieverMetaclass(ABCMeta):
         if "search" in attrs:
             # search method was explicitly overridden, do nothing
             return type.__new__(meta, name, bases, attrs)
-        # otherwise, we copy the signature and doc of the _get_search_results
+        # otherwise, we copy the signature and doc of the get_search_results
         # method to a copy of the search method
-        get_search_results_method = attrs.get("_get_search_results")
+        get_search_results_method = attrs.get("get_search_results")
         search_method = None
         for b in bases:
             search_method = getattr(b, "search", None)
@@ -133,11 +133,11 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
             raise Exception(f"No index with name {self.index_name} found") from e
 
     def search(self, *args: Any, **kwargs: Any) -> RetrieverResult:
-        """Search method. Call the `_get_search_results` method that returns
+        """Search method. Call the `get_search_results` method that returns
         a list of `neo4j.Record`, and format them using the function returned by
         `get_result_formatter` to return `RetrieverResult`.
         """
-        raw_result = self._get_search_results(*args, **kwargs)
+        raw_result = self.get_search_results(*args, **kwargs)
         formatter = self.get_result_formatter()
         search_items = [formatter(record) for record in raw_result.records]
         metadata = raw_result.metadata or {}
@@ -148,7 +148,7 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
         )
 
     @abstractmethod
-    def _get_search_results(self, *args: Any, **kwargs: Any) -> RawSearchResult:
+    def get_search_results(self, *args: Any, **kwargs: Any) -> RawSearchResult:
         pass
 
     def get_result_formatter(self) -> Callable[[neo4j.Record], RetrieverResultItem]:
@@ -182,7 +182,7 @@ class ExternalRetriever(Retriever, ABC):
         self.id_property_neo4j = id_property_neo4j
 
     @abstractmethod
-    def _get_search_results(
+    def get_search_results(
         self,
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
@@ -195,4 +195,8 @@ class ExternalRetriever(Retriever, ABC):
                 list[neo4j.Record]: List of Neo4j Records
 
         """
+        # NB: even though this method is not intended to be
+        # called from outside the class, we make it public
+        # to make it clearer for the developers that it should
+        # be implemented in child classes.
         pass

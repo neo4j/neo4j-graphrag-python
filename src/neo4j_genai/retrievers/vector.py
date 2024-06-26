@@ -118,7 +118,7 @@ class VectorRetriever(Retriever):
             metadata=metadata,
         )
 
-    def _get_search_results(
+    def get_search_results(
         self,
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
@@ -245,7 +245,7 @@ class VectorCypherRetriever(Retriever):
         self._embedding_dimension = None
         self._fetch_index_infos()
 
-    def _get_search_results(
+    def get_search_results(
         self,
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
