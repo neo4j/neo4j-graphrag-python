@@ -156,6 +156,8 @@ class VectorRetriever(Retriever):
 
         parameters = validated_data.model_dump(exclude_none=True)
         parameters["vector_index_name"] = self.index_name
+        if filters:
+            del parameters["filters"]
 
         if query_text:
             if not self.embedder:
@@ -287,6 +289,8 @@ class VectorCypherRetriever(Retriever):
 
         parameters = validated_data.model_dump(exclude_none=True)
         parameters["vector_index_name"] = self.index_name
+        if filters:
+            del parameters["filters"]
 
         if query_text:
             if not self.embedder:
