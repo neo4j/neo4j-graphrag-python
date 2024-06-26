@@ -14,20 +14,18 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Callable, Optional
+from typing import Callable, Optional
 
 import neo4j
 from pydantic import (
     BaseModel,
     ConfigDict,
     field_validator,
-    model_validator,
 )
 from weaviate.client import WeaviateClient
 from weaviate.collections.classes.filters import _Filters
 
 from neo4j_genai.types import EmbedderModel, Neo4jDriverModel, VectorSearchModel
-from neo4j_genai.utils import validate_search_query_input
 
 
 class WeaviateModel(BaseModel):
