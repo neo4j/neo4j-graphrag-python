@@ -14,7 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Optional, Union
 
 import neo4j
 from pinecone import Pinecone
@@ -29,7 +29,7 @@ from neo4j_genai.types import EmbedderModel, Neo4jDriverModel, VectorSearchModel
 
 class PineconeSearchModel(VectorSearchModel):
     pinecone_filter: Optional[
-        Dict[str, Union[str, float, int, bool, List[Any], Dict[Any, Any]]]
+        dict[str, Union[str, float, int, bool, list[Any], dict[Any, Any]]]
     ] = None
 
 
