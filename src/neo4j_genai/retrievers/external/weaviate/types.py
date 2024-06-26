@@ -66,12 +66,3 @@ class WeaviateNeo4jSearchModel(VectorSearchModel):
                 "Provided filters need to be of type weaviate.collections.classes.filters._Filters"
             )
         return value
-
-    @model_validator(mode="before")
-    def check_query(cls, values: dict[str, Any]) -> dict[str, Any]:
-        """
-        Validates that one of either query_vector or query_text is provided exclusively.
-        """
-        query_vector, query_text = values.get("query_vector"), values.get("query_text")
-        validate_search_query_input(query_text, query_vector)
-        return values
