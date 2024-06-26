@@ -18,27 +18,27 @@ VectorRetriever
 ===============
 
 .. autoclass:: neo4j_genai.retrievers.vector.VectorRetriever
-    :members:
+    :members: search
 
 VectorCypherRetriever
 =====================
 
 .. autoclass:: neo4j_genai.retrievers.vector.VectorCypherRetriever
-   :members:
+    :members: search
 
 
 HybridRetriever
 ===============
 
 .. autoclass:: neo4j_genai.retrievers.hybrid.HybridRetriever
-   :members:
+    :members: search
 
 
 HybridCypherRetriever
 =====================
 
 .. autoclass:: neo4j_genai.retrievers.hybrid.HybridCypherRetriever
-   :members:
+    :members: search
 
 
 
@@ -53,14 +53,14 @@ WeaviateNeo4jRetriever
 ======================
 
 .. autoclass:: neo4j_genai.retrievers.external.weaviate.weaviate.WeaviateNeo4jRetriever
-   :members:
+    :members: search
 
 
 PineconeNeo4jRetriever
 ======================
 
 .. autoclass:: neo4j_genai.retrievers.external.pinecone.pinecone.PineconeNeo4jRetriever
-   :members:
+    :members: search
 
 
 ******

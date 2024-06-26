@@ -14,12 +14,16 @@
 #  limitations under the License.
 from __future__ import annotations  # Reminder: May be removed after Python 3.9 is EOL.
 
+import inspect
+
 import pytest
+
+from typing import Union, Any
+from unittest.mock import MagicMock, patch
 
 from neo4j_genai.exceptions import Neo4jVersionError
 from neo4j_genai.retrievers.base import Retriever
-from unittest.mock import MagicMock
-from typing import Union, Any
+from neo4j_genai.types import RawSearchResult, RetrieverResult
 
 
 @pytest.mark.parametrize(
@@ -37,8 +41,8 @@ def test_retriever_version_support(
     expected_exception: Union[type[ValueError], None],
 ) -> None:
     class MockRetriever(Retriever):
-        def _get_search_results(self, *args: Any, **kwargs: Any) -> None:  # type: ignore
-            pass
+        def get_search_results(self, *args: Any, **kwargs: Any) -> RawSearchResult:
+            return RawSearchResult(records=[])
 
     driver.execute_query.return_value = [[{"versions": db_version}], None, None]
     if expected_exception:
@@ -46,3 +50,53 @@ def test_retriever_version_support(
             MockRetriever(driver=driver)
     else:
         MockRetriever(driver=driver)
+
+
+@patch("neo4j_genai.retrievers.base.Retriever._verify_version")
+def test_retriever_search_docstring_copied(
+    _verify_version_mock: MagicMock,
+    driver: MagicMock,
+) -> None:
+    class MockRetriever(Retriever):
+        def get_search_results(self, query: str, top_k: int = 10) -> RawSearchResult:
+            """My fabulous docstring"""
+            return RawSearchResult(records=[])
+
+    retriever = MockRetriever(driver=driver)
+    assert retriever.search.__doc__ == "My fabulous docstring"
+    signature = inspect.signature(retriever.search)
+    assert "query" in signature.parameters
+    query_param = signature.parameters["query"]
+    assert query_param.default == query_param.empty
+    assert query_param.annotation == "str"
+    assert "top_k" in signature.parameters
+    top_k_param = signature.parameters["top_k"]
+    assert top_k_param.default == 10
+    assert top_k_param.annotation == "int"
+
+
+@patch("neo4j_genai.retrievers.base.Retriever._verify_version")
+def test_retriever_search_docstring_unchanged(
+    _verify_version_mock: MagicMock,
+    driver: MagicMock,
+) -> None:
+    class MockRetrieverForNoise(Retriever):
+        def get_search_results(self, query: str, top_k: int = 10) -> RawSearchResult:
+            """My fabulous docstring"""
+            return RawSearchResult(records=[])
+
+    class MockRetriever(Retriever):
+        def get_search_results(self, *args: Any, **kwargs: Any) -> RawSearchResult:
+            return RawSearchResult(records=[])
+
+        def search(self, query: str, top_k: int = 10) -> RetrieverResult:
+            """My fabulous docstring that I do not want to be updated"""
+            return RetrieverResult(items=[])
+
+    assert MockRetrieverForNoise.search is not MockRetriever.search
+
+    retriever = MockRetriever(driver=driver)
+    assert (
+        retriever.search.__doc__
+        == "My fabulous docstring that I do not want to be updated"
+    )

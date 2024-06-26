@@ -13,15 +13,66 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
-from abc import ABC, abstractmethod
-from typing import Optional, Callable, Any
+import types
+import inspect
+from abc import ABC, abstractmethod, ABCMeta
+from typing import Optional, Callable, Any, TypeVar
+from typing_extensions import ParamSpec
+
 import neo4j
 
 from neo4j_genai.types import RawSearchResult, RetrieverResult, RetrieverResultItem
 from neo4j_genai.exceptions import Neo4jVersionError
 
+T = ParamSpec("T")
+P = TypeVar("P")
 
-class Retriever(ABC):
+
+def copy_function(f: Callable[T, P]) -> Callable[T, P]:
+    """Based on https://stackoverflow.com/a/30714299"""
+    g = types.FunctionType(
+        f.__code__,
+        f.__globals__,
+        name=f.__name__,
+        argdefs=f.__defaults__,
+        closure=f.__closure__,
+    )
+    # in case f was given attrs (note this dict is a shallow copy):
+    g.__dict__.update(f.__dict__)
+    return g
+
+
+class RetrieverMetaclass(ABCMeta):
+    """This metaclass is used to copy the docstring from the
+    `get_search_results` method, instantiated in all subclasses,
+    to the `search` method in the base class.
+    """
+
+    def __new__(
+        meta, name: str, bases: tuple[type, ...], attrs: dict[str, Any]
+    ) -> type:
+        if "search" in attrs:
+            # search method was explicitly overridden, do nothing
+            return type.__new__(meta, name, bases, attrs)
+        # otherwise, we copy the signature and doc of the get_search_results
+        # method to a copy of the search method
+        get_search_results_method = attrs.get("get_search_results")
+        search_method = None
+        for b in bases:
+            search_method = getattr(b, "search", None)
+            if search_method is not None:
+                break
+        if search_method and get_search_results_method:
+            new_search_method = copy_function(search_method)
+            new_search_method.__doc__ = get_search_results_method.__doc__
+            new_search_method.__signature__ = inspect.signature(  # type: ignore
+                get_search_results_method
+            )
+            attrs["search"] = new_search_method
+        return type.__new__(meta, name, bases, attrs)
+
+
+class Retriever(ABC, metaclass=RetrieverMetaclass):
     """
     Abstract class for Neo4j retrievers
     """
@@ -78,11 +129,11 @@ class Retriever(ABC):
             raise Exception(f"No index with name {self.index_name} found") from e
 
     def search(self, *args: Any, **kwargs: Any) -> RetrieverResult:
+        """Search method. Call the `get_search_results` method that returns
+        a list of `neo4j.Record`, and format them using the function returned by
+        `get_result_formatter` to return `RetrieverResult`.
         """
-        Search method. Call the get_search_result method that returns
-        a list of neo4j.Record, and format them to return RetrieverResult.
-        """
-        raw_result = self._get_search_results(*args, **kwargs)
+        raw_result = self.get_search_results(*args, **kwargs)
         formatter = self.get_result_formatter()
         search_items = [formatter(record) for record in raw_result.records]
         metadata = raw_result.metadata or {}
@@ -93,7 +144,20 @@ class Retriever(ABC):
         )
 
     @abstractmethod
-    def _get_search_results(self, *args: Any, **kwargs: Any) -> RawSearchResult:
+    def get_search_results(self, *args: Any, **kwargs: Any) -> RawSearchResult:
+        """This method must be implemented in each child class. It will
+        receive the same parameters provided to the public interface via
+        the `search` method, after validation. It returns a `RawSearchResult`
+        object which comprises a list of `neo4j.Record` objects and an optional
+        `metadata` dictionary that can contain retriever-level information.
+
+        Note that, even though this method is not intended to be called from
+        outside the class, we make it public to make it clearer for the developers
+        that it should be implemented in child classes.
+
+        Returns:
+            RawSearchResult: List of Neo4j Records and optional metadata dict
+        """
         pass
 
     def get_result_formatter(self) -> Callable[[neo4j.Record], RetrieverResultItem]:
@@ -127,7 +191,7 @@ class ExternalRetriever(Retriever, ABC):
         self.id_property_neo4j = id_property_neo4j
 
     @abstractmethod
-    def _get_search_results(
+    def get_search_results(
         self,
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
@@ -137,7 +201,7 @@ class ExternalRetriever(Retriever, ABC):
         """
 
         Returns:
-                list[neo4j.Record]: List of Neo4j Records
+                RawSearchResult: List of Neo4j Records and optional metadata dict
 
         """
         pass

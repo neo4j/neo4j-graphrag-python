@@ -115,7 +115,7 @@ class HybridRetriever(Retriever):
             metadata=metadata,
         )
 
-    def _get_search_results(
+    def get_search_results(
         self,
         query_text: str,
         query_vector: Optional[list[float]] = None,
@@ -243,7 +243,7 @@ class HybridCypherRetriever(Retriever):
         )
         self.result_formatter = result_formatter
 
-    def _get_search_results(
+    def get_search_results(
         self,
         query_text: str,
         query_vector: Optional[list[float]] = None,
