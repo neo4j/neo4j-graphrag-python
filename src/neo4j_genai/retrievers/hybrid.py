@@ -104,7 +104,7 @@ class HybridRetriever(Retriever):
 
     def default_record_formatter(self, record: neo4j.Record) -> RetrieverResultItem:
         """
-        Best effort to guess the node to text method. Inherited classes
+        Best effort to guess the node-to-text method. Inherited classes
         can override this method to implement custom text formatting.
         """
         metadata = {
@@ -132,6 +132,8 @@ class HybridRetriever(Retriever):
         - `Query a vector index <https://neo4j.com/docs/cypher-manual/current/indexes-for-vector-search/#indexes-vector-query>`_
         - `db.index.vector.queryNodes() <https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_queryNodes>`_
         - `db.index.fulltext.queryNodes() <https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_fulltext_querynodes>`_
+
+        To query by text, an embedder must be provided when the class is instantiated.
 
         Args:
             query_text (str): The text to get the closest neighbors of.
@@ -184,6 +186,8 @@ class HybridCypherRetriever(Retriever):
     This retriever builds on HybridRetriever.
     If an embedder is provided, it needs to have the required Embedder type.
 
+    Note: `node` is a variable from the base query that can be used in `retrieval_query` as seen in the example below.
+
     Example:
 
     .. code-block:: python
@@ -198,6 +202,8 @@ class HybridCypherRetriever(Retriever):
           driver, "vector-index-name", "fulltext-index-name", retrieval_query, custom_embedder
       )
       retriever.search(query_text="Find me a book about Fremen", top_k=5)
+
+    To query by text, an embedder must be provided when the class is instantiated.
 
     Args:
         driver (neo4j.Driver): The Neo4j Python driver.

@@ -65,6 +65,21 @@ PineconeNeo4jRetriever
     :members: search
 
 
+********************
+Database Interaction
+********************
+
+.. _create-vector-index:
+
+.. autofunction:: neo4j_genai.indexes.create_vector_index
+
+.. autofunction:: neo4j_genai.indexes.create_fulltext_index
+
+.. autofunction:: neo4j_genai.indexes.drop_index_if_exists
+
+.. autofunction:: neo4j_genai.indexes.upsert_vector
+
+
 ******
 Errors
 ******

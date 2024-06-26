@@ -118,7 +118,7 @@ embedder = OpenAIEmbeddings(model="text-embedding-3-large")
 retriever = VectorRetriever(driver, INDEX_NAME, embedder)
 
 # Initialize the LLM
-# Note: the OPENAI_API_KEY must be in the env vars
+# Note: An OPENAI_API_KEY environment variable is required here
 llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0})
 
 # Initialize the RAG pipeline

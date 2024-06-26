@@ -60,6 +60,8 @@ Creating a vector index
 
 When creating a vector index, make sure you match the number of dimensions in the index with the number of dimensions the embeddings have.
 
+See :ref:`the API documentation<create-vector-index>` for more details.
+
 .. code:: python
 
     from neo4j import GraphDatabase
@@ -85,7 +87,7 @@ When creating a vector index, make sure you match the number of dimensions in th
 
 .. note::
 
-    Assumption: Neo4j running
+    Assumed Neo4j is running
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Populating the Neo4j Vector Index
@@ -123,7 +125,7 @@ See below for writing data using `the Neo4j Python driver <https://github.com/ne
 
 .. note::
 
-    Assumption: Neo4j running with a defined vector index
+    Assumed Neo4j is running with a defined vector index
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Performing a similarity search
@@ -146,6 +148,7 @@ While the library has more retrievers than shown here, the following examples sh
     driver = GraphDatabase.driver(URI, auth=AUTH)
 
     # Create Embedder object
+    # Note: An OPENAI_API_KEY environment variable is required here
     embedder = OpenAIEmbeddings(model="text-embedding-3-large")
 
     # Initialize the retriever
@@ -157,7 +160,7 @@ While the library has more retrievers than shown here, the following examples sh
 
 .. note::
 
-    Assumption: Neo4j running with populated vector index in place.
+    Assumed Neo4j is running with populated vector index in place.
 
 ***********
 Limitations

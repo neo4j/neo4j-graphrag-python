@@ -104,7 +104,7 @@ class VectorRetriever(Retriever):
 
     def default_record_formatter(self, record: neo4j.Record) -> RetrieverResultItem:
         """
-        Best effort to guess the node to text method. Inherited classes
+        Best effort to guess the node-to-text method. Inherited classes
         can override this method to implement custom text formatting.
         """
         metadata = {
@@ -130,6 +130,8 @@ class VectorRetriever(Retriever):
 
         - `Query a vector index <https://neo4j.com/docs/cypher-manual/current/indexes-for-vector-search/#indexes-vector-query>`_
         - `db.index.vector.queryNodes() <https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_queryNodes>`_
+
+        To query by text, an embedder must be provided when the class is instantiated. The embedder is not required if `query_vector` is passed.
 
         Args:
             query_vector (Optional[list[float]]): The vector embeddings to get the closest neighbors of. Defaults to None.
@@ -190,6 +192,8 @@ class VectorCypherRetriever(Retriever):
     Provides retrieval method using vector similarity augmented by a Cypher query.
     This retriever builds on VectorRetriever.
     If an embedder is provided, it needs to have the required Embedder type.
+
+    Note: `node` is a variable from the base query that can be used in `retrieval_query` as seen in the example below.
 
     Example:
 
@@ -261,6 +265,8 @@ class VectorCypherRetriever(Retriever):
 
         - `Query a vector index <https://neo4j.com/docs/cypher-manual/current/indexes-for-vector-search/#indexes-vector-query>`_
         - `db.index.vector.queryNodes() <https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_queryNodes>`_
+
+        To query by text, an embedder must be provided when the class is instantiated.  The embedder is not required if `query_vector` is passed.
 
         Args:
             query_vector (Optional[list[float]]): The vector embeddings to get the closest neighbors of. Defaults to None.
