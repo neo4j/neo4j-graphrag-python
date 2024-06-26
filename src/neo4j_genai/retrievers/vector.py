@@ -35,6 +35,7 @@ from neo4j_genai.types import (
     RetrieverResultItem,
     SearchType,
     VectorCypherRetrieverModel,
+    VectorCypherSearchModel,
     VectorRetrieverModel,
     VectorSearchModel,
 )
@@ -274,7 +275,7 @@ class VectorCypherRetriever(Retriever):
             RawSearchResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
         """
         try:
-            validated_data = VectorSearchModel(
+            validated_data = VectorCypherSearchModel(
                 query_vector=query_vector,
                 query_text=query_text,
                 top_k=top_k,
