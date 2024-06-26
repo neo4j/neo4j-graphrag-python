@@ -17,11 +17,7 @@ import types
 import inspect
 from abc import ABC, abstractmethod, ABCMeta
 from typing import Optional, Callable, Any, TypeVar
-
-try:
-    from typing import ParamSpec
-except ImportError:
-    from typing_extensions import ParamSpec  # type: ignore
+from typing_extensions import ParamSpec
 
 import neo4j
 
@@ -149,6 +145,19 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
 
     @abstractmethod
     def get_search_results(self, *args: Any, **kwargs: Any) -> RawSearchResult:
+        """This method must be implemented in each child class. It will
+        receive the same parameters provided to the public interface via
+        the `search` method, after validation. It returns a `RawSearchResult`
+        object which comprises a list of `neo4j.Record` objects and an optional
+        `metadata` dictionary that can contain retriever-level information.
+
+        Note that, even though this method is not intended to be called from
+        outside the class, we make it public to make it clearer for the developers
+        that it should be implemented in child classes.
+
+        Returns:
+            RawSearchResult: List of Neo4j Records and optional metadata dict
+        """
         pass
 
     def get_result_formatter(self) -> Callable[[neo4j.Record], RetrieverResultItem]:
@@ -192,11 +201,7 @@ class ExternalRetriever(Retriever, ABC):
         """
 
         Returns:
-                list[neo4j.Record]: List of Neo4j Records
+                RawSearchResult: List of Neo4j Records and optional metadata dict
 
         """
-        # NB: even though this method is not intended to be
-        # called from outside the class, we make it public
-        # to make it clearer for the developers that it should
-        # be implemented in child classes.
         pass
