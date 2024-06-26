@@ -10,11 +10,14 @@
 -   Introduced the GraphRAG object, enabling a full RAG (Retrieval-Augmented Generation) pipeline with context retrieval, prompt formatting, and answer generation.
 -   Added PromptTemplate and RagTemplate for customizable prompt generation.
 -   Added LLMInterface with implementation for OpenAI LLM.
+-   Updated project configuration to support multiple Python versions (3.8 to 3.12) in CI workflows.
+-   Improved developer experience by copying the docstring from the `Retriever.get_search_results` method to the `Retriever.search` method
 
 ### Changed
 -   Refactored import paths for retrievers to neo4j_genai.retrievers.
 -   Implemented exception chaining for all re-raised exceptions to improve stack trace readability.
 -   Made error messages in `index.py` more consistent.
+-   Renamed `Retriever._get_search_results` to `Retriever.get_search_results`
 
 ## 0.2.0
 

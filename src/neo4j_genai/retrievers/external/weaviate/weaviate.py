@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
+from __future__ import annotations
 import logging
 from typing import Any, Callable, Optional
 
@@ -117,7 +117,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         self.retrieval_query = validated_data.retrieval_query
         self.result_formatter = validated_data.result_formatter
 
-    def _get_search_results(
+    def get_search_results(
         self,
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
@@ -171,7 +171,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
                 query_text=query_text,
                 weaviate_filters=weaviate_filters,
             )
-            query_text = validated_data.query_text
+            query_text = validated_data.query_text or ""
             query_vector = validated_data.query_vector
             top_k = validated_data.top_k
             weaviate_filters = validated_data.weaviate_filters

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from neo4j import GraphDatabase
 from neo4j_genai.retrievers import VectorCypherRetriever
 

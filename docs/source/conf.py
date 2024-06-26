@@ -97,7 +97,7 @@ autodoc_type_aliases = {
     "te": typing,
     # Type alias that's only defined and imported if `typing.TYPE_CHECKING`
     # is `True`.
-    "_TAuth": "typing.Tuple[typing.Any, typing.Any] | Auth | None",
+    "_TAuth": "typing.tuple[typing.Any, typing.Any] | Auth | None",
 }
 
 # Theme options are theme-specific and customize the look and feel of a theme

@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
+from __future__ import annotations
 import hashlib
 import json
 import os.path
@@ -478,7 +478,7 @@ def build_data_objects(
     with open(file_name, "r") as f:
         data = json.load(f)
 
-    question_objs = []
+    question_objs = []  # type: list[Any]
     neo4j_objs = {"nodes": [], "relationships": []}  # type: dict[str, list[Any]]
 
     # only unique categories and ids for them

@@ -12,6 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from __future__ import annotations
 from typing import Optional, Any, Callable
 
 import neo4j
@@ -117,7 +118,7 @@ class VectorRetriever(Retriever):
             metadata=metadata,
         )
 
-    def _get_search_results(
+    def get_search_results(
         self,
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
@@ -244,7 +245,7 @@ class VectorCypherRetriever(Retriever):
         self._embedding_dimension = None
         self._fetch_index_infos()
 
-    def _get_search_results(
+    def get_search_results(
         self,
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
