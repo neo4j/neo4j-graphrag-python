@@ -3,6 +3,8 @@
 API Documentation
 #################
 
+.. _retrievers-section:
+
 **********
 Retrievers
 **********

@@ -11,6 +11,8 @@ source information from external data stores to augment generated responses.
 
 This package enables Python developers to perform RAG using Neo4j.
 
+For more information about different retrieval strategies, see `the API documentation <api.html#retrievers-section>`_.
+
 
 ************************************
 Overview
@@ -27,7 +29,7 @@ Overview
     URI = "neo4j://localhost:7687"
     AUTH = ("neo4j", "password")
 
-    INDEX_NAME = "index-name"
+    INDEX_NAME = "vector-index-name"
 
     # Connect to Neo4j database
     driver = GraphDatabase.driver(URI, auth=AUTH)
