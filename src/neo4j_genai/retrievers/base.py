@@ -190,11 +190,16 @@ class ExternalRetriever(Retriever, ABC):
     VERIFY_NEO4J_VERSION = False
 
     def __init__(
-        self, driver: neo4j.Driver, id_property_external: str, id_property_neo4j: str
+        self,
+        driver: neo4j.Driver,
+        id_property_external: str,
+        id_property_neo4j: str,
+        neo4j_database: Optional[str] = None,
     ):
         super().__init__(driver)
         self.id_property_external = id_property_external
         self.id_property_neo4j = id_property_neo4j
+        self.neo4j_database = neo4j_database
 
     @abstractmethod
     def get_search_results(
