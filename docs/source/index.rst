@@ -16,7 +16,7 @@ fast to ship new features and high performing patterns and methods.
 Topics
 ******
 
-+ :ref:`rag-documentation`
++ :ref:`user-guide`
 + :ref:`api-documentation`
 + :ref:`types-documentation`
 
@@ -25,7 +25,7 @@ Topics
     :caption: Contents:
     :hidden:
 
-    rag.rst
+    user_guide.rst
     api.rst
     types.rst
 
