@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Literal, Optional
+from typing import Any, Callable, Literal, Optional
 
 import neo4j
 from pydantic import (
@@ -201,6 +201,7 @@ class VectorRetrieverModel(BaseModel):
     index_name: str
     embedder_model: Optional[EmbedderModel] = None
     return_properties: Optional[list[str]] = None
+    result_formatter: Optional[Callable[[neo4j.Record], RetrieverResultItem]] = None
     neo4j_database: Optional[str] = None
 
 
@@ -209,6 +210,7 @@ class VectorCypherRetrieverModel(BaseModel):
     index_name: str
     retrieval_query: str
     embedder_model: Optional[EmbedderModel] = None
+    result_formatter: Optional[Callable[[neo4j.Record], RetrieverResultItem]] = None
     neo4j_database: Optional[str] = None
 
 
@@ -218,6 +220,7 @@ class HybridRetrieverModel(BaseModel):
     fulltext_index_name: str
     embedder_model: Optional[EmbedderModel] = None
     return_properties: Optional[list[str]] = None
+    result_formatter: Optional[Callable[[neo4j.Record], RetrieverResultItem]] = None
     neo4j_database: Optional[str] = None
 
 
@@ -227,6 +230,7 @@ class HybridCypherRetrieverModel(BaseModel):
     fulltext_index_name: str
     retrieval_query: str
     embedder_model: Optional[EmbedderModel] = None
+    result_formatter: Optional[Callable[[neo4j.Record], RetrieverResultItem]] = None
     neo4j_database: Optional[str] = None
 
 
@@ -235,3 +239,4 @@ class Text2CypherRetrieverModel(BaseModel):
     llm_model: LLMModel
     neo4j_schema_model: Optional[Neo4jSchemaModel] = None
     examples: Optional[list[str]] = None
+    result_formatter: Optional[Callable[[neo4j.Record], RetrieverResultItem]] = None

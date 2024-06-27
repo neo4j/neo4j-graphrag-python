@@ -24,7 +24,12 @@ from pydantic import (
     field_validator,
 )
 
-from neo4j_genai.types import EmbedderModel, Neo4jDriverModel, VectorSearchModel
+from neo4j_genai.types import (
+    EmbedderModel,
+    Neo4jDriverModel,
+    RetrieverResultItem,
+    VectorSearchModel,
+)
 
 
 class PineconeSearchModel(VectorSearchModel):
@@ -52,5 +57,5 @@ class PineconeNeo4jRetrieverModel(BaseModel):
     embedder_model: Optional[EmbedderModel] = None
     return_properties: Optional[list[str]] = None
     retrieval_query: Optional[str] = None
-    result_formatter: Optional[Callable[[neo4j.Record], str]] = None
+    result_formatter: Optional[Callable[[neo4j.Record], RetrieverResultItem]] = None
     neo4j_database: Optional[str] = None

@@ -70,7 +70,7 @@ class HybridRetriever(Retriever):
         embedder (Optional[Embedder]): Embedder object to embed query text.
         return_properties (Optional[list[str]]): List of node properties to return.
         neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
-
+        result_formatter (Optional[Callable[[neo4j.Record], RetrieverResultItem]]): Provided custom function to transform a neo4j.Record to a RetrieverResultItem.
     """
 
     def __init__(
@@ -80,6 +80,9 @@ class HybridRetriever(Retriever):
         fulltext_index_name: str,
         embedder: Optional[Embedder] = None,
         return_properties: Optional[list[str]] = None,
+        result_formatter: Optional[
+            Callable[[neo4j.Record], RetrieverResultItem]
+        ] = None,
         neo4j_database: Optional[str] = None,
     ) -> None:
         try:
@@ -91,6 +94,7 @@ class HybridRetriever(Retriever):
                 fulltext_index_name=fulltext_index_name,
                 embedder_model=embedder_model,
                 return_properties=return_properties,
+                result_formatter=result_formatter,
                 neo4j_database=neo4j_database,
             )
         except ValidationError as e:
@@ -107,6 +111,7 @@ class HybridRetriever(Retriever):
             if validated_data.embedder_model
             else None
         )
+        self.result_formatter = validated_data.result_formatter
 
     def default_record_formatter(self, record: neo4j.Record) -> RetrieverResultItem:
         """
@@ -219,7 +224,7 @@ class HybridCypherRetriever(Retriever):
         fulltext_index_name (str): Fulltext index name.
         retrieval_query (str): Cypher query that gets appended.
         embedder (Optional[Embedder]): Embedder object to embed query text.
-        result_formatter (Optional[Callable[[Any], Any]]): Provided custom function to transform a neo4j.Record to a RetrieverResultItem.
+        result_formatter (Optional[Callable[[neo4j.Record], RetrieverResultItem]]): Provided custom function to transform a neo4j.Record to a RetrieverResultItem.
         neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
     Raises:
@@ -233,7 +238,9 @@ class HybridCypherRetriever(Retriever):
         fulltext_index_name: str,
         retrieval_query: str,
         embedder: Optional[Embedder] = None,
-        result_formatter: Optional[Callable[[Any], Any]] = None,
+        result_formatter: Optional[
+            Callable[[neo4j.Record], RetrieverResultItem]
+        ] = None,
         neo4j_database: Optional[str] = None,
     ) -> None:
         try:
@@ -245,7 +252,6 @@ class HybridCypherRetriever(Retriever):
                 fulltext_index_name=fulltext_index_name,
                 retrieval_query=retrieval_query,
                 embedder_model=embedder_model,
-                neo4j_database=neo4j_database,
             )
         except ValidationError as e:
             raise RetrieverInitializationError(e.errors()) from e
@@ -261,7 +267,7 @@ class HybridCypherRetriever(Retriever):
             if validated_data.embedder_model
             else None
         )
-        self.result_formatter = result_formatter
+        self.result_formatter = validated_data.result_formatter
 
     def get_search_results(
         self,

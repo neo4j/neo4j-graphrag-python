@@ -65,6 +65,7 @@ class VectorRetriever(Retriever):
         index_name (str): Vector index name.
         embedder (Optional[Embedder]): Embedder object to embed query text.
         return_properties (Optional[list[str]]): List of node properties to return.
+        result_formatter (Optional[Callable[[neo4j.Record], RetrieverResultItem]]): Provided custom function to transform a neo4j.Record to a RetrieverResultItem.
         neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
     Raises:
@@ -77,6 +78,9 @@ class VectorRetriever(Retriever):
         index_name: str,
         embedder: Optional[Embedder] = None,
         return_properties: Optional[list[str]] = None,
+        result_formatter: Optional[
+            Callable[[neo4j.Record], RetrieverResultItem]
+        ] = None,
         neo4j_database: Optional[str] = None,
     ) -> None:
         try:
@@ -87,6 +91,7 @@ class VectorRetriever(Retriever):
                 index_name=index_name,
                 embedder_model=embedder_model,
                 return_properties=return_properties,
+                result_formatter=result_formatter,
                 neo4j_database=neo4j_database,
             )
         except ValidationError as e:
@@ -102,6 +107,7 @@ class VectorRetriever(Retriever):
             if validated_data.embedder_model
             else None
         )
+        self.result_formatter = validated_data.result_formatter
         self._node_label = None
         self._embedding_node_property = None
         self._embedding_dimension = None
@@ -222,7 +228,7 @@ class VectorCypherRetriever(Retriever):
         index_name (str): Vector index name.
         retrieval_query (str): Cypher query that gets appended.
         embedder (Optional[Embedder]): Embedder object to embed query text.
-        result_formatter (Optional[Callable[[Any], Any]]): Provided custom function to transform a neo4j.Record to a RetrieverResultItem.
+        result_formatter (Optional[Callable[[neo4j.Record], RetrieverResultItem]]): Provided custom function to transform a neo4j.Record to a RetrieverResultItem.
         neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
     """
@@ -233,7 +239,9 @@ class VectorCypherRetriever(Retriever):
         index_name: str,
         retrieval_query: str,
         embedder: Optional[Embedder] = None,
-        result_formatter: Optional[Callable[[Any], Any]] = None,
+        result_formatter: Optional[
+            Callable[[neo4j.Record], RetrieverResultItem]
+        ] = None,
         neo4j_database: Optional[str] = None,
     ) -> None:
         try:
@@ -244,6 +252,7 @@ class VectorCypherRetriever(Retriever):
                 index_name=index_name,
                 retrieval_query=retrieval_query,
                 embedder_model=embedder_model,
+                result_formatter=result_formatter,
                 neo4j_database=neo4j_database,
             )
         except ValidationError as e:
@@ -259,7 +268,7 @@ class VectorCypherRetriever(Retriever):
             if validated_data.embedder_model
             else None
         )
-        self.result_formatter = result_formatter
+        self.result_formatter = validated_data.result_formatter
         self._node_label = None
         self._node_embedding_property = None
         self._embedding_dimension = None
