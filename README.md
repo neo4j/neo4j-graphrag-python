@@ -8,6 +8,14 @@ fast to ship new features and high performing patterns and methods.
 
 Documentation: https://neo4j.com/docs/neo4j-genai-python/
 
+Python versions supported:
+
+* Python 3.12 supported.
+* Python 3.11 supported.
+* Python 3.10 supported.
+* Python 3.9 supported.
+* Python 3.8 supported.
+
 # Usage
 
 ## Installation

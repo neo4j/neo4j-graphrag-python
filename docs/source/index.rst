@@ -12,6 +12,20 @@ The purpose of this package is to provide a first party package to developers,
 where Neo4j can guarantee long term commitment and maintenance as well as being
 fast to ship new features and high performing patterns and methods.
 
+Neo4j versions supported:
+
+* Neo4j >=5.18.1
+* Neo4j Aura >=5.18.0
+
+Python versions supported:
+
+* Python 3.12
+* Python 3.11
+* Python 3.10
+* Python 3.9
+* Python 3.8
+
+
 ******
 Topics
 ******
