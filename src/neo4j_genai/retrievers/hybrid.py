@@ -229,6 +229,7 @@ class HybridCypherRetriever(Retriever):
         retrieval_query: str,
         embedder: Optional[Embedder] = None,
         result_formatter: Optional[Callable[[Any], Any]] = None,
+        database: Optional[str] = None,
     ) -> None:
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -239,11 +240,12 @@ class HybridCypherRetriever(Retriever):
                 fulltext_index_name=fulltext_index_name,
                 retrieval_query=retrieval_query,
                 embedder_model=embedder_model,
+                database=database,
             )
         except ValidationError as e:
             raise RetrieverInitializationError(e.errors()) from e
 
-        super().__init__(validated_data.driver_model.driver)
+        super().__init__(validated_data.driver_model.driver, validated_data.database)
         self.vector_index_name = validated_data.vector_index_name
         self.fulltext_index_name = validated_data.fulltext_index_name
         self.retrieval_query = validated_data.retrieval_query

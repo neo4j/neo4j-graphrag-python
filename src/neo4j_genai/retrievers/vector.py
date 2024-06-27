@@ -229,6 +229,7 @@ class VectorCypherRetriever(Retriever):
         retrieval_query: str,
         embedder: Optional[Embedder] = None,
         result_formatter: Optional[Callable[[Any], Any]] = None,
+        database: Optional[str] = None,
     ) -> None:
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -238,11 +239,12 @@ class VectorCypherRetriever(Retriever):
                 index_name=index_name,
                 retrieval_query=retrieval_query,
                 embedder_model=embedder_model,
+                database=database,
             )
         except ValidationError as e:
             raise RetrieverInitializationError(e.errors()) from e
 
-        super().__init__(driver)
+        super().__init__(validated_data.driver_model.driver, validated_data.database)
         self.index_name = validated_data.index_name
         self.retrieval_query = validated_data.retrieval_query
         self.embedder = (

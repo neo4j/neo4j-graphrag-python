@@ -58,6 +58,22 @@ def test_hybrid_retriever_invalid_fulltext_index_name(
     assert "Input should be a valid string" in str(exc_info.value)
 
 
+@patch("neo4j_genai.retrievers.HybridRetriever._verify_version")
+def test_hybrid_retriever_invalid_database_name(
+    _verify_version_mock: MagicMock, driver: MagicMock
+) -> None:
+    with pytest.raises(RetrieverInitializationError) as exc_info:
+        HybridRetriever(
+            driver=driver,
+            vector_index_name="vector-index",
+            fulltext_index_name="fulltext-index",
+            database=42,  # type: ignore
+        )
+
+    assert "database" in str(exc_info.value)
+    assert "Input should be a valid string" in str(exc_info.value)
+
+
 @patch("neo4j_genai.retrievers.HybridCypherRetriever._verify_version")
 def test_hybrid_cypher_retriever_invalid_retrieval_query(
     _verify_version_mock: MagicMock, driver: MagicMock
@@ -71,6 +87,26 @@ def test_hybrid_cypher_retriever_invalid_retrieval_query(
         )
 
     assert "retrieval_query" in str(exc_info.value)
+    assert "Input should be a valid string" in str(exc_info.value)
+
+
+@patch("neo4j_genai.retrievers.HybridCypherRetriever._verify_version")
+def test_hybrid_cypher_retriever_invalid_database_name(
+    _verify_version_mock: MagicMock, driver: MagicMock
+) -> None:
+    retrieval_query = """
+        RETURN node.id AS node_id, node.text AS text, score, {test: $param} AS metadata
+        """
+    with pytest.raises(RetrieverInitializationError) as exc_info:
+        HybridCypherRetriever(
+            driver=driver,
+            vector_index_name="vector-index",
+            fulltext_index_name="fulltext-index",
+            retrieval_query=retrieval_query,
+            database=42,  # type: ignore
+        )
+
+    assert "database" in str(exc_info.value)
     assert "Input should be a valid string" in str(exc_info.value)
 
 
@@ -135,8 +171,9 @@ def test_hybrid_search_favors_query_vector_over_embedding_vector(
     fulltext_index_name = "fulltext-index"
     query_text = "may thy knife chip and shatter"
     top_k = 5
+    database = "neo4j"
     retriever = HybridRetriever(
-        driver, vector_index_name, fulltext_index_name, embedder
+        driver, vector_index_name, fulltext_index_name, embedder, database=database
     )
     retriever.driver.execute_query.return_value = [  # type: ignore
         [neo4j_record],
@@ -156,7 +193,7 @@ def test_hybrid_search_favors_query_vector_over_embedding_vector(
             "fulltext_index_name": fulltext_index_name,
             "query_vector": query_vector,
         },
-        database_=None,
+        database_=database,
     )
     embedder.embed_query.assert_not_called()
 
