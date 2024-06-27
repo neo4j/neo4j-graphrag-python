@@ -170,7 +170,7 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
 
     def default_record_formatter(self, record: neo4j.Record) -> RetrieverResultItem:
         """
-        Best effort to guess the node to text method. Inherited classes
+        Best effort to guess the node-to-text method. Inherited classes
         can override this method to implement custom text formatting.
         """
         return RetrieverResultItem(content=str(record), metadata=record.get("metadata"))
