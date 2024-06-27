@@ -12,6 +12,20 @@ The purpose of this package is to provide a first party package to developers,
 where Neo4j can guarantee long term commitment and maintenance as well as being
 fast to ship new features and high performing patterns and methods.
 
+Neo4j versions supported:
+
+* Neo4j >=5.18.1
+* Neo4j Aura >=5.18.0
+
+Python versions supported:
+
+* Python 3.12
+* Python 3.11
+* Python 3.10
+* Python 3.9
+* Python 3.8
+
+
 ******
 Topics
 ******
@@ -93,14 +107,13 @@ See :ref:`the API documentation<create-vector-index>` for more details.
 Populating the Neo4j Vector Index
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This library does not provide functionality to write data to the database.
-See below for writing data using `the Neo4j Python driver <https://github.com/neo4j/neo4j-python-driver>`_.
+Note that the below example is not the only way you can upsert data into your Neo4j database. For example, you could also leverage `the Neo4j Python driver <https://github.com/neo4j/neo4j-python-driver>`_.
 
 
 .. code:: python
 
     from neo4j import GraphDatabase
-    from random import random
+    from neo4j_genai.indexes import upsert_query
 
     URI = "neo4j://localhost:7687"
     AUTH = ("neo4j", "password")
@@ -109,18 +122,13 @@ See below for writing data using `the Neo4j Python driver <https://github.com/ne
     driver = GraphDatabase.driver(URI, auth=AUTH)
 
     # Upsert the vector
-    vector = [random() for _ in range(DIMENSION)]
-    insert_query = """
-        MERGE (n:Document {id: $id})
-        WITH n
-        CALL db.create.setNodeVectorProperty(n, 'vectorProperty', $vector)
-        RETURN n
-    """
-    parameters = {
-        "id": 0,
-        "vector": vector,
-    }
-    driver.execute_query(insert_query, parameters)
+    vector = ...
+    upsert_query(
+        driver,
+        node_id=1,
+        embedding_property="vectorProperty",
+        vector=vector,
+    )
 
 
 .. note::
