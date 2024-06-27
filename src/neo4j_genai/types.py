@@ -201,6 +201,7 @@ class VectorRetrieverModel(BaseModel):
     index_name: str
     embedder_model: Optional[EmbedderModel] = None
     return_properties: Optional[list[str]] = None
+    database: Optional[str] = None
 
 
 class VectorCypherRetrieverModel(BaseModel):
@@ -216,6 +217,7 @@ class HybridRetrieverModel(BaseModel):
     fulltext_index_name: str
     embedder_model: Optional[EmbedderModel] = None
     return_properties: Optional[list[str]] = None
+    database: Optional[str] = None
 
 
 class HybridCypherRetrieverModel(BaseModel):

@@ -38,6 +38,7 @@ def test_create_vector_index_happy_path(driver: MagicMock) -> None:
     driver.execute_query.assert_called_once_with(
         create_query,
         {"name": "my-index", "dimensions": 2048, "similarity_fn": "cosine"},
+        database_=None,
     )
 
 
@@ -58,6 +59,7 @@ def test_create_vector_index_ensure_escaping(driver: MagicMock) -> None:
             "dimensions": 2048,
             "similarity_fn": "cosine",
         },
+        database_=None,
     )
 
 
@@ -95,6 +97,7 @@ def test_drop_index_if_exists(driver: MagicMock) -> None:
     driver.execute_query.assert_called_once_with(
         drop_query,
         {"name": "my-index"},
+        database_=None,
     )
 
 
@@ -108,6 +111,7 @@ def test_drop_index_if_exists_raises_error_with_neo4j_client_error(
     driver.execute_query.assert_called_once_with(
         drop_query,
         {"name": "my-index"},
+        database_=None,
     )
 
 
@@ -125,6 +129,7 @@ def test_create_fulltext_index_happy_path(driver: MagicMock) -> None:
     driver.execute_query.assert_called_once_with(
         create_query,
         {"name": "my-index"},
+        database_=None,
     )
 
 
@@ -163,6 +168,7 @@ def test_create_fulltext_index_ensure_escaping(driver: MagicMock) -> None:
     driver.execute_query.assert_called_once_with(
         create_query,
         {"name": "my-complicated-`-index"},
+        database_=None,
     )
 
 
@@ -184,6 +190,7 @@ def test_upsert_vector_happy_path(driver: MagicMock) -> None:
     driver.execute_query.assert_called_once_with(
         upsert_query,
         {"id": id, "embedding_property": embedding_property, "vector": vector},
+        database_=None,
     )
 
 

@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Literal
+from typing import Literal, Optional
 
 import neo4j
 from pydantic import ValidationError
@@ -33,6 +33,7 @@ def create_vector_index(
     embedding_property: str,
     dimensions: int,
     similarity_fn: Literal["euclidean", "cosine"],
+    database: Optional[str] = None,
 ) -> None:
     """
     This method constructs a Cypher query and executes it
@@ -105,13 +106,18 @@ def create_vector_index(
         driver.execute_query(
             query,
             {"name": name, "dimensions": dimensions, "similarity_fn": similarity_fn},
+            database_=database,
         )
     except neo4j.exceptions.ClientError as e:
         raise Neo4jIndexError(f"Neo4j vector index creation failed: {e.message}") from e
 
 
 def create_fulltext_index(
-    driver: neo4j.Driver, name: str, label: str, node_properties: list[str]
+    driver: neo4j.Driver,
+    name: str,
+    label: str,
+    node_properties: list[str],
+    database: Optional[str] = None,
 ) -> None:
     """
     This method constructs a Cypher query and executes it
@@ -172,14 +178,16 @@ def create_fulltext_index(
             f"[{', '.join(['n.`' + prop + '`' for prop in node_properties])}]"
         )
         logger.info(f"Creating fulltext index named '{name}'")
-        driver.execute_query(query, {"name": name})
+        driver.execute_query(query, {"name": name}, database_=database)
     except neo4j.exceptions.ClientError as e:
         raise Neo4jIndexError(
             f"Neo4j fulltext index creation failed {e.message}"
         ) from e
 
 
-def drop_index_if_exists(driver: neo4j.Driver, name: str) -> None:
+def drop_index_if_exists(
+    driver: neo4j.Driver, name: str, database: Optional[str] = None
+) -> None:
     """
     This method constructs a Cypher query and executes it
     to drop an index in Neo4j, if the index exists.
@@ -220,7 +228,7 @@ def drop_index_if_exists(driver: neo4j.Driver, name: str) -> None:
             "name": name,
         }
         logger.info(f"Dropping index named '{name}'")
-        driver.execute_query(query, parameters)
+        driver.execute_query(query, parameters, database_=database)
     except neo4j.exceptions.ClientError as e:
         raise Neo4jIndexError(f"Dropping Neo4j index failed: {e.message}") from e
 
@@ -230,6 +238,7 @@ def upsert_vector(
     node_id: int,
     embedding_property: str,
     vector: list[float],
+    database: Optional[str] = None,
 ) -> None:
     """
     This method constructs a Cypher query and executes it to upsert (insert or update) a vector property on a specific node.
@@ -277,7 +286,7 @@ def upsert_vector(
             "embedding_property": embedding_property,
             "vector": vector,
         }
-        driver.execute_query(query, parameters)
+        driver.execute_query(query, parameters, database_=database)
     except neo4j.exceptions.ClientError as e:
         raise Neo4jInsertionError(
             f"Upserting vector to Neo4j failed: {e.message}"

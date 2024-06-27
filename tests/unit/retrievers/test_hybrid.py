@@ -109,6 +109,7 @@ def test_hybrid_search_text_happy_path(
             "fulltext_index_name": fulltext_index_name,
             "query_vector": embed_query_vector,
         },
+        database_=None,
     )
     embedder.embed_query.assert_called_once_with(query_text)
     assert records == RetrieverResult(
@@ -155,6 +156,7 @@ def test_hybrid_search_favors_query_vector_over_embedding_vector(
             "fulltext_index_name": fulltext_index_name,
             "query_vector": query_vector,
         },
+        database_=None,
     )
     embedder.embed_query.assert_not_called()
 
@@ -229,6 +231,7 @@ def test_hybrid_retriever_return_properties(
             "fulltext_index_name": fulltext_index_name,
             "query_vector": embed_query_vector,
         },
+        database_=None,
     )
     assert records == RetrieverResult(
         items=[
@@ -291,6 +294,7 @@ def test_hybrid_cypher_retrieval_query_with_params(
             "query_vector": embed_query_vector,
             "param": "dummy-param",
         },
+        database_=None,
     )
 
     assert records == RetrieverResult(

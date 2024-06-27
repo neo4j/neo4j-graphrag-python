@@ -78,6 +78,7 @@ class HybridRetriever(Retriever):
         fulltext_index_name: str,
         embedder: Optional[Embedder] = None,
         return_properties: Optional[list[str]] = None,
+        database: Optional[str] = None,
     ) -> None:
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -88,11 +89,12 @@ class HybridRetriever(Retriever):
                 fulltext_index_name=fulltext_index_name,
                 embedder_model=embedder_model,
                 return_properties=return_properties,
+                database=database,
             )
         except ValidationError as e:
             raise RetrieverInitializationError(e.errors()) from e
 
-        super().__init__(validated_data.driver_model.driver)
+        super().__init__(validated_data.driver_model.driver, validated_data.database)
         self.vector_index_name = validated_data.vector_index_name
         self.fulltext_index_name = validated_data.fulltext_index_name
         self.return_properties = validated_data.return_properties
@@ -173,7 +175,9 @@ class HybridRetriever(Retriever):
         logger.debug("HybridRetriever Cypher parameters: %s", parameters)
         logger.debug("HybridRetriever Cypher query: %s", search_query)
 
-        records, _, _ = self.driver.execute_query(search_query, parameters)
+        records, _, _ = self.driver.execute_query(
+            search_query, parameters, database_=self.database
+        )
         return RawSearchResult(
             records=records,
         )
@@ -316,7 +320,9 @@ class HybridCypherRetriever(Retriever):
         logger.debug("HybridCypherRetriever Cypher parameters: %s", parameters)
         logger.debug("HybridCypherRetriever Cypher query: %s", search_query)
 
-        records, _, _ = self.driver.execute_query(search_query, parameters)
+        records, _, _ = self.driver.execute_query(
+            search_query, parameters, database_=self.database
+        )
         return RawSearchResult(
             records=records,
         )

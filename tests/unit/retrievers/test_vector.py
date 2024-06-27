@@ -98,6 +98,7 @@ def test_similarity_search_vector_happy_path(
             "top_k": top_k,
             "query_vector": query_vector,
         },
+        database_=None,
     )
     assert records == RetrieverResult(
         items=[
@@ -142,6 +143,7 @@ def test_similarity_search_text_happy_path(
             "top_k": top_k,
             "query_vector": embed_query_vector,
         },
+        database_=None,
     )
     assert records == RetrieverResult(
         items=[
@@ -193,6 +195,7 @@ def test_similarity_search_text_return_properties(
             "top_k": top_k,
             "query_vector": embed_query_vector,
         },
+        database_=None,
     )
     assert records == RetrieverResult(
         items=[
@@ -307,6 +310,7 @@ def test_retrieval_query_happy_path(
             "top_k": top_k,
             "query_vector": embed_query_vector,
         },
+        database_=None,
     )
     assert records == RetrieverResult(
         items=[
@@ -372,6 +376,7 @@ def test_retrieval_query_with_result_format_function(
             "top_k": top_k,
             "query_vector": embed_query_vector,
         },
+        database_=None,
     )
     assert records == RetrieverResult(
         items=[
@@ -433,6 +438,7 @@ def test_retrieval_query_with_params(
             "query_vector": embed_query_vector,
             "param": "dummy-param",
         },
+        database_=None,
     )
 
     assert records == RetrieverResult(

@@ -81,8 +81,9 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
     index_name: str
     VERIFY_NEO4J_VERSION = True
 
-    def __init__(self, driver: neo4j.Driver):
+    def __init__(self, driver: neo4j.Driver, database: Optional[str] = None):
         self.driver = driver
+        self.database = database
         if self.VERIFY_NEO4J_VERSION:
             self._verify_version()
 
@@ -95,7 +96,9 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
         indexing. Raises a Neo4jMinVersionError if the connected Neo4j version is
         not supported.
         """
-        records, _, _ = self.driver.execute_query("CALL dbms.components()")
+        records, _, _ = self.driver.execute_query(
+            "CALL dbms.components()", database_=self.database
+        )
         version = records[0]["versions"][0]
 
         if "aura" in version:
@@ -120,7 +123,9 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
             "RETURN labelsOrTypes as labels, properties, "
             "options.indexConfig.`vector.dimensions` as dimensions"
         )
-        query_result = self.driver.execute_query(query, {"index_name": self.index_name})
+        query_result = self.driver.execute_query(
+            query, {"index_name": self.index_name}, database_=self.database
+        )
         try:
             result = query_result.records[0]
             self._node_label = result["labels"][0]

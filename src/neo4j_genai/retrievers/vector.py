@@ -76,6 +76,7 @@ class VectorRetriever(Retriever):
         index_name: str,
         embedder: Optional[Embedder] = None,
         return_properties: Optional[list[str]] = None,
+        database: Optional[str] = None,
     ) -> None:
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -85,11 +86,12 @@ class VectorRetriever(Retriever):
                 index_name=index_name,
                 embedder_model=embedder_model,
                 return_properties=return_properties,
+                database=database,
             )
         except ValidationError as e:
             raise RetrieverInitializationError(e.errors()) from e
 
-        super().__init__(driver)
+        super().__init__(validated_data.driver_model.driver, validated_data.database)
         self.index_name = validated_data.index_name
         self.return_properties = validated_data.return_properties
         self.embedder = (
@@ -183,7 +185,9 @@ class VectorRetriever(Retriever):
         logger.debug("VectorRetriever Cypher parameters: %s", parameters)
         logger.debug("VectorRetriever Cypher query: %s", search_query)
 
-        records, _, _ = self.driver.execute_query(search_query, parameters)
+        records, _, _ = self.driver.execute_query(
+            search_query, parameters, database_=self.database
+        )
         return RawSearchResult(records=records)
 
 
@@ -325,7 +329,9 @@ class VectorCypherRetriever(Retriever):
         logger.debug("VectorCypherRetriever Cypher parameters: %s", parameters)
         logger.debug("VectorCypherRetriever Cypher query: %s", search_query)
 
-        records, _, _ = self.driver.execute_query(search_query, parameters)
+        records, _, _ = self.driver.execute_query(
+            search_query, parameters, database_=self.database
+        )
         return RawSearchResult(
             records=records,
         )
