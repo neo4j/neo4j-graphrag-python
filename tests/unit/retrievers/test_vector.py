@@ -273,6 +273,49 @@ def test_vector_retriever_search_both_text_and_vector(
         )
 
 
+@patch("neo4j_genai.retrievers.VectorRetriever._fetch_index_infos")
+@patch("neo4j_genai.retrievers.VectorRetriever._verify_version")
+def test_vector_retriever_with_result_format_function(
+    _verify_version_mock: MagicMock,
+    _fetch_index_infos: MagicMock,
+    driver: MagicMock,
+    embedder: MagicMock,
+    neo4j_record: MagicMock,
+    result_formatter: MagicMock,
+) -> None:
+    embed_query_vector = [1.0 for _ in range(1536)]
+    embedder.embed_query.return_value = embed_query_vector
+    index_name = "my-index"
+
+    retriever = VectorRetriever(
+        driver,
+        index_name,
+        embedder=embedder,
+        result_formatter=result_formatter,
+    )
+    query_text = "may thy knife chip and shatter"
+    top_k = 5
+    driver.execute_query.return_value = [
+        [neo4j_record],
+        None,
+        None,
+    ]
+
+    records = retriever.search(
+        query_text=query_text,
+        top_k=top_k,
+    )
+
+    assert records == RetrieverResult(
+        items=[
+            RetrieverResultItem(
+                content="dummy-node", metadata={"score": 1.0, "node_id": 123}
+            ),
+        ],
+        metadata={"__retriever": "VectorRetriever"},
+    )
+
+
 def test_vector_cypher_retriever_search_missing_embedder_for_text(
     vector_cypher_retriever: VectorCypherRetriever,
 ) -> None:
@@ -370,6 +413,8 @@ def test_retrieval_query_with_result_format_function(
     _fetch_index_infos: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
+    neo4j_record: MagicMock,
+    result_formatter: MagicMock,
 ) -> None:
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
@@ -378,24 +423,17 @@ def test_retrieval_query_with_result_format_function(
         RETURN node.id AS node_id, node.text AS text, score
         """
 
-    def format_function(record: dict[str, Any]) -> RetrieverResultItem:
-        return RetrieverResultItem(
-            content=record.get("text"),
-            metadata={"score": record.get("score"), "node_id": record.get("node_id")},
-        )
-
     retriever = VectorCypherRetriever(
         driver,
         index_name,
         retrieval_query,
         embedder=embedder,
-        result_formatter=format_function,
+        result_formatter=result_formatter,
     )
     query_text = "may thy knife chip and shatter"
     top_k = 5
-    record = neo4j.Record({"node_id": 123, "text": "dummy-text", "score": 1.0})
     driver.execute_query.return_value = [
-        [record],
+        [neo4j_record],
         None,
         None,
     ]
@@ -421,7 +459,7 @@ def test_retrieval_query_with_result_format_function(
     assert records == RetrieverResult(
         items=[
             RetrieverResultItem(
-                content="dummy-text", metadata={"score": 1.0, "node_id": 123}
+                content="dummy-node", metadata={"score": 1.0, "node_id": 123}
             ),
         ],
         metadata={"__retriever": "VectorCypherRetriever"},

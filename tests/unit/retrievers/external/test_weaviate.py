@@ -255,3 +255,39 @@ def test_match_query_with_both_return_properties_and_retrieval_query() -> None:
         "WHERE node[$id_property] = match_id_value " + retrieval_query
     )
     assert match_query.strip() == expected.strip()
+
+
+def test_weaviate_retriever_with_result_format_function(
+    driver: MagicMock, neo4j_record: MagicMock, result_formatter: MagicMock
+) -> None:
+    query_text = "may thy knife chip and shatter"
+    top_k = 5
+    node_id_value = "node-test-id"
+    node_match_score = 0.9
+
+    wc = WClient(node_id_value=node_id_value, node_match_score=node_match_score)
+
+    retriever = WeaviateNeo4jRetriever(
+        driver=driver,
+        client=wc,
+        collection="dummy-collection",
+        id_property_neo4j="sync_id",
+        id_property_external="neo4j_id",
+        result_formatter=result_formatter,
+    )
+    driver.execute_query.return_value = [
+        [neo4j_record],
+        None,
+        None,
+    ]
+
+    records = retriever.search(query_text=query_text, top_k=top_k)
+
+    assert records == RetrieverResult(
+        items=[
+            RetrieverResultItem(
+                content="dummy-node", metadata={"score": 1.0, "node_id": 123}
+            ),
+        ],
+        metadata={"__retriever": "WeaviateNeo4jRetriever"},
+    )

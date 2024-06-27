@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+from typing import Callable
 from unittest.mock import MagicMock, patch
 
 import neo4j
@@ -25,6 +26,7 @@ from neo4j_genai.retrievers import (
     VectorCypherRetriever,
     VectorRetriever,
 )
+from neo4j_genai.types import RetrieverResultItem
 
 
 @pytest.fixture(scope="function")
@@ -84,4 +86,15 @@ def t2c_retriever(
 
 @pytest.fixture(scope="function")
 def neo4j_record() -> neo4j.Record:
-    return neo4j.Record({"node": "dummy-node", "score": 1.0})
+    return neo4j.Record({"node": "dummy-node", "score": 1.0, "node_id": 123})
+
+
+@pytest.fixture(scope="function")
+def result_formatter() -> Callable[[neo4j.Record], RetrieverResultItem]:
+    def format_function(record: neo4j.Record) -> RetrieverResultItem:
+        return RetrieverResultItem(
+            content=record.get("node"),
+            metadata={"score": record.get("score"), "node_id": record.get("node_id")},
+        )
+
+    return format_function

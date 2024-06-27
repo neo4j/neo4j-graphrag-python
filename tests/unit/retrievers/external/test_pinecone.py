@@ -245,3 +245,35 @@ def test_pinecone_retriever_search_retrieval_query(
         ],
         metadata={"__retriever": "PineconeNeo4jRetriever"},
     )
+
+
+def test_pinecone_retriever_with_result_format_function(
+    driver: MagicMock,
+    client: MagicMock,
+    neo4j_record: MagicMock,
+    result_formatter: MagicMock,
+) -> None:
+    retriever = PineconeNeo4jRetriever(
+        driver=driver,
+        client=client,
+        index_name="dummy-text",
+        id_property_neo4j="sync_id",
+        result_formatter=result_formatter,
+    )
+    with mock.patch.object(retriever, "index"):
+        driver.execute_query.return_value = (
+            [neo4j_record],
+            None,
+            None,
+        )
+        query_vector = [1.0 for _ in range(1536)]
+        records = retriever.search(query_vector=query_vector)
+
+    assert records == RetrieverResult(
+        items=[
+            RetrieverResultItem(
+                content="dummy-node", metadata={"score": 1.0, "node_id": 123}
+            ),
+        ],
+        metadata={"__retriever": "PineconeNeo4jRetriever"},
+    )

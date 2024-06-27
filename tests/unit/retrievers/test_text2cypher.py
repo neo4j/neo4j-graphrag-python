@@ -24,6 +24,7 @@ from neo4j_genai.exceptions import (
 from neo4j_genai.generation.prompts import Text2CypherTemplate
 from neo4j_genai.llm import LLMResponse
 from neo4j_genai.retrievers import Text2CypherRetriever
+from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 
 
 def test_t2c_retriever_initialization(driver: MagicMock, llm: MagicMock) -> None:
@@ -145,3 +146,35 @@ def test_t2c_retriever_cypher_error(
     with pytest.raises(Text2CypherRetrievalError) as e:
         retriever.search(query_text=query_text)
     assert "Failed to get search result" in str(e)
+
+
+@patch("neo4j_genai.retrievers.Text2CypherRetriever._verify_version")
+def test_t2c_retriever_with_result_format_function(
+    _verify_version_mock: MagicMock,
+    driver: MagicMock,
+    llm: MagicMock,
+    neo4j_record: MagicMock,
+    result_formatter: MagicMock,
+) -> None:
+    retriever = Text2CypherRetriever(
+        driver=driver, llm=llm, result_formatter=result_formatter
+    )
+    t2c_query = "MATCH (n) RETURN n;"
+    retriever.llm.invoke.return_value = LLMResponse(content=t2c_query)
+    query_text = "may thy knife chip and shatter"
+    driver.execute_query.return_value = [
+        [neo4j_record],
+        None,
+        None,
+    ]
+
+    records = retriever.search(query_text=query_text)
+
+    assert records == RetrieverResult(
+        items=[
+            RetrieverResultItem(
+                content="dummy-node", metadata={"score": 1.0, "node_id": 123}
+            ),
+        ],
+        metadata={"cypher": t2c_query, "__retriever": "Text2CypherRetriever"},
+    )
