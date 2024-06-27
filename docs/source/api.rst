@@ -3,6 +3,8 @@
 API Documentation
 #################
 
+.. _retrievers-section:
+
 **********
 Retrievers
 **********
@@ -107,8 +109,10 @@ PromptTemplate
 
 
 ********************
-Index operations
+Database Interaction
 ********************
+
+.. _create-vector-index:
 
 .. autofunction:: neo4j_genai.indexes.create_vector_index
 

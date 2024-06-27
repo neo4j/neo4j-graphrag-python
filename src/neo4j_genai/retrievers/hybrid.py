@@ -13,31 +13,32 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
-from typing import Optional, Any, Callable
+
+import logging
+from typing import Any, Callable, Optional
 
 import neo4j
 from pydantic import ValidationError
 
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.exceptions import (
+    EmbeddingRequiredError,
     RetrieverInitializationError,
     SearchValidationError,
-    EmbeddingRequiredError,
-)
-from neo4j_genai.retrievers.base import Retriever
-from neo4j_genai.types import (
-    HybridSearchModel,
-    SearchType,
-    HybridCypherSearchModel,
-    Neo4jDriverModel,
-    EmbedderModel,
-    HybridRetrieverModel,
-    HybridCypherRetrieverModel,
-    RawSearchResult,
-    RetrieverResultItem,
 )
 from neo4j_genai.neo4j_queries import get_search_query
-import logging
+from neo4j_genai.retrievers.base import Retriever
+from neo4j_genai.types import (
+    EmbedderModel,
+    HybridCypherRetrieverModel,
+    HybridCypherSearchModel,
+    HybridRetrieverModel,
+    HybridSearchModel,
+    Neo4jDriverModel,
+    RawSearchResult,
+    RetrieverResultItem,
+    SearchType,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +104,7 @@ class HybridRetriever(Retriever):
 
     def default_record_formatter(self, record: neo4j.Record) -> RetrieverResultItem:
         """
-        Best effort to guess the node to text method. Inherited classes
+        Best effort to guess the node-to-text method. Inherited classes
         can override this method to implement custom text formatting.
         """
         metadata = {
@@ -132,6 +133,8 @@ class HybridRetriever(Retriever):
         - `db.index.vector.queryNodes() <https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_queryNodes>`_
         - `db.index.fulltext.queryNodes() <https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_fulltext_querynodes>`_
 
+        To query by text, an embedder must be provided when the class is instantiated.
+
         Args:
             query_text (str): The text to get the closest neighbors of.
             query_vector (Optional[list[float]], optional): The vector embeddings to get the closest neighbors of. Defaults to None.
@@ -146,16 +149,16 @@ class HybridRetriever(Retriever):
         """
         try:
             validated_data = HybridSearchModel(
-                vector_index_name=self.vector_index_name,
-                fulltext_index_name=self.fulltext_index_name,
-                top_k=top_k,
                 query_vector=query_vector,
                 query_text=query_text,
+                top_k=top_k,
             )
         except ValidationError as e:
             raise SearchValidationError(e.errors()) from e
 
         parameters = validated_data.model_dump(exclude_none=True)
+        parameters["vector_index_name"] = self.vector_index_name
+        parameters["fulltext_index_name"] = self.fulltext_index_name
 
         if query_text and not query_vector:
             if not self.embedder:
@@ -183,6 +186,8 @@ class HybridCypherRetriever(Retriever):
     This retriever builds on HybridRetriever.
     If an embedder is provided, it needs to have the required Embedder type.
 
+    Note: `node` is a variable from the base query that can be used in `retrieval_query` as seen in the example below.
+
     Example:
 
     .. code-block:: python
@@ -197,6 +202,8 @@ class HybridCypherRetriever(Retriever):
           driver, "vector-index-name", "fulltext-index-name", retrieval_query, custom_embedder
       )
       retriever.search(query_text="Find me a book about Fremen", top_k=5)
+
+    To query by text, an embedder must be provided when the class is instantiated.
 
     Args:
         driver (neo4j.Driver): The Neo4j Python driver.
@@ -276,17 +283,17 @@ class HybridCypherRetriever(Retriever):
         """
         try:
             validated_data = HybridCypherSearchModel(
-                vector_index_name=self.vector_index_name,
-                fulltext_index_name=self.fulltext_index_name,
-                top_k=top_k,
                 query_vector=query_vector,
                 query_text=query_text,
+                top_k=top_k,
                 query_params=query_params,
             )
         except ValidationError as e:
             raise SearchValidationError(e.errors()) from e
 
         parameters = validated_data.model_dump(exclude_none=True)
+        parameters["vector_index_name"] = self.vector_index_name
+        parameters["fulltext_index_name"] = self.fulltext_index_name
 
         if query_text and not query_vector:
             if not self.embedder:

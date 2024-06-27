@@ -64,7 +64,7 @@ class PineconeNeo4jRetriever(ExternalRetriever):
               client=pc_client,
               index_name="jeopardy",
               id_property_neo4j="id",
-              embedder=embedder,  # type: ignore
+              embedder=embedder,
           )
 
           result = retriever.search(query_text="biology", top_k=2)
@@ -179,15 +179,14 @@ class PineconeNeo4jRetriever(ExternalRetriever):
             RawSearchResult: The results of the search query as a list of neo4j.Record and an optional metadata dict
         """
 
-        pinecone_filters = kwargs.get("pinecone_filters")
+        pinecone_filter = kwargs.get("pinecone_filter")
 
         try:
             validated_data = PineconeSearchModel(
-                vector_index_name=self.index_name,
                 query_vector=query_vector,
                 query_text=query_text,
                 top_k=top_k,
-                pinecone_filter=pinecone_filters,
+                pinecone_filter=pinecone_filter,
             )
         except ValidationError as e:
             raise SearchValidationError(e.errors()) from e

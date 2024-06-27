@@ -13,32 +13,32 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
-from typing import Optional, Any, Callable
+
+import logging
+from typing import Any, Callable, Optional
 
 import neo4j
-
-from neo4j_genai.exceptions import (
-    RetrieverInitializationError,
-    SearchValidationError,
-    EmbeddingRequiredError,
-)
-from neo4j_genai.retrievers.base import Retriever
 from pydantic import ValidationError
 
 from neo4j_genai.embedder import Embedder
-from neo4j_genai.types import (
-    VectorSearchModel,
-    VectorCypherSearchModel,
-    SearchType,
-    Neo4jDriverModel,
-    EmbedderModel,
-    VectorRetrieverModel,
-    VectorCypherRetrieverModel,
-    RawSearchResult,
-    RetrieverResultItem,
+from neo4j_genai.exceptions import (
+    EmbeddingRequiredError,
+    RetrieverInitializationError,
+    SearchValidationError,
 )
 from neo4j_genai.neo4j_queries import get_search_query
-import logging
+from neo4j_genai.retrievers.base import Retriever
+from neo4j_genai.types import (
+    EmbedderModel,
+    Neo4jDriverModel,
+    RawSearchResult,
+    RetrieverResultItem,
+    SearchType,
+    VectorCypherRetrieverModel,
+    VectorCypherSearchModel,
+    VectorRetrieverModel,
+    VectorSearchModel,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +104,7 @@ class VectorRetriever(Retriever):
 
     def default_record_formatter(self, record: neo4j.Record) -> RetrieverResultItem:
         """
-        Best effort to guess the node to text method. Inherited classes
+        Best effort to guess the node-to-text method. Inherited classes
         can override this method to implement custom text formatting.
         """
         metadata = {
@@ -131,6 +131,8 @@ class VectorRetriever(Retriever):
         - `Query a vector index <https://neo4j.com/docs/cypher-manual/current/indexes-for-vector-search/#indexes-vector-query>`_
         - `db.index.vector.queryNodes() <https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_queryNodes>`_
 
+        To query by text, an embedder must be provided when the class is instantiated. The embedder is not required if `query_vector` is passed.
+
         Args:
             query_vector (Optional[list[float]]): The vector embeddings to get the closest neighbors of. Defaults to None.
             query_text (Optional[str]): The text to get the closest neighbors of. Defaults to None.
@@ -146,15 +148,18 @@ class VectorRetriever(Retriever):
         """
         try:
             validated_data = VectorSearchModel(
-                vector_index_name=self.index_name,
-                top_k=top_k,
                 query_vector=query_vector,
                 query_text=query_text,
+                top_k=top_k,
+                filters=filters,
             )
         except ValidationError as e:
             raise SearchValidationError(e.errors()) from e
 
         parameters = validated_data.model_dump(exclude_none=True)
+        parameters["vector_index_name"] = self.index_name
+        if filters:
+            del parameters["filters"]
 
         if query_text:
             if not self.embedder:
@@ -187,6 +192,8 @@ class VectorCypherRetriever(Retriever):
     Provides retrieval method using vector similarity augmented by a Cypher query.
     This retriever builds on VectorRetriever.
     If an embedder is provided, it needs to have the required Embedder type.
+
+    Note: `node` is a variable from the base query that can be used in `retrieval_query` as seen in the example below.
 
     Example:
 
@@ -259,6 +266,8 @@ class VectorCypherRetriever(Retriever):
         - `Query a vector index <https://neo4j.com/docs/cypher-manual/current/indexes-for-vector-search/#indexes-vector-query>`_
         - `db.index.vector.queryNodes() <https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_queryNodes>`_
 
+        To query by text, an embedder must be provided when the class is instantiated.  The embedder is not required if `query_vector` is passed.
+
         Args:
             query_vector (Optional[list[float]]): The vector embeddings to get the closest neighbors of. Defaults to None.
             query_text (Optional[str]): The text to get the closest neighbors of. Defaults to None.
@@ -275,16 +284,19 @@ class VectorCypherRetriever(Retriever):
         """
         try:
             validated_data = VectorCypherSearchModel(
-                vector_index_name=self.index_name,
-                top_k=top_k,
                 query_vector=query_vector,
                 query_text=query_text,
+                top_k=top_k,
                 query_params=query_params,
+                filters=filters,
             )
         except ValidationError as e:
             raise SearchValidationError(e.errors()) from e
 
         parameters = validated_data.model_dump(exclude_none=True)
+        parameters["vector_index_name"] = self.index_name
+        if filters:
+            del parameters["filters"]
 
         if query_text:
             if not self.embedder:

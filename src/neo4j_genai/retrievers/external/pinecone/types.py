@@ -13,7 +13,8 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
-from typing import Any, Callable, Optional
+
+from typing import Any, Callable, Optional, Union
 
 import neo4j
 from pinecone import Pinecone
@@ -27,7 +28,9 @@ from neo4j_genai.types import EmbedderModel, Neo4jDriverModel, VectorSearchModel
 
 
 class PineconeSearchModel(VectorSearchModel):
-    pinecone_filter: Optional[dict[str, Any]] = None
+    pinecone_filter: Optional[
+        dict[str, Union[str, float, int, bool, list[Any], dict[Any, Any]]]
+    ] = None
 
 
 class PineconeClientModel(BaseModel):
