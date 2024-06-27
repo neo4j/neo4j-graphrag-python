@@ -1,7 +1,9 @@
-from neo4j_genai.embedder import Embedder
 from typing import Any
-import torch
+
 import numpy as np
+import torch
+
+from neo4j_genai.embedder import Embedder
 
 
 class SentenceTransformerEmbeddings(Embedder):

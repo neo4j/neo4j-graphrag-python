@@ -1,10 +1,11 @@
 from __future__ import annotations
-from neo4j import GraphDatabase
 
 from random import random
-from neo4j_genai.retrievers import HybridRetriever
+
+from neo4j import GraphDatabase
 from neo4j_genai.embedder import Embedder
-from neo4j_genai.indexes import create_vector_index, create_fulltext_index
+from neo4j_genai.indexes import create_fulltext_index, create_vector_index
+from neo4j_genai.retrievers import HybridRetriever
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")

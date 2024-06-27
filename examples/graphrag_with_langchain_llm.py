@@ -8,13 +8,13 @@ This example illustrates:
 """
 
 import logging
-import neo4j
 
+import neo4j
 from langchain.chat_models import ChatOpenAI
 from langchain.embeddings import OpenAIEmbeddings
-from neo4j_genai.types import RetrieverResultItem
-from neo4j_genai.retrievers import VectorCypherRetriever
 from neo4j_genai.generation import GraphRAG
+from neo4j_genai.retrievers import VectorCypherRetriever
+from neo4j_genai.types import RetrieverResultItem
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")

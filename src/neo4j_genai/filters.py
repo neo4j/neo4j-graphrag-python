@@ -13,9 +13,10 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
+
 import re
-from typing import Any, Type, Union
 from collections import Counter
+from typing import Any, Type, Union
 
 from neo4j_genai.exceptions import FilterValidationError
 

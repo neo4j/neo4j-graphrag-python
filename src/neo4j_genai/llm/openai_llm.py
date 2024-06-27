@@ -13,11 +13,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
-from typing import Optional, Any
 
+from typing import Any, Optional
+
+from ..exceptions import LLMGenerationError
 from .base import LLMInterface
 from .types import LLMResponse
-from ..exceptions import LLMGenerationError
 
 try:
     import openai

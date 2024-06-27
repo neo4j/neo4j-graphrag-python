@@ -35,8 +35,9 @@ jobs:
         run: poetry install --no-interaction
       - name: Check format and linting
         run: |
-          poetry run ruff format --check .
+          poetry run ruff check --select I .
           poetry run ruff check .
+          poetry run ruff format --check .
       - name: Run strict mypy check
         run: poetry run mypy --strict --ignore-missing-imports --allow-subclassing-any --allow-untyped-calls .
       - name: Run unit tests and check coverage

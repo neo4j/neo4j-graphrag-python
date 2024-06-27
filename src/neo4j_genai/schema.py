@@ -13,11 +13,11 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
+
 from typing import Any, Optional
-from neo4j.exceptions import ClientError
 
 import neo4j
-
+from neo4j.exceptions import ClientError
 
 BASE_ENTITY_LABEL = "__Entity__"
 EXCLUDED_LABELS = ["_Bloom_Perspective_", "_Bloom_Scene_"]

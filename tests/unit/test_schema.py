@@ -14,20 +14,21 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from unittest.mock import patch, MagicMock
+from typing import Any
+from unittest.mock import MagicMock, patch
+
 from neo4j import Driver
 from neo4j_genai.schema import (
-    get_schema,
-    get_structured_schema,
+    BASE_ENTITY_LABEL,
+    EXCLUDED_LABELS,
+    EXCLUDED_RELS,
+    INDEX_QUERY,
     NODE_PROPERTIES_QUERY,
     REL_PROPERTIES_QUERY,
     REL_QUERY,
-    EXCLUDED_LABELS,
-    BASE_ENTITY_LABEL,
-    EXCLUDED_RELS,
-    INDEX_QUERY,
+    get_schema,
+    get_structured_schema,
 )
-from typing import Any
 
 
 def _query_return_value(*args: Any, **kwargs: Any) -> list[Any]:

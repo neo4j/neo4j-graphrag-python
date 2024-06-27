@@ -13,19 +13,20 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
+
 import logging
-from typing import Optional, Any
+from typing import Any, Optional
 
 from pydantic import ValidationError
 
 from neo4j_genai.exceptions import (
-    SearchValidationError,
     RagInitializationError,
+    SearchValidationError,
 )
-from neo4j_genai.retrievers.base import Retriever
-from neo4j_genai.generation.types import RagResultModel, RagInitModel, RagSearchModel
-from neo4j_genai.llm import LLMInterface
 from neo4j_genai.generation.prompts import RagTemplate
+from neo4j_genai.generation.types import RagInitModel, RagResultModel, RagSearchModel
+from neo4j_genai.llm import LLMInterface
+from neo4j_genai.retrievers.base import Retriever
 from neo4j_genai.types import RetrieverResult
 
 logger = logging.getLogger(__name__)

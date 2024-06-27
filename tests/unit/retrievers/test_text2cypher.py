@@ -16,7 +16,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from neo4j.exceptions import CypherSyntaxError, Neo4jError
-from neo4j_genai.retrievers import Text2CypherRetriever
 from neo4j_genai.exceptions import (
     RetrieverInitializationError,
     SearchValidationError,
@@ -24,6 +23,7 @@ from neo4j_genai.exceptions import (
 )
 from neo4j_genai.generation.prompts import Text2CypherTemplate
 from neo4j_genai.llm import LLMResponse
+from neo4j_genai.retrievers import Text2CypherRetriever
 
 
 def test_t2c_retriever_initialization(driver: MagicMock, llm: MagicMock) -> None:
