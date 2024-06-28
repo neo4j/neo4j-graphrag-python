@@ -20,9 +20,14 @@ repos:
           - neo4j
           - langchain_community
           - langchain_openai
-
   - repo: local
     hooks:
+      - id: ruff-lint-isort
+        name: Ruff Lint Sort Imports
+        entry: poetry run ruff check --select I .
+        language: system
+        types: [ python ]
+        stages: [ commit, push ]
       - id: ruff-lint
         name: Ruff Lint Check
         entry: poetry run ruff format --check

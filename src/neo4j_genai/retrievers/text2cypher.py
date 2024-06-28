@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
+
 import logging
 from typing import Optional
 
@@ -26,8 +27,8 @@ from neo4j_genai.exceptions import (
     SearchValidationError,
     Text2CypherRetrievalError,
 )
-from neo4j_genai.llm import LLMInterface
 from neo4j_genai.generation.prompts import Text2CypherTemplate
+from neo4j_genai.llm import LLMInterface
 from neo4j_genai.retrievers.base import Retriever
 from neo4j_genai.schema import get_schema
 from neo4j_genai.types import (

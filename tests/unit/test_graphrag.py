@@ -15,10 +15,9 @@
 from unittest.mock import MagicMock
 
 import pytest
-
 from neo4j_genai.exceptions import RagInitializationError, SearchValidationError
-from neo4j_genai.generation.prompts import RagTemplate
 from neo4j_genai.generation.graphrag import GraphRAG
+from neo4j_genai.generation.prompts import RagTemplate
 from neo4j_genai.generation.types import RagResultModel
 from neo4j_genai.llm import LLMResponse
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem

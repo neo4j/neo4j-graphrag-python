@@ -17,14 +17,14 @@ from unittest.mock import MagicMock, patch
 
 import neo4j
 import pytest
+from neo4j_genai.embedder import Embedder
+from neo4j_genai.llm import LLMInterface
 from neo4j_genai.retrievers import (
     HybridRetriever,
     Text2CypherRetriever,
     VectorCypherRetriever,
     VectorRetriever,
 )
-from neo4j_genai.embedder import Embedder
-from neo4j_genai.llm import LLMInterface
 
 
 @pytest.fixture(scope="function")

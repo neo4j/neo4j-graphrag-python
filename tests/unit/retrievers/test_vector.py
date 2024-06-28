@@ -13,24 +13,24 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
-from unittest.mock import patch
+
+from typing import Any
+from unittest.mock import MagicMock, patch
 
 import neo4j
 import pytest
-from typing import Any
 from neo4j.exceptions import CypherSyntaxError
-from unittest.mock import MagicMock
-from neo4j_genai.retrievers import VectorRetriever, VectorCypherRetriever
 from neo4j_genai.exceptions import (
-    RetrieverInitializationError,
     EmbeddingRequiredError,
+    RetrieverInitializationError,
     SearchValidationError,
 )
 from neo4j_genai.neo4j_queries import get_search_query
+from neo4j_genai.retrievers import VectorCypherRetriever, VectorRetriever
 from neo4j_genai.types import (
-    SearchType,
     RetrieverResult,
     RetrieverResultItem,
+    SearchType,
 )
 
 

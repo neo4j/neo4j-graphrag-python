@@ -13,28 +13,29 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
-from unittest.mock import patch, call, MagicMock
+
+from typing import Any
+from unittest.mock import MagicMock, call, patch
 
 import pytest
-from typing import Any
 from neo4j_genai.exceptions import FilterValidationError
 from neo4j_genai.filters import (
-    get_metadata_filter,
-    _single_condition_cypher,
-    _handle_field_filter,
-    _construct_metadata_filter,
-    Operator,
     EqOperator,
-    NeqOperator,
-    LtOperator,
-    GtOperator,
-    LteOperator,
     GteOperator,
-    InOperator,
-    NinOperator,
-    LikeOperator,
+    GtOperator,
     ILikeOperator,
+    InOperator,
+    LikeOperator,
+    LteOperator,
+    LtOperator,
+    NeqOperator,
+    NinOperator,
+    Operator,
     ParameterStore,
+    _construct_metadata_filter,
+    _handle_field_filter,
+    _single_condition_cypher,
+    get_metadata_filter,
 )
 
 

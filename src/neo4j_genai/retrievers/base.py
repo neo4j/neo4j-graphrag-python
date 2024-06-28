@@ -13,16 +13,17 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
-import types
+
 import inspect
-from abc import ABC, abstractmethod, ABCMeta
-from typing import Optional, Callable, Any, TypeVar
-from typing_extensions import ParamSpec
+import types
+from abc import ABC, ABCMeta, abstractmethod
+from typing import Any, Callable, Optional, TypeVar
 
 import neo4j
+from typing_extensions import ParamSpec
 
-from neo4j_genai.types import RawSearchResult, RetrieverResult, RetrieverResultItem
 from neo4j_genai.exceptions import Neo4jVersionError
+from neo4j_genai.types import RawSearchResult, RetrieverResult, RetrieverResultItem
 
 T = ParamSpec("T")
 P = TypeVar("P")

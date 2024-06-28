@@ -15,12 +15,10 @@
 from __future__ import annotations  # Reminder: May be removed after Python 3.9 is EOL.
 
 import inspect
-
-import pytest
-
-from typing import Union, Any
+from typing import Any, Union
 from unittest.mock import MagicMock, patch
 
+import pytest
 from neo4j_genai.exceptions import Neo4jVersionError
 from neo4j_genai.retrievers.base import Retriever
 from neo4j_genai.types import RawSearchResult, RetrieverResult

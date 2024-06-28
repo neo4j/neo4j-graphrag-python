@@ -1,10 +1,9 @@
-from neo4j import GraphDatabase
-from neo4j_genai.retrievers import VectorRetriever
-
 from random import random
-from neo4j_genai.indexes import create_vector_index
 
 from langchain_openai import OpenAIEmbeddings
+from neo4j import GraphDatabase
+from neo4j_genai.indexes import create_vector_index
+from neo4j_genai.retrievers import VectorRetriever
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
