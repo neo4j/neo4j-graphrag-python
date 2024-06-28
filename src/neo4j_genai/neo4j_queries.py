@@ -13,11 +13,11 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
-from typing import Optional, Any
 
-from neo4j_genai.types import SearchType
+from typing import Any, Optional
+
 from neo4j_genai.filters import get_metadata_filter
-
+from neo4j_genai.types import SearchType
 
 VECTOR_INDEX_QUERY = (
     "CALL db.index.vector.queryNodes($vector_index_name, $top_k, $query_vector) "

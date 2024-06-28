@@ -13,13 +13,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from unittest.mock import patch, MagicMock
-import pytest
+from unittest.mock import MagicMock, patch
 
-from neo4j_genai.retrievers import HybridRetriever, HybridCypherRetriever
-from neo4j_genai.exceptions import RetrieverInitializationError, EmbeddingRequiredError
+import pytest
+from neo4j_genai.exceptions import EmbeddingRequiredError, RetrieverInitializationError
 from neo4j_genai.neo4j_queries import get_search_query
-from neo4j_genai.types import SearchType, RetrieverResult, RetrieverResultItem
+from neo4j_genai.retrievers import HybridCypherRetriever, HybridRetriever
+from neo4j_genai.types import RetrieverResult, RetrieverResultItem, SearchType
 
 
 def test_vector_retriever_initialization(driver: MagicMock) -> None:

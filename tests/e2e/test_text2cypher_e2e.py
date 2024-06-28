@@ -1,8 +1,8 @@
-import pytest
-from neo4j_genai.retrievers import Text2CypherRetriever
 from unittest.mock import MagicMock
 
+import pytest
 from neo4j_genai.llm import LLMResponse
+from neo4j_genai.retrievers import Text2CypherRetriever
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 
 

@@ -17,7 +17,6 @@ from .hybrid import HybridCypherRetriever, HybridRetriever
 from .text2cypher import Text2CypherRetriever
 from .vector import VectorCypherRetriever, VectorRetriever
 
-
 __all__ = [
     "VectorRetriever",
     "VectorCypherRetriever",

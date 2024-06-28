@@ -16,12 +16,12 @@
 import pytest
 from neo4j import Driver
 from neo4j_genai.schema import (
-    query_database,
-    get_structured_schema,
-    NODE_PROPERTIES_QUERY,
     BASE_ENTITY_LABEL,
+    NODE_PROPERTIES_QUERY,
     REL_PROPERTIES_QUERY,
     REL_QUERY,
+    get_structured_schema,
+    query_database,
 )
 
 
