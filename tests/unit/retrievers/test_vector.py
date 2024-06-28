@@ -59,10 +59,10 @@ def test_vector_retriever_invalid_database_name(
         VectorRetriever(
             driver=driver,
             index_name="my-index",
-            database=42,  # type: ignore
+            neo4j_database=42,  # type: ignore
         )
 
-    assert "database" in str(exc_info.value)
+    assert "neo4j_database" in str(exc_info.value)
     assert "Input should be a valid string" in str(exc_info.value)
 
 
@@ -89,10 +89,10 @@ def test_vector_cypher_retriever_invalid_database_name(
             driver=driver,
             index_name="my-index",
             retrieval_query=retrieval_query,
-            database=42,  # type: ignore
+            neo4j_database=42,  # type: ignore
         )
 
-        assert "database" in str(exc_info.value)
+        assert "neo4j_database" in str(exc_info.value)
         assert "Input should be a valid string" in str(exc_info.value)
 
 
@@ -115,7 +115,7 @@ def test_similarity_search_vector_happy_path(
     query_vector = [1.0 for _ in range(dimensions)]
     top_k = 5
     database = "neo4j"
-    retriever = VectorRetriever(driver, index_name, database=database)
+    retriever = VectorRetriever(driver, index_name, neo4j_database=database)
     expected_records = [neo4j.Record({"node": {"text": "dummy-node"}, "score": 1.0})]
     retriever.driver.execute_query.return_value = [  # type: ignore
         expected_records,
@@ -323,7 +323,7 @@ def test_retrieval_query_happy_path(
         index_name,
         retrieval_query,
         embedder=embedder,
-        database=database,
+        neo4j_database=database,
     )
     query_text = "may thy knife chip and shatter"
     top_k = 5

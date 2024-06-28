@@ -201,7 +201,7 @@ class VectorRetrieverModel(BaseModel):
     index_name: str
     embedder_model: Optional[EmbedderModel] = None
     return_properties: Optional[list[str]] = None
-    database: Optional[str] = None
+    neo4j_database: Optional[str] = None
 
 
 class VectorCypherRetrieverModel(BaseModel):
@@ -209,7 +209,7 @@ class VectorCypherRetrieverModel(BaseModel):
     index_name: str
     retrieval_query: str
     embedder_model: Optional[EmbedderModel] = None
-    database: Optional[str] = None
+    neo4j_database: Optional[str] = None
 
 
 class HybridRetrieverModel(BaseModel):
@@ -218,7 +218,7 @@ class HybridRetrieverModel(BaseModel):
     fulltext_index_name: str
     embedder_model: Optional[EmbedderModel] = None
     return_properties: Optional[list[str]] = None
-    database: Optional[str] = None
+    neo4j_database: Optional[str] = None
 
 
 class HybridCypherRetrieverModel(BaseModel):
@@ -227,7 +227,7 @@ class HybridCypherRetrieverModel(BaseModel):
     fulltext_index_name: str
     retrieval_query: str
     embedder_model: Optional[EmbedderModel] = None
-    database: Optional[str] = None
+    neo4j_database: Optional[str] = None
 
 
 class Text2CypherRetrieverModel(BaseModel):

@@ -81,9 +81,9 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
     index_name: str
     VERIFY_NEO4J_VERSION = True
 
-    def __init__(self, driver: neo4j.Driver, database: Optional[str] = None):
+    def __init__(self, driver: neo4j.Driver, neo4j_database: Optional[str] = None):
         self.driver = driver
-        self.database = database
+        self.neo4j_database = neo4j_database
         if self.VERIFY_NEO4J_VERSION:
             self._verify_version()
 
@@ -97,7 +97,7 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
         not supported.
         """
         records, _, _ = self.driver.execute_query(
-            "CALL dbms.components()", database_=self.database
+            "CALL dbms.components()", database_=self.neo4j_database
         )
         version = records[0]["versions"][0]
 
@@ -124,7 +124,7 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
             "options.indexConfig.`vector.dimensions` as dimensions"
         )
         query_result = self.driver.execute_query(
-            query, {"index_name": self.index_name}, database_=self.database
+            query, {"index_name": self.index_name}, database_=self.neo4j_database
         )
         try:
             result = query_result.records[0]

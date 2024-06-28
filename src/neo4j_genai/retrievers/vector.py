@@ -65,7 +65,7 @@ class VectorRetriever(Retriever):
         index_name (str): Vector index name.
         embedder (Optional[Embedder]): Embedder object to embed query text.
         return_properties (Optional[list[str]]): List of node properties to return.
-        database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
+        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
     Raises:
         RetrieverInitializationError: If validation of the input arguments fail.
@@ -77,7 +77,7 @@ class VectorRetriever(Retriever):
         index_name: str,
         embedder: Optional[Embedder] = None,
         return_properties: Optional[list[str]] = None,
-        database: Optional[str] = None,
+        neo4j_database: Optional[str] = None,
     ) -> None:
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -87,12 +87,14 @@ class VectorRetriever(Retriever):
                 index_name=index_name,
                 embedder_model=embedder_model,
                 return_properties=return_properties,
-                database=database,
+                neo4j_database=neo4j_database,
             )
         except ValidationError as e:
             raise RetrieverInitializationError(e.errors()) from e
 
-        super().__init__(validated_data.driver_model.driver, validated_data.database)
+        super().__init__(
+            validated_data.driver_model.driver, validated_data.neo4j_database
+        )
         self.index_name = validated_data.index_name
         self.return_properties = validated_data.return_properties
         self.embedder = (
@@ -187,7 +189,7 @@ class VectorRetriever(Retriever):
         logger.debug("VectorRetriever Cypher query: %s", search_query)
 
         records, _, _ = self.driver.execute_query(
-            search_query, parameters, database_=self.database
+            search_query, parameters, database_=self.neo4j_database
         )
         return RawSearchResult(records=records)
 
@@ -221,7 +223,7 @@ class VectorCypherRetriever(Retriever):
         retrieval_query (str): Cypher query that gets appended.
         embedder (Optional[Embedder]): Embedder object to embed query text.
         result_formatter (Optional[Callable[[Any], Any]]): Provided custom function to transform a neo4j.Record to a RetrieverResultItem.
-        database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
+        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
     """
 
@@ -232,7 +234,7 @@ class VectorCypherRetriever(Retriever):
         retrieval_query: str,
         embedder: Optional[Embedder] = None,
         result_formatter: Optional[Callable[[Any], Any]] = None,
-        database: Optional[str] = None,
+        neo4j_database: Optional[str] = None,
     ) -> None:
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -242,12 +244,14 @@ class VectorCypherRetriever(Retriever):
                 index_name=index_name,
                 retrieval_query=retrieval_query,
                 embedder_model=embedder_model,
-                database=database,
+                neo4j_database=neo4j_database,
             )
         except ValidationError as e:
             raise RetrieverInitializationError(e.errors()) from e
 
-        super().__init__(validated_data.driver_model.driver, validated_data.database)
+        super().__init__(
+            validated_data.driver_model.driver, validated_data.neo4j_database
+        )
         self.index_name = validated_data.index_name
         self.retrieval_query = validated_data.retrieval_query
         self.embedder = (
@@ -335,7 +339,7 @@ class VectorCypherRetriever(Retriever):
         logger.debug("VectorCypherRetriever Cypher query: %s", search_query)
 
         records, _, _ = self.driver.execute_query(
-            search_query, parameters, database_=self.database
+            search_query, parameters, database_=self.neo4j_database
         )
         return RawSearchResult(
             records=records,

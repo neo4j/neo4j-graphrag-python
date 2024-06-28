@@ -67,7 +67,7 @@ def test_hybrid_retriever_invalid_database_name(
             driver=driver,
             vector_index_name="vector-index",
             fulltext_index_name="fulltext-index",
-            database=42,  # type: ignore
+            neo4j_database=42,  # type: ignore
         )
 
     assert "database" in str(exc_info.value)
@@ -103,7 +103,7 @@ def test_hybrid_cypher_retriever_invalid_database_name(
             vector_index_name="vector-index",
             fulltext_index_name="fulltext-index",
             retrieval_query=retrieval_query,
-            database=42,  # type: ignore
+            neo4j_database=42,  # type: ignore
         )
 
     assert "database" in str(exc_info.value)
@@ -173,7 +173,11 @@ def test_hybrid_search_favors_query_vector_over_embedding_vector(
     top_k = 5
     database = "neo4j"
     retriever = HybridRetriever(
-        driver, vector_index_name, fulltext_index_name, embedder, database=database
+        driver,
+        vector_index_name,
+        fulltext_index_name,
+        embedder,
+        neo4j_database=database,
     )
     retriever.driver.execute_query.return_value = [  # type: ignore
         [neo4j_record],
