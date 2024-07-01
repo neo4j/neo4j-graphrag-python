@@ -13,6 +13,7 @@
 -   Updated project configuration to support multiple Python versions (3.8 to 3.12) in CI workflows.
 -   Improved developer experience by copying the docstring from the `Retriever.get_search_results` method to the `Retriever.search` method
 -   Support for specifying database names in index handling methods and retrievers.
+-   User Guide in documentation.
 
 ### Changed
 -   Refactored import paths for retrievers to neo4j_genai.retrievers.
