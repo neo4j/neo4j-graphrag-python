@@ -107,6 +107,7 @@ PromptTemplate
 .. autoclass:: neo4j_genai.generation.prompts.PromptTemplate
     :members:
 
+.. _database-interaction-section:
 
 ********************
 Database Interaction
@@ -115,6 +116,8 @@ Database Interaction
 .. _create-vector-index:
 
 .. autofunction:: neo4j_genai.indexes.create_vector_index
+
+.. _create-fulltext-index:
 
 .. autofunction:: neo4j_genai.indexes.create_fulltext_index
 

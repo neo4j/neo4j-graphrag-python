@@ -3,20 +3,19 @@
 User Guide
 #################
 
-This guide help you getting started with the Neo4j GenAI Python package,
-and explain how to configure it to meet your requirements.
+This guide provides a starting point for using the Neo4j GenAI Python package
+and configuring it according to specific requirements.
 
 
 ************
-Quick start
+Quickstart
 ************
 
-In order to perform a GraphRAG query using the neo4j-genai package, you need to
-instantiate a few components:
+To perform a GraphRAG query using the `neo4j-genai` package, a few components are needed:
 
-1. A neo4j driver: used to query your Neo4j database
-2. A Retriever: the neo4j-genai package provides some implementations (see ???) and lets you write your own if none of the provided implementations matches your needs (see ???)
-3. An LLM: in order to generate the answer, we need to call an LLM model. The neo4j-genai package currently only provides implementation for the OpenAI LLMs, but our interface is compatible with LangChain.
+1. A Neo4j driver: used to query your Neo4j database.
+2. A Retriever: the `neo4j-genai` package provides some implementations (see the :ref:`dedicated section <retriever-configuration>`) and lets you write your own if none of the provided implementations matches your needs (see :ref:`how to write a custom retriever <custom-retriever>`).
+3. An LLM: to generate the answer, we need to call an LLM model. The neo4j-genai package currently only provides implementation for the OpenAI LLMs, but its interface is compatible with LangChain and let developers write their own interface if needed.
 
 In practice, it's done with only a few lines of code:
 
@@ -57,28 +56,30 @@ In practice, it's done with only a few lines of code:
     print(response.answer)
 
 
-Let's dig into more details and learn how we can customize this code.
+The following sections provide more details about how to customize this code.
 
 ******************************
 GraphRAG Configuration
 ******************************
 
-Using another LLM model
+Each component can be configured individually: the LLM and the prompt.
+
+Using Another LLM Model
 ========================
 
-If you do not wish to use OpenAI, you have two available options:
+If OpenAI can not be used, there are two available alternatives:
 
-1. Use any LangChain chat model
-2. Implement your own interface
+1. Utilize any LangChain chat model.
+2. Implement a custom interface.
 
 Both options are illustrated below, using a local Ollama model as an example.
 
-Using a model from LangChain
+
+Using a Model from LangChain
 -----------------------------
 
-The LangChain python package contains implementations for many different LLMs
-and providers. Their interface is compatible with our GraphRAG interface, so you
-can use them easily:
+The LangChain Python package contains implementations for various LLMs and providers.
+Its interface is compatible with our `GraphRAG` interface, facilitating integration:
 
 .. code:: python
 
@@ -94,11 +95,15 @@ can use them easily:
     print(response.answer)
 
 
-Using a custom model
+It is however not mandatory to use LangChain. The alternative is to implement
+a custom model.
+
+Using a Custom Model
 -----------------------------
 
-If you do not wish to use LangChain, you can create your own LLM class by subclassing
-the LLMInterface. Here is an example using the Python ollama client:
+To avoid LangChain, developers can create a custom LLM class by subclassing
+the `LLMInterface`. Here's an example using the Python Ollama client:
+
 
 .. code:: python
 
@@ -127,17 +132,16 @@ the LLMInterface. Here is an example using the Python ollama client:
     response = rag.search(query_text=query_text, retriever_config={"top_k": 5})
     print(response.answer)
 
-Also see :ref:`llminterface`.
+See :ref:`llminterface`.
 
 
-Configuring the prompt
+Configuring the Prompt
 ========================
 
-Prompt are managed through `PromptTemplate` classes. More
-specifically, the `GraphRAG` pipeline uses a `RagTemplate` with
-a default prompt. You can use another prompt by subclassing
-the `RagTemplate` class and passing it to the `GraphRAG` pipeline
-object during initialization:
+Prompts are managed through `PromptTemplate` classes. Specifically, the `GraphRAG` pipeline
+utilizes a `RagTemplate` with a default prompt that can be accessed through
+`rag.prompt_template.template`. To use a different prompt, subclass the `RagTemplate`
+class and pass it to the `GraphRAG` pipeline object during initialization:
 
 .. code:: python
 
@@ -156,32 +160,34 @@ object during initialization:
     # ...
 
 
-Also see :ref:`prompttemplate`.
+See :ref:`prompttemplate`.
 
 
-The last piece you can configure in the GraphRAG pipeline is the retriever. The different options
-are described below.
+The final configurable component in the `GraphRAG` pipeline is the retriever.
+Below are descriptions of the various options available.
 
+.. _retriever-configuration:
 
 ************************
 Retriever Configuration
 ************************
 
-We provide implementation for the most commonly used retrievers:
+We provide implementations for the most commonly used retrievers:
 
-1. Vector retriever: performs a similarity search based on a Neo4j vector index and a query text or vector. Returns the matched node.
-2. Vector Cypher retriever: performs a similarity search based on a Neo4j vector index and a query text or vector. Returned results can be configured through a retrieval query parameter that will be executed after the index search. It can be used to fetch more context around the matched node.
-3. External retrievers: use these retrievers when your vectors are not saved in Neo4j but in an external vector database. We currently support Weaviate and Pinecone vector databases.
-4. Hybrid and Hybrid cypher retrievers: these retrievers use both a vector and full-text indexes.
+- **Vector retriever**: Performs a similarity search based on a Neo4j vector index and a query text or vector. Returns the matched `node` and similarity `score`.
+- **Vector Cypher retriever**: Performs a similarity search based on a Neo4j vector index and a query text or vector. The returned results can be configured through a retrieval query parameter that will be executed after the index search. It can be used to fetch more context around the matched node.
+- **External retrievers**: Use these retrievers when vectors are not saved in Neo4j but in an external vector database. Weaviate and Pinecone vector databases are currently supported.
+- **Hybrid and Hybrid Cypher retrievers**: These retrievers use both a vector and a full-text index in Neo4j.
+- **Text to Cypher retriever**: Translate the user question into a Cypher query to be run against a Neo4j database (or Knowledge Graph). The results of the query are then passed to the LLM to generate the final answer.
 
 Retrievers all expose a `search` method that we will discuss in the next sections.
 
-Also see :ref:`retrievers`.
+See :ref:`retrievers`.
 
-Vector retriever
+Vector Retriever
 ===================
 
-The easiest way to instantiate a vector retriever is:
+The simplest method to instantiate a vector retriever is:
 
 .. code:: python
 
@@ -195,24 +201,30 @@ The easiest way to instantiate a vector retriever is:
 The `index_name` is the name of the Neo4j vector index that will be used for similarity search.
 
 
-Search similar vector
+.. warning::
+
+    Vector index use an **approximate nearest neighbor** algorithm.
+    Refer to the `Neo4j Documentation <https://neo4j.com/docs/cypher-manual/current/indexes/semantic-indexes/vector-indexes/#_limitiations_and_known_issues>`_ to learn about its limitations.
+
+
+Search Similar Vector
 -----------------------------
 
-To find the top 3 most similar nodes, you can perform a search by vector:
+To identify the top 3 most similar nodes, perform a search by vector:
 
 .. code:: python
 
     vector = []  # a list of floats, same size as the vectors in the Neo4j vector index
     retriever_result = retriever.search(query_vector=vector, top_k=3)
 
-However, most of the time, you will be given a text (from user) and not a vector. This
-use case is covered thanks to the `Embedder`.
+However, in most cases, a text (from the user) will be provided instead of a vector.
+In this scenario, an `Embedder` is required.
 
-Search similar text
+Search Similar Text
 -----------------------------
 
-When searching for a text, you must tell the retriever how to transform (embbed) the text
-to a vector. This is the reason why an embedder is required when you initialize the retriever:
+When searching for a text, specifying how the retriever transforms (embeds) the text
+into a vector is required. Therefore, the retriever requires knowledge of an embedder:
 
 .. code:: python
 
@@ -232,9 +244,9 @@ to a vector. This is the reason why an embedder is required when you initialize 
 Embedders
 -----------------------------
 
-Currently, we support two embedders: `OpenAIEmbeddings` and `SentenceTransformerEmbeddings`.
+Currently, this package supports two embedders: `OpenAIEmbeddings` and `SentenceTransformerEmbeddings`.
 
-The OpenAIEmbedder was illustrated above. Here is how to use the `SentenceTransformerEmbeddings`:
+The `OpenAIEmbedder` was illustrated previously. Here is how to use the `SentenceTransformerEmbeddings`:
 
 .. code:: python
 
@@ -242,9 +254,8 @@ The OpenAIEmbedder was illustrated above. Here is how to use the `SentenceTransf
 
     embedder = SentenceTransformerEmbeddings(model="all-MiniLM-L6-v2")  # Note: this is the default model
 
-
-If you want to use another embedder, you can create your own custom embedder. For instance,
-this is an implementation of an embedder that would return only random numbers:
+If another embedder is desired, a custom embedder can be created. For example, consider
+the following implementation of an embedder that generates random numbers:
 
 .. warning::
     Do not use it in your application :)
@@ -274,12 +285,12 @@ this is an implementation of an embedder that would return only random numbers:
     vector = embedder.embed_query("some text")
 
 
-Other vector retriever configuration
+Other Vector Retriever Configuration
 ----------------------------------------
 
-Often, you won't be interested in all node properties, only a few of them will be
-relevant to be added to the context in the LLM prompt. You can configure the properties
-to be returned using the `return_properties` parameter:
+Often, not all node properties are pertinent for the RAG context; only a selected few are relevant
+for inclusion in the LLM prompt context. You can specify which properties to return
+using the `return_properties` parameter:
 
 .. code:: python
 
@@ -293,12 +304,19 @@ to be returned using the `return_properties` parameter:
     )
 
 
-Use pre-filters
+Pre-Filters
 -----------------------------
 
-When performing a similarity search, you may have constraints that you want to apply.
-For instance, you may want to filter out movies released before 2000. This can be
-achieved by specifying `filters`
+When performing a similarity search, one may have constraints to apply.
+For instance, filtering out movies released before 2000. This can be achieved
+using `filters`.
+
+.. note::
+
+    Filters are implemented for all retrievers except the Hybrid retrievers.
+    The documentation below is not valid for external retrievers, which use
+    their own filter syntax (see :ref:`vector-databases-section`).
+
 
 .. code:: python
 
@@ -318,10 +336,11 @@ achieved by specifying `filters`
     query_text = "How do I do similarity search in Neo4j?"
     retriever_result = retriever.search(query_text=query_text, filters=filters)
 
-.. note::
+.. warning::
 
-    Filters are implemented for all retrievers except the Hybrid retrievers.
-
+    When using filters, the similarity search bypasses the vector index and instead utilizes
+    an exact match algorithm
+    Ensure that the pre-filtering is stringent enough to prevent query overload.
 
 The currently supported operators are:
 
@@ -338,7 +357,7 @@ The currently supported operators are:
 - `$ilike`: LIKE operator case-insensitive.
 
 
-Here are example of valid filters and their meaning:
+Here are examples of valid filter syntaxes and their meaning:
 
 .. list-table:: Filters syntax
    :widths: 80 80
@@ -362,25 +381,26 @@ Here are example of valid filters and their meaning:
      - toLower(title) CONTAINS "The Matrix"
 
 
-Also see :ref:`vectorretriever`.
+See also:ref:`vectorretriever`.
 
 
-Vector Cypher retriever
+Vector Cypher Retriever
 =======================
 
-The `VectorCypherRetriever` lets you take full advantage of the graph nature of Neo4j, by enhancing the
-context with graph traversal.
+The `VectorCypherRetriever` allows full utilization of Neo4j's graph nature by
+enhancing context through graph traversal.
 
-Retrieval query
+Retrieval Query
 -----------------------------
 
-To write the retrieval query, you must know that two variables are available in the query scope:
+When crafting the retrieval query, it's important to note two available variables
+are in the query scope:
 
-- `node`: the node returned by the vector index search
-- `score`: the similarity score
+- `node`: represents the node retrieved from the vector index search.
+- `score`: denotes the similarity score.
 
-Assuming we are using a graph of movies with actors the vector index is on some movie
-properties, we can write the following retrieval query:
+For instance, in a movie graph with actors where the vector index pertains to
+certain movie properties, the retrieval query can be structured as follows:
 
 .. code:: python
 
@@ -391,19 +411,19 @@ properties, we can write the following retrieval query:
     )
 
 
-Format the results
+Format the Results
 -----------------------------
 
 .. warning::
 
     This API is in beta mode and will be subject to change is the future.
 
-For both readability and convenience for prompt-engineering, you have the ability to
-format the result according to your needs by providing a record_formatter function to
-the cypher retrievers. This function takes the neo4j record returned by the retrieval query
-and must return a `RetrieverResultItem` with content (str) and metadata (dict) fields.
-The content is the one that will be passed to the LLM, metadata can be used for debugging
-purposes for instance.
+For improved readability and ease in prompt-engineering, formatting the result to suit
+specific needs involves providing a `record_formatter` function to the Cypher retrievers.
+This function processes the Neo4j record from the retrieval query, returning a
+`RetrieverResultItem` with `content` (str) and `metadata` (dict) fields. The `content`
+field is used for passing data to the LLM, while `metadata` can serve debugging purposes
+and provide additional context.
 
 
 .. code:: python
@@ -426,6 +446,9 @@ purposes for instance.
 
 Also see :ref:`vectorcypherretriever`.
 
+
+.. _vector-databases-section:
+
 Vector Databases
 ====================
 
@@ -435,12 +458,12 @@ Vector Databases
     the documentation of the Python client for each provider for details.
 
 
-Weaviate retrievers
+Weaviate Retrievers
 -------------------
 
 .. note::
 
-    In order to import this retriever, you must install the Weaviate Python client:
+    In order to import this retriever, the Weaviate Python client must be installed:
     `pip install weaviate-client`
 
 
@@ -462,16 +485,17 @@ Weaviate retrievers
 Internally, this retriever performs the vector search in Weaviate, finds the corresponding node by matching
 the Weaviate metadata `id_property_external` with a Neo4j `node.id_property_neo4j`, and returns the matched node.
 
-Similarly to the vector retriever, you can also use `return_properties` or `retrieval_query` parameters.
+The `return_properties` and `retrieval_query` parameters operate similarly to those in other retrievers.
 
-Also see :ref:`weaviateneo4jretriever`.
+See :ref:`weaviateneo4jretriever`.
 
-Pinecone retrievers
+
+Pinecone Retrievers
 -------------------
 
 .. note::
 
-    In order to import this retriever, you must install the Weaviate Python client:
+    In order to import this retriever, the Pinecone Python client must be installed:
     `pip install pinecone-client`
 
 
@@ -493,25 +517,120 @@ Pinecone retrievers
 Also see :ref:`pineconeneo4jretriever`.
 
 
-Other retrievers
+Other Retrievers
 ===================
 
-Hybrid and Hybrid Cypher retrievers
+Hybrid and Hybrid Cypher Retrievers
 ------------------------------------
+
+In an hybrid retriever, results are searched for in both a vector and a full-text index.
+For this reason, a full-text index must also exist in the database, and its name must
+be provided when instantiating the retriever:
+
+.. code:: python
+
+    from neo4j_genai.retrievers import HybridRetriever
+
+    INDEX_NAME = "embedding-name"
+    FULLTEXT_INDEX_NAME = "fulltext-index-name"
+
+    retriever = HybridRetriever(
+        driver,
+        INDEX_NAME,
+        FULLTEXT_INDEX_NAME,
+        embedder,
+    )
+
 
 See :ref:`hybridretriever` and :ref:`hybridcypherretriever`.
 
+Also note that there is an helper function to create a full-text index (see `the API documentation <create-fulltext-index>`_).
 
-Custom retriever
+Text2Cypher Retriever
+------------------------------------
+
+This retriever first asks an LLM to generate a Cypher query to fetch the exact
+information required to answer the question from the database. Then this query is
+executed and the resulting records are added to the context for the LLM to write
+the answer to the initial user question. The cypher-generation and answer-generation
+LLMs can be different.
+
+.. code:: python
+
+    from neo4j import GraphDatabase
+    from neo4j_genai.retrievers import Text2CypherRetriever
+    from neo4j_genai.llm import OpenAILLM
+
+    URI = "neo4j://localhost:7687"
+    AUTH = ("neo4j", "password")
+
+    # Connect to Neo4j database
+    driver = GraphDatabase.driver(URI, auth=AUTH)
+
+    # Create LLM object
+    llm = OpenAILLM(model_name="gpt-3.5-turbo-instruct")
+
+    # (Optional) Specify your own Neo4j schema
+    neo4j_schema = """
+    Node properties:
+    Person {name: STRING, born: INTEGER}
+    Movie {tagline: STRING, title: STRING, released: INTEGER}
+    Relationship properties:
+    ACTED_IN {roles: LIST}
+    REVIEWED {summary: STRING, rating: INTEGER}
+    The relationships:
+    (:Person)-[:ACTED_IN]->(:Movie)
+    (:Person)-[:DIRECTED]->(:Movie)
+    (:Person)-[:PRODUCED]->(:Movie)
+    (:Person)-[:WROTE]->(:Movie)
+    (:Person)-[:FOLLOWS]->(:Person)
+    (:Person)-[:REVIEWED]->(:Movie)
+    """
+
+    # (Optional) Provide user input/query pairs for the LLM to use as examples
+    examples = [
+        "USER INPUT: 'Which actors starred in the Matrix?' QUERY: MATCH (p:Person)-[:ACTED_IN]->(m:Movie) WHERE m.title = 'The Matrix' RETURN p.name"
+    ]
+
+    # Initialize the retriever
+    retriever = Text2CypherRetriever(
+        driver=driver,
+        llm=llm,  # type: ignore
+        neo4j_schema=neo4j_schema,
+        examples=examples,
+    )
+
+    # Generate a Cypher query using the LLM, send it to the Neo4j database, and return the results
+    query_text = "Which movies did Hugo Weaving star in?"
+    print(retriever.search(query_text=query_text))
+
+
+.. note::
+
+    Since we are not performing any similarity search (vector index), the Text2Cypher
+    retriever does not require any embedder.
+
+.. warning::
+
+    The LLM-generated query is not guaranteed to be syntactically correct. In case it can't be
+    executed, a `Text2CypherRetrievalError` is raised.
+
+
+See :ref:`text2cypherretriever`.
+
+.. _custom-retriever:
+
+Custom Retriever
 ===================
 
-If none of the above matches your needs in terms of retrieval, you can implement your own custom retriever:
+If the application requires very specific retrieval strategy, it is possible to implement
+a custom retriever using the `Retriever` interface:
 
 .. code:: python
 
     from neo4j_genai.retrievers.base import Retriever
 
-    class VectorRetriever(Retriever):
+    class MyCustomRetriever(Retriever):
         def __init__(
             self,
             driver: neo4j.Driver,
@@ -533,10 +652,12 @@ See :ref:`rawsearchresult` for a description of the returned type.
 
 
 ******************************
-DB operations
+DB Operations
 ******************************
 
-Create the vector index
+See :ref:`database-interaction-section`.
+
+Create a Vector Index
 ========================
 
 .. code:: python
@@ -564,7 +685,7 @@ Create the vector index
     )
 
 
-Populate the vector index
+Populate a Vector Index
 ==========================
 
 .. code:: python
@@ -586,12 +707,12 @@ This will update the node with `id(node)=1234` to add (or update) a `node.embedd
 This property will also be added to the vector index.
 
 
-Drop the vector index
+Drop a Vector Index
 ========================
 
 .. warning::
 
-    This operation can not be undone, use it with caution.
+    This operation is irreversible and should be used with caution.
 
 
 .. code:: python
