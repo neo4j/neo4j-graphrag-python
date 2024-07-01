@@ -172,17 +172,33 @@ Below are descriptions of the various options available.
 Retriever Configuration
 ************************
 
-We provide implementations for the most commonly used retrievers:
+We provide implementations for the following retrievers:
 
-- **Vector retriever**: Performs a similarity search based on a Neo4j vector index and a query text or vector. Returns the matched `node` and similarity `score`.
-- **Vector Cypher retriever**: Performs a similarity search based on a Neo4j vector index and a query text or vector. The returned results can be configured through a retrieval query parameter that will be executed after the index search. It can be used to fetch more context around the matched node.
-- **External retrievers**: Use these retrievers when vectors are not saved in Neo4j but in an external vector database. Weaviate and Pinecone vector databases are currently supported.
-- **Hybrid and Hybrid Cypher retrievers**: These retrievers use both a vector and a full-text index in Neo4j.
-- **Text to Cypher retriever**: Translate the user question into a Cypher query to be run against a Neo4j database (or Knowledge Graph). The results of the query are then passed to the LLM to generate the final answer.
+.. list-table:: List of retrievers
+   :widths: 30 100
+   :header-rows: 1
+
+   * - Retriever
+     - Description
+   * - :ref:`VectorRetriever <vector-retriever-user-guide>`
+     - Performs a similarity search based on a Neo4j vector index and a query text or vector. Returns the matched `node` and similarity `score`.
+   * - :ref:`VectorCypherRetriever <vector-cypher-retriever-user-guide>`
+     - Performs a similarity search based on a Neo4j vector index and a query text or vector. The returned results can be configured through a retrieval query parameter that will be executed after the index search. It can be used to fetch more context around the matched node.
+   * - :ref:`HybridRetriever <hybrid-retriever-user-guide>`
+     - Uses both a vector and a full-text index in Neo4j.
+   * - :ref:`HybridCypherRetriever <hybrid-cypher-retriever-user-guide>`
+     - Same as HybridRetriever with a retrieval query similar to VectorCypherRetriever.
+   * - :ref:`Text2Cypher <text2cypher-retriever-user-guide>`
+     - Translates the user question into a Cypher query to be run against a Neo4j database (or Knowledge Graph). The results of the query are then passed to the LLM to generate the final answer.
+   * - :ref:`WeaviateNeo4jRetriever <weaviate-neo4j-retriever-user-guide>`
+     - Use this retriever when vectors are saved in a Weaviate vector database
+   * - :ref:`PineconeNeo4jRetriever <pinecone-neo4j-retriever-user-guide>`
+     - Use this retriever when vectors are saved in a Pinecone vector database
 
 Retrievers all expose a `search` method that we will discuss in the next sections.
 
-See :ref:`retrievers`.
+
+.. _vector-retriever-user-guide:
 
 Vector Retriever
 ===================
@@ -381,8 +397,9 @@ Here are examples of valid filter syntaxes and their meaning:
      - toLower(title) CONTAINS "The Matrix"
 
 
-See also:ref:`vectorretriever`.
+See also :ref:`vectorretriever`.
 
+.. _vector-cypher-retriever-user-guide:
 
 Vector Cypher Retriever
 =======================
@@ -457,6 +474,7 @@ Vector Databases
     For external retrievers, the filter syntax depends on the provider. Please refer to
     the documentation of the Python client for each provider for details.
 
+.. _weaviate-neo4j-retriever-user-guide:
 
 Weaviate Retrievers
 -------------------
@@ -489,6 +507,7 @@ The `return_properties` and `retrieval_query` parameters operate similarly to th
 
 See :ref:`weaviateneo4jretriever`.
 
+.. _pinecone-neo4j-retriever-user-guide:
 
 Pinecone Retrievers
 -------------------
@@ -520,7 +539,9 @@ Also see :ref:`pineconeneo4jretriever`.
 Other Retrievers
 ===================
 
-Hybrid and Hybrid Cypher Retrievers
+.. _hybrid-retriever-user-guide:
+
+Hybrid Retrievers
 ------------------------------------
 
 In an hybrid retriever, results are searched for in both a vector and a full-text index.
@@ -542,9 +563,39 @@ be provided when instantiating the retriever:
     )
 
 
-See :ref:`hybridretriever` and :ref:`hybridcypherretriever`.
+See :ref:`hybridretriever`.
 
 Also note that there is an helper function to create a full-text index (see `the API documentation <create-fulltext-index>`_).
+
+.. _hybrid-cypher-retriever-user-guide:
+
+Hybrid Cypher Retrievers
+------------------------------------
+
+In an hybrid cypher retriever, results are searched for in both a vector and a
+full-text index. Once the similar nodes are identified, a retrieval query can traverse
+the graph and return more context:
+
+.. code:: python
+
+    from neo4j_genai.retrievers import HybridCypherRetriever
+
+    INDEX_NAME = "embedding-name"
+    FULLTEXT_INDEX_NAME = "fulltext-index-name"
+
+    retriever = HybridCypherRetriever(
+        driver,
+        INDEX_NAME,
+        FULLTEXT_INDEX_NAME,
+        retrieval_query="MATCH (node)-[:AUTHORED_BY]->(author:Author)" "RETURN author.name"
+        embedder=embedder,
+    )
+
+
+See :ref:`hybridcypherretriever`.
+
+
+.. _text2cypher-retriever-user-guide:
 
 Text2Cypher Retriever
 ------------------------------------
