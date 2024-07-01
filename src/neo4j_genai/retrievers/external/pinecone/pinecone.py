@@ -79,6 +79,7 @@ class PineconeNeo4jRetriever(ExternalRetriever):
         embedder (Optional[Embedder]): Embedder object to embed query text.
         return_properties (Optional[list[str]]): List of node properties to return.
         result_formatter (Optional[Callable[[Any], Any]]): Function to transform a neo4j.Record to a RetrieverResultItem.
+        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
     Raises:
         RetrieverInitializationError: If validation of the input arguments fail.
@@ -94,6 +95,7 @@ class PineconeNeo4jRetriever(ExternalRetriever):
         return_properties: Optional[list[str]] = None,
         retrieval_query: Optional[str] = None,
         result_formatter: Optional[Callable[[Any], Any]] = None,
+        neo4j_database: Optional[str] = None,
     ):
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -108,6 +110,7 @@ class PineconeNeo4jRetriever(ExternalRetriever):
                 return_properties=return_properties,
                 retrieval_query=retrieval_query,
                 result_formatter=result_formatter,
+                neo4j_database=neo4j_database,
             )
         except ValidationError as e:
             raise RetrieverInitializationError(e.errors()) from e
@@ -116,6 +119,7 @@ class PineconeNeo4jRetriever(ExternalRetriever):
             driver=driver,
             id_property_external="id",
             id_property_neo4j=validated_data.id_property_neo4j,
+            neo4j_database=neo4j_database,
         )
         self.driver = validated_data.driver_model.driver
         self.client = validated_data.client_model.client
@@ -224,6 +228,8 @@ class PineconeNeo4jRetriever(ExternalRetriever):
         logger.debug("Pinecone Store Cypher parameters: %s", parameters)
         logger.debug("Pinecone Store Cypher query: %s", search_query)
 
-        records, _, _ = self.driver.execute_query(search_query, parameters)
+        records, _, _ = self.driver.execute_query(
+            search_query, parameters, database_=self.neo4j_database
+        )
 
         return RawSearchResult(records=records)
