@@ -13,16 +13,17 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
-import types
+
 import inspect
-from abc import ABC, abstractmethod, ABCMeta
-from typing import Optional, Callable, Any, TypeVar
-from typing_extensions import ParamSpec
+import types
+from abc import ABC, ABCMeta, abstractmethod
+from typing import Any, Callable, Optional, TypeVar
 
 import neo4j
+from typing_extensions import ParamSpec
 
-from neo4j_genai.types import RawSearchResult, RetrieverResult, RetrieverResultItem
 from neo4j_genai.exceptions import Neo4jVersionError
+from neo4j_genai.types import RawSearchResult, RetrieverResult, RetrieverResultItem
 
 T = ParamSpec("T")
 P = TypeVar("P")
@@ -80,8 +81,9 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
     index_name: str
     VERIFY_NEO4J_VERSION = True
 
-    def __init__(self, driver: neo4j.Driver):
+    def __init__(self, driver: neo4j.Driver, neo4j_database: Optional[str] = None):
         self.driver = driver
+        self.neo4j_database = neo4j_database
         if self.VERIFY_NEO4J_VERSION:
             self._verify_version()
 
@@ -94,7 +96,9 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
         indexing. Raises a Neo4jMinVersionError if the connected Neo4j version is
         not supported.
         """
-        records, _, _ = self.driver.execute_query("CALL dbms.components()")
+        records, _, _ = self.driver.execute_query(
+            "CALL dbms.components()", database_=self.neo4j_database
+        )
         version = records[0]["versions"][0]
 
         if "aura" in version:
@@ -119,7 +123,9 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
             "RETURN labelsOrTypes as labels, properties, "
             "options.indexConfig.`vector.dimensions` as dimensions"
         )
-        query_result = self.driver.execute_query(query, {"index_name": self.index_name})
+        query_result = self.driver.execute_query(
+            query, {"index_name": self.index_name}, database_=self.neo4j_database
+        )
         try:
             result = query_result.records[0]
             self._node_label = result["labels"][0]
@@ -184,11 +190,16 @@ class ExternalRetriever(Retriever, ABC):
     VERIFY_NEO4J_VERSION = False
 
     def __init__(
-        self, driver: neo4j.Driver, id_property_external: str, id_property_neo4j: str
+        self,
+        driver: neo4j.Driver,
+        id_property_external: str,
+        id_property_neo4j: str,
+        neo4j_database: Optional[str] = None,
     ):
         super().__init__(driver)
         self.id_property_external = id_property_external
         self.id_property_neo4j = id_property_neo4j
+        self.neo4j_database = neo4j_database
 
     @abstractmethod
     def get_search_results(

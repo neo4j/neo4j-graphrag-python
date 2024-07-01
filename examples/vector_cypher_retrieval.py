@@ -1,12 +1,12 @@
 from __future__ import annotations
-from neo4j import GraphDatabase
-from neo4j_genai.retrievers import VectorCypherRetriever
 
 import random
 import string
+
+from neo4j import GraphDatabase
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.indexes import create_vector_index
-
+from neo4j_genai.retrievers import VectorCypherRetriever
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")

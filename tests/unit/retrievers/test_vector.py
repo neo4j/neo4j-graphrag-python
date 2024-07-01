@@ -13,24 +13,24 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
-from unittest.mock import patch
+
+from typing import Any
+from unittest.mock import MagicMock, patch
 
 import neo4j
 import pytest
-from typing import Any
 from neo4j.exceptions import CypherSyntaxError
-from unittest.mock import MagicMock
-from neo4j_genai.retrievers import VectorRetriever, VectorCypherRetriever
 from neo4j_genai.exceptions import (
-    RetrieverInitializationError,
     EmbeddingRequiredError,
+    RetrieverInitializationError,
     SearchValidationError,
 )
 from neo4j_genai.neo4j_queries import get_search_query
+from neo4j_genai.retrievers import VectorCypherRetriever, VectorRetriever
 from neo4j_genai.types import (
-    SearchType,
     RetrieverResult,
     RetrieverResultItem,
+    SearchType,
 )
 
 
@@ -51,6 +51,21 @@ def test_vector_retriever_invalid_index_name(
     assert "Input should be a valid string" in str(exc_info.value)
 
 
+@patch("neo4j_genai.retrievers.VectorRetriever._verify_version")
+def test_vector_retriever_invalid_database_name(
+    _verify_version_mock: MagicMock, driver: MagicMock
+) -> None:
+    with pytest.raises(RetrieverInitializationError) as exc_info:
+        VectorRetriever(
+            driver=driver,
+            index_name="my-index",
+            neo4j_database=42,  # type: ignore
+        )
+
+    assert "neo4j_database" in str(exc_info.value)
+    assert "Input should be a valid string" in str(exc_info.value)
+
+
 @patch("neo4j_genai.retrievers.VectorCypherRetriever._verify_version")
 def test_vector_cypher_retriever_invalid_retrieval_query(
     _verify_version_mock: MagicMock, driver: MagicMock
@@ -59,6 +74,25 @@ def test_vector_cypher_retriever_invalid_retrieval_query(
         VectorCypherRetriever(driver=driver, index_name="my-index", retrieval_query=42)  # type: ignore
 
         assert "retrieval_query" in str(exc_info.value)
+        assert "Input should be a valid string" in str(exc_info.value)
+
+
+@patch("neo4j_genai.retrievers.VectorCypherRetriever._verify_version")
+def test_vector_cypher_retriever_invalid_database_name(
+    _verify_version_mock: MagicMock, driver: MagicMock
+) -> None:
+    retrieval_query = """
+        RETURN node.id AS node_id, node.text AS text, score
+        """
+    with pytest.raises(RetrieverInitializationError) as exc_info:
+        VectorCypherRetriever(
+            driver=driver,
+            index_name="my-index",
+            retrieval_query=retrieval_query,
+            neo4j_database=42,  # type: ignore
+        )
+
+        assert "neo4j_database" in str(exc_info.value)
         assert "Input should be a valid string" in str(exc_info.value)
 
 
@@ -80,7 +114,8 @@ def test_similarity_search_vector_happy_path(
     dimensions = 1536
     query_vector = [1.0 for _ in range(dimensions)]
     top_k = 5
-    retriever = VectorRetriever(driver, index_name)
+    database = "neo4j"
+    retriever = VectorRetriever(driver, index_name, neo4j_database=database)
     expected_records = [neo4j.Record({"node": {"text": "dummy-node"}, "score": 1.0})]
     retriever.driver.execute_query.return_value = [  # type: ignore
         expected_records,
@@ -98,6 +133,7 @@ def test_similarity_search_vector_happy_path(
             "top_k": top_k,
             "query_vector": query_vector,
         },
+        database_=database,
     )
     assert records == RetrieverResult(
         items=[
@@ -142,6 +178,7 @@ def test_similarity_search_text_happy_path(
             "top_k": top_k,
             "query_vector": embed_query_vector,
         },
+        database_=None,
     )
     assert records == RetrieverResult(
         items=[
@@ -193,6 +230,7 @@ def test_similarity_search_text_return_properties(
             "top_k": top_k,
             "query_vector": embed_query_vector,
         },
+        database_=None,
     )
     assert records == RetrieverResult(
         items=[
@@ -279,8 +317,13 @@ def test_retrieval_query_happy_path(
     retrieval_query = """
         RETURN node.id AS node_id, node.text AS text, score
         """
+    database = "neo4j"
     retriever = VectorCypherRetriever(
-        driver, index_name, retrieval_query, embedder=embedder
+        driver,
+        index_name,
+        retrieval_query,
+        embedder=embedder,
+        neo4j_database=database,
     )
     query_text = "may thy knife chip and shatter"
     top_k = 5
@@ -307,6 +350,7 @@ def test_retrieval_query_happy_path(
             "top_k": top_k,
             "query_vector": embed_query_vector,
         },
+        database_=database,
     )
     assert records == RetrieverResult(
         items=[
@@ -372,6 +416,7 @@ def test_retrieval_query_with_result_format_function(
             "top_k": top_k,
             "query_vector": embed_query_vector,
         },
+        database_=None,
     )
     assert records == RetrieverResult(
         items=[
@@ -433,6 +478,7 @@ def test_retrieval_query_with_params(
             "query_vector": embed_query_vector,
             "param": "dummy-param",
         },
+        database_=None,
     )
 
     assert records == RetrieverResult(

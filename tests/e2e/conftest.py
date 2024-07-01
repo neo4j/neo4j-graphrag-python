@@ -13,21 +13,24 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
+
 import random
 import string
 import uuid
+from typing import Any, Generator
 from unittest.mock import MagicMock
-from typing import Generator, Any
+
 import pytest
-from neo4j import GraphDatabase, Driver
+from neo4j import Driver, GraphDatabase
 from neo4j_genai.embedder import Embedder
-from neo4j_genai.retrievers import VectorRetriever
 from neo4j_genai.indexes import (
     create_fulltext_index,
     create_vector_index,
     drop_index_if_exists,
 )
 from neo4j_genai.llm import LLMInterface
+from neo4j_genai.retrievers import VectorRetriever
+
 from ..e2e.utils import EMBEDDING_BIOLOGY
 
 

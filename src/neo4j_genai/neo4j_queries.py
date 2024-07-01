@@ -13,11 +13,11 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
-from typing import Optional, Any
 
-from neo4j_genai.types import SearchType
+from typing import Any, Optional
+
 from neo4j_genai.filters import get_metadata_filter
-
+from neo4j_genai.types import SearchType
 
 VECTOR_INDEX_QUERY = (
     "CALL db.index.vector.queryNodes($vector_index_name, $top_k, $query_vector) "
@@ -57,9 +57,9 @@ def _get_hybrid_query() -> str:
 
 def _get_filtered_vector_query(
     filters: dict[str, Any],
-    node_label: Optional[str],
-    embedding_node_property: Optional[str],
-    embedding_dimension: Optional[int],
+    node_label: str,
+    embedding_node_property: str,
+    embedding_dimension: int,
 ) -> tuple[str, dict[str, Any]]:
     """Build Cypher query for vector search with filters
     Uses exact KNN.
@@ -83,31 +83,6 @@ def _get_filtered_vector_query(
     )
     query_params["embedding_dimension"] = embedding_dimension
     return f"{base_query} AND ({where_filters}) {vector_query}", query_params
-
-
-def _get_vector_query(
-    filters: Optional[dict[str, Any]],
-    node_label: Optional[str],
-    embedding_node_property: Optional[str],
-    embedding_dimension: Optional[int],
-) -> tuple[str, dict[str, Any]]:
-    """Build the vector query with or without filters
-
-    Args:
-        filters (dict[str, Any]): filters used to pre-filter the nodes before vector search
-        node_label (str): node label we want to search for
-        embedding_node_property (str): the name of the property holding the embeddings
-        embedding_dimension (int): the dimension of the embeddings
-
-    Returns:
-        tuple[str, dict[str, Any]]: query and parameters
-
-    """
-    if filters:
-        return _get_filtered_vector_query(
-            filters, node_label, embedding_node_property, embedding_dimension
-        )
-    return VECTOR_INDEX_QUERY, {}
 
 
 def get_search_query(
@@ -138,13 +113,25 @@ def get_search_query(
     """
     if search_type == SearchType.HYBRID:
         if filters:
-            raise Exception("Filters is not supported with Hybrid Search")
+            raise Exception("Filters are not supported with Hybrid Search")
         query = _get_hybrid_query()
         params: dict[str, Any] = {}
     elif search_type == SearchType.VECTOR:
-        query, params = _get_vector_query(
-            filters, node_label, embedding_node_property, embedding_dimension
-        )
+        if filters:
+            if (
+                node_label is not None
+                and embedding_node_property is not None
+                and embedding_dimension is not None
+            ):
+                query, params = _get_filtered_vector_query(
+                    filters, node_label, embedding_node_property, embedding_dimension
+                )
+            else:
+                raise Exception(
+                    "Vector Search with filters requires: node_label, embedding_node_property, embedding_dimension"
+                )
+        else:
+            query, params = VECTOR_INDEX_QUERY, {}
     else:
         raise ValueError(f"Search type is not supported: {search_type}")
     query_tail = get_query_tail(

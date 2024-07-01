@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
+
 import hashlib
 import json
 import os.path
@@ -20,8 +21,7 @@ from typing import Any, Literal
 
 import neo4j
 import weaviate.classes as wvc
-
-from neo4j_genai.indexes import drop_index_if_exists, create_vector_index
+from neo4j_genai.indexes import create_vector_index, drop_index_if_exists
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 

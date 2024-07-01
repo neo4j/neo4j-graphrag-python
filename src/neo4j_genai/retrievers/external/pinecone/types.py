@@ -53,3 +53,4 @@ class PineconeNeo4jRetrieverModel(BaseModel):
     return_properties: Optional[list[str]] = None
     retrieval_query: Optional[str] = None
     result_formatter: Optional[Callable[[neo4j.Record], str]] = None
+    neo4j_database: Optional[str] = None
