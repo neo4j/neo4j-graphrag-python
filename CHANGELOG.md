@@ -14,6 +14,7 @@
 -   Improved developer experience by copying the docstring from the `Retriever.get_search_results` method to the `Retriever.search` method
 -   Support for specifying database names in index handling methods and retrievers.
 -   User Guide in documentation.
+-   Introduced result_formatter argument to all retrievers, allowing custom formatting of retriever results.
 
 ### Changed
 -   Refactored import paths for retrievers to neo4j_genai.retrievers.
