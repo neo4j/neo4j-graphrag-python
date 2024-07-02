@@ -270,34 +270,31 @@ The `OpenAIEmbedder` was illustrated previously. Here is how to use the `Sentenc
 
     embedder = SentenceTransformerEmbeddings(model="all-MiniLM-L6-v2")  # Note: this is the default model
 
+
 If another embedder is desired, a custom embedder can be created. For example, consider
-the following implementation of an embedder that generates random numbers:
-
-.. warning::
-    Do not use it in your application :)
-
+the following implementation of an embedder that wraps the `OllamaEmbedding` model from LlamaIndex:
 
 .. code:: python
 
-    import random
+    from llama_index.embeddings.ollama import OllamaEmbedding
     from neo4j_genai.embedder import Embedder
 
-    class RandomEmbedder(Embedder):
-        def __init__(
-            self,
-            size: int,
-            seed: int = 42,
-        ) -> None:
-            self.size = size
-            random.seed(seed)
+    class OllamaEmbedder(Embedder):
+        def __init__(self, ollama_embedding):
+            self.embedder = ollama_embedding
 
         def embed_query(self, text: str) -> list[float]:
-            return [
-                random.random()
-                for _ in range(self.size)
-            ]
+            embedding = self.embedder.get_text_embedding_batch(
+                [text], show_progress=True
+            )
+            return embedding[0]
 
-    embedder = RandomEmbedder(10)
+    ollama_embedding = OllamaEmbedding(
+                model_name="llama3",
+                base_url="http://localhost:11434",
+                ollama_additional_kwargs={"mirostat": 0},
+            )
+    embedder = OllamaEmbedder(ollama_embedding)
     vector = embedder.embed_query("some text")
 
 
@@ -494,7 +491,7 @@ Weaviate Retrievers
     retriever = WeaviateNeo4jRetriever(
         driver=driver,
         client=client,
-        embedder=embeder,
+        embedder=embedder,
         collection="Movies",
         id_property_external="neo4j_id",
         id_property_neo4j="id",
@@ -530,7 +527,7 @@ Pinecone Retrievers
         client=client,
         index_name="Movies",
         id_property_neo4j="id",
-        embedder=embeder,
+        embedder=embedder,
     )
 
 Also see :ref:`pineconeneo4jretriever`.
