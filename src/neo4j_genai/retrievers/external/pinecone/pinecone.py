@@ -95,7 +95,9 @@ class PineconeNeo4jRetriever(ExternalRetriever):
         embedder: Optional[Embedder] = None,
         return_properties: Optional[list[str]] = None,
         retrieval_query: Optional[str] = None,
-        result_formatter: Optional[Callable[[neo4j.Record], RetrieverResultItem]] = None,
+        result_formatter: Optional[
+            Callable[[neo4j.Record], RetrieverResultItem]
+        ] = None,
         neo4j_database: Optional[str] = None,
     ):
         try:

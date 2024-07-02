@@ -25,7 +25,12 @@ from pydantic import (
 from weaviate.client import WeaviateClient
 from weaviate.collections.classes.filters import _Filters
 
-from neo4j_genai.types import EmbedderModel, Neo4jDriverModel, VectorSearchModel
+from neo4j_genai.types import (
+    EmbedderModel,
+    Neo4jDriverModel,
+    RetrieverResultItem,
+    VectorSearchModel,
+)
 
 
 class WeaviateModel(BaseModel):
