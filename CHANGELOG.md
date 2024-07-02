@@ -2,6 +2,8 @@
 
 ## Next
 
+## 0.3.0
+
 ### Added
 -   Stopped embeddings from being returned when searching with `VectorRetriever`. Added `nodeLabels` and `id` to the metadata of `VectorRetriever` results.
 -   Added `upsert_vector` utility function for attaching vectors to node properties.
