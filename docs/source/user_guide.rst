@@ -430,7 +430,7 @@ Format the Results
 
 .. warning::
 
-    This API is in beta mode and will be subject to change is the future.
+    This API is in beta mode and will be subject to change in the future.
 
 For improved readability and ease in prompt-engineering, formatting the result to suit
 specific needs involves providing a `record_formatter` function to the Cypher retrievers.

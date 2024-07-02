@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
+from typing import Callable, Optional
 
 import neo4j
 from neo4j.exceptions import CypherSyntaxError, DriverError, Neo4jError
@@ -36,6 +36,7 @@ from neo4j_genai.types import (
     Neo4jDriverModel,
     Neo4jSchemaModel,
     RawSearchResult,
+    RetrieverResultItem,
     Text2CypherRetrieverModel,
     Text2CypherSearchModel,
 )
@@ -65,6 +66,9 @@ class Text2CypherRetriever(Retriever):
         llm: LLMInterface,
         neo4j_schema: Optional[str] = None,
         examples: Optional[list[str]] = None,
+        result_formatter: Optional[
+            Callable[[neo4j.Record], RetrieverResultItem]
+        ] = None,
     ) -> None:
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -77,6 +81,7 @@ class Text2CypherRetriever(Retriever):
                 llm_model=llm_model,
                 neo4j_schema_model=neo4j_schema_model,
                 examples=examples,
+                result_formatter=result_formatter,
             )
         except ValidationError as e:
             raise RetrieverInitializationError(e.errors()) from e
@@ -84,6 +89,7 @@ class Text2CypherRetriever(Retriever):
         super().__init__(validated_data.driver_model.driver)
         self.llm = validated_data.llm_model.llm
         self.examples = validated_data.examples
+        self.result_formatter = validated_data.result_formatter
         try:
             self.neo4j_schema = (
                 validated_data.neo4j_schema_model.neo4j_schema
