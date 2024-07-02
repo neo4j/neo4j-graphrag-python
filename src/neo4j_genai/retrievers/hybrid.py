@@ -71,6 +71,11 @@ class HybridRetriever(Retriever):
         return_properties (Optional[list[str]]): List of node properties to return.
         neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
         result_formatter (Optional[Callable[[neo4j.Record], RetrieverResultItem]]): Provided custom function to transform a neo4j.Record to a RetrieverResultItem.
+
+            Two variables are provided in the neo4j.Record:
+
+            -   node: Represents the node retrieved from the vector index search.
+            -   score: Denotes the similarity score.
     """
 
     def __init__(
