@@ -31,7 +31,12 @@ from neo4j_genai.retrievers.external.weaviate.types import (
     WeaviateNeo4jRetrieverModel,
     WeaviateNeo4jSearchModel,
 )
-from neo4j_genai.types import EmbedderModel, Neo4jDriverModel, RawSearchResult
+from neo4j_genai.types import (
+    EmbedderModel,
+    Neo4jDriverModel,
+    RawSearchResult,
+    RetrieverResultItem,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +91,9 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         embedder: Optional[Embedder] = None,
         return_properties: Optional[list[str]] = None,
         retrieval_query: Optional[str] = None,
-        result_formatter: Optional[Callable[[Any], Any]] = None,
+        result_formatter: Optional[
+            Callable[[neo4j.Record], RetrieverResultItem]
+        ] = None,
         neo4j_database: Optional[str] = None,
     ):
         try:

@@ -252,6 +252,8 @@ class HybridCypherRetriever(Retriever):
                 fulltext_index_name=fulltext_index_name,
                 retrieval_query=retrieval_query,
                 embedder_model=embedder_model,
+                result_formatter=result_formatter,
+                neo4j_database=neo4j_database,
             )
         except ValidationError as e:
             raise RetrieverInitializationError(e.errors()) from e
