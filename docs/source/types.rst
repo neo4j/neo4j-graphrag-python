@@ -4,13 +4,6 @@
 Types
 *****
 
-Embedder
-========
-
-.. autoclass:: neo4j_genai.embedder.Embedder
-    :members:
-
-
 RawSearchResult
 ==================
 
@@ -27,3 +20,15 @@ RetrieverResultItem
 ====================
 
 .. autoclass:: neo4j_genai.types.RetrieverResultItem
+
+
+LLMResponse
+====================
+
+.. autoclass:: neo4j_genai.llm.types.LLMResponse
+
+
+RagResultModel
+====================
+
+.. autoclass:: neo4j_genai.generation.types.RagResultModel

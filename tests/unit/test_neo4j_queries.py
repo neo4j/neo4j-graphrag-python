@@ -12,9 +12,10 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from unittest.mock import patch
 from typing import Any
-from neo4j_genai.neo4j_queries import get_search_query, get_query_tail
+from unittest.mock import patch
+
+from neo4j_genai.neo4j_queries import get_query_tail, get_search_query
 from neo4j_genai.types import SearchType
 
 

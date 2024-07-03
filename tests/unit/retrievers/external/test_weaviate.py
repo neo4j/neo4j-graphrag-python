@@ -18,8 +18,10 @@ from typing import Optional
 from unittest.mock import MagicMock
 
 import neo4j
-from neo4j_genai.retrievers.external.utils import get_match_query
+import pytest
+from neo4j_genai.exceptions import RetrieverInitializationError
 from neo4j_genai.retrievers import WeaviateNeo4jRetriever
+from neo4j_genai.retrievers.external.utils import get_match_query
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 from weaviate.client import WeaviateClient
 
@@ -77,6 +79,7 @@ def test_text_search_remote_vector_store_happy_path(driver: MagicMock) -> None:
             ],
             "id_property": "sync_id",
         },
+        database_=None,
     )
     assert records == RetrieverResult(
         items=[
@@ -87,6 +90,26 @@ def test_text_search_remote_vector_store_happy_path(driver: MagicMock) -> None:
         ],
         metadata={"__retriever": "WeaviateNeo4jRetriever"},
     )
+
+
+def test_invalid_neo4j_database_name(driver: MagicMock) -> None:
+    node_id_value = "node-test-id"
+    node_match_score = 0.9
+
+    wc = WClient(node_id_value=node_id_value, node_match_score=node_match_score)
+
+    with pytest.raises(RetrieverInitializationError) as exc_info:
+        WeaviateNeo4jRetriever(
+            driver=driver,
+            client=wc,
+            collection="dummy-collection",
+            id_property_neo4j="sync_id",
+            id_property_external="neo4j_id",
+            neo4j_database=42,  # type: ignore
+        )
+
+    assert "neo4j_database" in str(exc_info.value)
+    assert "Input should be a valid string" in str(exc_info.value)
 
 
 def test_text_search_remote_vector_store_return_properties(driver: MagicMock) -> None:
@@ -122,6 +145,7 @@ def test_text_search_remote_vector_store_return_properties(driver: MagicMock) ->
             ],
             "id_property": "sync_id",
         },
+        database_=None,
     )
     assert records == RetrieverResult(
         items=[
@@ -168,6 +192,7 @@ def test_text_search_remote_vector_store_retrieval_query(driver: MagicMock) -> N
             ],
             "id_property": "sync_id",
         },
+        database_=None,
     )
 
     assert records == RetrieverResult(
@@ -230,3 +255,39 @@ def test_match_query_with_both_return_properties_and_retrieval_query() -> None:
         "WHERE node[$id_property] = match_id_value " + retrieval_query
     )
     assert match_query.strip() == expected.strip()
+
+
+def test_weaviate_retriever_with_result_format_function(
+    driver: MagicMock, neo4j_record: MagicMock, result_formatter: MagicMock
+) -> None:
+    query_text = "may thy knife chip and shatter"
+    top_k = 5
+    node_id_value = "node-test-id"
+    node_match_score = 0.9
+
+    wc = WClient(node_id_value=node_id_value, node_match_score=node_match_score)
+
+    retriever = WeaviateNeo4jRetriever(
+        driver=driver,
+        client=wc,
+        collection="dummy-collection",
+        id_property_neo4j="sync_id",
+        id_property_external="neo4j_id",
+        result_formatter=result_formatter,
+    )
+    driver.execute_query.return_value = [
+        [neo4j_record],
+        None,
+        None,
+    ]
+
+    records = retriever.search(query_text=query_text, top_k=top_k)
+
+    assert records == RetrieverResult(
+        items=[
+            RetrieverResultItem(
+                content="dummy-node", metadata={"score": 1.0, "node_id": 123}
+            ),
+        ],
+        metadata={"__retriever": "WeaviateNeo4jRetriever"},
+    )

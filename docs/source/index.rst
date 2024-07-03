@@ -12,11 +12,25 @@ The purpose of this package is to provide a first party package to developers,
 where Neo4j can guarantee long term commitment and maintenance as well as being
 fast to ship new features and high performing patterns and methods.
 
+Neo4j versions supported:
+
+* Neo4j >=5.18.1
+* Neo4j Aura >=5.18.0
+
+Python versions supported:
+
+* Python 3.12
+* Python 3.11
+* Python 3.10
+* Python 3.9
+* Python 3.8
+
+
 ******
 Topics
 ******
 
-+ :ref:`rag-documentation`
++ :ref:`user-guide`
 + :ref:`api-documentation`
 + :ref:`types-documentation`
 
@@ -25,7 +39,7 @@ Topics
     :caption: Contents:
     :hidden:
 
-    rag.rst
+    user_guide.rst
     api.rst
     types.rst
 
@@ -54,45 +68,13 @@ To install the latest stable version, use:
 Examples
 ********
 
-While the library has more retrievers than shown here, the following examples should be able to get you started.
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Performing a similarity search
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code:: python
-
-    from neo4j import GraphDatabase
-    from neo4j_genai.retrievers import VectorRetriever
-    from langchain_openai import OpenAIEmbeddings
-
-    URI = "neo4j://localhost:7687"
-    AUTH = ("neo4j", "password")
-
-    INDEX_NAME = "embedding-name"
-
-    # Connect to Neo4j database
-    driver = GraphDatabase.driver(URI, auth=AUTH)
-
-    # Create Embedder object
-    embedder = OpenAIEmbeddings(model="text-embedding-3-large")
-
-    # Initialize the retriever
-    retriever = VectorRetriever(driver, INDEX_NAME, embedder)
-
-    # Run the similarity search
-    query_text = "How do I do similarity search in Neo4j?"
-    response = retriever.search(query_text=query_text, top_k=5)
-
-.. note::
-
-    Assumption: Neo4j running with populated vector index in place.
-
 ~~~~~~~~~~~~~~~~~~~~~~~
 Creating a vector index
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 When creating a vector index, make sure you match the number of dimensions in the index with the number of dimensions the embeddings have.
+
+See :ref:`the API documentation<create-vector-index>` for more details.
 
 .. code:: python
 
@@ -102,7 +84,7 @@ When creating a vector index, make sure you match the number of dimensions in th
     URI = "neo4j://localhost:7687"
     AUTH = ("neo4j", "password")
 
-    INDEX_NAME = "chunk-index"
+    INDEX_NAME = "vector-index-name"
 
     # Connect to Neo4j database
     driver = GraphDatabase.driver(URI, auth=AUTH)
@@ -119,19 +101,19 @@ When creating a vector index, make sure you match the number of dimensions in th
 
 .. note::
 
-    Assumption: Neo4j running
+    Assumed Neo4j is running
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Populating the Neo4j Vector Index
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This library does not write to the database, that is up to you.
-See below for how to write using Cypher via the Neo4j driver.
+Note that the below example is not the only way you can upsert data into your Neo4j database. For example, you could also leverage `the Neo4j Python driver <https://github.com/neo4j/neo4j-python-driver>`_.
+
 
 .. code:: python
 
     from neo4j import GraphDatabase
-    from random import random
+    from neo4j_genai.indexes import upsert_query
 
     URI = "neo4j://localhost:7687"
     AUTH = ("neo4j", "password")
@@ -140,23 +122,60 @@ See below for how to write using Cypher via the Neo4j driver.
     driver = GraphDatabase.driver(URI, auth=AUTH)
 
     # Upsert the vector
-    vector = [random() for _ in range(DIMENSION)]
-    insert_query = (
-        "MERGE (n:Document {id: $id})"
-        "WITH n "
-        "CALL db.create.setNodeVectorProperty(n, 'vectorProperty', $vector)"
-        "RETURN n"
+    vector = ...
+    upsert_query(
+        driver,
+        node_id=1,
+        embedding_property="vectorProperty",
+        vector=vector,
     )
-    parameters = {
-        "id": 0,
-        "vector": vector,
-    }
-    driver.execute_query(insert_query, parameters)
 
 
 .. note::
 
-    Assumption: Neo4j running with a defined vector index
+    Assumed Neo4j is running with a defined vector index
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Performing a similarity search
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+While the library has more retrievers than shown here, the following examples should be able to get you started.
+
+.. code:: python
+
+    from neo4j import GraphDatabase
+    from neo4j_genai.retrievers import VectorRetriever
+    from langchain_openai import OpenAIEmbeddings
+
+    URI = "neo4j://localhost:7687"
+    AUTH = ("neo4j", "password")
+
+    INDEX_NAME = "vector-index-name"
+
+    # Connect to Neo4j database
+    driver = GraphDatabase.driver(URI, auth=AUTH)
+
+    # Create Embedder object
+    # Note: An OPENAI_API_KEY environment variable is required here
+    embedder = OpenAIEmbeddings(model="text-embedding-3-large")
+
+    # Initialize the retriever
+    retriever = VectorRetriever(driver, INDEX_NAME, embedder)
+
+    # Run the similarity search
+    query_text = "How do I do similarity search in Neo4j?"
+    response = retriever.search(query_text=query_text, top_k=5)
+
+.. note::
+
+    Assumed Neo4j is running with populated vector index in place.
+
+***********
+Limitations
+***********
+
+The query over the vector index is an *approximate* nearest neighbor search and may not give exact results. `See this reference for more details <https://neo4j.com/docs/cypher-manual/current/indexes/semantic-indexes/vector-indexes/#_limitiations_and_known_issues>`_.
+
 
 Development
 ===========

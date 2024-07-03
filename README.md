@@ -8,6 +8,14 @@ fast to ship new features and high performing patterns and methods.
 
 Documentation: https://neo4j.com/docs/neo4j-genai-python/
 
+Python versions supported:
+
+* Python 3.12 supported.
+* Python 3.11 supported.
+* Python 3.10 supported.
+* Python 3.9 supported.
+* Python 3.8 supported.
+
 # Usage
 
 ## Installation
@@ -22,50 +30,6 @@ pip install neo4j-genai
 
 ## Examples
 
-While the library has more retrievers than shown here, the following examples should be able to get you started.
-
-### Performing a similarity search
-
-Assumption: Neo4j running with populated vector index in place.
-
-In the following example, we use a simple vector search as retriever,
-that will perform a similarity search over the `index-name` vector index
-in Neo4j.
-
-```python
-from neo4j import GraphDatabase
-from neo4j_genai.retrievers import VectorRetriever
-from neo4j_genai.llm import OpenAILLM
-from neo4j_genai.generation import GraphRAG
-from neo4j_genai.embeddings.openai import OpenAIEmbeddings
-
-URI = "neo4j://localhost:7687"
-AUTH = ("neo4j", "password")
-
-INDEX_NAME = "index-name"
-
-# Connect to Neo4j database
-driver = GraphDatabase.driver(URI, auth=AUTH)
-
-# Create Embedder object
-embedder = OpenAIEmbeddings(model="text-embedding-3-large")
-
-# Initialize the retriever
-retriever = VectorRetriever(driver, INDEX_NAME, embedder)
-
-# Initialize the LLM
-# Note: the OPENAI_API_KEY must be in the env vars
-llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0})
-
-# Initialize the RAG pipeline
-rag = GraphRAG(retriever=retriever, llm=llm)
-
-# Query the graph
-query_text = "How do I do similarity search in Neo4j?"
-response = rag.search(query_text=query_text, retriever_config={"top_k": 5})
-print(response.answer)
-```
-
 ### Creating a vector index
 
 When creating a vector index, make sure you match the number of dimensions in the index with the number of dimensions the embeddings have.
@@ -79,7 +43,7 @@ from neo4j_genai.indexes import create_vector_index
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
 
-INDEX_NAME = "chunk-index"
+INDEX_NAME = "vector-index-name"
 
 # Connect to Neo4j database
 driver = GraphDatabase.driver(URI, auth=AUTH)
@@ -98,14 +62,13 @@ create_vector_index(
 
 ### Populating the Neo4j Vector Index
 
-This library does not write to the database, that is up to you.
-See below for how to write using Cypher via the Neo4j driver.
+Note that the below example is not the only way you can upsert data into your Neo4j database. For example, you could also leverage [the Neo4j Python driver](https://github.com/neo4j/neo4j-python-driver).
 
 Assumption: Neo4j running with a defined vector index
 
 ```python
 from neo4j import GraphDatabase
-from random import random
+from neo4j_genai.indexes import upsert_query
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
@@ -114,18 +77,59 @@ AUTH = ("neo4j", "password")
 driver = GraphDatabase.driver(URI, auth=AUTH)
 
 # Upsert the vector
-vector = [random() for _ in range(DIMENSION)]
-insert_query = (
-    "MERGE (n:Document {id: $id})"
-    "WITH n "
-    "CALL db.create.setNodeVectorProperty(n, 'vectorProperty', $vector)"
-    "RETURN n"
+vector = ...
+upsert_query(
+    driver,
+    node_id=1,
+    embedding_property="vectorProperty",
+    vector=vector,
 )
-parameters = {
-    "id": 0,
-    "vector": vector,
-}
-driver.execute_query(insert_query, parameters)
+```
+
+### Performing a similarity search
+
+Assumption: Neo4j running with populated vector index in place.
+
+Limitation: The query over the vector index is an _approximate_ nearest neighbor search and may not give exact results. [See this reference for more details](https://neo4j.com/docs/cypher-manual/current/indexes/semantic-indexes/vector-indexes/#_limitiations_and_known_issues).
+
+While the library has more retrievers than shown here, the following examples should be able to get you started.
+
+In the following example, we use a simple vector search as retriever,
+that will perform a similarity search over the `index-name` vector index
+in Neo4j.
+
+```python
+from neo4j import GraphDatabase
+from neo4j_genai.retrievers import VectorRetriever
+from neo4j_genai.llm import OpenAILLM
+from neo4j_genai.generation import GraphRAG
+from neo4j_genai.embeddings.openai import OpenAIEmbeddings
+
+URI = "neo4j://localhost:7687"
+AUTH = ("neo4j", "password")
+
+INDEX_NAME = "vector-index-name"
+
+# Connect to Neo4j database
+driver = GraphDatabase.driver(URI, auth=AUTH)
+
+# Create Embedder object
+embedder = OpenAIEmbeddings(model="text-embedding-3-large")
+
+# Initialize the retriever
+retriever = VectorRetriever(driver, INDEX_NAME, embedder)
+
+# Initialize the LLM
+# Note: An OPENAI_API_KEY environment variable is required here
+llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0})
+
+# Initialize the RAG pipeline
+rag = GraphRAG(retriever=retriever, llm=llm)
+
+# Query the graph
+query_text = "How do I do similarity search in Neo4j?"
+response = rag.search(query_text=query_text, retriever_config={"top_k": 5})
+print(response.answer)
 ```
 
 # Development

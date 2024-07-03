@@ -13,31 +13,32 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
-from typing import Optional, Any, Callable
+
+import logging
+from typing import Any, Callable, Optional
 
 import neo4j
 from pydantic import ValidationError
 
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.exceptions import (
+    EmbeddingRequiredError,
     RetrieverInitializationError,
     SearchValidationError,
-    EmbeddingRequiredError,
-)
-from neo4j_genai.retrievers.base import Retriever
-from neo4j_genai.types import (
-    HybridSearchModel,
-    SearchType,
-    HybridCypherSearchModel,
-    Neo4jDriverModel,
-    EmbedderModel,
-    HybridRetrieverModel,
-    HybridCypherRetrieverModel,
-    RawSearchResult,
-    RetrieverResultItem,
 )
 from neo4j_genai.neo4j_queries import get_search_query
-import logging
+from neo4j_genai.retrievers.base import Retriever
+from neo4j_genai.types import (
+    EmbedderModel,
+    HybridCypherRetrieverModel,
+    HybridCypherSearchModel,
+    HybridRetrieverModel,
+    HybridSearchModel,
+    Neo4jDriverModel,
+    RawSearchResult,
+    RetrieverResultItem,
+    SearchType,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +69,13 @@ class HybridRetriever(Retriever):
         fulltext_index_name (str): Fulltext index name.
         embedder (Optional[Embedder]): Embedder object to embed query text.
         return_properties (Optional[list[str]]): List of node properties to return.
+        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
+        result_formatter (Optional[Callable[[neo4j.Record], RetrieverResultItem]]): Provided custom function to transform a neo4j.Record to a RetrieverResultItem.
+
+            Two variables are provided in the neo4j.Record:
+
+            -   node: Represents the node retrieved from the vector index search.
+            -   score: Denotes the similarity score.
     """
 
     def __init__(
@@ -77,6 +85,10 @@ class HybridRetriever(Retriever):
         fulltext_index_name: str,
         embedder: Optional[Embedder] = None,
         return_properties: Optional[list[str]] = None,
+        result_formatter: Optional[
+            Callable[[neo4j.Record], RetrieverResultItem]
+        ] = None,
+        neo4j_database: Optional[str] = None,
     ) -> None:
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -87,11 +99,15 @@ class HybridRetriever(Retriever):
                 fulltext_index_name=fulltext_index_name,
                 embedder_model=embedder_model,
                 return_properties=return_properties,
+                result_formatter=result_formatter,
+                neo4j_database=neo4j_database,
             )
         except ValidationError as e:
             raise RetrieverInitializationError(e.errors()) from e
 
-        super().__init__(validated_data.driver_model.driver)
+        super().__init__(
+            validated_data.driver_model.driver, validated_data.neo4j_database
+        )
         self.vector_index_name = validated_data.vector_index_name
         self.fulltext_index_name = validated_data.fulltext_index_name
         self.return_properties = validated_data.return_properties
@@ -100,10 +116,11 @@ class HybridRetriever(Retriever):
             if validated_data.embedder_model
             else None
         )
+        self.result_formatter = validated_data.result_formatter
 
     def default_record_formatter(self, record: neo4j.Record) -> RetrieverResultItem:
         """
-        Best effort to guess the node to text method. Inherited classes
+        Best effort to guess the node-to-text method. Inherited classes
         can override this method to implement custom text formatting.
         """
         metadata = {
@@ -132,6 +149,8 @@ class HybridRetriever(Retriever):
         - `db.index.vector.queryNodes() <https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_vector_queryNodes>`_
         - `db.index.fulltext.queryNodes() <https://neo4j.com/docs/operations-manual/5/reference/procedures/#procedure_db_index_fulltext_querynodes>`_
 
+        To query by text, an embedder must be provided when the class is instantiated.
+
         Args:
             query_text (str): The text to get the closest neighbors of.
             query_vector (Optional[list[float]], optional): The vector embeddings to get the closest neighbors of. Defaults to None.
@@ -146,16 +165,16 @@ class HybridRetriever(Retriever):
         """
         try:
             validated_data = HybridSearchModel(
-                vector_index_name=self.vector_index_name,
-                fulltext_index_name=self.fulltext_index_name,
-                top_k=top_k,
                 query_vector=query_vector,
                 query_text=query_text,
+                top_k=top_k,
             )
         except ValidationError as e:
             raise SearchValidationError(e.errors()) from e
 
         parameters = validated_data.model_dump(exclude_none=True)
+        parameters["vector_index_name"] = self.vector_index_name
+        parameters["fulltext_index_name"] = self.fulltext_index_name
 
         if query_text and not query_vector:
             if not self.embedder:
@@ -170,7 +189,9 @@ class HybridRetriever(Retriever):
         logger.debug("HybridRetriever Cypher parameters: %s", parameters)
         logger.debug("HybridRetriever Cypher query: %s", search_query)
 
-        records, _, _ = self.driver.execute_query(search_query, parameters)
+        records, _, _ = self.driver.execute_query(
+            search_query, parameters, database_=self.neo4j_database
+        )
         return RawSearchResult(
             records=records,
         )
@@ -182,6 +203,8 @@ class HybridCypherRetriever(Retriever):
     fulltext search, augmented by a Cypher query.
     This retriever builds on HybridRetriever.
     If an embedder is provided, it needs to have the required Embedder type.
+
+    Note: `node` is a variable from the base query that can be used in `retrieval_query` as seen in the example below.
 
     Example:
 
@@ -198,13 +221,16 @@ class HybridCypherRetriever(Retriever):
       )
       retriever.search(query_text="Find me a book about Fremen", top_k=5)
 
+    To query by text, an embedder must be provided when the class is instantiated.
+
     Args:
         driver (neo4j.Driver): The Neo4j Python driver.
         vector_index_name (str): Vector index name.
         fulltext_index_name (str): Fulltext index name.
         retrieval_query (str): Cypher query that gets appended.
         embedder (Optional[Embedder]): Embedder object to embed query text.
-        result_formatter (Optional[Callable[[Any], Any]]): Provided custom function to transform a neo4j.Record to a RetrieverResultItem.
+        result_formatter (Optional[Callable[[neo4j.Record], RetrieverResultItem]]): Provided custom function to transform a neo4j.Record to a RetrieverResultItem.
+        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
     Raises:
         RetrieverInitializationError: If validation of the input arguments fail.
@@ -217,7 +243,10 @@ class HybridCypherRetriever(Retriever):
         fulltext_index_name: str,
         retrieval_query: str,
         embedder: Optional[Embedder] = None,
-        result_formatter: Optional[Callable[[Any], Any]] = None,
+        result_formatter: Optional[
+            Callable[[neo4j.Record], RetrieverResultItem]
+        ] = None,
+        neo4j_database: Optional[str] = None,
     ) -> None:
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -228,11 +257,15 @@ class HybridCypherRetriever(Retriever):
                 fulltext_index_name=fulltext_index_name,
                 retrieval_query=retrieval_query,
                 embedder_model=embedder_model,
+                result_formatter=result_formatter,
+                neo4j_database=neo4j_database,
             )
         except ValidationError as e:
             raise RetrieverInitializationError(e.errors()) from e
 
-        super().__init__(validated_data.driver_model.driver)
+        super().__init__(
+            validated_data.driver_model.driver, validated_data.neo4j_database
+        )
         self.vector_index_name = validated_data.vector_index_name
         self.fulltext_index_name = validated_data.fulltext_index_name
         self.retrieval_query = validated_data.retrieval_query
@@ -241,7 +274,7 @@ class HybridCypherRetriever(Retriever):
             if validated_data.embedder_model
             else None
         )
-        self.result_formatter = result_formatter
+        self.result_formatter = validated_data.result_formatter
 
     def get_search_results(
         self,
@@ -276,17 +309,17 @@ class HybridCypherRetriever(Retriever):
         """
         try:
             validated_data = HybridCypherSearchModel(
-                vector_index_name=self.vector_index_name,
-                fulltext_index_name=self.fulltext_index_name,
-                top_k=top_k,
                 query_vector=query_vector,
                 query_text=query_text,
+                top_k=top_k,
                 query_params=query_params,
             )
         except ValidationError as e:
             raise SearchValidationError(e.errors()) from e
 
         parameters = validated_data.model_dump(exclude_none=True)
+        parameters["vector_index_name"] = self.vector_index_name
+        parameters["fulltext_index_name"] = self.fulltext_index_name
 
         if query_text and not query_vector:
             if not self.embedder:
@@ -309,7 +342,9 @@ class HybridCypherRetriever(Retriever):
         logger.debug("HybridCypherRetriever Cypher parameters: %s", parameters)
         logger.debug("HybridCypherRetriever Cypher query: %s", search_query)
 
-        records, _, _ = self.driver.execute_query(search_query, parameters)
+        records, _, _ = self.driver.execute_query(
+            search_query, parameters, database_=self.neo4j_database
+        )
         return RawSearchResult(
             records=records,
         )

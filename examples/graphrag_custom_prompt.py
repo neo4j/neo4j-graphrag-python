@@ -9,13 +9,13 @@ This example illustrates:
 """
 
 import logging
-import neo4j
 
-from neo4j_genai.types import RetrieverResultItem
+import neo4j
 from neo4j_genai.embeddings.openai import OpenAIEmbeddings
-from neo4j_genai.retrievers import VectorCypherRetriever
 from neo4j_genai.generation import GraphRAG, RagTemplate
 from neo4j_genai.llm import OpenAILLM
+from neo4j_genai.retrievers import VectorCypherRetriever
+from neo4j_genai.types import RetrieverResultItem
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")

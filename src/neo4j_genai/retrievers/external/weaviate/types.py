@@ -13,21 +13,24 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
-from typing import Optional, Any, Callable
+
+from typing import Callable, Optional
 
 import neo4j
 from pydantic import (
-    field_validator,
     BaseModel,
-    PositiveInt,
-    model_validator,
     ConfigDict,
+    field_validator,
 )
 from weaviate.client import WeaviateClient
 from weaviate.collections.classes.filters import _Filters
 
-from neo4j_genai.utils import validate_search_query_input
-from neo4j_genai.types import Neo4jDriverModel, EmbedderModel
+from neo4j_genai.types import (
+    EmbedderModel,
+    Neo4jDriverModel,
+    RetrieverResultItem,
+    VectorSearchModel,
+)
 
 
 class WeaviateModel(BaseModel):
@@ -52,13 +55,11 @@ class WeaviateNeo4jRetrieverModel(BaseModel):
     embedder_model: Optional[EmbedderModel]
     return_properties: Optional[list[str]] = None
     retrieval_query: Optional[str] = None
-    result_formatter: Optional[Callable[[neo4j.Record], str]] = None
+    result_formatter: Optional[Callable[[neo4j.Record], RetrieverResultItem]] = None
+    neo4j_database: Optional[str] = None
 
 
-class WeaviateNeo4jSearchModel(BaseModel):
-    top_k: PositiveInt = 5
-    query_vector: Optional[list[float]] = None
-    query_text: Optional[str] = None
+class WeaviateNeo4jSearchModel(VectorSearchModel):
     weaviate_filters: Optional[_Filters] = None
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -69,12 +70,3 @@ class WeaviateNeo4jSearchModel(BaseModel):
                 "Provided filters need to be of type weaviate.collections.classes.filters._Filters"
             )
         return value
-
-    @model_validator(mode="before")
-    def check_query(cls, values: dict[str, Any]) -> dict[str, Any]:
-        """
-        Validates that one of either query_vector or query_text is provided exclusively.
-        """
-        query_vector, query_text = values.get("query_vector"), values.get("query_text")
-        validate_search_query_input(query_text, query_vector)
-        return values

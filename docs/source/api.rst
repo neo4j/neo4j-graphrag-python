@@ -3,6 +3,8 @@
 API Documentation
 #################
 
+.. _retrievers-section:
+
 **********
 Retrievers
 **********
@@ -17,29 +19,34 @@ RetrieverInterface
 VectorRetriever
 ===============
 
-.. autoclass:: neo4j_genai.retrievers.vector.VectorRetriever
+.. autoclass:: neo4j_genai.retrievers.VectorRetriever
     :members: search
 
 VectorCypherRetriever
 =====================
 
-.. autoclass:: neo4j_genai.retrievers.vector.VectorCypherRetriever
+.. autoclass:: neo4j_genai.retrievers.VectorCypherRetriever
     :members: search
 
 
 HybridRetriever
 ===============
 
-.. autoclass:: neo4j_genai.retrievers.hybrid.HybridRetriever
+.. autoclass:: neo4j_genai.retrievers.HybridRetriever
     :members: search
 
 
 HybridCypherRetriever
 =====================
 
-.. autoclass:: neo4j_genai.retrievers.hybrid.HybridCypherRetriever
+.. autoclass:: neo4j_genai.retrievers.HybridCypherRetriever
     :members: search
 
+Text2CypherRetriever
+=====================
+
+.. autoclass:: neo4j_genai.retrievers.Text2CypherRetriever
+    :members: search
 
 
 *******************
@@ -61,6 +68,62 @@ PineconeNeo4jRetriever
 
 .. autoclass:: neo4j_genai.retrievers.external.pinecone.pinecone.PineconeNeo4jRetriever
     :members: search
+
+
+**********
+Embedder
+**********
+
+.. autoclass:: neo4j_genai.embedder.Embedder
+    :members:
+
+SentenceTransformerEmbeddings
+================================
+
+.. autoclass:: neo4j_genai.embeddings.SentenceTransformerEmbeddings
+    :members:
+
+**********
+Generation
+**********
+
+LLMInterface
+======================
+
+.. autoclass:: neo4j_genai.llm.LLMInterface
+    :members:
+
+
+OpenAILLM
+======================
+
+.. autoclass:: neo4j_genai.llm.OpenAILLM
+    :members:
+
+
+PromptTemplate
+======================
+
+.. autoclass:: neo4j_genai.generation.prompts.PromptTemplate
+    :members:
+
+.. _database-interaction-section:
+
+********************
+Database Interaction
+********************
+
+.. _create-vector-index:
+
+.. autofunction:: neo4j_genai.indexes.create_vector_index
+
+.. _create-fulltext-index:
+
+.. autofunction:: neo4j_genai.indexes.create_fulltext_index
+
+.. autofunction:: neo4j_genai.indexes.drop_index_if_exists
+
+.. autofunction:: neo4j_genai.indexes.upsert_vector
 
 
 ******

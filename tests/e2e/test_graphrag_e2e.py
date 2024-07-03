@@ -13,17 +13,17 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import pytest
-import neo4j
-
 from unittest.mock import MagicMock
 
-from neo4j_genai.retrievers import VectorCypherRetriever
+import neo4j
+import pytest
+from neo4j_genai.exceptions import LLMGenerationError
 from neo4j_genai.generation.graphrag import GraphRAG
 from neo4j_genai.generation.types import RagResultModel
 from neo4j_genai.llm import LLMResponse
+from neo4j_genai.retrievers import VectorCypherRetriever
 from neo4j_genai.types import RetrieverResult
-from neo4j_genai.exceptions import LLMGenerationError
+
 from tests.e2e.conftest import BiologyEmbedder
 from tests.e2e.utils import build_data_objects, populate_neo4j
 

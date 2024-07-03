@@ -1,5 +1,4 @@
 import pytest
-
 from neo4j_genai.exceptions import PromptMissingInputError
 from neo4j_genai.generation.prompts import PromptTemplate
 

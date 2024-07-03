@@ -98,6 +98,7 @@ def test_pinecone_retriever_search_happy_path(
                 "match_params": [[f"node_{i}", i / top_k] for i in range(top_k)],
                 "id_property": "sync_id",
             },
+            database_=None,
         )
 
     assert records == RetrieverResult(
@@ -113,6 +114,20 @@ def test_pinecone_retriever_search_happy_path(
         ],
         metadata={"__retriever": "PineconeNeo4jRetriever"},
     )
+
+
+def test_invalid_neo4j_database_name(driver: MagicMock, client: MagicMock) -> None:
+    with pytest.raises(RetrieverInitializationError) as exc_info:
+        PineconeNeo4jRetriever(
+            driver=driver,
+            client=client,
+            index_name="dummy-text",
+            id_property_neo4j="sync_id",
+            neo4j_database=42,  # type: ignore
+        )
+
+    assert "neo4j_database" in str(exc_info.value)
+    assert "Input should be a valid string" in str(exc_info.value)
 
 
 def test_pinecone_retriever_search_return_properties(
@@ -155,6 +170,7 @@ def test_pinecone_retriever_search_return_properties(
                 "match_params": [[f"node_{i}", i / top_k] for i in range(top_k)],
                 "id_property": "sync_id",
             },
+            database_=None,
         )
 
     assert records == RetrieverResult(
@@ -213,6 +229,7 @@ def test_pinecone_retriever_search_retrieval_query(
                 "match_params": [[f"node_{i}", i / top_k] for i in range(top_k)],
                 "id_property": "sync_id",
             },
+            database_=None,
         )
 
     assert records == RetrieverResult(
@@ -225,6 +242,38 @@ def test_pinecone_retriever_search_retrieval_query(
                 metadata=None,
             )
             for i in range(top_k)
+        ],
+        metadata={"__retriever": "PineconeNeo4jRetriever"},
+    )
+
+
+def test_pinecone_retriever_with_result_format_function(
+    driver: MagicMock,
+    client: MagicMock,
+    neo4j_record: MagicMock,
+    result_formatter: MagicMock,
+) -> None:
+    retriever = PineconeNeo4jRetriever(
+        driver=driver,
+        client=client,
+        index_name="dummy-text",
+        id_property_neo4j="sync_id",
+        result_formatter=result_formatter,
+    )
+    with mock.patch.object(retriever, "index"):
+        driver.execute_query.return_value = (
+            [neo4j_record],
+            None,
+            None,
+        )
+        query_vector = [1.0 for _ in range(1536)]
+        records = retriever.search(query_vector=query_vector)
+
+    assert records == RetrieverResult(
+        items=[
+            RetrieverResultItem(
+                content="dummy-node", metadata={"score": 1.0, "node_id": 123}
+            ),
         ],
         metadata={"__retriever": "PineconeNeo4jRetriever"},
     )

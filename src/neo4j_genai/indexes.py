@@ -13,8 +13,9 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
+
 import logging
-from typing import Literal
+from typing import Literal, Optional
 
 import neo4j
 from pydantic import ValidationError
@@ -32,15 +33,42 @@ def create_vector_index(
     embedding_property: str,
     dimensions: int,
     similarity_fn: Literal["euclidean", "cosine"],
+    neo4j_database: Optional[str] = None,
 ) -> None:
     """
     This method constructs a Cypher query and executes it
     to create a new vector index in Neo4j.
 
-    See Cypher manual on [Create vector index](https://neo4j.com/docs/cypher-manual/current/indexes/semantic-indexes/vector-indexes/#indexes-vector-create)
+    See Cypher manual on `creating vector indexes <https://neo4j.com/docs/cypher-manual/current/indexes/semantic-indexes/vector-indexes/#create-vector-index>`_.
 
     Important: This operation will fail if an index with the same name already exists.
     Ensure that the index name provided is unique within the database context.
+
+    Example:
+
+    .. code-block:: python
+
+        from neo4j import GraphDatabase
+        from neo4j_genai.indexes import create_vector_index
+
+        URI = "neo4j://localhost:7687"
+        AUTH = ("neo4j", "password")
+
+        INDEX_NAME = "vector-index-name"
+
+        # Connect to Neo4j database
+        driver = GraphDatabase.driver(URI, auth=AUTH)
+
+        # Creating the index
+        create_vector_index(
+            driver,
+            INDEX_NAME,
+            label="Document",
+            embedding_property="vectorProperty",
+            dimensions=1536,
+            similarity_fn="euclidean",
+        )
+
 
     Args:
         driver (neo4j.Driver): Neo4j Python driver instance.
@@ -50,6 +78,7 @@ def create_vector_index(
         dimensions (int): Vector embedding dimension
         similarity_fn (str): case-insensitive values for the vector similarity function:
             ``euclidean`` or ``cosine``.
+        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
     Raises:
         ValueError: If validation of the input arguments fail.
@@ -78,28 +107,58 @@ def create_vector_index(
         driver.execute_query(
             query,
             {"name": name, "dimensions": dimensions, "similarity_fn": similarity_fn},
+            database_=neo4j_database,
         )
     except neo4j.exceptions.ClientError as e:
         raise Neo4jIndexError(f"Neo4j vector index creation failed: {e.message}") from e
 
 
 def create_fulltext_index(
-    driver: neo4j.Driver, name: str, label: str, node_properties: list[str]
+    driver: neo4j.Driver,
+    name: str,
+    label: str,
+    node_properties: list[str],
+    neo4j_database: Optional[str] = None,
 ) -> None:
     """
     This method constructs a Cypher query and executes it
     to create a new fulltext index in Neo4j.
 
-    See Cypher manual on [Create fulltext index](https://neo4j.com/docs/cypher-manual/current/indexes/semantic-indexes/full-text-indexes/#create-full-text-indexes)
+    See Cypher manual on `creating fulltext indexes <https://neo4j.com/docs/cypher-manual/current/indexes/semantic-indexes/full-text-indexes/#create-full-text-indexes>`_.
 
     Important: This operation will fail if an index with the same name already exists.
     Ensure that the index name provided is unique within the database context.
+
+    Example:
+
+    .. code-block:: python
+
+        from neo4j import GraphDatabase
+        from neo4j_genai.indexes import create_fulltext_index
+
+        URI = "neo4j://localhost:7687"
+        AUTH = ("neo4j", "password")
+
+        INDEX_NAME = "fulltext-index-name"
+
+        # Connect to Neo4j database
+        driver = GraphDatabase.driver(URI, auth=AUTH)
+
+        # Creating the index
+        create_fulltext_index(
+            driver,
+            INDEX_NAME,
+            label="Document",
+            node_properties=["vectorProperty"],
+        )
+
 
     Args:
         driver (neo4j.Driver): Neo4j Python driver instance.
         name (str): The unique name of the index.
         label (str): The node label to be indexed.
         node_properties (list[str]): The node properties to create the fulltext index on.
+        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
     Raises:
         ValueError: If validation of the input arguments fail.
@@ -121,22 +180,47 @@ def create_fulltext_index(
             f"[{', '.join(['n.`' + prop + '`' for prop in node_properties])}]"
         )
         logger.info(f"Creating fulltext index named '{name}'")
-        driver.execute_query(query, {"name": name})
+        driver.execute_query(query, {"name": name}, database_=neo4j_database)
     except neo4j.exceptions.ClientError as e:
         raise Neo4jIndexError(
             f"Neo4j fulltext index creation failed {e.message}"
         ) from e
 
 
-def drop_index_if_exists(driver: neo4j.Driver, name: str) -> None:
+def drop_index_if_exists(
+    driver: neo4j.Driver, name: str, neo4j_database: Optional[str] = None
+) -> None:
     """
     This method constructs a Cypher query and executes it
     to drop an index in Neo4j, if the index exists.
-    See Cypher manual on [Drop vector indexes](https://neo4j.com/docs/cypher-manual/current/indexes-for-vector-search/#indexes-vector-drop)
+    See Cypher manual on `dropping vector indexes <https://neo4j.com/docs/cypher-manual/current/indexes/semantic-indexes/vector-indexes/#drop-vector-indexes>`_.
+
+    Example:
+
+    .. code-block:: python
+
+        from neo4j import GraphDatabase
+        from neo4j_genai.indexes import drop_index_if_exists
+
+        URI = "neo4j://localhost:7687"
+        AUTH = ("neo4j", "password")
+
+        INDEX_NAME = "fulltext-index-name"
+
+        # Connect to Neo4j database
+        driver = GraphDatabase.driver(URI, auth=AUTH)
+
+        # Dropping the index if it exists
+        drop_index_if_exists(
+            driver,
+            INDEX_NAME,
+        )
+
 
     Args:
         driver (neo4j.Driver): Neo4j Python driver instance.
         name (str): The name of the index to delete.
+        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
     Raises:
         neo4j.exceptions.ClientError: If dropping of index fails.
@@ -147,7 +231,7 @@ def drop_index_if_exists(driver: neo4j.Driver, name: str) -> None:
             "name": name,
         }
         logger.info(f"Dropping index named '{name}'")
-        driver.execute_query(query, parameters)
+        driver.execute_query(query, parameters, database_=neo4j_database)
     except neo4j.exceptions.ClientError as e:
         raise Neo4jIndexError(f"Dropping Neo4j index failed: {e.message}") from e
 
@@ -157,18 +241,41 @@ def upsert_vector(
     node_id: int,
     embedding_property: str,
     vector: list[float],
+    neo4j_database: Optional[str] = None,
 ) -> None:
     """
     This method constructs a Cypher query and executes it to upsert (insert or update) a vector property on a specific node.
+
+    Example:
+
+    .. code-block:: python
+
+        from neo4j import GraphDatabase
+        from neo4j_genai.indexes import upsert_query
+
+        URI = "neo4j://localhost:7687"
+        AUTH = ("neo4j", "password")
+
+        # Connect to Neo4j database
+        driver = GraphDatabase.driver(URI, auth=AUTH)
+
+        # Upsert the vector data
+        upsert_query(
+            driver,
+            node_id="nodeId",
+            embedding_property="vectorProperty",
+            vector=...,
+        )
 
     Args:
         driver (neo4j.Driver): Neo4j Python driver instance.
         node_id (int): The id of the node.
         embedding_property (str): The name of the property to store the vector in.
         vector (list[float]): The vector to store.
+        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
     Raises:
-        Neo4jInsertError: If upserting of the vector fails.
+        Neo4jInsertionError: If upserting of the vector fails.
     """
     try:
         query = """
@@ -183,7 +290,7 @@ def upsert_vector(
             "embedding_property": embedding_property,
             "vector": vector,
         }
-        driver.execute_query(query, parameters)
+        driver.execute_query(query, parameters, database_=neo4j_database)
     except neo4j.exceptions.ClientError as e:
         raise Neo4jInsertionError(
             f"Upserting vector to Neo4j failed: {e.message}"

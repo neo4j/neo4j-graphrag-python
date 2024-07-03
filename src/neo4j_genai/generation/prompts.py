@@ -13,11 +13,21 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
-from typing import Optional, Any
+
+from typing import Any, Optional
+
 from neo4j_genai.exceptions import PromptMissingInputError
 
 
 class PromptTemplate:
+    """This class is used to generate a parameterized prompt. It is defined
+    from a string (the template) using the Python format syntax (parameters
+    between curly braces `{}`) and a list of required inputs.
+    Before sending the instructions to an LLM, call the `format` method that will
+    replace parameters with the provided values. If any of the expected inputs is
+    missing, a `PromptMissingInputError` is raised.
+    """
+
     DEFAULT_TEMPLATE: str = ""
     EXPECTED_INPUTS: list[str] = []
 
@@ -36,6 +46,32 @@ class PromptTemplate:
         return self.template.format(**kwargs)
 
     def format(self, *args: Any, **kwargs: Any) -> str:
+        """This method is used to replace parameters with the provided values.
+        Parameters must be provided:
+        - as kwargs
+        - as args if using the same order as in the expected inputs
+
+        Example:
+
+        .. code-block:: python
+
+            prompt_template = PromptTemplate(
+                template='''Explain the following concept to {target_audience}:
+                Concept: {concept}
+                Answer:
+                ''',
+                expected_inputs=['target_audience', 'concept']
+            )
+            prompt = prompt_template.format('12 yo children', concept='graph database')
+            print(prompt)
+
+            # Result:
+            # '''Explain the following concept to 12 yo children:
+            # Concept: graph database
+            # Answer:
+            # '''
+
+        """
         data = kwargs
         data.update({k: v for k, v in zip(self.expected_inputs, args)})
         return self._format(**data)
