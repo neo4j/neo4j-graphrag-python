@@ -174,7 +174,7 @@ While the library has more retrievers than shown here, the following examples sh
 Limitations
 ***********
 
-The query over the vector index is an *approximate* nearest neighbor search and may not give exact results. `See this reference for more details <https://neo4j.com/docs/cypher-manual/current/indexes/semantic-indexes/vector-indexes/#_limitiations_and_known_issues>`_.
+The query over the vector index is an *approximate* nearest neighbor search and may not give exact results. `See this reference for more details <https://neo4j.com/docs/cypher-manual/current/indexes/semantic-indexes/vector-indexes/#limitations-and-issues>`_.
 
 
 Development

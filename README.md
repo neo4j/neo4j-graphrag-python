@@ -90,7 +90,7 @@ upsert_query(
 
 Assumption: Neo4j running with populated vector index in place.
 
-Limitation: The query over the vector index is an _approximate_ nearest neighbor search and may not give exact results. [See this reference for more details](https://neo4j.com/docs/cypher-manual/current/indexes/semantic-indexes/vector-indexes/#_limitiations_and_known_issues).
+Limitation: The query over the vector index is an _approximate_ nearest neighbor search and may not give exact results. [See this reference for more details](https://neo4j.com/docs/cypher-manual/current/indexes/semantic-indexes/vector-indexes/#limitations-and-issues).
 
 While the library has more retrievers than shown here, the following examples should be able to get you started.
 
