@@ -220,7 +220,7 @@ The `index_name` is the name of the Neo4j vector index that will be used for sim
 .. warning::
 
     Vector index use an **approximate nearest neighbor** algorithm.
-    Refer to the `Neo4j Documentation <https://neo4j.com/docs/cypher-manual/current/indexes/semantic-indexes/vector-indexes/#_limitiations_and_known_issues>`_ to learn about its limitations.
+    Refer to the `Neo4j Documentation <https://neo4j.com/docs/cypher-manual/current/indexes/semantic-indexes/vector-indexes/#limitations-and-issues>`_ to learn about its limitations.
 
 
 Search Similar Vector
