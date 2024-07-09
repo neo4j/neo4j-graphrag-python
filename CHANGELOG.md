@@ -2,6 +2,10 @@
 
 ## Next
 
+### Fixed
+-   Corrected initialization to allow specifying the embedding model name.
+-   Removed sentence_transformers from embeddings/__init__.py to avoid ImportError when the package is not installed.
+
 ## 0.3.0
 
 ### Added

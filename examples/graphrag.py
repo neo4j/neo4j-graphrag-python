@@ -19,7 +19,7 @@ from neo4j_genai.types import RetrieverResultItem
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
 DATABASE = "neo4j"
-INDEX = "vector-index-name"
+INDEX = "moviePlotsEmbedding"
 
 
 # setup logger config
