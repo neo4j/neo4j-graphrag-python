@@ -6,7 +6,7 @@ from neo4j_genai.embedder import Embedder
 
 
 class OpenAIEmbeddings(Embedder):
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, model: str = "text-embedding-ada-002") -> None:
         try:
             import openai
         except ImportError:
@@ -15,10 +15,11 @@ class OpenAIEmbeddings(Embedder):
                 "Please install it with `pip install openai`."
             )
 
-        self.model = openai.OpenAI(*args, **kwargs)
+        self.openai_model = openai.OpenAI()
+        self.model = model
 
-    def embed_query(
-        self, text: str, model: str = "text-embedding-ada-002", **kwargs: Any
-    ) -> list[float]:
-        response = self.model.embeddings.create(input=text, model=model, **kwargs)
+    def embed_query(self, text: str, **kwargs: Any) -> list[float]:
+        response = self.openai_model.embeddings.create(
+            input=text, model=self.model, **kwargs
+        )
         return response.data[0].embedding
