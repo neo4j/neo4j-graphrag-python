@@ -266,7 +266,7 @@ The `OpenAIEmbedder` was illustrated previously. Here is how to use the `Sentenc
 
 .. code:: python
 
-    from neo4j_genai.embeddings import SentenceTransformerEmbeddings
+    from neo4j_genai.embeddings.sentence_transformers import SentenceTransformerEmbeddings
 
     embedder = SentenceTransformerEmbeddings(model="all-MiniLM-L6-v2")  # Note: this is the default model
 
