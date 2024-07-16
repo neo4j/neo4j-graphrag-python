@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 from neo4j_genai.embedder import Embedder
-from neo4j_genai.embeddings import SentenceTransformerEmbeddings
+from neo4j_genai.embeddings.sentence_transformers import SentenceTransformerEmbeddings
 
 
 @patch("sentence_transformers.SentenceTransformer")
