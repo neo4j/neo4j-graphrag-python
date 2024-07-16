@@ -52,7 +52,7 @@ In practice, it's done with only a few lines of code:
 
     # Query the graph
     query_text = "How do I do similarity search in Neo4j?"
-    response = rag.search(query_text=query_text, retriever_config={"top_k": 5})
+    response = rag.search(query=query_text, retriever_config={"top_k": 5})
     print(response.answer)
 
 
@@ -91,7 +91,7 @@ Its interface is compatible with our `GraphRAG` interface, facilitating integrat
     llm = ChatOllama(model="llama3:8b")
     rag = GraphRAG(retriever=retriever, llm=llm)
     query_text = "How do I do similarity search in Neo4j?"
-    response = rag.search(query_text=query_text, retriever_config={"top_k": 5})
+    response = rag.search(query=query_text, retriever_config={"top_k": 5})
     print(response.answer)
 
 
@@ -129,7 +129,7 @@ the `LLMInterface`. Here's an example using the Python Ollama client:
 
     rag = GraphRAG(retriever=retriever, llm=llm)
     query_text = "How do I do similarity search in Neo4j?"
-    response = rag.search(query_text=query_text, retriever_config={"top_k": 5})
+    response = rag.search(query=query_text, retriever_config={"top_k": 5})
     print(response.answer)
 
 See :ref:`llminterface`.
