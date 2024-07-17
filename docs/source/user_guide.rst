@@ -220,7 +220,7 @@ The `index_name` is the name of the Neo4j vector index that will be used for sim
 .. warning::
 
     Vector index use an **approximate nearest neighbor** algorithm.
-    Refer to the `Neo4j Documentation <https://neo4j.com/docs/cypher-manual/current/indexes/semantic-indexes/vector-indexes/#_limitiations_and_known_issues>`_ to learn about its limitations.
+    Refer to the `Neo4j Documentation <https://neo4j.com/docs/cypher-manual/current/indexes/semantic-indexes/vector-indexes/#limitations-and-issues>`_ to learn about its limitations.
 
 
 Search Similar Vector
@@ -266,7 +266,7 @@ The `OpenAIEmbedder` was illustrated previously. Here is how to use the `Sentenc
 
 .. code:: python
 
-    from neo4j_genai.embeddings import SentenceTransformerEmbeddings
+    from neo4j_genai.embeddings.sentence_transformers import SentenceTransformerEmbeddings
 
     embedder = SentenceTransformerEmbeddings(model="all-MiniLM-L6-v2")  # Note: this is the default model
 
