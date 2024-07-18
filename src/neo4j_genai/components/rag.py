@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any
 
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
@@ -13,18 +14,18 @@ class Retriever(Component):
             ]
         )
 
-    def process(self, query: str):
+    async def process(self, query: str) -> dict[str, Any]:
         res = self.search(query)
         return {"context": "\n".join(c.content for c in res.items)}
 
 
 class PromptTemplate(Component):
-    def process(self, query: str, context: list):
+    async def process(self, query: str, context: list[str]) -> dict[str, Any]:
         return {"prompt": f"my prompt using '{context}', query '{query}'"}
 
 
 class LLM(Component):
-    def process(self, prompt):
+    async def process(self, prompt: str) -> dict[str, Any]:
         return {"answer": f"some text based on '{prompt}'"}
 
 
@@ -37,4 +38,8 @@ if __name__ == "__main__":
     pipe.connect("augment", "generate", {"prompt": "augment.prompt"})
 
     query = "my question"
-    print(pipe.run_all({"retrieve": {"query": query}, "augment": {"query": query}}))
+    print(
+        asyncio.run(
+            pipe.run({"retrieve": {"query": query}, "augment": {"query": query}})
+        )
+    )
