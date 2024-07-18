@@ -1,5 +1,6 @@
 import asyncio
 from typing import Any
+
 from neo4j_genai.core.pipeline import Component
 
 

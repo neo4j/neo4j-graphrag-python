@@ -1,6 +1,5 @@
 import pytest
-
-from neo4j_genai.core.graph import Node, Edge, Graph
+from neo4j_genai.core.graph import Edge, Graph, Node
 
 
 def test_node_alone():

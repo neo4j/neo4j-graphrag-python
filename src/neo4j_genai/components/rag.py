@@ -1,8 +1,8 @@
 import asyncio
 from typing import Any
 
-from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 from neo4j_genai.core.pipeline import Component, Pipeline
+from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 
 
 class Retriever(Component):

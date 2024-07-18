@@ -1,6 +1,5 @@
-from sympy.testing import pytest
-
 from neo4j_genai.core.stores import InMemoryStore
+from sympy.testing import pytest
 
 
 def test_memory_store():
