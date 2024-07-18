@@ -1,5 +1,6 @@
 import abc
 from typing import Any
+
 from jsonpath_ng import parse
 
 

@@ -2,7 +2,7 @@
 Basic graph structure for Pipeline
 """
 
-from typing import Optional, Any
+from typing import Any, Optional
 
 
 class Node:

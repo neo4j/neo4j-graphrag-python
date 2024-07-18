@@ -14,16 +14,15 @@ e.g. DocumentChunker => ERExtractor, Embedder
 e.g. SchemaBuilder + Chunker => ERExtractor
 """
 
+import asyncio
 import enum
 import logging
-import asyncio
-from typing import Any, Optional, Callable, Awaitable, Generator
+from typing import Any, Awaitable, Callable, Generator, Optional
 
 from pydantic import BaseModel
 
-from neo4j_genai.core.stores import Store, InMemoryStore
 from neo4j_genai.core.graph import Graph, Node
-
+from neo4j_genai.core.stores import InMemoryStore, Store
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG, format="%(message)s")
