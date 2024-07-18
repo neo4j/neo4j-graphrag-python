@@ -23,13 +23,22 @@ class Store(abc.ABC):
 
     @abc.abstractmethod
     def get(self, key: str) -> Any:
+        """Retrieve value for `key`.
+        If key not found, returns None.
+        """
         pass
 
     @abc.abstractmethod
-    def find_all(self, pattern) -> list:
+    def find_all(self, pattern: str) -> list[Any]:
+        """Find all values whose key matches pattern"""
         pass
 
-    def all(self):
+    def all(self) -> dict[str, Any]:
+        """Return all stored data
+        Might not be relevant to implement
+        in all subclasses, that's why it is
+        not marked as abstract.
+        """
         raise NotImplementedError()
 
 
@@ -37,8 +46,8 @@ class InMemoryStore(Store):
     """Simple in-memory store.
     Saves each component's results in a _data dict."""
 
-    def __init__(self):
-        self._data = {}
+    def __init__(self) -> None:
+        self._data: dict[str, Any] = {}
 
     def add(self, key: str, value: Any, overwrite: bool = True) -> None:
         if (not overwrite) and key in self._data:
@@ -48,15 +57,12 @@ class InMemoryStore(Store):
     def get(self, key: str) -> Any:
         return self._data.get(key)
 
-    def find_all(self, pattern) -> list:
+    def find_all(self, pattern: str) -> list[Any]:
         jsonpath_expr = parse(pattern)
         # input_component, param = mapping.split(".")
         # value = self._results[input_component][param]
-        value = [
-            match.value
-            for match in jsonpath_expr.find(self._data)
-        ]
+        value = [match.value for match in jsonpath_expr.find(self._data)]
         return value
 
-    def all(self):
+    def all(self) -> dict[str, Any]:
         return self._data
