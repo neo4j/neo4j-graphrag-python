@@ -1,7 +1,7 @@
 from typing import Any
 
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
-from neo4j_genai.core.pipeline import Component, Pipeline
+from neo4j_genai.core.kg_builder import Component, Pipeline
 
 
 class Retriever(Component):
@@ -13,26 +13,28 @@ class Retriever(Component):
             ]
         )
 
-    def run(self, query: str):
+    def process(self, query: str):
         res = self.search(query)
         return {"context": "\n".join(c.content for c in res.items)}
 
 
 class PromptTemplate(Component):
-    def run(self, query: str, context: list):
+    def process(self, query: str, context: list):
         return {"prompt": f"my prompt using '{context}', query '{query}'"}
 
 
 class LLM(Component):
-    def run(self, prompt):
+    def process(self, prompt):
         return {"answer": f"some text based on '{prompt}'"}
 
 
 if __name__ == "__main__":
     pipe = Pipeline()
-    pipe.add_component(Retriever(), "retrieve")
-    pipe.add_component(PromptTemplate(), "augment", {"context": "retrieve.context"})
-    pipe.add_component(LLM(), "generate", {"prompt": "augment.prompt"})
+    pipe.add_component(Retriever("retrieve"))
+    pipe.add_component(PromptTemplate("augment"))
+    pipe.add_component(LLM("generate"))
+    pipe.connect("retrieve", "augment", {"context": "retrieve.context"})
+    pipe.connect("augment", "generate", {"prompt": "augment.prompt"})
 
-    query = "my qestion"
-    print(pipe.run({"retrieve": {"query": query}, "augment": {"query": query}}))
+    query = "my question"
+    print(pipe.run_all({"retrieve": {"query": query}, "augment": {"query": query}}))
