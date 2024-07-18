@@ -1,7 +1,7 @@
 from typing import Any
 
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
-from neo4j_genai.core.kg_builder import Component, Pipeline
+from neo4j_genai.core.pipeline import Component, Pipeline
 
 
 class Retriever(Component):
@@ -30,9 +30,9 @@ class LLM(Component):
 
 if __name__ == "__main__":
     pipe = Pipeline()
-    pipe.add_component(Retriever("retrieve"))
-    pipe.add_component(PromptTemplate("augment"))
-    pipe.add_component(LLM("generate"))
+    pipe.add_component("retrieve", Retriever())
+    pipe.add_component("augment", PromptTemplate())
+    pipe.add_component("generate", LLM())
     pipe.connect("retrieve", "augment", {"context": "retrieve.context"})
     pipe.connect("augment", "generate", {"prompt": "augment.prompt"})
 
