@@ -1,162 +1,188 @@
-"""First implementation, deprecatd
 """
-import abc
+Pipeline implementation.
+
+Features:
+- Sync/Async exec
+- Branching:
+      |
+    /   \
+e.g. DocumentChunker => ERExtractor, Embedder
+
+- Aggregation:
+    \  /
+     |
+e.g. SchemaBuilder + Chunker => ERExtractor
+"""
+import enum
+import logging
 import asyncio
-from typing import Optional, Any
+from typing import Any, Optional
+
+from pydantic import BaseModel
+
+from neo4j_genai.core.stores import Store, InMemoryStore
+from neo4j_genai.core.graph import Graph, Node
 
 
-# class ComponentMeta(abc.ABCMeta):
-#     def __new__(
-#         meta, name: str, bases: tuple[type, ...], attrs: dict[str, Any]
-#     ) -> type:
-#         run_method = attrs.get("run")
-#         if run_method is not None:
-#             sig = inspect.signature(run_method)
-#             inputs = [k for k in sig.parameters if k != "self"]
-#             if "kwargs" in inputs and name != "Component":
-#                 raise Exception()
-#             attrs["__inputs"] = inputs
-#         return type.__new__(meta, name, bases, attrs)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
-class Component(abc.ABC):  # , metaclass=ComponentMeta):
-
-    @abc.abstractmethod
-    def run(self, **kwargs) -> dict:
-        pass
-
-    async def arun(self, **kwargs) -> dict:
-        """Runs asynchronously
-        """
-        return self.run(**kwargs)
+class MissingDependencyError(Exception):
+    pass
 
 
-class Pipeline:
-    def __init__(self):
-        self._components = {}
-        # storing the results for each component,
-        # not the best memory-wise?
-        # results dict has key 'component_name' and the value is the component output
-        self._results = {}
+class RunStatus(enum.Enum):
+    UNKNOWN = "UNKNOWN"
+    SCHEDULED = "SCHEDULED"
+    WAITING = "WAITING"
+    RUNNING = "RUNNING"
+    SKIP = "SKIP"
+    DONE = "DONE"
 
-    def add_component(self, component: Component, name: str = "",
-                      input_def: Optional[dict[str, Any]] = None) -> None:
-        """
-        Add a component to the pipeline.
 
-        Args:
-            component:
-            name: name of the component within the pipeline. Must be unique.
-            input_def (dict): mapping between component's inputs and the output of
-             previous components in the pipeline
-        """
-        if name in self._components:
-            raise KeyError(f"Component with name '{name}' already in this Pipeline")
-        self._components[name] = (component, input_def)
+class RunResult(BaseModel):
+    status: RunStatus
+    result: Optional[dict] = None
 
-    def _get_component_inputs(self, component_name: str, input_defs: dict, data: dict) -> dict:
-        # TODO: use some defaults when the previous component's output has same
-        #   name/type (?) as this component's inputs
-        component_inputs = data.get(component_name, {})
+
+class Component:
+
+    def process(self, **kwargs: Any) -> dict:
+        return {}
+
+    async def aprocess(self, **kwargs: Any) -> dict:
+        return self.process(**kwargs)
+
+
+class Task(Node):
+    def __init__(self, name: str, component: Component, pipeline: "Pipeline"):
+        super().__init__(name, {})
+        self.component = component
+        self.status = RunStatus.UNKNOWN
+        self._pipeline = pipeline
+
+    def execute(self, **kwargs: Any) -> RunResult:
+        return asyncio.run(self.aexecute(**kwargs))
+
+    async def aexecute(self, **kwargs: Any) -> RunResult:
+        if self.status in (RunStatus.RUNNING, RunStatus.DONE):
+            # warning: race condition here?
+            logger.info(f"Skipping {self.name}, already in progress or done")
+            return RunResult(status=RunStatus.SKIP)
+        logger.info(f"Running component {self.name} with {kwargs}")
+        self.status = RunStatus.RUNNING
+        res = await self.component.aprocess(**kwargs)
+        self.status = RunStatus.DONE
+        return RunResult(
+            status=self.status,
+            result=res,
+        )
+
+    def get_input_defs_from_parents(self):
+        input_defs = {}
+        # make sure dependencies are satisfied
+        # and save the inputs defs that needs to be propagated from parent components
+        for prev_edge in self._pipeline.previous_edges(self):
+            if prev_edge.start.status != RunStatus.DONE:
+                logger.warning(f"Waiting for {prev_edge.start.name}")
+                # let's wait, the run should be triggered once the last required
+                # parent is done
+                raise MissingDependencyError(f"{prev_edge.start.name} not ready")
+            prev_edge_data = prev_edge.data.get("input_defs") or {}
+            input_defs.update(**prev_edge_data)
+        return input_defs
+
+    def run_all(self, data) -> dict:
+        # make sure dependencies are satisfied
+        # and save the inputs defs that needs to be
+        # propagated from parent components
+        try:
+            input_defs = self.get_input_defs_from_parents()
+        except MissingDependencyError:
+            return {"status": RunStatus.WAITING}
+        # create component's input based on initial input data,
+        # already done component's outputs and inputs definition mapping
+        inputs = self._pipeline.get_component_inputs(self.name, input_defs, data)
+        # execute component task
+        res = self.execute(**inputs)
+        # save its results
+        if res.status == RunStatus.DONE:
+            self._pipeline.add_result_for_component(self.name, res.result, is_final=self.is_leaf())
+            # trigger execution of children nodes
+            for c in self._pipeline.next_edges(self):
+                if c.end.status != RunStatus.DONE:
+                    c.end.run_all(data)
+        return {"status": self.status}
+
+    async def arun_all(self, data):
+        # make sure dependencies are satisfied
+        # and save the inputs defs that needs to be
+        # propagated from parent components
+        try:
+            input_defs = self.get_input_defs_from_parents()
+        except MissingDependencyError:
+            return {"status": "WAITING"}
+        # create component's input based on initial input data,
+        # already done component's outputs and inputs definition mapping
+        inputs = self._pipeline.get_component_inputs(self.name, input_defs, data)
+        # execute component task
+        res = await self.aexecute(**inputs)
+        # save its results
+        if res.status == RunStatus.DONE:
+            self._pipeline.add_result_for_component(self.name, res.result, is_final=self.is_leaf())
+            # trigger execution of children nodes
+            tasks = [
+                c.end.arun_all(data) for c in self._pipeline.next_edges(self)
+            ]
+            await asyncio.gather(*tasks)
+        return {"status": self.status}
+
+
+class Pipeline(Graph):
+    def __init__(self, store: Optional[Store] = None):
+        super().__init__()
+        self._store = store or InMemoryStore()
+        self._final_results = InMemoryStore()
+        self._task_status = InMemoryStore()
+
+    def add_component(self, name, component):
+        task = Task(name, component, self)
+        self.add_node(task)
+
+    def connect(self, start_component_name, end_component_name,
+                input_defs: Optional[dict[str, str]] = None):
+        start_node = self.get_node_by_name(start_component_name, raise_exception=True)
+        end_node = self.get_node_by_name(end_component_name, raise_exception=True)
+        super().connect(start_node, end_node, data={"input_defs": input_defs})
+
+    def add_result_for_component(self, name, result, is_final: bool = False):
+        self._store.add(name, result)
+        if is_final:
+            self._final_results.add(name, result)
+
+    def get_results_for_component(self, name: str):
+        return self._store.get(name)
+
+    def get_component_inputs(self, component_name: str, input_defs: dict,
+                             input_data: dict) -> dict:
+        component_inputs = input_data.get(component_name, {})
         if input_defs:
             for input_def, mapping in input_defs.items():
-                input_component, param = mapping.split(".")
-                value = self._results[input_component][param]
+                value = self._store.find_all(mapping)
+                if value:  # TODO: how to deal with multiple matches? Is it relevant?
+                    value = value[0]
                 component_inputs[input_def] = value
         return component_inputs
 
-    def run(self, data: dict):
-        if self._results:
-            self._results = {}
-        r = None
-        for name, (component, input_defs) in self._components.items():
-            component_inputs = self._get_component_inputs(name, input_defs, data)
-            r = component.run(**component_inputs)
-            self._results[name] = r
-        return r
+    def run_all(self, data):
+        roots = self.roots()
+        for root in roots:
+            root.run_all(data)
+        return self._final_results.all()
 
-    async def arun(self, data: dict):
-        """
-        Calls the arun method for each component.
-        """
-        if self._results:
-            self._results = {}
-        r = None
-        for name, (component, input_defs) in self._components.items():
-            component_inputs = self._get_component_inputs(name, input_defs, data)
-            r = await component.arun(**component_inputs)
-            self._results[name] = r
-        return r
-
-
-class SentenceSplitter(Component):
-
-    def __init__(self, separator: str = "."):
-        super().__init__()
-        self.separator = separator
-
-    def run(self, text: str = "") -> dict:
-        return {"sentences": [t.strip() for t in text.split(self.separator) if t.strip()]}
-
-
-class WordCounter(Component):
-
-    def __init__(self, word_delimiter: str = " "):
-        super().__init__()
-        self.word_delimiter = word_delimiter
-
-    def run(self, texts: list[str], remove_chars: list[str]) -> dict:
-        counts = []
-        for text in texts:
-            for r in remove_chars:
-                text = text.replace(r, "")
-            counts.append(len([t.strip() for t in text.split(self.word_delimiter) if t.strip()]))
-        return {"counts": counts}
-
-    async def _text_counter(self, text, remove_chars):
-        for r in remove_chars:
-            text = text.replace(r, "")
-        return len([t.strip() for t in text.split(self.word_delimiter) if t.strip()])
-
-    async def arun(self, texts: list[str], remove_chars: list[str]) -> dict:
-        results = await asyncio.gather(
-            *[
-                self._text_counter(text, remove_chars)
-                for text in texts
-            ]
-        )
-        return {"counts": results}
-
-
-class WordCounterSimple(Component):
-
-    def __init__(self, word_delimiter: str = " "):
-        self.word_delimiter = word_delimiter
-
-    def run(self, text: str, remove_chars: list[str]) -> dict:
-        # here we are processing text one by one, how can the pipeline handle that?
-        for r in remove_chars:
-            text = text.replace(r, "")
-        return {"count": len(text.split(self.word_delimiter))}
-
-
-if __name__ == '__main__':
-    pipe = Pipeline()
-    pipe.add_component(SentenceSplitter(), "splitter")
-    pipe.add_component(WordCounter(), "counter", input_def={
-        "texts": "splitter.sentences"
-    })
-
-    pipe_inputs = {
-        "splitter":
-            {
-                "text": "Graphs are everywhere. "
-                        "GraphRAG is the future of Artificial Intelligence. "
-                        "Robots are already running the world."
-            },
-        "counter": {
-            "remove_chars": [",", "is"]
-        }
-    }
-    print(pipe.run(pipe_inputs))
-    print(asyncio.run(pipe.arun(pipe_inputs)))
+    async def arun_all(self, data):
+        roots = self.roots()
+        tasks = [root.arun_all(data) for root in roots]
+        await asyncio.gather(*tasks)
+        return self._final_results.all()
