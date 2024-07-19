@@ -1,3 +1,17 @@
+#  Copyright (c) "Neo4j"
+#  Neo4j Sweden AB [https://neo4j.com]
+#  #
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#  #
+#      https://www.apache.org/licenses/LICENSE-2.0
+#  #
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
 """
 Pipeline implementation.
 
@@ -118,26 +132,26 @@ class Orchestrator:
             node.name, res.result or {}, is_final=node.is_leaf()
         )
 
-    async def run_node(self, node: TaskNode, data: dict[str, Any]) -> None:
-        await node.run(data, callback=self.on_task_complete)
+    async def run_task(self, task: TaskNode, data: dict[str, Any]) -> None:
+        await task.run(data, callback=self.on_task_complete)
 
     async def on_task_complete(
-        self, node: TaskNode, data: dict[str, Any], res: RunResult
+        self, task: TaskNode, data: dict[str, Any], res: RunResult
     ) -> None:
-        self.save_results(node, res)
-        await asyncio.gather(*[self.run_node(n, data) for n in self.next(node)])
+        self.pipeline.on_task_complete(task, res)
+        await asyncio.gather(*[self.run_task(n, data) for n in self.next(task)])
 
-    def check_dependencies_complete(self, node: TaskNode) -> None:
-        dependencies = self.pipeline.previous_edges(node)
+    def check_dependencies_complete(self, task: TaskNode) -> None:
+        dependencies = self.pipeline.previous_edges(task)
         for d in dependencies:
             if d.start.status != RunStatus.DONE:  # type: ignore
                 logger.warning(
-                    f"Missing dependency {d.start.name} for {node.name} (status: {d.start.status})"  # type: ignore
+                    f"Missing dependency {d.start.name} for {task.name} (status: {d.start.status})"  # type: ignore
                 )
                 raise MissingDependencyError()
 
-    def next(self, node: TaskNode) -> Generator[TaskNode, None, None]:
-        possible_nexts = self.pipeline.next_edges(node)
+    def next(self, task: TaskNode) -> Generator[TaskNode, None, None]:
+        possible_nexts = self.pipeline.next_edges(task)
         for next_edge in possible_nexts:
             next_node = next_edge.end
             # check status
@@ -184,6 +198,13 @@ class Pipeline(Graph):
         super().connect(start_node, end_node, data={"input_defs": input_defs})
         if self.is_cyclic():
             raise Exception("Cyclic graph")
+
+    def on_task_complete(self, node, result) -> None:
+        self.add_result_for_component(
+            node.name,
+            result.result,
+            is_final=node.is_leaf()
+        )
 
     def add_result_for_component(
         self, name: str, result: dict[str, Any], is_final: bool = False
