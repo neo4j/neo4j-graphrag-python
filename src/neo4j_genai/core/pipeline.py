@@ -81,6 +81,9 @@ class TaskNode(Node):
                 input_defs.update(**prev_edge_data)
         return input_defs
 
+    def reinitialize(self) -> None:
+        self.status = RunStatus.SCHEDULED
+
     async def run(
         self, data: dict[str, Any], callback: Callable[[Any, Any, Any], Awaitable[Any]]
     ) -> None:
@@ -163,7 +166,6 @@ class Pipeline(Graph):
         super().__init__()
         self._store = store or InMemoryStore()
         self._final_results = InMemoryStore()
-        self.orchestrator = Orchestrator(self)
 
     def add_component(self, name: str, component: Component) -> None:
         task = TaskNode(name, component, self)
@@ -178,6 +180,8 @@ class Pipeline(Graph):
         start_node = self.get_node_by_name(start_component_name, raise_exception=True)
         end_node = self.get_node_by_name(end_component_name, raise_exception=True)
         super().connect(start_node, end_node, data={"input_defs": input_defs})
+        if self.is_cyclic():
+            raise Exception("Cyclic graph")
 
     def add_result_for_component(
         self, name: str, result: dict[str, Any], is_final: bool = False
@@ -208,6 +212,14 @@ class Pipeline(Graph):
                 component_inputs[input_def] = value
         return component_inputs
 
+    def reinitialize(self):
+        self._store.empty()
+        self._final_results.empty()
+        for task in self._nodes.values():
+            task.reinitialize()  # type: ignore
+
     async def run(self, data: dict[str, Any]) -> dict[str, Any]:
-        await self.orchestrator.run(data)
+        self.reinitialize()
+        orchestrator = Orchestrator(self)
+        await orchestrator.run(data)
         return self._final_results.all()
