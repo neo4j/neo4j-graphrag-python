@@ -49,7 +49,7 @@ class RunResult(BaseModel):
 
 
 class Component:
-    async def process(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+    async def run(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
         return {}
 
 
@@ -63,7 +63,7 @@ class TaskNode(Node):
     async def execute(self, **kwargs: Any) -> RunResult:
         logger.debug(f"Running component {self.name} with {kwargs}")
         self.status = RunStatus.RUNNING
-        res = await self.component.process(**kwargs)
+        res = await self.component.run(**kwargs)
         self.status = RunStatus.DONE
         return RunResult(
             status=self.status,

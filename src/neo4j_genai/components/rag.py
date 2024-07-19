@@ -16,22 +16,25 @@ class Retriever(Component):
             ]
         )
 
-    async def process(self, query: str) -> dict[str, Any]:
+    async def run(self, query: str) -> dict[str, Any]:
         res = self.search(query)
         return {"context": "\n".join(c.content for c in res.items)}
 
 
 class PromptTemplate(Component):
-    async def process(self, query: str, context: list[str]) -> dict[str, Any]:
+    async def run(self, query: str, context: list[str]) -> dict[str, Any]:
         return {"prompt": f"my prompt using '{context}', query '{query}'"}
 
 
 class LLM(Component):
-    async def process(self, prompt: str) -> dict[str, Any]:
+    async def run(self, prompt: str) -> dict[str, Any]:
         return {"answer": f"some text based on '{prompt}'"}
 
 
 if __name__ == "__main__":
+    # retriever = Retriever()
+    # print(asyncio.run(retriever.run("my context item 1")))
+
     pipe = Pipeline()
     pipe.add_component("retrieve", Retriever())
     pipe.add_component("augment", PromptTemplate())
