@@ -7,12 +7,12 @@ from neo4j_genai.core.pipeline import Component
 
 
 class DocumentChunker(Component):
-    async def process(self, text: str) -> dict[str, Any]:
+    async def run(self, text: str) -> dict[str, Any]:
         return {"chunks": [t.strip() for t in text.split(".") if t.strip()]}
 
 
 class SchemaBuilder(Component):
-    async def process(self, schema: dict[str, Any]) -> dict[str, Any]:
+    async def run(self, schema: dict[str, Any]) -> dict[str, Any]:
         return {"schema": schema}
 
 
@@ -25,7 +25,7 @@ class ERExtractor(Component):
             }
         }
 
-    async def process(self, chunks: list[str], schema: str) -> dict[str, Any]:
+    async def run(self, chunks: list[str], schema: str) -> dict[str, Any]:
         tasks = [self._process_chunk(chunk, schema) for chunk in chunks]
         result = await asyncio.gather(*tasks)
         merged_result: dict[str, Any] = {"data": {"entities": [], "relations": []}}
@@ -36,7 +36,7 @@ class ERExtractor(Component):
 
 
 class Writer(Component):
-    async def process(
+    async def run(
         self, entities: dict[str, Any], relations: dict[str, Any]
     ) -> dict[str, Any]:
         return {
