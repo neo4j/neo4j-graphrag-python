@@ -14,6 +14,8 @@ e.g. DocumentChunker => ERExtractor, Embedder
 e.g. SchemaBuilder + Chunker => ERExtractor
 """
 
+from __future__ import annotations
+
 import asyncio
 import enum
 import logging
