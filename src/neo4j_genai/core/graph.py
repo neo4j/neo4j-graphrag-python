@@ -2,6 +2,8 @@
 Basic graph structure for Pipeline
 """
 
+from __future__ import annotations
+
 from typing import Any, Optional
 
 

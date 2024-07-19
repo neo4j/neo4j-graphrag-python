@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 from typing import Any
 
@@ -36,7 +38,6 @@ if __name__ == "__main__":
     pipe.add_component("generate", LLM())
     pipe.connect("retrieve", "augment", {"context": "retrieve.context"})
     pipe.connect("augment", "generate", {"prompt": "augment.prompt"})
-    pipe.connect("generate", "retrieve", {"prompt": "augment.prompt"})
 
     query = "my question"
     print(
