@@ -212,7 +212,7 @@ class Pipeline(Graph):
                 component_inputs[input_def] = value
         return component_inputs
 
-    def reinitialize(self):
+    def reinitialize(self) -> None:
         self._store.empty()
         self._final_results.empty()
         for task in self._nodes.values():
