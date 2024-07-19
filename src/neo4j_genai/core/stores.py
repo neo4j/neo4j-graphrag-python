@@ -42,6 +42,10 @@ class Store(abc.ABC):
         """
         raise NotImplementedError()
 
+    def empty(self) -> None:
+        """Remove everything from store"""
+        raise NotImplementedError()
+
 
 class InMemoryStore(Store):
     """Simple in-memory store.
@@ -67,3 +71,6 @@ class InMemoryStore(Store):
 
     def all(self) -> dict[str, Any]:
         return self._data
+
+    def empty(self) -> None:
+        self._data = {}
