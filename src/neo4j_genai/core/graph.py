@@ -71,29 +71,7 @@ class Graph:
     def __contains__(self, node: Node) -> bool:
         return node.name in self._nodes
 
-    def _check_stack(self, v, visited, stack):
-        visited[v.name] = True
-        stack[v.name] = True
-        for linked_vertices in self.next_edges(v):
-            next_node = linked_vertices.end
-            if not visited[next_node.name]:
-                if self._check_stack(next_node, visited, stack):
-                    return True
-            elif stack[next_node.name]:
-                return True
-        stack[v.name] = False
-        return False
-
-    def __is_cyclic(self) -> bool:
-        visited = {node: False for node in self._nodes}
-        stack = {node: False for node in self._nodes}
-        for node_name, node in self._nodes.items():
-            if not visited[node_name]:
-                if self._check_stack(node, visited, stack):
-                    return True
-        return False
-
-    def dfs(self, visited, node):
+    def dfs(self, visited: set[Node], node: Node) -> bool:
         if node in visited:
             return True
         else:
@@ -103,7 +81,7 @@ class Graph:
                     return True
             return False
 
-    def is_cyclic(self):
+    def is_cyclic(self) -> bool:
         for node in self._nodes.values():
             if self.dfs(set(), node):
                 return True

@@ -2,27 +2,27 @@ import pytest
 from neo4j_genai.core.graph import Edge, Graph, Node
 
 
-def test_node_alone():
+def test_node_alone() -> None:
     n = Node(name="node", data={})
     assert n.is_root() is True
     assert n.is_leaf() is True
 
 
-def test_node_not_root():
+def test_node_not_root() -> None:
     n = Node(name="node", data={})
     n.parents = [Node(name="child", data={})]
     assert n.is_root() is False
     assert n.is_leaf() is True
 
 
-def test_node_not_leaf():
+def test_node_not_leaf() -> None:
     n = Node(name="node", data={})
     n.children = [Node(name="child", data={})]
     assert n.is_root() is True
     assert n.is_leaf() is False
 
 
-def test_graph_add_nodes():
+def test_graph_add_nodes() -> None:
     g = Graph()
     n1 = Node("n1", {})
     n2 = Node("n2", {})
@@ -36,8 +36,8 @@ def test_graph_add_nodes():
     assert n2.parents == [n1]
 
 
-@pytest.fixture
-def graph():
+@pytest.fixture(scope="function")
+def graph() -> Graph:
     g = Graph()
     n1 = Node("n1", {})
     n2 = Node("n2", {})
@@ -47,13 +47,13 @@ def graph():
     return g
 
 
-def test_graph_roots(graph):
+def test_graph_roots(graph: Graph) -> None:
     roots = graph.roots()
     assert len(roots) == 1
     assert roots[0].name == "n1"
 
 
-def test_graph_next_edge(graph):
+def test_graph_next_edge(graph: Graph) -> None:
     start = graph._nodes["n1"]
     next_edges = graph.next_edges(start)
     assert len(next_edges) == 1
@@ -63,7 +63,7 @@ def test_graph_next_edge(graph):
     assert next_edge.end.name == "n2"
 
 
-def test_graph_prev_edge(graph):
+def test_graph_prev_edge(graph: Graph) -> None:
     start = graph._nodes["n2"]
     next_edges = graph.previous_edges(start)
     assert len(next_edges) == 1
@@ -73,6 +73,6 @@ def test_graph_prev_edge(graph):
     assert next_edge.end.name == "n2"
 
 
-def test_graph_contains(graph):
+def test_graph_contains(graph: Graph) -> None:
     start = graph._nodes["n2"]
     assert start in graph
