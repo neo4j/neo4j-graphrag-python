@@ -24,6 +24,7 @@ def pipeline_aggregation() -> Pipeline:
     return pipe
 
 
+@pytest.mark.asyncio
 async def test_orchestrator_branch(pipeline_branch: Pipeline) -> None:
     orchestrator = Orchestrator(pipeline=pipeline_branch)
     node_a = pipeline_branch.get_node_by_name("a")
@@ -33,6 +34,7 @@ async def test_orchestrator_branch(pipeline_branch: Pipeline) -> None:
     assert next_task_names == ["b", "c"]
 
 
+@pytest.mark.asyncio
 async def test_orchestrator_aggregation(pipeline_aggregation: Pipeline) -> None:
     orchestrator = Orchestrator(pipeline=pipeline_aggregation)
     node_a = pipeline_aggregation.get_node_by_name("a")
@@ -44,6 +46,7 @@ async def test_orchestrator_aggregation(pipeline_aggregation: Pipeline) -> None:
     assert next_task_names == ["c"]
 
 
+@pytest.mark.asyncio
 async def test_orchestrator_aggregation_waiting(pipeline_aggregation: Pipeline) -> None:
     orchestrator = Orchestrator(pipeline=pipeline_aggregation)
     node_a = pipeline_aggregation.get_node_by_name("a")
