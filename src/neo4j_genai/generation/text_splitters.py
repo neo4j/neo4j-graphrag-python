@@ -11,6 +11,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from __future__ import annotations
+
 from langchain_text_splitters import TextSplitter as LangChainTextSplitter
 from llama_index.core.node_parser import TextSplitter as LlamaIndexTextSplitter
 
