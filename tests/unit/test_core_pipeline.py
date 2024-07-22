@@ -55,9 +55,13 @@ async def test_simple_pipeline_two_components_parameter_propagation():
     pipe.add_component("a", component_a)
     pipe.add_component("b", component_b)
     # first component output product goes to second component input number1
-    pipe.connect("a", "b", {
-        "number1": "a.product",
-    })
+    pipe.connect(
+        "a",
+        "b",
+        {
+            "number1": "a.product",
+        },
+    )
     res = await pipe.run({"a": {}, "b": {"number2": 1}})
     assert component_a.run.called_one_with({})
     assert component_b.run.called_one_with({"number1": 20, "number2": 1})

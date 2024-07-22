@@ -15,6 +15,7 @@
 """Result store interface
 and in-memory store implementation.
 """
+
 from __future__ import annotations
 
 import abc
