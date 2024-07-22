@@ -749,7 +749,7 @@ Populate a Vector Index
 
     # Upsert the vector
     vector = [random() for _ in range(DIMENSION)]
-    upsert_vector(driver, node_id="1234", embedding_property="embedding", vector=vector)
+    upsert_vector(driver, id="1234", embedding_property="embedding", vector=vector)
 
 This will update the node with `id(node)=1234` to add (or update) a `node.embedding` property.
 This property will also be added to the vector index.

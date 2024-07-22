@@ -238,10 +238,11 @@ def drop_index_if_exists(
 
 def upsert_vector(
     driver: neo4j.Driver,
-    node_id: int,
+    id: int,
     embedding_property: str,
     vector: list[float],
     neo4j_database: Optional[str] = None,
+    relationship_embedding: bool = False
 ) -> None:
     """
     This method constructs a Cypher query and executes it to upsert (insert or update) a vector property on a specific node.
@@ -269,24 +270,34 @@ def upsert_vector(
 
     Args:
         driver (neo4j.Driver): Neo4j Python driver instance.
-        node_id (int): The id of the node.
+        id (int): The id of the node or relationship.
         embedding_property (str): The name of the property to store the vector in.
         vector (list[float]): The vector to store.
         neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
+        relationship_embedding (bool): If true, the vector is set on a relationship instead of a node. Defaults to False.
 
     Raises:
         Neo4jInsertionError: If upserting of the vector fails.
     """
     try:
-        query = """
-        MATCH (n)
-        WHERE elementId(n) = $id
-        WITH n
-        CALL db.create.setNodeVectorProperty(n, $embedding_property, $vector)
-        RETURN n
-        """
+        if relationship_embedding:
+            query = """
+            MATCH ()-[r]->()
+            WHERE elementId(r) = $id
+            WITH r
+            CALL db.create.setRelationshipVectorProperty(r, $embedding_property, $vector)
+            RETURN r
+            """
+        else:
+            query = """
+            MATCH (n)
+            WHERE elementId(n) = $id
+            WITH n
+            CALL db.create.setNodeVectorProperty(n, $embedding_property, $vector)
+            RETURN n
+            """
         parameters = {
-            "id": node_id,
+            "id": id,
             "embedding_property": embedding_property,
             "vector": vector,
         }
