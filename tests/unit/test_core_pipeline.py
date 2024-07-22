@@ -6,29 +6,8 @@ import pytest
 from neo4j_genai.core.pipeline import Component, Pipeline
 
 
-@pytest.fixture(scope="function")
-def component_multiply():
-    class ComponentMultiply(Component):
-        def __init__(self, r: float = 2.0) -> None:
-            self.r = r
-
-        async def run(self, number: float):
-            return {"product": number * self.r}
-
-    return ComponentMultiply()
-
-
-@pytest.fixture(scope="function")
-def component_add():
-    class ComponentAdd(Component):
-        async def run(self, number1: float, number2: float):
-            return {"sum": number1 + number2}
-
-    return ComponentAdd()
-
-
 @pytest.mark.asyncio
-async def test_simple_pipeline_two_components():
+async def test_simple_pipeline_two_components() -> None:
     pipe = Pipeline()
     component_a = AsyncMock(spec=Component)
     component_a.run = AsyncMock(return_value={})
@@ -45,7 +24,7 @@ async def test_simple_pipeline_two_components():
 
 
 @pytest.mark.asyncio
-async def test_simple_pipeline_two_components_parameter_propagation():
+async def test_simple_pipeline_two_components_parameter_propagation() -> None:
     pipe = Pipeline()
     component_a = AsyncMock(spec=Component)
     component_a.run = AsyncMock(return_value={"product": 20})
@@ -68,7 +47,7 @@ async def test_simple_pipeline_two_components_parameter_propagation():
 
 
 @pytest.mark.asyncio
-async def test_pipeline_branches():
+async def test_pipeline_branches() -> None:
     pipe = Pipeline()
     component_a = AsyncMock(spec=Component)
     component_a.run = AsyncMock(return_value={})
@@ -88,7 +67,7 @@ async def test_pipeline_branches():
 
 
 @pytest.mark.asyncio
-async def test_pipeline_aggregation():
+async def test_pipeline_aggregation() -> None:
     pipe = Pipeline()
     component_a = AsyncMock(spec=Component)
     component_a.run = AsyncMock(return_value={})
