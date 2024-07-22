@@ -17,8 +17,8 @@ async def test_simple_pipeline_two_components() -> None:
     pipe.add_component("b", component_b)
     pipe.connect("a", "b", {})
     res = await pipe.run({})
-    assert component_a.run.called_one_with({})
-    assert component_b.run.called_one_with({})
+    component_a.run.assert_awaited_once_with(**{})
+    component_b.run.assert_awaited_once_with(**{})
     assert "b" in res
     assert res["b"] == {"result": "result"}
 
@@ -41,8 +41,8 @@ async def test_simple_pipeline_two_components_parameter_propagation() -> None:
         },
     )
     res = await pipe.run({"a": {}, "b": {"number2": 1}})
-    assert component_a.run.called_one_with({})
-    assert component_b.run.called_one_with({"number1": 20, "number2": 1})
+    component_a.run.assert_awaited_once_with(**{})
+    component_b.run.assert_awaited_once_with(**{"number1": 20, "number2": 1})
     assert res == {"b": {"sum": 54}}
 
 
