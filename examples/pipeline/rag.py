@@ -17,7 +17,9 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from neo4j_genai.core.pipeline import Component, Pipeline
+from neo4j_genai.core.component import Component
+from neo4j_genai.core.pipeline import Pipeline
+from neo4j_genai.core.types import ComponentDef, ConnectionDef, PipelineDef
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 
 
@@ -36,8 +38,13 @@ class Retriever(Component):
 
 
 class PromptTemplate(Component):
+    def __init__(self, param: str = "default") -> None:
+        self.param = param
+
     async def run(self, query: str, context: list[str]) -> dict[str, Any]:
-        return {"prompt": f"my prompt using '{context}', query '{query}'"}
+        return {
+            "prompt": f"my prompt using '{context}' and '{self.param}', query '{query}'"
+        }
 
 
 class LLM(Component):
@@ -49,14 +56,38 @@ if __name__ == "__main__":
     # retriever = Retriever()
     # print(asyncio.run(retriever.run("my context item 1")))
 
-    pipe = Pipeline()
-    pipe.add_component("retrieve", Retriever())
-    pipe.add_component("augment", PromptTemplate())
-    pipe.add_component("generate", LLM())
-    pipe.connect("retrieve", "augment", {"context": "retrieve.context"})
-    pipe.connect("augment", "generate", {"prompt": "augment.prompt"})
+    pipe = Pipeline.from_template(
+        PipelineDef(
+            components=[
+                ComponentDef(name="retrieve", component=Retriever()),
+                ComponentDef(name="augment", component=PromptTemplate()),
+                ComponentDef(name="generate", component=LLM()),
+            ],
+            connections=[
+                ConnectionDef(
+                    start="retrieve",
+                    end="augment",
+                    input_defs={"context": "retrieve.context"},
+                ),
+                ConnectionDef(
+                    start="augment",
+                    end="generate",
+                    input_defs={"prompt": "augment.prompt"},
+                ),
+            ],
+        )
+    )
 
     query = "my question"
+    print(
+        asyncio.run(
+            pipe.run({"retrieve": {"query": query}, "augment": {"query": query}})
+        )
+    )
+
+    pipe.set_component("augment", PromptTemplate(param="my param"))
+    pipe.reinitialize()
+    print(pipe.show_as_dict())
     print(
         asyncio.run(
             pipe.run({"retrieve": {"query": query}, "augment": {"query": query}})

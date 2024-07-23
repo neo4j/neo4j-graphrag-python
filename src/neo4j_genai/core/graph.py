@@ -52,6 +52,16 @@ class Graph:
             raise ValueError(f"Node {node.name} already exists")
         self._nodes[node.name] = node
 
+    def set_node(self, node: Node) -> None:
+        if node not in self:
+            raise ValueError(f"Node {node.name} does not exist")
+        self._nodes[node.name] = node
+        for edge in self._edges:
+            if edge.start.name == node.name:
+                edge.start = node
+            if edge.end.name == node.name:
+                edge.end = node
+
     def connect(self, start: Node, end: Node, data: dict[str, Any]) -> None:
         self._edges.append(Edge(start, end, data))
         self._nodes[end.name].parents.append(start)
@@ -84,8 +94,10 @@ class Graph:
                 res.append(edge)
         return res
 
-    def __contains__(self, node: Node) -> bool:
-        return node.name in self._nodes
+    def __contains__(self, node: Node | str) -> bool:
+        if isinstance(node, Node):
+            return node.name in self._nodes
+        return node in self._nodes
 
     def dfs(self, visited: set[Node], node: Node) -> bool:
         if node in visited:
