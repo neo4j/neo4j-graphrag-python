@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 """
-Basic graph structure for Pipeline
+Basic graph structure for Pipeline.
 """
 
 from __future__ import annotations
@@ -21,12 +21,12 @@ from __future__ import annotations
 from typing import Any, Optional
 
 
-class Node:
+class PipelineNode:
     def __init__(self, name: str, data: dict[str, Any]) -> None:
         self.name = name
         self.data = data
-        self.parents: list[Node] = []
-        self.children: list[Node] = []
+        self.parents: list[PipelineNode] = []
+        self.children: list[PipelineNode] = []
 
     def is_root(self) -> bool:
         return len(self.parents) == 0
@@ -35,24 +35,24 @@ class Node:
         return len(self.children) == 0
 
 
-class Edge:
-    def __init__(self, start: Node, end: Node, data: Optional[dict[str, Any]] = None):
+class PipelineEdge:
+    def __init__(self, start: PipelineNode, end: PipelineNode, data: Optional[dict[str, Any]] = None):
         self.start = start
         self.end = end
         self.data = data
 
 
-class Graph:
+class PipelineGraph:
     def __init__(self) -> None:
-        self._nodes: dict[str, Node] = {}
-        self._edges: list[Edge] = []
+        self._nodes: dict[str, PipelineNode] = {}
+        self._edges: list[PipelineEdge] = []
 
-    def add_node(self, node: Node) -> None:
+    def add_node(self, node: PipelineNode) -> None:
         if node in self:
             raise ValueError(f"Node {node.name} already exists")
         self._nodes[node.name] = node
 
-    def set_node(self, node: Node) -> None:
+    def set_node(self, node: PipelineNode) -> None:
         if node not in self:
             raise ValueError(f"Node {node.name} does not exist")
         self._nodes[node.name] = node
@@ -62,44 +62,44 @@ class Graph:
             if edge.end.name == node.name:
                 edge.end = node
 
-    def connect(self, start: Node, end: Node, data: dict[str, Any]) -> None:
-        self._edges.append(Edge(start, end, data))
+    def connect(self, start: PipelineNode, end: PipelineNode, data: dict[str, Any]) -> None:
+        self._edges.append(PipelineEdge(start, end, data))
         self._nodes[end.name].parents.append(start)
         self._nodes[start.name].children.append(end)
 
-    def get_node_by_name(self, name: str, raise_exception: bool = False) -> Node:
+    def get_node_by_name(self, name: str, raise_exception: bool = False) -> PipelineNode:
         node = self._nodes.get(name)
         if node is None and raise_exception:
             raise KeyError(f"Component {name} not in graph")
         return node  # type: ignore
 
-    def roots(self) -> list[Node]:
+    def roots(self) -> list[PipelineNode]:
         root = []
         for node in self._nodes.values():
             if node.is_root():
                 root.append(node)
         return root
 
-    def next_edges(self, node: Node) -> list[Edge]:
+    def next_edges(self, node: PipelineNode) -> list[PipelineEdge]:
         res = []
         for edge in self._edges:
             if edge.start == node:
                 res.append(edge)
         return res
 
-    def previous_edges(self, node: Node) -> list[Edge]:
+    def previous_edges(self, node: PipelineNode) -> list[PipelineEdge]:
         res = []
         for edge in self._edges:
             if edge.end == node:
                 res.append(edge)
         return res
 
-    def __contains__(self, node: Node | str) -> bool:
-        if isinstance(node, Node):
+    def __contains__(self, node: PipelineNode | str) -> bool:
+        if isinstance(node, PipelineNode):
             return node.name in self._nodes
         return node in self._nodes
 
-    def dfs(self, visited: set[Node], node: Node) -> bool:
+    def dfs(self, visited: set[PipelineNode], node: PipelineNode) -> bool:
         if node in visited:
             return True
         else:
