@@ -172,20 +172,42 @@ def test_create_fulltext_index_ensure_escaping(driver: MagicMock) -> None:
     )
 
 
-def test_upsert_vector_happy_path(driver: MagicMock) -> None:
+def test_upsert_vector_node_happy_path(driver: MagicMock) -> None:
     id = 1
     embedding_property = "embedding"
     vector = [1.0, 2.0, 3.0]
 
     upsert_vector(driver, id, embedding_property, vector)
 
-    upsert_query = """
-        MATCH (n)
-        WHERE elementId(n) = $id
-        WITH n
-        CALL db.create.setNodeVectorProperty(n, $embedding_property, $vector)
-        RETURN n
-        """
+    upsert_query = (
+        "MATCH (n)"
+        "WHERE elementId(n) = $id"
+        "WITH n"
+        "CALL db.create.setNodeVectorProperty(n, $embedding_property, $vector)"
+        "RETURN n"
+    )
+
+    driver.execute_query.assert_called_once_with(
+        upsert_query,
+        {"id": id, "embedding_property": embedding_property, "vector": vector},
+        database_=None,
+    )
+
+
+def test_upsert_vector_relationship_happy_path(driver: MagicMock) -> None:
+    id = 1
+    embedding_property = "embedding"
+    vector = [1.0, 2.0, 3.0]
+
+    upsert_vector(driver, id, embedding_property, vector, relationship_embedding=True)
+
+    upsert_query = (
+        "MATCH ()-[r]->()"
+        "WHERE elementId(r) = $id"
+        "WITH r"
+        "CALL db.create.setRelationshipVectorProperty(r, $embedding_property, $vector)"
+        "RETURN r"
+    )
 
     driver.execute_query.assert_called_once_with(
         upsert_query,

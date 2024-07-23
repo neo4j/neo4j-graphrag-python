@@ -242,7 +242,7 @@ def upsert_vector(
     embedding_property: str,
     vector: list[float],
     neo4j_database: Optional[str] = None,
-    relationship_embedding: bool = False
+    relationship_embedding: bool = False,
 ) -> None:
     """
     This method constructs a Cypher query and executes it to upsert (insert or update) a vector property on a specific node.
@@ -281,21 +281,21 @@ def upsert_vector(
     """
     try:
         if relationship_embedding:
-            query = """
-            MATCH ()-[r]->()
-            WHERE elementId(r) = $id
-            WITH r
-            CALL db.create.setRelationshipVectorProperty(r, $embedding_property, $vector)
-            RETURN r
-            """
+            query = (
+                "MATCH ()-[r]->()"
+                "WHERE elementId(r) = $id"
+                "WITH r"
+                "CALL db.create.setRelationshipVectorProperty(r, $embedding_property, $vector)"
+                "RETURN r"
+            )
         else:
-            query = """
-            MATCH (n)
-            WHERE elementId(n) = $id
-            WITH n
-            CALL db.create.setNodeVectorProperty(n, $embedding_property, $vector)
-            RETURN n
-            """
+            query = (
+                "MATCH (n)"
+                "WHERE elementId(n) = $id"
+                "WITH n"
+                "CALL db.create.setNodeVectorProperty(n, $embedding_property, $vector)"
+                "RETURN n"
+            )
         parameters = {
             "id": id,
             "embedding_property": embedding_property,
