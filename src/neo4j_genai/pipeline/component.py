@@ -14,13 +14,32 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import inspect
 from typing import Any
 
 
-class Component:
+class ComponentMeta(type):
+    def __new__(
+        meta, name: str, bases: tuple[type, ...], attrs: dict[str, Any]
+    ) -> type:
+        run_method = attrs.get("run")
+        if run_method is not None:
+            sig = inspect.signature(run_method)
+            attrs["component_inputs"] = {
+                param.name: {
+                    "has_default": param.default != inspect.Parameter.empty,
+                    "annotation": param.annotation,
+                }
+                for param in sig.parameters.values()
+                if param.name not in ("self",)
+            }
+        return type.__new__(meta, name, bases, attrs)
+
+
+class Component(metaclass=ComponentMeta):
     """Interface that needs to be implemented
-    by all components
-    ."""
+    by all components.
+    """
 
     async def run(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
         return {}

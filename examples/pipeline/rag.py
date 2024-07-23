@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from neo4j_genai.pipeline import Pipeline, Component
+from neo4j_genai.pipeline import Component, Pipeline
 from neo4j_genai.pipeline.types import ComponentDef, ConnectionDef, PipelineDef
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 
@@ -71,7 +71,8 @@ if __name__ == "__main__":
                 ConnectionDef(
                     start="augment",
                     end="generate",
-                    input_defs={"prompt": "augment.prompt"},
+                    input_defs={},
+                    # input_defs={"prompt": "augment.prompt"},
                 ),
             ],
         )

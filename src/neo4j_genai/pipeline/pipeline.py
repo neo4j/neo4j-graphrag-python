@@ -37,9 +37,9 @@ from typing import Any, AsyncGenerator, Awaitable, Callable, Optional
 
 from pydantic import BaseModel
 
-from neo4j_genai.pipeline.component import Component
 from neo4j_genai.core.pipeline_graph import PipelineGraph, PipelineNode
 from neo4j_genai.core.stores import InMemoryStore, Store
+from neo4j_genai.pipeline.component import Component
 from neo4j_genai.pipeline.types import ComponentDef, ConnectionDef, PipelineDef
 
 logger = logging.getLogger(__name__)
@@ -51,6 +51,10 @@ class MissingDependencyError(Exception):
 
 
 class StatusUpdateError(Exception):
+    pass
+
+
+class PipelineDefinitionError(Exception):
     pass
 
 
@@ -235,7 +239,9 @@ class Orchestrator:
                 )
                 raise MissingDependencyError()
 
-    async def next(self, task: TaskPipelineNode) -> AsyncGenerator[TaskPipelineNode, None]:
+    async def next(
+        self, task: TaskPipelineNode
+    ) -> AsyncGenerator[TaskPipelineNode, None]:
         """Find the next tasks to be excuted after `task` is complete.
 
         1. Find the task children
@@ -378,7 +384,30 @@ class Pipeline(PipelineGraph):
         for task in self._nodes.values():
             task.reinitialize()  # type: ignore
 
+    def validate_inputs_definition(self, data: dict[str, Any]) -> None:
+        for task in self._nodes.values():
+            component = task.component  # type: ignore
+            expected_inputs = component.component_inputs
+            expected_mandatory_inputs = [
+                param_name
+                for param_name, config in expected_inputs.items()
+                if config["has_default"] is False
+            ]
+            prev_edges = self.previous_edges(task)
+            actual_inputs = list(data.get(task.name, {}).keys())
+            for edge in prev_edges:
+                edge_data = edge.data or {}
+                edge_inputs = edge_data.get("input_defs") or {}
+                actual_inputs.extend(list(edge_inputs.keys()))
+            if set(expected_mandatory_inputs) - set(actual_inputs):
+                raise PipelineDefinitionError(
+                    f"Missing input parameters: "
+                    f"Expected parameters: {expected_mandatory_inputs}. "
+                    f"Got: {actual_inputs}"
+                )
+
     async def run(self, data: dict[str, Any]) -> dict[str, Any]:
+        self.validate_inputs_definition(data)
         self.reinitialize()
         orchestrator = Orchestrator(self)
         await orchestrator.run(data)
