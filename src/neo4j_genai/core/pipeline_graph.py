@@ -36,7 +36,12 @@ class PipelineNode:
 
 
 class PipelineEdge:
-    def __init__(self, start: PipelineNode, end: PipelineNode, data: Optional[dict[str, Any]] = None):
+    def __init__(
+        self,
+        start: PipelineNode,
+        end: PipelineNode,
+        data: Optional[dict[str, Any]] = None,
+    ):
         self.start = start
         self.end = end
         self.data = data
@@ -62,12 +67,16 @@ class PipelineGraph:
             if edge.end.name == node.name:
                 edge.end = node
 
-    def connect(self, start: PipelineNode, end: PipelineNode, data: dict[str, Any]) -> None:
+    def connect(
+        self, start: PipelineNode, end: PipelineNode, data: dict[str, Any]
+    ) -> None:
         self._edges.append(PipelineEdge(start, end, data))
         self._nodes[end.name].parents.append(start)
         self._nodes[start.name].children.append(end)
 
-    def get_node_by_name(self, name: str, raise_exception: bool = False) -> PipelineNode:
+    def get_node_by_name(
+        self, name: str, raise_exception: bool = False
+    ) -> PipelineNode:
         node = self._nodes.get(name)
         if node is None and raise_exception:
             raise KeyError(f"Component {name} not in graph")

@@ -1,5 +1,6 @@
-from .stores import Store, InMemoryStore
 from neo4j_genai.pipeline.types import ComponentDef, ConnectionDef, PipelineDef
+
+from .stores import InMemoryStore, Store
 
 __all__ = [
     "Store",
