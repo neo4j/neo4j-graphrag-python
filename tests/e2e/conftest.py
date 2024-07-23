@@ -155,3 +155,23 @@ def setup_neo4j_for_schema_query_with_excluded_labels(driver: Driver) -> None:
     driver.execute_query(
         "CREATE (:_Bloom_Scene_{property_a: 'a'})-[:_Bloom_HAS_SCENE_{property_b: 'b'}]->(:_Bloom_Perspective_)"
     )
+
+@pytest.fixture(scope="module")
+def setup_neo4j_for_kg_builder(driver: Driver) -> None:
+
+    # Delete all nodes and indexes in the graph
+    driver.execute_query("MATCH (n) DETACH DELETE n")
+    vector_index_name = "vector-index-name"
+    fulltext_index_name = "fulltext-index-name"
+    drop_index_if_exists(driver, vector_index_name)
+    drop_index_if_exists(driver, fulltext_index_name)
+
+    # Create a vector index with the dimensions used by the Hugging Face all-MiniLM-L6-v2 model
+    create_vector_index(
+        driver,
+        vector_index_name,
+        label="Document",
+        embedding_property="vectorProperty",
+        dimensions=384,
+        similarity_fn="euclidean",
+    )

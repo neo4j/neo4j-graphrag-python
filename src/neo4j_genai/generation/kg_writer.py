@@ -76,7 +76,7 @@ class Neo4jWriter(KGWriter):
             properties += "}"
         query = UPSERT_NODE_QUERY.format(label=node.label, properties=properties)
         result = self.driver.execute_query(query)
-        node_id = result.records()[0]["elementID(n)"]
+        node_id = result.records[0]["elementID(n)"]
         # Add the embedding properties to the node
         if node.embedding_properties:
             if self.embedder:
@@ -114,7 +114,7 @@ class Neo4jWriter(KGWriter):
             properties=properties,
         )
         result = self.driver.execute_query(query)
-        rel_id = result.records()[0]["elementID(r)"]
+        rel_id = result.records[0]["elementID(r)"]
         # Add the embedding properties to the relationship
         if rel.embedding_properties:
             if self.embedder:
