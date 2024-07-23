@@ -33,7 +33,7 @@ from __future__ import annotations
 import asyncio
 import enum
 import logging
-from typing import Any, AsyncGenerator, Awaitable, Callable, Optional, Type
+from typing import Any, AsyncGenerator, Awaitable, Callable, Optional
 
 from pydantic import BaseModel
 
