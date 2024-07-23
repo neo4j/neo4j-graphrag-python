@@ -33,12 +33,14 @@ from __future__ import annotations
 import asyncio
 import enum
 import logging
-from typing import Any, AsyncGenerator, Awaitable, Callable, Optional
+from typing import Any, AsyncGenerator, Awaitable, Callable, Optional, Type
 
 from pydantic import BaseModel
 
+from neo4j_genai.core.component import Component
 from neo4j_genai.core.graph import Graph, Node
 from neo4j_genai.core.stores import InMemoryStore, Store
+from neo4j_genai.core.types import ComponentDef, ConnectionDef, PipelineDef
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG, format="%(message)s")
@@ -64,15 +66,6 @@ class RunStatus(enum.Enum):
 class RunResult(BaseModel):
     status: RunStatus
     result: Optional[dict[str, Any]] = None
-
-
-class Component:
-    """Interface that needs to be implemented
-    by all components
-    ."""
-
-    async def run(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        return {}
 
 
 class TaskNode(Node):
@@ -289,9 +282,45 @@ class Pipeline(Graph):
         self._store = store or InMemoryStore()
         self._final_results = InMemoryStore()
 
+    @classmethod
+    def from_template(
+        cls, pipeline_template: PipelineDef, store: Optional[Store] = None
+    ) -> Pipeline:
+        """Create a Pipeline from a pydantic model defining the components and their connections"""
+        pipeline = Pipeline(store=store)
+        for component in pipeline_template.components:
+            pipeline.add_component(component.name, component.component)
+        for edge in pipeline_template.connections:
+            pipeline.connect(edge.start, edge.end, edge.input_defs)
+        return pipeline
+
+    def show_as_dict(self) -> dict[str, Any]:
+        component_defs = []
+        for name, task in self._nodes.items():
+            component_defs.append(
+                ComponentDef(name=name, component=task.component)  # type: ignore
+            )
+        connection_defs = []
+        for edge in self._edges:
+            connection_defs.append(
+                ConnectionDef(
+                    start=edge.start.name,
+                    end=edge.end.name,
+                    input_defs=edge.data["input_defs"] if edge.data else {},
+                )
+            )
+        pipeline_def = PipelineDef(
+            components=component_defs, connections=connection_defs
+        )
+        return pipeline_def.model_dump()
+
     def add_component(self, name: str, component: Component) -> None:
         task = TaskNode(name, component, self)
         self.add_node(task)
+
+    def set_component(self, name: str, component: Component) -> None:
+        task = TaskNode(name, component, self)
+        self.set_node(task)
 
     def connect(  # type: ignore
         self,

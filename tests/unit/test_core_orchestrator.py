@@ -1,5 +1,6 @@
 import pytest
-from neo4j_genai.core.pipeline import Component, Orchestrator, Pipeline, RunStatus
+from neo4j_genai.core.component import Component
+from neo4j_genai.core.pipeline import Orchestrator, Pipeline, RunStatus
 
 
 @pytest.fixture(scope="function")
