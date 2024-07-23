@@ -17,9 +17,8 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from neo4j_genai.core.component import Component
-from neo4j_genai.core.pipeline import Pipeline
-from neo4j_genai.core.types import ComponentDef, ConnectionDef, PipelineDef
+from neo4j_genai.pipeline import Pipeline, Component
+from neo4j_genai.pipeline.types import ComponentDef, ConnectionDef, PipelineDef
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 
 

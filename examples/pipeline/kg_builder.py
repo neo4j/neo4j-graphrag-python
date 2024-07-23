@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from neo4j_genai.core.component import Component
+from neo4j_genai.pipeline import Component
 
 
 class DocumentChunker(Component):
@@ -61,7 +61,7 @@ class Writer(Component):
 
 
 if __name__ == "__main__":
-    from neo4j_genai.core.pipeline import Pipeline
+    from neo4j_genai.pipeline import Pipeline
 
     pipe = Pipeline()
     pipe.add_component("chunker", DocumentChunker())
@@ -81,9 +81,9 @@ if __name__ == "__main__":
 
     pipe_inputs = {
         "chunker": {
-            "text": "Graphs are everywhere. "
-            "GraphRAG is the future of Artificial Intelligence. "
-            "Robots are already running the world."
+            "text": """Graphs are everywhere.
+            GraphRAG is the future of Artificial Intelligence.
+            Robots are already running the world."""
         },
         "schema": {"schema": "Person OWNS House"},
     }

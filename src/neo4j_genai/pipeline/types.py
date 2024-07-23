@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict
 
-from neo4j_genai.core.component import Component
+from neo4j_genai.pipeline.component import Component
 
 
 class ComponentDef(BaseModel):

@@ -37,10 +37,10 @@ from typing import Any, AsyncGenerator, Awaitable, Callable, Optional
 
 from pydantic import BaseModel
 
-from neo4j_genai.core.component import Component
-from neo4j_genai.core.graph import Graph, Node
+from neo4j_genai.pipeline.component import Component
+from neo4j_genai.core.pipeline_graph import PipelineGraph, PipelineNode
 from neo4j_genai.core.stores import InMemoryStore, Store
-from neo4j_genai.core.types import ComponentDef, ConnectionDef, PipelineDef
+from neo4j_genai.pipeline.types import ComponentDef, ConnectionDef, PipelineDef
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG, format="%(message)s")
@@ -68,7 +68,7 @@ class RunResult(BaseModel):
     result: Optional[dict[str, Any]] = None
 
 
-class TaskNode(Node):
+class TaskPipelineNode(PipelineNode):
     """Runnable node. It must have:
     - a name (unique within the pipeline)
     - a component instance
@@ -204,11 +204,11 @@ class Orchestrator:
     def __init__(self, pipeline: "Pipeline"):
         self.pipeline = pipeline
 
-    async def run_task(self, task: TaskNode, data: dict[str, Any]) -> None:
+    async def run_task(self, task: TaskPipelineNode, data: dict[str, Any]) -> None:
         await task.run(data, callback=self.on_task_complete)
 
     async def on_task_complete(
-        self, task: TaskNode, data: dict[str, Any], res: RunResult
+        self, task: TaskPipelineNode, data: dict[str, Any], res: RunResult
     ) -> None:
         """When a given task is complete, it will call this method
         to find the next tasks to run.
@@ -220,7 +220,7 @@ class Orchestrator:
         # and run them in //
         await asyncio.gather(*[self.run_task(n, data) async for n in self.next(task)])
 
-    async def check_dependencies_complete(self, task: TaskNode) -> None:
+    async def check_dependencies_complete(self, task: TaskPipelineNode) -> None:
         """Check that all parent tasks are complete.
 
         Raises:
@@ -235,7 +235,7 @@ class Orchestrator:
                 )
                 raise MissingDependencyError()
 
-    async def next(self, task: TaskNode) -> AsyncGenerator[TaskNode, None]:
+    async def next(self, task: TaskPipelineNode) -> AsyncGenerator[TaskPipelineNode, None]:
         """Find the next tasks to be excuted after `task` is complete.
 
         1. Find the task children
@@ -273,7 +273,7 @@ class Orchestrator:
         await asyncio.gather(*tasks)
 
 
-class Pipeline(Graph):
+class Pipeline(PipelineGraph):
     """This is our pipeline, when we configure components
     and their execution order."""
 
@@ -315,11 +315,11 @@ class Pipeline(Graph):
         return pipeline_def.model_dump()
 
     def add_component(self, name: str, component: Component) -> None:
-        task = TaskNode(name, component, self)
+        task = TaskPipelineNode(name, component, self)
         self.add_node(task)
 
     def set_component(self, name: str, component: Component) -> None:
-        task = TaskNode(name, component, self)
+        task = TaskPipelineNode(name, component, self)
         self.set_node(task)
 
     def connect(  # type: ignore
@@ -334,7 +334,7 @@ class Pipeline(Graph):
         if self.is_cyclic():
             raise Exception("Cyclic graph")
 
-    def on_task_complete(self, node: TaskNode, result: RunResult) -> None:
+    def on_task_complete(self, node: TaskPipelineNode, result: RunResult) -> None:
         self.add_result_for_component(node.name, result.result, is_final=node.is_leaf())
 
     def add_result_for_component(

@@ -3,8 +3,8 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import pytest
-from neo4j_genai.core.component import Component
-from neo4j_genai.core.pipeline import Pipeline
+from neo4j_genai.pipeline.component import Component
+from neo4j_genai.pipeline import Pipeline
 
 
 @pytest.mark.asyncio
