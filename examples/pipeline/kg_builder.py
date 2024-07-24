@@ -17,9 +17,8 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from pydantic import BaseModel
-
 from neo4j_genai.pipeline import Component, DataModel
+from pydantic import BaseModel
 
 
 class DocumentChunkModel(DataModel):
