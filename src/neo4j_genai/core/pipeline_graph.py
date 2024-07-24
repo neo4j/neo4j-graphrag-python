@@ -25,8 +25,8 @@ class PipelineNode:
     def __init__(self, name: str, data: dict[str, Any]) -> None:
         self.name = name
         self.data = data
-        self.parents: list[PipelineNode] = []
-        self.children: list[PipelineNode] = []
+        self.parents: list[str] = []
+        self.children: list[str] = []
 
     def is_root(self) -> bool:
         return len(self.parents) == 0
@@ -38,8 +38,8 @@ class PipelineNode:
 class PipelineEdge:
     def __init__(
         self,
-        start: PipelineNode,
-        end: PipelineNode,
+        start: str,
+        end: str,
         data: Optional[dict[str, Any]] = None,
     ):
         self.start = start
@@ -58,21 +58,31 @@ class PipelineGraph:
         self._nodes[node.name] = node
 
     def set_node(self, node: PipelineNode) -> None:
+        """Replace an existing node with a new one based on node name."""
         if node not in self:
             raise ValueError(f"Node {node.name} does not exist")
+        # propagate the graph info to the new node:
+        old_node = self._nodes[node.name]
+        node.parents = old_node.parents
+        node.children = old_node.children
         self._nodes[node.name] = node
+
+    def _validate_edge(self, start: str, end: str):
+        if start not in self:
+            raise ValueError(f"Node {start} does not exist")
+        if end not in self:
+            raise ValueError(f"Node {end} does not exist")
         for edge in self._edges:
-            if edge.start.name == node.name:
-                edge.start = node
-            if edge.end.name == node.name:
-                edge.end = node
+            if edge.start == start and edge.end == end:
+                raise ValueError(f"{start} and {end} are already connected")
 
     def connect(
         self, start: PipelineNode, end: PipelineNode, data: dict[str, Any]
     ) -> None:
-        self._edges.append(PipelineEdge(start, end, data))
-        self._nodes[end.name].parents.append(start)
-        self._nodes[start.name].children.append(end)
+        self._validate_edge(start.name, end.name)
+        self._edges.append(PipelineEdge(start.name, end.name, data))
+        self._nodes[end.name].parents.append(start.name)
+        self._nodes[start.name].children.append(end.name)
 
     def get_node_by_name(
         self, name: str, raise_exception: bool = False
@@ -89,14 +99,14 @@ class PipelineGraph:
                 root.append(node)
         return root
 
-    def next_edges(self, node: PipelineNode) -> list[PipelineEdge]:
+    def next_edges(self, node: str) -> list[PipelineEdge]:
         res = []
         for edge in self._edges:
             if edge.start == node:
                 res.append(edge)
         return res
 
-    def previous_edges(self, node: PipelineNode) -> list[PipelineEdge]:
+    def previous_edges(self, node: str) -> list[PipelineEdge]:
         res = []
         for edge in self._edges:
             if edge.end == node:
@@ -112,8 +122,8 @@ class PipelineGraph:
         if node in visited:
             return True
         else:
-            for edge in self.next_edges(node):
-                neighbour = edge.end
+            for edge in self.next_edges(node.name):
+                neighbour = self.get_node_by_name(edge.end)
                 if self.dfs(visited | {node}, neighbour):
                     return True
             return False
