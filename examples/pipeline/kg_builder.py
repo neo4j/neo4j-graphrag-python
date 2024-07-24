@@ -28,7 +28,7 @@ class DocumentChunkModel(DataModel):
 class DocumentChunker(Component):
     async def run(self, text: str) -> DocumentChunkModel:
         chunks = [t.strip() for t in text.split(".") if t.strip()]
-        return DocumentChunkModel.model_validate({"chunks": chunks})  # type: ignore
+        return DocumentChunkModel(chunks=chunks)
 
 
 class SchemaModel(DataModel):
@@ -37,7 +37,7 @@ class SchemaModel(DataModel):
 
 class SchemaBuilder(Component):
     async def run(self, schema: dict[str, Any]) -> SchemaModel:
-        return SchemaModel.model_validate({"data_schema": schema})  # type: ignore
+        return SchemaModel(data_schema=schema)
 
 
 class EntityModel(BaseModel):
@@ -64,7 +64,9 @@ class ERExtractor(Component):
         for res in result:
             merged_result["entities"] += res["entities"]
             merged_result["relations"] += res["relations"]
-        return ERModel.model_validate(merged_result)  # type: ignore
+        return ERModel(
+            entities=merged_result["entities"], relations=merged_result["relations"]
+        )
 
 
 class WriterModel(DataModel):
@@ -77,13 +79,7 @@ class Writer(Component):
     async def run(
         self, entities: dict[str, Any], relations: dict[str, Any]
     ) -> WriterModel:
-        return WriterModel.model_validate(  # type: ignore
-            {
-                "status": "OK",
-                "entities": entities,
-                "relations": relations,
-            }
-        )
+        return WriterModel(status="OK", entities=entities, relations=relations)
 
 
 if __name__ == "__main__":
