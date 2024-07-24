@@ -30,7 +30,7 @@ An example is given below:
 
     class ComponentAdd(Component):
         async def run(self, number1: int, number2: int = 1) -> IntResultModel:
-            return IntResultModel(result = number 1 + number2)
+            return IntResultModel(result = number1 + number2)
 
 
 ***************************************
