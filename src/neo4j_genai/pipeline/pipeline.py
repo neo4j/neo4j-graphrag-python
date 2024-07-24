@@ -140,13 +140,13 @@ class TaskPipelineNode(PipelineNode):
         except StatusUpdateError:
             logger.info(f"Component {self.name} already running or done {self.status}")
             return None
-        res = await self.component.run(**kwargs)
+        component_result = await self.component.run(**kwargs)
         await self.set_status(RunStatus.DONE)
-        res = RunResult(
+        run_result = RunResult(
             status=self.status,
-            result=res,
+            result=component_result,
         )
-        return res
+        return run_result
 
     async def get_input_defs_from_parents(self) -> dict[str, str]:
         """Build input definition for this component. For this,
@@ -167,8 +167,8 @@ class TaskPipelineNode(PipelineNode):
             prev_node = self._pipeline.get_node_by_name(prev_edge.start)
             prev_status = await prev_node.read_status()  # type: ignore
             if prev_status != RunStatus.DONE:
-                logger.critical(f"Missing dependency {prev_edge.start.name}")
-                raise MissingDependencyError(f"{prev_edge.start.name} not ready")
+                logger.critical(f"Missing dependency {prev_edge.start}")
+                raise MissingDependencyError(f"{prev_edge.start} not ready")
             if prev_edge.data:
                 prev_edge_data = prev_edge.data.get("input_defs") or {}
                 input_defs.update(**prev_edge_data)
@@ -268,7 +268,7 @@ class Orchestrator:
                 await self.check_dependencies_complete(next_node)  # type: ignore
             except MissingDependencyError:
                 continue
-            yield next_node
+            yield next_node  # type: ignore
         return
 
     async def run(self, data: dict[str, Any]) -> None:
@@ -393,8 +393,7 @@ class Pipeline(PipelineGraph):
             task.reinitialize()  # type: ignore
 
     def validate_inputs_definition(self, data: dict[str, Any]) -> None:
-        """Go through the graph and make sure each component will not miss any input
-        """
+        """Go through the graph and make sure each component will not miss any input"""
         for task in self._nodes.values():
             component = task.component  # type: ignore
             expected_mandatory_inputs = [

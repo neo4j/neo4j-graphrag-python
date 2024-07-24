@@ -52,14 +52,14 @@ class ComponentMeta(abc.ABCMeta):
                 raise ValueError(
                     f"You must configure the return type of the run method in {name}"
                 )
-            if not issubclass(return_model, DataModel):
-                raise ValueError(f"The run method must return a subclass of DataModel")
+            if not issubclass(return_model, DataModel):  # type: ignore
+                raise ValueError("The run method must return a subclass of DataModel")
         attrs["component_outputs"] = {
             f: {
                 "has_default": field.is_required(),
                 "annotation": field.annotation,
             }
-            for f, field in return_model.model_fields.items()
+            for f, field in return_model.model_fields.items()  # type: ignore
         }
         return type.__new__(meta, name, bases, attrs)
 
@@ -70,5 +70,5 @@ class Component(abc.ABC, metaclass=ComponentMeta):
     """
 
     @abc.abstractmethod
-    async def run(self, *args, **kwargs) -> DataModel:
+    async def run(self, *args: Any, **kwargs: Any) -> DataModel:
         pass

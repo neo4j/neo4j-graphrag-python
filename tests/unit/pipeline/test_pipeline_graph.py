@@ -10,14 +10,14 @@ def test_node_alone() -> None:
 
 def test_node_not_root() -> None:
     n = PipelineNode(name="node", data={})
-    n.parents = [PipelineNode(name="child", data={})]
+    n.parents = ["other_node"]
     assert n.is_root() is False
     assert n.is_leaf() is True
 
 
 def test_node_not_leaf() -> None:
     n = PipelineNode(name="node", data={})
-    n.children = [PipelineNode(name="child", data={})]
+    n.children = ["other_node"]
     assert n.is_root() is True
     assert n.is_leaf() is False
 

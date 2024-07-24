@@ -1,5 +1,3 @@
-from typing import Any
-
 from neo4j_genai.pipeline import Component, DataModel
 
 

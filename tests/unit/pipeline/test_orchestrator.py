@@ -6,9 +6,9 @@ from neo4j_genai.pipeline.pipeline import Orchestrator, Pipeline, RunStatus
 @pytest.fixture(scope="function")
 def pipeline_branch() -> Pipeline:
     pipe = Pipeline()
-    pipe.add_component("a", Component())
-    pipe.add_component("b", Component())
-    pipe.add_component("c", Component())
+    pipe.add_component("a", Component())  # type: ignore
+    pipe.add_component("b", Component())  # type: ignore
+    pipe.add_component("c", Component())  # type: ignore
     pipe.connect("a", "b")
     pipe.connect("a", "c")
     return pipe
@@ -17,9 +17,9 @@ def pipeline_branch() -> Pipeline:
 @pytest.fixture(scope="function")
 def pipeline_aggregation() -> Pipeline:
     pipe = Pipeline()
-    pipe.add_component("a", Component())
-    pipe.add_component("b", Component())
-    pipe.add_component("c", Component())
+    pipe.add_component("a", Component())  # type: ignore
+    pipe.add_component("b", Component())  # type: ignore
+    pipe.add_component("c", Component())  # type: ignore
     pipe.connect("a", "b")
     pipe.connect("a", "c")
     return pipe
