@@ -156,9 +156,9 @@ def setup_neo4j_for_schema_query_with_excluded_labels(driver: Driver) -> None:
         "CREATE (:_Bloom_Scene_{property_a: 'a'})-[:_Bloom_HAS_SCENE_{property_b: 'b'}]->(:_Bloom_Perspective_)"
     )
 
-@pytest.fixture(scope="module")
-def setup_neo4j_for_kg_builder(driver: Driver) -> None:
 
+@pytest.fixture(scope="module")
+def setup_neo4j_for_kg_construction(driver: Driver) -> None:
     # Delete all nodes and indexes in the graph
     driver.execute_query("MATCH (n) DETACH DELETE n")
     vector_index_name = "vector-index-name"

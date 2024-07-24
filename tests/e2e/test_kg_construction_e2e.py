@@ -27,7 +27,7 @@ from neo4j_genai.kg_construction.types import (
 
 
 @pytest.mark.asyncio
-@pytest.mark.usefixtures("setup_neo4j_for_kg_builder")
+@pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
 async def test_kg_writer(driver: neo4j.Driver) -> None:
     start_node = Neo4jNode(
         id="1",
