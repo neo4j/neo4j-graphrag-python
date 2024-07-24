@@ -14,10 +14,7 @@
 import pytest
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from llama_index.core.node_parser.text.sentence import SentenceSplitter
-from neo4j_genai.generation.text_splitters import TextSplitterAdapter
-
-pytest_plugins = ("pytest_asyncio",)
-
+from neo4j_genai.kg_construction.text_splitters import TextSplitterAdapter
 
 text = """
 Lorem ipsum dolor sit amet, consectetur adipiscing elit.
