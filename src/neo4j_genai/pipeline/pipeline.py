@@ -195,7 +195,11 @@ class TaskPipelineNode(PipelineNode):
             prev_status = await prev_node.read_status()
             if prev_status != RunStatus.DONE:
                 logger.critical(f"Missing dependency {prev_edge.start}")
+<<<<<<< HEAD
                 raise PipelineMissingDependencyError(f"{prev_edge.start} not ready")
+=======
+                raise MissingDependencyError(f"{prev_edge.start} not ready")
+>>>>>>> 0c22ea4 (Finally installed pre-commit hooks...)
             if prev_edge.data:
                 prev_edge_data = prev_edge.data.get("input_config") or {}
                 input_config.update(**prev_edge_data)
@@ -295,7 +299,7 @@ class Orchestrator:
                 await self.check_dependencies_complete(next_node)
             except PipelineMissingDependencyError:
                 continue
-            yield next_node
+            yield next_node  # type: ignore
         return
 
     async def run(self, data: dict[str, Any]) -> None:
@@ -453,12 +457,17 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         for task in self._nodes.values():
             task.reinitialize()
 
+<<<<<<< HEAD
     def validate_inputs_config(self, data: dict[str, Any]) -> None:
         """Go through the graph and make sure each component will not miss any input
 
         Args:
             data (dict[str, Any]): the user provided data in the pipeline.run method.
         """
+=======
+    def validate_inputs_definition(self, data: dict[str, Any]) -> None:
+        """Go through the graph and make sure each component will not miss any input"""
+>>>>>>> 0c22ea4 (Finally installed pre-commit hooks...)
         for task in self._nodes.values():
             task.validate_inputs_config(data)
 

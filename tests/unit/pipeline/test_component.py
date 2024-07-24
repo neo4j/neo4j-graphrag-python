@@ -16,7 +16,11 @@ from .components import ComponentMultiply
 
 
 def test_component_inputs() -> None:
+<<<<<<< HEAD
     inputs = ComponentMultiply.component_inputs
+=======
+    inputs = ComponentMultiply.component_inputs  # type: ignore
+>>>>>>> 0c22ea4 (Finally installed pre-commit hooks...)
     assert "number1" in inputs
     assert inputs["number1"]["has_default"] is False
     assert "number2" in inputs
@@ -24,5 +28,9 @@ def test_component_inputs() -> None:
 
 
 def test_component_outputs() -> None:
+<<<<<<< HEAD
     outputs = ComponentMultiply.component_outputs
+=======
+    outputs = ComponentMultiply.component_outputs  # type: ignore
+>>>>>>> 0c22ea4 (Finally installed pre-commit hooks...)
     assert "result" in outputs

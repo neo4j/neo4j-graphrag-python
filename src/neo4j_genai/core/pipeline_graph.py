@@ -67,7 +67,7 @@ class PipelineGraph:
         node.children = old_node.children
         self._nodes[node.name] = node
 
-    def _validate_edge(self, start: str, end: str):
+    def _validate_edge(self, start: str, end: str) -> None:
         if start not in self:
             raise ValueError(f"Node {start} does not exist")
         if end not in self:
