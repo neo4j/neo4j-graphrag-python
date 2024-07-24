@@ -28,16 +28,16 @@ class DocumentChunkModel(DataModel):
 class DocumentChunker(Component):
     async def run(self, text: str) -> DocumentChunkModel:
         chunks = [t.strip() for t in text.split(".") if t.strip()]
-        return DocumentChunkModel.model_validate({"chunks": chunks})
+        return DocumentChunkModel.model_validate({"chunks": chunks})  # type: ignore
 
 
 class SchemaModel(DataModel):
-    schema: str
+    data_schema: str
 
 
 class SchemaBuilder(Component):
     async def run(self, schema: dict[str, Any]) -> SchemaModel:
-        return SchemaModel.model_validate({"schema": schema})
+        return SchemaModel.model_validate({"data_schema": schema})  # type: ignore
 
 
 class EntityModel(BaseModel):
@@ -64,7 +64,7 @@ class ERExtractor(Component):
         for res in result:
             merged_result["entities"] += res["entities"]
             merged_result["relations"] += res["relations"]
-        return ERModel.model_validate(merged_result)
+        return ERModel.model_validate(merged_result)  # type: ignore
 
 
 class WriterModel(DataModel):
@@ -77,11 +77,13 @@ class Writer(Component):
     async def run(
         self, entities: dict[str, Any], relations: dict[str, Any]
     ) -> WriterModel:
-        return WriterModel.model_validate({
-            "status": "OK",
-            "entities": entities,
-            "relations": relations,
-        })
+        return WriterModel.model_validate(  # type: ignore
+            {
+                "status": "OK",
+                "entities": entities,
+                "relations": relations,
+            }
+        )
 
 
 if __name__ == "__main__":
@@ -93,7 +95,7 @@ if __name__ == "__main__":
     pipe.add_component("extractor", ERExtractor())
     pipe.add_component("writer", Writer())
     pipe.connect("chunker", "extractor", input_defs={"chunks": "chunker.chunks"})
-    pipe.connect("schema", "extractor", input_defs={"schema": "schema.schema"})
+    pipe.connect("schema", "extractor", input_defs={"schema": "schema.data_schema"})
     pipe.connect(
         "extractor",
         "writer",
