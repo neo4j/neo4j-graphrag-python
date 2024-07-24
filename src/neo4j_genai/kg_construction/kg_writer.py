@@ -18,8 +18,7 @@ from abc import abstractmethod
 from typing import Optional
 
 import neo4j
-from docutils import Component
-
+from neo4j_genai.core.pipeline import Component
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.exceptions import EmbeddingRequiredError
 from neo4j_genai.generation.types import Neo4jGraph, Neo4jNode, Neo4jRelationship
