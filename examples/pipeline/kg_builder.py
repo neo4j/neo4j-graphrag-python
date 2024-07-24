@@ -36,7 +36,7 @@ class SchemaModel(DataModel):
 
 
 class SchemaBuilder(Component):
-    async def run(self, schema: dict[str, Any]) -> SchemaModel:
+    async def run(self, schema: str) -> SchemaModel:
         return SchemaModel(data_schema=schema)
 
 
@@ -77,9 +77,13 @@ class WriterModel(DataModel):
 
 class Writer(Component):
     async def run(
-        self, entities: dict[str, Any], relations: dict[str, Any]
+        self, entities: list[dict[str, Any]], relations: list[dict[str, Any]]
     ) -> WriterModel:
-        return WriterModel(status="OK", entities=entities, relations=relations)
+        return WriterModel(
+            status="OK",
+            entities=[EntityModel(**e) for e in entities],
+            relations=[EntityModel(**r) for r in relations],
+        )
 
 
 if __name__ == "__main__":
