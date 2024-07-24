@@ -18,11 +18,12 @@ from abc import abstractmethod
 from typing import Optional
 
 import neo4j
+
 from neo4j_genai.core.pipeline import Component
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.exceptions import EmbeddingRequiredError
-from neo4j_genai.generation.types import Neo4jGraph, Neo4jNode, Neo4jRelationship
 from neo4j_genai.indexes import upsert_vector
+from neo4j_genai.kg_construction.types import Neo4jGraph, Neo4jNode, Neo4jRelationship
 from neo4j_genai.neo4j_queries import UPSERT_NODE_QUERY, UPSERT_RELATIONSHIP_QUERY
 
 

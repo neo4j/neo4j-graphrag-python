@@ -16,16 +16,14 @@
 import neo4j
 import pytest
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
-from neo4j_genai.generation.kg_writer import Neo4jWriter
-from neo4j_genai.generation.types import (
+from neo4j_genai.kg_construction.kg_writer import Neo4jWriter
+from neo4j_genai.kg_construction.types import (
     Neo4jEmbeddingProperty,
     Neo4jGraph,
     Neo4jNode,
     Neo4jProperty,
     Neo4jRelationship,
 )
-
-pytest_plugins = ("pytest_asyncio",)
 
 
 @pytest.mark.asyncio

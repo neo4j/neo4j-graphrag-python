@@ -14,7 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Optional, Union
+from typing import Any, Union
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
@@ -50,33 +50,3 @@ class RagResultModel(BaseModel):
     retriever_result: Union[RetrieverResult, None] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
-
-
-class Neo4jProperty(BaseModel):
-    key: str
-    value: Any
-
-
-class Neo4jEmbeddingProperty(BaseModel):
-    key: str
-    value: str
-
-
-class Neo4jNode(BaseModel):
-    id: str
-    label: str
-    properties: Optional[list[Neo4jProperty]] = None
-    embedding_properties: Optional[list[Neo4jEmbeddingProperty]] = None
-
-
-class Neo4jRelationship(BaseModel):
-    start_node_id: str
-    end_node_id: str
-    label: str
-    properties: Optional[list[Neo4jProperty]] = None
-    embedding_properties: Optional[list[Neo4jEmbeddingProperty]] = None
-
-
-class Neo4jGraph(BaseModel):
-    nodes: list[Neo4jNode]
-    relationships: list[Neo4jRelationship]
