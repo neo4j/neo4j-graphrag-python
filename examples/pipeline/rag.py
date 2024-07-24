@@ -18,11 +18,18 @@ import asyncio
 from typing import Any
 
 from neo4j_genai.pipeline import Component, Pipeline
+from neo4j_genai.pipeline.component import DataModel
 from neo4j_genai.pipeline.types import ComponentDef, ConnectionDef, PipelineDef
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 
 
+class RetrieverOutputMessage(DataModel):
+    context: str
+
+
 class Retriever(Component):
+    output_data_model = RetrieverOutputMessage
+
     def search(self, *args: Any, **kwargs: Any) -> RetrieverResult:
         return RetrieverResult(
             items=[
@@ -31,24 +38,38 @@ class Retriever(Component):
             ]
         )
 
-    async def run(self, query: str) -> dict[str, Any]:
+    async def run(self, query: str) -> RetrieverOutputMessage:
         res = self.search(query)
-        return {"context": "\n".join(c.content for c in res.items)}
+        return RetrieverOutputMessage(
+            **{"context": "\n".join(c.content for c in res.items)}
+        )
+
+
+class PromptTemplateOutput(DataModel):
+    prompt: str
 
 
 class PromptTemplate(Component):
     def __init__(self, param: str = "default") -> None:
         self.param = param
 
-    async def run(self, query: str, context: list[str]) -> dict[str, Any]:
-        return {
-            "prompt": f"my prompt using '{context}' and '{self.param}', query '{query}'"
-        }
+    async def run(self, query: str, context: list[str]) -> PromptTemplateOutput:
+        return PromptTemplateOutput(
+            **{
+                "prompt": f"my prompt using '{context}' and '{self.param}', query '{query}'"
+            }
+        )
+
+
+class LLMOutputMessage(DataModel):
+    answer: str
 
 
 class LLM(Component):
-    async def run(self, prompt: str) -> dict[str, Any]:
-        return {"answer": f"some text based on '{prompt}'"}
+    async def run(self, prompt: str) -> LLMOutputMessage:
+        return LLMOutputMessage.model_validate(
+            {"answer": f"some text based on '{prompt}'"}
+        )
 
 
 if __name__ == "__main__":
@@ -71,8 +92,8 @@ if __name__ == "__main__":
                 ConnectionDef(
                     start="augment",
                     end="generate",
-                    input_defs={},
-                    # input_defs={"prompt": "augment.prompt"},
+                    # input_defs={},
+                    input_defs={"prompt": "augment.prompt"},
                 ),
             ],
         )
@@ -87,7 +108,7 @@ if __name__ == "__main__":
 
     pipe.set_component("augment", PromptTemplate(param="my param"))
     pipe.reinitialize()
-    print(pipe.show_as_dict())
+    # print(pipe.show_as_dict())
     print(
         asyncio.run(
             pipe.run({"retrieve": {"query": query}, "augment": {"query": query}})

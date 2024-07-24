@@ -33,13 +33,14 @@ from __future__ import annotations
 import asyncio
 import enum
 import logging
+from datetime import datetime
 from typing import Any, AsyncGenerator, Awaitable, Callable, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from neo4j_genai.core.pipeline_graph import PipelineGraph, PipelineNode
 from neo4j_genai.core.stores import InMemoryStore, Store
-from neo4j_genai.pipeline.component import Component
+from neo4j_genai.pipeline.component import Component, DataModel
 from neo4j_genai.pipeline.types import ComponentDef, ConnectionDef, PipelineDef
 
 logger = logging.getLogger(__name__)
@@ -69,7 +70,8 @@ class RunStatus(enum.Enum):
 
 class RunResult(BaseModel):
     status: RunStatus
-    result: Optional[dict[str, Any]] = None
+    result: Optional[DataModel] = None
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 
 class TaskPipelineNode(PipelineNode):
@@ -140,10 +142,11 @@ class TaskPipelineNode(PipelineNode):
             return None
         res = await self.component.run(**kwargs)
         await self.set_status(RunStatus.DONE)
-        return RunResult(
+        res = RunResult(
             status=self.status,
             result=res,
         )
+        return res
 
     async def get_input_defs_from_parents(self) -> dict[str, str]:
         """Build input definition for this component. For this,
@@ -160,8 +163,9 @@ class TaskPipelineNode(PipelineNode):
         input_defs: dict[str, Any] = {}
         # make sure dependencies are satisfied
         # and save the inputs defs that needs to be propagated from parent components
-        for prev_edge in self._pipeline.previous_edges(self):
-            prev_status = await prev_edge.start.read_status()  # type: ignore
+        for prev_edge in self._pipeline.previous_edges(self.name):
+            prev_node = self._pipeline.get_node_by_name(prev_edge.start)
+            prev_status = await prev_node.read_status()  # type: ignore
             if prev_status != RunStatus.DONE:
                 logger.critical(f"Missing dependency {prev_edge.start.name}")
                 raise MissingDependencyError(f"{prev_edge.start.name} not ready")
@@ -230,12 +234,13 @@ class Orchestrator:
         Raises:
             MissingDependencyError if a parent task's status is different from DONE.
         """
-        dependencies = self.pipeline.previous_edges(task)
+        dependencies = self.pipeline.previous_edges(task.name)
         for d in dependencies:
-            d_status = await d.start.read_status()  # type: ignore
+            start_node = self.pipeline.get_node_by_name(d.start)
+            d_status = await start_node.read_status()  # type: ignore
             if d_status != RunStatus.DONE:
                 logger.warning(
-                    f"Missing dependency {d.start.name} for {task.name} (status: {d_status})"
+                    f"Missing dependency {d.start} for {task.name} (status: {d_status})"
                 )
                 raise MissingDependencyError()
 
@@ -250,9 +255,9 @@ class Orchestrator:
             - otherwise, check that all its dependencies are met, if yes
                 add this task to the list of next tasks to be executed
         """
-        possible_nexts = self.pipeline.next_edges(task)
+        possible_nexts = self.pipeline.next_edges(task.name)
         for next_edge in possible_nexts:
-            next_node = next_edge.end
+            next_node = self.pipeline.get_node_by_name(next_edge.end)
             # check status
             next_node_status = await next_node.read_status()  # type: ignore
             if next_node_status in [RunStatus.RUNNING, RunStatus.DONE]:
@@ -263,7 +268,7 @@ class Orchestrator:
                 await self.check_dependencies_complete(next_node)  # type: ignore
             except MissingDependencyError:
                 continue
-            yield next_node  # type: ignore
+            yield next_node
         return
 
     async def run(self, data: dict[str, Any]) -> None:
@@ -310,8 +315,8 @@ class Pipeline(PipelineGraph):
         for edge in self._edges:
             connection_defs.append(
                 ConnectionDef(
-                    start=edge.start.name,
-                    end=edge.end.name,
+                    start=edge.start,
+                    end=edge.end,
                     input_defs=edge.data["input_defs"] if edge.data else {},
                 )
             )
@@ -338,10 +343,13 @@ class Pipeline(PipelineGraph):
         end_node = self.get_node_by_name(end_component_name, raise_exception=True)
         super().connect(start_node, end_node, data={"input_defs": input_defs})
         if self.is_cyclic():
-            raise Exception("Cyclic graph")
+            raise PipelineDefinitionError("Cyclic graph are not allowed")
 
     def on_task_complete(self, node: TaskPipelineNode, result: RunResult) -> None:
-        self.add_result_for_component(node.name, result.result, is_final=node.is_leaf())
+        res_to_save = None
+        if result.result:
+            res_to_save = result.result.model_dump()
+        self.add_result_for_component(node.name, res_to_save, is_final=node.is_leaf())
 
     def add_result_for_component(
         self, name: str, result: dict[str, Any] | None, is_final: bool = False
@@ -385,23 +393,42 @@ class Pipeline(PipelineGraph):
             task.reinitialize()  # type: ignore
 
     def validate_inputs_definition(self, data: dict[str, Any]) -> None:
+        """Go through the graph and make sure each component will not miss any input
+        """
         for task in self._nodes.values():
             component = task.component  # type: ignore
-            expected_inputs = component.component_inputs
             expected_mandatory_inputs = [
                 param_name
-                for param_name, config in expected_inputs.items()
+                for param_name, config in component.component_inputs.items()
                 if config["has_default"] is False
             ]
-            prev_edges = self.previous_edges(task)
+            # build the input def from previous edges
+            prev_edges = self.previous_edges(task.name)
+            # start building the actual input list, starting
+            # from the inputs provided in the pipeline.run method
             actual_inputs = list(data.get(task.name, {}).keys())
+            # then, iterate over all parents to find the parameter propagation
             for edge in prev_edges:
                 edge_data = edge.data or {}
                 edge_inputs = edge_data.get("input_defs") or {}
+                # check that the previous component is actually returning
+                # the mapped parameter
+                for param, path in edge_inputs.items():
+                    source_component_name, param_name = path.split(".")
+                    source_node = self.get_node_by_name(source_component_name)
+                    source_component = source_node.component  # type: ignore
+                    source_component_outputs = source_component.component_outputs
+                    if param_name not in source_component_outputs:
+                        raise PipelineDefinitionError(
+                            f"Parameter {param_name} is not valid output for "
+                            f"{source_component_name} (must be one of "
+                            f"{list(source_component_outputs.keys())})"
+                        )
+
                 actual_inputs.extend(list(edge_inputs.keys()))
             if set(expected_mandatory_inputs) - set(actual_inputs):
                 raise PipelineDefinitionError(
-                    f"Missing input parameters: "
+                    f"Missing input parameters for {task.name}: "
                     f"Expected parameters: {expected_mandatory_inputs}. "
                     f"Got: {actual_inputs}"
                 )

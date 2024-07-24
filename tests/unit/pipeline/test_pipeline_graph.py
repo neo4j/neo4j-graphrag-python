@@ -32,8 +32,8 @@ def test_graph_add_nodes() -> None:
     g.connect(n1, n2, {"key": "value"})
     assert len(g._edges) == 1
 
-    assert n1.children == [n2]
-    assert n2.parents == [n1]
+    assert n1.children == [n2.name]
+    assert n2.parents == [n1.name]
 
 
 @pytest.fixture(scope="function")
@@ -55,22 +55,22 @@ def test_graph_roots(graph: PipelineGraph) -> None:
 
 def test_graph_next_edge(graph: PipelineGraph) -> None:
     start = graph._nodes["n1"]
-    next_edges = graph.next_edges(start)
+    next_edges = graph.next_edges(start.name)
     assert len(next_edges) == 1
     next_edge = next_edges[0]
     assert isinstance(next_edge, PipelineEdge)
-    assert next_edge.start.name == "n1"
-    assert next_edge.end.name == "n2"
+    assert next_edge.start == "n1"
+    assert next_edge.end == "n2"
 
 
 def test_graph_prev_edge(graph: PipelineGraph) -> None:
     start = graph._nodes["n2"]
-    next_edges = graph.previous_edges(start)
+    next_edges = graph.previous_edges(start.name)
     assert len(next_edges) == 1
     next_edge = next_edges[0]
     assert isinstance(next_edge, PipelineEdge)
-    assert next_edge.start.name == "n1"
-    assert next_edge.end.name == "n2"
+    assert next_edge.start == "n1"
+    assert next_edge.end == "n2"
 
 
 def test_graph_contains(graph: PipelineGraph) -> None:

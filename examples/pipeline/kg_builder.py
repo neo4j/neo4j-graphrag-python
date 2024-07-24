@@ -17,47 +17,72 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from neo4j_genai.pipeline import Component
+from pydantic import BaseModel
+
+from neo4j_genai.pipeline import Component, DataModel
+
+
+class DocumentChunkModel(DataModel):
+    chunks: list[str]
 
 
 class DocumentChunker(Component):
-    async def run(self, text: str) -> dict[str, Any]:
-        return {"chunks": [t.strip() for t in text.split(".") if t.strip()]}
+    async def run(self, text: str) -> DocumentChunkModel:
+        chunks = [t.strip() for t in text.split(".") if t.strip()]
+        return DocumentChunkModel.model_validate({"chunks": chunks})
+
+
+class SchemaModel(DataModel):
+    schema: str
 
 
 class SchemaBuilder(Component):
-    async def run(self, schema: dict[str, Any]) -> dict[str, Any]:
-        return {"schema": schema}
+    async def run(self, schema: dict[str, Any]) -> SchemaModel:
+        return SchemaModel.model_validate({"schema": schema})
+
+
+class EntityModel(BaseModel):
+    label: str
+    properties: dict[str, str]
+
+
+class ERModel(DataModel):
+    entities: list[EntityModel]
+    relations: list[EntityModel]
 
 
 class ERExtractor(Component):
     async def _process_chunk(self, chunk: str, schema: str) -> dict[str, Any]:
         return {
-            "data": {
-                "entities": [{"label": "Person", "properties": {"name": "John Doe"}}],
-                "relations": [],
-            }
+            "entities": [{"label": "Person", "properties": {"name": "John Doe"}}],
+            "relations": [],
         }
 
-    async def run(self, chunks: list[str], schema: str) -> dict[str, Any]:
+    async def run(self, chunks: list[str], schema: str) -> ERModel:
         tasks = [self._process_chunk(chunk, schema) for chunk in chunks]
         result = await asyncio.gather(*tasks)
-        merged_result: dict[str, Any] = {"data": {"entities": [], "relations": []}}
+        merged_result: dict[str, Any] = {"entities": [], "relations": []}
         for res in result:
-            merged_result["data"]["entities"] += res["data"]["entities"]
-            merged_result["data"]["relations"] += res["data"]["relations"]
-        return merged_result
+            merged_result["entities"] += res["entities"]
+            merged_result["relations"] += res["relations"]
+        return ERModel.model_validate(merged_result)
+
+
+class WriterModel(DataModel):
+    status: str
+    entities: list[EntityModel]
+    relations: list[EntityModel]
 
 
 class Writer(Component):
     async def run(
         self, entities: dict[str, Any], relations: dict[str, Any]
-    ) -> dict[str, Any]:
-        return {
+    ) -> WriterModel:
+        return WriterModel.model_validate({
             "status": "OK",
             "entities": entities,
             "relations": relations,
-        }
+        })
 
 
 if __name__ == "__main__":
@@ -74,8 +99,8 @@ if __name__ == "__main__":
         "extractor",
         "writer",
         input_defs={
-            "entities": "extractor.data.entities",
-            "relations": "extractor.data.relations",
+            "entities": "extractor.entities",
+            "relations": "extractor.relations",
         },
     )
 

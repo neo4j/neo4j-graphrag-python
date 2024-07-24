@@ -55,5 +55,4 @@ async def test_orchestrator_aggregation_waiting(pipeline_aggregation: Pipeline) 
     node_b = pipeline_aggregation.get_node_by_name("a")
     node_b.status = RunStatus.UNKNOWN  # type: ignore
     next_tasks = [n async for n in orchestrator.next(node_a)]  # type: ignore
-    next_task_names = [n.name for n in next_tasks]
-    assert next_task_names == []
+    assert next_tasks == []

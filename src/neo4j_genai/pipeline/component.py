@@ -14,14 +14,24 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import abc
 import inspect
-from typing import Any
+from typing import Any, get_type_hints
+
+from pydantic import BaseModel
 
 
-class ComponentMeta(type):
+class DataModel(BaseModel):
+    """Input or Output data model for Components"""
+
+    pass
+
+
+class ComponentMeta(abc.ABCMeta):
     def __new__(
         meta, name: str, bases: tuple[type, ...], attrs: dict[str, Any]
     ) -> type:
+        # extract required inputs from the run method signature
         run_method = attrs.get("run")
         if run_method is not None:
             sig = inspect.signature(run_method)
@@ -33,13 +43,32 @@ class ComponentMeta(type):
                 for param in sig.parameters.values()
                 if param.name not in ("self",)
             }
+        # extract returned fields from the run method return type hint
+        return_model = get_type_hints(run_method).get("return")
+        # the type hint must be a subclass of DataModel
+        # but not DataModel itself which is empty
+        if name != "Component":
+            if return_model == DataModel:
+                raise ValueError(
+                    f"You must configure the return type of the run method in {name}"
+                )
+            if not issubclass(return_model, DataModel):
+                raise ValueError(f"The run method must return a subclass of DataModel")
+        attrs["component_outputs"] = {
+            f: {
+                "has_default": field.is_required(),
+                "annotation": field.annotation,
+            }
+            for f, field in return_model.model_fields.items()
+        }
         return type.__new__(meta, name, bases, attrs)
 
 
-class Component(metaclass=ComponentMeta):
+class Component(abc.ABC, metaclass=ComponentMeta):
     """Interface that needs to be implemented
     by all components.
     """
 
-    async def run(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        return {}
+    @abc.abstractmethod
+    async def run(self, *args, **kwargs) -> DataModel:
+        pass
