@@ -69,6 +69,11 @@ class Component(abc.ABC, metaclass=ComponentMeta):
     by all components.
     """
 
+    # these variables are filled by the metaclass
+    # added here for the type checker
+    component_inputs: dict[str, dict[str, str | bool]]
+    component_outputs: dict[str, dict[str, str | bool]]
+
     @abc.abstractmethod
     async def run(self, *args: Any, **kwargs: Any) -> DataModel:
         pass

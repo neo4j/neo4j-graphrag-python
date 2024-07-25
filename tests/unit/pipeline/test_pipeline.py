@@ -53,7 +53,7 @@ async def test_simple_pipeline_two_components() -> None:
 
 
 @pytest.mark.asyncio
-async def test_simple_pipeline_two_components_parameter_propagation() -> None:
+async def test_pipeline_parameter_propagation() -> None:
     pipe = Pipeline()
     component_a = ComponentPassThrough()
     component_b = ComponentPassThrough()
@@ -183,6 +183,6 @@ async def test_pipeline_wrong_component_name() -> None:
     component_b = ComponentNoParam()
     pipe.add_component("a", component_a)
     pipe.add_component("b", component_b)
-    with pytest.raises(KeyError) as excinfo:
+    with pytest.raises(PipelineDefinitionError) as excinfo:
         pipe.connect("a", "c", {})
-        assert "Component c not in graph" in str(excinfo.value)
+        assert "a or c not in the Pipeline" in str(excinfo.value)

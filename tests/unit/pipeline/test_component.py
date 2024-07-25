@@ -16,7 +16,7 @@ from .components import ComponentMultiply
 
 
 def test_component_inputs() -> None:
-    inputs = ComponentMultiply.component_inputs  # type: ignore
+    inputs = ComponentMultiply.component_inputs
     assert "number1" in inputs
     assert inputs["number1"]["has_default"] is False
     assert "number2" in inputs
@@ -24,5 +24,5 @@ def test_component_inputs() -> None:
 
 
 def test_component_outputs() -> None:
-    outputs = ComponentMultiply.component_outputs  # type: ignore
+    outputs = ComponentMultiply.component_outputs
     assert "result" in outputs
