@@ -67,9 +67,7 @@ class LLMOutputMessage(DataModel):
 
 class LLM(Component):
     async def run(self, prompt: str) -> LLMOutputMessage:
-        return LLMOutputMessage.model_validate(
-            {"answer": f"some text based on '{prompt}'"}
-        )
+        return LLMOutputMessage(answer=f"some text based on '{prompt}'")
 
 
 if __name__ == "__main__":
@@ -92,7 +90,6 @@ if __name__ == "__main__":
                 ConnectionConfig(
                     start="augment",
                     end="generate",
-                    # input_config={},
                     input_config={"prompt": "augment.prompt"},
                 ),
             ],
