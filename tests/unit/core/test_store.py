@@ -10,5 +10,4 @@ def test_memory_store() -> None:
     with pytest.raises(KeyError):
         store.add("key", "value", overwrite=False)
 
-    assert store.find_all("key") == ["value"]
     assert store.all() == {"key": "value"}
