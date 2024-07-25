@@ -12,22 +12,6 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-"""
-Pipeline implementation.
-
-Features:
-- Sync/Async exec
-- Branching:
-      |
-    /   \
-e.g. DocumentChunker => ERExtractor, Embedder
-
-- Aggregation:
-    \  /
-     |
-e.g. SchemaBuilder + Chunker => ERExtractor
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -41,22 +25,14 @@ from pydantic import BaseModel, Field
 from neo4j_genai.core.pipeline_graph import PipelineGraph, PipelineNode
 from neo4j_genai.core.stores import InMemoryStore, Store
 from neo4j_genai.pipeline.component import Component, DataModel
+from neo4j_genai.pipeline.exceptions import (
+    PipelineDefinitionError,
+    PipelineMissingDependencyError,
+    PipelineStatusUpdateError,
+)
 from neo4j_genai.pipeline.types import ComponentDef, ConnectionDef, PipelineDef
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG, format="%(message)s")
-
-
-class MissingDependencyError(Exception):
-    pass
-
-
-class StatusUpdateError(Exception):
-    pass
-
-
-class PipelineDefinitionError(Exception):
-    pass
 
 
 class RunStatus(enum.Enum):
@@ -113,10 +89,10 @@ class TaskPipelineNode(PipelineNode):
         """
         async with self._lock:
             if status == self.status:
-                raise StatusUpdateError()
+                raise PipelineStatusUpdateError()
             if status == RunStatus.RUNNING and self.status == RunStatus.DONE:
                 # can't go back to RUNNING from DONE
-                raise StatusUpdateError()
+                raise PipelineStatusUpdateError()
             self.status = status
 
     async def read_status(self) -> RunStatus:
@@ -137,7 +113,7 @@ class TaskPipelineNode(PipelineNode):
         logger.debug(f"Running component {self.name} with {kwargs}")
         try:
             await self.set_status(RunStatus.RUNNING)
-        except StatusUpdateError:
+        except PipelineStatusUpdateError:
             logger.info(f"Component {self.name} already running or done {self.status}")
             return None
         component_result = await self.component.run(**kwargs)
@@ -168,7 +144,7 @@ class TaskPipelineNode(PipelineNode):
             prev_status = await prev_node.read_status()  # type: ignore
             if prev_status != RunStatus.DONE:
                 logger.critical(f"Missing dependency {prev_edge.start}")
-                raise MissingDependencyError(f"{prev_edge.start} not ready")
+                raise PipelineMissingDependencyError(f"{prev_edge.start} not ready")
             if prev_edge.data:
                 prev_edge_data = prev_edge.data.get("input_defs") or {}
                 input_defs.update(**prev_edge_data)
@@ -242,7 +218,7 @@ class Orchestrator:
                 logger.warning(
                     f"Missing dependency {d.start} for {task.name} (status: {d_status})"
                 )
-                raise MissingDependencyError()
+                raise PipelineMissingDependencyError()
 
     async def next(
         self, task: TaskPipelineNode
@@ -266,7 +242,7 @@ class Orchestrator:
             # check deps
             try:
                 await self.check_dependencies_complete(next_node)  # type: ignore
-            except MissingDependencyError:
+            except PipelineMissingDependencyError:
                 continue
             yield next_node  # type: ignore
         return
