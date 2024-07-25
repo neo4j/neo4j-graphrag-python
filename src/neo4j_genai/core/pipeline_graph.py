@@ -18,7 +18,7 @@ Basic graph structure for Pipeline.
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Generic, Optional, Type, TypeVar
 
 
 class PipelineNode:
@@ -47,17 +47,30 @@ class PipelineEdge:
         self.data = data
 
 
-class PipelineGraph:
-    def __init__(self) -> None:
-        self._nodes: dict[str, PipelineNode] = {}
-        self._edges: list[PipelineEdge] = []
+GenericNodeType = TypeVar("GenericNodeType", bound=PipelineNode)
+GenericEdgeType = TypeVar("GenericEdgeType", bound=PipelineEdge)
 
-    def add_node(self, node: PipelineNode) -> None:
+
+class PipelineGraph(Generic[GenericNodeType, GenericEdgeType]):
+    """When defining a pipeline, user must define
+    the node and edge types.
+    The node type must inherit from PipelineNode.
+    The edge type must inherit from PipelineEdge.
+
+    This allows users to add more features to the node/edges,
+    while preserving type checker compatibility.
+    """
+
+    def __init__(self) -> None:
+        self._nodes: dict[str, GenericNodeType] = {}
+        self._edges: list[GenericEdgeType] = []
+
+    def add_node(self, node: GenericNodeType) -> None:
         if node in self:
             raise ValueError(f"Node {node.name} already exists")
         self._nodes[node.name] = node
 
-    def set_node(self, node: PipelineNode) -> None:
+    def set_node(self, node: GenericNodeType) -> None:
         """Replace an existing node with a new one based on node name."""
         if node not in self:
             raise ValueError(f"Node {node.name} does not exist")
@@ -69,56 +82,57 @@ class PipelineGraph:
 
     def _validate_edge(self, start: str, end: str) -> None:
         if start not in self:
-            raise ValueError(f"Node {start} does not exist")
+            raise KeyError(f"Node {start} does not exist")
         if end not in self:
-            raise ValueError(f"Node {end} does not exist")
+            raise KeyError(f"Node {end} does not exist")
         for edge in self._edges:
             if edge.start == start and edge.end == end:
                 raise ValueError(f"{start} and {end} are already connected")
 
-    def connect(
-        self, start: PipelineNode, end: PipelineNode, data: dict[str, Any]
-    ) -> None:
-        self._validate_edge(start.name, end.name)
-        self._edges.append(PipelineEdge(start.name, end.name, data))
-        self._nodes[end.name].parents.append(start.name)
-        self._nodes[start.name].children.append(end.name)
+    def add_edge(self, edge: GenericEdgeType) -> None:
+        self._validate_edge(edge.start, edge.end)
+        self._edges.append(edge)
+        self._nodes[edge.end].parents.append(edge.start)
+        self._nodes[edge.start].children.append(edge.end)
 
-    def get_node_by_name(
-        self, name: str, raise_exception: bool = False
-    ) -> PipelineNode:
-        node = self._nodes.get(name)
-        if node is None and raise_exception:
-            raise KeyError(f"Component {name} not in graph")
-        return node  # type: ignore
+    def get_node_by_name(self, name: str) -> GenericNodeType:
+        node = self._nodes[name]
+        return node
 
-    def roots(self) -> list[PipelineNode]:
+    def roots(self) -> list[GenericNodeType]:
         root = []
         for node in self._nodes.values():
             if node.is_root():
                 root.append(node)
         return root
 
-    def next_edges(self, node: str) -> list[PipelineEdge]:
+    def next_edges(self, node: str) -> list[GenericEdgeType]:
         res = []
         for edge in self._edges:
             if edge.start == node:
                 res.append(edge)
         return res
 
-    def previous_edges(self, node: str) -> list[PipelineEdge]:
+    def previous_edges(self, node: str) -> list[GenericEdgeType]:
         res = []
         for edge in self._edges:
             if edge.end == node:
                 res.append(edge)
         return res
 
-    def __contains__(self, node: PipelineNode | str) -> bool:
-        if isinstance(node, PipelineNode):
-            return node.name in self._nodes
-        return node in self._nodes
+    # def all_previous_edges(self, node: str) -> list[GenericEdgeType]:
+    #     res = []
+    #     for edge in self.previous_edges(node):
+    #         res.append(edge)
+    #         res.extend(self.all_previous_edges(edge.start))
+    #     return res
 
-    def dfs(self, visited: set[PipelineNode], node: PipelineNode) -> bool:
+    def __contains__(self, node: GenericNodeType | str) -> bool:
+        if isinstance(node, str):
+            return node in self._nodes
+        return node.name in self._nodes
+
+    def dfs(self, visited: set[GenericNodeType], node: GenericNodeType) -> bool:
         if node in visited:
             return True
         else:
