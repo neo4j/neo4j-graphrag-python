@@ -19,7 +19,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 from neo4j_genai.pipeline import Component, Pipeline
-from neo4j_genai.pipeline.pipeline import PipelineDefinitionError
+from neo4j_genai.pipeline.exceptions import PipelineDefinitionError
 
 from .components import (
     ComponentAdd,
