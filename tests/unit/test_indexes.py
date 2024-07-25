@@ -24,6 +24,7 @@ from neo4j_genai.indexes import (
     create_vector_index,
     drop_index_if_exists,
     upsert_vector,
+    upsert_vector_on_relationship,
 )
 
 
@@ -172,7 +173,7 @@ def test_create_fulltext_index_ensure_escaping(driver: MagicMock) -> None:
     )
 
 
-def test_upsert_vector_node_happy_path(driver: MagicMock) -> None:
+def test_upsert_vector_happy_path(driver: MagicMock) -> None:
     id = 1
     embedding_property = "embedding"
     vector = [1.0, 2.0, 3.0]
@@ -194,12 +195,12 @@ def test_upsert_vector_node_happy_path(driver: MagicMock) -> None:
     )
 
 
-def test_upsert_vector_relationship_happy_path(driver: MagicMock) -> None:
+def test_upsert_vector_on_relationship_happy_path(driver: MagicMock) -> None:
     id = 1
     embedding_property = "embedding"
     vector = [1.0, 2.0, 3.0]
 
-    upsert_vector(driver, id, embedding_property, vector, relationship_embedding=True)
+    upsert_vector_on_relationship(driver, id, embedding_property, vector)
 
     upsert_query = (
         "MATCH ()-[r]->()"
@@ -216,7 +217,20 @@ def test_upsert_vector_relationship_happy_path(driver: MagicMock) -> None:
     )
 
 
-def test_upsert_vector_raises_error_with_neo4j_insertion_error(
+def test_upsert_vector_on_relationship_raises_neo4j_insertion_error(
+    driver: MagicMock,
+) -> None:
+    id = 1
+    embedding_property = "embedding"
+    vector = [1.0, 2.0, 3.0]
+    driver.execute_query.side_effect = neo4j.exceptions.ClientError
+
+    with pytest.raises(Neo4jInsertionError) as excinfo:
+        upsert_vector_on_relationship(driver, id, embedding_property, vector)
+    assert "Upserting vector to Neo4j failed" in str(excinfo)
+
+
+def test_upsert_vector_raises_neo4j_insertion_error(
     driver: MagicMock,
 ) -> None:
     id = 1

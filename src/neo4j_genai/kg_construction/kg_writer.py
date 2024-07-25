@@ -22,7 +22,7 @@ import neo4j
 from neo4j_genai.core.pipeline import Component
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.exceptions import EmbeddingRequiredError
-from neo4j_genai.indexes import upsert_vector
+from neo4j_genai.indexes import upsert_vector, upsert_vector_on_relationship
 from neo4j_genai.kg_construction.types import Neo4jGraph, Neo4jNode, Neo4jRelationship
 from neo4j_genai.neo4j_queries import UPSERT_NODE_QUERY, UPSERT_RELATIONSHIP_QUERY
 
@@ -84,11 +84,10 @@ class Neo4jWriter(KGWriter):
                     vector = self.embedder.embed_query(prop.value)
                     upsert_vector(
                         driver=self.driver,
-                        id=node_id,
+                        node_id=node_id,
                         embedding_property=prop.key,
                         vector=vector,
                         neo4j_database=self.neo4j_database,
-                        relationship_embedding=False,
                     )
             else:
                 raise EmbeddingRequiredError(
@@ -120,13 +119,12 @@ class Neo4jWriter(KGWriter):
             if self.embedder:
                 for prop in rel.embedding_properties:
                     vector = self.embedder.embed_query(prop.value)
-                    upsert_vector(
+                    upsert_vector_on_relationship(
                         driver=self.driver,
-                        id=rel_id,
+                        rel_id=rel_id,
                         embedding_property=prop.key,
                         vector=vector,
                         neo4j_database=self.neo4j_database,
-                        relationship_embedding=True,
                     )
             else:
                 raise EmbeddingRequiredError(
