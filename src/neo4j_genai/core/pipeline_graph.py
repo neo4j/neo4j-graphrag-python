@@ -132,18 +132,24 @@ class PipelineGraph(Generic[GenericNodeType, GenericEdgeType]):
             return node in self._nodes
         return node.name in self._nodes
 
-    def dfs(self, visited: set[GenericNodeType], node: GenericNodeType) -> bool:
+    def dfs(self, visited: set[str], node: str) -> bool:
         if node in visited:
             return True
         else:
-            for edge in self.next_edges(node.name):
-                neighbour = self.get_node_by_name(edge.end)
-                if self.dfs(visited | {node}, neighbour):
+            for edge in self.next_edges(node):
+                if self.dfs(visited | {node}, edge.end):
                     return True
             return False
 
     def is_cyclic(self) -> bool:
-        for node in self._nodes.values():
+        """Returns True if at least one cycle is
+        found in the graph, False if no cycle is
+        detected.
+
+        Traverse the graph from each node.
+        If the same node is encountered again,
+        the graph is cyclic."""
+        for node in self._nodes:
             if self.dfs(set(), node):
                 return True
         return False

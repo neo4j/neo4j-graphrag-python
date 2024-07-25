@@ -92,3 +92,18 @@ def test_graph_prev_edge(graph: PipelineGraph[PipelineNode, PipelineEdge]) -> No
 def test_graph_contains(graph: PipelineGraph[PipelineNode, PipelineEdge]) -> None:
     start = graph._nodes["n2"]
     assert start in graph
+
+
+def test_graph_is_cyclic(graph: PipelineGraph[PipelineNode, PipelineEdge]) -> None:
+    g: PipelineGraph[PipelineNode, PipelineEdge] = PipelineGraph()
+    n1 = PipelineNode("n1", {})
+    n2 = PipelineNode("n2", {})
+    g.add_node(n1)
+    g.add_node(n2)
+    edge = PipelineEdge(n1.name, n2.name, {})
+    g.add_edge(edge)
+    assert g.is_cyclic() is False
+
+    edge = PipelineEdge(n2.name, n1.name, {})
+    g.add_edge(edge)
+    assert g.is_cyclic() is True
