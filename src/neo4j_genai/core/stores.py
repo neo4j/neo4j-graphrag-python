@@ -21,8 +21,6 @@ from __future__ import annotations
 import abc
 from typing import Any
 
-from jsonpath_ng import parse
-
 
 class Store(abc.ABC):
     """An interface to save component outputs"""
@@ -47,11 +45,6 @@ class Store(abc.ABC):
         """Retrieve value for `key`.
         If key not found, returns None.
         """
-        pass
-
-    @abc.abstractmethod
-    def find_all(self, pattern: str) -> list[Any]:
-        """Find all values whose key matches pattern"""
         pass
 
     def all(self) -> dict[str, Any]:
@@ -81,13 +74,6 @@ class InMemoryStore(Store):
 
     def get(self, key: str) -> Any:
         return self._data.get(key)
-
-    def find_all(self, pattern: str) -> list[Any]:
-        jsonpath_expr = parse(pattern)
-        # input_component, param = mapping.split(".")
-        # value = self._results[input_component][param]
-        value = [match.value for match in jsonpath_expr.find(self._data)]
-        return value
 
     def all(self) -> dict[str, Any]:
         return self._data

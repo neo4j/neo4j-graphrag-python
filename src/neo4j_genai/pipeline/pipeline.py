@@ -418,8 +418,11 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         component_inputs: dict[str, Any] = input_data.get(component_name, {})
         if input_config:
             for parameter, mapping in input_config.items():
-                value = self._store.find_all(mapping)
-                if value:  # TODO: how to deal with multiple matches? Is it relevant?
+                component, output_param = mapping.split(".")
+                component_result = self._store.get(component)
+                value = component_result.get(output_param)
+                # TODO: how to deal with multiple matches? Is it relevant?
+                if isinstance(value, list):
                     value = value[0]
                 component_inputs[parameter] = value
         return component_inputs
