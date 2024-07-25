@@ -18,7 +18,7 @@ Basic graph structure for Pipeline.
 
 from __future__ import annotations
 
-from typing import Any, Generic, Optional, Type, TypeVar
+from typing import Any, Generic, Optional, TypeVar
 
 
 class PipelineNode:
