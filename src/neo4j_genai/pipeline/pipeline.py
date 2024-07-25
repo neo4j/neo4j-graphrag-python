@@ -421,9 +421,6 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                 component, output_param = mapping.split(".")
                 component_result = self._store.get(component)
                 value = component_result.get(output_param)
-                # TODO: how to deal with multiple matches? Is it relevant?
-                if isinstance(value, list):
-                    value = value[0]
                 component_inputs[parameter] = value
         return component_inputs
 
