@@ -94,12 +94,12 @@ if __name__ == "__main__":
     pipe.add_component("schema", SchemaBuilder())
     pipe.add_component("extractor", ERExtractor())
     pipe.add_component("writer", Writer())
-    pipe.connect("chunker", "extractor", input_defs={"chunks": "chunker.chunks"})
-    pipe.connect("schema", "extractor", input_defs={"schema": "schema.data_schema"})
+    pipe.connect("chunker", "extractor", input_config={"chunks": "chunker.chunks"})
+    pipe.connect("schema", "extractor", input_config={"schema": "schema.data_schema"})
     pipe.connect(
         "extractor",
         "writer",
-        input_defs={
+        input_config={
             "entities": "extractor.entities",
             "relations": "extractor.relations",
         },

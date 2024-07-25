@@ -12,14 +12,14 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from neo4j_genai.pipeline.types import ComponentDef, ConnectionDef, PipelineDef
+from neo4j_genai.pipeline.types import ComponentConfig, ConnectionConfig, PipelineConfig
 
 from .stores import InMemoryStore, Store
 
 __all__ = [
     "Store",
     "InMemoryStore",
-    "ComponentDef",
-    "ConnectionDef",
-    "PipelineDef",
+    "ComponentConfig",
+    "ConnectionConfig",
+    "PipelineConfig",
 ]

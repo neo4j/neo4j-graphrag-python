@@ -19,19 +19,19 @@ from pydantic import BaseModel, ConfigDict
 from neo4j_genai.pipeline.component import Component
 
 
-class ComponentDef(BaseModel):
+class ComponentConfig(BaseModel):
     name: str
     component: Component
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
-class ConnectionDef(BaseModel):
+class ConnectionConfig(BaseModel):
     start: str
     end: str
-    input_defs: dict[str, str]
+    input_config: dict[str, str]
 
 
-class PipelineDef(BaseModel):
-    components: list[ComponentDef]
-    connections: list[ConnectionDef]
+class PipelineConfig(BaseModel):
+    components: list[ComponentConfig]
+    connections: list[ConnectionConfig]

@@ -19,7 +19,7 @@ from typing import Any
 
 from neo4j_genai.pipeline import Component, Pipeline
 from neo4j_genai.pipeline.component import DataModel
-from neo4j_genai.pipeline.types import ComponentDef, ConnectionDef, PipelineDef
+from neo4j_genai.pipeline.types import ComponentConfig, ConnectionConfig, PipelineConfig
 from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 
 
@@ -77,23 +77,23 @@ if __name__ == "__main__":
     # print(asyncio.run(retriever.run("my context item 1")))
 
     pipe = Pipeline.from_template(
-        PipelineDef(
+        PipelineConfig(
             components=[
-                ComponentDef(name="retrieve", component=Retriever()),
-                ComponentDef(name="augment", component=PromptTemplate()),
-                ComponentDef(name="generate", component=LLM()),
+                ComponentConfig(name="retrieve", component=Retriever()),
+                ComponentConfig(name="augment", component=PromptTemplate()),
+                ComponentConfig(name="generate", component=LLM()),
             ],
             connections=[
-                ConnectionDef(
+                ConnectionConfig(
                     start="retrieve",
                     end="augment",
-                    input_defs={"context": "retrieve.context"},
+                    input_config={"context": "retrieve.context"},
                 ),
-                ConnectionDef(
+                ConnectionConfig(
                     start="augment",
                     end="generate",
-                    # input_defs={},
-                    input_defs={"prompt": "augment.prompt"},
+                    # input_config={},
+                    input_config={"prompt": "augment.prompt"},
                 ),
             ],
         )

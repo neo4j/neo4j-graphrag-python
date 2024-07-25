@@ -30,7 +30,7 @@ from neo4j_genai.pipeline.exceptions import (
     PipelineMissingDependencyError,
     PipelineStatusUpdateError,
 )
-from neo4j_genai.pipeline.types import ComponentDef, ConnectionDef, PipelineDef
+from neo4j_genai.pipeline.types import ComponentConfig, ConnectionConfig, PipelineConfig
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +124,7 @@ class TaskPipelineNode(PipelineNode):
         )
         return run_result
 
-    async def get_input_defs_from_parents(self) -> dict[str, str]:
+    async def get_input_config_from_parents(self) -> dict[str, str]:
         """Build input definition for this component. For this,
         the method needs the input defs defined in the edges
         between this task and its parents.
@@ -136,7 +136,7 @@ class TaskPipelineNode(PipelineNode):
         Raises:
             MissingDependencyError if a parent dependency is not done yet
         """
-        input_defs: dict[str, Any] = {}
+        input_config: dict[str, Any] = {}
         # make sure dependencies are satisfied
         # and save the inputs defs that needs to be propagated from parent components
         for prev_edge in self._pipeline.previous_edges(self.name):
@@ -146,9 +146,9 @@ class TaskPipelineNode(PipelineNode):
                 logger.critical(f"Missing dependency {prev_edge.start}")
                 raise PipelineMissingDependencyError(f"{prev_edge.start} not ready")
             if prev_edge.data:
-                prev_edge_data = prev_edge.data.get("input_defs") or {}
-                input_defs.update(**prev_edge_data)
-        return input_defs
+                prev_edge_data = prev_edge.data.get("input_config") or {}
+                input_config.update(**prev_edge_data)
+        return input_config
 
     def reinitialize(self) -> None:
         self.status = RunStatus.SCHEDULED
@@ -165,10 +165,10 @@ class TaskPipelineNode(PipelineNode):
         logger.debug(f"TASK START {self.name=} {data=}")
         # prepare the inputs defs that needs to be
         # propagated from parent components
-        input_defs = await self.get_input_defs_from_parents()
+        input_config = await self.get_input_config_from_parents()
         # create component's input based on initial input data,
         # already done component's outputs and inputs definition mapping
-        inputs = self._pipeline.get_component_inputs(self.name, input_defs, data)
+        inputs = self._pipeline.get_component_inputs(self.name, input_config, data)
         # execute component task
         res = await self.execute(**inputs)
         if res is None:
@@ -271,35 +271,35 @@ class Pipeline(PipelineGraph):
 
     @classmethod
     def from_template(
-        cls, pipeline_template: PipelineDef, store: Optional[Store] = None
+        cls, pipeline_template: PipelineConfig, store: Optional[Store] = None
     ) -> Pipeline:
         """Create a Pipeline from a pydantic model defining the components and their connections"""
         pipeline = Pipeline(store=store)
         for component in pipeline_template.components:
             pipeline.add_component(component.name, component.component)
         for edge in pipeline_template.connections:
-            pipeline.connect(edge.start, edge.end, edge.input_defs)
+            pipeline.connect(edge.start, edge.end, edge.input_config)
         return pipeline
 
     def show_as_dict(self) -> dict[str, Any]:
-        component_defs = []
+        component_config = []
         for name, task in self._nodes.items():
-            component_defs.append(
-                ComponentDef(name=name, component=task.component)  # type: ignore
+            component_config.append(
+                ComponentConfig(name=name, component=task.component)  # type: ignore
             )
-        connection_defs = []
+        connection_config = []
         for edge in self._edges:
-            connection_defs.append(
-                ConnectionDef(
+            connection_config.append(
+                ConnectionConfig(
                     start=edge.start,
                     end=edge.end,
-                    input_defs=edge.data["input_defs"] if edge.data else {},
+                    input_config=edge.data["input_config"] if edge.data else {},
                 )
             )
-        pipeline_def = PipelineDef(
-            components=component_defs, connections=connection_defs
+        pipeline_config = PipelineConfig(
+            components=component_config, connections=connection_config
         )
-        return pipeline_def.model_dump()
+        return pipeline_config.model_dump()
 
     def add_component(self, name: str, component: Component) -> None:
         task = TaskPipelineNode(name, component, self)
@@ -313,11 +313,12 @@ class Pipeline(PipelineGraph):
         self,
         start_component_name: str,
         end_component_name: str,
-        input_defs: Optional[dict[str, str]] = None,
+        input_config: Optional[dict[str, str]] = None,
     ) -> None:
+        """ """
         start_node = self.get_node_by_name(start_component_name, raise_exception=True)
         end_node = self.get_node_by_name(end_component_name, raise_exception=True)
-        super().connect(start_node, end_node, data={"input_defs": input_defs})
+        super().connect(start_node, end_node, data={"input_config": input_config})
         if self.is_cyclic():
             raise PipelineDefinitionError("Cyclic graph are not allowed")
 
@@ -343,20 +344,20 @@ class Pipeline(PipelineGraph):
     def get_component_inputs(
         self,
         component_name: str,
-        input_defs: dict[str, Any],
+        input_config: dict[str, Any],
         input_data: dict[str, Any],
     ) -> dict[str, Any]:
         """Find the component inputs from:
         - data: the user input data
-        - input_defs: the mapping between components results and inputs
+        - input_config: the mapping between components results and inputs
         """
         component_inputs: dict[str, Any] = input_data.get(component_name, {})
-        if input_defs:
-            for input_def, mapping in input_defs.items():
+        if input_config:
+            for parameter, mapping in input_config.items():
                 value = self._store.find_all(mapping)
                 if value:  # TODO: how to deal with multiple matches? Is it relevant?
                     value = value[0]
-                component_inputs[input_def] = value
+                component_inputs[parameter] = value
         return component_inputs
 
     def reinitialize(self) -> None:
@@ -368,7 +369,7 @@ class Pipeline(PipelineGraph):
         for task in self._nodes.values():
             task.reinitialize()  # type: ignore
 
-    def validate_inputs_definition(self, data: dict[str, Any]) -> None:
+    def validate_inputs_config(self, data: dict[str, Any]) -> None:
         """Go through the graph and make sure each component will not miss any input"""
         for task in self._nodes.values():
             component = task.component  # type: ignore
@@ -385,7 +386,7 @@ class Pipeline(PipelineGraph):
             # then, iterate over all parents to find the parameter propagation
             for edge in prev_edges:
                 edge_data = edge.data or {}
-                edge_inputs = edge_data.get("input_defs") or {}
+                edge_inputs = edge_data.get("input_config") or {}
                 # check that the previous component is actually returning
                 # the mapped parameter
                 for param, path in edge_inputs.items():
@@ -409,7 +410,7 @@ class Pipeline(PipelineGraph):
                 )
 
     async def run(self, data: dict[str, Any]) -> dict[str, Any]:
-        self.validate_inputs_definition(data)
+        self.validate_inputs_config(data)
         self.reinitialize()
         orchestrator = Orchestrator(self)
         await orchestrator.run(data)
