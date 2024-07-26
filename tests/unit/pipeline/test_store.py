@@ -1,5 +1,5 @@
 import pytest
-from neo4j_genai.core.stores import InMemoryStore
+from neo4j_genai.pipeline.stores import InMemoryStore
 
 
 def test_memory_store() -> None:

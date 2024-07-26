@@ -13,7 +13,11 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import pytest
-from neo4j_genai.core.pipeline_graph import PipelineEdge, PipelineGraph, PipelineNode
+from neo4j_genai.pipeline.pipeline_graph import (
+    PipelineEdge,
+    PipelineGraph,
+    PipelineNode,
+)
 
 
 def test_node_alone() -> None:

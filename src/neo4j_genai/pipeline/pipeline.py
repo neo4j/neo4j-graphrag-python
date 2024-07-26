@@ -22,14 +22,18 @@ from typing import Any, AsyncGenerator, Awaitable, Callable, Optional
 
 from pydantic import BaseModel, Field
 
-from neo4j_genai.core.pipeline_graph import PipelineEdge, PipelineGraph, PipelineNode
-from neo4j_genai.core.stores import InMemoryStore, Store
 from neo4j_genai.pipeline.component import Component, DataModel
 from neo4j_genai.pipeline.exceptions import (
     PipelineDefinitionError,
     PipelineMissingDependencyError,
     PipelineStatusUpdateError,
 )
+from neo4j_genai.pipeline.pipeline_graph import (
+    PipelineEdge,
+    PipelineGraph,
+    PipelineNode,
+)
+from neo4j_genai.pipeline.stores import InMemoryStore, Store
 from neo4j_genai.pipeline.types import ComponentConfig, ConnectionConfig, PipelineConfig
 
 logger = logging.getLogger(__name__)
