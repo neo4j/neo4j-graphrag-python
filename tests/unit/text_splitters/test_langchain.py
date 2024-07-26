@@ -13,8 +13,8 @@
 #  limitations under the License.
 import pytest
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from llama_index.core.node_parser.text.sentence import SentenceSplitter
-from neo4j_genai.kg_construction.text_splitters import TextSplitterAdapter
+from neo4j_genai.text_splitters.base import TextChunks
+from neo4j_genai.text_splitters.langchain import LangChainTextSplitterAdapter
 
 text = """
 Lorem ipsum dolor sit amet, consectetur adipiscing elit.
@@ -29,23 +29,9 @@ Nam sagittis nisl vitae nibh pellentesque, et convallis turpis ultrices.
 
 @pytest.mark.asyncio
 async def test_langchain_adapter() -> None:
-    text_splitter = TextSplitterAdapter(RecursiveCharacterTextSplitter())
+    text_splitter = LangChainTextSplitterAdapter(RecursiveCharacterTextSplitter())
     text_chunks = await text_splitter.run(text)
-
-    assert list(text_chunks.keys()) == ["text_chunks"]
-    assert isinstance(text_chunks["text_chunks"], list)
-    for text_chunk in text_chunks["text_chunks"]:
-        assert isinstance(text_chunk, str)
-        assert text_chunk in text
-
-
-@pytest.mark.asyncio
-async def test_llamaindex_adapter() -> None:
-    text_splitter = TextSplitterAdapter(SentenceSplitter())
-    text_chunks = await text_splitter.run(text)
-
-    assert list(text_chunks.keys()) == ["text_chunks"]
-    assert isinstance(text_chunks["text_chunks"], list)
-    for text_chunk in text_chunks["text_chunks"]:
+    assert isinstance(text_chunks, TextChunks)
+    for text_chunk in text_chunks.chunks:
         assert isinstance(text_chunk, str)
         assert text_chunk in text
