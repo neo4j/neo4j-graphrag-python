@@ -20,10 +20,10 @@ from neo4j_genai.text_splitters.base import TextChunk, TextChunks, TextSplitter
 
 class LangChainTextSplitterAdapter(TextSplitter):
     """Adapter for LangChain TextSplitters.
-    Allows instances of these classes to be used in the knowledge graph builder pipeline.
+    Allows instances of this class to be used in the knowledge graph builder pipeline.
 
     Args:
-        text_splitter (LangChainTextSplitter): An instance of a LangChain TextSplitter class.
+        text_splitter (LangChainTextSplitter): An instance of LangChain's TextSplitter class.
     """
 
     def __init__(self, text_splitter: LangChainTextSplitter) -> None:

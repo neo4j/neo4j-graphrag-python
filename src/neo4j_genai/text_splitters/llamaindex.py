@@ -20,10 +20,10 @@ from neo4j_genai.text_splitters.base import TextChunk, TextChunks, TextSplitter
 
 class LlamaIndexTextSplitterAdapter(TextSplitter):
     """Adapter for LlamaIndex TextSplitters.
-    Allows instances of these classes to be used in the knowledge graph builder pipeline.
+    Allows instances of this class to be used in the knowledge graph builder pipeline.
 
     Args:
-        text_splitter (LlamaIndexTextSplitter): An instance of a LlamaIndex TextSplitter class.
+        text_splitter (LlamaIndexTextSplitter): An instance of LlamaIndex's TextSplitter class.
     """
 
     def __init__(self, text_splitter: LlamaIndexTextSplitter) -> None:
