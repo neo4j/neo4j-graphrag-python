@@ -17,7 +17,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from neo4j_genai.exceptions import EmbeddingRequiredError
+from neo4j_genai.kg_construction.kg_writer import Neo4jWriter
 from neo4j_genai.kg_construction.types import (
     Neo4jEmbeddingProperty,
     Neo4jGraph,
@@ -26,8 +26,6 @@ from neo4j_genai.kg_construction.types import (
     Neo4jRelationship,
 )
 from neo4j_genai.neo4j_queries import UPSERT_NODE_QUERY, UPSERT_RELATIONSHIP_QUERY
-
-from src.neo4j_genai.kg_construction.kg_writer import Neo4jWriter
 
 
 def test_upsert_node(driver: MagicMock) -> None:
@@ -43,16 +41,14 @@ def test_upsert_node(driver: MagicMock) -> None:
 
 def test_upsert_node_with_embedding(
     driver: MagicMock,
-    embedder: MagicMock,
 ) -> None:
-    embedder.embed_query.return_value = [1.0, 2.0, 3.0]
-    neo4j_writer = Neo4jWriter(driver=driver, embedder=embedder)
+    neo4j_writer = Neo4jWriter(driver=driver)
     node = Neo4jNode(
         id="1",
         label="Label",
         properties=[Neo4jProperty(key="key", value="value")],
         embedding_properties=[
-            Neo4jEmbeddingProperty(key="embeddingProp", value="embeddingText")
+            Neo4jEmbeddingProperty(key="embeddingProp", value=[1.0, 2.0, 3.0])
         ],
     )
     driver.execute_query.return_value.records = [{"elementID(n)": 1}]
@@ -60,7 +56,6 @@ def test_upsert_node_with_embedding(
     driver.execute_query.assert_any_call(
         UPSERT_NODE_QUERY.format(label="Label", properties="{id: 1, key: value}")
     )
-    embedder.embed_query.assert_called_once_with("embeddingText")
     query = (
         "MATCH (n) "
         "WHERE elementId(n) = $id "
@@ -74,23 +69,6 @@ def test_upsert_node_with_embedding(
         "vector": [1.0, 2.0, 3.0],
     }
     driver.execute_query.assert_any_call(query, parameters, database_=None)
-
-
-def test_upsert_node_no_embedder(driver: MagicMock) -> None:
-    neo4j_writer = Neo4jWriter(driver=driver)
-    node = Neo4jNode(
-        id="1",
-        label="Label",
-        properties=[Neo4jProperty(key="key", value="value")],
-        embedding_properties=[
-            Neo4jEmbeddingProperty(key="embeddingProp", value="embeddingText")
-        ],
-    )
-    with pytest.raises(EmbeddingRequiredError) as excinfo:
-        neo4j_writer._upsert_node(node=node)
-        assert f"No embedder provided for embedding properties on node {node}." in str(
-            excinfo.value
-        )
 
 
 def test_upsert_relationship(driver: MagicMock) -> None:
@@ -112,18 +90,15 @@ def test_upsert_relationship(driver: MagicMock) -> None:
     )
 
 
-def test_upsert_relationship_with_embedding(
-    driver: MagicMock, embedder: MagicMock
-) -> None:
-    embedder.embed_query.return_value = [1.0, 2.0, 3.0]
-    neo4j_writer = Neo4jWriter(driver=driver, embedder=embedder)
+def test_upsert_relationship_with_embedding(driver: MagicMock) -> None:
+    neo4j_writer = Neo4jWriter(driver=driver)
     rel = Neo4jRelationship(
         start_node_id="1",
         end_node_id="2",
         label="RELATIONSHIP",
         properties=[Neo4jProperty(key="key", value="value")],
         embedding_properties=[
-            Neo4jEmbeddingProperty(key="embeddingProp", value="embeddingText")
+            Neo4jEmbeddingProperty(key="embeddingProp", value=[1.0, 2.0, 3.0])
         ],
     )
     driver.execute_query.return_value.records = [{"elementID(r)": "rel_elem_id"}]
@@ -136,7 +111,6 @@ def test_upsert_relationship_with_embedding(
             properties="{key: value}",
         )
     )
-    embedder.embed_query.assert_called_once_with("embeddingText")
     query = (
         "MATCH ()-[r]->() "
         "WHERE elementId(r) = $id "
@@ -150,25 +124,6 @@ def test_upsert_relationship_with_embedding(
         "vector": [1.0, 2.0, 3.0],
     }
     driver.execute_query.assert_any_call(query, parameters, database_=None)
-
-
-def test_upsert_relationship_no_embedder(driver: MagicMock) -> None:
-    neo4j_writer = Neo4jWriter(driver=driver)
-    rel = Neo4jRelationship(
-        start_node_id="1",
-        end_node_id="2",
-        label="RELATIONSHIP",
-        properties=[Neo4jProperty(key="key", value="value")],
-        embedding_properties=[
-            Neo4jEmbeddingProperty(key="embeddingProp", value="embeddingText")
-        ],
-    )
-    with pytest.raises(EmbeddingRequiredError) as excinfo:
-        neo4j_writer._upsert_relationship(rel=rel)
-        assert (
-            f"No embedder provided for embedding properties on relationship: {rel}."
-            in str(excinfo.value)
-        )
 
 
 @pytest.mark.asyncio

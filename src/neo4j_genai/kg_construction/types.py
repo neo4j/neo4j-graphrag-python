@@ -26,7 +26,7 @@ class Neo4jProperty(BaseModel):
 
 class Neo4jEmbeddingProperty(BaseModel):
     key: str
-    value: str
+    value: list[float]
 
 
 class Neo4jNode(BaseModel):

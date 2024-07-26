@@ -15,7 +15,6 @@
 
 import neo4j
 import pytest
-from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from neo4j_genai.kg_construction.kg_writer import Neo4jWriter
 from neo4j_genai.kg_construction.types import (
     Neo4jEmbeddingProperty,
@@ -34,9 +33,7 @@ async def test_kg_writer(driver: neo4j.Driver) -> None:
         label="Document",
         properties=[Neo4jProperty(key="chunk", value=1)],
         embedding_properties=[
-            Neo4jEmbeddingProperty(
-                key="vectorProperty", value="Lorem ipsum dolor sit amet."
-            )
+            Neo4jEmbeddingProperty(key="vectorProperty", value=[1.0, 2.0, 3.0])
         ],
     )
     end_node = Neo4jNode(
@@ -46,7 +43,7 @@ async def test_kg_writer(driver: neo4j.Driver) -> None:
         embedding_properties=[
             Neo4jEmbeddingProperty(
                 key="vectorProperty",
-                value="Nulla facilisi. Pellentesque habitant morbi.",
+                value=[1.0, 2.0, 3.0],
             )
         ],
     )
@@ -55,9 +52,7 @@ async def test_kg_writer(driver: neo4j.Driver) -> None:
     )
     graph = Neo4jGraph(nodes=[start_node, end_node], relationships=[relationship])
 
-    embedder = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-
-    neo4j_writer = Neo4jWriter(driver=driver, embedder=embedder)
+    neo4j_writer = Neo4jWriter(driver=driver)
     await neo4j_writer.run(graph=graph)
 
     query = """
@@ -77,7 +72,7 @@ async def test_kg_writer(driver: neo4j.Driver) -> None:
     if start_node.embedding_properties:
         for embedding_prop in start_node.embedding_properties:
             assert embedding_prop.key in node_a.keys()
-            assert len(node_a.get(embedding_prop.key)) == 384
+            assert node_a.get(embedding_prop.key) == [1.0, 2.0, 3.0]
 
     node_b = record["b"]
     assert end_node.label == list(node_b.labels)[0]
@@ -89,7 +84,7 @@ async def test_kg_writer(driver: neo4j.Driver) -> None:
     if end_node.embedding_properties:
         for embedding_prop in end_node.embedding_properties:
             assert embedding_prop.key in node_b.keys()
-            assert len(node_b.get(embedding_prop.key)) == 384
+            assert node_b.get(embedding_prop.key) == [1.0, 2.0, 3.0]
 
     rel = record["r"]
     assert rel.type == relationship.label

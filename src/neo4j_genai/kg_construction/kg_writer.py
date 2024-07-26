@@ -20,8 +20,6 @@ from typing import Optional
 import neo4j
 
 from neo4j_genai.core.pipeline import Component
-from neo4j_genai.embedder import Embedder
-from neo4j_genai.exceptions import EmbeddingRequiredError
 from neo4j_genai.indexes import upsert_vector, upsert_vector_on_relationship
 from neo4j_genai.kg_construction.types import Neo4jGraph, Neo4jNode, Neo4jRelationship
 from neo4j_genai.neo4j_queries import UPSERT_NODE_QUERY, UPSERT_RELATIONSHIP_QUERY
@@ -38,7 +36,7 @@ class KGWriter(Component):
         Args:
             graph (Neo4jGraph): The knowledge graph to write to the data store.
         """
-        self.graph = graph
+        pass
 
 
 class Neo4jWriter(KGWriter):
@@ -46,18 +44,15 @@ class Neo4jWriter(KGWriter):
 
     Args:
         driver (neo4j.driver): The Neo4j driver to connect to the database.
-        embedder (Optional[Embedder]): An embedder to generate embeddings for specified properties of the nodes and relationships in the graph. Defaults to None.
         neo4j_database (Optional[str]): The name of the Neo4j database to write to. Defaults to 'neo4j' if not provided.
     """
 
     def __init__(
         self,
         driver: neo4j.driver,
-        embedder: Optional[Embedder] = None,
         neo4j_database: Optional[str] = None,
     ):
         self.driver = driver
-        self.embedder = embedder
         self.neo4j_database = neo4j_database
 
     def _upsert_node(self, node: Neo4jNode) -> None:
@@ -79,19 +74,13 @@ class Neo4jWriter(KGWriter):
         node_id = result.records[0]["elementID(n)"]
         # Add the embedding properties to the node
         if node.embedding_properties:
-            if self.embedder:
-                for prop in node.embedding_properties:
-                    vector = self.embedder.embed_query(prop.value)
-                    upsert_vector(
-                        driver=self.driver,
-                        node_id=node_id,
-                        embedding_property=prop.key,
-                        vector=vector,
-                        neo4j_database=self.neo4j_database,
-                    )
-            else:
-                raise EmbeddingRequiredError(
-                    f"No embedder provided for embedding properties on node: {node}."
+            for prop in node.embedding_properties:
+                upsert_vector(
+                    driver=self.driver,
+                    node_id=node_id,
+                    embedding_property=prop.key,
+                    vector=prop.value,
+                    neo4j_database=self.neo4j_database,
                 )
 
     def _upsert_relationship(self, rel: Neo4jRelationship) -> None:
@@ -116,19 +105,13 @@ class Neo4jWriter(KGWriter):
         rel_id = result.records[0]["elementID(r)"]
         # Add the embedding properties to the relationship
         if rel.embedding_properties:
-            if self.embedder:
-                for prop in rel.embedding_properties:
-                    vector = self.embedder.embed_query(prop.value)
-                    upsert_vector_on_relationship(
-                        driver=self.driver,
-                        rel_id=rel_id,
-                        embedding_property=prop.key,
-                        vector=vector,
-                        neo4j_database=self.neo4j_database,
-                    )
-            else:
-                raise EmbeddingRequiredError(
-                    f"No embedder provided for embedding properties on relationship: {rel}."
+            for prop in rel.embedding_properties:
+                upsert_vector_on_relationship(
+                    driver=self.driver,
+                    rel_id=rel_id,
+                    embedding_property=prop.key,
+                    vector=prop.value,
+                    neo4j_database=self.neo4j_database,
                 )
 
     async def run(self, graph: Neo4jGraph) -> None:
