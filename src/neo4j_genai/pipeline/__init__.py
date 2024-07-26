@@ -14,8 +14,11 @@
 #  limitations under the License.
 from .component import Component, DataModel
 from .pipeline import Pipeline
+from .stores import InMemoryStore, Store
 
 __all__ = [
+    "Store",
+    "InMemoryStore",
     "Component",
     "DataModel",
     "Pipeline",
