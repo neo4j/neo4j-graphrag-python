@@ -279,10 +279,10 @@ def upsert_vector(
     """
     try:
         query = (
-            "MATCH (n)"
-            "WHERE elementId(n) = $id"
-            "WITH n"
-            "CALL db.create.setNodeVectorProperty(n, $embedding_property, $vector)"
+            "MATCH (n) "
+            "WHERE elementId(n) = $id "
+            "WITH n "
+            "CALL db.create.setNodeVectorProperty(n, $embedding_property, $vector) "
             "RETURN n"
         )
         parameters = {
@@ -340,10 +340,10 @@ def upsert_vector_on_relationship(
     """
     try:
         query = (
-            "MATCH ()-[r]->()"
-            "WHERE elementId(r) = $id"
-            "WITH r"
-            "CALL db.create.setRelationshipVectorProperty(r, $embedding_property, $vector)"
+            "MATCH ()-[r]->() "
+            "WHERE elementId(r) = $id "
+            "WITH r "
+            "CALL db.create.setRelationshipVectorProperty(r, $embedding_property, $vector) "
             "RETURN r"
         )
         parameters = {

@@ -62,10 +62,10 @@ def test_upsert_node_with_embedding(
     )
     embedder.embed_query.assert_called_once_with("embeddingText")
     query = (
-        "MATCH (n)"
-        "WHERE elementId(n) = $id"
-        "WITH n"
-        "CALL db.create.setNodeVectorProperty(n, $embedding_property, $vector)"
+        "MATCH (n) "
+        "WHERE elementId(n) = $id "
+        "WITH n "
+        "CALL db.create.setNodeVectorProperty(n, $embedding_property, $vector) "
         "RETURN n"
     )
     parameters = {
@@ -138,10 +138,10 @@ def test_upsert_relationship_with_embedding(
     )
     embedder.embed_query.assert_called_once_with("embeddingText")
     query = (
-        "MATCH ()-[r]->()"
-        "WHERE elementId(r) = $id"
-        "WITH r"
-        "CALL db.create.setRelationshipVectorProperty(r, $embedding_property, $vector)"
+        "MATCH ()-[r]->() "
+        "WHERE elementId(r) = $id "
+        "WITH r "
+        "CALL db.create.setRelationshipVectorProperty(r, $embedding_property, $vector) "
         "RETURN r"
     )
     parameters = {
