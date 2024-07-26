@@ -13,7 +13,7 @@
 #  limitations under the License.
 import pytest
 from llama_index.core.node_parser.text.sentence import SentenceSplitter
-from neo4j_genai.text_splitters.base import TextChunks
+from neo4j_genai.text_splitters.base import TextChunk, TextChunks
 from neo4j_genai.text_splitters.llamaindex import LlamaIndexTextSplitterAdapter
 
 text = """
@@ -33,5 +33,5 @@ async def test_llamaindex_adapter() -> None:
     text_chunks = await text_splitter.run(text)
     assert isinstance(text_chunks, TextChunks)
     for text_chunk in text_chunks.chunks:
-        assert isinstance(text_chunk, str)
-        assert text_chunk in text
+        assert isinstance(text_chunk, TextChunk)
+        assert text_chunk.text in text

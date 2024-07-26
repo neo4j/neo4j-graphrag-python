@@ -15,12 +15,15 @@ from __future__ import annotations
 
 from langchain_text_splitters import TextSplitter as LangChainTextSplitter
 
-from neo4j_genai.text_splitters.base import TextChunks, TextSplitter
+from neo4j_genai.text_splitters.base import TextChunk, TextChunks, TextSplitter
 
 
 class LangChainTextSplitterAdapter(TextSplitter):
     """Adapter for LangChain TextSplitters.
     Allows instances of these classes to be used in the knowledge graph builder pipeline.
+
+    Args:
+        text_splitter (LangChainTextSplitter): An instance of a LangChain TextSplitter class.
     """
 
     def __init__(self, text_splitter: LangChainTextSplitter) -> None:
@@ -36,4 +39,8 @@ class LangChainTextSplitterAdapter(TextSplitter):
         Returns:
             TextChunks: The text split into chunks.
         """
-        return TextChunks(chunks=self.text_splitter.split_text(text))
+        return TextChunks(
+            chunks=[
+                TextChunk(text=chunk) for chunk in self.text_splitter.split_text(text)
+            ]
+        )

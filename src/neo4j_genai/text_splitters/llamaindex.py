@@ -15,12 +15,15 @@ from __future__ import annotations
 
 from llama_index.core.node_parser import TextSplitter as LlamaIndexTextSplitter
 
-from neo4j_genai.text_splitters.base import TextChunks, TextSplitter
+from neo4j_genai.text_splitters.base import TextChunk, TextChunks, TextSplitter
 
 
 class LlamaIndexTextSplitterAdapter(TextSplitter):
     """Adapter for LlamaIndex TextSplitters.
     Allows instances of these classes to be used in the knowledge graph builder pipeline.
+
+    Args:
+        text_splitter (LlamaIndexTextSplitter): An instance of a LlamaIndex TextSplitter class.
     """
 
     def __init__(self, text_splitter: LlamaIndexTextSplitter) -> None:
@@ -36,4 +39,8 @@ class LlamaIndexTextSplitterAdapter(TextSplitter):
         Returns:
             TextChunks: The text split into chunks.
         """
-        return TextChunks(chunks=self.text_splitter.split_text(text))
+        return TextChunks(
+            chunks=[
+                TextChunk(text=chunk) for chunk in self.text_splitter.split_text(text)
+            ]
+        )
