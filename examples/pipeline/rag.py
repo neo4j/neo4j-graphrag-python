@@ -12,102 +12,101 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+"""This example illustrates how to use a Pipeline with
+the existing Retriever and LLM interfaces. It consists
+in creating a Component wrapper around the required
+objects.
+"""
+
 from __future__ import annotations
 
 import asyncio
-from typing import Any
 
+import neo4j
+from neo4j_genai.embeddings.openai import OpenAIEmbeddings
+from neo4j_genai.generation import PromptTemplate, RagTemplate
+from neo4j_genai.llm import LLMInterface, OpenAILLM
 from neo4j_genai.pipeline import Component, Pipeline
 from neo4j_genai.pipeline.component import DataModel
 from neo4j_genai.pipeline.types import ComponentConfig, ConnectionConfig, PipelineConfig
-from neo4j_genai.types import RetrieverResult, RetrieverResultItem
+from neo4j_genai.retrievers import VectorRetriever
+from neo4j_genai.retrievers.base import Retriever
 
 
-class RetrieverOutputMessage(DataModel):
-    context: str
+class StringDataModel(DataModel):
+    result: str
 
 
-class Retriever(Component):
-    output_data_model = RetrieverOutputMessage
+class RetrieverComponent(Component):
+    def __init__(self, retriever: Retriever) -> None:
+        self.retriever = retriever
 
-    def search(self, *args: Any, **kwargs: Any) -> RetrieverResult:
-        return RetrieverResult(
-            items=[
-                RetrieverResultItem(content="my context item 1"),
-                RetrieverResultItem(content="my context item 2"),
-            ]
-        )
-
-    async def run(self, query: str) -> RetrieverOutputMessage:
-        res = self.search(query)
-        return RetrieverOutputMessage(
-            **{"context": "\n".join(c.content for c in res.items)}
-        )
+    async def run(self, query: str) -> StringDataModel:
+        res = self.retriever.search(query_text=query)
+        return StringDataModel(result="\n".join(c.content for c in res.items))
 
 
-class PromptTemplateOutput(DataModel):
-    prompt: str
+class PromptTemplateComponent(Component):
+    def __init__(self, prompt: PromptTemplate) -> None:
+        self.prompt = prompt
+
+    async def run(self, query: str, context: list[str]) -> StringDataModel:
+        prompt = self.prompt.format(query, context, examples="")
+        return StringDataModel(result=prompt)
 
 
-class PromptTemplate(Component):
-    def __init__(self, param: str = "default") -> None:
-        self.param = param
+class LLMComponent(Component):
+    def __init__(self, llm: LLMInterface) -> None:
+        self.llm = llm
 
-    async def run(self, query: str, context: list[str]) -> PromptTemplateOutput:
-        return PromptTemplateOutput(
-            **{
-                "prompt": f"my prompt using '{context}' and '{self.param}', query '{query}'"
-            }
-        )
-
-
-class LLMOutputMessage(DataModel):
-    answer: str
-
-
-class LLM(Component):
-    async def run(self, prompt: str) -> LLMOutputMessage:
-        return LLMOutputMessage(answer=f"some text based on '{prompt}'")
+    async def run(self, prompt: str) -> StringDataModel:
+        llm_response = self.llm.invoke(prompt)
+        return StringDataModel(result=llm_response.content)
 
 
 if __name__ == "__main__":
-    # retriever = Retriever()
-    # print(asyncio.run(retriever.run("my context item 1")))
+    driver = neo4j.GraphDatabase.driver(
+        "bolt://localhost:7687",
+        auth=("neo4j", "password"),
+        database="neo4j",
+    )
+    embedder = OpenAIEmbeddings()
+    retriever = VectorRetriever(
+        driver, index_name="moviePlotsEmbedding", embedder=embedder
+    )
+    prompt_template = RagTemplate()
+    llm = OpenAILLM(model_name="gpt-4o")
 
     pipe = Pipeline.from_template(
         PipelineConfig(
             components=[
-                ComponentConfig(name="retrieve", component=Retriever()),
-                ComponentConfig(name="augment", component=PromptTemplate()),
-                ComponentConfig(name="generate", component=LLM()),
+                ComponentConfig(
+                    name="retrieve", component=RetrieverComponent(retriever)
+                ),
+                ComponentConfig(
+                    name="augment", component=PromptTemplateComponent(prompt_template)
+                ),
+                ComponentConfig(name="generate", component=LLMComponent(llm)),
             ],
             connections=[
                 ConnectionConfig(
                     start="retrieve",
                     end="augment",
-                    input_config={"context": "retrieve.context"},
+                    input_config={"context": "retrieve.result"},
                 ),
                 ConnectionConfig(
                     start="augment",
                     end="generate",
-                    input_config={"prompt": "augment.prompt"},
+                    input_config={"prompt": "augment.result"},
                 ),
             ],
         )
     )
 
-    query = "my question"
-    print(
-        asyncio.run(
-            pipe.run({"retrieve": {"query": query}, "augment": {"query": query}})
-        )
+    query = "A movie about the US presidency"
+    result = asyncio.run(
+        pipe.run({"retrieve": {"query": query}, "augment": {"query": query}})
     )
+    print(result["generate"]["result"])
 
-    pipe.set_component("augment", PromptTemplate(param="my param"))
-    pipe.reinitialize()
-    # print(pipe.show_as_dict())
-    print(
-        asyncio.run(
-            pipe.run({"retrieve": {"query": query}, "augment": {"query": query}})
-        )
-    )
+    driver.close()

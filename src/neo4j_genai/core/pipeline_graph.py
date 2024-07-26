@@ -120,13 +120,6 @@ class PipelineGraph(Generic[GenericNodeType, GenericEdgeType]):
                 res.append(edge)
         return res
 
-    # def all_previous_edges(self, node: str) -> list[GenericEdgeType]:
-    #     res = []
-    #     for edge in self.previous_edges(node):
-    #         res.append(edge)
-    #         res.extend(self.all_previous_edges(edge.start))
-    #     return res
-
     def __contains__(self, node: GenericNodeType | str) -> bool:
         if isinstance(node, str):
             return node in self._nodes

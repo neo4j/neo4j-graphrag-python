@@ -10,9 +10,9 @@ This page provides information about how to create a pipeline.
 Creating Components
 ******************************
 
-Components are units of work performing a simple task such as chunking documents
-or saving results to Neo4j. This package provides a few default components detailed above
-but developers can create their own components by following these steps:
+Components are units of work that perform simple tasks, such as chunking documents
+or saving results to Neo4j. This package includes a few default components,
+but developers can create their own by following these steps:
 
 1. Create a subclass of `neo4j_genai.pipeline.DataModel` to represent the data being returned by the component
 2. Create a subclass of `neo4j_genai.pipeline.Component`
@@ -37,10 +37,10 @@ An example is given below:
 Connecting Components within a Pipeline
 ***************************************
 
-The final goal of creating components is to be able to compose them to create complex
-pipeline for a given purpose, for instance to build a Knowledge Graph from text data.
+The ultimate aim of creating components is to assemble them into a complex pipeline
+for a specific purpose, such as building a Knowledge Graph from text data.
 
-Here is how to create a simple pipeline (explanations below):
+Here's how to create a simple pipeline (detailed explanations follow):
 
 .. code:: python
 
@@ -48,16 +48,16 @@ Here is how to create a simple pipeline (explanations below):
     from neo4j_genai.pipeline import Pipeline
 
     pipe = Pipeline()
-    pipe.add_component("first_addition", ComponentAdd())
-    pipe.add_component("second_addition", ComponentAdd())
+    pipe.add_component("a", ComponentAdd())
+    pipe.add_component("b", ComponentAdd())
 
-    pipe.connect("first_addition", "second_addition", {"number2": "a.result"})
+    pipe.connect("a", "b", {"number2": "a.result"})
     asyncio.run(pipe.run({"a": {"number1": 10, "number2": 1}, "b": {"number1": 4}))
     # result: 10+1+4 = 15
 
-1. First, a pipeline is created and two components named "a" and "b" are added to it
-2. Then, the two components are connected such that "b" runs after "a" and the "number2" parameter for component "b" will be the result of component "a".
-3. Finally, the pipeline can be run using 10 and 1 as input parameters for "a". Component "b" will receive 11 (10 + 1, result of "a") as number1, and 4 as "number2" (as specified in the pipeline.run parameters)
+1. First, a pipeline is created, and two components named "a" and "b" are added to it.
+2. Next, the two components are connected so that "b" runs after "a", with the "number2" parameter for component "b" being the result of component "a".
+3. Finally, the pipeline is run with 10 and 1 as input parameters for "a". Component "b" will receive 11 (10 + 1, the result of "a") as "number1" and 4 as "number2" (as specified in the pipeline.run parameters).
 
 .. warning::
 
