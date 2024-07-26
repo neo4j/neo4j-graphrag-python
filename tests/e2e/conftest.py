@@ -172,6 +172,6 @@ def setup_neo4j_for_kg_construction(driver: Driver) -> None:
         vector_index_name,
         label="Document",
         embedding_property="vectorProperty",
-        dimensions=384,
+        dimensions=3,
         similarity_fn="euclidean",
     )
