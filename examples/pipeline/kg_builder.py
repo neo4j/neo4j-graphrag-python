@@ -15,10 +15,13 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Any
 
 from neo4j_genai.pipeline import Component, DataModel
-from pydantic import BaseModel
+from pydantic import BaseModel, validate_call
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 class DocumentChunkModel(DataModel):
@@ -45,9 +48,9 @@ class EntityModel(BaseModel):
     properties: dict[str, str]
 
 
-class ERModel(DataModel):
-    entities: list[EntityModel]
-    relations: list[EntityModel]
+class Neo4jGraph(DataModel):
+    entities: list[dict[str, Any]]
+    relations: list[dict[str, Any]]
 
 
 class ERExtractor(Component):
@@ -57,14 +60,14 @@ class ERExtractor(Component):
             "relations": [],
         }
 
-    async def run(self, chunks: list[str], schema: str) -> ERModel:
+    async def run(self, chunks: list[str], schema: str) -> Neo4jGraph:
         tasks = [self._process_chunk(chunk, schema) for chunk in chunks]
         result = await asyncio.gather(*tasks)
         merged_result: dict[str, Any] = {"entities": [], "relations": []}
         for res in result:
             merged_result["entities"] += res["entities"]
             merged_result["relations"] += res["relations"]
-        return ERModel(
+        return Neo4jGraph(
             entities=merged_result["entities"], relations=merged_result["relations"]
         )
 
@@ -76,9 +79,10 @@ class WriterModel(DataModel):
 
 
 class Writer(Component):
-    async def run(
-        self, entities: list[dict[str, Any]], relations: list[dict[str, Any]]
-    ) -> WriterModel:
+    @validate_call
+    async def run(self, graph: Neo4jGraph) -> WriterModel:
+        entities = graph.entities
+        relations = graph.relations
         return WriterModel(
             status="OK",
             entities=[EntityModel(**e) for e in entities],
@@ -99,10 +103,7 @@ if __name__ == "__main__":
     pipe.connect(
         "extractor",
         "writer",
-        input_config={
-            "entities": "extractor.entities",
-            "relations": "extractor.relations",
-        },
+        input_config={"graph": "extractor"},
     )
 
     pipe_inputs = {
@@ -113,5 +114,4 @@ if __name__ == "__main__":
         },
         "schema": {"schema": "Person OWNS House"},
     }
-    # print(pipe.run_all(pipe_inputs))
     print(asyncio.run(pipe.run(pipe_inputs)))

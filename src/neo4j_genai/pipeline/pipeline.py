@@ -149,11 +149,18 @@ class TaskPipelineNode(PipelineNode):
             # check that the previous component is actually returning
             # the mapped parameter
             for param, path in edge_inputs.items():
-                source_component_name, param_name = path.split(".")
+                try:
+                    source_component_name, param_name = path.split(".")
+                except ValueError:
+                    # no specific output mapped
+                    # the full source component result will be
+                    # passed to the next component, so no need
+                    # for further check
+                    continue
                 source_node = self._pipeline.get_node_by_name(source_component_name)
                 source_component = source_node.component
                 source_component_outputs = source_component.component_outputs
-                if param_name not in source_component_outputs:
+                if param_name and param_name not in source_component_outputs:
                     raise PipelineDefinitionError(
                         f"Parameter {param_name} is not valid output for "
                         f"{source_component_name} (must be one of "
@@ -422,9 +429,18 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         component_inputs: dict[str, Any] = input_data.get(component_name, {})
         if input_config:
             for parameter, mapping in input_config.items():
-                component, output_param = mapping.split(".")
+                try:
+                    component, output_param = mapping.split(".")
+                except ValueError:
+                    # we will use the full output of
+                    # component as input
+                    component = mapping
+                    output_param = None
                 component_result = self._store.get(component)
-                value = component_result.get(output_param)
+                if output_param is not None:
+                    value = component_result.get(output_param)
+                else:
+                    value = component_result
                 component_inputs[parameter] = value
         return component_inputs
 
