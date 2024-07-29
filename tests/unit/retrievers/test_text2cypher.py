@@ -12,6 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import logging
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -178,3 +179,56 @@ def test_t2c_retriever_with_result_format_function(
         ],
         metadata={"cypher": t2c_query, "__retriever": "Text2CypherRetriever"},
     )
+
+
+@pytest.mark.usefixtures("caplog")
+@patch("neo4j_genai.retrievers.base.Retriever._verify_version")
+def test_t2c_retriever_initialization_with_custom_prompt(
+    _verify_version_mock: MagicMock,
+    driver: MagicMock,
+    llm: MagicMock,
+    neo4j_record: MagicMock,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    prompt = "This is a custom prompt."
+    with caplog.at_level(logging.DEBUG):
+        retriever = Text2CypherRetriever(driver=driver, llm=llm, custom_prompt=prompt)
+        retriever.driver.execute_query.return_value = (  # type: ignore
+            [neo4j_record],
+            None,
+            None,
+        )
+        retriever.search(query_text="test")
+
+    assert f"Text2CypherRetriever prompt: {prompt}" in caplog.text
+
+
+@pytest.mark.usefixtures("caplog")
+@patch("neo4j_genai.retrievers.base.Retriever._verify_version")
+def test_t2c_retriever_initialization_with_custom_prompt_and_schema_and_examples(
+    _verify_version_mock: MagicMock,
+    driver: MagicMock,
+    llm: MagicMock,
+    neo4j_record: MagicMock,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    prompt = "This is another custom prompt."
+    neo4j_schema = "dummy-schema"
+    examples = ["example-1", "example-2"]
+    with caplog.at_level(logging.DEBUG):
+        retriever = Text2CypherRetriever(
+            driver=driver,
+            llm=llm,
+            custom_prompt=prompt,
+            neo4j_schema=neo4j_schema,
+            examples=examples,
+        )
+
+        retriever.driver.execute_query.return_value = (  # type: ignore
+            [neo4j_record],
+            None,
+            None,
+        )
+        retriever.search(query_text="test")
+
+    assert f"Text2CypherRetriever prompt: {prompt}" in caplog.text
