@@ -1,6 +1,8 @@
 # @neo4j/neo4j-genai-python
 
 ## Next
+
+### Added
 - Add optional custom_prompt arg to the Text2CypherRetriever class.
   
 ## 0.3.1
