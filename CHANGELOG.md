@@ -1,51 +1,16 @@
 # @neo4j/neo4j-genai-python
 
 ## Next
-- Add `template` validation in `PromptTemplate` class upon construction.
-- `custom_prompt` arg is now converted to `Text2CypherTemplate` class within the `Text2CypherRetriever.get_search_results` method.
-- Text2Cypher templates now require `query_text` arg and will warn if it is not present. Previous arg (`query`) may be used, but will warn of deprecation.
-- Fix bug in `Text2CypherRetriever` using `custom_prompt` arg where the `search` method would not inject the `query_text` content.
-- Add feature to include kwargs in `Text2CypherRetriever.search()` that will be injected into a custom prompt, if provided.
-- Add validation to `custom_prompt` parameter of `Text2CypherRetriever` to ensure that `query_text` placeholder exists in prompt.
-
-### Added
-- Ability to visualise pipeline with `my_pipeline.draw("pipeline.png")`
-
-### Fixed
-- Pipelines now return correct results when the same pipeline is run in parallel.
-
-### Changed
-- Pipeline run method now return a PipelineResult object.
-
-
-## 0.5.0
-
-### Added
-- PDF-to-graph pipeline for knowledge graph construction in experimental mode
-- Introduced support for Component/Pipeline flexible architecture.
-- Added new components for knowledge graph construction, including text splitters, schema builders, entity-relation extractors, and Neo4j writers.
-- Implemented end-to-end tests for the new knowledge graph builder pipeline.
-
-### Changed
-- When saving the lexical graph in a KG creation pipeline, the document is also saved as a specific node, together with relationships between each chunk and the document they were created from.
-
-### Fixed
-- Corrected the hybrid retriever query to ensure proper normalization of scores in vector search results.
-
-## 0.4.0
-
-### Added
 - Add optional custom_prompt arg to the Text2CypherRetriever class.
-
-### Changed
-- `GraphRAG.search` method first parameter has been renamed `query_text` (was `query`) for consistency with the retrievers interface.
-- Made `GraphRAG.search` method backwards compatible with the query parameter, raising warnings to encourage using query_text instead.
-
+  
 ## 0.3.1
 
 ### Fixed
 -   Corrected initialization to allow specifying the embedding model name.
 -   Removed sentence_transformers from embeddings/__init__.py to avoid ImportError when the package is not installed.
+
+### Changed
+- `GraphRAG.search` method first parameter has been renamed `query_text` (was `query`) for consistency with the retrievers interface.
 
 ## 0.3.0
 
