@@ -46,14 +46,8 @@ class ComponentMeta(abc.ABCMeta):
         # extract returned fields from the run method return type hint
         return_model = get_type_hints(run_method).get("return")
         # the type hint must be a subclass of DataModel
-        # but not DataModel itself which is empty
-        if name != "Component":
-            if return_model == DataModel:
-                raise ValueError(
-                    f"You must configure the return type of the run method in {name}"
-                )
-            if not issubclass(return_model, DataModel):  # type: ignore
-                raise ValueError("The run method must return a subclass of DataModel")
+        if not issubclass(return_model, DataModel):  # type: ignore
+            raise ValueError("The run method must return a subclass of DataModel")
         attrs["component_outputs"] = {
             f: {
                 "has_default": field.is_required(),
