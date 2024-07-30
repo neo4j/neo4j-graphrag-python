@@ -12,9 +12,9 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from pydantic import BaseModel, Field, create_model
-from typing import Any, List
-from neo4j_genai.pipeline import Component
+from pydantic import BaseModel, Field, model_validator
+
+from neo4j_genai.exceptions import SchemaValidationError
 
 
 class Entity(BaseModel):
@@ -30,82 +30,53 @@ class Relation(BaseModel):
     description: str
 
 
-class SchemaBuilder(Component):
+class SchemaConfig(BaseModel):
+    entities: dict[str, Entity]
+    relations: dict[str, Relation]
+    potential_schema: dict[str, list[str]]
+
+    @model_validator(mode="before")
+    def check_schema(cls, data):
+        entities = data.get("entities", {}).keys()
+        relations = data.get("relations", {}).keys()
+        potential_schema = data.get("potential_schema", {})
+        print(potential_schema.values())
+        for entity in potential_schema.keys():
+            if entity not in entities:
+                raise SchemaValidationError(
+                    f"Entity '{entity}' is not defined in the provided entities."
+                )
+
+        for rels in potential_schema.values():
+            for rel in rels:
+                if rel not in relations:
+                    raise SchemaValidationError(
+                        f"Relation '{rel}' is not defined in the provided relations."
+                    )
+
+        return data
+
+
+class SchemaBuilder:
     @staticmethod
     def create_schema_model(
-        entities: List[Entity],
-        relations: List[Relation],
-        potential_schema: dict[str, List[str]],
-    ) -> BaseModel:
-        EntityModel = create_model(
-            "EntityModel",
-            **{
-                entity.name: (
-                    dict[str, Any],
-                    Field(..., description=entity.description),
-                )
-                for entity in entities
-            },
-        )
-        RelationModel = create_model(
-            "RelationModel",
-            **{
-                relation.name: (
-                    dict[str, str],
-                    Field(..., description=relation.description),
-                )
-                for relation in relations
-            },
-        )
+        entities: list[Entity],
+        relations: list[Relation],
+        potential_schema: dict[str, list[str]],
+    ) -> SchemaConfig:
+        entity_dict = {entity.name: entity.dict() for entity in entities}
+        relation_dict = {relation.name: relation.dict() for relation in relations}
 
-        SchemaModel = create_model(
-            "SchemaModel",
-            entities=(
-                EntityModel,
-                Field(
-                    ...,
-                    description="Templates for entities involved in the knowledge graph",
-                ),
-            ),
-            relations=(
-                RelationModel,
-                Field(
-                    ...,
-                    description="Templates for relations defined in the knowledge graph",
-                ),
-            ),
-            potential_schema=(
-                dict[str, List[str]],
-                Field(
-                    ..., description="Schema outlining possible entity relationships"
-                ),
-            ),
-        )
-        schema_instance = SchemaModel(
-            entities={
-                entity.name: {
-                    "name": entity.name,
-                    "type": entity.type,
-                    "description": entity.description,
-                }
-                for entity in entities
-            },
-            relations={
-                relation.name: {
-                    "name": relation.name,
-                    "description": relation.description,
-                }
-                for relation in relations
-            },
+        return SchemaConfig(
+            entities=entity_dict,
+            relations=relation_dict,
             potential_schema=potential_schema,
         )
-        return schema_instance
 
     async def run(
         self,
-        entities: List[Entity],
-        relations: List[Relation],
-        potential_schema: dict[str, List[str]],
-    ) -> dict[str, Any]:
-        schema_model = self.create_schema_model(entities, relations, potential_schema)
-        return {"schema": schema_model}
+        entities: list[Entity],
+        relations: list[Relation],
+        potential_schema: dict[str, list[str]],
+    ) -> SchemaConfig:
+        return self.create_schema_model(entities, relations, potential_schema)
