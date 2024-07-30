@@ -15,21 +15,26 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Optional
+from typing import Literal, Optional
 
 import neo4j
-
-from neo4j_genai.core.pipeline import Component
+from neo4j_genai.core.component import Component, DataModel
 from neo4j_genai.indexes import upsert_vector, upsert_vector_on_relationship
 from neo4j_genai.kg_construction.types import Neo4jGraph, Neo4jNode, Neo4jRelationship
 from neo4j_genai.neo4j_queries import UPSERT_NODE_QUERY, UPSERT_RELATIONSHIP_QUERY
+from pydantic import validate_call
+
+
+class KGWriterModel(DataModel):
+    status: Literal["SUCCESS", "FAILURE"]
 
 
 class KGWriter(Component):
     """Abstract class used to write a knowledge graph to a data store."""
 
     @abstractmethod
-    async def run(self, graph: Neo4jGraph) -> None:
+    @validate_call
+    async def run(self, graph: Neo4jGraph) -> KGWriterModel:
         """
         Writes the graph to a data store.
 
@@ -114,14 +119,20 @@ class Neo4jWriter(KGWriter):
                     neo4j_database=self.neo4j_database,
                 )
 
-    async def run(self, graph: Neo4jGraph) -> None:
+    @validate_call
+    async def run(self, graph: Neo4jGraph) -> KGWriterModel:
         """Upserts a knowledge graph into a Neo4j database.
 
         Args:
             graph (Neo4jGraph): The knowledge graph to upsert into the database.
         """
-        for node in graph.nodes:
-            self._upsert_node(node)
+        try:
+            for node in graph.nodes:
+                self._upsert_node(node)
 
-        for rel in graph.relationships:
-            self._upsert_relationship(rel)
+            for rel in graph.relationships:
+                self._upsert_relationship(rel)
+
+            return KGWriterModel(status="SUCCESS")
+        except neo4j.exceptions.ClientError:
+            return KGWriterModel(status="FAILURE")
