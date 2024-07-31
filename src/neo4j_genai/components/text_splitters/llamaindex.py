@@ -13,20 +13,23 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from langchain_text_splitters import TextSplitter as LangChainTextSplitter
+from llama_index.core.node_parser import TextSplitter as LlamaIndexTextSplitter
+from neo4j_genai.components.text_splitters.base import (
+    TextChunk,
+    TextChunks,
+    TextSplitter,
+)
 
-from neo4j_genai.text_splitters.base import TextChunk, TextChunks, TextSplitter
 
-
-class LangChainTextSplitterAdapter(TextSplitter):
-    """Adapter for LangChain TextSplitters.
+class LlamaIndexTextSplitterAdapter(TextSplitter):
+    """Adapter for LlamaIndex TextSplitters.
     Allows instances of this class to be used in the knowledge graph builder pipeline.
 
     Args:
-        text_splitter (LangChainTextSplitter): An instance of LangChain's TextSplitter class.
+        text_splitter (LlamaIndexTextSplitter): An instance of LlamaIndex's TextSplitter class.
     """
 
-    def __init__(self, text_splitter: LangChainTextSplitter) -> None:
+    def __init__(self, text_splitter: LlamaIndexTextSplitter) -> None:
         self.text_splitter = text_splitter
 
     async def run(self, text: str) -> TextChunks:

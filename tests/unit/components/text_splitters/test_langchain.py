@@ -12,9 +12,9 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import pytest
-from llama_index.core.node_parser.text.sentence import SentenceSplitter
-from neo4j_genai.text_splitters.base import TextChunk, TextChunks
-from neo4j_genai.text_splitters.llamaindex import LlamaIndexTextSplitterAdapter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from neo4j_genai.components.text_splitters.base import TextChunk, TextChunks
+from neo4j_genai.components.text_splitters.langchain import LangChainTextSplitterAdapter
 
 text = """
 Lorem ipsum dolor sit amet, consectetur adipiscing elit.
@@ -28,8 +28,8 @@ Nam sagittis nisl vitae nibh pellentesque, et convallis turpis ultrices.
 
 
 @pytest.mark.asyncio
-async def test_llamaindex_adapter() -> None:
-    text_splitter = LlamaIndexTextSplitterAdapter(SentenceSplitter())
+async def test_langchain_adapter() -> None:
+    text_splitter = LangChainTextSplitterAdapter(RecursiveCharacterTextSplitter())
     text_chunks = await text_splitter.run(text)
     assert isinstance(text_chunks, TextChunks)
     for text_chunk in text_chunks.chunks:

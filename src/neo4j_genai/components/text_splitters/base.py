@@ -16,9 +16,8 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import Any, Optional
 
-from pydantic import BaseModel
-
 from neo4j_genai.core.component import Component, DataModel
+from pydantic import BaseModel
 
 
 class TextChunk(BaseModel):
