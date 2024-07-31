@@ -28,6 +28,7 @@ async def test_text_chunk_embedder_run(embedder: MagicMock) -> None:
     assert isinstance(embedded_chunks, TextChunks)
     for chunk in embedded_chunks.chunks:
         assert isinstance(chunk, TextChunk)
+        assert chunk.metadata is not None
         assert "embedding" in chunk.metadata.keys()
         assert isinstance(chunk.metadata["embedding"], list)
         for i in chunk.metadata["embedding"]:
