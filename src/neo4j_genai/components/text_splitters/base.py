@@ -16,7 +16,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import Any, Optional
 
-from neo4j_genai.core.component import Component, DataModel
+from neo4j_genai.pipeline.component import Component, DataModel
 from pydantic import BaseModel
 
 
