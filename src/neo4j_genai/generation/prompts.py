@@ -16,53 +16,45 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from neo4j_genai.exceptions import PromptMissingInputError
+from jinja2 import Environment, StrictUndefined
 
 
 class PromptTemplate:
     """This class is used to generate a parameterized prompt. It is defined
-    from a string (the template) using the Python format syntax (parameters
-    between curly braces `{}`) and a list of required inputs.
+    from a string (the template) using the Jinja2 templating system syntax
+    (parameters between double curly braces `{{ }}`) .
     Before sending the instructions to an LLM, call the `format` method that will
-    replace parameters with the provided values. If any of the expected inputs is
-    missing, a `PromptMissingInputError` is raised.
+    render the template, replacing parameters with the provided values.
     """
 
     DEFAULT_TEMPLATE: str = ""
-    EXPECTED_INPUTS: list[str] = []
 
     def __init__(
         self,
         template: Optional[str] = None,
-        expected_inputs: Optional[list[str]] = None,
     ) -> None:
-        self.template = template or self.DEFAULT_TEMPLATE
-        self.expected_inputs = expected_inputs or self.EXPECTED_INPUTS
+        self._string_template = template or self.DEFAULT_TEMPLATE
+        env = Environment(undefined=StrictUndefined)
+        self._template = env.from_string(self._string_template)
 
-    def _format(self, **kwargs: Any) -> str:
-        for e in self.EXPECTED_INPUTS:
-            if e not in kwargs:
-                raise PromptMissingInputError(f"Missing input '{e}'")
-        return self.template.format(**kwargs)
+    @property
+    def _local_context(self) -> dict[str, Any]:
+        return {}
 
-    def format(self, *args: Any, **kwargs: Any) -> str:
+    def render(self, **kwargs: Any) -> str:
         """This method is used to replace parameters with the provided values.
-        Parameters must be provided:
-        - as kwargs
-        - as args if using the same order as in the expected inputs
 
         Example:
 
         .. code-block:: python
 
             prompt_template = PromptTemplate(
-                template='''Explain the following concept to {target_audience}:
-                Concept: {concept}
+                template='''Explain the following concept to {{target_audience}}:
+                Concept: {{concept}}
                 Answer:
                 ''',
-                expected_inputs=['target_audience', 'concept']
             )
-            prompt = prompt_template.format('12 yo children', concept='graph database')
+            prompt = prompt_template.format(target_audience='12 yo children', concept='graph database')
             print(prompt)
 
             # Result:
@@ -72,29 +64,30 @@ class PromptTemplate:
             # '''
 
         """
-        data = kwargs
-        data.update({k: v for k, v in zip(self.expected_inputs, args)})
-        return self._format(**data)
+        local_context = self._local_context
+        return self._template.render(local_context=local_context, **kwargs)  # type: ignore
+
+    def format(self, *args: Any, **kwargs: Any) -> str:
+        return self.render(**kwargs)
 
 
 class RagTemplate(PromptTemplate):
     DEFAULT_TEMPLATE = """Answer the user question using the following context
 
 Context:
-{context}
+{{context}}
 
 Examples:
-{examples}
+{{examples}}
 
 Question:
-{query}
+{{query}}
 
 Answer:
 """
-    EXPECTED_INPUTS = ["context", "query", "examples"]
 
     def format(self, query: str, context: str, examples: str) -> str:
-        return super().format(query=query, context=context, examples=examples)
+        return self.render(query=query, context=context, examples=examples)
 
 
 class Text2CypherTemplate(PromptTemplate):
@@ -102,20 +95,69 @@ class Text2CypherTemplate(PromptTemplate):
 Task: Generate a Cypher statement for querying a Neo4j graph database from a user input.
 
 Schema:
-{schema}
+{{schema}}
 
 Examples (optional):
-{examples}
+{{examples}}
 
 Input:
-{query}
+{{query}}
 
 Do not use any properties or relationships not included in the schema.
 Do not include triple backticks ``` or any additional text except the generated Cypher statement in your response.
 
 Cypher query:
 """
-    EXPECTED_INPUTS = ["schema", "query", "examples"]
 
     def format(self, query: str, schema: str, examples: str) -> str:
-        return super().format(query=query, schema=schema, examples=examples)
+        return self.render(query=query, schema=schema, examples=examples)
+
+
+class ERExtractionTemplate(PromptTemplate):
+    DEFAULT_TEMPLATE = """
+{% macro property_list(properties) %}
+    {%- for prop in properties %}
+    - {{ prop.name }} ({{prop.type}}) {% endfor %}
+{% endmacro %}
+
+You are a top-tier algorithm designed for extracting
+information in structured formats to build a knowledge graph.
+
+Extract the entities and specify their type from the following text.
+Also extract the relations between these entities.
+
+Return result as JSON using the following format:
+{"entities": [{"id": 0, "label": "", "properties": [{"name": "", "value": ""}]},],
+"relations": [{"from": 0, "to": 1, "properties": [{"name": "", "value": ""}]}, ]}
+
+Use only fhe following entities and relations:
+Entities:
+{% for entity in schema.entities %}
+- {{ entity.label }}:
+{{ property_list(entity.properties) }}
+{% endfor %}
+
+Relations:
+{% for rel in schema.relations %}
+- {{ rel.label }}:
+    - from {{ rel.source_node_type }}
+    - to {{ rel.target_node_type }}
+{{ property_list(rel.properties) }}
+{%- endfor -%}
+
+Assign a unique ID to each entity, and reuse it to define relationships.
+Do respect the source and target entity types for relationship and
+the relationship direction.
+
+{% if examples %}
+Examples
+{{ examples }}
+{% endif %}
+
+Input text:
+
+{{ text }}
+"""
+
+    def format(self, text: str, schema: Any, examples: str) -> str:
+        return self.render(text=text, schema=schema, examples=examples)

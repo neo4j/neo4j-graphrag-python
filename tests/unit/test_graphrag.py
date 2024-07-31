@@ -39,8 +39,7 @@ Examples:
 Question:
 user's query
 
-Answer:
-"""
+Answer:"""
     )
 
 
@@ -72,8 +71,7 @@ Examples:
 Question:
 question
 
-Answer:
-""")
+Answer:""")
 
     assert isinstance(res, RagResultModel)
     assert res.answer == "llm generated text"
