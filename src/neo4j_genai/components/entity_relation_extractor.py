@@ -29,6 +29,7 @@ class RelationModel(BaseModel):
 class EntityRelationGraphModel(BaseModel):
     entities: list[EntityModel]
     relations: list[RelationModel]
+    error: bool = False
 
 
 class ERResultModel(DataModel):

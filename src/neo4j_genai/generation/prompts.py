@@ -130,6 +130,7 @@ Return result as JSON using the following format:
 {"entities": [{"id": 0, "label": "", "properties": [{"name": "", "value": ""}]},],
 "relations": [{"from": 0, "to": 1, "properties": [{"name": "", "value": ""}]}, ]}
 
+{% if schema %}
 Use only fhe following entities and relations:
 Entities:
 {% for entity in schema.entities %}
@@ -144,6 +145,7 @@ Relations:
     - to {{ rel.target_node_type }}
 {{ property_list(rel.properties) }}
 {%- endfor -%}
+{% endif %}
 
 Assign a unique ID to each entity, and reuse it to define relationships.
 Do respect the source and target entity types for relationship and
