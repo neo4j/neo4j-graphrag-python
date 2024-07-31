@@ -56,7 +56,7 @@ async def test_kg_writer(driver: neo4j.Driver) -> None:
     await neo4j_writer.run(graph=graph)
 
     query = """
-    MATCH (a:Document {id: 1})-[r:NEXT_CHUNK]-(b:Document {id: 2})
+    MATCH (a:Document {id: 1})-[r:NEXT_CHUNK]->(b:Document {id: 2})
     RETURN a, r, b
     """
     record = driver.execute_query(query).records[0]
