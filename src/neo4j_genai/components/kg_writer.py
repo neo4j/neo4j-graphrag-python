@@ -18,9 +18,9 @@ from abc import abstractmethod
 from typing import Literal, Optional
 
 import neo4j
+from neo4j_genai.components.types import Neo4jGraph, Neo4jNode, Neo4jRelationship
 from neo4j_genai.core.component import Component, DataModel
 from neo4j_genai.indexes import upsert_vector, upsert_vector_on_relationship
-from neo4j_genai.kg_construction.types import Neo4jGraph, Neo4jNode, Neo4jRelationship
 from neo4j_genai.neo4j_queries import UPSERT_NODE_QUERY, UPSERT_RELATIONSHIP_QUERY
 from pydantic import validate_call
 

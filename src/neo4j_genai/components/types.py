@@ -1,3 +1,4 @@
+#  Copyright (c) "Neo4j"
 #  Neo4j Sweden AB [https://neo4j.com]
 #  #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,3 +40,33 @@ class TextChunks(DataModel):
     """
 
     chunks: list[TextChunk]
+
+
+class Neo4jProperty(BaseModel):
+    key: str
+    value: Any
+
+
+class Neo4jEmbeddingProperty(BaseModel):
+    key: str
+    value: list[float]
+
+
+class Neo4jNode(BaseModel):
+    id: str
+    label: str
+    properties: Optional[list[Neo4jProperty]] = None
+    embedding_properties: Optional[list[Neo4jEmbeddingProperty]] = None
+
+
+class Neo4jRelationship(BaseModel):
+    start_node_id: str
+    end_node_id: str
+    label: str
+    properties: Optional[list[Neo4jProperty]] = None
+    embedding_properties: Optional[list[Neo4jEmbeddingProperty]] = None
+
+
+class Neo4jGraph(BaseModel):
+    nodes: list[Neo4jNode]
+    relationships: list[Neo4jRelationship]

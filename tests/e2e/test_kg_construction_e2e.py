@@ -15,8 +15,8 @@
 
 import neo4j
 import pytest
-from neo4j_genai.kg_construction.kg_writer import Neo4jWriter
-from neo4j_genai.kg_construction.types import (
+from neo4j_genai.components.kg_writer import Neo4jWriter
+from neo4j_genai.components.types import (
     Neo4jEmbeddingProperty,
     Neo4jGraph,
     Neo4jNode,
