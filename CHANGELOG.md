@@ -2,6 +2,9 @@
 
 ## Next
 
+### Added
+- Introduced support for Component/Pipeline flexible architecture
+
 ## 0.3.1
 
 ### Fixed

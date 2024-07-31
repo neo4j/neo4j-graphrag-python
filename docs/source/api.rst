@@ -80,7 +80,7 @@ Embedder
 SentenceTransformerEmbeddings
 ================================
 
-.. autoclass:: neo4j_genai.embeddings.SentenceTransformerEmbeddings
+.. autoclass:: neo4j_genai.embeddings.sentence_transformers.SentenceTransformerEmbeddings
     :members:
 
 **********

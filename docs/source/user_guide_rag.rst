@@ -1,6 +1,6 @@
-.. _user-guide:
+.. _user-guide-rag:
 
-User Guide
+User Guide: RAG
 #################
 
 This guide provides a starting point for using the Neo4j GenAI Python package
