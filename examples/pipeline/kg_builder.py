@@ -16,90 +16,53 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any
 
-from neo4j_genai.pipeline import Component, DataModel
-from pydantic import BaseModel, validate_call
+import neo4j
+from langchain_text_splitters import CharacterTextSplitter
+from neo4j_genai.components.entity_relation_extractor import LLMEntityRelationExtractor
+from neo4j_genai.components.kg_writer import Neo4jWriter
+from neo4j_genai.components.text_splitters.langchain import LangChainTextSplitterAdapter
+from neo4j_genai.llm import OpenAILLM
+from neo4j_genai.pipeline import Component, DataModel, Pipeline
 
-logging.basicConfig(level=logging.DEBUG)
-
-
-class DocumentChunkModel(DataModel):
-    chunks: list[str]
-
-
-class DocumentChunker(Component):
-    async def run(self, text: str) -> DocumentChunkModel:
-        chunks = [t.strip() for t in text.split(".") if t.strip()]
-        return DocumentChunkModel(chunks=chunks)
+# logging.getLogger(__name__).setLevel(logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG)
 
 
 class SchemaModel(DataModel):
-    data_schema: str
+    data_schema: dict[str, str]
 
 
 class SchemaBuilder(Component):
-    async def run(self, schema: str) -> SchemaModel:
+    async def run(self, schema: dict[str, str]) -> SchemaModel:
         return SchemaModel(data_schema=schema)
 
 
-class EntityModel(BaseModel):
-    label: str
-    properties: dict[str, str]
-
-
-class Neo4jGraph(DataModel):
-    entities: list[dict[str, Any]]
-    relations: list[dict[str, Any]]
-
-
-class ERExtractor(Component):
-    async def _process_chunk(self, chunk: str, schema: str) -> dict[str, Any]:
-        return {
-            "entities": [{"label": "Person", "properties": {"name": "John Doe"}}],
-            "relations": [],
-        }
-
-    async def run(self, chunks: list[str], schema: str) -> Neo4jGraph:
-        tasks = [self._process_chunk(chunk, schema) for chunk in chunks]
-        result = await asyncio.gather(*tasks)
-        merged_result: dict[str, Any] = {"entities": [], "relations": []}
-        for res in result:
-            merged_result["entities"] += res["entities"]
-            merged_result["relations"] += res["relations"]
-        return Neo4jGraph(
-            entities=merged_result["entities"], relations=merged_result["relations"]
-        )
-
-
-class WriterModel(DataModel):
-    status: str
-    entities: list[EntityModel]
-    relations: list[EntityModel]
-
-
-class Writer(Component):
-    @validate_call
-    async def run(self, graph: Neo4jGraph) -> WriterModel:
-        entities = graph.entities
-        relations = graph.relations
-        return WriterModel(
-            status="OK",
-            entities=[EntityModel(**e) for e in entities],
-            relations=[EntityModel(**r) for r in relations],
-        )
-
-
 if __name__ == "__main__":
-    from neo4j_genai.pipeline import Pipeline
+    driver = neo4j.GraphDatabase.driver(
+        "bolt://localhost:7687", auth=("neo4j", "password")
+    )
 
     pipe = Pipeline()
-    pipe.add_component("chunker", DocumentChunker())
+    pipe.add_component(
+        "splitter", LangChainTextSplitterAdapter(CharacterTextSplitter())
+    )
     pipe.add_component("schema", SchemaBuilder())
-    pipe.add_component("extractor", ERExtractor())
-    pipe.add_component("writer", Writer())
-    pipe.connect("chunker", "extractor", input_config={"chunks": "chunker.chunks"})
-    pipe.connect("schema", "extractor", input_config={"schema": "schema.data_schema"})
+    pipe.add_component(
+        "extractor",
+        LLMEntityRelationExtractor(
+            llm=OpenAILLM(
+                model_name="gpt-4o",
+                model_params={
+                    "max_tokens": 1000,
+                    "response_format": {"type": "json_object"},
+                },
+            )
+        ),
+    )
+    pipe.add_component("writer", Neo4jWriter(driver))
+    pipe.connect("splitter", "extractor", input_config={"chunks": "splitter"})
+    pipe.connect("schema", "extractor", input_config={"schema": "schema"})
     pipe.connect(
         "extractor",
         "writer",
@@ -107,11 +70,13 @@ if __name__ == "__main__":
     )
 
     pipe_inputs = {
-        "chunker": {
+        "splitter": {
             "text": """Graphs are everywhere.
             GraphRAG is the future of Artificial Intelligence.
             Robots are already running the world."""
         },
-        "schema": {"schema": "Person OWNS House"},
+        "schema": {"schema": {}},
     }
     print(asyncio.run(pipe.run(pipe_inputs)))
+
+    driver.close()

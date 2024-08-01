@@ -41,7 +41,7 @@ class ComponentMeta(abc.ABCMeta):
                     "annotation": param.annotation,
                 }
                 for param in sig.parameters.values()
-                if param.name not in ("self",)
+                if param.name not in ("self", "kwargs")
             }
         # extract returned fields from the run method return type hint
         return_model = get_type_hints(run_method).get("return")

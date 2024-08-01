@@ -2,44 +2,24 @@ from __future__ import annotations
 
 import enum
 import json
+import logging
 from typing import Any
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ValidationError, validate_call
 
+from neo4j_genai.components.types import Neo4jGraph, TextChunk, TextChunks
 from neo4j_genai.exceptions import LLMGenerationError
 from neo4j_genai.generation.prompts import ERExtractionTemplate, PromptTemplate
 from neo4j_genai.llm import LLMInterface
-from neo4j_genai.pipeline.component import Component, DataModel
+from neo4j_genai.pipeline.component import Component
 
-
-class EntityModel(BaseModel):
-    id: str
-    label: str
-    properties: dict[str, Any]
-
-
-class RelationModel(BaseModel):
-    # id: str
-    label: str
-    source_entity: str
-    target_entity: str
-    properties: dict[str, Any]
-
-
-class EntityRelationGraphModel(BaseModel):
-    entities: list[EntityModel]
-    relations: list[RelationModel]
-    error: bool = False
-
-
-class ERResultModel(DataModel):
-    result: list[EntityRelationGraphModel]
+logger = logging.getLogger(__name__)
 
 
 class EntityRelationExtractor(Component):
-    async def run(self, chunks: list[str], **kwargs: Any) -> ERResultModel:
+    async def run(self, chunks: TextChunks, **kwargs: Any) -> Neo4jGraph:
         # for each chunk, returns a dict with entities and relations keys
-        return ERResultModel(result=[])
+        return Neo4jGraph(nodes=[], relationships=[])
 
 
 class OnError(enum.Enum):
@@ -62,37 +42,60 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         self.prompt_template = template
         self.on_error = on_error
 
+    def update_ids(self, chunk_index: int, graph: Neo4jGraph) -> Neo4jGraph:
+        for node in graph.nodes:
+            node.id = f"{chunk_index}:{node.id}"
+        for rel in graph.relationships:
+            rel.start_node_id = f"{chunk_index}:{rel.start_node_id}"
+            rel.end_node_id = f"{chunk_index}:{rel.end_node_id}"
+        return graph
+
     # TODO: fix the type of "schema" and "examples"
+    @validate_call
     async def run(
         self,
-        chunks: list[str],
+        chunks: TextChunks,
         schema: BaseModel | dict[str, Any] | None = None,
         examples: Any = None,
         **kwargs: Any,
-    ) -> ERResultModel:
+    ) -> Neo4jGraph:
+        print(chunks)
         schema = schema or {}
         examples = examples or ""
-        # TODO: deal with tools (for function calling)?
-        chunk_results = []
-        for index, chunk in enumerate(chunks):
+        graph = Neo4jGraph()
+        for index, chunk in enumerate(chunks.chunks):
             prompt = self.prompt_template.format(
-                text=chunk, schema=schema, examples=examples
+                text=chunk.text, schema=schema, examples=examples
             )
             llm_result = self.llm.invoke(prompt)
             try:
                 result = json.loads(llm_result.content)
+                print(result)
             except json.JSONDecodeError:
+                print("error")
                 if self.on_error == OnError.RAISE:
+                    logger.error(f"LLM response is not valid JSON {llm_result.content}")
                     raise LLMGenerationError(
                         f"LLM response is not valid JSON {llm_result.content}"
                     )
-                result = {"entities": [], "relations": [], "error": True}
-            chunk_results.append(result)
-        try:
-            er_result = ERResultModel(result=chunk_results)
-            return er_result
-        except ValidationError:
-            raise
+                result = {"nodes": [], "relationships": []}
+            print("Result", result)
+            try:
+                chunk_graph = Neo4jGraph(**result)
+            except ValidationError:
+                if self.on_error == OnError.RAISE:
+                    logger.error(
+                        f"LLM response has improper format {llm_result.content}"
+                    )
+                    raise LLMGenerationError(
+                        f"LLM response has improper format {llm_result.content}"
+                    )
+                chunk_graph = Neo4jGraph()
+            self.update_ids(index, chunk_graph)
+            graph.nodes.extend(chunk_graph.nodes)
+            graph.relationships.extend(chunk_graph.relationships)
+        logger.debug(f"{self.__class__.__name__}: {graph}")
+        return graph
 
 
 if __name__ == "__main__":
@@ -106,11 +109,13 @@ if __name__ == "__main__":
     extractor = LLMEntityRelationExtractor(llm)
     result = asyncio.run(
         extractor.run(
-            chunks=[
-                "Emil Eifrem is the CEO of Neo4j.",
-                "Mark is a Freemason",
-                "Alice belongs to the Freemasonry organization",
-            ],
+            chunks=TextChunks(
+                chunks=[
+                    TextChunk(text="Emil Eifrem is the CEO of Neo4j."),
+                    TextChunk(text="Mark is a Freemason"),
+                    TextChunk(text="Alice belongs to the Freemasonry organization"),
+                ]
+            ),
             schema={
                 "entities": [
                     {

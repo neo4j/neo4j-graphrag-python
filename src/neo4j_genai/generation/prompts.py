@@ -126,18 +126,18 @@ class ERExtractionTemplate(PromptTemplate):
 You are a top-tier algorithm designed for extracting
 information in structured formats to build a knowledge graph.
 
-Extract the entities and specify their type from the following text.
-Also extract the relations between these entities.
+Extract the entities (nodes) and specify their type from the following text.
+Also extract the relationships between these nodes.
 
 Return result as JSON using the following format:
-{{"entities": [{{"id": "0", "label": "", "properties": {{"name": "John"}} }},],
-"relations": [{{"label": "KNOWS", "source_entity": "0", "target_entity": "1", "properties": {{"since": "2024-08-01"}} }}, ]}}
+{{"nodes": [ {{"id": "0", "label": "Person", "properties": [ {{"key": "name", "value": "John"}} ] }}],
+"relationships": [{{"type": "KNOWS", "start_node_id": "0", "end_node_id": "1", "properties": [{{"key": "since", "value": "2024-08-01"}}] }}] }}
 
-Use only fhe following entities and relations (if provided):
+Use only fhe following nodes and relationships (if provided):
 {schema}
 
-Assign a unique ID (string) to each entity, and reuse it to define relationships.
-Do respect the source and target entity types for relationship and
+Assign a unique ID (string) to each node, and reuse it to define relationships.
+Do respect the source and target node types for relationship and
 the relationship direction.
 
 Examples:
