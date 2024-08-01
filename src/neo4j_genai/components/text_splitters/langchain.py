@@ -14,11 +14,8 @@
 from __future__ import annotations
 
 from langchain_text_splitters import TextSplitter as LangChainTextSplitter
-from neo4j_genai.components.text_splitters.base import (
-    TextChunk,
-    TextChunks,
-    TextSplitter,
-)
+from neo4j_genai.components.text_splitters.base import TextSplitter
+from neo4j_genai.components.types import TextChunk, TextChunks
 
 
 class LangChainTextSplitterAdapter(TextSplitter):
