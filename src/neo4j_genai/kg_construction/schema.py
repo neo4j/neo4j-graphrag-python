@@ -26,6 +26,10 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from __future__ import annotations
+
+from typing import Any
+
 from neo4j_genai.exceptions import SchemaValidationError
 from pydantic import BaseModel, Field, model_validator
 
@@ -44,12 +48,12 @@ class Relation(BaseModel):
 
 
 class SchemaConfig(BaseModel):
-    entities: dict[str, Entity]
-    relations: dict[str, Relation]
+    entities: dict[str, dict[str, Any]]
+    relations: dict[str, dict[str, Any]]
     potential_schema: dict[str, list[str]]
 
     @model_validator(mode="before")
-    def check_schema(cls, data):
+    def check_schema(cls, data: dict[str, Any]) -> dict[str, Any]:
         entities = data.get("entities", {}).keys()
         relations = data.get("relations", {}).keys()
         potential_schema = data.get("potential_schema", {})

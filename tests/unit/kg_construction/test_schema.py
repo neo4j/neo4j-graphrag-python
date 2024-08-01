@@ -12,6 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from __future__ import annotations
 
 import pytest
 from neo4j_genai.exceptions import SchemaValidationError
@@ -21,7 +22,7 @@ from pydantic import ValidationError
 
 # Fixtures for test data
 @pytest.fixture
-def valid_entities():
+def valid_entities() -> list[Entity]:
     return [
         Entity(name="PERSON", type="str", description="An individual human being."),
         Entity(
@@ -34,7 +35,7 @@ def valid_entities():
 
 
 @pytest.fixture
-def valid_relations():
+def valid_relations() -> list[Relation]:
     return [
         Relation(name="EMPLOYED_BY", description="Indicates employment relationship."),
         Relation(
@@ -46,7 +47,7 @@ def valid_relations():
 
 
 @pytest.fixture
-def potential_schema():
+def potential_schema() -> dict[str, list[str]]:
     return {
         "PERSON": ["EMPLOYED_BY", "ATTENDED_BY"],
         "ORGANIZATION": ["EMPLOYED_BY", "ORGANIZED_BY"],
@@ -54,7 +55,7 @@ def potential_schema():
 
 
 @pytest.fixture
-def potential_schema_with_invalid_entity():
+def potential_schema_with_invalid_entity() -> dict[str, list[str]]:
     return {
         "PERSON": ["EMPLOYED_BY"],
         "NON_EXISTENT_ENTITY": ["ORGANIZED_BY"],
@@ -62,51 +63,55 @@ def potential_schema_with_invalid_entity():
 
 
 @pytest.fixture
-def potential_schema_with_invalid_relation():
+def potential_schema_with_invalid_relation() -> dict[str, list[str]]:
     return {
         "PERSON": ["EMPLOYED_BY", "NON_EXISTENT_RELATION"],
     }
 
 
 @pytest.fixture
-def schema_builder():
+def schema_builder() -> SchemaBuilder:
     return SchemaBuilder()
 
 
 # Test cases
 def test_create_schema_model_valid_data(
-    schema_builder, valid_entities, valid_relations, potential_schema
-):
+    schema_builder: SchemaBuilder,
+    valid_entities: list[Entity],
+    valid_relations: list[Relation],
+    potential_schema: dict[str, list[str]],
+) -> None:
     schema_instance = schema_builder.create_schema_model(
         valid_entities, valid_relations, potential_schema
     )
 
     assert (
-        schema_instance.entities["PERSON"].description == "An individual human being."
+        schema_instance.entities["PERSON"]["description"]
+        == "An individual human being."
     )
     assert (
-        schema_instance.entities["ORGANIZATION"].description
+        schema_instance.entities["ORGANIZATION"]["description"]
         == "A structured group of people with a common purpose."
     )
-    assert schema_instance.entities["AGE"].description == "Age of a person in years."
+    assert schema_instance.entities["AGE"]["description"] == "Age of a person in years."
 
     assert (
-        schema_instance.relations["EMPLOYED_BY"].description
+        schema_instance.relations["EMPLOYED_BY"]["description"]
         == "Indicates employment relationship."
     )
     assert (
-        schema_instance.relations["ORGANIZED_BY"].description
+        schema_instance.relations["ORGANIZED_BY"]["description"]
         == "Indicates organization responsible for an event."
     )
     assert (
-        schema_instance.relations["ATTENDED_BY"].description
+        schema_instance.relations["ATTENDED_BY"]["description"]
         == "Indicates attendance at an event."
     )
 
     assert schema_instance.potential_schema == potential_schema
 
 
-def test_create_schema_model_missing_description(schema_builder):
+def test_create_schema_model_missing_description(schema_builder: SchemaBuilder) -> None:
     entities = [
         Entity(name="PERSON", type="str", description="An individual human being."),
         Entity(name="ORGANIZATION", type="str", description=""),
@@ -125,14 +130,14 @@ def test_create_schema_model_missing_description(schema_builder):
     schema_instance = schema_builder.create_schema_model(
         entities, relations, potential_schema
     )
-    print(schema_instance)
-    assert schema_instance.entities["ORGANIZATION"].description == ""
-    assert schema_instance.entities["AGE"].description == ""
-    assert schema_instance.relations["ORGANIZED_BY"].description == ""
-    assert schema_instance.relations["ATTENDED_BY"].description == ""
+
+    assert schema_instance.entities["ORGANIZATION"]["description"] == ""
+    assert schema_instance.entities["AGE"]["description"] == ""
+    assert schema_instance.relations["ORGANIZED_BY"]["description"] == ""
+    assert schema_instance.relations["ATTENDED_BY"]["description"] == ""
 
 
-def test_create_schema_model_empty_lists(schema_builder):
+def test_create_schema_model_empty_lists(schema_builder: SchemaBuilder) -> None:
     schema_instance = schema_builder.create_schema_model([], [], {})
 
     assert schema_instance.entities == {}
@@ -140,13 +145,13 @@ def test_create_schema_model_empty_lists(schema_builder):
     assert schema_instance.potential_schema == {}
 
 
-def test_create_schema_model_invalid_data_types(schema_builder):
+def test_create_schema_model_invalid_data_types(schema_builder: SchemaBuilder) -> None:
     with pytest.raises(ValidationError):
         entities = [
             Entity(name="PERSON", type="str", description="An individual human being."),
             Entity(
                 name="ORGANIZATION",
-                type=123,
+                type=123,  # type: ignore
                 description="A structured group of people with a common purpose.",
             ),
         ]
@@ -155,7 +160,8 @@ def test_create_schema_model_invalid_data_types(schema_builder):
                 name="EMPLOYED_BY", description="Indicates employment relationship."
             ),
             Relation(
-                name=456, description="Indicates organization responsible for an event."
+                name=456,  # type: ignore
+                description="Indicates organization responsible for an event.",
             ),
         ]
         potential_schema = {
@@ -168,27 +174,30 @@ def test_create_schema_model_invalid_data_types(schema_builder):
 
 @pytest.mark.asyncio
 async def test_run_method(
-    schema_builder, valid_entities, valid_relations, potential_schema
-):
+    schema_builder: SchemaBuilder,
+    valid_entities: list[Entity],
+    valid_relations: list[Relation],
+    potential_schema: dict[str, list[str]],
+) -> None:
     schema = await schema_builder.run(valid_entities, valid_relations, potential_schema)
 
-    assert schema.entities["PERSON"].description == "An individual human being."
+    assert schema.entities["PERSON"]["description"] == "An individual human being."
     assert (
-        schema.entities["ORGANIZATION"].description
+        schema.entities["ORGANIZATION"]["description"]
         == "A structured group of people with a common purpose."
     )
-    assert schema.entities["AGE"].description == "Age of a person in years."
+    assert schema.entities["AGE"]["description"] == "Age of a person in years."
 
     assert (
-        schema.relations["EMPLOYED_BY"].description
+        schema.relations["EMPLOYED_BY"]["description"]
         == "Indicates employment relationship."
     )
     assert (
-        schema.relations["ORGANIZED_BY"].description
+        schema.relations["ORGANIZED_BY"]["description"]
         == "Indicates organization responsible for an event."
     )
     assert (
-        schema.relations["ATTENDED_BY"].description
+        schema.relations["ATTENDED_BY"]["description"]
         == "Indicates attendance at an event."
     )
 
@@ -196,11 +205,11 @@ async def test_run_method(
 
 
 def test_create_schema_model_invalid_entity(
-    schema_builder,
-    valid_entities,
-    valid_relations,
-    potential_schema_with_invalid_entity,
-):
+    schema_builder: SchemaBuilder,
+    valid_entities: list[Entity],
+    valid_relations: list[Relation],
+    potential_schema_with_invalid_entity: dict[str, list[str]],
+) -> None:
     with pytest.raises(SchemaValidationError) as exc_info:
         schema_builder.create_schema_model(
             valid_entities, valid_relations, potential_schema_with_invalid_entity
@@ -211,11 +220,11 @@ def test_create_schema_model_invalid_entity(
 
 
 def test_create_schema_model_invalid_relation(
-    schema_builder,
-    valid_entities,
-    valid_relations,
-    potential_schema_with_invalid_relation,
-):
+    schema_builder: SchemaBuilder,
+    valid_entities: list[Entity],
+    valid_relations: list[Relation],
+    potential_schema_with_invalid_relation: dict[str, list[str]],
+) -> None:
     with pytest.raises(SchemaValidationError) as exc_info:
         schema_builder.create_schema_model(
             valid_entities, valid_relations, potential_schema_with_invalid_relation
