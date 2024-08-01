@@ -52,7 +52,7 @@ def test_graphrag_happy_path(
     llm.invoke.return_value = LLMResponse(content="some text")
 
     result = rag.search(
-        query="biology",
+        query_text="biology",
         retriever_config={
             "top_k": 2,
         },
@@ -96,7 +96,7 @@ def test_graphrag_happy_path_return_context(
     llm.invoke.return_value = LLMResponse(content="some text")
 
     result = rag.search(
-        query="biology",
+        query_text="biology",
         retriever_config={
             "top_k": 2,
         },
@@ -142,7 +142,7 @@ def test_graphrag_happy_path_examples(
     llm.invoke.return_value = LLMResponse(content="some text")
 
     result = rag.search(
-        query="biology",
+        query_text="biology",
         retriever_config={
             "top_k": 2,
         },
@@ -186,7 +186,7 @@ def test_graphrag_llm_error(
 
     with pytest.raises(LLMGenerationError):
         rag.search(
-            query="biology",
+            query_text="biology",
         )
 
 
@@ -203,5 +203,5 @@ def test_graphrag_retrieval_error(
 
     with pytest.raises(TypeError):
         rag.search(
-            query="biology",
+            query_text="biology",
         )

@@ -39,7 +39,7 @@ class RagInitModel(BaseModel):
 
 
 class RagSearchModel(BaseModel):
-    query: str
+    query_text: str
     examples: str = ""
     retriever_config: dict[str, Any] = {}
     return_context: bool = False

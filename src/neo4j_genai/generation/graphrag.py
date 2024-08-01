@@ -53,7 +53,7 @@ class GraphRAG:
 
     def search(
         self,
-        query: str,
+        query_text: str,
         examples: str = "",
         retriever_config: Optional[dict[str, Any]] = None,
         return_context: bool = False,
@@ -64,7 +64,7 @@ class GraphRAG:
         3. Generation: answer generation with LLM
 
         Args:
-            query (str): The user question
+            query_text (str): The user question
             examples: Examples added to the LLM prompt.
             retriever_config (Optional[dict]): Parameters passed to the retriever
                 search method; e.g.: top_k
@@ -76,20 +76,20 @@ class GraphRAG:
         """
         try:
             validated_data = RagSearchModel(
-                query=query,
+                query_text=query_text,
                 examples=examples,
                 retriever_config=retriever_config or {},
                 return_context=return_context,
             )
         except ValidationError as e:
             raise SearchValidationError(e.errors())
-        query = validated_data.query
+        query_text = validated_data.query_text
         retriever_result: RetrieverResult = self.retriever.search(
-            query_text=query, **validated_data.retriever_config
+            query_text=query_text, **validated_data.retriever_config
         )
         context = "\n".join(item.content for item in retriever_result.items)
         prompt = self.prompt_template.format(
-            query=query, context=context, examples=validated_data.examples
+            query_text=query_text, context=context, examples=validated_data.examples
         )
         logger.debug(f"RAG: retriever_result={retriever_result}")
         logger.debug(f"RAG: prompt={prompt}")
