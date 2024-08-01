@@ -4,10 +4,10 @@ import enum
 import json
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from neo4j_genai.exceptions import LLMGenerationError
-from neo4j_genai.generation.prompts import ERExtractionTemplate
+from neo4j_genai.generation.prompts import ERExtractionTemplate, PromptTemplate
 from neo4j_genai.llm import LLMInterface
 from neo4j_genai.pipeline.component import Component, DataModel
 
@@ -19,7 +19,7 @@ class EntityModel(BaseModel):
 
 
 class RelationModel(BaseModel):
-    id: str
+    # id: str
     label: str
     source_entity: str
     target_entity: str
@@ -51,11 +51,15 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
     def __init__(
         self,
         llm: LLMInterface,
-        prompt_template: ERExtractionTemplate = ERExtractionTemplate(),
+        prompt_template: ERExtractionTemplate | str = ERExtractionTemplate(),
         on_error: OnError = OnError.RAISE,
     ) -> None:
         self.llm = llm  # with response_format={ "type": "json_object" },
-        self.prompt_template = prompt_template
+        if isinstance(prompt_template, str):
+            template = PromptTemplate(prompt_template, expected_inputs=[])
+        else:
+            template = prompt_template
+        self.prompt_template = template
         self.on_error = on_error
 
     # TODO: fix the type of "schema" and "examples"
@@ -66,6 +70,8 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         examples: Any = None,
         **kwargs: Any,
     ) -> ERResultModel:
+        schema = schema or {}
+        examples = examples or ""
         # TODO: deal with tools (for function calling)?
         chunk_results = []
         for index, chunk in enumerate(chunks):
@@ -82,38 +88,49 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                     )
                 result = {"entities": [], "relations": [], "error": True}
             chunk_results.append(result)
-        return ERResultModel(result=chunk_results)
+        try:
+            er_result = ERResultModel(result=chunk_results)
+            return er_result
+        except ValidationError:
+            raise
 
 
 if __name__ == "__main__":
+    import asyncio
+
     from neo4j_genai.llm import OpenAILLM
 
     llm = OpenAILLM(
         model_name="gpt-4o", model_params={"response_format": {"type": "json_object"}}
     )
     extractor = LLMEntityRelationExtractor(llm)
-    result = extractor.run(
-        chunks=[
-            "Emil Eifrem is the CEO of Neo4j.",
-            "Mark is a Freemason",
-            "Alice belongs to the Freemasonry organization",
-        ],
-        schema={
-            "entities": [
-                {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]},
-                {
-                    "label": "Organization",
-                    "properties": [{"name": "name", "type": "STRING"}],
-                },
+    result = asyncio.run(
+        extractor.run(
+            chunks=[
+                "Emil Eifrem is the CEO of Neo4j.",
+                "Mark is a Freemason",
+                "Alice belongs to the Freemasonry organization",
             ],
-            "relations": [
-                {
-                    "label": "MEMBER_OF",
-                    "source_node_type": "Person",
-                    "target_node_type": "Organization",
-                    "properties": [],
-                },
-            ],
-        },
+            schema={
+                "entities": [
+                    {
+                        "label": "Person",
+                        "properties": [{"name": "name", "type": "STRING"}],
+                    },
+                    {
+                        "label": "Organization",
+                        "properties": [{"name": "name", "type": "STRING"}],
+                    },
+                ],
+                "relations": [
+                    {
+                        "label": "BELONGS_TO",
+                        "source_node_type": "Person",
+                        "target_node_type": "Organization",
+                        "properties": [],
+                    },
+                ],
+            },
+        )
     )
     print(result)

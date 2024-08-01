@@ -84,10 +84,10 @@ async def test_extractor_llm_invoke_failed() -> None:
 
 
 @pytest.mark.asyncio
-async def test_extractor_llm_bad_json() -> None:
+async def test_extractor_llm_badly_formatted_json() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.invoke.return_value = LLMResponse(
-        content='{"entities": [{"id": 0, "label": "Person", "properties": {}}], "relations": [}'
+        content='{"entities": [{"id": "0", "label": "Person", "properties": {}}], "relations": [}'
     )
 
     extractor = LLMEntityRelationExtractor(
@@ -99,7 +99,25 @@ async def test_extractor_llm_bad_json() -> None:
 
 
 @pytest.mark.asyncio
-async def test_extractor_llm_bad_json_do_not_raise() -> None:
+async def test_extractor_llm_invalid_json() -> None:
+    """Test what happens when the returned JSON is valid JSON but
+    does not match the expected Pydantic model"""
+    llm = MagicMock(spec=LLMInterface)
+    llm.invoke.return_value = LLMResponse(
+        # missing "label" for entity
+        content='{"entities": [{"id": 0, "entity_type": "Person", "properties": {}}], "relations": []}'
+    )
+
+    extractor = LLMEntityRelationExtractor(
+        llm=llm,
+    )
+    chunks = ["some text"]
+    with pytest.raises(ValidationError):
+        await extractor.run(chunks=chunks)
+
+
+@pytest.mark.asyncio
+async def test_extractor_llm_badly_formatted_json_do_not_raise() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.invoke.return_value = LLMResponse(
         content='{"entities": [{"id": "0", "label": "Person", "properties": {}}], "relations": [}'
@@ -112,3 +130,14 @@ async def test_extractor_llm_bad_json_do_not_raise() -> None:
     chunks = ["some text"]
     res = await extractor.run(chunks=chunks)
     assert res.result[0].error is True
+
+
+@pytest.mark.asyncio
+async def test_extractor_custom_prompt() -> None:
+    llm = MagicMock(spec=LLMInterface)
+    llm.invoke.return_value = LLMResponse(content='{"entities": [], "relations": []}')
+
+    extractor = LLMEntityRelationExtractor(llm=llm, prompt_template="this is my prompt")
+    chunks = ["some text"]
+    await extractor.run(chunks=chunks)
+    llm.invoke.assert_called_once_with("this is my prompt")
