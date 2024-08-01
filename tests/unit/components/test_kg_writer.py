@@ -138,6 +138,6 @@ async def test_run(driver: MagicMock) -> None:
     )
     driver.execute_query.assert_any_call(
         UPSERT_RELATIONSHIP_QUERY.format(
-            tpe="RELATIONSHIP", start_node_id="1", end_node_id="2", properties="{}"
+            type="RELATIONSHIP", start_node_id="1", end_node_id="2", properties="{}"
         )
     )
