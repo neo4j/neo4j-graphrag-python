@@ -21,7 +21,7 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError, validate_call
 
-from neo4j_genai.components.types import Neo4jGraph, TextChunk, TextChunks
+from neo4j_genai.components.types import Neo4jGraph, TextChunks
 from neo4j_genai.exceptions import LLMGenerationError
 from neo4j_genai.generation.prompts import ERExtractionTemplate, PromptTemplate
 from neo4j_genai.llm import LLMInterface
