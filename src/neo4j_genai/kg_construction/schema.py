@@ -31,6 +31,7 @@ from __future__ import annotations
 from typing import Any
 
 from neo4j_genai.exceptions import SchemaValidationError
+from neo4j_genai.pipeline import Component, DataModel
 from pydantic import BaseModel, Field, model_validator
 
 
@@ -47,7 +48,7 @@ class Relation(BaseModel):
     description: str
 
 
-class SchemaConfig(BaseModel):
+class SchemaConfig(DataModel):
     entities: dict[str, dict[str, Any]]
     relations: dict[str, dict[str, Any]]
     potential_schema: dict[str, list[str]]
@@ -74,13 +75,30 @@ class SchemaConfig(BaseModel):
         return data
 
 
-class SchemaBuilder:
+class SchemaBuilder(Component):
+    """
+    A builder class for constructing SchemaConfig objects from given entities,
+    relations, and their interrelationships defined in a potential schema.
+    """
+
     @staticmethod
     def create_schema_model(
         entities: list[Entity],
         relations: list[Relation],
         potential_schema: dict[str, list[str]],
     ) -> SchemaConfig:
+        """
+        Creates a SchemaConfig object from lists of Entity and Relation objects
+        and a dictionary defining potential relationships.
+
+        Args:
+            entities (list[Entity]): List of Entity objects.
+            relations (list[Relation]): List of Relation objects.
+            potential_schema (dict[str, list[str]]): Dictionary mapping entity names to lists of relation names.
+
+        Returns:
+            SchemaConfig: A configured schema object.
+        """
         entity_dict = {entity.name: entity.dict() for entity in entities}
         relation_dict = {relation.name: relation.dict() for relation in relations}
 
@@ -96,4 +114,15 @@ class SchemaBuilder:
         relations: list[Relation],
         potential_schema: dict[str, list[str]],
     ) -> SchemaConfig:
+        """
+        Asynchronously constructs and returns a SchemaConfig object.
+
+        Args:
+            entities (list[Entity]): List of Entity objects.
+            relations (list[Relation]): List of Relation objects.
+            potential_schema (dict[str, list[str]]): Dictionary mapping entity names to lists of relation names.
+
+        Returns:
+            SchemaConfig: A configured schema object, constructed asynchronously.
+        """
         return self.create_schema_model(entities, relations, potential_schema)
