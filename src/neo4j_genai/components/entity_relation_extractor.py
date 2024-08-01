@@ -73,7 +73,6 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         examples: Any = None,
         **kwargs: Any,
     ) -> Neo4jGraph:
-        print(chunks)
         schema = schema or {}
         examples = examples or ""
         graph = Neo4jGraph()
@@ -84,16 +83,13 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             llm_result = self.llm.invoke(prompt)
             try:
                 result = json.loads(llm_result.content)
-                print(result)
             except json.JSONDecodeError:
-                print("error")
                 if self.on_error == OnError.RAISE:
                     logger.error(f"LLM response is not valid JSON {llm_result.content}")
                     raise LLMGenerationError(
                         f"LLM response is not valid JSON {llm_result.content}"
                     )
                 result = {"nodes": [], "relationships": []}
-            print("Result", result)
             try:
                 chunk_graph = Neo4jGraph(**result)
             except ValidationError:
@@ -110,46 +106,3 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             graph.relationships.extend(chunk_graph.relationships)
         logger.debug(f"{self.__class__.__name__}: {graph}")
         return graph
-
-
-if __name__ == "__main__":
-    import asyncio
-
-    from neo4j_genai.llm import OpenAILLM
-
-    llm = OpenAILLM(
-        model_name="gpt-4o", model_params={"response_format": {"type": "json_object"}}
-    )
-    extractor = LLMEntityRelationExtractor(llm)
-    result = asyncio.run(
-        extractor.run(
-            chunks=TextChunks(
-                chunks=[
-                    TextChunk(text="Emil Eifrem is the CEO of Neo4j."),
-                    TextChunk(text="Mark is a Freemason"),
-                    TextChunk(text="Alice belongs to the Freemasonry organization"),
-                ]
-            ),
-            schema={
-                "entities": [
-                    {
-                        "label": "Person",
-                        "properties": [{"name": "name", "type": "STRING"}],
-                    },
-                    {
-                        "label": "Organization",
-                        "properties": [{"name": "name", "type": "STRING"}],
-                    },
-                ],
-                "relations": [
-                    {
-                        "label": "BELONGS_TO",
-                        "source_node_type": "Person",
-                        "target_node_type": "Organization",
-                        "properties": [],
-                    },
-                ],
-            },
-        )
-    )
-    print(result)
