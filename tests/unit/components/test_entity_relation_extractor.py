@@ -8,7 +8,6 @@ from neo4j_genai.components.entity_relation_extractor import (
 from neo4j_genai.components.types import Neo4jGraph, TextChunk, TextChunks
 from neo4j_genai.exceptions import LLMGenerationError
 from neo4j_genai.llm import LLMInterface, LLMResponse
-from pydantic import ValidationError
 
 
 @pytest.mark.asyncio
