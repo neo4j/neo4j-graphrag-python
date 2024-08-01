@@ -64,7 +64,7 @@ def test_t2c_retriever_invalid_neo4j_schema(
     _verify_version_mock: MagicMock, driver: MagicMock, llm: MagicMock
 ) -> None:
     with pytest.raises(RetrieverInitializationError) as exc_info:
-        Text2CypherRetriever(driver=driver, llm=llm, neo4j_schema=42)  # type: ignore
+        Text2CypherRetriever(driver=driver, llm=llm, neo4j_schema=42)
 
     assert "neo4j_schema" in str(exc_info.value)
     assert "Input should be a valid string" in str(exc_info.value)
@@ -93,7 +93,7 @@ def test_t2c_retriever_invalid_search_examples(
             driver=driver,
             llm=llm,
             neo4j_schema="dummy-text",
-            examples=42,  # type: ignore
+            examples=42,
         )
 
     assert "examples" in str(exc_info.value)
@@ -115,7 +115,7 @@ def test_t2c_retriever_happy_path(
         driver=driver, llm=llm, neo4j_schema=neo4j_schema, examples=examples
     )
     retriever.llm.invoke.return_value = LLMResponse(content=t2c_query)
-    retriever.driver.execute_query.return_value = (  # type: ignore
+    retriever.driver.execute_query.return_value = (
         [neo4j_record],
         None,
         None,
@@ -128,7 +128,7 @@ def test_t2c_retriever_happy_path(
     )
     retriever.search(query_text=query_text)
     retriever.llm.invoke.assert_called_once_with(prompt)
-    retriever.driver.execute_query.assert_called_once_with(query_=t2c_query)  # type: ignore
+    retriever.driver.execute_query.assert_called_once_with(query_=t2c_query)
 
 
 @patch("neo4j_genai.retrievers.Text2CypherRetriever._verify_version")
@@ -193,7 +193,7 @@ def test_t2c_retriever_initialization_with_custom_prompt(
     prompt = "This is a custom prompt."
     with caplog.at_level(logging.DEBUG):
         retriever = Text2CypherRetriever(driver=driver, llm=llm, custom_prompt=prompt)
-        retriever.driver.execute_query.return_value = (  # type: ignore
+        retriever.driver.execute_query.return_value = (
             [neo4j_record],
             None,
             None,
@@ -224,7 +224,7 @@ def test_t2c_retriever_initialization_with_custom_prompt_and_schema_and_examples
             examples=examples,
         )
 
-        retriever.driver.execute_query.return_value = (  # type: ignore
+        retriever.driver.execute_query.return_value = (
             [neo4j_record],
             None,
             None,
@@ -232,3 +232,13 @@ def test_t2c_retriever_initialization_with_custom_prompt_and_schema_and_examples
         retriever.search(query_text="test")
 
     assert f"Text2CypherRetriever prompt: {prompt}" in caplog.text
+
+
+@patch("neo4j_genai.retrievers.Text2CypherRetriever._verify_version")
+def test_t2c_retriever_invalid_custom_prompt_type(
+    _verify_version_mock: MagicMock, driver: MagicMock, llm: MagicMock
+) -> None:
+    with pytest.raises(RetrieverInitializationError) as exc_info:
+        Text2CypherRetriever(driver=driver, llm=llm, custom_prompt=42)
+
+    assert "Input should be a valid string" in str(exc_info.value)
