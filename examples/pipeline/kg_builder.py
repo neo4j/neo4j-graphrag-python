@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import asyncio
-import logging
+import logging.config
 
 import neo4j
 from langchain_text_splitters import CharacterTextSplitter
@@ -25,8 +25,25 @@ from neo4j_genai.components.text_splitters.langchain import LangChainTextSplitte
 from neo4j_genai.llm import OpenAILLM
 from neo4j_genai.pipeline import Component, DataModel, Pipeline
 
-# logging.getLogger(__name__).setLevel(logging.DEBUG)
-# logging.basicConfig(level=logging.DEBUG)
+# set log level to DEBUG for all neo4j_genai.* loggers
+logging.config.dictConfig(
+    {
+        "version": 1,
+        "handlers": {
+            "console": {
+                "class": "logging.StreamHandler",
+            }
+        },
+        "loggers": {
+            "root": {
+                "handlers": ["console"],
+            },
+            "neo4j_genai": {
+                "level": "DEBUG",
+            },
+        },
+    }
+)
 
 
 class SchemaModel(DataModel):
