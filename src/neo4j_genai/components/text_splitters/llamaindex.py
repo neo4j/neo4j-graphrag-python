@@ -1,3 +1,4 @@
+#  Copyright (c) "Neo4j"
 #  Neo4j Sweden AB [https://neo4j.com]
 #  #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,11 +16,8 @@ from __future__ import annotations
 
 from llama_index.core.node_parser import TextSplitter as LlamaIndexTextSplitter
 
-from neo4j_genai.components.text_splitters.base import (
-    TextChunk,
-    TextChunks,
-    TextSplitter,
-)
+from neo4j_genai.components.text_splitters.base import TextSplitter
+from neo4j_genai.components.types import TextChunk, TextChunks
 
 
 class LlamaIndexTextSplitterAdapter(TextSplitter):

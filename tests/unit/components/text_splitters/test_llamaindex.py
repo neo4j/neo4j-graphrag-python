@@ -1,3 +1,4 @@
+#  Copyright (c) "Neo4j"
 #  Neo4j Sweden AB [https://neo4j.com]
 #  #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,10 +14,10 @@
 #  limitations under the License.
 import pytest
 from llama_index.core.node_parser.text.sentence import SentenceSplitter
-from neo4j_genai.components.text_splitters.base import TextChunk, TextChunks
 from neo4j_genai.components.text_splitters.llamaindex import (
     LlamaIndexTextSplitterAdapter,
 )
+from neo4j_genai.components.types import TextChunk, TextChunks
 
 text = """
 Lorem ipsum dolor sit amet, consectetur adipiscing elit.

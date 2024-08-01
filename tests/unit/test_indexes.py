@@ -24,6 +24,7 @@ from neo4j_genai.indexes import (
     create_vector_index,
     drop_index_if_exists,
     upsert_vector,
+    upsert_vector_on_relationship,
 )
 
 
@@ -179,13 +180,13 @@ def test_upsert_vector_happy_path(driver: MagicMock) -> None:
 
     upsert_vector(driver, id, embedding_property, vector)
 
-    upsert_query = """
-        MATCH (n)
-        WHERE elementId(n) = $id
-        WITH n
-        CALL db.create.setNodeVectorProperty(n, $embedding_property, $vector)
-        RETURN n
-        """
+    upsert_query = (
+        "MATCH (n) "
+        "WHERE elementId(n) = $id "
+        "WITH n "
+        "CALL db.create.setNodeVectorProperty(n, $embedding_property, $vector) "
+        "RETURN n"
+    )
 
     driver.execute_query.assert_called_once_with(
         upsert_query,
@@ -194,7 +195,42 @@ def test_upsert_vector_happy_path(driver: MagicMock) -> None:
     )
 
 
-def test_upsert_vector_raises_error_with_neo4j_insertion_error(
+def test_upsert_vector_on_relationship_happy_path(driver: MagicMock) -> None:
+    id = 1
+    embedding_property = "embedding"
+    vector = [1.0, 2.0, 3.0]
+
+    upsert_vector_on_relationship(driver, id, embedding_property, vector)
+
+    upsert_query = (
+        "MATCH ()-[r]->() "
+        "WHERE elementId(r) = $id "
+        "WITH r "
+        "CALL db.create.setRelationshipVectorProperty(r, $embedding_property, $vector) "
+        "RETURN r"
+    )
+
+    driver.execute_query.assert_called_once_with(
+        upsert_query,
+        {"id": id, "embedding_property": embedding_property, "vector": vector},
+        database_=None,
+    )
+
+
+def test_upsert_vector_on_relationship_raises_neo4j_insertion_error(
+    driver: MagicMock,
+) -> None:
+    id = 1
+    embedding_property = "embedding"
+    vector = [1.0, 2.0, 3.0]
+    driver.execute_query.side_effect = neo4j.exceptions.ClientError
+
+    with pytest.raises(Neo4jInsertionError) as excinfo:
+        upsert_vector_on_relationship(driver, id, embedding_property, vector)
+    assert "Upserting vector to Neo4j failed" in str(excinfo)
+
+
+def test_upsert_vector_raises_neo4j_insertion_error(
     driver: MagicMock,
 ) -> None:
     id = 1
