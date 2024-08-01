@@ -43,16 +43,39 @@ class TextChunks(DataModel):
 
 
 class Neo4jProperty(BaseModel):
+    """Represents a Neo4j property.
+
+    Attributes:
+        key (str): The property name.
+        value (Any): The property value.
+    """
+
     key: str
     value: Any
 
 
 class Neo4jEmbeddingProperty(BaseModel):
+    """Represents a Neo4j embedding property.
+
+    Attributes:
+        key (str): The property name.
+        value (list[float]): The embedding vector.
+    """
+
     key: str
     value: list[float]
 
 
 class Neo4jNode(BaseModel):
+    """Represents a Neo4j node.
+
+    Attributes:
+        id (str): The ID of the node.
+        label (str): The label of the node.
+        properties (Optional[list[Neo4jProperty]]): A list of properties associated with the node.
+        embedding_properties (Optional[list[Neo4jEmbeddingProperty]]): A list of embedding properties associated with the node.
+    """
+
     id: str
     label: str
     properties: Optional[list[Neo4jProperty]] = None
@@ -60,13 +83,30 @@ class Neo4jNode(BaseModel):
 
 
 class Neo4jRelationship(BaseModel):
+    """Represents a Neo4j relationship.
+
+    Attributes:
+        start_node_id (str): The ID of the start node.
+        end_node_id (str): The ID of the end node.
+        type (str): The relationship type.
+        properties (Optional[list[Neo4jProperty]]): A list of properties associated with the relationship.
+        embedding_properties (Optional[list[Neo4jEmbeddingProperty]]): A list of embedding properties associated with the relationship.
+    """
+
     start_node_id: str
     end_node_id: str
-    label: str
+    type: str
     properties: Optional[list[Neo4jProperty]] = None
     embedding_properties: Optional[list[Neo4jEmbeddingProperty]] = None
 
 
 class Neo4jGraph(BaseModel):
+    """Represents a Neo4j graph.
+
+    Attributes:
+        nodes (list[Neo4jNode]): A list of nodes in the graph.
+        relationships (list[Neo4jRelationship]): A list of relationships in the graph.
+    """
+
     nodes: list[Neo4jNode]
     relationships: list[Neo4jRelationship]

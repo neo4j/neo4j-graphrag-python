@@ -48,7 +48,7 @@ async def test_kg_writer(driver: neo4j.Driver) -> None:
         ],
     )
     relationship = Neo4jRelationship(
-        start_node_id="1", end_node_id="2", label="NEXT_CHUNK"
+        start_node_id="1", end_node_id="2", type="NEXT_CHUNK"
     )
     graph = Neo4jGraph(nodes=[start_node, end_node], relationships=[relationship])
 
@@ -87,7 +87,7 @@ async def test_kg_writer(driver: neo4j.Driver) -> None:
             assert node_b.get(embedding_prop.key) == [1.0, 2.0, 3.0]
 
     rel = record["r"]
-    assert rel.type == relationship.label
+    assert rel.type == relationship.type
     assert relationship.start_node_id and relationship.end_node_id in [
         str(node.get("id")) for node in rel.nodes
     ]

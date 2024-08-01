@@ -76,13 +76,13 @@ def test_upsert_relationship(driver: MagicMock) -> None:
     rel = Neo4jRelationship(
         start_node_id="1",
         end_node_id="2",
-        label="RELATIONSHIP",
+        type="RELATIONSHIP",
         properties=[Neo4jProperty(key="key", value="value")],
     )
     neo4j_writer._upsert_relationship(rel=rel)
     driver.execute_query.assert_called_once_with(
         UPSERT_RELATIONSHIP_QUERY.format(
-            label="RELATIONSHIP",
+            type="RELATIONSHIP",
             start_node_id="1",
             end_node_id="2",
             properties="{key: value}",
@@ -95,7 +95,7 @@ def test_upsert_relationship_with_embedding(driver: MagicMock) -> None:
     rel = Neo4jRelationship(
         start_node_id="1",
         end_node_id="2",
-        label="RELATIONSHIP",
+        type="RELATIONSHIP",
         properties=[Neo4jProperty(key="key", value="value")],
         embedding_properties=[
             Neo4jEmbeddingProperty(key="embeddingProp", value=[1.0, 2.0, 3.0])
@@ -105,7 +105,7 @@ def test_upsert_relationship_with_embedding(driver: MagicMock) -> None:
     neo4j_writer._upsert_relationship(rel=rel)
     driver.execute_query.assert_any_call(
         UPSERT_RELATIONSHIP_QUERY.format(
-            label="RELATIONSHIP",
+            type="RELATIONSHIP",
             start_node_id="1",
             end_node_id="2",
             properties="{key: value}",
@@ -130,7 +130,7 @@ def test_upsert_relationship_with_embedding(driver: MagicMock) -> None:
 async def test_run(driver: MagicMock) -> None:
     neo4j_writer = Neo4jWriter(driver=driver)
     node = Neo4jNode(id="1", label="Label")
-    rel = Neo4jRelationship(start_node_id="1", end_node_id="2", label="RELATIONSHIP")
+    rel = Neo4jRelationship(start_node_id="1", end_node_id="2", type="RELATIONSHIP")
     graph = Neo4jGraph(nodes=[node], relationships=[rel])
     await neo4j_writer.run(graph=graph)
     driver.execute_query.assert_any_call(
@@ -138,6 +138,6 @@ async def test_run(driver: MagicMock) -> None:
     )
     driver.execute_query.assert_any_call(
         UPSERT_RELATIONSHIP_QUERY.format(
-            label="RELATIONSHIP", start_node_id="1", end_node_id="2", properties="{}"
+            tpe="RELATIONSHIP", start_node_id="1", end_node_id="2", properties="{}"
         )
     )

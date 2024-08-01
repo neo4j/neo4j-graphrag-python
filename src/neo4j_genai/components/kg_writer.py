@@ -26,6 +26,12 @@ from pydantic import validate_call
 
 
 class KGWriterModel(DataModel):
+    """Data model for the output of the Knowledge Graph writer.
+
+    Attributes:
+        status (Literal["SUCCESS", "FAILURE"]): Whether or not the write operation was successful.
+    """
+
     status: Literal["SUCCESS", "FAILURE"]
 
 
@@ -103,7 +109,7 @@ class Neo4jWriter(KGWriter):
         query = UPSERT_RELATIONSHIP_QUERY.format(
             start_node_id=rel.start_node_id,
             end_node_id=rel.end_node_id,
-            label=rel.label,
+            type=rel.type,
             properties=properties,
         )
         result = self.driver.execute_query(query)
