@@ -115,7 +115,7 @@ def test_t2c_retriever_happy_path(
         driver=driver, llm=llm, neo4j_schema=neo4j_schema, examples=examples
     )
     retriever.llm.invoke.return_value = LLMResponse(content=t2c_query)
-    retriever.driver.execute_query.return_value = (
+    retriever.driver.execute_query.return_value = (  # type: ignore
         [neo4j_record],
         None,
         None,
