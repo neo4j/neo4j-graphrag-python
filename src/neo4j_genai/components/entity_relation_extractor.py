@@ -76,7 +76,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         schema = schema or {}
         examples = examples or ""
         graph = Neo4jGraph()
-        for index, chunk in enumerate(chunks.chunks):
+        for chunk_index, chunk in enumerate(chunks.chunks):
             prompt = self.prompt_template.format(
                 text=chunk.text, schema=schema, examples=examples
             )
@@ -85,23 +85,27 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                 result = json.loads(llm_result.content)
             except json.JSONDecodeError:
                 if self.on_error == OnError.RAISE:
-                    logger.error(f"LLM response is not valid JSON {llm_result.content}")
                     raise LLMGenerationError(
                         f"LLM response is not valid JSON {llm_result.content}"
+                    )
+                else:
+                    logger.error(
+                        f"LLM response is not valid JSON {llm_result.content} for chunk_index={chunk_index}"
                     )
                 result = {"nodes": [], "relationships": []}
             try:
                 chunk_graph = Neo4jGraph(**result)
             except ValidationError:
                 if self.on_error == OnError.RAISE:
-                    logger.error(
-                        f"LLM response has improper format {llm_result.content}"
-                    )
                     raise LLMGenerationError(
-                        f"LLM response has improper format {llm_result.content}"
+                        f"LLM response has improper format {result}"
+                    )
+                else:
+                    logger.error(
+                        f"LLM response has improper format {result} for chunk_index={chunk_index}"
                     )
                 chunk_graph = Neo4jGraph()
-            self.update_ids(index, chunk_graph)
+            self.update_ids(chunk_index, chunk_graph)
             graph.nodes.extend(chunk_graph.nodes)
             graph.relationships.extend(chunk_graph.relationships)
         logger.debug(f"{self.__class__.__name__}: {graph}")
