@@ -64,7 +64,7 @@ def test_t2c_retriever_invalid_neo4j_schema(
     _verify_version_mock: MagicMock, driver: MagicMock, llm: MagicMock
 ) -> None:
     with pytest.raises(RetrieverInitializationError) as exc_info:
-        Text2CypherRetriever(driver=driver, llm=llm, neo4j_schema=42)
+        Text2CypherRetriever(driver=driver, llm=llm, neo4j_schema=42)  # type: ignore
 
     assert "neo4j_schema" in str(exc_info.value)
     assert "Input should be a valid string" in str(exc_info.value)
