@@ -93,7 +93,7 @@ def test_t2c_retriever_invalid_search_examples(
             driver=driver,
             llm=llm,
             neo4j_schema="dummy-text",
-            examples=42,
+            examples=42,  # type: ignore
         )
 
     assert "examples" in str(exc_info.value)
