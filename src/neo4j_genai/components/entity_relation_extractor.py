@@ -17,7 +17,7 @@ from __future__ import annotations
 import enum
 import json
 import logging
-from typing import Any
+from typing import Any, Dict, Union
 
 from pydantic import BaseModel, ValidationError, validate_call
 
@@ -69,7 +69,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
     async def run(
         self,
         chunks: TextChunks,
-        schema: BaseModel | dict[str, Any] | None = None,
+        schema: Union[BaseModel, Dict[str, Any], None] = None,
         examples: Any = None,
         **kwargs: Any,
     ) -> Neo4jGraph:
