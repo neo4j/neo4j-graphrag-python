@@ -128,7 +128,7 @@ def test_t2c_retriever_happy_path(
     )
     retriever.search(query_text=query_text)
     retriever.llm.invoke.assert_called_once_with(prompt)
-    retriever.driver.execute_query.assert_called_once_with(query_=t2c_query)
+    retriever.driver.execute_query.assert_called_once_with(query_=t2c_query)  # type: ignore
 
 
 @patch("neo4j_genai.retrievers.Text2CypherRetriever._verify_version")
