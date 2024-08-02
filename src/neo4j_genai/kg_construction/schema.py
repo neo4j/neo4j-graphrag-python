@@ -28,11 +28,11 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from neo4j_genai.exceptions import SchemaValidationError
 from neo4j_genai.pipeline import Component, DataModel
-from pydantic import BaseModel, Field, model_validator, ValidationError
+from pydantic import BaseModel, Field, ValidationError, model_validator
 
 
 class Entity(BaseModel):

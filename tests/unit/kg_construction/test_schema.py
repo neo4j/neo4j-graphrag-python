@@ -96,10 +96,7 @@ def test_create_schema_model_valid_data(
         schema_instance.entities["PERSON"]["description"]
         == "An individual human being."
     )
-    assert (
-        schema_instance.entities["PERSON"]["properties"]
-        == ["birth date", "name"]
-    )
+    assert schema_instance.entities["PERSON"]["properties"] == ["birth date", "name"]
     assert (
         schema_instance.entities["ORGANIZATION"]["description"]
         == "A structured group of people with a common purpose."
@@ -118,10 +115,10 @@ def test_create_schema_model_valid_data(
         schema_instance.relations["ATTENDED_BY"]["description"]
         == "Indicates attendance at an event."
     )
-    assert (
-        schema_instance.relations["EMPLOYED_BY"]["properties"]
-        == ["start_time", "end_time"]
-    )
+    assert schema_instance.relations["EMPLOYED_BY"]["properties"] == [
+        "start_time",
+        "end_time",
+    ]
 
     assert schema_instance.potential_schema == potential_schema
 
@@ -176,6 +173,42 @@ def test_create_schema_model_invalid_data_types(schema_builder: SchemaBuilder) -
             ),
             Relation(
                 name=456,  # type: ignore
+                description="Indicates organization responsible for an event.",
+            ),
+        ]
+        potential_schema = {
+            "PERSON": ["EMPLOYED_BY", "ATTENDED_BY"],
+            "ORGANIZATION": ["EMPLOYED_BY", "ORGANIZED_BY"],
+        }
+
+        schema_builder.create_schema_model(entities, relations, potential_schema)
+
+
+def test_create_schema_model_invalid_properties_types(
+    schema_builder: SchemaBuilder,
+) -> None:
+    with pytest.raises(ValidationError):
+        entities = [
+            Entity(
+                name="PERSON",
+                type="str",
+                description="An individual human being.",
+                properties=[42, 1337],
+            ),
+            Entity(
+                name="ORGANIZATION",
+                type="str",
+                description="A structured group of people with a common purpose.",
+            ),
+        ]
+        relations = [
+            Relation(
+                name="EMPLOYED_BY",
+                description="Indicates employment relationship.",
+                properties=[42, 1337],
+            ),
+            Relation(
+                name="ORGANIZED_BY",
                 description="Indicates organization responsible for an event.",
             ),
         ]
@@ -247,3 +280,48 @@ def test_create_schema_model_invalid_relation(
     assert "Relation 'NON_EXISTENT_RELATION' is not defined" in str(
         exc_info.value
     ), "Should fail due to non-existent relation"
+
+
+def test_create_schema_model_missing_properties(schema_builder: SchemaBuilder) -> None:
+    entities = [
+        Entity(name="PERSON", type="str", description="An individual human being."),
+        Entity(
+            name="ORGANIZATION",
+            type="str",
+            description="A structured group of people with a common purpose.",
+        ),
+        Entity(name="AGE", type="int", description="Age of a person in years."),
+    ]
+
+    relations = [
+        Relation(name="EMPLOYED_BY", description="Indicates employment relationship."),
+        Relation(
+            name="ORGANIZED_BY",
+            description="Indicates organization responsible for an event.",
+        ),
+        Relation(name="ATTENDED_BY", description="Indicates attendance at an event."),
+    ]
+
+    schema_instance = schema_builder.create_schema_model(
+        entities, relations, schema_builder
+    )
+
+    assert (
+        schema_instance.entities["PERSON"]["properties"] == []
+    ), "Expected empty properties for PERSON"
+    assert (
+        schema_instance.entities["ORGANIZATION"]["properties"] == []
+    ), "Expected empty properties for ORGANIZATION"
+    assert (
+        schema_instance.entities["AGE"]["properties"] == []
+    ), "Expected empty properties for AGE"
+
+    assert (
+        schema_instance.relations["EMPLOYED_BY"]["properties"] == []
+    ), "Expected empty properties for EMPLOYED_BY"
+    assert (
+        schema_instance.relations["ORGANIZED_BY"]["properties"] == []
+    ), "Expected empty properties for ORGANIZED_BY"
+    assert (
+        schema_instance.relations["ATTENDED_BY"]["properties"] == []
+    ), "Expected empty properties for ATTENDED_BY"
