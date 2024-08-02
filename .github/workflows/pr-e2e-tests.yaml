@@ -68,6 +68,8 @@ jobs:
         with:
           path: .venv
           key: ${{ runner.os }}-venv-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Check disk space
+        run: df . -h
       - name: Install dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: poetry install --no-interaction --no-root
