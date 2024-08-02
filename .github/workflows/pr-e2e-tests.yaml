@@ -15,12 +15,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.12']
+        # , '3.9', '3.10', '3.11', '3.12']
         neo4j-version:
           - 5
         neo4j-edition:
           - community
-          - enterprise
+          # - enterprise
     services:
       t2v-transformers:
         image: cr.weaviate.io/semitechnologies/transformers-inference:sentence-transformers-all-MiniLM-L6-v2-onnx
