@@ -70,6 +70,8 @@ jobs:
           key: ${{ runner.os }}-venv-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
       - name: Check disk space
         run: df . -h
+      - name: Check docker image sizes
+        run: docker image ls
       - name: Check docker container sizes
         run: docker ps --size
       - name: Install dependencies
