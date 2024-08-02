@@ -20,11 +20,15 @@ from neo4j_genai.kg_construction.schema import Entity, Relation, SchemaBuilder
 from pydantic import ValidationError
 
 
-# Fixtures for test data
 @pytest.fixture
 def valid_entities() -> list[Entity]:
     return [
-        Entity(name="PERSON", type="str", description="An individual human being."),
+        Entity(
+            name="PERSON",
+            type="str",
+            description="An individual human being.",
+            properties=["birth date", "name"],
+        ),
         Entity(
             name="ORGANIZATION",
             type="str",
@@ -37,7 +41,11 @@ def valid_entities() -> list[Entity]:
 @pytest.fixture
 def valid_relations() -> list[Relation]:
     return [
-        Relation(name="EMPLOYED_BY", description="Indicates employment relationship."),
+        Relation(
+            name="EMPLOYED_BY",
+            description="Indicates employment relationship.",
+            properties=["start_time", "end_time"],
+        ),
         Relation(
             name="ORGANIZED_BY",
             description="Indicates organization responsible for an event.",
@@ -74,7 +82,6 @@ def schema_builder() -> SchemaBuilder:
     return SchemaBuilder()
 
 
-# Test cases
 def test_create_schema_model_valid_data(
     schema_builder: SchemaBuilder,
     valid_entities: list[Entity],
@@ -88,6 +95,10 @@ def test_create_schema_model_valid_data(
     assert (
         schema_instance.entities["PERSON"]["description"]
         == "An individual human being."
+    )
+    assert (
+        schema_instance.entities["PERSON"]["properties"]
+        == ["birth date", "name"]
     )
     assert (
         schema_instance.entities["ORGANIZATION"]["description"]
@@ -106,6 +117,10 @@ def test_create_schema_model_valid_data(
     assert (
         schema_instance.relations["ATTENDED_BY"]["description"]
         == "Indicates attendance at an event."
+    )
+    assert (
+        schema_instance.relations["EMPLOYED_BY"]["properties"]
+        == ["start_time", "end_time"]
     )
 
     assert schema_instance.potential_schema == potential_schema

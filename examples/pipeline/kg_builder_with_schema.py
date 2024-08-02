@@ -94,7 +94,8 @@ if __name__ == "__main__":
             description="A structured group of people with a common purpose.",
         ),
         Entity(
-            name="AGE", type="int", description="The age of an individual in years."
+            name="AGE",
+            type="int",
         ),
     ]
     relations = [

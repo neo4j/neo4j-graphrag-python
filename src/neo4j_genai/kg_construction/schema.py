@@ -28,11 +28,11 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from neo4j_genai.exceptions import SchemaValidationError
 from neo4j_genai.pipeline import Component, DataModel
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, model_validator, ValidationError
 
 
 class Entity(BaseModel):
@@ -40,12 +40,14 @@ class Entity(BaseModel):
     type: str = Field(
         ..., description="Type of the entity's name field, represented as a string."
     )
-    description: str
+    description: str = ""
+    properties: List[str] = []
 
 
 class Relation(BaseModel):
     name: str
-    description: str
+    description: str = ""
+    properties: List[str] = []
 
 
 class SchemaConfig(DataModel):
@@ -102,11 +104,14 @@ class SchemaBuilder(Component):
         entity_dict = {entity.name: entity.dict() for entity in entities}
         relation_dict = {relation.name: relation.dict() for relation in relations}
 
-        return SchemaConfig(
-            entities=entity_dict,
-            relations=relation_dict,
-            potential_schema=potential_schema,
-        )
+        try:
+            return SchemaConfig(
+                entities=entity_dict,
+                relations=relation_dict,
+                potential_schema=potential_schema,
+            )
+        except (ValidationError, SchemaValidationError) as e:
+            raise SchemaValidationError(e)
 
     async def run(
         self,
