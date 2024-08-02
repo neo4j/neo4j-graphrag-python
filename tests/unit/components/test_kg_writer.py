@@ -19,10 +19,8 @@ from unittest.mock import MagicMock
 import pytest
 from neo4j_genai.components.kg_writer import Neo4jWriter
 from neo4j_genai.components.types import (
-    Neo4jEmbeddingProperty,
     Neo4jGraph,
     Neo4jNode,
-    Neo4jProperty,
     Neo4jRelationship,
 )
 from neo4j_genai.neo4j_queries import UPSERT_NODE_QUERY, UPSERT_RELATIONSHIP_QUERY
@@ -30,12 +28,12 @@ from neo4j_genai.neo4j_queries import UPSERT_NODE_QUERY, UPSERT_RELATIONSHIP_QUE
 
 def test_upsert_node(driver: MagicMock) -> None:
     neo4j_writer = Neo4jWriter(driver=driver)
-    node = Neo4jNode(
-        id="1", label="Label", properties=[Neo4jProperty(key="key", value="value")]
-    )
+    node = Neo4jNode(id="1", label="Label", properties={"key": "value"})
     neo4j_writer._upsert_node(node=node)
+    parameters = {"id": "1", "key": "value"}
     driver.execute_query.assert_called_once_with(
-        UPSERT_NODE_QUERY.format(label="Label", properties="{id: 1, key: value}")
+        UPSERT_NODE_QUERY.format(label="Label", properties="{id: $id, key: $key}"),
+        parameters_=parameters,
     )
 
 
@@ -46,15 +44,15 @@ def test_upsert_node_with_embedding(
     node = Neo4jNode(
         id="1",
         label="Label",
-        properties=[Neo4jProperty(key="key", value="value")],
-        embedding_properties=[
-            Neo4jEmbeddingProperty(key="embeddingProp", value=[1.0, 2.0, 3.0])
-        ],
+        properties={"key": "value"},
+        embedding_properties={"embeddingProp": [1.0, 2.0, 3.0]},
     )
     driver.execute_query.return_value.records = [{"elementID(n)": 1}]
     neo4j_writer._upsert_node(node=node)
+    parameters = {"id": "1", "key": "value"}
     driver.execute_query.assert_any_call(
-        UPSERT_NODE_QUERY.format(label="Label", properties="{id: 1, key: value}")
+        UPSERT_NODE_QUERY.format(label="Label", properties="{id: $id, key: $key}"),
+        parameters_=parameters,
     )
     query = (
         "MATCH (n) "
@@ -77,16 +75,18 @@ def test_upsert_relationship(driver: MagicMock) -> None:
         start_node_id="1",
         end_node_id="2",
         type="RELATIONSHIP",
-        properties=[Neo4jProperty(key="key", value="value")],
+        properties={"key": "value"},
     )
     neo4j_writer._upsert_relationship(rel=rel)
+    parameters = {"key": "value"}
     driver.execute_query.assert_called_once_with(
         UPSERT_RELATIONSHIP_QUERY.format(
             type="RELATIONSHIP",
             start_node_id="1",
             end_node_id="2",
-            properties="{key: value}",
-        )
+            properties="{key: $key}",
+        ),
+        parameters_=parameters,
     )
 
 
@@ -96,20 +96,20 @@ def test_upsert_relationship_with_embedding(driver: MagicMock) -> None:
         start_node_id="1",
         end_node_id="2",
         type="RELATIONSHIP",
-        properties=[Neo4jProperty(key="key", value="value")],
-        embedding_properties=[
-            Neo4jEmbeddingProperty(key="embeddingProp", value=[1.0, 2.0, 3.0])
-        ],
+        properties={"key": "value"},
+        embedding_properties={"embeddingProp": [1.0, 2.0, 3.0]},
     )
     driver.execute_query.return_value.records = [{"elementID(r)": "rel_elem_id"}]
     neo4j_writer._upsert_relationship(rel=rel)
+    parameters = {"key": "value"}
     driver.execute_query.assert_any_call(
         UPSERT_RELATIONSHIP_QUERY.format(
             type="RELATIONSHIP",
             start_node_id="1",
             end_node_id="2",
-            properties="{key: value}",
-        )
+            properties="{key: $key}",
+        ),
+        parameters_=parameters,
     )
     query = (
         "MATCH ()-[r]->() "
@@ -133,11 +133,14 @@ async def test_run(driver: MagicMock) -> None:
     rel = Neo4jRelationship(start_node_id="1", end_node_id="2", type="RELATIONSHIP")
     graph = Neo4jGraph(nodes=[node], relationships=[rel])
     await neo4j_writer.run(graph=graph)
+    parameters = {"id": "1"}
     driver.execute_query.assert_any_call(
-        UPSERT_NODE_QUERY.format(label="Label", properties="{id: 1}")
+        UPSERT_NODE_QUERY.format(label="Label", properties="{id: $id}"),
+        parameters_=parameters,
     )
     driver.execute_query.assert_any_call(
         UPSERT_RELATIONSHIP_QUERY.format(
             type="RELATIONSHIP", start_node_id="1", end_node_id="2", properties="{}"
-        )
+        ),
+        parameters_=None,
     )

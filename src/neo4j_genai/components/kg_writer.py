@@ -73,24 +73,23 @@ class Neo4jWriter(KGWriter):
             node (Neo4jNode): The node to upsert into the database.
         """
         # Create the initial node
-        properties = "{" + f"id: {node.id}"
+        parameters = {"id": node.id}
         if node.properties:
-            properties += (
-                ", " + ", ".join(f"{p.key}: {p.value}" for p in node.properties) + "}"
-            )
-        else:
-            properties += "}"
+            parameters.update(node.properties)
+        properties = (
+            "{" + ", ".join(f"{key}: ${key}" for key in parameters.keys()) + "}"
+        )
         query = UPSERT_NODE_QUERY.format(label=node.label, properties=properties)
-        result = self.driver.execute_query(query)
+        result = self.driver.execute_query(query, parameters_=parameters)
         node_id = result.records[0]["elementID(n)"]
         # Add the embedding properties to the node
         if node.embedding_properties:
-            for prop in node.embedding_properties:
+            for prop, vector in node.embedding_properties.items():
                 upsert_vector(
                     driver=self.driver,
                     node_id=node_id,
-                    embedding_property=prop.key,
-                    vector=prop.value,
+                    embedding_property=prop,
+                    vector=vector,
                     neo4j_database=self.neo4j_database,
                 )
 
@@ -102,26 +101,27 @@ class Neo4jWriter(KGWriter):
         """
         # Create the initial relationship
         properties = (
-            "{" + ", ".join(f"{p.key}: {p.value}" for p in rel.properties) + "}"
+            "{" + ", ".join(f"{key}: ${key}" for key in rel.properties.keys()) + "}"
             if rel.properties
             else "{}"
         )
+        parameters = rel.properties
         query = UPSERT_RELATIONSHIP_QUERY.format(
             start_node_id=rel.start_node_id,
             end_node_id=rel.end_node_id,
             type=rel.type,
             properties=properties,
         )
-        result = self.driver.execute_query(query)
+        result = self.driver.execute_query(query, parameters_=parameters)
         rel_id = result.records[0]["elementID(r)"]
         # Add the embedding properties to the relationship
         if rel.embedding_properties:
-            for prop in rel.embedding_properties:
+            for prop, vector in rel.embedding_properties.items():
                 upsert_vector_on_relationship(
                     driver=self.driver,
                     rel_id=rel_id,
-                    embedding_property=prop.key,
-                    vector=prop.value,
+                    embedding_property=prop,
+                    vector=vector,
                     neo4j_database=self.neo4j_database,
                 )
 
