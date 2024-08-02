@@ -61,12 +61,12 @@ def test_upsert_node_with_embedding(
         "CALL db.create.setNodeVectorProperty(n, $embedding_property, $vector) "
         "RETURN n"
     )
-    parameters = {
+    parameters_ = {
         "id": 1,
         "embedding_property": "embeddingProp",
         "vector": [1.0, 2.0, 3.0],
     }
-    driver.execute_query.assert_any_call(query, parameters, database_=None)
+    driver.execute_query.assert_any_call(query, parameters_, database_=None)
 
 
 def test_upsert_relationship(driver: MagicMock) -> None:
@@ -118,12 +118,12 @@ def test_upsert_relationship_with_embedding(driver: MagicMock) -> None:
         "CALL db.create.setRelationshipVectorProperty(r, $embedding_property, $vector) "
         "RETURN r"
     )
-    parameters = {
+    parameters_ = {
         "id": "rel_elem_id",
         "embedding_property": "embeddingProp",
         "vector": [1.0, 2.0, 3.0],
     }
-    driver.execute_query.assert_any_call(query, parameters, database_=None)
+    driver.execute_query.assert_any_call(query, parameters_, database_=None)
 
 
 @pytest.mark.asyncio
