@@ -43,18 +43,18 @@ class ComponentMeta(abc.ABCMeta):
                 for param in sig.parameters.values()
                 if param.name not in ("self", "kwargs")
             }
-        # extract returned fields from the run method return type hint
-        return_model = get_type_hints(run_method).get("return")
-        # the type hint must be a subclass of DataModel
-        if not issubclass(return_model, DataModel):  # type: ignore
-            raise ValueError("The run method must return a subclass of DataModel")
-        attrs["component_outputs"] = {
-            f: {
-                "has_default": field.is_required(),
-                "annotation": field.annotation,
+            # extract returned fields from the run method return type hint
+            return_model = get_type_hints(run_method).get("return")
+            # the type hint must be a subclass of DataModel
+            if not issubclass(return_model, DataModel):  # type: ignore
+                raise ValueError("The run method must return a subclass of DataModel")
+            attrs["component_outputs"] = {
+                f: {
+                    "has_default": field.is_required(),
+                    "annotation": field.annotation,
+                }
+                for f, field in return_model.model_fields.items()  # type: ignore
             }
-            for f, field in return_model.model_fields.items()  # type: ignore
-        }
         return type.__new__(meta, name, bases, attrs)
 
 
