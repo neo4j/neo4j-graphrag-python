@@ -78,12 +78,10 @@ def test_upsert_relationship(driver: MagicMock) -> None:
         properties={"key": "value"},
     )
     neo4j_writer._upsert_relationship(rel=rel)
-    parameters = {"key": "value"}
+    parameters = {"start_node_id": "1", "end_node_id": "2", "key": "value"}
     driver.execute_query.assert_called_once_with(
         UPSERT_RELATIONSHIP_QUERY.format(
             type="RELATIONSHIP",
-            start_node_id="1",
-            end_node_id="2",
             properties="{key: $key}",
         ),
         parameters_=parameters,
@@ -101,12 +99,10 @@ def test_upsert_relationship_with_embedding(driver: MagicMock) -> None:
     )
     driver.execute_query.return_value.records = [{"elementID(r)": "rel_elem_id"}]
     neo4j_writer._upsert_relationship(rel=rel)
-    parameters = {"key": "value"}
+    parameters = {"start_node_id": "1", "end_node_id": "2", "key": "value"}
     driver.execute_query.assert_any_call(
         UPSERT_RELATIONSHIP_QUERY.format(
             type="RELATIONSHIP",
-            start_node_id="1",
-            end_node_id="2",
             properties="{key: $key}",
         ),
         parameters_=parameters,
@@ -138,9 +134,8 @@ async def test_run(driver: MagicMock) -> None:
         UPSERT_NODE_QUERY.format(label="Label", properties="{id: $id}"),
         parameters_=parameters,
     )
+    parameters_ = {"start_node_id": "1", "end_node_id": "2"}
     driver.execute_query.assert_any_call(
-        UPSERT_RELATIONSHIP_QUERY.format(
-            type="RELATIONSHIP", start_node_id="1", end_node_id="2", properties="{}"
-        ),
-        parameters_=None,
+        UPSERT_RELATIONSHIP_QUERY.format(type="RELATIONSHIP", properties="{}"),
+        parameters_=parameters_,
     )

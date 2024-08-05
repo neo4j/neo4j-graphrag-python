@@ -100,15 +100,18 @@ class Neo4jWriter(KGWriter):
             rel (Neo4jRelationship): The relationship to upsert into the database.
         """
         # Create the initial relationship
-        properties = (
-            "{" + ", ".join(f"{key}: ${key}" for key in rel.properties.keys()) + "}"
-            if rel.properties
-            else "{}"
-        )
-        parameters = rel.properties
+        parameters = {
+            "start_node_id": rel.start_node_id,
+            "end_node_id": rel.end_node_id,
+        }
+        if rel.properties:
+            properties = (
+                "{" + ", ".join(f"{key}: ${key}" for key in rel.properties.keys()) + "}"
+            )
+            parameters.update(rel.properties)
+        else:
+            properties = "{}"
         query = UPSERT_RELATIONSHIP_QUERY.format(
-            start_node_id=rel.start_node_id,
-            end_node_id=rel.end_node_id,
             type=rel.type,
             properties=properties,
         )
