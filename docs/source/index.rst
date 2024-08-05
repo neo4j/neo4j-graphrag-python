@@ -31,6 +31,7 @@ Topics
 ******
 
 + :ref:`user-guide-rag`
++ :ref:`user-guide-kg-builder`
 + :ref:`user-guide-pipeline`
 + :ref:`api-documentation`
 + :ref:`types-documentation`
@@ -41,6 +42,7 @@ Topics
     :hidden:
 
     user_guide_rag.rst
+    user_guide_kg_builder.rst
     user_guide_pipeline.rst
     api.rst
     types.rst
