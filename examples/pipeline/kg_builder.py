@@ -16,10 +16,14 @@ from __future__ import annotations
 
 import asyncio
 import logging.config
+from typing import Dict
 
 import neo4j
 from langchain_text_splitters import CharacterTextSplitter
-from neo4j_genai.components.entity_relation_extractor import LLMEntityRelationExtractor
+from neo4j_genai.components.entity_relation_extractor import (
+    LLMEntityRelationExtractor,
+    OnError,
+)
 from neo4j_genai.components.kg_writer import Neo4jWriter
 from neo4j_genai.components.text_splitters.langchain import LangChainTextSplitterAdapter
 from neo4j_genai.llm import OpenAILLM
@@ -51,7 +55,7 @@ class SchemaModel(DataModel):
 
 
 class SchemaBuilder(Component):
-    async def run(self, schema: dict[str, str]) -> SchemaModel:
+    async def run(self, schema: Dict[str, str]) -> SchemaModel:
         return SchemaModel(data_schema=schema)
 
 
@@ -74,7 +78,8 @@ if __name__ == "__main__":
                     "max_tokens": 1000,
                     "response_format": {"type": "json_object"},
                 },
-            )
+            ),
+            on_error=OnError.RAISE,
         ),
     )
     pipe.add_component("writer", Neo4jWriter(driver))

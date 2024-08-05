@@ -130,8 +130,8 @@ Extract the entities (nodes) and specify their type from the following text.
 Also extract the relationships between these nodes.
 
 Return result as JSON using the following format:
-{{"nodes": [ {{"id": "0", "label": "Person", "properties": [ {{"key": "name", "value": "John"}} ] }}],
-"relationships": [{{"type": "KNOWS", "start_node_id": "0", "end_node_id": "1", "properties": [{{"key": "since", "value": "2024-08-01"}}] }}] }}
+{{"nodes": [ {{"id": "0", "label": "Person", "properties": {{"name": "John"}} }}],
+"relationships": [{{"type": "KNOWS", "start_node_id": "0", "end_node_id": "1", "properties": {{"since": "2024-08-01"}} }}] }}
 
 Use only fhe following nodes and relationships (if provided):
 {schema}
