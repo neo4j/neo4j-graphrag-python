@@ -1,28 +1,23 @@
-name: 'Neo4j-GenAI PR E2E Tests'
+name: 'Neo4j-GenAI Scheduled E2E Tests'
 
 on:
+  schedule:
+    - cron:  '0 */3 * * *'  # Runs every 3 hours
   push:
     branches:
       - main
-      - fix-out-of-space-error-on-gh-actions
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
-    branches:
-      - main
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
 
 jobs:
   e2e-tests:
     runs-on: ubuntu-latest
     strategy:
+      max-parallel: 6
       matrix:
-        python-version: ['3.8', '3.12']
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
         neo4j-version:
           - 5
         neo4j-edition:
+          - community
           - enterprise
     services:
       t2v-transformers:
