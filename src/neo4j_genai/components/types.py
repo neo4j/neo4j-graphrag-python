@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from neo4j_genai.pipeline.component import DataModel
 
@@ -43,44 +43,29 @@ class TextChunks(DataModel):
     chunks: list[TextChunk]
 
 
-class Neo4jProperty(BaseModel):
-    """Represents a Neo4j property.
-
-    Attributes:
-        key (str): The property name.
-        value (Any): The property value.
-    """
-
-    key: str
-    value: Any
-
-
-class Neo4jEmbeddingProperty(BaseModel):
-    """Represents a Neo4j embedding property.
-
-    Attributes:
-        key (str): The property name.
-        value (list[float]): The embedding vector.
-    """
-
-    key: str
-    value: list[float]
-
-
 class Neo4jNode(BaseModel):
     """Represents a Neo4j node.
 
     Attributes:
         id (str): The ID of the node.
         label (str): The label of the node.
-        properties (Optional[list[Neo4jProperty]]): A list of properties associated with the node.
-        embedding_properties (Optional[list[Neo4jEmbeddingProperty]]): A list of embedding properties associated with the node.
+        properties (Optional[dict[str, Any]]): A dictionary of properties attached to the node.
+        embedding_properties (Optional[dict[str, list[float]]]): A list of embedding properties attached to the node.
     """
 
     id: str
     label: str
-    properties: Optional[list[Neo4jProperty]] = None
-    embedding_properties: Optional[list[Neo4jEmbeddingProperty]] = None
+    properties: Optional[dict[str, Any]] = None
+    embedding_properties: Optional[dict[str, list[float]]] = None
+
+    @field_validator("properties", "embedding_properties")
+    @classmethod
+    def check_for_id_properties(
+        cls, v: Optional[dict[str, Any]]
+    ) -> Optional[dict[str, Any]]:
+        if v and "id" in v.keys():
+            raise TypeError("'id' as a property name is not allowed")
+        return v
 
 
 class Neo4jRelationship(BaseModel):
@@ -90,15 +75,15 @@ class Neo4jRelationship(BaseModel):
         start_node_id (str): The ID of the start node.
         end_node_id (str): The ID of the end node.
         type (str): The relationship type.
-        properties (Optional[list[Neo4jProperty]]): A list of properties associated with the relationship.
-        embedding_properties (Optional[list[Neo4jEmbeddingProperty]]): A list of embedding properties associated with the relationship.
+        properties (Optional[dict[str, Any]]): A dictionary of properties attached to the relationship.
+        embedding_properties (Optional[dict[str, list[float]]]): A list of embedding properties attached to the relationship.
     """
 
     start_node_id: str
     end_node_id: str
     type: str
-    properties: Optional[list[Neo4jProperty]] = None
-    embedding_properties: Optional[list[Neo4jEmbeddingProperty]] = None
+    properties: Optional[dict[str, Any]] = None
+    embedding_properties: Optional[dict[str, list[float]]] = None
 
 
 class Neo4jGraph(DataModel):
