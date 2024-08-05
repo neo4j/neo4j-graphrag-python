@@ -1,6 +1,10 @@
 name: 'Neo4j-GenAI PR E2E Tests'
 
 on:
+  push:
+    branches:
+      - main
+      - fix-out-of-space-error-on-gh-actions
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     branches:
@@ -14,8 +18,10 @@ jobs:
   e2e-tests:
     runs-on: ubuntu-latest
     strategy:
+      max-parallel: 1
       matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.8', '3.12']
+#        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
         neo4j-version:
           - 5
         neo4j-edition:
@@ -68,6 +74,8 @@ jobs:
         with:
           path: .venv
           key: ${{ runner.os }}-venv-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Check disk space after cleanup
+        run: df -h
       - name: Install dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: poetry install --no-interaction --no-root
