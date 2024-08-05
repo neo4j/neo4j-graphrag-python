@@ -18,10 +18,8 @@ jobs:
   e2e-tests:
     runs-on: ubuntu-latest
     strategy:
-      max-parallel: 1
       matrix:
-        python-version: ['3.8', '3.12']
-#        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
         neo4j-version:
           - 5
         neo4j-edition:
@@ -56,6 +54,10 @@ jobs:
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
+      - name: Docker Prune
+        run: |
+          docker system prune -af
+          docker volume prune -f
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
