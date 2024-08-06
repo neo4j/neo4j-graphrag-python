@@ -193,7 +193,7 @@ def test_create_schema_model_invalid_properties_types(
                 name="PERSON",
                 type="str",
                 description="An individual human being.",
-                properties=[42, 1337],
+                properties=[42, 1337],  # type: ignore
             ),
             Entity(
                 name="ORGANIZATION",
@@ -205,7 +205,7 @@ def test_create_schema_model_invalid_properties_types(
             Relation(
                 name="EMPLOYED_BY",
                 description="Indicates employment relationship.",
-                properties=[42, 1337],
+                properties=[42, 1337],  # type: ignore
             ),
             Relation(
                 name="ORGANIZED_BY",
@@ -282,7 +282,9 @@ def test_create_schema_model_invalid_relation(
     ), "Should fail due to non-existent relation"
 
 
-def test_create_schema_model_missing_properties(schema_builder: SchemaBuilder) -> None:
+def test_create_schema_model_missing_properties(
+    schema_builder: SchemaBuilder, potential_schema: dict[str, list[str]]
+) -> None:
     entities = [
         Entity(name="PERSON", type="str", description="An individual human being."),
         Entity(
@@ -303,7 +305,7 @@ def test_create_schema_model_missing_properties(schema_builder: SchemaBuilder) -
     ]
 
     schema_instance = schema_builder.create_schema_model(
-        entities, relations, schema_builder
+        entities, relations, potential_schema
     )
 
     assert (
