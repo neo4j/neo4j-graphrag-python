@@ -1,10 +1,6 @@
 name: 'Neo4j-GenAI PR E2E Tests'
 
 on:
-  push:
-    branches:
-      - main
-      - fix-out-of-space-error-on-gh-actions
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     branches:
