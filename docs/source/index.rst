@@ -113,7 +113,7 @@ Note that the below example is not the only way you can upsert data into your Ne
 .. code:: python
 
     from neo4j import GraphDatabase
-    from neo4j_genai.indexes import upsert_query
+    from neo4j_genai.indexes import upsert_vector
 
     URI = "neo4j://localhost:7687"
     AUTH = ("neo4j", "password")
@@ -123,7 +123,7 @@ Note that the below example is not the only way you can upsert data into your Ne
 
     # Upsert the vector
     vector = ...
-    upsert_query(
+    upsert_vector(
         driver,
         node_id=1,
         embedding_property="vectorProperty",

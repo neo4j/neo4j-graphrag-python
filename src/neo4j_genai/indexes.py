@@ -251,7 +251,7 @@ def upsert_vector(
     .. code-block:: python
 
         from neo4j import GraphDatabase
-        from neo4j_genai.indexes import upsert_query
+        from neo4j_genai.indexes import upsert_vector
 
         URI = "neo4j://localhost:7687"
         AUTH = ("neo4j", "password")
@@ -260,7 +260,7 @@ def upsert_vector(
         driver = GraphDatabase.driver(URI, auth=AUTH)
 
         # Upsert the vector data
-        upsert_query(
+        upsert_vector(
             driver,
             node_id="nodeId",
             embedding_property="vectorProperty",
