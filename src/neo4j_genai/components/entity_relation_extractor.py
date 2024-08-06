@@ -67,13 +67,12 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             rel.end_node_id = f"{chunk_index}:{rel.end_node_id}"
         return graph
 
-    # TODO: fix the type of "schema" and "examples"
     @validate_call
     async def run(
         self,
         chunks: TextChunks,
         schema: Union[BaseModel, Dict[str, Any], None] = None,
-        examples: Any = None,
+        examples: str = "",
         **kwargs: Any,
     ) -> Neo4jGraph:
         schema = schema or {}
