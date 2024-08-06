@@ -59,6 +59,9 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
     def update_ids(self, chunk_index: int, graph: Neo4jGraph) -> Neo4jGraph:
         for node in graph.nodes:
             node.id = f"{chunk_index}:{node.id}"
+            if node.properties is None:
+                node.properties = {}
+            node.properties.update({"chunk_index": chunk_index})
         for rel in graph.relationships:
             rel.start_node_id = f"{chunk_index}:{rel.start_node_id}"
             rel.end_node_id = f"{chunk_index}:{rel.end_node_id}"
@@ -95,10 +98,10 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                 result = {"nodes": [], "relationships": []}
             try:
                 chunk_graph = Neo4jGraph(**result)
-            except ValidationError:
+            except ValidationError as e:
                 if self.on_error == OnError.RAISE:
                     raise LLMGenerationError(
-                        f"LLM response has improper format {result}"
+                        f"LLM response has improper format {result}: {e}"
                     )
                 else:
                     logger.error(

@@ -45,7 +45,7 @@ async def test_extractor_happy_path_empty_result() -> None:
 async def test_extractor_happy_path_non_empty_result() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.invoke.return_value = LLMResponse(
-        content='{"nodes": [{"id": "0", "label": "Person", "properties": []}], "relationships": []}'
+        content='{"nodes": [{"id": "0", "label": "Person", "properties": {}}], "relationships": []}'
     )
 
     extractor = LLMEntityRelationExtractor(
@@ -57,7 +57,7 @@ async def test_extractor_happy_path_non_empty_result() -> None:
     entity = result.nodes[0]
     assert entity.id == "0:0"
     assert entity.label == "Person"
-    assert entity.properties == []
+    assert entity.properties == {"chunk_index": 0}
     assert result.relationships == []
 
 
@@ -65,7 +65,7 @@ async def test_extractor_happy_path_non_empty_result() -> None:
 async def test_extractor_missing_entity_id() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.invoke.return_value = LLMResponse(
-        content='{"nodes": [{"label": "Person", "properties": []}], "relationships": []}'
+        content='{"nodes": [{"label": "Person", "properties": {}}], "relationships": []}'
     )
     extractor = LLMEntityRelationExtractor(
         llm=llm,
@@ -92,7 +92,7 @@ async def test_extractor_llm_invoke_failed() -> None:
 async def test_extractor_llm_badly_formatted_json() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.invoke.return_value = LLMResponse(
-        content='{"nodes": [{"id": "0", "label": "Person", "properties": []}], "relationships": [}'
+        content='{"nodes": [{"id": "0", "label": "Person", "properties": {}}], "relationships": [}'
     )
 
     extractor = LLMEntityRelationExtractor(
@@ -110,7 +110,7 @@ async def test_extractor_llm_invalid_json() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.invoke.return_value = LLMResponse(
         # missing "label" for entity
-        content='{"nodes": [{"id": 0, "entity_type": "Person", "properties": []}], "relationships": []}'
+        content='{"nodes": [{"id": 0, "entity_type": "Person", "properties": {}}], "relationships": []}'
     )
 
     extractor = LLMEntityRelationExtractor(
@@ -125,7 +125,7 @@ async def test_extractor_llm_invalid_json() -> None:
 async def test_extractor_llm_badly_formatted_json_do_not_raise() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.invoke.return_value = LLMResponse(
-        content='{"nodes": [{"id": "0", "label": "Person", "properties": []}], "relationships": [}'
+        content='{"nodes": [{"id": "0", "label": "Person", "properties": {}}], "relationships": [}'
     )
 
     extractor = LLMEntityRelationExtractor(
