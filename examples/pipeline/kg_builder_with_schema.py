@@ -18,7 +18,11 @@ import asyncio
 import logging
 from typing import Any
 
-from neo4j_genai.kg_construction.schema import Entity, Relation, SchemaBuilder
+from neo4j_genai.kg_construction.schema import (
+    SchemaBuilder,
+    SchemaEntity,
+    SchemaRelation,
+)
 from neo4j_genai.pipeline import Component, DataModel
 from pydantic import BaseModel, validate_call
 
@@ -87,29 +91,31 @@ if __name__ == "__main__":
 
     # Instantiate Entity and Relation objects
     entities = [
-        Entity(name="PERSON", type="str", description="An individual human being."),
-        Entity(
-            name="ORGANIZATION",
-            type="str",
+        SchemaEntity(label="PERSON", description="An individual human being."),
+        SchemaEntity(
+            label="ORGANIZATION",
             description="A structured group of people with a common purpose.",
         ),
-        Entity(
-            name="AGE",
-            type="int",
+        SchemaEntity(
+            label="AGE",
         ),
     ]
     relations = [
-        Relation(name="EMPLOYED_BY", description="Indicates employment relationship."),
-        Relation(
-            name="ORGANIZED_BY",
+        SchemaRelation(
+            label="EMPLOYED_BY", description="Indicates employment relationship."
+        ),
+        SchemaRelation(
+            label="ORGANIZED_BY",
             description="Indicates organization responsible for an event.",
         ),
-        Relation(name="ATTENDED_BY", description="Indicates attendance at an event."),
+        SchemaRelation(
+            label="ATTENDED_BY", description="Indicates attendance at an event."
+        ),
     ]
-    potential_schema = {
-        "PERSON": ["EMPLOYED_BY", "ATTENDED_BY"],
-        "ORGANIZATION": ["EMPLOYED_BY", "ORGANIZED_BY"],
-    }
+    potential_schema = [
+        ("PERSON", "EMPLOYED_BY", "ORGANIZATION"),
+        ("ORGANIZATION", "ATTENDED_BY", "PERSON"),
+    ]
 
     # Set up the pipeline
     pipe = Pipeline()

@@ -28,14 +28,14 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal
+from typing import Any, Dict, List, Literal, Tuple
 
 from neo4j_genai.exceptions import SchemaValidationError
 from neo4j_genai.pipeline import Component, DataModel
-from pydantic import BaseModel, Field, ValidationError, model_validator
+from pydantic import BaseModel, Field, ValidationError, model_validator, validate_call
 
 
-class NodeProperty(BaseModel):
+class SchemaProperty(BaseModel):
     name: str
     # See https://neo4j.com/docs/cypher-manual/current/values-and-types/property-structural-constructed/#property-types
     type: Literal[
@@ -55,27 +55,24 @@ class NodeProperty(BaseModel):
     description: str = ""
 
 
-class Entity(BaseModel):
+class SchemaEntity(BaseModel):
     """
     Represents a possible node in the graph.
     """
 
-    name: str
-    type: str = Field(
-        ..., description="Type of the entity's name field, represented as a string."
-    )
+    label: str
     description: str = ""
-    properties: List[NodeProperty] = []
+    properties: List[SchemaProperty] = []
 
 
-class Relation(BaseModel):
+class SchemaRelation(BaseModel):
     """
     Represents a possible relationship between nodes in the graph.
     """
 
-    name: str
+    label: str
     description: str = ""
-    properties: List[NodeProperty] = []
+    properties: List[SchemaProperty] = []
 
 
 class SchemaConfig(DataModel):
@@ -85,26 +82,27 @@ class SchemaConfig(DataModel):
 
     entities: Dict[str, Dict[str, Any]]
     relations: Dict[str, Dict[str, Any]]
-    potential_schema: Dict[str, List[str]]
+    potential_schema: List[Tuple[str, str, str]]
 
     @model_validator(mode="before")
     def check_schema(cls, data: Dict[str, Any]) -> Dict[str, Any]:
         entities = data.get("entities", {}).keys()
         relations = data.get("relations", {}).keys()
-        potential_schema = data.get("potential_schema", {})
+        potential_schema = data.get("potential_schema", [])
 
-        for entity in potential_schema.keys():
-            if entity not in entities:
+        for entity1, relation, entity2 in potential_schema:
+            if entity1 not in entities:
                 raise SchemaValidationError(
-                    f"Entity '{entity}' is not defined in the provided entities."
+                    f"Entity '{entity1}' is not defined in the provided entities."
                 )
-
-        for rels in potential_schema.values():
-            for rel in rels:
-                if rel not in relations:
-                    raise SchemaValidationError(
-                        f"Relation '{rel}' is not defined in the provided relations."
-                    )
+            if relation not in relations:
+                raise SchemaValidationError(
+                    f"Relation '{relation}' is not defined in the provided relations."
+                )
+            if entity2 not in entities:
+                raise SchemaValidationError(
+                    f"Entity '{entity1}' is not defined in the provided entities."
+                )
 
         return data
 
@@ -117,24 +115,24 @@ class SchemaBuilder(Component):
 
     @staticmethod
     def create_schema_model(
-        entities: List[Entity],
-        relations: List[Relation],
-        potential_schema: Dict[str, List[str]],
+        entities: List[SchemaEntity],
+        relations: List[SchemaRelation],
+        potential_schema: List[Tuple[str, str, str]],
     ) -> SchemaConfig:
         """
         Creates a SchemaConfig object from Lists of Entity and Relation objects
         and a Dictionary defining potential relationships.
 
         Args:
-            entities (List[Entity]): List of Entity objects.
-            relations (List[Relation]): List of Relation objects.
+            entities (List[SchemaEntity]): List of Entity objects.
+            relations (List[SchemaRelation]): List of Relation objects.
             potential_schema (Dict[str, List[str]]): Dictionary mapping entity names to Lists of relation names.
 
         Returns:
             SchemaConfig: A configured schema object.
         """
-        entity_dict = {entity.name: entity.dict() for entity in entities}
-        relation_dict = {relation.name: relation.dict() for relation in relations}
+        entity_dict = {entity.label: entity.dict() for entity in entities}
+        relation_dict = {relation.label: relation.dict() for relation in relations}
 
         try:
             return SchemaConfig(
@@ -145,18 +143,19 @@ class SchemaBuilder(Component):
         except (ValidationError, SchemaValidationError) as e:
             raise SchemaValidationError(e)
 
+    @validate_call
     async def run(
         self,
-        entities: List[Entity],
-        relations: List[Relation],
-        potential_schema: Dict[str, List[str]],
+        entities: List[SchemaEntity],
+        relations: List[SchemaRelation],
+        potential_schema: List[Tuple[str, str, str]],
     ) -> SchemaConfig:
         """
         Asynchronously constructs and returns a SchemaConfig object.
 
         Args:
-            entities (List[Entity]): List of Entity objects.
-            relations (List[Relation]): List of Relation objects.
+            entities (List[SchemaEntity]): List of Entity objects.
+            relations (List[SchemaRelation]): List of Relation objects.
             potential_schema (Dict[str, List[str]]): Dictionary mapping entity names to Lists of relation names.
 
         Returns:
