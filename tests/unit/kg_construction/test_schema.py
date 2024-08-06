@@ -16,7 +16,12 @@ from __future__ import annotations
 
 import pytest
 from neo4j_genai.exceptions import SchemaValidationError
-from neo4j_genai.kg_construction.schema import Entity, Relation, SchemaBuilder
+from neo4j_genai.kg_construction.schema import (
+    Entity,
+    NodeProperty,
+    Relation,
+    SchemaBuilder,
+)
 from pydantic import ValidationError
 
 
@@ -27,7 +32,10 @@ def valid_entities() -> list[Entity]:
             name="PERSON",
             type="str",
             description="An individual human being.",
-            properties=["birth date", "name"],
+            properties=[
+                NodeProperty(name="birth date", type="ZONED_DATETIME"),
+                NodeProperty(name="name", type="STRING"),
+            ],
         ),
         Entity(
             name="ORGANIZATION",
@@ -44,7 +52,10 @@ def valid_relations() -> list[Relation]:
         Relation(
             name="EMPLOYED_BY",
             description="Indicates employment relationship.",
-            properties=["start_time", "end_time"],
+            properties=[
+                NodeProperty(name="start_time", type="LOCAL_DATETIME"),
+                NodeProperty(name="end_time", type="LOCAL_DATETIME"),
+            ],
         ),
         Relation(
             name="ORGANIZED_BY",
@@ -96,7 +107,10 @@ def test_create_schema_model_valid_data(
         schema_instance.entities["PERSON"]["description"]
         == "An individual human being."
     )
-    assert schema_instance.entities["PERSON"]["properties"] == ["birth date", "name"]
+    assert schema_instance.entities["PERSON"]["properties"] == [
+        {"description": "", "name": "birth date", "type": "ZONED_DATETIME"},
+        {"description": "", "name": "name", "type": "STRING"},
+    ]
     assert (
         schema_instance.entities["ORGANIZATION"]["description"]
         == "A structured group of people with a common purpose."
@@ -116,8 +130,8 @@ def test_create_schema_model_valid_data(
         == "Indicates attendance at an event."
     )
     assert schema_instance.relations["EMPLOYED_BY"]["properties"] == [
-        "start_time",
-        "end_time",
+        {"description": "", "name": "start_time", "type": "LOCAL_DATETIME"},
+        {"description": "", "name": "end_time", "type": "LOCAL_DATETIME"},
     ]
 
     assert schema_instance.potential_schema == potential_schema

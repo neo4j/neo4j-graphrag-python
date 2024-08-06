@@ -28,29 +28,61 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Literal
 
 from neo4j_genai.exceptions import SchemaValidationError
 from neo4j_genai.pipeline import Component, DataModel
 from pydantic import BaseModel, Field, ValidationError, model_validator
 
 
+class NodeProperty(BaseModel):
+    name: str
+    # See https://neo4j.com/docs/cypher-manual/current/values-and-types/property-structural-constructed/#property-types
+    type: Literal[
+        "BOOLEAN",
+        "DATE",
+        "DURATION",
+        "FLOAT",
+        "INTEGER",
+        "LIST",
+        "LOCAL_DATETIME",
+        "LOCAL_TIME",
+        "POINT",
+        "STRING",
+        "ZONED_DATETIME",
+        "ZONED_TIME",
+    ]
+    description: str = ""
+
+
 class Entity(BaseModel):
+    """
+    Represents a possible node in the graph.
+    """
+
     name: str
     type: str = Field(
         ..., description="Type of the entity's name field, represented as a string."
     )
     description: str = ""
-    properties: List[str] = []
+    properties: List[NodeProperty] = []
 
 
 class Relation(BaseModel):
+    """
+    Represents a possible relationship between nodes in the graph.
+    """
+
     name: str
     description: str = ""
-    properties: List[str] = []
+    properties: List[NodeProperty] = []
 
 
 class SchemaConfig(DataModel):
+    """
+    Represents possible relationships between entities and relations in the graph.
+    """
+
     entities: Dict[str, Dict[str, Any]]
     relations: Dict[str, Dict[str, Any]]
     potential_schema: Dict[str, List[str]]
