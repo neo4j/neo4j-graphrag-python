@@ -32,7 +32,7 @@ from typing import Any, Dict, List, Literal, Tuple
 
 from neo4j_genai.exceptions import SchemaValidationError
 from neo4j_genai.pipeline import Component, DataModel
-from pydantic import BaseModel, Field, ValidationError, model_validator, validate_call
+from pydantic import BaseModel, ValidationError, model_validator, validate_call
 
 
 class SchemaProperty(BaseModel):
