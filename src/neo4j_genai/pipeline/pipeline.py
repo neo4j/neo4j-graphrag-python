@@ -58,7 +58,7 @@ class TaskPipelineNode(PipelineNode):
     """Runnable node. It must have:
     - a name (unique within the pipeline)
     - a component instance
-    - a reference to the pipline it belongs to
+    - a reference to the pipeline it belongs to
         (to find dependent tasks)
     """
 
