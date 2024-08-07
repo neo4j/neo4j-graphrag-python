@@ -68,7 +68,7 @@ Assumption: Neo4j running with a defined vector index
 
 ```python
 from neo4j import GraphDatabase
-from neo4j_genai.indexes import upsert_query
+from neo4j_genai.indexes import upsert_vector
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
@@ -78,7 +78,7 @@ driver = GraphDatabase.driver(URI, auth=AUTH)
 
 # Upsert the vector
 vector = ...
-upsert_query(
+upsert_vector(
     driver,
     node_id=1,
     embedding_property="vectorProperty",
