@@ -55,7 +55,7 @@ async def test_extractor_happy_path_non_empty_result() -> None:
     result = await extractor.run(chunks=chunks)
     assert isinstance(result, Neo4jGraph)
     entity = result.nodes[0]
-    assert entity.id == "0:0"
+    assert entity.id.endswith("0:0")
     assert entity.label == "Person"
     assert entity.properties == {"chunk_index": 0}
     assert result.relationships == []
