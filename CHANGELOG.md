@@ -58,6 +58,9 @@
 -   Corrected initialization to allow specifying the embedding model name.
 -   Removed sentence_transformers from embeddings/__init__.py to avoid ImportError when the package is not installed.
 
+### Changed
+- `GraphRAG.search` method first parameter has been renamed `query_text` (was `query`) for consistency with the retrievers interface.
+
 ## 0.3.0
 
 ### Added
