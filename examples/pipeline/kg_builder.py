@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import logging.config
-from typing import Dict
+from typing import Any
 
 import neo4j
 from langchain_text_splitters import CharacterTextSplitter
@@ -25,9 +25,15 @@ from neo4j_genai.components.entity_relation_extractor import (
     OnError,
 )
 from neo4j_genai.components.kg_writer import Neo4jWriter
+from neo4j_genai.components.schema import (
+    SchemaBuilder,
+    SchemaEntity,
+    SchemaProperty,
+    SchemaRelation,
+)
 from neo4j_genai.components.text_splitters.langchain import LangChainTextSplitterAdapter
 from neo4j_genai.llm import OpenAILLM
-from neo4j_genai.pipeline import Component, DataModel, Pipeline
+from neo4j_genai.pipeline import Pipeline
 
 # set log level to DEBUG for all neo4j_genai.* loggers
 logging.config.dictConfig(
@@ -50,23 +56,27 @@ logging.config.dictConfig(
 )
 
 
-class SchemaModel(DataModel):
-    data_schema: dict[str, str]
-
-
-class SchemaBuilder(Component):
-    async def run(self, schema: Dict[str, str]) -> SchemaModel:
-        return SchemaModel(data_schema=schema)
-
-
-if __name__ == "__main__":
-    driver = neo4j.GraphDatabase.driver(
-        "bolt://localhost:7687", auth=("neo4j", "password")
-    )
-
+async def main(neo4j_driver: neo4j.Driver) -> dict[str, Any]:
+    """This is where we define and run the KG builder pipeline, instantiating a few
+    components:
+    - Text Splitter: in this example we use a text splitter from the LangChain package
+    - Schema Builder: this component takes a list of entities, relationships and
+        possible triplets as inputs, validate them and return a schema ready to use
+        for the rest of the pipeline
+    - LLM Entity Relation Extractor is an LLM-based entity and relation extractor:
+        based on the provided schema, the LLM will do its best to identity these
+        entities and their relations within the provided text
+    - KG writer: once entities and relations are extracted, they can be writen
+        to a Neo4j database
+    """
     pipe = Pipeline()
+    # define the components
     pipe.add_component(
-        "splitter", LangChainTextSplitterAdapter(CharacterTextSplitter())
+        "splitter",
+        LangChainTextSplitterAdapter(
+            # chunk_size=50 for the sake of this demo
+            CharacterTextSplitter(chunk_size=50, chunk_overlap=10, separator=".")
+        ),
     )
     pipe.add_component("schema", SchemaBuilder())
     pipe.add_component(
@@ -82,7 +92,9 @@ if __name__ == "__main__":
             on_error=OnError.RAISE,
         ),
     )
-    pipe.add_component("writer", Neo4jWriter(driver))
+    pipe.add_component("writer", Neo4jWriter(neo4j_driver))
+    # define the execution order of component
+    # and how the output of previous components must be used
     pipe.connect("splitter", "extractor", input_config={"chunks": "splitter"})
     pipe.connect("schema", "extractor", input_config={"schema": "schema"})
     pipe.connect(
@@ -90,15 +102,60 @@ if __name__ == "__main__":
         "writer",
         input_config={"graph": "extractor"},
     )
-
+    # user input:
+    # the initial text
+    # and the list of entities and relations we are looking for
     pipe_inputs = {
         "splitter": {
-            "text": """Graphs are everywhere.
-            GraphRAG is the future of Artificial Intelligence.
-            Robots are already running the world."""
+            "text": """Albert Einstein was a German physicist born in 1879 who
+            wrote many groundbreaking papers especially about general relativity
+            and quantum mechanics. He worked for many different institutions, including
+            the University of Bern in Switzerland and the University of Oxford."""
         },
-        "schema": {"schema": {}},
+        "schema": {
+            "entities": [
+                SchemaEntity(
+                    label="Person",
+                    properties=[
+                        SchemaProperty(name="name", type="STRING"),
+                        SchemaProperty(name="place_of_birth", type="STRING"),
+                        SchemaProperty(name="date_of_birth", type="DATE"),
+                    ],
+                ),
+                SchemaEntity(
+                    label="Organization",
+                    properties=[
+                        SchemaProperty(name="name", type="STRING"),
+                        SchemaProperty(name="country", type="STRING"),
+                    ],
+                ),
+                SchemaEntity(
+                    label="Field",
+                    properties=[
+                        SchemaProperty(name="name", type="STRING"),
+                    ],
+                ),
+            ],
+            "relations": [
+                SchemaRelation(
+                    label="WORKED_ON",
+                ),
+                SchemaRelation(
+                    label="WORKED_FOR",
+                ),
+            ],
+            "potential_schema": [
+                ("Person", "WORKED_ON", "Field"),
+                ("Person", "WORKED_FOR", "Organization"),
+            ],
+        },
     }
-    print(asyncio.run(pipe.run(pipe_inputs)))
+    # run the pipeline
+    return await pipe.run(pipe_inputs)
 
-    driver.close()
+
+if __name__ == "__main__":
+    with neo4j.GraphDatabase.driver(
+        "bolt://localhost:7687", auth=("neo4j", "password")
+    ) as driver:
+        print(asyncio.run(main(driver)))

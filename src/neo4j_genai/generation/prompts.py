@@ -149,5 +149,5 @@ Input text:
 """
     EXPECTED_INPUTS = ["text"]
 
-    def format(self, text: str, schema: Any, examples: str) -> str:
+    def format(self, text: str, schema: dict[str, Any], examples: str) -> str:
         return super().format(text=text, schema=schema, examples=examples)

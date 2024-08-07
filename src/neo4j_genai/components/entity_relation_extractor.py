@@ -17,10 +17,11 @@ from __future__ import annotations
 import enum
 import json
 import logging
-from typing import Any, Dict, Union
+from typing import Any, Union
 
-from pydantic import BaseModel, ValidationError, validate_call
+from pydantic import ValidationError, validate_call
 
+from neo4j_genai.components.schema import SchemaConfig
 from neo4j_genai.components.types import Neo4jGraph, TextChunks
 from neo4j_genai.exceptions import LLMGenerationError
 from neo4j_genai.generation.prompts import ERExtractionTemplate, PromptTemplate
@@ -32,7 +33,6 @@ logger = logging.getLogger(__name__)
 
 class EntityRelationExtractor(Component):
     async def run(self, chunks: TextChunks, **kwargs: Any) -> Neo4jGraph:
-        # for each chunk, returns a dict with entities and relations keys
         return Neo4jGraph(nodes=[], relationships=[])
 
 
@@ -71,16 +71,16 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
     async def run(
         self,
         chunks: TextChunks,
-        schema: Union[BaseModel, Dict[str, Any], None] = None,
+        schema: Union[SchemaConfig, None] = None,
         examples: str = "",
         **kwargs: Any,
     ) -> Neo4jGraph:
-        schema = schema or {}
+        schema = schema or SchemaConfig(entities={}, relations={}, potential_schema=[])
         examples = examples or ""
         graph = Neo4jGraph()
         for chunk_index, chunk in enumerate(chunks.chunks):
             prompt = self.prompt_template.format(
-                text=chunk.text, schema=schema, examples=examples
+                text=chunk.text, schema=schema.model_dump(), examples=examples
             )
             llm_result = self.llm.invoke(prompt)
             try:
