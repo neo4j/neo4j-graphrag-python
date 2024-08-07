@@ -18,6 +18,7 @@ import abc
 import enum
 import json
 import logging
+from datetime import datetime
 from typing import Any, Union
 
 from pydantic import ValidationError, validate_call
@@ -59,14 +60,17 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         self.on_error = on_error
 
     def update_ids(self, chunk_index: int, graph: Neo4jGraph) -> Neo4jGraph:
+        """Make node IDs unique across chunks and pipeline runs by
+        prefixing them with the current timestamp and chunk index."""
+        ts = datetime.now().timestamp()
         for node in graph.nodes:
-            node.id = f"{chunk_index}:{node.id}"
+            node.id = f"{ts}:{chunk_index}:{node.id}"
             if node.properties is None:
                 node.properties = {}
             node.properties.update({"chunk_index": chunk_index})
         for rel in graph.relationships:
-            rel.start_node_id = f"{chunk_index}:{rel.start_node_id}"
-            rel.end_node_id = f"{chunk_index}:{rel.end_node_id}"
+            rel.start_node_id = f"{ts}:{chunk_index}:{rel.start_node_id}"
+            rel.end_node_id = f"{ts}:{chunk_index}:{rel.end_node_id}"
         return graph
 
     @validate_call
