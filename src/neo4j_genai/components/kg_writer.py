@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import logging
 from abc import abstractmethod
 from typing import Literal, Optional
 
@@ -24,6 +25,8 @@ from neo4j_genai.components.types import Neo4jGraph, Neo4jNode, Neo4jRelationshi
 from neo4j_genai.indexes import upsert_vector, upsert_vector_on_relationship
 from neo4j_genai.neo4j_queries import UPSERT_NODE_QUERY, UPSERT_RELATIONSHIP_QUERY
 from neo4j_genai.pipeline.component import Component, DataModel
+
+logger = logging.getLogger(__name__)
 
 
 class KGWriterModel(DataModel):
@@ -144,5 +147,6 @@ class Neo4jWriter(KGWriter):
                 self._upsert_relationship(rel)
 
             return KGWriterModel(status="SUCCESS")
-        except neo4j.exceptions.ClientError:
+        except neo4j.exceptions.ClientError as e:
+            logger.exception(e)
             return KGWriterModel(status="FAILURE")
