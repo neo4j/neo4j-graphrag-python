@@ -71,11 +71,15 @@ async def test_extractor_happy_path_non_empty_result() -> None:
     chunks = TextChunks(chunks=[TextChunk(text="some text")])
     result = await extractor.run(chunks=chunks)
     assert isinstance(result, Neo4jGraph)
+    assert len(result.nodes) == 2
     entity = result.nodes[0]
     assert entity.id.endswith("0:0")
     assert entity.label == "Person"
     assert entity.properties == {"chunk_index": 0}
-    assert result.relationships == []
+    chunk_entity = result.nodes[1]
+    assert chunk_entity.label == "Chunk"
+    assert len(result.relationships) == 1
+    assert result.relationships[0].type == "FROM_CHUNK"
 
 
 @pytest.mark.asyncio

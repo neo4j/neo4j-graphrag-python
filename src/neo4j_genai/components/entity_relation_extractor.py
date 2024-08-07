@@ -129,6 +129,8 @@ class EntityRelationExtractor(Component, abc.ABC):
             )
             chunk_graph.relationships.append(next_chunk_rel)
         for node in chunk_graph.nodes:
+            if node.label == CHUNK_NODE_LABEL:
+                continue
             node_to_chunk_rel = self.create_node_to_chunk_rel(node, chunk_id)
             chunk_graph.relationships.append(node_to_chunk_rel)
         return chunk_graph
