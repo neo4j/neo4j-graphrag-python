@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from llama_index.core.node_parser import TextSplitter as LlamaIndexTextSplitter
+
 from neo4j_genai.components.text_splitters.base import TextSplitter
 from neo4j_genai.components.types import TextChunk, TextChunks
 

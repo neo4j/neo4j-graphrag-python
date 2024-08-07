@@ -15,13 +15,13 @@
 from __future__ import annotations
 
 import pytest
-from neo4j_genai.exceptions import SchemaValidationError
-from neo4j_genai.kg_construction.schema import (
+from neo4j_genai.components.schema import (
     SchemaBuilder,
     SchemaEntity,
     SchemaProperty,
     SchemaRelation,
 )
+from neo4j_genai.exceptions import SchemaValidationError
 from pydantic import ValidationError
 
 
