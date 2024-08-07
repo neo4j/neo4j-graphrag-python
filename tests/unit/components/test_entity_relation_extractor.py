@@ -27,7 +27,7 @@ from neo4j_genai.llm import LLMInterface, LLMResponse
 
 
 @pytest.mark.asyncio
-async def test_extractor_happy_path_empty_result() -> None:
+async def test_extractor_happy_path_no_entities() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.invoke.return_value = LLMResponse(content='{"nodes": [], "relationships": []}')
 
@@ -37,6 +37,23 @@ async def test_extractor_happy_path_empty_result() -> None:
     chunks = TextChunks(chunks=[TextChunk(text="some text")])
     result = await extractor.run(chunks=chunks)
     assert isinstance(result, Neo4jGraph)
+    # only one Chunk node
+    assert len(result.nodes) == 1
+    assert result.nodes[0].label == "Chunk"
+    assert result.relationships == []
+
+
+@pytest.mark.asyncio
+async def test_extractor_happy_path_no_entities_no_lexical_graph() -> None:
+    llm = MagicMock(spec=LLMInterface)
+    llm.invoke.return_value = LLMResponse(content='{"nodes": [], "relationships": []}')
+
+    extractor = LLMEntityRelationExtractor(
+        llm=llm,
+        create_lexical_graph=False,
+    )
+    chunks = TextChunks(chunks=[TextChunk(text="some text")])
+    result = await extractor.run(chunks=chunks)
     assert result.nodes == []
     assert result.relationships == []
 
@@ -131,6 +148,7 @@ async def test_extractor_llm_badly_formatted_json_do_not_raise() -> None:
     extractor = LLMEntityRelationExtractor(
         llm=llm,
         on_error=OnError.IGNORE,
+        create_lexical_graph=False,
     )
     chunks = TextChunks(chunks=[TextChunk(text="some text")])
     res = await extractor.run(chunks=chunks)
