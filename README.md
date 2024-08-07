@@ -128,7 +128,7 @@ rag = GraphRAG(retriever=retriever, llm=llm)
 
 # Query the graph
 query_text = "How do I do similarity search in Neo4j?"
-response = rag.search(query_text=query_text, retriever_config={"top_k": 5})
+response = rag.search(query=query_text, retriever_config={"top_k": 5})
 print(response.answer)
 ```
 
