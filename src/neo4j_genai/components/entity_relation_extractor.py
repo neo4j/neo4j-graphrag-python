@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import abc
 import enum
 import json
 import logging
@@ -31,9 +32,10 @@ from neo4j_genai.pipeline.component import Component
 logger = logging.getLogger(__name__)
 
 
-class EntityRelationExtractor(Component):
+class EntityRelationExtractor(Component, abc.ABC):
+    @abc.abstractmethod
     async def run(self, chunks: TextChunks, **kwargs: Any) -> Neo4jGraph:
-        return Neo4jGraph(nodes=[], relationships=[])
+        pass
 
 
 class OnError(enum.Enum):
