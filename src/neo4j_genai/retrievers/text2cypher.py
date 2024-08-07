@@ -55,6 +55,7 @@ class Text2CypherRetriever(Retriever):
         llm (neo4j_genai.generation.llm.LLMInterface): LLM object to generate the Cypher query.
         neo4j_schema (Optional[str]): Neo4j schema used to generate the Cypher query.
         examples (Optional[list[str], optional): Optional user input/query pairs for the LLM to use as examples.
+        custom_prompt (Optional[str]): Optional custom prompt to use instead of auto generated prompt. Will not include the neo4j_schema or examples args, if provided.
 
     Raises:
         RetrieverInitializationError: If validation of the input arguments fail.
@@ -69,6 +70,7 @@ class Text2CypherRetriever(Retriever):
         result_formatter: Optional[
             Callable[[neo4j.Record], RetrieverResultItem]
         ] = None,
+        custom_prompt: Optional[str] = None,
     ) -> None:
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -82,6 +84,7 @@ class Text2CypherRetriever(Retriever):
                 neo4j_schema_model=neo4j_schema_model,
                 examples=examples,
                 result_formatter=result_formatter,
+                custom_prompt=custom_prompt,
             )
         except ValidationError as e:
             raise RetrieverInitializationError(e.errors()) from e
@@ -90,12 +93,17 @@ class Text2CypherRetriever(Retriever):
         self.llm = validated_data.llm_model.llm
         self.examples = validated_data.examples
         self.result_formatter = validated_data.result_formatter
+        self.custom_prompt = validated_data.custom_prompt
         try:
-            self.neo4j_schema = (
-                validated_data.neo4j_schema_model.neo4j_schema
-                if validated_data.neo4j_schema_model
-                else get_schema(validated_data.driver_model.driver)
-            )
+            if (
+                not validated_data.custom_prompt
+            ):  # don't need schema for a custom prompt
+                self.neo4j_schema = (
+                    validated_data.neo4j_schema_model.neo4j_schema
+                    if validated_data.neo4j_schema_model
+                    else get_schema(validated_data.driver_model.driver)
+                )
+
         except (Neo4jError, DriverError) as e:
             error_message = getattr(e, "message", str(e))
             raise SchemaFetchError(
@@ -124,12 +132,16 @@ class Text2CypherRetriever(Retriever):
         except ValidationError as e:
             raise SearchValidationError(e.errors()) from e
 
-        prompt_template = Text2CypherTemplate()
-        prompt = prompt_template.format(
-            schema=self.neo4j_schema,
-            examples="\n".join(self.examples) if self.examples else "",
-            query=validated_data.query_text,
-        )
+        if not self.custom_prompt:
+            prompt_template = Text2CypherTemplate()
+            prompt = prompt_template.format(
+                schema=self.neo4j_schema,
+                examples="\n".join(self.examples) if self.examples else "",
+                query=validated_data.query_text,
+            )
+        else:
+            prompt = self.custom_prompt
+
         logger.debug("Text2CypherRetriever prompt: %s", prompt)
 
         try:
