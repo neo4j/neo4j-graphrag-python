@@ -45,6 +45,8 @@
 
 ## 0.4.0
 
+## 0.4.0
+
 ### Added
 - Add optional custom_prompt arg to the Text2CypherRetriever class.
 
