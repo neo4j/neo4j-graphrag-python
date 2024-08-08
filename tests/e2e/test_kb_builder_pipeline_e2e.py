@@ -19,6 +19,7 @@ from unittest.mock import MagicMock
 import neo4j
 import pytest
 from langchain_text_splitters import CharacterTextSplitter
+from neo4j_genai.components.embedder import TextChunkEmbedder
 from neo4j_genai.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
     OnError,
@@ -31,6 +32,7 @@ from neo4j_genai.components.schema import (
     SchemaRelation,
 )
 from neo4j_genai.components.text_splitters.langchain import LangChainTextSplitterAdapter
+from neo4j_genai.embedder import Embedder
 from neo4j_genai.exceptions import LLMGenerationError
 from neo4j_genai.llm import LLMInterface, LLMResponse
 from neo4j_genai.pipeline import Pipeline
@@ -40,6 +42,12 @@ from neo4j_genai.pipeline import Pipeline
 def llm() -> LLMInterface:
     llm = MagicMock(spec=LLMInterface)
     return llm
+
+
+@pytest.fixture
+def embedder() -> Embedder:
+    embedder = MagicMock(spec=Embedder)
+    return embedder
 
 
 @pytest.fixture
@@ -53,6 +61,11 @@ def text_splitter() -> LangChainTextSplitterAdapter:
         # chunk_size=50 for the sake of this demo
         CharacterTextSplitter(chunk_size=50, chunk_overlap=10, separator="\n\n")
     )
+
+
+@pytest.fixture
+def chunk_embedder(embedder: Embedder) -> TextChunkEmbedder:
+    return TextChunkEmbedder(embedder=embedder)
 
 
 @pytest.fixture
@@ -71,6 +84,7 @@ def kg_writer(driver: neo4j.Driver) -> Neo4jWriter:
 @pytest.fixture
 def kg_builder_pipeline(
     text_splitter: LangChainTextSplitterAdapter,
+    chunk_embedder: TextChunkEmbedder,
     schema_builder: SchemaBuilder,
     entity_relation_extractor: LLMEntityRelationExtractor,
     kg_writer: Neo4jWriter,
@@ -81,7 +95,8 @@ def kg_builder_pipeline(
         "splitter",
         text_splitter,
     )
-    pipe.add_component("schema", SchemaBuilder())
+    pipe.add_component("embedder", chunk_embedder)
+    pipe.add_component("schema", schema_builder)
     pipe.add_component(
         "extractor",
         entity_relation_extractor,
@@ -89,8 +104,9 @@ def kg_builder_pipeline(
     pipe.add_component("writer", kg_writer)
     # define the execution order of component
     # and how the output of previous components must be used
-    pipe.connect("splitter", "extractor", input_config={"chunks": "splitter"})
+    pipe.connect("splitter", "embedder", input_config={"text_chunks": "splitter"})
     pipe.connect("schema", "extractor", input_config={"schema": "schema"})
+    pipe.connect("embedder", "extractor", input_config={"chunks": "embedder"})
     pipe.connect(
         "extractor",
         "writer",
@@ -103,12 +119,14 @@ def kg_builder_pipeline(
 @pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
 async def test_pipeline_builder_happy_path(
     llm: MagicMock,
+    embedder: MagicMock,
     driver: neo4j.Driver,
     kg_builder_pipeline: Pipeline,
 ) -> None:
     """When everything works as expected, extracted entities, relations and text
     chunks must be in the DB
     """
+    embedder.embed.return_value = [1, 2, 3]
     llm.invoke.side_effect = [
         LLMResponse(
             content="""{
@@ -231,6 +249,12 @@ async def test_pipeline_builder_happy_path(
     assert len(created_nodes.records) == 6
     created_rels = driver.execute_query("MATCH ()-[r]->() RETURN r")
     assert len(created_rels.records) == 7
+
+    created_chunks = driver.execute_query("MATCH (n:Chunk) RETURN n").records
+    assert len(created_chunks) == 3
+    for c in created_chunks:
+        assert c.get("embedding") == [1, 2, 3]
+        assert c.get("text") is not None
 
 
 @pytest.mark.asyncio

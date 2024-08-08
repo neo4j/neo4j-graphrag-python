@@ -20,6 +20,7 @@ from typing import Any
 
 import neo4j
 from langchain_text_splitters import CharacterTextSplitter
+from neo4j_genai.components.embedder import TextChunkEmbedder
 from neo4j_genai.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
     OnError,
@@ -32,6 +33,7 @@ from neo4j_genai.components.schema import (
     SchemaRelation,
 )
 from neo4j_genai.components.text_splitters.langchain import LangChainTextSplitterAdapter
+from neo4j_genai.embeddings.openai import OpenAIEmbeddings
 from neo4j_genai.llm import OpenAILLM
 from neo4j_genai.pipeline import Pipeline
 
@@ -78,6 +80,7 @@ async def main(neo4j_driver: neo4j.Driver) -> dict[str, Any]:
             CharacterTextSplitter(chunk_size=50, chunk_overlap=10, separator=".")
         ),
     )
+    pipe.add_component("chunk_embedder", TextChunkEmbedder(embedder=OpenAIEmbeddings()))
     pipe.add_component("schema", SchemaBuilder())
     pipe.add_component(
         "extractor",
@@ -95,8 +98,11 @@ async def main(neo4j_driver: neo4j.Driver) -> dict[str, Any]:
     pipe.add_component("writer", Neo4jWriter(neo4j_driver))
     # define the execution order of component
     # and how the output of previous components must be used
-    pipe.connect("splitter", "extractor", input_config={"chunks": "splitter"})
+    pipe.connect("splitter", "chunk_embedder", input_config={"text_chunks": "splitter"})
     pipe.connect("schema", "extractor", input_config={"schema": "schema"})
+    pipe.connect(
+        "chunk_embedder", "extractor", input_config={"chunks": "chunk_embedder"}
+    )
     pipe.connect(
         "extractor",
         "writer",
