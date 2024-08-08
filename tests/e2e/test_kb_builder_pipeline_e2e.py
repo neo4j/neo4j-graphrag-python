@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import os
 from unittest.mock import MagicMock
 
 import neo4j
@@ -36,6 +37,8 @@ from neo4j_genai.embedder import Embedder
 from neo4j_genai.exceptions import LLMGenerationError
 from neo4j_genai.llm import LLMInterface, LLMResponse
 from neo4j_genai.pipeline import Pipeline
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 @pytest.fixture
@@ -115,9 +118,17 @@ def kg_builder_pipeline(
     return pipe
 
 
+@pytest.fixture
+def text() -> str:
+    with open(os.path.join(BASE_DIR, "data/harry_potter.txt", "r")) as f:
+        text = f.read()
+    return text
+
+
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
 async def test_pipeline_builder_happy_path(
+    text: str,
     llm: MagicMock,
     embedder: MagicMock,
     driver: neo4j.Driver,
@@ -174,8 +185,6 @@ async def test_pipeline_builder_happy_path(
     # user input:
     # the initial text
     # and the list of entities and relations we are looking for
-    with open("./data/harry_potter.txt", "r") as f:
-        text = f.read()
     pipe_inputs = {
         "splitter": {"text": text},
         "schema": {
@@ -260,6 +269,7 @@ async def test_pipeline_builder_happy_path(
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
 async def test_pipeline_builder_failing_chunk_raise(
+    text: str,
     llm: MagicMock,
     driver: neo4j.Driver,
     kg_builder_pipeline: Pipeline,
@@ -315,8 +325,6 @@ async def test_pipeline_builder_failing_chunk_raise(
     # user input:
     # the initial text
     # and the list of entities and relations we are looking for
-    with open("./data/harry_potter.txt", "r") as f:
-        text = f.read()
     pipe_inputs = {
         "splitter": {"text": text},
         # note: schema not used in this test because
@@ -338,6 +346,7 @@ async def test_pipeline_builder_failing_chunk_raise(
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
 async def test_pipeline_builder_failing_chunk_do_not_raise(
+    text: str,
     llm: MagicMock,
     driver: neo4j.Driver,
     kg_builder_pipeline: Pipeline,
@@ -392,8 +401,6 @@ async def test_pipeline_builder_failing_chunk_do_not_raise(
     # user input:
     # the initial text
     # and the list of entities and relations we are looking for
-    with open("./data/harry_potter.txt", "r") as f:
-        text = f.read()
     pipe_inputs = {
         "splitter": {"text": text},
         # note: schema not used in this test because
@@ -406,7 +413,7 @@ async def test_pipeline_builder_failing_chunk_do_not_raise(
     }
     kg_builder_pipeline.get_node_by_name(
         "extractor"
-    ).component.on_error = OnError.IGNORE  # type: ignore
+    ).component.on_error = OnError.IGNORE
     res = await kg_builder_pipeline.run(pipe_inputs)
     # llm must have been called for each chunk
     assert llm.return_value.invoke.call_count == 3

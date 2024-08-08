@@ -14,7 +14,6 @@
 #  limitations under the License.
 from __future__ import annotations
 
-import os.path
 from typing import Any
 
 import neo4j
@@ -22,8 +21,6 @@ from neo4j import GraphDatabase
 from pinecone import Pinecone, ServerlessSpec
 
 from ..utils import build_data_objects, populate_neo4j
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def populate_dbs(
