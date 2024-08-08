@@ -5,7 +5,8 @@ User Guide: Pipeline
 
 This page provides information about how to create a pipeline.
 
-.. node::
+
+.. note::
 
     Pipelines run asynchronously, see examples below.
 

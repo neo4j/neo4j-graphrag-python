@@ -12,22 +12,17 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from neo4j_genai.exceptions import Neo4jGenAiError
+import pytest
+from neo4j_genai.components.types import Neo4jNode
 
 
-class PipelineDefinitionError(Neo4jGenAiError):
-    """Raised when the pipeline graph is invalid"""
-
-    pass
-
-
-class PipelineMissingDependencyError(Neo4jGenAiError):
-    """Raised when a task is scheduled but its dependencies are not yet done"""
-
-    pass
+def test_neo4j_node_invalid_property() -> None:
+    with pytest.raises(TypeError) as excinfo:
+        Neo4jNode(id="0", label="Label", properties={"id": "1"})
+        assert "'id' as a property name is not allowed" in str(excinfo)
 
 
-class PipelineStatusUpdateError(Neo4jGenAiError):
-    """Raises when trying an invalid change of state (e.g. DONE => DOING)"""
-
-    pass
+def test_neo4j_node_invalid_embedding_property() -> None:
+    with pytest.raises(TypeError) as excinfo:
+        Neo4jNode(id="0", label="Label", embedding_properties={"id": [1.0, 2.0, 3.0]})
+        assert "'id' as a property name is not allowed" in str(excinfo)

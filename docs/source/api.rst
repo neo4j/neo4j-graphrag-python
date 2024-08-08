@@ -10,7 +10,7 @@ Retrievers
 **********
 
 RetrieverInterface
-===================
+==================
 
 .. autoclass:: neo4j_genai.retrievers.base.Retriever
     :members:
@@ -70,9 +70,9 @@ PineconeNeo4jRetriever
     :members: search
 
 
-**********
+********
 Embedder
-**********
+********
 
 .. autoclass:: neo4j_genai.embedder.Embedder
     :members:
@@ -88,21 +88,21 @@ Generation
 **********
 
 LLMInterface
-======================
+============
 
 .. autoclass:: neo4j_genai.llm.LLMInterface
     :members:
 
 
 OpenAILLM
-======================
+=========
 
 .. autoclass:: neo4j_genai.llm.OpenAILLM
     :members:
 
 
 PromptTemplate
-======================
+==============
 
 .. autoclass:: neo4j_genai.generation.prompts.PromptTemplate
     :members:
@@ -124,6 +124,8 @@ Database Interaction
 .. autofunction:: neo4j_genai.indexes.drop_index_if_exists
 
 .. autofunction:: neo4j_genai.indexes.upsert_vector
+
+.. autofunction:: neo4j_genai.indexes.upsert_vector_on_relationship
 
 
 ******
@@ -156,6 +158,12 @@ Errors
   * :class:`neo4j_genai.exceptions.PromptMissingInputError`
 
   * :class:`neo4j_genai.exceptions.LLMGenerationError`
+
+  * :class:`neo4j_genai.pipeline.exceptions.PipelineDefinitionError`
+
+  * :class:`neo4j_genai.pipeline.exceptions.PipelineMissingDependencyError`
+
+  * :class:`neo4j_genai.pipeline.exceptions.PipelineStatusUpdateError`
 
 
 Neo4jGenAiError
@@ -222,7 +230,7 @@ Neo4jVersionError
 
 
 Text2CypherRetrievalError
-==========================
+=========================
 
 .. autoclass:: neo4j_genai.exceptions.Text2CypherRetrievalError
    :show-inheritance:
@@ -236,21 +244,42 @@ SchemaFetchError
 
 
 RagInitializationError
-==========================
+======================
 
 .. autoclass:: neo4j_genai.exceptions.RagInitializationError
    :show-inheritance:
 
 
 PromptMissingInputError
-==========================
+=======================
 
 .. autoclass:: neo4j_genai.exceptions.PromptMissingInputError
    :show-inheritance:
 
 
 LLMGenerationError
-==========================
+==================
 
 .. autoclass:: neo4j_genai.exceptions.LLMGenerationError
+   :show-inheritance:
+
+
+PipelineDefinitionError
+=======================
+
+.. autoclass:: neo4j_genai.pipeline.exceptions.PipelineDefinitionError
+   :show-inheritance:
+
+
+PipelineMissingDependencyError
+==============================
+
+.. autoclass:: neo4j_genai.pipeline.exceptions.PipelineMissingDependencyError
+   :show-inheritance:
+
+
+PipelineStatusUpdateError
+=========================
+
+.. autoclass:: neo4j_genai.pipeline.exceptions.PipelineStatusUpdateError
    :show-inheritance:
