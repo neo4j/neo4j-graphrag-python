@@ -162,10 +162,10 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         llm_result = self.llm.invoke(prompt)
         try:
             result = json.loads(llm_result.content)
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
             if self.on_error == OnError.RAISE:
                 raise LLMGenerationError(
-                    f"LLM response is not valid JSON {llm_result.content}"
+                    f"LLM response is not valid JSON {llm_result.content}: {e}"
                 )
             else:
                 logger.error(

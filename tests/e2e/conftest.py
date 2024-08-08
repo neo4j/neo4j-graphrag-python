@@ -157,7 +157,7 @@ def setup_neo4j_for_schema_query_with_excluded_labels(driver: Driver) -> None:
     )
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def setup_neo4j_for_kg_construction(driver: Driver) -> None:
     # Delete all nodes and indexes in the graph
     driver.execute_query("MATCH (n) DETACH DELETE n")
