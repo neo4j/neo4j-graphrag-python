@@ -87,14 +87,14 @@ Examples:
 {examples}
 
 Question:
-{query}
+{query_text}
 
 Answer:
 """
-    EXPECTED_INPUTS = ["context", "query", "examples"]
+    EXPECTED_INPUTS = ["context", "query_text", "examples"]
 
-    def format(self, query: str, context: str, examples: str) -> str:
-        return super().format(query=query, context=context, examples=examples)
+    def format(self, query_text: str, context: str, examples: str) -> str:
+        return super().format(query_text=query_text, context=context, examples=examples)
 
 
 class Text2CypherTemplate(PromptTemplate):
