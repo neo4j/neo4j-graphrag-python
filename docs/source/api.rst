@@ -3,6 +3,66 @@
 API Documentation
 #################
 
+.. _components-section:
+
+**********
+Components
+**********
+
+KGWriter
+========
+
+.. autoclass:: neo4j_genai.components.kg_writer.KGWriter
+    :members: run
+
+Neo4jWriter
+===========
+
+.. autoclass:: neo4j_genai.components.kg_writer.Neo4jWriter
+    :members: run
+
+TextSplitter
+============
+
+.. autoclass:: neo4j_genai.components.text_splitters.base.TextSplitter
+    :members: run
+
+LangChainTextSplitterAdapter
+============================
+
+.. autoclass:: neo4j_genai.components.text_splitters.langchain.LangChainTextSplitterAdapter
+    :members: run
+
+LlamaIndexTextSplitterAdapter
+=============================
+
+.. autoclass:: neo4j_genai.components.text_splitters.llamaindex.LlamaIndexTextSplitterAdapter
+    :members: run
+
+TextChunkEmbedder
+=================
+
+.. autoclass:: neo4j_genai.components.embedder.TextChunkEmbedder
+    :members: run
+
+SchemaBuilder
+=============
+
+.. autoclass:: neo4j_genai.components.schema.SchemaBuilder
+    :members: run
+
+EntityRelationExtractor
+=======================
+
+.. autoclass:: neo4j_genai.components.entity_relation_extractor.EntityRelationExtractor
+    :members: run
+
+LLMEntityRelationExtractor
+==========================
+
+.. autoclass:: neo4j_genai.components.entity_relation_extractor.LLMEntityRelationExtractor
+    :members: run
+
 .. _retrievers-section:
 
 **********

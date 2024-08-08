@@ -26,6 +26,19 @@ class LangChainTextSplitterAdapter(TextSplitter):
 
     Args:
         text_splitter (LangChainTextSplitter): An instance of LangChain's TextSplitter class.
+
+    Example:
+
+    .. code-block:: python
+
+        from langchain_text_splitters import RecursiveCharacterTextSplitter
+        from neo4j_genai.components.text_splitters.langchain import LangChainTextSplitterAdapter
+        from neo4j_genai.pipeline import Pipeline
+
+        pipeline = Pipeline()
+        text_splitter = LangChainTextSplitterAdapter(RecursiveCharacterTextSplitter())
+        pipeline.add_component("text_splitter", text_splitter)
+
     """
 
     def __init__(self, text_splitter: LangChainTextSplitter) -> None:
