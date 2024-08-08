@@ -86,7 +86,7 @@ class Neo4jRelationship(BaseModel):
     embedding_properties: Optional[dict[str, list[float]]] = None
 
 
-class Neo4jGraph(BaseModel):
+class Neo4jGraph(DataModel):
     """Represents a Neo4j graph.
 
     Attributes:
@@ -94,5 +94,5 @@ class Neo4jGraph(BaseModel):
         relationships (list[Neo4jRelationship]): A list of relationships in the graph.
     """
 
-    nodes: list[Neo4jNode]
-    relationships: list[Neo4jRelationship]
+    nodes: list[Neo4jNode] = []
+    relationships: list[Neo4jRelationship] = []

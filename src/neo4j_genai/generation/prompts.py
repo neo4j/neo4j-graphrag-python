@@ -119,3 +119,35 @@ Cypher query:
 
     def format(self, query: str, schema: str, examples: str) -> str:
         return super().format(query=query, schema=schema, examples=examples)
+
+
+class ERExtractionTemplate(PromptTemplate):
+    DEFAULT_TEMPLATE = """
+You are a top-tier algorithm designed for extracting
+information in structured formats to build a knowledge graph.
+
+Extract the entities (nodes) and specify their type from the following text.
+Also extract the relationships between these nodes.
+
+Return result as JSON using the following format:
+{{"nodes": [ {{"id": "0", "label": "Person", "properties": {{"name": "John"}} }}],
+"relationships": [{{"type": "KNOWS", "start_node_id": "0", "end_node_id": "1", "properties": {{"since": "2024-08-01"}} }}] }}
+
+Use only fhe following nodes and relationships (if provided):
+{schema}
+
+Assign a unique ID (string) to each node, and reuse it to define relationships.
+Do respect the source and target node types for relationship and
+the relationship direction.
+
+Examples:
+{examples}
+
+Input text:
+
+{text}
+"""
+    EXPECTED_INPUTS = ["text"]
+
+    def format(self, text: str, schema: dict[str, Any], examples: str) -> str:
+        return super().format(text=text, schema=schema, examples=examples)
