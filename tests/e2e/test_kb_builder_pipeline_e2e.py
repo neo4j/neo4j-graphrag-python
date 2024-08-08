@@ -413,7 +413,7 @@ async def test_pipeline_builder_failing_chunk_do_not_raise(
     }
     kg_builder_pipeline.get_node_by_name(
         "extractor"
-    ).component.on_error = OnError.IGNORE
+    ).component.on_error = OnError.IGNORE  # type: ignore[arg-type, unused-ignore]
     res = await kg_builder_pipeline.run(pipe_inputs)
     # llm must have been called for each chunk
     assert llm.return_value.invoke.call_count == 3
