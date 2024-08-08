@@ -4,15 +4,16 @@
 
 ### Added
 - Add optional custom_prompt arg to the Text2CypherRetriever class.
-  
+
+### Changed
+- `GraphRAG.search` method first parameter has been renamed `query_text` (was `query`) for consistency with the retrievers interface.
+- Made `GraphRAG.search` method backwards compatible with the query parameter, raising warnings to encourage using query_text instead.
+
 ## 0.3.1
 
 ### Fixed
 -   Corrected initialization to allow specifying the embedding model name.
 -   Removed sentence_transformers from embeddings/__init__.py to avoid ImportError when the package is not installed.
-
-### Changed
-- `GraphRAG.search` method first parameter has been renamed `query_text` (was `query`) for consistency with the retrievers interface.
 
 ## 0.3.0
 
