@@ -79,6 +79,6 @@ SchemaRelation
 .. autoclass:: neo4j_genai.components.schema.SchemaEntity
 
 SchemaConfig
-==============
+============
 
 .. autoclass:: neo4j_genai.components.schema.SchemaConfig

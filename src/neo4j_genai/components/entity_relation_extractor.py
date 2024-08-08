@@ -161,7 +161,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         from neo4j_genai.llm import OpenAILLM
         from neo4j_genai.pipeline import Pipeline
 
-        llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0})
+        llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0, "response_format": {"type": "object"}})
 
         extractor = LLMEntityRelationExtractor(llm=llm)
         pipe = Pipeline()

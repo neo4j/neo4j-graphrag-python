@@ -38,6 +38,7 @@ the resulting sum:
         async def run(self, number1: int, number2: int = 1) -> IntResultModel:
             return IntResultModel(result = number1 + number2)
 
+Read more about :ref:`components-section` in the API Documentation.
 
 ***************************************
 Connecting Components within a Pipeline
