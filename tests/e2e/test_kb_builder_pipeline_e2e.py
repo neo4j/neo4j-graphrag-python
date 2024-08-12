@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import os
+from collections import Counter
 from unittest.mock import MagicMock
 
 import neo4j
@@ -61,7 +62,6 @@ def schema_builder() -> SchemaBuilder:
 @pytest.fixture
 def text_splitter() -> LangChainTextSplitterAdapter:
     return LangChainTextSplitterAdapter(
-        # chunk_size=50 for the sake of this demo
         CharacterTextSplitter(chunk_size=50, chunk_overlap=10, separator="\n\n")
     )
 
@@ -119,8 +119,8 @@ def kg_builder_pipeline(
 
 
 @pytest.fixture
-def text() -> str:
-    with open(os.path.join(BASE_DIR, "data/harry_potter.txt", "r")) as f:
+def harry_potter_text() -> str:
+    with open(os.path.join(BASE_DIR, "data/harry_potter.txt"), "r") as f:
         text = f.read()
     return text
 
@@ -128,7 +128,7 @@ def text() -> str:
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
 async def test_pipeline_builder_happy_path(
-    text: str,
+    harry_potter_text: str,
     llm: MagicMock,
     embedder: MagicMock,
     driver: neo4j.Driver,
@@ -137,7 +137,7 @@ async def test_pipeline_builder_happy_path(
     """When everything works as expected, extracted entities, relations and text
     chunks must be in the DB
     """
-    embedder.embed.return_value = [1, 2, 3]
+    embedder.return_value.embed.return_value = [1, 2, 3]
     llm.invoke.side_effect = [
         LLMResponse(
             content="""{
@@ -186,7 +186,7 @@ async def test_pipeline_builder_happy_path(
     # the initial text
     # and the list of entities and relations we are looking for
     pipe_inputs = {
-        "splitter": {"text": text},
+        "splitter": {"text": harry_potter_text},
         "schema": {
             "entities": [
                 SchemaEntity(
@@ -224,7 +224,7 @@ async def test_pipeline_builder_happy_path(
                     label="PART_OF",
                 ),
                 SchemaRelation(
-                    label="LEAD_BY",
+                    label="LED_BY",
                 ),
                 SchemaRelation(
                     label="DRINKS",
@@ -234,7 +234,7 @@ async def test_pipeline_builder_happy_path(
                 ("Person", "KNOWS", "Person"),
                 ("Person", "DRINKS", "Potion"),
                 ("Person", "PART_OF", "Organization"),
-                ("Organization", "LEAD_BY", "Person"),
+                ("Organization", "LED_BY", "Person"),
             ],
         },
     }
@@ -248,11 +248,21 @@ async def test_pipeline_builder_happy_path(
     assert len(chunks["chunks"]) == 3
     graph = kg_builder_pipeline.get_results_for_component("extractor")
     # 3 entities + 3 chunks
-    assert len(graph["nodes"]) == 6
+    nodes = graph["nodes"]
+    assert len(nodes) == 6
+    label_counts = dict(Counter([n.label for n in nodes]))
+    assert label_counts == {
+        "Chunk": 3,
+        "Person": 2,
+        "Organization": 1,
+    }
     # 2 relationships between entities
     # + 3 rels between entities and their chunk
     # + 2 "NEXT_CHUNK" rels
-    assert len(graph["relationships"]) == 7
+    relationships = graph["relationships"]
+    assert len(relationships) == 7
+    type_counts = dict(Counter([r.label for r in relationships]))
+    assert type_counts == {"IN_CHUNK": 3, "KNOWS": 1, "LED_BY": 1, "NEXT_CHUNK": 2}
     # then check content of neo4j db
     created_nodes = driver.execute_query("MATCH (n) RETURN n")
     assert len(created_nodes.records) == 6
@@ -269,7 +279,7 @@ async def test_pipeline_builder_happy_path(
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
 async def test_pipeline_builder_failing_chunk_raise(
-    text: str,
+    harry_potter_text: str,
     llm: MagicMock,
     driver: neo4j.Driver,
     kg_builder_pipeline: Pipeline,
@@ -326,7 +336,7 @@ async def test_pipeline_builder_failing_chunk_raise(
     # the initial text
     # and the list of entities and relations we are looking for
     pipe_inputs = {
-        "splitter": {"text": text},
+        "splitter": {"text": harry_potter_text},
         # note: schema not used in this test because
         # we are mocking the LLM
         "schema": {
@@ -346,7 +356,7 @@ async def test_pipeline_builder_failing_chunk_raise(
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
 async def test_pipeline_builder_failing_chunk_do_not_raise(
-    text: str,
+    harry_potter_text: str,
     llm: MagicMock,
     driver: neo4j.Driver,
     kg_builder_pipeline: Pipeline,
@@ -402,7 +412,7 @@ async def test_pipeline_builder_failing_chunk_do_not_raise(
     # the initial text
     # and the list of entities and relations we are looking for
     pipe_inputs = {
-        "splitter": {"text": text},
+        "splitter": {"text": harry_potter_text},
         # note: schema not used in this test because
         # we are mocking the LLM
         "schema": {
