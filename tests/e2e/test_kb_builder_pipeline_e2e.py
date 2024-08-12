@@ -108,6 +108,7 @@ def kg_builder_pipeline(
     # define the execution order of component
     # and how the output of previous components must be used
     pipe.connect("splitter", "embedder", input_config={"text_chunks": "splitter"})
+    # pipe.connect("splitter", "extractor", input_config={"chunks": "splitter"})
     pipe.connect("schema", "extractor", input_config={"schema": "schema"})
     pipe.connect("embedder", "extractor", input_config={"chunks": "embedder"})
     pipe.connect(
@@ -137,7 +138,8 @@ async def test_pipeline_builder_happy_path(
     """When everything works as expected, extracted entities, relations and text
     chunks must be in the DB
     """
-    embedder.return_value.embed.return_value = [1, 2, 3]
+    driver.execute_query("MATCH (n) DETACH DELETE n")
+    embedder.embed_query.return_value = [1, 2, 3]
     llm.invoke.side_effect = [
         LLMResponse(
             content="""{
@@ -250,7 +252,7 @@ async def test_pipeline_builder_happy_path(
     # 3 entities + 3 chunks
     nodes = graph["nodes"]
     assert len(nodes) == 6
-    label_counts = dict(Counter([n.label for n in nodes]))
+    label_counts = dict(Counter([n["label"] for n in nodes]))
     assert label_counts == {
         "Chunk": 3,
         "Person": 2,
@@ -261,8 +263,8 @@ async def test_pipeline_builder_happy_path(
     # + 2 "NEXT_CHUNK" rels
     relationships = graph["relationships"]
     assert len(relationships) == 7
-    type_counts = dict(Counter([r.label for r in relationships]))
-    assert type_counts == {"IN_CHUNK": 3, "KNOWS": 1, "LED_BY": 1, "NEXT_CHUNK": 2}
+    type_counts = dict(Counter([r["type"] for r in relationships]))
+    assert type_counts == {"FROM_CHUNK": 3, "KNOWS": 1, "LED_BY": 1, "NEXT_CHUNK": 2}
     # then check content of neo4j db
     created_nodes = driver.execute_query("MATCH (n) RETURN n")
     assert len(created_nodes.records) == 6
@@ -272,14 +274,16 @@ async def test_pipeline_builder_happy_path(
     created_chunks = driver.execute_query("MATCH (n:Chunk) RETURN n").records
     assert len(created_chunks) == 3
     for c in created_chunks:
-        assert c.get("embedding") == [1, 2, 3]
-        assert c.get("text") is not None
+        node = c.get("n")
+        assert node.get("embedding") == [1, 2, 3]
+        assert node.get("text") is not None
 
 
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
 async def test_pipeline_builder_failing_chunk_raise(
     harry_potter_text: str,
+    embedder: MagicMock,
     llm: MagicMock,
     driver: neo4j.Driver,
     kg_builder_pipeline: Pipeline,
@@ -288,6 +292,8 @@ async def test_pipeline_builder_failing_chunk_raise(
     extractor should stop the process with an exception. Nothing should be
     added to the DB
     """
+    driver.execute_query("MATCH (n) DETACH DELETE n")
+    embedder.embed_query.return_value = [1, 2, 3]
     llm.invoke.side_effect = [
         LLMResponse(
             content="""{
@@ -358,12 +364,15 @@ async def test_pipeline_builder_failing_chunk_raise(
 async def test_pipeline_builder_failing_chunk_do_not_raise(
     harry_potter_text: str,
     llm: MagicMock,
+    embedder: MagicMock,
     driver: neo4j.Driver,
     kg_builder_pipeline: Pipeline,
 ) -> None:
     """If on_error is set to "IGNORE", process must continue
     and nodes/relationships created for the chunks that succeeded
     """
+    driver.execute_query("MATCH (n) DETACH DELETE n")
+    embedder.embed_query.return_value = [1, 2, 3]
     llm.invoke.side_effect = [
         LLMResponse(content="invalid json"),
         LLMResponse(
@@ -426,7 +435,7 @@ async def test_pipeline_builder_failing_chunk_do_not_raise(
     ).component.on_error = OnError.IGNORE  # type: ignore[attr-defined, unused-ignore]
     res = await kg_builder_pipeline.run(pipe_inputs)
     # llm must have been called for each chunk
-    assert llm.return_value.invoke.call_count == 3
+    assert llm.invoke.call_count == 3
     # result must be success
     assert res == {"writer": {"status": "SUCCESS"}}
     # check component's results
@@ -436,7 +445,7 @@ async def test_pipeline_builder_failing_chunk_do_not_raise(
     # 3 entities + 3 chunks
     nodes = graph["nodes"]
     assert len(nodes) == 6
-    label_counts = dict(Counter([n.label for n in nodes]))
+    label_counts = dict(Counter([n["label"] for n in nodes]))
     assert label_counts == {
         "Chunk": 3,
         "Person": 2,
@@ -447,8 +456,8 @@ async def test_pipeline_builder_failing_chunk_do_not_raise(
     # + 2 "NEXT_CHUNK" rels
     relationships = graph["relationships"]
     assert len(relationships) == 7
-    type_counts = dict(Counter([r.label for r in relationships]))
-    assert type_counts == {"IN_CHUNK": 3, "KNOWS": 1, "LED_BY": 1, "NEXT_CHUNK": 2}
+    type_counts = dict(Counter([r["type"] for r in relationships]))
+    assert type_counts == {"FROM_CHUNK": 3, "KNOWS": 1, "LED_BY": 1, "NEXT_CHUNK": 2}
     # then check content of neo4j db
     created_nodes = driver.execute_query("MATCH (n) RETURN n")
     assert len(created_nodes.records) == 6
