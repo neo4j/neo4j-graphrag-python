@@ -21,6 +21,7 @@ import fsspec
 from fsspec import AbstractFileSystem
 from fsspec.implementations.local import LocalFileSystem
 
+from neo4j_genai.exceptions import PdfLoaderError
 from neo4j_genai.pipeline import Component, DataModel
 
 
@@ -34,7 +35,7 @@ class DataLoader(Component):
     """
 
     @abstractmethod
-    async def run(self, filepath: str) -> PdfDocument:
+    async def run(self, filepath: Path) -> PdfDocument:
         pass
 
 
@@ -43,13 +44,12 @@ def is_default_fs(fs: fsspec.AbstractFileSystem) -> bool:
 
 
 class PdfLoader(DataLoader):
+    @staticmethod
     def load_file(
-        self,
         file: Path,
-        extra_info: Optional[dict] = None,
         fs: Optional[AbstractFileSystem] = None,
     ) -> str:
-        """Parse file."""
+        """Parse PDF file and return text."""
         if not isinstance(file, Path):
             file = Path(file)
 
@@ -61,15 +61,19 @@ class PdfLoader(DataLoader):
             )
         fs = fs or LocalFileSystem()
 
-        with fs.open(file, "rb") as fp:
-            stream = fp if is_default_fs(fs) else io.BytesIO(fp.read())
-            pdf = pypdf.PdfReader(stream)
-            num_pages = len(pdf.pages)
-            text = "\n".join(
-                pdf.pages[page].extract_text() for page in range(num_pages)
-            )
+        try:
+            with fs.open(file, "rb") as fp:
+                stream = fp if is_default_fs(fs) else io.BytesIO(fp.read())
+                pdf = pypdf.PdfReader(stream)
+                num_pages = len(pdf.pages)
+                text_parts = (
+                    pdf.pages[page].extract_text() for page in range(num_pages)
+                )
+                full_text = "\n".join(text_parts)
 
-            return text
+                return full_text
+        except Exception as e:
+            raise PdfLoaderError(e)
 
     async def run(self, filepath: Path) -> PdfDocument:
         return PdfDocument(text=self.load_file(filepath))
