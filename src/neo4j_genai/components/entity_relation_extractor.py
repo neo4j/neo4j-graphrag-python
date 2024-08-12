@@ -51,6 +51,13 @@ NODE_TO_CHUNK_RELATIONSHIP_TYPE = "FROM_CHUNK"
 
 
 class EntityRelationExtractor(Component, abc.ABC):
+    """Abstract class for entity relation extraction components.
+
+    Args:
+        on_error (OnError): What to do when an error occurs during extraction. Defaults to raising an error.
+        create_lexical_graph (bool): Whether to include the text chunks in the graph in addition to the extracted entities and relations. Defaults to True.
+    """
+
     def __init__(
         self,
         *args: Any,
@@ -137,6 +144,31 @@ class EntityRelationExtractor(Component, abc.ABC):
 
 
 class LLMEntityRelationExtractor(EntityRelationExtractor):
+    """
+    Extracts a knowledge graph from a series of text chunks using a large language model.
+
+    Args:
+        llm (LLMInterface): The language model to use for extraction.
+        prompt_template (ERExtractionTemplate | str): A custom prompt template to use for extraction.
+        create_lexical_graph (bool): Whether to include the text chunks in the graph in addition to the extracted entities and relations. Defaults to True.
+        on_error (OnError): What to do when an error occurs during extraction. Defaults to raising an error.
+
+    Example:
+
+    .. code-block:: python
+
+        from neo4j_genai.components.entity_relation_extractor import LLMEntityRelationExtractor
+        from neo4j_genai.llm import OpenAILLM
+        from neo4j_genai.pipeline import Pipeline
+
+        llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0, "response_format": {"type": "object"}})
+
+        extractor = LLMEntityRelationExtractor(llm=llm)
+        pipe = Pipeline()
+        pipe.add_component("extractor", extractor)
+
+    """
+
     def __init__(
         self,
         llm: LLMInterface,

@@ -26,6 +26,19 @@ class LlamaIndexTextSplitterAdapter(TextSplitter):
 
     Args:
         text_splitter (LlamaIndexTextSplitter): An instance of LlamaIndex's TextSplitter class.
+
+    Example:
+
+    .. code-block:: python
+
+        from llama_index.core.node_parser.text.sentence import SentenceSplitter
+        from neo4j_genai.components.text_splitters.langchain import LangChainTextSplitterAdapter
+        from neo4j_genai.pipeline import Pipeline
+
+        pipeline = Pipeline()
+        text_splitter = LlamaIndexTextSplitterAdapter(SentenceSplitter())
+        pipeline.add_component("text_splitter", text_splitter)
+
     """
 
     def __init__(self, text_splitter: LlamaIndexTextSplitter) -> None:

@@ -12,20 +12,6 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-#  Copyright (c) "Neo4j"
-#  Neo4j Sweden AB [https://neo4j.com]
-#  #
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#  #
-#      https://www.apache.org/licenses/LICENSE-2.0
-#  #
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
 from __future__ import annotations
 
 from typing import Any, Dict, List, Literal, Tuple
@@ -37,6 +23,10 @@ from neo4j_genai.pipeline import Component, DataModel
 
 
 class SchemaProperty(BaseModel):
+    """
+    Represents a property on a node or relationship in the graph.
+    """
+
     name: str
     # See https://neo4j.com/docs/cypher-manual/current/values-and-types/property-structural-constructed/#property-types
     type: Literal[
@@ -112,6 +102,59 @@ class SchemaBuilder(Component):
     """
     A builder class for constructing SchemaConfig objects from given entities,
     relations, and their interrelationships defined in a potential schema.
+
+    Example:
+
+    .. code-block:: python
+
+        from neo4j_genai.components.schema import (
+            SchemaBuilder,
+            SchemaEntity,
+            SchemaProperty,
+            SchemaRelation,
+        )
+        from neo4j_genai.pipeline import Pipeline
+
+        entities = [
+            SchemaEntity(
+                label="PERSON",
+                description="An individual human being.",
+                properties=[
+                    SchemaProperty(
+                        name="name", type="STRING", description="The name of the person"
+                    )
+                ],
+            ),
+            SchemaEntity(
+                label="ORGANIZATION",
+                description="A structured group of people with a common purpose.",
+                properties=[
+                    SchemaProperty(
+                        name="name", type="STRING", description="The name of the organization"
+                    )
+                ],
+            ),
+        ]
+        relations = [
+            SchemaRelation(
+                label="EMPLOYED_BY", description="Indicates employment relationship."
+            ),
+        ]
+        potential_schema = [
+            ("PERSON", "EMPLOYED_BY", "ORGANIZATION"),
+        ]
+        pipe = Pipeline()
+        schema_builder = SchemaBuilder()
+        pipe.add_component("schema_builder", schema_builder)
+        pipe_inputs = {
+            "schema": {
+                "entities": entities,
+                "relations": relations,
+                "potential_schema": potential_schema,
+            },
+            ...
+        }
+        pipe.run(pipe_inputs)
     """
 
     @staticmethod

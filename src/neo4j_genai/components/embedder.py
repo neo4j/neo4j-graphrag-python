@@ -22,6 +22,20 @@ class TextChunkEmbedder(Component):
 
     Args:
         embedder (Embedder): The embedder to use to create the embeddings.
+
+    Example:
+
+    .. code-block:: python
+
+        from neo4j_genai.components.embedder import TextChunkEmbedder
+        from neo4j_genai.embeddings.openai import OpenAIEmbeddings
+        from neo4j_genai.pipeline import Pipeline
+
+        embedder = OpenAIEmbeddings(model="text-embedding-3-large")
+        chunk_embedder = TextChunkEmbedder(embedder)
+        pipeline = Pipeline()
+        pipeline.add_component("chunk_embedder", chunk_embedder)
+
     """
 
     def __init__(self, embedder: Embedder):

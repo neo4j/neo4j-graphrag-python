@@ -60,6 +60,25 @@ class Neo4jWriter(KGWriter):
     Args:
         driver (neo4j.driver): The Neo4j driver to connect to the database.
         neo4j_database (Optional[str]): The name of the Neo4j database to write to. Defaults to 'neo4j' if not provided.
+
+    Example:
+
+    .. code-block:: python
+
+        from neo4j import GraphDatabase
+        from neo4j_genai.components.kg_writer import Neo4jWriter
+        from neo4j_genai.pipeline import Pipeline
+
+        URI = "neo4j://localhost:7687"
+        AUTH = ("neo4j", "password")
+        DATABASE = "neo4j"
+
+        driver = GraphDatabase.driver(URI, auth=AUTH, database=DATABASE)
+        writer = Neo4jWriter(driver=driver, neo4j_database=DATABASE)
+
+        pipeline = Pipeline()
+        pipeline.add_component("writer", writer)
+
     """
 
     def __init__(
