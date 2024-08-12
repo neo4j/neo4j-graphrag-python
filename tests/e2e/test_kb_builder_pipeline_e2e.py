@@ -434,11 +434,21 @@ async def test_pipeline_builder_failing_chunk_do_not_raise(
     assert len(chunks["chunks"]) == 3
     graph = kg_builder_pipeline.get_results_for_component("extractor")
     # 3 entities + 3 chunks
-    assert len(graph["nodes"]) == 6
+    nodes = graph["nodes"]
+    assert len(nodes) == 6
+    label_counts = dict(Counter([n.label for n in nodes]))
+    assert label_counts == {
+        "Chunk": 3,
+        "Person": 2,
+        "Organization": 1,
+    }
     # 2 relationships between entities
     # + 3 rels between entities and their chunk
     # + 2 "NEXT_CHUNK" rels
-    assert len(graph["relationships"]) == 7
+    relationships = graph["relationships"]
+    assert len(relationships) == 7
+    type_counts = dict(Counter([r.label for r in relationships]))
+    assert type_counts == {"IN_CHUNK": 3, "KNOWS": 1, "LED_BY": 1, "NEXT_CHUNK": 2}
     # then check content of neo4j db
     created_nodes = driver.execute_query("MATCH (n) RETURN n")
     assert len(created_nodes.records) == 6
