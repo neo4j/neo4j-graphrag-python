@@ -112,7 +112,8 @@ if __name__ == "__main__":
             description="Indicates the leader of an organization.",
         ),
         SchemaRelation(
-            label="OWNS", description="Indicates the ownership of an item such as a Horcrux."
+            label="OWNS",
+            description="Indicates the ownership of an item such as a Horcrux.",
         ),
         SchemaRelation(
             label="INTERACTS", description="The interaction between two people."
