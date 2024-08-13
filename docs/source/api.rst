@@ -55,7 +55,8 @@ EntityRelationExtractor
 =======================
 
 .. autoclass:: neo4j_genai.components.entity_relation_extractor.EntityRelationExtractor
-    :members: run
+    :members:
+    :undoc-members: component_inputs, component_outputs
 
 LLMEntityRelationExtractor
 ==========================
@@ -166,6 +167,14 @@ PromptTemplate
 
 .. autoclass:: neo4j_genai.generation.prompts.PromptTemplate
     :members:
+
+
+.. autoclass:: neo4j_genai.generation.prompts.RagPromptTemplate
+    :members:
+
+.. autoclass:: neo4j_genai.generation.prompts.ERExtractionTemplate
+    :members:
+
 
 .. _database-interaction-section:
 
