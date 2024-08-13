@@ -20,6 +20,8 @@ from typing import Any, get_type_hints
 
 from pydantic import BaseModel
 
+from neo4j_genai.pipeline.exceptions import PipelineDefinitionError
+
 
 class DataModel(BaseModel):
     """Input or Output data model for Components"""
@@ -31,7 +33,7 @@ class ComponentMeta(abc.ABCMeta):
     def __new__(
         meta, name: str, bases: tuple[type, ...], attrs: dict[str, Any]
     ) -> type:
-        # extract required inputs from the run method signature
+        # extract required inputs and outputs from the run method signature
         run_method = attrs.get("run")
         if run_method is not None:
             sig = inspect.signature(run_method)
@@ -41,20 +43,26 @@ class ComponentMeta(abc.ABCMeta):
                     "annotation": param.annotation,
                 }
                 for param in sig.parameters.values()
-                if param.name not in ("self",)
+                if param.name not in ("self", "kwargs")
             }
-        # extract returned fields from the run method return type hint
-        return_model = get_type_hints(run_method).get("return")
-        # the type hint must be a subclass of DataModel
-        if not issubclass(return_model, DataModel):  # type: ignore
-            raise ValueError("The run method must return a subclass of DataModel")
-        attrs["component_outputs"] = {
-            f: {
-                "has_default": field.is_required(),
-                "annotation": field.annotation,
+            # extract returned fields from the run method return type hint
+            return_model = get_type_hints(run_method).get("return")
+            if return_model is None:
+                raise PipelineDefinitionError(
+                    f"The run method return type must be annotated in {name}"
+                )
+            # the type hint must be a subclass of DataModel
+            if not issubclass(return_model, DataModel):
+                raise PipelineDefinitionError(
+                    f"The run method must return a subclass of DataModel in {name}"
+                )
+            attrs["component_outputs"] = {
+                f: {
+                    "has_default": field.is_required(),
+                    "annotation": field.annotation,
+                }
+                for f, field in return_model.model_fields.items()
             }
-            for f, field in return_model.model_fields.items()  # type: ignore
-        }
         return type.__new__(meta, name, bases, attrs)
 
 
