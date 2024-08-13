@@ -18,11 +18,21 @@ import asyncio
 import logging
 from typing import Any
 
+import neo4j
+from langchain_text_splitters import CharacterTextSplitter
+from neo4j_genai.components.entity_relation_extractor import (
+    LLMEntityRelationExtractor,
+    OnError,
+)
+from neo4j_genai.components.kg_writer import Neo4jWriter
+from neo4j_genai.components.pdf_loader import PdfLoader
 from neo4j_genai.components.schema import (
     SchemaBuilder,
     SchemaEntity,
     SchemaRelation,
 )
+from neo4j_genai.components.text_splitters.langchain import LangChainTextSplitterAdapter
+from neo4j_genai.llm import OpenAILLM
 from neo4j_genai.pipeline import Component, DataModel
 from pydantic import BaseModel, validate_call
 
@@ -86,7 +96,7 @@ class Writer(Component):
         )
 
 
-if __name__ == "__main__":
+async def main(neo4j_driver: neo4j.Driver) -> dict[str, Any]:
     from neo4j_genai.pipeline import Pipeline
 
     # Instantiate Entity and Relation objects
@@ -96,34 +106,62 @@ if __name__ == "__main__":
             label="ORGANIZATION",
             description="A structured group of people with a common purpose.",
         ),
+        SchemaEntity(label="LOCATION", description="A location or place."),
         SchemaEntity(
-            label="AGE",
+            label="HORCRUX",
+            description="A magical item in the Harry Potter universe.",
         ),
     ]
     relations = [
         SchemaRelation(
-            label="EMPLOYED_BY", description="Indicates employment relationship."
+            label="SITUATED_AT", description="Indicates the location of a person."
         ),
         SchemaRelation(
-            label="ORGANIZED_BY",
-            description="Indicates organization responsible for an event.",
+            label="LED_BY",
+            description="Indicates the leader of an organization.",
         ),
         SchemaRelation(
-            label="ATTENDED_BY", description="Indicates attendance at an event."
+            label="OWNS",
+            description="Indicates the ownership of an item such as a Horcrux.",
+        ),
+        SchemaRelation(
+            label="INTERACTS", description="The interaction between two people."
         ),
     ]
     potential_schema = [
-        ("PERSON", "EMPLOYED_BY", "ORGANIZATION"),
-        ("ORGANIZATION", "ATTENDED_BY", "PERSON"),
+        ("PERSON", "SITUATED_AT", "LOCATION"),
+        ("PERSON", "INTERACTS", "PERSON"),
+        ("PERSON", "OWNS", "HORCRUX"),
+        ("ORGANIZATION", "LED_BY", "PERSON"),
     ]
 
     # Set up the pipeline
     pipe = Pipeline()
-    pipe.add_component("chunker", DocumentChunker())
+    pipe.add_component("pdf_loader", PdfLoader())
+    pipe.add_component(
+        "splitter",
+        LangChainTextSplitterAdapter(
+            # chunk_size=50 for the sake of this demo
+            CharacterTextSplitter(chunk_size=50, chunk_overlap=10, separator=".")
+        ),
+    )
     pipe.add_component("schema", SchemaBuilder())
-    pipe.add_component("extractor", ERExtractor())
-    pipe.add_component("writer", Writer())
-    pipe.connect("chunker", "extractor", input_config={"chunks": "chunker.chunks"})
+    pipe.add_component(
+        "extractor",
+        LLMEntityRelationExtractor(
+            llm=OpenAILLM(
+                model_name="gpt-4o",
+                model_params={
+                    "max_tokens": 1000,
+                    "response_format": {"type": "json_object"},
+                },
+            ),
+            on_error=OnError.RAISE,
+        ),
+    )
+    pipe.add_component("writer", Neo4jWriter(neo4j_driver))
+    pipe.connect("pdf_loader", "splitter", input_config={"text": "pdf_loader.text"})
+    pipe.connect("splitter", "extractor", input_config={"chunks": "splitter"})
     pipe.connect("schema", "extractor", input_config={"schema": "schema"})
     pipe.connect(
         "extractor",
@@ -132,10 +170,8 @@ if __name__ == "__main__":
     )
 
     pipe_inputs = {
-        "chunker": {
-            "text": """Graphs are everywhere.
-            GraphRAG is the future of Artificial Intelligence.
-            Robots are already running the world."""
+        "pdf_loader": {
+            "filepath": "examples/pipeline/Harry Potter and the Death Hallows Summary.pdf"
         },
         "schema": {
             "entities": entities,
@@ -143,4 +179,11 @@ if __name__ == "__main__":
             "potential_schema": potential_schema,
         },
     }
-    print(asyncio.run(pipe.run(pipe_inputs)))
+    return await pipe.run(pipe_inputs)
+
+
+if __name__ == "__main__":
+    with neo4j.GraphDatabase.driver(
+        "bolt://localhost:7687", auth=("neo4j", "password")
+    ) as driver:
+        print(asyncio.run(main(driver)))
