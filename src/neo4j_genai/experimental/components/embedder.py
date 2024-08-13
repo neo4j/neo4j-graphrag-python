@@ -14,9 +14,9 @@
 #  limitations under the License.
 from pydantic import validate_call
 
-from neo4j_genai.components.types import TextChunk, TextChunks
 from neo4j_genai.embedder import Embedder
-from neo4j_genai.pipeline.component import Component
+from neo4j_genai.experimental.components.types import TextChunk, TextChunks
+from neo4j_genai.experimental.pipeline.component import Component
 
 
 class TextChunkEmbedder(Component):
@@ -29,9 +29,9 @@ class TextChunkEmbedder(Component):
 
     .. code-block:: python
 
-        from neo4j_genai.components.embedder import TextChunkEmbedder
+        from neo4j_genai.experimental.components.embedder import TextChunkEmbedder
         from neo4j_genai.embeddings.openai import OpenAIEmbeddings
-        from neo4j_genai.pipeline import Pipeline
+        from neo4j_genai.experimental.pipeline import Pipeline
 
         embedder = OpenAIEmbeddings(model="text-embedding-3-large")
         chunk_embedder = TextChunkEmbedder(embedder)

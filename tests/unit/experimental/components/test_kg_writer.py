@@ -17,8 +17,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from neo4j_genai.components.kg_writer import Neo4jWriter
-from neo4j_genai.components.types import (
+from neo4j_genai.experimental.components.kg_writer import Neo4jWriter
+from neo4j_genai.experimental.components.types import (
     Neo4jGraph,
     Neo4jNode,
     Neo4jRelationship,

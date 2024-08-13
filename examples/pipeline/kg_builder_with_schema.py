@@ -18,12 +18,12 @@ import asyncio
 import logging
 from typing import Any
 
-from neo4j_genai.components.schema import (
+from neo4j_genai.experimental.components.schema import (
     SchemaBuilder,
     SchemaEntity,
     SchemaRelation,
 )
-from neo4j_genai.pipeline import Component, DataModel
+from neo4j_genai.experimental.pipeline import Component, DataModel
 from pydantic import BaseModel, validate_call
 
 logging.basicConfig(level=logging.DEBUG)
@@ -87,7 +87,7 @@ class Writer(Component):
 
 
 if __name__ == "__main__":
-    from neo4j_genai.pipeline import Pipeline
+    from neo4j_genai.experimental.pipeline import Pipeline
 
     # Instantiate Entity and Relation objects
     entities = [

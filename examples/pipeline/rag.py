@@ -24,11 +24,15 @@ import asyncio
 
 import neo4j
 from neo4j_genai.embeddings.openai import OpenAIEmbeddings
+from neo4j_genai.experimental.pipeline import Component, Pipeline
+from neo4j_genai.experimental.pipeline.component import DataModel
+from neo4j_genai.experimental.pipeline.types import (
+    ComponentConfig,
+    ConnectionConfig,
+    PipelineConfig,
+)
 from neo4j_genai.generation import PromptTemplate, RagTemplate
 from neo4j_genai.llm import LLMInterface, OpenAILLM
-from neo4j_genai.pipeline import Component, Pipeline
-from neo4j_genai.pipeline.component import DataModel
-from neo4j_genai.pipeline.types import ComponentConfig, ConnectionConfig, PipelineConfig
 from neo4j_genai.retrievers import VectorRetriever
 from neo4j_genai.retrievers.base import Retriever
 

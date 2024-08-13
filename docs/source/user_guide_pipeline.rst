@@ -19,8 +19,8 @@ such as chunking documents or saving results to Neo4j.
 This package includes a few default components, but developers can create
 their own by following these steps:
 
-1. Create a subclass of the Pydantic `neo4j_genai.pipeline.DataModel` to represent the data being returned by the component
-2. Create a subclass of `neo4j_genai.pipeline.Component`
+1. Create a subclass of the Pydantic `neo4j_genai.experimental.pipeline.DataModel` to represent the data being returned by the component
+2. Create a subclass of `neo4j_genai.experimental.pipeline.Component`
 3. Create a run method in this new class and specify the required inputs and output model using the just created `DataModel`
 4. Implement the run method: it's an `async` method, allowing tasks to be parallelized and awaited within this method.
 
@@ -29,7 +29,7 @@ the resulting sum:
 
 .. code:: python
 
-    from neo4j_genai.pipeline import Component, DataModel
+    from neo4j_genai.experimental.pipeline import Component, DataModel
 
     class IntResultModel(DataModel):
         result: int
@@ -53,7 +53,7 @@ Here's how to create a simple pipeline and propagate results from one component 
 .. code:: python
 
     import asyncio
-    from neo4j_genai.pipeline import Pipeline
+    from neo4j_genai.experimental.pipeline import Pipeline
 
     pipe = Pipeline()
     pipe.add_component("a", ComponentAdd())
