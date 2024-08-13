@@ -15,17 +15,17 @@ unstructured data.
 
 
 ******************
-Pipeline structure
+Pipeline Structure
 ******************
 
 A Knowledge Graph (KG) construction pipeline requires a few components:
 
-- Document **parser**: extract text from files (PDFs, ...)
-- Document **chunker**: split the text into smaller pieces of text, manageable by the LLM context window (token limit).
-- Chunk **embedder** (optional): compute and store the chunk embeddings
+- **Document parser**: extract text from files (PDFs, ...).
+- **Document chunker**: split the text into smaller pieces of text, manageable by the LLM context window (token limit).
+- **Chunk embedder** (optional): compute the chunk embeddings.
 - **Schema builder**: provide a schema to ground the LLM extracted entities and relations and obtain an easily navigable KG.
 - **Entity and relation extractor**: extract relevant entities and relations from the text.
-- **Knowledge Graph writer**: write the identified entities and relations to a Neo4j database.
+- **Knowledge Graph writer**: save the identified entities and relations.
 
 .. image:: images/kg_builder_pipeline.png
   :alt: KG Builder pipeline
@@ -171,9 +171,9 @@ Schema Builder
 The schema is used to try and ground the LLM to a list of possible entities and relations of interest.
 So far, schema must be manually created by specifying:
 
-- The entities the LLM should look for in the text, including their properties (name and type)
-- The relations of interest between these entities, including the relation properties (name and type)
-- A list of possible triplets to define the start (source) and end (target) types for each relation
+- **Entities** the LLM should look for in the text, including their properties (name and type).
+- **Relations** of interest between these entities, including the relation properties (name and type).
+- **Triplets** to define the start (source) and end (target) entity types for each relation.
 
 Here is a code block illustrating these concepts:
 
@@ -317,9 +317,9 @@ The default prompt uses the :ref:`erextractiontemplate`. It is possible to provi
 
 The following variables can be used in the prompt:
 
-- `text` (str): the text to be analyzed
-- `schema` (str): the graph schema to be used
-- `examples` (str): examples for few-shot learning
+- `text` (str): the text to be analyzed.
+- `schema` (str): the graph schema to be used.
+- `examples` (str): examples for few-shot learning.
 
 
 Subclassing the EntityRelationExtractor
