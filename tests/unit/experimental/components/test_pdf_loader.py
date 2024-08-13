@@ -17,7 +17,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from neo4j_genai.components.pdf_loader import PdfLoader
+from neo4j_genai.experimental.components.pdf_loader import PdfLoader
 from neo4j_genai.exceptions import PdfLoaderError
 
 BASE_DIR = Path(__file__).parent

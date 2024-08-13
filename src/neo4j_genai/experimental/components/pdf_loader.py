@@ -23,7 +23,7 @@ from fsspec import AbstractFileSystem
 from fsspec.implementations.local import LocalFileSystem
 
 from neo4j_genai.exceptions import PdfLoaderError
-from neo4j_genai.pipeline import Component, DataModel
+from neo4j_genai.experimental.pipeline import Component, DataModel
 
 
 class PdfDocument(DataModel):
