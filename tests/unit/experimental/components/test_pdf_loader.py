@@ -17,9 +17,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from fsspec.implementations.local import LocalFileSystem
-from neo4j_graphrag.exceptions import PdfLoaderError
-from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
+from neo4j_genai.exceptions import PdfLoaderError
+from neo4j_genai.experimental.components.pdf_loader import PdfLoader
 
 BASE_DIR = Path(__file__).parent
 
@@ -36,7 +35,7 @@ def dummy_pdf_path() -> Path:
 
 def test_pdf_loading(pdf_loader: PdfLoader, dummy_pdf_path: Path) -> None:
     expected_content = "Lorem ipsum dolor sit amet."
-    actual_content = pdf_loader.load_file(dummy_pdf_path, fs=LocalFileSystem())
+    actual_content = pdf_loader.load_file(dummy_pdf_path)
     assert actual_content == expected_content
 
 
@@ -46,4 +45,4 @@ def test_pdf_processing_error(pdf_loader: PdfLoader, dummy_pdf_path: Path) -> No
         side_effect=Exception("Failed to open"),
     ):
         with pytest.raises(PdfLoaderError):
-            pdf_loader.load_file(dummy_pdf_path, fs=LocalFileSystem())
+            pdf_loader.load_file(dummy_pdf_path)

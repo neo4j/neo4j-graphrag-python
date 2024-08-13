@@ -16,30 +16,30 @@ from __future__ import annotations
 
 import asyncio
 import logging.config
+from typing import Any
 
 import neo4j
 from langchain_text_splitters import CharacterTextSplitter
-from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
-from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
-from neo4j_graphrag.experimental.components.entity_relation_extractor import (
+from neo4j_genai.embeddings.openai import OpenAIEmbeddings
+from neo4j_genai.experimental.components.embedder import TextChunkEmbedder
+from neo4j_genai.experimental.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
     OnError,
 )
-from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
-from neo4j_graphrag.experimental.components.schema import (
+from neo4j_genai.experimental.components.kg_writer import Neo4jWriter
+from neo4j_genai.experimental.components.schema import (
     SchemaBuilder,
     SchemaEntity,
     SchemaProperty,
     SchemaRelation,
 )
-from neo4j_graphrag.experimental.components.text_splitters.langchain import (
+from neo4j_genai.experimental.components.text_splitters.langchain import (
     LangChainTextSplitterAdapter,
 )
-from neo4j_graphrag.experimental.pipeline import Pipeline
-from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
-from neo4j_graphrag.llm import OpenAILLM
+from neo4j_genai.experimental.pipeline import Pipeline
+from neo4j_genai.llm import OpenAILLM
 
-# set log level to DEBUG for all neo4j_graphrag.* loggers
+# set log level to DEBUG for all neo4j_genai.* loggers
 logging.config.dictConfig(
     {
         "version": 1,
@@ -52,7 +52,7 @@ logging.config.dictConfig(
             "root": {
                 "handlers": ["console"],
             },
-            "neo4j_graphrag": {
+            "neo4j_genai": {
                 "level": "DEBUG",
             },
         },
@@ -60,7 +60,7 @@ logging.config.dictConfig(
 )
 
 
-async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
+async def main(neo4j_driver: neo4j.Driver) -> dict[str, Any]:
     """This is where we define and run the KG builder pipeline, instantiating a few
     components:
     - Text Splitter: in this example we use a text splitter from the LangChain package
@@ -76,15 +76,16 @@ async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
     pipe = Pipeline()
     # define the components
     pipe.add_component(
+        "splitter",
         LangChainTextSplitterAdapter(
             # chunk_size=50 for the sake of this demo
             CharacterTextSplitter(chunk_size=50, chunk_overlap=10, separator=".")
         ),
-        "splitter",
     )
-    pipe.add_component(TextChunkEmbedder(embedder=OpenAIEmbeddings()), "chunk_embedder")
-    pipe.add_component(SchemaBuilder(), "schema")
+    pipe.add_component("chunk_embedder", TextChunkEmbedder(embedder=OpenAIEmbeddings()))
+    pipe.add_component("schema", SchemaBuilder())
     pipe.add_component(
+        "extractor",
         LLMEntityRelationExtractor(
             llm=OpenAILLM(
                 model_name="gpt-4o",
@@ -95,9 +96,8 @@ async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
             ),
             on_error=OnError.RAISE,
         ),
-        "extractor",
     )
-    pipe.add_component(Neo4jWriter(neo4j_driver), "writer")
+    pipe.add_component("writer", Neo4jWriter(neo4j_driver))
     # define the execution order of component
     # and how the output of previous components must be used
     pipe.connect("splitter", "chunk_embedder", input_config={"text_chunks": "splitter"})
@@ -156,11 +156,6 @@ async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
                 ("Person", "WORKED_ON", "Field"),
                 ("Person", "WORKED_FOR", "Organization"),
             ],
-        },
-        "extractor": {
-            "document_info": {
-                "path": "my text",
-            }
         },
     }
     # run the pipeline

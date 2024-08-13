@@ -92,7 +92,7 @@ class SchemaConfig(DataModel):
                 )
             if entity2 not in entities:
                 raise SchemaValidationError(
-                    f"Entity '{entity1}' is not defined in the provided entities."
+                    f"Entity '{entity2}' is not defined in the provided entities."
                 )
 
         return data
