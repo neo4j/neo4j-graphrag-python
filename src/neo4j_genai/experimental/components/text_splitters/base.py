@@ -12,17 +12,17 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from .components import ComponentMultiply
+from __future__ import annotations
+
+from abc import abstractmethod
+
+from neo4j_genai.experimental.components.types import TextChunks
+from neo4j_genai.experimental.pipeline.component import Component
 
 
-def test_component_inputs() -> None:
-    inputs = ComponentMultiply.component_inputs
-    assert "number1" in inputs
-    assert inputs["number1"]["has_default"] is False
-    assert "number2" in inputs
-    assert inputs["number2"]["has_default"] is True
+class TextSplitter(Component):
+    """Interface for a text splitter."""
 
-
-def test_component_outputs() -> None:
-    outputs = ComponentMultiply.component_outputs
-    assert "result" in outputs
+    @abstractmethod
+    async def run(self, text: str) -> TextChunks:
+        pass

@@ -20,22 +20,24 @@ from typing import Any
 
 import neo4j
 from langchain_text_splitters import CharacterTextSplitter
-from neo4j_genai.components.embedder import TextChunkEmbedder
-from neo4j_genai.components.entity_relation_extractor import (
+from neo4j_genai.embeddings.openai import OpenAIEmbeddings
+from neo4j_genai.experimental.components.embedder import TextChunkEmbedder
+from neo4j_genai.experimental.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
     OnError,
 )
-from neo4j_genai.components.kg_writer import Neo4jWriter
-from neo4j_genai.components.schema import (
+from neo4j_genai.experimental.components.kg_writer import Neo4jWriter
+from neo4j_genai.experimental.components.schema import (
     SchemaBuilder,
     SchemaEntity,
     SchemaProperty,
     SchemaRelation,
 )
-from neo4j_genai.components.text_splitters.langchain import LangChainTextSplitterAdapter
-from neo4j_genai.embeddings.openai import OpenAIEmbeddings
+from neo4j_genai.experimental.components.text_splitters.langchain import (
+    LangChainTextSplitterAdapter,
+)
+from neo4j_genai.experimental.pipeline import Pipeline
 from neo4j_genai.llm import OpenAILLM
-from neo4j_genai.pipeline import Pipeline
 
 # set log level to DEBUG for all neo4j_genai.* loggers
 logging.config.dictConfig(

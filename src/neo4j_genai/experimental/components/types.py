@@ -18,7 +18,7 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, field_validator
 
-from neo4j_genai.pipeline.component import DataModel
+from neo4j_genai.experimental.pipeline.component import DataModel
 
 
 class TextChunk(BaseModel):

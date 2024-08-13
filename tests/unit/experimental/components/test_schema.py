@@ -15,8 +15,8 @@
 from __future__ import annotations
 
 import pytest
-from neo4j_graphrag.exceptions import SchemaValidationError
-from neo4j_graphrag.experimental.components.schema import (
+from neo4j_genai.exceptions import SchemaValidationError
+from neo4j_genai.experimental.components.schema import (
     SchemaBuilder,
     SchemaEntity,
     SchemaProperty,

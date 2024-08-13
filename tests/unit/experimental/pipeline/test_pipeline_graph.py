@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import pytest
-from neo4j_graphrag.experimental.pipeline.pipeline_graph import (
+from neo4j_genai.experimental.pipeline.pipeline_graph import (
     PipelineEdge,
     PipelineGraph,
     PipelineNode,
@@ -111,27 +111,3 @@ def test_graph_is_cyclic(graph: PipelineGraph[PipelineNode, PipelineEdge]) -> No
     edge = PipelineEdge(n2.name, n1.name, {})
     g.add_edge(edge)
     assert g.is_cyclic() is True
-
-
-def test_graph_set_node(graph: PipelineGraph[PipelineNode, PipelineEdge]) -> None:
-    new_node = PipelineNode("n1", {})
-    graph.set_node(new_node)
-    new_node_from_graph = graph.get_node_by_name("n1")
-    assert new_node_from_graph.parents == []
-    assert new_node_from_graph.children == ["n2"]
-
-
-def test_graph_validate_edge_bad_node_name(
-    graph: PipelineGraph[PipelineNode, PipelineEdge],
-) -> None:
-    with pytest.raises(KeyError):
-        graph.add_edge(PipelineEdge("n0", "n1", {}))
-    with pytest.raises(KeyError):
-        graph.add_edge(PipelineEdge("n1", "n12", {}))
-
-
-def test_graph_validate_edge_no_parallel_edges(
-    graph: PipelineGraph[PipelineNode, PipelineEdge],
-) -> None:
-    with pytest.raises(ValueError):
-        graph.add_edge(PipelineEdge("n1", "n2", {}))

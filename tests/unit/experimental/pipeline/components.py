@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from neo4j_graphrag.experimental.pipeline import Component, DataModel
+from neo4j_genai.experimental.pipeline import Component, DataModel
 
 
 class StringResultModel(DataModel):
