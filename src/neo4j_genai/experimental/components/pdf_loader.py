@@ -70,5 +70,9 @@ class PdfLoader(DataLoader):
         except Exception as e:
             raise PdfLoaderError(e)
 
-    async def run(self, filepath: Path) -> PdfDocument:
-        return PdfDocument(text=self.load_file(filepath))
+    async def run(
+        self,
+        filepath: Path,
+        fs: Optional[AbstractFileSystem] = None,
+    ) -> PdfDocument:
+        return PdfDocument(text=self.load_file(filepath, fs))

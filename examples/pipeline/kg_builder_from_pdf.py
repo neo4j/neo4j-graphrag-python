@@ -20,20 +20,22 @@ from typing import Any
 
 import neo4j
 from langchain_text_splitters import CharacterTextSplitter
-from neo4j_genai.components.entity_relation_extractor import (
+from neo4j_genai.experimental.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
     OnError,
 )
-from neo4j_genai.components.kg_writer import Neo4jWriter
-from neo4j_genai.components.pdf_loader import PdfLoader
-from neo4j_genai.components.schema import (
+from neo4j_genai.experimental.components.kg_writer import Neo4jWriter
+from neo4j_genai.experimental.components.pdf_loader import PdfLoader
+from neo4j_genai.experimental.components.schema import (
     SchemaBuilder,
     SchemaEntity,
     SchemaRelation,
 )
-from neo4j_genai.components.text_splitters.langchain import LangChainTextSplitterAdapter
+from neo4j_genai.experimental.components.text_splitters.langchain import (
+    LangChainTextSplitterAdapter,
+)
+from neo4j_genai.experimental.pipeline import Component, DataModel
 from neo4j_genai.llm import OpenAILLM
-from neo4j_genai.pipeline import Component, DataModel
 from pydantic import BaseModel, validate_call
 
 logging.basicConfig(level=logging.DEBUG)
@@ -97,7 +99,7 @@ class Writer(Component):
 
 
 async def main(neo4j_driver: neo4j.Driver) -> dict[str, Any]:
-    from neo4j_genai.pipeline import Pipeline
+    from neo4j_genai.experimental.pipeline import Pipeline
 
     # Instantiate Entity and Relation objects
     entities = [
