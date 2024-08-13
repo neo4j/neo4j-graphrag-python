@@ -131,15 +131,15 @@ PineconeNeo4jRetriever
     :members: search
 
 
-**********
+********
 Embedder
-**********
+********
 
 .. autoclass:: neo4j_genai.embedder.Embedder
     :members:
 
 SentenceTransformerEmbeddings
-================================
+=============================
 
 .. autoclass:: neo4j_genai.embeddings.sentence_transformers.SentenceTransformerEmbeddings
     :members:
@@ -149,28 +149,34 @@ Generation
 **********
 
 LLMInterface
-======================
+============
 
 .. autoclass:: neo4j_genai.llm.LLMInterface
     :members:
 
 
 OpenAILLM
-======================
+=========
 
 .. autoclass:: neo4j_genai.llm.OpenAILLM
     :members:
 
 
 PromptTemplate
-======================
+===============
 
 .. autoclass:: neo4j_genai.generation.prompts.PromptTemplate
     :members:
 
 
-.. autoclass:: neo4j_genai.generation.prompts.RagPromptTemplate
+RagTemplate
+-----------
+
+.. autoclass:: neo4j_genai.generation.prompts.RagTemplate
     :members:
+
+ERExtractionTemplate
+--------------------
 
 .. autoclass:: neo4j_genai.generation.prompts.ERExtractionTemplate
     :members:

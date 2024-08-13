@@ -1,7 +1,7 @@
 .. _user-guide-kg-builder:
 
 User Guide: Knowledge Graph Builder
-########################################
+###################################
 
 
 This page provides information about how to create a Knowledge Graph from
@@ -14,9 +14,9 @@ unstructured data.
     It is not recommended to use it in production yet.
 
 
-******************************
+******************
 Pipeline structure
-******************************
+******************
 
 A Knowledge Graph (KG) construction pipeline requires a few components:
 
@@ -36,9 +36,9 @@ This package contains the interface and implementations for each of these compon
 To see an end-to-end example of a Knowledge Graph construction pipeline,
 refer to `this example <https://github.com/neo4j/neo4j-genai-python/blob/main/examples/pipeline/kg_builder.py>`_.
 
-***************************************
+**********************************
 Knowledge Graph Builder Components
-***************************************
+**********************************
 
 Below is a list of the different components available in this package, and how to use them.
 
@@ -66,7 +66,7 @@ They can also be used within a pipeline:
 
 
 Document Parser
-========================
+===============
 
 Document parsers start from a file path and return the text extracted from this file.
 
@@ -95,7 +95,7 @@ To implement your own loader, use the `DataLoader` interface:
 
 
 Document Splitter
-========================
+=================
 
 Document splitters, as the name indicate, are splitting documents into smaller chunks
 that can be processed within the LLM token limits. Wrappers for LangChain and LlamaIndex
@@ -137,7 +137,7 @@ To implement a custom text splitter, the `TextSplitter` interface can be used:
 
 
 Chunk Embedder
-===============================
+==============
 
 In order to embed the chunks' texts (to be used in vector search RAG), one can use the
 `TextChunkEmbedder` component, which rely on the :ref:`Embedder` interface.
@@ -168,7 +168,7 @@ The embeddings are added to each chunk metadata, and will be saved as a Chunk no
 
 
 Schema Builder
-========================
+==============
 
 The schema is used to try and ground the LLM to a list of possible entities and relations of interest.
 So far, schema must be manually created by specifying:
@@ -227,7 +227,7 @@ to the LLM.
 
 
 Entity and Relation Extractor
-===============================
+=============================
 
 This component is responsible for extracting the relevant entities and relationships from each text chunk,
 using the schema as guideline.
@@ -259,7 +259,7 @@ It can be used in this way:
 The LLM to use can be customized, the only constraint is that it obeys the :ref:`LLMInterface <llminterface>`.
 
 Error Behaviour
--------------------------------
+---------------
 
 By default, if the extraction fails for one chunk, it will be ignored and the non-failing chunks will be saved.
 This behaviour can be changed by using the `on_error` flag in the `LLMEntityRelationExtractor` constructor:
@@ -287,7 +287,7 @@ will be saved to Neo4j.
 
 
 Lexical Graph
--------------------------------
+-------------
 
 By default, the `LLMEntityRelationExtractor` adds some extra nodes and relationships to the extracted graph:
 
@@ -306,7 +306,7 @@ If this 'lexical graph' is not desired, set the `created_lexical_graph` to `Fals
 
 
 Customizing the Prompt
-----------------------------------------
+----------------------
 
 The default prompt uses the :ref:`erextractiontemplate`. It is possible to provide a custom prompt as string:
 
@@ -325,7 +325,7 @@ The following variables can be used in the prompt:
 
 
 Subclassing the EntityRelationExtractor
-----------------------------------------
+---------------------------------------
 
 If more customization is needed, it is possible to subclass the `EntityRelationExtractor` interface:
 
@@ -360,7 +360,7 @@ See :ref:`entityrelationextractor`.
 
 
 Knowledge Graph Writer
-===============================
+======================
 
 KG writer are used to save the results of the `EntityRelationExtractor`.
 The main implementation is the `Neo4jWriter` that will write nodes and relationships
