@@ -17,13 +17,18 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from neo4j_genai.components.entity_relation_extractor import (
+from neo4j_genai.exceptions import LLMGenerationError
+from neo4j_genai.experimental.components.entity_relation_extractor import (
     EntityRelationExtractor,
     LLMEntityRelationExtractor,
     OnError,
 )
-from neo4j_genai.components.types import Neo4jGraph, Neo4jNode, TextChunk, TextChunks
-from neo4j_genai.exceptions import LLMGenerationError
+from neo4j_genai.experimental.components.types import (
+    Neo4jGraph,
+    Neo4jNode,
+    TextChunk,
+    TextChunks,
+)
 from neo4j_genai.llm import LLMInterface, LLMResponse
 
 

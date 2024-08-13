@@ -13,8 +13,8 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import pytest
-from neo4j_genai.pipeline import Component
-from neo4j_genai.pipeline.pipeline import Orchestrator, Pipeline, RunStatus
+from neo4j_genai.experimental.pipeline import Component
+from neo4j_genai.experimental.pipeline.pipeline import Orchestrator, Pipeline, RunStatus
 
 
 @pytest.fixture(scope="function")

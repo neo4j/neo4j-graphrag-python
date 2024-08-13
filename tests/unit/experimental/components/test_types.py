@@ -12,17 +12,17 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from __future__ import annotations
-
-from abc import abstractmethod
-
-from neo4j_genai.components.types import TextChunks
-from neo4j_genai.pipeline.component import Component
+import pytest
+from neo4j_genai.experimental.components.types import Neo4jNode
 
 
-class TextSplitter(Component):
-    """Interface for a text splitter."""
+def test_neo4j_node_invalid_property() -> None:
+    with pytest.raises(TypeError) as excinfo:
+        Neo4jNode(id="0", label="Label", properties={"id": "1"})
+        assert "'id' as a property name is not allowed" in str(excinfo)
 
-    @abstractmethod
-    async def run(self, text: str) -> TextChunks:
-        pass
+
+def test_neo4j_node_invalid_embedding_property() -> None:
+    with pytest.raises(TypeError) as excinfo:
+        Neo4jNode(id="0", label="Label", embedding_properties={"id": [1.0, 2.0, 3.0]})
+        assert "'id' as a property name is not allowed" in str(excinfo)

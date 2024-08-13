@@ -21,23 +21,25 @@ from unittest.mock import MagicMock
 import neo4j
 import pytest
 from langchain_text_splitters import CharacterTextSplitter
-from neo4j_genai.components.embedder import TextChunkEmbedder
-from neo4j_genai.components.entity_relation_extractor import (
+from neo4j_genai.embedder import Embedder
+from neo4j_genai.exceptions import LLMGenerationError
+from neo4j_genai.experimental.components.embedder import TextChunkEmbedder
+from neo4j_genai.experimental.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
     OnError,
 )
-from neo4j_genai.components.kg_writer import Neo4jWriter
-from neo4j_genai.components.schema import (
+from neo4j_genai.experimental.components.kg_writer import Neo4jWriter
+from neo4j_genai.experimental.components.schema import (
     SchemaBuilder,
     SchemaEntity,
     SchemaProperty,
     SchemaRelation,
 )
-from neo4j_genai.components.text_splitters.langchain import LangChainTextSplitterAdapter
-from neo4j_genai.embedder import Embedder
-from neo4j_genai.exceptions import LLMGenerationError
+from neo4j_genai.experimental.components.text_splitters.langchain import (
+    LangChainTextSplitterAdapter,
+)
+from neo4j_genai.experimental.pipeline import Pipeline
 from neo4j_genai.llm import LLMInterface, LLMResponse
-from neo4j_genai.pipeline import Pipeline
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 

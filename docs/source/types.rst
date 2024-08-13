@@ -36,49 +36,49 @@ RagResultModel
 TextChunk
 =========
 
-.. autoclass:: neo4j_genai.components.types.TextChunk
+.. autoclass:: neo4j_genai.experimental.components.types.TextChunk
 
 TextChunks
 ==========
 
-.. autoclass:: neo4j_genai.components.types.TextChunks
+.. autoclass:: neo4j_genai.experimental.components.types.TextChunks
 
 Neo4jNode
 =========
 
-.. autoclass:: neo4j_genai.components.types.Neo4jNode
+.. autoclass:: neo4j_genai.experimental.components.types.Neo4jNode
 
 Neo4jRelationship
 =================
 
-.. autoclass:: neo4j_genai.components.types.Neo4jRelationship
+.. autoclass:: neo4j_genai.experimental.components.types.Neo4jRelationship
 
 Neo4jGraph
 ==========
 
-.. autoclass:: neo4j_genai.components.types.Neo4jGraph
+.. autoclass:: neo4j_genai.experimental.components.types.Neo4jGraph
 
 KGWriterModel
 =============
 
-.. autoclass:: neo4j_genai.components.kg_writer.KGWriterModel
+.. autoclass:: neo4j_genai.experimental.components.kg_writer.KGWriterModel
 
 SchemaProperty
 ==============
 
-.. autoclass:: neo4j_genai.components.schema.SchemaProperty
+.. autoclass:: neo4j_genai.experimental.components.schema.SchemaProperty
 
 SchemaEntity
 ============
 
-.. autoclass:: neo4j_genai.components.schema.SchemaEntity
+.. autoclass:: neo4j_genai.experimental.components.schema.SchemaEntity
 
 SchemaRelation
 ==============
 
-.. autoclass:: neo4j_genai.components.schema.SchemaEntity
+.. autoclass:: neo4j_genai.experimental.components.schema.SchemaEntity
 
 SchemaConfig
 ============
 
-.. autoclass:: neo4j_genai.components.schema.SchemaConfig
+.. autoclass:: neo4j_genai.experimental.components.schema.SchemaConfig

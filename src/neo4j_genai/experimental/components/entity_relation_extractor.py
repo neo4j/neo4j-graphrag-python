@@ -24,18 +24,18 @@ from typing import Any, Dict, List, Union
 
 from pydantic import ValidationError, validate_call
 
-from neo4j_genai.components.schema import SchemaConfig
-from neo4j_genai.components.types import (
+from neo4j_genai.exceptions import LLMGenerationError
+from neo4j_genai.experimental.components.schema import SchemaConfig
+from neo4j_genai.experimental.components.types import (
     Neo4jGraph,
     Neo4jNode,
     Neo4jRelationship,
     TextChunk,
     TextChunks,
 )
-from neo4j_genai.exceptions import LLMGenerationError
+from neo4j_genai.experimental.pipeline.component import Component
 from neo4j_genai.generation.prompts import ERExtractionTemplate, PromptTemplate
 from neo4j_genai.llm import LLMInterface
-from neo4j_genai.pipeline.component import Component
 
 logger = logging.getLogger(__name__)
 
@@ -163,9 +163,9 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
 
     .. code-block:: python
 
-        from neo4j_genai.components.entity_relation_extractor import LLMEntityRelationExtractor
+        from neo4j_genai.experimental.components.entity_relation_extractor import LLMEntityRelationExtractor
         from neo4j_genai.llm import OpenAILLM
-        from neo4j_genai.pipeline import Pipeline
+        from neo4j_genai.experimental.pipeline import Pipeline
 
         llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0, "response_format": {"type": "object"}})
 

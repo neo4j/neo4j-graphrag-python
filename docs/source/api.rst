@@ -12,56 +12,56 @@ Components
 KGWriter
 ========
 
-.. autoclass:: neo4j_genai.components.kg_writer.KGWriter
+.. autoclass:: neo4j_genai.experimental.components.kg_writer.KGWriter
     :members: run
 
 Neo4jWriter
 ===========
 
-.. autoclass:: neo4j_genai.components.kg_writer.Neo4jWriter
+.. autoclass:: neo4j_genai.experimental.components.kg_writer.Neo4jWriter
     :members: run
 
 TextSplitter
 ============
 
-.. autoclass:: neo4j_genai.components.text_splitters.base.TextSplitter
+.. autoclass:: neo4j_genai.experimental.components.text_splitters.base.TextSplitter
     :members: run
 
 LangChainTextSplitterAdapter
 ============================
 
-.. autoclass:: neo4j_genai.components.text_splitters.langchain.LangChainTextSplitterAdapter
+.. autoclass:: neo4j_genai.experimental.components.text_splitters.langchain.LangChainTextSplitterAdapter
     :members: run
 
 LlamaIndexTextSplitterAdapter
 =============================
 
-.. autoclass:: neo4j_genai.components.text_splitters.llamaindex.LlamaIndexTextSplitterAdapter
+.. autoclass:: neo4j_genai.experimental.components.text_splitters.llamaindex.LlamaIndexTextSplitterAdapter
     :members: run
 
 TextChunkEmbedder
 =================
 
-.. autoclass:: neo4j_genai.components.embedder.TextChunkEmbedder
+.. autoclass:: neo4j_genai.experimental.components.embedder.TextChunkEmbedder
     :members: run
 
 SchemaBuilder
 =============
 
-.. autoclass:: neo4j_genai.components.schema.SchemaBuilder
+.. autoclass:: neo4j_genai.experimental.components.schema.SchemaBuilder
     :members: run
 
 EntityRelationExtractor
 =======================
 
-.. autoclass:: neo4j_genai.components.entity_relation_extractor.EntityRelationExtractor
+.. autoclass:: neo4j_genai.experimental.components.entity_relation_extractor.EntityRelationExtractor
     :members:
     :undoc-members: component_inputs, component_outputs
 
 LLMEntityRelationExtractor
 ==========================
 
-.. autoclass:: neo4j_genai.components.entity_relation_extractor.LLMEntityRelationExtractor
+.. autoclass:: neo4j_genai.experimental.components.entity_relation_extractor.LLMEntityRelationExtractor
     :members: run
 
 .. _retrievers-section:
@@ -163,7 +163,7 @@ OpenAILLM
 
 
 PromptTemplate
-===============
+==============
 
 .. autoclass:: neo4j_genai.generation.prompts.PromptTemplate
     :members:
@@ -234,11 +234,11 @@ Errors
 
   * :class:`neo4j_genai.exceptions.LLMGenerationError`
 
-  * :class:`neo4j_genai.pipeline.exceptions.PipelineDefinitionError`
+  * :class:`neo4j_genai.experimental.pipeline.exceptions.PipelineDefinitionError`
 
-  * :class:`neo4j_genai.pipeline.exceptions.PipelineMissingDependencyError`
+  * :class:`neo4j_genai.experimental.pipeline.exceptions.PipelineMissingDependencyError`
 
-  * :class:`neo4j_genai.pipeline.exceptions.PipelineStatusUpdateError`
+  * :class:`neo4j_genai.experimental.pipeline.exceptions.PipelineStatusUpdateError`
 
 
 Neo4jGenAiError
@@ -305,7 +305,7 @@ Neo4jVersionError
 
 
 Text2CypherRetrievalError
-==========================
+=========================
 
 .. autoclass:: neo4j_genai.exceptions.Text2CypherRetrievalError
    :show-inheritance:
@@ -319,21 +319,21 @@ SchemaFetchError
 
 
 RagInitializationError
-==========================
+======================
 
 .. autoclass:: neo4j_genai.exceptions.RagInitializationError
    :show-inheritance:
 
 
 PromptMissingInputError
-==========================
+=======================
 
 .. autoclass:: neo4j_genai.exceptions.PromptMissingInputError
    :show-inheritance:
 
 
 LLMGenerationError
-==========================
+==================
 
 .. autoclass:: neo4j_genai.exceptions.LLMGenerationError
    :show-inheritance:
@@ -342,19 +342,19 @@ LLMGenerationError
 PipelineDefinitionError
 =======================
 
-.. autoclass:: neo4j_genai.pipeline.exceptions.PipelineDefinitionError
+.. autoclass:: neo4j_genai.experimental.pipeline.exceptions.PipelineDefinitionError
    :show-inheritance:
 
 
 PipelineMissingDependencyError
 ==============================
 
-.. autoclass:: neo4j_genai.pipeline.exceptions.PipelineMissingDependencyError
+.. autoclass:: neo4j_genai.experimental.pipeline.exceptions.PipelineMissingDependencyError
    :show-inheritance:
 
 
 PipelineStatusUpdateError
 =========================
 
-.. autoclass:: neo4j_genai.pipeline.exceptions.PipelineStatusUpdateError
+.. autoclass:: neo4j_genai.experimental.pipeline.exceptions.PipelineStatusUpdateError
    :show-inheritance:
