@@ -16,8 +16,8 @@ from __future__ import annotations
 
 from langchain_text_splitters import TextSplitter as LangChainTextSplitter
 
-from neo4j_genai.components.text_splitters.base import TextSplitter
-from neo4j_genai.components.types import TextChunk, TextChunks
+from neo4j_genai.experimental.components.text_splitters.base import TextSplitter
+from neo4j_genai.experimental.components.types import TextChunk, TextChunks
 
 
 class LangChainTextSplitterAdapter(TextSplitter):
@@ -32,8 +32,8 @@ class LangChainTextSplitterAdapter(TextSplitter):
     .. code-block:: python
 
         from langchain_text_splitters import RecursiveCharacterTextSplitter
-        from neo4j_genai.components.text_splitters.langchain import LangChainTextSplitterAdapter
-        from neo4j_genai.pipeline import Pipeline
+        from neo4j_genai.experimental.components.text_splitters.langchain import LangChainTextSplitterAdapter
+        from neo4j_genai.experimental.pipeline import Pipeline
 
         pipeline = Pipeline()
         text_splitter = LangChainTextSplitterAdapter(RecursiveCharacterTextSplitter())

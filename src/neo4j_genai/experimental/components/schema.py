@@ -19,7 +19,7 @@ from typing import Any, Dict, List, Literal, Tuple
 from pydantic import BaseModel, ValidationError, model_validator, validate_call
 
 from neo4j_genai.exceptions import SchemaValidationError
-from neo4j_genai.pipeline import Component, DataModel
+from neo4j_genai.experimental.pipeline import Component, DataModel
 
 
 class SchemaProperty(BaseModel):
@@ -107,13 +107,13 @@ class SchemaBuilder(Component):
 
     .. code-block:: python
 
-        from neo4j_genai.components.schema import (
+        from neo4j_genai.experimental.components.schema import (
             SchemaBuilder,
             SchemaEntity,
             SchemaProperty,
             SchemaRelation,
         )
-        from neo4j_genai.pipeline import Pipeline
+        from neo4j_genai.experimental.pipeline import Pipeline
 
         entities = [
             SchemaEntity(

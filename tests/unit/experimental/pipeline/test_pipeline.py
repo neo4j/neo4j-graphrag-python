@@ -18,8 +18,8 @@ from unittest import mock
 from unittest.mock import AsyncMock
 
 import pytest
-from neo4j_genai.pipeline import Component, Pipeline
-from neo4j_genai.pipeline.exceptions import PipelineDefinitionError
+from neo4j_genai.experimental.pipeline import Component, Pipeline
+from neo4j_genai.experimental.pipeline.exceptions import PipelineDefinitionError
 
 from .components import (
     ComponentAdd,
@@ -39,7 +39,7 @@ async def test_simple_pipeline_two_components() -> None:
     pipe.add_component("b", component_b)
     pipe.connect("a", "b", {})
     with mock.patch(
-        "tests.unit.pipeline.test_pipeline.ComponentNoParam.run"
+        "tests.unit.experimental.pipeline.test_pipeline.ComponentNoParam.run"
     ) as mock_run:
         mock_run.side_effect = [
             StringResultModel(result=""),
@@ -68,7 +68,7 @@ async def test_pipeline_parameter_propagation() -> None:
         },
     )
     with mock.patch(
-        "tests.unit.pipeline.test_pipeline.ComponentPassThrough.run"
+        "tests.unit.experimental.pipeline.test_pipeline.ComponentPassThrough.run"
     ) as mock_run:
         mock_run.side_effect = [
             StringResultModel(result="text"),

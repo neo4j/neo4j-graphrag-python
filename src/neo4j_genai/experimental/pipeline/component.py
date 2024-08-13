@@ -20,7 +20,7 @@ from typing import Any, get_type_hints
 
 from pydantic import BaseModel
 
-from neo4j_genai.pipeline.exceptions import PipelineDefinitionError
+from neo4j_genai.experimental.pipeline.exceptions import PipelineDefinitionError
 
 
 class DataModel(BaseModel):

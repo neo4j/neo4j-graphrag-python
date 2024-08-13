@@ -21,10 +21,14 @@ from typing import Literal, Optional
 import neo4j
 from pydantic import validate_call
 
-from neo4j_genai.components.types import Neo4jGraph, Neo4jNode, Neo4jRelationship
+from neo4j_genai.experimental.components.types import (
+    Neo4jGraph,
+    Neo4jNode,
+    Neo4jRelationship,
+)
+from neo4j_genai.experimental.pipeline.component import Component, DataModel
 from neo4j_genai.indexes import upsert_vector, upsert_vector_on_relationship
 from neo4j_genai.neo4j_queries import UPSERT_NODE_QUERY, UPSERT_RELATIONSHIP_QUERY
-from neo4j_genai.pipeline.component import Component, DataModel
 
 logger = logging.getLogger(__name__)
 
@@ -66,8 +70,8 @@ class Neo4jWriter(KGWriter):
     .. code-block:: python
 
         from neo4j import GraphDatabase
-        from neo4j_genai.components.kg_writer import Neo4jWriter
-        from neo4j_genai.pipeline import Pipeline
+        from neo4j_genai.experimental.components.kg_writer import Neo4jWriter
+        from neo4j_genai.experimental.pipeline import Pipeline
 
         URI = "neo4j://localhost:7687"
         AUTH = ("neo4j", "password")
