@@ -60,7 +60,7 @@ template = RagTemplate(
     {context}
 
     Question:
-    {query}
+    {query_text}
 
     Answer:
     """

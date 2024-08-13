@@ -2,6 +2,18 @@
 
 ## Next
 
+## 0.4.0
+
+### Added
+- Add optional custom_prompt arg to the Text2CypherRetriever class.
+- Introduced support for Component/Pipeline flexible architecture.
+- Added new components for knowledge graph construction, including text splitters, schema builders, entity-relation extractors, and Neo4j writers.
+- Implemented end-to-end tests for the new knowledge graph builder pipeline.
+
+### Changed
+- `GraphRAG.search` method first parameter has been renamed `query_text` (was `query`) for consistency with the retrievers interface.
+- Made `GraphRAG.search` method backwards compatible with the query parameter, raising warnings to encourage using query_text instead.
+
 ## 0.3.1
 
 ### Fixed

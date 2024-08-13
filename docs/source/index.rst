@@ -30,7 +30,9 @@ Python versions supported:
 Topics
 ******
 
-+ :ref:`user-guide`
++ :ref:`user-guide-rag`
++ :ref:`user-guide-kg-builder`
++ :ref:`user-guide-pipeline`
 + :ref:`api-documentation`
 + :ref:`types-documentation`
 
@@ -39,7 +41,9 @@ Topics
     :caption: Contents:
     :hidden:
 
-    user_guide.rst
+    user_guide_rag.rst
+    user_guide_kg_builder.rst
+    user_guide_pipeline.rst
     api.rst
     types.rst
 
@@ -113,7 +117,7 @@ Note that the below example is not the only way you can upsert data into your Ne
 .. code:: python
 
     from neo4j import GraphDatabase
-    from neo4j_genai.indexes import upsert_query
+    from neo4j_genai.indexes import upsert_vector
 
     URI = "neo4j://localhost:7687"
     AUTH = ("neo4j", "password")
@@ -123,7 +127,7 @@ Note that the below example is not the only way you can upsert data into your Ne
 
     # Upsert the vector
     vector = ...
-    upsert_query(
+    upsert_vector(
         driver,
         node_id=1,
         embedding_property="vectorProperty",

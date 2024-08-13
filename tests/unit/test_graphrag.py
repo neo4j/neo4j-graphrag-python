@@ -25,7 +25,9 @@ from neo4j_genai.types import RetrieverResult, RetrieverResultItem
 
 def test_graphrag_prompt_template() -> None:
     template = RagTemplate()
-    prompt = template.format(context="my context", query="user's query", examples="")
+    prompt = template.format(
+        context="my context", query_text="user's query", examples=""
+    )
     assert (
         prompt
         == """Answer the user question using the following context

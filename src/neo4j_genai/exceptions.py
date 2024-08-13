@@ -104,3 +104,15 @@ class SchemaFetchError(Neo4jGenAiError):
     """Exception raised when a Neo4jSchema cannot be fetched."""
 
     pass
+
+
+class SchemaValidationError(Neo4jGenAiError):
+    """Custom exception for errors in schema configuration."""
+
+    pass
+
+
+class PdfLoaderError(Neo4jGenAiError):
+    """Custom exception for errors in PDF loader."""
+
+    pass
