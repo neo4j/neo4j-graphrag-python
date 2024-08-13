@@ -20,11 +20,6 @@ from typing import Literal, Optional
 import neo4j
 from pydantic import ValidationError
 
-from neo4j_graphrag.neo4j_queries import (
-    UPSERT_VECTOR_ON_NODE_QUERY,
-    UPSERT_VECTOR_ON_RELATIONSHIP_QUERY,
-)
-
 from .exceptions import Neo4jIndexError, Neo4jInsertionError
 from .types import FulltextIndexModel, VectorIndexModel
 
@@ -54,7 +49,7 @@ def create_vector_index(
     .. code-block:: python
 
         from neo4j import GraphDatabase
-        from neo4j_graphrag.indexes import create_vector_index
+        from neo4j_genai.indexes import create_vector_index
 
         URI = "neo4j://localhost:7687"
         AUTH = ("neo4j", "password")
@@ -139,7 +134,7 @@ def create_fulltext_index(
     .. code-block:: python
 
         from neo4j import GraphDatabase
-        from neo4j_graphrag.indexes import create_fulltext_index
+        from neo4j_genai.indexes import create_fulltext_index
 
         URI = "neo4j://localhost:7687"
         AUTH = ("neo4j", "password")
@@ -205,7 +200,7 @@ def drop_index_if_exists(
     .. code-block:: python
 
         from neo4j import GraphDatabase
-        from neo4j_graphrag.indexes import drop_index_if_exists
+        from neo4j_genai.indexes import drop_index_if_exists
 
         URI = "neo4j://localhost:7687"
         AUTH = ("neo4j", "password")
@@ -256,7 +251,7 @@ def upsert_vector(
     .. code-block:: python
 
         from neo4j import GraphDatabase
-        from neo4j_graphrag.indexes import upsert_vector
+        from neo4j_genai.indexes import upsert_vector
 
         URI = "neo4j://localhost:7687"
         AUTH = ("neo4j", "password")
@@ -283,14 +278,19 @@ def upsert_vector(
         Neo4jInsertionError: If upserting of the vector fails.
     """
     try:
+        query = (
+            "MATCH (n) "
+            "WHERE elementId(n) = $id "
+            "WITH n "
+            "CALL db.create.setNodeVectorProperty(n, $embedding_property, $vector) "
+            "RETURN n"
+        )
         parameters = {
             "id": node_id,
             "embedding_property": embedding_property,
             "vector": vector,
         }
-        driver.execute_query(
-            UPSERT_VECTOR_ON_NODE_QUERY, parameters, database_=neo4j_database
-        )
+        driver.execute_query(query, parameters, database_=neo4j_database)
     except neo4j.exceptions.ClientError as e:
         raise Neo4jInsertionError(
             f"Upserting vector to Neo4j failed: {e.message}"
@@ -312,7 +312,7 @@ def upsert_vector_on_relationship(
     .. code-block:: python
 
         from neo4j import GraphDatabase
-        from neo4j_graphrag.indexes import upsert_vector_on_relationship
+        from neo4j_genai.indexes import upsert_vector_on_relationship
 
         URI = "neo4j://localhost:7687"
         AUTH = ("neo4j", "password")
@@ -339,128 +339,19 @@ def upsert_vector_on_relationship(
         Neo4jInsertionError: If upserting of the vector fails.
     """
     try:
+        query = (
+            "MATCH ()-[r]->() "
+            "WHERE elementId(r) = $id "
+            "WITH r "
+            "CALL db.create.setRelationshipVectorProperty(r, $embedding_property, $vector) "
+            "RETURN r"
+        )
         parameters = {
             "id": rel_id,
             "embedding_property": embedding_property,
             "vector": vector,
         }
-        driver.execute_query(
-            UPSERT_VECTOR_ON_RELATIONSHIP_QUERY, parameters, database_=neo4j_database
-        )
-    except neo4j.exceptions.ClientError as e:
-        raise Neo4jInsertionError(
-            f"Upserting vector to Neo4j failed: {e.message}"
-        ) from e
-
-
-async def async_upsert_vector(
-    driver: neo4j.AsyncDriver,
-    node_id: int,
-    embedding_property: str,
-    vector: list[float],
-    neo4j_database: Optional[str] = None,
-) -> None:
-    """
-    This method constructs a Cypher query and asynchronously executes it
-    to upsert (insert or update) a vector property on a specific node.
-
-    Example:
-
-    .. code-block:: python
-
-        from neo4j import AsyncGraphDatabase
-        from neo4j_graphrag.indexes import upsert_vector
-
-        URI = "neo4j://localhost:7687"
-        AUTH = ("neo4j", "password")
-
-        # Connect to Neo4j database
-        driver = AsyncGraphDatabase.driver(URI, auth=AUTH)
-
-        # Upsert the vector data
-        async_upsert_vector(
-            driver,
-            node_id="nodeId",
-            embedding_property="vectorProperty",
-            vector=...,
-        )
-
-    Args:
-        driver (neo4j.AsyncDriver): Neo4j Python asynchronous driver instance.
-        node_id (int): The id of the node.
-        embedding_property (str): The name of the property to store the vector in.
-        vector (list[float]): The vector to store.
-        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
-
-    Raises:
-        Neo4jInsertionError: If upserting of the vector fails.
-    """
-    try:
-        parameters = {
-            "id": node_id,
-            "embedding_property": embedding_property,
-            "vector": vector,
-        }
-        await driver.execute_query(
-            UPSERT_VECTOR_ON_NODE_QUERY, parameters, database_=neo4j_database
-        )
-    except neo4j.exceptions.ClientError as e:
-        raise Neo4jInsertionError(
-            f"Upserting vector to Neo4j failed: {e.message}"
-        ) from e
-
-
-async def async_upsert_vector_on_relationship(
-    driver: neo4j.AsyncDriver,
-    rel_id: int,
-    embedding_property: str,
-    vector: list[float],
-    neo4j_database: Optional[str] = None,
-) -> None:
-    """
-    This method constructs a Cypher query and asynchronously executes it
-    to upsert (insert or update) a vector property on a specific relationship.
-
-    Example:
-
-    .. code-block:: python
-
-        from neo4j import AsyncGraphDatabase
-        from neo4j_graphrag.indexes import upsert_vector_on_relationship
-
-        URI = "neo4j://localhost:7687"
-        AUTH = ("neo4j", "password")
-
-        # Connect to Neo4j database
-        driver = AsyncGraphDatabase.driver(URI, auth=AUTH)
-
-        # Upsert the vector data
-        async_upsert_vector_on_relationship(
-            driver,
-            node_id="nodeId",
-            embedding_property="vectorProperty",
-            vector=...,
-        )
-
-    Args:
-        driver (neo4j.AsyncDriver): Neo4j Python asynchronous driver instance.
-        rel_id (int): The id of the relationship.
-        embedding_property (str): The name of the property to store the vector in.
-        vector (list[float]): The vector to store.
-        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
-
-    Raises:
-        Neo4jInsertionError: If upserting of the vector fails.
-    """
-    try:
-        parameters = {
-            "id": rel_id,
-            "embedding_property": embedding_property,
-            "vector": vector,
-        }
-        await driver.execute_query(
-            UPSERT_VECTOR_ON_RELATIONSHIP_QUERY, parameters, database_=neo4j_database
-        )
+        driver.execute_query(query, parameters, database_=neo4j_database)
     except neo4j.exceptions.ClientError as e:
         raise Neo4jInsertionError(
             f"Upserting vector to Neo4j failed: {e.message}"

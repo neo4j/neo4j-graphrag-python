@@ -17,13 +17,13 @@ from __future__ import annotations
 from pydantic_core import ErrorDetails
 
 
-class Neo4jGraphRagError(Exception):
-    """Global exception used for the neo4j-graphrag package."""
+class Neo4jGenAiError(Exception):
+    """Global exception used for the neo4j-genai package."""
 
     pass
 
 
-class RetrieverInitializationError(Neo4jGraphRagError):
+class RetrieverInitializationError(Neo4jGenAiError):
     """Exception raised when initialization of a retriever fails."""
 
     def __init__(self, errors: list[ErrorDetails]) -> None:
@@ -31,25 +31,25 @@ class RetrieverInitializationError(Neo4jGraphRagError):
         self.errors = errors
 
 
-class RagInitializationError(Neo4jGraphRagError):
+class RagInitializationError(Neo4jGenAiError):
     def __init__(self, errors: list[ErrorDetails]):
         super().__init__(f"Initialization failed: {errors}")
         self.errors = errors
 
 
-class PromptMissingInputError(Neo4jGraphRagError):
+class PromptMissingInputError(Neo4jGenAiError):
     """Exception raised when a prompt required input is missing."""
 
     pass
 
 
-class LLMGenerationError(Neo4jGraphRagError):
+class LLMGenerationError(Neo4jGenAiError):
     """Exception raised when answer generation from LLM fails."""
 
     pass
 
 
-class SearchValidationError(Neo4jGraphRagError):
+class SearchValidationError(Neo4jGenAiError):
     """Exception raised for validation errors during search."""
 
     def __init__(self, errors: list[ErrorDetails]) -> None:
@@ -57,62 +57,56 @@ class SearchValidationError(Neo4jGraphRagError):
         self.errors = errors
 
 
-class FilterValidationError(Neo4jGraphRagError):
+class FilterValidationError(Neo4jGenAiError):
     """Exception raised when input validation for metadata filtering fails."""
 
     pass
 
 
-class EmbeddingRequiredError(Neo4jGraphRagError):
+class EmbeddingRequiredError(Neo4jGenAiError):
     """Exception raised when an embedding method is required but not provided."""
 
     pass
 
 
-class InvalidRetrieverResultError(Neo4jGraphRagError):
+class InvalidRetrieverResultError(Neo4jGenAiError):
     """Exception raised when the Retriever fails to return a result."""
 
     pass
 
 
-class Neo4jIndexError(Neo4jGraphRagError):
+class Neo4jIndexError(Neo4jGenAiError):
     """Exception raised when handling Neo4j index fails."""
 
     pass
 
 
-class Neo4jInsertionError(Neo4jGraphRagError):
+class Neo4jInsertionError(Neo4jGenAiError):
     """Exception raised when inserting data into the Neo4j database fails."""
 
     pass
 
 
-class Neo4jVersionError(Neo4jGraphRagError):
+class Neo4jVersionError(Neo4jGenAiError):
     """Exception raised when Neo4j version does not meet minimum requirements."""
 
     def __init__(self) -> None:
         super().__init__("This package only supports Neo4j version 5.18.1 or greater")
 
 
-class Text2CypherRetrievalError(Neo4jGraphRagError):
+class Text2CypherRetrievalError(Neo4jGenAiError):
     """Exception raised when text-to-cypher retrieval fails."""
 
     pass
 
 
-class SchemaFetchError(Neo4jGraphRagError):
+class SchemaFetchError(Neo4jGenAiError):
     """Exception raised when a Neo4jSchema cannot be fetched."""
 
     pass
 
 
-class SchemaValidationError(Neo4jGraphRagError):
+class SchemaValidationError(Exception):
     """Custom exception for errors in schema configuration."""
-
-    pass
-
-
-class PdfLoaderError(Neo4jGraphRagError):
-    """Custom exception for errors in PDF loader."""
 
     pass

@@ -16,8 +16,8 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from neo4j_graphrag.filters import get_metadata_filter
-from neo4j_graphrag.types import SearchType
+from neo4j_genai.filters import get_metadata_filter
+from neo4j_genai.types import SearchType
 
 VECTOR_INDEX_QUERY = (
     "CALL db.index.vector.queryNodes($vector_index_name, $top_k, $query_vector) "
@@ -49,34 +49,16 @@ UPSERT_RELATIONSHIP_QUERY = (
     "RETURN elementID(r)"
 )
 
-UPSERT_VECTOR_ON_NODE_QUERY = (
-    "MATCH (n) "
-    "WHERE elementId(n) = $id "
-    "WITH n "
-    "CALL db.create.setNodeVectorProperty(n, $embedding_property, $vector) "
-    "RETURN n"
-)
-
-UPSERT_VECTOR_ON_RELATIONSHIP_QUERY = (
-    "MATCH ()-[r]->() "
-    "WHERE elementId(r) = $id "
-    "WITH r "
-    "CALL db.create.setRelationshipVectorProperty(r, $embedding_property, $vector) "
-    "RETURN r"
-)
-
 
 def _get_hybrid_query() -> str:
     return (
         f"CALL {{ {VECTOR_INDEX_QUERY} "
-        f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS vector_index_max_score "
-        f"UNWIND nodes AS n "
-        f"RETURN n.node AS node, (n.score / vector_index_max_score) AS score "
+        f"RETURN node, score "
         f"UNION "
         f"{FULL_TEXT_SEARCH_QUERY} "
-        f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS ft_index_max_score "
+        f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS max "
         f"UNWIND nodes AS n "
-        f"RETURN n.node AS node, (n.score / ft_index_max_score) AS score }} "
+        f"RETURN n.node AS node, (n.score / max) AS score }} "
         f"WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k"
     )
 

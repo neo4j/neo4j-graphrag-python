@@ -21,55 +21,47 @@ objects.
 from __future__ import annotations
 
 import asyncio
-from typing import List
 
 import neo4j
-from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
-from neo4j_graphrag.experimental.pipeline import Component, Pipeline
-from neo4j_graphrag.experimental.pipeline.component import DataModel
-from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
-from neo4j_graphrag.experimental.pipeline.types import (
-    ComponentConfig,
-    ConnectionConfig,
-    PipelineConfig,
-)
-from neo4j_graphrag.generation import PromptTemplate, RagTemplate
-from neo4j_graphrag.llm import LLMInterface, OpenAILLM
-from neo4j_graphrag.retrievers import VectorRetriever
-from neo4j_graphrag.retrievers.base import Retriever
+from neo4j_genai.embeddings.openai import OpenAIEmbeddings
+from neo4j_genai.generation import PromptTemplate, RagTemplate
+from neo4j_genai.llm import LLMInterface, OpenAILLM
+from neo4j_genai.pipeline import Component, Pipeline
+from neo4j_genai.pipeline.component import DataModel
+from neo4j_genai.pipeline.types import ComponentConfig, ConnectionConfig, PipelineConfig
+from neo4j_genai.retrievers import VectorRetriever
+from neo4j_genai.retrievers.base import Retriever
 
 
-class ComponentResultDataModel(DataModel):
-    """A simple DataModel with a single text field"""
-
-    text: str
+class StringDataModel(DataModel):
+    result: str
 
 
 class RetrieverComponent(Component):
     def __init__(self, retriever: Retriever) -> None:
         self.retriever = retriever
 
-    async def run(self, query: str) -> ComponentResultDataModel:
+    async def run(self, query: str) -> StringDataModel:
         res = self.retriever.search(query_text=query)
-        return ComponentResultDataModel(text="\n".join(c.content for c in res.items))
+        return StringDataModel(result="\n".join(c.content for c in res.items))
 
 
 class PromptTemplateComponent(Component):
     def __init__(self, prompt: PromptTemplate) -> None:
         self.prompt = prompt
 
-    async def run(self, query: str, context: List[str]) -> ComponentResultDataModel:
+    async def run(self, query: str, context: list[str]) -> StringDataModel:
         prompt = self.prompt.format(query, context, examples="")
-        return ComponentResultDataModel(text=prompt)
+        return StringDataModel(result=prompt)
 
 
 class LLMComponent(Component):
     def __init__(self, llm: LLMInterface) -> None:
         self.llm = llm
 
-    async def run(self, prompt: str) -> ComponentResultDataModel:
+    async def run(self, prompt: str) -> StringDataModel:
         llm_response = self.llm.invoke(prompt)
-        return ComponentResultDataModel(text=llm_response.content)
+        return StringDataModel(result=llm_response.content)
 
 
 if __name__ == "__main__":
@@ -100,21 +92,21 @@ if __name__ == "__main__":
                 ConnectionConfig(
                     start="retrieve",
                     end="augment",
-                    input_config={"context": "retrieve.text"},
+                    input_config={"context": "retrieve.result"},
                 ),
                 ConnectionConfig(
                     start="augment",
                     end="generate",
-                    input_config={"prompt": "augment.text"},
+                    input_config={"prompt": "augment.result"},
                 ),
             ],
         )
     )
 
     query = "A movie about the US presidency"
-    pipe_output: PipelineResult = asyncio.run(
+    result = asyncio.run(
         pipe.run({"retrieve": {"query": query}, "augment": {"query": query}})
     )
-    print(pipe_output.result["generate"]["text"])
+    print(result["generate"]["result"])
 
     driver.close()
