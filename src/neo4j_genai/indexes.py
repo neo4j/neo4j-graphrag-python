@@ -278,15 +278,76 @@ def upsert_vector(
         Neo4jInsertionError: If upserting of the vector fails.
     """
     try:
-        query = """
-        MATCH (n)
-        WHERE elementId(n) = $id
-        WITH n
-        CALL db.create.setNodeVectorProperty(n, $embedding_property, $vector)
-        RETURN n
-        """
+        query = (
+            "MATCH (n) "
+            "WHERE elementId(n) = $id "
+            "WITH n "
+            "CALL db.create.setNodeVectorProperty(n, $embedding_property, $vector) "
+            "RETURN n"
+        )
         parameters = {
             "id": node_id,
+            "embedding_property": embedding_property,
+            "vector": vector,
+        }
+        driver.execute_query(query, parameters, database_=neo4j_database)
+    except neo4j.exceptions.ClientError as e:
+        raise Neo4jInsertionError(
+            f"Upserting vector to Neo4j failed: {e.message}"
+        ) from e
+
+
+def upsert_vector_on_relationship(
+    driver: neo4j.Driver,
+    rel_id: int,
+    embedding_property: str,
+    vector: list[float],
+    neo4j_database: Optional[str] = None,
+) -> None:
+    """
+    This method constructs a Cypher query and executes it to upsert (insert or update) a vector property on a specific relationship.
+
+    Example:
+
+    .. code-block:: python
+
+        from neo4j import GraphDatabase
+        from neo4j_genai.indexes import upsert_vector_on_relationship
+
+        URI = "neo4j://localhost:7687"
+        AUTH = ("neo4j", "password")
+
+        # Connect to Neo4j database
+        driver = GraphDatabase.driver(URI, auth=AUTH)
+
+        # Upsert the vector data
+        upsert_vector_on_relationship(
+            driver,
+            node_id="nodeId",
+            embedding_property="vectorProperty",
+            vector=...,
+        )
+
+    Args:
+        driver (neo4j.Driver): Neo4j Python driver instance.
+        rel_id (int): The id of the relationship.
+        embedding_property (str): The name of the property to store the vector in.
+        vector (list[float]): The vector to store.
+        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
+
+    Raises:
+        Neo4jInsertionError: If upserting of the vector fails.
+    """
+    try:
+        query = (
+            "MATCH ()-[r]->() "
+            "WHERE elementId(r) = $id "
+            "WITH r "
+            "CALL db.create.setRelationshipVectorProperty(r, $embedding_property, $vector) "
+            "RETURN r"
+        )
+        parameters = {
+            "id": rel_id,
             "embedding_property": embedding_property,
             "vector": vector,
         }

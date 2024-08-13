@@ -104,3 +104,9 @@ class SchemaFetchError(Neo4jGenAiError):
     """Exception raised when a Neo4jSchema cannot be fetched."""
 
     pass
+
+
+class SchemaValidationError(Exception):
+    """Custom exception for errors in schema configuration."""
+
+    pass

@@ -30,7 +30,8 @@ Python versions supported:
 Topics
 ******
 
-+ :ref:`user-guide`
++ :ref:`user-guide-rag`
++ :ref:`user-guide-pipeline`
 + :ref:`api-documentation`
 + :ref:`types-documentation`
 
@@ -39,7 +40,8 @@ Topics
     :caption: Contents:
     :hidden:
 
-    user_guide.rst
+    user_guide_rag.rst
+    user_guide_pipeline.rst
     api.rst
     types.rst
 
