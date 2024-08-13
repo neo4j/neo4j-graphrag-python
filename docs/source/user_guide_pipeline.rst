@@ -10,9 +10,10 @@ This page provides information about how to create a pipeline.
 
     Pipelines run asynchronously, see examples below.
 
-******************************
+
+*******************
 Creating Components
-******************************
+*******************
 
 Components are asynchronous units of work that perform simple tasks,
 such as chunking documents or saving results to Neo4j.
