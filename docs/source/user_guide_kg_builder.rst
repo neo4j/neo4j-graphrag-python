@@ -40,7 +40,7 @@ refer to `this example <https://github.com/neo4j/neo4j-genai-python/blob/main/ex
 Knowledge Graph Builder Components
 **********************************
 
-Below is a list of the different components available in this package, and how to use them.
+Below is a list of the different components available in this package and how to use them.
 
 Each of these components can be run individually:
 
@@ -95,7 +95,7 @@ To implement your own loader, use the `DataLoader` interface:
 Document Splitter
 =================
 
-Document splitters, as the name indicate, are splitting documents into smaller chunks
+Document splitters, as the name indicate, split documents into smaller chunks
 that can be processed within the LLM token limits. Wrappers for LangChain and LlamaIndex
 text splitters are included in this package:
 
@@ -159,7 +159,7 @@ Example usage:
         os.environ["OPENAI_API_KEY"] = "sk-..."
 
 
-If OpenAI is not an option, see :ref:`embedders` to learn how to use sentence-transformer or create your own embedder.
+If OpenAI is not an option, see :ref:`embedders` to learn how to use sentence-transformers or create your own embedder.
 
 The embeddings are added to each chunk metadata, and will be saved as a Chunk node property in the graph if
 `create_lexical_graph` is enabled in the `EntityRelationExtractor` (keep reading).
