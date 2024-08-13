@@ -12,6 +12,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from pydantic import validate_call
+
 from neo4j_genai.components.types import TextChunk, TextChunks
 from neo4j_genai.embedder import Embedder
 from neo4j_genai.pipeline.component import Component
@@ -56,6 +58,7 @@ class TextChunkEmbedder(Component):
         metadata["embedding"] = embedding
         return TextChunk(text=text_chunk.text, metadata=metadata)
 
+    @validate_call
     async def run(self, text_chunks: TextChunks) -> TextChunks:
         """Embed a list of text chunks.
 

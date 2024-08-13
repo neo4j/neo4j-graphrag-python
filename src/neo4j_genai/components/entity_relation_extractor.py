@@ -98,16 +98,22 @@ class EntityRelationExtractor(Component, abc.ABC):
         )
 
     def create_chunk_node(self, chunk: TextChunk, chunk_id: str) -> Neo4jNode:
-        """Create chunk node with properties 'text' and 'metadata' if metadata is defined."""
+        """Create chunk node with properties 'text' and any 'metadata' added during
+        the process. Special case for the potential chunk embedding property that
+        gets added as an embedding_property"""
         chunk_properties: Dict[str, Any] = {
             "text": chunk.text,
         }
+        embedding_properties = {}
         if chunk.metadata:
-            chunk_properties["metadata"] = chunk.metadata
+            if "embedding" in chunk.metadata:
+                embedding_properties["embedding"] = chunk.metadata.pop("embedding")
+            chunk_properties.update(chunk.metadata)
         return Neo4jNode(
             id=chunk_id,
             label=CHUNK_NODE_LABEL,
             properties=chunk_properties,
+            embedding_properties=embedding_properties,
         )
 
     def create_node_to_chunk_rel(
@@ -194,10 +200,10 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         llm_result = self.llm.invoke(prompt)
         try:
             result = json.loads(llm_result.content)
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
             if self.on_error == OnError.RAISE:
                 raise LLMGenerationError(
-                    f"LLM response is not valid JSON {llm_result.content}"
+                    f"LLM response is not valid JSON {llm_result.content}: {e}"
                 )
             else:
                 logger.error(

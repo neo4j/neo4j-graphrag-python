@@ -18,12 +18,52 @@ from unittest.mock import MagicMock
 
 import pytest
 from neo4j_genai.components.entity_relation_extractor import (
+    EntityRelationExtractor,
     LLMEntityRelationExtractor,
     OnError,
 )
-from neo4j_genai.components.types import Neo4jGraph, TextChunk, TextChunks
+from neo4j_genai.components.types import Neo4jGraph, Neo4jNode, TextChunk, TextChunks
 from neo4j_genai.exceptions import LLMGenerationError
 from neo4j_genai.llm import LLMInterface, LLMResponse
+
+
+def test_create_chunk_node_no_metadata() -> None:
+    # instantiating an abstract class to test common methods
+    extractor = EntityRelationExtractor()  # type: ignore
+    node = extractor.create_chunk_node(
+        chunk=TextChunk(text="text chunk"), chunk_id="10"
+    )
+    assert isinstance(node, Neo4jNode)
+    assert node.id == "10"
+    assert node.properties == {"text": "text chunk"}
+    assert node.embedding_properties == {}
+
+
+def test_create_chunk_node_metadata_no_embedding() -> None:
+    # instantiating an abstract class to test common methods
+    extractor = EntityRelationExtractor()  # type: ignore
+    node = extractor.create_chunk_node(
+        chunk=TextChunk(text="text chunk", metadata={"status": "ok"}), chunk_id="10"
+    )
+    assert isinstance(node, Neo4jNode)
+    assert node.id == "10"
+    assert node.properties == {"text": "text chunk", "status": "ok"}
+    assert node.embedding_properties == {}
+
+
+def test_create_chunk_node_metadata_embedding() -> None:
+    # instantiating an abstract class to test common methods
+    extractor = EntityRelationExtractor()  # type: ignore
+    node = extractor.create_chunk_node(
+        chunk=TextChunk(
+            text="text chunk", metadata={"status": "ok", "embedding": [1, 2, 3]}
+        ),
+        chunk_id="10",
+    )
+    assert isinstance(node, Neo4jNode)
+    assert node.id == "10"
+    assert node.properties == {"text": "text chunk", "status": "ok"}
+    assert node.embedding_properties == {"embedding": [1, 2, 3]}
 
 
 @pytest.mark.asyncio
