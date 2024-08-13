@@ -131,9 +131,9 @@ PineconeNeo4jRetriever
     :members: search
 
 
-********
+**********
 Embedder
-********
+**********
 
 .. autoclass:: neo4j_genai.embedder.Embedder
     :members:
@@ -149,21 +149,21 @@ Generation
 **********
 
 LLMInterface
-============
+======================
 
 .. autoclass:: neo4j_genai.llm.LLMInterface
     :members:
 
 
 OpenAILLM
-=========
+======================
 
 .. autoclass:: neo4j_genai.llm.OpenAILLM
     :members:
 
 
 PromptTemplate
-==============
+======================
 
 .. autoclass:: neo4j_genai.generation.prompts.PromptTemplate
     :members:
@@ -299,7 +299,7 @@ Neo4jVersionError
 
 
 Text2CypherRetrievalError
-=========================
+==========================
 
 .. autoclass:: neo4j_genai.exceptions.Text2CypherRetrievalError
    :show-inheritance:
@@ -313,21 +313,21 @@ SchemaFetchError
 
 
 RagInitializationError
-======================
+==========================
 
 .. autoclass:: neo4j_genai.exceptions.RagInitializationError
    :show-inheritance:
 
 
 PromptMissingInputError
-=======================
+==========================
 
 .. autoclass:: neo4j_genai.exceptions.PromptMissingInputError
    :show-inheritance:
 
 
 LLMGenerationError
-==================
+==========================
 
 .. autoclass:: neo4j_genai.exceptions.LLMGenerationError
    :show-inheritance:
