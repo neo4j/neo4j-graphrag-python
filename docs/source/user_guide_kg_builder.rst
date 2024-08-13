@@ -20,12 +20,12 @@ Pipeline structure
 
 A Knowledge Graph (KG) construction pipeline requires a few components:
 
-- A document **parser**: extract text from files (PDFs, ...)
-- A document **chunker**: split the text into smaller pieces of text, manageable by the LLM context window (token limit).
-- A chunk **embeder** (optional): compute and store the chunk embeddings
-- A **schema builder**: provide a schema to ground the LLM extracted entities and relations and obtain an easily navigable KG.
-- An **entity and relation extractor**: extract relevant entities and relations from the text.
-- A **Knowledge Graph writer**: write the identified entities and relations to a Neo4j database.
+- Document **parser**: extract text from files (PDFs, ...)
+- Document **chunker**: split the text into smaller pieces of text, manageable by the LLM context window (token limit).
+- Chunk **embedder** (optional): compute and store the chunk embeddings
+- **Schema builder**: provide a schema to ground the LLM extracted entities and relations and obtain an easily navigable KG.
+- **Entity and relation extractor**: extract relevant entities and relations from the text.
+- **Knowledge Graph writer**: write the identified entities and relations to a Neo4j database.
 
 .. image:: images/kg_builder_pipeline.png
   :alt: KG Builder pipeline
@@ -47,7 +47,6 @@ Each of these components can be run individually:
 .. code:: python
 
     import asyncio
-    # replace `PdfLoader` by a real component name
     from neo4j_genai.experimental.components.pdf_loader import PdfLoader
     my_component = PdfLoader()
     asyncio.run(my_component.run("my_file.pdf"))
@@ -58,7 +57,6 @@ They can also be used within a pipeline:
 .. code:: python
 
     from neo4j_genai.experimental.pipeline import Pipeline
-    # replace `PdfLoader` by a real component name
     from neo4j_genai.experimental.components.pdf_loader import PdfLoader
     pipeline = Pipeline()
     my_component = PdfLoader()
