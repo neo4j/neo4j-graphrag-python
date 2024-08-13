@@ -15,9 +15,10 @@
 import io
 from abc import abstractmethod
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 import fsspec
+import pypdf
 from fsspec import AbstractFileSystem
 from fsspec.implementations.local import LocalFileSystem
 
@@ -46,19 +47,13 @@ def is_default_fs(fs: fsspec.AbstractFileSystem) -> bool:
 class PdfLoader(DataLoader):
     @staticmethod
     def load_file(
-        file: Path,
+        file: Union[Path, str],
         fs: Optional[AbstractFileSystem] = None,
     ) -> str:
         """Parse PDF file and return text."""
         if not isinstance(file, Path):
             file = Path(file)
 
-        try:
-            import pypdf
-        except ImportError:
-            raise ImportError(
-                "pypdf is required to read PDF files: `pip install pypdf`"
-            )
         fs = fs or LocalFileSystem()
 
         try:

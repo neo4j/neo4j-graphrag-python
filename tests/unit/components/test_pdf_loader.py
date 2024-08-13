@@ -39,12 +39,6 @@ def test_pdf_loading(pdf_loader: PdfLoader, dummy_pdf_path: Path) -> None:
     assert actual_content == expected_content
 
 
-def test_missing_pypdf_dependency(pdf_loader: PdfLoader, dummy_pdf_path: Path) -> None:
-    with patch.dict("sys.modules", {"pypdf": None}):
-        with pytest.raises(ImportError, match="pypdf is required"):
-            pdf_loader.load_file(dummy_pdf_path)
-
-
 def test_pdf_processing_error(pdf_loader: PdfLoader, dummy_pdf_path: Path) -> None:
     with patch(
         "fsspec.implementations.local.LocalFileSystem.open",
