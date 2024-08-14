@@ -83,19 +83,15 @@ jobs:
           df -h
       - name: Install dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --no-root
+        run: poetry install --no-interaction --no-cache --with dev
       - name: Show disk usage after dependency installation
         run: |
           df -h
       - name: Clear Poetry cache
         run: poetry cache clear --all .
-      - name: Show disk usage after Poetry cache clear
+      - name: Show disk usage after Poetry installation
         run: |
           df -h
-      - name: Install root project
-        run: poetry install --no-interaction
-      - name: Install dependencies
-        run: poetry install --with dev
       - name: Wait for Weaviate to start
         shell: bash
         run: |
