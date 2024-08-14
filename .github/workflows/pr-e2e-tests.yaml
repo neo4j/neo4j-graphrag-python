@@ -14,7 +14,7 @@ jobs:
   e2e-tests:
     runs-on: ubuntu-latest
     strategy:
-      max-parallel: 1
+      max-parallel: 2
       matrix:
         python-version: ['3.8', '3.12']
         neo4j-version:
@@ -85,6 +85,11 @@ jobs:
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: poetry install --no-interaction --no-root
       - name: Show disk usage after dependency installation
+        run: |
+          df -h
+      - name: Clear Poetry cache
+        run: poetry cache clear --all .
+      - name: Show disk usage after Poetry cache clear
         run: |
           df -h
       - name: Install root project
