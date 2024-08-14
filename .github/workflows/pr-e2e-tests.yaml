@@ -14,7 +14,6 @@ jobs:
   e2e-tests:
     runs-on: ubuntu-latest
     strategy:
-      max-parallel: 1
       matrix:
         python-version: ['3.8', '3.12']
         neo4j-version:
@@ -74,11 +73,12 @@ jobs:
           key: ${{ runner.os }}-venv-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
       - name: Install dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --no-root
-      - name: Install root project
-        run: poetry install --no-interaction
-      - name: Install dependencies
-        run: poetry install --with dev
+        run: poetry install --no-interaction --no-cache --with dev
+      - name: Clear Poetry cache
+        run: poetry cache clear --all .
+      - name: Show disk usage after Poetry installation
+        run: |
+          df -h
       - name: Wait for Weaviate to start
         shell: bash
         run: |
