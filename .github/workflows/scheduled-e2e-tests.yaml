@@ -2,7 +2,7 @@ name: 'Neo4j-GenAI Scheduled E2E Tests'
 
 on:
   schedule:
-    - cron:  '0 6,9,12,15,18 * * 1-5'  # Runs every 3 hours daytime on working days
+    - cron:  '0 6 * * 1-5'  # Runs at 6am on working days
   push:
     branches:
       - main
