@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import json
 from unittest.mock import MagicMock
 
 import pytest
@@ -214,3 +215,73 @@ async def test_extractor_custom_prompt() -> None:
     chunks = TextChunks(chunks=[TextChunk(text="some text")])
     await extractor.run(chunks=chunks)
     llm.invoke.assert_called_once_with("this is my prompt")
+
+
+def test_fix_unquoted_keys() -> None:
+    json_string = '{name: "John", age: "30"}'
+    expected_result = '{"name": "John", "age": "30"}'
+
+    fixed_json = LLMEntityRelationExtractor.fix_invalid_json(json_string)
+
+    assert json.loads(fixed_json)
+    assert fixed_json == expected_result
+
+
+def test_fix_unquoted_string_values() -> None:
+    json_string = '{"name": John, "age": 30}'
+    expected_result = '{"name": "John", "age": 30}'
+
+    fixed_json = LLMEntityRelationExtractor.fix_invalid_json(json_string)
+
+    assert json.loads(fixed_json)
+    assert fixed_json == expected_result
+
+
+def test_remove_trailing_commas() -> None:
+    json_string = '{"name": "John", "age": 30,}'
+    expected_result = '{"name": "John", "age": 30}'
+
+    fixed_json = LLMEntityRelationExtractor.fix_invalid_json(json_string)
+
+    assert json.loads(fixed_json)
+    assert fixed_json == expected_result
+
+
+def test_fix_excessive_braces() -> None:
+    json_string = '{{"name": "John"}}'
+    expected_result = '{"name": "John"}'
+
+    fixed_json = LLMEntityRelationExtractor.fix_invalid_json(json_string)
+
+    assert json.loads(fixed_json)
+    assert fixed_json == expected_result
+
+
+def test_fix_multiple_issues() -> None:
+    json_string = '{name: John, "hobbies": ["reading", "swimming",], "age": 30}'
+    expected_result = '{"name": "John", "hobbies": ["reading", "swimming"], "age": 30}'
+
+    fixed_json = LLMEntityRelationExtractor.fix_invalid_json(json_string)
+
+    assert json.loads(fixed_json)
+    assert fixed_json == expected_result
+
+
+def test_fix_null_values() -> None:
+    json_string = '{"name": John, "nickname": null}'
+    expected_result = '{"name": "John", "nickname": null}'
+
+    fixed_json = LLMEntityRelationExtractor.fix_invalid_json(json_string)
+
+    assert json.loads(fixed_json)
+    assert fixed_json == expected_result
+
+
+def test_fix_numeric_values() -> None:
+    json_string = '{"age": 30, "score": 95.5}'
+    expected_result = '{"age": 30, "score": 95.5}'
+
+    fixed_json = LLMEntityRelationExtractor.fix_invalid_json(json_string)
+
+    assert json.loads(fixed_json)
+    assert fixed_json == expected_result

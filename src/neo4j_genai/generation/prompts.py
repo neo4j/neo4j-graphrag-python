@@ -140,6 +140,8 @@ Assign a unique ID (string) to each node, and reuse it to define relationships.
 Do respect the source and target node types for relationship and
 the relationship direction.
 
+Do not return any additional information other than the JSON in it.
+
 Examples:
 {examples}
 

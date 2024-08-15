@@ -19,6 +19,7 @@ import asyncio
 import enum
 import json
 import logging
+import re
 from datetime import datetime
 from typing import Any, Dict, List, Union
 
@@ -190,6 +191,31 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             template = prompt_template
         self.prompt_template = template
 
+    @staticmethod
+    def fix_invalid_json(invalid_json_string: str) -> str:
+        # Fix missing quotes around field names
+        invalid_json_string = re.sub(
+            r"([{,]\s*)(\w+)(\s*:)", r'\1"\2"\3', invalid_json_string
+        )
+        # Fix missing quotes around string values, correctly ignoring null, true, false, and numeric values
+        invalid_json_string = re.sub(
+            r":\s*(?!(null|true|false|\d+\.?\d*))([a-zA-Z_]+[a-zA-Z0-9_]*)\s*([,}])",
+            r': "\2"\3',
+            invalid_json_string,
+        )
+        # Remove trailing commas at the end of lists and objects
+        invalid_json_string = re.sub(r",\s*([}\]])", r"\1", invalid_json_string)
+        # Normalize excessive curly braces
+        invalid_json_string = re.sub(r"{{+", "{", invalid_json_string)
+        invalid_json_string = re.sub(r"}}+", "}", invalid_json_string)
+
+        # Add missing closing braces before new objects or at the end of array
+        invalid_json_string = re.sub(
+            r"(\{[^{}]*)(?=\s*\{)", r"\1},", invalid_json_string
+        )
+        valid_json_string = re.sub(r"(\{[^{}]*)(?=\s*\])", r"\1}", invalid_json_string)
+        return valid_json_string
+
     async def extract_for_chunk(
         self, schema: SchemaConfig, examples: str, chunk_index: int, chunk: TextChunk
     ) -> Neo4jGraph:
@@ -200,16 +226,20 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         llm_result = self.llm.invoke(prompt)
         try:
             result = json.loads(llm_result.content)
-        except json.JSONDecodeError as e:
-            if self.on_error == OnError.RAISE:
-                raise LLMGenerationError(
-                    f"LLM response is not valid JSON {llm_result.content}: {e}"
-                )
-            else:
-                logger.error(
-                    f"LLM response is not valid JSON {llm_result.content} for chunk_index={chunk_index}"
-                )
-            result = {"nodes": [], "relationships": []}
+        except json.JSONDecodeError:
+            fixed_content = self.fix_invalid_json(llm_result.content)
+            try:
+                result = json.loads(fixed_content)
+            except json.JSONDecodeError as e:
+                if self.on_error == OnError.RAISE:
+                    raise LLMGenerationError(
+                        f"LLM response is not valid JSON {fixed_content}: {e}"
+                    )
+                else:
+                    logger.error(
+                        f"LLM response is not valid JSON {llm_result.content} for chunk_index={chunk_index}"
+                    )
+                result = {"nodes": [], "relationships": []}
         try:
             chunk_graph = Neo4jGraph(**result)
         except ValidationError as e:
