@@ -51,25 +51,21 @@ NEXT_CHUNK_RELATIONSHIP_TYPE = "NEXT_CHUNK"
 NODE_TO_CHUNK_RELATIONSHIP_TYPE = "FROM_CHUNK"
 
 
-def balance_braces_and_brackets(json_string: str) -> str:
+def balance_curly_braces(json_string: str) -> str:
     """
-    Balances curly braces `{}` and square brackets `[]` in a JSON string. This function ensures that every opening brace
-    or bracket has a corresponding closing brace or bracket, but only when they are not part of a string value.
-    If there are unbalanced closing braces or brackets, they are ignored. If there are missing closing braces or brackets,
-    they are appended at the end of the string.
+    Balances curly braces `{}` in a JSON string. This function ensures that every opening brace has a corresponding
+    closing brace, but only when they are not part of a string value. If there are unbalanced closing braces,
+    they are ignored. If there are missing closing braces, they are appended at the end of the string.
 
     Args:
-        json_string (str): A potentially malformed JSON string with unbalanced braces or brackets.
+        json_string (str): A potentially malformed JSON string with unbalanced curly braces.
 
     Returns:
-        str: A JSON string with balanced braces and brackets.
+        str: A JSON string with balanced curly braces.
     """
     stack = []
     fixed_json = []
-    bracket_mapping = {"}": "{", "]": "["}
-    # To track if we are inside a string literal
     in_string = False
-    # To track escape characters
     escape = False
 
     for char in json_string:
@@ -83,26 +79,23 @@ def balance_braces_and_brackets(json_string: str) -> str:
             escape = False
 
         if not in_string:
-            if char in "{[":
+            if char == "{":
                 stack.append(char)
                 fixed_json.append(char)
-            elif char == "}" and (stack and stack[-1] == "{"):
+            elif char == "}" and stack and stack[-1] == "{":
                 stack.pop()
                 fixed_json.append(char)
-            elif char == "]" and (stack and stack[-1] == "["):
-                stack.pop()
-                fixed_json.append(char)
-            elif char in "]}" and (not stack or stack[-1] != bracket_mapping[char]):
+            elif char == "}" and (not stack or stack[-1] != "{"):
                 continue
             else:
                 fixed_json.append(char)
         else:
             fixed_json.append(char)
 
-    # If stack is not empty, add missing closing brackets or braces
+    # If stack is not empty, add missing closing braces
     while stack:
-        last_open = stack.pop()
-        fixed_json.append("}" if last_open == "{" else "]")
+        stack.pop()
+        fixed_json.append("}")
 
     return "".join(fixed_json)
 
@@ -112,22 +105,23 @@ def fix_invalid_json(invalid_json_string: str) -> str:
     invalid_json_string = re.sub(
         r"([{,]\s*)(\w+)(\s*:)", r'\1"\2"\3', invalid_json_string
     )
+
     # Fix missing quotes around string values, correctly ignoring null, true, false, and numeric values
     invalid_json_string = re.sub(
-        r":\s*(?!(null|true|false|\d+\.?\d*))([a-zA-Z_]+[a-zA-Z0-9_]*)\s*([,}])",
-        r': "\2"\3',
+        r"(?<=:\s)(?!(null|true|false|\d+\.?\d*))([a-zA-Z_][a-zA-Z0-9_]*)\s*(?=[,}])",
+        r'"\2"',
         invalid_json_string,
     )
-    # Remove trailing commas at the end of lists and objects
-    invalid_json_string = re.sub(r",\s*([}\]])", r"\1", invalid_json_string)
+
+    # Correct the specific issue: remove trailing commas within arrays or objects before closing braces or brackets
+    invalid_json_string = re.sub(r",\s*(?=[}\]])", "", invalid_json_string)
+
     # Normalize excessive curly braces
     invalid_json_string = re.sub(r"{{+", "{", invalid_json_string)
     invalid_json_string = re.sub(r"}}+", "}", invalid_json_string)
 
-    # Add missing closing braces before new objects or at the end of array
-    invalid_json_string = re.sub(r"(\{[^{}]*)(?=\s*\{)", r"\1},", invalid_json_string)
-    invalid_json_string = re.sub(r"(\{[^{}]*)(?=\s*\])", r"\1}", invalid_json_string)
-    return balance_braces_and_brackets(invalid_json_string)
+    # Balance curly braces
+    return balance_curly_braces(invalid_json_string)
 
 
 class EntityRelationExtractor(Component, abc.ABC):
