@@ -23,6 +23,8 @@ from neo4j_genai.experimental.components.entity_relation_extractor import (
     EntityRelationExtractor,
     LLMEntityRelationExtractor,
     OnError,
+    balance_braces_and_brackets,
+    fix_invalid_json,
 )
 from neo4j_genai.experimental.components.types import (
     Neo4jGraph,
@@ -221,7 +223,7 @@ def test_fix_unquoted_keys() -> None:
     json_string = '{name: "John", age: "30"}'
     expected_result = '{"name": "John", "age": "30"}'
 
-    fixed_json = LLMEntityRelationExtractor.fix_invalid_json(json_string)
+    fixed_json = fix_invalid_json(json_string)
 
     assert json.loads(fixed_json)
     assert fixed_json == expected_result
@@ -231,7 +233,7 @@ def test_fix_unquoted_string_values() -> None:
     json_string = '{"name": John, "age": 30}'
     expected_result = '{"name": "John", "age": 30}'
 
-    fixed_json = LLMEntityRelationExtractor.fix_invalid_json(json_string)
+    fixed_json = fix_invalid_json(json_string)
 
     assert json.loads(fixed_json)
     assert fixed_json == expected_result
@@ -241,7 +243,7 @@ def test_remove_trailing_commas() -> None:
     json_string = '{"name": "John", "age": 30,}'
     expected_result = '{"name": "John", "age": 30}'
 
-    fixed_json = LLMEntityRelationExtractor.fix_invalid_json(json_string)
+    fixed_json = fix_invalid_json(json_string)
 
     assert json.loads(fixed_json)
     assert fixed_json == expected_result
@@ -251,7 +253,7 @@ def test_fix_excessive_braces() -> None:
     json_string = '{{"name": "John"}}'
     expected_result = '{"name": "John"}'
 
-    fixed_json = LLMEntityRelationExtractor.fix_invalid_json(json_string)
+    fixed_json = fix_invalid_json(json_string)
 
     assert json.loads(fixed_json)
     assert fixed_json == expected_result
@@ -261,7 +263,7 @@ def test_fix_multiple_issues() -> None:
     json_string = '{name: John, "hobbies": ["reading", "swimming",], "age": 30}'
     expected_result = '{"name": "John", "hobbies": ["reading", "swimming"], "age": 30}'
 
-    fixed_json = LLMEntityRelationExtractor.fix_invalid_json(json_string)
+    fixed_json = fix_invalid_json(json_string)
 
     assert json.loads(fixed_json)
     assert fixed_json == expected_result
@@ -271,7 +273,7 @@ def test_fix_null_values() -> None:
     json_string = '{"name": John, "nickname": null}'
     expected_result = '{"name": "John", "nickname": null}'
 
-    fixed_json = LLMEntityRelationExtractor.fix_invalid_json(json_string)
+    fixed_json = fix_invalid_json(json_string)
 
     assert json.loads(fixed_json)
     assert fixed_json == expected_result
@@ -281,7 +283,121 @@ def test_fix_numeric_values() -> None:
     json_string = '{"age": 30, "score": 95.5}'
     expected_result = '{"age": 30, "score": 95.5}'
 
-    fixed_json = LLMEntityRelationExtractor.fix_invalid_json(json_string)
+    fixed_json = fix_invalid_json(json_string)
+
+    assert json.loads(fixed_json)
+    assert fixed_json == expected_result
+
+
+def test_balance_braces_and_brackets_missing_closing() -> None:
+    json_string = '{"name": "John", "hobbies": ["reading", "swimming", "age": 30'
+    expected_result = '{"name": "John", "hobbies": ["reading", "swimming", "age": 30]}'
+
+    fixed_json = balance_braces_and_brackets(json_string)
+
+    assert json.loads(fixed_json)
+    assert fixed_json == expected_result
+
+
+def test_balance_braces_and_brackets_extra_closing() -> None:
+    json_string = '{"name": "John", "hobbies": ["reading", "swimming"]]}'
+    expected_result = '{"name": "John", "hobbies": ["reading", "swimming"]}'
+
+    fixed_json = balance_braces_and_brackets(json_string)
+
+    assert json.loads(fixed_json)
+    assert fixed_json == expected_result
+
+
+def test_balance_braces_and_brackets_balanced_input() -> None:
+    json_string = '{"name": "John", "hobbies": ["reading", "swimming"], "age": 30}'
+    expected_result = json_string
+
+    fixed_json = balance_braces_and_brackets(json_string)
+
+    assert json.loads(fixed_json)
+    assert fixed_json == expected_result
+
+
+def test_balance_braces_and_brackets_nested_structure() -> None:
+    json_string = '{"person": {"name": "John", "hobbies": ["reading", "swimming"]}}'
+    expected_result = json_string
+
+    fixed_json = balance_braces_and_brackets(json_string)
+
+    assert json.loads(fixed_json)
+    assert fixed_json == expected_result
+
+
+def test_balance_braces_and_brackets_unbalanced_nested() -> None:
+    json_string = '{"person": {"name": "John", "hobbies": ["reading", "swimming"}}'
+    expected_result = '{"person": {"name": "John", "hobbies": ["reading", "swimming"]}}'
+
+    fixed_json = balance_braces_and_brackets(json_string)
+
+    assert json.loads(fixed_json)
+    assert fixed_json == expected_result
+
+
+def test_balance_braces_and_brackets_unmatched_openings() -> None:
+    json_string = '{"name": "John", "hobbies": ["reading", "swimming"'
+    expected_result = '{"name": "John", "hobbies": ["reading", "swimming"]}'
+
+    fixed_json = balance_braces_and_brackets(json_string)
+
+    assert json.loads(fixed_json)
+    assert fixed_json == expected_result
+
+
+def test_balance_braces_and_brackets_unmatched_closings() -> None:
+    json_string = '{"name": "John", "hobbies": "reading", "swimming"]}}'
+    expected_result = '{"name": "John", "hobbies": "reading", "swimming"]}'
+
+    fixed_json = balance_braces_and_brackets(json_string)
+
+    assert json.loads(fixed_json)
+    assert fixed_json == expected_result
+
+
+def test_balance_braces_and_brackets_complex_structure() -> None:
+    json_string = '[{"name": "John", "hobbies": ["reading", "swimming", {"nested": "value"}]}, {"name": "Jane"}'
+    expected_result = '[{"name": "John", "hobbies": ["reading", "swimming", {"nested": "value"}]}, {"name": "Jane"}]'
+
+    fixed_json = balance_braces_and_brackets(json_string)
+
+    assert json.loads(fixed_json)
+    assert fixed_json == expected_result
+
+
+def test_balance_braces_and_brackets_incorrect_nested_closings() -> None:
+    json_string = '{"key1": {"key2": [1, 2, 3]}, "key3": [4, 5, 6]]}'
+    expected_result = '{"key1": {"key2": [1, 2, 3]}, "key3": [4, 5, 6]}'
+
+    fixed_json = balance_braces_and_brackets(json_string)
+
+    assert json.loads(fixed_json)
+    assert fixed_json == expected_result
+
+
+def test_balance_braces_and_brackets_braces_inside_string() -> None:
+    json_string = '{"name": "John", "example": "a{b}c", "age": 30}'
+    expected_result = json_string
+
+    fixed_json = balance_braces_and_brackets(json_string)
+
+    assert json.loads(fixed_json)
+    assert fixed_json == expected_result
+
+
+def test_balance_braces_and_brackets_unbalanced_with_string() -> None:
+    json_string = (
+        '{"name": "John", "example": "a{b}c", "hobbies": ["reading", "swimming"'
+    )
+    expected_result = (
+        '{"name": "John", "example": "a{b}c", "hobbies": ["reading", "swimming"]}'
+    )
+
+    fixed_json = balance_braces_and_brackets(json_string)
 
     assert json.loads(fixed_json)
     assert fixed_json == expected_result

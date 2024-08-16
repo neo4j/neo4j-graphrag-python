@@ -52,23 +52,50 @@ NODE_TO_CHUNK_RELATIONSHIP_TYPE = "FROM_CHUNK"
 
 
 def balance_braces_and_brackets(json_string: str) -> str:
-    # Ensure matching brackets and braces: stack approach to balance
+    """
+    Balances curly braces `{}` and square brackets `[]` in a JSON string. This function ensures that every opening brace
+    or bracket has a corresponding closing brace or bracket, but only when they are not part of a string value.
+    If there are unbalanced closing braces or brackets, they are ignored. If there are missing closing braces or brackets,
+    they are appended at the end of the string.
+
+    Args:
+        json_string (str): A potentially malformed JSON string with unbalanced braces or brackets.
+
+    Returns:
+        str: A JSON string with balanced braces and brackets.
+    """
     stack = []
     fixed_json = []
+    bracket_mapping = {"}": "{", "]": "["}
+    # To track if we are inside a string literal
+    in_string = False
+    # To track escape characters
+    escape = False
 
     for char in json_string:
-        if char in "{[":
-            stack.append(char)
+        if char == '"' and not escape:
+            in_string = not in_string
+        elif char == "\\" and in_string:
+            escape = not escape
             fixed_json.append(char)
-        elif char == "}" and (stack and stack[-1] == "{"):
-            stack.pop()
-            fixed_json.append(char)
-        elif char == "]" and (stack and stack[-1] == "["):
-            stack.pop()
-            fixed_json.append(char)
-        elif char in "]}" and (not stack or stack[-1] != {"}": "{", "]": "["}[char]):
-            # Skip appending the character if it's unbalanced
             continue
+        else:
+            escape = False
+
+        if not in_string:
+            if char in "{[":
+                stack.append(char)
+                fixed_json.append(char)
+            elif char == "}" and (stack and stack[-1] == "{"):
+                stack.pop()
+                fixed_json.append(char)
+            elif char == "]" and (stack and stack[-1] == "["):
+                stack.pop()
+                fixed_json.append(char)
+            elif char in "]}" and (not stack or stack[-1] != bracket_mapping[char]):
+                continue
+            else:
+                fixed_json.append(char)
         else:
             fixed_json.append(char)
 
