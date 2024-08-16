@@ -51,6 +51,58 @@ NEXT_CHUNK_RELATIONSHIP_TYPE = "NEXT_CHUNK"
 NODE_TO_CHUNK_RELATIONSHIP_TYPE = "FROM_CHUNK"
 
 
+def balance_braces_and_brackets(json_string: str) -> str:
+    # Ensure matching brackets and braces: stack approach to balance
+    stack = []
+    fixed_json = []
+
+    for char in json_string:
+        if char in "{[":
+            stack.append(char)
+            fixed_json.append(char)
+        elif char == "}" and (stack and stack[-1] == "{"):
+            stack.pop()
+            fixed_json.append(char)
+        elif char == "]" and (stack and stack[-1] == "["):
+            stack.pop()
+            fixed_json.append(char)
+        elif char in "]}" and (not stack or stack[-1] != {"}": "{", "]": "["}[char]):
+            # Skip appending the character if it's unbalanced
+            continue
+        else:
+            fixed_json.append(char)
+
+    # If stack is not empty, add missing closing brackets or braces
+    while stack:
+        last_open = stack.pop()
+        fixed_json.append("}" if last_open == "{" else "]")
+
+    return "".join(fixed_json)
+
+
+def fix_invalid_json(invalid_json_string: str) -> str:
+    # Fix missing quotes around field names
+    invalid_json_string = re.sub(
+        r"([{,]\s*)(\w+)(\s*:)", r'\1"\2"\3', invalid_json_string
+    )
+    # Fix missing quotes around string values, correctly ignoring null, true, false, and numeric values
+    invalid_json_string = re.sub(
+        r":\s*(?!(null|true|false|\d+\.?\d*))([a-zA-Z_]+[a-zA-Z0-9_]*)\s*([,}])",
+        r': "\2"\3',
+        invalid_json_string,
+    )
+    # Remove trailing commas at the end of lists and objects
+    invalid_json_string = re.sub(r",\s*([}\]])", r"\1", invalid_json_string)
+    # Normalize excessive curly braces
+    invalid_json_string = re.sub(r"{{+", "{", invalid_json_string)
+    invalid_json_string = re.sub(r"}}+", "}", invalid_json_string)
+
+    # Add missing closing braces before new objects or at the end of array
+    invalid_json_string = re.sub(r"(\{[^{}]*)(?=\s*\{)", r"\1},", invalid_json_string)
+    invalid_json_string = re.sub(r"(\{[^{}]*)(?=\s*\])", r"\1}", invalid_json_string)
+    return balance_braces_and_brackets(invalid_json_string)
+
+
 class EntityRelationExtractor(Component, abc.ABC):
     """Abstract class for entity relation extraction components.
 
@@ -191,31 +243,6 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             template = prompt_template
         self.prompt_template = template
 
-    @staticmethod
-    def fix_invalid_json(invalid_json_string: str) -> str:
-        # Fix missing quotes around field names
-        invalid_json_string = re.sub(
-            r"([{,]\s*)(\w+)(\s*:)", r'\1"\2"\3', invalid_json_string
-        )
-        # Fix missing quotes around string values, correctly ignoring null, true, false, and numeric values
-        invalid_json_string = re.sub(
-            r":\s*(?!(null|true|false|\d+\.?\d*))([a-zA-Z_]+[a-zA-Z0-9_]*)\s*([,}])",
-            r': "\2"\3',
-            invalid_json_string,
-        )
-        # Remove trailing commas at the end of lists and objects
-        invalid_json_string = re.sub(r",\s*([}\]])", r"\1", invalid_json_string)
-        # Normalize excessive curly braces
-        invalid_json_string = re.sub(r"{{+", "{", invalid_json_string)
-        invalid_json_string = re.sub(r"}}+", "}", invalid_json_string)
-
-        # Add missing closing braces before new objects or at the end of array
-        invalid_json_string = re.sub(
-            r"(\{[^{}]*)(?=\s*\{)", r"\1},", invalid_json_string
-        )
-        valid_json_string = re.sub(r"(\{[^{}]*)(?=\s*\])", r"\1}", invalid_json_string)
-        return valid_json_string
-
     async def extract_for_chunk(
         self, schema: SchemaConfig, examples: str, chunk_index: int, chunk: TextChunk
     ) -> Neo4jGraph:
@@ -227,7 +254,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         try:
             result = json.loads(llm_result.content)
         except json.JSONDecodeError:
-            fixed_content = self.fix_invalid_json(llm_result.content)
+            fixed_content = fix_invalid_json(llm_result.content)
             try:
                 result = json.loads(fixed_content)
             except json.JSONDecodeError as e:
