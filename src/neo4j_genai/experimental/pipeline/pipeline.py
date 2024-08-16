@@ -119,8 +119,7 @@ class TaskPipelineNode(PipelineNode):
             if the task run successfully, None if the status update
             was unsuccessful.
         """
-        logger.info(f"Running component {self.name}")
-        logger.debug(f"Component {self.name} arguments: {kwargs}")
+        logger.debug(f"Running component {self.name} with {kwargs}")
         start_time = default_timer()
         try:
             await self.set_status(RunStatus.RUNNING)
@@ -134,7 +133,7 @@ class TaskPipelineNode(PipelineNode):
             result=component_result,
         )
         end_time = default_timer()
-        logger.info(f"Component {self.name} finished in {end_time - start_time}s")
+        logger.debug(f"Component {self.name} finished in {end_time - start_time}s")
         return run_result
 
     def validate_inputs_config(self, input_data: dict[str, Any]) -> None:
