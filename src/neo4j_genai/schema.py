@@ -23,6 +23,7 @@ BASE_ENTITY_LABEL = "__Entity__"
 EXCLUDED_LABELS = ["_Bloom_Perspective_", "_Bloom_Scene_"]
 EXCLUDED_RELS = ["_Bloom_HAS_SCENE_"]
 
+
 NODE_PROPERTIES_QUERY = """
 CALL apoc.meta.data()
 YIELD label, other, elementType, type, property
