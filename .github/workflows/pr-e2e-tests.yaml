@@ -25,6 +25,9 @@ jobs:
         image: cr.weaviate.io/semitechnologies/transformers-inference:sentence-transformers-all-MiniLM-L6-v2-onnx
         env:
           ENABLE_CUDA: '0'
+        credentials:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       weaviate:
         image: cr.weaviate.io/semitechnologies/weaviate:1.25.1
         env:
@@ -36,6 +39,9 @@ jobs:
         ports:
           - 8080:8080
           - 50051:50051
+        credentials:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       neo4j:
         image: neo4j:${{ matrix.neo4j-version }}-${{ matrix.neo4j-edition }}
         env:
@@ -45,6 +51,9 @@ jobs:
         ports:
           - 7687:7687
           - 7474:7474
+        credentials:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
     steps:
       - name: Check out repository code
