@@ -22,14 +22,14 @@ jobs:
           - enterprise
     services:
       t2v-transformers:
-        image: semitechnologies/transformers-inference:sentence-transformers-all-MiniLM-L6-v2-onnx
+        image: cr.weaviate.io/semitechnologies/transformers-inference:sentence-transformers-all-MiniLM-L6-v2-onnx
         env:
           ENABLE_CUDA: '0'
         credentials:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       weaviate:
-        image: semitechnologies/weaviate:1.25.1
+        image: cr.weaviate.io/semitechnologies/weaviate:1.25.1
         env:
           TRANSFORMERS_INFERENCE_API: 'http://t2v-transformers:8080'
           AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
