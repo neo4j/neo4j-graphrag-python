@@ -85,13 +85,13 @@ class GraphRAG:
                         DeprecationWarning,
                         stacklevel=2,
                     )
-            elif isinstance(query, str):
-                warnings.warn(
-                    "'query' is deprecated and will be removed in a future version, please use 'query_text' instead.",
-                    DeprecationWarning,
-                    stacklevel=2,
-                )
-                query_text = query
+                elif isinstance(query, str):
+                    warnings.warn(
+                        "'query' is deprecated and will be removed in a future version, please use 'query_text' instead.",
+                        DeprecationWarning,
+                        stacklevel=2,
+                    )
+                    query_text = query
 
             validated_data = RagSearchModel(
                 query_text=query_text,
