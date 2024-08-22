@@ -18,6 +18,7 @@ import asyncio
 import enum
 import logging
 from datetime import datetime
+from timeit import default_timer
 from typing import Any, AsyncGenerator, Awaitable, Callable, Optional
 
 from pydantic import BaseModel, Field
@@ -119,6 +120,7 @@ class TaskPipelineNode(PipelineNode):
             was unsuccessful.
         """
         logger.debug(f"Running component {self.name} with {kwargs}")
+        start_time = default_timer()
         try:
             await self.set_status(RunStatus.RUNNING)
         except PipelineStatusUpdateError:
@@ -130,6 +132,8 @@ class TaskPipelineNode(PipelineNode):
             status=self.status,
             result=component_result,
         )
+        end_time = default_timer()
+        logger.debug(f"Component {self.name} finished in {end_time - start_time}s")
         return run_result
 
     def validate_inputs_config(self, input_data: dict[str, Any]) -> None:
@@ -467,8 +471,12 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
             task.validate_inputs_config(data)
 
     async def run(self, data: dict[str, Any]) -> dict[str, Any]:
+        logger.debug("Starting pipeline")
+        start_time = default_timer()
         self.validate_inputs_config(data)
         self.reinitialize()
         orchestrator = Orchestrator(self)
         await orchestrator.run(data)
+        end_time = default_timer()
+        logger.debug(f"Pipeline finished in {end_time - start_time}s")
         return self._final_results.all()
