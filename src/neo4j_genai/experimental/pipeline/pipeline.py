@@ -22,7 +22,6 @@ from timeit import default_timer
 from typing import Any, AsyncGenerator, Awaitable, Callable, Optional
 
 from pydantic import BaseModel, Field
-from tqdm.asyncio import tqdm
 
 from neo4j_genai.experimental.pipeline.component import Component, DataModel
 from neo4j_genai.experimental.pipeline.exceptions import (
@@ -411,7 +410,6 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         if result.result:
             res_to_save = result.result.model_dump()
         self.add_result_for_component(node.name, res_to_save, is_final=node.is_leaf())
-        self.pbar.update(1)
 
     def add_result_for_component(
         self, name: str, result: dict[str, Any] | None, is_final: bool = False
@@ -474,13 +472,11 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
 
     async def run(self, data: dict[str, Any]) -> dict[str, Any]:
         logger.debug("Starting pipeline")
-        self.pbar = tqdm(total=len(self._nodes), desc="Creating knowledge graph")
         start_time = default_timer()
         self.validate_inputs_config(data)
         self.reinitialize()
         orchestrator = Orchestrator(self)
         await orchestrator.run(data)
         end_time = default_timer()
-        self.pbar.close()
         logger.debug(f"Pipeline finished in {end_time - start_time}s")
         return self._final_results.all()
