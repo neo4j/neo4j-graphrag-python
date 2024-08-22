@@ -79,3 +79,7 @@ class Component(abc.ABC, metaclass=ComponentMeta):
     @abc.abstractmethod
     async def run(self, *args: Any, **kwargs: Any) -> DataModel:
         pass
+
+    def __call__(self, pipeline, **kwargs):
+        pipeline.add(self, **kwargs)
+        return pipeline

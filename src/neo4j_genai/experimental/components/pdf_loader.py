@@ -35,8 +35,11 @@ class DataLoader(Component):
     Interface for loading data of various input types.
     """
 
+    def __init__(self):
+        super().__init__()
+
     @abstractmethod
-    async def run(self, filepath: Path) -> PdfDocument:
+    async def run(self) -> PdfDocument:
         pass
 
 
@@ -45,6 +48,15 @@ def is_default_fs(fs: fsspec.AbstractFileSystem) -> bool:
 
 
 class PdfLoader(DataLoader):
+    def __init__(
+        self,
+        filepath,
+        fs: Optional[fsspec.AbstractFileSystem] = None,
+    ):
+        super().__init__()
+        self.fs = fs or LocalFileSystem()
+        self.filepath = filepath
+
     @staticmethod
     def load_file(
         file: Union[Path, str],
@@ -72,7 +84,7 @@ class PdfLoader(DataLoader):
 
     async def run(
         self,
-        filepath: Path,
         fs: Optional[AbstractFileSystem] = None,
     ) -> PdfDocument:
-        return PdfDocument(text=self.load_file(filepath, fs))
+        fs = fs or self.fs
+        return PdfDocument(text=self.load_file(self.filepath, fs))

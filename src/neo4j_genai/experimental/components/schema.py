@@ -157,12 +157,24 @@ class SchemaBuilder(Component):
         pipe.run(pipe_inputs)
     """
 
-    @staticmethod
-    def create_schema_model(
+    def __init__(
+        self,
         entities: List[SchemaEntity],
         relations: List[SchemaRelation],
         potential_schema: List[Tuple[str, str, str]],
-    ) -> SchemaConfig:
+    ):
+        super().__init__()
+        self.entities = entities
+        self.relations = relations
+        self.potential_schema = potential_schema
+        self.schema_config = None
+
+    def create_schema_model(
+        self,
+        entities: List[SchemaEntity],
+        relations: List[SchemaRelation],
+        potential_schema: List[Tuple[str, str, str]],
+    ) -> None:
         """
         Creates a SchemaConfig object from Lists of Entity and Relation objects
         and a Dictionary defining potential relationships.
@@ -179,7 +191,7 @@ class SchemaBuilder(Component):
         relation_dict = {relation.label: relation.dict() for relation in relations}
 
         try:
-            return SchemaConfig(
+            self.schema_config = SchemaConfig(
                 entities=entity_dict,
                 relations=relation_dict,
                 potential_schema=potential_schema,
@@ -190,9 +202,6 @@ class SchemaBuilder(Component):
     @validate_call
     async def run(
         self,
-        entities: List[SchemaEntity],
-        relations: List[SchemaRelation],
-        potential_schema: List[Tuple[str, str, str]],
     ) -> SchemaConfig:
         """
         Asynchronously constructs and returns a SchemaConfig object.
@@ -205,4 +214,12 @@ class SchemaBuilder(Component):
         Returns:
             SchemaConfig: A configured schema object, constructed asynchronously.
         """
-        return self.create_schema_model(entities, relations, potential_schema)
+        if self.schema_config is None:
+            self.create_schema_model(
+                self.entities, self.relations, self.potential_schema
+            )
+        return self.schema_config
+
+    @property
+    def output(self):
+        return self.schema_config

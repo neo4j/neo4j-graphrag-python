@@ -12,10 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from __future__ import annotations
-
 import asyncio
-import logging
 from typing import Any
 
 import neo4j
@@ -36,24 +33,30 @@ from neo4j_genai.experimental.components.text_splitters.langchain import (
 )
 from neo4j_genai.experimental.pipeline import Component, DataModel
 from neo4j_genai.llm import OpenAILLM
-from pydantic import BaseModel, validate_call
-
-logging.basicConfig(level=logging.DEBUG)
 
 
-class DocumentChunkModel(DataModel):
-    chunks: list[str]
+class FuncPipeline:
+    def __init__(self):
+        self.components = []
 
+    def add(self, component, **kwargs):
+        self.components.append((component, kwargs))
+        return self
 
-class DocumentChunker(Component):
-    async def run(self, text: str) -> DocumentChunkModel:
-        chunks = [t.strip() for t in text.split(".") if t.strip()]
-        return DocumentChunkModel(chunks=chunks)
+    async def run(self):
+        data = None
+        for component, kwargs in self.components:
+            if isinstance(component, Component):
+                data = await component.run(data, **kwargs)
+            else:
+                raise TypeError("All elements must be instances of Component")
+        return data
 
+    def finalise(self):
+        print("Pipeline is finalised and ready to run.")
 
-class EntityModel(BaseModel):
-    label: str
-    properties: dict[str, str]
+    def __call__(self, component, **kwargs):
+        return self.add(component, **kwargs)
 
 
 class Neo4jGraph(DataModel):
@@ -61,46 +64,7 @@ class Neo4jGraph(DataModel):
     relations: list[dict[str, Any]]
 
 
-class ERExtractor(Component):
-    async def _process_chunk(self, chunk: str, schema: str) -> dict[str, Any]:
-        return {
-            "entities": [{"label": "Person", "properties": {"name": "John Doe"}}],
-            "relations": [],
-        }
-
-    async def run(self, chunks: list[str], schema: str) -> Neo4jGraph:
-        tasks = [self._process_chunk(chunk, schema) for chunk in chunks]
-        result = await asyncio.gather(*tasks)
-        merged_result: dict[str, Any] = {"entities": [], "relations": []}
-        for res in result:
-            merged_result["entities"] += res["entities"]
-            merged_result["relations"] += res["relations"]
-        return Neo4jGraph(
-            entities=merged_result["entities"], relations=merged_result["relations"]
-        )
-
-
-class WriterModel(DataModel):
-    status: str
-    entities: list[EntityModel]
-    relations: list[EntityModel]
-
-
-class Writer(Component):
-    @validate_call
-    async def run(self, graph: Neo4jGraph) -> WriterModel:
-        entities = graph.entities
-        relations = graph.relations
-        return WriterModel(
-            status="OK",
-            entities=[EntityModel(**e) for e in entities],
-            relations=[EntityModel(**r) for r in relations],
-        )
-
-
-async def main(neo4j_driver: neo4j.Driver) -> dict[str, Any]:
-    from neo4j_genai.experimental.pipeline import Pipeline
-
+async def main(neo4j_driver: neo4j.Driver):
     # Instantiate Entity and Relation objects
     entities = [
         SchemaEntity(label="PERSON", description="An individual human being."),
@@ -136,52 +100,35 @@ async def main(neo4j_driver: neo4j.Driver) -> dict[str, Any]:
         ("PERSON", "OWNS", "HORCRUX"),
         ("ORGANIZATION", "LED_BY", "PERSON"),
     ]
-
-    # Set up the pipeline
-    pipe = Pipeline()
-    pipe.add_component("pdf_loader", PdfLoader())
-    pipe.add_component(
-        "splitter",
-        LangChainTextSplitterAdapter(
-            # chunk_size=50 for the sake of this demo
-            CharacterTextSplitter(chunk_size=50, chunk_overlap=10, separator=".")
-        ),
+    pipeline = FuncPipeline()
+    pdf_loader = PdfLoader(
+        filepath="examples/pipeline/Harry Potter and the Death Hallows Summary.pdf"
     )
-    pipe.add_component("schema", SchemaBuilder())
-    pipe.add_component(
-        "extractor",
-        LLMEntityRelationExtractor(
-            llm=OpenAILLM(
-                model_name="gpt-4o",
-                model_params={
-                    "max_tokens": 1000,
-                    "response_format": {"type": "json_object"},
-                },
-            ),
-            on_error=OnError.RAISE,
-        ),
+    text_splitter = LangChainTextSplitterAdapter(CharacterTextSplitter())
+    schema_builder = SchemaBuilder(
+        entities=entities, relations=relations, potential_schema=potential_schema
     )
-    pipe.add_component("writer", Neo4jWriter(neo4j_driver))
-    pipe.connect("pdf_loader", "splitter", input_config={"text": "pdf_loader.text"})
-    pipe.connect("splitter", "extractor", input_config={"chunks": "splitter"})
-    pipe.connect("schema", "extractor", input_config={"schema": "schema"})
-    pipe.connect(
-        "extractor",
-        "writer",
-        input_config={"graph": "extractor"},
+    er_extractor = LLMEntityRelationExtractor(
+        llm=OpenAILLM(
+            model_name="gpt-4o",
+            model_params={
+                "max_tokens": 1000,
+                "response_format": {"type": "json_object"},
+            },
+        ),
+        on_error=OnError.RAISE,
     )
 
-    pipe_inputs = {
-        "pdf_loader": {
-            "filepath": "examples/pipeline/Harry Potter and the Death Hallows Summary.pdf"
-        },
-        "schema": {
-            "entities": entities,
-            "relations": relations,
-            "potential_schema": potential_schema,
-        },
-    }
-    return await pipe.run(pipe_inputs)
+    neo4j_writer = Neo4jWriter(neo4j_driver)
+
+    pipeline = pdf_loader(pipeline)
+    pipeline = text_splitter(pipeline)
+    pipeline = er_extractor(pipeline, schema=schema_builder.schema_config)
+    pipeline = neo4j_writer(pipeline)
+
+    pipeline.finalise()
+    result = await pipeline.run()
+    print(result)
 
 
 if __name__ == "__main__":

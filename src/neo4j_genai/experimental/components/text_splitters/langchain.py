@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from langchain_text_splitters import TextSplitter as LangChainTextSplitter
 
+from neo4j_genai.experimental.components.pdf_loader import PdfDocument
 from neo4j_genai.experimental.components.text_splitters.base import TextSplitter
 from neo4j_genai.experimental.components.types import TextChunk, TextChunks
 
@@ -42,9 +43,10 @@ class LangChainTextSplitterAdapter(TextSplitter):
     """
 
     def __init__(self, text_splitter: LangChainTextSplitter) -> None:
+        super().__init__()
         self.text_splitter = text_splitter
 
-    async def run(self, text: str) -> TextChunks:
+    async def run(self, pdf_document: PdfDocument) -> TextChunks:
         """
         Splits text into chunks.
 
@@ -54,6 +56,7 @@ class LangChainTextSplitterAdapter(TextSplitter):
         Returns:
             TextChunks: The text split into chunks.
         """
+        text = pdf_document.text
         return TextChunks(
             chunks=[
                 TextChunk(text=chunk) for chunk in self.text_splitter.split_text(text)
