@@ -331,7 +331,10 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         """Create a Pipeline from a pydantic model defining the components and their connections"""
         pipeline = Pipeline(store=store)
         for component in pipeline_template.components:
-            pipeline.add_component(component.name, component.component)
+            pipeline.add_component(
+                component.component,
+                component.name,
+            )
         for edge in pipeline_template.connections:
             pipeline_edge = PipelineEdge(
                 edge.start, edge.end, data={"input_config": edge.input_config}
@@ -359,7 +362,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         )
         return pipeline_config.model_dump()
 
-    def add_component(self, name: str, component: Component) -> None:
+    def add_component(self, component: Component, name: str) -> None:
         task = TaskPipelineNode(name, component, self)
         self.add_node(task)
 
