@@ -15,10 +15,9 @@
 from __future__ import annotations
 
 from unittest import mock
-from unittest.mock import AsyncMock, call, patch
+from unittest.mock import AsyncMock, call
 
 import pytest
-from anyio.abc import TaskStatus
 from neo4j_genai.experimental.pipeline import Component, Pipeline
 from neo4j_genai.experimental.pipeline.exceptions import PipelineDefinitionError
 from neo4j_genai.experimental.pipeline.pipeline import (
