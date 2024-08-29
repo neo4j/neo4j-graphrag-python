@@ -97,16 +97,25 @@ def kg_builder_pipeline(
     pipe = Pipeline()
     # define the components
     pipe.add_component(
-        "splitter",
         text_splitter,
+        "splitter",
     )
-    pipe.add_component("embedder", chunk_embedder)
-    pipe.add_component("schema", schema_builder)
     pipe.add_component(
-        "extractor",
-        entity_relation_extractor,
+        chunk_embedder,
+        "embedder",
     )
-    pipe.add_component("writer", kg_writer)
+    pipe.add_component(
+        schema_builder,
+        "schema",
+    )
+    pipe.add_component(
+        entity_relation_extractor,
+        "extractor",
+    )
+    pipe.add_component(
+        kg_writer,
+        "writer",
+    )
     # define the execution order of component
     # and how the output of previous components must be used
     pipe.connect("splitter", "embedder", input_config={"text_chunks": "splitter"})

@@ -35,8 +35,14 @@ async def test_simple_pipeline_two_components() -> None:
     pipe = Pipeline()
     component_a = ComponentNoParam()
     component_b = ComponentNoParam()
-    pipe.add_component("a", component_a)
-    pipe.add_component("b", component_b)
+    pipe.add_component(
+        component_a,
+        "a",
+    )
+    pipe.add_component(
+        component_b,
+        "b",
+    )
     pipe.connect("a", "b", {})
     with mock.patch(
         "tests.unit.experimental.pipeline.test_pipeline.ComponentNoParam.run"
@@ -57,8 +63,14 @@ async def test_pipeline_parameter_propagation() -> None:
     pipe = Pipeline()
     component_a = ComponentPassThrough()
     component_b = ComponentPassThrough()
-    pipe.add_component("a", component_a)
-    pipe.add_component("b", component_b)
+    pipe.add_component(
+        component_a,
+        "a",
+    )
+    pipe.add_component(
+        component_b,
+        "b",
+    )
     # first component output product goes to second component input number1
     pipe.connect(
         "a",
@@ -90,9 +102,15 @@ async def test_pipeline_branches() -> None:
     component_c = AsyncMock(spec=Component)
     component_c.run = AsyncMock(return_value={})
 
-    pipe.add_component("a", component_a)
-    pipe.add_component("b", component_b)
-    pipe.add_component("c", component_c)
+    pipe.add_component(
+        component_a,
+        "a",
+    )
+    pipe.add_component(
+        component_b,
+        "b",
+    )
+    pipe.add_component(component_c, "c")
     pipe.connect("a", "b")
     pipe.connect("a", "c")
     res = await pipe.run({})
@@ -110,9 +128,15 @@ async def test_pipeline_aggregation() -> None:
     component_c = AsyncMock(spec=Component)
     component_c.run = AsyncMock(return_value={})
 
-    pipe.add_component("a", component_a)
-    pipe.add_component("b", component_b)
-    pipe.add_component("c", component_c)
+    pipe.add_component(
+        component_a,
+        "a",
+    )
+    pipe.add_component(
+        component_b,
+        "b",
+    )
+    pipe.add_component(component_c, "c")
     pipe.connect("a", "c")
     pipe.connect("b", "c")
     res = await pipe.run({})
@@ -124,8 +148,14 @@ async def test_pipeline_missing_param_on_init() -> None:
     pipe = Pipeline()
     component_a = ComponentAdd()
     component_b = ComponentAdd()
-    pipe.add_component("a", component_a)
-    pipe.add_component("b", component_b)
+    pipe.add_component(
+        component_a,
+        "a",
+    )
+    pipe.add_component(
+        component_b,
+        "b",
+    )
     pipe.connect("a", "b", {"number1": "a.result"})
     with pytest.raises(PipelineDefinitionError) as excinfo:
         await pipe.run({"a": {"number1": 1}})
@@ -140,8 +170,14 @@ async def test_pipeline_missing_param_on_connect() -> None:
     pipe = Pipeline()
     component_a = ComponentAdd()
     component_b = ComponentAdd()
-    pipe.add_component("a", component_a)
-    pipe.add_component("b", component_b)
+    pipe.add_component(
+        component_a,
+        "a",
+    )
+    pipe.add_component(
+        component_b,
+        "b",
+    )
     pipe.connect("a", "b", {"number1": "a.result"})
     with pytest.raises(PipelineDefinitionError) as excinfo:
         await pipe.run({"a": {"number1": 1, "number2": 2}})
@@ -156,8 +192,14 @@ async def test_pipeline_with_default_params() -> None:
     pipe = Pipeline()
     component_a = ComponentAdd()
     component_b = ComponentMultiply()
-    pipe.add_component("a", component_a)
-    pipe.add_component("b", component_b)
+    pipe.add_component(
+        component_a,
+        "a",
+    )
+    pipe.add_component(
+        component_b,
+        "b",
+    )
     pipe.connect("a", "b", {"number1": "a.result"})
     res = await pipe.run({"a": {"number1": 1, "number2": 2}})
     assert res == {"b": {"result": 6}}  # (1+2)*2
@@ -168,8 +210,14 @@ async def test_pipeline_cycle() -> None:
     pipe = Pipeline()
     component_a = ComponentNoParam()
     component_b = ComponentNoParam()
-    pipe.add_component("a", component_a)
-    pipe.add_component("b", component_b)
+    pipe.add_component(
+        component_a,
+        "a",
+    )
+    pipe.add_component(
+        component_b,
+        "b",
+    )
     pipe.connect("a", "b", {})
     with pytest.raises(PipelineDefinitionError) as excinfo:
         pipe.connect("b", "a", {})
@@ -181,8 +229,14 @@ async def test_pipeline_wrong_component_name() -> None:
     pipe = Pipeline()
     component_a = ComponentNoParam()
     component_b = ComponentNoParam()
-    pipe.add_component("a", component_a)
-    pipe.add_component("b", component_b)
+    pipe.add_component(
+        component_a,
+        "a",
+    )
+    pipe.add_component(
+        component_b,
+        "b",
+    )
     with pytest.raises(PipelineDefinitionError) as excinfo:
         pipe.connect("a", "c", {})
         assert "a or c not in the Pipeline" in str(excinfo.value)
