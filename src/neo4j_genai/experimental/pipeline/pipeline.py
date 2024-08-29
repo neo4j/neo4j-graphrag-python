@@ -313,7 +313,7 @@ class Orchestrator:
 
 
 class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
-    """This is the main pipeline, when components
+    """This is the main pipeline, where components
     and their execution order are defined"""
 
     def __init__(self, store: Optional[Store] = None) -> None:
@@ -360,10 +360,16 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         return pipeline_config.model_dump()
 
     def add_component(self, component: Component, name: str) -> None:
+        """Add a new component. Components are uniquely identified
+        by their name. If 'name' is already in the pipeline, a ValueError
+        is raised."""
         task = TaskPipelineNode(name, component)
         self.add_node(task)
 
     def set_component(self, name: str, component: Component) -> None:
+        """Replace a component with another. If 'name' is not yet in the pipeline,
+        raises ValueError.
+        """
         task = TaskPipelineNode(name, component)
         self.set_node(task)
 
@@ -385,7 +391,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
 
         Raises:
             PipelineDefinitionError: if the provided component are not in the Pipeline
-                or if the created graph is cyclic
+                or if the graph that would be created by this connection is cyclic.
         """
         edge = PipelineEdge(
             start_component_name,
