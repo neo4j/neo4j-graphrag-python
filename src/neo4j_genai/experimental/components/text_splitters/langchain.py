@@ -37,7 +37,7 @@ class LangChainTextSplitterAdapter(TextSplitter):
 
         pipeline = Pipeline()
         text_splitter = LangChainTextSplitterAdapter(RecursiveCharacterTextSplitter())
-        pipeline.add_component("text_splitter", text_splitter)
+        pipeline.add_component(text_splitter, "text_splitter")
 
     """
 
