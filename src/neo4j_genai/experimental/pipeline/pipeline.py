@@ -18,8 +18,9 @@ import asyncio
 import enum
 import logging
 from datetime import datetime
+from functools import partial
 from timeit import default_timer
-from typing import Any, AsyncGenerator, Awaitable, Callable, Optional
+from typing import Any, AsyncGenerator, Optional, Protocol
 
 from pydantic import BaseModel, Field
 
@@ -59,26 +60,28 @@ class RunResult(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 
+# Type used for annotating the partial on_task_complete parameter
+# and prevent type checking error when using kwargs
+class PartialOnTaskCompleteProtocol(Protocol):
+    async def __call__(self, task: TaskPipelineNode, res: RunResult) -> None: ...
+
+
 class TaskPipelineNode(PipelineNode):
     """Runnable node. It must have:
     - a name (unique within the pipeline)
     - a component instance
-    - a reference to the pipeline it belongs to
-        (to find dependent tasks)
     """
 
-    def __init__(self, name: str, component: Component, pipeline: "Pipeline"):
-        """TaskNode is a graph node with a run method.
+    def __init__(self, name: str, component: Component):
+        """TaskPipelineNode is a graph node with a run method.
 
         Args:
             name (str): node's name
             component (Component): component instance
-            pipeline (Pipeline): pipeline the task belongs to
         """
         super().__init__(name, {})
         self.component = component
         self.status = RunStatus.UNKNOWN
-        self._pipeline = pipeline
         self._lock = asyncio.Lock()
         """This lock is used to make sure we're not trying
         to update the status in //. This should prevent the task to
@@ -136,109 +139,30 @@ class TaskPipelineNode(PipelineNode):
         logger.debug(f"Component {self.name} finished in {end_time - start_time}s")
         return run_result
 
-    def validate_inputs_config(self, input_data: dict[str, Any]) -> None:
-        """Make sure the parameter defined in the input config
-        matches a parameter in the previous component output model.
-        """
-        component = self.component
-        expected_mandatory_inputs = [
-            param_name
-            for param_name, config in component.component_inputs.items()
-            if config["has_default"] is False
-        ]
-        # start building the actual input list, starting
-        # from the inputs provided in the pipeline.run method
-        actual_inputs = list(input_data.get(self.name, {}).keys())
-        prev_edges = self._pipeline.previous_edges(self.name)
-        # then, iterate over all parents to find the parameter propagation
-        for edge in prev_edges:
-            edge_data = edge.data or {}
-            edge_inputs = edge_data.get("input_config") or {}
-            # check that the previous component is actually returning
-            # the mapped parameter
-            for param, path in edge_inputs.items():
-                try:
-                    source_component_name, param_name = path.split(".")
-                except ValueError:
-                    # no specific output mapped
-                    # the full source component result will be
-                    # passed to the next component, so no need
-                    # for further check
-                    continue
-                source_node = self._pipeline.get_node_by_name(source_component_name)
-                source_component = source_node.component
-                source_component_outputs = source_component.component_outputs
-                if param_name and param_name not in source_component_outputs:
-                    raise PipelineDefinitionError(
-                        f"Parameter {param_name} is not valid output for "
-                        f"{source_component_name} (must be one of "
-                        f"{list(source_component_outputs.keys())})"
-                    )
-
-            actual_inputs.extend(list(edge_inputs.keys()))
-        if set(expected_mandatory_inputs) - set(actual_inputs):
-            raise PipelineDefinitionError(
-                f"Missing input parameters for {self.name}: "
-                f"Expected parameters: {expected_mandatory_inputs}. "
-                f"Got: {actual_inputs}"
-            )
-
-    async def get_input_config_from_parents(self) -> dict[str, str]:
-        """Build input definition for this component. For this,
-        the method needs the input defs defined in the edges
-        between this task and its parents.
-
-        Returns:
-            dict: a dict of
-                {input_parameter: path_to_value_in_the_pipeline_results_dict}
-
-        Raises:
-            MissingDependencyError if a parent dependency is not done yet
-        """
-        input_config: dict[str, Any] = {}
-        # make sure dependencies are satisfied
-        # and save the inputs defs that needs to be propagated from parent components
-        for prev_edge in self._pipeline.previous_edges(self.name):
-            prev_node = self._pipeline.get_node_by_name(prev_edge.start)
-            prev_status = await prev_node.read_status()
-            if prev_status != RunStatus.DONE:
-                logger.critical(f"Missing dependency {prev_edge.start}")
-                raise PipelineMissingDependencyError(f"{prev_edge.start} not ready")
-            if prev_edge.data:
-                prev_edge_data = prev_edge.data.get("input_config") or {}
-                input_config.update(**prev_edge_data)
-        return input_config
-
     def reinitialize(self) -> None:
         self.status = RunStatus.SCHEDULED
 
     async def run(
-        self, data: dict[str, Any], callback: Callable[[Any, Any, Any], Awaitable[Any]]
+        self, inputs: dict[str, Any], callback: PartialOnTaskCompleteProtocol
     ) -> None:
-        """Main method to execute the task.
-        1. Get the input defs (path to all required inputs)
-        2. Build the input dict from the previous input defs
-        3. Call the execute method
-        4. Call the pipeline callback method to deal with child dependencies
-        """
-        logger.debug(f"TASK START {self.name=} {data=}")
-        # prepare the inputs defs that needs to be
-        # propagated from parent components
-        input_config = await self.get_input_config_from_parents()
-        # create component's input based on initial input data,
-        # already done component's outputs and inputs definition mapping
-        inputs = self._pipeline.get_component_inputs(self.name, input_config, data)
-        # execute component task
+        """Main method to execute the task."""
+        logger.debug(f"TASK START {self.name=} {inputs=}")
         res = await self.execute(**inputs)
         if res is None:
             return
         logger.debug(f"TASK RESULT {self.name=} {res=}")
         # save its results
-        await callback(self, data, res)
+        await callback(task=self, res=res)
 
 
 class Orchestrator:
-    """Orchestrate a pipeline
+    """Orchestrate a pipeline.
+
+    The orchestrator is responsible for:
+    - finding the next tasks to execute
+    - building the inputs for each task
+    - calling the run method on each task
+
     Once a TaskNode is done, it calls the `on_task_complete` callback
     that will save the results, find the next tasks to be executed
     (checking that all dependencies are met), and run them.
@@ -248,10 +172,22 @@ class Orchestrator:
         self.pipeline = pipeline
 
     async def run_task(self, task: TaskPipelineNode, data: dict[str, Any]) -> None:
-        await task.run(data, callback=self.on_task_complete)
+        """Get inputs and run a specific task. Once the task is done,
+        calls the on_task_complete method.
+
+        Args:
+            task (TaskPipelineNode): The task to be run
+            data (dict[str, Any]): The pipeline input data
+
+        Returns:
+            None
+        """
+        input_config = await self.get_input_config_for_task(task)
+        inputs = self.get_component_inputs(task.name, input_config, data)
+        await task.run(inputs, callback=partial(self.on_task_complete, data=data))
 
     async def on_task_complete(
-        self, task: TaskPipelineNode, data: dict[str, Any], res: RunResult
+        self, data: dict[str, Any], task: TaskPipelineNode, res: RunResult
     ) -> None:
         """When a given task is complete, it will call this method
         to find the next tasks to run.
@@ -267,7 +203,7 @@ class Orchestrator:
         """Check that all parent tasks are complete.
 
         Raises:
-            MissingDependencyError if a parent task's status is different from DONE.
+            MissingDependencyError if a parent task's status is not DONE.
         """
         dependencies = self.pipeline.previous_edges(task.name)
         for d in dependencies:
@@ -282,7 +218,7 @@ class Orchestrator:
     async def next(
         self, task: TaskPipelineNode
     ) -> AsyncGenerator[TaskPipelineNode, None]:
-        """Find the next tasks to be excuted after `task` is complete.
+        """Find the next tasks to be executed after `task` is complete.
 
         1. Find the task children
         2. Check each child's status:
@@ -306,22 +242,79 @@ class Orchestrator:
             yield next_node
         return
 
+    async def get_input_config_for_task(self, task: TaskPipelineNode) -> dict[str, str]:
+        """Build input definition for a given task.,
+        The method needs to access the input defs defined in the edges
+        between this task and its parents.
+
+        Args:
+            task (TaskPipelineNode): the task to get the input config for
+
+        Returns:
+            dict: a dict of
+                {input_parameter: path_to_value_in_the_pipeline_results_dict}
+        """
+        input_config: dict[str, Any] = {}
+        # make sure dependencies are satisfied
+        # and save the inputs defs that needs to be propagated from parent components
+        for prev_edge in self.pipeline.previous_edges(task.name):
+            prev_node = self.pipeline.get_node_by_name(prev_edge.start)
+            prev_status = await prev_node.read_status()
+            if prev_status != RunStatus.DONE:
+                logger.critical(f"Missing dependency {prev_edge.start}")
+                raise PipelineMissingDependencyError(f"{prev_edge.start} not ready")
+            if prev_edge.data:
+                prev_edge_data = prev_edge.data.get("input_config") or {}
+                input_config.update(**prev_edge_data)
+        return input_config
+
+    def get_component_inputs(
+        self,
+        component_name: str,
+        input_config: dict[str, Any],
+        input_data: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Find the component inputs from:
+        - input_config: the mapping between components results and inputs
+            (results are stored in the pipeline result store)
+        - input_data: the user input data
+
+        Args:
+            component_name (str): the component/task name
+            input_config (dict[str, Any]): the input config
+            input_data (dict[str, Any]): the pipeline input data (user input)
+        """
+        component_inputs: dict[str, Any] = input_data.get(component_name, {})
+        if input_config:
+            for parameter, mapping in input_config.items():
+                try:
+                    component, output_param = mapping.split(".")
+                except ValueError:
+                    # we will use the full output of
+                    # component as input
+                    component = mapping
+                    output_param = None
+                component_result = self.pipeline.get_results_for_component(component)
+                if output_param is not None:
+                    value = component_result.get(output_param)
+                else:
+                    value = component_result
+                component_inputs[parameter] = value
+        return component_inputs
+
     async def run(self, data: dict[str, Any]) -> None:
         """Run the pipline, starting from the root nodes
         (node without any parent). Then the callback on_task_complete
         will handle the task dependencies.
         """
         logger.debug(f"PIPELINE START {data=}")
-        tasks = [
-            root.run(data, callback=self.on_task_complete)
-            for root in self.pipeline.roots()
-        ]
+        tasks = [self.run_task(root, data) for root in self.pipeline.roots()]
         await asyncio.gather(*tasks)
 
 
 class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
-    """This is our pipeline, when we configure components
-    and their execution order."""
+    """This is the main pipeline, when components
+    and their execution order are defined"""
 
     def __init__(self, store: Optional[Store] = None) -> None:
         super().__init__()
@@ -364,11 +357,11 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         return pipeline_config.model_dump()
 
     def add_component(self, name: str, component: Component) -> None:
-        task = TaskPipelineNode(name, component, self)
+        task = TaskPipelineNode(name, component)
         self.add_node(task)
 
     def set_component(self, name: str, component: Component) -> None:
-        task = TaskPipelineNode(name, component, self)
+        task = TaskPipelineNode(name, component)
         self.set_node(task)
 
     def connect(
@@ -405,15 +398,19 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         if self.is_cyclic():
             raise PipelineDefinitionError("Cyclic graph are not allowed")
 
-    def on_task_complete(self, node: TaskPipelineNode, result: RunResult) -> None:
+    def on_task_complete(self, task: TaskPipelineNode, result: RunResult) -> None:
+        """Method called when a task is done."""
         res_to_save = None
         if result.result:
             res_to_save = result.result.model_dump()
-        self.add_result_for_component(node.name, res_to_save, is_final=node.is_leaf())
+        self.add_result_for_component(task.name, res_to_save, is_final=task.is_leaf())
 
     def add_result_for_component(
         self, name: str, result: dict[str, Any] | None, is_final: bool = False
     ) -> None:
+        """This is where we save the results in the result store and, optionally,
+        in the final result store.
+        """
         self._store.add(name, result)
         if is_final:
             # The pipeline only returns the results
@@ -423,34 +420,6 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
 
     def get_results_for_component(self, name: str) -> Any:
         return self._store.get(name)
-
-    def get_component_inputs(
-        self,
-        component_name: str,
-        input_config: dict[str, Any],
-        input_data: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Find the component inputs from:
-        - data: the user input data
-        - input_config: the mapping between components results and inputs
-        """
-        component_inputs: dict[str, Any] = input_data.get(component_name, {})
-        if input_config:
-            for parameter, mapping in input_config.items():
-                try:
-                    component, output_param = mapping.split(".")
-                except ValueError:
-                    # we will use the full output of
-                    # component as input
-                    component = mapping
-                    output_param = None
-                component_result = self._store.get(component)
-                if output_param is not None:
-                    value = component_result.get(output_param)
-                else:
-                    value = component_result
-                component_inputs[parameter] = value
-        return component_inputs
 
     def reinitialize(self) -> None:
         """Reinitialize the result stores and component status
@@ -468,7 +437,56 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
             data (dict[str, Any]): the user provided data in the pipeline.run method.
         """
         for task in self._nodes.values():
-            task.validate_inputs_config(data)
+            self.validate_inputs_config_for_task(task, data)
+
+    def validate_inputs_config_for_task(
+        self, task: TaskPipelineNode, input_data: dict[str, Any]
+    ) -> None:
+        """Make sure the parameter defined in the input config
+        matches a parameter in the previous component output model.
+        """
+        component = task.component
+        expected_mandatory_inputs = [
+            param_name
+            for param_name, config in component.component_inputs.items()
+            if config["has_default"] is False
+        ]
+        # start building the actual input list, starting
+        # from the inputs provided in the pipeline.run method
+        actual_inputs = list(input_data.get(task.name, {}).keys())
+        prev_edges = self.previous_edges(task.name)
+        # then, iterate over all parents to find the parameter propagation
+        for edge in prev_edges:
+            edge_data = edge.data or {}
+            edge_inputs = edge_data.get("input_config") or {}
+            # check that the previous component is actually returning
+            # the mapped parameter
+            for param, path in edge_inputs.items():
+                try:
+                    source_component_name, param_name = path.split(".")
+                except ValueError:
+                    # no specific output mapped
+                    # the full source component result will be
+                    # passed to the next component, so no need
+                    # for further check
+                    continue
+                source_node = self.get_node_by_name(source_component_name)
+                source_component = source_node.component
+                source_component_outputs = source_component.component_outputs
+                if param_name and param_name not in source_component_outputs:
+                    raise PipelineDefinitionError(
+                        f"Parameter {param_name} is not valid output for "
+                        f"{source_component_name} (must be one of "
+                        f"{list(source_component_outputs.keys())})"
+                    )
+
+            actual_inputs.extend(list(edge_inputs.keys()))
+        if set(expected_mandatory_inputs) - set(actual_inputs):
+            raise PipelineDefinitionError(
+                f"Missing input parameters for {task.name}: "
+                f"Expected parameters: {expected_mandatory_inputs}. "
+                f"Got: {actual_inputs}"
+            )
 
     async def run(self, data: dict[str, Any]) -> dict[str, Any]:
         logger.debug("Starting pipeline")
