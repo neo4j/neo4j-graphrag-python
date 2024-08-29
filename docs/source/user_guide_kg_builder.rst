@@ -60,7 +60,7 @@ They can also be used within a pipeline:
     from neo4j_genai.experimental.components.pdf_loader import PdfLoader
     pipeline = Pipeline()
     my_component = PdfLoader()
-    pipeline.add("component_name", my_component)
+    pipeline.add_component(my_component, "component_name")
 
 
 Document Parser
