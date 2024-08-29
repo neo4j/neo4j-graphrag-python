@@ -19,6 +19,7 @@ import asyncio
 import enum
 import json
 import logging
+import re
 from datetime import datetime
 from typing import Any, Dict, List, Union
 
@@ -48,6 +49,79 @@ class OnError(enum.Enum):
 CHUNK_NODE_LABEL = "Chunk"
 NEXT_CHUNK_RELATIONSHIP_TYPE = "NEXT_CHUNK"
 NODE_TO_CHUNK_RELATIONSHIP_TYPE = "FROM_CHUNK"
+
+
+def balance_curly_braces(json_string: str) -> str:
+    """
+    Balances curly braces `{}` in a JSON string. This function ensures that every opening brace has a corresponding
+    closing brace, but only when they are not part of a string value. If there are unbalanced closing braces,
+    they are ignored. If there are missing closing braces, they are appended at the end of the string.
+
+    Args:
+        json_string (str): A potentially malformed JSON string with unbalanced curly braces.
+
+    Returns:
+        str: A JSON string with balanced curly braces.
+    """
+    stack = []
+    fixed_json = []
+    in_string = False
+    escape = False
+
+    for char in json_string:
+        if char == '"' and not escape:
+            in_string = not in_string
+        elif char == "\\" and in_string:
+            escape = not escape
+            fixed_json.append(char)
+            continue
+        else:
+            escape = False
+
+        if not in_string:
+            if char == "{":
+                stack.append(char)
+                fixed_json.append(char)
+            elif char == "}" and stack and stack[-1] == "{":
+                stack.pop()
+                fixed_json.append(char)
+            elif char == "}" and (not stack or stack[-1] != "{"):
+                continue
+            else:
+                fixed_json.append(char)
+        else:
+            fixed_json.append(char)
+
+    # If stack is not empty, add missing closing braces
+    while stack:
+        stack.pop()
+        fixed_json.append("}")
+
+    return "".join(fixed_json)
+
+
+def fix_invalid_json(invalid_json_string: str) -> str:
+    # Fix missing quotes around field names
+    invalid_json_string = re.sub(
+        r"([{,]\s*)(\w+)(\s*:)", r'\1"\2"\3', invalid_json_string
+    )
+
+    # Fix missing quotes around string values, correctly ignoring null, true, false, and numeric values
+    invalid_json_string = re.sub(
+        r"(?<=:\s)(?!(null|true|false|\d+\.?\d*))([a-zA-Z_][a-zA-Z0-9_]*)\s*(?=[,}])",
+        r'"\2"',
+        invalid_json_string,
+    )
+
+    # Correct the specific issue: remove trailing commas within arrays or objects before closing braces or brackets
+    invalid_json_string = re.sub(r",\s*(?=[}\]])", "", invalid_json_string)
+
+    # Normalize excessive curly braces
+    invalid_json_string = re.sub(r"{{+", "{", invalid_json_string)
+    invalid_json_string = re.sub(r"}}+", "}", invalid_json_string)
+
+    # Balance curly braces
+    return balance_curly_braces(invalid_json_string)
 
 
 class EntityRelationExtractor(Component, abc.ABC):
@@ -200,16 +274,20 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         llm_result = self.llm.invoke(prompt)
         try:
             result = json.loads(llm_result.content)
-        except json.JSONDecodeError as e:
-            if self.on_error == OnError.RAISE:
-                raise LLMGenerationError(
-                    f"LLM response is not valid JSON {llm_result.content}: {e}"
-                )
-            else:
-                logger.error(
-                    f"LLM response is not valid JSON {llm_result.content} for chunk_index={chunk_index}"
-                )
-            result = {"nodes": [], "relationships": []}
+        except json.JSONDecodeError:
+            fixed_content = fix_invalid_json(llm_result.content)
+            try:
+                result = json.loads(fixed_content)
+            except json.JSONDecodeError as e:
+                if self.on_error == OnError.RAISE:
+                    raise LLMGenerationError(
+                        f"LLM response is not valid JSON {fixed_content}: {e}"
+                    )
+                else:
+                    logger.error(
+                        f"LLM response is not valid JSON {llm_result.content} for chunk_index={chunk_index}"
+                    )
+                result = {"nodes": [], "relationships": []}
         try:
             chunk_graph = Neo4jGraph(**result)
         except ValidationError as e:
