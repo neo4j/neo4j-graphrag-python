@@ -175,8 +175,10 @@ class SchemaBuilder(Component):
         Returns:
             SchemaConfig: A configured schema object.
         """
-        entity_dict = {entity.label: entity.dict() for entity in entities}
-        relation_dict = {relation.label: relation.dict() for relation in relations}
+        entity_dict = {entity.label: entity.model_dump() for entity in entities}
+        relation_dict = {
+            relation.label: relation.model_dump() for relation in relations
+        }
 
         try:
             return SchemaConfig(
