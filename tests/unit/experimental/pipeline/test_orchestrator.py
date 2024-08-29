@@ -21,8 +21,8 @@ from tests.unit.experimental.pipeline.components import ComponentPassThrough
 
 def test_orchestrator_get_component_inputs_from_user_only() -> None:
     pipe = Pipeline()
-    pipe.add_component("a", ComponentPassThrough())
-    pipe.add_component("b", ComponentPassThrough())
+    pipe.add_component(ComponentPassThrough(), "a")
+    pipe.add_component(ComponentPassThrough(), "b")
     orchestrator = Orchestrator(pipe)
     data = orchestrator.get_component_inputs("a", {}, {"a": {"value": "text"}})
     assert data == {"value": "text"}
@@ -32,8 +32,8 @@ def test_orchestrator_get_component_inputs_from_user_only() -> None:
 
 def test_pipeline_get_component_inputs_from_parent_specific() -> None:
     pipe = Pipeline()
-    pipe.add_component("a", ComponentPassThrough())
-    pipe.add_component("b", ComponentPassThrough())
+    pipe.add_component(ComponentPassThrough(), "a")
+    pipe.add_component(ComponentPassThrough(), "b")
     pipe.connect("a", "b", input_config={"value": "a.result"})
 
     # component "a" already run and results stored:
@@ -48,8 +48,8 @@ def test_pipeline_get_component_inputs_from_parent_specific() -> None:
 
 def test_orchestrator_get_component_inputs_from_parent_all() -> None:
     pipe = Pipeline()
-    pipe.add_component("a", ComponentPassThrough())
-    pipe.add_component("b", ComponentPassThrough())
+    pipe.add_component(ComponentPassThrough(), "a")
+    pipe.add_component(ComponentPassThrough(), "b")
     pipe.connect("a", "b", input_config={"value": "a"})
 
     # component "a" already run and results stored:
@@ -64,8 +64,8 @@ def test_orchestrator_get_component_inputs_from_parent_all() -> None:
 
 def test_orchestrator_get_component_inputs_from_parent_and_input() -> None:
     pipe = Pipeline()
-    pipe.add_component("a", ComponentPassThrough())
-    pipe.add_component("b", ComponentPassThrough())
+    pipe.add_component(ComponentPassThrough(), "a")
+    pipe.add_component(ComponentPassThrough(), "b")
     pipe.connect("a", "b", input_config={"value": "a"})
 
     # component "a" already run and results stored:
@@ -83,9 +83,9 @@ def test_orchestrator_get_component_inputs_from_parent_and_input() -> None:
 @pytest.fixture(scope="function")
 def pipeline_branch() -> Pipeline:
     pipe = Pipeline()
-    pipe.add_component("a", Component())  # type: ignore[abstract,unused-ignore]
-    pipe.add_component("b", Component())  # type: ignore[abstract,unused-ignore]
-    pipe.add_component("c", Component())  # type: ignore[abstract,unused-ignore]
+    pipe.add_component(Component(), "a")  # type: ignore[abstract,unused-ignore]
+    pipe.add_component(Component(), "b")  # type: ignore[abstract,unused-ignore]
+    pipe.add_component(Component(), "c")  # type: ignore[abstract,unused-ignore]
     pipe.connect("a", "b")
     pipe.connect("a", "c")
     return pipe
@@ -94,9 +94,9 @@ def pipeline_branch() -> Pipeline:
 @pytest.fixture(scope="function")
 def pipeline_aggregation() -> Pipeline:
     pipe = Pipeline()
-    pipe.add_component("a", Component())  # type: ignore[abstract,unused-ignore]
-    pipe.add_component("b", Component())  # type: ignore[abstract,unused-ignore]
-    pipe.add_component("c", Component())  # type: ignore[abstract,unused-ignore]
+    pipe.add_component(Component(), "a")  # type: ignore[abstract,unused-ignore]
+    pipe.add_component(Component(), "b")  # type: ignore[abstract,unused-ignore]
+    pipe.add_component(Component(), "c")  # type: ignore[abstract,unused-ignore]
     pipe.connect("a", "c")
     pipe.connect("b", "c")
     return pipe
