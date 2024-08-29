@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from unittest import mock
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, call
 
 import pytest
 from neo4j_genai.experimental.pipeline import Component, Pipeline
@@ -42,14 +42,14 @@ async def test_simple_pipeline_two_components() -> None:
         "tests.unit.experimental.pipeline.test_pipeline.ComponentNoParam.run"
     ) as mock_run:
         mock_run.side_effect = [
-            StringResultModel(result=""),
-            StringResultModel(result=""),
+            StringResultModel(result="1"),
+            StringResultModel(result="2"),
         ]
         res = await pipe.run({})
         mock_run.assert_awaited_with(**{})
         mock_run.assert_awaited_with(**{})
     assert "b" in res
-    assert res["b"] == {"result": ""}
+    assert res["b"] == {"result": "2"}
 
 
 @pytest.mark.asyncio
@@ -71,13 +71,12 @@ async def test_pipeline_parameter_propagation() -> None:
         "tests.unit.experimental.pipeline.test_pipeline.ComponentPassThrough.run"
     ) as mock_run:
         mock_run.side_effect = [
-            StringResultModel(result="text"),
-            StringResultModel(result="text"),
+            StringResultModel(result="1"),
+            StringResultModel(result="2"),
         ]
         res = await pipe.run({"a": {"value": "text"}})
-        mock_run.assert_awaited_with(**{"value": "text"})
-        mock_run.assert_awaited_with(**{"value": "text"})
-    assert res == {"b": {"result": "text"}}
+        mock_run.assert_has_awaits([call(**{"value": "text"}), call(**{"value": "1"})])
+    assert res == {"b": {"result": "2"}}
 
 
 @pytest.mark.asyncio

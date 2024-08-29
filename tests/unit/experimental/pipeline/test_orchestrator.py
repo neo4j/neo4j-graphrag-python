@@ -20,9 +20,9 @@ from neo4j_genai.experimental.pipeline.pipeline import Orchestrator, Pipeline, R
 @pytest.fixture(scope="function")
 def pipeline_branch() -> Pipeline:
     pipe = Pipeline()
-    pipe.add_component("a", Component())  # type: ignore
-    pipe.add_component("b", Component())  # type: ignore
-    pipe.add_component("c", Component())  # type: ignore
+    pipe.add_component("a", Component())  # type: ignore[abstract,unused-ignore]
+    pipe.add_component("b", Component())  # type: ignore[abstract,unused-ignore]
+    pipe.add_component("c", Component())  # type: ignore[abstract,unused-ignore]
     pipe.connect("a", "b")
     pipe.connect("a", "c")
     return pipe
@@ -31,11 +31,11 @@ def pipeline_branch() -> Pipeline:
 @pytest.fixture(scope="function")
 def pipeline_aggregation() -> Pipeline:
     pipe = Pipeline()
-    pipe.add_component("a", Component())  # type: ignore
-    pipe.add_component("b", Component())  # type: ignore
-    pipe.add_component("c", Component())  # type: ignore
-    pipe.connect("a", "b")
+    pipe.add_component("a", Component())  # type: ignore[abstract,unused-ignore]
+    pipe.add_component("b", Component())  # type: ignore[abstract,unused-ignore]
+    pipe.add_component("c", Component())  # type: ignore[abstract,unused-ignore]
     pipe.connect("a", "c")
+    pipe.connect("b", "c")
     return pipe
 
 
@@ -54,8 +54,14 @@ async def test_orchestrator_aggregation(pipeline_aggregation: Pipeline) -> None:
     orchestrator = Orchestrator(pipeline=pipeline_aggregation)
     node_a = pipeline_aggregation.get_node_by_name("a")
     node_a.status = RunStatus.DONE
+    next_tasks = [n async for n in orchestrator.next(node_a)]
+    next_task_names = [n.name for n in next_tasks]
+    # "c" not ready yet
+    assert next_task_names == []
+    # set "b" to DONE
     node_b = pipeline_aggregation.get_node_by_name("b")
     node_b.status = RunStatus.DONE
+    # then "c" can start
     next_tasks = [n async for n in orchestrator.next(node_a)]
     next_task_names = [n.name for n in next_tasks]
     assert next_task_names == ["c"]
