@@ -2,6 +2,12 @@
 
 ## Next
 
+### Added
+- Working PDF-to-graph pipeline for knowledge graph construction
+
+### Changed
+- Moved automatic knowledge graph construction to experimental folder
+
 ## 0.4.0
 
 ### Added
