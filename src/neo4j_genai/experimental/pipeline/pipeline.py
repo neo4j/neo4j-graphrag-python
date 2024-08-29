@@ -444,7 +444,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
 
     def validate_inputs_config_for_task(
         self, task: TaskPipelineNode, input_data: dict[str, Any]
-    ) -> None:
+    ) -> bool:
         """Make sure the parameter defined in the input config
         matches a parameter in the previous component output model.
         """
@@ -490,6 +490,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                 f"Expected parameters: {expected_mandatory_inputs}. "
                 f"Got: {actual_inputs}"
             )
+        return True
 
     async def run(self, data: dict[str, Any]) -> dict[str, Any]:
         logger.debug("Starting pipeline")
