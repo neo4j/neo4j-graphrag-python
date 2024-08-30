@@ -1,49 +1,9 @@
-# @neo4j/neo4j-graphrag-python
+# @neo4j/neo4j-genai-python
 
 ## Next
-- Add `template` validation in `PromptTemplate` class upon construction.
-- `custom_prompt` arg is now converted to `Text2CypherTemplate` class within the `Text2CypherRetriever.get_search_results` method.
-- Text2Cypher templates now require `query_text` arg and will warn if it is not present. Previous arg (`query`) may be used, but will warn of deprecation.
 - Fix bug in `Text2CypherRetriever` using `custom_prompt` arg where the `search` method would not inject the `query_text` content.
 - Add feature to include kwargs in `Text2CypherRetriever.search()` that will be injected into a custom prompt, if provided.
-- Add validation to `custom_prompt` parameter of `Text2CypherRetriever` to ensure that `query_text` placeholder exists in prompt.
-
-## 0.6.2
-
-## 0.6.1
-
-### Changed
-- Officially renamed neo4j-genai to neo4j-graphrag. For the final release version of neo4j-genai, please visit https://pypi.org/project/neo4j-genai/.
-
-## 0.6.0
-
-### IMPORTANT NOTICE
-- The `neo4j-genai` package is now deprecated. Users are advised to switch to the new package `neo4j-graphrag`.
-### Added
-- Ability to visualise pipeline with `my_pipeline.draw("pipeline.png")`
-
-### Fixed
-- Pipelines now return correct results when the same pipeline is run in parallel.
-
-### Changed
-- Pipeline run method now return a PipelineResult object.
-
-
-## 0.5.0
-
-### Added
-- PDF-to-graph pipeline for knowledge graph construction in experimental mode
-- Introduced support for Component/Pipeline flexible architecture.
-- Added new components for knowledge graph construction, including text splitters, schema builders, entity-relation extractors, and Neo4j writers.
-- Implemented end-to-end tests for the new knowledge graph builder pipeline.
-
-### Changed
-- When saving the lexical graph in a KG creation pipeline, the document is also saved as a specific node, together with relationships between each chunk and the document they were created from.
-
-### Fixed
-- Corrected the hybrid retriever query to ensure proper normalization of scores in vector search results.
-
-## 0.4.0
+- Add validation to `custom_prompt` parameter of `Text2CypherRetriever` to ensure that `query` placeholder exists in prompt.
 
 ## 0.4.0
 
@@ -69,7 +29,7 @@
 -   Stopped embeddings from being returned when searching with `VectorRetriever`. Added `nodeLabels` and `id` to the metadata of `VectorRetriever` results.
 -   Added `upsert_vector` utility function for attaching vectors to node properties.
 -   Introduced `Neo4jInsertionError` for handling insertion failures in Neo4j.
--   Included Pinecone and Weaviate retrievers in neo4j_graphrag.retrievers.
+-   Included Pinecone and Weaviate retrievers in neo4j_genai.retrievers.
 -   Introduced the GraphRAG object, enabling a full RAG (Retrieval-Augmented Generation) pipeline with context retrieval, prompt formatting, and answer generation.
 -   Added PromptTemplate and RagTemplate for customizable prompt generation.
 -   Added LLMInterface with implementation for OpenAI LLM.
@@ -80,7 +40,7 @@
 -   Introduced result_formatter argument to all retrievers, allowing custom formatting of retriever results.
 
 ### Changed
--   Refactored import paths for retrievers to neo4j_graphrag.retrievers.
+-   Refactored import paths for retrievers to neo4j_genai.retrievers.
 -   Implemented exception chaining for all re-raised exceptions to improve stack trace readability.
 -   Made error messages in `index.py` more consistent.
 -   Renamed `Retriever._get_search_results` to `Retriever.get_search_results`
