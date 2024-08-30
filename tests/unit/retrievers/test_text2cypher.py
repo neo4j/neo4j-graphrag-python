@@ -280,4 +280,4 @@ def test_t2c_retriever_injects_query_into_prompt(
 
         retriever.search(query_text="test")
 
-    assert f"Text2CypherRetriever prompt: {prompt.format(query="test")}" in caplog.text
+    assert f"Text2CypherRetriever prompt: {prompt.format(query='test')}" in caplog.text
