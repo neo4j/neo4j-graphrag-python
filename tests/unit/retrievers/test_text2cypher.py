@@ -252,3 +252,32 @@ def test_t2c_retriever_invalid_custom_prompt_type(
         )
 
     assert "Input should be a valid string" in str(exc_info.value)
+
+
+@pytest.mark.usefixtures("caplog")
+@patch("neo4j_genai.retrievers.base.Retriever._verify_version")
+def test_t2c_retriever_injects_query_into_prompt(
+    _verify_version_mock: MagicMock,
+    driver: MagicMock,
+    llm: MagicMock,
+    neo4j_record: MagicMock,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    prompt = "This is another custom prompt. {query}"
+
+    with caplog.at_level(logging.DEBUG):
+        retriever = Text2CypherRetriever(
+            driver=driver,
+            llm=llm,
+            custom_prompt=prompt,
+        )
+
+        driver.execute_query.return_value = (
+            [neo4j_record],
+            None,
+            None,
+        )
+
+        retriever.search(query_text="test")
+
+    assert f"Text2CypherRetriever prompt: {prompt.format(query="test")}" in caplog.text

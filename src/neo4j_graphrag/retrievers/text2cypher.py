@@ -140,7 +140,7 @@ class Text2CypherRetriever(Retriever):
                 query=validated_data.query_text,
             )
         else:
-            prompt = self.custom_prompt
+            prompt = self.custom_prompt.format(query=validated_data.query_text)
 
         logger.debug("Text2CypherRetriever prompt: %s", prompt)
 
