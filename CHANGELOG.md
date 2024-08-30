@@ -1,6 +1,7 @@
 # @neo4j/neo4j-genai-python
 
 ## Next
+- Fix bug in `Text2CypherRetriever` using `custom_prompt` arg where the `search` method would not inject the `query_text` content.
 
 ### Added
 - Add optional custom_prompt arg to the Text2CypherRetriever class.
