@@ -206,7 +206,7 @@ def test_t2c_retriever_initialization_with_custom_prompt(
         )
         retriever.search(query_text="test")
 
-    assert f"Text2CypherRetriever prompt: {prompt.format(query="test")}" in caplog.text
+    assert f"Text2CypherRetriever prompt: {prompt.format(query='test')}" in caplog.text
 
 
 @pytest.mark.usefixtures("caplog")
@@ -237,7 +237,7 @@ def test_t2c_retriever_initialization_with_custom_prompt_and_schema_and_examples
         )
         retriever.search(query_text="test")
 
-    assert f"Text2CypherRetriever prompt: {prompt.format(query="test")}" in caplog.text
+    assert f"Text2CypherRetriever prompt: {prompt.format(query='test')}" in caplog.text
 
 
 @patch("neo4j_graphrag.retrievers.Text2CypherRetriever._verify_version")
