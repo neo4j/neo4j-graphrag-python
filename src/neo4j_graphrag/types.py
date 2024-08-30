@@ -241,3 +241,12 @@ class Text2CypherRetrieverModel(BaseModel):
     examples: Optional[list[str]] = None
     result_formatter: Optional[Callable[[neo4j.Record], RetrieverResultItem]] = None
     custom_prompt: Optional[str] = None
+
+    @field_validator("custom_prompt")
+    def custom_prompt_validator(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            assert (
+                "{query}" in v
+            ), "`custom_prompt` arg must contain the placeholder `query`."
+
+        return v
