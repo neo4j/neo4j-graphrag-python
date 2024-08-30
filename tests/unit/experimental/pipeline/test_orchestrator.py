@@ -16,7 +16,10 @@ import pytest
 from neo4j_genai.experimental.pipeline import Component
 from neo4j_genai.experimental.pipeline.pipeline import Orchestrator, Pipeline, RunStatus
 
-from tests.unit.experimental.pipeline.components import ComponentPassThrough
+from tests.unit.experimental.pipeline.components import (
+    ComponentNoParam,
+    ComponentPassThrough,
+)
 
 
 def test_orchestrator_get_component_inputs_from_user_only() -> None:
@@ -24,10 +27,11 @@ def test_orchestrator_get_component_inputs_from_user_only() -> None:
     pipe.add_component(ComponentPassThrough(), "a")
     pipe.add_component(ComponentPassThrough(), "b")
     orchestrator = Orchestrator(pipe)
-    data = orchestrator.get_component_inputs("a", {}, {"a": {"value": "text"}})
+    input_data = {"a": {"value": "text"}, "b": {"value": "other text"}}
+    data = orchestrator.get_component_inputs("a", {}, input_data)
     assert data == {"value": "text"}
-    data = orchestrator.get_component_inputs("b", {}, {"a": {"value": "text"}})
-    assert data == {}
+    data = orchestrator.get_component_inputs("b", {}, input_data)
+    assert data == {"value": "other text"}
 
 
 def test_pipeline_get_component_inputs_from_parent_specific() -> None:
@@ -37,47 +41,46 @@ def test_pipeline_get_component_inputs_from_parent_specific() -> None:
     pipe.connect("a", "b", input_config={"value": "a.result"})
 
     # component "a" already run and results stored:
-    pipe._store.add("a", {"result": "a_result"})
+    pipe._store.add("a", {"result": "output from component a"})
 
     orchestrator = Orchestrator(pipe)
-    data = orchestrator.get_component_inputs(
-        "b", {"value": "a.result"}, {"a": {"value": "text"}}
-    )
-    assert data == {"value": "a_result"}
+    data = orchestrator.get_component_inputs("b", {"value": "a.result"}, {})
+    assert data == {"value": "output from component a"}
 
 
 def test_orchestrator_get_component_inputs_from_parent_all() -> None:
     pipe = Pipeline()
-    pipe.add_component(ComponentPassThrough(), "a")
+    pipe.add_component(ComponentNoParam(), "a")
     pipe.add_component(ComponentPassThrough(), "b")
     pipe.connect("a", "b", input_config={"value": "a"})
 
     # component "a" already run and results stored:
-    pipe._store.add("a", {"result": "a_result"})
+    pipe._store.add("a", {"result": "output from component a"})
 
     orchestrator = Orchestrator(pipe)
-    data = orchestrator.get_component_inputs(
-        "b", {"value": "a"}, {"a": {"value": "text"}}
-    )
-    assert data == {"value": {"result": "a_result"}}
+    data = orchestrator.get_component_inputs("b", {"value": "a"}, {})
+    assert data == {"value": {"result": "output from component a"}}
 
 
 def test_orchestrator_get_component_inputs_from_parent_and_input() -> None:
     pipe = Pipeline()
-    pipe.add_component(ComponentPassThrough(), "a")
+    pipe.add_component(ComponentNoParam(), "a")
     pipe.add_component(ComponentPassThrough(), "b")
     pipe.connect("a", "b", input_config={"value": "a"})
 
     # component "a" already run and results stored:
-    pipe._store.add("a", {"result": "a_result"})
+    pipe._store.add("a", {"result": "output from component a"})
 
     orchestrator = Orchestrator(pipe)
     data = orchestrator.get_component_inputs(
         "b",
         {"value": "a"},
-        {"a": {"value": "text"}, "b": {"other_value": "other_text"}},
+        {"b": {"other_value": "other_text"}},
     )
-    assert data == {"value": {"result": "a_result"}, "other_value": "other_text"}
+    assert data == {
+        "value": {"result": "output from component a"},
+        "other_value": "other_text",
+    }
 
 
 @pytest.fixture(scope="function")
