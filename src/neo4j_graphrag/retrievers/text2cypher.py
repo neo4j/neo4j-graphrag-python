@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 import neo4j
 from neo4j.exceptions import CypherSyntaxError, DriverError, Neo4jError
@@ -110,15 +110,13 @@ class Text2CypherRetriever(Retriever):
                 f"Failed to fetch schema for Text2CypherRetriever: {error_message}"
             ) from e
 
-    def get_search_results(
-        self,
-        query_text: str,
-    ) -> RawSearchResult:
+    def get_search_results(self, query_text: str, **kwargs: Any) -> RawSearchResult:
         """Converts query_text to a Cypher query using an LLM.
            Retrieve records from a Neo4j database using the generated Cypher query.
 
         Args:
             query_text (str): The natural language query used to search the Neo4j database.
+            kwargs: additional values to inject into the custom prompt, if it is provided.
 
         Raises:
             SearchValidationError: If validation of the input arguments fail.
@@ -140,7 +138,9 @@ class Text2CypherRetriever(Retriever):
                 query=validated_data.query_text,
             )
         else:
-            prompt = self.custom_prompt.format(query=validated_data.query_text)
+            prompt = self.custom_prompt.format(
+                query=validated_data.query_text, **kwargs
+            )
 
         logger.debug("Text2CypherRetriever prompt: %s", prompt)
 
