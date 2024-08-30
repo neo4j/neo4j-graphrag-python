@@ -2,6 +2,8 @@
 
 ## Next
 - Fix bug in `Text2CypherRetriever` using `custom_prompt` arg where the `search` method would not inject the `query_text` content.
+- Add feature to include kwargs in `Text2CypherRetriever.search()` that will be injected into a custom prompt, if provided.
+- Add validation to `custom_prompt` parameter of `Text2CypherRetriever` to ensure that `query` placeholder exists in prompt.
 
 ### Added
 - Add optional custom_prompt arg to the Text2CypherRetriever class.
