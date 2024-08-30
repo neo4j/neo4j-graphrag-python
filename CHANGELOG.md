@@ -7,6 +7,11 @@
 - Add feature to include kwargs in `Text2CypherRetriever.search()` that will be injected into a custom prompt, if provided.
 - Add validation to `custom_prompt` parameter of `Text2CypherRetriever` to ensure that `query_text` placeholder exists in prompt.
 
+## 0.5.0
+
+### Fixed
+- Corrected the hybrid retriever query to ensure proper normalization of scores in vector search results.
+
 ## 0.4.0
 
 ### Added
