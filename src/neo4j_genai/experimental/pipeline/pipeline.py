@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import enum
 import logging
+import warnings
 from datetime import datetime
 from functools import partial
 from timeit import default_timer
@@ -299,6 +300,10 @@ class Orchestrator:
                     value = component_result.get(output_param)
                 else:
                     value = component_result
+                if parameter in component_inputs:
+                    warnings.warn(
+                        f"In component '{component_name}', parameter '{parameter}' from user input will be ignored and replaced by '{mapping}'"
+                    )
                 component_inputs[parameter] = value
         return component_inputs
 
