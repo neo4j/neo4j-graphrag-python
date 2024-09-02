@@ -25,7 +25,6 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
 from pydantic import ValidationError, validate_call
-from sqlalchemy.orm import relationships
 
 from neo4j_genai.exceptions import LLMGenerationError
 from neo4j_genai.experimental.components.pdf_loader import DocumentInfo
@@ -221,11 +220,10 @@ class LexicalGraphBuilder:
     def create_document_node(document_info: DocumentInfo) -> Neo4jNode:
         document_metadata = document_info.metadata or {}
         return Neo4jNode(
-            id=f"{document_info.protocol}://{document_info.path}",
+            id=document_info.path,
             label=DOCUMENT_NODE_LABEL,
             properties={
                 "path": document_info.path,
-                "protocol": document_info.protocol,
                 **document_metadata,
             },
         )
@@ -322,6 +320,9 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         try:
             result = json.loads(llm_result.content)
         except json.JSONDecodeError:
+            logger.warning(
+                f"LLM response is not valid JSON {llm_result.content} for chunk_index={chunk.index}. Trying to fix it."
+            )
             fixed_content = fix_invalid_json(llm_result.content)
             try:
                 result = json.loads(fixed_content)

@@ -17,7 +17,7 @@ from __future__ import annotations
 import io
 from abc import abstractmethod
 from pathlib import Path
-from typing import Optional, Union
+from typing import Dict, Optional, Union
 
 import fsspec
 import pypdf
@@ -30,12 +30,7 @@ from neo4j_genai.experimental.pipeline import Component, DataModel
 
 class DocumentInfo(DataModel):
     path: str
-    protocol: str
-    metadata: Optional[dict[str, str]] = None
-
-    @property
-    def doc_id(self) -> str:
-        return f"{self.protocol}://{self.path}"
+    metadata: Optional[Dict[str, str]] = None
 
 
 class PdfDocument(DataModel):
@@ -49,13 +44,13 @@ class DataLoader(Component):
     """
 
     def get_document_metadata(
-        self, text: str, metadata: Optional[dict[str, str]] = None
-    ) -> dict[str, str] | None:
+        self, text: str, metadata: Optional[Dict[str, str]] = None
+    ) -> Dict[str, str] | None:
         return metadata
 
     @abstractmethod
     async def run(
-        self, filepath: Path, metadata: Optional[dict[str, str]] = None
+        self, filepath: Path, metadata: Optional[Dict[str, str]] = None
     ) -> PdfDocument:
         pass
 
@@ -91,7 +86,7 @@ class PdfLoader(DataLoader):
     async def run(
         self,
         filepath: Path,
-        metadata: Optional[dict[str, str]] = None,
+        metadata: Optional[Dict[str, str]] = None,
         fs: Optional[AbstractFileSystem] = None,
     ) -> PdfDocument:
         fs = fs or LocalFileSystem()
@@ -100,7 +95,6 @@ class PdfLoader(DataLoader):
             text=text,
             document_info=DocumentInfo(
                 path=str(filepath),
-                protocol=fs.protocol,
                 metadata=self.get_document_metadata(text, metadata),
             ),
         )

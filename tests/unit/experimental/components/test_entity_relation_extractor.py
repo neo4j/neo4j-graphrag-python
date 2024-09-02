@@ -101,7 +101,7 @@ async def test_extractor_happy_path_no_entities() -> None:
         llm=llm,
     )
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
-    document_info = DocumentInfo(path="path", protocol="local")
+    document_info = DocumentInfo(path="path")
     result = await extractor.run(chunks=chunks, document_info=document_info)
     assert isinstance(result, Neo4jGraph)
     # one Chunk node and one Document node
@@ -122,7 +122,7 @@ async def test_extractor_happy_path_no_entities_no_lexical_graph() -> None:
         create_lexical_graph=False,
     )
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
-    document_info = DocumentInfo(path="path", protocol="local")
+    document_info = DocumentInfo(path="path")
     result = await extractor.run(chunks=chunks, document_info=document_info)
     assert result.nodes == []
     assert result.relationships == []
@@ -139,7 +139,7 @@ async def test_extractor_happy_path_non_empty_result() -> None:
         llm=llm,
     )
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
-    document_info = DocumentInfo(path="path", protocol="local")
+    document_info = DocumentInfo(path="path")
     result = await extractor.run(chunks=chunks, document_info=document_info)
     assert isinstance(result, Neo4jGraph)
     assert len(result.nodes) == 3
@@ -154,7 +154,7 @@ async def test_extractor_happy_path_non_empty_result() -> None:
     assert len(result.relationships) == 2
     assert result.relationships[0].type == "FROM_DOCUMENT"
     assert result.relationships[0].start_node_id.endswith(":0")
-    assert result.relationships[0].end_node_id == "local://path"
+    assert result.relationships[0].end_node_id == "path"
     assert result.relationships[1].type == "FROM_CHUNK"
 
 
