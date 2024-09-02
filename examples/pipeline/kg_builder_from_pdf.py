@@ -168,7 +168,10 @@ async def main(neo4j_driver: neo4j.Driver) -> dict[str, Any]:
     pipe.connect(
         "extractor",
         "writer",
-        input_config={"graph": "extractor"},
+        input_config={
+            "graph": "extractor",
+            "document_metadata": "pdf_loader.metadata",
+        },
     )
 
     pipe_inputs = {

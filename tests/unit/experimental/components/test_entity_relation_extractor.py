@@ -20,7 +20,7 @@ from unittest.mock import MagicMock
 import pytest
 from neo4j_genai.exceptions import LLMGenerationError
 from neo4j_genai.experimental.components.entity_relation_extractor import (
-    EntityRelationExtractor,
+    LexicalGraphBuilder,
     LLMEntityRelationExtractor,
     OnError,
     balance_curly_braces,
@@ -37,9 +37,9 @@ from neo4j_genai.llm import LLMInterface, LLMResponse
 
 def test_create_chunk_node_no_metadata() -> None:
     # instantiating an abstract class to test common methods
-    extractor = EntityRelationExtractor()  # type: ignore
-    node = extractor.create_chunk_node(
-        chunk=TextChunk(text="text chunk"), chunk_id="10"
+    builder = LexicalGraphBuilder()
+    node = builder.create_chunk_node(
+        chunk=TextChunk(text="text chunk", index=0), chunk_id="10"
     )
     assert isinstance(node, Neo4jNode)
     assert node.id == "10"
@@ -49,9 +49,10 @@ def test_create_chunk_node_no_metadata() -> None:
 
 def test_create_chunk_node_metadata_no_embedding() -> None:
     # instantiating an abstract class to test common methods
-    extractor = EntityRelationExtractor()  # type: ignore
-    node = extractor.create_chunk_node(
-        chunk=TextChunk(text="text chunk", metadata={"status": "ok"}), chunk_id="10"
+    builder = LexicalGraphBuilder()
+    node = builder.create_chunk_node(
+        chunk=TextChunk(text="text chunk", index=0, metadata={"status": "ok"}),
+        chunk_id="10",
     )
     assert isinstance(node, Neo4jNode)
     assert node.id == "10"
@@ -61,10 +62,12 @@ def test_create_chunk_node_metadata_no_embedding() -> None:
 
 def test_create_chunk_node_metadata_embedding() -> None:
     # instantiating an abstract class to test common methods
-    extractor = EntityRelationExtractor()  # type: ignore
-    node = extractor.create_chunk_node(
+    builder = LexicalGraphBuilder()
+    node = builder.create_chunk_node(
         chunk=TextChunk(
-            text="text chunk", metadata={"status": "ok", "embedding": [1, 2, 3]}
+            text="text chunk",
+            index=0,
+            metadata={"status": "ok", "embedding": [1, 2, 3]},
         ),
         chunk_id="10",
     )
@@ -82,10 +85,10 @@ async def test_extractor_happy_path_no_entities() -> None:
     extractor = LLMEntityRelationExtractor(
         llm=llm,
     )
-    chunks = TextChunks(chunks=[TextChunk(text="some text")])
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
     result = await extractor.run(chunks=chunks)
     assert isinstance(result, Neo4jGraph)
-    # only one Chunk node
+    # only one Chunk node (no document info provided)
     assert len(result.nodes) == 1
     assert result.nodes[0].label == "Chunk"
     assert result.relationships == []
@@ -100,7 +103,7 @@ async def test_extractor_happy_path_no_entities_no_lexical_graph() -> None:
         llm=llm,
         create_lexical_graph=False,
     )
-    chunks = TextChunks(chunks=[TextChunk(text="some text")])
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
     result = await extractor.run(chunks=chunks)
     assert result.nodes == []
     assert result.relationships == []
@@ -116,7 +119,7 @@ async def test_extractor_happy_path_non_empty_result() -> None:
     extractor = LLMEntityRelationExtractor(
         llm=llm,
     )
-    chunks = TextChunks(chunks=[TextChunk(text="some text")])
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
     result = await extractor.run(chunks=chunks)
     assert isinstance(result, Neo4jGraph)
     assert len(result.nodes) == 2
@@ -139,7 +142,7 @@ async def test_extractor_missing_entity_id() -> None:
     extractor = LLMEntityRelationExtractor(
         llm=llm,
     )
-    chunks = TextChunks(chunks=[TextChunk(text="some text")])
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
     with pytest.raises(LLMGenerationError):
         await extractor.run(chunks=chunks)
 
@@ -152,7 +155,7 @@ async def test_extractor_llm_invoke_failed() -> None:
     extractor = LLMEntityRelationExtractor(
         llm=llm,
     )
-    chunks = TextChunks(chunks=[TextChunk(text="some text")])
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
     with pytest.raises(LLMGenerationError):
         await extractor.run(chunks=chunks)
 
@@ -167,7 +170,7 @@ async def test_extractor_llm_badly_formatted_json() -> None:
     extractor = LLMEntityRelationExtractor(
         llm=llm,
     )
-    chunks = TextChunks(chunks=[TextChunk(text="some text")])
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
     with pytest.raises(LLMGenerationError):
         await extractor.run(chunks=chunks)
 
@@ -185,7 +188,7 @@ async def test_extractor_llm_invalid_json() -> None:
     extractor = LLMEntityRelationExtractor(
         llm=llm,
     )
-    chunks = TextChunks(chunks=[TextChunk(text="some text")])
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
     with pytest.raises(LLMGenerationError):
         await extractor.run(chunks=chunks)
 
@@ -202,7 +205,7 @@ async def test_extractor_llm_badly_formatted_json_do_not_raise() -> None:
         on_error=OnError.IGNORE,
         create_lexical_graph=False,
     )
-    chunks = TextChunks(chunks=[TextChunk(text="some text")])
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
     res = await extractor.run(chunks=chunks)
     assert res.nodes == []
     assert res.relationships == []
@@ -214,7 +217,7 @@ async def test_extractor_custom_prompt() -> None:
     llm.invoke.return_value = LLMResponse(content='{"nodes": [], "relationships": []}')
 
     extractor = LLMEntityRelationExtractor(llm=llm, prompt_template="this is my prompt")
-    chunks = TextChunks(chunks=[TextChunk(text="some text")])
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
     await extractor.run(chunks=chunks)
     llm.invoke.assert_called_once_with("this is my prompt")
 
