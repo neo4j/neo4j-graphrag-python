@@ -85,7 +85,7 @@ class Neo4jWriter(KGWriter):
         DATABASE = "neo4j"
 
         driver = AsyncGraphDatabase.driver(URI, auth=AUTH, database=DATABASE)
-        writer = AsyncNeo4jWriter(driver=driver, neo4j_database=DATABASE)
+        writer = Neo4jWriter(driver=driver, neo4j_database=DATABASE)
 
         pipeline = Pipeline()
         pipeline.add_component("writer", writer)
