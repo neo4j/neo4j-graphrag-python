@@ -139,14 +139,13 @@ async def main(neo4j_driver: neo4j.Driver) -> dict[str, Any]:
 
     # Set up the pipeline
     pipe = Pipeline()
-    pipe.add_component("pdf_loader", PdfLoader())
+    pipe.add_component(PdfLoader(), "pdf_loader")
     pipe.add_component(
-        "splitter",
         LangChainTextSplitterAdapter(CharacterTextSplitter(separator=". \n")),
+        "splitter",
     )
-    pipe.add_component("schema", SchemaBuilder())
+    pipe.add_component(SchemaBuilder(), "schema")
     pipe.add_component(
-        "extractor",
         LLMEntityRelationExtractor(
             llm=OpenAILLM(
                 model_name="gpt-4o",
@@ -157,8 +156,9 @@ async def main(neo4j_driver: neo4j.Driver) -> dict[str, Any]:
             ),
             on_error=OnError.RAISE,
         ),
+        "extractor",
     )
-    pipe.add_component("writer", Neo4jWriter(neo4j_driver))
+    pipe.add_component(Neo4jWriter(neo4j_driver), "writer")
     pipe.connect("pdf_loader", "splitter", input_config={"text": "pdf_loader.text"})
     pipe.connect("splitter", "extractor", input_config={"chunks": "splitter"})
     pipe.connect(
@@ -172,9 +172,7 @@ async def main(neo4j_driver: neo4j.Driver) -> dict[str, Any]:
     pipe.connect(
         "extractor",
         "writer",
-        input_config={
-            "graph": "extractor",
-        },
+        input_config={"graph": "extractor"},
     )
 
     pipe_inputs = {
