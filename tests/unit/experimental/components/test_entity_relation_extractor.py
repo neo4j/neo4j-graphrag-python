@@ -26,6 +26,7 @@ from neo4j_genai.experimental.components.entity_relation_extractor import (
     balance_curly_braces,
     fix_invalid_json,
 )
+from neo4j_genai.experimental.components.pdf_loader import DocumentInfo
 from neo4j_genai.experimental.components.types import (
     Neo4jGraph,
     Neo4jNode,
@@ -36,7 +37,6 @@ from neo4j_genai.llm import LLMInterface, LLMResponse
 
 
 def test_create_chunk_node_no_metadata() -> None:
-    # instantiating an abstract class to test common methods
     builder = LexicalGraphBuilder()
     node = builder.create_chunk_node(
         chunk=TextChunk(text="text chunk", index=0), chunk_id="10"
@@ -48,7 +48,6 @@ def test_create_chunk_node_no_metadata() -> None:
 
 
 def test_create_chunk_node_metadata_no_embedding() -> None:
-    # instantiating an abstract class to test common methods
     builder = LexicalGraphBuilder()
     node = builder.create_chunk_node(
         chunk=TextChunk(text="text chunk", index=0, metadata={"status": "ok"}),
@@ -61,7 +60,6 @@ def test_create_chunk_node_metadata_no_embedding() -> None:
 
 
 def test_create_chunk_node_metadata_embedding() -> None:
-    # instantiating an abstract class to test common methods
     builder = LexicalGraphBuilder()
     node = builder.create_chunk_node(
         chunk=TextChunk(
@@ -78,7 +76,7 @@ def test_create_chunk_node_metadata_embedding() -> None:
 
 
 @pytest.mark.asyncio
-async def test_extractor_happy_path_no_entities() -> None:
+async def test_extractor_happy_path_no_entities_no_document() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.invoke.return_value = LLMResponse(content='{"nodes": [], "relationships": []}')
 
@@ -95,6 +93,26 @@ async def test_extractor_happy_path_no_entities() -> None:
 
 
 @pytest.mark.asyncio
+async def test_extractor_happy_path_no_entities() -> None:
+    llm = MagicMock(spec=LLMInterface)
+    llm.invoke.return_value = LLMResponse(content='{"nodes": [], "relationships": []}')
+
+    extractor = LLMEntityRelationExtractor(
+        llm=llm,
+    )
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
+    document_info = DocumentInfo(path="path", protocol="local")
+    result = await extractor.run(chunks=chunks, document_info=document_info)
+    assert isinstance(result, Neo4jGraph)
+    # one Chunk node and one Document node
+    assert len(result.nodes) == 2
+    print(result)
+    assert set(n.label for n in result.nodes) == {"Chunk", "Document"}
+    assert len(result.relationships) == 1
+    assert result.relationships[0].type == "FROM_DOCUMENT"
+
+
+@pytest.mark.asyncio
 async def test_extractor_happy_path_no_entities_no_lexical_graph() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.invoke.return_value = LLMResponse(content='{"nodes": [], "relationships": []}')
@@ -104,7 +122,8 @@ async def test_extractor_happy_path_no_entities_no_lexical_graph() -> None:
         create_lexical_graph=False,
     )
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
-    result = await extractor.run(chunks=chunks)
+    document_info = DocumentInfo(path="path", protocol="local")
+    result = await extractor.run(chunks=chunks, document_info=document_info)
     assert result.nodes == []
     assert result.relationships == []
 
@@ -120,17 +139,23 @@ async def test_extractor_happy_path_non_empty_result() -> None:
         llm=llm,
     )
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
-    result = await extractor.run(chunks=chunks)
+    document_info = DocumentInfo(path="path", protocol="local")
+    result = await extractor.run(chunks=chunks, document_info=document_info)
     assert isinstance(result, Neo4jGraph)
-    assert len(result.nodes) == 2
-    entity = result.nodes[0]
+    assert len(result.nodes) == 3
+    doc = result.nodes[0]
+    assert doc.label == "Document"
+    entity = result.nodes[1]
     assert entity.id.endswith("0:0")
     assert entity.label == "Person"
     assert entity.properties == {"chunk_index": 0}
-    chunk_entity = result.nodes[1]
+    chunk_entity = result.nodes[2]
     assert chunk_entity.label == "Chunk"
-    assert len(result.relationships) == 1
-    assert result.relationships[0].type == "FROM_CHUNK"
+    assert len(result.relationships) == 2
+    assert result.relationships[0].type == "FROM_DOCUMENT"
+    assert result.relationships[0].start_node_id.endswith(":0")
+    assert result.relationships[0].end_node_id == "local://path"
+    assert result.relationships[1].type == "FROM_CHUNK"
 
 
 @pytest.mark.asyncio

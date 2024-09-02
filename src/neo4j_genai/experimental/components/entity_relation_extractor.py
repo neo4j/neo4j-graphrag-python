@@ -25,6 +25,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
 from pydantic import ValidationError, validate_call
+from sqlalchemy.orm import relationships
 
 from neo4j_genai.exceptions import LLMGenerationError
 from neo4j_genai.experimental.components.pdf_loader import DocumentInfo
@@ -49,7 +50,7 @@ class OnError(enum.Enum):
 
 
 CHUNK_NODE_LABEL = "Chunk"
-DOCUMENT_NODE_LABEL = "Chunk"
+DOCUMENT_NODE_LABEL = "Document"
 NEXT_CHUNK_RELATIONSHIP_TYPE = "NEXT_CHUNK"
 NODE_TO_CHUNK_RELATIONSHIP_TYPE = "FROM_CHUNK"
 CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE = "FROM_DOCUMENT"
@@ -366,9 +367,11 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                 chunk_graph, chunk, run_id, document_id=document_id
             )
 
-    def combine_chunk_graphs(self, chunk_graphs: List[Neo4jGraph]) -> Neo4jGraph:
+    def combine_chunk_graphs(
+        self, lexical_graph: Neo4jGraph, chunk_graphs: List[Neo4jGraph]
+    ) -> Neo4jGraph:
         """Combine sub-graphs obtained for each chunk into a single Neo4jGraph object"""
-        graph = Neo4jGraph()
+        graph = lexical_graph.model_copy(deep=True)
         for chunk_graph in chunk_graphs:
             graph.nodes.extend(chunk_graph.nodes)
             graph.relationships.extend(chunk_graph.relationships)
@@ -402,6 +405,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         """Perform entity and relation extraction for all chunks in a list."""
         lexical_graph_builder = None
         document_id = None
+        nodes = []
         if self.create_lexical_graph:
             lexical_graph_builder = LexicalGraphBuilder()
             if document_info is None:
@@ -412,7 +416,9 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                 document_node = lexical_graph_builder.create_document_node(
                     document_info
                 )
+                nodes.append(document_node)
                 document_id = document_node.id
+        lexical_graph = Neo4jGraph(nodes=nodes, relationships=[])
         schema = schema or SchemaConfig(entities={}, relations={}, potential_schema=[])
         examples = examples or ""
         run_id = str(datetime.now().timestamp())
@@ -423,6 +429,6 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             for chunk in chunks.chunks
         ]
         chunk_graphs: list[Neo4jGraph] = list(await asyncio.gather(*tasks))
-        graph = self.combine_chunk_graphs(chunk_graphs)
+        graph = self.combine_chunk_graphs(lexical_graph, chunk_graphs)
         logger.debug(f"{self.__class__.__name__}: {graph}")
         return graph
