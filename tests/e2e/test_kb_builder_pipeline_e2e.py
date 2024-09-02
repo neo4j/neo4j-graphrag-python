@@ -151,7 +151,7 @@ async def test_pipeline_builder_happy_path(
     """
     driver.execute_query("MATCH (n) DETACH DELETE n")
     embedder.embed_query.return_value = [1, 2, 3]
-    llm.invoke.side_effect = [
+    llm.ainvoke.side_effect = [
         LLMResponse(
             content="""{
                         "nodes": [
@@ -253,7 +253,7 @@ async def test_pipeline_builder_happy_path(
     }
     res = await kg_builder_pipeline.run(pipe_inputs)
     # llm must have been called for each chunk
-    assert llm.invoke.call_count == 3
+    assert llm.ainvoke.call_count == 3
     # result must be success
     assert res == {"writer": {"status": "SUCCESS"}}
     # check component's results
@@ -305,7 +305,7 @@ async def test_pipeline_builder_failing_chunk_raise(
     """
     driver.execute_query("MATCH (n) DETACH DELETE n")
     embedder.embed_query.return_value = [1, 2, 3]
-    llm.invoke.side_effect = [
+    llm.ainvoke.side_effect = [
         LLMResponse(
             content="""{
                         "nodes": [
@@ -384,7 +384,7 @@ async def test_pipeline_builder_failing_chunk_do_not_raise(
     """
     driver.execute_query("MATCH (n) DETACH DELETE n")
     embedder.embed_query.return_value = [1, 2, 3]
-    llm.invoke.side_effect = [
+    llm.ainvoke.side_effect = [
         LLMResponse(content="invalid json"),
         LLMResponse(
             content="""{
@@ -446,7 +446,7 @@ async def test_pipeline_builder_failing_chunk_do_not_raise(
     ).component.on_error = OnError.IGNORE  # type: ignore[attr-defined, unused-ignore]
     res = await kg_builder_pipeline.run(pipe_inputs)
     # llm must have been called for each chunk
-    assert llm.invoke.call_count == 3
+    assert llm.ainvoke.call_count == 3
     # result must be success
     assert res == {"writer": {"status": "SUCCESS"}}
     # check component's results
