@@ -126,7 +126,6 @@ class TaskPipelineNode(PipelineNode):
         except PipelineStatusUpdateError:
             logger.info(f"Component {self.name} already running or done {self.status}")
             return None
-        print(self.name, kwargs)
         component_result = await self.component.run(**kwargs)
         await self.set_status(RunStatus.DONE)
         run_result = RunResult(
