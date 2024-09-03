@@ -232,6 +232,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         prompt_template (ERExtractionTemplate | str): A custom prompt template to use for extraction.
         create_lexical_graph (bool): Whether to include the text chunks in the graph in addition to the extracted entities and relations. Defaults to True.
         on_error (OnError): What to do when an error occurs during extraction. Defaults to raising an error.
+        max_concurrency (int): The maximum number of concurrent tasks which can be used to make requests to the LLM.
 
     Example:
 
@@ -255,9 +256,11 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         prompt_template: ERExtractionTemplate | str = ERExtractionTemplate(),
         create_lexical_graph: bool = True,
         on_error: OnError = OnError.RAISE,
+        max_concurrency: int = 5,
     ) -> None:
         super().__init__(on_error=on_error, create_lexical_graph=create_lexical_graph)
         self.llm = llm  # with response_format={ "type": "json_object" },
+        self.max_concurrency = max_concurrency
         if isinstance(prompt_template, str):
             template = PromptTemplate(prompt_template, expected_inputs=["query_text"])
         else:
@@ -271,7 +274,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         prompt = self.prompt_template.format(
             query_text=chunk.text, schema=schema.model_dump(), examples=examples
         )
-        llm_result = self.llm.invoke(prompt)
+        llm_result = await self.llm.ainvoke(prompt)
         try:
             result = json.loads(llm_result.content)
         except json.JSONDecodeError:
@@ -322,12 +325,20 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         return graph
 
     async def run_for_chunk(
-        self, schema: SchemaConfig, examples: str, chunk_index: int, chunk: TextChunk
+        self,
+        schema: SchemaConfig,
+        examples: str,
+        chunk_index: int,
+        chunk: TextChunk,
+        sem: asyncio.Semaphore,
     ) -> Neo4jGraph:
         """Run extraction and post processing for a single chunk"""
-        chunk_graph = await self.extract_for_chunk(schema, examples, chunk_index, chunk)
-        await self.post_process_chunk(chunk_graph, chunk_index, chunk)
-        return chunk_graph
+        async with sem:
+            chunk_graph = await self.extract_for_chunk(
+                schema, examples, chunk_index, chunk
+            )
+            await self.post_process_chunk(chunk_graph, chunk_index, chunk)
+            return chunk_graph
 
     @validate_call
     async def run(
@@ -341,8 +352,9 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         schema = schema or SchemaConfig(entities={}, relations={}, potential_schema=[])
         examples = examples or ""
         self._id_prefix = str(datetime.now().timestamp())
+        sem = asyncio.Semaphore(self.max_concurrency)
         tasks = [
-            self.run_for_chunk(schema, examples, chunk_index, chunk)
+            self.run_for_chunk(schema, examples, chunk_index, chunk, sem)
             for chunk_index, chunk in enumerate(chunks.chunks)
         ]
         chunk_graphs = await asyncio.gather(*tasks)

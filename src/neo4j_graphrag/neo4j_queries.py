@@ -49,6 +49,22 @@ UPSERT_RELATIONSHIP_QUERY = (
     "RETURN elementID(r)"
 )
 
+UPSERT_VECTOR_ON_NODE_QUERY = (
+    "MATCH (n) "
+    "WHERE elementId(n) = $id "
+    "WITH n "
+    "CALL db.create.setNodeVectorProperty(n, $embedding_property, $vector) "
+    "RETURN n"
+)
+
+UPSERT_VECTOR_ON_RELATIONSHIP_QUERY = (
+    "MATCH ()-[r]->() "
+    "WHERE elementId(r) = $id "
+    "WITH r "
+    "CALL db.create.setRelationshipVectorProperty(r, $embedding_property, $vector) "
+    "RETURN r"
+)
+
 
 def _get_hybrid_query() -> str:
     return (

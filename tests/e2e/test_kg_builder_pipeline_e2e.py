@@ -21,26 +21,25 @@ from unittest.mock import MagicMock
 import neo4j
 import pytest
 from langchain_text_splitters import CharacterTextSplitter
-from neo4j_graphrag.embedder import Embedder
-from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
-from neo4j_graphrag.experimental.components.entity_relation_extractor import (
+from neo4j_genai.embedder import Embedder
+from neo4j_genai.exceptions import LLMGenerationError
+from neo4j_genai.experimental.components.embedder import TextChunkEmbedder
+from neo4j_genai.experimental.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
     OnError,
 )
-from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
-from neo4j_graphrag.experimental.components.schema import (
+from neo4j_genai.experimental.components.kg_writer import Neo4jWriter
+from neo4j_genai.experimental.components.schema import (
     SchemaBuilder,
     SchemaEntity,
     SchemaProperty,
     SchemaRelation,
 )
-from neo4j_graphrag.experimental.components.text_splitters.langchain import (
+from neo4j_genai.experimental.components.text_splitters.langchain import (
     LangChainTextSplitterAdapter,
 )
-from neo4j_graphrag.experimental.pipeline import Pipeline
-from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
-from neo4j_graphrag.llm import LLMInterface, LLMResponse
+from neo4j_genai.experimental.pipeline import Pipeline
+from neo4j_genai.llm import LLMInterface, LLMResponse
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -251,30 +250,22 @@ async def test_pipeline_builder_happy_path(
                 ("Organization", "LED_BY", "Person"),
             ],
         },
-        "extractor": {"document_info": {"path": "my document path"}},
     }
     res = await kg_builder_pipeline.run(pipe_inputs)
     # llm must have been called for each chunk
     assert llm.ainvoke.call_count == 3
     # result must be success
-    assert isinstance(res, PipelineResult)
-    assert res.run_id is not None
-    assert res.result == {"writer": {"status": "SUCCESS"}}
+    assert res == {"writer": {"status": "SUCCESS"}}
     # check component's results
-    chunks = await kg_builder_pipeline.store.get_result_for_component(
-        res.run_id, "splitter"
-    )
+    chunks = kg_builder_pipeline.get_results_for_component("splitter")
     assert len(chunks["chunks"]) == 3
-    graph = await kg_builder_pipeline.store.get_result_for_component(
-        res.run_id, "extractor"
-    )
-    # 3 entities + 3 chunks + 1 document
+    graph = kg_builder_pipeline.get_results_for_component("extractor")
+    # 3 entities + 3 chunks
     nodes = graph["nodes"]
-    assert len(nodes) == 7
+    assert len(nodes) == 6
     label_counts = dict(Counter([n["label"] for n in nodes]))
     assert label_counts == {
         "Chunk": 3,
-        "Document": 1,
         "Person": 2,
         "Organization": 1,
     }
@@ -282,20 +273,14 @@ async def test_pipeline_builder_happy_path(
     # + 3 rels between entities and their chunk
     # + 2 "NEXT_CHUNK" rels
     relationships = graph["relationships"]
-    assert len(relationships) == 10
+    assert len(relationships) == 7
     type_counts = dict(Counter([r["type"] for r in relationships]))
-    assert type_counts == {
-        "FROM_CHUNK": 3,
-        "FROM_DOCUMENT": 3,
-        "KNOWS": 1,
-        "LED_BY": 1,
-        "NEXT_CHUNK": 2,
-    }
+    assert type_counts == {"FROM_CHUNK": 3, "KNOWS": 1, "LED_BY": 1, "NEXT_CHUNK": 2}
     # then check content of neo4j db
     created_nodes = driver.execute_query("MATCH (n) RETURN n")
-    assert len(created_nodes.records) == 7
+    assert len(created_nodes.records) == 6
     created_rels = driver.execute_query("MATCH ()-[r]->() RETURN r")
-    assert len(created_rels.records) == 10
+    assert len(created_rels.records) == 7
 
     created_chunks = driver.execute_query("MATCH (n:Chunk) RETURN n").records
     assert len(created_chunks) == 3
@@ -463,17 +448,11 @@ async def test_pipeline_builder_failing_chunk_do_not_raise(
     # llm must have been called for each chunk
     assert llm.ainvoke.call_count == 3
     # result must be success
-    assert isinstance(res, PipelineResult)
-    assert res.run_id is not None
-    assert res.result == {"writer": {"status": "SUCCESS"}}
+    assert res == {"writer": {"status": "SUCCESS"}}
     # check component's results
-    chunks = await kg_builder_pipeline.store.get_result_for_component(
-        res.run_id, "splitter"
-    )
+    chunks = kg_builder_pipeline.get_results_for_component("splitter")
     assert len(chunks["chunks"]) == 3
-    graph = await kg_builder_pipeline.store.get_result_for_component(
-        res.run_id, "extractor"
-    )
+    graph = kg_builder_pipeline.get_results_for_component("extractor")
     # 3 entities + 3 chunks
     nodes = graph["nodes"]
     assert len(nodes) == 6
