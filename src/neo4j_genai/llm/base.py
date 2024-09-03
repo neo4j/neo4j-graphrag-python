@@ -45,3 +45,17 @@ class LLMInterface(ABC):
         Raises:
             LLMGenerationError: If anything goes wrong.
         """
+
+    @abstractmethod
+    async def ainvoke(self, input: str) -> LLMResponse:
+        """Asynchronously sends a text input to the LLM and retrieves a response.
+
+        Args:
+            input (str): Text sent to the LLM
+
+        Returns:
+            LLMResponse: The response from the LLM.
+
+        Raises:
+            LLMGenerationError: If anything goes wrong.
+        """

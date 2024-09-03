@@ -213,6 +213,9 @@ Database Interaction
 
 .. autofunction:: neo4j_genai.indexes.upsert_vector_on_relationship
 
+.. autofunction:: neo4j_genai.indexes.async_upsert_vector
+
+.. autofunction:: neo4j_genai.indexes.async_upsert_vector_on_relationship
 
 ******
 Errors
