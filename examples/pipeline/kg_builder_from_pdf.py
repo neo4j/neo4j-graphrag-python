@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any
+from typing import Any, Dict, List
 
 import neo4j
 from langchain_text_splitters import CharacterTextSplitter
@@ -62,13 +62,13 @@ class Neo4jGraph(DataModel):
 
 
 class ERExtractor(Component):
-    async def _process_chunk(self, chunk: str, schema: str) -> dict[str, Any]:
+    async def _process_chunk(self, chunk: str, schema: str) -> Dict[str, Any]:
         return {
             "entities": [{"label": "Person", "properties": {"name": "John Doe"}}],
             "relations": [],
         }
 
-    async def run(self, chunks: list[str], schema: str) -> Neo4jGraph:
+    async def run(self, chunks: List[str], schema: str) -> Neo4jGraph:
         tasks = [self._process_chunk(chunk, schema) for chunk in chunks]
         result = await asyncio.gather(*tasks)
         merged_result: dict[str, Any] = {"entities": [], "relations": []}
@@ -141,10 +141,7 @@ async def main(neo4j_driver: neo4j.Driver) -> dict[str, Any]:
     pipe = Pipeline()
     pipe.add_component(PdfLoader(), "pdf_loader")
     pipe.add_component(
-        LangChainTextSplitterAdapter(
-            # chunk_size=50 for the sake of this demo
-            CharacterTextSplitter(chunk_size=50, chunk_overlap=10, separator=".")
-        ),
+        LangChainTextSplitterAdapter(CharacterTextSplitter(separator=". \n")),
         "splitter",
     )
     pipe.add_component(SchemaBuilder(), "schema")
@@ -153,7 +150,7 @@ async def main(neo4j_driver: neo4j.Driver) -> dict[str, Any]:
             llm=OpenAILLM(
                 model_name="gpt-4o",
                 model_params={
-                    "max_tokens": 1000,
+                    "max_tokens": 2000,
                     "response_format": {"type": "json_object"},
                 },
             ),
@@ -164,7 +161,14 @@ async def main(neo4j_driver: neo4j.Driver) -> dict[str, Any]:
     pipe.add_component(Neo4jWriter(neo4j_driver), "writer")
     pipe.connect("pdf_loader", "splitter", input_config={"text": "pdf_loader.text"})
     pipe.connect("splitter", "extractor", input_config={"chunks": "splitter"})
-    pipe.connect("schema", "extractor", input_config={"schema": "schema"})
+    pipe.connect(
+        "schema",
+        "extractor",
+        input_config={
+            "schema": "schema",
+            "document_info": "pdf_loader.document_info",
+        },
+    )
     pipe.connect(
         "extractor",
         "writer",
