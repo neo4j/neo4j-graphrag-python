@@ -2,6 +2,11 @@
 
 ## Next
 
+## 0.5.0
+
+### Fixed
+- Corrected the hybrid retriever query to ensure proper normalization of scores in vector search results.
+
 ## 0.4.0
 
 ### Added

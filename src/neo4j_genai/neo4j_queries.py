@@ -53,12 +53,14 @@ UPSERT_RELATIONSHIP_QUERY = (
 def _get_hybrid_query() -> str:
     return (
         f"CALL {{ {VECTOR_INDEX_QUERY} "
-        f"RETURN node, score "
+        f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS vector_index_max_score "
+        f"UNWIND nodes AS n "
+        f"RETURN n.node AS node, (n.score / vector_index_max_score) AS score "
         f"UNION "
         f"{FULL_TEXT_SEARCH_QUERY} "
-        f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS max "
+        f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS ft_index_max_score "
         f"UNWIND nodes AS n "
-        f"RETURN n.node AS node, (n.score / max) AS score }} "
+        f"RETURN n.node AS node, (n.score / ft_index_max_score) AS score }} "
         f"WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k"
     )
 
