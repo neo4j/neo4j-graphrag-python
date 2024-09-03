@@ -196,7 +196,7 @@ def test_t2c_retriever_initialization_with_custom_prompt(
     neo4j_record: MagicMock,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    prompt = "This is a custom prompt. {query}"
+    prompt = "This is a custom prompt. {query_text}"
     with caplog.at_level(logging.DEBUG):
         retriever = Text2CypherRetriever(driver=driver, llm=llm, custom_prompt=prompt)
         driver.execute_query.return_value = (
@@ -206,7 +206,10 @@ def test_t2c_retriever_initialization_with_custom_prompt(
         )
         retriever.search(query_text="test")
 
-    assert f"Text2CypherRetriever prompt: {prompt.format(query='test')}" in caplog.text
+    assert (
+        f"Text2CypherRetriever prompt: {prompt.format(query_text='test')}"
+        in caplog.text
+    )
 
 
 @pytest.mark.usefixtures("caplog")
@@ -218,7 +221,7 @@ def test_t2c_retriever_initialization_with_custom_prompt_and_schema_and_examples
     neo4j_record: MagicMock,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    prompt = "This is another custom prompt. {query}"
+    prompt = "This is another custom prompt. {query_text}"
     neo4j_schema = "dummy-schema"
     examples = ["example-1", "example-2"]
     with caplog.at_level(logging.DEBUG):
@@ -237,7 +240,10 @@ def test_t2c_retriever_initialization_with_custom_prompt_and_schema_and_examples
         )
         retriever.search(query_text="test")
 
-    assert f"Text2CypherRetriever prompt: {prompt.format(query='test')}" in caplog.text
+    assert (
+        f"Text2CypherRetriever prompt: {prompt.format(query_text='test')}"
+        in caplog.text
+    )
 
 
 @patch("neo4j_graphrag.retrievers.Text2CypherRetriever._verify_version")
@@ -263,7 +269,7 @@ def test_t2c_retriever_with_custom_prompt_kwargs_inputs(
     neo4j_record: MagicMock,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    prompt = "This is a custom prompt. {query} {examples}"
+    prompt = "This is a custom prompt. {query_text} {examples}"
     query = "test"
     examples = ["example A", "example B"]
     with caplog.at_level(logging.DEBUG):
@@ -276,6 +282,6 @@ def test_t2c_retriever_with_custom_prompt_kwargs_inputs(
         retriever.search(query_text=query, examples=examples)
 
     assert (
-        f"Text2CypherRetriever prompt: {prompt.format(query=query, examples=examples)}"
+        f"Text2CypherRetriever prompt: {prompt.format(query_text=query, examples=examples)}"
         in caplog.text
     )

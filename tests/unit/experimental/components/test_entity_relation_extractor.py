@@ -213,10 +213,12 @@ async def test_extractor_custom_prompt() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.invoke.return_value = LLMResponse(content='{"nodes": [], "relationships": []}')
 
-    extractor = LLMEntityRelationExtractor(llm=llm, prompt_template="this is my prompt")
+    extractor = LLMEntityRelationExtractor(
+        llm=llm, prompt_template="this is my prompt {query_text}"
+    )
     chunks = TextChunks(chunks=[TextChunk(text="some text")])
     await extractor.run(chunks=chunks)
-    llm.invoke.assert_called_once_with("this is my prompt")
+    llm.invoke.assert_called_once_with("this is my prompt some text")
 
 
 def test_fix_unquoted_keys() -> None:

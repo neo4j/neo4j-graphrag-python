@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import warnings
 from typing import Any, Optional
 
 from neo4j_graphrag.exceptions import PromptMissingInputError
@@ -28,8 +29,8 @@ class PromptTemplate:
     missing, a `PromptMissingInputError` is raised.
     """
 
-    DEFAULT_TEMPLATE: str = ""
-    EXPECTED_INPUTS: list[str] = []
+    DEFAULT_TEMPLATE: str = "{query_text}"
+    EXPECTED_INPUTS: list[str] = ["query_text"]
 
     def __init__(
         self,
@@ -38,6 +39,10 @@ class PromptTemplate:
     ) -> None:
         self.template = template or self.DEFAULT_TEMPLATE
         self.expected_inputs = expected_inputs or self.EXPECTED_INPUTS
+
+        assert (
+            "{query_text}" in self.template
+        ), "`template` arg must contain the placeholder `query_text`."
 
     def _format(self, **kwargs: Any) -> str:
         for e in self.EXPECTED_INPUTS:
@@ -108,17 +113,40 @@ Examples (optional):
 {examples}
 
 Input:
-{query}
+{query_text}
 
 Do not use any properties or relationships not included in the schema.
 Do not include triple backticks ``` or any additional text except the generated Cypher statement in your response.
 
 Cypher query:
 """
-    EXPECTED_INPUTS = ["schema", "query", "examples"]
+    EXPECTED_INPUTS = ["schema", "query_text", "examples"]
 
-    def format(self, query: str, schema: str, examples: str) -> str:
-        return super().format(query=query, schema=schema, examples=examples)
+    def format(
+        self,
+        schema: str,
+        examples: str,
+        query_text: str = "",
+        query: Optional[str] = None,
+    ) -> str:
+        try:
+            if query is not None:
+                if query_text:
+                    warnings.warn(
+                        "Both 'query' and 'query_text' are provided, 'query_text' will be used.",
+                        DeprecationWarning,
+                        stacklevel=2,
+                    )
+                elif isinstance(query, str):
+                    warnings.warn(
+                        "'query' is deprecated and will be removed in a future version, please use 'query_text' instead.",
+                        DeprecationWarning,
+                        stacklevel=2,
+                    )
+                    query_text = query
+        except ValidationError as e:
+            raise SearchValidationError(e.errors())
+        return super().format(query_text=query_text, schema=schema, examples=examples)
 
 
 class ERExtractionTemplate(PromptTemplate):
@@ -147,9 +175,32 @@ Examples:
 
 Input text:
 
-{text}
+{query_text}
 """
-    EXPECTED_INPUTS = ["text"]
+    EXPECTED_INPUTS = ["query_text"]
 
-    def format(self, text: str, schema: dict[str, Any], examples: str) -> str:
-        return super().format(text=text, schema=schema, examples=examples)
+    def format(
+        self,
+        schema: dict[str, Any],
+        examples: str,
+        query_text: str = "",
+        text: Optional[str] = None,
+    ) -> str:
+        try:
+            if text is not None:
+                if query_text:
+                    warnings.warn(
+                        "Both 'text' and 'query_text' are provided, 'query_text' will be used.",
+                        DeprecationWarning,
+                        stacklevel=2,
+                    )
+                elif isinstance(text, str):
+                    warnings.warn(
+                        "'text' is deprecated and will be removed in a future version, please use 'query_text' instead.",
+                        DeprecationWarning,
+                        stacklevel=2,
+                    )
+                    query_text = text
+        except ValidationError as e:
+            raise SearchValidationError(e.errors())
+        return super().format(query_text=query_text, schema=schema, examples=examples)

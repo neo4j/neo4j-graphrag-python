@@ -259,7 +259,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         super().__init__(on_error=on_error, create_lexical_graph=create_lexical_graph)
         self.llm = llm  # with response_format={ "type": "json_object" },
         if isinstance(prompt_template, str):
-            template = PromptTemplate(prompt_template, expected_inputs=[])
+            template = PromptTemplate(prompt_template, expected_inputs=["query_text"])
         else:
             template = prompt_template
         self.prompt_template = template
@@ -269,7 +269,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
     ) -> Neo4jGraph:
         """Run entity extraction for a given text chunk."""
         prompt = self.prompt_template.format(
-            text=chunk.text, schema=schema.model_dump(), examples=examples
+            query_text=chunk.text, schema=schema.model_dump(), examples=examples
         )
         llm_result = self.llm.invoke(prompt)
         try:

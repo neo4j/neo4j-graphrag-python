@@ -135,11 +135,11 @@ class Text2CypherRetriever(Retriever):
             prompt = prompt_template.format(
                 schema=self.neo4j_schema,
                 examples="\n".join(self.examples) if self.examples else "",
-                query=validated_data.query_text,
+                query_text=validated_data.query_text,
             )
         else:
             prompt = self.custom_prompt.format(
-                query=validated_data.query_text, **kwargs
+                query_text=validated_data.query_text, **kwargs
             )
 
         logger.debug("Text2CypherRetriever prompt: %s", prompt)
