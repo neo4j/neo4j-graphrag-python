@@ -2,6 +2,8 @@
 
 ## Next
 
+## 0.5.0
+
 ### Added
 - PDF-to-graph pipeline for knowledge graph construction in experimental mode
 - Introduced support for Component/Pipeline flexible architecture.
