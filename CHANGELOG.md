@@ -1,9 +1,11 @@
 # @neo4j/neo4j-genai-python
 
 ## Next
+- `custom_prompt` arg is now converted to `Text2CypherTemplate` class within the `Text2CypherRetriever.get_search_results` method.
+- All prompt templates now require `query_text` arg and will error if it is not present. Previous args (`query`, `text`) may be used, but will warn of deprecation.
 - Fix bug in `Text2CypherRetriever` using `custom_prompt` arg where the `search` method would not inject the `query_text` content.
 - Add feature to include kwargs in `Text2CypherRetriever.search()` that will be injected into a custom prompt, if provided.
-- Add validation to `custom_prompt` parameter of `Text2CypherRetriever` to ensure that `query` placeholder exists in prompt.
+- Add validation to `custom_prompt` parameter of `Text2CypherRetriever` to ensure that `query_text` placeholder exists in prompt.
 
 ### Added
 - Add optional custom_prompt arg to the Text2CypherRetriever class.
