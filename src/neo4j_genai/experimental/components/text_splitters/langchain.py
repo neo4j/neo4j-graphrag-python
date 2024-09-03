@@ -54,8 +54,9 @@ class LangChainTextSplitterAdapter(TextSplitter):
         Returns:
             TextChunks: The text split into chunks.
         """
+        chunks = self.text_splitter.split_text(text)
         return TextChunks(
             chunks=[
-                TextChunk(text=chunk) for chunk in self.text_splitter.split_text(text)
+                TextChunk(text=chunk, index=index) for index, chunk in enumerate(chunks)
             ]
         )

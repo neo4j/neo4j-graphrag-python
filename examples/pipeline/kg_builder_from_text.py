@@ -154,6 +154,11 @@ async def main(neo4j_driver: neo4j.Driver) -> dict[str, Any]:
                 ("Person", "WORKED_FOR", "Organization"),
             ],
         },
+        "extractor": {
+            "document_info": {
+                "path": "my text",
+            }
+        },
     }
     # run the pipeline
     return await pipe.run(pipe_inputs)

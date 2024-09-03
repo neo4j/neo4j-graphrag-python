@@ -8,6 +8,12 @@
 - Added new components for knowledge graph construction, including text splitters, schema builders, entity-relation extractors, and Neo4j writers.
 - Implemented end-to-end tests for the new knowledge graph builder pipeline.
 
+### Changed
+- When saving the lexical graph in a KG creation pipeline, the document is also saved as a specific node, together with relationships between each chunk and the document they were created from.
+
+### Fixed
+- Corrected the hybrid retriever query to ensure proper normalization of scores in vector search results.
+
 ## 0.4.0
 
 ### Added

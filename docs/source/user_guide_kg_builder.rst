@@ -289,9 +289,11 @@ Lexical Graph
 
 By default, the `LLMEntityRelationExtractor` adds some extra nodes and relationships to the extracted graph:
 
+- `Document` node: represent the processed document and have a `path` property.
 - `Chunk` nodes: represent the text chunks. They have a `text` property and, if computed, an `embedding` property.
 - `NEXT_CHUNK` relationships between one chunk node and the next one in the document. It can be used to enhance the context in a RAG application.
 - `FROM_CHUNK` relationship between any extracted entity and the chunk it has been identified into.
+- `FROM_DOCUMENT` relationship between each chunk and the document it was built from.
 
 If this 'lexical graph' is not desired, set the `created_lexical_graph` to `False` in the extractor constructor:
 

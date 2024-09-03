@@ -49,6 +49,7 @@ class OpenAILLM(LLMInterface):
             )
         super().__init__(model_name, model_params)
         self.client = openai.OpenAI(**kwargs)
+        self.async_client = openai.AsyncOpenAI(**kwargs)
 
     def get_messages(
         self,
@@ -60,7 +61,7 @@ class OpenAILLM(LLMInterface):
 
     def invoke(self, input: str) -> LLMResponse:
         """Sends a text input to the OpenAI chat completion model
-        and return the response's content.
+        and returns the response's content.
 
         Args:
             input (str): Text sent to the LLM
@@ -73,6 +74,30 @@ class OpenAILLM(LLMInterface):
         """
         try:
             response = self.client.chat.completions.create(
+                messages=self.get_messages(input),  # type: ignore
+                model=self.model_name,
+                **self.model_params,
+            )
+            content = response.choices[0].message.content or ""
+            return LLMResponse(content=content)
+        except openai.OpenAIError as e:
+            raise LLMGenerationError(e)
+
+    async def ainvoke(self, input: str) -> LLMResponse:
+        """Asynchronously sends a text input to the OpenAI chat
+        completion model and returns the response's content.
+
+        Args:
+            input (str): Text sent to the LLM
+
+        Returns:
+            LLMResponse: The response from OpenAI.
+
+        Raises:
+            LLMGenerationError: If anything goes wrong.
+        """
+        try:
+            response = await self.async_client.chat.completions.create(
                 messages=self.get_messages(input),  # type: ignore
                 model=self.model_name,
                 **self.model_params,
