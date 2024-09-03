@@ -246,7 +246,7 @@ class Text2CypherRetrieverModel(BaseModel):
     def custom_prompt_validator(cls, v: Optional[str]) -> Optional[str]:
         if v is not None:
             assert (
-                "{query}" in v
-            ), "`custom_prompt` arg must contain the placeholder `query`."
+                "{query_text}" in v
+            ), "`custom_prompt` arg must contain the placeholder `query_text`."
 
         return v

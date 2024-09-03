@@ -323,7 +323,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
     ) -> Neo4jGraph:
         """Run entity extraction for a given text chunk."""
         prompt = self.prompt_template.format(
-            text=chunk.text, schema=schema.model_dump(), examples=examples
+            query_text=chunk.text, schema=schema.model_dump(), examples=examples
         )
         llm_result = await self.llm.ainvoke(prompt)
         try:

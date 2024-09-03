@@ -180,9 +180,9 @@ Examples:
 
 Input text:
 
-{text}
+{query_text}
 """
-    EXPECTED_INPUTS = ["text"]
+    EXPECTED_INPUTS = ["query_text"]
 
     def format(
         self,
