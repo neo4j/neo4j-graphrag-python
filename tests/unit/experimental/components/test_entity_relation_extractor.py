@@ -106,7 +106,6 @@ async def test_extractor_happy_path_no_entities() -> None:
     assert isinstance(result, Neo4jGraph)
     # one Chunk node and one Document node
     assert len(result.nodes) == 2
-    print(result)
     assert set(n.label for n in result.nodes) == {"Chunk", "Document"}
     assert len(result.relationships) == 1
     assert result.relationships[0].type == "FROM_DOCUMENT"

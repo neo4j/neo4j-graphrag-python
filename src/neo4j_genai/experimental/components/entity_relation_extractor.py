@@ -128,6 +128,106 @@ def fix_invalid_json(invalid_json_string: str) -> str:
     return balance_curly_braces(invalid_json_string)
 
 
+class LexicalGraphBuilder:
+    """A helper class to encompass useful methods to build the lexical graph"""
+
+    @staticmethod
+    def create_next_chunk_relationship(
+        previous_chunk_id: str, chunk_id: str
+    ) -> Neo4jRelationship:
+        """Create relationship between a chunk and the next one"""
+        return Neo4jRelationship(
+            type=NEXT_CHUNK_RELATIONSHIP_TYPE,
+            start_node_id=previous_chunk_id,
+            end_node_id=chunk_id,
+        )
+
+    @staticmethod
+    def create_chunk_node(chunk: TextChunk, chunk_id: str) -> Neo4jNode:
+        """Create chunk node with properties 'text', 'index' and any 'metadata' added during
+        the process. Special case for the potential chunk embedding property that
+        gets added as an embedding_property"""
+        chunk_properties: Dict[str, Any] = {
+            "text": chunk.text,
+            "index": chunk.index,
+        }
+        embedding_properties = {}
+        if chunk.metadata:
+            if "embedding" in chunk.metadata:
+                embedding_properties["embedding"] = chunk.metadata.pop("embedding")
+            chunk_properties.update(chunk.metadata)
+        return Neo4jNode(
+            id=chunk_id,
+            label=CHUNK_NODE_LABEL,
+            properties=chunk_properties,
+            embedding_properties=embedding_properties,
+        )
+
+    @staticmethod
+    def create_node_to_chunk_rel(node: Neo4jNode, chunk_id: str) -> Neo4jRelationship:
+        """Create relationship between a chunk and entities found in that chunk"""
+        return Neo4jRelationship(
+            start_node_id=node.id,
+            end_node_id=chunk_id,
+            type=NODE_TO_CHUNK_RELATIONSHIP_TYPE,
+        )
+
+    @staticmethod
+    def create_document_node(document_info: DocumentInfo) -> Neo4jNode:
+        """Create a Document node with 'path' property. Any document metadata is also
+        added as a node property.
+        """
+        document_metadata = document_info.metadata or {}
+        return Neo4jNode(
+            id=document_info.path,
+            label=DOCUMENT_NODE_LABEL,
+            properties={
+                "path": document_info.path,
+                **document_metadata,
+            },
+        )
+
+    @staticmethod
+    def create_chunk_to_document_rel(
+        chunk_id: str, document_id: str
+    ) -> Neo4jRelationship:
+        """Create the relationship between a chunk and the document it belongs to."""
+        return Neo4jRelationship(
+            start_node_id=chunk_id,
+            end_node_id=document_id,
+            type=CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE,
+        )
+
+    async def process_chunk(
+        self,
+        chunk_graph: Neo4jGraph,
+        chunk: TextChunk,
+        id_prefix: str,
+        document_id: Optional[str] = None,
+    ) -> None:
+        """Add chunks and relationships between them (NEXT_CHUNK) and between
+        chunks and extracted entities from that chunk.
+        Updates `chunk_graph` in place.
+        """
+        chunk_id = f"{id_prefix}:{chunk.index}"
+        if document_id:
+            chunk_to_doc_rel = self.create_chunk_to_document_rel(chunk_id, document_id)
+            chunk_graph.relationships.append(chunk_to_doc_rel)
+        chunk_node = self.create_chunk_node(chunk, chunk_id)
+        chunk_graph.nodes.append(chunk_node)
+        if chunk.index > 0:
+            previous_chunk_id = f"{id_prefix}:{chunk.index - 1}"
+            next_chunk_rel = self.create_next_chunk_relationship(
+                previous_chunk_id, chunk_id
+            )
+            chunk_graph.relationships.append(next_chunk_rel)
+        for node in chunk_graph.nodes:
+            if node.label in (CHUNK_NODE_LABEL, DOCUMENT_NODE_LABEL):
+                continue
+            node_to_chunk_rel = self.create_node_to_chunk_rel(node, chunk_id)
+            chunk_graph.relationships.append(node_to_chunk_rel)
+
+
 class EntityRelationExtractor(Component, abc.ABC):
     """Abstract class for entity relation extraction components.
 
@@ -171,101 +271,6 @@ class EntityRelationExtractor(Component, abc.ABC):
             rel.start_node_id = f"{prefix}:{rel.start_node_id}"
             rel.end_node_id = f"{prefix}:{rel.end_node_id}"
         return graph
-
-
-class LexicalGraphBuilder:
-    """A class to encompass useful methods to build the lexical graph"""
-
-    @staticmethod
-    def create_next_chunk_relationship(
-        previous_chunk_id: str, chunk_id: str
-    ) -> Neo4jRelationship:
-        """Create relationship between a chunk and the next one"""
-        return Neo4jRelationship(
-            type=NEXT_CHUNK_RELATIONSHIP_TYPE,
-            start_node_id=previous_chunk_id,
-            end_node_id=chunk_id,
-        )
-
-    @staticmethod
-    def create_chunk_node(chunk: TextChunk, chunk_id: str) -> Neo4jNode:
-        """Create chunk node with properties 'text' and any 'metadata' added during
-        the process. Special case for the potential chunk embedding property that
-        gets added as an embedding_property"""
-        chunk_properties: Dict[str, Any] = {
-            "text": chunk.text,
-        }
-        embedding_properties = {}
-        if chunk.metadata:
-            if "embedding" in chunk.metadata:
-                embedding_properties["embedding"] = chunk.metadata.pop("embedding")
-            chunk_properties.update(chunk.metadata)
-        return Neo4jNode(
-            id=chunk_id,
-            label=CHUNK_NODE_LABEL,
-            properties=chunk_properties,
-            embedding_properties=embedding_properties,
-        )
-
-    @staticmethod
-    def create_node_to_chunk_rel(node: Neo4jNode, chunk_id: str) -> Neo4jRelationship:
-        """Create relationship between a chunk and entities found in that chunk"""
-        return Neo4jRelationship(
-            start_node_id=node.id,
-            end_node_id=chunk_id,
-            type=NODE_TO_CHUNK_RELATIONSHIP_TYPE,
-        )
-
-    @staticmethod
-    def create_document_node(document_info: DocumentInfo) -> Neo4jNode:
-        document_metadata = document_info.metadata or {}
-        return Neo4jNode(
-            id=document_info.path,
-            label=DOCUMENT_NODE_LABEL,
-            properties={
-                "path": document_info.path,
-                **document_metadata,
-            },
-        )
-
-    @staticmethod
-    def create_chunk_to_document_rel(
-        chunk_id: str, document_id: str
-    ) -> Neo4jRelationship:
-        return Neo4jRelationship(
-            start_node_id=chunk_id,
-            end_node_id=document_id,
-            type=CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE,
-        )
-
-    async def process_chunk(
-        self,
-        chunk_graph: Neo4jGraph,
-        chunk: TextChunk,
-        id_prefix: str,
-        document_id: Optional[str] = None,
-    ) -> None:
-        """Add chunks and relationships between them (NEXT_CHUNK) and between
-        chunks and extracted entities from that chunk.
-        Updates `chunk_graph` in place.
-        """
-        chunk_id = f"{id_prefix}:{chunk.index}"
-        if document_id:
-            chunk_to_doc_rel = self.create_chunk_to_document_rel(chunk_id, document_id)
-            chunk_graph.relationships.append(chunk_to_doc_rel)
-        chunk_node = self.create_chunk_node(chunk, chunk_id)
-        chunk_graph.nodes.append(chunk_node)
-        if chunk.index > 0:
-            previous_chunk_id = f"{id_prefix}:{chunk.index - 1}"
-            next_chunk_rel = self.create_next_chunk_relationship(
-                previous_chunk_id, chunk_id
-            )
-            chunk_graph.relationships.append(next_chunk_rel)
-        for node in chunk_graph.nodes:
-            if node.label in (CHUNK_NODE_LABEL, DOCUMENT_NODE_LABEL):
-                continue
-            node_to_chunk_rel = self.create_node_to_chunk_rel(node, chunk_id)
-            chunk_graph.relationships.append(node_to_chunk_rel)
 
 
 class LLMEntityRelationExtractor(EntityRelationExtractor):
