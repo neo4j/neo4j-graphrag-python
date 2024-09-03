@@ -163,8 +163,9 @@ class LexicalGraphBuilder:
             embedding_properties=embedding_properties,
         )
 
-    @staticmethod
-    def create_node_to_chunk_rel(node: Neo4jNode, chunk_id: str) -> Neo4jRelationship:
+    def create_node_to_chunk_rel(
+        self, node: Neo4jNode, chunk_id: str
+    ) -> Neo4jRelationship:
         """Create relationship between a chunk and entities found in that chunk"""
         return Neo4jRelationship(
             start_node_id=node.id,
@@ -282,6 +283,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         prompt_template (ERExtractionTemplate | str): A custom prompt template to use for extraction.
         create_lexical_graph (bool): Whether to include the text chunks in the graph in addition to the extracted entities and relations. Defaults to True.
         on_error (OnError): What to do when an error occurs during extraction. Defaults to raising an error.
+        max_concurrency (int): The maximum number of concurrent tasks which can be used to make requests to the LLM.
 
     Example:
 
@@ -305,9 +307,11 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         prompt_template: ERExtractionTemplate | str = ERExtractionTemplate(),
         create_lexical_graph: bool = True,
         on_error: OnError = OnError.RAISE,
+        max_concurrency: int = 5,
     ) -> None:
         super().__init__(on_error=on_error, create_lexical_graph=create_lexical_graph)
         self.llm = llm  # with response_format={ "type": "json_object" },
+        self.max_concurrency = max_concurrency
         if isinstance(prompt_template, str):
             template = PromptTemplate(prompt_template, expected_inputs=[])
         else:
@@ -321,7 +325,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         prompt = self.prompt_template.format(
             text=chunk.text, schema=schema.model_dump(), examples=examples
         )
-        llm_result = self.llm.invoke(prompt)
+        llm_result = await self.llm.ainvoke(prompt)
         try:
             result = json.loads(llm_result.content)
         except json.JSONDecodeError:
@@ -385,6 +389,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
 
     async def run_for_chunk(
         self,
+        sem: asyncio.Semaphore,
         run_id: str,
         chunk: TextChunk,
         schema: SchemaConfig,
@@ -392,12 +397,13 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         lexical_graph_builder: Optional[LexicalGraphBuilder] = None,
         document_id: Optional[str] = None,
     ) -> Neo4jGraph:
-        """Run extraction and post-processing for a single chunk"""
-        chunk_graph = await self.extract_for_chunk(schema, examples, chunk)
-        await self.post_process_chunk(
-            chunk_graph, chunk, run_id, lexical_graph_builder, document_id
-        )
-        return chunk_graph
+        """Run extraction and post processing for a single chunk"""
+        async with sem:
+            chunk_graph = await self.extract_for_chunk(schema, examples, chunk)
+            await self.post_process_chunk(
+                chunk_graph, chunk, run_id, lexical_graph_builder, document_id
+            )
+            return chunk_graph
 
     @validate_call
     async def run(
@@ -428,9 +434,10 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         schema = schema or SchemaConfig(entities={}, relations={}, potential_schema=[])
         examples = examples or ""
         run_id = str(datetime.now().timestamp())
+        sem = asyncio.Semaphore(self.max_concurrency)
         tasks = [
             self.run_for_chunk(
-                run_id, chunk, schema, examples, lexical_graph_builder, document_id
+                sem, run_id, chunk, schema, examples, lexical_graph_builder, document_id
             )
             for chunk in chunks.chunks
         ]
