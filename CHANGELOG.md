@@ -7,6 +7,8 @@
 - Add feature to include kwargs in `Text2CypherRetriever.search()` that will be injected into a custom prompt, if provided.
 - Add validation to `custom_prompt` parameter of `Text2CypherRetriever` to ensure that `query_text` placeholder exists in prompt.
 
+## 0.5.0
+
 ### Added
 - PDF-to-graph pipeline for knowledge graph construction in experimental mode
 - Introduced support for Component/Pipeline flexible architecture.
