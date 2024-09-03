@@ -130,15 +130,16 @@ class Text2CypherRetriever(Retriever):
         except ValidationError as e:
             raise SearchValidationError(e.errors()) from e
 
-        if not self.custom_prompt:
-            prompt_template = Text2CypherTemplate()
+        prompt_template = Text2CypherTemplate(template=self.custom_prompt)
+
+        if self.custom_prompt is None:
             prompt = prompt_template.format(
                 schema=self.neo4j_schema,
                 examples="\n".join(self.examples) if self.examples else "",
                 query_text=validated_data.query_text,
             )
         else:
-            prompt = self.custom_prompt.format(
+            prompt = prompt_template.format(
                 query_text=validated_data.query_text, **kwargs
             )
 

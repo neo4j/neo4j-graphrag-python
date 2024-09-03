@@ -124,8 +124,8 @@ Cypher query:
 
     def format(
         self,
-        schema: str,
-        examples: str,
+        schema: Optional[str] = None,
+        examples: Optional[str] = None,
         query_text: str = "",
         query: Optional[str] = None,
     ) -> str:
