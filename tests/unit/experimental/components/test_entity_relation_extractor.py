@@ -43,7 +43,7 @@ def test_create_chunk_node_no_metadata() -> None:
     )
     assert isinstance(node, Neo4jNode)
     assert node.id == "10"
-    assert node.properties == {"text": "text chunk"}
+    assert node.properties == {"index": 0, "text": "text chunk"}
     assert node.embedding_properties == {}
 
 
@@ -55,7 +55,7 @@ def test_create_chunk_node_metadata_no_embedding() -> None:
     )
     assert isinstance(node, Neo4jNode)
     assert node.id == "10"
-    assert node.properties == {"text": "text chunk", "status": "ok"}
+    assert node.properties == {"index": 0, "text": "text chunk", "status": "ok"}
     assert node.embedding_properties == {}
 
 
@@ -71,14 +71,14 @@ def test_create_chunk_node_metadata_embedding() -> None:
     )
     assert isinstance(node, Neo4jNode)
     assert node.id == "10"
-    assert node.properties == {"text": "text chunk", "status": "ok"}
+    assert node.properties == {"index": 0, "text": "text chunk", "status": "ok"}
     assert node.embedding_properties == {"embedding": [1, 2, 3]}
 
 
 @pytest.mark.asyncio
 async def test_extractor_happy_path_no_entities_no_document() -> None:
     llm = MagicMock(spec=LLMInterface)
-    llm.invoke.return_value = LLMResponse(content='{"nodes": [], "relationships": []}')
+    llm.ainvoke.return_value = LLMResponse(content='{"nodes": [], "relationships": []}')
 
     extractor = LLMEntityRelationExtractor(
         llm=llm,
