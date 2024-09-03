@@ -156,7 +156,7 @@ LLMInterface
 
 
 OpenAILLM
-=========
+---------
 
 .. autoclass:: neo4j_genai.llm.OpenAILLM
     :members:
@@ -179,6 +179,17 @@ ERExtractionTemplate
 --------------------
 
 .. autoclass:: neo4j_genai.generation.prompts.ERExtractionTemplate
+    :members:
+
+
+****
+RAG
+****
+
+GraphRAG
+========
+
+.. autoclass:: neo4j_genai.generation.graphrag.GraphRAG
     :members:
 
 

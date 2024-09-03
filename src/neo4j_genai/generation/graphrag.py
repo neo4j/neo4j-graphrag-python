@@ -34,6 +34,34 @@ logger = logging.getLogger(__name__)
 
 
 class GraphRAG:
+    """Performs a GraphRAG search using a specific retriever
+    and LLM.
+
+    Example:
+
+    .. code-block:: python
+
+      import neo4j
+      from neo4j_genai.retrievers import VectorRetriever
+      from neo4j_genai.llm.openai_llm import OpenAILLM
+      from neo4j_genai.generation import GraphRAG
+
+      driver = neo4j.GraphDatabase.driver(URI, auth=AUTH)
+
+      retriever = VectorRetriever(driver, "vector-index-name", custom_embedder)
+      llm = OpenAILLM()
+      graph_rag = GraphRAG(retriever, llm)
+      graph_rag.search(query_text="Find me a book about Fremen")
+
+    Args:
+        retriever (Retriever): The retriever used to find relevant context to pass to the LLM.
+        llm (LLMInterface): The LLM used to generate the answer.
+        prompt_template (RagTemplate): The prompt template that will be formatted with context and user question and passed to the LLM.
+
+    Raises:
+        RagInitializationError: If validation of the input arguments fail.
+    """
+
     def __init__(
         self,
         retriever: Retriever,
@@ -67,10 +95,10 @@ class GraphRAG:
 
         Args:
             query_text (str): The user question
-            examples: Examples added to the LLM prompt.
+            examples (str): Examples added to the LLM prompt.
             retriever_config (Optional[dict]): Parameters passed to the retriever
                 search method; e.g.: top_k
-            return_context (bool): Whether to return the retriever result (default: False)
+            return_context (bool): Whether to append the retriever result to the final result (default: False)
             query (Optional[str]): The user question. Will be deprecated in favor of query_text.
 
         Returns:
