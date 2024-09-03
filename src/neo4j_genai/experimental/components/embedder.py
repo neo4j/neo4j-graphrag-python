@@ -36,7 +36,7 @@ class TextChunkEmbedder(Component):
         embedder = OpenAIEmbeddings(model="text-embedding-3-large")
         chunk_embedder = TextChunkEmbedder(embedder)
         pipeline = Pipeline()
-        pipeline.add_component("chunk_embedder", chunk_embedder)
+        pipeline.add_component(chunk_embedder, "chunk_embedder")
 
     """
 
