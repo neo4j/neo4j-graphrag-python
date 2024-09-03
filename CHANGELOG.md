@@ -7,6 +7,9 @@
 - Add feature to include kwargs in `Text2CypherRetriever.search()` that will be injected into a custom prompt, if provided.
 - Add validation to `custom_prompt` parameter of `Text2CypherRetriever` to ensure that `query_text` placeholder exists in prompt.
 
+### Changed
+- When saving the lexical graph in a KG creation pipeline, the document is also saved as a specific node, together with relationships between each chunk and the document they were created from.
+
 ## 0.5.0
 
 ### Fixed

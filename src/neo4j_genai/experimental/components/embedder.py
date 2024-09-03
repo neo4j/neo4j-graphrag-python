@@ -56,7 +56,9 @@ class TextChunkEmbedder(Component):
         embedding = self._embedder.embed_query(text_chunk.text)
         metadata = text_chunk.metadata if text_chunk.metadata else {}
         metadata["embedding"] = embedding
-        return TextChunk(text=text_chunk.text, metadata=metadata)
+        return TextChunk(
+            text=text_chunk.text, index=text_chunk.index, metadata=metadata
+        )
 
     @validate_call
     async def run(self, text_chunks: TextChunks) -> TextChunks:

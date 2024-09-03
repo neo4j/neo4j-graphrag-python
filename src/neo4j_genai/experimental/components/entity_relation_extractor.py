@@ -20,12 +20,14 @@ import enum
 import json
 import logging
 import re
+import warnings
 from datetime import datetime
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import ValidationError, validate_call
 
 from neo4j_genai.exceptions import LLMGenerationError
+from neo4j_genai.experimental.components.pdf_loader import DocumentInfo
 from neo4j_genai.experimental.components.schema import SchemaConfig
 from neo4j_genai.experimental.components.types import (
     Neo4jGraph,
@@ -47,8 +49,10 @@ class OnError(enum.Enum):
 
 
 CHUNK_NODE_LABEL = "Chunk"
+DOCUMENT_NODE_LABEL = "Document"
 NEXT_CHUNK_RELATIONSHIP_TYPE = "NEXT_CHUNK"
 NODE_TO_CHUNK_RELATIONSHIP_TYPE = "FROM_CHUNK"
+CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE = "FROM_DOCUMENT"
 
 
 def balance_curly_braces(json_string: str) -> str:
@@ -124,45 +128,12 @@ def fix_invalid_json(invalid_json_string: str) -> str:
     return balance_curly_braces(invalid_json_string)
 
 
-class EntityRelationExtractor(Component, abc.ABC):
-    """Abstract class for entity relation extraction components.
+class LexicalGraphBuilder:
+    """A helper class to encompass useful methods to build the lexical graph"""
 
-    Args:
-        on_error (OnError): What to do when an error occurs during extraction. Defaults to raising an error.
-        create_lexical_graph (bool): Whether to include the text chunks in the graph in addition to the extracted entities and relations. Defaults to True.
-    """
-
-    def __init__(
-        self,
-        *args: Any,
-        on_error: OnError = OnError.IGNORE,
-        create_lexical_graph: bool = True,
-        **kwargs: Any,
-    ) -> None:
-        self.create_lexical_graph = create_lexical_graph
-        self.on_error = on_error
-        self._id_prefix = ""
-
-    @abc.abstractmethod
-    async def run(self, chunks: TextChunks, **kwargs: Any) -> Neo4jGraph:
-        pass
-
-    def update_ids(self, graph: Neo4jGraph, chunk_index: int) -> Neo4jGraph:
-        """Make node IDs unique across chunks and pipeline runs by
-        prefixing them with a custom prefix (set in the run method)
-        and chunk index."""
-        for node in graph.nodes:
-            node.id = f"{self._id_prefix}:{chunk_index}:{node.id}"
-            if node.properties is None:
-                node.properties = {}
-            node.properties.update({"chunk_index": chunk_index})
-        for rel in graph.relationships:
-            rel.start_node_id = f"{self._id_prefix}:{chunk_index}:{rel.start_node_id}"
-            rel.end_node_id = f"{self._id_prefix}:{chunk_index}:{rel.end_node_id}"
-        return graph
-
+    @staticmethod
     def create_next_chunk_relationship(
-        self, previous_chunk_id: str, chunk_id: str
+        previous_chunk_id: str, chunk_id: str
     ) -> Neo4jRelationship:
         """Create relationship between a chunk and the next one"""
         return Neo4jRelationship(
@@ -171,12 +142,14 @@ class EntityRelationExtractor(Component, abc.ABC):
             end_node_id=chunk_id,
         )
 
-    def create_chunk_node(self, chunk: TextChunk, chunk_id: str) -> Neo4jNode:
-        """Create chunk node with properties 'text' and any 'metadata' added during
+    @staticmethod
+    def create_chunk_node(chunk: TextChunk, chunk_id: str) -> Neo4jNode:
+        """Create chunk node with properties 'text', 'index' and any 'metadata' added during
         the process. Special case for the potential chunk embedding property that
         gets added as an embedding_property"""
         chunk_properties: Dict[str, Any] = {
             "text": chunk.text,
+            "index": chunk.index,
         }
         embedding_properties = {}
         if chunk.metadata:
@@ -200,27 +173,105 @@ class EntityRelationExtractor(Component, abc.ABC):
             type=NODE_TO_CHUNK_RELATIONSHIP_TYPE,
         )
 
-    def build_lexical_graph(
-        self, chunk_graph: Neo4jGraph, chunk_index: int, chunk: TextChunk
-    ) -> Neo4jGraph:
+    @staticmethod
+    def create_document_node(document_info: DocumentInfo) -> Neo4jNode:
+        """Create a Document node with 'path' property. Any document metadata is also
+        added as a node property.
+        """
+        document_metadata = document_info.metadata or {}
+        return Neo4jNode(
+            id=document_info.path,
+            label=DOCUMENT_NODE_LABEL,
+            properties={
+                "path": document_info.path,
+                **document_metadata,
+            },
+        )
+
+    @staticmethod
+    def create_chunk_to_document_rel(
+        chunk_id: str, document_id: str
+    ) -> Neo4jRelationship:
+        """Create the relationship between a chunk and the document it belongs to."""
+        return Neo4jRelationship(
+            start_node_id=chunk_id,
+            end_node_id=document_id,
+            type=CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE,
+        )
+
+    async def process_chunk(
+        self,
+        chunk_graph: Neo4jGraph,
+        chunk: TextChunk,
+        id_prefix: str,
+        document_id: Optional[str] = None,
+    ) -> None:
         """Add chunks and relationships between them (NEXT_CHUNK) and between
         chunks and extracted entities from that chunk.
+        Updates `chunk_graph` in place.
         """
-        chunk_id = f"{self._id_prefix}:{chunk_index}"
+        chunk_id = f"{id_prefix}:{chunk.index}"
+        if document_id:
+            chunk_to_doc_rel = self.create_chunk_to_document_rel(chunk_id, document_id)
+            chunk_graph.relationships.append(chunk_to_doc_rel)
         chunk_node = self.create_chunk_node(chunk, chunk_id)
         chunk_graph.nodes.append(chunk_node)
-        if chunk_index > 0:
-            previous_chunk_id = f"{self._id_prefix}:{chunk_index - 1}"
+        if chunk.index > 0:
+            previous_chunk_id = f"{id_prefix}:{chunk.index - 1}"
             next_chunk_rel = self.create_next_chunk_relationship(
                 previous_chunk_id, chunk_id
             )
             chunk_graph.relationships.append(next_chunk_rel)
         for node in chunk_graph.nodes:
-            if node.label == CHUNK_NODE_LABEL:
+            if node.label in (CHUNK_NODE_LABEL, DOCUMENT_NODE_LABEL):
                 continue
             node_to_chunk_rel = self.create_node_to_chunk_rel(node, chunk_id)
             chunk_graph.relationships.append(node_to_chunk_rel)
-        return chunk_graph
+
+
+class EntityRelationExtractor(Component, abc.ABC):
+    """Abstract class for entity relation extraction components.
+
+    Args:
+        on_error (OnError): What to do when an error occurs during extraction. Defaults to raising an error.
+        create_lexical_graph (bool): Whether to include the text chunks in the graph in addition to the extracted entities and relations. Defaults to True.
+    """
+
+    def __init__(
+        self,
+        *args: Any,
+        on_error: OnError = OnError.IGNORE,
+        create_lexical_graph: bool = True,
+        **kwargs: Any,
+    ) -> None:
+        self.on_error = on_error
+        self.create_lexical_graph = create_lexical_graph
+
+    @abc.abstractmethod
+    async def run(
+        self,
+        chunks: TextChunks,
+        document_info: Optional[DocumentInfo] = None,
+        **kwargs: Any,
+    ) -> Neo4jGraph:
+        pass
+
+    def update_ids(
+        self, graph: Neo4jGraph, chunk_index: int, run_id: str
+    ) -> Neo4jGraph:
+        """Make node IDs unique across chunks and pipeline runs by
+        prefixing them with a custom prefix (set in the run method)
+        and chunk index."""
+        prefix = f"{run_id}:{chunk_index}"
+        for node in graph.nodes:
+            node.id = f"{prefix}:{node.id}"
+            if node.properties is None:
+                node.properties = {}
+            node.properties.update({"chunk_index": chunk_index})
+        for rel in graph.relationships:
+            rel.start_node_id = f"{prefix}:{rel.start_node_id}"
+            rel.end_node_id = f"{prefix}:{rel.end_node_id}"
+        return graph
 
 
 class LLMEntityRelationExtractor(EntityRelationExtractor):
@@ -268,7 +319,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         self.prompt_template = template
 
     async def extract_for_chunk(
-        self, schema: SchemaConfig, examples: str, chunk_index: int, chunk: TextChunk
+        self, schema: SchemaConfig, examples: str, chunk: TextChunk
     ) -> Neo4jGraph:
         """Run entity extraction for a given text chunk."""
         prompt = self.prompt_template.format(
@@ -278,6 +329,9 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         try:
             result = json.loads(llm_result.content)
         except json.JSONDecodeError:
+            logger.warning(
+                f"LLM response is not valid JSON {llm_result.content} for chunk_index={chunk.index}. Trying to fix it."
+            )
             fixed_content = fix_invalid_json(llm_result.content)
             try:
                 result = json.loads(fixed_content)
@@ -288,7 +342,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                     )
                 else:
                     logger.error(
-                        f"LLM response is not valid JSON {llm_result.content} for chunk_index={chunk_index}"
+                        f"LLM response is not valid JSON {llm_result.content} for chunk_index={chunk.index}"
                     )
                 result = {"nodes": [], "relationships": []}
         try:
@@ -300,25 +354,34 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                 )
             else:
                 logger.error(
-                    f"LLM response has improper format {result} for chunk_index={chunk_index}"
+                    f"LLM response has improper format {result} for chunk_index={chunk.index}"
                 )
             chunk_graph = Neo4jGraph()
         return chunk_graph
 
     async def post_process_chunk(
-        self, chunk_graph: Neo4jGraph, chunk_index: int, chunk: TextChunk
+        self,
+        chunk_graph: Neo4jGraph,
+        chunk: TextChunk,
+        run_id: str,
+        lexical_graph_builder: Optional[LexicalGraphBuilder] = None,
+        document_id: Optional[str] = None,
     ) -> None:
         """Perform post-processing after entity and relation extraction:
         - Update node IDs to make them unique across chunks
         - Build the lexical graph if requested
         """
-        self.update_ids(chunk_graph, chunk_index)
-        if self.create_lexical_graph:
-            self.build_lexical_graph(chunk_graph, chunk_index, chunk)
+        self.update_ids(chunk_graph, chunk.index, run_id)
+        if lexical_graph_builder:
+            await lexical_graph_builder.process_chunk(
+                chunk_graph, chunk, run_id, document_id=document_id
+            )
 
-    def combine_chunk_graphs(self, chunk_graphs: List[Neo4jGraph]) -> Neo4jGraph:
+    def combine_chunk_graphs(
+        self, lexical_graph: Neo4jGraph, chunk_graphs: List[Neo4jGraph]
+    ) -> Neo4jGraph:
         """Combine sub-graphs obtained for each chunk into a single Neo4jGraph object"""
-        graph = Neo4jGraph()
+        graph = lexical_graph.model_copy(deep=True)
         for chunk_graph in chunk_graphs:
             graph.nodes.extend(chunk_graph.nodes)
             graph.relationships.extend(chunk_graph.relationships)
@@ -326,38 +389,59 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
 
     async def run_for_chunk(
         self,
+        sem: asyncio.Semaphore,
+        run_id: str,
+        chunk: TextChunk,
         schema: SchemaConfig,
         examples: str,
-        chunk_index: int,
-        chunk: TextChunk,
-        sem: asyncio.Semaphore,
+        lexical_graph_builder: Optional[LexicalGraphBuilder] = None,
+        document_id: Optional[str] = None,
     ) -> Neo4jGraph:
         """Run extraction and post processing for a single chunk"""
         async with sem:
-            chunk_graph = await self.extract_for_chunk(
-                schema, examples, chunk_index, chunk
+            chunk_graph = await self.extract_for_chunk(schema, examples, chunk)
+            await self.post_process_chunk(
+                chunk_graph, chunk, run_id, lexical_graph_builder, document_id
             )
-            await self.post_process_chunk(chunk_graph, chunk_index, chunk)
             return chunk_graph
 
     @validate_call
     async def run(
         self,
         chunks: TextChunks,
+        document_info: Optional[DocumentInfo] = None,
         schema: Union[SchemaConfig, None] = None,
         examples: str = "",
         **kwargs: Any,
     ) -> Neo4jGraph:
         """Perform entity and relation extraction for all chunks in a list."""
+        lexical_graph_builder = None
+        document_id = None
+        nodes = []
+        if self.create_lexical_graph:
+            lexical_graph_builder = LexicalGraphBuilder()
+            if document_info is None:
+                warnings.warn(
+                    "No document metadata provided, the document node won't be created in the lexical graph"
+                )
+            else:
+                document_node = lexical_graph_builder.create_document_node(
+                    document_info
+                )
+                nodes.append(document_node)
+                document_id = document_node.id
+        lexical_graph = Neo4jGraph(nodes=nodes, relationships=[])
         schema = schema or SchemaConfig(entities={}, relations={}, potential_schema=[])
         examples = examples or ""
-        self._id_prefix = str(datetime.now().timestamp())
+        run_id = str(datetime.now().timestamp())
         sem = asyncio.Semaphore(self.max_concurrency)
         tasks = [
-            self.run_for_chunk(schema, examples, chunk_index, chunk, sem)
-            for chunk_index, chunk in enumerate(chunks.chunks)
+            self.run_for_chunk(
+                sem, run_id, chunk, schema, examples, lexical_graph_builder, document_id
+            )
+            for chunk in chunks.chunks
         ]
-        chunk_graphs = await asyncio.gather(*tasks)
-        graph = self.combine_chunk_graphs(chunk_graphs)
+        chunk_graphs: list[Neo4jGraph] = list(await asyncio.gather(*tasks))
+        graph = self.combine_chunk_graphs(lexical_graph, chunk_graphs)
         logger.debug(f"{self.__class__.__name__}: {graph}")
         return graph
