@@ -30,6 +30,7 @@ class TextChunk(BaseModel):
     """
 
     text: str
+    index: int
     metadata: Optional[dict[str, Any]] = None
 
 

@@ -250,6 +250,7 @@ async def test_pipeline_builder_happy_path(
                 ("Organization", "LED_BY", "Person"),
             ],
         },
+        "extractor": {"document_info": {"path": "my document path"}},
     }
     res = await kg_builder_pipeline.run(pipe_inputs)
     # llm must have been called for each chunk
@@ -260,12 +261,13 @@ async def test_pipeline_builder_happy_path(
     chunks = kg_builder_pipeline.get_results_for_component("splitter")
     assert len(chunks["chunks"]) == 3
     graph = kg_builder_pipeline.get_results_for_component("extractor")
-    # 3 entities + 3 chunks
+    # 3 entities + 3 chunks + 1 document
     nodes = graph["nodes"]
-    assert len(nodes) == 6
+    assert len(nodes) == 7
     label_counts = dict(Counter([n["label"] for n in nodes]))
     assert label_counts == {
         "Chunk": 3,
+        "Document": 1,
         "Person": 2,
         "Organization": 1,
     }
@@ -273,14 +275,20 @@ async def test_pipeline_builder_happy_path(
     # + 3 rels between entities and their chunk
     # + 2 "NEXT_CHUNK" rels
     relationships = graph["relationships"]
-    assert len(relationships) == 7
+    assert len(relationships) == 10
     type_counts = dict(Counter([r["type"] for r in relationships]))
-    assert type_counts == {"FROM_CHUNK": 3, "KNOWS": 1, "LED_BY": 1, "NEXT_CHUNK": 2}
+    assert type_counts == {
+        "FROM_CHUNK": 3,
+        "FROM_DOCUMENT": 3,
+        "KNOWS": 1,
+        "LED_BY": 1,
+        "NEXT_CHUNK": 2,
+    }
     # then check content of neo4j db
     created_nodes = driver.execute_query("MATCH (n) RETURN n")
-    assert len(created_nodes.records) == 6
+    assert len(created_nodes.records) == 7
     created_rels = driver.execute_query("MATCH ()-[r]->() RETURN r")
-    assert len(created_rels.records) == 7
+    assert len(created_rels.records) == 10
 
     created_chunks = driver.execute_query("MATCH (n:Chunk) RETURN n").records
     assert len(created_chunks) == 3

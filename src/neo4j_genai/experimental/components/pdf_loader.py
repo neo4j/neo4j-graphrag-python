@@ -12,10 +12,12 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from __future__ import annotations
+
 import io
 from abc import abstractmethod
 from pathlib import Path
-from typing import Optional, Union
+from typing import Dict, Optional, Union
 
 import fsspec
 import pypdf
@@ -26,8 +28,14 @@ from neo4j_genai.exceptions import PdfLoaderError
 from neo4j_genai.experimental.pipeline import Component, DataModel
 
 
+class DocumentInfo(DataModel):
+    path: str
+    metadata: Optional[Dict[str, str]] = None
+
+
 class PdfDocument(DataModel):
     text: str
+    document_info: DocumentInfo
 
 
 class DataLoader(Component):
@@ -35,8 +43,15 @@ class DataLoader(Component):
     Interface for loading data of various input types.
     """
 
+    def get_document_metadata(
+        self, text: str, metadata: Optional[Dict[str, str]] = None
+    ) -> Dict[str, str] | None:
+        return metadata
+
     @abstractmethod
-    async def run(self, filepath: Path) -> PdfDocument:
+    async def run(
+        self, filepath: Path, metadata: Optional[Dict[str, str]] = None
+    ) -> PdfDocument:
         pass
 
 
@@ -48,13 +63,11 @@ class PdfLoader(DataLoader):
     @staticmethod
     def load_file(
         file: Union[Path, str],
-        fs: Optional[AbstractFileSystem] = None,
+        fs: AbstractFileSystem,
     ) -> str:
         """Parse PDF file and return text."""
         if not isinstance(file, Path):
             file = Path(file)
-
-        fs = fs or LocalFileSystem()
 
         try:
             with fs.open(file, "rb") as fp:
@@ -73,6 +86,15 @@ class PdfLoader(DataLoader):
     async def run(
         self,
         filepath: Path,
+        metadata: Optional[Dict[str, str]] = None,
         fs: Optional[AbstractFileSystem] = None,
     ) -> PdfDocument:
-        return PdfDocument(text=self.load_file(filepath, fs))
+        fs = fs or LocalFileSystem()
+        text = self.load_file(filepath, fs)
+        return PdfDocument(
+            text=text,
+            document_info=DocumentInfo(
+                path=str(filepath),
+                metadata=self.get_document_metadata(text, metadata),
+            ),
+        )
