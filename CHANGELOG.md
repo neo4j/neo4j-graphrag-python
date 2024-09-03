@@ -7,10 +7,14 @@
 - Add feature to include kwargs in `Text2CypherRetriever.search()` that will be injected into a custom prompt, if provided.
 - Add validation to `custom_prompt` parameter of `Text2CypherRetriever` to ensure that `query_text` placeholder exists in prompt.
 
+### Added
+- PDF-to-graph pipeline for knowledge graph construction in experimental mode
+- Introduced support for Component/Pipeline flexible architecture.
+- Added new components for knowledge graph construction, including text splitters, schema builders, entity-relation extractors, and Neo4j writers.
+- Implemented end-to-end tests for the new knowledge graph builder pipeline.
+
 ### Changed
 - When saving the lexical graph in a KG creation pipeline, the document is also saved as a specific node, together with relationships between each chunk and the document they were created from.
-
-## 0.5.0
 
 ### Fixed
 - Corrected the hybrid retriever query to ensure proper normalization of scores in vector search results.
@@ -19,9 +23,6 @@
 
 ### Added
 - Add optional custom_prompt arg to the Text2CypherRetriever class.
-- Introduced support for Component/Pipeline flexible architecture.
-- Added new components for knowledge graph construction, including text splitters, schema builders, entity-relation extractors, and Neo4j writers.
-- Implemented end-to-end tests for the new knowledge graph builder pipeline.
 
 ### Changed
 - `GraphRAG.search` method first parameter has been renamed `query_text` (was `query`) for consistency with the retrievers interface.

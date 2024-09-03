@@ -37,7 +37,7 @@ class LlamaIndexTextSplitterAdapter(TextSplitter):
 
         pipeline = Pipeline()
         text_splitter = LlamaIndexTextSplitterAdapter(SentenceSplitter())
-        pipeline.add_component("text_splitter", text_splitter)
+        pipeline.add_component(text_splitter, "text_splitter")
 
     """
 

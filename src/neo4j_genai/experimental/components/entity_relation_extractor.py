@@ -297,7 +297,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
 
         extractor = LLMEntityRelationExtractor(llm=llm)
         pipe = Pipeline()
-        pipe.add_component("extractor", extractor)
+        pipe.add_component(extractor, "extractor")
 
     """
 
