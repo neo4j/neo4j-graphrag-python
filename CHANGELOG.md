@@ -2,6 +2,9 @@
 
 ## Next
 
+## Fixed
+- Pipelines now return correct results when the same pipeline is run in parallel.
+
 ## 0.5.0
 
 ### Added

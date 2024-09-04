@@ -35,6 +35,7 @@ from neo4j_genai.experimental.components.text_splitters.langchain import (
     LangChainTextSplitterAdapter,
 )
 from neo4j_genai.experimental.pipeline import Pipeline
+from neo4j_genai.experimental.pipeline.pipeline import PipelineResult
 from neo4j_genai.llm import OpenAILLM
 
 # set log level to DEBUG for all neo4j_genai.* loggers
@@ -58,7 +59,7 @@ logging.config.dictConfig(
 )
 
 
-async def main(neo4j_driver: neo4j.Driver) -> dict[str, Any]:
+async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
     """This is where we define and run the KG builder pipeline, instantiating a few
     components:
     - Text Splitter: in this example we use a text splitter from the LangChain package
