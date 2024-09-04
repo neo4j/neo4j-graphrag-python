@@ -39,7 +39,7 @@ from neo4j_genai.experimental.pipeline.pipeline import PipelineResult
 from neo4j_genai.llm import OpenAILLM
 from pydantic import BaseModel, validate_call
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 
 class DocumentChunkModel(DataModel):

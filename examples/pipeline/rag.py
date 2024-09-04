@@ -21,6 +21,7 @@ objects.
 from __future__ import annotations
 
 import asyncio
+from typing import List
 
 import neo4j
 from neo4j_genai.embeddings.openai import OpenAIEmbeddings
@@ -54,7 +55,7 @@ class PromptTemplateComponent(Component):
     def __init__(self, prompt: PromptTemplate) -> None:
         self.prompt = prompt
 
-    async def run(self, query: str, context: list[str]) -> StringDataModel:
+    async def run(self, query: str, context: List[str]) -> StringDataModel:
         prompt = self.prompt.format(query, context, examples="")
         return StringDataModel(result=prompt)
 
@@ -111,6 +112,6 @@ if __name__ == "__main__":
     result = asyncio.run(
         pipe.run({"retrieve": {"query": query}, "augment": {"query": query}})
     )
-    print(result["generate"]["result"])
+    print(result.result["generate"]["result"])
 
     driver.close()
