@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import asyncio
 import logging.config
-from typing import Any
 
 import neo4j
 from langchain_text_splitters import CharacterTextSplitter
