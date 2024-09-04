@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import os
 from collections import Counter
+from typing import Any
 from unittest.mock import MagicMock
 
 import neo4j
@@ -39,6 +40,7 @@ from neo4j_genai.experimental.components.text_splitters.langchain import (
     LangChainTextSplitterAdapter,
 )
 from neo4j_genai.experimental.pipeline import Pipeline
+from neo4j_genai.experimental.pipeline.pipeline import PipelineResult
 from neo4j_genai.llm import LLMInterface, LLMResponse
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -256,11 +258,13 @@ async def test_pipeline_builder_happy_path(
     # llm must have been called for each chunk
     assert llm.ainvoke.call_count == 3
     # result must be success
-    assert res == {"writer": {"status": "SUCCESS"}}
+    assert isinstance(res, PipelineResult)
+    assert res.run_id is not None
+    assert res.result == {"writer": {"status": "SUCCESS"}}
     # check component's results
-    chunks = kg_builder_pipeline.get_results_for_component("splitter")
+    chunks = kg_builder_pipeline.store.get_result_for_component(res.run_id, "splitter")
     assert len(chunks["chunks"]) == 3
-    graph = kg_builder_pipeline.get_results_for_component("extractor")
+    graph = kg_builder_pipeline.store.get_result_for_component(res.run_id, "extractor")
     # 3 entities + 3 chunks + 1 document
     nodes = graph["nodes"]
     assert len(nodes) == 7
@@ -456,11 +460,13 @@ async def test_pipeline_builder_failing_chunk_do_not_raise(
     # llm must have been called for each chunk
     assert llm.ainvoke.call_count == 3
     # result must be success
-    assert res == {"writer": {"status": "SUCCESS"}}
+    assert isinstance(res, PipelineResult)
+    assert res.run_id is not None
+    assert res.result == {"writer": {"status": "SUCCESS"}}
     # check component's results
-    chunks = kg_builder_pipeline.get_results_for_component("splitter")
+    chunks = kg_builder_pipeline.store.get_result_for_component(res.run_id, "splitter")
     assert len(chunks["chunks"]) == 3
-    graph = kg_builder_pipeline.get_results_for_component("extractor")
+    graph = kg_builder_pipeline.store.get_result_for_component(res.run_id, "extractor")
     # 3 entities + 3 chunks
     nodes = graph["nodes"]
     assert len(nodes) == 6

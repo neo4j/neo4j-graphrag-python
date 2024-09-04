@@ -23,6 +23,7 @@ import pytest
 from neo4j_genai.experimental.pipeline import Component, Pipeline
 from neo4j_genai.experimental.pipeline.exceptions import PipelineDefinitionError
 from neo4j_genai.experimental.pipeline.pipeline import (
+    PipelineResult,
     RunResult,
     RunStatus,
     TaskPipelineNode,
@@ -61,10 +62,8 @@ async def test_simple_pipeline_two_components() -> None:
         res = await pipe.run({})
         mock_run.assert_awaited_with(**{})
         mock_run.assert_awaited_with(**{})
-    print(pipe.store.all())
-    print(res)
-    assert "b" in res
-    assert res["b"] == {"result": "2"}
+    assert "b" in res.result
+    assert res.result["b"] == {"result": "2"}
 
 
 @pytest.mark.asyncio
@@ -85,7 +84,7 @@ async def test_pipeline_parameter_propagation() -> None:
         ]
         res = await pipe.run({"a": {"value": "text"}})
         mock_run.assert_has_awaits([call(**{"value": "text"}), call(**{"value": "1"})])
-    assert res == {"b": {"result": "2"}}
+    assert res.result == {"b": {"result": "2"}}
 
 
 def test_pipeline_validate_inputs_config_for_task_no_expected_params() -> None:
@@ -193,7 +192,8 @@ async def test_pipeline_branches() -> None:
     pipe.add_component(component_c, "c")
     pipe.connect("a", "b")
     pipe.connect("a", "c")
-    res = await pipe.run({})
+    pipeline_result = await pipe.run({})
+    res = pipeline_result.result
     assert "b" in res
     assert "c" in res
 
@@ -219,7 +219,8 @@ async def test_pipeline_aggregation() -> None:
     pipe.add_component(component_c, "c")
     pipe.connect("a", "c")
     pipe.connect("b", "c")
-    res = await pipe.run({})
+    pipeline_result = await pipe.run({})
+    res = pipeline_result.result
     assert "c" in res
 
 
@@ -263,7 +264,8 @@ async def test_pipeline_with_default_params() -> None:
     pipe.add_component(component_a, "a")
     pipe.add_component(component_b, "b")
     pipe.connect("a", "b", {"number1": "a.result"})
-    res = await pipe.run({"a": {"number1": 1, "number2": 2}})
+    pipeline_result = await pipe.run({"a": {"number1": 1, "number2": 2}})
+    res = pipeline_result.result
     assert res == {"b": {"result": 6}}  # (1+2)*2
 
 
@@ -300,6 +302,8 @@ async def test_pipeline_async() -> None:
     runs = []
     for a, b in run_params:
         runs.append(pipe.run({"add": {"number1": a, "number2": b}}))
-    res = await asyncio.gather(*runs)
-
-    assert res == [{"add": {"result": 21}}, {"add": {"result": 12}}]
+    pipeline_result = await asyncio.gather(*runs)
+    assert len(pipeline_result) == 2
+    assert pipeline_result[0].run_id != pipeline_result[1].run_id
+    assert pipeline_result[0].result == {"add": {"result": 21}}
+    assert pipeline_result[1].result == {"add": {"result": 12}}

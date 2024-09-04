@@ -36,7 +36,7 @@ from neo4j_genai.experimental.pipeline.pipeline_graph import (
     PipelineGraph,
     PipelineNode,
 )
-from neo4j_genai.experimental.pipeline.stores import InMemoryStore, Store
+from neo4j_genai.experimental.pipeline.stores import InMemoryStore, ResultStore
 from neo4j_genai.experimental.pipeline.types import (
     ComponentConfig,
     ConnectionConfig,
@@ -295,9 +295,7 @@ class Orchestrator:
                     # component as input
                     component = mapping
                     output_param = None
-                component_result = self.get_results_for_component(
-                    component, self.run_id
-                )
+                component_result = self.get_results_for_component(component)
                 if output_param is not None:
                     value = component_result.get(output_param)
                 else:
@@ -318,8 +316,7 @@ class Orchestrator:
         """This is where we save the results in the result store and, optionally,
         in the final result store.
         """
-        key = self.component_result_key(name)
-        self.pipeline.store.add(key, result)
+        self.pipeline.store.add_result_for_component(self.run_id, name, result)
         if is_final:
             # The pipeline only returns the results
             # of the leaf nodes
@@ -330,9 +327,8 @@ class Orchestrator:
                 self.run_id, existing_results, overwrite=True
             )
 
-    def get_results_for_component(self, name: str, run_id: str) -> Any:
-        key = f"{run_id}:{name}"
-        return self.pipeline.store.get(key)
+    def get_results_for_component(self, name: str) -> Any:
+        return self.pipeline.store.get_result_for_component(self.run_id, name)
 
     async def run(self, data: dict[str, Any]) -> None:
         """Run the pipline, starting from the root nodes
@@ -344,18 +340,23 @@ class Orchestrator:
         await asyncio.gather(*tasks)
 
 
+class PipelineResult(BaseModel):
+    run_id: str
+    result: Any
+
+
 class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
     """This is the main pipeline, where components
     and their execution order are defined"""
 
-    def __init__(self, store: Optional[Store] = None) -> None:
+    def __init__(self, store: Optional[ResultStore] = None) -> None:
         super().__init__()
         self.store = store or InMemoryStore()
         self.final_results = InMemoryStore()
 
     @classmethod
     def from_template(
-        cls, pipeline_template: PipelineConfig, store: Optional[Store] = None
+        cls, pipeline_template: PipelineConfig, store: Optional[ResultStore] = None
     ) -> Pipeline:
         """Create a Pipeline from a pydantic model defining the components and their connections"""
         pipeline = Pipeline(store=store)
@@ -498,7 +499,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
             )
         return True
 
-    async def run(self, data: dict[str, Any]) -> dict[str, Any]:
+    async def run(self, data: dict[str, Any]) -> PipelineResult:
         logger.debug("Starting pipeline")
         start_time = default_timer()
         self.validate_inputs_config(data)
@@ -508,4 +509,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         logger.debug(
             f"Pipeline {orchestrator.run_id} finished in {end_time - start_time}s"
         )
-        return self.final_results.get(orchestrator.run_id)  # type: ignore[no-any-return]
+        return PipelineResult(
+            run_id=orchestrator.run_id,
+            result=self.final_results.get(orchestrator.run_id),
+        )
