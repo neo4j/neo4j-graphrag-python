@@ -57,8 +57,8 @@ Here's how to create a simple pipeline and propagate results from one component 
     from neo4j_genai.experimental.pipeline import Pipeline
 
     pipe = Pipeline()
-    pipe.add_component("a", ComponentAdd())
-    pipe.add_component("b", ComponentAdd())
+    pipe.add_component(ComponentAdd(), "a")
+    pipe.add_component(ComponentAdd(), "b")
 
     pipe.connect("a", "b", {"number2": "a.result"})
     asyncio.run(pipe.run({"a": {"number1": 10, "number2": 1}, "b": {"number1": 4}))

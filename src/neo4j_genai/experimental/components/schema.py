@@ -145,7 +145,7 @@ class SchemaBuilder(Component):
         ]
         pipe = Pipeline()
         schema_builder = SchemaBuilder()
-        pipe.add_component("schema_builder", schema_builder)
+        pipe.add_component(schema_builder, "schema_builder")
         pipe_inputs = {
             "schema": {
                 "entities": entities,
