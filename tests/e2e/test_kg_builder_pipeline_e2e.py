@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import os
 from collections import Counter
-from typing import Any
 from unittest.mock import MagicMock
 
 import neo4j

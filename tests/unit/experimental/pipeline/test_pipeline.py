@@ -15,19 +15,12 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 from unittest import mock
 from unittest.mock import AsyncMock, call
 
 import pytest
 from neo4j_genai.experimental.pipeline import Component, Pipeline
 from neo4j_genai.experimental.pipeline.exceptions import PipelineDefinitionError
-from neo4j_genai.experimental.pipeline.pipeline import (
-    PipelineResult,
-    RunResult,
-    RunStatus,
-    TaskPipelineNode,
-)
 
 from .components import (
     ComponentAdd,
