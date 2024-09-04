@@ -39,8 +39,6 @@ from neo4j_genai.experimental.pipeline import Pipeline
 from neo4j_genai.experimental.pipeline.pipeline import PipelineResult
 from neo4j_genai.llm import OpenAILLM
 
-from examples.hybrid_cypher_search import embedder
-
 # set log level to DEBUG for all neo4j_genai.* loggers
 logging.config.dictConfig(
     {
