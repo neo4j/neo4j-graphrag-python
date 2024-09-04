@@ -47,7 +47,7 @@ logger = logging.getLogger(__name__)
 
 
 class RunStatus(enum.Enum):
-    UNKNOWN = "UNKNOWN"
+    UNKNOWN = None
     SCHEDULED = "SCHEDULED"
     WAITING = "WAITING"
     RUNNING = "RUNNING"
@@ -76,37 +76,6 @@ class TaskPipelineNode(PipelineNode):
         """
         super().__init__(name, {})
         self.component = component
-        self.status: dict[str, RunStatus] = {}
-        self._lock = asyncio.Lock()
-        """This lock is used to make sure we're not trying
-        to update the status in //. This should prevent the task to
-        be executed multiple times because the status was not known
-        by the orchestrator.
-        """
-
-    async def set_status(self, run_id: str, status: RunStatus) -> None:
-        """Set a new status
-
-        Args:
-            run_id (str): Unique ID for the current pipeline run
-            status (RunStatus): New status
-
-        Raises:
-            PipelineStatusUpdateError if the new status is not
-                compatible with the current one.
-        """
-        async with self._lock:
-            current_status = self.status.get(run_id)
-            if status == current_status:
-                raise PipelineStatusUpdateError()
-            if status == RunStatus.RUNNING and current_status == RunStatus.DONE:
-                # can't go back to RUNNING from DONE
-                raise PipelineStatusUpdateError()
-            self.status[run_id] = status
-
-    async def read_status(self, run_id: str) -> RunStatus:
-        async with self._lock:
-            return self.status.get(run_id, RunStatus.UNKNOWN)
 
     async def execute(self, **kwargs: Any) -> RunResult | None:
         """Execute the task
@@ -163,18 +132,44 @@ class Orchestrator:
             None
         """
         input_config = await self.get_input_config_for_task(task)
-        inputs = self.get_component_inputs(task.name, input_config, data)
+        inputs = await self.get_component_inputs(task.name, input_config, data)
         try:
-            await task.set_status(self.run_id, RunStatus.RUNNING)
+            await self.set_task_status(task.name, RunStatus.RUNNING)
         except PipelineStatusUpdateError:
-            logger.info(
-                f"Component {task.name} already running or done {task.status.get(self.run_id)}"
-            )
+            logger.info(f"Component {task.name} already running or done")
             return None
         res = await task.run(inputs)
-        await task.set_status(self.run_id, RunStatus.DONE)
+        await self.set_task_status(task.name, RunStatus.DONE)
         if res:
             await self.on_task_complete(data=data, task=task, result=res)
+
+    async def set_task_status(self, task_name: str, status: RunStatus) -> None:
+        """Set a new status
+
+        Args:
+            task_name (str): Name of the component
+            status (RunStatus): New status
+
+        Raises:
+            PipelineStatusUpdateError if the new status is not
+                compatible with the current one.
+        """
+        # Make the method async-safe against this kind of calls:
+        #       1: get status => UNKNOWN
+        #       2: get status => UNKNOWN
+        #       1: set status => RUNNING
+        #       2: set status => RUNNING
+        # that would cause two tasks to be started instead of one
+        async with asyncio.Lock():
+            current_status = RunStatus(await self.get_status_for_component(task_name))
+            if status == current_status:
+                raise PipelineStatusUpdateError()
+            if status == RunStatus.RUNNING and current_status == RunStatus.DONE:
+                # can't go back to RUNNING from DONE
+                raise PipelineStatusUpdateError()
+            return await self.pipeline.store.add_status_for_component(
+                self.run_id, task_name, status.value
+            )
 
     async def on_task_complete(
         self, data: dict[str, Any], task: TaskPipelineNode, result: RunResult
@@ -187,7 +182,9 @@ class Orchestrator:
         res_to_save = None
         if result.result:
             res_to_save = result.result.model_dump()
-        self.add_result_for_component(task.name, res_to_save, is_final=task.is_leaf())
+        await self.add_result_for_component(
+            task.name, res_to_save, is_final=task.is_leaf()
+        )
         # then get the next tasks to be executed
         # and run them in //
         await asyncio.gather(*[self.run_task(n, data) async for n in self.next(task)])
@@ -200,8 +197,7 @@ class Orchestrator:
         """
         dependencies = self.pipeline.previous_edges(task.name)
         for d in dependencies:
-            start_node = self.pipeline.get_node_by_name(d.start)
-            d_status = await start_node.read_status(self.run_id)
+            d_status = RunStatus(await self.get_status_for_component(d.start))
             if d_status != RunStatus.DONE:
                 logger.warning(
                     f"Missing dependency {d.start} for {task.name} (status: {d_status})"
@@ -223,7 +219,9 @@ class Orchestrator:
         for next_edge in possible_next:
             next_node = self.pipeline.get_node_by_name(next_edge.end)
             # check status
-            next_node_status = await next_node.read_status(self.run_id)
+            next_node_status = RunStatus(
+                await self.get_status_for_component(next_node.name)
+            )
             if next_node_status in [RunStatus.RUNNING, RunStatus.DONE]:
                 # already running
                 continue
@@ -251,8 +249,9 @@ class Orchestrator:
         # make sure dependencies are satisfied
         # and save the inputs defs that needs to be propagated from parent components
         for prev_edge in self.pipeline.previous_edges(task.name):
-            prev_node = self.pipeline.get_node_by_name(prev_edge.start)
-            prev_status = await prev_node.read_status(self.run_id)
+            prev_status = RunStatus(
+                await self.get_status_for_component(prev_edge.start)
+            )
             if prev_status != RunStatus.DONE:
                 logger.critical(f"Missing dependency {prev_edge.start}")
                 raise PipelineMissingDependencyError(f"{prev_edge.start} not ready")
@@ -261,7 +260,7 @@ class Orchestrator:
                 input_config.update(**prev_edge_data)
         return input_config
 
-    def get_component_inputs(
+    async def get_component_inputs(
         self,
         component_name: str,
         input_config: dict[str, Any],
@@ -287,7 +286,7 @@ class Orchestrator:
                     # component as input
                     component = mapping
                     output_param = None
-                component_result = self.get_results_for_component(component)
+                component_result = await self.get_results_for_component(component)
                 if output_param is not None:
                     value = component_result.get(output_param)
                 else:
@@ -299,25 +298,28 @@ class Orchestrator:
                 component_inputs[parameter] = value
         return component_inputs
 
-    def add_result_for_component(
+    async def add_result_for_component(
         self, name: str, result: dict[str, Any] | None, is_final: bool = False
     ) -> None:
         """This is where we save the results in the result store and, optionally,
         in the final result store.
         """
-        self.pipeline.store.add_result_for_component(self.run_id, name, result)
+        await self.pipeline.store.add_result_for_component(self.run_id, name, result)
         if is_final:
             # The pipeline only returns the results
             # of the leaf nodes
             # TODO: make this configurable in the future.
-            existing_results = self.pipeline.final_results.get(self.run_id) or {}
+            existing_results = await self.pipeline.final_results.get(self.run_id) or {}
             existing_results[name] = result
-            self.pipeline.final_results.add(
+            await self.pipeline.final_results.add(
                 self.run_id, existing_results, overwrite=True
             )
 
-    def get_results_for_component(self, name: str) -> Any:
-        return self.pipeline.store.get_result_for_component(self.run_id, name)
+    async def get_results_for_component(self, name: str) -> Any:
+        return await self.pipeline.store.get_result_for_component(self.run_id, name)
+
+    async def get_status_for_component(self, name: str) -> Any:
+        return await self.pipeline.store.get_status_for_component(self.run_id, name)
 
     async def run(self, data: dict[str, Any]) -> None:
         """Run the pipline, starting from the root nodes
@@ -500,5 +502,5 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         )
         return PipelineResult(
             run_id=orchestrator.run_id,
-            result=self.final_results.get(orchestrator.run_id),
+            result=await self.final_results.get(orchestrator.run_id),
         )
