@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import enum
 import logging
+import uuid
 import warnings
 from datetime import datetime
 from functools import partial
@@ -64,7 +65,7 @@ class RunResult(BaseModel):
 # Type used for annotating the partial on_task_complete parameter
 # and prevent type checking error when using kwargs
 class PartialOnTaskCompleteProtocol(Protocol):
-    async def __call__(self, task: TaskPipelineNode, res: RunResult) -> None: ...
+    async def __call__(self, task: TaskPipelineNode, result: RunResult) -> None: ...
 
 
 class TaskPipelineNode(PipelineNode):
@@ -153,7 +154,7 @@ class TaskPipelineNode(PipelineNode):
             return
         logger.debug(f"TASK RESULT {self.name=} {res=}")
         # save its results
-        await callback(task=self, res=res)
+        await callback(task=self, result=res)
 
 
 class Orchestrator:
@@ -171,6 +172,7 @@ class Orchestrator:
 
     def __init__(self, pipeline: "Pipeline"):
         self.pipeline = pipeline
+        self.run_id = str(uuid.uuid4())
 
     async def run_task(self, task: TaskPipelineNode, data: dict[str, Any]) -> None:
         """Get inputs and run a specific task. Once the task is done,
@@ -188,14 +190,17 @@ class Orchestrator:
         await task.run(inputs, callback=partial(self.on_task_complete, data=data))
 
     async def on_task_complete(
-        self, data: dict[str, Any], task: TaskPipelineNode, res: RunResult
+        self, data: dict[str, Any], task: TaskPipelineNode, result: RunResult
     ) -> None:
         """When a given task is complete, it will call this method
         to find the next tasks to run.
         """
         # first call the method for the pipeline
         # this is where the results can be saved
-        self.pipeline.on_task_complete(task, res)
+        res_to_save = None
+        if result.result:
+            res_to_save = result.result.model_dump()
+        self.add_result_for_component(task.name, res_to_save, is_final=task.is_leaf())
         # then get the next tasks to be executed
         # and run them in //
         await asyncio.gather(*[self.run_task(n, data) async for n in self.next(task)])
@@ -295,7 +300,9 @@ class Orchestrator:
                     # component as input
                     component = mapping
                     output_param = None
-                component_result = self.pipeline.get_results_for_component(component)
+                component_result = self.get_results_for_component(
+                    component, self.run_id
+                )
                 if output_param is not None:
                     value = component_result.get(output_param)
                 else:
@@ -306,6 +313,31 @@ class Orchestrator:
                     )
                 component_inputs[parameter] = value
         return component_inputs
+
+    def component_result_key(self, name: str) -> str:
+        return f"{self.run_id}:{name}"
+
+    def add_result_for_component(
+        self, name: str, result: dict[str, Any] | None, is_final: bool = False
+    ) -> None:
+        """This is where we save the results in the result store and, optionally,
+        in the final result store.
+        """
+        key = self.component_result_key(name)
+        self.pipeline.store.add(key, result)
+        if is_final:
+            # The pipeline only returns the results
+            # of the leaf nodes
+            # TODO: make this configurable in the future.
+            existing_results = self.pipeline.final_results.get(self.run_id) or {}
+            existing_results[name] = result
+            self.pipeline.final_results.add(
+                self.run_id, existing_results, overwrite=True
+            )
+
+    def get_results_for_component(self, name: str, run_id: str) -> Any:
+        key = f"{run_id}:{name}"
+        return self.pipeline.store.get(key)
 
     async def run(self, data: dict[str, Any]) -> None:
         """Run the pipline, starting from the root nodes
@@ -323,8 +355,8 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
 
     def __init__(self, store: Optional[Store] = None) -> None:
         super().__init__()
-        self._store = store or InMemoryStore()
-        self._final_results = InMemoryStore()
+        self.store = store or InMemoryStore()
+        self.final_results = InMemoryStore()
 
     @classmethod
     def from_template(
@@ -412,35 +444,12 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         if self.is_cyclic():
             raise PipelineDefinitionError("Cyclic graph are not allowed")
 
-    def on_task_complete(self, task: TaskPipelineNode, result: RunResult) -> None:
-        """Method called when a task is done."""
-        res_to_save = None
-        if result.result:
-            res_to_save = result.result.model_dump()
-        self.add_result_for_component(task.name, res_to_save, is_final=task.is_leaf())
-
-    def add_result_for_component(
-        self, name: str, result: dict[str, Any] | None, is_final: bool = False
-    ) -> None:
-        """This is where we save the results in the result store and, optionally,
-        in the final result store.
-        """
-        self._store.add(name, result)
-        if is_final:
-            # The pipeline only returns the results
-            # of the leaf nodes
-            # TODO: make this configurable in the future.
-            self._final_results.add(name, result)
-
-    def get_results_for_component(self, name: str) -> Any:
-        return self._store.get(name)
-
     def reinitialize(self) -> None:
         """Reinitialize the result stores and component status
         if we want to rerun the same pipeline again
         (maybe with inputs)"""
-        self._store.empty()
-        self._final_results.empty()
+        self.store.empty()
+        self.final_results.empty()
         for task in self._nodes.values():
             task.reinitialize()
 
@@ -503,13 +512,18 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
             )
         return True
 
-    async def run(self, data: dict[str, Any]) -> dict[str, Any]:
+    async def run(
+        self, data: dict[str, Any], reinitialize: bool = False
+    ) -> dict[str, Any]:
         logger.debug("Starting pipeline")
         start_time = default_timer()
         self.validate_inputs_config(data)
-        self.reinitialize()
+        if reinitialize:
+            self.reinitialize()
         orchestrator = Orchestrator(self)
         await orchestrator.run(data)
         end_time = default_timer()
-        logger.debug(f"Pipeline finished in {end_time - start_time}s")
-        return self._final_results.all()
+        logger.debug(
+            f"Pipeline {orchestrator.run_id} finished in {end_time - start_time}s"
+        )
+        return self.final_results.get(orchestrator.run_id)  # type: ignore[no-any-return]

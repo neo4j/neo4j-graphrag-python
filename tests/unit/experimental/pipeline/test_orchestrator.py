@@ -40,7 +40,9 @@ def test_orchestrator_get_component_inputs_from_user_only() -> None:
     assert data == {"value": "user input for component b"}
 
 
-@patch("neo4j_genai.experimental.pipeline.Pipeline.get_results_for_component")
+@patch(
+    "neo4j_genai.experimental.pipeline.pipeline.Orchestrator.get_results_for_component"
+)
 def test_pipeline_get_component_inputs_from_parent_specific(mock_result: Mock) -> None:
     """Propagate one specific output field from 'a' to the next component."""
     pipe = Pipeline()
@@ -56,7 +58,9 @@ def test_pipeline_get_component_inputs_from_parent_specific(mock_result: Mock) -
     assert data == {"value": "output from component a"}
 
 
-@patch("neo4j_genai.experimental.pipeline.Pipeline.get_results_for_component")
+@patch(
+    "neo4j_genai.experimental.pipeline.pipeline.Orchestrator.get_results_for_component"
+)
 def test_orchestrator_get_component_inputs_from_parent_all(mock_result: Mock) -> None:
     """Use the component name to get the full output
     (without extracting a specific field).
@@ -74,7 +78,9 @@ def test_orchestrator_get_component_inputs_from_parent_all(mock_result: Mock) ->
     assert data == {"value": {"result": "output from component a"}}
 
 
-@patch("neo4j_genai.experimental.pipeline.Pipeline.get_results_for_component")
+@patch(
+    "neo4j_genai.experimental.pipeline.pipeline.Orchestrator.get_results_for_component"
+)
 def test_orchestrator_get_component_inputs_from_parent_and_input(
     mock_result: Mock,
 ) -> None:
@@ -99,7 +105,9 @@ def test_orchestrator_get_component_inputs_from_parent_and_input(
     }
 
 
-@patch("neo4j_genai.experimental.pipeline.Pipeline.get_results_for_component")
+@patch(
+    "neo4j_genai.experimental.pipeline.pipeline.Orchestrator.get_results_for_component"
+)
 def test_orchestrator_get_component_inputs_ignore_user_input_if_input_def_provided(
     mock_result: Mock,
 ) -> None:
