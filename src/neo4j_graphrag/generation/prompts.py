@@ -125,7 +125,6 @@ Do not include triple backticks ``` or any additional text except the generated 
 
 Cypher query:
 """
-
     EXPECTED_INPUTS = ["query_text"]
 
     def format(

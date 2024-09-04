@@ -187,7 +187,6 @@ def test_t2c_retriever_with_result_format_function(
     )
 
 
-@pytest.mark.usefixtures("caplog")
 @patch("neo4j_graphrag.retrievers.base.Retriever._verify_version")
 def test_t2c_retriever_initialization_with_custom_prompt(
     _verify_version_mock: MagicMock,
@@ -207,7 +206,6 @@ def test_t2c_retriever_initialization_with_custom_prompt(
     llm.invoke.assert_called_once_with("This is a custom prompt. test")
 
 
-@pytest.mark.usefixtures("caplog")
 @patch("neo4j_graphrag.retrievers.base.Retriever._verify_version")
 def test_t2c_retriever_initialization_with_custom_prompt_and_schema_and_examples(
     _verify_version_mock: MagicMock,
