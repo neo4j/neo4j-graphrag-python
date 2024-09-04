@@ -21,7 +21,7 @@ import uuid
 import warnings
 from datetime import datetime
 from timeit import default_timer
-from typing import Any, AsyncGenerator, Optional, Protocol
+from typing import Any, AsyncGenerator, Optional
 
 from pydantic import BaseModel, Field
 
@@ -59,12 +59,6 @@ class RunResult(BaseModel):
     status: RunStatus = RunStatus.DONE
     result: Optional[DataModel] = None
     timestamp: datetime = Field(default_factory=datetime.utcnow)
-
-
-# Type used for annotating the partial on_task_complete parameter
-# and prevent type checking error when using kwargs
-class PartialOnTaskCompleteProtocol(Protocol):
-    async def __call__(self, task: TaskPipelineNode, result: RunResult) -> None: ...
 
 
 class TaskPipelineNode(PipelineNode):
@@ -306,9 +300,6 @@ class Orchestrator:
                     )
                 component_inputs[parameter] = value
         return component_inputs
-
-    def component_result_key(self, name: str) -> str:
-        return f"{self.run_id}:{name}"
 
     def add_result_for_component(
         self, name: str, result: dict[str, Any] | None, is_final: bool = False
