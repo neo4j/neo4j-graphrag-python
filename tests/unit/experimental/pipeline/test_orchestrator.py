@@ -161,7 +161,7 @@ def pipeline_aggregation() -> Pipeline:
 async def test_orchestrator_branch(pipeline_branch: Pipeline) -> None:
     orchestrator = Orchestrator(pipeline=pipeline_branch)
     node_a = pipeline_branch.get_node_by_name("a")
-    node_a.status = RunStatus.DONE
+    node_a.status = {orchestrator.run_id: RunStatus.DONE}
     next_tasks = [n async for n in orchestrator.next(node_a)]
     next_task_names = [n.name for n in next_tasks]
     assert next_task_names == ["b", "c"]
@@ -171,14 +171,14 @@ async def test_orchestrator_branch(pipeline_branch: Pipeline) -> None:
 async def test_orchestrator_aggregation(pipeline_aggregation: Pipeline) -> None:
     orchestrator = Orchestrator(pipeline=pipeline_aggregation)
     node_a = pipeline_aggregation.get_node_by_name("a")
-    node_a.status = RunStatus.DONE
+    node_a.status = {orchestrator.run_id: RunStatus.DONE}
     next_tasks = [n async for n in orchestrator.next(node_a)]
     next_task_names = [n.name for n in next_tasks]
     # "c" not ready yet
     assert next_task_names == []
     # set "b" to DONE
     node_b = pipeline_aggregation.get_node_by_name("b")
-    node_b.status = RunStatus.DONE
+    node_b.status = {orchestrator.run_id: RunStatus.DONE}
     # then "c" can start
     next_tasks = [n async for n in orchestrator.next(node_a)]
     next_task_names = [n.name for n in next_tasks]
@@ -189,8 +189,8 @@ async def test_orchestrator_aggregation(pipeline_aggregation: Pipeline) -> None:
 async def test_orchestrator_aggregation_waiting(pipeline_aggregation: Pipeline) -> None:
     orchestrator = Orchestrator(pipeline=pipeline_aggregation)
     node_a = pipeline_aggregation.get_node_by_name("a")
-    node_a.status = RunStatus.DONE
+    node_a.status = {orchestrator.run_id: RunStatus.DONE}
     node_b = pipeline_aggregation.get_node_by_name("a")
-    node_b.status = RunStatus.UNKNOWN
+    node_b.status = {orchestrator.run_id: RunStatus.UNKNOWN}
     next_tasks = [n async for n in orchestrator.next(node_a)]
     assert next_tasks == []

@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from unittest import mock
 from unittest.mock import AsyncMock, call
 
@@ -34,24 +35,6 @@ from .components import (
     ComponentPassThrough,
     StringResultModel,
 )
-
-
-async def dummy_callback(task: TaskPipelineNode, res: RunResult) -> None:
-    pass
-
-
-@pytest.mark.asyncio
-async def test_task_pipeline_node_status_done() -> None:
-    task = TaskPipelineNode("task", ComponentNoParam())
-    with mock.patch(
-        "tests.unit.experimental.pipeline.test_pipeline.dummy_callback"
-    ) as m:
-        await task.run({}, m)
-    args, kwargs = m.call_args
-    assert len(kwargs) == 2
-    assert kwargs["task"] == task
-    assert isinstance(kwargs["res"], RunResult)
-    # assert task.status == RunStatus.DONE
 
 
 @pytest.mark.asyncio
@@ -78,6 +61,8 @@ async def test_simple_pipeline_two_components() -> None:
         res = await pipe.run({})
         mock_run.assert_awaited_with(**{})
         mock_run.assert_awaited_with(**{})
+    print(pipe.store.all())
+    print(res)
     assert "b" in res
     assert res["b"] == {"result": "2"}
 
