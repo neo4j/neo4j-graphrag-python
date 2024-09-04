@@ -88,7 +88,7 @@ class Neo4jWriter(KGWriter):
         writer = Neo4jWriter(driver=driver, neo4j_database=DATABASE)
 
         pipeline = Pipeline()
-        pipeline.add_component("writer", writer)
+        pipeline.add_component(writer, "writer")
 
     """
 
