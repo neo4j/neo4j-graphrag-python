@@ -64,7 +64,7 @@ def test_prompt_template_missing_placeholders() -> None:
         EXPECTED_INPUTS = ["query_text", "banana"]
 
     with pytest.raises(PromptMissingPlaceholderError) as e:
-        template = MyTemplate()
+        MyTemplate()
 
     assert "`template` is missing placeholder banana" in str(e)
 
