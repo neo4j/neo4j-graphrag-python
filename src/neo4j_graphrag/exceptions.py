@@ -116,3 +116,7 @@ class PdfLoaderError(Neo4jGenAiError):
     """Custom exception for errors in PDF loader."""
 
     pass
+
+
+class PromptMissingPlaceholderError(Neo4jGenAiError):
+    """Exception raised when a prompt is missing an expected placeholder."""

@@ -194,22 +194,17 @@ def test_t2c_retriever_initialization_with_custom_prompt(
     driver: MagicMock,
     llm: MagicMock,
     neo4j_record: MagicMock,
-    caplog: pytest.LogCaptureFixture,
 ) -> None:
     prompt = "This is a custom prompt. {query_text}"
-    with caplog.at_level(logging.DEBUG):
-        retriever = Text2CypherRetriever(driver=driver, llm=llm, custom_prompt=prompt)
-        driver.execute_query.return_value = (
-            [neo4j_record],
-            None,
-            None,
-        )
-        retriever.search(query_text="test")
-
-    assert (
-        f"Text2CypherRetriever prompt: {prompt.format(query_text='test')}"
-        in caplog.text
+    retriever = Text2CypherRetriever(driver=driver, llm=llm, custom_prompt=prompt)
+    driver.execute_query.return_value = (
+        [neo4j_record],
+        None,
+        None,
     )
+    retriever.search(query_text="test")
+
+    llm.invoke.assert_called_once_with("This is a custom prompt. test")
 
 
 @pytest.mark.usefixtures("caplog")
@@ -219,31 +214,27 @@ def test_t2c_retriever_initialization_with_custom_prompt_and_schema_and_examples
     driver: MagicMock,
     llm: MagicMock,
     neo4j_record: MagicMock,
-    caplog: pytest.LogCaptureFixture,
 ) -> None:
-    prompt = "This is another custom prompt. {query_text}"
+    prompt = "This is a custom prompt. {query_text}"
     neo4j_schema = "dummy-schema"
     examples = ["example-1", "example-2"]
-    with caplog.at_level(logging.DEBUG):
-        retriever = Text2CypherRetriever(
-            driver=driver,
-            llm=llm,
-            custom_prompt=prompt,
-            neo4j_schema=neo4j_schema,
-            examples=examples,
-        )
 
-        driver.execute_query.return_value = (
-            [neo4j_record],
-            None,
-            None,
-        )
-        retriever.search(query_text="test")
-
-    assert (
-        f"Text2CypherRetriever prompt: {prompt.format(query_text='test')}"
-        in caplog.text
+    retriever = Text2CypherRetriever(
+        driver=driver,
+        llm=llm,
+        custom_prompt=prompt,
+        neo4j_schema=neo4j_schema,
+        examples=examples,
     )
+
+    driver.execute_query.return_value = (
+        [neo4j_record],
+        None,
+        None,
+    )
+    retriever.search(query_text="test")
+
+    llm.invoke.assert_called_once_with("This is a custom prompt. test")
 
 
 @patch("neo4j_graphrag.retrievers.Text2CypherRetriever._verify_version")
@@ -260,28 +251,25 @@ def test_t2c_retriever_invalid_custom_prompt_type(
     assert "Input should be a valid string" in str(exc_info.value)
 
 
-@pytest.mark.usefixtures("caplog")
 @patch("neo4j_genai.retrievers.base.Retriever._verify_version")
 def test_t2c_retriever_with_custom_prompt_kwargs_inputs(
     _verify_version_mock: MagicMock,
     driver: MagicMock,
     llm: MagicMock,
     neo4j_record: MagicMock,
-    caplog: pytest.LogCaptureFixture,
 ) -> None:
     prompt = "This is a custom prompt. {query_text} {examples}"
     query = "test"
     examples = ["example A", "example B"]
-    with caplog.at_level(logging.DEBUG):
-        retriever = Text2CypherRetriever(driver=driver, llm=llm, custom_prompt=prompt)
-        driver.execute_query.return_value = (
-            [neo4j_record],
-            None,
-            None,
-        )
-        retriever.search(query_text=query, examples=examples)
 
-    assert (
-        f"Text2CypherRetriever prompt: {prompt.format(query_text=query, examples=examples)}"
-        in caplog.text
+    retriever = Text2CypherRetriever(driver=driver, llm=llm, custom_prompt=prompt)
+    driver.execute_query.return_value = (
+        [neo4j_record],
+        None,
+        None,
+    )
+    retriever.search(query_text=query, examples=examples)
+
+    llm.invoke.assert_called_once_with(
+        """This is a custom prompt. test ['example A', 'example B']"""
     )

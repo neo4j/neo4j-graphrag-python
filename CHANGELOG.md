@@ -1,6 +1,7 @@
 # @neo4j/neo4j-genai-python
 
 ## Next
+- Add `template` validation in `PromptTemplate` class upon construction.
 - `custom_prompt` arg is now converted to `Text2CypherTemplate` class within the `Text2CypherRetriever.get_search_results` method.
 - All prompt templates now require `query_text` arg and will error if it is not present. Previous args (`query`, `text`) may be used, but will warn of deprecation.
 - Fix bug in `Text2CypherRetriever` using `custom_prompt` arg where the `search` method would not inject the `query_text` content.

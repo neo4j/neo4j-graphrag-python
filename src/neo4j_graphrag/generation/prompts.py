@@ -40,9 +40,11 @@ class PromptTemplate:
         self.template = template or self.DEFAULT_TEMPLATE
         self.expected_inputs = expected_inputs or self.EXPECTED_INPUTS
 
-        assert (
-            "{query_text}" in self.template
-        ), "`template` arg must contain the placeholder `query_text`."
+        for e in self.expected_inputs:
+            if f"{{{e}}}" not in self.template:
+                raise PromptMissingPlaceholderError(
+                    f"`template` is missing placeholder {e}"
+                )
 
     def _format(self, **kwargs: Any) -> str:
         for e in self.EXPECTED_INPUTS:
@@ -120,7 +122,8 @@ Do not include triple backticks ``` or any additional text except the generated 
 
 Cypher query:
 """
-    EXPECTED_INPUTS = ["schema", "query_text", "examples"]
+    # EXPECTED_INPUTS = ["schema", "query_text", "examples"]
+    EXPECTED_INPUTS = ["query_text"]
 
     def format(
         self,
@@ -128,6 +131,7 @@ Cypher query:
         examples: Optional[str] = None,
         query_text: str = "",
         query: Optional[str] = None,
+        **kwargs: Any,
     ) -> str:
         try:
             if query is not None:

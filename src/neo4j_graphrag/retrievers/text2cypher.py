@@ -103,6 +103,8 @@ class Text2CypherRetriever(Retriever):
                     if validated_data.neo4j_schema_model
                     else get_schema(validated_data.driver_model.driver)
                 )
+            else:
+                self.neo4j_schema = ""
 
         except (Neo4jError, DriverError) as e:
             error_message = getattr(e, "message", str(e))
@@ -130,18 +132,22 @@ class Text2CypherRetriever(Retriever):
         except ValidationError as e:
             raise SearchValidationError(e.errors()) from e
 
+        # parse the schema and examples inputs
+        examples_to_use = kwargs.get("examples") or (
+            "\n".join(self.examples) if self.examples else ""
+        )
+        schema_to_use = kwargs.get("schema") or self.neo4j_schema
+        kwargs.pop("examples", None)
+        kwargs.pop("schema", None)
+
         prompt_template = Text2CypherTemplate(template=self.custom_prompt)
 
-        if self.custom_prompt is None:
-            prompt = prompt_template.format(
-                schema=self.neo4j_schema,
-                examples="\n".join(self.examples) if self.examples else "",
-                query_text=validated_data.query_text,
-            )
-        else:
-            prompt = prompt_template.format(
-                query_text=validated_data.query_text, **kwargs
-            )
+        prompt = prompt_template.format(
+            schema=schema_to_use,
+            examples=examples_to_use,
+            query_text=validated_data.query_text,
+            **kwargs,
+        )
 
         logger.debug("Text2CypherRetriever prompt: %s", prompt)
 
