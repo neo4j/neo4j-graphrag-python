@@ -60,7 +60,7 @@ Here's how to create a simple pipeline and propagate results from one component 
     pipe.add_component(ComponentAdd(), "a")
     pipe.add_component(ComponentAdd(), "b")
 
-    pipe.connect("a", "b", {"number2": "a.result"})
+    pipe.connect("a", "b", input_config={"number2": "a.result"})
     asyncio.run(pipe.run({"a": {"number1": 10, "number2": 1}, "b": {"number1": 4}}))
     # result: 10+1+4 = 15
 
@@ -92,7 +92,7 @@ The data flow is illustrated in the diagram below:
 
     .. code:: python
 
-            pipe.connect("a", "b", {"number2": "a.result"})
+            pipe.connect("a", "b", input_config={"number2": "a.result"})
             asyncio.run(pipe.run({"a": {"number1": 10, "number2": 1}, "b": {"number1": 4, "number2": 42}}))
 
     The result will still be **15** because the user input `"number2": 42` is ignored.
