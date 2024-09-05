@@ -14,10 +14,6 @@
 #  limitations under the License.
 """This example illustrates how to visualize a Pipeline"""
 
-from __future__ import annotations
-
-import asyncio
-
 from neo4j_genai.experimental.pipeline import Component, Pipeline
 from neo4j_genai.experimental.pipeline.component import DataModel
 from pydantic import validate_call
@@ -58,10 +54,5 @@ if __name__ == "__main__":
     pipe.connect("times_two", "addition", {"a": "times_two.value"})
     pipe.connect("times_ten", "addition", {"b": "times_ten.value"})
     pipe.connect("addition", "save", {"number": "addition"})
-    pipe_inputs = {
-        "times_two": {"number": 1},
-        "times_ten": {"number": 2},
-    }
-    # print(asyncio.run(pipe.run(pipe_inputs)))
-    # pipe.validate_inputs_config({})
     pipe.draw("graph.png")
+    pipe.draw("graph_full.png", hide_unused_outputs=False)

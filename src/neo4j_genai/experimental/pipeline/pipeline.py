@@ -369,12 +369,14 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         )
         return pipeline_config.model_dump()
 
-    def draw(self, path: str, layout: str = "dot") -> Any:
-        G = self.get_pygraphviz_graph()
+    def draw(
+        self, path: str, layout: str = "dot", hide_unused_outputs: bool = True
+    ) -> Any:
+        G = self.get_pygraphviz_graph(hide_unused_outputs)
         G.layout(layout)
         G.draw(path)
 
-    def get_pygraphviz_graph(self) -> pgv.AGraph:
+    def get_pygraphviz_graph(self, hide_unused_outputs: bool = True) -> pgv.AGraph:
         self.validate_connection_parameters()
         G = pgv.AGraph(strict=False, directed=True)
         # create a node for each component
@@ -406,9 +408,10 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                     source_output_node = source_component
                 G.add_edge(source_output_node, component_name, label=param)
         # remove outputs that are not mapped
-        for n in G.nodes():
-            if n.attr["node_type"] == "output" and G.out_degree(n) == 0:  # type: ignore
-                G.remove_node(n)
+        if hide_unused_outputs:
+            for n in G.nodes():
+                if n.attr["node_type"] == "output" and G.out_degree(n) == 0:  # type: ignore
+                    G.remove_node(n)
         return G
 
     def add_component(self, component: Component, name: str) -> None:
