@@ -29,8 +29,8 @@ class PromptTemplate:
     missing, a `PromptMissingInputError` is raised.
     """
 
-    DEFAULT_TEMPLATE: str = "{query_text}"
-    EXPECTED_INPUTS: list[str] = ["query_text"]
+    DEFAULT_TEMPLATE: str = ""
+    EXPECTED_INPUTS: list[str] = []
 
     def __init__(
         self,
