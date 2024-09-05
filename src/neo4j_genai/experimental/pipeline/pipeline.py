@@ -417,6 +417,8 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         is raised."""
         task = TaskPipelineNode(name, component)
         self.add_node(task)
+        # invalidate the pipeline if it was already validated
+        self.is_validated = False
 
     def set_component(self, name: str, component: Component) -> None:
         """Replace a component with another. If 'name' is not yet in the pipeline,
@@ -424,6 +426,8 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         """
         task = TaskPipelineNode(name, component)
         self.set_node(task)
+        # invalidate the pipeline if it was already validated
+        self.is_validated = False
 
     def connect(
         self,
@@ -458,6 +462,8 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
             )
         if self.is_cyclic():
             raise PipelineDefinitionError("Cyclic graph are not allowed")
+        # invalidate the pipeline if it was already validated
+        self.is_validated = False
 
     def on_task_complete(self, task: TaskPipelineNode, result: RunResult) -> None:
         """Method called when a task is done."""
