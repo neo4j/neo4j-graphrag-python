@@ -33,7 +33,7 @@ class PromptTemplate:
     """
 
     DEFAULT_TEMPLATE: str = ""
-    EXPECTED_INPUTS: list[str] = list()
+    EXPECTED_INPUTS: list[str] = []
 
     def __init__(
         self,
