@@ -55,7 +55,7 @@ jobs:
 
     steps:
       - name: Install graphviz package
-        run: sudo apt install graphviz
+        run: sudo apt install graphviz graphviz-dev
       - name: Check out repository code
         uses: actions/checkout@v4
       - name: Docker Prune
