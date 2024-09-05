@@ -24,6 +24,7 @@ from functools import partial
 from timeit import default_timer
 from typing import Any, AsyncGenerator, Optional, Protocol
 
+import pygraphviz as pgv
 from pydantic import BaseModel, Field
 
 from neo4j_genai.experimental.pipeline.component import Component, DataModel
@@ -368,6 +369,48 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         )
         return pipeline_config.model_dump()
 
+    def draw(self, path: str, layout: str = "dot") -> Any:
+        G = self.get_pygraphviz_graph()
+        G.layout(layout)
+        G.draw(path)
+
+    def get_pygraphviz_graph(self) -> pgv.AGraph:
+        self.validate_connection_parameters()
+        G = pgv.AGraph(strict=False, directed=True)
+        # create a node for each component
+        for n, node in self._nodes.items():
+            comp_inputs = ",".join(
+                f"{i}: {d['annotation']}"
+                for i, d in node.component.component_inputs.items()
+            )
+            G.add_node(
+                n,
+                node_type="component",
+                shape="rectangle",
+                label=f"{node.component.__class__.__name__}: {n}({comp_inputs})",
+            )
+            # create a node for each output field and connect them it to its component
+            for o in node.component.component_outputs:
+                param_node_name = f"{n}.{o}"
+                G.add_node(param_node_name, label=o, node_type="output")
+                G.add_edge(n, param_node_name)
+        # then we create the edges between a component output
+        # and the component it gets added to
+        for component_name, params in self.param_mapping.items():
+            for param, mapping in params.items():
+                source_component = mapping["component"]
+                source_param_name = mapping.get("param")
+                if source_param_name:
+                    source_output_node = f"{source_component}.{source_param_name}"
+                else:
+                    source_output_node = source_component
+                G.add_edge(source_output_node, component_name, label=param)
+        # remove outputs that are not mapped
+        for n in G.nodes():
+            if n.attr["node_type"] == "output" and G.out_degree(n) == 0:  # type: ignore
+                G.remove_node(n)
+        return G
+
     def add_component(self, component: Component, name: str) -> None:
         """Add a new component. Components are uniquely identified
         by their name. If 'name' is already in the pipeline, a ValueError
@@ -505,6 +548,10 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
             # check that the previous component is actually returning
             # the mapped parameter
             for param, path in edge_inputs.items():
+                if param in self.param_mapping[task.name]:
+                    raise PipelineDefinitionError(
+                        f"Parameter '{param}' already mapped to {self.param_mapping[task.name][param]}"
+                    )
                 try:
                     source_component_name, param_name = path.split(".")
                 except ValueError:
