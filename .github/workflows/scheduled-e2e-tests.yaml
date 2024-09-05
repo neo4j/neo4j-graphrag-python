@@ -54,6 +54,8 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
     steps:
+      - name: Install Graphviz
+        run: sudo apt-get install graphviz
       - name: Check out repository code
         uses: actions/checkout@v4
       - name: Docker Prune
