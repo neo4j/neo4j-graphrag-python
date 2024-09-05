@@ -74,11 +74,11 @@ class PineconeNeo4jRetriever(ExternalRetriever):
     Args:
         driver (neo4j.Driver): The Neo4j Python driver.
         client (Pinecone): The Pinecone client object.
-        collection (str): Name of a set of Weaviate objects that share the same data structure.
-        id_property_external (str): The name of the Weaviate property that has the identifier that refers to a corresponding Neo4j node id property.
-        id_property_neo4j (str): The name of the Neo4j node property that's used as the identifier for relating matches from Weaviate to Neo4j nodes.
+        index_name (str): The name of the Pinecone index.
+        id_property_neo4j (str): The name of the Neo4j node property that's used as the identifier for relating matches from Pinecone to Neo4j nodes.
         embedder (Optional[Embedder]): Embedder object to embed query text.
         return_properties (Optional[list[str]]): List of node properties to return.
+        retrieval_query (str): Cypher query that gets appended.
         result_formatter (Optional[Callable[[neo4j.Record], RetrieverResultItem]]): Function to transform a neo4j.Record to a RetrieverResultItem.
         neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
