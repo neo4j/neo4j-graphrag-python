@@ -106,7 +106,7 @@ def test_pipeline_validate_inputs_config_for_task_no_expected_params() -> None:
     pipe = Pipeline()
     component_a = ComponentNoParam()
     pipe.add_component(component_a, "a")
-    is_valid = pipe.validate_inputs_config_for_task(pipe.get_node_by_name("a"), {})
+    is_valid = pipe.validate_connection_parameters_for_task(pipe.get_node_by_name("a"))
     assert is_valid is True
 
 
@@ -114,9 +114,7 @@ def test_pipeline_validate_inputs_config_for_task_one_component_all_good() -> No
     pipe = Pipeline()
     component_a = ComponentPassThrough()
     pipe.add_component(component_a, "a")
-    is_valid = pipe.validate_inputs_config_for_task(
-        pipe.get_node_by_name("a"), {"a": {"value": "value"}}
-    )
+    is_valid = pipe.validate_connection_parameters_for_task(pipe.get_node_by_name("a"))
     assert is_valid is True
 
 
@@ -126,12 +124,8 @@ def test_pipeline_validate_inputs_config_for_task_one_component_input_param_miss
     pipe = Pipeline()
     component_a = ComponentPassThrough()
     pipe.add_component(component_a, "a")
-    with pytest.raises(PipelineDefinitionError) as excinfo:
-        pipe.validate_inputs_config_for_task(pipe.get_node_by_name("a"), {"a": {}})
-    assert (
-        "Missing input parameters for a: Expected parameters: ['value']. Got: []"
-        in str(excinfo.value)
-    )
+    pipe.validate_connection_parameters_for_task(pipe.get_node_by_name("a"))
+    assert pipe.missing_inputs["a"] == ["value"]
 
 
 def test_pipeline_validate_inputs_config_for_task_one_component_full_input_missing() -> (
@@ -140,12 +134,8 @@ def test_pipeline_validate_inputs_config_for_task_one_component_full_input_missi
     pipe = Pipeline()
     component_a = ComponentPassThrough()
     pipe.add_component(component_a, "a")
-    with pytest.raises(PipelineDefinitionError) as excinfo:
-        pipe.validate_inputs_config_for_task(pipe.get_node_by_name("a"), {})
-    assert (
-        "Missing input parameters for a: Expected parameters: ['value']. Got: []"
-        in str(excinfo.value)
-    )
+    pipe.validate_connection_parameters_for_task(pipe.get_node_by_name("a"))
+    assert pipe.missing_inputs["a"] == ["value"]
 
 
 def test_pipeline_validate_inputs_config_for_task_connected_components_input() -> None:
@@ -156,9 +146,7 @@ def test_pipeline_validate_inputs_config_for_task_connected_components_input() -
     pipe.add_component(component_a, "a")
     pipe.add_component(component_b, "b")
     pipe.connect("a", "b", {})
-    is_valid = pipe.validate_inputs_config_for_task(
-        pipe.get_node_by_name("b"), {"b": {"value": "value"}}
-    )
+    is_valid = pipe.validate_connection_parameters_for_task(pipe.get_node_by_name("b"))
     assert is_valid is True
 
 
@@ -170,7 +158,7 @@ def test_pipeline_validate_inputs_config_for_task_connected_components_result() 
     pipe.add_component(component_a, "a")
     pipe.add_component(component_b, "b")
     pipe.connect("a", "b", {"value": "b.result"})
-    is_valid = pipe.validate_inputs_config_for_task(pipe.get_node_by_name("b"), {})
+    is_valid = pipe.validate_connection_parameters_for_task(pipe.get_node_by_name("b"))
     assert is_valid is True
 
 
@@ -184,12 +172,8 @@ def test_pipeline_validate_inputs_config_for_task_connected_components_missing_i
     pipe.add_component(component_a, "a")
     pipe.add_component(component_b, "b")
     pipe.connect("a", "b", {})
-    with pytest.raises(PipelineDefinitionError) as excinfo:
-        pipe.validate_inputs_config_for_task(pipe.get_node_by_name("b"), {})
-    assert (
-        "Missing input parameters for b: Expected parameters: ['value']. Got: []"
-        in str(excinfo.value)
-    )
+    pipe.validate_connection_parameters_for_task(pipe.get_node_by_name("b"))
+    assert pipe.missing_inputs["b"] == ["value"]
 
 
 @pytest.mark.asyncio

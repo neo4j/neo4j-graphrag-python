@@ -328,6 +328,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
             }
         }
         """
+        self.missing_inputs: dict[str, list[str]] = defaultdict()
 
     @classmethod
     def from_template(
@@ -447,21 +448,45 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         for task in self._nodes.values():
             task.reinitialize()
 
-    def validate_inputs_config(self, data: dict[str, Any]) -> None:
-        """Go through the graph and make sure each component will not miss any input
-
-        Args:
-            data (dict[str, Any]): the user provided data in the pipeline.run method.
-        """
+    def validate_connection_parameters(self) -> None:
+        """Go through the graph and make sure each component will not miss any input"""
+        if self.is_validated:
+            return
         for task in self._nodes.values():
-            self.validate_inputs_config_for_task(task, data)
+            self.validate_connection_parameters_for_task(task)
         self.is_validated = True
 
-    def validate_inputs_config_for_task(
-        self, task: TaskPipelineNode, input_data: dict[str, Any]
-    ) -> bool:
-        """Make sure the parameter defined in the input config
-        matches a parameter in the previous component output model.
+    def validate_all_parameters(self, data: dict[str, Any]) -> None:
+        """Performs parameter validation before running the pipeline:
+        - Check parameters defined in the connect method
+        - Make sure the missing parameters are present in the input `data` dict.
+
+        Args:
+            data (dict[str, Any]): input data to use for validation
+
+        Raises:
+            PipelineDefinitionError if any parameter mapping is invalid or if a
+                parameter is missing.
+        """
+        if not self.is_validated:
+            self.validate_connection_parameters()
+        for task in self._nodes.values():
+            if task.name not in self.param_mapping:
+                self.validate_connection_parameters_for_task(task)
+            missing_params = self.missing_inputs[task.name]
+            task_data = data.get(task.name) or {}
+            for param in missing_params:
+                if param not in task_data:
+                    raise PipelineDefinitionError(
+                        f"Parameter '{param}' not provided for component '{task.name}'"
+                    )
+
+    def validate_connection_parameters_for_task(self, task: TaskPipelineNode) -> bool:
+        """Make sure that all the parameters defined in the input config
+        when connecting components are valid fields in the previous
+        component output model.
+
+        This method builds the param_mapping and missing_inputs instance variables.
         """
         component = task.component
         expected_mandatory_inputs = [
@@ -471,7 +496,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         ]
         # start building the actual input list, starting
         # from the inputs provided in the pipeline.run method
-        actual_inputs = list(input_data.get(task.name, {}).keys())
+        actual_inputs = []
         prev_edges = self.previous_edges(task.name)
         # then, iterate over all parents to find the parameter propagation
         for edge in prev_edges:
@@ -488,7 +513,6 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                     # passed to the next component
                     self.param_mapping[task.name][param] = {
                         "component": path,
-                        "param": "*",
                     }
                     continue
                 try:
@@ -511,18 +535,14 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                     "param": param_name,
                 }
             actual_inputs.extend(list(edge_inputs.keys()))
-        if set(expected_mandatory_inputs) - set(actual_inputs):
-            raise PipelineDefinitionError(
-                f"Missing input parameters for {task.name}: "
-                f"Expected parameters: {expected_mandatory_inputs}. "
-                f"Got: {actual_inputs}"
-            )
+        missing_inputs = list(set(expected_mandatory_inputs) - set(actual_inputs))
+        self.missing_inputs[task.name] = missing_inputs
         return True
 
     async def run(self, data: dict[str, Any]) -> dict[str, Any]:
         logger.debug("Starting pipeline")
         start_time = default_timer()
-        self.validate_inputs_config(data)
+        self.validate_all_parameters(data)
         self.reinitialize()
         orchestrator = Orchestrator(self)
         await orchestrator.run(data)
