@@ -2,6 +2,10 @@
 
 ## Next
 
+### Added
+- Ability to visualise pipeline with `my_pipeline.draw("pipeline.png")`
+
+
 ## 0.5.0
 
 ### Added
