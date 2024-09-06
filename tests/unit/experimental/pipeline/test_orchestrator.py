@@ -190,7 +190,5 @@ async def test_orchestrator_aggregation_waiting(pipeline_aggregation: Pipeline) 
     orchestrator = Orchestrator(pipeline=pipeline_aggregation)
     node_a = pipeline_aggregation.get_node_by_name("a")
     node_a.status = {orchestrator.run_id: RunStatus.DONE}
-    node_b = pipeline_aggregation.get_node_by_name("a")
-    node_b.status = {orchestrator.run_id: RunStatus.UNKNOWN}
     next_tasks = [n async for n in orchestrator.next(node_a)]
     assert next_tasks == []
