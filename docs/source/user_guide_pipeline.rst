@@ -60,8 +60,8 @@ Here's how to create a simple pipeline and propagate results from one component 
     pipe.add_component(ComponentAdd(), "a")
     pipe.add_component(ComponentAdd(), "b")
 
-    pipe.connect("a", "b", {"number2": "a.result"})
-    asyncio.run(pipe.run({"a": {"number1": 10, "number2": 1}, "b": {"number1": 4}))
+    pipe.connect("a", "b", input_config={"number2": "a.result"})
+    asyncio.run(pipe.run({"a": {"number1": 10, "number2": 1}, "b": {"number1": 4}}))
     # result: 10+1+4 = 15
 
 1. First, a pipeline is created, and two components named "a" and "b" are added to it.
@@ -79,9 +79,23 @@ The data flow is illustrated in the diagram below:
                                  Component "b" -> 15
     4 -------------------------/
 
-.. warning::
+.. warning:: Cyclic graph
 
     Cycles are not allowed in a Pipeline.
+
+
+.. warning:: Ignored user inputs
+
+    If inputs are provided both by user in the `pipeline.run` method and as
+    `input_config` in a connect method, the user input will be ignored. Take for
+    instance the following pipeline, adapted from the previous one:
+
+    .. code:: python
+
+            pipe.connect("a", "b", input_config={"number2": "a.result"})
+            asyncio.run(pipe.run({"a": {"number1": 10, "number2": 1}, "b": {"number1": 4, "number2": 42}}))
+
+    The result will still be **15** because the user input `"number2": 42` is ignored.
 
 
 **********************
