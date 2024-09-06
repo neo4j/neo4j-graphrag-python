@@ -508,13 +508,14 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
             self.validate_connection_parameters_for_task(task)
         self.is_validated = True
 
-    def validate_all_parameters(self, data: dict[str, Any]) -> None:
+    def validate_all_parameters(self, data: dict[str, Any]) -> bool:
         """Performs parameter validation before running the pipeline:
         - Check parameters defined in the connect method
         - Make sure the missing parameters are present in the input `data` dict.
 
         Args:
             data (dict[str, Any]): input data to use for validation
+                (usually from Pipeline.run)
 
         Raises:
             PipelineDefinitionError if any parameter mapping is invalid or if a
@@ -532,6 +533,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                     raise PipelineDefinitionError(
                         f"Parameter '{param}' not provided for component '{task.name}'"
                     )
+        return True
 
     def validate_connection_parameters_for_task(self, task: TaskPipelineNode) -> bool:
         """Make sure that all the parameters defined in the input config

@@ -102,7 +102,7 @@ async def test_pipeline_parameter_propagation() -> None:
     assert res == {"b": {"result": "2"}}
 
 
-def test_pipeline_validate_inputs_config_for_task_no_expected_params() -> None:
+def test_pipeline_parameter_validation_no_expected_params() -> None:
     pipe = Pipeline()
     component_a = ComponentNoParam()
     pipe.add_component(component_a, "a")
@@ -110,7 +110,7 @@ def test_pipeline_validate_inputs_config_for_task_no_expected_params() -> None:
     assert is_valid is True
 
 
-def test_pipeline_validate_inputs_config_for_task_one_component_all_good() -> None:
+def test_pipeline_parameter_validation_one_component_all_good() -> None:
     pipe = Pipeline()
     component_a = ComponentPassThrough()
     pipe.add_component(component_a, "a")
@@ -118,9 +118,7 @@ def test_pipeline_validate_inputs_config_for_task_one_component_all_good() -> No
     assert is_valid is True
 
 
-def test_pipeline_validate_inputs_config_for_task_one_component_input_param_missing() -> (
-    None
-):
+def test_pipeline_parameter_validation_one_component_input_param_missing() -> None:
     pipe = Pipeline()
     component_a = ComponentPassThrough()
     pipe.add_component(component_a, "a")
@@ -128,17 +126,7 @@ def test_pipeline_validate_inputs_config_for_task_one_component_input_param_miss
     assert pipe.missing_inputs["a"] == ["value"]
 
 
-def test_pipeline_validate_inputs_config_for_task_one_component_full_input_missing() -> (
-    None
-):
-    pipe = Pipeline()
-    component_a = ComponentPassThrough()
-    pipe.add_component(component_a, "a")
-    pipe.validate_connection_parameters_for_task(pipe.get_node_by_name("a"))
-    assert pipe.missing_inputs["a"] == ["value"]
-
-
-def test_pipeline_validate_inputs_config_for_task_connected_components_input() -> None:
+def test_pipeline_parameter_validation_connected_components_input() -> None:
     """Parameter for component 'b' comes from the pipeline inputs"""
     pipe = Pipeline()
     component_a = ComponentNoParam()
@@ -148,9 +136,10 @@ def test_pipeline_validate_inputs_config_for_task_connected_components_input() -
     pipe.connect("a", "b", {})
     is_valid = pipe.validate_connection_parameters_for_task(pipe.get_node_by_name("b"))
     assert is_valid is True
+    assert dict(pipe.missing_inputs) == {"b": ["value"]}
 
 
-def test_pipeline_validate_inputs_config_for_task_connected_components_result() -> None:
+def test_pipeline_parameter_validation_connected_components_result() -> None:
     """Parameter for component 'b' comes from the result of component 'a'"""
     pipe = Pipeline()
     component_a = ComponentNoParam()
@@ -160,11 +149,10 @@ def test_pipeline_validate_inputs_config_for_task_connected_components_result() 
     pipe.connect("a", "b", {"value": "b.result"})
     is_valid = pipe.validate_connection_parameters_for_task(pipe.get_node_by_name("b"))
     assert is_valid is True
+    assert pipe.missing_inputs == {"b": []}
 
 
-def test_pipeline_validate_inputs_config_for_task_connected_components_missing_input() -> (
-    None
-):
+def test_pipeline_parameter_validation_connected_components_missing_input() -> None:
     """Parameter for component 'b' is missing"""
     pipe = Pipeline()
     component_a = ComponentNoParam()
@@ -172,8 +160,42 @@ def test_pipeline_validate_inputs_config_for_task_connected_components_missing_i
     pipe.add_component(component_a, "a")
     pipe.add_component(component_b, "b")
     pipe.connect("a", "b", {})
-    pipe.validate_connection_parameters_for_task(pipe.get_node_by_name("b"))
+    is_valid = pipe.validate_connection_parameters_for_task(pipe.get_node_by_name("b"))
+    assert is_valid is True
     assert pipe.missing_inputs["b"] == ["value"]
+
+
+def test_pipeline_parameter_validation_full_missing_inputs_in_user_data() -> None:
+    pipe = Pipeline()
+    component_a = ComponentNoParam()
+    component_b = ComponentPassThrough()
+    pipe.add_component(component_a, "a")
+    pipe.add_component(component_b, "b")
+    pipe.connect("a", "b", {})
+    is_valid = pipe.validate_all_parameters(data={"b": {"value": "input for b"}})
+    assert is_valid is True
+
+
+def test_pipeline_parameter_validation_full_missing_inputs_in_component_name() -> None:
+    pipe = Pipeline()
+    component_a = ComponentNoParam()
+    component_b = ComponentPassThrough()
+    pipe.add_component(component_a, "a")
+    pipe.add_component(component_b, "b")
+    pipe.connect("a", "b", {})
+    with pytest.raises(PipelineDefinitionError):
+        pipe.validate_all_parameters(data={"b": {}})
+
+
+def test_pipeline_parameter_validation_full_missing_inputs() -> None:
+    pipe = Pipeline()
+    component_a = ComponentNoParam()
+    component_b = ComponentPassThrough()
+    pipe.add_component(component_a, "a")
+    pipe.add_component(component_b, "b")
+    pipe.connect("a", "b", {})
+    with pytest.raises(PipelineDefinitionError):
+        pipe.validate_all_parameters(data={})
 
 
 @pytest.mark.asyncio
