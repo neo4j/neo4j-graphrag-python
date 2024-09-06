@@ -261,7 +261,7 @@ class Orchestrator:
         """
         if not self.pipeline.is_validated:
             raise PipelineDefinitionError(
-                "You must validate the pipeline input config first. Call `pipeline.validate_inputs_config(input_data)`"
+                "You must validate the pipeline input config first. Call `pipeline.validate_connection_parameters()`"
             )
         return self.pipeline.param_mapping.get(task.name) or {}
 
