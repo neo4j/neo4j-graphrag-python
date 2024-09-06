@@ -130,8 +130,6 @@ class TaskPipelineNode(PipelineNode):
         """Main method to execute the task."""
         logger.debug(f"TASK START {self.name=} {inputs=}")
         res = await self.execute(**inputs)
-        if res is None:
-            return None
         logger.debug(f"TASK RESULT {self.name=} {res=}")
         return res
 

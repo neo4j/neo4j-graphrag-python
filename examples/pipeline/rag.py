@@ -27,6 +27,7 @@ import neo4j
 from neo4j_genai.embeddings.openai import OpenAIEmbeddings
 from neo4j_genai.experimental.pipeline import Component, Pipeline
 from neo4j_genai.experimental.pipeline.component import DataModel
+from neo4j_genai.experimental.pipeline.pipeline import PipelineResult
 from neo4j_genai.experimental.pipeline.types import (
     ComponentConfig,
     ConnectionConfig,
@@ -38,35 +39,37 @@ from neo4j_genai.retrievers import VectorRetriever
 from neo4j_genai.retrievers.base import Retriever
 
 
-class StringDataModel(DataModel):
-    result: str
+class ComponentResultDataModel(DataModel):
+    """A simple DataModel with a single text field"""
+
+    text: str
 
 
 class RetrieverComponent(Component):
     def __init__(self, retriever: Retriever) -> None:
         self.retriever = retriever
 
-    async def run(self, query: str) -> StringDataModel:
+    async def run(self, query: str) -> ComponentResultDataModel:
         res = self.retriever.search(query_text=query)
-        return StringDataModel(result="\n".join(c.content for c in res.items))
+        return ComponentResultDataModel(text="\n".join(c.content for c in res.items))
 
 
 class PromptTemplateComponent(Component):
     def __init__(self, prompt: PromptTemplate) -> None:
         self.prompt = prompt
 
-    async def run(self, query: str, context: List[str]) -> StringDataModel:
+    async def run(self, query: str, context: List[str]) -> ComponentResultDataModel:
         prompt = self.prompt.format(query, context, examples="")
-        return StringDataModel(result=prompt)
+        return ComponentResultDataModel(text=prompt)
 
 
 class LLMComponent(Component):
     def __init__(self, llm: LLMInterface) -> None:
         self.llm = llm
 
-    async def run(self, prompt: str) -> StringDataModel:
+    async def run(self, prompt: str) -> ComponentResultDataModel:
         llm_response = self.llm.invoke(prompt)
-        return StringDataModel(result=llm_response.content)
+        return ComponentResultDataModel(text=llm_response.content)
 
 
 if __name__ == "__main__":
@@ -97,21 +100,21 @@ if __name__ == "__main__":
                 ConnectionConfig(
                     start="retrieve",
                     end="augment",
-                    input_config={"context": "retrieve.result"},
+                    input_config={"context": "retrieve.text"},
                 ),
                 ConnectionConfig(
                     start="augment",
                     end="generate",
-                    input_config={"prompt": "augment.result"},
+                    input_config={"prompt": "augment.text"},
                 ),
             ],
         )
     )
 
     query = "A movie about the US presidency"
-    result = asyncio.run(
+    pipe_output: PipelineResult = asyncio.run(
         pipe.run({"retrieve": {"query": query}, "augment": {"query": query}})
     )
-    print(result.result["generate"]["result"])
+    print(pipe_output.result["generate"]["text"])
 
     driver.close()
