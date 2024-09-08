@@ -95,9 +95,6 @@ class TaskPipelineNode(PipelineNode):
         logger.debug(f"Component {self.name} finished in {end_time - start_time}s")
         return run_result
 
-    def reinitialize(self) -> None:
-        self.status = RunStatus.SCHEDULED
-
     async def run(self, inputs: dict[str, Any]) -> RunResult | None:
         """Main method to execute the task."""
         logger.debug(f"TASK START {self.name=} {inputs=}")
