@@ -178,13 +178,13 @@ async def test_orchestrator_branch(
     node_a = pipeline_branch.get_node_by_name("a")
     mock_status.side_effect = [
         # next b
-        None,
+        RunStatus.UNKNOWN,
         # dep of b = a
-        "DONE",
+        RunStatus.DONE,
         # next c
-        None,
+        RunStatus.UNKNOWN,
         # dep of c = a
-        "DONE",
+        RunStatus.DONE,
     ]
     next_tasks = [n async for n in orchestrator.next(node_a)]
     next_task_names = [n.name for n in next_tasks]
@@ -205,7 +205,7 @@ async def test_orchestrator_aggregation(
         # next c:
         RunStatus.SCHEDULED,
         # dep of c = a
-        "DONE",
+        RunStatus.DONE,
         # dep of c = b
         RunStatus.SCHEDULED,
     ]
@@ -217,9 +217,9 @@ async def test_orchestrator_aggregation(
         # next c:
         RunStatus.SCHEDULED,
         # dep of c = a
-        "DONE",
+        RunStatus.DONE,
         # dep of c = b
-        "DONE",
+        RunStatus.DONE,
     ]
     # then "c" can start
     next_tasks = [n async for n in orchestrator.next(node_a)]

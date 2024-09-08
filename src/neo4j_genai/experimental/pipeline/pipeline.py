@@ -164,7 +164,7 @@ class Orchestrator:
         #       2: set status => RUNNING
         # that would cause two tasks to be started instead of one
         async with asyncio.Lock():
-            current_status = RunStatus(await self.get_status_for_component(task_name))
+            current_status = await self.get_status_for_component(task_name)
             if status == current_status:
                 raise PipelineStatusUpdateError()
             if status == RunStatus.RUNNING and current_status == RunStatus.DONE:
@@ -200,7 +200,7 @@ class Orchestrator:
         """
         dependencies = self.pipeline.previous_edges(task.name)
         for d in dependencies:
-            d_status = RunStatus(await self.get_status_for_component(d.start))
+            d_status = await self.get_status_for_component(d.start)
             if d_status != RunStatus.DONE:
                 logger.warning(
                     f"Missing dependency {d.start} for {task.name} (status: {d_status})"
@@ -222,9 +222,7 @@ class Orchestrator:
         for next_edge in possible_next:
             next_node = self.pipeline.get_node_by_name(next_edge.end)
             # check status
-            next_node_status = RunStatus(
-                await self.get_status_for_component(next_node.name)
-            )
+            next_node_status = await self.get_status_for_component(next_node.name)
             if next_node_status in [RunStatus.RUNNING, RunStatus.DONE]:
                 # already running
                 continue
@@ -252,9 +250,7 @@ class Orchestrator:
         # make sure dependencies are satisfied
         # and save the inputs defs that needs to be propagated from parent components
         for prev_edge in self.pipeline.previous_edges(task.name):
-            prev_status = RunStatus(
-                await self.get_status_for_component(prev_edge.start)
-            )
+            prev_status = await self.get_status_for_component(prev_edge.start)
             if prev_status != RunStatus.DONE:
                 logger.critical(f"Missing dependency {prev_edge.start}")
                 raise PipelineMissingDependencyError(f"{prev_edge.start} not ready")
@@ -321,8 +317,9 @@ class Orchestrator:
     async def get_results_for_component(self, name: str) -> Any:
         return await self.pipeline.store.get_result_for_component(self.run_id, name)
 
-    async def get_status_for_component(self, name: str) -> Any:
-        return await self.pipeline.store.get_status_for_component(self.run_id, name)
+    async def get_status_for_component(self, name: str) -> RunStatus:
+        status = await self.pipeline.store.get_status_for_component(self.run_id, name)
+        return RunStatus(status)
 
     async def run(self, data: dict[str, Any]) -> None:
         """Run the pipline, starting from the root nodes
