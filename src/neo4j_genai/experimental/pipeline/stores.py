@@ -60,7 +60,21 @@ class Store(abc.ABC):
         raise NotImplementedError()
 
 
-class InMemoryStore(Store):
+class ResultStore(Store, abc.ABC):
+    @staticmethod
+    def get_key(run_id: str, task_name: str) -> str:
+        return f"{run_id}:{task_name}"
+
+    def add_result_for_component(
+        self, run_id: str, task_name: str, result: Any, overwrite: bool = False
+    ) -> None:
+        self.add(self.get_key(run_id, task_name), result, overwrite=overwrite)
+
+    def get_result_for_component(self, run_id: str, task_name: str) -> Any:
+        return self.get(self.get_key(run_id, task_name))
+
+
+class InMemoryStore(ResultStore):
     """Simple in-memory store.
     Saves each component's results in a _data dict."""
 
