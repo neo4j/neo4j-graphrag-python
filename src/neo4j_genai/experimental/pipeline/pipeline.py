@@ -559,10 +559,6 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
             # check that the previous component is actually returning
             # the mapped parameter
             for param, path in edge_inputs.items():
-                if param in self.param_mapping[task.name]:
-                    raise PipelineDefinitionError(
-                        f"Parameter '{param}' already mapped to {self.param_mapping[task.name][param]}"
-                    )
                 try:
                     source_component_name, param_name = path.split(".")
                 except ValueError:
