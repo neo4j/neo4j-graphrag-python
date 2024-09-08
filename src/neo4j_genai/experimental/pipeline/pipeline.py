@@ -154,19 +154,13 @@ class Orchestrator:
             PipelineStatusUpdateError if the new status is not
                 compatible with the current one.
         """
-        # Make the method async-safe against this kind of calls:
-        #       1: get status => UNKNOWN
-        #       2: get status => UNKNOWN
-        #       1: set status => RUNNING
-        #       2: set status => RUNNING
-        # that would cause two tasks to be started instead of one
+        # prevent the method from being called by two concurrent async calls
         async with asyncio.Lock():
             current_status = await self.get_status_for_component(task_name)
             if status == current_status:
-                raise PipelineStatusUpdateError()
+                raise PipelineStatusUpdateError(f"Status is already '{status}'")
             if status == RunStatus.RUNNING and current_status == RunStatus.DONE:
-                # can't go back to RUNNING from DONE
-                raise PipelineStatusUpdateError()
+                raise PipelineStatusUpdateError("Can't go back from RUNNING to DONE")
             return await self.pipeline.store.add_status_for_component(
                 self.run_id, task_name, status.value
             )
@@ -177,8 +171,7 @@ class Orchestrator:
         """When a given task is complete, it will call this method
         to find the next tasks to run.
         """
-        # first call the method for the pipeline
-        # this is where the results can be saved
+        # first save this component results
         res_to_save = None
         if result.result:
             res_to_save = result.result.model_dump()
