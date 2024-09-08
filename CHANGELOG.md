@@ -5,6 +5,8 @@
 ### Added
 - Ability to visualise pipeline with `my_pipeline.draw("pipeline.png")`
 
+## Fixed
+- Pipelines now return correct results when the same pipeline is run in parallel.
 
 ## 0.5.0
 

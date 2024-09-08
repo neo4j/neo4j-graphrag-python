@@ -51,7 +51,9 @@ def test_orchestrator_get_component_inputs_from_user_only() -> None:
     assert data == {"value": "user input for component b"}
 
 
-@patch("neo4j_genai.experimental.pipeline.Pipeline.get_results_for_component")
+@patch(
+    "neo4j_genai.experimental.pipeline.pipeline.Orchestrator.get_results_for_component"
+)
 def test_pipeline_get_component_inputs_from_parent_specific(mock_result: Mock) -> None:
     """Propagate one specific output field from 'a' to the next component."""
     pipe = Pipeline()
@@ -69,7 +71,9 @@ def test_pipeline_get_component_inputs_from_parent_specific(mock_result: Mock) -
     assert data == {"value": "output from component a"}
 
 
-@patch("neo4j_genai.experimental.pipeline.Pipeline.get_results_for_component")
+@patch(
+    "neo4j_genai.experimental.pipeline.pipeline.Orchestrator.get_results_for_component"
+)
 def test_orchestrator_get_component_inputs_from_parent_all(mock_result: Mock) -> None:
     """Use the component name to get the full output
     (without extracting a specific field).
@@ -87,7 +91,9 @@ def test_orchestrator_get_component_inputs_from_parent_all(mock_result: Mock) ->
     assert data == {"value": {"result": "output from component a"}}
 
 
-@patch("neo4j_genai.experimental.pipeline.Pipeline.get_results_for_component")
+@patch(
+    "neo4j_genai.experimental.pipeline.pipeline.Orchestrator.get_results_for_component"
+)
 def test_orchestrator_get_component_inputs_from_parent_and_input(
     mock_result: Mock,
 ) -> None:
@@ -112,7 +118,9 @@ def test_orchestrator_get_component_inputs_from_parent_and_input(
     }
 
 
-@patch("neo4j_genai.experimental.pipeline.Pipeline.get_results_for_component")
+@patch(
+    "neo4j_genai.experimental.pipeline.pipeline.Orchestrator.get_results_for_component"
+)
 def test_orchestrator_get_component_inputs_ignore_user_input_if_input_def_provided(
     mock_result: Mock,
 ) -> None:
@@ -168,7 +176,7 @@ def pipeline_aggregation() -> Pipeline:
 async def test_orchestrator_branch(pipeline_branch: Pipeline) -> None:
     orchestrator = Orchestrator(pipeline=pipeline_branch)
     node_a = pipeline_branch.get_node_by_name("a")
-    node_a.status = RunStatus.DONE
+    node_a.status = {orchestrator.run_id: RunStatus.DONE}
     next_tasks = [n async for n in orchestrator.next(node_a)]
     next_task_names = [n.name for n in next_tasks]
     assert next_task_names == ["b", "c"]
@@ -178,14 +186,14 @@ async def test_orchestrator_branch(pipeline_branch: Pipeline) -> None:
 async def test_orchestrator_aggregation(pipeline_aggregation: Pipeline) -> None:
     orchestrator = Orchestrator(pipeline=pipeline_aggregation)
     node_a = pipeline_aggregation.get_node_by_name("a")
-    node_a.status = RunStatus.DONE
+    node_a.status = {orchestrator.run_id: RunStatus.DONE}
     next_tasks = [n async for n in orchestrator.next(node_a)]
     next_task_names = [n.name for n in next_tasks]
     # "c" not ready yet
     assert next_task_names == []
     # set "b" to DONE
     node_b = pipeline_aggregation.get_node_by_name("b")
-    node_b.status = RunStatus.DONE
+    node_b.status = {orchestrator.run_id: RunStatus.DONE}
     # then "c" can start
     next_tasks = [n async for n in orchestrator.next(node_a)]
     next_task_names = [n.name for n in next_tasks]
@@ -196,8 +204,6 @@ async def test_orchestrator_aggregation(pipeline_aggregation: Pipeline) -> None:
 async def test_orchestrator_aggregation_waiting(pipeline_aggregation: Pipeline) -> None:
     orchestrator = Orchestrator(pipeline=pipeline_aggregation)
     node_a = pipeline_aggregation.get_node_by_name("a")
-    node_a.status = RunStatus.DONE
-    node_b = pipeline_aggregation.get_node_by_name("a")
-    node_b.status = RunStatus.UNKNOWN
+    node_a.status = {orchestrator.run_id: RunStatus.DONE}
     next_tasks = [n async for n in orchestrator.next(node_a)]
     assert next_tasks == []

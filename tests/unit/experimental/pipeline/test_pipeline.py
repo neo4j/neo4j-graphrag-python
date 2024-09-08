@@ -14,17 +14,13 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import asyncio
 from unittest import mock
 from unittest.mock import AsyncMock, call
 
 import pytest
 from neo4j_genai.experimental.pipeline import Component, Pipeline
 from neo4j_genai.experimental.pipeline.exceptions import PipelineDefinitionError
-from neo4j_genai.experimental.pipeline.pipeline import (
-    RunResult,
-    RunStatus,
-    TaskPipelineNode,
-)
 
 from .components import (
     ComponentAdd,
@@ -33,24 +29,6 @@ from .components import (
     ComponentPassThrough,
     StringResultModel,
 )
-
-
-async def dummy_callback(task: TaskPipelineNode, res: RunResult) -> None:
-    pass
-
-
-@pytest.mark.asyncio
-async def test_task_pipeline_node_status_done() -> None:
-    task = TaskPipelineNode("task", ComponentNoParam())
-    with mock.patch(
-        "tests.unit.experimental.pipeline.test_pipeline.dummy_callback"
-    ) as m:
-        await task.run({}, m)
-    args, kwargs = m.call_args
-    assert len(kwargs) == 2
-    assert kwargs["task"] == task
-    assert isinstance(kwargs["res"], RunResult)
-    assert task.status == RunStatus.DONE
 
 
 @pytest.mark.asyncio
@@ -77,8 +55,8 @@ async def test_simple_pipeline_two_components() -> None:
         res = await pipe.run({})
         mock_run.assert_awaited_with(**{})
         mock_run.assert_awaited_with(**{})
-    assert "b" in res
-    assert res["b"] == {"result": "2"}
+    assert "b" in res.result
+    assert res.result["b"] == {"result": "2"}
 
 
 @pytest.mark.asyncio
@@ -99,7 +77,7 @@ async def test_pipeline_parameter_propagation() -> None:
         ]
         res = await pipe.run({"a": {"value": "text"}})
         mock_run.assert_has_awaits([call(**{"value": "text"}), call(**{"value": "1"})])
-    assert res == {"b": {"result": "2"}}
+    assert res.result == {"b": {"result": "2"}}
 
 
 def test_pipeline_parameter_validation_no_expected_params() -> None:
@@ -213,7 +191,8 @@ async def test_pipeline_branches() -> None:
     pipe.add_component(component_c, "c")
     pipe.connect("a", "b")
     pipe.connect("a", "c")
-    res = await pipe.run({})
+    pipeline_result = await pipe.run({})
+    res = pipeline_result.result
     assert "b" in res
     assert "c" in res
 
@@ -239,7 +218,8 @@ async def test_pipeline_aggregation() -> None:
     pipe.add_component(component_c, "c")
     pipe.connect("a", "c")
     pipe.connect("b", "c")
-    res = await pipe.run({})
+    pipeline_result = await pipe.run({})
+    res = pipeline_result.result
     assert "c" in res
 
 
@@ -283,7 +263,8 @@ async def test_pipeline_with_default_params() -> None:
     pipe.add_component(component_a, "a")
     pipe.add_component(component_b, "b")
     pipe.connect("a", "b", {"number1": "a.result"})
-    res = await pipe.run({"a": {"number1": 1, "number2": 2}})
+    pipeline_result = await pipe.run({"a": {"number1": 1, "number2": 2}})
+    res = pipeline_result.result
     assert res == {"b": {"result": 6}}  # (1+2)*2
 
 
@@ -310,3 +291,18 @@ async def test_pipeline_wrong_component_name() -> None:
     with pytest.raises(PipelineDefinitionError) as excinfo:
         pipe.connect("a", "c", {})
         assert "a or c not in the Pipeline" in str(excinfo.value)
+
+
+@pytest.mark.asyncio
+async def test_pipeline_async() -> None:
+    pipe = Pipeline()
+    pipe.add_component(ComponentAdd(), "add")
+    run_params = [[1, 20], [10, 2]]
+    runs = []
+    for a, b in run_params:
+        runs.append(pipe.run({"add": {"number1": a, "number2": b}}))
+    pipeline_result = await asyncio.gather(*runs)
+    assert len(pipeline_result) == 2
+    assert pipeline_result[0].run_id != pipeline_result[1].run_id
+    assert pipeline_result[0].result == {"add": {"result": 21}}
+    assert pipeline_result[1].result == {"add": {"result": 12}}
