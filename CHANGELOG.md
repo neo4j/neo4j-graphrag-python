@@ -8,6 +8,9 @@
 - Add feature to include kwargs in `Text2CypherRetriever.search()` that will be injected into a custom prompt, if provided.
 - Add validation to `custom_prompt` parameter of `Text2CypherRetriever` to ensure that `query_text` placeholder exists in prompt.
 
+## Fixed
+- Pipelines now return correct results when the same pipeline is run in parallel.
+
 ## 0.5.0
 
 ### Added
