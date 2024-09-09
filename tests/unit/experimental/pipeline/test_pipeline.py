@@ -119,6 +119,7 @@ def test_pipeline_parameter_validation_param_mapped_twice() -> None:
         pipe.validate_connection_parameters_for_task(pipe.get_node_by_name("c"))
         assert (
             "Parameter 'value' already mapped to {'component': 'a', 'param': 'result'}"
+            in str(excinfo)
         )
 
 
