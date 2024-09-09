@@ -544,6 +544,14 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
             # check that the previous component is actually returning
             # the mapped parameter
             for param, path in edge_inputs.items():
+                if param in self.param_mapping[task.name]:
+                    raise PipelineDefinitionError(
+                        f"Parameter '{param}' already mapped to {self.param_mapping[task.name][param]}"
+                    )
+                if param not in task.component.component_inputs:
+                    raise PipelineDefinitionError(
+                        f"Parameter '{param}' is not a valid input for component '{task.name}' of type '{task.component.__class__.__name__}'"
+                    )
                 try:
                     source_component_name, param_name = path.split(".")
                 except ValueError:

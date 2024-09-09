@@ -105,6 +105,38 @@ def test_pipeline_parameter_validation_one_component_input_param_missing() -> No
     assert pipe.missing_inputs["a"] == ["value"]
 
 
+def test_pipeline_parameter_validation_param_mapped_twice() -> None:
+    pipe = Pipeline()
+    component_a = ComponentPassThrough()
+    component_b = ComponentPassThrough()
+    component_c = ComponentPassThrough()
+    pipe.add_component(component_a, "a")
+    pipe.add_component(component_b, "b")
+    pipe.add_component(component_c, "c")
+    pipe.connect("a", "c", {"value": "a.result"})
+    pipe.connect("b", "c", {"value": "b.result"})
+    with pytest.raises(PipelineDefinitionError) as excinfo:
+        pipe.validate_connection_parameters_for_task(pipe.get_node_by_name("c"))
+        assert (
+            "Parameter 'value' already mapped to {'component': 'a', 'param': 'result'}"
+        )
+
+
+def test_pipeline_parameter_validation_unexpected_input() -> None:
+    pipe = Pipeline()
+    component_a = ComponentPassThrough()
+    component_b = ComponentPassThrough()
+    pipe.add_component(component_a, "a")
+    pipe.add_component(component_b, "b")
+    pipe.connect("a", "b", {"result": "a.result"})
+    with pytest.raises(PipelineDefinitionError) as excinfo:
+        pipe.validate_connection_parameters_for_task(pipe.get_node_by_name("b"))
+        assert (
+            "Parameter 'result' is not a valid input for component 'b' of type 'ComponentPassThrough'"
+            in str(excinfo)
+        )
+
+
 def test_pipeline_parameter_validation_connected_components_input() -> None:
     """Parameter for component 'b' comes from the pipeline inputs"""
     pipe = Pipeline()
