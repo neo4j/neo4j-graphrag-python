@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import asyncio
+import tempfile
 from unittest import mock
 from unittest.mock import AsyncMock, call
 
@@ -306,3 +307,31 @@ async def test_pipeline_async() -> None:
     assert pipeline_result[0].run_id != pipeline_result[1].run_id
     assert pipeline_result[0].result == {"add": {"result": 21}}
     assert pipeline_result[1].result == {"add": {"result": 12}}
+
+
+def test_pipeline_to_pgv() -> None:
+    pipe = Pipeline()
+    component_a = ComponentAdd()
+    component_b = ComponentMultiply()
+    pipe.add_component(component_a, "a")
+    pipe.add_component(component_b, "b")
+    pipe.connect("a", "b", {"number1": "a.result"})
+    g = pipe.get_pygraphviz_graph()
+    # 3 nodes:
+    #   - 2 components 'a' and 'b'
+    #   - 1 output 'a.result'
+    assert len(g.nodes()) == 3
+    g = pipe.get_pygraphviz_graph(hide_unused_outputs=False)
+    # 4 nodes:
+    #   - 2 components 'a' and 'b'
+    #   - 2 output 'a.result' and 'b.result'
+    assert len(g.nodes()) == 4
+
+
+def test_pipeline_draw() -> None:
+    pipe = Pipeline()
+    pipe.add_component(ComponentAdd(), "add")
+    t = tempfile.NamedTemporaryFile()
+    pipe.draw(t.name)
+    content = t.file.read()
+    assert len(content) > 0
