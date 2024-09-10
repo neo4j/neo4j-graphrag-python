@@ -47,11 +47,8 @@ logger = logging.getLogger(__name__)
 
 
 class RunStatus(enum.Enum):
-    UNKNOWN = None
-    SCHEDULED = "SCHEDULED"
-    WAITING = "WAITING"
+    UNKNOWN = "UNKNOWN"
     RUNNING = "RUNNING"
-    SKIP = "SKIP"
     DONE = "DONE"
 
 
@@ -309,6 +306,8 @@ class Orchestrator:
 
     async def get_status_for_component(self, name: str) -> RunStatus:
         status = await self.pipeline.store.get_status_for_component(self.run_id, name)
+        if status is None:
+            return RunStatus.UNKNOWN
         return RunStatus(status)
 
     async def run(self, data: dict[str, Any]) -> None:

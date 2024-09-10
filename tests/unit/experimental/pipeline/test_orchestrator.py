@@ -203,11 +203,11 @@ async def test_orchestrator_aggregation(
     node_a = pipeline_aggregation.get_node_by_name("a")
     mock_status.side_effect = [
         # next c:
-        RunStatus.SCHEDULED,
+        RunStatus.UNKNOWN,
         # dep of c = a
         RunStatus.DONE,
         # dep of c = b
-        RunStatus.SCHEDULED,
+        RunStatus.UNKNOWN,
     ]
     next_task_names = [n.name async for n in orchestrator.next(node_a)]
     # "c" dependencies not ready yet
@@ -215,7 +215,7 @@ async def test_orchestrator_aggregation(
     # set "b" to DONE
     mock_status.side_effect = [
         # next c:
-        RunStatus.SCHEDULED,
+        RunStatus.UNKNOWN,
         # dep of c = a
         RunStatus.DONE,
         # dep of c = b
