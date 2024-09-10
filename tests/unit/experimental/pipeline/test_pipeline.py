@@ -97,6 +97,25 @@ def test_pipeline_parameter_validation_one_component_all_good() -> None:
     assert is_valid is True
 
 
+def test_pipeline_parameter_validation_called_twice() -> None:
+    pipe = Pipeline()
+    component_a = ComponentPassThrough()
+    component_b = ComponentPassThrough()
+    pipe.add_component(component_a, "a")
+    pipe.add_component(component_b, "b")
+    pipe.connect("a", "b", {"value": "a.result"})
+    is_valid = pipe.validate_connection_parameters_for_task(pipe.get_node_by_name("b"))
+    assert is_valid is True
+    with pytest.raises(PipelineDefinitionError):
+        pipe.validate_connection_parameters_for_task(pipe.get_node_by_name("b"))
+    pipe.invalidate()
+    assert pipe.is_validated is False
+    assert len(pipe.param_mapping) == 0
+    assert len(pipe.missing_inputs) == 0
+    is_valid = pipe.validate_connection_parameters_for_task(pipe.get_node_by_name("b"))
+    assert is_valid is True
+
+
 def test_pipeline_parameter_validation_one_component_input_param_missing() -> None:
     pipe = Pipeline()
     component_a = ComponentPassThrough()
@@ -129,11 +148,11 @@ def test_pipeline_parameter_validation_unexpected_input() -> None:
     component_b = ComponentPassThrough()
     pipe.add_component(component_a, "a")
     pipe.add_component(component_b, "b")
-    pipe.connect("a", "b", {"result": "a.result"})
+    pipe.connect("a", "b", {"unexpected_input_name": "a.result"})
     with pytest.raises(PipelineDefinitionError) as excinfo:
         pipe.validate_connection_parameters_for_task(pipe.get_node_by_name("b"))
         assert (
-            "Parameter 'result' is not a valid input for component 'b' of type 'ComponentPassThrough'"
+            "Parameter 'unexpected_input_name' is not a valid input for component 'b' of type 'ComponentPassThrough'"
             in str(excinfo)
         )
 
