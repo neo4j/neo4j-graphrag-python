@@ -270,7 +270,7 @@ class Orchestrator:
 
         Args:
             component_name (str): the component/task name
-            param_mapping (dict[str, Any]): the input config
+            param_mapping (dict[str, dict[str, str]]): the input config
             input_data (dict[str, Any]): the pipeline input data (user input)
         """
         component_inputs: dict[str, Any] = input_data.get(component_name, {})
@@ -340,7 +340,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         Dict structure:
         { component_name : {
                 param_name: {
-                    source_component_name: "",
+                    component: "",  # source component name
                     param_name: "",
                 }
             }
