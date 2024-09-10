@@ -157,7 +157,7 @@ class Orchestrator:
             if status == current_status:
                 raise PipelineStatusUpdateError(f"Status is already '{status}'")
             if status == RunStatus.RUNNING and current_status == RunStatus.DONE:
-                raise PipelineStatusUpdateError("Can't go back from RUNNING to DONE")
+                raise PipelineStatusUpdateError("Can't go back from DONE to RUNNING")
             return await self.pipeline.store.add_status_for_component(
                 self.run_id, task_name, status.value
             )
