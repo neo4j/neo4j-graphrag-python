@@ -239,7 +239,7 @@ class Orchestrator:
         """
         if not self.pipeline.is_validated:
             raise PipelineDefinitionError(
-                "You must validate the pipeline input config first. Call `pipeline.validate_connection_parameters()`"
+                "You must validate the pipeline input config first. Call `pipeline.validate_parameter_mapping()`"
             )
         return self.pipeline.param_mapping.get(task.name) or {}
 
@@ -386,7 +386,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         G.draw(path)
 
     def get_pygraphviz_graph(self, hide_unused_outputs: bool = True) -> pgv.AGraph:
-        self.validate_connection_parameters()
+        self.validate_parameter_mapping()
         G = pgv.AGraph(strict=False, directed=True)
         # create a node for each component
         for n, node in self._nodes.items():
@@ -477,16 +477,18 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         # invalidate the pipeline if it was already validated
         self.is_validated = False
 
-    def validate_connection_parameters(self) -> None:
-        """Go through the graph and make sure each component will not miss any input"""
+    def validate_parameter_mapping(self) -> None:
+        """Go through the graph and make sure parameter mapping is valid
+        (without considering user input yet)
+        """
         if self.is_validated:
             return
         for task in self._nodes.values():
-            self.validate_connection_parameters_for_task(task)
+            self.validate_parameter_mapping_for_task(task)
         self.is_validated = True
 
-    def validate_all_parameters(self, data: dict[str, Any]) -> bool:
-        """Performs parameter validation before running the pipeline:
+    def validate_input_data(self, data: dict[str, Any]) -> bool:
+        """Performs parameter and data validation before running the pipeline:
         - Check parameters defined in the connect method
         - Make sure the missing parameters are present in the input `data` dict.
 
@@ -499,10 +501,10 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                 parameter is missing.
         """
         if not self.is_validated:
-            self.validate_connection_parameters()
+            self.validate_parameter_mapping()
         for task in self._nodes.values():
             if task.name not in self.param_mapping:
-                self.validate_connection_parameters_for_task(task)
+                self.validate_parameter_mapping_for_task(task)
             missing_params = self.missing_inputs[task.name]
             task_data = data.get(task.name) or {}
             for param in missing_params:
@@ -512,10 +514,15 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                     )
         return True
 
-    def validate_connection_parameters_for_task(self, task: TaskPipelineNode) -> bool:
-        """Make sure that all the parameters defined in the input config
-        when connecting components are valid fields in the previous
-        component output model.
+    def validate_parameter_mapping_for_task(self, task: TaskPipelineNode) -> bool:
+        """Make sure that all the parameter mapping for a given task are valid.
+        Does not consider user input yet.
+
+        Considering the naming {param => target (component, [output_parameter]) },
+        the mapping is valid if:
+         - The target component exists in the pipeline and, if specified, the
+            target output parameter is a valid field in the target component's
+            result model.
 
         This method builds the param_mapping and missing_inputs instance variables.
         """
@@ -573,7 +580,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
     async def run(self, data: dict[str, Any]) -> PipelineResult:
         logger.debug("Starting pipeline")
         start_time = default_timer()
-        self.validate_all_parameters(data)
+        self.validate_input_data(data)
         orchestrator = Orchestrator(self)
         await orchestrator.run(data)
         end_time = default_timer()
