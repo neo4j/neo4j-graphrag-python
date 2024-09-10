@@ -1,5 +1,5 @@
-from langchain_openai import OpenAI
 from neo4j import GraphDatabase
+from neo4j_genai.llm import OpenAILLM
 from neo4j_genai.retrievers.text2cypher import Text2CypherRetriever
 
 URI = "neo4j://localhost:7687"
@@ -9,7 +9,7 @@ AUTH = ("neo4j", "password")
 driver = GraphDatabase.driver(URI, auth=AUTH)
 
 # Create LLM object
-llm = OpenAI(model="gpt-3.5-turbo-instruct")
+llm = OpenAILLM(model_name="gpt-3.5-turbo", model_params={"temperature": 0})
 
 # (Optional) Specify your own Neo4j schema
 neo4j_schema = """
@@ -36,7 +36,7 @@ examples = [
 # Initialize the retriever
 retriever = Text2CypherRetriever(
     driver=driver,
-    llm=llm,  # type: ignore
+    llm=llm,
     neo4j_schema=neo4j_schema,
     examples=examples,
 )

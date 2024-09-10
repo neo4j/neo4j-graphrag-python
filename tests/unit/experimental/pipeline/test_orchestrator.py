@@ -30,12 +30,12 @@ def test_orchestrator_get_input_config_for_task_pipeline_not_validated() -> None
     pipe.add_component(ComponentPassThrough(), "a")
     pipe.add_component(ComponentPassThrough(), "b")
     orchestrator = Orchestrator(pipe)
-    print(pipe.is_validated)
     with pytest.raises(PipelineDefinitionError):
         orchestrator.get_input_config_for_task(pipe.get_node_by_name("a"))
 
 
-def test_orchestrator_get_component_inputs_from_user_only() -> None:
+@pytest.mark.asyncio
+async def test_orchestrator_get_component_inputs_from_user_only() -> None:
     """Components take all their inputs from user input."""
     pipe = Pipeline()
     pipe.add_component(ComponentPassThrough(), "a")
@@ -45,16 +45,19 @@ def test_orchestrator_get_component_inputs_from_user_only() -> None:
         "a": {"value": "user input for component a"},
         "b": {"value": "user input for component b"},
     }
-    data = orchestrator.get_component_inputs("a", {}, input_data)
+    data = await orchestrator.get_component_inputs("a", {}, input_data)
     assert data == {"value": "user input for component a"}
-    data = orchestrator.get_component_inputs("b", {}, input_data)
+    data = await orchestrator.get_component_inputs("b", {}, input_data)
     assert data == {"value": "user input for component b"}
 
 
 @patch(
     "neo4j_genai.experimental.pipeline.pipeline.Orchestrator.get_results_for_component"
 )
-def test_pipeline_get_component_inputs_from_parent_specific(mock_result: Mock) -> None:
+@pytest.mark.asyncio
+async def test_pipeline_get_component_inputs_from_parent_specific(
+    mock_result: Mock,
+) -> None:
     """Propagate one specific output field from 'a' to the next component."""
     pipe = Pipeline()
     pipe.add_component(ComponentPassThrough(), "a")
@@ -65,7 +68,7 @@ def test_pipeline_get_component_inputs_from_parent_specific(mock_result: Mock) -
     mock_result.return_value = {"result": "output from component a"}
 
     orchestrator = Orchestrator(pipe)
-    data = orchestrator.get_component_inputs(
+    data = await orchestrator.get_component_inputs(
         "b", {"value": {"component": "a", "param": "result"}}, {}
     )
     assert data == {"value": "output from component a"}
@@ -74,7 +77,10 @@ def test_pipeline_get_component_inputs_from_parent_specific(mock_result: Mock) -
 @patch(
     "neo4j_genai.experimental.pipeline.pipeline.Orchestrator.get_results_for_component"
 )
-def test_orchestrator_get_component_inputs_from_parent_all(mock_result: Mock) -> None:
+@pytest.mark.asyncio
+async def test_orchestrator_get_component_inputs_from_parent_all(
+    mock_result: Mock,
+) -> None:
     """Use the component name to get the full output
     (without extracting a specific field).
     """
@@ -87,14 +93,17 @@ def test_orchestrator_get_component_inputs_from_parent_all(mock_result: Mock) ->
     mock_result.return_value = {"result": "output from component a"}
 
     orchestrator = Orchestrator(pipe)
-    data = orchestrator.get_component_inputs("b", {"value": {"component": "a"}}, {})
+    data = await orchestrator.get_component_inputs(
+        "b", {"value": {"component": "a"}}, {}
+    )
     assert data == {"value": {"result": "output from component a"}}
 
 
 @patch(
     "neo4j_genai.experimental.pipeline.pipeline.Orchestrator.get_results_for_component"
 )
-def test_orchestrator_get_component_inputs_from_parent_and_input(
+@pytest.mark.asyncio
+async def test_orchestrator_get_component_inputs_from_parent_and_input(
     mock_result: Mock,
 ) -> None:
     """Some parameters from user input, some other parameter from previous component."""
@@ -107,7 +116,7 @@ def test_orchestrator_get_component_inputs_from_parent_and_input(
     mock_result.return_value = {"result": "output from component a"}
 
     orchestrator = Orchestrator(pipe)
-    data = orchestrator.get_component_inputs(
+    data = await orchestrator.get_component_inputs(
         "b",
         {"value": {"component": "a"}},
         {"b": {"other_value": "user input for component b 'other_value' param"}},
@@ -121,7 +130,8 @@ def test_orchestrator_get_component_inputs_from_parent_and_input(
 @patch(
     "neo4j_genai.experimental.pipeline.pipeline.Orchestrator.get_results_for_component"
 )
-def test_orchestrator_get_component_inputs_ignore_user_input_if_input_def_provided(
+@pytest.mark.asyncio
+async def test_orchestrator_get_component_inputs_ignore_user_input_if_input_def_provided(
     mock_result: Mock,
 ) -> None:
     """If a parameter is defined both in the user input and in an input definition
@@ -138,7 +148,7 @@ def test_orchestrator_get_component_inputs_ignore_user_input_if_input_def_provid
 
     orchestrator = Orchestrator(pipe)
     with pytest.warns(Warning) as w:
-        data = orchestrator.get_component_inputs(
+        data = await orchestrator.get_component_inputs(
             "b",
             {"value": {"component": "a"}},
             {"b": {"value": "user input for component a"}},
@@ -173,27 +183,60 @@ def pipeline_aggregation() -> Pipeline:
 
 
 @pytest.mark.asyncio
-async def test_orchestrator_branch(pipeline_branch: Pipeline) -> None:
+@patch(
+    "neo4j_genai.experimental.pipeline.pipeline.Orchestrator.get_status_for_component"
+)
+async def test_orchestrator_branch(
+    mock_status: Mock, pipeline_branch: Pipeline
+) -> None:
+    """a -> b, c"""
     orchestrator = Orchestrator(pipeline=pipeline_branch)
     node_a = pipeline_branch.get_node_by_name("a")
-    node_a.status = {orchestrator.run_id: RunStatus.DONE}
+    mock_status.side_effect = [
+        # next b
+        RunStatus.UNKNOWN,
+        # dep of b = a
+        RunStatus.DONE,
+        # next c
+        RunStatus.UNKNOWN,
+        # dep of c = a
+        RunStatus.DONE,
+    ]
     next_tasks = [n async for n in orchestrator.next(node_a)]
     next_task_names = [n.name for n in next_tasks]
     assert next_task_names == ["b", "c"]
 
 
 @pytest.mark.asyncio
-async def test_orchestrator_aggregation(pipeline_aggregation: Pipeline) -> None:
+@patch(
+    "neo4j_genai.experimental.pipeline.pipeline.Orchestrator.get_status_for_component"
+)
+async def test_orchestrator_aggregation(
+    mock_status: Mock, pipeline_aggregation: Pipeline
+) -> None:
+    """a, b -> c"""
     orchestrator = Orchestrator(pipeline=pipeline_aggregation)
     node_a = pipeline_aggregation.get_node_by_name("a")
-    node_a.status = {orchestrator.run_id: RunStatus.DONE}
-    next_tasks = [n async for n in orchestrator.next(node_a)]
-    next_task_names = [n.name for n in next_tasks]
-    # "c" not ready yet
+    mock_status.side_effect = [
+        # next c:
+        RunStatus.UNKNOWN,
+        # dep of c = a
+        RunStatus.DONE,
+        # dep of c = b
+        RunStatus.UNKNOWN,
+    ]
+    next_task_names = [n.name async for n in orchestrator.next(node_a)]
+    # "c" dependencies not ready yet
     assert next_task_names == []
     # set "b" to DONE
-    node_b = pipeline_aggregation.get_node_by_name("b")
-    node_b.status = {orchestrator.run_id: RunStatus.DONE}
+    mock_status.side_effect = [
+        # next c:
+        RunStatus.UNKNOWN,
+        # dep of c = a
+        RunStatus.DONE,
+        # dep of c = b
+        RunStatus.DONE,
+    ]
     # then "c" can start
     next_tasks = [n async for n in orchestrator.next(node_a)]
     next_task_names = [n.name for n in next_tasks]
@@ -204,6 +247,5 @@ async def test_orchestrator_aggregation(pipeline_aggregation: Pipeline) -> None:
 async def test_orchestrator_aggregation_waiting(pipeline_aggregation: Pipeline) -> None:
     orchestrator = Orchestrator(pipeline=pipeline_aggregation)
     node_a = pipeline_aggregation.get_node_by_name("a")
-    node_a.status = {orchestrator.run_id: RunStatus.DONE}
     next_tasks = [n async for n in orchestrator.next(node_a)]
     assert next_tasks == []
