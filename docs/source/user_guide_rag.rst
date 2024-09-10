@@ -616,7 +616,7 @@ LLMs can be different.
     driver = GraphDatabase.driver(URI, auth=AUTH)
 
     # Create LLM object
-    llm = OpenAILLM(model_name="gpt-3.5-turbo-0125")
+    llm = OpenAILLM(model_name="gpt-3.5-turbo")
 
     # (Optional) Specify your own Neo4j schema
     neo4j_schema = """
