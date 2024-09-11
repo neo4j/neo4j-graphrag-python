@@ -19,10 +19,12 @@ import enum
 import logging
 import uuid
 import warnings
+from collections import defaultdict
 from datetime import datetime
 from timeit import default_timer
 from typing import Any, AsyncGenerator, Optional
 
+import pygraphviz as pgv
 from pydantic import BaseModel, Field
 
 from neo4j_genai.experimental.pipeline.component import Component, DataModel
@@ -128,8 +130,8 @@ class Orchestrator:
         Returns:
             None
         """
-        input_config = await self.get_input_config_for_task(task)
-        inputs = await self.get_component_inputs(task.name, input_config, data)
+        param_mapping = self.get_input_config_for_task(task)
+        inputs = await self.get_component_inputs(task.name, param_mapping, data)
         try:
             await self.set_task_status(task.name, RunStatus.RUNNING)
         except PipelineStatusUpdateError:
@@ -221,7 +223,9 @@ class Orchestrator:
             yield next_node
         return
 
-    async def get_input_config_for_task(self, task: TaskPipelineNode) -> dict[str, str]:
+    def get_input_config_for_task(
+        self, task: TaskPipelineNode
+    ) -> dict[str, dict[str, str]]:
         """Build input definition for a given task.,
         The method needs to access the input defs defined in the edges
         between this task and its parents.
@@ -231,25 +235,18 @@ class Orchestrator:
 
         Returns:
             dict: a dict of
-                {input_parameter: path_to_value_in_the_pipeline_results_dict}
+                {input_parameter: {source_component_name: "", param_name: ""}}
         """
-        input_config: dict[str, Any] = {}
-        # make sure dependencies are satisfied
-        # and save the inputs defs that needs to be propagated from parent components
-        for prev_edge in self.pipeline.previous_edges(task.name):
-            prev_status = await self.get_status_for_component(prev_edge.start)
-            if prev_status != RunStatus.DONE:
-                logger.critical(f"Missing dependency {prev_edge.start}")
-                raise PipelineMissingDependencyError(f"{prev_edge.start} not ready")
-            if prev_edge.data:
-                prev_edge_data = prev_edge.data.get("input_config") or {}
-                input_config.update(**prev_edge_data)
-        return input_config
+        if not self.pipeline.is_validated:
+            raise PipelineDefinitionError(
+                "You must validate the pipeline input config first. Call `pipeline.validate_parameter_mapping()`"
+            )
+        return self.pipeline.param_mapping.get(task.name) or {}
 
     async def get_component_inputs(
         self,
         component_name: str,
-        input_config: dict[str, Any],
+        param_mapping: dict[str, dict[str, str]],
         input_data: dict[str, Any],
     ) -> dict[str, Any]:
         """Find the component inputs from:
@@ -259,27 +256,23 @@ class Orchestrator:
 
         Args:
             component_name (str): the component/task name
-            input_config (dict[str, Any]): the input config
+            param_mapping (dict[str, dict[str, str]]): the input config
             input_data (dict[str, Any]): the pipeline input data (user input)
         """
         component_inputs: dict[str, Any] = input_data.get(component_name, {})
-        if input_config:
-            for parameter, mapping in input_config.items():
-                try:
-                    component, output_param = mapping.split(".")
-                except ValueError:
-                    # we will use the full output of
-                    # component as input
-                    component = mapping
-                    output_param = None
+        if param_mapping:
+            for parameter, mapping in param_mapping.items():
+                component = mapping["component"]
+                output_param = mapping.get("param")
                 component_result = await self.get_results_for_component(component)
                 if output_param is not None:
                     value = component_result.get(output_param)
                 else:
                     value = component_result
                 if parameter in component_inputs:
+                    m = f"{component}.{parameter}" if parameter else component
                     warnings.warn(
-                        f"In component '{component_name}', parameter '{parameter}' from user input will be ignored and replaced by '{mapping}'"
+                        f"In component '{component_name}', parameter '{parameter}' from user input will be ignored and replaced by '{m}'"
                     )
                 component_inputs[parameter] = value
         return component_inputs
@@ -333,6 +326,19 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         super().__init__()
         self.store = store or InMemoryStore()
         self.final_results = InMemoryStore()
+        self.is_validated = False
+        self.param_mapping: dict[str, dict[str, dict[str, str]]] = defaultdict(dict)
+        """
+        Dict structure:
+        { component_name : {
+                param_name: {
+                    component: "",  # source component name
+                    param_name: "",
+                }
+            }
+        }
+        """
+        self.missing_inputs: dict[str, list[str]] = defaultdict()
 
     @classmethod
     def from_template(
@@ -372,12 +378,59 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         )
         return pipeline_config.model_dump()
 
+    def draw(
+        self, path: str, layout: str = "dot", hide_unused_outputs: bool = True
+    ) -> Any:
+        G = self.get_pygraphviz_graph(hide_unused_outputs)
+        G.layout(layout)
+        G.draw(path)
+
+    def get_pygraphviz_graph(self, hide_unused_outputs: bool = True) -> pgv.AGraph:
+        self.validate_parameter_mapping()
+        G = pgv.AGraph(strict=False, directed=True)
+        # create a node for each component
+        for n, node in self._nodes.items():
+            comp_inputs = ",".join(
+                f"{i}: {d['annotation']}"
+                for i, d in node.component.component_inputs.items()
+            )
+            G.add_node(
+                n,
+                node_type="component",
+                shape="rectangle",
+                label=f"{node.component.__class__.__name__}: {n}({comp_inputs})",
+            )
+            # create a node for each output field and connect them it to its component
+            for o in node.component.component_outputs:
+                param_node_name = f"{n}.{o}"
+                G.add_node(param_node_name, label=o, node_type="output")
+                G.add_edge(n, param_node_name)
+        # then we create the edges between a component output
+        # and the component it gets added to
+        for component_name, params in self.param_mapping.items():
+            for param, mapping in params.items():
+                source_component = mapping["component"]
+                source_param_name = mapping.get("param")
+                if source_param_name:
+                    source_output_node = f"{source_component}.{source_param_name}"
+                else:
+                    source_output_node = source_component
+                G.add_edge(source_output_node, component_name, label=param)
+        # remove outputs that are not mapped
+        if hide_unused_outputs:
+            for n in G.nodes():
+                if n.attr["node_type"] == "output" and G.out_degree(n) == 0:  # type: ignore
+                    G.remove_node(n)
+        return G
+
     def add_component(self, component: Component, name: str) -> None:
         """Add a new component. Components are uniquely identified
         by their name. If 'name' is already in the pipeline, a ValueError
         is raised."""
         task = TaskPipelineNode(name, component)
         self.add_node(task)
+        # invalidate the pipeline if it was already validated
+        self.is_validated = False
 
     def set_component(self, name: str, component: Component) -> None:
         """Replace a component with another. If 'name' is not yet in the pipeline,
@@ -385,6 +438,8 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         """
         task = TaskPipelineNode(name, component)
         self.set_node(task)
+        # invalidate the pipeline if it was already validated
+        self.is_validated = False
 
     def connect(
         self,
@@ -419,21 +474,57 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
             )
         if self.is_cyclic():
             raise PipelineDefinitionError("Cyclic graph are not allowed")
+        # invalidate the pipeline if it was already validated
+        self.is_validated = False
 
-    def validate_inputs_config(self, data: dict[str, Any]) -> None:
-        """Go through the graph and make sure each component will not miss any input
+    def validate_parameter_mapping(self) -> None:
+        """Go through the graph and make sure parameter mapping is valid
+        (without considering user input yet)
+        """
+        if self.is_validated:
+            return
+        for task in self._nodes.values():
+            self.validate_parameter_mapping_for_task(task)
+        self.is_validated = True
+
+    def validate_input_data(self, data: dict[str, Any]) -> bool:
+        """Performs parameter and data validation before running the pipeline:
+        - Check parameters defined in the connect method
+        - Make sure the missing parameters are present in the input `data` dict.
 
         Args:
-            data (dict[str, Any]): the user provided data in the `pipeline.run` method.
-        """
-        for task in self._nodes.values():
-            self.validate_inputs_config_for_task(task, data)
+            data (dict[str, Any]): input data to use for validation
+                (usually from Pipeline.run)
 
-    def validate_inputs_config_for_task(
-        self, task: TaskPipelineNode, input_data: dict[str, Any]
-    ) -> bool:
-        """Make sure the parameter defined in the input config
-        matches a parameter in the previous component output model.
+        Raises:
+            PipelineDefinitionError if any parameter mapping is invalid or if a
+                parameter is missing.
+        """
+        if not self.is_validated:
+            self.validate_parameter_mapping()
+        for task in self._nodes.values():
+            if task.name not in self.param_mapping:
+                self.validate_parameter_mapping_for_task(task)
+            missing_params = self.missing_inputs[task.name]
+            task_data = data.get(task.name) or {}
+            for param in missing_params:
+                if param not in task_data:
+                    raise PipelineDefinitionError(
+                        f"Parameter '{param}' not provided for component '{task.name}'"
+                    )
+        return True
+
+    def validate_parameter_mapping_for_task(self, task: TaskPipelineNode) -> bool:
+        """Make sure that all the parameter mapping for a given task are valid.
+        Does not consider user input yet.
+
+        Considering the naming {param => target (component, [output_parameter]) },
+        the mapping is valid if:
+         - The target component exists in the pipeline and, if specified, the
+            target output parameter is a valid field in the target component's
+            result model.
+
+        This method builds the param_mapping and missing_inputs instance variables.
         """
         component = task.component
         expected_mandatory_inputs = [
@@ -443,7 +534,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         ]
         # start building the actual input list, starting
         # from the inputs provided in the pipeline.run method
-        actual_inputs = list(input_data.get(task.name, {}).keys())
+        actual_inputs = []
         prev_edges = self.previous_edges(task.name)
         # then, iterate over all parents to find the parameter propagation
         for edge in prev_edges:
@@ -457,10 +548,18 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                 except ValueError:
                     # no specific output mapped
                     # the full source component result will be
-                    # passed to the next component, so no need
-                    # for further check
+                    # passed to the next component
+                    self.param_mapping[task.name][param] = {
+                        "component": path,
+                    }
                     continue
-                source_node = self.get_node_by_name(source_component_name)
+                try:
+                    source_node = self.get_node_by_name(source_component_name)
+                except KeyError:
+                    raise PipelineDefinitionError(
+                        f"Component {source_component_name} does not exist in the pipeline,"
+                        f" can not map {param} to {path} for {task.name}."
+                    )
                 source_component = source_node.component
                 source_component_outputs = source_component.component_outputs
                 if param_name and param_name not in source_component_outputs:
@@ -469,20 +568,19 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                         f"{source_component_name} (must be one of "
                         f"{list(source_component_outputs.keys())})"
                     )
-
+                self.param_mapping[task.name][param] = {
+                    "component": source_component_name,
+                    "param": param_name,
+                }
             actual_inputs.extend(list(edge_inputs.keys()))
-        if set(expected_mandatory_inputs) - set(actual_inputs):
-            raise PipelineDefinitionError(
-                f"Missing input parameters for {task.name}: "
-                f"Expected parameters: {expected_mandatory_inputs}. "
-                f"Got: {actual_inputs}"
-            )
+        missing_inputs = list(set(expected_mandatory_inputs) - set(actual_inputs))
+        self.missing_inputs[task.name] = missing_inputs
         return True
 
     async def run(self, data: dict[str, Any]) -> PipelineResult:
         logger.debug("Starting pipeline")
         start_time = default_timer()
-        self.validate_inputs_config(data)
+        self.validate_input_data(data)
         orchestrator = Orchestrator(self)
         await orchestrator.run(data)
         end_time = default_timer()
