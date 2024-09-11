@@ -17,7 +17,10 @@ from __future__ import annotations
 import warnings
 from typing import Any, Optional
 
-from neo4j_graphrag.exceptions import PromptMissingInputError
+from neo4j_graphrag.exceptions import (
+    PromptMissingInputError,
+    PromptMissingPlaceholderError,
+)
 
 
 class PromptTemplate:
