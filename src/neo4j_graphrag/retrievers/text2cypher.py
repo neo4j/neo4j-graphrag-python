@@ -120,7 +120,7 @@ class Text2CypherRetriever(Retriever):
 
         Args:
             query_text (str): The natural language query used to search the Neo4j database.
-            kwargs: additional values to inject into the custom prompt, if it is provided.
+            prompt_params (Dict[str, Any]): additional values to inject into the custom prompt, if it is provided. Example: {'schema': 'this is the graph schema'}
 
         Raises:
             SearchValidationError: If validation of the input arguments fail.
