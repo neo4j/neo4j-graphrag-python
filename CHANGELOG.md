@@ -2,6 +2,8 @@
 
 ## Next
 
+### IMPORTANT NOTICE
+- The `neo4j-genai` package is now deprecated. Users are advised to switch to the new package `neo4j-graphrag`.
 ### Added
 - Ability to visualise pipeline with `my_pipeline.draw("pipeline.png")`
 

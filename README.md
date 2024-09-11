@@ -1,3 +1,9 @@
+# ⚠️ Deprecation Warning ⚠️
+
+This package `neo4j-genai` is deprecated and will no longer be maintained. Please switch to our new package `neo4j-graphrag`, which is available at [neo4j-graphrag on GitHub](https://github.com/neo4j/neo4j-graphrag-python) and [neo4j-graphrag on PyPI](https://pypi.org/project/neo4j-graphrag/).
+
+`neo4j-graphrag` is a renamed continuation of this package. We encourage all users to migrate to the new package to continue receiving updates and support.
+
 # Neo4j GenAI package for Python
 
 This repository contains the official Neo4j GenAI features for Python.
