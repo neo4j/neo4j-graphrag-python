@@ -1,4 +1,4 @@
-# @neo4j/neo4j-graphrag
+# @neo4j/neo4j-graphrag-python
 
 ## Next
 

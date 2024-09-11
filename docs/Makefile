@@ -3,7 +3,7 @@
 
 # You can set these variables from the command line.
 VERSION       = SNAPSHOT
-PRODUCT       = neo4j-graphrag
+PRODUCT       = neo4j-graphrag-python
 SPHINXOPTS    =
 SPHINXBUILD   = poetry run sphinx-build
 PAPER         =
