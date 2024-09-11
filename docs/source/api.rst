@@ -144,6 +144,18 @@ SentenceTransformerEmbeddings
 .. autoclass:: neo4j_graphrag.embeddings.sentence_transformers.SentenceTransformerEmbeddings
     :members:
 
+OpenAIEmbeddings
+================
+
+.. autoclass:: neo4j_genai.embeddings.openai.OpenAIEmbeddings
+    :members:
+
+VertexAIEmbeddings
+==================
+
+.. autoclass:: neo4j_genai.embeddings.vertexai.VertexAIEmbeddings
+    :members:
+
 **********
 Generation
 **********
