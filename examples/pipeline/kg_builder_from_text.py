@@ -64,6 +64,7 @@ async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
     """This is where we define and run the KG builder pipeline, instantiating a few
     components:
     - Text Splitter: in this example we use a text splitter from the LangChain package
+    - Chunk Embedder: to embed the chunks' text
     - Schema Builder: this component takes a list of entities, relationships and
         possible triplets as inputs, validate them and return a schema ready to use
         for the rest of the pipeline
