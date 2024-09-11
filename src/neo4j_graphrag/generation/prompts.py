@@ -30,7 +30,7 @@ class PromptTemplate:
     """
 
     DEFAULT_TEMPLATE: str = ""
-    EXPECTED_INPUTS: list[str] = []
+    EXPECTED_INPUTS: list[str] = list()
 
     def __init__(
         self,
@@ -133,23 +133,21 @@ Cypher query:
         query: Optional[str] = None,
         **kwargs: Any,
     ) -> str:
-        try:
-            if query is not None:
-                if query_text:
-                    warnings.warn(
-                        "Both 'query' and 'query_text' are provided, 'query_text' will be used.",
-                        DeprecationWarning,
-                        stacklevel=2,
-                    )
-                elif isinstance(query, str):
-                    warnings.warn(
-                        "'query' is deprecated and will be removed in a future version, please use 'query_text' instead.",
-                        DeprecationWarning,
-                        stacklevel=2,
-                    )
-                    query_text = query
-        except ValidationError as e:
-            raise SearchValidationError(e.errors())
+        if query is not None:
+            if query_text:
+                warnings.warn(
+                    "Both 'query' and 'query_text' are provided, 'query_text' will be used.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+            elif isinstance(query, str):
+                warnings.warn(
+                    "'query' is deprecated and will be removed in a future version, please use 'query_text' instead.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                query_text = query
+
         return super().format(query_text=query_text, schema=schema, examples=examples)
 
 
@@ -179,32 +177,14 @@ Examples:
 
 Input text:
 
-{query_text}
+{text}
 """
-    EXPECTED_INPUTS = ["query_text"]
+    EXPECTED_INPUTS = ["text"]
 
     def format(
         self,
         schema: dict[str, Any],
         examples: str,
-        query_text: str = "",
-        text: Optional[str] = None,
+        text: str = "",
     ) -> str:
-        try:
-            if text is not None:
-                if query_text:
-                    warnings.warn(
-                        "Both 'text' and 'query_text' are provided, 'query_text' will be used.",
-                        DeprecationWarning,
-                        stacklevel=2,
-                    )
-                elif isinstance(text, str):
-                    warnings.warn(
-                        "'text' is deprecated and will be removed in a future version, please use 'query_text' instead.",
-                        DeprecationWarning,
-                        stacklevel=2,
-                    )
-                    query_text = text
-        except ValidationError as e:
-            raise SearchValidationError(e.errors())
-        return super().format(query_text=query_text, schema=schema, examples=examples)
+        return super().format(text=text, schema=schema, examples=examples)

@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Dict, Optional
 
 import neo4j
 from neo4j.exceptions import CypherSyntaxError, DriverError, Neo4jError
@@ -112,7 +112,9 @@ class Text2CypherRetriever(Retriever):
                 f"Failed to fetch schema for Text2CypherRetriever: {error_message}"
             ) from e
 
-    def get_search_results(self, query_text: str, **kwargs: Any) -> RawSearchResult:
+    def get_search_results(
+        self, query_text: str, prompt_params: Optional[Dict[str, Any]] = None
+    ) -> RawSearchResult:
         """Converts query_text to a Cypher query using an LLM.
            Retrieve records from a Neo4j database using the generated Cypher query.
 
@@ -132,21 +134,26 @@ class Text2CypherRetriever(Retriever):
         except ValidationError as e:
             raise SearchValidationError(e.errors()) from e
 
-        # parse the schema and examples inputs
-        examples_to_use = kwargs.get("examples") or (
-            "\n".join(self.examples) if self.examples else ""
-        )
-        schema_to_use = kwargs.get("schema") or self.neo4j_schema
-        kwargs.pop("examples", None)
-        kwargs.pop("schema", None)
-
         prompt_template = Text2CypherTemplate(template=self.custom_prompt)
+
+        if prompt_params is not None:
+            # parse the schema and examples inputs
+            examples_to_use = prompt_params.get("examples") or (
+                "\n".join(self.examples) if self.examples else ""
+            )
+            schema_to_use = prompt_params.get("schema") or self.neo4j_schema
+            prompt_params.pop("examples", None)
+            prompt_params.pop("schema", None)
+        else:
+            examples_to_use = "\n".join(self.examples) if self.examples else ""
+            schema_to_use = self.neo4j_schema
+            prompt_params = dict()
 
         prompt = prompt_template.format(
             schema=schema_to_use,
             examples=examples_to_use,
             query_text=validated_data.query_text,
-            **kwargs,
+            **prompt_params,
         )
 
         logger.debug("Text2CypherRetriever prompt: %s", prompt)

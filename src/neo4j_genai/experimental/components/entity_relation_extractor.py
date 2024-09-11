@@ -313,7 +313,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         self.llm = llm  # with response_format={ "type": "json_object" },
         self.max_concurrency = max_concurrency
         if isinstance(prompt_template, str):
-            template = PromptTemplate(prompt_template, expected_inputs=["query_text"])
+            template = PromptTemplate(prompt_template, expected_inputs=["text"])
         else:
             template = prompt_template
         self.prompt_template = template
@@ -323,7 +323,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
     ) -> Neo4jGraph:
         """Run entity extraction for a given text chunk."""
         prompt = self.prompt_template.format(
-            query_text=chunk.text, schema=schema.model_dump(), examples=examples
+            text=chunk.text, schema=schema.model_dump(), examples=examples
         )
         llm_result = await self.llm.ainvoke(prompt)
         try:

@@ -129,7 +129,7 @@ def test_t2c_retriever_happy_path(
     prompt = template.format(
         schema=neo4j_schema,
         examples="\n".join(examples),
-        query=query_text,
+        query_text=query_text,
     )
     retriever.search(query_text=query_text)
     llm.invoke.assert_called_once_with(prompt)
@@ -251,7 +251,7 @@ def test_t2c_retriever_invalid_custom_prompt_type(
 
 
 @patch("neo4j_genai.retrievers.base.Retriever._verify_version")
-def test_t2c_retriever_with_custom_prompt_kwargs_inputs(
+def test_t2c_retriever_with_custom_prompt_prompt_params(
     _verify_version_mock: MagicMock,
     driver: MagicMock,
     llm: MagicMock,
@@ -267,7 +267,37 @@ def test_t2c_retriever_with_custom_prompt_kwargs_inputs(
         None,
         None,
     )
-    retriever.search(query_text=query, examples=examples)
+    retriever.search(query_text=query, prompt_params={"examples": examples})
+
+    llm.invoke.assert_called_once_with(
+        """This is a custom prompt. test ['example A', 'example B']"""
+    )
+
+
+@patch("neo4j_genai.retrievers.base.Retriever._verify_version")
+def test_t2c_retriever_with_custom_prompt_bad_prompt_params(
+    _verify_version_mock: MagicMock,
+    driver: MagicMock,
+    llm: MagicMock,
+    neo4j_record: MagicMock,
+) -> None:
+    prompt = "This is a custom prompt. {query_text} {examples}"
+    query = "test"
+    examples = ["example A", "example B"]
+
+    retriever = Text2CypherRetriever(driver=driver, llm=llm, custom_prompt=prompt)
+    driver.execute_query.return_value = (
+        [neo4j_record],
+        None,
+        None,
+    )
+    retriever.search(
+        query_text=query,
+        prompt_params={
+            "examples": examples,
+            "bad_param": "this should not be present in template.",
+        },
+    )
 
     llm.invoke.assert_called_once_with(
         """This is a custom prompt. test ['example A', 'example B']"""
