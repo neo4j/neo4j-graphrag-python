@@ -10,6 +10,9 @@
 
 ### Changed
 - Pipeline run method now return a PipelineResult object.
+- Improved parameter validation for pipelines (#124). Pipeline now raise an error before a run starts if:
+  - the same parameter is mapped twice
+  - or a parameter is defined in the mapping but is not a valid component input
 
 
 ## 0.5.0
