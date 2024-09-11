@@ -214,7 +214,7 @@ async def test_extractor_custom_prompt() -> None:
     llm.invoke.return_value = LLMResponse(content='{"nodes": [], "relationships": []}')
 
     extractor = LLMEntityRelationExtractor(
-        llm=llm, prompt_template="this is my prompt {query_text}"
+        llm=llm, prompt_template="this is my prompt {text}"
     )
     chunks = TextChunks(chunks=[TextChunk(text="some text")])
     await extractor.run(chunks=chunks)

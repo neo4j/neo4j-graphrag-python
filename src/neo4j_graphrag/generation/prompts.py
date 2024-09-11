@@ -33,7 +33,7 @@ class PromptTemplate:
     """
 
     DEFAULT_TEMPLATE: str = ""
-    EXPECTED_INPUTS: list[str] = []
+    EXPECTED_INPUTS: list[str] = list()
 
     def __init__(
         self,
@@ -179,9 +179,9 @@ Examples:
 
 Input text:
 
-{query_text}
+{text}
 """
-    EXPECTED_INPUTS = ["query_text"]
+    EXPECTED_INPUTS = ["text"]
 
     def format(
         self,
