@@ -19,6 +19,7 @@ and in-memory store implementation.
 from __future__ import annotations
 
 import abc
+import asyncio
 from typing import Any
 
 
@@ -26,7 +27,7 @@ class Store(abc.ABC):
     """An interface to save component outputs"""
 
     @abc.abstractmethod
-    def add(self, key: str, value: Any, overwrite: bool = True) -> None:
+    async def add(self, key: str, value: Any, overwrite: bool = True) -> None:
         """
         Args:
             key (str): The key to access the data.
@@ -41,7 +42,7 @@ class Store(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get(self, key: str) -> Any:
+    async def get(self, key: str) -> Any:
         """Retrieve value for `key`.
         If key not found, returns None.
         """
@@ -62,16 +63,32 @@ class Store(abc.ABC):
 
 class ResultStore(Store, abc.ABC):
     @staticmethod
-    def get_key(run_id: str, task_name: str) -> str:
-        return f"{run_id}:{task_name}"
+    def get_key(run_id: str, task_name: str, suffix: str = "") -> str:
+        key = f"{run_id}:{task_name}"
+        if suffix:
+            key += f":{suffix}"
+        return key
 
-    def add_result_for_component(
+    async def add_status_for_component(
+        self,
+        run_id: str,
+        task_name: str,
+        status: str,
+    ) -> None:
+        await self.add(
+            self.get_key(run_id, task_name, "status"), status, overwrite=True
+        )
+
+    async def get_status_for_component(self, run_id: str, task_name: str) -> Any:
+        return await self.get(self.get_key(run_id, task_name, "status"))
+
+    async def add_result_for_component(
         self, run_id: str, task_name: str, result: Any, overwrite: bool = False
     ) -> None:
-        self.add(self.get_key(run_id, task_name), result, overwrite=overwrite)
+        await self.add(self.get_key(run_id, task_name), result, overwrite=overwrite)
 
-    def get_result_for_component(self, run_id: str, task_name: str) -> Any:
-        return self.get(self.get_key(run_id, task_name))
+    async def get_result_for_component(self, run_id: str, task_name: str) -> Any:
+        return await self.get(self.get_key(run_id, task_name))
 
 
 class InMemoryStore(ResultStore):
@@ -80,14 +97,18 @@ class InMemoryStore(ResultStore):
 
     def __init__(self) -> None:
         self._data: dict[str, Any] = {}
+        self._lock = asyncio.Lock()
+        """This lock is used to prevent read while a write in ongoing and vice-versa."""
 
-    def add(self, key: str, value: Any, overwrite: bool = True) -> None:
-        if (not overwrite) and key in self._data:
-            raise KeyError(f"{key} already exists")
-        self._data[key] = value
+    async def add(self, key: str, value: Any, overwrite: bool = True) -> None:
+        async with self._lock:
+            if (not overwrite) and key in self._data:
+                raise KeyError(f"{key} already exists")
+            self._data[key] = value
 
-    def get(self, key: str) -> Any:
-        return self._data.get(key)
+    async def get(self, key: str) -> Any:
+        async with self._lock:
+            return self._data.get(key)
 
     def all(self) -> dict[str, Any]:
         return self._data

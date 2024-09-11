@@ -261,9 +261,13 @@ async def test_pipeline_builder_happy_path(
     assert res.run_id is not None
     assert res.result == {"writer": {"status": "SUCCESS"}}
     # check component's results
-    chunks = kg_builder_pipeline.store.get_result_for_component(res.run_id, "splitter")
+    chunks = await kg_builder_pipeline.store.get_result_for_component(
+        res.run_id, "splitter"
+    )
     assert len(chunks["chunks"]) == 3
-    graph = kg_builder_pipeline.store.get_result_for_component(res.run_id, "extractor")
+    graph = await kg_builder_pipeline.store.get_result_for_component(
+        res.run_id, "extractor"
+    )
     # 3 entities + 3 chunks + 1 document
     nodes = graph["nodes"]
     assert len(nodes) == 7
@@ -463,9 +467,13 @@ async def test_pipeline_builder_failing_chunk_do_not_raise(
     assert res.run_id is not None
     assert res.result == {"writer": {"status": "SUCCESS"}}
     # check component's results
-    chunks = kg_builder_pipeline.store.get_result_for_component(res.run_id, "splitter")
+    chunks = await kg_builder_pipeline.store.get_result_for_component(
+        res.run_id, "splitter"
+    )
     assert len(chunks["chunks"]) == 3
-    graph = kg_builder_pipeline.store.get_result_for_component(res.run_id, "extractor")
+    graph = await kg_builder_pipeline.store.get_result_for_component(
+        res.run_id, "extractor"
+    )
     # 3 entities + 3 chunks
     nodes = graph["nodes"]
     assert len(nodes) == 6
