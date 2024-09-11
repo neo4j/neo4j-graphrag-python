@@ -522,8 +522,11 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
     def validate_parameter_mapping_for_task(self, task: TaskPipelineNode) -> bool:
         """Make sure that all the parameter mapping for a given task are valid.
         Does not consider user input yet.
+
         Considering the naming {param => target (component, [output_parameter]) },
         the mapping is valid if:
+         - 'param' is a valid input for task
+         - 'param' has not already been mapped
          - The target component exists in the pipeline and, if specified, the
             target output parameter is a valid field in the target component's
             result model.
