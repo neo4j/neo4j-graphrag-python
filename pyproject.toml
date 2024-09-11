@@ -24,7 +24,7 @@ homepage = "https://neo4j.com/"
 repository = "https://github.com/neo4j/neo4j-genai-python"
 
 [[tool.poetry.packages]]
-include = "neo4j_genai"
+include = "neo4j_graphrag"
 from = "src"
 
 [tool.poetry.dependencies]
