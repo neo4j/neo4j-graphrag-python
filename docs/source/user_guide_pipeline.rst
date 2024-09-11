@@ -96,3 +96,38 @@ The data flow is illustrated in the diagram below:
             asyncio.run(pipe.run({"a": {"number1": 10, "number2": 1}, "b": {"number1": 4, "number2": 42}}))
 
     The result will still be **15** because the user input `"number2": 42` is ignored.
+
+
+**********************
+Visualising a Pipeline
+**********************
+
+Pipelines can be visualized using the `draw` method:
+
+.. code:: python
+
+    import asyncio
+    from neo4j_genai.experimental.pipeline import Pipeline
+
+    pipe = Pipeline()
+    # ... define components and connections
+
+    pipe.draw("pipeline.png")
+
+Here is an example pipeline rendering:
+
+.. image:: images/pipeline_no_unused_outputs.png
+  :alt: Pipeline visualisation with hidden outputs if unused
+
+
+By default, output fields which are not mapped to any component are hidden. They
+can be added to the canvas by setting `hide_unused_outputs` to `False`:
+
+.. code:: python
+
+    pipe.draw("pipeline.png", hide_unused_outputs=False)
+
+Here is an example of final result:
+
+.. image:: images/pipeline_full.png
+  :alt: Pipeline visualisation

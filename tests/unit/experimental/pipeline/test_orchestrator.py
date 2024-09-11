@@ -16,12 +16,22 @@ from unittest.mock import Mock, patch
 
 import pytest
 from neo4j_genai.experimental.pipeline import Component
+from neo4j_genai.experimental.pipeline.exceptions import PipelineDefinitionError
 from neo4j_genai.experimental.pipeline.pipeline import Orchestrator, Pipeline, RunStatus
 
 from tests.unit.experimental.pipeline.components import (
     ComponentNoParam,
     ComponentPassThrough,
 )
+
+
+def test_orchestrator_get_input_config_for_task_pipeline_not_validated() -> None:
+    pipe = Pipeline()
+    pipe.add_component(ComponentPassThrough(), "a")
+    pipe.add_component(ComponentPassThrough(), "b")
+    orchestrator = Orchestrator(pipe)
+    with pytest.raises(PipelineDefinitionError):
+        orchestrator.get_input_config_for_task(pipe.get_node_by_name("a"))
 
 
 @pytest.mark.asyncio
@@ -58,7 +68,9 @@ async def test_pipeline_get_component_inputs_from_parent_specific(
     mock_result.return_value = {"result": "output from component a"}
 
     orchestrator = Orchestrator(pipe)
-    data = await orchestrator.get_component_inputs("b", {"value": "a.result"}, {})
+    data = await orchestrator.get_component_inputs(
+        "b", {"value": {"component": "a", "param": "result"}}, {}
+    )
     assert data == {"value": "output from component a"}
 
 
@@ -81,7 +93,9 @@ async def test_orchestrator_get_component_inputs_from_parent_all(
     mock_result.return_value = {"result": "output from component a"}
 
     orchestrator = Orchestrator(pipe)
-    data = await orchestrator.get_component_inputs("b", {"value": "a"}, {})
+    data = await orchestrator.get_component_inputs(
+        "b", {"value": {"component": "a"}}, {}
+    )
     assert data == {"value": {"result": "output from component a"}}
 
 
@@ -104,7 +118,7 @@ async def test_orchestrator_get_component_inputs_from_parent_and_input(
     orchestrator = Orchestrator(pipe)
     data = await orchestrator.get_component_inputs(
         "b",
-        {"value": "a"},
+        {"value": {"component": "a"}},
         {"b": {"other_value": "user input for component b 'other_value' param"}},
     )
     assert data == {
@@ -135,12 +149,14 @@ async def test_orchestrator_get_component_inputs_ignore_user_input_if_input_def_
     orchestrator = Orchestrator(pipe)
     with pytest.warns(Warning) as w:
         data = await orchestrator.get_component_inputs(
-            "b", {"value": "a"}, {"b": {"value": "user input for component a"}}
+            "b",
+            {"value": {"component": "a"}},
+            {"b": {"value": "user input for component a"}},
         )
         assert data == {"value": {"result": "output from component a"}}
         assert (
             w[0].message.args[0]  # type: ignore[union-attr]
-            == "In component 'b', parameter 'value' from user input will be ignored and replaced by 'a'"
+            == "In component 'b', parameter 'value' from user input will be ignored and replaced by 'a.value'"
         )
 
 
