@@ -17,25 +17,25 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from neo4j.exceptions import CypherSyntaxError, Neo4jError
-from neo4j_genai.exceptions import (
+from neo4j_graphrag.exceptions import (
     RetrieverInitializationError,
     SearchValidationError,
     Text2CypherRetrievalError,
 )
-from neo4j_genai.generation.prompts import Text2CypherTemplate
-from neo4j_genai.llm import LLMResponse
-from neo4j_genai.retrievers import Text2CypherRetriever
-from neo4j_genai.types import RetrieverResult, RetrieverResultItem
+from neo4j_graphrag.generation.prompts import Text2CypherTemplate
+from neo4j_graphrag.llm import LLMResponse
+from neo4j_graphrag.retrievers import Text2CypherRetriever
+from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
 
 
 def test_t2c_retriever_initialization(driver: MagicMock, llm: MagicMock) -> None:
-    with patch("neo4j_genai.retrievers.base.Retriever._verify_version") as mock_verify:
+    with patch("neo4j_graphrag.retrievers.base.Retriever._verify_version") as mock_verify:
         Text2CypherRetriever(driver, llm, neo4j_schema="dummy-text")
         mock_verify.assert_called_once()
 
 
-@patch("neo4j_genai.retrievers.base.Retriever._verify_version")
-@patch("neo4j_genai.retrievers.text2cypher.get_schema")
+@patch("neo4j_graphrag.retrievers.base.Retriever._verify_version")
+@patch("neo4j_graphrag.retrievers.text2cypher.get_schema")
 def test_t2c_retriever_schema_retrieval(
     _verify_version_mock: MagicMock,
     get_schema_mock: MagicMock,
@@ -46,8 +46,8 @@ def test_t2c_retriever_schema_retrieval(
     get_schema_mock.assert_called_once()
 
 
-@patch("neo4j_genai.retrievers.base.Retriever._verify_version")
-@patch("neo4j_genai.retrievers.text2cypher.get_schema")
+@patch("neo4j_graphrag.retrievers.base.Retriever._verify_version")
+@patch("neo4j_graphrag.retrievers.text2cypher.get_schema")
 def test_t2c_retriever_schema_retrieval_failure(
     _verify_version_mock: MagicMock,
     get_schema_mock: MagicMock,
@@ -59,7 +59,7 @@ def test_t2c_retriever_schema_retrieval_failure(
         Text2CypherRetriever(driver, llm)
 
 
-@patch("neo4j_genai.retrievers.Text2CypherRetriever._verify_version")
+@patch("neo4j_graphrag.retrievers.Text2CypherRetriever._verify_version")
 def test_t2c_retriever_invalid_neo4j_schema(
     _verify_version_mock: MagicMock, driver: MagicMock, llm: MagicMock
 ) -> None:
@@ -74,7 +74,7 @@ def test_t2c_retriever_invalid_neo4j_schema(
     assert "Input should be a valid string" in str(exc_info.value)
 
 
-@patch("neo4j_genai.retrievers.Text2CypherRetriever._verify_version")
+@patch("neo4j_graphrag.retrievers.Text2CypherRetriever._verify_version")
 def test_t2c_retriever_invalid_search_query(
     _verify_version_mock: MagicMock, driver: MagicMock, llm: MagicMock
 ) -> None:
@@ -88,7 +88,7 @@ def test_t2c_retriever_invalid_search_query(
     assert "Input should be a valid string" in str(exc_info.value)
 
 
-@patch("neo4j_genai.retrievers.Text2CypherRetriever._verify_version")
+@patch("neo4j_graphrag.retrievers.Text2CypherRetriever._verify_version")
 def test_t2c_retriever_invalid_search_examples(
     _verify_version_mock: MagicMock, driver: MagicMock, llm: MagicMock
 ) -> None:
@@ -104,7 +104,7 @@ def test_t2c_retriever_invalid_search_examples(
     assert "Initialization failed" in str(exc_info.value)
 
 
-@patch("neo4j_genai.retrievers.Text2CypherRetriever._verify_version")
+@patch("neo4j_graphrag.retrievers.Text2CypherRetriever._verify_version")
 def test_t2c_retriever_happy_path(
     _verify_version_mock: MagicMock,
     driver: MagicMock,
@@ -135,7 +135,7 @@ def test_t2c_retriever_happy_path(
     driver.execute_query.assert_called_once_with(query_=t2c_query)
 
 
-@patch("neo4j_genai.retrievers.Text2CypherRetriever._verify_version")
+@patch("neo4j_graphrag.retrievers.Text2CypherRetriever._verify_version")
 def test_t2c_retriever_cypher_error(
     _verify_version_mock: MagicMock, driver: MagicMock, llm: MagicMock
 ) -> None:
@@ -153,7 +153,7 @@ def test_t2c_retriever_cypher_error(
     assert "Failed to get search result" in str(e)
 
 
-@patch("neo4j_genai.retrievers.Text2CypherRetriever._verify_version")
+@patch("neo4j_graphrag.retrievers.Text2CypherRetriever._verify_version")
 def test_t2c_retriever_with_result_format_function(
     _verify_version_mock: MagicMock,
     driver: MagicMock,
@@ -186,7 +186,7 @@ def test_t2c_retriever_with_result_format_function(
 
 
 @pytest.mark.usefixtures("caplog")
-@patch("neo4j_genai.retrievers.base.Retriever._verify_version")
+@patch("neo4j_graphrag.retrievers.base.Retriever._verify_version")
 def test_t2c_retriever_initialization_with_custom_prompt(
     _verify_version_mock: MagicMock,
     driver: MagicMock,
@@ -208,7 +208,7 @@ def test_t2c_retriever_initialization_with_custom_prompt(
 
 
 @pytest.mark.usefixtures("caplog")
-@patch("neo4j_genai.retrievers.base.Retriever._verify_version")
+@patch("neo4j_graphrag.retrievers.base.Retriever._verify_version")
 def test_t2c_retriever_initialization_with_custom_prompt_and_schema_and_examples(
     _verify_version_mock: MagicMock,
     driver: MagicMock,
@@ -238,7 +238,7 @@ def test_t2c_retriever_initialization_with_custom_prompt_and_schema_and_examples
     assert f"Text2CypherRetriever prompt: {prompt}" in caplog.text
 
 
-@patch("neo4j_genai.retrievers.Text2CypherRetriever._verify_version")
+@patch("neo4j_graphrag.retrievers.Text2CypherRetriever._verify_version")
 def test_t2c_retriever_invalid_custom_prompt_type(
     _verify_version_mock: MagicMock, driver: MagicMock, llm: MagicMock
 ) -> None:

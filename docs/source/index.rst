@@ -1,4 +1,4 @@
-.. neo4j-genai-python documentation master file, created by
+.. neo4j-graphrag documentation master file, created by
    sphinx-quickstart on Tue Apr  9 16:36:43 2024.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
@@ -61,7 +61,7 @@ To install the latest stable version, use:
 
 .. code:: bash
 
-    pip install neo4j-genai
+    pip install neo4j-graphrag
 
 
 .. note::

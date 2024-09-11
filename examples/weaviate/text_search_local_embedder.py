@@ -1,6 +1,6 @@
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from neo4j import GraphDatabase
-from neo4j_genai.retrievers import WeaviateNeo4jRetriever
+from neo4j_graphrag.retrievers import WeaviateNeo4jRetriever
 from weaviate.connect.helpers import connect_to_local
 
 NEO4J_URL = "neo4j://localhost:7687"

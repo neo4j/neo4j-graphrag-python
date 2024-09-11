@@ -1,4 +1,4 @@
-name: neo4j_genai PR
+name: neo4j_graphrag PR
 on: pull_request
 
 jobs:

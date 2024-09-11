@@ -18,7 +18,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 from neo4j import Driver
-from neo4j_genai.schema import (
+from neo4j_graphrag.schema import (
     BASE_ENTITY_LABEL,
     EXCLUDED_LABELS,
     EXCLUDED_RELS,
@@ -64,7 +64,7 @@ def _query_return_value(*args: Any, **kwargs: Any) -> list[Any]:
     raise AssertionError("Unexpected query")
 
 
-@patch("neo4j_genai.schema.query_database", side_effect=_query_return_value)
+@patch("neo4j_graphrag.schema.query_database", side_effect=_query_return_value)
 def test_get_schema_ensure_formatted_response(driver: Driver) -> None:
     result = get_schema(driver)
     assert (
@@ -98,7 +98,7 @@ def test_get_structured_schema_happy_path(driver: MagicMock) -> None:
     driver.execute_query.assert_any_call(INDEX_QUERY, {})
 
 
-@patch("neo4j_genai.schema.query_database", side_effect=_query_return_value)
+@patch("neo4j_graphrag.schema.query_database", side_effect=_query_return_value)
 def test_get_schema_ensure_structured_response(driver: MagicMock) -> None:
     result = get_structured_schema(driver)
 

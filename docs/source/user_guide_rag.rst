@@ -11,11 +11,11 @@ and configuring it according to specific requirements.
 Quickstart
 ************
 
-To perform a GraphRAG query using the `neo4j-genai` package, a few components are needed:
+To perform a GraphRAG query using the `neo4j-graphrag` package, a few components are needed:
 
 1. A Neo4j driver: used to query your Neo4j database.
-2. A Retriever: the `neo4j-genai` package provides some implementations (see the :ref:`dedicated section <retriever-configuration>`) and lets you write your own if none of the provided implementations matches your needs (see :ref:`how to write a custom retriever <custom-retriever>`).
-3. An LLM: to generate the answer, we need to call an LLM model. The neo4j-genai package currently only provides implementation for the OpenAI LLMs, but its interface is compatible with LangChain and let developers write their own interface if needed.
+2. A Retriever: the `neo4j-graphrag` package provides some implementations (see the :ref:`dedicated section <retriever-configuration>`) and lets you write your own if none of the provided implementations matches your needs (see :ref:`how to write a custom retriever <custom-retriever>`).
+3. An LLM: to generate the answer, we need to call an LLM model. The neo4j-graphrag package currently only provides implementation for the OpenAI LLMs, but its interface is compatible with LangChain and let developers write their own interface if needed.
 
 In practice, it's done with only a few lines of code:
 

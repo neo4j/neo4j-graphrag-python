@@ -1,5 +1,5 @@
 import pytest
-from neo4j_genai.experimental.pipeline.stores import InMemoryStore
+from neo4j_graphrag.experimental.pipeline.stores import InMemoryStore
 
 
 @pytest.mark.asyncio

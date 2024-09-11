@@ -14,7 +14,7 @@
 # limitations under the License.
 
 [tool.poetry]
-name = "neo4j-genai"
+name = "neo4j-graphrag"
 version = "0.6.0"
 description = "Python package to allow easy integration to Neo4j's GenAI features"
 authors = ["Neo4j, Inc <team-gen-ai@neo4j.com>"]
@@ -76,7 +76,6 @@ pygraphviz = [
 
 [tool.poetry.extras]
 external_clients = ["weaviate-client", "pinecone-client"]
-kg_creation_tools = ["pygraphviz"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

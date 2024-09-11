@@ -3,9 +3,9 @@ from __future__ import annotations
 from random import random
 
 from neo4j import GraphDatabase
-from neo4j_genai.embedder import Embedder
-from neo4j_genai.indexes import create_vector_index
-from neo4j_genai.retrievers import VectorRetriever
+from neo4j_graphrag.embedder import Embedder
+from neo4j_graphrag.indexes import create_vector_index
+from neo4j_graphrag.retrievers import VectorRetriever
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")

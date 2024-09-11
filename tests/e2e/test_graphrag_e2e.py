@@ -17,12 +17,12 @@ from unittest.mock import MagicMock
 
 import neo4j
 import pytest
-from neo4j_genai.exceptions import LLMGenerationError
-from neo4j_genai.generation.graphrag import GraphRAG
-from neo4j_genai.generation.types import RagResultModel
-from neo4j_genai.llm import LLMResponse
-from neo4j_genai.retrievers import VectorCypherRetriever
-from neo4j_genai.types import RetrieverResult
+from neo4j_graphrag.exceptions import LLMGenerationError
+from neo4j_graphrag.generation.graphrag import GraphRAG
+from neo4j_graphrag.generation.types import RagResultModel
+from neo4j_graphrag.llm import LLMResponse
+from neo4j_graphrag.retrievers import VectorCypherRetriever
+from neo4j_graphrag.types import RetrieverResult
 
 from tests.e2e.conftest import BiologyEmbedder
 from tests.e2e.utils import build_data_objects, populate_neo4j
