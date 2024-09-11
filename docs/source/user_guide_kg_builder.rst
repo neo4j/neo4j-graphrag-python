@@ -24,6 +24,7 @@ A Knowledge Graph (KG) construction pipeline requires a few components:
 - **Document chunker**: split the text into smaller pieces of text, manageable by the LLM context window (token limit).
 - **Chunk embedder** (optional): compute the chunk embeddings.
 - **Schema builder**: provide a schema to ground the LLM extracted entities and relations and obtain an easily navigable KG.
+- **LexicalGraphBuilder**: build the lexical graph (Document, Chunk and their relationships) (optional).
 - **Entity and relation extractor**: extract relevant entities and relations from the text.
 - **Knowledge Graph writer**: save the identified entities and relations.
 
@@ -165,6 +166,34 @@ The embeddings are added to each chunk metadata, and will be saved as a Chunk no
 `create_lexical_graph` is enabled in the `EntityRelationExtractor` (keep reading).
 
 
+Lexical Graph Builder
+=====================
+
+Once the chunks are extracted and, if needed, embedded, a graph can be created. The lexical graph contains:
+
+- `Document` node: represent the processed document and have a `path` property.
+- `Chunk` nodes: represent the text chunks. They have a `text` property and, if computed, an `embedding` property.
+- `NEXT_CHUNK` relationships between one chunk node and the next one in the document. It can be used to enhance the context in a RAG application.
+- `FROM_DOCUMENT` relationship between each chunk and the document it was built from.
+
+Example usage:
+
+.. code:: python
+
+    from neo4j_genai.experimental.pipeline.components.lexical_graph_builder import LexicalGraphBuilder
+
+    lexical_graph_builder = LexicalGraphBuilder(id_prefix="example")
+    graph = await lexical_graph_builder.run(
+        text_chunks=TextChunks(chunks=[
+            TextChunk(text="some text", index=0),
+            TextChunk(text="some text", index=1),
+        ]),
+        document_info=DocumentInfo(path="my_document.pdf"),
+    )
+
+See :ref:`kg-writer-section` to learn how to write the resulting nodes and relationships to Neo4j.
+
+
 Schema Builder
 ==============
 
@@ -287,13 +316,7 @@ will be saved to Neo4j.
 Lexical Graph
 -------------
 
-By default, the `LLMEntityRelationExtractor` adds some extra nodes and relationships to the extracted graph:
-
-- `Document` node: represent the processed document and have a `path` property.
-- `Chunk` nodes: represent the text chunks. They have a `text` property and, if computed, an `embedding` property.
-- `NEXT_CHUNK` relationships between one chunk node and the next one in the document. It can be used to enhance the context in a RAG application.
-- `FROM_CHUNK` relationship between any extracted entity and the chunk it has been identified into.
-- `FROM_DOCUMENT` relationship between each chunk and the document it was built from.
+By default, the `LLMEntityRelationExtractor` also creates the lexical graph, adding a `FROM_CHUNK` relationship between any extracted entity and the chunk it has been identified into.
 
 If this 'lexical graph' is not desired, set the `created_lexical_graph` to `False` in the extractor constructor:
 
@@ -359,6 +382,8 @@ If more customization is needed, it is possible to subclass the `EntityRelationE
 See :ref:`entityrelationextractor`.
 
 
+.. _kg-writer-section:
+
 Knowledge Graph Writer
 ======================
 
@@ -377,7 +402,7 @@ to a Neo4j database:
     ) as driver:
         writer = Neo4jWriter(driver)
         graph = Neo4jGraph(nodes=[], relationships=[])
-        asyncio.run(writer.run())
+        asyncio.run(writer.run(graph=graph))
 
 See :ref:`neo4jgraph` for the description of the input type.
 
@@ -406,7 +431,7 @@ It is possible to create a custom writer using the `KGWriter` interface:
 
 .. note::
 
-    The `validate_call` decorator is required when the input parameter contain a `pydantic` model.
+    The `validate_call` decorator is required when the input parameter contain a `Pydantic` model.
 
 
 See :ref:`kgwritermodel` and :ref:`kgwriter` in API reference.

@@ -45,6 +45,13 @@ TextChunkEmbedder
 .. autoclass:: neo4j_genai.experimental.components.embedder.TextChunkEmbedder
     :members: run
 
+LexicalGraphBuilder
+===================
+
+.. autoclass:: neo4j_genai.experimental.components.lexical_graph.LexicalGraphBuilder
+    :members:
+    :exclude-members: component_inputs, component_outputs
+
 SchemaBuilder
 =============
 
@@ -56,7 +63,7 @@ EntityRelationExtractor
 
 .. autoclass:: neo4j_genai.experimental.components.entity_relation_extractor.EntityRelationExtractor
     :members:
-    :undoc-members: component_inputs, component_outputs
+    :exclude-members: component_inputs, component_outputs
 
 LLMEntityRelationExtractor
 ==========================
