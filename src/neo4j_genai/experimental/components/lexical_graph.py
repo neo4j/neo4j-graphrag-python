@@ -81,17 +81,13 @@ class LexicalGraphBuilder(Component):
 
         Updates `graph` in place.
         """
-        chunk_id = self.chunk_id(chunk.index)
         if document_id:
-            chunk_to_doc_rel = self.create_chunk_to_document_rel(chunk_id, document_id)
+            chunk_to_doc_rel = self.create_chunk_to_document_rel(chunk, document_id)
             graph.relationships.append(chunk_to_doc_rel)
-        chunk_node = self.create_chunk_node(chunk, chunk_id)
+        chunk_node = self.create_chunk_node(chunk)
         graph.nodes.append(chunk_node)
         if chunk.index > 0:
-            previous_chunk_id = f"{self.id_prefix}:{chunk.index - 1}"
-            next_chunk_rel = self.create_next_chunk_relationship(
-                previous_chunk_id, chunk_id
-            )
+            next_chunk_rel = self.create_next_chunk_relationship(chunk)
             graph.relationships.append(next_chunk_rel)
 
     def create_document_node(self, document_info: DocumentInfo) -> Neo4jNode:
@@ -108,10 +104,11 @@ class LexicalGraphBuilder(Component):
             },
         )
 
-    def create_chunk_node(self, chunk: TextChunk, chunk_id: str) -> Neo4jNode:
+    def create_chunk_node(self, chunk: TextChunk) -> Neo4jNode:
         """Create chunk node with properties 'text', 'index' and any 'metadata' added during
         the process. Special case for the potential chunk embedding property that
         gets added as an embedding_property"""
+        chunk_id = self.chunk_id(chunk.index)
         chunk_properties: Dict[str, Any] = {
             "text": chunk.text,
             "index": chunk.index,
@@ -129,9 +126,10 @@ class LexicalGraphBuilder(Component):
         )
 
     def create_chunk_to_document_rel(
-        self, chunk_id: str, document_id: str
+        self, chunk: TextChunk, document_id: str
     ) -> Neo4jRelationship:
         """Create the relationship between a chunk and the document it belongs to."""
+        chunk_id = self.chunk_id(chunk.index)
         return Neo4jRelationship(
             start_node_id=chunk_id,
             end_node_id=document_id,
@@ -139,9 +137,12 @@ class LexicalGraphBuilder(Component):
         )
 
     def create_next_chunk_relationship(
-        self, previous_chunk_id: str, chunk_id: str
+        self,
+        chunk: TextChunk,
     ) -> Neo4jRelationship:
         """Create relationship between a chunk and the next one"""
+        chunk_id = self.chunk_id(chunk.index)
+        previous_chunk_id = self.chunk_id(chunk.index - 1)
         return Neo4jRelationship(
             type=self.next_chunk_relationship_type,
             start_node_id=previous_chunk_id,
