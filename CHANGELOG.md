@@ -2,6 +2,8 @@
 
 ## Next
 
+## 0.6.1
+
 ### Changed
 - Officially renamed neo4j-genai to neo4j-graphrag. For the final release version of neo4j-genai, please visit https://pypi.org/project/neo4j-genai/.
 
