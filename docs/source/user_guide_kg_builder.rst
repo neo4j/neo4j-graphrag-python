@@ -34,7 +34,7 @@ A Knowledge Graph (KG) construction pipeline requires a few components:
 This package contains the interface and implementations for each of these components, which are detailed in the following sections.
 
 To see an end-to-end example of a Knowledge Graph construction pipeline,
-refer to `this example <https://github.com/neo4j/neo4j-genai-python/blob/main/examples/pipeline/kg_builder.py>`_.
+refer to `this example <https://github.com/neo4j/neo4j-graphrag-python/blob/main/examples/pipeline/kg_builder.py>`_.
 
 **********************************
 Knowledge Graph Builder Components
