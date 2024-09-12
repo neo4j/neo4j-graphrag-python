@@ -2,6 +2,8 @@
 
 ## Next
 
+## 0.6.0
+
 ### IMPORTANT NOTICE
 - The `neo4j-genai` package is now deprecated. Users are advised to switch to the new package `neo4j-graphrag`.
 ### Added
