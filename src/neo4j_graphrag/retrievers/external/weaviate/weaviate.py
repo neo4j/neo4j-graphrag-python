@@ -23,7 +23,10 @@ from pydantic import ValidationError
 from weaviate.client import WeaviateClient
 
 from neo4j_graphrag.embedder import Embedder
-from neo4j_graphrag.exceptions import RetrieverInitializationError, SearchValidationError
+from neo4j_graphrag.exceptions import (
+    RetrieverInitializationError,
+    SearchValidationError,
+)
 from neo4j_graphrag.retrievers.base import ExternalRetriever
 from neo4j_graphrag.retrievers.external.utils import get_match_query
 from neo4j_graphrag.retrievers.external.weaviate.types import (

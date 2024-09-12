@@ -3,10 +3,10 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Neo4j GenAI package for Python
-==============================
+Neo4j GraphRAG for Python
+=========================
 
-This repository contains the official Neo4j GenAI features for Python.
+This repository contains the official Neo4j GraphRAG features for Python.
 
 The purpose of this package is to provide a first party package to developers,
 where Neo4j can guarantee long term commitment and maintenance as well as being
@@ -203,7 +203,7 @@ Issues
 If you have a bug to report or feature to request, first
 `search to see if an issue already exists <https://docs.github.com/en/github/searching-for-information-on-github/searching-on-github/searching-issues-and-pull-requests#search-by-the-title-body-or-comments>`_.
 If a related issue doesn't exist, please raise a new issue using the relevant
-`issue form <https://github.com/neo4j/neo4j-genai-python/issues/new/choose>`_.
+`issue form <https://github.com/neo4j/neo4j-graphrag-python/issues/new/choose>`_.
 
 If you're a Neo4j Enterprise customer, you can also reach out to `Customer Support <http://support.neo4j.com/>`_.
 

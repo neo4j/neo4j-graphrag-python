@@ -428,7 +428,8 @@ def test_construct_metadata_filter_implicit_and(
 
 
 @patch(
-    "neo4j_graphrag.filters._construct_metadata_filter", side_effect=["filter1", "filter2"]
+    "neo4j_graphrag.filters._construct_metadata_filter",
+    side_effect=["filter1", "filter2"],
 )
 def test_construct_metadata_filter_explicit_and(
     _construct_metadata_filter_mock: MagicMock, param_store_empty: ParameterStore
@@ -448,7 +449,8 @@ def test_construct_metadata_filter_explicit_and(
 
 
 @patch(
-    "neo4j_graphrag.filters._construct_metadata_filter", side_effect=["filter1", "filter2"]
+    "neo4j_graphrag.filters._construct_metadata_filter",
+    side_effect=["filter1", "filter2"],
 )
 def test_construct_metadata_filter_or(
     _construct_metadata_filter_mock: MagicMock, param_store_empty: ParameterStore

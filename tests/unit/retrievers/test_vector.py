@@ -34,7 +34,9 @@ from neo4j_graphrag.types import (
 
 
 def test_vector_retriever_initialization(driver: MagicMock) -> None:
-    with patch("neo4j_graphrag.retrievers.base.Retriever._verify_version") as mock_verify:
+    with patch(
+        "neo4j_graphrag.retrievers.base.Retriever._verify_version"
+    ) as mock_verify:
         VectorRetriever(driver=driver, index_name="my-index")
         mock_verify.assert_called_once()
 
@@ -96,7 +98,9 @@ def test_vector_cypher_retriever_invalid_database_name(
 
 
 def test_vector_cypher_retriever_initialization(driver: MagicMock) -> None:
-    with patch("neo4j_graphrag.retrievers.base.Retriever._verify_version") as mock_verify:
+    with patch(
+        "neo4j_graphrag.retrievers.base.Retriever._verify_version"
+    ) as mock_verify:
         VectorCypherRetriever(driver=driver, index_name="my-index", retrieval_query="")
         mock_verify.assert_called_once()
 

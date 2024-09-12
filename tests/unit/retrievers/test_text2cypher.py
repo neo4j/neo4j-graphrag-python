@@ -29,7 +29,9 @@ from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
 
 
 def test_t2c_retriever_initialization(driver: MagicMock, llm: MagicMock) -> None:
-    with patch("neo4j_graphrag.retrievers.base.Retriever._verify_version") as mock_verify:
+    with patch(
+        "neo4j_graphrag.retrievers.base.Retriever._verify_version"
+    ) as mock_verify:
         Text2CypherRetriever(driver, llm, neo4j_schema="dummy-text")
         mock_verify.assert_called_once()
 

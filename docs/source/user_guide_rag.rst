@@ -3,7 +3,7 @@
 User Guide: RAG
 #################
 
-This guide provides a starting point for using the Neo4j GenAI Python package
+This guide provides a starting point for using the Neo4j GraphRAG package
 and configuring it according to specific requirements.
 
 

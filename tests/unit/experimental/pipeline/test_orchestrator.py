@@ -16,7 +16,11 @@ from unittest.mock import Mock, patch
 
 import pytest
 from neo4j_graphrag.experimental.pipeline import Component
-from neo4j_graphrag.experimental.pipeline.pipeline import Orchestrator, Pipeline, RunStatus
+from neo4j_graphrag.experimental.pipeline.pipeline import (
+    Orchestrator,
+    Pipeline,
+    RunStatus,
+)
 
 from tests.unit.experimental.pipeline.components import (
     ComponentNoParam,

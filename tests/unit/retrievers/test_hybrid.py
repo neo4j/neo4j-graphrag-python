@@ -16,14 +16,19 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from neo4j_graphrag.exceptions import EmbeddingRequiredError, RetrieverInitializationError
+from neo4j_graphrag.exceptions import (
+    EmbeddingRequiredError,
+    RetrieverInitializationError,
+)
 from neo4j_graphrag.neo4j_queries import get_search_query
 from neo4j_graphrag.retrievers import HybridCypherRetriever, HybridRetriever
 from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem, SearchType
 
 
 def test_vector_retriever_initialization(driver: MagicMock) -> None:
-    with patch("neo4j_graphrag.retrievers.base.Retriever._verify_version") as mock_verify:
+    with patch(
+        "neo4j_graphrag.retrievers.base.Retriever._verify_version"
+    ) as mock_verify:
         HybridRetriever(
             driver=driver,
             vector_index_name="vector-index",
@@ -33,7 +38,9 @@ def test_vector_retriever_initialization(driver: MagicMock) -> None:
 
 
 def test_vector_cypher_retriever_initialization(driver: MagicMock) -> None:
-    with patch("neo4j_graphrag.retrievers.base.Retriever._verify_version") as mock_verify:
+    with patch(
+        "neo4j_graphrag.retrievers.base.Retriever._verify_version"
+    ) as mock_verify:
         HybridCypherRetriever(
             driver=driver,
             vector_index_name="vector-index",
