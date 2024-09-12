@@ -51,7 +51,7 @@
 -   Stopped embeddings from being returned when searching with `VectorRetriever`. Added `nodeLabels` and `id` to the metadata of `VectorRetriever` results.
 -   Added `upsert_vector` utility function for attaching vectors to node properties.
 -   Introduced `Neo4jInsertionError` for handling insertion failures in Neo4j.
--   Included Pinecone and Weaviate retrievers in neo4j_genai.retrievers.
+-   Included Pinecone and Weaviate retrievers in neo4j_graphrag.retrievers.
 -   Introduced the GraphRAG object, enabling a full RAG (Retrieval-Augmented Generation) pipeline with context retrieval, prompt formatting, and answer generation.
 -   Added PromptTemplate and RagTemplate for customizable prompt generation.
 -   Added LLMInterface with implementation for OpenAI LLM.
@@ -62,7 +62,7 @@
 -   Introduced result_formatter argument to all retrievers, allowing custom formatting of retriever results.
 
 ### Changed
--   Refactored import paths for retrievers to neo4j_genai.retrievers.
+-   Refactored import paths for retrievers to neo4j_graphrag.retrievers.
 -   Implemented exception chaining for all re-raised exceptions to improve stack trace readability.
 -   Made error messages in `index.py` more consistent.
 -   Renamed `Retriever._get_search_results` to `Retriever.get_search_results`

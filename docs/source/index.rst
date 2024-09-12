@@ -83,7 +83,7 @@ See :ref:`the API documentation<create-vector-index>` for more details.
 .. code:: python
 
     from neo4j import GraphDatabase
-    from neo4j_genai.indexes import create_vector_index
+    from neo4j_graphrag.indexes import create_vector_index
 
     URI = "neo4j://localhost:7687"
     AUTH = ("neo4j", "password")
@@ -117,7 +117,7 @@ Note that the below example is not the only way you can upsert data into your Ne
 .. code:: python
 
     from neo4j import GraphDatabase
-    from neo4j_genai.indexes import upsert_vector
+    from neo4j_graphrag.indexes import upsert_vector
 
     URI = "neo4j://localhost:7687"
     AUTH = ("neo4j", "password")
@@ -148,7 +148,7 @@ While the library has more retrievers than shown here, the following examples sh
 .. code:: python
 
     from neo4j import GraphDatabase
-    from neo4j_genai.retrievers import VectorRetriever
+    from neo4j_graphrag.retrievers import VectorRetriever
     from langchain_openai import OpenAIEmbeddings
 
     URI = "neo4j://localhost:7687"
