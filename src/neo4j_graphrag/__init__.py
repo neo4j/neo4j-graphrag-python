@@ -12,10 +12,3 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
-import warnings
-
-warnings.warn(
-    "This package 'neo4j-genai' is deprecated and replaced by 'neo4j-graphrag'. Please upgrade to 'neo4j-graphrag' for ongoing updates and support.",
-    DeprecationWarning,
-)
