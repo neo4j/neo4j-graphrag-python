@@ -1,10 +1,4 @@
-# ⚠️ Deprecation Warning ⚠️
-
-This package `neo4j-genai` is deprecated and will no longer be maintained. Please switch to our new package `neo4j-graphrag`, which is available at [neo4j-graphrag on GitHub](https://github.com/neo4j/neo4j-graphrag-python) and [neo4j-graphrag on PyPI](https://pypi.org/project/neo4j-graphrag/).
-
-`neo4j-graphrag` is a renamed continuation of this package. We encourage all users to migrate to the new package to continue receiving updates and support.
-
-# Neo4j GenAI package for Python
+# Neo4j GraphRAG package for Python
 
 This repository contains the official Neo4j GenAI features for Python.
 
@@ -31,7 +25,7 @@ This package requires Python (>=3.8.1).
 To install the latest stable version, use:
 
 ```shell
-pip install neo4j-genai
+pip install neo4j-graphrag
 ```
 
 ## Examples
@@ -44,7 +38,7 @@ Assumption: Neo4j running
 
 ```python
 from neo4j import GraphDatabase
-from neo4j_genai.indexes import create_vector_index
+from neo4j_graphrag.indexes import create_vector_index
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
@@ -74,7 +68,7 @@ Assumption: Neo4j running with a defined vector index
 
 ```python
 from neo4j import GraphDatabase
-from neo4j_genai.indexes import upsert_vector
+from neo4j_graphrag.indexes import upsert_vector
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
@@ -106,10 +100,10 @@ in Neo4j.
 
 ```python
 from neo4j import GraphDatabase
-from neo4j_genai.retrievers import VectorRetriever
-from neo4j_genai.llm import OpenAILLM
-from neo4j_genai.generation import GraphRAG
-from neo4j_genai.embeddings.openai import OpenAIEmbeddings
+from neo4j_graphrag.retrievers import VectorRetriever
+from neo4j_graphrag.llm import OpenAILLM
+from neo4j_graphrag.generation import GraphRAG
+from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")

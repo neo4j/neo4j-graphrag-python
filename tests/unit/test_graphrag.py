@@ -16,12 +16,12 @@ from unittest.mock import MagicMock
 from warnings import catch_warnings
 
 import pytest
-from neo4j_genai.exceptions import RagInitializationError, SearchValidationError
-from neo4j_genai.generation.graphrag import GraphRAG
-from neo4j_genai.generation.prompts import RagTemplate
-from neo4j_genai.generation.types import RagResultModel
-from neo4j_genai.llm import LLMResponse
-from neo4j_genai.types import RetrieverResult, RetrieverResultItem
+from neo4j_graphrag.exceptions import RagInitializationError, SearchValidationError
+from neo4j_graphrag.generation.graphrag import GraphRAG
+from neo4j_graphrag.generation.prompts import RagTemplate
+from neo4j_graphrag.generation.types import RagResultModel
+from neo4j_graphrag.llm import LLMResponse
+from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
 from pydantic import ValidationError
 
 

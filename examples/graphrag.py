@@ -10,11 +10,11 @@ This example illustrates:
 import logging
 
 import neo4j
-from neo4j_genai.embeddings.openai import OpenAIEmbeddings
-from neo4j_genai.generation import GraphRAG
-from neo4j_genai.llm import OpenAILLM
-from neo4j_genai.retrievers import VectorCypherRetriever
-from neo4j_genai.types import RetrieverResultItem
+from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
+from neo4j_graphrag.generation import GraphRAG
+from neo4j_graphrag.llm import OpenAILLM
+from neo4j_graphrag.retrievers import VectorCypherRetriever
+from neo4j_graphrag.types import RetrieverResultItem
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
@@ -23,7 +23,7 @@ INDEX = "moviePlotsEmbedding"
 
 
 # setup logger config
-logger = logging.getLogger("neo4j_genai")
+logger = logging.getLogger("neo4j_graphrag")
 logging.basicConfig(format="%(asctime)s - %(message)s")
 logger.setLevel(logging.DEBUG)
 

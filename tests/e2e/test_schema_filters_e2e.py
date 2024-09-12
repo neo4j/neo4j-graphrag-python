@@ -15,7 +15,7 @@
 
 import pytest
 from neo4j import Driver
-from neo4j_genai.schema import (
+from neo4j_graphrag.schema import (
     BASE_ENTITY_LABEL,
     EXCLUDED_LABELS,
     EXCLUDED_RELS,

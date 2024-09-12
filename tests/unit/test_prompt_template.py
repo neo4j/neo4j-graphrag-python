@@ -1,6 +1,6 @@
 import pytest
-from neo4j_genai.exceptions import PromptMissingInputError
-from neo4j_genai.generation.prompts import PromptTemplate
+from neo4j_graphrag.exceptions import PromptMissingInputError
+from neo4j_graphrag.generation.prompts import PromptTemplate
 
 
 def test_prompt_template_all_default() -> None:
