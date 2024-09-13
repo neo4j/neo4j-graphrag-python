@@ -243,9 +243,9 @@ async def test_extractor_custom_prompt() -> None:
     extractor = LLMEntityRelationExtractor(
         llm=llm, prompt_template="this is my prompt {text}"
     )
-    chunks = TextChunks(chunks=[TextChunk(text="some text")])
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
     await extractor.run(chunks=chunks)
-    llm.invoke.assert_called_once_with("this is my prompt some text")
+    llm.ainvoke.assert_called_once_with("this is my prompt some text")
 
 
 def test_fix_unquoted_keys() -> None:
