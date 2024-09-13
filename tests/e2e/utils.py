@@ -21,7 +21,7 @@ from typing import Any, Literal
 
 import neo4j
 import weaviate.classes as wvc
-from neo4j_genai.indexes import create_vector_index, drop_index_if_exists
+from neo4j_graphrag.indexes import create_vector_index, drop_index_if_exists
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 

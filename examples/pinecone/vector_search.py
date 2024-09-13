@@ -1,5 +1,5 @@
 from neo4j import GraphDatabase
-from neo4j_genai.retrievers import PineconeNeo4jRetriever
+from neo4j_graphrag.retrievers import PineconeNeo4jRetriever
 from pinecone import Pinecone
 
 from examples.embedding_biology import EMBEDDING_BIOLOGY
