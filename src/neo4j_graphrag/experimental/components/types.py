@@ -26,6 +26,7 @@ class TextChunk(BaseModel):
 
     Attributes:
         text (str): The raw chunk text.
+        index (int): The index of the chunk in the document.
         metadata (Optional[dict[str, Any]]): Metadata associated with this chunk such as the id of the next chunk in the original document.
     """
 

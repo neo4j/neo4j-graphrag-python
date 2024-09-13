@@ -175,3 +175,12 @@ def setup_neo4j_for_kg_construction(driver: Driver) -> None:
         dimensions=3,
         similarity_fn="euclidean",
     )
+
+
+@pytest.fixture(scope="module")
+@pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
+def setup_neo4j_for_kg_construction_with_chunks(driver: Driver) -> None:
+    driver.execute_query('CREATE (:Chunk {id: "0", index: 0, text: "some text"})')
+    driver.execute_query(
+        'CREATE (:Chunk {id: "1", index: 1, text: "some longer text"})'
+    )
