@@ -76,6 +76,7 @@ pygraphviz = [
 
 [tool.poetry.extras]
 external_clients = ["weaviate-client", "pinecone-client"]
+kg_creation_tools = ["pygraphviz"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
