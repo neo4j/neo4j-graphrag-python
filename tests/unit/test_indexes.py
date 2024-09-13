@@ -18,8 +18,8 @@ from unittest.mock import MagicMock
 
 import neo4j.exceptions
 import pytest
-from neo4j_genai.exceptions import Neo4jIndexError, Neo4jInsertionError
-from neo4j_genai.indexes import (
+from neo4j_graphrag.exceptions import Neo4jIndexError, Neo4jInsertionError
+from neo4j_graphrag.indexes import (
     create_fulltext_index,
     create_vector_index,
     drop_index_if_exists,

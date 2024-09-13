@@ -3,7 +3,7 @@
 User Guide: RAG
 #################
 
-This guide provides a starting point for using the Neo4j GenAI Python package
+This guide provides a starting point for using the Neo4j GraphRAG package
 and configuring it according to specific requirements.
 
 
@@ -11,21 +11,21 @@ and configuring it according to specific requirements.
 Quickstart
 ************
 
-To perform a GraphRAG query using the `neo4j-genai` package, a few components are needed:
+To perform a GraphRAG query using the `neo4j-graphrag` package, a few components are needed:
 
 1. A Neo4j driver: used to query your Neo4j database.
-2. A Retriever: the `neo4j-genai` package provides some implementations (see the :ref:`dedicated section <retriever-configuration>`) and lets you write your own if none of the provided implementations matches your needs (see :ref:`how to write a custom retriever <custom-retriever>`).
-3. An LLM: to generate the answer, we need to call an LLM model. The neo4j-genai package currently only provides implementation for the OpenAI LLMs, but its interface is compatible with LangChain and let developers write their own interface if needed.
+2. A Retriever: the `neo4j-graphrag` package provides some implementations (see the :ref:`dedicated section <retriever-configuration>`) and lets you write your own if none of the provided implementations matches your needs (see :ref:`how to write a custom retriever <custom-retriever>`).
+3. An LLM: to generate the answer, we need to call an LLM model. The neo4j-graphrag package currently only provides implementation for the OpenAI LLMs, but its interface is compatible with LangChain and let developers write their own interface if needed.
 
 In practice, it's done with only a few lines of code:
 
 .. code:: python
 
     from neo4j import GraphDatabase
-    from neo4j_genai.retrievers import VectorRetriever
-    from neo4j_genai.llm import OpenAILLM
-    from neo4j_genai.generation import GraphRAG
-    from neo4j_genai.embeddings.openai import OpenAIEmbeddings
+    from neo4j_graphrag.retrievers import VectorRetriever
+    from neo4j_graphrag.llm import OpenAILLM
+    from neo4j_graphrag.generation import GraphRAG
+    from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
 
     # 1. Neo4j driver
     URI = "neo4j://localhost:7687"
@@ -83,7 +83,7 @@ Its interface is compatible with our `GraphRAG` interface, facilitating integrat
 
 .. code:: python
 
-    from neo4j_genai.generation import GraphRAG
+    from neo4j_graphrag.generation import GraphRAG
     from langchain_community.chat_models import ChatOllama
 
     # retriever = ...
@@ -108,7 +108,7 @@ the `LLMInterface`. Here's an example using the Python Ollama client:
 .. code:: python
 
     import ollama
-    from neo4j_genai.llm import LLMInterface, LLMResponse
+    from neo4j_graphrag.llm import LLMInterface, LLMResponse
 
     class OllamaLLM(LLMInterface):
 
@@ -145,7 +145,7 @@ class and pass it to the `GraphRAG` pipeline object during initialization:
 
 .. code:: python
 
-    from neo4j_genai.generation import RagTemplate, GraphRAG
+    from neo4j_graphrag.generation import RagTemplate, GraphRAG
 
     # retriever = ...
     # llm = ...
@@ -207,7 +207,7 @@ The simplest method to instantiate a vector retriever is:
 
 .. code:: python
 
-    from neo4j_genai.retrievers import VectorRetriever
+    from neo4j_graphrag.retrievers import VectorRetriever
 
     retriever = VectorRetriever(
         driver,
@@ -266,7 +266,7 @@ The `OpenAIEmbedder` was illustrated previously. Here is how to use the `Sentenc
 
 .. code:: python
 
-    from neo4j_genai.embeddings.sentence_transformers import SentenceTransformerEmbeddings
+    from neo4j_graphrag.embeddings.sentence_transformers import SentenceTransformerEmbeddings
 
     embedder = SentenceTransformerEmbeddings(model="all-MiniLM-L6-v2")  # Note: this is the default model
 
@@ -277,7 +277,7 @@ the following implementation of an embedder that wraps the `OllamaEmbedding` mod
 .. code:: python
 
     from llama_index.embeddings.ollama import OllamaEmbedding
-    from neo4j_genai.embedder import Embedder
+    from neo4j_graphrag.embedder import Embedder
 
     class OllamaEmbedder(Embedder):
         def __init__(self, ollama_embedding):
@@ -307,7 +307,7 @@ using the `return_properties` parameter:
 
 .. code:: python
 
-    from neo4j_genai.retrievers import VectorRetriever
+    from neo4j_graphrag.retrievers import VectorRetriever
 
     retriever = VectorRetriever(
         driver,
@@ -333,7 +333,7 @@ using `filters`.
 
 .. code:: python
 
-    from neo4j_genai.retrievers import VectorRetriever
+    from neo4j_graphrag.retrievers import VectorRetriever
 
     retriever = VectorRetriever(
         driver,
@@ -485,7 +485,7 @@ Weaviate Retrievers
 .. code:: python
 
     from weaviate.connect.helpers import connect_to_local
-    from neo4j_genai.retrievers import WeaviateNeo4jRetriever
+    from neo4j_graphrag.retrievers import WeaviateNeo4jRetriever
 
     client = connect_to_local()
     retriever = WeaviateNeo4jRetriever(
@@ -518,7 +518,7 @@ Pinecone Retrievers
 .. code:: python
 
     from pinecone import Pinecone
-    from neo4j_genai.retrievers import PineconeNeo4jRetriever
+    from neo4j_graphrag.retrievers import PineconeNeo4jRetriever
 
     client = Pinecone()  # ... create your Pinecone client
 
@@ -547,7 +547,7 @@ be provided when instantiating the retriever:
 
 .. code:: python
 
-    from neo4j_genai.retrievers import HybridRetriever
+    from neo4j_graphrag.retrievers import HybridRetriever
 
     INDEX_NAME = "embedding-name"
     FULLTEXT_INDEX_NAME = "fulltext-index-name"
@@ -575,7 +575,7 @@ the graph and return more context:
 
 .. code:: python
 
-    from neo4j_genai.retrievers import HybridCypherRetriever
+    from neo4j_graphrag.retrievers import HybridCypherRetriever
 
     INDEX_NAME = "embedding-name"
     FULLTEXT_INDEX_NAME = "fulltext-index-name"
@@ -606,8 +606,8 @@ LLMs can be different.
 .. code:: python
 
     from neo4j import GraphDatabase
-    from neo4j_genai.retrievers import Text2CypherRetriever
-    from neo4j_genai.llm import OpenAILLM
+    from neo4j_graphrag.retrievers import Text2CypherRetriever
+    from neo4j_graphrag.llm import OpenAILLM
 
     URI = "neo4j://localhost:7687"
     AUTH = ("neo4j", "password")
@@ -676,7 +676,7 @@ a custom retriever using the `Retriever` interface:
 
 .. code:: python
 
-    from neo4j_genai.retrievers.base import Retriever
+    from neo4j_graphrag.retrievers.base import Retriever
 
     class MyCustomRetriever(Retriever):
         def __init__(
@@ -711,7 +711,7 @@ Create a Vector Index
 .. code:: python
 
     from neo4j import GraphDatabase
-    from neo4j_genai.indexes import create_vector_index
+    from neo4j_graphrag.indexes import create_vector_index
 
     URI = "neo4j://localhost:7687"
     AUTH = ("neo4j", "password")

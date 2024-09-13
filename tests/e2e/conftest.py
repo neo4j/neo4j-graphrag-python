@@ -22,14 +22,14 @@ from unittest.mock import MagicMock
 
 import pytest
 from neo4j import Driver, GraphDatabase
-from neo4j_genai.embedder import Embedder
-from neo4j_genai.indexes import (
+from neo4j_graphrag.embedder import Embedder
+from neo4j_graphrag.indexes import (
     create_fulltext_index,
     create_vector_index,
     drop_index_if_exists,
 )
-from neo4j_genai.llm import LLMInterface
-from neo4j_genai.retrievers import VectorRetriever
+from neo4j_graphrag.llm import LLMInterface
+from neo4j_graphrag.retrievers import VectorRetriever
 
 from ..e2e.utils import EMBEDDING_BIOLOGY
 

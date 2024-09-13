@@ -15,8 +15,8 @@
 from typing import Any
 from unittest.mock import patch
 
-from neo4j_genai.neo4j_queries import get_query_tail, get_search_query
-from neo4j_genai.types import SearchType
+from neo4j_graphrag.neo4j_queries import get_query_tail, get_search_query
+from neo4j_graphrag.types import SearchType
 
 
 def test_vector_search_basic() -> None:
@@ -72,7 +72,7 @@ def test_vector_search_with_retrieval_query() -> None:
     assert result.strip() == expected.strip()
 
 
-@patch("neo4j_genai.neo4j_queries.get_metadata_filter", return_value=["True", {}])
+@patch("neo4j_graphrag.neo4j_queries.get_metadata_filter", return_value=["True", {}])
 def test_vector_search_with_filters(_mock: Any) -> None:
     expected = (
         "MATCH (node:`Label`) "
@@ -96,7 +96,7 @@ def test_vector_search_with_filters(_mock: Any) -> None:
 
 
 @patch(
-    "neo4j_genai.neo4j_queries.get_metadata_filter",
+    "neo4j_graphrag.neo4j_queries.get_metadata_filter",
     return_value=["True", {"param": "value"}],
 )
 def test_vector_search_with_params_from_filters(_mock: Any) -> None:

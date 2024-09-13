@@ -1,9 +1,9 @@
 from unittest.mock import MagicMock
 
 import pytest
-from neo4j_genai.llm import LLMResponse
-from neo4j_genai.retrievers import Text2CypherRetriever
-from neo4j_genai.types import RetrieverResult, RetrieverResultItem
+from neo4j_graphrag.llm import LLMResponse
+from neo4j_graphrag.retrievers import Text2CypherRetriever
+from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_schema_query")

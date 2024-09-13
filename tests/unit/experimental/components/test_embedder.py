@@ -15,8 +15,8 @@
 from unittest.mock import MagicMock
 
 import pytest
-from neo4j_genai.experimental.components.embedder import TextChunkEmbedder
-from neo4j_genai.experimental.components.types import TextChunk, TextChunks
+from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
+from neo4j_graphrag.experimental.components.types import TextChunk, TextChunks
 
 
 @pytest.mark.asyncio

@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/neo4j-genai
+      url: https://pypi.org/p/neo4j-graphrag
     permissions:
       id-token: write
     steps:

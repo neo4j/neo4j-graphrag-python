@@ -19,9 +19,9 @@ from typing import Any, Generator
 import pytest
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from neo4j import Driver
-from neo4j_genai.embedder import Embedder
-from neo4j_genai.retrievers import WeaviateNeo4jRetriever
-from neo4j_genai.types import RetrieverResult, RetrieverResultItem
+from neo4j_graphrag.embedder import Embedder
+from neo4j_graphrag.retrievers import WeaviateNeo4jRetriever
+from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
 from weaviate.client import WeaviateClient
 from weaviate.connect.helpers import connect_to_local
 

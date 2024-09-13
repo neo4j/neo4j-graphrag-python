@@ -20,8 +20,8 @@ from unittest import mock
 from unittest.mock import AsyncMock, call
 
 import pytest
-from neo4j_genai.experimental.pipeline import Component, Pipeline
-from neo4j_genai.experimental.pipeline.exceptions import PipelineDefinitionError
+from neo4j_graphrag.experimental.pipeline import Component, Pipeline
+from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
 
 from .components import (
     ComponentAdd,

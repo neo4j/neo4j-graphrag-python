@@ -18,22 +18,22 @@ import json
 from unittest.mock import MagicMock
 
 import pytest
-from neo4j_genai.exceptions import LLMGenerationError
-from neo4j_genai.experimental.components.entity_relation_extractor import (
+from neo4j_graphrag.exceptions import LLMGenerationError
+from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     LexicalGraphBuilder,
     LLMEntityRelationExtractor,
     OnError,
     balance_curly_braces,
     fix_invalid_json,
 )
-from neo4j_genai.experimental.components.pdf_loader import DocumentInfo
-from neo4j_genai.experimental.components.types import (
+from neo4j_graphrag.experimental.components.pdf_loader import DocumentInfo
+from neo4j_graphrag.experimental.components.types import (
     Neo4jGraph,
     Neo4jNode,
     TextChunk,
     TextChunks,
 )
-from neo4j_genai.llm import LLMInterface, LLMResponse
+from neo4j_graphrag.llm import LLMInterface, LLMResponse
 
 
 def test_create_chunk_node_no_metadata() -> None:

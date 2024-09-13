@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import pytest
 from neo4j import Driver
-from neo4j_genai.schema import (
+from neo4j_graphrag.schema import (
     BASE_ENTITY_LABEL,
     NODE_PROPERTIES_QUERY,
     REL_PROPERTIES_QUERY,

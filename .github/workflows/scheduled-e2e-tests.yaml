@@ -1,4 +1,4 @@
-name: 'Neo4j-GenAI Scheduled E2E Tests'
+name: 'Neo4j-GraphRAG Scheduled E2E Tests'
 
 on:
   schedule:
