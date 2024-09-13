@@ -6,7 +6,7 @@ The purpose of this package is to provide a first party package to developers,
 where Neo4j can guarantee long term commitment and maintenance as well as being
 fast to ship new features and high performing patterns and methods.
 
-Documentation: https://neo4j.com/docs/neo4j-graphrag-python/
+Documentation: https://neo4j.com/docs/neo4j-genai-python/
 
 Python versions supported:
 
