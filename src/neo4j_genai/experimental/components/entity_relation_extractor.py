@@ -20,6 +20,7 @@ import enum
 import json
 import logging
 import re
+import warnings
 from datetime import datetime
 from typing import Any, List, Optional, Union
 
@@ -137,6 +138,10 @@ class EntityRelationExtractor(Component, abc.ABC):
         create_lexical_graph: bool = True,
         **kwargs: Any,
     ) -> None:
+        if create_lexical_graph:
+            warnings.warn(
+                "`create_lexical_graph` is deprecated. Use the `LexicalGraphBuilder` component instead."
+            )
         self.on_error = on_error
         self.create_lexical_graph = create_lexical_graph
 
@@ -145,6 +150,7 @@ class EntityRelationExtractor(Component, abc.ABC):
         self,
         chunks: TextChunks,
         document_info: Optional[DocumentInfo] = None,
+        lexical_graph_config: Optional[LexicalGraphConfig] = None,
         **kwargs: Any,
     ) -> Neo4jGraph:
         pass
@@ -308,9 +314,9 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         self,
         chunks: TextChunks,
         document_info: Optional[DocumentInfo] = None,
+        lexical_graph_config: Optional[LexicalGraphConfig] = None,
         schema: Union[SchemaConfig, None] = None,
         examples: str = "",
-        lexical_graph_config: Optional[LexicalGraphConfig] = None,
         **kwargs: Any,
     ) -> Neo4jGraph:
         """Perform entity and relation extraction for all chunks in a list."""
@@ -318,12 +324,16 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         lexical_graph_builder = None
         lexical_graph = None
         if self.create_lexical_graph:
+            # duplicated code with the next if block but this one
+            # is deprecated and will be removed in an upcoming version
             config = lexical_graph_config or LexicalGraphConfig()
             lexical_graph_builder = LexicalGraphBuilder(config=config)
             lexical_graph_result = await lexical_graph_builder.run(
                 text_chunks=chunks, document_info=document_info
             )
             lexical_graph = lexical_graph_result.graph
+        elif lexical_graph_config:
+            lexical_graph_builder = LexicalGraphBuilder(config=lexical_graph_config)
         schema = schema or SchemaConfig(entities={}, relations={}, potential_schema=[])
         examples = examples or ""
         sem = asyncio.Semaphore(self.max_concurrency)
