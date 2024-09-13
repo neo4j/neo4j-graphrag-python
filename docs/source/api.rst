@@ -222,7 +222,7 @@ Errors
 ******
 
 
-* :class:`neo4j_graphrag.exceptions.Neo4jGenAiError`
+* :class:`neo4j_graphrag.exceptions.Neo4jGraphRagError`
 
   * :class:`neo4j_graphrag.exceptions.RetrieverInitializationError`
 
@@ -255,10 +255,10 @@ Errors
   * :class:`neo4j_graphrag.experimental.pipeline.exceptions.PipelineStatusUpdateError`
 
 
-Neo4jGenAiError
-===============
+Neo4jGraphRagError
+==================
 
-.. autoclass:: neo4j_graphrag.exceptions.Neo4jGenAiError
+.. autoclass:: neo4j_graphrag.exceptions.Neo4jGraphRagError
    :show-inheritance:
 
 
