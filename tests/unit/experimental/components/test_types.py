@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import pytest
-from neo4j_genai.experimental.components.types import Neo4jNode
+from neo4j_graphrag.experimental.components.types import Neo4jNode
 
 
 def test_neo4j_node_invalid_property() -> None:
