@@ -20,7 +20,7 @@ from typing import Literal, Optional
 import neo4j
 from pydantic import ValidationError
 
-from neo4j_genai.neo4j_queries import (
+from neo4j_graphrag.neo4j_queries import (
     UPSERT_VECTOR_ON_NODE_QUERY,
     UPSERT_VECTOR_ON_RELATIONSHIP_QUERY,
 )
