@@ -2,7 +2,7 @@ import asyncio
 import warnings
 from typing import Any, Dict, Optional
 
-from pydantic import validate_call
+from pydantic import BaseModel, validate_call
 
 from neo4j_genai.experimental.components.constants import (
     CHUNK_NODE_LABEL,
@@ -19,7 +19,21 @@ from neo4j_genai.experimental.components.types import (
     TextChunk,
     TextChunks,
 )
-from neo4j_genai.experimental.pipeline import Component
+from neo4j_genai.experimental.pipeline import Component, DataModel
+
+
+class LexicalGraphConfig(BaseModel):
+    id_prefix: str = ""
+    document_node_label: str = DOCUMENT_NODE_LABEL
+    chunk_node_label: str = CHUNK_NODE_LABEL
+    chunk_to_document_relationship_type: str = CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE
+    next_chunk_relationship_type: str = NEXT_CHUNK_RELATIONSHIP_TYPE
+    node_to_chunk_relationship_type: str = NODE_TO_CHUNK_RELATIONSHIP_TYPE
+
+
+class LexicalGraphResult(DataModel):
+    config: LexicalGraphConfig
+    graph: Neo4jGraph
 
 
 class LexicalGraphBuilder(Component):
@@ -33,24 +47,16 @@ class LexicalGraphBuilder(Component):
 
     def __init__(
         self,
-        id_prefix: str,
-        document_node_label: str = DOCUMENT_NODE_LABEL,
-        chunk_node_label: str = CHUNK_NODE_LABEL,
-        chunk_to_document_relationship_type: str = CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE,
-        next_chunk_relationship_type: str = NEXT_CHUNK_RELATIONSHIP_TYPE,
-        node_to_chunk_relationship_type: str = NODE_TO_CHUNK_RELATIONSHIP_TYPE,
+        config: LexicalGraphConfig = LexicalGraphConfig(),
     ):
-        self.id_prefix = id_prefix
-        self.document_node_label = document_node_label
-        self.chunk_node_label = chunk_node_label
-        self.document_to_chunk_relationship_type = chunk_to_document_relationship_type
-        self.next_chunk_relationship_type = next_chunk_relationship_type
-        self.node_to_chunk_relationship_type = node_to_chunk_relationship_type
+        self.config = config
 
     @validate_call
     async def run(
-        self, text_chunks: TextChunks, document_info: Optional[DocumentInfo] = None
-    ) -> Neo4jGraph:
+        self,
+        text_chunks: TextChunks,
+        document_info: Optional[DocumentInfo] = None,
+    ) -> LexicalGraphResult:
         if document_info is None:
             warnings.warn(
                 "No document metadata provided, the document node won't be created in the lexical graph"
@@ -66,10 +72,13 @@ class LexicalGraphBuilder(Component):
             for chunk in text_chunks.chunks
         ]
         await asyncio.gather(*tasks)
-        return graph
+        return LexicalGraphResult(
+            config=self.config,
+            graph=graph,
+        )
 
     def chunk_id(self, chunk_index: int) -> str:
-        return f"{self.id_prefix}:{chunk_index}"
+        return f"{self.config.id_prefix}:{chunk_index}"
 
     async def process_chunk(
         self,
@@ -97,7 +106,7 @@ class LexicalGraphBuilder(Component):
         document_metadata = document_info.metadata or {}
         return Neo4jNode(
             id=document_info.path,
-            label=self.document_node_label,
+            label=self.config.document_node_label,
             properties={
                 "path": document_info.path,
                 **document_metadata,
@@ -120,7 +129,7 @@ class LexicalGraphBuilder(Component):
             chunk_properties.update(chunk.metadata)
         return Neo4jNode(
             id=chunk_id,
-            label=self.chunk_node_label,
+            label=self.config.chunk_node_label,
             properties=chunk_properties,
             embedding_properties=embedding_properties,
         )
@@ -133,7 +142,7 @@ class LexicalGraphBuilder(Component):
         return Neo4jRelationship(
             start_node_id=chunk_id,
             end_node_id=document_id,
-            type=self.document_to_chunk_relationship_type,
+            type=self.config.chunk_to_document_relationship_type,
         )
 
     def create_next_chunk_relationship(
@@ -144,7 +153,7 @@ class LexicalGraphBuilder(Component):
         chunk_id = self.chunk_id(chunk.index)
         previous_chunk_id = self.chunk_id(chunk.index - 1)
         return Neo4jRelationship(
-            type=self.next_chunk_relationship_type,
+            type=self.config.next_chunk_relationship_type,
             start_node_id=previous_chunk_id,
             end_node_id=chunk_id,
         )
@@ -156,7 +165,7 @@ class LexicalGraphBuilder(Component):
         return Neo4jRelationship(
             start_node_id=node.id,
             end_node_id=chunk_id,
-            type=self.node_to_chunk_relationship_type,
+            type=self.config.node_to_chunk_relationship_type,
         )
 
     async def process_chunk_extracted_entities(

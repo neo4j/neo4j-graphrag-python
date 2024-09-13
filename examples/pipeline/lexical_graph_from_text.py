@@ -21,7 +21,10 @@ from langchain_text_splitters import CharacterTextSplitter
 from neo4j_genai.embeddings.openai import OpenAIEmbeddings
 from neo4j_genai.experimental.components.embedder import TextChunkEmbedder
 from neo4j_genai.experimental.components.kg_writer import Neo4jWriter
-from neo4j_genai.experimental.components.lexical_graph import LexicalGraphBuilder
+from neo4j_genai.experimental.components.lexical_graph import (
+    LexicalGraphBuilder,
+    LexicalGraphConfig,
+)
 from neo4j_genai.experimental.components.text_splitters.langchain import (
     LangChainTextSplitterAdapter,
 )
@@ -48,7 +51,8 @@ async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
     )
     pipe.add_component(TextChunkEmbedder(embedder=OpenAIEmbeddings()), "chunk_embedder")
     pipe.add_component(
-        LexicalGraphBuilder(id_prefix="example"), "lexical_graph_builder"
+        LexicalGraphBuilder(LexicalGraphConfig(id_prefix="example")),
+        "lexical_graph_builder",
     )
     pipe.add_component(Neo4jWriter(neo4j_driver), "writer")
     # define the execution order of component

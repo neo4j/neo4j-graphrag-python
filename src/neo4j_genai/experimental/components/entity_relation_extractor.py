@@ -26,7 +26,10 @@ from typing import Any, List, Optional, Union
 from pydantic import ValidationError, validate_call
 
 from neo4j_genai.exceptions import LLMGenerationError
-from neo4j_genai.experimental.components.lexical_graph import LexicalGraphBuilder
+from neo4j_genai.experimental.components.lexical_graph import (
+    LexicalGraphBuilder,
+    LexicalGraphConfig,
+)
 from neo4j_genai.experimental.components.pdf_loader import DocumentInfo
 from neo4j_genai.experimental.components.schema import SchemaConfig
 from neo4j_genai.experimental.components.types import (
@@ -307,17 +310,20 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         document_info: Optional[DocumentInfo] = None,
         schema: Union[SchemaConfig, None] = None,
         examples: str = "",
+        lexical_graph_config: Optional[LexicalGraphConfig] = None,
         **kwargs: Any,
     ) -> Neo4jGraph:
         """Perform entity and relation extraction for all chunks in a list."""
-        lexical_graph_builder = None
         run_id = str(datetime.now().timestamp())
+        lexical_graph_builder = None
         lexical_graph = None
         if self.create_lexical_graph:
-            lexical_graph_builder = LexicalGraphBuilder(id_prefix=run_id)
-            lexical_graph = await lexical_graph_builder.run(
+            config = lexical_graph_config or LexicalGraphConfig()
+            lexical_graph_builder = LexicalGraphBuilder(config=config)
+            lexical_graph_result = await lexical_graph_builder.run(
                 text_chunks=chunks, document_info=document_info
             )
+            lexical_graph = lexical_graph_result.graph
         schema = schema or SchemaConfig(entities={}, relations={}, potential_schema=[])
         examples = examples or ""
         sem = asyncio.Semaphore(self.max_concurrency)

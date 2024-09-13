@@ -21,10 +21,13 @@ from neo4j_genai.experimental.components.constants import (
     DOCUMENT_NODE_LABEL,
     NEXT_CHUNK_RELATIONSHIP_TYPE,
 )
-from neo4j_genai.experimental.components.lexical_graph import LexicalGraphBuilder
+from neo4j_genai.experimental.components.lexical_graph import (
+    LexicalGraphBuilder,
+    LexicalGraphConfig,
+    LexicalGraphResult,
+)
 from neo4j_genai.experimental.components.pdf_loader import DocumentInfo
 from neo4j_genai.experimental.components.types import (
-    Neo4jGraph,
     Neo4jNode,
     TextChunk,
     TextChunks,
@@ -32,7 +35,9 @@ from neo4j_genai.experimental.components.types import (
 
 
 def test_lexical_graph_builder_create_chunk_node_no_metadata() -> None:
-    builder = LexicalGraphBuilder("test_create_chunk_node_no_metadata")
+    builder = LexicalGraphBuilder(
+        LexicalGraphConfig(id_prefix="test_create_chunk_node_no_metadata")
+    )
     node = builder.create_chunk_node(chunk=TextChunk(text="text chunk", index=0))
     assert isinstance(node, Neo4jNode)
     assert node.id == "test_create_chunk_node_no_metadata:0"
@@ -41,7 +46,9 @@ def test_lexical_graph_builder_create_chunk_node_no_metadata() -> None:
 
 
 def test_lexical_graph_builder_create_chunk_node_metadata_no_embedding() -> None:
-    builder = LexicalGraphBuilder("test_create_chunk_node_metadata_no_embedding")
+    builder = LexicalGraphBuilder(
+        LexicalGraphConfig(id_prefix="test_create_chunk_node_metadata_no_embedding")
+    )
     node = builder.create_chunk_node(
         chunk=TextChunk(text="text chunk", index=0, metadata={"status": "ok"})
     )
@@ -52,7 +59,9 @@ def test_lexical_graph_builder_create_chunk_node_metadata_no_embedding() -> None
 
 
 def test_lexical_graph_builder_create_chunk_node_metadata_embedding() -> None:
-    builder = LexicalGraphBuilder("test_create_chunk_node_metadata_embedding")
+    builder = LexicalGraphBuilder(
+        LexicalGraphConfig(id_prefix="test_create_chunk_node_metadata_embedding")
+    )
     node = builder.create_chunk_node(
         chunk=TextChunk(
             text="text chunk",
@@ -68,8 +77,10 @@ def test_lexical_graph_builder_create_chunk_node_metadata_embedding() -> None:
 
 @pytest.mark.asyncio
 async def test_lexical_graph_builder_run_with_document() -> None:
-    lexical_graph_builder = LexicalGraphBuilder(id_prefix="test")
-    graph = await lexical_graph_builder.run(
+    lexical_graph_builder = LexicalGraphBuilder(
+        config=LexicalGraphConfig(id_prefix="test")
+    )
+    result = await lexical_graph_builder.run(
         text_chunks=TextChunks(
             chunks=[
                 TextChunk(text="text chunk 1", index=0),
@@ -78,7 +89,8 @@ async def test_lexical_graph_builder_run_with_document() -> None:
         ),
         document_info=DocumentInfo(path="test_lexical_graph"),
     )
-    assert isinstance(graph, Neo4jGraph)
+    assert isinstance(result, LexicalGraphResult)
+    graph = result.graph
     nodes = graph.nodes
     assert len(nodes) == 3
     document = nodes[0]
@@ -97,8 +109,10 @@ async def test_lexical_graph_builder_run_with_document() -> None:
 
 @pytest.mark.asyncio
 async def test_lexical_graph_builder_run_no_document() -> None:
-    lexical_graph_builder = LexicalGraphBuilder(id_prefix="test")
-    graph = await lexical_graph_builder.run(
+    lexical_graph_builder = LexicalGraphBuilder(
+        config=LexicalGraphConfig(id_prefix="test")
+    )
+    result = await lexical_graph_builder.run(
         text_chunks=TextChunks(
             chunks=[
                 TextChunk(text="text chunk 1", index=0),
@@ -106,7 +120,8 @@ async def test_lexical_graph_builder_run_no_document() -> None:
             ]
         ),
     )
-    assert isinstance(graph, Neo4jGraph)
+    assert isinstance(result, LexicalGraphResult)
+    graph = result.graph
     nodes = graph.nodes
     assert len(nodes) == 2
     chunk1 = nodes[0]
@@ -120,13 +135,15 @@ async def test_lexical_graph_builder_run_no_document() -> None:
 @pytest.mark.asyncio
 async def test_lexical_graph_builder_run_custom_labels() -> None:
     lexical_graph_builder = LexicalGraphBuilder(
-        id_prefix="test",
-        document_node_label="Report",
-        chunk_node_label="Page",
-        chunk_to_document_relationship_type="IN_REPORT",
-        next_chunk_relationship_type="NEXT_PAGE",
+        config=LexicalGraphConfig(
+            id_prefix="test",
+            document_node_label="Report",
+            chunk_node_label="Page",
+            chunk_to_document_relationship_type="IN_REPORT",
+            next_chunk_relationship_type="NEXT_PAGE",
+        ),
     )
-    graph = await lexical_graph_builder.run(
+    result = await lexical_graph_builder.run(
         text_chunks=TextChunks(
             chunks=[
                 TextChunk(text="text chunk 1", index=0),
@@ -135,7 +152,8 @@ async def test_lexical_graph_builder_run_custom_labels() -> None:
         ),
         document_info=DocumentInfo(path="test_lexical_graph"),
     )
-    assert isinstance(graph, Neo4jGraph)
+    assert isinstance(result, LexicalGraphResult)
+    graph = result.graph
     nodes = graph.nodes
     assert len(nodes) == 3
     document = nodes[0]

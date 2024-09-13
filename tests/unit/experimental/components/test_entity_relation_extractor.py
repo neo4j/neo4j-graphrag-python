@@ -25,6 +25,7 @@ from neo4j_genai.experimental.components.entity_relation_extractor import (
     balance_curly_braces,
     fix_invalid_json,
 )
+from neo4j_genai.experimental.components.lexical_graph import LexicalGraphResult
 from neo4j_genai.experimental.components.pdf_loader import DocumentInfo
 from neo4j_genai.experimental.components.types import (
     Neo4jGraph,
@@ -81,9 +82,9 @@ async def test_extractor_happy_path_no_entities_no_lexical_graph() -> None:
     )
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
     document_info = DocumentInfo(path="path")
-    result = await extractor.run(chunks=chunks, document_info=document_info)
-    assert result.nodes == []
-    assert result.relationships == []
+    graph = await extractor.run(chunks=chunks, document_info=document_info)
+    assert graph.nodes == []
+    assert graph.relationships == []
 
 
 @pytest.mark.asyncio
