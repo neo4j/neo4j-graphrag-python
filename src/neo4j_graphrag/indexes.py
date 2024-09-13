@@ -54,7 +54,7 @@ def create_vector_index(
     .. code-block:: python
 
         from neo4j import GraphDatabase
-        from neo4j_genai.indexes import create_vector_index
+        from neo4j_graphrag.indexes import create_vector_index
 
         URI = "neo4j://localhost:7687"
         AUTH = ("neo4j", "password")
@@ -139,7 +139,7 @@ def create_fulltext_index(
     .. code-block:: python
 
         from neo4j import GraphDatabase
-        from neo4j_genai.indexes import create_fulltext_index
+        from neo4j_graphrag.indexes import create_fulltext_index
 
         URI = "neo4j://localhost:7687"
         AUTH = ("neo4j", "password")
@@ -205,7 +205,7 @@ def drop_index_if_exists(
     .. code-block:: python
 
         from neo4j import GraphDatabase
-        from neo4j_genai.indexes import drop_index_if_exists
+        from neo4j_graphrag.indexes import drop_index_if_exists
 
         URI = "neo4j://localhost:7687"
         AUTH = ("neo4j", "password")
@@ -256,7 +256,7 @@ def upsert_vector(
     .. code-block:: python
 
         from neo4j import GraphDatabase
-        from neo4j_genai.indexes import upsert_vector
+        from neo4j_graphrag.indexes import upsert_vector
 
         URI = "neo4j://localhost:7687"
         AUTH = ("neo4j", "password")
@@ -312,7 +312,7 @@ def upsert_vector_on_relationship(
     .. code-block:: python
 
         from neo4j import GraphDatabase
-        from neo4j_genai.indexes import upsert_vector_on_relationship
+        from neo4j_graphrag.indexes import upsert_vector_on_relationship
 
         URI = "neo4j://localhost:7687"
         AUTH = ("neo4j", "password")
@@ -369,7 +369,7 @@ async def async_upsert_vector(
     .. code-block:: python
 
         from neo4j import AsyncGraphDatabase
-        from neo4j_genai.indexes import upsert_vector
+        from neo4j_graphrag.indexes import upsert_vector
 
         URI = "neo4j://localhost:7687"
         AUTH = ("neo4j", "password")
@@ -426,7 +426,7 @@ async def async_upsert_vector_on_relationship(
     .. code-block:: python
 
         from neo4j import AsyncGraphDatabase
-        from neo4j_genai.indexes import upsert_vector_on_relationship
+        from neo4j_graphrag.indexes import upsert_vector_on_relationship
 
         URI = "neo4j://localhost:7687"
         AUTH = ("neo4j", "password")
