@@ -248,7 +248,7 @@ def test_t2c_retriever_invalid_custom_prompt_type(
     assert "Input should be a valid string" in str(exc_info.value)
 
 
-@patch("neo4j_genai.retrievers.base.Retriever._verify_version")
+@patch("neo4j_graphrag.retrievers.base.Retriever._verify_version")
 def test_t2c_retriever_with_custom_prompt_prompt_params(
     _verify_version_mock: MagicMock,
     driver: MagicMock,
@@ -272,7 +272,7 @@ def test_t2c_retriever_with_custom_prompt_prompt_params(
     )
 
 
-@patch("neo4j_genai.retrievers.base.Retriever._verify_version")
+@patch("neo4j_graphrag.retrievers.base.Retriever._verify_version")
 def test_t2c_retriever_with_custom_prompt_bad_prompt_params(
     _verify_version_mock: MagicMock,
     driver: MagicMock,
