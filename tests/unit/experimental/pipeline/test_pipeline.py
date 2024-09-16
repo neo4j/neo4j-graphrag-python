@@ -97,6 +97,17 @@ def test_pipeline_parameter_validation_one_component_all_good() -> None:
     assert is_valid is True
 
 
+def test_pipeline_invalidate() -> None:
+    pipe = Pipeline()
+    pipe.is_validated = True
+    pipe.param_mapping = {"a": {"key": "value"}}
+    pipe.missing_inputs = {"a": ["other_key"]}
+    pipe.invalidate()
+    assert pipe.is_validated is False
+    assert len(pipe.param_mapping) == 0
+    assert len(pipe.missing_inputs) == 0
+
+
 def test_pipeline_parameter_validation_called_twice() -> None:
     pipe = Pipeline()
     component_a = ComponentPassThrough()
@@ -109,9 +120,6 @@ def test_pipeline_parameter_validation_called_twice() -> None:
     with pytest.raises(PipelineDefinitionError):
         pipe.validate_parameter_mapping_for_task(pipe.get_node_by_name("b"))
     pipe.invalidate()
-    assert pipe.is_validated is False
-    assert len(pipe.param_mapping) == 0
-    assert len(pipe.missing_inputs) == 0
     is_valid = pipe.validate_parameter_mapping_for_task(pipe.get_node_by_name("b"))
     assert is_valid is True
 
