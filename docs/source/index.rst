@@ -45,7 +45,7 @@ Topics
     :caption: Contents:
     :hidden:
 
-    self
+    Introduction <self>
     user_guide_rag.rst
     user_guide_kg_builder.rst
     user_guide_pipeline.rst
