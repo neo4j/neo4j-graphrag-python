@@ -14,10 +14,10 @@ from neo4j_graphrag.experimental.components.types import (
 )
 from neo4j_graphrag.experimental.pipeline import Component, DataModel
 
-CHUNK_NODE_LABEL = "Chunk"
 DOCUMENT_NODE_LABEL = "Document"
-NEXT_CHUNK_RELATIONSHIP_TYPE = "NEXT_CHUNK"
+CHUNK_NODE_LABEL = "Chunk"
 CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE = "FROM_DOCUMENT"
+NEXT_CHUNK_RELATIONSHIP_TYPE = "NEXT_CHUNK"
 NODE_TO_CHUNK_RELATIONSHIP_TYPE = "FROM_CHUNK"
 
 
