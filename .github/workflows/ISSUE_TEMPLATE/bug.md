@@ -1,6 +1,6 @@
 ---
 name: Bug Report
-about: Report a bug in the Neo4j GenAI library
+about: Report a bug in the Neo4j GraphRAG library
 labels: "bug"
 ---
 

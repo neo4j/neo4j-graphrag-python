@@ -15,9 +15,13 @@
 from unittest.mock import Mock, patch
 
 import pytest
-from neo4j_genai.experimental.pipeline import Component
-from neo4j_genai.experimental.pipeline.exceptions import PipelineDefinitionError
-from neo4j_genai.experimental.pipeline.pipeline import Orchestrator, Pipeline, RunStatus
+from neo4j_graphrag.experimental.pipeline import Component
+from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
+from neo4j_graphrag.experimental.pipeline.pipeline import (
+    Orchestrator,
+    Pipeline,
+    RunStatus,
+)
 
 from tests.unit.experimental.pipeline.components import (
     ComponentNoParam,
@@ -52,7 +56,7 @@ async def test_orchestrator_get_component_inputs_from_user_only() -> None:
 
 
 @patch(
-    "neo4j_genai.experimental.pipeline.pipeline.Orchestrator.get_results_for_component"
+    "neo4j_graphrag.experimental.pipeline.pipeline.Orchestrator.get_results_for_component"
 )
 @pytest.mark.asyncio
 async def test_pipeline_get_component_inputs_from_parent_specific(
@@ -75,7 +79,7 @@ async def test_pipeline_get_component_inputs_from_parent_specific(
 
 
 @patch(
-    "neo4j_genai.experimental.pipeline.pipeline.Orchestrator.get_results_for_component"
+    "neo4j_graphrag.experimental.pipeline.pipeline.Orchestrator.get_results_for_component"
 )
 @pytest.mark.asyncio
 async def test_orchestrator_get_component_inputs_from_parent_all(
@@ -100,7 +104,7 @@ async def test_orchestrator_get_component_inputs_from_parent_all(
 
 
 @patch(
-    "neo4j_genai.experimental.pipeline.pipeline.Orchestrator.get_results_for_component"
+    "neo4j_graphrag.experimental.pipeline.pipeline.Orchestrator.get_results_for_component"
 )
 @pytest.mark.asyncio
 async def test_orchestrator_get_component_inputs_from_parent_and_input(
@@ -128,7 +132,7 @@ async def test_orchestrator_get_component_inputs_from_parent_and_input(
 
 
 @patch(
-    "neo4j_genai.experimental.pipeline.pipeline.Orchestrator.get_results_for_component"
+    "neo4j_graphrag.experimental.pipeline.pipeline.Orchestrator.get_results_for_component"
 )
 @pytest.mark.asyncio
 async def test_orchestrator_get_component_inputs_ignore_user_input_if_input_def_provided(
@@ -184,7 +188,7 @@ def pipeline_aggregation() -> Pipeline:
 
 @pytest.mark.asyncio
 @patch(
-    "neo4j_genai.experimental.pipeline.pipeline.Orchestrator.get_status_for_component"
+    "neo4j_graphrag.experimental.pipeline.pipeline.Orchestrator.get_status_for_component"
 )
 async def test_orchestrator_branch(
     mock_status: Mock, pipeline_branch: Pipeline
@@ -209,7 +213,7 @@ async def test_orchestrator_branch(
 
 @pytest.mark.asyncio
 @patch(
-    "neo4j_genai.experimental.pipeline.pipeline.Orchestrator.get_status_for_component"
+    "neo4j_graphrag.experimental.pipeline.pipeline.Orchestrator.get_status_for_component"
 )
 async def test_orchestrator_aggregation(
     mock_status: Mock, pipeline_aggregation: Pipeline

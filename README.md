@@ -1,6 +1,6 @@
-# Neo4j GenAI package for Python
+# Neo4j GraphRAG package for Python
 
-This repository contains the official Neo4j GenAI features for Python.
+This repository contains the official Neo4j GraphRAG features for Python.
 
 The purpose of this package is to provide a first party package to developers,
 where Neo4j can guarantee long term commitment and maintenance as well as being
@@ -25,7 +25,7 @@ This package requires Python (>=3.8.1).
 To install the latest stable version, use:
 
 ```shell
-pip install neo4j-genai
+pip install neo4j-graphrag
 ```
 
 ## Examples
@@ -38,7 +38,7 @@ Assumption: Neo4j running
 
 ```python
 from neo4j import GraphDatabase
-from neo4j_genai.indexes import create_vector_index
+from neo4j_graphrag.indexes import create_vector_index
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
@@ -68,7 +68,7 @@ Assumption: Neo4j running with a defined vector index
 
 ```python
 from neo4j import GraphDatabase
-from neo4j_genai.indexes import upsert_vector
+from neo4j_graphrag.indexes import upsert_vector
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
@@ -100,10 +100,10 @@ in Neo4j.
 
 ```python
 from neo4j import GraphDatabase
-from neo4j_genai.retrievers import VectorRetriever
-from neo4j_genai.llm import OpenAILLM
-from neo4j_genai.generation import GraphRAG
-from neo4j_genai.embeddings.openai import OpenAIEmbeddings
+from neo4j_graphrag.retrievers import VectorRetriever
+from neo4j_graphrag.llm import OpenAILLM
+from neo4j_graphrag.generation import GraphRAG
+from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
@@ -147,7 +147,7 @@ poetry install
 If you have a bug to report or feature to request, first
 [search to see if an issue already exists](https://docs.github.com/en/github/searching-for-information-on-github/searching-on-github/searching-issues-and-pull-requests#search-by-the-title-body-or-comments).
 If a related issue doesn't exist, please raise a new issue using the relevant
-[issue form](https://github.com/neo4j/neo4j-genai-python/issues/new/choose).
+[issue form](https://github.com/neo4j/neo4j-graphrag-python/issues/new/choose).
 
 If you're a Neo4j Enterprise customer, you can also reach out to [Customer Support](http://support.neo4j.com/).
 

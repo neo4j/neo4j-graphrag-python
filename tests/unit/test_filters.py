@@ -18,8 +18,8 @@ from typing import Any
 from unittest.mock import MagicMock, call, patch
 
 import pytest
-from neo4j_genai.exceptions import FilterValidationError
-from neo4j_genai.filters import (
+from neo4j_graphrag.exceptions import FilterValidationError
+from neo4j_graphrag.filters import (
     EqOperator,
     GteOperator,
     GtOperator,
@@ -269,7 +269,7 @@ def test_handle_field_filter_operator_between_not_enough_parameters(
     assert "Expected lower and upper bounds in a list, got [0]" in str(excinfo)
 
 
-@patch("neo4j_genai.filters._single_condition_cypher", return_value="condition")
+@patch("neo4j_graphrag.filters._single_condition_cypher", return_value="condition")
 def test_handle_field_filter_implicit_eq(
     _single_condition_cypher_mocked: MagicMock, param_store_empty: ParameterStore
 ) -> None:
@@ -282,7 +282,7 @@ def test_handle_field_filter_implicit_eq(
     assert generated == "condition"
 
 
-@patch("neo4j_genai.filters._single_condition_cypher")
+@patch("neo4j_graphrag.filters._single_condition_cypher")
 def test_handle_field_filter_eq(
     _single_condition_cypher_mocked: MagicMock, param_store_empty: ParameterStore
 ) -> None:
@@ -294,7 +294,7 @@ def test_handle_field_filter_eq(
     )
 
 
-@patch("neo4j_genai.filters._single_condition_cypher")
+@patch("neo4j_graphrag.filters._single_condition_cypher")
 def test_handle_field_filter_neq(
     _single_condition_cypher_mocked: MagicMock, param_store_empty: ParameterStore
 ) -> None:
@@ -306,7 +306,7 @@ def test_handle_field_filter_neq(
     )
 
 
-@patch("neo4j_genai.filters._single_condition_cypher")
+@patch("neo4j_graphrag.filters._single_condition_cypher")
 def test_handle_field_filter_lt(
     _single_condition_cypher_mocked: MagicMock, param_store_empty: ParameterStore
 ) -> None:
@@ -316,7 +316,7 @@ def test_handle_field_filter_lt(
     )
 
 
-@patch("neo4j_genai.filters._single_condition_cypher")
+@patch("neo4j_graphrag.filters._single_condition_cypher")
 def test_handle_field_filter_gt(
     _single_condition_cypher_mocked: MagicMock, param_store_empty: ParameterStore
 ) -> None:
@@ -326,7 +326,7 @@ def test_handle_field_filter_gt(
     )
 
 
-@patch("neo4j_genai.filters._single_condition_cypher")
+@patch("neo4j_graphrag.filters._single_condition_cypher")
 def test_handle_field_filter_lte(
     _single_condition_cypher_mocked: MagicMock, param_store_empty: ParameterStore
 ) -> None:
@@ -336,7 +336,7 @@ def test_handle_field_filter_lte(
     )
 
 
-@patch("neo4j_genai.filters._single_condition_cypher")
+@patch("neo4j_graphrag.filters._single_condition_cypher")
 def test_handle_field_filter_gte(
     _single_condition_cypher_mocked: MagicMock, param_store_empty: ParameterStore
 ) -> None:
@@ -346,7 +346,7 @@ def test_handle_field_filter_gte(
     )
 
 
-@patch("neo4j_genai.filters._single_condition_cypher")
+@patch("neo4j_graphrag.filters._single_condition_cypher")
 def test_handle_field_filter_in(
     _single_condition_cypher_mocked: MagicMock, param_store_empty: ParameterStore
 ) -> None:
@@ -356,7 +356,7 @@ def test_handle_field_filter_in(
     )
 
 
-@patch("neo4j_genai.filters._single_condition_cypher")
+@patch("neo4j_graphrag.filters._single_condition_cypher")
 def test_handle_field_filter_nin(
     _single_condition_cypher_mocked: MagicMock, param_store_empty: ParameterStore
 ) -> None:
@@ -366,7 +366,7 @@ def test_handle_field_filter_nin(
     )
 
 
-@patch("neo4j_genai.filters._single_condition_cypher")
+@patch("neo4j_graphrag.filters._single_condition_cypher")
 def test_handle_field_filter_like(
     _single_condition_cypher_mocked: MagicMock, param_store_empty: ParameterStore
 ) -> None:
@@ -378,7 +378,7 @@ def test_handle_field_filter_like(
     )
 
 
-@patch("neo4j_genai.filters._single_condition_cypher")
+@patch("neo4j_graphrag.filters._single_condition_cypher")
 def test_handle_field_filter_ilike(
     _single_condition_cypher_mocked: MagicMock, param_store_empty: ParameterStore
 ) -> None:
@@ -390,7 +390,7 @@ def test_handle_field_filter_ilike(
     )
 
 
-@patch("neo4j_genai.filters._handle_field_filter")
+@patch("neo4j_graphrag.filters._handle_field_filter")
 def test_construct_metadata_filter_filter_is_not_a_dict(
     _handle_field_filter_mock: MagicMock, param_store_empty: ParameterStore
 ) -> None:
@@ -399,7 +399,7 @@ def test_construct_metadata_filter_filter_is_not_a_dict(
     assert "Filter must be a dictionary, got <class 'list'>" in str(excinfo)
 
 
-@patch("neo4j_genai.filters._handle_field_filter")
+@patch("neo4j_graphrag.filters._handle_field_filter")
 def test_construct_metadata_filter_no_operator(
     _handle_field_filter_mock: MagicMock, param_store_empty: ParameterStore
 ) -> None:
@@ -409,7 +409,7 @@ def test_construct_metadata_filter_no_operator(
     )
 
 
-@patch("neo4j_genai.filters._construct_metadata_filter")
+@patch("neo4j_graphrag.filters._construct_metadata_filter")
 def test_construct_metadata_filter_implicit_and(
     _construct_metadata_filter_mock: MagicMock, param_store_empty: ParameterStore
 ) -> None:
@@ -428,7 +428,8 @@ def test_construct_metadata_filter_implicit_and(
 
 
 @patch(
-    "neo4j_genai.filters._construct_metadata_filter", side_effect=["filter1", "filter2"]
+    "neo4j_graphrag.filters._construct_metadata_filter",
+    side_effect=["filter1", "filter2"],
 )
 def test_construct_metadata_filter_explicit_and(
     _construct_metadata_filter_mock: MagicMock, param_store_empty: ParameterStore
@@ -448,7 +449,8 @@ def test_construct_metadata_filter_explicit_and(
 
 
 @patch(
-    "neo4j_genai.filters._construct_metadata_filter", side_effect=["filter1", "filter2"]
+    "neo4j_graphrag.filters._construct_metadata_filter",
+    side_effect=["filter1", "filter2"],
 )
 def test_construct_metadata_filter_or(
     _construct_metadata_filter_mock: MagicMock, param_store_empty: ParameterStore

@@ -35,7 +35,7 @@ A Knowledge Graph (KG) construction pipeline requires a few components:
 This package contains the interface and implementations for each of these components, which are detailed in the following sections.
 
 To see an end-to-end example of a Knowledge Graph construction pipeline,
-refer to `this example <https://github.com/neo4j/neo4j-genai-python/blob/main/examples/pipeline/kg_builder.py>`_.
+refer to `this example <https://github.com/neo4j/neo4j-graphrag-python/blob/main/examples/pipeline/kg_builder.py>`_.
 
 **********************************
 Knowledge Graph Builder Components
@@ -48,7 +48,7 @@ Each of these components can be run individually:
 .. code:: python
 
     import asyncio
-    from neo4j_genai.experimental.components.pdf_loader import PdfLoader
+    from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
     my_component = PdfLoader()
     asyncio.run(my_component.run("my_file.pdf"))
 
@@ -57,8 +57,8 @@ They can also be used within a pipeline:
 
 .. code:: python
 
-    from neo4j_genai.experimental.pipeline import Pipeline
-    from neo4j_genai.experimental.components.pdf_loader import PdfLoader
+    from neo4j_graphrag.experimental.pipeline import Pipeline
+    from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
     pipeline = Pipeline()
     my_component = PdfLoader()
     pipeline.add_component(my_component, "component_name")
@@ -74,7 +74,7 @@ This package currently supports text extraction from PDFs:
 .. code:: python
 
     from pathlib import Path
-    from neo4j_genai.experimental.components.pdf_loader import PdfLoader
+    from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
 
     loader = PdfLoader()
     loader.run(path=Path("my_file.pdf"))
@@ -84,7 +84,7 @@ To implement your own loader, use the `DataLoader` interface:
 .. code:: python
 
     from pathlib import Path
-    from neo4j_genai.experimental.components.pdf_loader import DataLoader, PdfDocument
+    from neo4j_graphrag.experimental.components.pdf_loader import DataLoader, PdfDocument
 
     class MyDataLoader(DataLoader):
         async def run(self, path: Path) -> PdfDocument:
@@ -104,7 +104,7 @@ text splitters are included in this package:
 .. code:: python
 
     from langchain_text_splitters import CharacterTextSplitter
-    from neo4j_genai.experimental.components.text_splitters.langchain import LangChainTextSplitterAdapter
+    from neo4j_graphrag.experimental.components.text_splitters.langchain import LangChainTextSplitterAdapter
     splitter = LangChainTextSplitterAdapter(
         CharacterTextSplitter(chunk_size=500, chunk_overlap=100, separator=".")
     )
@@ -117,8 +117,8 @@ To implement a custom text splitter, the `TextSplitter` interface can be used:
 
 .. code:: python
 
-    from neo4j_genai.experimental.components.text_splitters.base import TextSplitter
-    from neo4j_genai.experimental.components.types import TextChunks, TextChunk
+    from neo4j_graphrag.experimental.components.text_splitters.base import TextSplitter
+    from neo4j_graphrag.experimental.components.types import TextChunks, TextChunk
 
 
     class MyTextSplitter(TextSplitter):
@@ -145,8 +145,8 @@ Example usage:
 
 .. code:: python
 
-    from neo4j_genai.experimental.components.embedder import TextChunkEmbedder
-    from neo4j_genai.embeddings.openai import OpenAIEmbeddings
+    from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
+    from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
     text_chunk_embedder = TextChunkEmbedder(embedder=OpenAIEmbeddings())
     text_chunk_embedder.run(text_chunks=TextChunks(chunks=[TextChunk(text="my_text")]))
 
@@ -208,7 +208,7 @@ Here is a code block illustrating these concepts:
 
 .. code:: python
 
-    from neo4j_genai.experimental.components.schema import (
+    from neo4j_graphrag.experimental.components.schema import (
         SchemaBuilder,
         SchemaEntity,
         SchemaProperty,
@@ -264,10 +264,10 @@ It can be used in this way:
 
 .. code:: python
 
-    from neo4j_genai.experimental.components.entity_relation_extractor import (
+    from neo4j_graphrag.experimental.components.entity_relation_extractor import (
         LLMEntityRelationExtractor,
     )
-    from neo4j_genai.llm import OpenAILLM
+    from neo4j_graphrag.llm import OpenAILLM
 
     extractor = LLMEntityRelationExtractor(
         llm=OpenAILLM(
@@ -293,7 +293,7 @@ This behaviour can be changed by using the `on_error` flag in the `LLMEntityRela
 
 .. code:: python
 
-    from neo4j_genai.experimental.components.entity_relation_extractor import (
+    from neo4j_graphrag.experimental.components.entity_relation_extractor import (
         LLMEntityRelationExtractor,
         OnError,
     )
@@ -355,9 +355,9 @@ If more customization is needed, it is possible to subclass the `EntityRelationE
 .. code:: python
 
     from pydantic import validate_call
-    from neo4j_genai.experimental.components.entity_relation_extractor import EntityRelationExtractor
-    from neo4j_genai.experimental.components.schema import SchemaConfig
-    from neo4j_genai.experimental.components.types import (
+    from neo4j_graphrag.experimental.components.entity_relation_extractor import EntityRelationExtractor
+    from neo4j_graphrag.experimental.components.schema import SchemaConfig
+    from neo4j_graphrag.experimental.components.types import (
         Neo4jGraph,
         Neo4jNode,
         Neo4jRelationship,
@@ -394,8 +394,8 @@ to a Neo4j database:
 .. code:: python
 
     import neo4j
-    from neo4j_genai.experimental.components.kg_writer import Neo4jWriter
-    from neo4j_genai.experimental.components.types import Neo4jGraph
+    from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
+    from neo4j_graphrag.experimental.components.types import Neo4jGraph
 
     with neo4j.GraphDatabase.driver(
         "bolt://localhost:7687", auth=("neo4j", "password")
@@ -412,7 +412,7 @@ It is possible to create a custom writer using the `KGWriter` interface:
 
     import json
     from pydantic import validate_call
-    from neo4j_genai.experimental.components.kg_writer import KGWriter
+    from neo4j_graphrag.experimental.components.kg_writer import KGWriter
 
     class JsonWriter(KGWriter):
 

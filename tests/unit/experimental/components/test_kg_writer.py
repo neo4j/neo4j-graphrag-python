@@ -17,13 +17,13 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from neo4j_genai.experimental.components.kg_writer import Neo4jWriter
-from neo4j_genai.experimental.components.types import (
+from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
+from neo4j_graphrag.experimental.components.types import (
     Neo4jGraph,
     Neo4jNode,
     Neo4jRelationship,
 )
-from neo4j_genai.neo4j_queries import UPSERT_NODE_QUERY, UPSERT_RELATIONSHIP_QUERY
+from neo4j_graphrag.neo4j_queries import UPSERT_NODE_QUERY, UPSERT_RELATIONSHIP_QUERY
 
 
 def test_upsert_node(driver: MagicMock) -> None:

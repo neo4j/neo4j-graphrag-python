@@ -18,21 +18,21 @@ import json
 from unittest.mock import MagicMock
 
 import pytest
-from neo4j_genai.exceptions import LLMGenerationError
-from neo4j_genai.experimental.components.entity_relation_extractor import (
+from neo4j_graphrag.exceptions import LLMGenerationError
+from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
     OnError,
     balance_curly_braces,
     fix_invalid_json,
 )
-from neo4j_genai.experimental.components.lexical_graph import LexicalGraphResult
-from neo4j_genai.experimental.components.pdf_loader import DocumentInfo
-from neo4j_genai.experimental.components.types import (
+from neo4j_graphrag.experimental.components.lexical_graph import LexicalGraphResult
+from neo4j_graphrag.experimental.components.pdf_loader import DocumentInfo
+from neo4j_graphrag.experimental.components.types import (
     Neo4jGraph,
     TextChunk,
     TextChunks,
 )
-from neo4j_genai.llm import LLMInterface, LLMResponse
+from neo4j_graphrag.llm import LLMInterface, LLMResponse
 
 
 @pytest.mark.asyncio

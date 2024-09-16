@@ -14,8 +14,8 @@
 #  limitations under the License.
 """This example illustrates how to visualize a Pipeline"""
 
-from neo4j_genai.experimental.pipeline import Component, Pipeline
-from neo4j_genai.experimental.pipeline.component import DataModel
+from neo4j_graphrag.experimental.pipeline import Component, Pipeline
+from neo4j_graphrag.experimental.pipeline.component import DataModel
 from pydantic import validate_call
 
 

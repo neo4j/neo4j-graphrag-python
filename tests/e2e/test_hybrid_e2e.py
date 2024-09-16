@@ -15,12 +15,12 @@
 
 import pytest
 from neo4j import Driver
-from neo4j_genai.embedder import Embedder
-from neo4j_genai.retrievers import (
+from neo4j_graphrag.embedder import Embedder
+from neo4j_graphrag.retrievers import (
     HybridCypherRetriever,
     HybridRetriever,
 )
-from neo4j_genai.types import RetrieverResult, RetrieverResultItem
+from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")

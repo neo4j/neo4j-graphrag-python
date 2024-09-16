@@ -1,7 +1,18 @@
-# @neo4j/neo4j-genai-python
+# @neo4j/neo4j-graphrag-python
 
 ## Next
 
+## 0.6.2
+
+## 0.6.1
+
+### Changed
+- Officially renamed neo4j-genai to neo4j-graphrag. For the final release version of neo4j-genai, please visit https://pypi.org/project/neo4j-genai/.
+
+## 0.6.0
+
+### IMPORTANT NOTICE
+- The `neo4j-genai` package is now deprecated. Users are advised to switch to the new package `neo4j-graphrag`.
 ### Added
 - Ability to visualise pipeline with `my_pipeline.draw("pipeline.png")`.
 - `LexicalGraphBuilder` component to create the lexical graph without entity-relation extraction.
@@ -48,7 +59,7 @@
 -   Stopped embeddings from being returned when searching with `VectorRetriever`. Added `nodeLabels` and `id` to the metadata of `VectorRetriever` results.
 -   Added `upsert_vector` utility function for attaching vectors to node properties.
 -   Introduced `Neo4jInsertionError` for handling insertion failures in Neo4j.
--   Included Pinecone and Weaviate retrievers in neo4j_genai.retrievers.
+-   Included Pinecone and Weaviate retrievers in neo4j_graphrag.retrievers.
 -   Introduced the GraphRAG object, enabling a full RAG (Retrieval-Augmented Generation) pipeline with context retrieval, prompt formatting, and answer generation.
 -   Added PromptTemplate and RagTemplate for customizable prompt generation.
 -   Added LLMInterface with implementation for OpenAI LLM.
@@ -59,7 +70,7 @@
 -   Introduced result_formatter argument to all retrievers, allowing custom formatting of retriever results.
 
 ### Changed
--   Refactored import paths for retrievers to neo4j_genai.retrievers.
+-   Refactored import paths for retrievers to neo4j_graphrag.retrievers.
 -   Implemented exception chaining for all re-raised exceptions to improve stack trace readability.
 -   Made error messages in `index.py` more consistent.
 -   Renamed `Retriever._get_search_results` to `Retriever.get_search_results`

@@ -15,19 +15,19 @@
 from __future__ import annotations
 
 import pytest
-from neo4j_genai.experimental.components.constants import (
+from neo4j_graphrag.experimental.components.constants import (
     CHUNK_NODE_LABEL,
     CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE,
     DOCUMENT_NODE_LABEL,
     NEXT_CHUNK_RELATIONSHIP_TYPE,
 )
-from neo4j_genai.experimental.components.lexical_graph import (
+from neo4j_graphrag.experimental.components.lexical_graph import (
     LexicalGraphBuilder,
     LexicalGraphConfig,
     LexicalGraphResult,
 )
-from neo4j_genai.experimental.components.pdf_loader import DocumentInfo
-from neo4j_genai.experimental.components.types import (
+from neo4j_graphrag.experimental.components.pdf_loader import DocumentInfo
+from neo4j_graphrag.experimental.components.types import (
     Neo4jNode,
     TextChunk,
     TextChunks,

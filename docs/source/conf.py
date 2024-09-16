@@ -28,7 +28,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "neo4j-genai-python"
+project = "neo4j-graphrag-python"
 copyright = "2024, Neo4j, Inc."
 author = "Neo4j, Inc."
 

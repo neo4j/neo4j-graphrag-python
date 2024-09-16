@@ -19,9 +19,9 @@ from typing import Any, Union
 from unittest.mock import MagicMock, patch
 
 import pytest
-from neo4j_genai.exceptions import Neo4jVersionError
-from neo4j_genai.retrievers.base import Retriever
-from neo4j_genai.types import RawSearchResult, RetrieverResult
+from neo4j_graphrag.exceptions import Neo4jVersionError
+from neo4j_graphrag.retrievers.base import Retriever
+from neo4j_graphrag.types import RawSearchResult, RetrieverResult
 
 
 @pytest.mark.parametrize(
@@ -50,7 +50,7 @@ def test_retriever_version_support(
         MockRetriever(driver=driver)
 
 
-@patch("neo4j_genai.retrievers.base.Retriever._verify_version")
+@patch("neo4j_graphrag.retrievers.base.Retriever._verify_version")
 def test_retriever_search_docstring_copied(
     _verify_version_mock: MagicMock,
     driver: MagicMock,
@@ -73,7 +73,7 @@ def test_retriever_search_docstring_copied(
     assert top_k_param.annotation == "int"
 
 
-@patch("neo4j_genai.retrievers.base.Retriever._verify_version")
+@patch("neo4j_graphrag.retrievers.base.Retriever._verify_version")
 def test_retriever_search_docstring_unchanged(
     _verify_version_mock: MagicMock,
     driver: MagicMock,

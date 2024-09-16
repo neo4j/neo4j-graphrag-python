@@ -11,17 +11,17 @@ from unittest.mock import MagicMock
 
 import neo4j
 import pytest
-from neo4j_genai.experimental.components.entity_relation_extractor import (
+from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
 )
-from neo4j_genai.experimental.components.kg_writer import Neo4jWriter
-from neo4j_genai.experimental.components.lexical_graph import (
+from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
+from neo4j_graphrag.experimental.components.lexical_graph import (
     LexicalGraphBuilder,
     LexicalGraphConfig,
 )
-from neo4j_genai.experimental.components.types import TextChunk, TextChunks
-from neo4j_genai.experimental.pipeline import Pipeline
-from neo4j_genai.llm import LLMResponse
+from neo4j_graphrag.experimental.components.types import TextChunk, TextChunks
+from neo4j_graphrag.experimental.pipeline import Pipeline
+from neo4j_graphrag.llm import LLMResponse
 
 
 @pytest.mark.asyncio
