@@ -25,7 +25,6 @@ from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     balance_curly_braces,
     fix_invalid_json,
 )
-from neo4j_graphrag.experimental.components.lexical_graph import LexicalGraphResult
 from neo4j_graphrag.experimental.components.pdf_loader import DocumentInfo
 from neo4j_graphrag.experimental.components.types import (
     Neo4jGraph,

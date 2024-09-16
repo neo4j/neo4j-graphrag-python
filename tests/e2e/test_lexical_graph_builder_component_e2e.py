@@ -123,7 +123,7 @@ async def test_lexical_graph_before_extractor(
     assert len(created_documents.records) == 0
 
     # check the entity graph has been created
-    created_persons = driver.execute_query(f"MATCH (n:Person) RETURN n")
+    created_persons = driver.execute_query("MATCH (n:Person) RETURN n")
     assert len(created_persons.records) == 2
 
     created_entity_to_chunk_rels = driver.execute_query(
