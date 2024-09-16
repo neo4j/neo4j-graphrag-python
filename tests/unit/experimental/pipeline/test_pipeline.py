@@ -100,7 +100,7 @@ def test_pipeline_parameter_validation_one_component_all_good() -> None:
 def test_pipeline_invalidate() -> None:
     pipe = Pipeline()
     pipe.is_validated = True
-    pipe.param_mapping = {"a": {"key": "value"}}
+    pipe.param_mapping = {"a": {"key": {"component": "component", "param": "param"}}}
     pipe.missing_inputs = {"a": ["other_key"]}
     pipe.invalidate()
     assert pipe.is_validated is False
