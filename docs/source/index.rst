@@ -6,11 +6,15 @@
 Neo4j GraphRAG for Python
 =========================
 
-This repository contains the official Neo4j GraphRAG features for Python.
+This package contains the official Neo4j GraphRAG features for Python.
 
 The purpose of this package is to provide a first party package to developers,
 where Neo4j can guarantee long term commitment and maintenance as well as being
 fast to ship new features and high performing patterns and methods.
+
+⚠️ This package is a renamed continuation of `neo4j-genai`.
+The package `neo4j-genai` is deprecated and will no longer be maintained.
+We encourage all users to migrate to this new package to continue receiving updates and support.
 
 Neo4j versions supported:
 
@@ -41,6 +45,7 @@ Topics
     :caption: Contents:
     :hidden:
 
+    self
     user_guide_rag.rst
     user_guide_kg_builder.rst
     user_guide_pipeline.rst
