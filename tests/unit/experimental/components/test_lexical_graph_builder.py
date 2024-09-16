@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import pytest
-from neo4j_graphrag.experimental.components.constants import (
+from neo4j_graphrag.experimental.components.lexical_graph import (
     CHUNK_NODE_LABEL,
     CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE,
     DOCUMENT_NODE_LABEL,

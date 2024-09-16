@@ -4,13 +4,6 @@ from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, validate_call
 
-from neo4j_graphrag.experimental.components.constants import (
-    CHUNK_NODE_LABEL,
-    CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE,
-    DOCUMENT_NODE_LABEL,
-    NEXT_CHUNK_RELATIONSHIP_TYPE,
-    NODE_TO_CHUNK_RELATIONSHIP_TYPE,
-)
 from neo4j_graphrag.experimental.components.pdf_loader import DocumentInfo
 from neo4j_graphrag.experimental.components.types import (
     Neo4jGraph,
@@ -20,6 +13,13 @@ from neo4j_graphrag.experimental.components.types import (
     TextChunks,
 )
 from neo4j_graphrag.experimental.pipeline import Component, DataModel
+
+
+CHUNK_NODE_LABEL = "Chunk"
+DOCUMENT_NODE_LABEL = "Document"
+NEXT_CHUNK_RELATIONSHIP_TYPE = "NEXT_CHUNK"
+CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE = "FROM_DOCUMENT"
+NODE_TO_CHUNK_RELATIONSHIP_TYPE = "FROM_CHUNK"
 
 
 class LexicalGraphConfig(BaseModel):

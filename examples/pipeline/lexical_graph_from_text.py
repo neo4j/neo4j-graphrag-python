@@ -1,35 +1,21 @@
-#  Copyright (c) "Neo4j"
-#  Neo4j Sweden AB [https://neo4j.com]
-#  #
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#  #
-#      https://www.apache.org/licenses/LICENSE-2.0
-#  #
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
 from __future__ import annotations
 
 import asyncio
 
 import neo4j
 from langchain_text_splitters import CharacterTextSplitter
-from neo4j_genai.embeddings.openai import OpenAIEmbeddings
-from neo4j_genai.experimental.components.embedder import TextChunkEmbedder
-from neo4j_genai.experimental.components.kg_writer import Neo4jWriter
-from neo4j_genai.experimental.components.lexical_graph import (
+from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
+from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
+from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
+from neo4j_graphrag.experimental.components.lexical_graph import (
     LexicalGraphBuilder,
     LexicalGraphConfig,
 )
-from neo4j_genai.experimental.components.text_splitters.langchain import (
+from neo4j_graphrag.experimental.components.text_splitters.langchain import (
     LangChainTextSplitterAdapter,
 )
-from neo4j_genai.experimental.pipeline import Pipeline
-from neo4j_genai.experimental.pipeline.pipeline import PipelineResult
+from neo4j_graphrag.experimental.pipeline import Pipeline
+from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 
 
 async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
