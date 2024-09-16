@@ -20,8 +20,6 @@ from neo4j_graphrag.experimental.components.lexical_graph import (
     CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE,
     DOCUMENT_NODE_LABEL,
     NEXT_CHUNK_RELATIONSHIP_TYPE,
-)
-from neo4j_graphrag.experimental.components.lexical_graph import (
     LexicalGraphBuilder,
     LexicalGraphConfig,
     LexicalGraphResult,
