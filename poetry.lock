@@ -4699,8 +4699,9 @@ type = ["pytest-mypy"]
 
 [extras]
 external-clients = ["pinecone-client", "weaviate-client"]
+kg-creation-tools = ["pygraphviz", "pygraphviz"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8.1"
-content-hash = "114a9cb1b30154ca4718c3c905f663cf6baf9e6a558d6ac9ca7875b94a94c3c7"
+content-hash = "30d3f785f9e878afce94706e84745cac151d8f10bb7735e78499ddb8e907c8dc"
