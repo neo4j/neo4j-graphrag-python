@@ -19,36 +19,38 @@ from neo4j_graphrag.experimental.components.schema import (
     SchemaRelation,
 )
 
-schema_builder = SchemaBuilder()
 
-schema_builder.run(
-    entities=[
-        SchemaEntity(
-            label="Person",
-            properties=[
-                SchemaProperty(name="name", type="STRING"),
-                SchemaProperty(name="place_of_birth", type="STRING"),
-                SchemaProperty(name="date_of_birth", type="DATE"),
-            ],
-        ),
-        SchemaEntity(
-            label="Organization",
-            properties=[
-                SchemaProperty(name="name", type="STRING"),
-                SchemaProperty(name="country", type="STRING"),
-            ],
-        ),
-    ],
-    relations=[
-        SchemaRelation(
-            label="WORKED_ON",
-        ),
-        SchemaRelation(
-            label="WORKED_FOR",
-        ),
-    ],
-    potential_schema=[
-        ("Person", "WORKED_ON", "Field"),
-        ("Person", "WORKED_FOR", "Organization"),
-    ],
-)
+async def main() -> None:
+    schema_builder = SchemaBuilder()
+
+    await schema_builder.run(
+        entities=[
+            SchemaEntity(
+                label="Person",
+                properties=[
+                    SchemaProperty(name="name", type="STRING"),
+                    SchemaProperty(name="place_of_birth", type="STRING"),
+                    SchemaProperty(name="date_of_birth", type="DATE"),
+                ],
+            ),
+            SchemaEntity(
+                label="Organization",
+                properties=[
+                    SchemaProperty(name="name", type="STRING"),
+                    SchemaProperty(name="country", type="STRING"),
+                ],
+            ),
+        ],
+        relations=[
+            SchemaRelation(
+                label="WORKED_ON",
+            ),
+            SchemaRelation(
+                label="WORKED_FOR",
+            ),
+        ],
+        potential_schema=[
+            ("Person", "WORKED_ON", "Field"),
+            ("Person", "WORKED_FOR", "Organization"),
+        ],
+    )
