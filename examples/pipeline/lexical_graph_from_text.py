@@ -52,7 +52,7 @@ async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
     pipe.connect(
         "lexical_graph_builder",
         "writer",
-        input_config={"graph": "lexical_graph_builder"},
+        input_config={"graph": "lexical_graph_builder.graph"},
     )
     # user input:
     # the initial text
