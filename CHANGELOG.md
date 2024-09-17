@@ -7,11 +7,13 @@
 
 ### Added
 - Introduction page to the documentation content tree.
-
-### Added
 - Introduced a new Vertex AI embeddings class for generating text embeddings using Vertex AI.
 - Updated documentation to include OpenAI and Vertex AI embeddings classes.
 - Added google-cloud-aiplatform as an optional dependency for Vertex AI embeddings.
+
+### Fixed
+- Make `pygraphviz` an optional dependency - it is now only required when calling `pipeline.draw`.
+
 
 ## 0.6.2
 
