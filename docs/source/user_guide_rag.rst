@@ -277,7 +277,7 @@ the following implementation of an embedder that wraps the `OllamaEmbedding` mod
 .. code:: python
 
     from llama_index.embeddings.ollama import OllamaEmbedding
-    from neo4j_graphrag.embedder import Embedder
+    from neo4j_graphrag.embeddings.embedder import Embedder
 
     class OllamaEmbedder(Embedder):
         def __init__(self, ollama_embedding):
