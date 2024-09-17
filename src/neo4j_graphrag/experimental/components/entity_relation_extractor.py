@@ -20,7 +20,6 @@ import enum
 import json
 import logging
 import re
-import warnings
 from datetime import datetime
 from typing import Any, List, Optional, Union
 
@@ -138,10 +137,6 @@ class EntityRelationExtractor(Component, abc.ABC):
         create_lexical_graph: bool = True,
         **kwargs: Any,
     ) -> None:
-        if create_lexical_graph:
-            warnings.warn(
-                "`create_lexical_graph` is deprecated. Use the `LexicalGraphBuilder` component instead."
-            )
         self.on_error = on_error
         self.create_lexical_graph = create_lexical_graph
 
@@ -324,8 +319,6 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         lexical_graph_builder = None
         lexical_graph = None
         if self.create_lexical_graph:
-            # duplicated code with the next if block but this one
-            # is deprecated and will be removed in an upcoming version
             config = lexical_graph_config or LexicalGraphConfig()
             lexical_graph_builder = LexicalGraphBuilder(config=config)
             lexical_graph_result = await lexical_graph_builder.run(
