@@ -150,7 +150,9 @@ Cypher query:
                 )
                 query_text = query
 
-        return super().format(query_text=query_text, schema=schema, examples=examples, **kwargs)
+        return super().format(
+            query_text=query_text, schema=schema, examples=examples, **kwargs
+        )
 
 
 class ERExtractionTemplate(PromptTemplate):
