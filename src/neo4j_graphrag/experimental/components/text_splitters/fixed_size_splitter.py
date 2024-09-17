@@ -38,7 +38,7 @@ class FixedSizeSplitter(TextSplitter):
     """
 
     @validate_call
-    def __init__(self, chunk_size: int, chunk_overlap: int) -> None:
+    def __init__(self, chunk_size: int = 4000, chunk_overlap: int = 200) -> None:
         if chunk_overlap >= chunk_size:
             raise ValueError("chunk_overlap must be strictly less than chunk_size")
         self.chunk_size = chunk_size
