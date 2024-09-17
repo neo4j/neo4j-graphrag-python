@@ -144,6 +144,18 @@ SentenceTransformerEmbeddings
 .. autoclass:: neo4j_graphrag.embeddings.sentence_transformers.SentenceTransformerEmbeddings
     :members:
 
+OpenAIEmbeddings
+================
+
+.. autoclass:: neo4j_genai.embeddings.openai.OpenAIEmbeddings
+    :members:
+
+VertexAIEmbeddings
+==================
+
+.. autoclass:: neo4j_genai.embeddings.vertexai.VertexAIEmbeddings
+    :members:
+
 **********
 Generation
 **********
@@ -222,7 +234,7 @@ Errors
 ******
 
 
-* :class:`neo4j_graphrag.exceptions.Neo4jGenAiError`
+* :class:`neo4j_graphrag.exceptions.Neo4jGraphRagError`
 
   * :class:`neo4j_graphrag.exceptions.RetrieverInitializationError`
 
@@ -255,10 +267,10 @@ Errors
   * :class:`neo4j_graphrag.experimental.pipeline.exceptions.PipelineStatusUpdateError`
 
 
-Neo4jGenAiError
-===============
+Neo4jGraphRagError
+==================
 
-.. autoclass:: neo4j_graphrag.exceptions.Neo4jGenAiError
+.. autoclass:: neo4j_graphrag.exceptions.Neo4jGraphRagError
    :show-inheritance:
 
 

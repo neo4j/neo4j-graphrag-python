@@ -1,6 +1,6 @@
 ---
 name: Feature Request
-about: Suggest an idea for the Neo4j GenAI library
+about: Suggest an idea for the Neo4j GraphRAG library
 labels: "feature request"
 ---
 

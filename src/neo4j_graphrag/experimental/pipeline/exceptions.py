@@ -12,22 +12,22 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from neo4j_graphrag.exceptions import Neo4jGenAiError
+from neo4j_graphrag.exceptions import Neo4jGraphRagError
 
 
-class PipelineDefinitionError(Neo4jGenAiError):
+class PipelineDefinitionError(Neo4jGraphRagError):
     """Raised when the pipeline graph is invalid"""
 
     pass
 
 
-class PipelineMissingDependencyError(Neo4jGenAiError):
+class PipelineMissingDependencyError(Neo4jGraphRagError):
     """Raised when a task is scheduled but its dependencies are not yet done"""
 
     pass
 
 
-class PipelineStatusUpdateError(Neo4jGenAiError):
+class PipelineStatusUpdateError(Neo4jGraphRagError):
     """Raises when trying an invalid change of state (e.g. DONE => DOING)"""
 
     pass
