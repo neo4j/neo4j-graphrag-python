@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 import tempfile
 from unittest import mock
-from unittest.mock import AsyncMock, Mock, call, patch
+from unittest.mock import AsyncMock, call, patch
 
 import pytest
 from neo4j_graphrag.experimental.pipeline import Component, Pipeline
