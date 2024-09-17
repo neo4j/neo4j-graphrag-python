@@ -430,7 +430,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         task = TaskPipelineNode(name, component)
         self.add_node(task)
         # invalidate the pipeline if it was already validated
-        self.is_validated = False
+        self.invalidate()
 
     def set_component(self, name: str, component: Component) -> None:
         """Replace a component with another. If 'name' is not yet in the pipeline,
@@ -439,7 +439,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         task = TaskPipelineNode(name, component)
         self.set_node(task)
         # invalidate the pipeline if it was already validated
-        self.is_validated = False
+        self.invalidate()
 
     def connect(
         self,
@@ -475,7 +475,12 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         if self.is_cyclic():
             raise PipelineDefinitionError("Cyclic graph are not allowed")
         # invalidate the pipeline if it was already validated
+        self.invalidate()
+
+    def invalidate(self) -> None:
         self.is_validated = False
+        self.param_mapping = defaultdict(dict)
+        self.missing_inputs = defaultdict()
 
     def validate_parameter_mapping(self) -> None:
         """Go through the graph and make sure parameter mapping is valid
@@ -520,6 +525,8 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
 
         Considering the naming {param => target (component, [output_parameter]) },
         the mapping is valid if:
+         - 'param' is a valid input for task
+         - 'param' has not already been mapped
          - The target component exists in the pipeline and, if specified, the
             target output parameter is a valid field in the target component's
             result model.
@@ -543,6 +550,14 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
             # check that the previous component is actually returning
             # the mapped parameter
             for param, path in edge_inputs.items():
+                if param in self.param_mapping[task.name]:
+                    raise PipelineDefinitionError(
+                        f"Parameter '{param}' already mapped to {self.param_mapping[task.name][param]}"
+                    )
+                if param not in task.component.component_inputs:
+                    raise PipelineDefinitionError(
+                        f"Parameter '{param}' is not a valid input for component '{task.name}' of type '{task.component.__class__.__name__}'"
+                    )
                 try:
                     source_component_name, param_name = path.split(".")
                 except ValueError:
