@@ -21,6 +21,14 @@ from neo4j_graphrag.embedder import Embedder
 
 
 class OpenAIEmbeddings(Embedder):
+    """
+    OpenAI embeddings class.
+    This class uses the OpenAI python client to generate embeddings for text data.
+
+    Args:
+        model (str): The name of the OpenAI embedding model to use. Defaults to "text-embedding-ada-002".
+    """
+
     def __init__(self, model: str = "text-embedding-ada-002") -> None:
         try:
             import openai
@@ -34,6 +42,13 @@ class OpenAIEmbeddings(Embedder):
         self.model = model
 
     def embed_query(self, text: str, **kwargs: Any) -> list[float]:
+        """
+        Generate embeddings for a given query using a OpenAI text embedding model.
+
+        Args:
+            text (str): The text to generate an embedding for.
+            **kwargs (Any): Additional arguments to pass to the OpenAI embedding generation function.
+        """
         response = self.openai_model.embeddings.create(
             input=text, model=self.model, **kwargs
         )
