@@ -19,7 +19,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
-from neo4j_graphrag.embedder import Embedder
+from neo4j_graphrag.embeddings.embedder import Embedder
 from neo4j_graphrag.retrievers import PineconeNeo4jRetriever
 from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
 from pinecone import Pinecone

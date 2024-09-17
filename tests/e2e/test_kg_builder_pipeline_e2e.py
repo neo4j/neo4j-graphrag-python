@@ -21,7 +21,7 @@ from unittest.mock import MagicMock
 import neo4j
 import pytest
 from langchain_text_splitters import CharacterTextSplitter
-from neo4j_graphrag.embedder import Embedder
+from neo4j_graphrag.embeddings.embedder import Embedder
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
 from neo4j_graphrag.experimental.components.entity_relation_extractor import (

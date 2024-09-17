@@ -18,7 +18,7 @@ from typing import Any
 import numpy as np
 import torch
 
-from neo4j_graphrag.embedder import Embedder
+from neo4j_graphrag.embeddings.embedder import Embedder
 
 
 class SentenceTransformerEmbeddings(Embedder):

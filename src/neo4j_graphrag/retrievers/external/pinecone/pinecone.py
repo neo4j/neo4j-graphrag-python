@@ -21,7 +21,7 @@ import neo4j
 from pinecone import Pinecone
 from pydantic import ValidationError
 
-from neo4j_graphrag.embedder import Embedder
+from neo4j_graphrag.embeddings.embedder import Embedder
 from neo4j_graphrag.exceptions import (
     EmbeddingRequiredError,
     RetrieverInitializationError,
