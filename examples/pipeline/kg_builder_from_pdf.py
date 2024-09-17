@@ -19,7 +19,6 @@ import logging
 from typing import Any, Dict, List
 
 import neo4j
-from langchain_text_splitters import CharacterTextSplitter
 from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
     OnError,
@@ -31,8 +30,8 @@ from neo4j_graphrag.experimental.components.schema import (
     SchemaEntity,
     SchemaRelation,
 )
-from neo4j_graphrag.experimental.components.text_splitters.langchain import (
-    LangChainTextSplitterAdapter,
+from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
+    FixedSizeSplitter,
 )
 from neo4j_graphrag.experimental.pipeline import Component, DataModel
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
@@ -141,10 +140,7 @@ async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
     # Set up the pipeline
     pipe = Pipeline()
     pipe.add_component(PdfLoader(), "pdf_loader")
-    pipe.add_component(
-        LangChainTextSplitterAdapter(CharacterTextSplitter(separator=". \n")),
-        "splitter",
-    )
+    pipe.add_component(FixedSizeSplitter(FixedSizeSplitter()), "splitter")
     pipe.add_component(SchemaBuilder(), "schema")
     pipe.add_component(
         LLMEntityRelationExtractor(
