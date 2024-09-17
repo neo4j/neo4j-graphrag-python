@@ -24,7 +24,11 @@ from datetime import datetime
 from timeit import default_timer
 from typing import Any, AsyncGenerator, Optional
 
-import pygraphviz as pgv
+try:
+    import pygraphviz as pgv
+except ImportError:
+    pyg = None
+
 from pydantic import BaseModel, Field
 
 from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
@@ -386,6 +390,12 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         G.draw(path)
 
     def get_pygraphviz_graph(self, hide_unused_outputs: bool = True) -> pgv.AGraph:
+        if pgv is None:
+            raise ImportError(
+                "Could not import pygraphviz. "
+                "Follow installation instruction in pygraphviz documentation "
+                "to get it up and running on your system."
+            )
         self.validate_parameter_mapping()
         G = pgv.AGraph(strict=False, directed=True)
         # create a node for each component

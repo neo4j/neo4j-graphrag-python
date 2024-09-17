@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 import tempfile
 from unittest import mock
-from unittest.mock import AsyncMock, call
+from unittest.mock import AsyncMock, Mock, call, patch
 
 import pytest
 from neo4j_graphrag.experimental.pipeline import Component, Pipeline
@@ -395,3 +395,12 @@ def test_pipeline_draw() -> None:
     pipe.draw(t.name)
     content = t.file.read()
     assert len(content) > 0
+
+
+@patch("neo4j_graphrag.experimental.pipeline.pipeline.pgv", None)
+def test_pipeline_draw_missing_pygraphviz_dep() -> None:
+    pipe = Pipeline()
+    pipe.add_component(ComponentAdd(), "add")
+    t = tempfile.NamedTemporaryFile()
+    with pytest.raises(ImportError):
+        pipe.draw(t.name)
