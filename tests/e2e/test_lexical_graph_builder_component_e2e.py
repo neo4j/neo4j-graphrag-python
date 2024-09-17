@@ -1,12 +1,17 @@
-"""
-What is tested?
-
-1. Chunking -> LexicalGraph -> Writer
-2. Chunking -> LexicalGraph -> Extractor(create_lexical_graph=True) -> Writer
-3. Chunking -> Extractor(create_lexical_graph=True) -> Writer  # deprecated (tested in the pipeline e2e tests)
-4. Reader -> Extractor -> Writer (tested in reader e2e tests)
-"""
-
+#  Copyright (c) "Neo4j"
+#  Neo4j Sweden AB [https://neo4j.com]
+#  #
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#  #
+#      https://www.apache.org/licenses/LICENSE-2.0
+#  #
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
 from unittest.mock import MagicMock
 
 import neo4j
@@ -57,9 +62,10 @@ async def test_lexical_graph_component_alone_default_config(
 
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
-async def test_lexical_graph_before_extractor(
+async def test_lexical_graph_before_extractor_custom_prefix(
     driver: neo4j.Driver, llm: MagicMock
 ) -> None:
+    driver.execute_query("MATCH (n) DETACH DELETE n")
     llm.ainvoke.side_effect = [
         LLMResponse(
             content="""{
@@ -90,7 +96,10 @@ async def test_lexical_graph_before_extractor(
         ),
     ]
     pipe = Pipeline()
-    pipe.add_component(LexicalGraphBuilder(), "lexical_graph")
+    pipe.add_component(
+        LexicalGraphBuilder(config=LexicalGraphConfig(id_prefix="myPrefix")),
+        "lexical_graph",
+    )
     pipe.add_component(
         LLMEntityRelationExtractor(llm, create_lexical_graph=False), "extractor"
     )
