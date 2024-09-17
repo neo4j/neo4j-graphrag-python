@@ -255,7 +255,7 @@ def test_t2c_retriever_with_custom_prompt_prompt_params(
     llm: MagicMock,
     neo4j_record: MagicMock,
 ) -> None:
-    prompt = "This is a custom prompt. {query_text} {examples}"
+    prompt = "This is a custom prompt. {query_text} {examples_custom}"
     query = "test"
     examples = ["example A", "example B"]
 
@@ -265,7 +265,7 @@ def test_t2c_retriever_with_custom_prompt_prompt_params(
         None,
         None,
     )
-    retriever.search(query_text=query, prompt_params={"examples": examples})
+    retriever.search(query_text=query, prompt_params={"examples_custom": examples})
 
     llm.invoke.assert_called_once_with(
         """This is a custom prompt. test ['example A', 'example B']"""
