@@ -1,6 +1,8 @@
 # @neo4j/neo4j-graphrag-python
 
 ## Next
+
+## 0.6.3
 ### Changed
 - Updated documentation links in README.
 - Renamed deprecated package references in documentation.
