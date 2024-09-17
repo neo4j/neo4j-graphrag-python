@@ -1,6 +1,12 @@
 # @neo4j/neo4j-graphrag-python
 
 ## Next
+### Changed
+- Updated documentation links in README.
+- Renamed deprecated package references in documentation.
+
+### Added
+- Introduction page to the documentation content tree.
 
 ### Added
 - Introduced a new Vertex AI embeddings class for generating text embeddings using Vertex AI.
@@ -8,6 +14,9 @@
 - Added google-cloud-aiplatform as an optional dependency for Vertex AI embeddings.
 
 ## 0.6.2
+
+### Fixed
+- Moved pygraphviz to optional dependencies under [tool.poetry.extras] in pyproject.toml to resolve an issue where pip install neo4j-graphrag incorrectly required pygraphviz as a mandatory dependency.
 
 ## 0.6.1
 
