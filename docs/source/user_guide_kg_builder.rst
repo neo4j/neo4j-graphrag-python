@@ -180,7 +180,7 @@ Example usage:
 
 .. code:: python
 
-    from neo4j_genai.experimental.pipeline.components.lexical_graph_builder import LexicalGraphBuilder
+    from neo4j_graphrag.experimental.pipeline.components.lexical_graph_builder import LexicalGraphBuilder
 
     lexical_graph_builder = LexicalGraphBuilder(id_prefix="example")
     graph = await lexical_graph_builder.run(

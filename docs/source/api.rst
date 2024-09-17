@@ -48,7 +48,7 @@ TextChunkEmbedder
 LexicalGraphBuilder
 ===================
 
-.. autoclass:: neo4j_genai.experimental.components.lexical_graph.LexicalGraphBuilder
+.. autoclass:: neo4j_graphrag.experimental.components.lexical_graph.LexicalGraphBuilder
     :members:
     :exclude-members: component_inputs, component_outputs
 
