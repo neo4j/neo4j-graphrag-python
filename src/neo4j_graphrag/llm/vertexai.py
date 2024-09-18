@@ -31,7 +31,11 @@ class VertexAILLM(LLMInterface):
 
     Args:
         model_name (str, optional): Name of the LLM to use. Defaults to "gemini-1.5-flash-001".
-        model_params (Optional[Dict[str, Any]], optional): Parameters for passed to the LLM's invoke and ainvoke functions.
+        model_params (Optional[dict], optional): Additional parameters passed to the model when text is sent to it. Defaults to None.
+        **kwargs (Any): Arguments passed to the model when for the class is initialised. Defaults to None.
+
+    Raises:
+        LLMGenerationError: If there's an error generating the response from the model.
     """
 
     def __init__(
