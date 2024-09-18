@@ -17,15 +17,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from neo4j_genai.embedder import Embedder
+from neo4j_graphrag.embedder import Embedder
 
 try:
     from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
 except ImportError:
-    raise ImportError(
-        "Could not import Vertex AI python client. "
-        "Please install it with `pip install google-cloud-aiplatform`."
-    )
+    TextEmbeddingModel = TextEmbeddingInput = None
 
 
 class VertexAIEmbeddings(Embedder):
@@ -38,6 +35,11 @@ class VertexAIEmbeddings(Embedder):
     """
 
     def __init__(self, model: str = "text-embedding-004") -> None:
+        if TextEmbeddingModel is None:
+            raise ImportError(
+                "Could not import Vertex AI python client. "
+                "Please install it with `pip install google-cloud-aiplatform`."
+            )
         self.vertexai_model = TextEmbeddingModel.from_pretrained(model)
 
     def embed_query(
