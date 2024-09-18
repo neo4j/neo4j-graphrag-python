@@ -1,14 +1,21 @@
 # @neo4j/neo4j-graphrag-python
 
 ## Next
+### Added
+- Add `template` validation in `PromptTemplate` class upon construction.
+- `custom_prompt` arg is now converted to `Text2CypherTemplate` class within the `Text2CypherRetriever.get_search_results` method.
+- `Text2CypherTemplate` and `RAGTemplate` prompt templates now require `query_text` arg and will error if it is not present. Previous `query_text` aliases may be used, but will warn of deprecation.
+- Fix bug in `Text2CypherRetriever` using `custom_prompt` arg where the `search` method would not inject the `query_text` content.
+- Add feature to include kwargs in `Text2CypherRetriever.search()` that will be injected into a custom prompt, if provided.
+- Add validation to `custom_prompt` parameter of `Text2CypherRetriever` to ensure that `query_text` placeholder exists in prompt.
+
+## 0.6.3
 ### Changed
 - Updated documentation links in README.
 - Renamed deprecated package references in documentation.
 
 ### Added
 - Introduction page to the documentation content tree.
-
-### Added
 - Introduced a new Vertex AI embeddings class for generating text embeddings using Vertex AI.
 - Updated documentation to include OpenAI and Vertex AI embeddings classes.
 - Added google-cloud-aiplatform as an optional dependency for Vertex AI embeddings.
