@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Type
 
 from neo4j_graphrag.embedder import Embedder
 
@@ -33,7 +33,8 @@ class OpenAIEmbeddings(Embedder):
     Args:
         model (str): The name of the OpenAI embedding model to use. Defaults to "text-embedding-ada-002".
     """
-    client_class = openai.OpenAI
+
+    client_class: Type[openai.OpenAI] = openai.OpenAI
 
     def __init__(self, model: str = "text-embedding-ada-002", **kwargs: Any) -> None:
         if openai is None:
@@ -60,4 +61,4 @@ class OpenAIEmbeddings(Embedder):
 
 
 class AzureOpenAIEmbeddings(OpenAIEmbeddings):
-    client_class = openai.AzureOpenAI
+    client_class: Type[openai.OpenAI] = openai.AzureOpenAI

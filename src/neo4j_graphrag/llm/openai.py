@@ -14,7 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Optional, Type
 
 from ..exceptions import LLMGenerationError
 from .base import LLMInterface
@@ -27,8 +27,8 @@ except ImportError:
 
 
 class OpenAILLM(LLMInterface):
-    client_class = openai.OpenAI
-    async_client_class = openai.AsyncOpenAI
+    client_class: Type[openai.OpenAI] = openai.OpenAI
+    async_client_class: Type[openai.AsyncOpenAI] = openai.AsyncOpenAI
 
     def __init__(
         self,
@@ -81,7 +81,6 @@ class OpenAILLM(LLMInterface):
                 model=self.model_name,
                 **self.model_params,
             )
-            print(response)
             content = response.choices[0].message.content or ""
             return LLMResponse(content=content)
         except openai.OpenAIError as e:
@@ -113,5 +112,5 @@ class OpenAILLM(LLMInterface):
 
 
 class AzureOpenAILLM(OpenAILLM):
-    client_class = openai.AzureOpenAI
-    async_client_class = openai.AsyncAzureOpenAI
+    client_class: Type[openai.OpenAI] = openai.AzureOpenAI
+    async_client_class: Type[openai.AsyncOpenAI] = openai.AsyncAzureOpenAI

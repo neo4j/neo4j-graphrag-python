@@ -44,10 +44,8 @@ def test_azure_openai_llm_missing_dependency() -> None:
 
 @patch("neo4j_graphrag.llm.openai.AzureOpenAILLM.client_class")
 def test_azure_openai_llm_happy_path(mock_openai: Mock) -> None:
-    mock_openai.return_value.chat.completions.create.return_value = (
-        MagicMock(
-            choices=[MagicMock(message=MagicMock(content="openai chat response"))],
-        )
+    mock_openai.return_value.chat.completions.create.return_value = MagicMock(
+        choices=[MagicMock(message=MagicMock(content="openai chat response"))],
     )
     llm = AzureOpenAILLM(
         model_name="gpt",
