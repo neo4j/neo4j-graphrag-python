@@ -13,7 +13,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from .base import LLMInterface
-from .openai_llm import OpenAILLM
 from .types import LLMResponse
 
-__all__ = ["LLMResponse", "LLMInterface", "OpenAILLM"]
+__all__ = ["LLMResponse", "LLMInterface"]

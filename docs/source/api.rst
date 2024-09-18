@@ -170,7 +170,7 @@ LLMInterface
 OpenAILLM
 ---------
 
-.. autoclass:: neo4j_graphrag.llm.OpenAILLM
+.. autoclass:: neo4j_graphrag.llm.openai.OpenAILLM
     :members:
 
 

@@ -13,7 +13,7 @@ import logging
 import neo4j
 from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
 from neo4j_graphrag.generation import GraphRAG, RagTemplate
-from neo4j_graphrag.llm import OpenAILLM
+from neo4j_graphrag.llm.openai import OpenAILLM
 from neo4j_graphrag.retrievers import VectorCypherRetriever
 from neo4j_graphrag.types import RetrieverResultItem
 

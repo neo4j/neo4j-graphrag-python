@@ -23,7 +23,7 @@ In practice, it's done with only a few lines of code:
 
     from neo4j import GraphDatabase
     from neo4j_graphrag.retrievers import VectorRetriever
-    from neo4j_graphrag.llm import OpenAILLM
+    from neo4j_graphrag.llm.openai import OpenAILLM
     from neo4j_graphrag.generation import GraphRAG
     from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
 
@@ -67,12 +67,44 @@ Each component can be configured individually: the LLM and the prompt.
 Using Another LLM Model
 ========================
 
-If OpenAI can not be used, there are two available alternatives:
+If OpenAI can not be used directly, there are a few available alternatives:
 
-1. Utilize any LangChain chat model.
-2. Implement a custom interface.
+- Use Azure OpenAI.
+- Use a local Ollama model.
+- Implement a custom interface.
+- Utilize any LangChain chat model.
 
-Both options are illustrated below, using a local Ollama model as an example.
+All options are illustrated below, using a local Ollama model as an example.
+
+Using Azure Open AI LLM
+-----------------------
+
+It is possible to use Azure OpenAI switching to the `AzureOpenAILLM` class:
+
+.. code:: python
+
+    from neo4j_graphrag.llm.openai import AzureOpenAILLM
+    llm = AzureOpenAILLM(
+        azure_endpoint="https://example-endpoint.openai.azure.com",
+    )
+    llm.invoke("say something")
+
+Check the OpenAI Python client [documentation](https://github.com/openai/openai-python?tab=readme-ov-file#microsoft-azure-openai)
+to learn more about the configuration.
+
+
+Using a Local Model via Ollama
+-------------------------------
+
+Similarly to the official OpenAI Python client, the `OpenAILLM` can be
+used with Ollama. Assuming Ollama is running on the default address `127.0.0.1:11434`,
+it can be queried using the following:
+
+.. code:: python
+
+    from neo4j_graphrag.llm.openai import OpenAILLM
+    llm = OpenAILLM(api_key="ollama", base_url="http://127.0.0.1:11434/v1", model_name="orca-mini")
+    llm.invoke("say something")
 
 
 Using a Model from LangChain
@@ -99,7 +131,7 @@ It is however not mandatory to use LangChain. The alternative is to implement
 a custom model.
 
 Using a Custom Model
------------------------------
+--------------------
 
 To avoid LangChain, developers can create a custom LLM class by subclassing
 the `LLMInterface`. Here's an example using the Python Ollama client:
@@ -607,7 +639,7 @@ LLMs can be different.
 
     from neo4j import GraphDatabase
     from neo4j_graphrag.retrievers import Text2CypherRetriever
-    from neo4j_graphrag.llm import OpenAILLM
+    from neo4j_graphrag.llm.openai import OpenAILLM
 
     URI = "neo4j://localhost:7687"
     AUTH = ("neo4j", "password")

@@ -36,7 +36,7 @@ from neo4j_graphrag.experimental.components.text_splitters.langchain import (
 )
 from neo4j_graphrag.experimental.pipeline import Component, DataModel
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
-from neo4j_graphrag.llm import OpenAILLM
+from neo4j_graphrag.llm.openai import OpenAILLM
 from pydantic import BaseModel, validate_call
 
 logging.basicConfig(level=logging.INFO)

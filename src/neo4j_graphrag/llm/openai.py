@@ -106,3 +106,29 @@ class OpenAILLM(LLMInterface):
             return LLMResponse(content=content)
         except openai.OpenAIError as e:
             raise LLMGenerationError(e)
+
+
+class AzureOpenAILLM(OpenAILLM):
+    def __init__(
+        self,
+        model_name: str,
+        model_params: Optional[dict[str, Any]] = None,
+        **kwargs: Any,
+    ):
+        """
+
+        Args:
+            model_name (str):
+            model_params (str): Parameters like temperature and such  that will be
+             passed to the model
+            kwargs: All other parameters will be passed to the openai.OpenAI init.
+
+        """
+        if openai is None:
+            raise ImportError(
+                "Could not import openai python client. "
+                "Please install it with `pip install openai`."
+            )
+        super().__init__(model_name, model_params)
+        self.client = openai.AzureOpenAI(**kwargs)
+        self.async_client = openai.AsyncAzureOpenAI(**kwargs)
