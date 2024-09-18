@@ -135,7 +135,7 @@ PineconeNeo4jRetriever
 Embedder
 ********
 
-.. autoclass:: neo4j_graphrag.embeddings.embedder.Embedder
+.. autoclass:: neo4j_graphrag.embeddings.base.Embedder
     :members:
 
 SentenceTransformerEmbeddings

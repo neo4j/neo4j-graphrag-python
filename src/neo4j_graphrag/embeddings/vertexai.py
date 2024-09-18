@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from neo4j_graphrag.embeddings.embedder import Embedder
+from neo4j_graphrag.embeddings.base import Embedder
 
 try:
     from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel

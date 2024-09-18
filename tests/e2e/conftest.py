@@ -22,7 +22,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from neo4j import Driver, GraphDatabase
-from neo4j_graphrag.embeddings.embedder import Embedder
+from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.indexes import (
     create_fulltext_index,
     create_vector_index,

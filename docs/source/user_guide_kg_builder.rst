@@ -188,7 +188,7 @@ Here is a code block illustrating these concepts:
 
     schema_builder = SchemaBuilder()
 
-    schema_builder.run(
+    await schema_builder.run(
         entities=[
             SchemaEntity(
                 label="Person",

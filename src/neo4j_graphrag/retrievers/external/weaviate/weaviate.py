@@ -22,7 +22,7 @@ import weaviate.classes as wvc
 from pydantic import ValidationError
 from weaviate.client import WeaviateClient
 
-from neo4j_graphrag.embeddings.embedder import Embedder
+from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.exceptions import (
     RetrieverInitializationError,
     SearchValidationError,
