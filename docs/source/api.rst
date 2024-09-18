@@ -162,6 +162,12 @@ VertexAIEmbeddings
 .. autoclass:: neo4j_graphrag.embeddings.vertexai.VertexAIEmbeddings
     :members:
 
+MistralAIEmbeddings
+===================
+
+.. autoclass:: neo4j_graphrag.embeddings.mistral.MistralAIEmbeddings
+    :members:
+
 CohereEmbeddings
 ================
 

@@ -14,22 +14,20 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Optional, Type
+import os
+from typing import Any, Optional
 
 from ..exceptions import LLMGenerationError
 from .base import LLMInterface
 from .types import LLMResponse
 
 try:
-    import openai
+    import mistralai
 except ImportError:
-    openai = None  # type: ignore
+    mistralai = None # type: ignore
 
 
-class OpenAILLM(LLMInterface):
-    client_class: Type[openai.OpenAI] = openai.OpenAI
-    async_client_class: Type[openai.AsyncOpenAI] = openai.AsyncOpenAI
-
+class MistralAILLM(LLMInterface):
     def __init__(
         self,
         model_name: str,
@@ -40,25 +38,29 @@ class OpenAILLM(LLMInterface):
 
         Args:
             model_name (str):
-            model_params (str): Parameters like temperature that will be passed to the model when text is sent to it
+            model_params (str): Parameters like temperature and such  that will be
+             passed to the model
             kwargs: All other parameters will be passed to the openai.OpenAI init.
 
         """
-        if openai is None:
+        if mistralai is None:
             raise ImportError(
-                "Could not import openai Python client. "
-                "Please install it with `pip install openai`."
+                "Could not import Mistral Python client. "
+                "Please install it with `pip install mistralai`."
             )
-        super().__init__(model_name, model_params, **kwargs)
-        self.client = self.client_class(**kwargs)
-        self.async_client = self.async_client_class(**kwargs)
+        super().__init__(model_name, model_params)
+        api_key = os.getenv("MISTRAL_API_KEY", "")
+        self.client = mistralai.Mistral(api_key=api_key)
 
     def get_messages(
         self,
         input: str,
     ) -> list[dict[str, str]]:
         return [
-            {"role": "system", "content": input},
+            {
+                "content": input,
+                "role": "user",
+            }
         ]
 
     def invoke(self, input: str) -> LLMResponse:
@@ -75,14 +77,14 @@ class OpenAILLM(LLMInterface):
             LLMGenerationError: If anything goes wrong.
         """
         try:
-            response = self.client.chat.completions.create(
-                messages=self.get_messages(input),  # type: ignore
+            response = self.client.chat.complete(
                 model=self.model_name,
+                messages=self.get_messages(input), # type: ignore
                 **self.model_params,
             )
             content = response.choices[0].message.content or ""
             return LLMResponse(content=content)
-        except openai.OpenAIError as e:
+        except mistralai.models.sdkerror.SDKError as e:
             raise LLMGenerationError(e)
 
     async def ainvoke(self, input: str) -> LLMResponse:
@@ -99,17 +101,12 @@ class OpenAILLM(LLMInterface):
             LLMGenerationError: If anything goes wrong.
         """
         try:
-            response = await self.async_client.chat.completions.create(
-                messages=self.get_messages(input),  # type: ignore
+            response = await self.client.files.complete_async(
                 model=self.model_name,
+                messages=self.get_messages(input),
                 **self.model_params,
             )
             content = response.choices[0].message.content or ""
             return LLMResponse(content=content)
-        except openai.OpenAIError as e:
+        except mistralai.models.sdkerror.SDKError as e:
             raise LLMGenerationError(e)
-
-
-class AzureOpenAILLM(OpenAILLM):
-    client_class: Type[openai.OpenAI] = openai.AzureOpenAI
-    async_client_class: Type[openai.AsyncOpenAI] = openai.AsyncAzureOpenAI
