@@ -27,6 +27,9 @@ except ImportError:
 
 
 class OpenAILLM(LLMInterface):
+    client_class = openai.OpenAI
+    async_client_class = openai.AsyncOpenAI
+
     def __init__(
         self,
         model_name: str,
@@ -47,9 +50,9 @@ class OpenAILLM(LLMInterface):
                 "Could not import openai python client. "
                 "Please install it with `pip install openai`."
             )
-        super().__init__(model_name, model_params)
-        self.client = openai.OpenAI(**kwargs)
-        self.async_client = openai.AsyncOpenAI(**kwargs)
+        super().__init__(model_name, model_params, **kwargs)
+        self.client = self.client_class(**kwargs)
+        self.async_client = self.async_client_class(**kwargs)
 
     def get_messages(
         self,
@@ -78,6 +81,7 @@ class OpenAILLM(LLMInterface):
                 model=self.model_name,
                 **self.model_params,
             )
+            print(response)
             content = response.choices[0].message.content or ""
             return LLMResponse(content=content)
         except openai.OpenAIError as e:
@@ -109,26 +113,5 @@ class OpenAILLM(LLMInterface):
 
 
 class AzureOpenAILLM(OpenAILLM):
-    def __init__(
-        self,
-        model_name: str,
-        model_params: Optional[dict[str, Any]] = None,
-        **kwargs: Any,
-    ):
-        """
-
-        Args:
-            model_name (str):
-            model_params (str): Parameters like temperature and such  that will be
-             passed to the model
-            kwargs: All other parameters will be passed to the openai.OpenAI init.
-
-        """
-        if openai is None:
-            raise ImportError(
-                "Could not import openai python client. "
-                "Please install it with `pip install openai`."
-            )
-        super().__init__(model_name, model_params)
-        self.client = openai.AzureOpenAI(**kwargs)
-        self.async_client = openai.AsyncAzureOpenAI(**kwargs)
+    client_class = openai.AzureOpenAI
+    async_client_class = openai.AsyncAzureOpenAI

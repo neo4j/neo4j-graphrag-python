@@ -24,12 +24,12 @@ def test_openai_embedder_missing_dependency() -> None:
         OpenAIEmbeddings()
 
 
-@patch("neo4j_graphrag.embeddings.openai.openai")
+@patch("neo4j_graphrag.embeddings.openai.OpenAIEmbeddings.client_class")
 def test_openai_embedder_happy_path(mock_openai: Mock) -> None:
-    mock_openai.OpenAI.return_value.embeddings.create.return_value = MagicMock(
+    mock_openai.return_value.embeddings.create.return_value = MagicMock(
         data=[MagicMock(embedding=[1.0, 2.0])],
     )
-    embedder = OpenAIEmbeddings()
+    embedder = OpenAIEmbeddings(api_key="my key")
     res = embedder.embed_query("my text")
     assert isinstance(res, list)
     assert res == [1.0, 2.0]
@@ -41,12 +41,17 @@ def test_azure_openai_embedder_missing_dependency() -> None:
         AzureOpenAIEmbeddings()
 
 
-@patch("neo4j_graphrag.embeddings.openai.openai")
+@patch("neo4j_graphrag.embeddings.openai.AzureOpenAIEmbeddings.client_class")
 def test_azure_openai_embedder_happy_path(mock_openai: Mock) -> None:
-    mock_openai.AzureOpenAI.return_value.embeddings.create.return_value = MagicMock(
+    mock_openai.return_value.embeddings.create.return_value = MagicMock(
         data=[MagicMock(embedding=[1.0, 2.0])],
     )
-    embedder = AzureOpenAIEmbeddings()
+    embedder = AzureOpenAIEmbeddings(
+        model_name="gpt",
+        azure_endpoint="https://test.openai.azure.com/",
+        api_key="my key",
+        api_version="version",
+    )
     res = embedder.embed_query("my text")
     assert isinstance(res, list)
     assert res == [1.0, 2.0]

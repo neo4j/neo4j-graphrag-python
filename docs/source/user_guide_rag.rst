@@ -67,7 +67,7 @@ Each component can be configured individually: the LLM and the prompt.
 Using Another LLM Model
 ========================
 
-If OpenAI can not be used directly, there are a few available alternatives:
+If OpenAI cannot be used directly, there are a few available alternatives:
 
 - Use Azure OpenAI.
 - Use a local Ollama model.
@@ -85,7 +85,10 @@ It is possible to use Azure OpenAI switching to the `AzureOpenAILLM` class:
 
     from neo4j_graphrag.llm.openai import AzureOpenAILLM
     llm = AzureOpenAILLM(
-        azure_endpoint="https://example-endpoint.openai.azure.com",
+        model_name="gpt-4o",
+        azure_endpoint="https://example-endpoint.openai.azure.com/",  # update with your endpoint
+        api_version="2024-06-01",  # update appropriate version
+        api_key="ba3a46d86259405385f73f08078f588b",  # api_key is optional and can also be set with OPENAI_API_KEY env var
     )
     llm.invoke("say something")
 
@@ -133,8 +136,9 @@ a custom model.
 Using a Custom Model
 --------------------
 
-To avoid LangChain, developers can create a custom LLM class by subclassing
-the `LLMInterface`. Here's an example using the Python Ollama client:
+If the provided implementations do not match their needs, developers can create a
+custom LLM class by subclassing the `LLMInterface`.
+Here's an example using the Python Ollama client:
 
 
 .. code:: python
@@ -154,6 +158,10 @@ the `LLMInterface`. Here's an example using the Python Ollama client:
             return LLMResponse(
                 content=response["message"]["content"]
             )
+
+        async def ainvoke(self, input: str) -> LLMResponse:
+            return self.invoke(input)  # TODO: implement async with ollama.AsyncClient
+
 
     # retriever = ...
 

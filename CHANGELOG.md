@@ -2,6 +2,7 @@
 
 ## Next
 ### Added
+- Added AzureOpenAILLM and AzureOpenAIEmbeddings to support Azure served OpenAI models
 - Add `template` validation in `PromptTemplate` class upon construction.
 - `custom_prompt` arg is now converted to `Text2CypherTemplate` class within the `Text2CypherRetriever.get_search_results` method.
 - `Text2CypherTemplate` and `RAGTemplate` prompt templates now require `query_text` arg and will error if it is not present. Previous `query_text` aliases may be used, but will warn of deprecation.

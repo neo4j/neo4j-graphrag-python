@@ -33,6 +33,7 @@ class OpenAIEmbeddings(Embedder):
     Args:
         model (str): The name of the OpenAI embedding model to use. Defaults to "text-embedding-ada-002".
     """
+    client_class = openai.OpenAI
 
     def __init__(self, model: str = "text-embedding-ada-002", **kwargs: Any) -> None:
         if openai is None:
@@ -41,7 +42,7 @@ class OpenAIEmbeddings(Embedder):
                 "Please install it with `pip install openai`."
             )
 
-        self.openai_model = openai.OpenAI(**kwargs)
+        self.openai_model = self.client_class(**kwargs)
         self.model = model
 
     def embed_query(self, text: str, **kwargs: Any) -> list[float]:
@@ -59,7 +60,4 @@ class OpenAIEmbeddings(Embedder):
 
 
 class AzureOpenAIEmbeddings(OpenAIEmbeddings):
-    def __init__(self, model: str = "text-embedding-ada-002", **kwargs: Any) -> None:
-        super().__init__(model, **kwargs)
-        # overwrite the openai client to use AzureOpenAI
-        self.openai_model = openai.AzureOpenAI(**kwargs)
+    client_class = openai.AzureOpenAI
