@@ -102,7 +102,7 @@ that can be processed within the LLM token limits:
 
     from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import FixedSizeSplitter
 
-    splitter = FixedSizeSplitter(chunk_size=500, chunk_overlap=100)
+    splitter = FixedSizeSplitter(chunk_size=4000, chunk_overlap=200)
     splitter.run(text="Hello World. Life is beautiful.")
 
 
@@ -113,7 +113,7 @@ Wrappers for LangChain and LlamaIndex text splitters are included in this packag
     from langchain_text_splitters import CharacterTextSplitter
     from neo4j_graphrag.experimental.components.text_splitters.langchain import LangChainTextSplitterAdapter
     splitter = LangChainTextSplitterAdapter(
-        CharacterTextSplitter(chunk_size=500, chunk_overlap=100, separator=".")
+        CharacterTextSplitter(chunk_size=4000, chunk_overlap=200, separator=".")
     )
     splitter.run(text="Hello World. Life is beautiful.")
 

@@ -33,7 +33,7 @@ class FixedSizeSplitter(TextSplitter):
         from neo4j_graphrag.experimental.pipeline import Pipeline
 
         pipeline = Pipeline()
-        text_splitter = FixedSizeSplitter(chunk_size=500, chunk_overlap=100)
+        text_splitter = FixedSizeSplitter(chunk_size=4000, chunk_overlap=200)
         pipeline.add_component(text_splitter, "text_splitter")
     """
 

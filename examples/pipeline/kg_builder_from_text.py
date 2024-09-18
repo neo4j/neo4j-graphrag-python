@@ -76,7 +76,7 @@ async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
     # define the components
     pipe.add_component(
         # chunk_size=50 for the sake of this demo
-        FixedSizeSplitter(chunk_size=50, chunk_overlap=10),
+        FixedSizeSplitter(chunk_size=4000, chunk_overlap=200),
         "splitter",
     )
     pipe.add_component(TextChunkEmbedder(embedder=OpenAIEmbeddings()), "chunk_embedder")
