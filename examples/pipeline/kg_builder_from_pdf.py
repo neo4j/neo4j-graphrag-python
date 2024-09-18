@@ -140,7 +140,7 @@ async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
     # Set up the pipeline
     pipe = Pipeline()
     pipe.add_component(PdfLoader(), "pdf_loader")
-    pipe.add_component(FixedSizeSplitter(FixedSizeSplitter()), "splitter")
+    pipe.add_component(FixedSizeSplitter(), "splitter")
     pipe.add_component(SchemaBuilder(), "schema")
     pipe.add_component(
         LLMEntityRelationExtractor(
