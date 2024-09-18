@@ -23,7 +23,7 @@ class FixedSizeSplitter(TextSplitter):
 
     Args:
         chunk_size (int): The number of characters in each chunk.
-        chunk_overlap (int): The number of characters to overlap between chunks. Must be less than `chunk_size`.
+        chunk_overlap (int): The number of characters from the previous chunk to overlap with each chunk. Must be less than `chunk_size`.
 
     Example:
 
