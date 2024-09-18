@@ -28,7 +28,7 @@ TextSplitter
     :members: run
 
 FixedSizeSplitter
-================
+=================
 
 .. autoclass:: neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter.FixedSizeSplitter
     :members: run
