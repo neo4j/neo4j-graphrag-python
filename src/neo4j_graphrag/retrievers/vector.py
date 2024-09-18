@@ -20,7 +20,7 @@ from typing import Any, Callable, Optional
 import neo4j
 from pydantic import ValidationError
 
-from neo4j_graphrag.embedder import Embedder
+from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.exceptions import (
     EmbeddingRequiredError,
     RetrieverInitializationError,

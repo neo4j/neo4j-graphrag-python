@@ -135,7 +135,7 @@ PineconeNeo4jRetriever
 Embedder
 ********
 
-.. autoclass:: neo4j_graphrag.embedder.Embedder
+.. autoclass:: neo4j_graphrag.embeddings.base.Embedder
     :members:
 
 SentenceTransformerEmbeddings
@@ -147,13 +147,13 @@ SentenceTransformerEmbeddings
 OpenAIEmbeddings
 ================
 
-.. autoclass:: neo4j_genai.embeddings.openai.OpenAIEmbeddings
+.. autoclass:: neo4j_graphrag.embeddings.openai.OpenAIEmbeddings
     :members:
 
 VertexAIEmbeddings
 ==================
 
-.. autoclass:: neo4j_genai.embeddings.vertexai.VertexAIEmbeddings
+.. autoclass:: neo4j_graphrag.embeddings.vertexai.VertexAIEmbeddings
     :members:
 
 **********
