@@ -40,7 +40,9 @@ class VertexAIEmbeddings(Embedder):
                 "Could not import Vertex AI python client. "
                 "Please install it with `pip install google-cloud-aiplatform`."
             )
-        self.vertexai_model = vertexai.language_models.TextEmbeddingModel.from_pretrained(model)
+        self.vertexai_model = (
+            vertexai.language_models.TextEmbeddingModel.from_pretrained(model)
+        )
 
     def embed_query(
         self, text: str, task_type: str = "RETRIEVAL_QUERY", **kwargs: Any
