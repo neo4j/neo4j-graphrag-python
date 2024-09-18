@@ -33,8 +33,6 @@ jobs:
       - name: Install dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: poetry install --no-interaction --no-root --extras external_clients
-      - name: Install root project
-        run: poetry install --no-interaction
       - name: Check format and linting
         run: |
           poetry run ruff check --select I .
