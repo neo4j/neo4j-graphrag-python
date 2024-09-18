@@ -23,9 +23,7 @@ from neo4j_graphrag.embeddings.base import Embedder
 try:
     from mistralai import Mistral
 except ImportError:
-    raise ImportError(
-        "Could not import mistralai. " "Please install it with `pip install mistralai`."
-    )
+    Mistral = None
 
 
 class MistralAIEmbeddings(Embedder):
@@ -38,6 +36,11 @@ class MistralAIEmbeddings(Embedder):
     """
 
     def __init__(self, model: str = "mistral-embed") -> None:
+        if Mistral is None:
+            raise ImportError(
+                "Could not import mistralai. "
+                "Please install it with `pip install mistralai`."
+            )
         api_key = os.getenv("MISTRAL_API_KEY", "")
         self.model = model
         self.mistral_client = Mistral(api_key=api_key)
@@ -54,4 +57,5 @@ class MistralAIEmbeddings(Embedder):
             model=self.model,
             inputs=[text],
         )
+        print("@@@", embeddings_batch_response.data[0].embedding)
         return embeddings_batch_response.data[0].embedding

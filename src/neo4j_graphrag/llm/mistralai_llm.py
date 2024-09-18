@@ -24,7 +24,7 @@ from .types import LLMResponse
 try:
     import mistralai
 except ImportError:
-    mistralai = None # type: ignore
+    mistralai = None  # type: ignore
 
 
 class MistralAILLM(LLMInterface):
@@ -79,7 +79,7 @@ class MistralAILLM(LLMInterface):
         try:
             response = self.client.chat.complete(
                 model=self.model_name,
-                messages=self.get_messages(input), # type: ignore
+                messages=self.get_messages(input),  # type: ignore
                 **self.model_params,
             )
             content = response.choices[0].message.content or ""
