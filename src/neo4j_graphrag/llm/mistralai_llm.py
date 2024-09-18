@@ -38,9 +38,9 @@ class MistralAILLM(LLMInterface):
 
         Args:
             model_name (str):
-            model_params (str): Parameters like temperature and such  that will be
-             passed to the model
-            kwargs: All other parameters will be passed to the openai.OpenAI init.
+            model_params (str): Parameters like temperature and such that will be
+             passed to the chat completions endpoint
+            kwargs: All other parameters will be passed to the Mistral client.
 
         """
         if mistralai is None:
