@@ -50,7 +50,7 @@ class MistralAILLM(LLMInterface):
             )
         super().__init__(model_name, model_params)
         api_key = os.getenv("MISTRAL_API_KEY", "")
-        self.client = mistralai.Mistral(api_key=api_key)
+        self.client = mistralai.Mistral(api_key=api_key, **kwargs)
 
     def get_messages(
         self,

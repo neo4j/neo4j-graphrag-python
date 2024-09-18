@@ -18,7 +18,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from neo4j_graphrag.embeddings.embedder import Embedder
+from neo4j_graphrag.embeddings.base import Embedder
 
 try:
     from mistralai import Mistral

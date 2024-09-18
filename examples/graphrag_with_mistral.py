@@ -12,6 +12,7 @@ import logging
 import neo4j
 from neo4j_graphrag.embeddings.mistral import MistralAIEmbeddings
 from neo4j_graphrag.generation import GraphRAG
+from neo4j_graphrag.indexes import create_vector_index
 from neo4j_graphrag.llm.mistralai_llm import MistralAILLM
 from neo4j_graphrag.retrievers import VectorCypherRetriever
 from neo4j_graphrag.types import RetrieverResultItem
@@ -35,6 +36,15 @@ def formatter(record: neo4j.Record) -> RetrieverResultItem:
 driver = neo4j.GraphDatabase.driver(
     URI,
     auth=AUTH,
+)
+
+create_vector_index(
+    driver,
+    INDEX_NAME,
+    label="Document",
+    embedding_property="vectorProperty",
+    dimensions=1024,
+    similarity_fn="cosine",
 )
 
 
