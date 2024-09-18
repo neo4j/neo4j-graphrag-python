@@ -3,9 +3,8 @@ from __future__ import annotations
 from random import random
 
 from neo4j import GraphDatabase
-from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.embeddings.mistral import MistralAIEmbeddings
-from neo4j_graphrag.indexes import create_vector_index, drop_index_if_exists
+from neo4j_graphrag.indexes import create_vector_index
 from neo4j_graphrag.retrievers import VectorRetriever
 
 URI = "neo4j://localhost:7687"
@@ -20,7 +19,6 @@ driver = GraphDatabase.driver(URI, auth=AUTH)
 embedder = MistralAIEmbeddings()
 
 # Creating the index
-drop_index_if_exists(driver, INDEX_NAME)
 create_vector_index(
     driver,
     INDEX_NAME,

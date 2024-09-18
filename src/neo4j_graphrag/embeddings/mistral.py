@@ -57,5 +57,4 @@ class MistralAIEmbeddings(Embedder):
             model=self.model,
             inputs=[text],
         )
-        print("@@@", embeddings_batch_response.data[0].embedding)
         return embeddings_batch_response.data[0].embedding

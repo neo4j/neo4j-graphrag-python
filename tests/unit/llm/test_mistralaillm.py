@@ -30,7 +30,9 @@ def test_mistralai_embeddings_happy_path(mock_mistral: Mock) -> None:
     mock_mistral_instance = mock_mistral.return_value
     embeddings_batch_response_mock = MagicMock()
     embeddings_batch_response_mock.data = [MagicMock(embedding=[1.0, 2.0, 3.0])]
-    mock_mistral_instance.embeddings.create.return_value = embeddings_batch_response_mock
+    mock_mistral_instance.embeddings.create.return_value = (
+        embeddings_batch_response_mock
+    )
     embedder = MistralAIEmbeddings()
 
     res = embedder.embed_query("some text")
