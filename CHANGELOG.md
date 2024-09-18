@@ -1,6 +1,7 @@
 # @neo4j/neo4j-graphrag-python
 
 ## Next
+
 ### Added
 - Add `template` validation in `PromptTemplate` class upon construction.
 - `custom_prompt` arg is now converted to `Text2CypherTemplate` class within the `Text2CypherRetriever.get_search_results` method.
@@ -8,6 +9,9 @@
 - Fix bug in `Text2CypherRetriever` using `custom_prompt` arg where the `search` method would not inject the `query_text` content.
 - Add feature to include kwargs in `Text2CypherRetriever.search()` that will be injected into a custom prompt, if provided.
 - Add validation to `custom_prompt` parameter of `Text2CypherRetriever` to ensure that `query_text` placeholder exists in prompt.
+
+### Changed
+- Moved the Embedder class to the neo4j_graphrag.embeddings directory for better organization alongside other custom embedders.
 
 ## 0.6.3
 ### Changed
