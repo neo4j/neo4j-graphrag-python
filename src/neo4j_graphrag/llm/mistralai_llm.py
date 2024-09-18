@@ -64,14 +64,14 @@ class MistralAILLM(LLMInterface):
         ]
 
     def invoke(self, input: str) -> LLMResponse:
-        """Sends a text input to the OpenAI chat completion model
+        """Sends a text input to the Mistral chat completion model
         and returns the response's content.
 
         Args:
             input (str): Text sent to the LLM
 
         Returns:
-            LLMResponse: The response from OpenAI.
+            LLMResponse: The response from MistralAI.
 
         Raises:
             LLMGenerationError: If anything goes wrong.
@@ -88,7 +88,7 @@ class MistralAILLM(LLMInterface):
             raise LLMGenerationError(e)
 
     async def ainvoke(self, input: str) -> LLMResponse:
-        """Asynchronously sends a text input to the OpenAI chat
+        """Asynchronously sends a text input to the MistralAI chat
         completion model and returns the response's content.
 
         Args:

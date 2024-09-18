@@ -224,6 +224,13 @@ CohereLLM
     :members:
 
 
+MistralAILLM
+------------
+
+.. autoclass:: neo4j_graphrag.llm.mistrai_llm.MistralAILLM
+    :members:
+
+
 PromptTemplate
 ==============
 
