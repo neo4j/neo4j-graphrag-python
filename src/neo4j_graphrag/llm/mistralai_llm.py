@@ -22,9 +22,11 @@ from .base import LLMInterface
 from .types import LLMResponse
 
 try:
-    import mistralai
+    from mistralai import Mistral
+    from mistralai.models.sdkerror import SDKError
 except ImportError:
-    mistralai = None  # type: ignore
+    Mistral = None  # type: ignore
+    SDKError = None  # type: ignore
 
 
 class MistralAILLM(LLMInterface):
@@ -43,14 +45,14 @@ class MistralAILLM(LLMInterface):
             kwargs: All other parameters will be passed to the Mistral client.
 
         """
-        if mistralai is None:
+        if Mistral is None:
             raise ImportError(
                 "Could not import Mistral Python client. "
                 "Please install it with `pip install mistralai`."
             )
         super().__init__(model_name, model_params)
         api_key = os.getenv("MISTRAL_API_KEY", "")
-        self.client = mistralai.Mistral(api_key=api_key, **kwargs)
+        self.client = Mistral(api_key=api_key, **kwargs)
 
     def get_messages(
         self,
@@ -84,7 +86,7 @@ class MistralAILLM(LLMInterface):
             )
             content = response.choices[0].message.content or ""
             return LLMResponse(content=content)
-        except mistralai.models.sdkerror.SDKError as e:
+        except SDKError as e:
             raise LLMGenerationError(e)
 
     async def ainvoke(self, input: str) -> LLMResponse:
@@ -108,5 +110,5 @@ class MistralAILLM(LLMInterface):
             )
             content = response.choices[0].message.content or ""
             return LLMResponse(content=content)
-        except mistralai.models.sdkerror.SDKError as e:
+        except SDKError as e:
             raise LLMGenerationError(e)

@@ -35,7 +35,7 @@ class MistralAIEmbeddings(Embedder):
         model (str): The name of the Mistral AI text embedding model to use. Defaults to "mistral-embed".
     """
 
-    def __init__(self, model: str = "mistral-embed", **kwargs) -> None:
+    def __init__(self, model: str = "mistral-embed", **kwargs: Any) -> None:
         if Mistral is None:
             raise ImportError(
                 "Could not import mistralai. "
