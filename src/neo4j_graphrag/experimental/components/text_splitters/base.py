@@ -25,4 +25,12 @@ class TextSplitter(Component):
 
     @abstractmethod
     async def run(self, text: str) -> TextChunks:
+        """Splits a piece of text into chunks.
+
+        Args:
+            text (str): The text to be split.
+
+        Returns:
+            TextChunks: A list of chunks.
+        """
         pass

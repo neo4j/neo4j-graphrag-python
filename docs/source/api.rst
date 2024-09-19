@@ -27,6 +27,12 @@ TextSplitter
 .. autoclass:: neo4j_graphrag.experimental.components.text_splitters.base.TextSplitter
     :members: run
 
+FixedSizeSplitter
+=================
+
+.. autoclass:: neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter.FixedSizeSplitter
+    :members: run
+
 LangChainTextSplitterAdapter
 ============================
 
@@ -135,7 +141,7 @@ PineconeNeo4jRetriever
 Embedder
 ********
 
-.. autoclass:: neo4j_graphrag.embedder.Embedder
+.. autoclass:: neo4j_graphrag.embeddings.base.Embedder
     :members:
 
 SentenceTransformerEmbeddings
@@ -147,13 +153,13 @@ SentenceTransformerEmbeddings
 OpenAIEmbeddings
 ================
 
-.. autoclass:: neo4j_genai.embeddings.openai.OpenAIEmbeddings
+.. autoclass:: neo4j_graphrag.embeddings.openai.OpenAIEmbeddings
     :members:
 
 VertexAIEmbeddings
 ==================
 
-.. autoclass:: neo4j_genai.embeddings.vertexai.VertexAIEmbeddings
+.. autoclass:: neo4j_graphrag.embeddings.vertexai.VertexAIEmbeddings
     :members:
 
 **********

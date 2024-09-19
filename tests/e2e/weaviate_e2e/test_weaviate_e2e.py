@@ -19,7 +19,7 @@ from typing import Any, Generator
 import pytest
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from neo4j import Driver
-from neo4j_graphrag.embedder import Embedder
+from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.retrievers import WeaviateNeo4jRetriever
 from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
 from weaviate.client import WeaviateClient
