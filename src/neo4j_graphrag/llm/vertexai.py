@@ -36,6 +36,19 @@ class VertexAILLM(LLMInterface):
 
     Raises:
         LLMGenerationError: If there's an error generating the response from the model.
+
+    Example:
+
+    .. code-block:: python
+
+        from neo4j_graphrag.llm import VertexAILLM
+        from vertexai.generative_models import GenerationConfig
+
+        generation_config = GenerationConfig(temperature=0.0)
+        llm = VertexAILLM(
+            model_name="gemini-1.5-flash-001", generation_config=generation_config
+        )
+        llm.invoke("Who is the mother of Paul Atreides?")
     """
 
     def __init__(
