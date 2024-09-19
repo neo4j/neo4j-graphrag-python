@@ -14,7 +14,7 @@
 - Added unit tests for the Vertex AI LLM class.
 
 ### Fixed
-- Resolved import issue with the Vertex AI Embeddings class.ß
+- Resolved import issue with the Vertex AI Embeddings class.
 
 ### Changed
 - Moved the Embedder class to the neo4j_graphrag.embeddings directory for better organization alongside other custom embedders.
