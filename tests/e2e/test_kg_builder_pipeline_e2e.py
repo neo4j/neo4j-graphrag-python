@@ -20,7 +20,6 @@ from unittest.mock import MagicMock
 
 import neo4j
 import pytest
-from langchain_text_splitters import CharacterTextSplitter
 from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
@@ -35,8 +34,8 @@ from neo4j_graphrag.experimental.components.schema import (
     SchemaProperty,
     SchemaRelation,
 )
-from neo4j_graphrag.experimental.components.text_splitters.langchain import (
-    LangChainTextSplitterAdapter,
+from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
+    FixedSizeSplitter,
 )
 from neo4j_graphrag.experimental.pipeline import Pipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
@@ -63,10 +62,8 @@ def schema_builder() -> SchemaBuilder:
 
 
 @pytest.fixture
-def text_splitter() -> LangChainTextSplitterAdapter:
-    return LangChainTextSplitterAdapter(
-        CharacterTextSplitter(chunk_size=50, chunk_overlap=10, separator="\n\n")
-    )
+def text_splitter() -> FixedSizeSplitter:
+    return FixedSizeSplitter(chunk_size=500, chunk_overlap=100)
 
 
 @pytest.fixture
@@ -89,7 +86,7 @@ def kg_writer(driver: neo4j.Driver) -> Neo4jWriter:
 
 @pytest.fixture
 def kg_builder_pipeline(
-    text_splitter: LangChainTextSplitterAdapter,
+    text_splitter: FixedSizeSplitter,
     chunk_embedder: TextChunkEmbedder,
     schema_builder: SchemaBuilder,
     entity_relation_extractor: LLMEntityRelationExtractor,
