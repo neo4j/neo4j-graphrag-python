@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import Any, Type
 
-from neo4j_graphrag.embedder import Embedder
+from neo4j_graphrag.embeddings.base import Embedder
 
 try:
     import openai

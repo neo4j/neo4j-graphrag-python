@@ -96,16 +96,24 @@ Document Splitter
 =================
 
 Document splitters, as the name indicate, split documents into smaller chunks
-that can be processed within the LLM token limits. Wrappers for LangChain and LlamaIndex
-text splitters are included in this package:
+that can be processed within the LLM token limits:
 
+.. code:: python
+
+    from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import FixedSizeSplitter
+
+    splitter = FixedSizeSplitter(chunk_size=4000, chunk_overlap=200)
+    splitter.run(text="Hello World. Life is beautiful.")
+
+
+Wrappers for LangChain and LlamaIndex text splitters are included in this package:
 
 .. code:: python
 
     from langchain_text_splitters import CharacterTextSplitter
     from neo4j_graphrag.experimental.components.text_splitters.langchain import LangChainTextSplitterAdapter
     splitter = LangChainTextSplitterAdapter(
-        CharacterTextSplitter(chunk_size=500, chunk_overlap=100, separator=".")
+        CharacterTextSplitter(chunk_size=4000, chunk_overlap=200, separator=".")
     )
     splitter.run(text="Hello World. Life is beautiful.")
 
@@ -188,7 +196,7 @@ Here is a code block illustrating these concepts:
 
     schema_builder = SchemaBuilder()
 
-    schema_builder.run(
+    await schema_builder.run(
         entities=[
             SchemaEntity(
                 label="Person",
