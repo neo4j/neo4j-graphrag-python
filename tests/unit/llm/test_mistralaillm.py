@@ -12,13 +12,13 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
+from typing import Any
 from unittest.mock import MagicMock, Mock, patch
-import pytest
 
+import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.mistralai_llm import MistralAILLM
 from neo4j_graphrag.llm import LLMResponse
+from neo4j_graphrag.llm.mistralai_llm import MistralAILLM
 
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral", None)
@@ -26,12 +26,15 @@ def test_mistral_ai_llm_missing_dependency() -> None:
     with pytest.raises(ImportError):
         MistralAILLM(model_name="mistral-model")
 
+
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
 def test_mistral_ai_llm_invoke(mock_mistral: Mock) -> None:
     mock_mistral_instance = mock_mistral.return_value
 
     chat_response_mock = MagicMock()
-    chat_response_mock.choices = [MagicMock(message=MagicMock(content="mistral response"))]
+    chat_response_mock.choices = [
+        MagicMock(message=MagicMock(content="mistral response"))
+    ]
 
     mock_mistral_instance.chat.complete.return_value = chat_response_mock
 
@@ -42,6 +45,7 @@ def test_mistral_ai_llm_invoke(mock_mistral: Mock) -> None:
     assert isinstance(res, LLMResponse)
     assert res.content == "mistral response"
 
+
 @pytest.mark.asyncio
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
 async def test_mistral_ai_llm_ainvoke(mock_mistral: Mock) -> None:
@@ -49,7 +53,9 @@ async def test_mistral_ai_llm_ainvoke(mock_mistral: Mock) -> None:
 
     async def mock_complete_async(*args, **kwargs):
         chat_response_mock = MagicMock()
-        chat_response_mock.choices = [MagicMock(message=MagicMock(content="async mistral response"))]
+        chat_response_mock.choices = [
+            MagicMock(message=MagicMock(content="async mistral response"))
+        ]
         return chat_response_mock
 
     mock_mistral_instance.chat.complete_async = mock_complete_async
@@ -60,6 +66,7 @@ async def test_mistral_ai_llm_ainvoke(mock_mistral: Mock) -> None:
 
     assert isinstance(res, LLMResponse)
     assert res.content == "async mistral response"
+
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
 def test_mistral_ai_llm_invoke_sdkerror(mock_mistral: Mock) -> None:
@@ -73,6 +80,7 @@ def test_mistral_ai_llm_invoke_sdkerror(mock_mistral: Mock) -> None:
     with pytest.raises(LLMGenerationError):
         llm.invoke("some input")
 
+
 @pytest.mark.asyncio
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
 async def test_mistral_ai_llm_ainvoke_sdkerror(mock_mistral: Mock) -> None:
@@ -80,7 +88,7 @@ async def test_mistral_ai_llm_ainvoke_sdkerror(mock_mistral: Mock) -> None:
 
     mock_mistral_instance = mock_mistral.return_value
 
-    async def mock_complete_async(*args, **kwargs):
+    async def mock_complete_async(*args: Any, **kwargs: Any):
         raise SDKError("Some async error")
 
     mock_mistral_instance.chat.complete_async = mock_complete_async

@@ -24,6 +24,7 @@ from .types import LLMResponse
 try:
     from mistralai import Mistral
     from mistralai.models.sdkerror import SDKError
+    from mistralai.models.usermessage import UserMessage
 except ImportError:
     Mistral = None  # type: ignore
     SDKError = None  # type: ignore
@@ -54,16 +55,8 @@ class MistralAILLM(LLMInterface):
         api_key = os.getenv("MISTRAL_API_KEY", "")
         self.client = Mistral(api_key=api_key, **kwargs)
 
-    def get_messages(
-        self,
-        input: str,
-    ) -> list[dict[str, str]]:
-        return [
-            {
-                "content": input,
-                "role": "user",
-            }
-        ]
+    def get_messages(self, input: str) -> list[UserMessage]:
+        return [UserMessage(content=input)]
 
     def invoke(self, input: str) -> LLMResponse:
         """Sends a text input to the Mistral chat completion model
@@ -81,10 +74,13 @@ class MistralAILLM(LLMInterface):
         try:
             response = self.client.chat.complete(
                 model=self.model_name,
-                messages=self.get_messages(input),  # type: ignore
+                messages=self.get_messages(input),
                 **self.model_params,
             )
-            content = response.choices[0].message.content or ""
+            if response is None or response.choices is None or not response.choices:
+                content = ""
+            else:
+                content = response.choices[0].message.content or ""
             return LLMResponse(content=content)
         except SDKError as e:
             raise LLMGenerationError(e)

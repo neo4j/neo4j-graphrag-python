@@ -23,7 +23,7 @@ from neo4j_graphrag.embeddings.base import Embedder
 try:
     from mistralai import Mistral
 except ImportError:
-    Mistral = None
+    Mistral = None  # type: ignore
 
 
 class MistralAIEmbeddings(Embedder):
