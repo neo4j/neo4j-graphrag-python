@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from ..exceptions import LLMGenerationError
 from .base import LLMInterface
@@ -29,7 +29,7 @@ try:
     from mistralai.models.toolmessage import ToolMessage
     from mistralai.models.usermessage import UserMessage
 
-    MessageType = AssistantMessage | SystemMessage | ToolMessage | UserMessage
+    MessageType = Union[AssistantMessage, SystemMessage, ToolMessage, UserMessage]
 except ImportError:
     Mistral = None  # type: ignore
     SDKError = None  # type: ignore
