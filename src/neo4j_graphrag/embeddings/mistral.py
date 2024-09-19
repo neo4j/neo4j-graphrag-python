@@ -57,4 +57,16 @@ class MistralAIEmbeddings(Embedder):
             model=self.model,
             inputs=[text],
         )
-        return embeddings_batch_response.data[0].embedding
+        if (
+            embeddings_batch_response is None
+            or embeddings_batch_response.data is None
+            or not embeddings_batch_response.data
+        ):
+            raise ValueError("Failed to retrieve embeddings.")
+
+        embedding = embeddings_batch_response.data[0].embedding
+
+        if not isinstance(embedding, list):
+            raise TypeError("Embedding is not a list of floats.")
+
+        return embedding

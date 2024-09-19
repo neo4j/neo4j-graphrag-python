@@ -16,6 +16,7 @@ from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+from mistralai.models.sdkerror import SDKError
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm import LLMResponse
 from neo4j_graphrag.llm.mistralai_llm import MistralAILLM
@@ -51,7 +52,7 @@ def test_mistral_ai_llm_invoke(mock_mistral: Mock) -> None:
 async def test_mistral_ai_llm_ainvoke(mock_mistral: Mock) -> None:
     mock_mistral_instance = mock_mistral.return_value
 
-    async def mock_complete_async(*args, **kwargs):
+    async def mock_complete_async(*args: Any, **kwargs: Any) -> MagicMock:
         chat_response_mock = MagicMock()
         chat_response_mock.choices = [
             MagicMock(message=MagicMock(content="async mistral response"))
@@ -70,8 +71,6 @@ async def test_mistral_ai_llm_ainvoke(mock_mistral: Mock) -> None:
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
 def test_mistral_ai_llm_invoke_sdkerror(mock_mistral: Mock) -> None:
-    from neo4j_graphrag.llm.mistralai_llm import SDKError  # Import inside function
-
     mock_mistral_instance = mock_mistral.return_value
     mock_mistral_instance.chat.complete.side_effect = SDKError("Some error")
 
@@ -84,11 +83,9 @@ def test_mistral_ai_llm_invoke_sdkerror(mock_mistral: Mock) -> None:
 @pytest.mark.asyncio
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
 async def test_mistral_ai_llm_ainvoke_sdkerror(mock_mistral: Mock) -> None:
-    from neo4j_graphrag.llm.mistralai_llm import SDKError  # Import inside function
-
     mock_mistral_instance = mock_mistral.return_value
 
-    async def mock_complete_async(*args: Any, **kwargs: Any):
+    async def mock_complete_async(*args: Any, **kwargs: Any) -> None:
         raise SDKError("Some async error")
 
     mock_mistral_instance.chat.complete_async = mock_complete_async
