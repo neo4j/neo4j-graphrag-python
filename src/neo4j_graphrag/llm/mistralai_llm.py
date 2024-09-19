@@ -101,7 +101,7 @@ class MistralAILLM(LLMInterface):
             LLMGenerationError: If anything goes wrong.
         """
         try:
-            response = await self.client.files.complete_async(
+            response = await self.client.chat.complete_async(
                 model=self.model_name,
                 messages=self.get_messages(input),
                 **self.model_params,
