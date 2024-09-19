@@ -18,7 +18,6 @@ import asyncio
 import logging.config
 
 import neo4j
-from langchain_text_splitters import CharacterTextSplitter
 from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
 from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
 from neo4j_graphrag.experimental.components.entity_relation_extractor import (
@@ -32,8 +31,8 @@ from neo4j_graphrag.experimental.components.schema import (
     SchemaProperty,
     SchemaRelation,
 )
-from neo4j_graphrag.experimental.components.text_splitters.langchain import (
-    LangChainTextSplitterAdapter,
+from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
+    FixedSizeSplitter,
 )
 from neo4j_graphrag.experimental.pipeline import Pipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
@@ -63,7 +62,7 @@ logging.config.dictConfig(
 async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
     """This is where we define and run the KG builder pipeline, instantiating a few
     components:
-    - Text Splitter: in this example we use a text splitter from the LangChain package
+    - Text Splitter: in this example we use the fixed size text splitter
     - Schema Builder: this component takes a list of entities, relationships and
         possible triplets as inputs, validate them and return a schema ready to use
         for the rest of the pipeline
@@ -76,10 +75,8 @@ async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
     pipe = Pipeline()
     # define the components
     pipe.add_component(
-        LangChainTextSplitterAdapter(
-            # chunk_size=50 for the sake of this demo
-            CharacterTextSplitter(chunk_size=50, chunk_overlap=10, separator=".")
-        ),
+        # chunk_size=50 for the sake of this demo
+        FixedSizeSplitter(chunk_size=4000, chunk_overlap=200),
         "splitter",
     )
     pipe.add_component(TextChunkEmbedder(embedder=OpenAIEmbeddings()), "chunk_embedder")

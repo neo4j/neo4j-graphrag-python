@@ -116,3 +116,7 @@ class PdfLoaderError(Neo4jGraphRagError):
     """Custom exception for errors in PDF loader."""
 
     pass
+
+
+class PromptMissingPlaceholderError(Neo4jGraphRagError):
+    """Exception raised when a prompt is missing an expected placeholder."""

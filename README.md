@@ -28,6 +28,13 @@ To install the latest stable version, use:
 pip install neo4j-graphrag
 ```
 
+### Optional dependencies
+
+#### pygraphviz
+
+`pygraphviz` is used for visualizing pipelines.
+Follow installation instructions [here](https://pygraphviz.github.io/documentation/stable/install.html).
+
 ## Examples
 
 ### Creating a vector index
