@@ -42,7 +42,9 @@ class MistralAIEmbeddings(Embedder):
                 "Could not import mistralai. "
                 "Please install it with `pip install mistralai`."
             )
-        api_key = os.getenv("MISTRAL_API_KEY", "")
+        api_key = kwargs.pop("api_key", None)
+        if api_key is None:
+            api_key = os.getenv("MISTRAL_API_KEY", "")
         self.model = model
         self.mistral_client = Mistral(api_key=api_key, **kwargs)
 

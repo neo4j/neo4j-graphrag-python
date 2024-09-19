@@ -38,3 +38,37 @@ def test_mistralai_embedder_happy_path(mock_mistralai: Mock) -> None:
 
     assert isinstance(res, list)
     assert res == [1.0, 2.0]
+
+
+@patch("neo4j_graphrag.embeddings.mistral.Mistral")
+def test_mistralai_embedder_api_key_via_kwargs(mock_mistral: Mock) -> None:
+    mock_mistral_instance = mock_mistral.return_value
+    embeddings_batch_response_mock = MagicMock()
+    embeddings_batch_response_mock.data = [MagicMock(embedding=[1.0, 2.0])]
+    mock_mistral_instance.embeddings.create.return_value = (
+        embeddings_batch_response_mock
+    )
+    api_key = "test_api_key"
+
+    MistralAIEmbeddings(api_key=api_key)
+
+    mock_mistral.assert_called_with(api_key=api_key)
+
+
+@patch("neo4j_graphrag.embeddings.mistral.Mistral")
+@patch("os.getenv")
+def test_mistralai_embedder_api_key_from_env(
+    mock_getenv: Mock, mock_mistral: Mock
+) -> None:
+    mock_getenv.return_value = "env_api_key"
+    mock_mistral_instance = mock_mistral.return_value
+    embeddings_batch_response_mock = MagicMock()
+    embeddings_batch_response_mock.data = [MagicMock(embedding=[1.0, 2.0])]
+    mock_mistral_instance.embeddings.create.return_value = (
+        embeddings_batch_response_mock
+    )
+
+    MistralAIEmbeddings()
+
+    mock_getenv.assert_called_with("MISTRAL_API_KEY", "")
+    mock_mistral.assert_called_with(api_key="env_api_key")

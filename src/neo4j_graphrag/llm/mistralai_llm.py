@@ -57,7 +57,9 @@ class MistralAILLM(LLMInterface):
                 "Please install it with `pip install mistralai`."
             )
         super().__init__(model_name, model_params)
-        api_key = os.getenv("MISTRAL_API_KEY", "")
+        api_key = kwargs.pop("api_key", None)
+        if api_key is None:
+            api_key = os.getenv("MISTRAL_API_KEY", "")
         self.client = Mistral(api_key=api_key, **kwargs)
 
     def get_messages(self, input: str) -> list[MessageType]:
