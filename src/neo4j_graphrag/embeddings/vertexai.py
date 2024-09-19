@@ -37,7 +37,7 @@ class VertexAIEmbeddings(Embedder):
     def __init__(self, model: str = "text-embedding-004") -> None:
         if TextEmbeddingInput is None or TextEmbeddingInput is None:
             raise ImportError(
-                "Could not import Vertex AI python client. "
+                "Could not import Vertex AI Python client. "
                 "Please install it with `pip install google-cloud-aiplatform`."
             )
         self.vertexai_model = TextEmbeddingModel.from_pretrained(model)

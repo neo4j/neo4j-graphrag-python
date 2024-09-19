@@ -46,7 +46,7 @@ class VertexAILLM(LLMInterface):
     ):
         if GenerativeModel is None or ResponseValidationError is None:
             raise ImportError(
-                "Could not import Vertex AI python client. "
+                "Could not import Vertex AI Python client. "
                 "Please install it with `pip install google-cloud-aiplatform`."
             )
         super().__init__(model_name, model_params)
