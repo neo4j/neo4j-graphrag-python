@@ -112,7 +112,7 @@ def test_graphrag_search_query_deprecation_warning(
             llm=llm,
         )
         with pytest.raises(ValidationError):
-            rag.search(query="Some query text")
+            rag.search(query_text="Some query text")
 
     assert len(warn_list) == 1
     assert (
