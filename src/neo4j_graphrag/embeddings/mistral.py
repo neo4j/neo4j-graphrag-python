@@ -19,6 +19,7 @@ import os
 from typing import Any
 
 from neo4j_graphrag.embeddings.base import Embedder
+from neo4j_graphrag.exceptions import Neo4jGraphRagError
 
 try:
     from mistralai import Mistral
@@ -62,11 +63,11 @@ class MistralAIEmbeddings(Embedder):
             or embeddings_batch_response.data is None
             or not embeddings_batch_response.data
         ):
-            raise ValueError("Failed to retrieve embeddings.")
+            raise Neo4jGraphRagError("Failed to retrieve embeddings.")
 
         embedding = embeddings_batch_response.data[0].embedding
 
         if not isinstance(embedding, list):
-            raise TypeError("Embedding is not a list of floats.")
+            raise Neo4jGraphRagError("Embedding is not a list of floats.")
 
         return embedding
