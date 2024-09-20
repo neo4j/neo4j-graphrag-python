@@ -24,7 +24,7 @@ import asyncio
 from typing import List
 
 import neo4j
-from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
+from neo4j_graphrag.embeddings.openai_embeddings import OpenAIEmbeddings
 from neo4j_graphrag.experimental.pipeline import Component, Pipeline
 from neo4j_graphrag.experimental.pipeline.component import DataModel
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
@@ -34,8 +34,7 @@ from neo4j_graphrag.experimental.pipeline.types import (
     PipelineConfig,
 )
 from neo4j_graphrag.generation import PromptTemplate, RagTemplate
-from neo4j_graphrag.llm import LLMInterface
-from neo4j_graphrag.llm.openai import OpenAILLM
+from neo4j_graphrag.llm import LLMInterface, OpenAILLM
 from neo4j_graphrag.retrievers import VectorRetriever
 from neo4j_graphrag.retrievers.base import Retriever
 

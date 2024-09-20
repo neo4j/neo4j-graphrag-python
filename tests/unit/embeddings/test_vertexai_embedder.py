@@ -15,16 +15,16 @@
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
-from neo4j_graphrag.embeddings.vertexai import VertexAIEmbeddings
+from neo4j_graphrag.embeddings.vertexai_embeddings import VertexAIEmbeddings
 
 
-@patch("neo4j_graphrag.embeddings.vertexai.vertexai", None)
+@patch("neo4j_graphrag.embeddings.vertexai_embeddings.vertexai", None)
 def test_vertexai_embedder_missing_dependency() -> None:
     with pytest.raises(ImportError):
         VertexAIEmbeddings()
 
 
-@patch("neo4j_graphrag.embeddings.vertexai.vertexai")
+@patch("neo4j_graphrag.embeddings.vertexai_embeddings.vertexai")
 def test_vertexai_embedder_happy_path(mock_vertexai: Mock) -> None:
     mock_vertexai.language_models.TextEmbeddingModel.from_pretrained.return_value.get_embeddings.return_value = [
         MagicMock(values=[1.0, 2.0])

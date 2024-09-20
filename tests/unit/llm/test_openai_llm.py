@@ -16,16 +16,16 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from neo4j_graphrag.llm import LLMResponse
-from neo4j_graphrag.llm.openai import AzureOpenAILLM, OpenAILLM
+from neo4j_graphrag.llm.openai_llm import AzureOpenAILLM, OpenAILLM
 
 
-@patch("neo4j_graphrag.llm.openai.openai", None)
+@patch("neo4j_graphrag.llm.openai_llm.openai", None)
 def test_openai_llm_missing_dependency() -> None:
     with pytest.raises(ImportError):
         OpenAILLM(model_name="gpt-4o")
 
 
-@patch("neo4j_graphrag.llm.openai.OpenAILLM.client_class")
+@patch("neo4j_graphrag.llm.openai_llm.OpenAILLM.client_class")
 def test_openai_llm_happy_path(mock_openai: Mock) -> None:
     mock_openai.return_value.chat.completions.create.return_value = MagicMock(
         choices=[MagicMock(message=MagicMock(content="openai chat response"))],
@@ -36,13 +36,13 @@ def test_openai_llm_happy_path(mock_openai: Mock) -> None:
     assert res.content == "openai chat response"
 
 
-@patch("neo4j_graphrag.llm.openai.openai", None)
+@patch("neo4j_graphrag.llm.openai_llm.openai", None)
 def test_azure_openai_llm_missing_dependency() -> None:
     with pytest.raises(ImportError):
         AzureOpenAILLM(model_name="gpt-4o")
 
 
-@patch("neo4j_graphrag.llm.openai.AzureOpenAILLM.client_class")
+@patch("neo4j_graphrag.llm.openai_llm.AzureOpenAILLM.client_class")
 def test_azure_openai_llm_happy_path(mock_openai: Mock) -> None:
     mock_openai.return_value.chat.completions.create.return_value = MagicMock(
         choices=[MagicMock(message=MagicMock(content="openai chat response"))],

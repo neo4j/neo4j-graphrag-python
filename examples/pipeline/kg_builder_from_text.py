@@ -18,7 +18,7 @@ import asyncio
 import logging.config
 
 import neo4j
-from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
+from neo4j_graphrag.embeddings.openai_embeddings import OpenAIEmbeddings
 from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
 from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
@@ -36,7 +36,7 @@ from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter i
 )
 from neo4j_graphrag.experimental.pipeline import Pipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
-from neo4j_graphrag.llm.openai import OpenAILLM
+from neo4j_graphrag.llm import OpenAILLM
 
 # set log level to DEBUG for all neo4j_graphrag.* loggers
 logging.config.dictConfig(
