@@ -174,11 +174,16 @@ LLMInterface
 
 
 OpenAILLM
----------
+=========
 
 .. autoclass:: neo4j_graphrag.llm.openai.OpenAILLM
     :members:
 
+VertexAILLM
+===========
+
+.. autoclass:: neo4j_graphrag.llm.vertexai.VertexAILLM
+    :members:
 
 PromptTemplate
 ==============
