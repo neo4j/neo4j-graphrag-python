@@ -21,8 +21,10 @@ from neo4j_graphrag.llm import LLMInterface, LLMResponse
 
 try:
     import cohere
+    from cohere.core import ApiError
 except ImportError:
     cohere = None  # type: ignore
+    ApiError = Exception
 
 
 class CohereLLM(LLMInterface):
@@ -75,7 +77,7 @@ class CohereLLM(LLMInterface):
                 message=input,
                 model=self.model_name,
             )
-        except cohere.core.ApiError as e:
+        except ApiError as e:
             raise LLMGenerationError(e)
         return LLMResponse(
             content=res.text,
@@ -95,7 +97,7 @@ class CohereLLM(LLMInterface):
                 message=input,
                 model=self.model_name,
             )
-        except cohere.core.ApiError as e:
+        except ApiError as e:
             raise LLMGenerationError(e)
         return LLMResponse(
             content=res.text,
