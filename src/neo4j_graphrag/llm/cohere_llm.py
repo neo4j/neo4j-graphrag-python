@@ -24,7 +24,7 @@ try:
     from cohere.core import ApiError
 except ImportError:
     cohere = None  # type: ignore
-    ApiError = Exception
+    ApiError = Exception  # type: ignore[assignment, misc]
 
 
 class CohereLLM(LLMInterface):
