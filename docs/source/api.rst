@@ -162,6 +162,12 @@ VertexAIEmbeddings
 .. autoclass:: neo4j_graphrag.embeddings.vertexai.VertexAIEmbeddings
     :members:
 
+CohereEmbeddings
+================
+
+.. autoclass:: neo4j_graphrag.embeddings.cohere.CohereEmbeddings
+    :members:
+
 **********
 Generation
 **********
@@ -174,16 +180,25 @@ LLMInterface
 
 
 OpenAILLM
-=========
+---------
 
-.. autoclass:: neo4j_graphrag.llm.openai.OpenAILLM
+.. autoclass:: neo4j_graphrag.llm.openai_llm.OpenAILLM
     :members:
+    :undoc-members: get_messages, client_class, async_client_class
+
 
 VertexAILLM
-===========
+-----------
 
-.. autoclass:: neo4j_graphrag.llm.vertexai.VertexAILLM
+.. autoclass:: neo4j_graphrag.llm.vertexai_llm.VertexAILLM
     :members:
+
+CohereLLM
+---------
+
+.. autoclass:: neo4j_graphrag.llm.cohere_llm.CohereLLM
+    :members:
+
 
 PromptTemplate
 ==============
