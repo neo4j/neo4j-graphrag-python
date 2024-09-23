@@ -37,8 +37,7 @@ class OpenAILLM(LLMInterface):
 
         Args:
             model_name (str):
-            model_params (str): Parameters like temperature and such  that will be
-             passed to the model
+            model_params (str): Parameters like temperature that will be passed to the model when text is sent to it
             kwargs: All other parameters will be passed to the openai.OpenAI init.
 
         """
