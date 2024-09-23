@@ -54,7 +54,7 @@
 - [End to end GraphRAG ](./graphrag/)
 - [Retriever from an embedding vector](graphrag/retrievers/similarity_search_for_vector.py)
 - [Retriever from a text](graphrag/retrievers/similarity_search_for_text.py)
-- [Retriever with pre-filters](./vector_search_with_filters.py)
+- [Retriever with pre-filters](old/vector_search_with_filters.py)
 
 ### Retrievers
 
@@ -64,12 +64,12 @@
 
 #### External Retrievers
 
-- [Weaviate](./weaviate)
-- [Pinecone](./pinecone)
+- [Weaviate](old/weaviate)
+- [Pinecone](old/pinecone)
 
 ### Prompts
 
-- [Using a custom prompt](./graphrag_custom_prompt.py)
+- [Using a custom prompt](old/graphrag_custom_prompt.py)
 
 
 ## Database Setup
