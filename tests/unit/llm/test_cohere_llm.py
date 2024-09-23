@@ -19,7 +19,7 @@ import pytest
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm import LLMResponse
-from neo4j_graphrag.llm.cohere import CohereLLM
+from neo4j_graphrag.llm.cohere_llm import CohereLLM
 
 
 @patch("neo4j_graphrag.llm.cohere.cohere", None)
