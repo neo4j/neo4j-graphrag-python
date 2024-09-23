@@ -21,7 +21,7 @@ from neo4j_graphrag.embeddings.base import Embedder
 try:
     import cohere
 except ImportError:
-    cohere = None
+    cohere = None  # type: ignore
 
 
 class CohereEmbeddings(Embedder):
@@ -40,4 +40,4 @@ class CohereEmbeddings(Embedder):
             model=self.model,
             **kwargs,
         )
-        return response.embeddings[0]
+        return response.embeddings[0]  # type: ignore

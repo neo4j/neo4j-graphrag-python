@@ -22,7 +22,7 @@ from neo4j_graphrag.llm import LLMInterface, LLMResponse
 try:
     import cohere
 except ImportError:
-    cohere = None
+    cohere = None  # type: ignore
 
 
 class CohereLLM(LLMInterface):
@@ -81,9 +81,7 @@ class CohereLLM(LLMInterface):
             content=res.text,
         )
 
-    async def ainvoke(
-        self, input: str, chat_history: Optional[list[dict[str, str]]] = None
-    ) -> LLMResponse:
+    async def ainvoke(self, input: str) -> LLMResponse:
         """Asynchronously sends text to the LLM and returns a response.
 
         Args:
@@ -96,7 +94,6 @@ class CohereLLM(LLMInterface):
             res = await self.async_client.chat(
                 message=input,
                 model=self.model_name,
-                chat_history=chat_history,
             )
         except cohere.core.ApiError as e:
             raise LLMGenerationError(e)
