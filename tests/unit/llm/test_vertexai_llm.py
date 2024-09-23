@@ -16,16 +16,16 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
-from neo4j_graphrag.llm.vertexai import VertexAILLM
+from neo4j_graphrag.llm.vertexai_llm import VertexAILLM
 
 
-@patch("neo4j_graphrag.llm.vertexai.GenerativeModel", None)
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel", None)
 def test_vertexai_llm_missing_dependency() -> None:
     with pytest.raises(ImportError):
         VertexAILLM(model_name="gemini-1.5-flash-001")
 
 
-@patch("neo4j_graphrag.llm.vertexai.GenerativeModel")
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
 def test_invoke_happy_path(GenerativeModelMock: MagicMock) -> None:
     mock_response = Mock()
     mock_response.text = "Return text"
@@ -40,7 +40,7 @@ def test_invoke_happy_path(GenerativeModelMock: MagicMock) -> None:
 
 
 @pytest.mark.asyncio
-@patch("neo4j_graphrag.llm.vertexai.GenerativeModel")
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
 async def test_ainvoke_happy_path(GenerativeModelMock: MagicMock) -> None:
     mock_response = AsyncMock()
     mock_response.text = "Return text"

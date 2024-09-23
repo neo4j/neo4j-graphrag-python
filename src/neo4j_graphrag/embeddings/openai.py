@@ -15,9 +15,14 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Type
 
 from neo4j_graphrag.embeddings.base import Embedder
+
+try:
+    import openai
+except ImportError:
+    openai = None  # type: ignore
 
 
 class OpenAIEmbeddings(Embedder):
@@ -29,16 +34,16 @@ class OpenAIEmbeddings(Embedder):
         model (str): The name of the OpenAI embedding model to use. Defaults to "text-embedding-ada-002".
     """
 
-    def __init__(self, model: str = "text-embedding-ada-002") -> None:
-        try:
-            import openai
-        except ImportError:
+    client_class: Type[openai.OpenAI] = openai.OpenAI
+
+    def __init__(self, model: str = "text-embedding-ada-002", **kwargs: Any) -> None:
+        if openai is None:
             raise ImportError(
                 "Could not import openai python client. "
                 "Please install it with `pip install openai`."
             )
 
-        self.openai_model = openai.OpenAI()
+        self.openai_model = self.client_class(**kwargs)
         self.model = model
 
     def embed_query(self, text: str, **kwargs: Any) -> list[float]:
@@ -53,3 +58,7 @@ class OpenAIEmbeddings(Embedder):
             input=text, model=self.model, **kwargs
         )
         return response.data[0].embedding
+
+
+class AzureOpenAIEmbeddings(OpenAIEmbeddings):
+    client_class: Type[openai.OpenAI] = openai.AzureOpenAI

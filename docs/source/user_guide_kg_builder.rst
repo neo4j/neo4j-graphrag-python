@@ -246,7 +246,7 @@ It can be used in this way:
     from neo4j_graphrag.experimental.components.entity_relation_extractor import (
         LLMEntityRelationExtractor,
     )
-    from neo4j_graphrag.llm import OpenAILLM
+    from neo4j_graphrag.llm.openai import OpenAILLM
 
     extractor = LLMEntityRelationExtractor(
         llm=OpenAILLM(
