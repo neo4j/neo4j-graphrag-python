@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any, Dict, List
 
 import neo4j
 from neo4j_graphrag.experimental.components.entity_relation_extractor import (
@@ -33,69 +32,10 @@ from neo4j_graphrag.experimental.components.schema import (
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
     FixedSizeSplitter,
 )
-from neo4j_graphrag.experimental.pipeline import Component, DataModel
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.llm import OpenAILLM
-from pydantic import BaseModel, validate_call
 
 logging.basicConfig(level=logging.INFO)
-
-
-class DocumentChunkModel(DataModel):
-    chunks: list[str]
-
-
-class DocumentChunker(Component):
-    async def run(self, text: str) -> DocumentChunkModel:
-        chunks = [t.strip() for t in text.split(".") if t.strip()]
-        return DocumentChunkModel(chunks=chunks)
-
-
-class EntityModel(BaseModel):
-    label: str
-    properties: dict[str, str]
-
-
-class Neo4jGraph(DataModel):
-    entities: list[dict[str, Any]]
-    relations: list[dict[str, Any]]
-
-
-class ERExtractor(Component):
-    async def _process_chunk(self, chunk: str, schema: str) -> Dict[str, Any]:
-        return {
-            "entities": [{"label": "Person", "properties": {"name": "John Doe"}}],
-            "relations": [],
-        }
-
-    async def run(self, chunks: List[str], schema: str) -> Neo4jGraph:
-        tasks = [self._process_chunk(chunk, schema) for chunk in chunks]
-        result = await asyncio.gather(*tasks)
-        merged_result: dict[str, Any] = {"entities": [], "relations": []}
-        for res in result:
-            merged_result["entities"] += res["entities"]
-            merged_result["relations"] += res["relations"]
-        return Neo4jGraph(
-            entities=merged_result["entities"], relations=merged_result["relations"]
-        )
-
-
-class WriterModel(DataModel):
-    status: str
-    entities: list[EntityModel]
-    relations: list[EntityModel]
-
-
-class Writer(Component):
-    @validate_call
-    async def run(self, graph: Neo4jGraph) -> WriterModel:
-        entities = graph.entities
-        relations = graph.relations
-        return WriterModel(
-            status="OK",
-            entities=[EntityModel(**e) for e in entities],
-            relations=[EntityModel(**r) for r in relations],
-        )
 
 
 async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:

@@ -18,7 +18,7 @@ import asyncio
 import logging.config
 
 import neo4j
-from neo4j_graphrag.embeddings.openai_embeddings import OpenAIEmbeddings
+from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
 from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
 from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,

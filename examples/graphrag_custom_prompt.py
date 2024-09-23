@@ -11,7 +11,7 @@ This example illustrates:
 import logging
 
 import neo4j
-from neo4j_graphrag.embeddings.openai_embeddings import OpenAIEmbeddings
+from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
 from neo4j_graphrag.generation import GraphRAG, RagTemplate
 from neo4j_graphrag.llm import OpenAILLM
 from neo4j_graphrag.retrievers import VectorCypherRetriever
