@@ -24,11 +24,11 @@ def test_cohere_embedder_missing_cohere_dependency() -> None:
         CohereEmbeddings()
 
 
-@patch("neo4j_graphrag.embeddings.cohere.cohere.Client")
+@patch("neo4j_graphrag.embeddings.cohere.cohere")
 def test_cohere_embedder_happy_path(mock_cohere: Mock) -> None:
-    mock_cohere.return_value.chat.return_value = MagicMock()
-    embedder = CohereEmbeddings(model="")
+    mock_cohere.Client.return_value.embed.return_value = MagicMock(embeddings=[
+        [1.0, 2.0]
+    ])
+    embedder = CohereEmbeddings()
     res = embedder.embed_query("my text")
-    print(res)
-    assert isinstance(res, list)
-    assert False
+    assert res == [1.0, 2.0]

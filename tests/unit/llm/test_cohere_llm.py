@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 
 import pytest
 from neo4j_graphrag.llm import LLMResponse
@@ -27,8 +27,10 @@ def test_cohere_llm_missing_dependency() -> None:
 
 @patch("neo4j_graphrag.llm.cohere.cohere")
 def test_cohere_embedder_happy_path(mock_cohere: Mock) -> None:
-    mock_cohere.Cohere.return_value.chat.return_value = []
+    mock_cohere.Client.return_value.chat.return_value = MagicMock(
+        text="cohere response text"
+    )
     embedder = CohereLLM(model_name="something")
     res = embedder.invoke("my text")
     assert isinstance(res, LLMResponse)
-    assert False
+    assert res.content == "cohere response text"

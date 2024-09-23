@@ -32,7 +32,7 @@ class CohereEmbeddings(Embedder):
                 "Please install it with `pip install cohere`."
             )
         self.model = model
-        self.client = cohere.Cohere(**kwargs)
+        self.client = cohere.Client(**kwargs)
 
     def embed_query(self, text: str, **kwargs: Any) -> list[float]:
         response = self.client.embed(
