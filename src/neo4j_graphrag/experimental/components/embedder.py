@@ -14,7 +14,7 @@
 #  limitations under the License.
 from pydantic import validate_call
 
-from neo4j_graphrag.embedder import Embedder
+from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.experimental.components.types import TextChunk, TextChunks
 from neo4j_graphrag.experimental.pipeline.component import Component
 

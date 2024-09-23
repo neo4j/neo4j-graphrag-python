@@ -21,7 +21,13 @@ from .types import LLMResponse
 
 
 class LLMInterface(ABC):
-    """Interface for large language models."""
+    """Interface for large language models.
+
+    Args:
+        model_name (str): The name of the language model.
+        model_params (Optional[dict], optional): Additional parameters passed to the model when text is sent to it. Defaults to None.
+        **kwargs (Any): Arguments passed to the model when for the class is initialised. Defaults to None.
+    """
 
     def __init__(
         self,
