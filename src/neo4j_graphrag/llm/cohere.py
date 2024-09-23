@@ -64,11 +64,11 @@ class CohereLLM(LLMInterface):
     def invoke(self, input: str) -> LLMResponse:
         """Sends text to the LLM and returns a response.
 
-           Args:
-               input (str): The text to send to the LLM.
+        Args:
+            input (str): The text to send to the LLM.
 
-           Returns:
-               LLMResponse: The response from the LLM.
+        Returns:
+            LLMResponse: The response from the LLM.
         """
         try:
             res = self.client.chat(

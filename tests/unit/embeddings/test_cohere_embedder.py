@@ -26,9 +26,9 @@ def test_cohere_embedder_missing_cohere_dependency() -> None:
 
 @patch("neo4j_graphrag.embeddings.cohere.cohere")
 def test_cohere_embedder_happy_path(mock_cohere: Mock) -> None:
-    mock_cohere.Client.return_value.embed.return_value = MagicMock(embeddings=[
-        [1.0, 2.0]
-    ])
+    mock_cohere.Client.return_value.embed.return_value = MagicMock(
+        embeddings=[[1.0, 2.0]]
+    )
     embedder = CohereEmbeddings()
     res = embedder.embed_query("my text")
     assert res == [1.0, 2.0]
