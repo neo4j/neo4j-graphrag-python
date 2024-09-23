@@ -19,7 +19,7 @@ from neo4j_graphrag.llm import LLMResponse
 from neo4j_graphrag.llm.cohere import CohereLLM
 
 
-@patch("neo4j_graphrag.embeddings.cohere.cohere", None)
+@patch("neo4j_graphrag.llm.cohere.cohere", None)
 def test_cohere_llm_missing_dependency() -> None:
     with pytest.raises(ImportError):
         CohereLLM(model_name="something")
