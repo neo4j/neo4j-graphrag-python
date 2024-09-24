@@ -42,6 +42,7 @@ pygraphviz = [
     {version = "^1.0.0", python = "<3.10", optional = true}
 ]
 google-cloud-aiplatform = {version = "^1.66.0", optional = true}
+anthropic = { version = "^0.34.2", optional = true}
 
 [tool.poetry.group.dev.dependencies]
 pylint = "^3.1.0"
@@ -75,9 +76,10 @@ pygraphviz = [
     {version = "^1.0.0", python = "<3.10"}
 ]
 google-cloud-aiplatform = {version = "^1.66.0"}
+anthropic = { version = "^0.34.2"}
 
 [tool.poetry.extras]
-external_clients = ["weaviate-client", "pinecone-client", "google-cloud-aiplatform"]
+external_clients = ["weaviate-client", "pinecone-client", "google-cloud-aiplatform", "anthropic"]
 kg_creation_tools = ["pygraphviz"]
 
 [build-system]
