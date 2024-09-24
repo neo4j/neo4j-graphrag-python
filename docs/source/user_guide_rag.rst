@@ -23,9 +23,9 @@ In practice, it's done with only a few lines of code:
 
     from neo4j import GraphDatabase
     from neo4j_graphrag.retrievers import VectorRetriever
-    from neo4j_graphrag.llm.openai import OpenAILLM
+    from neo4j_graphrag.llm import OpenAILLM
     from neo4j_graphrag.generation import GraphRAG
-    from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
+    from neo4j_graphrag.embeddings import OpenAIEmbeddings
 
     # 1. Neo4j driver
     URI = "neo4j://localhost:7687"
@@ -56,6 +56,12 @@ In practice, it's done with only a few lines of code:
     print(response.answer)
 
 
+.. note::
+
+    In order to run this code, the `openai` Python package needs to be installed:
+    `pip install openai`
+
+
 The following sections provide more details about how to customize this code.
 
 ******************************
@@ -70,6 +76,8 @@ Using Another LLM Model
 If OpenAI cannot be used directly, there are a few available alternatives:
 
 - Use Azure OpenAI.
+- Use Google VertexAI.
+- Use Cohere.
 - Use a local Ollama model.
 - Implement a custom interface.
 - Utilize any LangChain chat model.
@@ -83,17 +91,45 @@ It is possible to use Azure OpenAI switching to the `AzureOpenAILLM` class:
 
 .. code:: python
 
-    from neo4j_graphrag.llm.openai import AzureOpenAILLM
+    from neo4j_graphrag.llm import AzureOpenAILLM
     llm = AzureOpenAILLM(
         model_name="gpt-4o",
         azure_endpoint="https://example-endpoint.openai.azure.com/",  # update with your endpoint
         api_version="2024-06-01",  # update appropriate version
-        api_key="ba3a46d86259405385f73f08078f588b",  # api_key is optional and can also be set with OPENAI_API_KEY env var
+        api_key="...",  # api_key is optional and can also be set with OPENAI_API_KEY env var
     )
     llm.invoke("say something")
 
 Check the OpenAI Python client [documentation](https://github.com/openai/openai-python?tab=readme-ov-file#microsoft-azure-openai)
 to learn more about the configuration.
+
+.. note::
+
+    In order to run this code, the `openai` Python package needs to be installed:
+    `pip install openai`
+
+
+Using VertexAI LLM
+------------------
+
+To use VertexAI, instantiate the `VertexAILLM` class:
+
+.. code:: python
+
+    from neo4j_graphrag.llm import VertexAILLM
+    from vertexai.generative_models import GenerationConfig
+
+    generation_config = GenerationConfig(temperature=0.0)
+    llm = VertexAILLM(
+        model_name="gemini-1.5-flash-001", generation_config=generation_config
+    )
+    llm.invoke("say something")
+
+
+.. note::
+
+    In order to run this code, the `google-cloud-aiplatform` Python package needs to be installed:
+    `pip install google-cloud-aiplatform`
 
 
 Using a Local Model via Ollama
@@ -105,7 +141,7 @@ it can be queried using the following:
 
 .. code:: python
 
-    from neo4j_graphrag.llm.openai import OpenAILLM
+    from neo4j_graphrag.llm import OpenAILLM
     llm = OpenAILLM(api_key="ollama", base_url="http://127.0.0.1:11434/v1", model_name="orca-mini")
     llm.invoke("say something")
 
@@ -300,13 +336,18 @@ into a vector is required. Therefore, the retriever requires knowledge of an emb
 Embedders
 -----------------------------
 
-Currently, this package supports two embedders: `OpenAIEmbeddings` and `SentenceTransformerEmbeddings`.
+Currently, this package supports several embedders:
+- `OpenAIEmbeddings`
+- `AzureOpenAIEmbeddings`
+- `VertexAIEmbeddings`
+- `CohereEmbeddings`
+- `SentenceTransformerEmbeddings`.
 
 The `OpenAIEmbedder` was illustrated previously. Here is how to use the `SentenceTransformerEmbeddings`:
 
 .. code:: python
 
-    from neo4j_graphrag.embeddings.sentence_transformers import SentenceTransformerEmbeddings
+    from neo4j_graphrag.embeddings import SentenceTransformerEmbeddings
 
     embedder = SentenceTransformerEmbeddings(model="all-MiniLM-L6-v2")  # Note: this is the default model
 
@@ -330,10 +371,10 @@ the following implementation of an embedder that wraps the `OllamaEmbedding` mod
             return embedding[0]
 
     ollama_embedding = OllamaEmbedding(
-                model_name="llama3",
-                base_url="http://localhost:11434",
-                ollama_additional_kwargs={"mirostat": 0},
-            )
+        model_name="llama3",
+        base_url="http://localhost:11434",
+        ollama_additional_kwargs={"mirostat": 0},
+    )
     embedder = OllamaEmbedder(ollama_embedding)
     vector = embedder.embed_query("some text")
 
