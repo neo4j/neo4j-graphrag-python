@@ -20,13 +20,13 @@ from neo4j_graphrag.llm.anthropic_llm import AnthropicLLM
 
 
 @patch("neo4j_graphrag.llm.anthropic_llm.anthropic", None)
-def test_vertexai_llm_missing_dependency() -> None:
+def test_anthropic_llm_missing_dependency() -> None:
     with pytest.raises(ImportError):
         AnthropicLLM(model_name="claude-3-opus-20240229")
 
 
 @patch("neo4j_graphrag.llm.anthropic_llm.anthropic")
-def test_invoke_happy_path(mock_anthropic: MagicMock) -> None:
+def test_anthropic_invoke_happy_path(mock_anthropic: MagicMock) -> None:
     mock_anthropic.Anthropic.return_value.messages.create.return_value = MagicMock(
         content="generated text"
     )
@@ -35,7 +35,7 @@ def test_invoke_happy_path(mock_anthropic: MagicMock) -> None:
     input_text = "may thy knife chip and shatter"
     response = llm.invoke(input_text)
     assert response.content == "generated text"
-    llm.client.messages.create.assert_called_once_with(
+    llm.client.messages.create.assert_called_once_with(  # type: ignore
         messages=[{"role": "user", "content": input_text}],
         model="claude-3-opus-20240229",
         **model_params,
@@ -44,7 +44,7 @@ def test_invoke_happy_path(mock_anthropic: MagicMock) -> None:
 
 @pytest.mark.asyncio
 @patch("neo4j_graphrag.llm.anthropic_llm.anthropic")
-async def test_ainvoke_happy_path(mock_anthropic: MagicMock) -> None:
+async def test_anthropic_ainvoke_happy_path(mock_anthropic: MagicMock) -> None:
     mock_response = AsyncMock()
     mock_response.content = "Return text"
     mock_model = mock_anthropic.AsyncAnthropic.return_value
@@ -54,7 +54,7 @@ async def test_ainvoke_happy_path(mock_anthropic: MagicMock) -> None:
     input_text = "may thy knife chip and shatter"
     response = await llm.ainvoke(input_text)
     assert response.content == "Return text"
-    llm.async_client.messages.create.assert_called_once_with(
+    llm.async_client.messages.create.assert_awaited_once_with(  # type: ignore
         model="claude-3-opus-20240229",
         messages=[{"role": "user", "content": input_text}],
         **model_params,
