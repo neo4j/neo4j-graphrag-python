@@ -4,15 +4,16 @@
 
 ### Added
 - Added AzureOpenAILLM and AzureOpenAIEmbeddings to support Azure served OpenAI models
-- Add `template` validation in `PromptTemplate` class upon construction.
+- Added `template` validation in `PromptTemplate` class upon construction.
 - `custom_prompt` arg is now converted to `Text2CypherTemplate` class within the `Text2CypherRetriever.get_search_results` method.
 - `Text2CypherTemplate` and `RAGTemplate` prompt templates now require `query_text` arg and will error if it is not present. Previous `query_text` aliases may be used, but will warn of deprecation.
-- Fix bug in `Text2CypherRetriever` using `custom_prompt` arg where the `search` method would not inject the `query_text` content.
-- Add feature to include kwargs in `Text2CypherRetriever.search()` that will be injected into a custom prompt, if provided.
-- Add validation to `custom_prompt` parameter of `Text2CypherRetriever` to ensure that `query_text` placeholder exists in prompt.
+- Fixed bug in `Text2CypherRetriever` using `custom_prompt` arg where the `search` method would not inject the `query_text` content.
+- Added feature to include kwargs in `Text2CypherRetriever.search()` that will be injected into a custom prompt, if provided.
+- Added validation to `custom_prompt` parameter of `Text2CypherRetriever` to ensure that `query_text` placeholder exists in prompt.
 - Introduced a fixed size text splitter component for splitting text into specified fixed size chunks with overlap. Updated examples and tests to utilize this new component.
 - Introduced Vertex AI LLM class for integrating Vertex AI models.
 - Added unit tests for the Vertex AI LLM class.
+- Added support for Cohere LLM and embeddings - added optional dependency to `cohere`.
 
 ### Fixed
 - Resolved import issue with the Vertex AI Embeddings class.
@@ -30,6 +31,9 @@
 - Introduced a new Vertex AI embeddings class for generating text embeddings using Vertex AI.
 - Updated documentation to include OpenAI and Vertex AI embeddings classes.
 - Added google-cloud-aiplatform as an optional dependency for Vertex AI embeddings.
+
+### Fixed
+- Make `pygraphviz` an optional dependency - it is now only required when calling `pipeline.draw`.
 
 ## 0.6.2
 
