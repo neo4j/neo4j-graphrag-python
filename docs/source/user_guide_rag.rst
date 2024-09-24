@@ -75,14 +75,15 @@ Using Another LLM Model
 
 If OpenAI cannot be used directly, there are a few available alternatives:
 
-- Use Azure OpenAI.
-- Use Google VertexAI.
+- Use Azure OpenAI (GPT...).
+- Use Google VertexAI (Gemini...).
+- Use Anthropic LLM (Claude...).
 - Use Cohere.
 - Use a local Ollama model.
 - Implement a custom interface.
 - Utilize any LangChain chat model.
 
-All options are illustrated below, using a local Ollama model as an example.
+All options are illustrated below.
 
 Using Azure Open AI LLM
 -----------------------
@@ -109,6 +110,9 @@ to learn more about the configuration.
     `pip install openai`
 
 
+See :ref:`azureopenaillm`.
+
+
 Using VertexAI LLM
 ------------------
 
@@ -130,6 +134,59 @@ To use VertexAI, instantiate the `VertexAILLM` class:
 
     In order to run this code, the `google-cloud-aiplatform` Python package needs to be installed:
     `pip install google-cloud-aiplatform`
+
+
+See :ref:`vertexaillm`.
+
+
+Using Anthropic LLM
+-------------------
+
+To use Anthropic, instantiate the `AnthropicLLM` class:
+
+.. code:: python
+
+    from neo4j_graphrag.llm import AnthropicLLM
+
+    llm = AnthropicLLM(
+        model_name="claude-3-opus-20240229",
+        model_params={"max_tokens": 1000},  # max_tokens must be specified
+        api_key=api_key,  # can also set `ANTHROPIC_API_KEY` in env vars
+    )
+    llm.invoke("say something")
+
+
+.. note::
+
+    In order to run this code, the `anthropic` Python package needs to be installed:
+    `pip install anthropic`
+
+See :ref:`anthropicllm`.
+
+
+Using Cohere LLM
+----------------
+
+To use Cohere, instantiate the `CohereLLM` class:
+
+.. code:: python
+
+    from neo4j_graphrag.llm import CohereLLM
+
+    llm = CohereLLM(
+        model_name="command-r",
+        api_key=api_key,  # can also set `CO_API_KEY` in env vars
+    )
+    llm.invoke("say something")
+
+
+.. note::
+
+    In order to run this code, the `cohere` Python package needs to be installed:
+    `pip install cohere`
+
+
+See :ref:`coherellm`.
 
 
 Using a Local Model via Ollama

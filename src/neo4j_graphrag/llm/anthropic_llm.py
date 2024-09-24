@@ -15,8 +15,6 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from openai import APIError
-
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface
 from neo4j_graphrag.llm.types import LLMResponse
@@ -25,8 +23,8 @@ try:
     import anthropic
     from anthropic import APIError
 except ImportError:
-    anthropic = None
-    APIError = None
+    anthropic = None  # type: ignore
+    APIError = None  # type: ignore
 
 
 class AnthropicLLM(LLMInterface):
@@ -56,7 +54,7 @@ class AnthropicLLM(LLMInterface):
 
     def __init__(
         self,
-        model_name: str = "gemini-1.5-flash-001",
+        model_name: str,
         model_params: Optional[dict[str, Any]] = None,
         **kwargs: Any,
     ):

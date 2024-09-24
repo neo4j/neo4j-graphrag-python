@@ -22,7 +22,7 @@ from neo4j_graphrag.llm.anthropic_llm import AnthropicLLM
 @patch("neo4j_graphrag.llm.anthropic_llm.anthropic", None)
 def test_vertexai_llm_missing_dependency() -> None:
     with pytest.raises(ImportError):
-        AnthropicLLM(model_name="gemini-1.5-flash-001")
+        AnthropicLLM(model_name="claude-3-opus-20240229")
 
 
 @patch("neo4j_graphrag.llm.anthropic_llm.anthropic")
@@ -31,13 +31,13 @@ def test_invoke_happy_path(mock_anthropic: MagicMock) -> None:
         content="generated text"
     )
     model_params = {"temperature": 0.3}
-    llm = AnthropicLLM("claude", model_params=model_params)
+    llm = AnthropicLLM("claude-3-opus-20240229", model_params=model_params)
     input_text = "may thy knife chip and shatter"
     response = llm.invoke(input_text)
     assert response.content == "generated text"
     llm.client.messages.create.assert_called_once_with(
         messages=[{"role": "user", "content": input_text}],
-        model="claude",
+        model="claude-3-opus-20240229",
         **model_params,
     )
 
@@ -50,12 +50,12 @@ async def test_ainvoke_happy_path(mock_anthropic: MagicMock) -> None:
     mock_model = mock_anthropic.AsyncAnthropic.return_value
     mock_model.messages.create = AsyncMock(return_value=mock_response)
     model_params = {"temperature": 0.3}
-    llm = AnthropicLLM("claude", model_params)
+    llm = AnthropicLLM("claude-3-opus-20240229", model_params)
     input_text = "may thy knife chip and shatter"
     response = await llm.ainvoke(input_text)
     assert response.content == "Return text"
     llm.async_client.messages.create.assert_called_once_with(
-        model="claude",
+        model="claude-3-opus-20240229",
         messages=[{"role": "user", "content": input_text}],
         **model_params,
     )

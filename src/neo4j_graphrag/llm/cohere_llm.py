@@ -17,7 +17,8 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm import LLMInterface, LLMResponse
+from neo4j_graphrag.llm.base import LLMInterface
+from neo4j_graphrag.llm.types import LLMResponse
 
 try:
     import cohere
