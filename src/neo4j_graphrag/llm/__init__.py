@@ -13,7 +13,8 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from .base import LLMInterface
-from .openai_llm import OpenAILLM
+from .openai_llm import AzureOpenAILLM, OpenAILLM
 from .types import LLMResponse
+from .vertexai_llm import VertexAILLM
 
-__all__ = ["LLMResponse", "LLMInterface", "OpenAILLM", "VertexAILLM"]
+__all__ = ["LLMResponse", "LLMInterface", "OpenAILLM", "VertexAILLM", "AzureOpenAILLM"]

@@ -27,7 +27,7 @@ from typing import Any, AsyncGenerator, Optional
 try:
     import pygraphviz as pgv
 except ImportError:
-    pyg = None
+    pgv = None
 
 from pydantic import BaseModel, Field
 
