@@ -110,7 +110,7 @@ from neo4j import GraphDatabase
 from neo4j_graphrag.retrievers import VectorRetriever
 from neo4j_graphrag.llm import OpenAILLM
 from neo4j_graphrag.generation import GraphRAG
-from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
+from neo4j_graphrag.embeddings import OpenAIEmbeddings
 
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")

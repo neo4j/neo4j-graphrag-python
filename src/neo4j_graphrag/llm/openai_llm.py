@@ -14,7 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Optional, Type
 
 from ..exceptions import LLMGenerationError
 from .base import LLMInterface
@@ -27,6 +27,9 @@ except ImportError:
 
 
 class OpenAILLM(LLMInterface):
+    client_class: Type[openai.OpenAI] = openai.OpenAI
+    async_client_class: Type[openai.AsyncOpenAI] = openai.AsyncOpenAI
+
     def __init__(
         self,
         model_name: str,
@@ -46,9 +49,9 @@ class OpenAILLM(LLMInterface):
                 "Could not import openai python client. "
                 "Please install it with `pip install openai`."
             )
-        super().__init__(model_name, model_params)
-        self.client = openai.OpenAI(**kwargs)
-        self.async_client = openai.AsyncOpenAI(**kwargs)
+        super().__init__(model_name, model_params, **kwargs)
+        self.client = self.client_class(**kwargs)
+        self.async_client = self.async_client_class(**kwargs)
 
     def get_messages(
         self,
@@ -105,3 +108,8 @@ class OpenAILLM(LLMInterface):
             return LLMResponse(content=content)
         except openai.OpenAIError as e:
             raise LLMGenerationError(e)
+
+
+class AzureOpenAILLM(OpenAILLM):
+    client_class: Type[openai.OpenAI] = openai.AzureOpenAI
+    async_client_class: Type[openai.AsyncOpenAI] = openai.AsyncAzureOpenAI
