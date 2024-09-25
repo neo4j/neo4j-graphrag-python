@@ -29,10 +29,6 @@ from neo4j_graphrag.experimental.components.types import (
     Neo4jRelationship,
 )
 from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
-from neo4j_graphrag.indexes import (
-    async_upsert_vector_on_relationship,
-    upsert_vector_on_relationship,
-)
 from neo4j_graphrag.neo4j_queries import UPSERT_NODE_QUERY, UPSERT_RELATIONSHIP_QUERY
 
 logger = logging.getLogger(__name__)
