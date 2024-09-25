@@ -103,7 +103,7 @@ class Neo4jWriter(KGWriter):
         self.max_concurrency = max_concurrency
         self._db_setup()
 
-    def _db_setup(self):
+    def _db_setup(self) -> None:
         # create index on __Entity__.id
         self.driver.execute_query(
             "CREATE INDEX __entity__id IF NOT EXISTS  FOR (n:__Entity__) ON (n.id)"
