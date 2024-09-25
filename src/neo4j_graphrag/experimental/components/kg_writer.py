@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import logging
 from abc import abstractmethod
 from typing import Any, Dict, Literal, Optional, Tuple
@@ -29,9 +30,7 @@ from neo4j_graphrag.experimental.components.types import (
 )
 from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
 from neo4j_graphrag.indexes import (
-    async_upsert_vector,
     async_upsert_vector_on_relationship,
-    upsert_vector,
     upsert_vector_on_relationship,
 )
 from neo4j_graphrag.neo4j_queries import UPSERT_NODE_QUERY, UPSERT_RELATIONSHIP_QUERY
@@ -101,11 +100,16 @@ class Neo4jWriter(KGWriter):
         self.driver = driver
         self.neo4j_database = neo4j_database
         self.max_concurrency = max_concurrency
-        self._db_setup()
 
     def _db_setup(self) -> None:
         # create index on __Entity__.id
         self.driver.execute_query(
+            "CREATE INDEX __entity__id IF NOT EXISTS  FOR (n:__Entity__) ON (n.id)"
+        )
+
+    async def _async_db_setup(self) -> None:
+        # create index on __Entity__.id
+        await self.driver.execute_query(
             "CREATE INDEX __entity__id IF NOT EXISTS  FOR (n:__Entity__) ON (n.id)"
         )
 
@@ -114,6 +118,7 @@ class Neo4jWriter(KGWriter):
         parameters = {
             "id": node.id,
             "properties": node.properties or {},
+            "embeddings": node.embedding_properties,
         }
         query = UPSERT_NODE_QUERY.format(label=node.label)
         return query, parameters
@@ -125,18 +130,7 @@ class Neo4jWriter(KGWriter):
             node (Neo4jNode): The node to upsert into the database.
         """
         query, parameters = self._get_node_query(node)
-        result = self.driver.execute_query(query, parameters_=parameters)
-        node_id = result.records[0]["elementID(n)"]
-        # Add the embedding properties to the node
-        if node.embedding_properties:
-            for prop, vector in node.embedding_properties.items():
-                upsert_vector(
-                    driver=self.driver,
-                    node_id=node_id,
-                    embedding_property=prop,
-                    vector=vector,
-                    neo4j_database=self.neo4j_database,
-                )
+        self.driver.execute_query(query, parameters_=parameters)
 
     async def _async_upsert_node(
         self,
@@ -150,18 +144,7 @@ class Neo4jWriter(KGWriter):
         """
         async with sem:
             query, parameters = self._get_node_query(node)
-            result = await self.driver.execute_query(query, parameters_=parameters)
-            node_id = result.records[0]["elementID(n)"]
-            # Add the embedding properties to the node
-            if node.embedding_properties:
-                for prop, vector in node.embedding_properties.items():
-                    await async_upsert_vector(
-                        driver=self.driver,
-                        node_id=node_id,
-                        embedding_property=prop,
-                        vector=vector,
-                        neo4j_database=self.neo4j_database,
-                    )
+            await self.driver.execute_query(query, parameters_=parameters)
 
     def _get_rel_query(self, rel: Neo4jRelationship) -> Tuple[str, Dict[str, Any]]:
         # Create the initial relationship
@@ -236,7 +219,8 @@ class Neo4jWriter(KGWriter):
             graph (Neo4jGraph): The knowledge graph to upsert into the database.
         """
         try:
-            if isinstance(self.driver, neo4j.AsyncDriver):
+            if inspect.iscoroutinefunction(self.driver.execute_query):
+                await self._async_db_setup()
                 sem = asyncio.Semaphore(self.max_concurrency)
                 node_tasks = [
                     self._async_upsert_node(node, sem) for node in graph.nodes
@@ -249,6 +233,8 @@ class Neo4jWriter(KGWriter):
                 ]
                 await asyncio.gather(*rel_tasks)
             else:
+                self._db_setup()
+
                 for node in graph.nodes:
                     self._upsert_node(node)
 
