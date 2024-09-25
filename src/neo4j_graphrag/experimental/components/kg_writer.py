@@ -101,16 +101,21 @@ class Neo4jWriter(KGWriter):
         self.driver = driver
         self.neo4j_database = neo4j_database
         self.max_concurrency = max_concurrency
+        self._db_setup()
+
+    def _db_setup(self):
+        # create index on __Entity__.id
+        self.driver.execute_query(
+            "CREATE INDEX __entity__id IF NOT EXISTS  FOR (n:__Entity__) ON (n.id)"
+        )
 
     def _get_node_query(self, node: Neo4jNode) -> Tuple[str, Dict[str, Any]]:
         # Create the initial node
-        parameters = {"id": node.id}
-        if node.properties:
-            parameters.update(node.properties)
-        properties = (
-            "{" + ", ".join(f"{key}: ${key}" for key in parameters.keys()) + "}"
-        )
-        query = UPSERT_NODE_QUERY.format(label=node.label, properties=properties)
+        parameters = {
+            "id": node.id,
+            "properties": node.properties or {},
+        }
+        query = UPSERT_NODE_QUERY.format(label=node.label)
         return query, parameters
 
     def _upsert_node(self, node: Neo4jNode) -> None:
@@ -185,6 +190,9 @@ class Neo4jWriter(KGWriter):
         """
         query, parameters = self._get_rel_query(rel)
         result = self.driver.execute_query(query, parameters_=parameters)
+        if len(result.records) == 0:
+            logger.warning(f"Failed to upsert relationship {rel=}")
+            return
         rel_id = result.records[0]["elementID(r)"]
         # Add the embedding properties to the relationship
         if rel.embedding_properties:

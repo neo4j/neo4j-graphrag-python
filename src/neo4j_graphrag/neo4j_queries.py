@@ -41,10 +41,11 @@ FULL_TEXT_SEARCH_QUERY = (
     "YIELD node, score"
 )
 
-UPSERT_NODE_QUERY = "MERGE (n:`{label}` {properties}) RETURN elementID(n)"
+UPSERT_NODE_QUERY = "MERGE (n:__Entity__ {{id: $id}}) WITH n SET n:`{label}`, n += $properties RETURN elementID(n)"
 
 UPSERT_RELATIONSHIP_QUERY = (
-    "MATCH (start {{ id: $start_node_id }}), (end {{ id: $end_node_id }}) "
+    "MATCH (start {{ id: $start_node_id }}) "
+    "MATCH (end {{ id: $end_node_id }}) "
     "MERGE (start)-[r:{type} {properties}]->(end) "
     "RETURN elementID(r)"
 )

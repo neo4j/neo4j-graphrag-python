@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+from unittest import mock
 from unittest.mock import MagicMock
 
 import pytest
@@ -26,17 +27,18 @@ from neo4j_graphrag.experimental.components.types import (
 from neo4j_graphrag.neo4j_queries import UPSERT_NODE_QUERY, UPSERT_RELATIONSHIP_QUERY
 
 
+@mock.patch("neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._db_setup")
 def test_upsert_node(driver: MagicMock) -> None:
     neo4j_writer = Neo4jWriter(driver=driver)
     node = Neo4jNode(id="1", label="Label", properties={"key": "value"})
     neo4j_writer._upsert_node(node=node)
-    parameters = {"id": "1", "key": "value"}
     driver.execute_query.assert_called_once_with(
-        UPSERT_NODE_QUERY.format(label="Label", properties="{id: $id, key: $key}"),
-        parameters_=parameters,
+        UPSERT_NODE_QUERY.format(label="Label"),
+        parameters_={"id": "1", "properties": {"key": "value"}},
     )
 
 
+@mock.patch("neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._db_setup")
 def test_upsert_node_with_embedding(
     driver: MagicMock,
 ) -> None:
@@ -49,10 +51,9 @@ def test_upsert_node_with_embedding(
     )
     driver.execute_query.return_value.records = [{"elementID(n)": 1}]
     neo4j_writer._upsert_node(node=node)
-    parameters = {"id": "1", "key": "value"}
     driver.execute_query.assert_any_call(
-        UPSERT_NODE_QUERY.format(label="Label", properties="{id: $id, key: $key}"),
-        parameters_=parameters,
+        UPSERT_NODE_QUERY.format(label="Label"),
+        parameters_={"id": "1", "properties": {"key": "value"}},
     )
     query = (
         "MATCH (n) "
@@ -69,6 +70,7 @@ def test_upsert_node_with_embedding(
     driver.execute_query.assert_any_call(query, parameters_, database_=None)
 
 
+@mock.patch("neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._db_setup")
 def test_upsert_relationship(driver: MagicMock) -> None:
     neo4j_writer = Neo4jWriter(driver=driver)
     rel = Neo4jRelationship(
@@ -88,6 +90,7 @@ def test_upsert_relationship(driver: MagicMock) -> None:
     )
 
 
+@mock.patch("neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._db_setup")
 def test_upsert_relationship_with_embedding(driver: MagicMock) -> None:
     neo4j_writer = Neo4jWriter(driver=driver)
     rel = Neo4jRelationship(
@@ -122,6 +125,7 @@ def test_upsert_relationship_with_embedding(driver: MagicMock) -> None:
     driver.execute_query.assert_any_call(query, parameters_, database_=None)
 
 
+@mock.patch("neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._db_setup")
 @pytest.mark.asyncio
 async def test_run(driver: MagicMock) -> None:
     neo4j_writer = Neo4jWriter(driver=driver)
@@ -129,10 +133,9 @@ async def test_run(driver: MagicMock) -> None:
     rel = Neo4jRelationship(start_node_id="1", end_node_id="2", type="RELATIONSHIP")
     graph = Neo4jGraph(nodes=[node], relationships=[rel])
     await neo4j_writer.run(graph=graph)
-    parameters = {"id": "1"}
     driver.execute_query.assert_any_call(
-        UPSERT_NODE_QUERY.format(label="Label", properties="{id: $id}"),
-        parameters_=parameters,
+        UPSERT_NODE_QUERY.format(label="Label"),
+        parameters_={"id": "1", "properties": {}},
     )
     parameters_ = {"start_node_id": "1", "end_node_id": "2"}
     driver.execute_query.assert_any_call(
