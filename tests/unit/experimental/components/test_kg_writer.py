@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from unittest import mock
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, Mock
 
 import pytest
 from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
@@ -130,7 +130,7 @@ def test_upsert_relationship_with_embedding(driver: MagicMock) -> None:
     "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._db_setup",
     return_value=None,
 )
-async def test_run(_, driver: MagicMock) -> None:
+async def test_run(_: Mock, driver: MagicMock) -> None:
     neo4j_writer = Neo4jWriter(driver=driver)
     node = Neo4jNode(id="1", label="Label")
     rel = Neo4jRelationship(start_node_id="1", end_node_id="2", type="RELATIONSHIP")
@@ -152,7 +152,7 @@ async def test_run(_, driver: MagicMock) -> None:
     "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._async_db_setup",
     return_value=None,
 )
-async def test_run_async_driver(_, async_driver: MagicMock) -> None:
+async def test_run_async_driver(_: Mock, async_driver: MagicMock) -> None:
     neo4j_writer = Neo4jWriter(driver=async_driver)
     node = Neo4jNode(id="1", label="Label")
     rel = Neo4jRelationship(start_node_id="1", end_node_id="2", type="RELATIONSHIP")
