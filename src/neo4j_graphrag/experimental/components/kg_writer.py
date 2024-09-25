@@ -151,17 +151,11 @@ class Neo4jWriter(KGWriter):
         parameters = {
             "start_node_id": rel.start_node_id,
             "end_node_id": rel.end_node_id,
+            "properties": rel.properties or {},
+            "embeddings": rel.embedding_properties,
         }
-        if rel.properties:
-            properties = (
-                "{" + ", ".join(f"{key}: ${key}" for key in rel.properties.keys()) + "}"
-            )
-            parameters.update(rel.properties)
-        else:
-            properties = "{}"
         query = UPSERT_RELATIONSHIP_QUERY.format(
             type=rel.type,
-            properties=properties,
         )
         return query, parameters
 
@@ -172,21 +166,7 @@ class Neo4jWriter(KGWriter):
             rel (Neo4jRelationship): The relationship to upsert into the database.
         """
         query, parameters = self._get_rel_query(rel)
-        result = self.driver.execute_query(query, parameters_=parameters)
-        if len(result.records) == 0:
-            logger.warning(f"Failed to upsert relationship {rel=}")
-            return
-        rel_id = result.records[0]["elementID(r)"]
-        # Add the embedding properties to the relationship
-        if rel.embedding_properties:
-            for prop, vector in rel.embedding_properties.items():
-                upsert_vector_on_relationship(
-                    driver=self.driver,
-                    rel_id=rel_id,
-                    embedding_property=prop,
-                    vector=vector,
-                    neo4j_database=self.neo4j_database,
-                )
+        self.driver.execute_query(query, parameters_=parameters)
 
     async def _async_upsert_relationship(
         self, rel: Neo4jRelationship, sem: asyncio.Semaphore
@@ -198,18 +178,7 @@ class Neo4jWriter(KGWriter):
         """
         async with sem:
             query, parameters = self._get_rel_query(rel)
-            result = await self.driver.execute_query(query, parameters_=parameters)
-            rel_id = result.records[0]["elementID(r)"]
-            # Add the embedding properties to the relationship
-            if rel.embedding_properties:
-                for prop, vector in rel.embedding_properties.items():
-                    await async_upsert_vector_on_relationship(
-                        driver=self.driver,
-                        rel_id=rel_id,
-                        embedding_property=prop,
-                        vector=vector,
-                        neo4j_database=self.neo4j_database,
-                    )
+            await self.driver.execute_query(query, parameters_=parameters)
 
     @validate_call
     async def run(self, graph: Neo4jGraph) -> KGWriterModel:

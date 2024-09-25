@@ -55,7 +55,13 @@ UPSERT_NODE_QUERY = (
 UPSERT_RELATIONSHIP_QUERY = (
     "MATCH (start {{ id: $start_node_id }}) "
     "MATCH (end {{ id: $end_node_id }}) "
-    "MERGE (start)-[r:{type} {properties}]->(end) "
+    "MERGE (start)-[r:{type}]->(end) "
+    "WITH r SET r += $properties "
+    "WITH r CALL {{ "
+    "WITH r WITH r WHERE $embeddings IS NOT NULL "
+    "UNWIND keys($embeddings) as emb "
+    "CALL db.create.setRelationshipVectorProperty(r, emb, $embeddings[emb]) "
+    "}} "
     "RETURN elementID(r)"
 )
 
