@@ -95,7 +95,10 @@ def test_upsert_relationship(driver: MagicMock) -> None:
     )
 
 
-@mock.patch("neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._db_setup", return_value=None)
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._db_setup",
+    return_value=None,
+)
 def test_upsert_relationship_with_embedding(_: Mock, driver: MagicMock) -> None:
     neo4j_writer = Neo4jWriter(driver=driver)
     rel = Neo4jRelationship(
@@ -111,7 +114,7 @@ def test_upsert_relationship_with_embedding(_: Mock, driver: MagicMock) -> None:
         "start_node_id": "1",
         "end_node_id": "2",
         "properties": {"key": "value"},
-        "embeddings": {"embeddingProp": [1.0, 2.0, 3.0]}
+        "embeddings": {"embeddingProp": [1.0, 2.0, 3.0]},
     }
     driver.execute_query.assert_any_call(
         UPSERT_RELATIONSHIP_QUERY.format(
@@ -137,7 +140,12 @@ async def test_run(_: Mock, driver: MagicMock) -> None:
         UPSERT_NODE_QUERY.format(label="Label"),
         parameters_={"id": "1", "properties": {}, "embeddings": None},
     )
-    parameters_ = {"start_node_id": "1", "end_node_id": "2", "properties": {}, "embeddings": None}
+    parameters_ = {
+        "start_node_id": "1",
+        "end_node_id": "2",
+        "properties": {},
+        "embeddings": None,
+    }
     driver.execute_query.assert_any_call(
         UPSERT_RELATIONSHIP_QUERY.format(type="RELATIONSHIP", properties="{}"),
         parameters_=parameters_,
@@ -159,7 +167,12 @@ async def test_run_async_driver(_: Mock, async_driver: MagicMock) -> None:
         UPSERT_NODE_QUERY.format(label="Label"),
         parameters_={"id": "1", "properties": {}, "embeddings": None},
     )
-    parameters_ = {"start_node_id": "1", "end_node_id": "2", "properties": {}, "embeddings": None}
+    parameters_ = {
+        "start_node_id": "1",
+        "end_node_id": "2",
+        "properties": {},
+        "embeddings": None,
+    }
     async_driver.execute_query.assert_any_call(
         UPSERT_RELATIONSHIP_QUERY.format(type="RELATIONSHIP", properties="{}"),
         parameters_=parameters_,
