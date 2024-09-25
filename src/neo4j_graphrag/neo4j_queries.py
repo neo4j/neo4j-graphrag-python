@@ -49,7 +49,7 @@ UPSERT_NODE_QUERY = (
     "UNWIND keys($embeddings) as emb "
     "CALL db.create.setNodeVectorProperty(n, emb, $embeddings[emb]) "
     "}} "
-    "RETURN elementID(n)"
+    "RETURN elementId(n)"
 )
 
 UPSERT_RELATIONSHIP_QUERY = (
@@ -62,7 +62,7 @@ UPSERT_RELATIONSHIP_QUERY = (
     "UNWIND keys($embeddings) as emb "
     "CALL db.create.setRelationshipVectorProperty(r, emb, $embeddings[emb]) "
     "}} "
-    "RETURN elementID(r)"
+    "RETURN elementId(r)"
 )
 
 UPSERT_VECTOR_ON_NODE_QUERY = (

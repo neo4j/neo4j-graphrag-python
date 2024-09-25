@@ -55,7 +55,7 @@ def test_upsert_node_with_embedding(
         properties={"key": "value"},
         embedding_properties={"embeddingProp": [1.0, 2.0, 3.0]},
     )
-    driver.execute_query.return_value.records = [{"elementID(n)": 1}]
+    driver.execute_query.return_value.records = [{"elementId(n)": 1}]
     neo4j_writer._upsert_node(node=node)
     driver.execute_query.assert_any_call(
         UPSERT_NODE_QUERY.format(label="Label"),
@@ -108,7 +108,7 @@ def test_upsert_relationship_with_embedding(_: Mock, driver: MagicMock) -> None:
         properties={"key": "value"},
         embedding_properties={"embeddingProp": [1.0, 2.0, 3.0]},
     )
-    driver.execute_query.return_value.records = [{"elementID(r)": "rel_elem_id"}]
+    driver.execute_query.return_value.records = [{"elementId(r)": "rel_elem_id"}]
     neo4j_writer._upsert_relationship(rel=rel)
     parameters = {
         "start_node_id": "1",
