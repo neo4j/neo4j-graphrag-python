@@ -256,7 +256,12 @@ async def test_pipeline_builder_happy_path(
     # result must be success
     assert isinstance(res, PipelineResult)
     assert res.run_id is not None
-    assert res.result == {"writer": {"status": "SUCCESS"}}
+    assert res.result == {
+        "writer": {
+            "status": "SUCCESS",
+            "metadata": {"node_count": 7, "relationship_count": 10},
+        }
+    }
     # check component's results
     chunks = await kg_builder_pipeline.store.get_result_for_component(
         res.run_id, "splitter"
@@ -462,7 +467,12 @@ async def test_pipeline_builder_failing_chunk_do_not_raise(
     # result must be success
     assert isinstance(res, PipelineResult)
     assert res.run_id is not None
-    assert res.result == {"writer": {"status": "SUCCESS"}}
+    assert res.result == {
+        "writer": {
+            "status": "SUCCESS",
+            "metadata": {"node_count": 6, "relationship_count": 7},
+        }
+    }
     # check component's results
     chunks = await kg_builder_pipeline.store.get_result_for_component(
         res.run_id, "splitter"

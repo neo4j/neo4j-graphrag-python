@@ -42,13 +42,15 @@ FULL_TEXT_SEARCH_QUERY = (
 )
 
 UPSERT_NODE_QUERY = (
-    "MERGE (n:__Entity__ {{id: $id}}) "
-    "WITH n SET n:`{label}`, n += $properties "
-    "WITH n CALL {{ "
-    "WITH n WITH n WHERE $embeddings IS NOT NULL "
-    "UNWIND keys($embeddings) as emb "
-    "CALL db.create.setNodeVectorProperty(n, emb, $embeddings[emb]) "
-    "}} "
+    "UNWIND $rows AS row "
+    "MERGE (n:__Entity__ {id: row.id}) "
+    "WITH n, row SET n += row.properties "
+    "WITH n, row CALL apoc.create.addLabels(n, [row.label]) YIELD node "
+    "WITH node as n, row CALL { "
+    "WITH n, row WITH n, row WHERE row.embedding_properties IS NOT NULL "
+    "UNWIND keys(row.embedding_properties) as emb "
+    "CALL db.create.setNodeVectorProperty(n, emb, row.embedding_properties[emb]) "
+    "} "
     "RETURN elementId(n)"
 )
 

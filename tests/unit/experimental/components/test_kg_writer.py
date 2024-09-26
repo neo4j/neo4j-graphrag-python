@@ -18,7 +18,7 @@ from unittest import mock
 from unittest.mock import MagicMock, Mock
 
 import pytest
-from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
+from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter, batched
 from neo4j_graphrag.experimental.components.types import (
     Neo4jGraph,
     Neo4jNode,
@@ -27,17 +27,40 @@ from neo4j_graphrag.experimental.components.types import (
 from neo4j_graphrag.neo4j_queries import UPSERT_NODE_QUERY, UPSERT_RELATIONSHIP_QUERY
 
 
+def test_batched():
+    assert list(batched([1, 2, 3, 4], batch_size=2)) == [
+        [1, 2],
+        [3, 4],
+    ]
+    assert list(batched([1, 2, 3], batch_size=2)) == [
+        [1, 2],
+        [3],
+    ]
+    assert list(batched([1, 2, 3], batch_size=4)) == [
+        [1, 2, 3],
+    ]
+
+
 @mock.patch(
     "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._db_setup",
     return_value=None,
 )
-def test_upsert_node(driver: MagicMock) -> None:
+def test_upsert_nodes(driver: MagicMock) -> None:
     neo4j_writer = Neo4jWriter(driver=driver)
     node = Neo4jNode(id="1", label="Label", properties={"key": "value"})
-    neo4j_writer._upsert_node(node=node)
+    neo4j_writer._upsert_nodes(nodes=[node])
     driver.execute_query.assert_called_once_with(
-        UPSERT_NODE_QUERY.format(label="Label"),
-        parameters_={"id": "1", "properties": {"key": "value"}, "embeddings": None},
+        UPSERT_NODE_QUERY,
+        parameters_={
+            "rows": [
+                {
+                    "label": "Label",
+                    "id": "1",
+                    "properties": {"key": "value"},
+                    "embedding_properties": None,
+                }
+            ]
+        },
     )
 
 
@@ -45,7 +68,7 @@ def test_upsert_node(driver: MagicMock) -> None:
     "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._db_setup",
     return_value=None,
 )
-def test_upsert_node_with_embedding(
+def test_upsert_nodes_with_embedding(
     driver: MagicMock,
 ) -> None:
     neo4j_writer = Neo4jWriter(driver=driver)
@@ -56,13 +79,18 @@ def test_upsert_node_with_embedding(
         embedding_properties={"embeddingProp": [1.0, 2.0, 3.0]},
     )
     driver.execute_query.return_value.records = [{"elementId(n)": 1}]
-    neo4j_writer._upsert_node(node=node)
+    neo4j_writer._upsert_nodes(nodes=[node])
     driver.execute_query.assert_any_call(
-        UPSERT_NODE_QUERY.format(label="Label"),
+        UPSERT_NODE_QUERY,
         parameters_={
-            "id": "1",
-            "properties": {"key": "value"},
-            "embeddings": {"embeddingProp": [1.0, 2.0, 3.0]},
+            "rows": [
+                {
+                    "label": "Label",
+                    "id": "1",
+                    "properties": {"key": "value"},
+                    "embedding_properties": {"embeddingProp": [1.0, 2.0, 3.0]},
+                }
+            ]
         },
     )
 
@@ -136,9 +164,19 @@ async def test_run(_: Mock, driver: MagicMock) -> None:
     rel = Neo4jRelationship(start_node_id="1", end_node_id="2", type="RELATIONSHIP")
     graph = Neo4jGraph(nodes=[node], relationships=[rel])
     await neo4j_writer.run(graph=graph)
+    print(driver.execute_query.call_args_list)
     driver.execute_query.assert_any_call(
-        UPSERT_NODE_QUERY.format(label="Label"),
-        parameters_={"id": "1", "properties": {}, "embeddings": None},
+        UPSERT_NODE_QUERY,
+        parameters_={
+            "rows": [
+                {
+                    "label": "Label",
+                    "id": "1",
+                    "properties": {},
+                    "embedding_properties": None,
+                }
+            ]
+        },
     )
     parameters_ = {
         "start_node_id": "1",
@@ -164,8 +202,17 @@ async def test_run_async_driver(_: Mock, async_driver: MagicMock) -> None:
     graph = Neo4jGraph(nodes=[node], relationships=[rel])
     await neo4j_writer.run(graph=graph)
     async_driver.execute_query.assert_any_call(
-        UPSERT_NODE_QUERY.format(label="Label"),
-        parameters_={"id": "1", "properties": {}, "embeddings": None},
+        UPSERT_NODE_QUERY,
+        parameters_={
+            "rows": [
+                {
+                    "label": "Label",
+                    "id": "1",
+                    "properties": {},
+                    "embedding_properties": None,
+                }
+            ]
+        },
     )
     parameters_ = {
         "start_node_id": "1",

@@ -35,8 +35,8 @@ async def test_kg_writer(driver: neo4j.Driver) -> None:
     end_node = Neo4jNode(
         id="2",
         label="Document",
-        properties={"chunk": 2},
-        embedding_properties={"vectorProperty": [1.0, 2.0, 3.0]},
+        properties={},
+        embedding_properties=None,
     )
     relationship = Neo4jRelationship(
         start_node_id="1", end_node_id="2", type="NEXT_CHUNK"
@@ -44,7 +44,8 @@ async def test_kg_writer(driver: neo4j.Driver) -> None:
     graph = Neo4jGraph(nodes=[start_node, end_node], relationships=[relationship])
 
     neo4j_writer = Neo4jWriter(driver=driver)
-    await neo4j_writer.run(graph=graph)
+    res = await neo4j_writer.run(graph=graph)
+    assert res.status == "SUCCESS"
 
     query = """
     MATCH (a:Document {id: '1'})-[r:NEXT_CHUNK]->(b:Document {id: '2'})
