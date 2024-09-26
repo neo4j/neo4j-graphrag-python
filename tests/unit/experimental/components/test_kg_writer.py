@@ -27,7 +27,7 @@ from neo4j_graphrag.experimental.components.types import (
 from neo4j_graphrag.neo4j_queries import UPSERT_NODE_QUERY, UPSERT_RELATIONSHIP_QUERY
 
 
-def test_batched():
+def test_batched() -> None:
     assert list(batched([1, 2, 3, 4], batch_size=2)) == [
         [1, 2],
         [3, 4],
@@ -164,7 +164,6 @@ async def test_run(_: Mock, driver: MagicMock) -> None:
     rel = Neo4jRelationship(start_node_id="1", end_node_id="2", type="RELATIONSHIP")
     graph = Neo4jGraph(nodes=[node], relationships=[rel])
     await neo4j_writer.run(graph=graph)
-    print(driver.execute_query.call_args_list)
     driver.execute_query.assert_any_call(
         UPSERT_NODE_QUERY,
         parameters_={
