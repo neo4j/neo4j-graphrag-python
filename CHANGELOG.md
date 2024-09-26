@@ -15,6 +15,7 @@
 - Added unit tests for the Vertex AI LLM class.
 - Added support for Cohere LLM and embeddings - added optional dependency to `cohere`.
 - Added support for Anthropic LLM - added optional dependency to `anthropic`.
+- Added support for Qdrant - added optional dependency to `qdrant-client`.
 
 ### Fixed
 - Resolved import issue with the Vertex AI Embeddings class.
