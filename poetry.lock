@@ -163,6 +163,31 @@ files = [
 typing-extensions = {version = ">=4.0.0", markers = "python_version < \"3.9\""}
 
 [[package]]
+name = "anthropic"
+version = "0.34.2"
+description = "The official Python library for the anthropic API"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "anthropic-0.34.2-py3-none-any.whl", hash = "sha256:f50a628eb71e2c76858b106c8cbea278c45c6bd2077cb3aff716a112abddc9fc"},
+    {file = "anthropic-0.34.2.tar.gz", hash = "sha256:808ea19276f26646bfde9ee535669735519376e4eeb301a2974fc69892be1d6e"},
+]
+
+[package.dependencies]
+anyio = ">=3.5.0,<5"
+distro = ">=1.7.0,<2"
+httpx = ">=0.23.0,<1"
+jiter = ">=0.4.0,<1"
+pydantic = ">=1.9.0,<3"
+sniffio = "*"
+tokenizers = ">=0.13.0"
+typing-extensions = ">=4.7,<5"
+
+[package.extras]
+bedrock = ["boto3 (>=1.28.57)", "botocore (>=1.31.57)"]
+vertex = ["google-auth (>=2,<3)"]
+
+[[package]]
 name = "anyio"
 version = "4.5.0"
 description = "High level compatibility layer for multiple asynchronous event loop implementations"
@@ -5371,10 +5396,10 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 type = ["pytest-mypy"]
 
 [extras]
-external-clients = ["cohere", "google-cloud-aiplatform", "pinecone-client", "weaviate-client"]
+external-clients = ["anthropic", "cohere", "google-cloud-aiplatform", "pinecone-client", "weaviate-client"]
 kg-creation-tools = ["pygraphviz", "pygraphviz"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8.1"
-content-hash = "a08b83983073c53b578b5ce76453bb0080981f73ce842a46bbd6cce517ad460e"
+content-hash = "1b03544369611022d388ab45ecdf8df0f33056045ae0b54b55b048ae0f26671e"
