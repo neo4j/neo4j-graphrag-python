@@ -18,7 +18,7 @@ import asyncio
 import inspect
 import logging
 from abc import abstractmethod
-from typing import Any, Dict, Generator, Literal, Optional, Tuple
+from typing import Any, Generator, Literal, Optional
 
 import neo4j
 from pydantic import validate_call
@@ -112,17 +112,24 @@ class Neo4jWriter(KGWriter):
 
     def _db_setup(self) -> None:
         # create index on __Entity__.id
+        # used when creating the relationships
         self.driver.execute_query(
             "CREATE INDEX __entity__id IF NOT EXISTS  FOR (n:__Entity__) ON (n.id)"
         )
 
     async def _async_db_setup(self) -> None:
         # create index on __Entity__.id
+        # used when creating the relationships
         await self.driver.execute_query(
             "CREATE INDEX __entity__id IF NOT EXISTS  FOR (n:__Entity__) ON (n.id)"
         )
 
     def _upsert_nodes(self, nodes: list[Neo4jNode]) -> None:
+        """Upserts a single node into the Neo4j database."
+
+        Args:
+            nodes (list[Neo4jNode]): The nodes batch to upsert into the database.
+        """
         parameters = {"rows": [n.model_dump() for n in nodes]}
         self.driver.execute_query(UPSERT_NODE_QUERY, parameters_=parameters)
 
@@ -134,7 +141,7 @@ class Neo4jWriter(KGWriter):
         """Asynchronously upserts a single node into the Neo4j database."
 
         Args:
-            nodes (list[Neo4jNode]): The node to upsert into the database.
+            nodes (list[Neo4jNode]): The nodes batch to upsert into the database.
         """
         async with sem:
             parameters = {"rows": [n.model_dump() for n in nodes]}
@@ -144,7 +151,7 @@ class Neo4jWriter(KGWriter):
         """Upserts a single relationship into the Neo4j database.
 
         Args:
-            rel (Neo4jRelationship): The relationship to upsert into the database.
+            rels (list[Neo4jRelationship]): The relationships batch to upsert into the database.
         """
         parameters = {"rows": [rel.model_dump() for rel in rels]}
         self.driver.execute_query(UPSERT_RELATIONSHIP_QUERY, parameters_=parameters)
@@ -155,7 +162,7 @@ class Neo4jWriter(KGWriter):
         """Asynchronously upserts a single relationship into the Neo4j database.
 
         Args:
-            rel (Neo4jRelationship): The relationship to upsert into the database.
+            rels (list[Neo4jRelationship]): The relationships batch to upsert into the database.
         """
         async with sem:
             parameters = {"rows": [rel.model_dump() for rel in rels]}
