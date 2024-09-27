@@ -19,6 +19,8 @@
 ### Fixed
 - Resolved import issue with the Vertex AI Embeddings class.
 - Resolved issue where Neo4jWriter component would raise an error if the start or end node ID was not defined properly in the input.
+- Resolved issue where relationship types was not escaped in the insert Cypher query.
+- Improved query performance in Neo4jWriter.
 
 ### Changed
 - Moved the Embedder class to the neo4j_graphrag.embeddings directory for better organization alongside other custom embedders.
