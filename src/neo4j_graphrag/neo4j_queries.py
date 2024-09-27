@@ -43,8 +43,8 @@ FULL_TEXT_SEARCH_QUERY = (
 
 UPSERT_NODE_QUERY = (
     "UNWIND $rows AS row "
-    "MERGE (n:__Entity__ {id: row.id}) "
-    "WITH n, row SET n += row.properties "
+    "CREATE (n:__Entity__ {id: row.id}) "
+    "SET n += row.properties "
     "WITH n, row CALL apoc.create.addLabels(n, [row.label]) YIELD node "
     "WITH node as n, row CALL { "
     "WITH n, row WITH n, row WHERE row.embedding_properties IS NOT NULL "
