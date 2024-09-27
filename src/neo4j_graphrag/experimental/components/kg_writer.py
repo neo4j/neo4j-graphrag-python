@@ -123,48 +123,34 @@ class Neo4jWriter(KGWriter):
         )
 
     def _upsert_nodes(self, nodes: list[Neo4jNode]) -> None:
-        for batch in batched(nodes, self.batch_size):
-            parameters = {"rows": [n.model_dump() for n in batch]}
-            self.driver.execute_query(UPSERT_NODE_QUERY, parameters_=parameters)
+        parameters = {"rows": [n.model_dump() for n in nodes]}
+        self.driver.execute_query(UPSERT_NODE_QUERY, parameters_=parameters)
 
     async def _async_upsert_nodes(
         self,
-        batch: list[Any],
+        nodes: list[Neo4jNode],
         sem: asyncio.Semaphore,
     ) -> None:
         """Asynchronously upserts a single node into the Neo4j database."
 
         Args:
-            node (Neo4jNode): The node to upsert into the database.
+            nodes (list[Neo4jNode]): The node to upsert into the database.
         """
         async with sem:
-            parameters = {"rows": [n.model_dump() for n in batch]}
+            parameters = {"rows": [n.model_dump() for n in nodes]}
             await self.driver.execute_query(UPSERT_NODE_QUERY, parameters_=parameters)
 
-    def _get_rel_query(self, rel: Neo4jRelationship) -> Tuple[str, Dict[str, Any]]:
-        # Create the initial relationship
-        parameters = {
-            "start_node_id": rel.start_node_id,
-            "end_node_id": rel.end_node_id,
-            "properties": rel.properties or {},
-            "embeddings": rel.embedding_properties,
-        }
-        query = UPSERT_RELATIONSHIP_QUERY.format(
-            type=rel.type,
-        )
-        return query, parameters
-
-    def _upsert_relationship(self, rel: Neo4jRelationship) -> None:
+    def _upsert_relationships(self, rels: list[Neo4jRelationship]) -> None:
         """Upserts a single relationship into the Neo4j database.
 
         Args:
             rel (Neo4jRelationship): The relationship to upsert into the database.
         """
-        query, parameters = self._get_rel_query(rel)
-        self.driver.execute_query(query, parameters_=parameters)
+        parameters = {"rows": [rel.model_dump() for rel in rels]}
+        self.driver.execute_query(UPSERT_RELATIONSHIP_QUERY, parameters_=parameters)
 
-    async def _async_upsert_relationship(
-        self, rel: Neo4jRelationship, sem: asyncio.Semaphore
+    async def _async_upsert_relationships(
+        self, rels: list[Neo4jRelationship], sem: asyncio.Semaphore
     ) -> None:
         """Asynchronously upserts a single relationship into the Neo4j database.
 
@@ -172,8 +158,10 @@ class Neo4jWriter(KGWriter):
             rel (Neo4jRelationship): The relationship to upsert into the database.
         """
         async with sem:
-            query, parameters = self._get_rel_query(rel)
-            await self.driver.execute_query(query, parameters_=parameters)
+            parameters = {"rows": [rel.model_dump() for rel in rels]}
+            await self.driver.execute_query(
+                UPSERT_RELATIONSHIP_QUERY, parameters_=parameters
+            )
 
     @validate_call
     async def run(self, graph: Neo4jGraph) -> KGWriterModel:
@@ -193,17 +181,18 @@ class Neo4jWriter(KGWriter):
                 await asyncio.gather(*node_tasks)
 
                 rel_tasks = [
-                    self._async_upsert_relationship(rel, sem)
-                    for rel in graph.relationships
+                    self._async_upsert_relationships(batch, sem)
+                    for batch in batched(graph.relationships, self.batch_size)
                 ]
                 await asyncio.gather(*rel_tasks)
             else:
                 self._db_setup()
 
-                self._upsert_nodes(graph.nodes)
+                for batch in batched(graph.nodes, self.batch_size):
+                    self._upsert_nodes(batch)
 
-                for rel in graph.relationships:
-                    self._upsert_relationship(rel)
+                for batch in batched(graph.relationships, self.batch_size):
+                    self._upsert_relationships(batch)
 
             return KGWriterModel(
                 status="SUCCESS",

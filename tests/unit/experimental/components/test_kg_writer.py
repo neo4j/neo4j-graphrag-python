@@ -107,18 +107,20 @@ def test_upsert_relationship(driver: MagicMock) -> None:
         type="RELATIONSHIP",
         properties={"key": "value"},
     )
-    neo4j_writer._upsert_relationship(rel=rel)
+    neo4j_writer._upsert_relationships(rels=[rel])
     parameters = {
-        "start_node_id": "1",
-        "end_node_id": "2",
-        "properties": {"key": "value"},
-        "embeddings": None,
+        "rows": [
+            {
+                "type": "RELATIONSHIP",
+                "start_node_id": "1",
+                "end_node_id": "2",
+                "properties": {"key": "value"},
+                "embedding_properties": None,
+            }
+        ]
     }
     driver.execute_query.assert_called_once_with(
-        UPSERT_RELATIONSHIP_QUERY.format(
-            type="RELATIONSHIP",
-            properties="{key: $key}",
-        ),
+        UPSERT_RELATIONSHIP_QUERY,
         parameters_=parameters,
     )
 
@@ -137,18 +139,20 @@ def test_upsert_relationship_with_embedding(_: Mock, driver: MagicMock) -> None:
         embedding_properties={"embeddingProp": [1.0, 2.0, 3.0]},
     )
     driver.execute_query.return_value.records = [{"elementId(r)": "rel_elem_id"}]
-    neo4j_writer._upsert_relationship(rel=rel)
+    neo4j_writer._upsert_relationships(rels=[rel])
     parameters = {
-        "start_node_id": "1",
-        "end_node_id": "2",
-        "properties": {"key": "value"},
-        "embeddings": {"embeddingProp": [1.0, 2.0, 3.0]},
+        "rows": [
+            {
+                "type": "RELATIONSHIP",
+                "start_node_id": "1",
+                "end_node_id": "2",
+                "properties": {"key": "value"},
+                "embedding_properties": {"embeddingProp": [1.0, 2.0, 3.0]},
+            }
+        ]
     }
     driver.execute_query.assert_any_call(
-        UPSERT_RELATIONSHIP_QUERY.format(
-            type="RELATIONSHIP",
-            properties="{key: $key}",
-        ),
+        UPSERT_RELATIONSHIP_QUERY,
         parameters_=parameters,
     )
 
@@ -178,13 +182,18 @@ async def test_run(_: Mock, driver: MagicMock) -> None:
         },
     )
     parameters_ = {
-        "start_node_id": "1",
-        "end_node_id": "2",
-        "properties": {},
-        "embeddings": None,
+        "rows": [
+            {
+                "type": "RELATIONSHIP",
+                "start_node_id": "1",
+                "end_node_id": "2",
+                "properties": {},
+                "embedding_properties": None,
+            }
+        ]
     }
     driver.execute_query.assert_any_call(
-        UPSERT_RELATIONSHIP_QUERY.format(type="RELATIONSHIP", properties="{}"),
+        UPSERT_RELATIONSHIP_QUERY,
         parameters_=parameters_,
     )
 
@@ -214,12 +223,17 @@ async def test_run_async_driver(_: Mock, async_driver: MagicMock) -> None:
         },
     )
     parameters_ = {
-        "start_node_id": "1",
-        "end_node_id": "2",
-        "properties": {},
-        "embeddings": None,
+        "rows": [
+            {
+                "type": "RELATIONSHIP",
+                "start_node_id": "1",
+                "end_node_id": "2",
+                "properties": {},
+                "embedding_properties": None,
+            }
+        ]
     }
     async_driver.execute_query.assert_any_call(
-        UPSERT_RELATIONSHIP_QUERY.format(type="RELATIONSHIP", properties="{}"),
+        UPSERT_RELATIONSHIP_QUERY,
         parameters_=parameters_,
     )
