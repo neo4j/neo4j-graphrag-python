@@ -18,7 +18,7 @@ import asyncio
 import inspect
 import logging
 from abc import abstractmethod
-from typing import Any, Dict, Literal, Optional, Tuple
+from typing import Any, Dict, Literal, Optional, Tuple, List
 
 import neo4j
 from pydantic import validate_call
@@ -29,9 +29,24 @@ from neo4j_graphrag.experimental.components.types import (
     Neo4jRelationship,
 )
 from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
-from neo4j_graphrag.neo4j_queries import UPSERT_NODE_QUERY, UPSERT_RELATIONSHIP_QUERY
+from neo4j_graphrag.neo4j_queries import UPSERT_NODE_QUERY, UPSERT_NODES_QUERY, \
+    UPSERT_NODE_EMBEDDINGS_QUERY, UPSERT_RELATIONSHIP_QUERY, UPSERT_RELATIONSHIPS_QUERY
 
 logger = logging.getLogger(__name__)
+
+
+def chunks(xs, n=1_000):
+    n = max(1, n)
+    return [xs[i:i + n] for i in range(0, len(xs), n)]
+
+
+def get_node_embeddings(graph: Neo4jGraph) -> List:
+    node_embeddings = []
+    for node in graph.nodes:
+        if node.embedding_properties:
+            for k, v in node.embedding_properties.items():
+                node_embeddings.append({'id': node.id, 'k': k, 'v': v})
+    return node_embeddings
 
 
 class KGWriterModel(DataModel):
@@ -142,6 +157,53 @@ class Neo4jWriter(KGWriter):
             query, parameters = self._get_node_query(node)
             await self.driver.execute_query(query, parameters_=parameters)
 
+    def _upsert_nodes(self, nodes: List[Neo4jNode]) -> None:
+        """Upserts a list of nodes into the Neo4j database."
+
+        Args:
+            nodes List[Neo4jNode]: The nodes to upsert into the database.
+        """
+
+        self.driver.execute_query(UPSERT_NODES_QUERY,
+                                  parameters_={
+                                      'records': [{
+                                          "id": n.id,
+                                          "properties": n.properties or {},
+                                          "label": n.label
+                                      } for n in nodes]})
+
+    async def _async_upsert_nodes(
+        self,
+        nodes: List[Neo4jNode],
+        sem: asyncio.Semaphore,
+    ) -> None:
+        """Asynchronously upserts a single node into the Neo4j database."
+
+        Args:
+            nodes List[Neo4jNode]: The nodes to upsert into the database.
+        """
+        async with sem:
+            await self.driver.execute_query(UPSERT_NODES_QUERY,
+                                            parameters_={
+                                                'records': [{
+                                                    "id": n.id,
+                                                    "properties": n.properties or {},
+                                                    "label": n.label
+                                                } for n in nodes]})
+
+    def _upsert_node_embeddings(self, node_embeddings: List) -> None:
+        self.driver.execute_query(UPSERT_NODE_EMBEDDINGS_QUERY,
+                                  parameters_={'records': node_embeddings})
+
+    async def _async_upsert_node_embeddings(
+        self,
+        node_embeddings: List,
+        sem: asyncio.Semaphore,
+    ) -> None:
+        async with sem:
+            await self.driver.execute_query(UPSERT_NODE_EMBEDDINGS_QUERY,
+                                            parameters_={'records': node_embeddings})
+
     def _get_rel_query(self, rel: Neo4jRelationship) -> Tuple[str, Dict[str, Any]]:
         # Create the initial relationship
         parameters = {
@@ -176,11 +238,47 @@ class Neo4jWriter(KGWriter):
             query, parameters = self._get_rel_query(rel)
             await self.driver.execute_query(query, parameters_=parameters)
 
+    def _upsert_relationships(self, rels: List[Neo4jRelationship]) -> None:
+        """Upserts a single relationship into the Neo4j database.
+
+        Args:
+            rels (List[Neo4jRelationship]): The relationships to upsert into the database.
+        """
+        self.driver.execute_query(UPSERT_RELATIONSHIPS_QUERY, parameters_={
+            "records": [{
+                "start_node_id": r.start_node_id,
+                "end_node_id": r.end_node_id,
+                "type": r.type,
+                "properties": r.properties or {}} for r in rels]
+
+        })
+
+    async def _async_upsert_relationships(
+        self, rels: List[Neo4jRelationship], sem: asyncio.Semaphore
+    ) -> None:
+        """Asynchronously upserts a single relationship into the Neo4j database.
+
+        Args:
+            rels (List[Neo4jRelationship]): The relationships to upsert into the database.
+        """
+        async with sem:
+            await self.driver.execute_query(UPSERT_RELATIONSHIPS_QUERY,
+                                            parameters_={
+                                                "records": [{
+                                                    "start_node_id": r.start_node_id,
+                                                    "end_node_id": r.end_node_id,
+                                                    "type": r.type,
+                                                    "properties": r.properties or {}}
+                                                    for r in rels]
+
+                                            })
+
     @validate_call
-    async def run(self, graph: Neo4jGraph) -> KGWriterModel:
+    async def run(self, graph: Neo4jGraph, chunk_size: int = 1_000) -> KGWriterModel:
         """Upserts a knowledge graph into a Neo4j database.
 
         Args:
+            chunk_size: The amount of nodes and rels to batch in each upsert query
             graph (Neo4jGraph): The knowledge graph to upsert into the database.
         """
         try:
@@ -188,23 +286,33 @@ class Neo4jWriter(KGWriter):
                 await self._async_db_setup()
                 sem = asyncio.Semaphore(self.max_concurrency)
                 node_tasks = [
-                    self._async_upsert_node(node, sem) for node in graph.nodes
+                    self._async_upsert_nodes(nodes, sem) for nodes in
+                    chunks(graph.nodes, chunk_size)
                 ]
                 await asyncio.gather(*node_tasks)
 
+                node_emb_tasks = [
+                    self._async_upsert_node_embeddings(node_embs, sem) for node_embs in
+                    chunks(get_node_embeddings(graph), chunk_size)
+                ]
+                await asyncio.gather(*node_emb_tasks)
+
                 rel_tasks = [
-                    self._async_upsert_relationship(rel, sem)
-                    for rel in graph.relationships
+                    self._async_upsert_relationships(rels, sem)
+                    for rels in chunks(graph.relationships, chunk_size)
                 ]
                 await asyncio.gather(*rel_tasks)
             else:
                 self._db_setup()
 
-                for node in graph.nodes:
-                    self._upsert_node(node)
+                for nodes in chunks(graph.nodes, chunk_size):
+                    self._upsert_nodes(nodes)
 
-                for rel in graph.relationships:
-                    self._upsert_relationship(rel)
+                for node_embs in chunks(get_node_embeddings(graph), chunk_size):
+                    self._upsert_node_embeddings(node_embs)
+
+                for rels in chunks(graph.relationships, chunk_size):
+                    self._upsert_relationships(rels)
 
             return KGWriterModel(status="SUCCESS")
         except neo4j.exceptions.ClientError as e:

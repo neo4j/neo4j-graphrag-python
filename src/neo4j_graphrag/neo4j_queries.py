@@ -52,6 +52,22 @@ UPSERT_NODE_QUERY = (
     "RETURN elementId(n)"
 )
 
+UPSERT_NODES_QUERY = ("""
+UNWIND $records AS rec
+MERGE (n:__Entity__ {id: rec.id})
+SET n += rec.properties
+WITH n, rec
+CALL apoc.create.addLabels(n, [rec.label]) YIELD node
+RETURN distinct 'done'
+""")
+
+UPSERT_NODE_EMBEDDINGS_QUERY = ("""
+UNWIND $records AS rec
+MATCH (n:__Entity__ {id: rec.id})
+CALL db.create.setNodeVectorProperty(n, rec.k, rec.v)
+RETURN distinct 'done'
+""")
+
 UPSERT_RELATIONSHIP_QUERY = (
     "MATCH (start:__Entity__ {{ id: $start_node_id }}) "
     "MATCH (end:__Entity__ {{ id: $end_node_id }}) "
@@ -64,6 +80,25 @@ UPSERT_RELATIONSHIP_QUERY = (
     "}} "
     "RETURN elementId(r)"
 )
+
+# TODO: Below does not account for parallel rels. Either document limitation or extend.
+UPSERT_RELATIONSHIPS_QUERY = ("""
+UNWIND $records AS rec
+MATCH (start:__Entity__ {id: rec.start_node_id})
+MATCH (end:__Entity__ {id: rec.end_node_id})
+CALL apoc.merge.relationship(start, rec.type, {}, rec.properties, end) YIELD rel
+RETURN distinct 'done'
+""")
+
+# TODO: Implement in Writer.
+UPSERT_REL_EMBEDDINGS_QUERY = ("""
+UNWIND $records AS rec
+MATCH (:__Entity__ {id: rec.start_node_id})-[r]->(end:__Entity__ {id: rec.end_node_id})
+WHERE type(r) = rec.type
+CALL db.create.setRelationshipVectorProperty(r, rec.k, rec.v)
+RETURN distinct 'done'
+""")
+
 
 UPSERT_VECTOR_ON_NODE_QUERY = (
     "MATCH (n) "
