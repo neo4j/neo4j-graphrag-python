@@ -172,8 +172,11 @@ CohereEmbeddings
 Generation
 **********
 
+LLM
+===
+
 LLMInterface
-============
+------------
 
 .. autoclass:: neo4j_graphrag.llm.LLMInterface
     :members:
@@ -187,11 +190,26 @@ OpenAILLM
     :undoc-members: get_messages, client_class, async_client_class
 
 
+AzureOpenAILLM
+--------------
+
+.. autoclass:: neo4j_graphrag.llm.openai_llm.AzureOpenAILLM
+    :members:
+    :undoc-members: get_messages, client_class, async_client_class
+
+
 VertexAILLM
 -----------
 
 .. autoclass:: neo4j_graphrag.llm.vertexai_llm.VertexAILLM
     :members:
+
+AnthropicLLM
+------------
+
+.. autoclass:: neo4j_graphrag.llm.anthropic_llm.AnthropicLLM
+    :members:
+
 
 CohereLLM
 ---------

@@ -28,7 +28,7 @@ def test_cohere_llm_missing_dependency() -> None:
 
 
 @patch("neo4j_graphrag.llm.cohere_llm.cohere")
-def test_cohere_embedder_happy_path(mock_cohere: Mock) -> None:
+def test_cohere_llm_happy_path(mock_cohere: Mock) -> None:
     mock_cohere.Client.return_value.chat.return_value = MagicMock(
         text="cohere response text"
     )
@@ -40,7 +40,7 @@ def test_cohere_embedder_happy_path(mock_cohere: Mock) -> None:
 
 @pytest.mark.asyncio
 @patch("neo4j_graphrag.llm.cohere_llm.cohere")
-async def test_cohere_embedder_happy_path_async(mock_cohere: Mock) -> None:
+async def test_cohere_llm_happy_path_async(mock_cohere: Mock) -> None:
     async_mock = Mock()
     async_mock.chat = AsyncMock(return_value=MagicMock(text="cohere response text"))
     mock_cohere.AsyncClient.return_value = async_mock
@@ -51,7 +51,7 @@ async def test_cohere_embedder_happy_path_async(mock_cohere: Mock) -> None:
 
 
 @patch("neo4j_graphrag.llm.cohere_llm.cohere")
-def test_cohere_embedder_failed(mock_cohere: Mock) -> None:
+def test_cohere_llm_failed(mock_cohere: Mock) -> None:
     mock_cohere.Client.return_value.chat.side_effect = cohere.core.ApiError
     embedder = CohereLLM(model_name="something")
     with pytest.raises(LLMGenerationError) as excinfo:
@@ -61,7 +61,7 @@ def test_cohere_embedder_failed(mock_cohere: Mock) -> None:
 
 @pytest.mark.asyncio
 @patch("neo4j_graphrag.llm.cohere_llm.cohere")
-async def test_cohere_embedder_failed_async(mock_cohere: Mock) -> None:
+async def test_cohere_llm_failed_async(mock_cohere: Mock) -> None:
     mock_cohere.AsyncClient.return_value.chat.side_effect = cohere.core.ApiError
     embedder = CohereLLM(model_name="something")
     with pytest.raises(LLMGenerationError) as excinfo:
