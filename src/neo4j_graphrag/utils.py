@@ -32,6 +32,8 @@ async def execute_query(
 ) -> list[neo4j.Record]:
     if inspect.iscoroutinefunction(driver.execute_query):
         records, _, _ = await driver.execute_query(query, **kwargs)
-        return records
-    records, _, _ = driver.execute_query(query, **kwargs)
-    return records
+        return records  # type: ignore[no-any-return]
+    # ignoring type because mypy complains about coroutine
+    # but we're sure at this stage we do not have a coroutine anymore
+    records, _, _ = driver.execute_query(query, **kwargs)  # type: ignore[misc]
+    return records  # type: ignore[no-any-return]
