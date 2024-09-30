@@ -63,7 +63,6 @@ class MistralAIEmbeddings(Embedder):
         if (
             embeddings_batch_response is None
             or embeddings_batch_response.data is None
-            or not embeddings_batch_response.data
         ):
             raise Neo4jGraphRagError("Failed to retrieve embeddings.")
 
