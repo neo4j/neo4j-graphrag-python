@@ -31,6 +31,7 @@ from neo4j_graphrag.types import RawSearchResult, RetrieverResult
         (["5.3-aura"], Neo4jVersionError),
         (["5.19.0"], None),
         (["4.3.5"], Neo4jVersionError),
+        (["5.23.0-6698"], None)
     ],
 )
 def test_retriever_version_support(
