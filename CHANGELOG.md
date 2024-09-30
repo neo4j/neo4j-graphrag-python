@@ -24,6 +24,7 @@
 
 ### Changed
 - Moved the Embedder class to the neo4j_graphrag.embeddings directory for better organization alongside other custom embedders.
+- Removed query argument from the GraphRAG class' `.search` method; users must now use `query_text`.
 - Neo4jWriter component now runs a single query to merge node and set its embeddings if any.
 
 ## 0.6.3
