@@ -5454,4 +5454,4 @@ kg-creation-tools = ["pygraphviz", "pygraphviz"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8.1"
-content-hash = "22ab7497fb71c617653d90ca48aef14d12fd95c68ac92f729a225434a6ad73c8"
+content-hash = "660e13e30d6c69da33af3f771daf387d5af1c5c29c1c44de3b22d1354aca97b5"

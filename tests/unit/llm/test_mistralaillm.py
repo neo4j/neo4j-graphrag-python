@@ -18,8 +18,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 from mistralai.models.sdkerror import SDKError
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm import LLMResponse
-from neo4j_graphrag.llm import MistralAILLM
+from neo4j_graphrag.llm import LLMResponse, MistralAILLM
 
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral", None)

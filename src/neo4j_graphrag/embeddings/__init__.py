@@ -18,12 +18,11 @@ from .openai import AzureOpenAIEmbeddings, OpenAIEmbeddings
 from .sentence_transformers import SentenceTransformerEmbeddings
 from .vertexai import VertexAIEmbeddings
 
-
 __all__ = [
     "Embedder",
     "SentenceTransformerEmbeddings",
     "OpenAIEmbeddings",
     "AzureOpenAIEmbeddings",
     "VertexAIEmbeddings",
-    "MistralAIEmbeddings"
+    "MistralAIEmbeddings",
 ]
