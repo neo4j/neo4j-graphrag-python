@@ -50,6 +50,7 @@ UPSERT_NODE_QUERY = (
     "WITH n, row WITH n, row WHERE row.embedding_properties IS NOT NULL "
     "UNWIND keys(row.embedding_properties) as emb "
     "CALL db.create.setNodeVectorProperty(n, emb, row.embedding_properties[emb]) "
+    "RETURN count(*) as nbEmb "
     "} "
     "RETURN elementId(n)"
 )
