@@ -98,3 +98,8 @@ class Neo4jGraph(DataModel):
 
     nodes: list[Neo4jNode] = []
     relationships: list[Neo4jRelationship] = []
+
+
+class ResolutionStats(DataModel):
+    number_of_affected_nodes: int
+    number_of_created_nodes: int

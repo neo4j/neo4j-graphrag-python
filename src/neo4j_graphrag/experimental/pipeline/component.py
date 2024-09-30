@@ -73,6 +73,7 @@ class Component(abc.ABC, metaclass=ComponentMeta):
 
     # these variables are filled by the metaclass
     # added here for the type checker
+    # DO NOT CHANGE
     component_inputs: dict[str, dict[str, str | bool]]
     component_outputs: dict[str, dict[str, str | bool]]
 

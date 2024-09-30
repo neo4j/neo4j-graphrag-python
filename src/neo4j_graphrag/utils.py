@@ -14,7 +14,10 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Optional
+import inspect
+from typing import Any, Optional, Union
+
+import neo4j
 
 
 def validate_search_query_input(
@@ -22,3 +25,13 @@ def validate_search_query_input(
 ) -> None:
     if not (bool(query_vector) ^ bool(query_text)):
         raise ValueError("You must provide exactly one of query_vector or query_text.")
+
+
+async def execute_query(
+    driver: Union[neo4j.Driver, neo4j.AsyncDriver], query: str, **kwargs: Any
+) -> list[neo4j.Record]:
+    if inspect.iscoroutinefunction(driver.execute_query):
+        records, _, _ = await driver.execute_query(query, **kwargs)
+        return records
+    records, _, _ = driver.execute_query(query, **kwargs)
+    return records
