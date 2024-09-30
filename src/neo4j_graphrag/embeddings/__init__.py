@@ -13,9 +13,11 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from .base import Embedder
+from .mistral import MistralAIEmbeddings
 from .openai import AzureOpenAIEmbeddings, OpenAIEmbeddings
 from .sentence_transformers import SentenceTransformerEmbeddings
 from .vertexai import VertexAIEmbeddings
+
 
 __all__ = [
     "Embedder",
@@ -23,4 +25,5 @@ __all__ = [
     "OpenAIEmbeddings",
     "AzureOpenAIEmbeddings",
     "VertexAIEmbeddings",
+    "MistralAIEmbeddings"
 ]

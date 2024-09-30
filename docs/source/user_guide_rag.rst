@@ -400,8 +400,9 @@ Currently, this package supports the following embedders:
 - :ref:`vertexaiembeddings`
 - :ref:`mistralaiembeddings`
 - :ref:`cohereembeddings`
+- :ref:`azureopenaiembeddings`
 
-The `OpenAIEmbedder` was illustrated previously. Here is how to use the `SentenceTransformerEmbeddings`:
+The `OpenAIEmbeddings` was illustrated previously. Here is how to use the `SentenceTransformerEmbeddings`:
 
 .. code:: python
 

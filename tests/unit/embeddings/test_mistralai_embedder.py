@@ -15,7 +15,7 @@
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
-from neo4j_graphrag.embeddings.mistral import MistralAIEmbeddings
+from neo4j_graphrag.embeddings import MistralAIEmbeddings
 
 
 @patch("neo4j_graphrag.embeddings.mistral.Mistral", None)

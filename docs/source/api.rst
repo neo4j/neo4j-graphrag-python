@@ -156,6 +156,12 @@ OpenAIEmbeddings
 .. autoclass:: neo4j_graphrag.embeddings.openai.OpenAIEmbeddings
     :members:
 
+AzureOpenAIEmbeddings
+=====================
+
+.. autoclass:: neo4j_graphrag.embeddings.openai.AzureOpenAIEmbeddings
+    :members:
+
 VertexAIEmbeddings
 ==================
 
@@ -227,7 +233,7 @@ CohereLLM
 MistralAILLM
 ------------
 
-.. autoclass:: neo4j_graphrag.llm.mistrai_llm.MistralAILLM
+.. autoclass:: neo4j_graphrag.llm.mistralai_llm.MistralAILLM
     :members:
 
 

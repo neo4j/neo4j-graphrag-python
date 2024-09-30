@@ -100,7 +100,7 @@ class MistralAILLM(LLMInterface):
             input (str): Text sent to the LLM
 
         Returns:
-            LLMResponse: The response from OpenAI.
+            LLMResponse: The response from MistralAI.
 
         Raises:
             LLMGenerationError: If anything goes wrong.
