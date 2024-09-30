@@ -13,7 +13,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from unittest.mock import MagicMock
-from warnings import catch_warnings
 
 import pytest
 from neo4j_graphrag.exceptions import RagInitializationError, SearchValidationError
@@ -22,7 +21,6 @@ from neo4j_graphrag.generation.prompts import RagTemplate
 from neo4j_graphrag.generation.types import RagResultModel
 from neo4j_graphrag.llm import LLMResponse
 from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
-from pydantic import ValidationError
 
 
 def test_graphrag_prompt_template() -> None:
@@ -101,21 +99,3 @@ def test_graphrag_search_error(retriever_mock: MagicMock, llm: MagicMock) -> Non
     with pytest.raises(SearchValidationError) as excinfo:
         rag.search(10)  # type: ignore
     assert "Input should be a valid string" in str(excinfo)
-
-
-def test_graphrag_search_query_deprecation_warning(
-    retriever_mock: MagicMock, llm: MagicMock
-) -> None:
-    with catch_warnings(record=True) as warn_list:
-        rag = GraphRAG(
-            retriever=retriever_mock,
-            llm=llm,
-        )
-        with pytest.raises(ValidationError):
-            rag.search(query="Some query text")
-
-    assert len(warn_list) == 1
-    assert (
-        str(warn_list[0].message)
-        == "'query' is deprecated and will be removed in a future version, please use 'query_text' instead."
-    )
