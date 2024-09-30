@@ -20,12 +20,13 @@
 - Resolved import issue with the Vertex AI Embeddings class.
 - Resolved issue where Neo4jWriter component would raise an error if the start or end node ID was not defined properly in the input.
 - Resolved issue where relationship types was not escaped in the insert Cypher query.
-- Improved query performance in Neo4jWriter.
+- Improved query performance in Neo4jWriter: created nodes now have a generic `__Entity__` label and an index is created on the `__Entity__.id` property. Moreover, insertion queries are now batched. Batch size can be controlled using the `batch_size` parameter in the `Neo4jWriter` component.
 
 ### Changed
 - Moved the Embedder class to the neo4j_graphrag.embeddings directory for better organization alongside other custom embedders.
 - Removed query argument from the GraphRAG class' `.search` method; users must now use `query_text`.
 - Neo4jWriter component now runs a single query to merge node and set its embeddings if any.
+- Nodes created by the `Neo4jWriter` now have an extra `__Entity__` label.
 
 ## 0.6.3
 ### Changed
