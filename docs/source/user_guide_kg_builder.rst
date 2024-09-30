@@ -26,6 +26,7 @@ A Knowledge Graph (KG) construction pipeline requires a few components:
 - **Schema builder**: provide a schema to ground the LLM extracted entities and relations and obtain an easily navigable KG.
 - **Entity and relation extractor**: extract relevant entities and relations from the text.
 - **Knowledge Graph writer**: save the identified entities and relations.
+- **Entity resolver**: merge similar entities into a single node.
 
 .. image:: images/kg_builder_pipeline.png
   :alt: KG Builder pipeline
@@ -420,3 +421,31 @@ It is possible to create a custom writer using the `KGWriter` interface:
 
 
 See :ref:`kgwritermodel` and :ref:`kgwriter` in API reference.
+
+
+Entity Resolver
+===============
+
+The KG writer component creates a new nodes for each identified entities,
+without any assumption on similar entities. The Entity Resolver is here
+to clean up the created KG and merge entity nodes which represent the same
+real world object.
+
+In practise, this package implement only one resolver, that will merge all nodes
+with the same label and the same "name" property.
+
+
+.. warning::
+
+    The `SinglePropertyExactMatchResolver` **replaces** the nodes created by the KG writer.
+
+It can be used like this:
+
+.. code:: python
+    from neo4j_graphrag.experimental.components.resolver import (
+        SinglePropertyExactMatchResolver,
+    )
+    resolver = SinglePropertyExactMatchResolver(driver)
+    res = await resolver.run(path="file_path.pdf")
+
+The document is not read again, but we use its name to filter nodes that were created from it.

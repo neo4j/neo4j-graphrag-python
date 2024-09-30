@@ -70,6 +70,14 @@ LLMEntityRelationExtractor
 .. autoclass:: neo4j_graphrag.experimental.components.entity_relation_extractor.LLMEntityRelationExtractor
     :members: run
 
+
+SinglePropertyExactMatchResolver
+================================
+
+.. autoclass:: neo4j_graphrag.experimental.components.resolver.SinglePropertyExactMatchResolver
+    :members: run
+
+
 .. _retrievers-section:
 
 **********
