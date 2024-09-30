@@ -19,31 +19,59 @@ from typing import Any, Union
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from neo4j_graphrag.exceptions import Neo4jVersionError
 from neo4j_graphrag.retrievers.base import Retriever
 from neo4j_graphrag.types import RawSearchResult, RetrieverResult
 
 
 @pytest.mark.parametrize(
-    "db_version,expected_exception",
+    "db_version,expected_version",
     [
-        (["5.18-aura"], None),
-        (["5.3-aura"], Neo4jVersionError),
-        (["5.19.0"], None),
-        (["4.3.5"], Neo4jVersionError),
-        (["5.23.0-6698"], None)
+        (["5.18-aura"], ((5, 18, 0), True)),
+        (["5.3-aura"], ((5, 3, 0), True)),
+        (["5.19.0"], ((5, 19, 0), False)),
+        (["4.3.5"], ((4, 3, 5), False)),
+        (["5.23.0-6698"], ((5, 23, 0), False))
     ],
 )
-def test_retriever_version_support(
+def test_retriever_get_version(
     driver: MagicMock,
     db_version: list[str],
+    expected_version: tuple[tuple[int, ...], bool],
+) -> None:
+    class MockRetriever(Retriever):
+        VERIFY_NEO4J_VERSION = False
+        def get_search_results(self, *args: Any, **kwargs: Any) -> RawSearchResult:
+            return RawSearchResult(records=[])
+
+    driver.execute_query.return_value = [[{"versions": db_version}], None, None]
+    retriever = MockRetriever(driver)
+    assert retriever._get_version() == expected_version
+
+
+@pytest.mark.parametrize(
+    "db_version,expected_exception",
+    [
+        (((5, 18, 0), True), None),
+        (((5, 3, 0), True), Neo4jVersionError),
+        (((5, 19, 0), False), None),
+        (((4, 3, 5), False), Neo4jVersionError),
+        (((5, 23, 0), False), None)
+    ],
+)
+@patch("neo4j_graphrag.retrievers.base.Retriever._get_version")
+def test_retriever_version_support(
+    mock_get_version: MagicMock,
+    driver: MagicMock,
+    db_version: tuple[tuple[int, ...], bool],
     expected_exception: Union[type[ValueError], None],
 ) -> None:
     class MockRetriever(Retriever):
         def get_search_results(self, *args: Any, **kwargs: Any) -> RawSearchResult:
             return RawSearchResult(records=[])
 
-    driver.execute_query.return_value = [[{"versions": db_version}], None, None]
+    mock_get_version.return_value = db_version
     if expected_exception:
         with pytest.raises(expected_exception):
             MockRetriever(driver=driver)

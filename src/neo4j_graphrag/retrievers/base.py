@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import inspect
 import types
-import warnings
 from abc import ABC, ABCMeta, abstractmethod
 from typing import Any, Callable, Optional, TypeVar
 
