@@ -301,6 +301,8 @@ Errors
 
   * :class:`neo4j_graphrag.exceptions.RetrieverInitializationError`
 
+  * :class:`neo4j_graphrag.exceptions.EmbeddingsGenerationError`
+
   * :class:`neo4j_graphrag.exceptions.SearchValidationError`
 
   * :class:`neo4j_graphrag.exceptions.FilterValidationError`

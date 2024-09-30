@@ -19,7 +19,7 @@ import os
 from typing import Any
 
 from neo4j_graphrag.embeddings.base import Embedder
-from neo4j_graphrag.exceptions import Neo4jGraphRagError
+from neo4j_graphrag.exceptions import Neo4jGraphRagError, EmbeddingsGenerationError
 
 try:
     from mistralai import Mistral
@@ -70,6 +70,6 @@ class MistralAIEmbeddings(Embedder):
         embedding = embeddings_batch_response.data[0].embedding
 
         if not isinstance(embedding, list):
-            raise Neo4jGraphRagError("Embedding is not a list of floats.")
+            raise EmbeddingsGenerationError("Embedding is not a list of floats.")
 
         return embedding
