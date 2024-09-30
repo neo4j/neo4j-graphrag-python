@@ -19,7 +19,6 @@ from typing import Any, Union
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from neo4j_graphrag.exceptions import Neo4jVersionError
 from neo4j_graphrag.retrievers.base import Retriever
 from neo4j_graphrag.types import RawSearchResult, RetrieverResult
@@ -32,7 +31,7 @@ from neo4j_graphrag.types import RawSearchResult, RetrieverResult
         (["5.3-aura"], ((5, 3, 0), True)),
         (["5.19.0"], ((5, 19, 0), False)),
         (["4.3.5"], ((4, 3, 5), False)),
-        (["5.23.0-6698"], ((5, 23, 0), False))
+        (["5.23.0-6698"], ((5, 23, 0), False)),
     ],
 )
 def test_retriever_get_version(
@@ -42,6 +41,7 @@ def test_retriever_get_version(
 ) -> None:
     class MockRetriever(Retriever):
         VERIFY_NEO4J_VERSION = False
+
         def get_search_results(self, *args: Any, **kwargs: Any) -> RawSearchResult:
             return RawSearchResult(records=[])
 
@@ -57,7 +57,7 @@ def test_retriever_get_version(
         (((5, 3, 0), True), Neo4jVersionError),
         (((5, 19, 0), False), None),
         (((4, 3, 5), False), Neo4jVersionError),
-        (((5, 23, 0), False), None)
+        (((5, 23, 0), False), None),
     ],
 )
 @patch("neo4j_graphrag.retrievers.base.Retriever._get_version")
