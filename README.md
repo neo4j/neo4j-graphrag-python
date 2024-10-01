@@ -36,6 +36,62 @@ Follow installation instructions [here](https://pygraphviz.github.io/documentati
 
 ## Examples
 
+### Knowledge graph construction
+
+```python
+# Instantiate Entity and Relation objects
+entities = [
+    SchemaEntity(label="PERSON", description="An individual human being."),
+    SchemaEntity(
+        label="ORGANIZATION",
+        description="A structured group of people with a common purpose.",
+    ),
+    SchemaEntity(label="LOCATION", description="A location or place."),
+    SchemaEntity(
+        label="HORCRUX",
+        description="A magical item in the Harry Potter universe.",
+    ),
+]
+relations = [
+    SchemaRelation(
+        label="SITUATED_AT", description="Indicates the location of a person."
+    ),
+    SchemaRelation(
+        label="LED_BY",
+        description="Indicates the leader of an organization.",
+    ),
+    SchemaRelation(
+        label="OWNS",
+        description="Indicates the ownership of an item such as a Horcrux.",
+    ),
+    SchemaRelation(
+        label="INTERACTS", description="The interaction between two people."
+    ),
+]
+
+# Instantiate the LLM
+llm = OpenAILLM(
+    model_name="gpt-4o",
+    model_params={
+        "max_tokens": 2000,
+        "response_format": {"type": "json_object"},
+    },
+)
+
+# Create an instance of the KnowledgeGraphBuilder
+kg_builder = KnowledgeGraphBuilder(
+    llm=llm,
+    driver=driver,
+    file_path="examples/pipeline/Harry Potter and the Death Hallows Summary.pdf",
+    entities=entities,
+    relations=relations,
+    on_error=OnError.RAISE,
+)
+
+```
+
+
+
 ### Creating a vector index
 
 When creating a vector index, make sure you match the number of dimensions in the index with the number of dimensions the embeddings have.

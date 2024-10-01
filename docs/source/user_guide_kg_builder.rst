@@ -343,11 +343,11 @@ If more customization is needed, it is possible to subclass the `EntityRelationE
 
     from pydantic import validate_call
     from neo4j_graphrag.experimental.components.entity_relation_extractor import EntityRelationExtractor
-    from neo4j_graphrag.experimental.components.schema import SchemaConfig
     from neo4j_graphrag.experimental.components.types import (
         Neo4jGraph,
         Neo4jNode,
         Neo4jRelationship,
+        SchemaConfig,
         TextChunks,
     )
 
