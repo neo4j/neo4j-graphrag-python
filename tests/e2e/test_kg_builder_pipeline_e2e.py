@@ -295,6 +295,7 @@ async def test_pipeline_builder_happy_path(
     }
     # then check content of neo4j db
     created_nodes = driver.execute_query("MATCH (n) RETURN n")
+    print(created_nodes.records)
     assert len(created_nodes.records) == 7
     created_rels = driver.execute_query("MATCH ()-[r]->() RETURN r")
     assert len(created_rels.records) == 10

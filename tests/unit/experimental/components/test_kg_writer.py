@@ -55,6 +55,7 @@ def test_upsert_nodes(driver: MagicMock) -> None:
             "rows": [
                 {
                     "label": "Label",
+                    "labels": ["Label", "__Entity__"],
                     "id": "1",
                     "properties": {"key": "value"},
                     "embedding_properties": None,
@@ -86,6 +87,7 @@ def test_upsert_nodes_with_embedding(
             "rows": [
                 {
                     "label": "Label",
+                    "labels": ["Label", "__Entity__"],
                     "id": "1",
                     "properties": {"key": "value"},
                     "embedding_properties": {"embeddingProp": [1.0, 2.0, 3.0]},
@@ -174,6 +176,7 @@ async def test_run(_: Mock, driver: MagicMock) -> None:
             "rows": [
                 {
                     "label": "Label",
+                    "labels": ["Label", "__Entity__"],
                     "id": "1",
                     "properties": {},
                     "embedding_properties": None,
@@ -215,6 +218,7 @@ async def test_run_async_driver(_: Mock, async_driver: MagicMock) -> None:
             "rows": [
                 {
                     "label": "Label",
+                    "labels": ["Label", "__Entity__"],
                     "id": "1",
                     "properties": {},
                     "embedding_properties": None,

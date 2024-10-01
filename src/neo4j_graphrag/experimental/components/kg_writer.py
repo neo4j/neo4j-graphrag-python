@@ -30,6 +30,10 @@ from neo4j_graphrag.experimental.components.types import (
 )
 from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
 from neo4j_graphrag.neo4j_queries import UPSERT_NODE_QUERY, UPSERT_RELATIONSHIP_QUERY
+from tests.unit.experimental.components.lexical_graph import (
+    CHUNK_NODE_LABEL,
+    DOCUMENT_NODE_LABEL,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -114,15 +118,27 @@ class Neo4jWriter(KGWriter):
         # create index on __Entity__.id
         # used when creating the relationships
         self.driver.execute_query(
-            "CREATE INDEX __entity__id IF NOT EXISTS  FOR (n:__Entity__) ON (n.id)"
+            "CREATE INDEX __entity__id IF NOT EXISTS  FOR (n:__KGBuilder__) ON (n.id)"
         )
 
     async def _async_db_setup(self) -> None:
         # create index on __Entity__.id
         # used when creating the relationships
         await self.driver.execute_query(
-            "CREATE INDEX __entity__id IF NOT EXISTS  FOR (n:__Entity__) ON (n.id)"
+            "CREATE INDEX __entity__id IF NOT EXISTS  FOR (n:__KGBuilder__) ON (n.id)"
         )
+
+    @staticmethod
+    def _nodes_to_rows(nodes: list[Neo4jNode]) -> list[dict[str, Any]]:
+        rows = []
+        for node in nodes:
+            labels = [node.label]
+            if node.label not in (CHUNK_NODE_LABEL, DOCUMENT_NODE_LABEL):
+                labels.append("__Entity__")
+            row = node.model_dump()
+            row["labels"] = labels
+            rows.append(row)
+        return rows
 
     def _upsert_nodes(self, nodes: list[Neo4jNode]) -> None:
         """Upserts a single node into the Neo4j database."
@@ -130,7 +146,7 @@ class Neo4jWriter(KGWriter):
         Args:
             nodes (list[Neo4jNode]): The nodes batch to upsert into the database.
         """
-        parameters = {"rows": [n.model_dump() for n in nodes]}
+        parameters = {"rows": self._nodes_to_rows(nodes)}
         self.driver.execute_query(UPSERT_NODE_QUERY, parameters_=parameters)
 
     async def _async_upsert_nodes(
@@ -144,7 +160,7 @@ class Neo4jWriter(KGWriter):
             nodes (list[Neo4jNode]): The nodes batch to upsert into the database.
         """
         async with sem:
-            parameters = {"rows": [n.model_dump() for n in nodes]}
+            parameters = {"rows": self._nodes_to_rows(nodes)}
             await self.driver.execute_query(UPSERT_NODE_QUERY, parameters_=parameters)
 
     def _upsert_relationships(self, rels: list[Neo4jRelationship]) -> None:
