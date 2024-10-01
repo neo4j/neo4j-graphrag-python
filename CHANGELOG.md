@@ -7,6 +7,7 @@
 - Added `template` validation in `PromptTemplate` class upon construction.
 - `custom_prompt` arg is now converted to `Text2CypherTemplate` class within the `Text2CypherRetriever.get_search_results` method.
 - `Text2CypherTemplate` and `RAGTemplate` prompt templates now require `query_text` arg and will error if it is not present. Previous `query_text` aliases may be used, but will warn of deprecation.
+- Examples demonstrating the use of Mistral embeddings and LLM in RAG pipelines.
 - Fixed bug in `Text2CypherRetriever` using `custom_prompt` arg where the `search` method would not inject the `query_text` content.
 - Added feature to include kwargs in `Text2CypherRetriever.search()` that will be injected into a custom prompt, if provided.
 - Added validation to `custom_prompt` parameter of `Text2CypherRetriever` to ensure that `query_text` placeholder exists in prompt.
@@ -15,6 +16,7 @@
 - Added unit tests for the Vertex AI LLM class.
 - Added support for Cohere LLM and embeddings - added optional dependency to `cohere`.
 - Added support for Anthropic LLM - added optional dependency to `anthropic`.
+- Added support for MistralAI LLM - added optional dependency to `mistralai`.
 
 ### Fixed
 - Resolved import issue with the Vertex AI Embeddings class.
