@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import asyncio
-import logging.config
 
 import neo4j
 from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
@@ -37,26 +36,6 @@ from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter i
 from neo4j_graphrag.experimental.pipeline import Pipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.llm import LLMInterface, OpenAILLM
-
-# set log level to DEBUG for all neo4j_graphrag.* loggers
-logging.config.dictConfig(
-    {
-        "version": 1,
-        "handlers": {
-            "console": {
-                "class": "logging.StreamHandler",
-            }
-        },
-        "loggers": {
-            "root": {
-                "handlers": ["console"],
-            },
-            "neo4j_graphrag": {
-                "level": "DEBUG",
-            },
-        },
-    }
-)
 
 
 async def define_and_run_pipeline(
