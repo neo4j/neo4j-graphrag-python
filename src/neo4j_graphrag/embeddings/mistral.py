@@ -19,7 +19,7 @@ import os
 from typing import Any
 
 from neo4j_graphrag.embeddings.base import Embedder
-from neo4j_graphrag.exceptions import EmbeddingsGenerationError, Neo4jGraphRagError
+from neo4j_graphrag.exceptions import EmbeddingsGenerationError
 
 try:
     from mistralai import Mistral
@@ -61,7 +61,7 @@ class MistralAIEmbeddings(Embedder):
             inputs=[text],
         )
         if embeddings_batch_response is None or not embeddings_batch_response.data:
-            raise Neo4jGraphRagError("Failed to retrieve embeddings.")
+            raise EmbeddingsGenerationError("Failed to retrieve embeddings.")
 
         embedding = embeddings_batch_response.data[0].embedding
 
