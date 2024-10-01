@@ -30,7 +30,7 @@ from neo4j_graphrag.experimental.components.types import (
 )
 from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
 from neo4j_graphrag.neo4j_queries import UPSERT_NODE_QUERY, UPSERT_RELATIONSHIP_QUERY
-from tests.unit.experimental.components.lexical_graph import (
+from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     CHUNK_NODE_LABEL,
     DOCUMENT_NODE_LABEL,
 )
