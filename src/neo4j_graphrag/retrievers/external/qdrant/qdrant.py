@@ -208,7 +208,7 @@ class QdrantNeo4jRetriever(ExternalRetriever):
         ).points
 
         result_tuples = [
-            [f"{point.payload[self.id_property_external]}", point.score]  # type: ignore
+            [f"{point.payload[self.id_property_external]}", point.score]
             for point in points
         ]
 
