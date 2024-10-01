@@ -11,8 +11,6 @@ unstructured data.
 
     This feature is still experimental. API changes and bug fixes are expected.
 
-    It is not recommended to use it in production yet.
-
 
 ******************
 Pipeline Structure
@@ -439,6 +437,7 @@ with the same label and the same "name" property.
 
     The `SinglePropertyExactMatchResolver` **replaces** the nodes created by the KG writer.
 
+
 It can be used like this:
 
 .. code:: python
@@ -446,6 +445,18 @@ It can be used like this:
         SinglePropertyExactMatchResolver,
     )
     resolver = SinglePropertyExactMatchResolver(driver)
-    res = await resolver.run(path="file_path.pdf")
+    res = await resolver.run()
 
-The document is not read again, but we use its name to filter nodes that were created from it.
+.. warning::
+
+    By default, all nodes with `__Entity__` labels will be resolved. If you want to preserve
+    some of them, a `filter_query` can be added to the query. For instance, if a `:Resolved`
+    label has been added to already resolved entities in the graph, these entities can be
+    ignored like this:
+
+    .. code:: python
+        from neo4j_graphrag.experimental.components.resolver import (
+            SinglePropertyExactMatchResolver,
+        )
+        resolver = SinglePropertyExactMatchResolver(driver, filter_query="WHERE not entity:Resolved")
+        res = await resolver.run()

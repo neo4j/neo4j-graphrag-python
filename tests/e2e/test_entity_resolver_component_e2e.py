@@ -25,17 +25,17 @@ async def test_resolver_single_node(driver: neo4j.Driver) -> None:
     driver.execute_query("MATCH (n) DETACH DELETE n")
     driver.execute_query(
         """
-        CREATE (d:Document:__Entity__ {id: "0", path: "path"})
-        CREATE (c:Chunk:__Entity__ {id: "0:0"})
+        CREATE (d:Document {id: "0", path: "path"})
+        CREATE (c:Chunk {id: "0:0"})
         CREATE (c)-[:FROM_DOCUMENT]->(d)
         CREATE (alice:__Entity__:Person {id: "0:0:1", name: "Alice"})
         CREATE (alice)-[:FROM_CHUNK]->(c)
         """
     )
     resolver = SinglePropertyExactMatchResolver(driver)
-    res = await resolver.run("path")
+    res = await resolver.run()
     # __Entity__ nodes attached to a chunk
-    assert res.number_of_affected_nodes == 1
+    assert res.number_of_nodes_to_resolve == 1
     # Alice
     assert res.number_of_created_nodes == 1
 
@@ -55,8 +55,8 @@ async def test_resolver_two_nodes_and_relationships(driver: neo4j.Driver) -> Non
     driver.execute_query("MATCH (n) DETACH DELETE n")
     driver.execute_query(
         """
-        CREATE (d:Document:__Entity__ {id: "0", path: "path"})
-        CREATE (c:Chunk:__Entity__ {id: "0:0"})
+        CREATE (d:Document {id: "0", path: "path"})
+        CREATE (c:Chunk {id: "0:0"})
         CREATE (c)-[:FROM_DOCUMENT]->(d)
         CREATE (alice1:__Entity__:Person {id: "0:0:1", name: "Alice"})
         CREATE (alice2:__Entity__:Person {id: "0:0:2", name: "Alice"})
@@ -68,9 +68,9 @@ async def test_resolver_two_nodes_and_relationships(driver: neo4j.Driver) -> Non
         """
     )
     resolver = SinglePropertyExactMatchResolver(driver)
-    res = await resolver.run("path")
+    res = await resolver.run()
     # __Entity__ nodes attached to a chunk
-    assert res.number_of_affected_nodes == 3
+    assert res.number_of_nodes_to_resolve == 3
     # Alice and Sweden
     assert res.number_of_created_nodes == 2
 
@@ -94,7 +94,7 @@ async def test_resolver_two_nodes_and_relationships(driver: neo4j.Driver) -> Non
     assert len(records) == 1
     path = records[0].get("path")
     assert path.start_node.get("name") == "Alice"
-    assert path.end_node.labels == frozenset({"__Entity__", "Chunk"})
+    assert path.end_node.labels == frozenset({"Chunk"})
     assert path.end_node.get("id") == "0:0"
 
 
@@ -104,8 +104,8 @@ async def test_resolver_same_name_different_labels(driver: neo4j.Driver) -> None
     driver.execute_query("MATCH (n) DETACH DELETE n")
     driver.execute_query(
         """
-        CREATE (d:Document:__Entity__ {id: "0", path: "path"})
-        CREATE (c:Chunk:__Entity__ {id: "0:0"})
+        CREATE (d:Document {id: "0", path: "path"})
+        CREATE (c:Chunk {id: "0:0"})
         CREATE (c)-[:FROM_DOCUMENT]->(d)
         CREATE (alice1:__Entity__:Person {id: "0:0:1", name: "Alice"})
         CREATE (alice2:__Entity__:Human {id: "0:0:2", name: "Alice"})
@@ -115,9 +115,9 @@ async def test_resolver_same_name_different_labels(driver: neo4j.Driver) -> None
         """
     )
     resolver = SinglePropertyExactMatchResolver(driver)
-    res = await resolver.run("path")
+    res = await resolver.run()
     # __Entity__ nodes attached to a chunk
-    assert res.number_of_affected_nodes == 2
+    assert res.number_of_nodes_to_resolve == 2
     # Alice Person and Alice Human
     assert res.number_of_created_nodes == 2
 
@@ -131,8 +131,8 @@ async def test_resolver_custom_property(driver: neo4j.Driver) -> None:
     driver.execute_query("MATCH (n) DETACH DELETE n")
     driver.execute_query(
         """
-        CREATE (d:Document:__Entity__ {id: "0", path: "path"})
-        CREATE (c:Chunk:__Entity__ {id: "0:0"})
+        CREATE (d:Document {id: "0", path: "path"})
+        CREATE (c:Chunk {id: "0:0"})
         CREATE (c)-[:FROM_DOCUMENT]->(d)
         CREATE (alice:__Entity__:Person {id: "0:0:1", name: "Alice"})
         CREATE (alicia:__Entity__:Person {id: "0:0:1", name: "Alicia"})
@@ -141,12 +141,41 @@ async def test_resolver_custom_property(driver: neo4j.Driver) -> None:
         """
     )
     resolver = SinglePropertyExactMatchResolver(driver, resolve_property="id")
-    res = await resolver.run("path")
+    res = await resolver.run()
     # __Entity__ nodes attached to a chunk
-    assert res.number_of_affected_nodes == 2
+    assert res.number_of_nodes_to_resolve == 2
     # Alice
     assert res.number_of_created_nodes == 1
 
     records, _, _ = driver.execute_query("MATCH (person:Person) RETURN person")
     assert len(records) == 1
     assert records[0].get("person").get("name") == "Alice"
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
+async def test_resolver_custom_filter(driver: neo4j.Driver) -> None:
+    driver.execute_query("MATCH (n) DETACH DELETE n")
+    driver.execute_query(
+        """
+        CREATE (d:Document {id: "0", path: "path"})
+        CREATE (c:Chunk {id: "0:0"})
+        CREATE (c)-[:FROM_DOCUMENT]->(d)
+        CREATE (alice1:__Entity__:Person {id: "0:0:1", name: "Alice"})
+        CREATE (alice2:__Entity__:Person {id: "0:0:2", name: "Alice"})
+        CREATE (sweden:__Entity__:Country {id: "0:0:3", name: "Sweden"})
+        CREATE (alice1)-[:LIVES_IN]->(sweden)
+        CREATE (alice1)-[:FROM_CHUNK]->(c)
+        CREATE (alice2)-[:FROM_CHUNK]->(c)
+        CREATE (sweden)-[:FROM_CHUNK]->(c)
+        """
+    )
+    resolver = SinglePropertyExactMatchResolver(
+        driver, filter_query="WHERE not entity:Person"
+    )
+    res = await resolver.run()
+    # __Entity__ nodes attached to a chunk without a Person label
+    # so only Country here
+    assert res.number_of_nodes_to_resolve == 1
+    # Sweden
+    assert res.number_of_created_nodes == 1

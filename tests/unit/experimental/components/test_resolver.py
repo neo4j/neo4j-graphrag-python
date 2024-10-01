@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import neo4j
 import pytest
@@ -29,8 +29,31 @@ async def test_simple_resolver(driver: MagicMock) -> None:
         ([neo4j.Record({"c": 1})], None, None),
     ]
     resolver = SinglePropertyExactMatchResolver(driver=driver)
-    res = await resolver.run("path")
+    res = await resolver.run()
     assert isinstance(res, ResolutionStats)
-    assert res.number_of_affected_nodes == 2
+    assert res.number_of_nodes_to_resolve == 2
     assert res.number_of_created_nodes == 1
-    assert driver.execute_query.call_args[1]["parameters_"] == {"path": "path"}
+    assert driver.execute_query.call_count == 2
+    driver.execute_query.assert_has_calls(
+        [call("MATCH (entity:__Entity__)  RETURN count(entity) as c", database_=None)]
+    )
+
+
+@pytest.mark.asyncio
+async def test_simple_resolver_custom_filter(driver: MagicMock) -> None:
+    driver.execute_query.side_effect = [
+        ([neo4j.Record({"c": 2})], None, None),
+        ([neo4j.Record({"c": 1})], None, None),
+    ]
+    resolver = SinglePropertyExactMatchResolver(
+        driver=driver, filter_query="WHERE not entity:Resolved"
+    )
+    await resolver.run()
+    driver.execute_query.assert_has_calls(
+        [
+            call(
+                "MATCH (entity:__Entity__) WHERE not entity:Resolved RETURN count(entity) as c",
+                database_=None,
+            )
+        ]
+    )

@@ -101,5 +101,5 @@ class Neo4jGraph(DataModel):
 
 
 class ResolutionStats(DataModel):
-    number_of_affected_nodes: int
-    number_of_created_nodes: int
+    number_of_nodes_to_resolve: int
+    number_of_created_nodes: Optional[int] = None
