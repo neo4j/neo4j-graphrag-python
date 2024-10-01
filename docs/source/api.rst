@@ -70,6 +70,17 @@ LLMEntityRelationExtractor
 .. autoclass:: neo4j_graphrag.experimental.components.entity_relation_extractor.LLMEntityRelationExtractor
     :members: run
 
+
+.. _pipeline-section:
+
+********
+Pipeline
+********
+
+.. autoclass:: neo4j_graphrag.experimental.pipeline.Pipeline
+    :members: run, add_component, connect, get_pygraphviz_graph
+
+
 .. _retrievers-section:
 
 **********
