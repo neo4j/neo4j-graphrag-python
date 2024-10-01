@@ -53,9 +53,9 @@ UPSERT_NODE_QUERY = (
 )
 
 UPSERT_RELATIONSHIP_QUERY = (
-    "MATCH (start {{ id: $start_node_id }}) "
-    "MATCH (end {{ id: $end_node_id }}) "
-    "MERGE (start)-[r:{type}]->(end) "
+    "MATCH (start:__Entity__ {{ id: $start_node_id }}) "
+    "MATCH (end:__Entity__ {{ id: $end_node_id }}) "
+    "MERGE (start)-[r:`{type}`]->(end) "
     "WITH r SET r += $properties "
     "WITH r CALL {{ "
     "WITH r WITH r WHERE $embeddings IS NOT NULL "

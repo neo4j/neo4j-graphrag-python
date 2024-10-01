@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import logging
-import warnings
 from typing import Any, Optional
 
 from pydantic import ValidationError
@@ -86,7 +85,6 @@ class GraphRAG:
         examples: str = "",
         retriever_config: Optional[dict[str, Any]] = None,
         return_context: bool = False,
-        query: Optional[str] = None,
     ) -> RagResultModel:
         """This method performs a full RAG search:
         1. Retrieval: context retrieval
@@ -99,28 +97,12 @@ class GraphRAG:
             retriever_config (Optional[dict]): Parameters passed to the retriever
                 search method; e.g.: top_k
             return_context (bool): Whether to append the retriever result to the final result (default: False)
-            query (Optional[str]): The user question. Will be deprecated in favor of query_text.
 
         Returns:
             RagResultModel: The LLM-generated answer
 
         """
         try:
-            if query is not None:
-                if query_text:
-                    warnings.warn(
-                        "Both 'query' and 'query_text' are provided, 'query_text' will be used.",
-                        DeprecationWarning,
-                        stacklevel=2,
-                    )
-                elif isinstance(query, str):
-                    warnings.warn(
-                        "'query' is deprecated and will be removed in a future version, please use 'query_text' instead.",
-                        DeprecationWarning,
-                        stacklevel=2,
-                    )
-                    query_text = query
-
             validated_data = RagSearchModel(
                 query_text=query_text,
                 examples=examples,

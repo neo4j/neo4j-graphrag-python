@@ -395,14 +395,16 @@ into a vector is required. Therefore, the retriever requires knowledge of an emb
 Embedders
 -----------------------------
 
-Currently, this package supports several embedders:
-- `OpenAIEmbeddings`
-- `AzureOpenAIEmbeddings`
-- `VertexAIEmbeddings`
-- `CohereEmbeddings`
-- `SentenceTransformerEmbeddings`.
+Currently, this package supports the following embedders:
 
-The `OpenAIEmbedder` was illustrated previously. Here is how to use the `SentenceTransformerEmbeddings`:
+- :ref:`openaiembeddings`
+- :ref:`sentencetransformerembeddings`
+- :ref:`vertexaiembeddings`
+- :ref:`mistralaiembeddings`
+- :ref:`cohereembeddings`
+- :ref:`azureopenaiembeddings`
+
+The `OpenAIEmbeddings` was illustrated previously. Here is how to use the `SentenceTransformerEmbeddings`:
 
 .. code:: python
 
