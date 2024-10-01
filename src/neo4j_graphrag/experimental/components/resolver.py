@@ -17,12 +17,6 @@ from typing import Any, Optional, Union
 
 import neo4j
 
-from neo4j_graphrag.experimental.components.entity_relation_extractor import (
-    CHUNK_NODE_LABEL,
-    DOCUMENT_NODE_LABEL,
-    NODE_TO_CHUNK_RELATIONSHIP_TYPE,
-)
-from neo4j_graphrag.experimental.components.pdf_loader import DocumentInfo
 from neo4j_graphrag.experimental.components.types import ResolutionStats
 from neo4j_graphrag.experimental.pipeline import Component
 from neo4j_graphrag.utils import execute_query
