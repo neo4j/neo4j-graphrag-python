@@ -46,7 +46,7 @@ class OpenAILLM(LLMInterface):
         """
         if openai is None:
             raise ImportError(
-                "Could not import openai python client. "
+                "Could not import openai Python client. "
                 "Please install it with `pip install openai`."
             )
         super().__init__(model_name, model_params, **kwargs)

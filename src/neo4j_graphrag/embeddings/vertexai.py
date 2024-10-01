@@ -27,7 +27,7 @@ except ImportError:
 class VertexAIEmbeddings(Embedder):
     """
     Vertex AI embeddings class.
-    This class uses the Vertex AI python client to generate embeddings for text data.
+    This class uses the Vertex AI Python client to generate vector embeddings for text data.
 
     Args:
         model (str): The name of the Vertex AI text embedding model to use. Defaults to "text-embedding-004".
