@@ -26,7 +26,7 @@ def test_vertexai_llm_missing_dependency() -> None:
 
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
-def test_invoke_happy_path(GenerativeModelMock: MagicMock) -> None:
+def test_vertexai_invoke_happy_path(GenerativeModelMock: MagicMock) -> None:
     mock_response = Mock()
     mock_response.text = "Return text"
     mock_model = GenerativeModelMock.return_value
@@ -41,7 +41,7 @@ def test_invoke_happy_path(GenerativeModelMock: MagicMock) -> None:
 
 @pytest.mark.asyncio
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
-async def test_ainvoke_happy_path(GenerativeModelMock: MagicMock) -> None:
+async def test_vertexai_ainvoke_happy_path(GenerativeModelMock: MagicMock) -> None:
     mock_response = AsyncMock()
     mock_response.text = "Return text"
     mock_model = GenerativeModelMock.return_value

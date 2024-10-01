@@ -41,12 +41,28 @@ FULL_TEXT_SEARCH_QUERY = (
     "YIELD node, score"
 )
 
-UPSERT_NODE_QUERY = "MERGE (n:`{label}` {properties}) RETURN elementID(n)"
+UPSERT_NODE_QUERY = (
+    "MERGE (n:__Entity__ {{id: $id}}) "
+    "WITH n SET n:`{label}`, n += $properties "
+    "WITH n CALL {{ "
+    "WITH n WITH n WHERE $embeddings IS NOT NULL "
+    "UNWIND keys($embeddings) as emb "
+    "CALL db.create.setNodeVectorProperty(n, emb, $embeddings[emb]) "
+    "}} "
+    "RETURN elementId(n)"
+)
 
 UPSERT_RELATIONSHIP_QUERY = (
-    "MATCH (start {{ id: $start_node_id }}), (end {{ id: $end_node_id }}) "
-    "MERGE (start)-[r:{type} {properties}]->(end) "
-    "RETURN elementID(r)"
+    "MATCH (start:__Entity__ {{ id: $start_node_id }}) "
+    "MATCH (end:__Entity__ {{ id: $end_node_id }}) "
+    "MERGE (start)-[r:`{type}`]->(end) "
+    "WITH r SET r += $properties "
+    "WITH r CALL {{ "
+    "WITH r WITH r WHERE $embeddings IS NOT NULL "
+    "UNWIND keys($embeddings) as emb "
+    "CALL db.create.setRelationshipVectorProperty(r, emb, $embeddings[emb]) "
+    "}} "
+    "RETURN elementId(r)"
 )
 
 UPSERT_VECTOR_ON_NODE_QUERY = (
