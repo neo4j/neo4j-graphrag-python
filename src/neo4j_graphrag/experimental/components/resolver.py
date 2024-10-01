@@ -37,7 +37,7 @@ class EntityResolver(Component, abc.ABC):
 
 
 class SinglePropertyExactMatchResolver(EntityResolver):
-    """Resolve entities with same labels
+    """Resolve entities with same label and exact same property (default is "name").
 
     Args:
         driver (neo4j.driver): The Neo4j driver to connect to the database.
@@ -51,7 +51,6 @@ class SinglePropertyExactMatchResolver(EntityResolver):
 
         from neo4j import AsyncGraphDatabase
         from neo4j_graphrag.experimental.components.resolver import SinglePropertyExactMatchResolver
-        from neo4j_graphrag.experimental.pipeline import Pipeline
 
         URI = "neo4j://localhost:7687"
         AUTH = ("neo4j", "password")
@@ -59,7 +58,7 @@ class SinglePropertyExactMatchResolver(EntityResolver):
 
         driver = AsyncGraphDatabase.driver(URI, auth=AUTH, database=DATABASE)
         resolver = SinglePropertyExactMatchResolver(driver=driver, neo4j_database=DATABASE)
-        await resolver.run()
+        await resolver.run()  # no expected parameters
 
     """
 

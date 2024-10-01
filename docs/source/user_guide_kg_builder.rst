@@ -424,14 +424,13 @@ See :ref:`kgwritermodel` and :ref:`kgwriter` in API reference.
 Entity Resolver
 ===============
 
-The KG writer component creates a new nodes for each identified entities,
-without any assumption on similar entities. The Entity Resolver is here
-to clean up the created KG and merge entity nodes which represent the same
-real world object.
+The KG Writer component creates new nodes for each identified entity
+without making assumptions about entity similarity. The Entity Resolver
+is responsible for refining the created knowledge graph by merging entity
+nodes that represent the same real-world object.
 
-In practise, this package implement only one resolver, that will merge all nodes
-with the same label and the same "name" property.
-
+In practice, this package implements a single resolver that merges nodes
+with the same label and identical "name" property.
 
 .. warning::
 
@@ -449,10 +448,10 @@ It can be used like this:
 
 .. warning::
 
-    By default, all nodes with `__Entity__` labels will be resolved. If you want to preserve
-    some of them, a `filter_query` can be added to the query. For instance, if a `:Resolved`
-    label has been added to already resolved entities in the graph, these entities can be
-    ignored like this:
+    By default, all nodes with the __Entity__ label will be resolved.
+    To exclude specific nodes, a filter_query can be added to the query.
+    For example, if a `:Resolved` label has been applied to already resolved entities
+    in the graph, these entities can be excluded with the following approach:
 
     .. code:: python
         from neo4j_graphrag.experimental.components.resolver import (
