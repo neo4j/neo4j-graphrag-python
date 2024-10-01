@@ -22,6 +22,7 @@ from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     OnError,
 )
 from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
+from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
 from neo4j_graphrag.experimental.components.resolver import (
     SinglePropertyExactMatchResolver,
 )
@@ -35,11 +36,12 @@ from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter i
     FixedSizeSplitter,
 )
 from neo4j_graphrag.experimental.pipeline import Pipeline
-from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
-from neo4j_graphrag.llm import OpenAILLM
+from neo4j_graphrag.llm import LLMInterface, OpenAILLM
 
 
-async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
+async def define_and_run_pipeline(
+    neo4j_driver: neo4j.AsyncDriver, llm: LLMInterface
+) -> None:
     """This is where we define and run the KG builder pipeline, instantiating a few
     components:
     - Text Splitter: in this example we use the fixed size text splitter
@@ -54,46 +56,41 @@ async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
     """
     pipe = Pipeline()
     # define the components
+    pipe.add_component(PdfLoader(), "loader")
     pipe.add_component(
-        # small chunk_size for the sake of this demo
-        FixedSizeSplitter(chunk_size=40, chunk_overlap=2),
+        FixedSizeSplitter(),
         "splitter",
     )
     pipe.add_component(SchemaBuilder(), "schema")
     pipe.add_component(
         LLMEntityRelationExtractor(
-            llm=OpenAILLM(
-                model_name="gpt-4o",
-                model_params={
-                    "max_tokens": 1000,
-                    "response_format": {"type": "json_object"},
-                },
-            ),
-            on_error=OnError.RAISE,
+            llm=llm,
+            on_error=OnError.IGNORE,
         ),
         "extractor",
     )
     pipe.add_component(Neo4jWriter(neo4j_driver), "writer")
-    pipe.add_component(SinglePropertyExactMatchResolver(driver), "resolver")
+    pipe.add_component(SinglePropertyExactMatchResolver(neo4j_driver), "resolver")
     # define the execution order of component
     # and how the output of previous components must be used
+    pipe.connect("loader", "splitter", {"text": "loader.text"})
     pipe.connect("splitter", "extractor", input_config={"chunks": "splitter"})
-    pipe.connect("schema", "extractor", input_config={"schema": "schema"})
+    pipe.connect(
+        "schema",
+        "extractor",
+        input_config={"schema": "schema", "document_info": "loader.document_info"},
+    )
     pipe.connect(
         "extractor",
         "writer",
         input_config={"graph": "extractor"},
     )
-    pipe.connect("extractor", "resolver", {})
+    pipe.connect("writer", "resolver", {})
     # user input:
     # the initial text
     # and the list of entities and relations we are looking for
     pipe_inputs = {
-        "splitter": {
-            "text": """Alice is born on Oct 7th.
-            Alice works at Neo4j in Sweden.
-            """
-        },
+        "loader": {},
         "schema": {
             "entities": [
                 SchemaEntity(
@@ -116,28 +113,44 @@ async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
                 SchemaRelation(
                     label="WORKED_FOR",
                 ),
+                SchemaRelation(
+                    label="FRIEND",
+                ),
+                SchemaRelation(
+                    label="ENEMY",
+                ),
             ],
             "potential_schema": [
                 ("Person", "WORKED_FOR", "Organization"),
+                ("Person", "FRIEND", "Person"),
+                ("Person", "ENEMY", "Person"),
             ],
         },
-        "extractor": {
-            "document_info": {
-                "path": "file_path",
-            }
-        },
-        "resolver": {
-            "document_path": "file_path",
-        },
     }
-    # run the pipeline
-    res = await pipe.run(pipe_inputs)
-    print(await pipe.store.get_result_for_component(res.run_id, "extractor"))
-    return res
+    # run the pipeline for each documents
+    for document in [
+        "examples/pipeline/Harry Potter and the Chamber of Secrets Summary.pdf",
+        "examples/pipeline/Harry Potter and the Death Hallows Summary.pdf",
+    ]:
+        pipe_inputs["loader"]["filepath"] = document
+        await pipe.run(pipe_inputs)
+
+
+async def main() -> None:
+    llm = OpenAILLM(
+        model_name="gpt-4o",
+        model_params={
+            "max_tokens": 1000,
+            "response_format": {"type": "json_object"},
+        },
+    )
+    driver = neo4j.AsyncGraphDatabase.driver(
+        "bolt://localhost:7687", auth=("neo4j", "password")
+    )
+    await define_and_run_pipeline(driver, llm)
+    await driver.close()
+    await llm.async_client.close()
 
 
 if __name__ == "__main__":
-    with neo4j.GraphDatabase.driver(
-        "bolt://localhost:7687", auth=("neo4j", "password")
-    ) as driver:
-        print(asyncio.run(main(driver)))
+    asyncio.run(main())
