@@ -14,13 +14,12 @@ Python versions supported:
 * Python 3.11 supported.
 * Python 3.10 supported.
 * Python 3.9 supported.
-* Python 3.8 supported.
 
 # Usage
 
 ## Installation
 
-This package requires Python (>=3.8.1).
+This package requires Python (>=3.9).
 
 To install the latest stable version, use:
 
