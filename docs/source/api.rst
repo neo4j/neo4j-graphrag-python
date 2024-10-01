@@ -70,6 +70,17 @@ LLMEntityRelationExtractor
 .. autoclass:: neo4j_graphrag.experimental.components.entity_relation_extractor.LLMEntityRelationExtractor
     :members: run
 
+
+.. _pipeline-section:
+
+********
+Pipeline
+********
+
+.. autoclass:: neo4j_graphrag.experimental.pipeline.Pipeline
+    :members: run, add_component, connect, get_pygraphviz_graph
+
+
 .. _retrievers-section:
 
 **********
@@ -156,10 +167,22 @@ OpenAIEmbeddings
 .. autoclass:: neo4j_graphrag.embeddings.openai.OpenAIEmbeddings
     :members:
 
+AzureOpenAIEmbeddings
+=====================
+
+.. autoclass:: neo4j_graphrag.embeddings.openai.AzureOpenAIEmbeddings
+    :members:
+
 VertexAIEmbeddings
 ==================
 
 .. autoclass:: neo4j_graphrag.embeddings.vertexai.VertexAIEmbeddings
+    :members:
+
+MistralAIEmbeddings
+===================
+
+.. autoclass:: neo4j_graphrag.embeddings.mistral.MistralAIEmbeddings
     :members:
 
 CohereEmbeddings
@@ -215,6 +238,13 @@ CohereLLM
 ---------
 
 .. autoclass:: neo4j_graphrag.llm.cohere_llm.CohereLLM
+    :members:
+
+
+MistralAILLM
+------------
+
+.. autoclass:: neo4j_graphrag.llm.mistralai_llm.MistralAILLM
     :members:
 
 
@@ -281,6 +311,8 @@ Errors
 * :class:`neo4j_graphrag.exceptions.Neo4jGraphRagError`
 
   * :class:`neo4j_graphrag.exceptions.RetrieverInitializationError`
+
+  * :class:`neo4j_graphrag.exceptions.EmbeddingsGenerationError`
 
   * :class:`neo4j_graphrag.exceptions.SearchValidationError`
 
