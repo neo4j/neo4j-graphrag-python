@@ -23,6 +23,10 @@ from typing import Any, Generator, Literal, Optional
 import neo4j
 from pydantic import validate_call
 
+from neo4j_graphrag.experimental.components.entity_relation_extractor import (
+    CHUNK_NODE_LABEL,
+    DOCUMENT_NODE_LABEL,
+)
 from neo4j_graphrag.experimental.components.types import (
     Neo4jGraph,
     Neo4jNode,
@@ -30,10 +34,6 @@ from neo4j_graphrag.experimental.components.types import (
 )
 from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
 from neo4j_graphrag.neo4j_queries import UPSERT_NODE_QUERY, UPSERT_RELATIONSHIP_QUERY
-from neo4j_graphrag.experimental.components.entity_relation_extractor import (
-    CHUNK_NODE_LABEL,
-    DOCUMENT_NODE_LABEL,
-)
 
 logger = logging.getLogger(__name__)
 
