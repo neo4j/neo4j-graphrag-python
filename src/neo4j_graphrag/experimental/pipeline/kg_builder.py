@@ -48,6 +48,7 @@ class KnowledgeGraphBuilderConfig(BaseModel):
     relations: list[SchemaRelation] = Field(default_factory=list)
     potential_schema: list[tuple] = Field(default_factory=list)
     pdf_loader: Any = None
+    kg_writer: Any = None
     text_splitter: Any = None
     on_error: OnError = OnError.RAISE
 
@@ -114,6 +115,7 @@ class KnowledgeGraphBuilder:
             potential_schema=potential_schema,
             text_splitter=text_splitter,
             pdf_loader=pdf_loader,
+            kg_writer=kg_writer,
             on_error=on_error,
         )
 
@@ -126,8 +128,8 @@ class KnowledgeGraphBuilder:
         self.potential_schema = self.config.potential_schema
         self.text_splitter = self.config.text_splitter or FixedSizeSplitter()
         self.on_error = self.config.on_error
-        self.pdf_loader = pdf_loader
-        self.kg_writer = kg_writer
+        self.pdf_loader = self.config.pdf_loader
+        self.kg_writer = self.config.kg_writer
 
         self.pipeline = self._build_pipeline()
 
