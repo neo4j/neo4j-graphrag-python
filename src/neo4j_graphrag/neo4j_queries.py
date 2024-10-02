@@ -41,12 +41,32 @@ FULL_TEXT_SEARCH_QUERY = (
     "YIELD node, score"
 )
 
-UPSERT_NODE_QUERY = "MERGE (n:`{label}` {properties}) RETURN elementID(n)"
+UPSERT_NODE_QUERY = (
+    "UNWIND $rows AS row "
+    "CREATE (n:__KGBuilder__ {id: row.id}) "
+    "SET n += row.properties "
+    "WITH n, row CALL apoc.create.addLabels(n, row.labels) YIELD node "
+    "WITH node as n, row CALL { "
+    "WITH n, row WITH n, row WHERE row.embedding_properties IS NOT NULL "
+    "UNWIND keys(row.embedding_properties) as emb "
+    "CALL db.create.setNodeVectorProperty(n, emb, row.embedding_properties[emb]) "
+    "RETURN count(*) as nbEmb "
+    "} "
+    "RETURN elementId(n)"
+)
 
 UPSERT_RELATIONSHIP_QUERY = (
-    "MATCH (start {{ id: $start_node_id }}), (end {{ id: $end_node_id }}) "
-    "MERGE (start)-[r:{type} {properties}]->(end) "
-    "RETURN elementID(r)"
+    "UNWIND $rows as row "
+    "MATCH (start:__KGBuilder__ {id: row.start_node_id}) "
+    "MATCH (end:__KGBuilder__ {id: row.end_node_id}) "
+    "WITH start, end, row "
+    "CALL apoc.merge.relationship(start, row.type, {}, row.properties, end, row.properties) YIELD rel  "
+    "WITH rel, row CALL { "
+    "WITH rel, row WITH rel, row WHERE row.embedding_properties IS NOT NULL "
+    "UNWIND keys(row.embedding_properties) as emb "
+    "CALL db.create.setRelationshipVectorProperty(rel, emb, row.embedding_properties[emb]) "
+    "} "
+    "RETURN elementId(rel)"
 )
 
 UPSERT_VECTOR_ON_NODE_QUERY = (

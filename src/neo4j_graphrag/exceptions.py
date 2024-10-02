@@ -49,6 +49,10 @@ class LLMGenerationError(Neo4jGraphRagError):
     pass
 
 
+class EmbeddingsGenerationError(Neo4jGraphRagError):
+    """Exception raised when generation of embeddings fails"""
+
+
 class SearchValidationError(Neo4jGraphRagError):
     """Exception raised for validation errors during search."""
 

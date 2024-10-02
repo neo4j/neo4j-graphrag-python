@@ -15,7 +15,7 @@
 
 [tool.poetry]
 name = "neo4j-graphrag"
-version = "0.6.3"
+version = "0.7.0"
 description = "Python package to allow easy integration to Neo4j's GraphRAG features"
 authors = ["Neo4j, Inc <team-gen-ai@neo4j.com>"]
 license = "Apache License, Version 2.0"
@@ -28,7 +28,7 @@ include = "neo4j_graphrag"
 from = "src"
 
 [tool.poetry.dependencies]
-python = "^3.8.1"
+python = "^3.9.0"
 neo4j = "^5.17.0"
 pydantic = "^2.6.3"
 weaviate-client = {version = "^4.6.1", optional = true}
@@ -43,6 +43,8 @@ pygraphviz = [
 ]
 google-cloud-aiplatform = {version = "^1.66.0", optional = true}
 cohere = {version = "^5.9.0", optional = true}
+anthropic = { version = "^0.34.2", optional = true}
+mistralai = {version = "^1.0.3", optional = true}
 
 [tool.poetry.group.dev.dependencies]
 pylint = "^3.1.0"
@@ -77,9 +79,12 @@ pygraphviz = [
 ]
 google-cloud-aiplatform = {version = "^1.66.0"}
 cohere = {version = "^5.9.0"}
+anthropic = { version = "^0.34.2"}
+mistralai = {version = "^1.0.3"}
+
 
 [tool.poetry.extras]
-external_clients = ["weaviate-client", "pinecone-client", "google-cloud-aiplatform", "cohere"]
+external_clients = ["weaviate-client", "pinecone-client", "google-cloud-aiplatform", "cohere", "anthropic", "mistralai"]
 kg_creation_tools = ["pygraphviz"]
 
 [build-system]

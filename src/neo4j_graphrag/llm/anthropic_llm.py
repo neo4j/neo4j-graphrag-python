@@ -1,4 +1,3 @@
-#  Copyright (c) "Neo4j"
 #  Neo4j Sweden AB [https://neo4j.com]
 #  #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,15 +20,15 @@ from neo4j_graphrag.llm.base import LLMInterface
 from neo4j_graphrag.llm.types import LLMResponse
 
 try:
-    import cohere
-    from cohere.core import ApiError
+    import anthropic
+    from anthropic import APIError
 except ImportError:
-    cohere = None  # type: ignore
-    ApiError = Exception  # type: ignore[assignment, misc]
+    anthropic = None  # type: ignore
+    APIError = None  # type: ignore
 
 
-class CohereLLM(LLMInterface):
-    """Interface for large language models on the Cohere platform
+class AnthropicLLM(LLMInterface):
+    """Interface for large language models on Anthropic
 
     Args:
         model_name (str, optional): Name of the LLM to use. Defaults to "gemini-1.5-flash-001".
@@ -43,26 +42,30 @@ class CohereLLM(LLMInterface):
 
     .. code-block:: python
 
-        from neo4j_graphrag.llm import CohereLLM
+        from neo4j_graphrag.llm import AnthropicLLM
 
-        llm = CohereLLM(api_key="...")
-        llm.invoke("Say something")
+        llm = AnthropicLLM(
+            model_name="claude-3-opus-20240229",
+            model_params={"max_tokens": 1000},
+            api_key="sk...",   # can also be read from env vars
+        )
+        llm.invoke("Who is the mother of Paul Atreides?")
     """
 
     def __init__(
         self,
-        model_name: str = "",
+        model_name: str,
         model_params: Optional[dict[str, Any]] = None,
         **kwargs: Any,
-    ) -> None:
-        if cohere is None:
+    ):
+        if anthropic is None:
             raise ImportError(
-                "Could not import cohere python client. "
-                "Please install it with `pip install cohere`."
+                "Could not import Anthropic Python client. "
+                "Please install it with `pip install anthropic`."
             )
         super().__init__(model_name, model_params)
-        self.client = cohere.Client(**kwargs)
-        self.async_client = cohere.AsyncClient(**kwargs)
+        self.client = anthropic.Anthropic(**kwargs)
+        self.async_client = anthropic.AsyncAnthropic(**kwargs)
 
     def invoke(self, input: str) -> LLMResponse:
         """Sends text to the LLM and returns a response.
@@ -74,15 +77,19 @@ class CohereLLM(LLMInterface):
             LLMResponse: The response from the LLM.
         """
         try:
-            res = self.client.chat(
-                message=input,
+            response = self.client.messages.create(
                 model=self.model_name,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": input,
+                    }
+                ],
+                **self.model_params,
             )
-        except ApiError as e:
+            return LLMResponse(content=response.content)
+        except APIError as e:
             raise LLMGenerationError(e)
-        return LLMResponse(
-            content=res.text,
-        )
 
     async def ainvoke(self, input: str) -> LLMResponse:
         """Asynchronously sends text to the LLM and returns a response.
@@ -94,12 +101,16 @@ class CohereLLM(LLMInterface):
             LLMResponse: The response from the LLM.
         """
         try:
-            res = await self.async_client.chat(
-                message=input,
+            response = await self.async_client.messages.create(
                 model=self.model_name,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": input,
+                    }
+                ],
+                **self.model_params,
             )
-        except ApiError as e:
+            return LLMResponse(content=response.content)
+        except APIError as e:
             raise LLMGenerationError(e)
-        return LLMResponse(
-            content=res.text,
-        )
