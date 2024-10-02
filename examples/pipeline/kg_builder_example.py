@@ -28,7 +28,7 @@ logging.basicConfig(level=logging.INFO)
 
 async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
     # Instantiate Entity and Relation objects
-    entities = ["PERSON", "ORGANIZATION", "HORCRUX"]
+    entities = ["PERSON", "ORGANIZATION", "HORCRUX", "LOCATION"]
     relations = ["SITUATED_AT", "INTERACTS", "OWNS", "LED_BY"]
     potential_schema = [
         ("PERSON", "SITUATED_AT", "LOCATION"),
@@ -47,7 +47,7 @@ async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
     )
 
     # Create an instance of the KnowledgeGraphBuilder
-    kg_builder = KnowledgeGraphBuilder(
+    kg_builder_pdf = KnowledgeGraphBuilder(
         llm=llm,
         driver=neo4j_driver,
         entities=entities,
@@ -58,8 +58,25 @@ async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
     )
 
     # Run the knowledge graph building process asynchronously
-    result = await kg_builder.run_async()
-    return result
+    pdf_file_path = "examples/pipeline/Harry Potter and the Death Hallows Summary.pdf"
+    pdf_result = await kg_builder_pdf.run_async(file_path=pdf_file_path)
+    print(f"PDF Processing Result: {pdf_result}")
+
+    # Create an instance of the KnowledgeGraphBuilder for text input
+    kg_builder_text = KnowledgeGraphBuilder(
+        llm=llm,
+        driver=neo4j_driver,
+        entities=entities,
+        relations=relations,
+        potential_schema=potential_schema,
+        from_pdf=False,
+        on_error=OnError.RAISE,
+    )
+
+    # Run the knowledge graph building process with text input
+    text_input = "John Doe lives in New York City."
+    text_result = await kg_builder_text.run_async(text=text_input)
+    print(f"Text Processing Result: {text_result}")
 
 
 if __name__ == "__main__":

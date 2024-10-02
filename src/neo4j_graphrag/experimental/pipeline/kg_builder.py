@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 
 import neo4j
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -36,14 +36,13 @@ from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter i
     FixedSizeSplitter,
 )
 from neo4j_graphrag.experimental.pipeline.pipeline import Pipeline, PipelineResult
+from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 from neo4j_graphrag.llm.base import LLMInterface
 
 
 class KnowledgeGraphBuilderConfig(BaseModel):
     llm: LLMInterface
     driver: neo4j.Driver
-    file_path: Optional[str] = None
-    text: Optional[str] = None
     entities: list[SchemaEntity] = Field(default_factory=list)
     relations: list[SchemaRelation] = Field(default_factory=list)
     potential_schema: list[tuple[str, str, str]] = Field(default_factory=list)
@@ -51,16 +50,7 @@ class KnowledgeGraphBuilderConfig(BaseModel):
     kg_writer: Any = None
     text_splitter: Any = None
     on_error: OnError = OnError.RAISE
-
-    @model_validator(mode="before")
-    def check_input_source(cls, values: dict[str, Any]) -> dict[str, Any]:
-        file_path = values.get("file_path")
-        text = values.get("text")
-        if (file_path is None and text is None) or (
-            file_path is not None and text is not None
-        ):
-            raise ValueError("Exactly one of 'file_path' or 'text' must be provided.")
-        return values
+    prompt_template: Union[ERExtractionTemplate, str] = ERExtractionTemplate()
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -97,10 +87,24 @@ class KnowledgeGraphBuilder:
         pdf_loader: Optional[Any] = None,
         kg_writer: Optional[Any] = None,
         on_error: OnError = OnError.RAISE,
+        prompt_template: Union[ERExtractionTemplate, str] = ERExtractionTemplate(),
     ):
         self.entities = [SchemaEntity(label=label) for label in entities or []]
         self.relations = [SchemaRelation(label=label) for label in relations or []]
         self.potential_schema = potential_schema if potential_schema is not None else []
+
+        self.config = KnowledgeGraphBuilderConfig(
+            llm=llm,
+            driver=driver,
+            entities=self.entities,
+            relations=self.relations,
+            potential_schema=self.potential_schema,
+            pdf_loader=pdf_loader,
+            kg_writer=kg_writer,
+            text_splitter=text_splitter,
+            on_error=on_error,
+            prompt_template=prompt_template,
+        )
 
         self.from_pdf = from_pdf
         self.llm = llm
@@ -109,6 +113,7 @@ class KnowledgeGraphBuilder:
         self.on_error = on_error
         self.pdf_loader = pdf_loader if pdf_loader is not None else PdfLoader()
         self.kg_writer = kg_writer if kg_writer is not None else Neo4jWriter(driver)
+        self.prompt_template = self.config.prompt_template
 
         self.pipeline = self._build_pipeline()
 
@@ -118,24 +123,30 @@ class KnowledgeGraphBuilder:
         pipe.add_component(self.text_splitter, "splitter")
         pipe.add_component(SchemaBuilder(), "schema")
         pipe.add_component(
-            LLMEntityRelationExtractor(llm=self.llm, on_error=self.on_error),
+            LLMEntityRelationExtractor(
+                llm=self.llm,
+                on_error=self.on_error,
+                prompt_template=self.prompt_template
+            ),
             "extractor",
         )
         pipe.add_component(self.kg_writer, "writer")
 
         if self.from_pdf:
-            pipe.add_component(self.pdf_loader, "loader")
+            pipe.add_component(self.pdf_loader, "pdf_loader")
+
             pipe.connect(
-                "loader",
+                "pdf_loader",
                 "splitter",
-                input_config={"text": "loader.text"},
+                input_config={"text": "pdf_loader.text"},
             )
+
             pipe.connect(
                 "schema",
                 "extractor",
                 input_config={
                     "schema": "schema",
-                    "document_info": "loader.document_info",
+                    "document_info": "pdf_loader.document_info",
                 },
             )
         else:
@@ -144,7 +155,6 @@ class KnowledgeGraphBuilder:
                 "extractor",
                 input_config={
                     "schema": "schema",
-                    "document_info.path": "direct_text_input",
                 },
             )
 
@@ -153,6 +163,8 @@ class KnowledgeGraphBuilder:
             "extractor",
             input_config={"chunks": "splitter"},
         )
+
+        # Connect extractor to writer
         pipe.connect(
             "extractor",
             "writer",
@@ -213,9 +225,8 @@ class KnowledgeGraphBuilder:
         }
 
         if self.from_pdf:
-            pipe_inputs["loader"] = {"filepath": file_path}
+            pipe_inputs["pdf_loader"] = {"filepath": file_path}
         else:
             pipe_inputs["splitter"] = {"text": text}
-            pipe_inputs["extractor"] = {"document_info": {"path": "direct_text_input"}}
 
         return pipe_inputs
