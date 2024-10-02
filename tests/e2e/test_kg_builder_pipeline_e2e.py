@@ -474,7 +474,7 @@ async def test_pipeline_builder_failing_chunk_do_not_raise(
     assert isinstance(res, PipelineResult)
     assert res.run_id is not None
     assert res.result == {
-        "resolver": {"number_of_created_nodes": 3, "number_of_nodes_to_resolve": 5}
+        "resolver": {"number_of_created_nodes": 3, "number_of_nodes_to_resolve": 3}
     }
     # check component's results
     chunks = await kg_builder_pipeline.store.get_result_for_component(
@@ -618,6 +618,8 @@ async def test_pipeline_builder_two_documents(
     await kg_builder_pipeline.run(pipe_inputs_1)
     await kg_builder_pipeline.run(pipe_inputs_2)
     created_nodes = driver.execute_query("MATCH (n:__Entity__) RETURN n")
-    assert len(created_nodes.records) == 6
-    created_rels = driver.execute_query("MATCH (n:__Entity__)-[r]->() RETURN r")
-    assert len(created_rels.records) == 7
+    assert len(created_nodes.records) == 3
+    created_rels = driver.execute_query(
+        "MATCH (:__Entity__)-[r]->(:__Entity__) RETURN r"
+    )
+    assert len(created_rels.records) == 2

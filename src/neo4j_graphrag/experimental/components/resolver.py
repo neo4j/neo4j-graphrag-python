@@ -23,6 +23,13 @@ from neo4j_graphrag.utils import execute_query
 
 
 class EntityResolver(Component, abc.ABC):
+    """Entity resolution base class
+
+    Args:
+        driver (neo4j.driver): The Neo4j driver to connect to the database.
+        filter_query (Optional[str]): Cypher query to select the entities to resolve. By default, all nodes with __Entity__ label are used
+    """
+
     def __init__(
         self,
         driver: Union[neo4j.Driver, neo4j.AsyncDriver],
@@ -74,6 +81,15 @@ class SinglePropertyExactMatchResolver(EntityResolver):
         self.database = neo4j_database
 
     async def run(self) -> ResolutionStats:
+        """Resolve entities based on the following rule:
+        For each entity label, entities with the same 'resolve_property' value
+        (exact match) are grouped into a single node:
+
+        - Properties: the property from the first node will remain if already set, otherwise the first property in list will be written.
+        - Relationships: merge relationships with same type and target node.
+
+        See apoc.refactor.mergeNodes documentation for more details.
+        """
         match_query = "MATCH (entity:__Entity__) "
         if self.filter_query:
             match_query += self.filter_query
@@ -91,10 +107,22 @@ class SinglePropertyExactMatchResolver(EntityResolver):
         merge_nodes_query = (
             f"{match_query} "
             f"WITH entity, entity.{self.resolve_property} as prop "
+            # keep only entities for which the resolve_property (name) is not null
             "WITH entity, prop WHERE prop IS NOT NULL "
+            # will check the property for each of the entity labels,
+            # except the reserved ones __Entity__ and __KGBuilder__
             "UNWIND labels(entity) as lab  "
-            "WITH lab, prop, entity WHERE lab <> '__Entity__' "
+            "WITH lab, prop, entity WHERE NOT lab IN ['__Entity__', '__KGBuilder__'] "
+            # aggregate based on property value and label
+            # collect all entities with exact same property and label
+            # in the 'entities' list
             "WITH prop, lab, collect(entity) AS entities "
+            # merge all entities into a single node
+            # * merge relationships: if the merged entities have a relationship of same
+            # type to the same target node, these relationships are merged
+            # otherwise relationships are just attached to the newly created node
+            # * properties: if the two entities have the same property key with
+            # different values, only one of them is kept in the created node
             "CALL apoc.refactor.mergeNodes(entities,{ "
             " properties:'discard', "
             " mergeRels:true "
