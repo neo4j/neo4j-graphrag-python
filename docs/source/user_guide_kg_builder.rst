@@ -388,7 +388,13 @@ to a Neo4j database:
         graph = Neo4jGraph(nodes=[], relationships=[])
         await writer.run(graph)
 
-See :ref:`neo4jgraph` for the description of the input type.
+To improve insert performances, it is possible to act on two parameters:
+
+- `batch_size`: the number of nodes/relationships to be processed in each batch (default is 1000).
+- `max_concurrency`: the max number of concurrent queries (default is 5).
+
+See :ref:`neo4jgraph`.
+
 
 It is possible to create a custom writer using the `KGWriter` interface:
 
