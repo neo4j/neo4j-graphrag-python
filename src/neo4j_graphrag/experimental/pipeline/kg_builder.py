@@ -46,14 +46,14 @@ class KnowledgeGraphBuilderConfig(BaseModel):
     text: Optional[str] = None
     entities: list[SchemaEntity] = Field(default_factory=list)
     relations: list[SchemaRelation] = Field(default_factory=list)
-    potential_schema: list[tuple] = Field(default_factory=list)
+    potential_schema: list[tuple[str, str, str]] = Field(default_factory=list)
     pdf_loader: Any = None
     kg_writer: Any = None
     text_splitter: Any = None
     on_error: OnError = OnError.RAISE
 
     @model_validator(mode="before")
-    def check_input_source(cls, values):
+    def check_input_source(cls, values: dict[str, Any]) -> dict[str, Any]:
         file_path = values.get("file_path")
         text = values.get("text")
         if (file_path is None and text is None) or (
@@ -91,7 +91,7 @@ class KnowledgeGraphBuilder:
         driver: neo4j.Driver,
         entities: Optional[List[str]] = None,
         relations: Optional[List[str]] = None,
-        potential_schema: Optional[List[tuple]] = None,
+        potential_schema: Optional[List[tuple[str, str, str]]] = None,
         from_pdf: bool = True,
         text_splitter: Optional[Any] = None,
         pdf_loader: Optional[Any] = None,
@@ -115,7 +115,6 @@ class KnowledgeGraphBuilder:
     def _build_pipeline(self) -> Pipeline:
         pipe = Pipeline()
 
-        # Add components that are always used
         pipe.add_component(self.text_splitter, "splitter")
         pipe.add_component(SchemaBuilder(), "schema")
         pipe.add_component(
@@ -124,32 +123,35 @@ class KnowledgeGraphBuilder:
         )
         pipe.add_component(self.kg_writer, "writer")
 
-        # Conditionally add PdfLoader
         if self.from_pdf:
             pipe.add_component(self.pdf_loader, "loader")
-            # Connect loader to splitter
             pipe.connect(
                 "loader",
                 "splitter",
                 input_config={"text": "loader.text"},
             )
-            document_info_input = "loader.document_info"
+            pipe.connect(
+                "schema",
+                "extractor",
+                input_config={
+                    "schema": "schema",
+                    "document_info": "loader.document_info",
+                },
+            )
         else:
-            document_info_input = {"path": "direct_text_input"}
+            pipe.connect(
+                "schema",
+                "extractor",
+                input_config={
+                    "schema": "schema",
+                    "document_info.path": "direct_text_input",
+                },
+            )
 
-        # Connect components
         pipe.connect(
             "splitter",
             "extractor",
             input_config={"chunks": "splitter"},
-        )
-        pipe.connect(
-            "schema",
-            "extractor",
-            input_config={
-                "schema": "schema",
-                "document_info": document_info_input,
-            },
         )
         pipe.connect(
             "extractor",
@@ -190,8 +192,9 @@ class KnowledgeGraphBuilder:
         """
         return asyncio.run(self.run_async(file_path=file_path, text=text))
 
-    def _prepare_inputs(self, file_path: Optional[str], text: Optional[str]) -> dict:
-        # Validate inputs
+    def _prepare_inputs(
+        self, file_path: Optional[str], text: Optional[str]
+    ) -> dict[str, Any]:
         if self.from_pdf:
             if file_path is None or text is not None:
                 raise ValueError(
@@ -201,8 +204,7 @@ class KnowledgeGraphBuilder:
             if text is None or file_path is not None:
                 raise ValueError("Expected 'text' argument when 'from_pdf' is False.")
 
-        # Prepare pipeline inputs
-        pipe_inputs = {
+        pipe_inputs: dict[str, Any] = {
             "schema": {
                 "entities": self.entities,
                 "relations": self.relations,

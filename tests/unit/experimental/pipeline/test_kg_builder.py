@@ -22,7 +22,7 @@ from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.llm.base import LLMInterface
 
 
-def test_knowledge_graph_builder_init_with_text():
+def test_knowledge_graph_builder_init_with_text() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
 
@@ -55,7 +55,7 @@ def test_knowledge_graph_builder_init_with_text():
         }
 
 
-def test_knowledge_graph_builder_init_with_file_path():
+def test_knowledge_graph_builder_init_with_file_path() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
 
@@ -85,7 +85,7 @@ def test_knowledge_graph_builder_init_with_file_path():
         assert pipe_inputs["loader"]["filepath"] == file_path
 
 
-def test_knowledge_graph_builder_run_with_both_inputs():
+def test_knowledge_graph_builder_run_with_both_inputs() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
 
@@ -106,7 +106,7 @@ def test_knowledge_graph_builder_run_with_both_inputs():
     ) or "Expected 'text' argument when 'from_pdf' is False." in str(exc_info.value)
 
 
-def test_knowledge_graph_builder_run_with_no_inputs():
+def test_knowledge_graph_builder_run_with_no_inputs() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
 
@@ -124,7 +124,7 @@ def test_knowledge_graph_builder_run_with_no_inputs():
     ) or "Expected 'text' argument when 'from_pdf' is False." in str(exc_info.value)
 
 
-def test_knowledge_graph_builder_document_info_with_file():
+def test_knowledge_graph_builder_document_info_with_file() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
 
@@ -149,7 +149,7 @@ def test_knowledge_graph_builder_document_info_with_file():
         assert "extractor" not in pipe_inputs
 
 
-def test_knowledge_graph_builder_document_info_with_text():
+def test_knowledge_graph_builder_document_info_with_text() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
 
@@ -177,7 +177,7 @@ def test_knowledge_graph_builder_document_info_with_text():
         }
 
 
-def test_knowledge_graph_builder_with_entities_and_file():
+def test_knowledge_graph_builder_with_entities_and_file() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
 
