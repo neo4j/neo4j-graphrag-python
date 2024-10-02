@@ -5,9 +5,9 @@ is required (see INDEX_NAME).
 It shows how to use a vector-only retriever to find context
 similar to a query **vector** using vector similarity.
 """
+
 from neo4j import GraphDatabase
 from neo4j_graphrag.retrievers import VectorRetriever
-
 
 INDEX_NAME = "my-index-name"  # UPDATE THIS LINE
 

@@ -1,8 +1,8 @@
 from neo4j import GraphDatabase
 from neo4j_graphrag.retrievers import WeaviateNeo4jRetriever
-from weaviate.connect.helpers import connect_to_local
 
 from examples.old.embedding_biology import EMBEDDING_BIOLOGY
+from weaviate.connect.helpers import connect_to_local
 
 NEO4J_URL = "neo4j://localhost:7687"
 NEO4J_AUTH = ("neo4j", "password")

@@ -1,5 +1,5 @@
-import string
 import random
+import string
 from typing import Any
 
 from neo4j_graphrag.llm import LLMInterface, LLMResponse
@@ -10,7 +10,9 @@ class CustomLLM(LLMInterface):
         super().__init__(model_name, **kwargs)
 
     def invoke(self, input: str) -> LLMResponse:
-        content: str = self.model_name + ": " + ''.join(random.choices(string.ascii_letters, k=30))
+        content: str = (
+            self.model_name + ": " + "".join(random.choices(string.ascii_letters, k=30))
+        )
         return LLMResponse(content=content)
 
     async def ainvoke(self, input: str) -> LLMResponse:

@@ -1,4 +1,4 @@
-from neo4j_graphrag.llm import OpenAILLM, LLMResponse
+from neo4j_graphrag.llm import LLMResponse, OpenAILLM
 
 # set api key here on in env var
 api_key = None

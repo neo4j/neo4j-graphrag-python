@@ -6,10 +6,10 @@ It shows how to use a vector-only retriever to find context
 similar to a query **text** using vector similarity. The text
 is first transformed into a vector using a configurable embedder.
 """
+
 from neo4j import GraphDatabase
 from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
 from neo4j_graphrag.retrievers import VectorRetriever
-
 
 INDEX_NAME = "my-index-name"  # UPDATE THIS LINE
 
@@ -20,9 +20,7 @@ driver = GraphDatabase.driver(URI, auth=AUTH)
 
 # Initialize the retriever
 retriever = VectorRetriever(
-    driver=driver,
-    index_name=INDEX_NAME,
-    embedder=OpenAIEmbeddings()
+    driver=driver, index_name=INDEX_NAME, embedder=OpenAIEmbeddings()
 )
 
 # Perform the similarity search for a text query

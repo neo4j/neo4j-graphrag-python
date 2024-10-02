@@ -1,6 +1,7 @@
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from neo4j import GraphDatabase
 from neo4j_graphrag.retrievers import PineconeNeo4jRetriever
+
 from pinecone import Pinecone
 
 NEO4J_AUTH = ("neo4j", "password")
