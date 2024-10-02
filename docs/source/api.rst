@@ -148,7 +148,7 @@ PineconeNeo4jRetriever
     :members: search
 
 QdrantNeo4jRetriever
-======================
+====================
 
 .. autoclass:: neo4j_graphrag.retrievers.external.qdrant.qdrant.QdrantNeo4jRetriever
     :members: search
