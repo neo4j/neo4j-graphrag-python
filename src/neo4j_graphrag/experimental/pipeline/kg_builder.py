@@ -22,7 +22,8 @@ import neo4j
 from pydantic import Field, BaseModel, model_validator, ConfigDict
 
 from neo4j_graphrag.experimental.components.entity_relation_extractor import (
-    LLMEntityRelationExtractor, OnError,
+    LLMEntityRelationExtractor,
+    OnError,
 )
 from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
 from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
@@ -36,7 +37,6 @@ from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter i
 )
 from neo4j_graphrag.experimental.pipeline.pipeline import Pipeline, PipelineResult
 from neo4j_graphrag.llm.base import LLMInterface
-
 
 
 class KnowledgeGraphBuilderConfig(BaseModel):
@@ -74,8 +74,8 @@ class KnowledgeGraphBuilder:
         driver (neo4j.Driver): A Neo4j driver instance for database connection.
         file_path (Optional[str]): The path to the PDF file to process.
         text (Optional[str]): The text content to process.
-        entities (Optional[List[SchemaEntity]]): A list of schema entities.
-        relations (Optional[List[SchemaRelation]]): A list of schema relations.
+        entities (Optional[List[str]]): A list of entity labels as strings.
+        relations (Optional[List[str]]): A list of relation labels as strings.
         potential_schema (Optional[List[tuple]]): A list of potential schema relationships.
         text_splitter (Optional[Any]): A text splitter component. Defaults to FixedSizeSplitter().
         pdf_loader (Optional[Any]): A PDF loader component. Defaults to PdfLoader().
@@ -89,16 +89,16 @@ class KnowledgeGraphBuilder:
         driver: neo4j.Driver,
         file_path: Optional[str] = None,
         text: Optional[str] = None,
-        entities: Optional[List[SchemaEntity]] = None,
-        relations: Optional[List[SchemaRelation]] = None,
+        entities: Optional[List[str]] = None,
+        relations: Optional[List[str]] = None,
         potential_schema: Optional[List[tuple]] = None,
         text_splitter: Optional[Any] = None,
         pdf_loader: Optional[Any] = None,
         kg_writer: Optional[Any] = None,
         on_error: OnError = OnError.RAISE,
     ):
-        entities = entities if entities is not None else []
-        relations = relations if relations is not None else []
+        entities = [SchemaEntity(label=label) for label in entities or []]
+        relations = [SchemaRelation(label=label) for label in relations or []]
         potential_schema = potential_schema if potential_schema is not None else []
 
         pdf_loader = pdf_loader if pdf_loader is not None else PdfLoader()
@@ -125,9 +125,9 @@ class KnowledgeGraphBuilder:
         self.relations = self.config.relations
         self.potential_schema = self.config.potential_schema
         self.text_splitter = self.config.text_splitter or FixedSizeSplitter()
+        self.on_error = self.config.on_error
         self.pdf_loader = pdf_loader
         self.kg_writer = kg_writer
-        self.on_error = self.config.on_error
 
         self.pipeline = self._build_pipeline()
 

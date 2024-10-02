@@ -158,8 +158,8 @@ def test_knowledge_graph_builder_with_entities_and_file():
     driver = MagicMock(spec=neo4j.Driver)
 
     file_path = "path/to/test.pdf"
-    entities = [SchemaEntity(label="Document")]
-    relations = [SchemaRelation(label="CONTAINS")]
+    entities = ["Document", "Section"]
+    relations = ["CONTAINS"]
     potential_schema = [("Document", "CONTAINS", "Section")]
 
     kg_builder = KnowledgeGraphBuilder(
@@ -171,6 +171,8 @@ def test_knowledge_graph_builder_with_entities_and_file():
         potential_schema=potential_schema,
     )
 
-    assert kg_builder.entities == entities
-    assert kg_builder.relations == relations
+    internal_entities = [SchemaEntity(label=label) for label in entities]
+    internal_relations = [SchemaRelation(label=label) for label in relations]
+    assert kg_builder.entities == internal_entities
+    assert kg_builder.relations == internal_relations
     assert kg_builder.potential_schema == potential_schema
