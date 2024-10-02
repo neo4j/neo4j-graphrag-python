@@ -19,7 +19,7 @@ import asyncio
 from typing import Any, List, Optional
 
 import neo4j
-from pydantic import Field, BaseModel, model_validator, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
@@ -73,11 +73,12 @@ class KnowledgeGraphBuilder:
     Args:
         llm (LLMInterface): An instance of an LLM to use for entity and relation extraction.
         driver (neo4j.Driver): A Neo4j driver instance for database connection.
-        file_path (Optional[str]): The path to the PDF file to process.
-        text (Optional[str]): The text content to process.
         entities (Optional[List[str]]): A list of entity labels as strings.
         relations (Optional[List[str]]): A list of relation labels as strings.
         potential_schema (Optional[List[tuple]]): A list of potential schema relationships.
+        from_pdf (bool): Determines whether to include the PdfLoader in the pipeline.
+                         If True, expects `file_path` input in `run` methods.
+                         If False, expects `text` input in `run` methods.
         text_splitter (Optional[Any]): A text splitter component. Defaults to FixedSizeSplitter().
         pdf_loader (Optional[Any]): A PDF loader component. Defaults to PdfLoader().
         kg_writer (Optional[Any]): A knowledge graph writer component. Defaults to Neo4jWriter().
@@ -88,67 +89,34 @@ class KnowledgeGraphBuilder:
         self,
         llm: LLMInterface,
         driver: neo4j.Driver,
-        file_path: Optional[str] = None,
-        text: Optional[str] = None,
         entities: Optional[List[str]] = None,
         relations: Optional[List[str]] = None,
         potential_schema: Optional[List[tuple]] = None,
+        from_pdf: bool = True,
         text_splitter: Optional[Any] = None,
         pdf_loader: Optional[Any] = None,
         kg_writer: Optional[Any] = None,
         on_error: OnError = OnError.RAISE,
     ):
-        entities = [SchemaEntity(label=label) for label in entities or []]
-        relations = [SchemaRelation(label=label) for label in relations or []]
-        potential_schema = potential_schema if potential_schema is not None else []
+        self.entities = [SchemaEntity(label=label) for label in entities or []]
+        self.relations = [SchemaRelation(label=label) for label in relations or []]
+        self.potential_schema = potential_schema if potential_schema is not None else []
 
-        pdf_loader = pdf_loader if pdf_loader is not None else PdfLoader()
-        kg_writer = kg_writer if kg_writer is not None else Neo4jWriter(driver)
-
-        self.config = KnowledgeGraphBuilderConfig(
-            llm=llm,
-            driver=driver,
-            file_path=file_path,
-            text=text,
-            entities=entities,
-            relations=relations,
-            potential_schema=potential_schema,
-            text_splitter=text_splitter,
-            pdf_loader=pdf_loader,
-            kg_writer=kg_writer,
-            on_error=on_error,
-        )
-
-        self.llm = self.config.llm
-        self.driver = self.config.driver
-        self.file_path = self.config.file_path
-        self.text = self.config.text
-        self.entities = self.config.entities
-        self.relations = self.config.relations
-        self.potential_schema = self.config.potential_schema
-        self.text_splitter = self.config.text_splitter or FixedSizeSplitter()
-        self.on_error = self.config.on_error
-        self.pdf_loader = self.config.pdf_loader
-        self.kg_writer = self.config.kg_writer
+        self.from_pdf = from_pdf
+        self.llm = llm
+        self.driver = driver
+        self.text_splitter = text_splitter or FixedSizeSplitter()
+        self.on_error = on_error
+        self.pdf_loader = pdf_loader if pdf_loader is not None else PdfLoader()
+        self.kg_writer = kg_writer if kg_writer is not None else Neo4jWriter(driver)
 
         self.pipeline = self._build_pipeline()
 
     def _build_pipeline(self) -> Pipeline:
         pipe = Pipeline()
 
-        if self.file_path:
-            pipe.add_component(self.pdf_loader, "loader")
-            loader_inputs = {"filepath": self.file_path}
-            document_info_input = "loader.document_info"
-        else:
-            loader_inputs = {}
-            document_info_input = {"path": "direct_text_input"}
-
-        pipe.add_component(
-            self.text_splitter,
-            "splitter",
-        )
-
+        # Add components that are always used
+        pipe.add_component(self.text_splitter, "splitter")
         pipe.add_component(SchemaBuilder(), "schema")
         pipe.add_component(
             LLMEntityRelationExtractor(llm=self.llm, on_error=self.on_error),
@@ -156,16 +124,20 @@ class KnowledgeGraphBuilder:
         )
         pipe.add_component(self.kg_writer, "writer")
 
-        if self.file_path:
+        # Conditionally add PdfLoader
+        if self.from_pdf:
+            pipe.add_component(self.pdf_loader, "loader")
+            # Connect loader to splitter
             pipe.connect(
                 "loader",
                 "splitter",
                 input_config={"text": "loader.text"},
             )
-            self.pipe_inputs = {}
+            document_info_input = "loader.document_info"
         else:
-            self.pipe_inputs = {"splitter": {"text": self.text}}
+            document_info_input = {"path": "direct_text_input"}
 
+        # Connect components
         pipe.connect(
             "splitter",
             "extractor",
@@ -185,37 +157,63 @@ class KnowledgeGraphBuilder:
             input_config={"graph": "extractor"},
         )
 
-        self.pipe_inputs.update(
-            {
-                "schema": {
-                    "entities": self.entities,
-                    "relations": self.relations,
-                    "potential_schema": self.potential_schema,
-                },
-            }
-        )
-
-        if self.file_path:
-            self.pipe_inputs["loader"] = loader_inputs
-        else:
-            self.pipe_inputs["extractor"] = {"document_info": document_info_input}
-
         return pipe
 
-    async def run_async(self) -> PipelineResult:
+    async def run_async(
+        self, file_path: Optional[str] = None, text: Optional[str] = None
+    ) -> PipelineResult:
         """
         Asynchronously runs the knowledge graph building process.
 
+        Args:
+            file_path (Optional[str]): The path to the PDF file to process. Required if `from_pdf` is True.
+            text (Optional[str]): The text content to process. Required if `from_pdf` is False.
+
         Returns:
             PipelineResult: The result of the pipeline execution.
         """
-        return await self.pipeline.run(self.pipe_inputs)
+        pipe_inputs = self._prepare_inputs(file_path=file_path, text=text)
+        return await self.pipeline.run(pipe_inputs)
 
-    def run(self) -> PipelineResult:
+    def run(
+        self, file_path: Optional[str] = None, text: Optional[str] = None
+    ) -> PipelineResult:
         """
         Runs the knowledge graph building process.
 
+        Args:
+            file_path (Optional[str]): The path to the PDF file to process. Required if `from_pdf` is True.
+            text (Optional[str]): The text content to process. Required if `from_pdf` is False.
+
         Returns:
             PipelineResult: The result of the pipeline execution.
         """
-        return asyncio.run(self.run_async())
+        return asyncio.run(self.run_async(file_path=file_path, text=text))
+
+    def _prepare_inputs(self, file_path: Optional[str], text: Optional[str]) -> dict:
+        # Validate inputs
+        if self.from_pdf:
+            if file_path is None or text is not None:
+                raise ValueError(
+                    "Expected 'file_path' argument when 'from_pdf' is True."
+                )
+        else:
+            if text is None or file_path is not None:
+                raise ValueError("Expected 'text' argument when 'from_pdf' is False.")
+
+        # Prepare pipeline inputs
+        pipe_inputs = {
+            "schema": {
+                "entities": self.entities,
+                "relations": self.relations,
+                "potential_schema": self.potential_schema,
+            },
+        }
+
+        if self.from_pdf:
+            pipe_inputs["loader"] = {"filepath": file_path}
+        else:
+            pipe_inputs["splitter"] = {"text": text}
+            pipe_inputs["extractor"] = {"document_info": {"path": "direct_text_input"}}
+
+        return pipe_inputs

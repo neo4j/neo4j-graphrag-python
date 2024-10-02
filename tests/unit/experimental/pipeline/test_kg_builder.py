@@ -12,152 +12,175 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from unittest.mock import MagicMock, patch
+
 import neo4j
 import pytest
-from unittest.mock import MagicMock
-
 from neo4j_graphrag.experimental.components.schema import SchemaEntity, SchemaRelation
 from neo4j_graphrag.experimental.pipeline.kg_builder import KnowledgeGraphBuilder
-from neo4j_graphrag.llm import LLMResponse
+from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.llm.base import LLMInterface
 
 
 def test_knowledge_graph_builder_init_with_text():
     llm = MagicMock(spec=LLMInterface)
-    llm.ainvoke.return_value = LLMResponse(
-        content='{"nodes": [{"id": "0", "label": "Person", "properties": {}}], "relationships": []}'
-    )
     driver = MagicMock(spec=neo4j.Driver)
 
-    text_input = "May thy knife chip and shatter."
     kg_builder = KnowledgeGraphBuilder(
         llm=llm,
         driver=driver,
-        text=text_input,
+        from_pdf=False,
     )
 
     assert kg_builder.llm == llm
     assert kg_builder.driver == driver
-    assert kg_builder.text == text_input
-    assert kg_builder.file_path is None
+    assert kg_builder.from_pdf is False
     assert kg_builder.entities == []
     assert kg_builder.relations == []
     assert kg_builder.potential_schema == []
+
+    text_input = "May thy knife chip and shatter."
+
+    with patch.object(
+        kg_builder.pipeline,
+        "run",
+        return_value=PipelineResult(run_id="test_run", result=None),
+    ) as mock_run:
+        kg_builder.run(text=text_input)
+        mock_run.assert_called_once()
+        pipe_inputs = mock_run.call_args[0][0]
+        assert pipe_inputs["splitter"]["text"] == text_input
+        assert pipe_inputs["extractor"]["document_info"] == {
+            "path": "direct_text_input"
+        }
 
 
 def test_knowledge_graph_builder_init_with_file_path():
     llm = MagicMock(spec=LLMInterface)
-    llm.ainvoke.return_value = LLMResponse(
-        content='{"nodes": [{"id": "0", "label": "Person", "properties": {}}], "relationships": []}'
-    )
     driver = MagicMock(spec=neo4j.Driver)
 
-    file_path = "path/to/test.pdf"
     kg_builder = KnowledgeGraphBuilder(
         llm=llm,
         driver=driver,
-        file_path=file_path,
+        from_pdf=True,
     )
 
     assert kg_builder.llm == llm
     assert kg_builder.driver == driver
-    assert kg_builder.text is None
-    assert kg_builder.file_path == file_path
+    assert kg_builder.from_pdf is True
     assert kg_builder.entities == []
     assert kg_builder.relations == []
     assert kg_builder.potential_schema == []
 
+    file_path = "path/to/test.pdf"
 
-def test_knowledge_graph_builder_init_with_both_inputs():
+    with patch.object(
+        kg_builder.pipeline,
+        "run",
+        return_value=PipelineResult(run_id="test_run", result=None),
+    ) as mock_run:
+        kg_builder.run(file_path=file_path)
+        mock_run.assert_called_once()
+        pipe_inputs = mock_run.call_args[0][0]
+        assert pipe_inputs["loader"]["filepath"] == file_path
+
+
+def test_knowledge_graph_builder_run_with_both_inputs():
     llm = MagicMock(spec=LLMInterface)
-    llm.ainvoke.return_value = LLMResponse(
-        content='{"nodes": [{"id": "0", "label": "Person", "properties": {}}], "relationships": []}'
-    )
     driver = MagicMock(spec=neo4j.Driver)
+
+    kg_builder = KnowledgeGraphBuilder(
+        llm=llm,
+        driver=driver,
+        from_pdf=True,
+    )
 
     text_input = "May thy knife chip and shatter."
     file_path = "path/to/test.pdf"
 
     with pytest.raises(ValueError) as exc_info:
-        KnowledgeGraphBuilder(
-            llm=llm,
-            driver=driver,
-            text=text_input,
-            file_path=file_path,
-        )
+        kg_builder.run(file_path=file_path, text=text_input)
 
-    assert "Exactly one of 'file_path' or 'text' must be provided." in str(
+    assert "Expected 'file_path' argument when 'from_pdf' is True." in str(
         exc_info.value
-    )
+    ) or "Expected 'text' argument when 'from_pdf' is False." in str(exc_info.value)
 
 
-def test_knowledge_graph_builder_init_with_no_inputs():
+def test_knowledge_graph_builder_run_with_no_inputs():
     llm = MagicMock(spec=LLMInterface)
-    llm.ainvoke.return_value = LLMResponse(
-        content='{"nodes": [{"id": "0", "label": "Person", "properties": {}}], "relationships": []}'
-    )
     driver = MagicMock(spec=neo4j.Driver)
 
-    with pytest.raises(ValueError) as exc_info:
-        KnowledgeGraphBuilder(
-            llm=llm,
-            driver=driver,
-        )
-
-    assert "Exactly one of 'file_path' or 'text' must be provided." in str(
-        exc_info.value
+    kg_builder = KnowledgeGraphBuilder(
+        llm=llm,
+        driver=driver,
+        from_pdf=True,  # or False
     )
+
+    with pytest.raises(ValueError) as exc_info:
+        kg_builder.run()
+
+    assert "Expected 'file_path' argument when 'from_pdf' is True." in str(
+        exc_info.value
+    ) or "Expected 'text' argument when 'from_pdf' is False." in str(exc_info.value)
 
 
 def test_knowledge_graph_builder_document_info_with_file():
     llm = MagicMock(spec=LLMInterface)
-    llm.ainvoke.return_value = LLMResponse(
-        content='{"nodes": [{"id": "0", "label": "Person", "properties": {}}], "relationships": []}'
-    )
     driver = MagicMock(spec=neo4j.Driver)
 
-    file_path = "path/to/test.pdf"
     kg_builder = KnowledgeGraphBuilder(
         llm=llm,
         driver=driver,
-        file_path=file_path,
+        from_pdf=True,
     )
 
-    assert "loader" in kg_builder.pipe_inputs
-    assert kg_builder.pipe_inputs["loader"] == {"filepath": file_path}
-    assert "extractor" not in kg_builder.pipe_inputs
+    file_path = "path/to/test.pdf"
+
+    with patch.object(
+        kg_builder.pipeline,
+        "run",
+        return_value=PipelineResult(run_id="test_run", result=None),
+    ) as mock_run:
+        kg_builder.run(file_path=file_path)
+
+        pipe_inputs = mock_run.call_args[0][0]
+        assert "loader" in pipe_inputs
+        assert pipe_inputs["loader"] == {"filepath": file_path}
+        assert "extractor" not in pipe_inputs
 
 
 def test_knowledge_graph_builder_document_info_with_text():
     llm = MagicMock(spec=LLMInterface)
-    llm.ainvoke.return_value = LLMResponse(
-        content='{"nodes": [{"id": "0", "label": "Person", "properties": {}}], "relationships": []}'
-    )
     driver = MagicMock(spec=neo4j.Driver)
 
-    text_input = "May thy knife chip and shatter."
     kg_builder = KnowledgeGraphBuilder(
         llm=llm,
         driver=driver,
-        text=text_input,
+        from_pdf=False,
     )
 
-    assert "splitter" in kg_builder.pipe_inputs
-    assert kg_builder.pipe_inputs["splitter"] == {"text": text_input}
-    assert "extractor" in kg_builder.pipe_inputs
-    assert kg_builder.pipe_inputs["extractor"] == {
-        "document_info": {"path": "direct_text_input"}
-    }
+    text_input = "May thy knife chip and shatter."
+
+    with patch.object(
+        kg_builder.pipeline,
+        "run",
+        return_value=PipelineResult(run_id="test_run", result=None),
+    ) as mock_run:
+        kg_builder.run(text=text_input)
+
+        pipe_inputs = mock_run.call_args[0][0]
+        assert "splitter" in pipe_inputs
+        assert pipe_inputs["splitter"] == {"text": text_input}
+        assert "extractor" in pipe_inputs
+        assert pipe_inputs["extractor"] == {
+            "document_info": {"path": "direct_text_input"}
+        }
 
 
 def test_knowledge_graph_builder_with_entities_and_file():
     llm = MagicMock(spec=LLMInterface)
-    llm.ainvoke.return_value = LLMResponse(
-        content='{"nodes": [{"id": "0", "label": "Person", "properties": {}}], "relationships": []}'
-    )
     driver = MagicMock(spec=neo4j.Driver)
 
-    file_path = "path/to/test.pdf"
     entities = ["Document", "Section"]
     relations = ["CONTAINS"]
     potential_schema = [("Document", "CONTAINS", "Section")]
@@ -165,10 +188,10 @@ def test_knowledge_graph_builder_with_entities_and_file():
     kg_builder = KnowledgeGraphBuilder(
         llm=llm,
         driver=driver,
-        file_path=file_path,
         entities=entities,
         relations=relations,
         potential_schema=potential_schema,
+        from_pdf=True,
     )
 
     internal_entities = [SchemaEntity(label=label) for label in entities]
@@ -176,3 +199,16 @@ def test_knowledge_graph_builder_with_entities_and_file():
     assert kg_builder.entities == internal_entities
     assert kg_builder.relations == internal_relations
     assert kg_builder.potential_schema == potential_schema
+
+    file_path = "path/to/test.pdf"
+
+    with patch.object(
+        kg_builder.pipeline,
+        "run",
+        return_value=PipelineResult(run_id="test_run", result=None),
+    ) as mock_run:
+        kg_builder.run(file_path=file_path)
+        pipe_inputs = mock_run.call_args[0][0]
+        assert pipe_inputs["schema"]["entities"] == internal_entities
+        assert pipe_inputs["schema"]["relations"] == internal_relations
+        assert pipe_inputs["schema"]["potential_schema"] == potential_schema

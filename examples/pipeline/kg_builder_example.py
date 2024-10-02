@@ -18,14 +18,14 @@ import asyncio
 import logging
 
 import neo4j
+from neo4j_graphrag.experimental.components.entity_relation_extractor import OnError
 from neo4j_graphrag.experimental.components.schema import (
     SchemaEntity,
     SchemaRelation,
 )
-from neo4j_graphrag.llm.openai_llm import OpenAILLM
-from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.experimental.pipeline.kg_builder import KnowledgeGraphBuilder
-from neo4j_graphrag.experimental.components.entity_relation_extractor import OnError
+from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
+from neo4j_graphrag.llm.openai_llm import OpenAILLM
 
 logging.basicConfig(level=logging.INFO)
 
