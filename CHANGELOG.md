@@ -2,6 +2,8 @@
 
 ## Next
 
+## 0.7.0
+
 ### Added
 - Added AzureOpenAILLM and AzureOpenAIEmbeddings to support Azure served OpenAI models
 - Added `template` validation in `PromptTemplate` class upon construction.
