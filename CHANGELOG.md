@@ -24,12 +24,13 @@
 - `Text2CypherTemplate` and `RAGTemplate` prompt templates now require `query_text` arg and will error if it is not present. Previous `query_text` aliases may be used, but will warn of deprecation.
 - Resolved issue where Neo4jWriter component would raise an error if the start or end node ID was not defined properly in the input.
 - Resolved issue where relationship types was not escaped in the insert Cypher query.
-- Improved query performance in Neo4jWriter.
+- Improved query performance in Neo4jWriter: created nodes now have a generic `__KGBuilder__` label and an index is created on the `__KGBuilder__.id` property. Moreover, insertion queries are now batched. Batch size can be controlled using the `batch_size` parameter in the `Neo4jWriter` component.
 
 ### Changed
 - Moved the Embedder class to the neo4j_graphrag.embeddings directory for better organization alongside other custom embedders.
 - Removed query argument from the GraphRAG class' `.search` method; users must now use `query_text`.
 - Neo4jWriter component now runs a single query to merge node and set its embeddings if any.
+- Nodes created by the `Neo4jWriter` now have an extra `__KGBuilder__` label. Nodes from the entity graph also have an `__Entity__` label.
 - Dropped support for Python 3.8 (end of life).
 
 ## 0.6.3
