@@ -195,8 +195,9 @@ class Orchestrator:
         for d in dependencies:
             d_status = await self.get_status_for_component(d.start)
             if d_status != RunStatus.DONE:
-                logger.warning(
-                    f"Missing dependency {d.start} for {task.name} (status: {d_status})"
+                logger.debug(
+                    f"Missing dependency {d.start} for {task.name} (status: {d_status}). "
+                    "Will try again when dependency is complete."
                 )
                 raise PipelineMissingDependencyError()
 
@@ -605,6 +606,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
     async def run(self, data: dict[str, Any]) -> PipelineResult:
         logger.debug("Starting pipeline")
         start_time = default_timer()
+        self.invalidate()
         self.validate_input_data(data)
         orchestrator = Orchestrator(self)
         await orchestrator.run(data)

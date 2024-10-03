@@ -11,8 +11,6 @@ unstructured data.
 
     This feature is still experimental. API changes and bug fixes are expected.
 
-    It is not recommended to use it in production yet.
-
 
 ******************
 Pipeline Structure
@@ -26,6 +24,7 @@ A Knowledge Graph (KG) construction pipeline requires a few components:
 - **Schema builder**: provide a schema to ground the LLM extracted entities and relations and obtain an easily navigable KG.
 - **Entity and relation extractor**: extract relevant entities and relations from the text.
 - **Knowledge Graph writer**: save the identified entities and relations.
+- **Entity resolver**: merge similar entities into a single node.
 
 .. image:: images/kg_builder_pipeline.png
   :alt: KG Builder pipeline
@@ -426,3 +425,44 @@ It is possible to create a custom writer using the `KGWriter` interface:
 
 
 See :ref:`kgwritermodel` and :ref:`kgwriter` in API reference.
+
+
+Entity Resolver
+===============
+
+The KG Writer component creates new nodes for each identified entity
+without making assumptions about entity similarity. The Entity Resolver
+is responsible for refining the created knowledge graph by merging entity
+nodes that represent the same real-world object.
+
+In practice, this package implements a single resolver that merges nodes
+with the same label and identical "name" property.
+
+.. warning::
+
+    The `SinglePropertyExactMatchResolver` **replaces** the nodes created by the KG writer.
+
+
+It can be used like this:
+
+.. code:: python
+    from neo4j_graphrag.experimental.components.resolver import (
+        SinglePropertyExactMatchResolver,
+    )
+    resolver = SinglePropertyExactMatchResolver(driver)
+    res = await resolver.run()
+
+.. warning::
+
+    By default, all nodes with the __Entity__ label will be resolved.
+    To exclude specific nodes, a filter_query can be added to the query.
+    For example, if a `:Resolved` label has been applied to already resolved entities
+    in the graph, these entities can be excluded with the following approach:
+
+    .. code:: python
+
+        from neo4j_graphrag.experimental.components.resolver import (
+            SinglePropertyExactMatchResolver,
+        )
+        resolver = SinglePropertyExactMatchResolver(driver, filter_query="WHERE not entity:Resolved")
+        res = await resolver.run()
