@@ -26,6 +26,9 @@ from neo4j_graphrag.experimental.components.entity_relation_extractor import (
 )
 from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
 from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
+from neo4j_graphrag.experimental.components.resolver import (
+    SinglePropertyExactMatchResolver,
+)
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
     SchemaEntity,
@@ -52,6 +55,7 @@ class SimpleKGPipelineConfig(BaseModel):
     text_splitter: Any = None
     on_error: OnError = OnError.RAISE
     prompt_template: Union[ERExtractionTemplate, str] = ERExtractionTemplate()
+    perform_entity_resolution: bool = True
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -73,7 +77,8 @@ class SimpleKGPipeline:
         text_splitter (Optional[Any]): A text splitter component. Defaults to FixedSizeSplitter().
         pdf_loader (Optional[Any]): A PDF loader component. Defaults to PdfLoader().
         kg_writer (Optional[Any]): A knowledge graph writer component. Defaults to Neo4jWriter().
-        on_error (OnError): Error handling strategy. Defaults to OnError.RAISE.
+        on_error (str): Error handling strategy. Defaults to "RAISE". Possible values: "RAISE" or "IGNORE".
+        perform_entity_resolution (bool): Merge entities with same label and name. Default: True
     """
 
     def __init__(
@@ -89,6 +94,7 @@ class SimpleKGPipeline:
         kg_writer: Optional[Any] = None,
         on_error: str = "RAISE",
         prompt_template: Union[ERExtractionTemplate, str] = ERExtractionTemplate(),
+        perform_entity_resolution: bool = True,
     ):
         self.entities = [SchemaEntity(label=label) for label in entities or []]
         self.relations = [SchemaRelation(label=label) for label in relations or []]
@@ -113,18 +119,20 @@ class SimpleKGPipeline:
             text_splitter=text_splitter,
             on_error=on_error_enum,
             prompt_template=prompt_template,
+            perform_entity_resolution=perform_entity_resolution,
         )
 
         self.from_pdf = config.from_pdf
         self.llm = config.llm
         self.driver = config.driver
         self.text_splitter = config.text_splitter or FixedSizeSplitter()
-        self.on_error = config.on_error
+        self.on_error: OnError = config.on_error
         self.pdf_loader = config.pdf_loader if pdf_loader is not None else PdfLoader()
         self.kg_writer = (
             config.kg_writer if kg_writer is not None else Neo4jWriter(driver)
         )
         self.prompt_template = config.prompt_template
+        self.perform_entity_resolution = config.perform_entity_resolution
 
         self.pipeline = self._build_pipeline()
 
@@ -181,6 +189,12 @@ class SimpleKGPipeline:
             "writer",
             input_config={"graph": "extractor"},
         )
+
+        if self.perform_entity_resolution:
+            pipe.add_component(
+                SinglePropertyExactMatchResolver(self.driver), "resolver"
+            )
+            pipe.connect("writer", "resolver", {})
 
         return pipe
 
