@@ -25,7 +25,7 @@ from fsspec import AbstractFileSystem
 from fsspec.implementations.local import LocalFileSystem
 
 from neo4j_graphrag.exceptions import PdfLoaderError
-from neo4j_graphrag.experimental.pipeline import Component, DataModel
+from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
 
 
 class DocumentInfo(DataModel):

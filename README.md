@@ -14,13 +14,12 @@ Python versions supported:
 * Python 3.11 supported.
 * Python 3.10 supported.
 * Python 3.9 supported.
-* Python 3.8 supported.
 
 # Usage
 
 ## Installation
 
-This package requires Python (>=3.8.1).
+This package requires Python (>=3.9).
 
 To install the latest stable version, use:
 
@@ -36,6 +35,47 @@ pip install neo4j-graphrag
 Follow installation instructions [here](https://pygraphviz.github.io/documentation/stable/install.html).
 
 ## Examples
+
+### Knowledge graph construction
+
+```python
+from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
+from neo4j_graphrag.llm.openai_llm import OpenAILLM
+
+# Instantiate Entity and Relation objects
+entities = ["PERSON", "ORGANIZATION", "LOCATION"]
+relations = ["SITUATED_AT", "INTERACTS", "LED_BY"]
+potential_schema = [
+    ("PERSON", "SITUATED_AT", "LOCATION"),
+    ("PERSON", "INTERACTS", "PERSON"),
+    ("ORGANIZATION", "LED_BY", "PERSON"),
+]
+
+# Instantiate the LLM
+llm = OpenAILLM(
+    model_name="gpt-4o",
+    model_params={
+        "max_tokens": 2000,
+        "response_format": {"type": "json_object"},
+    },
+)
+
+# Create an instance of the SimpleKGPipeline
+kg_builder = SimpleKGPipeline(
+    llm=llm,
+    driver=driver,
+    file_path=file_path,
+    entities=entities,
+    relations=relations,
+)
+
+await kg_builder.run_async(text="""
+    Albert Einstein was a German physicist born in 1879 who wrote many groundbreaking
+    papers especially about general relativity and quantum mechanics.
+""")
+```
+
+
 
 ### Creating a vector index
 
