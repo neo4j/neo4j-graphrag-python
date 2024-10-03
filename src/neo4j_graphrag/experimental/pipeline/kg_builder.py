@@ -15,7 +15,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from typing import Any, List, Optional, Union
 
 import neo4j
@@ -193,39 +192,6 @@ class SimpleKGPipeline:
         """
         pipe_inputs = self._prepare_inputs(file_path=file_path, text=text)
         return await self.pipeline.run(pipe_inputs)
-
-    def run(
-        self, file_path: Optional[str] = None, text: Optional[str] = None
-    ) -> PipelineResult:
-        """
-        Runs the knowledge graph building process.
-
-        Args:
-            file_path (Optional[str]): The path to the PDF file to process. Required if `from_pdf` is True.
-            text (Optional[str]): The text content to process. Required if `from_pdf` is False.
-
-        Returns:
-            PipelineResult: The result of the pipeline execution.
-        """
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-        if loop.is_running():
-            new_loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(new_loop)
-            result = new_loop.run_until_complete(
-                self.run_async(file_path=file_path, text=text)
-            )
-            new_loop.close()
-            asyncio.set_event_loop(loop)
-        else:
-            result = loop.run_until_complete(
-                self.run_async(file_path=file_path, text=text)
-            )
-        return result
 
     def _prepare_inputs(
         self, file_path: Optional[str], text: Optional[str]

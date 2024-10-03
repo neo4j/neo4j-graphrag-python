@@ -18,7 +18,6 @@ import asyncio
 import logging
 
 import neo4j
-from neo4j_graphrag.experimental.components.entity_relation_extractor import OnError
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.llm.openai_llm import OpenAILLM
 
@@ -53,7 +52,7 @@ async def main(neo4j_driver: neo4j.Driver) -> None:
         relations=relations,
         potential_schema=potential_schema,
         from_pdf=True,
-        on_error=OnError.RAISE,
+        on_error="RAISE",
     )
 
     # Run the knowledge graph building process asynchronously
@@ -69,7 +68,7 @@ async def main(neo4j_driver: neo4j.Driver) -> None:
         relations=relations,
         potential_schema=potential_schema,
         from_pdf=False,
-        on_error=OnError.RAISE,
+        on_error="RAISE",
     )
 
     # Run the knowledge graph building process with text input
