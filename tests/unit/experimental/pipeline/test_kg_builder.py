@@ -25,7 +25,8 @@ from neo4j_graphrag.llm.base import LLMInterface
 from pydantic import ValidationError
 
 
-def test_knowledge_graph_builder_init_with_text() -> None:
+@pytest.mark.asyncio
+async def test_knowledge_graph_builder_init_with_text() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
 
@@ -49,13 +50,14 @@ def test_knowledge_graph_builder_init_with_text() -> None:
         "run",
         return_value=PipelineResult(run_id="test_run", result=None),
     ) as mock_run:
-        kg_builder.run(text=text_input)
+        await kg_builder.run_async(text=text_input)
         mock_run.assert_called_once()
         pipe_inputs = mock_run.call_args[0][0]
         assert pipe_inputs["splitter"]["text"] == text_input
 
 
-def test_knowledge_graph_builder_init_with_file_path() -> None:
+@pytest.mark.asyncio
+async def test_knowledge_graph_builder_init_with_file_path() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
 
@@ -79,13 +81,14 @@ def test_knowledge_graph_builder_init_with_file_path() -> None:
         "run",
         return_value=PipelineResult(run_id="test_run", result=None),
     ) as mock_run:
-        kg_builder.run(file_path=file_path)
+        await kg_builder.run_async(file_path=file_path)
         mock_run.assert_called_once()
         pipe_inputs = mock_run.call_args[0][0]
         assert pipe_inputs["pdf_loader"]["filepath"] == file_path
 
 
-def test_knowledge_graph_builder_run_with_both_inputs() -> None:
+@pytest.mark.asyncio
+async def test_knowledge_graph_builder_run_with_both_inputs() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
 
@@ -99,14 +102,15 @@ def test_knowledge_graph_builder_run_with_both_inputs() -> None:
     file_path = "path/to/test.pdf"
 
     with pytest.raises(PipelineDefinitionError) as exc_info:
-        kg_builder.run(file_path=file_path, text=text_input)
+        await kg_builder.run_async(file_path=file_path, text=text_input)
 
     assert "Expected 'file_path' argument when 'from_pdf' is True." in str(
         exc_info.value
     ) or "Expected 'text' argument when 'from_pdf' is False." in str(exc_info.value)
 
 
-def test_knowledge_graph_builder_run_with_no_inputs() -> None:
+@pytest.mark.asyncio
+async def test_knowledge_graph_builder_run_with_no_inputs() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
 
@@ -117,14 +121,15 @@ def test_knowledge_graph_builder_run_with_no_inputs() -> None:
     )
 
     with pytest.raises(PipelineDefinitionError) as exc_info:
-        kg_builder.run()
+        await kg_builder.run_async()
 
     assert "Expected 'file_path' argument when 'from_pdf' is True." in str(
         exc_info.value
     ) or "Expected 'text' argument when 'from_pdf' is False." in str(exc_info.value)
 
 
-def test_knowledge_graph_builder_document_info_with_file() -> None:
+@pytest.mark.asyncio
+async def test_knowledge_graph_builder_document_info_with_file() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
 
@@ -141,7 +146,7 @@ def test_knowledge_graph_builder_document_info_with_file() -> None:
         "run",
         return_value=PipelineResult(run_id="test_run", result=None),
     ) as mock_run:
-        kg_builder.run(file_path=file_path)
+        await kg_builder.run_async(file_path=file_path)
 
         pipe_inputs = mock_run.call_args[0][0]
         assert "pdf_loader" in pipe_inputs
@@ -149,7 +154,8 @@ def test_knowledge_graph_builder_document_info_with_file() -> None:
         assert "extractor" not in pipe_inputs
 
 
-def test_knowledge_graph_builder_document_info_with_text() -> None:
+@pytest.mark.asyncio
+async def test_knowledge_graph_builder_document_info_with_text() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
 
@@ -166,14 +172,15 @@ def test_knowledge_graph_builder_document_info_with_text() -> None:
         "run",
         return_value=PipelineResult(run_id="test_run", result=None),
     ) as mock_run:
-        kg_builder.run(text=text_input)
+        await kg_builder.run_async(text=text_input)
 
         pipe_inputs = mock_run.call_args[0][0]
         assert "splitter" in pipe_inputs
         assert pipe_inputs["splitter"] == {"text": text_input}
 
 
-def test_knowledge_graph_builder_with_entities_and_file() -> None:
+@pytest.mark.asyncio
+async def test_knowledge_graph_builder_with_entities_and_file() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
 
@@ -203,7 +210,7 @@ def test_knowledge_graph_builder_with_entities_and_file() -> None:
         "run",
         return_value=PipelineResult(run_id="test_run", result=None),
     ) as mock_run:
-        kg_builder.run(file_path=file_path)
+        await kg_builder.run_async(file_path=file_path)
         pipe_inputs = mock_run.call_args[0][0]
         assert pipe_inputs["schema"]["entities"] == internal_entities
         assert pipe_inputs["schema"]["relations"] == internal_relations
