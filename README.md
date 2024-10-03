@@ -69,7 +69,10 @@ kg_builder = SimpleKGPipeline(
     relations=relations,
 )
 
-kg_builder.run()
+await kg_builder.run_async(text="""
+    Albert Einstein was a German physicist born in 1879 who wrote many groundbreaking
+    papers especially about general relativity and quantum mechanics.
+""")
 ```
 
 
