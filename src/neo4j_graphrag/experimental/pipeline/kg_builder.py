@@ -126,7 +126,7 @@ class SimpleKGPipeline:
         self.llm = config.llm
         self.driver = config.driver
         self.text_splitter = config.text_splitter or FixedSizeSplitter()
-        self.on_error: OnError = config.on_error
+        self.on_error = config.on_error
         self.pdf_loader = config.pdf_loader if pdf_loader is not None else PdfLoader()
         self.kg_writer = (
             config.kg_writer if kg_writer is not None else Neo4jWriter(driver)
