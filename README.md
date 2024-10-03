@@ -39,6 +39,9 @@ Follow installation instructions [here](https://pygraphviz.github.io/documentati
 ### Knowledge graph construction
 
 ```python
+from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
+from neo4j_graphrag.llm.openai_llm import OpenAILLM
+
 # Instantiate Entity and Relation objects
 entities = ["PERSON", "ORGANIZATION", "LOCATION"]
 relations = ["SITUATED_AT", "INTERACTS", "LED_BY"]
