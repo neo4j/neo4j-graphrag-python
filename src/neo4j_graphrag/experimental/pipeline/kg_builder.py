@@ -94,6 +94,13 @@ class SimpleKGPipeline:
         self.relations = [SchemaRelation(label=label) for label in relations or []]
         self.potential_schema = potential_schema if potential_schema is not None else []
 
+        try:
+            on_error_enum = OnError(on_error)
+        except PipelineDefinitionError:
+            raise PipelineDefinitionError(
+                f"Invalid value for on_error: {on_error}. Expected 'RAISE' or 'CONTINUE'."
+            )
+
         config = SimpleKGPipelineConfig(
             llm=llm,
             driver=driver,
@@ -104,7 +111,7 @@ class SimpleKGPipeline:
             pdf_loader=pdf_loader,
             kg_writer=kg_writer,
             text_splitter=text_splitter,
-            on_error=on_error,
+            on_error=on_error_enum,
             prompt_template=prompt_template,
         )
 
