@@ -460,6 +460,7 @@ It can be used like this:
     in the graph, these entities can be excluded with the following approach:
 
     .. code:: python
+
         from neo4j_graphrag.experimental.components.resolver import (
             SinglePropertyExactMatchResolver,
         )
