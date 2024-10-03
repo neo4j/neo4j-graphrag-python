@@ -41,7 +41,7 @@ async def test_knowledge_graph_builder_init_with_text() -> None:
     assert kg_builder.entities == []
     assert kg_builder.relations == []
     assert kg_builder.potential_schema == []
-    assert "loader" not in kg_builder.pipeline
+    assert "pdf_loader" not in kg_builder.pipeline
 
     text_input = "May thy knife chip and shatter."
 
@@ -73,7 +73,7 @@ async def test_knowledge_graph_builder_init_with_file_path() -> None:
     assert kg_builder.entities == []
     assert kg_builder.relations == []
     assert kg_builder.potential_schema == []
-    assert "loader" in kg_builder.pipeline
+    assert "pdf_loader" in kg_builder.pipeline
 
     file_path = "path/to/test.pdf"
 
