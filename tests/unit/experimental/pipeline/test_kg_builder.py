@@ -17,7 +17,7 @@ from unittest.mock import MagicMock, patch
 import neo4j
 import pytest
 from neo4j_graphrag.experimental.components.schema import SchemaEntity, SchemaRelation
-from neo4j_graphrag.experimental.pipeline.kg_builder import KnowledgeGraphBuilder
+from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.llm.base import LLMInterface
 
@@ -26,7 +26,7 @@ def test_knowledge_graph_builder_init_with_text() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
 
-    kg_builder = KnowledgeGraphBuilder(
+    kg_builder = SimpleKGPipeline(
         llm=llm,
         driver=driver,
         from_pdf=False,
@@ -50,16 +50,13 @@ def test_knowledge_graph_builder_init_with_text() -> None:
         mock_run.assert_called_once()
         pipe_inputs = mock_run.call_args[0][0]
         assert pipe_inputs["splitter"]["text"] == text_input
-        assert pipe_inputs["extractor"]["document_info"] == {
-            "path": "direct_text_input"
-        }
 
 
 def test_knowledge_graph_builder_init_with_file_path() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
 
-    kg_builder = KnowledgeGraphBuilder(
+    kg_builder = SimpleKGPipeline(
         llm=llm,
         driver=driver,
         from_pdf=True,
@@ -82,14 +79,14 @@ def test_knowledge_graph_builder_init_with_file_path() -> None:
         kg_builder.run(file_path=file_path)
         mock_run.assert_called_once()
         pipe_inputs = mock_run.call_args[0][0]
-        assert pipe_inputs["loader"]["filepath"] == file_path
+        assert pipe_inputs["pdf_loader"]["filepath"] == file_path
 
 
 def test_knowledge_graph_builder_run_with_both_inputs() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
 
-    kg_builder = KnowledgeGraphBuilder(
+    kg_builder = SimpleKGPipeline(
         llm=llm,
         driver=driver,
         from_pdf=True,
@@ -110,7 +107,7 @@ def test_knowledge_graph_builder_run_with_no_inputs() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
 
-    kg_builder = KnowledgeGraphBuilder(
+    kg_builder = SimpleKGPipeline(
         llm=llm,
         driver=driver,
         from_pdf=True,  # or False
@@ -128,7 +125,7 @@ def test_knowledge_graph_builder_document_info_with_file() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
 
-    kg_builder = KnowledgeGraphBuilder(
+    kg_builder = SimpleKGPipeline(
         llm=llm,
         driver=driver,
         from_pdf=True,
@@ -144,8 +141,8 @@ def test_knowledge_graph_builder_document_info_with_file() -> None:
         kg_builder.run(file_path=file_path)
 
         pipe_inputs = mock_run.call_args[0][0]
-        assert "loader" in pipe_inputs
-        assert pipe_inputs["loader"] == {"filepath": file_path}
+        assert "pdf_loader" in pipe_inputs
+        assert pipe_inputs["pdf_loader"] == {"filepath": file_path}
         assert "extractor" not in pipe_inputs
 
 
@@ -153,7 +150,7 @@ def test_knowledge_graph_builder_document_info_with_text() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
 
-    kg_builder = KnowledgeGraphBuilder(
+    kg_builder = SimpleKGPipeline(
         llm=llm,
         driver=driver,
         from_pdf=False,
@@ -171,10 +168,6 @@ def test_knowledge_graph_builder_document_info_with_text() -> None:
         pipe_inputs = mock_run.call_args[0][0]
         assert "splitter" in pipe_inputs
         assert pipe_inputs["splitter"] == {"text": text_input}
-        assert "extractor" in pipe_inputs
-        assert pipe_inputs["extractor"] == {
-            "document_info": {"path": "direct_text_input"}
-        }
 
 
 def test_knowledge_graph_builder_with_entities_and_file() -> None:
@@ -185,7 +178,7 @@ def test_knowledge_graph_builder_with_entities_and_file() -> None:
     relations = ["CONTAINS"]
     potential_schema = [("Document", "CONTAINS", "Section")]
 
-    kg_builder = KnowledgeGraphBuilder(
+    kg_builder = SimpleKGPipeline(
         llm=llm,
         driver=driver,
         entities=entities,

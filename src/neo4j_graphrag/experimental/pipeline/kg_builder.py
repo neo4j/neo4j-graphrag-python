@@ -19,7 +19,7 @@ import asyncio
 from typing import Any, List, Optional, Union
 
 import neo4j
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
@@ -40,9 +40,10 @@ from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 from neo4j_graphrag.llm.base import LLMInterface
 
 
-class KnowledgeGraphBuilderConfig(BaseModel):
+class SimpleKGPipelineConfig(BaseModel):
     llm: LLMInterface
     driver: neo4j.Driver
+    from_pdf: bool
     entities: list[SchemaEntity] = Field(default_factory=list)
     relations: list[SchemaRelation] = Field(default_factory=list)
     potential_schema: list[tuple[str, str, str]] = Field(default_factory=list)
@@ -55,7 +56,7 @@ class KnowledgeGraphBuilderConfig(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
-class KnowledgeGraphBuilder:
+class SimpleKGPipeline:
     """
     A class to simplify the process of building a knowledge graph from text documents.
     It abstracts away the complexity of setting up the pipeline and its components.
@@ -93,12 +94,13 @@ class KnowledgeGraphBuilder:
         self.relations = [SchemaRelation(label=label) for label in relations or []]
         self.potential_schema = potential_schema if potential_schema is not None else []
 
-        self.config = KnowledgeGraphBuilderConfig(
+        config = SimpleKGPipelineConfig(
             llm=llm,
             driver=driver,
             entities=self.entities,
             relations=self.relations,
             potential_schema=self.potential_schema,
+            from_pdf=from_pdf,
             pdf_loader=pdf_loader,
             kg_writer=kg_writer,
             text_splitter=text_splitter,
@@ -106,14 +108,16 @@ class KnowledgeGraphBuilder:
             prompt_template=prompt_template,
         )
 
-        self.from_pdf = from_pdf
-        self.llm = llm
-        self.driver = driver
-        self.text_splitter = text_splitter or FixedSizeSplitter()
-        self.on_error = on_error
-        self.pdf_loader = pdf_loader if pdf_loader is not None else PdfLoader()
-        self.kg_writer = kg_writer if kg_writer is not None else Neo4jWriter(driver)
-        self.prompt_template = self.config.prompt_template
+        self.from_pdf = config.from_pdf
+        self.llm = config.llm
+        self.driver = config.driver
+        self.text_splitter = config.text_splitter or FixedSizeSplitter()
+        self.on_error = config.on_error
+        self.pdf_loader = config.pdf_loader if pdf_loader is not None else PdfLoader()
+        self.kg_writer = (
+            config.kg_writer if kg_writer is not None else Neo4jWriter(driver)
+        )
+        self.prompt_template = config.prompt_template
 
         self.pipeline = self._build_pipeline()
 
@@ -126,7 +130,7 @@ class KnowledgeGraphBuilder:
             LLMEntityRelationExtractor(
                 llm=self.llm,
                 on_error=self.on_error,
-                prompt_template=self.prompt_template
+                prompt_template=self.prompt_template,
             ),
             "extractor",
         )

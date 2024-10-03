@@ -40,33 +40,12 @@ Follow installation instructions [here](https://pygraphviz.github.io/documentati
 
 ```python
 # Instantiate Entity and Relation objects
-entities = [
-    SchemaEntity(label="PERSON", description="An individual human being."),
-    SchemaEntity(
-        label="ORGANIZATION",
-        description="A structured group of people with a common purpose.",
-    ),
-    SchemaEntity(label="LOCATION", description="A location or place."),
-    SchemaEntity(
-        label="HORCRUX",
-        description="A magical item in the Harry Potter universe.",
-    ),
-]
-relations = [
-    SchemaRelation(
-        label="SITUATED_AT", description="Indicates the location of a person."
-    ),
-    SchemaRelation(
-        label="LED_BY",
-        description="Indicates the leader of an organization.",
-    ),
-    SchemaRelation(
-        label="OWNS",
-        description="Indicates the ownership of an item such as a Horcrux.",
-    ),
-    SchemaRelation(
-        label="INTERACTS", description="The interaction between two people."
-    ),
+entities = ["PERSON", "ORGANIZATION", "LOCATION"]
+relations = ["SITUATED_AT", "INTERACTS", "LED_BY"]
+potential_schema = [
+    ("PERSON", "SITUATED_AT", "LOCATION"),
+    ("PERSON", "INTERACTS", "PERSON"),
+    ("ORGANIZATION", "LED_BY", "PERSON"),
 ]
 
 # Instantiate the LLM
@@ -78,14 +57,13 @@ llm = OpenAILLM(
     },
 )
 
-# Create an instance of the KnowledgeGraphBuilder
-kg_builder = KnowledgeGraphBuilder(
+# Create an instance of the SimpleKGPipeline
+kg_builder = SimpleKGPipeline(
     llm=llm,
     driver=driver,
-    file_path="examples/pipeline/Harry Potter and the Death Hallows Summary.pdf",
+    file_path=file_path,
     entities=entities,
     relations=relations,
-    on_error=OnError.RAISE,
 )
 
 ```

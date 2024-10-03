@@ -19,7 +19,7 @@ import logging
 
 import neo4j
 from neo4j_graphrag.experimental.components.entity_relation_extractor import OnError
-from neo4j_graphrag.experimental.pipeline.kg_builder import KnowledgeGraphBuilder
+from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.llm.openai_llm import OpenAILLM
 
@@ -46,14 +46,14 @@ async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
         },
     )
 
-    # Create an instance of the KnowledgeGraphBuilder
-    kg_builder_pdf = KnowledgeGraphBuilder(
+    # Create an instance of the SimpleKGPipeline
+    kg_builder_pdf = SimpleKGPipeline(
         llm=llm,
         driver=neo4j_driver,
         entities=entities,
         relations=relations,
         potential_schema=potential_schema,
-        text_splitter=None,
+        from_pdf=True,
         on_error=OnError.RAISE,
     )
 
@@ -62,8 +62,8 @@ async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
     pdf_result = await kg_builder_pdf.run_async(file_path=pdf_file_path)
     print(f"PDF Processing Result: {pdf_result}")
 
-    # Create an instance of the KnowledgeGraphBuilder for text input
-    kg_builder_text = KnowledgeGraphBuilder(
+    # Create an instance of the SimpleKGPipeline for text input
+    kg_builder_text = SimpleKGPipeline(
         llm=llm,
         driver=neo4j_driver,
         entities=entities,
@@ -78,9 +78,11 @@ async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
     text_result = await kg_builder_text.run_async(text=text_input)
     print(f"Text Processing Result: {text_result}")
 
+    await llm.async_client.close()
+
 
 if __name__ == "__main__":
     with neo4j.GraphDatabase.driver(
         "bolt://localhost:7687", auth=("neo4j", "password")
     ) as driver:
-        print(asyncio.run(main(driver)))
+        asyncio.run(main(driver))

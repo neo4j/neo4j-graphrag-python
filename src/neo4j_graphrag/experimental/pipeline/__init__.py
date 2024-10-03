@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from .component import Component, DataModel
+from .kg_builder import SimpleKGPipeline
 from .pipeline import Pipeline
 from .stores import InMemoryStore, Store
 
@@ -22,4 +23,5 @@ __all__ = [
     "Component",
     "DataModel",
     "Pipeline",
+    "SimpleKGPipeline",
 ]
