@@ -35,6 +35,7 @@ from neo4j_graphrag.experimental.components.schema import (
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
     FixedSizeSplitter,
 )
+from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
 from neo4j_graphrag.experimental.pipeline.pipeline import Pipeline, PipelineResult
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 from neo4j_graphrag.llm.base import LLMInterface
@@ -216,12 +217,14 @@ class SimpleKGPipeline:
             new_loop = asyncio.new_event_loop()
             asyncio.set_event_loop(new_loop)
             result = new_loop.run_until_complete(
-                self.run_async(file_path=file_path, text=text))
+                self.run_async(file_path=file_path, text=text)
+            )
             new_loop.close()
             asyncio.set_event_loop(loop)
         else:
             result = loop.run_until_complete(
-                self.run_async(file_path=file_path, text=text))
+                self.run_async(file_path=file_path, text=text)
+            )
         return result
 
     def _prepare_inputs(
@@ -229,12 +232,14 @@ class SimpleKGPipeline:
     ) -> dict[str, Any]:
         if self.from_pdf:
             if file_path is None or text is not None:
-                raise ValueError(
+                raise PipelineDefinitionError(
                     "Expected 'file_path' argument when 'from_pdf' is True."
                 )
         else:
             if text is None or file_path is not None:
-                raise ValueError("Expected 'text' argument when 'from_pdf' is False.")
+                raise PipelineDefinitionError(
+                    "Expected 'text' argument when 'from_pdf' is False."
+                )
 
         pipe_inputs: dict[str, Any] = {
             "schema": {
