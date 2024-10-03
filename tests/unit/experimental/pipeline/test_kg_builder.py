@@ -22,7 +22,6 @@ from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionEr
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.llm.base import LLMInterface
-from pydantic import ValidationError
 
 
 @pytest.mark.asyncio
@@ -234,11 +233,11 @@ def test_simple_kg_pipeline_on_error_invalid_value() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
 
-    with pytest.raises(ValidationError) as exc_info:
+    with pytest.raises(PipelineDefinitionError) as exc_info:
         SimpleKGPipeline(
             llm=llm,
             driver=driver,
             on_error="IGNORE",
         )
 
-    assert "Input should be 'RAISE' or 'CONTINUE'" in str(exc_info.value)
+    assert "Expected 'RAISE' or 'CONTINUE'" in str(exc_info.value)

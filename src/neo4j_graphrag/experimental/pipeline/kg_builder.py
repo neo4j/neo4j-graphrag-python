@@ -96,7 +96,7 @@ class SimpleKGPipeline:
 
         try:
             on_error_enum = OnError(on_error)
-        except PipelineDefinitionError:
+        except ValueError:
             raise PipelineDefinitionError(
                 f"Invalid value for on_error: {on_error}. Expected 'RAISE' or 'CONTINUE'."
             )
