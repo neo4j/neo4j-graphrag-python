@@ -17,6 +17,7 @@ from unittest.mock import MagicMock, patch
 import neo4j
 import pytest
 from neo4j_graphrag.experimental.components.schema import SchemaEntity, SchemaRelation
+from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.llm.base import LLMInterface
@@ -95,7 +96,7 @@ def test_knowledge_graph_builder_run_with_both_inputs() -> None:
     text_input = "May thy knife chip and shatter."
     file_path = "path/to/test.pdf"
 
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(PipelineDefinitionError) as exc_info:
         kg_builder.run(file_path=file_path, text=text_input)
 
     assert "Expected 'file_path' argument when 'from_pdf' is True." in str(
@@ -113,7 +114,7 @@ def test_knowledge_graph_builder_run_with_no_inputs() -> None:
         from_pdf=True,  # or False
     )
 
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(PipelineDefinitionError) as exc_info:
         kg_builder.run()
 
     assert "Expected 'file_path' argument when 'from_pdf' is True." in str(
