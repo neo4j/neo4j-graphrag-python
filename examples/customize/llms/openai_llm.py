@@ -1,6 +1,6 @@
 from neo4j_graphrag.llm import LLMResponse, OpenAILLM
 
-# set api key here on in env var
+# set api key here on in the OPENAI_API_KEY env var
 api_key = None
 # api_key = "sk-..."
 

@@ -46,10 +46,12 @@ are listed in [the last section of this file](#customize).
 
 ### LLMs
 
-- [OpenAI](./customize/llms/openai_llm.py)
+- [OpenAI (GPT)](./customize/llms/openai_llm.py)
 - [Azure OpenAI]()
-- [VertexAI]()
-- [MistralAI]()
+- [VertexAI (Gemini)](./customize/llms/vertexai_llm.py)
+- [MistralAI](./customize/llms/mistalai_llm.py)
+- [Cohere](./customize/llms/cohere_llm.py)
+- [Anthropic (Claude)](./customize/llms/anthropic_llm.py)
 - [Ollama]()
 - [Custom LLM](./customize/llms/custom_llm.py)
 

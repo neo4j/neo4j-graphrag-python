@@ -20,5 +20,5 @@ class CustomLLM(LLMInterface):
 
 
 llm = CustomLLM("")
-res = llm.invoke("text")
+res: LLMResponse = llm.invoke("text")
 print(res.content)
