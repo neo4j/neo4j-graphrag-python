@@ -1,0 +1,46 @@
+name: Publish a new Alpha release (x.y.0a0 -> x.y.0a1) 🚀
+
+on:
+  workflow_dispatch:
+
+jobs:
+  bump-version:
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GIT_PUSH_PAT }}
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install and configure Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.8.2
+          virtualenvs-create: false
+          virtualenvs-in-project: false
+          installer-parallel: true
+
+      - name: Bump version
+        run: poetry version prerelease
+
+      - name: Get version
+        id: get-version
+        run: echo version=`poetry version -s` >> "$GITHUB_OUTPUT"
+      - name: Print version
+        run: |
+          echo Version: ${{ steps.get-version.outputs.version }}
+      - name: Update CHANGELOG.md (cross platform supported)
+        run: |
+          sed -i.bak -e 's/## Next/## Next\n\n## ${{ steps.get-version.outputs.version }}/' CHANGELOG.md && rm CHANGELOG.md.bak
+      - uses: EndBug/add-and-commit@v9
+        with:
+          author_name: 'Neo4j-GraphRAG GitHub Action'
+          author_email: 'team-gen-ai@neo4j.com'
+          message: 'Bump version to ${{ steps.get-version.outputs.version }}'
+          add: "['pyproject.toml', 'CHANGELOG.md']"
+          tag: '${{ steps.get-version.outputs.version }}'
