@@ -69,6 +69,7 @@ kg_builder = SimpleKGPipeline(
     relations=relations,
 )
 
+kg_builder.run()
 ```
 
 
