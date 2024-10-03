@@ -40,6 +40,10 @@ are listed in [the last section of this file](#customize).
 
 ## Customize
 
+### Retriever
+
+- [Result format](customize/retrievers/result_formatter.py)
+
 ### LLMs
 
 - [OpenAI](./customize/llms/openai_llm.py)
@@ -65,7 +69,7 @@ are listed in [the last section of this file](#customize).
 - [Custom LLM]()
 
 
-### KG Construction
+### KG Construction - Pipeline
 
 - [End to end example with explicit components]()
 
