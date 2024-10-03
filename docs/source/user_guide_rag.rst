@@ -78,6 +78,7 @@ If OpenAI cannot be used directly, there are a few available alternatives:
 - Use Azure OpenAI (GPT...).
 - Use Google VertexAI (Gemini...).
 - Use Anthropic LLM (Claude...).
+- Use Mistral LLM
 - Use Cohere.
 - Use a local Ollama model.
 - Implement a custom interface.
@@ -162,6 +163,31 @@ To use Anthropic, instantiate the `AnthropicLLM` class:
     `pip install anthropic`
 
 See :ref:`anthropicllm`.
+
+
+Using MistralAI LLM
+-------------------
+
+To use MistralAI, instantiate the `MistralAILLM` class:
+
+.. code:: python
+
+    from neo4j_graphrag.llm import MistralAILLM
+
+    llm = MistralAILLM(
+        model_name="mistral-small-latest",
+        api_key=api_key,  # can also set `MISTRAL_API_KEY` in env vars
+    )
+    llm.invoke("say something")
+
+
+.. note::
+
+    In order to run this code, the `mistralai` Python package needs to be installed:
+    `pip install mistralai`
+
+See :ref:`mistralaillm`.
+
 
 
 Using Cohere LLM
