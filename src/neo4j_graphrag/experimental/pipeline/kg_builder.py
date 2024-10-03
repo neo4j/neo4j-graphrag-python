@@ -206,7 +206,23 @@ class SimpleKGPipeline:
         Returns:
             PipelineResult: The result of the pipeline execution.
         """
-        return asyncio.run(self.run_async(file_path=file_path, text=text))
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        if loop.is_running():
+            new_loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(new_loop)
+            result = new_loop.run_until_complete(
+                self.run_async(file_path=file_path, text=text))
+            new_loop.close()
+            asyncio.set_event_loop(loop)
+        else:
+            result = loop.run_until_complete(
+                self.run_async(file_path=file_path, text=text))
+        return result
 
     def _prepare_inputs(
         self, file_path: Optional[str], text: Optional[str]
