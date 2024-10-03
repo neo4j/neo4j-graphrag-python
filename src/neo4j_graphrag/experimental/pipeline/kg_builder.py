@@ -88,7 +88,7 @@ class SimpleKGPipeline:
         text_splitter: Optional[Any] = None,
         pdf_loader: Optional[Any] = None,
         kg_writer: Optional[Any] = None,
-        on_error: OnError = OnError.RAISE,
+        on_error: str = "RAISE",
         prompt_template: Union[ERExtractionTemplate, str] = ERExtractionTemplate(),
     ):
         self.entities = [SchemaEntity(label=label) for label in entities or []]

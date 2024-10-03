@@ -16,11 +16,13 @@ from unittest.mock import MagicMock, patch
 
 import neo4j
 import pytest
+from neo4j_graphrag.experimental.components.entity_relation_extractor import OnError
 from neo4j_graphrag.experimental.components.schema import SchemaEntity, SchemaRelation
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.llm.base import LLMInterface
+from pydantic import ValidationError
 
 
 def test_knowledge_graph_builder_init_with_text() -> None:
@@ -206,3 +208,30 @@ def test_knowledge_graph_builder_with_entities_and_file() -> None:
         assert pipe_inputs["schema"]["entities"] == internal_entities
         assert pipe_inputs["schema"]["relations"] == internal_relations
         assert pipe_inputs["schema"]["potential_schema"] == potential_schema
+
+
+def test_simple_kg_pipeline_on_error_conversion() -> None:
+    llm = MagicMock(spec=LLMInterface)
+    driver = MagicMock(spec=neo4j.Driver)
+
+    kg_builder = SimpleKGPipeline(
+        llm=llm,
+        driver=driver,
+        on_error="RAISE",
+    )
+
+    assert kg_builder.on_error == OnError.RAISE
+
+
+def test_simple_kg_pipeline_on_error_invalid_value() -> None:
+    llm = MagicMock(spec=LLMInterface)
+    driver = MagicMock(spec=neo4j.Driver)
+
+    with pytest.raises(ValidationError) as exc_info:
+        SimpleKGPipeline(
+            llm=llm,
+            driver=driver,
+            on_error="IGNORE",
+        )
+
+    assert "Input should be 'RAISE' or 'CONTINUE'" in str(exc_info.value)
