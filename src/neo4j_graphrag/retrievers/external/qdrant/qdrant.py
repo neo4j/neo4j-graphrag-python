@@ -207,10 +207,12 @@ class QdrantNeo4jRetriever(ExternalRetriever):
             **kwargs,
         ).points
 
-        result_tuples = [
-            [f"{point.payload[self.id_property_external]}", point.score]
-            for point in points
-        ]
+        result_tuples = []
+        for point in points:
+            assert point.payload is not None
+            result_tuples.append(
+                [f"{point.payload[self.id_property_external]}", point.score]
+            )
 
         search_query = get_match_query(
             return_properties=self.return_properties,
