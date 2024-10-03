@@ -24,7 +24,7 @@ from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
 
 class SchemaProperty(BaseModel):
     """
-    represents a property on a node or relationship in the graph.
+    Represents a property on a node or relationship in the graph.
     """
 
     name: str
