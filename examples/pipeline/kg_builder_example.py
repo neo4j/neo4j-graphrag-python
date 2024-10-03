@@ -20,13 +20,12 @@ import logging
 import neo4j
 from neo4j_graphrag.experimental.components.entity_relation_extractor import OnError
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
-from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.llm.openai_llm import OpenAILLM
 
 logging.basicConfig(level=logging.INFO)
 
 
-async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
+async def main(neo4j_driver: neo4j.Driver) -> None:
     # Instantiate Entity and Relation objects
     entities = ["PERSON", "ORGANIZATION", "HORCRUX", "LOCATION"]
     relations = ["SITUATED_AT", "INTERACTS", "OWNS", "LED_BY"]
