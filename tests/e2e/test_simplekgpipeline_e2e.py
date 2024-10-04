@@ -45,24 +45,6 @@ def harry_potter_text() -> str:
     return text
 
 
-@pytest.fixture
-def harry_potter_text_part1() -> str:
-    with open(
-        os.path.join(BASE_DIR, "data/documents/harry_potter_part1.txt"), "r"
-    ) as f:
-        text = f.read()
-    return text
-
-
-@pytest.fixture
-def harry_potter_text_part2() -> str:
-    with open(
-        os.path.join(BASE_DIR, "data/documents/harry_potter_part2.txt"), "r"
-    ) as f:
-        text = f.read()
-    return text
-
-
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
 async def test_pipeline_builder_happy_path(
@@ -144,5 +126,3 @@ async def test_pipeline_builder_happy_path(
     # Run the knowledge graph building process with text input
     text_input = "John Doe lives in New York City."
     await kg_builder_text.run_async(text=text_input)
-
-    await llm.async_client.close()
