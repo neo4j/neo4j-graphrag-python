@@ -18,6 +18,7 @@ import asyncio
 import logging
 
 import neo4j
+from neo4j_graphrag.embeddings import OpenAIEmbeddings
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.llm.openai_llm import OpenAILLM
 
@@ -44,10 +45,14 @@ async def main(neo4j_driver: neo4j.Driver) -> None:
         },
     )
 
+    # Use OpenAIEmbeddings as embedder
+    embedder = OpenAIEmbeddings()
+
     # Create an instance of the SimpleKGPipeline
     kg_builder_pdf = SimpleKGPipeline(
         llm=llm,
         driver=neo4j_driver,
+        embedder=embedder,
         entities=entities,
         relations=relations,
         potential_schema=potential_schema,
@@ -64,6 +69,7 @@ async def main(neo4j_driver: neo4j.Driver) -> None:
     kg_builder_text = SimpleKGPipeline(
         llm=llm,
         driver=neo4j_driver,
+        embedder=embedder,
         entities=entities,
         relations=relations,
         potential_schema=potential_schema,
