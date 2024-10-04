@@ -18,7 +18,6 @@ import asyncio
 import logging
 
 import neo4j
-
 from neo4j_graphrag.embeddings import OpenAIEmbeddings
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.llm.openai_llm import OpenAILLM
