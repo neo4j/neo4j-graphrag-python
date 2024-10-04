@@ -268,9 +268,14 @@ def test_simple_kg_pipeline_on_error_invalid_value() -> None:
 def test_simple_kg_pipeline_no_entity_resolution() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
+    embedder = MagicMock(spec=Embedder)
 
     kg_builder = SimpleKGPipeline(
-        llm=llm, driver=driver, on_error="CONTINUE", perform_entity_resolution=False
+        llm=llm,
+        driver=driver,
+        embedder=embedder,
+        on_error="CONTINUE",
+        perform_entity_resolution=False,
     )
 
     assert "resolver" not in kg_builder.pipeline

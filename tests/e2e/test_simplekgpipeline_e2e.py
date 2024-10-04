@@ -137,7 +137,7 @@ async def test_pipeline_builder_happy_path(
         entities=entities,
         relations=relations,
         potential_schema=potential_schema,
-        from_pdf=True,
+        from_pdf=False,
         on_error="RAISE",
     )
 
