@@ -21,7 +21,7 @@ import neo4j
 import pytest
 from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
-from neo4j_graphrag.llm import LLMInterface, LLMResponse, OpenAILLM
+from neo4j_graphrag.llm import LLMInterface, LLMResponse
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -128,15 +128,6 @@ async def test_pipeline_builder_happy_path(
         ("PERSON", "OWNS", "HORCRUX"),
         ("ORGANIZATION", "LED_BY", "PERSON"),
     ]
-
-    # Instantiate the LLM
-    llm = OpenAILLM(
-        model_name="gpt-4o",
-        model_params={
-            "max_tokens": 2000,
-            "response_format": {"type": "json_object"},
-        },
-    )
 
     # Create an instance of the SimpleKGPipeline
     kg_builder_text = SimpleKGPipeline(
