@@ -2,6 +2,8 @@
 
 ## Next
 
+## 1.0.0a1
+
 ## 1.0.0a0
 
 - Added `SinglePropertyExactMatchResolver` component allowing to merge entities with exact same property (e.g. name)
