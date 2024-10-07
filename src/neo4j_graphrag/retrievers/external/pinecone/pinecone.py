@@ -18,7 +18,6 @@ import logging
 from typing import Any, Callable, Optional
 
 import neo4j
-from pinecone import Pinecone
 from pydantic import ValidationError
 
 from neo4j_graphrag.embeddings.base import Embedder
@@ -40,6 +39,11 @@ from neo4j_graphrag.types import (
     RawSearchResult,
     RetrieverResultItem,
 )
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pinecone import Pinecone
 
 logger = logging.getLogger(__name__)
 

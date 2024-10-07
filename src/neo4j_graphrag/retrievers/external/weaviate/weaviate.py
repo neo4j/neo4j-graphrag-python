@@ -20,7 +20,6 @@ from typing import Any, Callable, Optional
 import neo4j
 import weaviate.classes as wvc
 from pydantic import ValidationError
-from weaviate.client import WeaviateClient
 
 from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.exceptions import (
@@ -42,6 +41,11 @@ from neo4j_graphrag.types import (
 )
 
 logger = logging.getLogger(__name__)
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from weaviate.client import WeaviateClient
 
 
 class WeaviateNeo4jRetriever(ExternalRetriever):
