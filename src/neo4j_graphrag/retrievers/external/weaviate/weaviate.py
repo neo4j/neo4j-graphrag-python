@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, TYPE_CHECKING
 
 import neo4j
 import weaviate.classes as wvc
@@ -41,8 +41,6 @@ from neo4j_graphrag.types import (
 )
 
 logger = logging.getLogger(__name__)
-
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from weaviate.client import WeaviateClient

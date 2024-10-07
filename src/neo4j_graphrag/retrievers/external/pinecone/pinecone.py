@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 import neo4j
 from pydantic import ValidationError
@@ -39,8 +39,6 @@ from neo4j_graphrag.types import (
     RawSearchResult,
     RetrieverResultItem,
 )
-
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pinecone import Pinecone
