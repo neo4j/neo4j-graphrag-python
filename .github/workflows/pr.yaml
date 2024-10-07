@@ -35,7 +35,6 @@ jobs:
         run: poetry install --no-interaction --extras external_clients
       - name: Check format and linting
         run: |
-          poetry run ruff check --select I .
           poetry run ruff check .
           poetry run ruff format --check .
       - name: Run strict mypy check
