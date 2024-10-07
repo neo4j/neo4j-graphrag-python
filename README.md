@@ -65,7 +65,6 @@ kg_builder = SimpleKGPipeline(
     llm=llm,
     driver=driver,
     embedder=OpenAIEmbeddings(),
-    file_path=file_path,
     entities=entities,
     relations=relations,
 )
