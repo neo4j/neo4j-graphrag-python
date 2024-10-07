@@ -1,1 +1,111 @@
-﻿<svg xmlns="http://www.w3.org/2000/svg" width="252.5004425048828" height="226.56007385253906" viewBox="-216.2211151123047 -129.43341064453125 252.5004425048828 226.56007385253906"><title>Neo4j Graph Visualization</title><desc>Created using Neo4j (http://www.neo4j.com/)</desc><g class="layer relationships"><g class="relationship" transform="translate(3.6713963566403294 -100.22222702912391) rotate(498.41622637394704)"><path class="b-outline" fill="#A5ABB6" stroke="none" d="M 25 0.5 L 92.10063241652892 0.5 L 92.10063241652892 -0.5 L 25 -0.5 Z M 154.54594491652892 0.5 L 221.64657733305785 0.5 L 221.64657733305785 3.5 L 228.64657733305785 0 L 221.64657733305785 -3.5 L 221.64657733305785 -0.5 L 154.54594491652892 -0.5 Z"/><text text-anchor="middle" pointer-events="none" font-size="8px" fill="#000000" x="123.32328866652892" y="3" transform="rotate(180 123.32328866652892 0)" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">FROM_CHUNK</text></g><g class="relationship" transform="translate(3.6713963566403294 -100.22222702912391) rotate(519.3261924730333)"><path class="b-outline" fill="#A5ABB6" stroke="none" d="M 25 0.5 L 30.223238071377878 0.5 L 30.223238071377878 -0.5 L 25 -0.5 Z M 96.23495682137788 0.5 L 101.45819489275576 0.5 L 101.45819489275576 3.5 L 108.45819489275576 0 L 101.45819489275576 -3.5 L 101.45819489275576 -0.5 L 96.23495682137788 -0.5 Z"/><text text-anchor="middle" pointer-events="none" font-size="8px" fill="#000000" x="63.22909744637788" y="3" transform="rotate(180 63.22909744637788 0)" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">AUTHORED_BY</text></g><g class="relationship" transform="translate(3.6713963566403294 -100.22222702912391) rotate(180.0633829572464)"><path class="b-outline" fill="#A5ABB6" stroke="none" d="M 25 0.5 L 52.790066983244984 0.5 L 52.790066983244984 -0.5 L 25 -0.5 Z M 131.10256698324497 0.5 L 158.89263396648997 0.5 L 158.89263396648997 3.5 L 165.89263396648997 0 L 158.89263396648997 -3.5 L 158.89263396648997 -0.5 L 131.10256698324497 -0.5 Z"/><text text-anchor="middle" pointer-events="none" font-size="8px" fill="#000000" x="91.94631698324498" y="3" transform="rotate(180 91.94631698324498 0)" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">CATEGORIZED_BY</text></g><g class="relationship" transform="translate(3.6713963566403294 -100.22222702912391) rotate(448.7473909144465)"><path class="b-outline" fill="#A5ABB6" stroke="none" d="M 25 0.5 L 45.123458303068034 0.5 L 45.123458303068034 -0.5 L 25 -0.5 Z M 112.92033330306803 0.5 L 133.04379160613607 0.5 L 133.04379160613607 3.5 L 140.04379160613607 0 L 133.04379160613607 -3.5 L 133.04379160613607 -0.5 L 112.92033330306803 -0.5 Z"/><text text-anchor="middle" pointer-events="none" font-size="8px" fill="#000000" x="79.02189580306803" y="3" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">PUBLISHED_ON</text></g><g class="relationship" transform="translate(7.279321525097391 64.78212450049026) rotate(539.0089139166532)"><path class="b-outline" fill="#A5ABB6" stroke="none" d="M 25 0.5 L 61.95782531245774 0.5 L 61.95782531245774 -0.5 L 25 -0.5 Z M 124.40313781245774 0.5 L 161.3609631249155 0.5 L 161.3609631249155 3.5 L 168.3609631249155 0 L 161.3609631249155 -3.5 L 161.3609631249155 -0.5 L 124.40313781245774 -0.5 Z"/><text text-anchor="middle" pointer-events="none" font-size="8px" fill="#000000" x="93.18048156245774" y="3" transform="rotate(180 93.18048156245774 0)" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">FROM_CHUNK</text></g><g class="relationship" transform="translate(-187.22112080554135 -100.43340030039055) rotate(449.6028496921062)"><path class="b-outline" fill="#A5ABB6" stroke="none" d="M 25 0.5 L 49.55939893536606 0.5 L 49.55939893536606 -0.5 L 25 -0.5 Z M 112.00471143536606 0.5 L 136.56411037073212 0.5 L 136.56411037073212 3.5 L 143.56411037073212 0 L 136.56411037073212 -3.5 L 136.56411037073212 -0.5 L 112.00471143536606 -0.5 Z"/><text text-anchor="middle" pointer-events="none" font-size="8px" fill="#000000" x="80.78205518536606" y="3" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">FROM_CHUNK</text></g><g class="relationship" transform="translate(-121.19282778106336 -53.10518855553054) rotate(478.1470925767243)"><path class="b-outline" fill="#A5ABB6" stroke="none" d="M 25 0.5 L 34.0231911711266 0.5 L 34.0231911711266 -0.5 L 25 -0.5 Z M 96.4685036711266 0.5 L 105.4916948422532 0.5 L 105.4916948422532 3.5 L 112.4916948422532 0 L 105.4916948422532 -3.5 L 105.4916948422532 -0.5 L 96.4685036711266 -0.5 Z"/><text text-anchor="middle" pointer-events="none" font-size="8px" fill="#000000" x="65.2458474211266" y="3" transform="rotate(180 65.2458474211266 0)" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">FROM_CHUNK</text></g></g><g class="layer nodes"><g class="node" aria-label="graph-node0" transform="translate(3.6713963566403294,-100.22222702912391)"><circle class="b-outline" cx="0" cy="0" r="25" fill="#57C7E3" stroke="#23b3d7" stroke-width="2px"/><text class="caption" text-anchor="middle" pointer-events="none" x="0" y="5" font-size="10px" fill="#2A2C34" font-family="Helvetica Neue, Helvetica, Arial, sans-serif"> Dune</text></g><g class="node" aria-label="graph-node1" transform="translate(7.279321525097391,64.78212450049026)"><circle class="b-outline" cx="0" cy="0" r="25" fill="#F16667" stroke="#eb2728" stroke-width="2px"/><text class="caption" text-anchor="middle" pointer-events="none" x="0" y="5" font-size="10px" fill="#FFFFFF" font-family="Helvetica Neue, Helvetica, Arial, sans-serif"> 1965</text></g><g class="node" aria-label="graph-node2" transform="translate(-187.22112080554135,-100.43340030039055)"><circle class="b-outline" cx="0" cy="0" r="25" fill="#DA7194" stroke="#cc3c6c" stroke-width="2px"/><text class="caption" text-anchor="middle" pointer-events="none" x="0" y="0" font-size="10px" fill="#FFFFFF" font-family="Helvetica Neue, Helvetica, Arial, sans-serif"> science</text><text class="caption" text-anchor="middle" pointer-events="none" x="0" y="10" font-size="10px" fill="#FFFFFF" font-family="Helvetica Neue, Helvetica, Arial, sans-serif"> fiction</text></g><g class="node" aria-label="graph-node3" transform="translate(-121.19282778106336,-53.10518855553054)"><circle class="b-outline" cx="0" cy="0" r="25" fill="#569480" stroke="#447666" stroke-width="2px"/><text class="caption" text-anchor="middle" pointer-events="none" x="0" y="0" font-size="10px" fill="#FFFFFF" font-family="Helvetica Neue, Helvetica, Arial, sans-serif"> Frank</text><text class="caption" text-anchor="middle" pointer-events="none" x="0" y="10" font-size="10px" fill="#FFFFFF" font-family="Helvetica Neue, Helvetica, Arial, sans-serif"> Herbert</text></g><g class="node" aria-label="graph-node4" transform="translate(-186.05271446184184,68.126660602815)"><circle class="b-outline" cx="0" cy="0" r="25" fill="#8DCC93" stroke="#5db665" stroke-width="2px"/><text class="caption" text-anchor="middle" pointer-events="none" x="0" y="5" font-size="10px" fill="#2A2C34" font-family="Helvetica Neue, Helvetica, Arial, sans-serif"> 0</text></g></g></svg>
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="505.00088501" height="453.120147705"
+    viewBox="-216.2211151123047 -129.43341064453125 252.5004425048828 226.56007385253906">
+    <title>Neo4j Graph Visualization</title>
+    <desc>Created using Neo4j (http://www.neo4j.com/)</desc>
+    <g class="layer relationships">
+        <g class="relationship"
+            transform="translate(3.6713963566403294 -100.22222702912391) rotate(498.41622637394704)">
+            <path class="b-outline" fill="#A5ABB6" stroke="none"
+                d="M 25 0.5 L 92.10063241652892 0.5 L 92.10063241652892 -0.5 L 25 -0.5 Z M 154.54594491652892 0.5 L 221.64657733305785 0.5 L 221.64657733305785 3.5 L 228.64657733305785 0 L 221.64657733305785 -3.5 L 221.64657733305785 -0.5 L 154.54594491652892 -0.5 Z" />
+            <text text-anchor="middle" pointer-events="none" font-size="8px" fill="#A5ABB6"
+                x="123.32328866652892" y="3" transform="rotate(180 123.32328866652892 0)"
+                font-family="Helvetica Neue, Helvetica, Arial, sans-serif">FROM_CHUNK</text>
+        </g>
+        <g class="relationship"
+            transform="translate(3.6713963566403294 -100.22222702912391) rotate(519.3261924730333)">
+            <path class="b-outline" fill="#A5ABB6" stroke="none"
+                d="M 25 0.5 L 30.223238071377878 0.5 L 30.223238071377878 -0.5 L 25 -0.5 Z M 96.23495682137788 0.5 L 101.45819489275576 0.5 L 101.45819489275576 3.5 L 108.45819489275576 0 L 101.45819489275576 -3.5 L 101.45819489275576 -0.5 L 96.23495682137788 -0.5 Z" />
+            <text text-anchor="middle" pointer-events="none" font-size="8px" fill="#A5ABB6"
+                x="63.22909744637788" y="3" transform="rotate(180 63.22909744637788 0)"
+                font-family="Helvetica Neue, Helvetica, Arial, sans-serif">AUTHORED_BY</text>
+        </g>
+        <g class="relationship"
+            transform="translate(3.6713963566403294 -100.22222702912391) rotate(180.0633829572464)">
+            <path class="b-outline" fill="#A5ABB6" stroke="none"
+                d="M 25 0.5 L 52.790066983244984 0.5 L 52.790066983244984 -0.5 L 25 -0.5 Z M 131.10256698324497 0.5 L 158.89263396648997 0.5 L 158.89263396648997 3.5 L 165.89263396648997 0 L 158.89263396648997 -3.5 L 158.89263396648997 -0.5 L 131.10256698324497 -0.5 Z" />
+            <text text-anchor="middle" pointer-events="none" font-size="8px" fill="#A5ABB6"
+                x="91.94631698324498" y="3" transform="rotate(180 91.94631698324498 0)"
+                font-family="Helvetica Neue, Helvetica, Arial, sans-serif">CATEGORIZED_BY</text>
+        </g>
+        <g class="relationship"
+            transform="translate(3.6713963566403294 -100.22222702912391) rotate(448.7473909144465)">
+            <path class="b-outline" fill="#A5ABB6" stroke="none"
+                d="M 25 0.5 L 45.123458303068034 0.5 L 45.123458303068034 -0.5 L 25 -0.5 Z M 112.92033330306803 0.5 L 133.04379160613607 0.5 L 133.04379160613607 3.5 L 140.04379160613607 0 L 133.04379160613607 -3.5 L 133.04379160613607 -0.5 L 112.92033330306803 -0.5 Z" />
+            <text text-anchor="middle" pointer-events="none" font-size="8px" fill="#A5ABB6"
+                x="79.02189580306803" y="3"
+                font-family="Helvetica Neue, Helvetica, Arial, sans-serif">PUBLISHED_ON</text>
+        </g>
+        <g class="relationship"
+            transform="translate(7.279321525097391 64.78212450049026) rotate(539.0089139166532)">
+            <path class="b-outline" fill="#A5ABB6" stroke="none"
+                d="M 25 0.5 L 61.95782531245774 0.5 L 61.95782531245774 -0.5 L 25 -0.5 Z M 124.40313781245774 0.5 L 161.3609631249155 0.5 L 161.3609631249155 3.5 L 168.3609631249155 0 L 161.3609631249155 -3.5 L 161.3609631249155 -0.5 L 124.40313781245774 -0.5 Z" />
+            <text text-anchor="middle" pointer-events="none" font-size="8px" fill="#A5ABB6"
+                x="93.18048156245774" y="3" transform="rotate(180 93.18048156245774 0)"
+                font-family="Helvetica Neue, Helvetica, Arial, sans-serif">FROM_CHUNK</text>
+        </g>
+        <g class="relationship"
+            transform="translate(-187.22112080554135 -100.43340030039055) rotate(449.6028496921062)">
+            <path class="b-outline" fill="#A5ABB6" stroke="none"
+                d="M 25 0.5 L 49.55939893536606 0.5 L 49.55939893536606 -0.5 L 25 -0.5 Z M 112.00471143536606 0.5 L 136.56411037073212 0.5 L 136.56411037073212 3.5 L 143.56411037073212 0 L 136.56411037073212 -3.5 L 136.56411037073212 -0.5 L 112.00471143536606 -0.5 Z" />
+            <text text-anchor="middle" pointer-events="none" font-size="8px" fill="#A5ABB6"
+                x="80.78205518536606" y="3"
+                font-family="Helvetica Neue, Helvetica, Arial, sans-serif">FROM_CHUNK</text>
+        </g>
+        <g class="relationship"
+            transform="translate(-121.19282778106336 -53.10518855553054) rotate(478.1470925767243)">
+            <path class="b-outline" fill="#A5ABB6" stroke="none"
+                d="M 25 0.5 L 34.0231911711266 0.5 L 34.0231911711266 -0.5 L 25 -0.5 Z M 96.4685036711266 0.5 L 105.4916948422532 0.5 L 105.4916948422532 3.5 L 112.4916948422532 0 L 105.4916948422532 -3.5 L 105.4916948422532 -0.5 L 96.4685036711266 -0.5 Z" />
+            <text text-anchor="middle" pointer-events="none" font-size="8px" fill="#A5ABB6"
+                x="65.2458474211266" y="3" transform="rotate(180 65.2458474211266 0)"
+                font-family="Helvetica Neue, Helvetica, Arial, sans-serif">FROM_CHUNK</text>
+        </g>
+    </g>
+    <g class="layer nodes">
+        <g class="node" aria-label="graph-node0"
+            transform="translate(3.6713963566403294,-100.22222702912391)">
+            <circle class="b-outline" cx="0" cy="0" r="25" fill="#57C7E3" stroke="#23b3d7"
+                stroke-width="2px" />
+            <text class="caption" text-anchor="middle" pointer-events="none" x="0" y="5"
+                font-size="10px" fill="#2A2C34"
+                font-family="Helvetica Neue, Helvetica, Arial, sans-serif"> Dune</text>
+        </g>
+        <g class="node" aria-label="graph-node1"
+            transform="translate(7.279321525097391,64.78212450049026)">
+            <circle class="b-outline" cx="0" cy="0" r="25" fill="#F16667" stroke="#eb2728"
+                stroke-width="2px" />
+            <text class="caption" text-anchor="middle" pointer-events="none" x="0" y="5"
+                font-size="10px" fill="#FFFFFF"
+                font-family="Helvetica Neue, Helvetica, Arial, sans-serif"> 1965</text>
+        </g>
+        <g class="node" aria-label="graph-node2"
+            transform="translate(-187.22112080554135,-100.43340030039055)">
+            <circle class="b-outline" cx="0" cy="0" r="25" fill="#DA7194" stroke="#cc3c6c"
+                stroke-width="2px" />
+            <text class="caption" text-anchor="middle" pointer-events="none" x="0" y="0"
+                font-size="10px" fill="#FFFFFF"
+                font-family="Helvetica Neue, Helvetica, Arial, sans-serif"> science</text>
+            <text class="caption" text-anchor="middle" pointer-events="none" x="0" y="10"
+                font-size="10px" fill="#FFFFFF"
+                font-family="Helvetica Neue, Helvetica, Arial, sans-serif"> fiction</text>
+        </g>
+        <g class="node" aria-label="graph-node3"
+            transform="translate(-121.19282778106336,-53.10518855553054)">
+            <circle class="b-outline" cx="0" cy="0" r="25" fill="#569480" stroke="#447666"
+                stroke-width="2px" />
+            <text class="caption" text-anchor="middle" pointer-events="none" x="0" y="0"
+                font-size="10px" fill="#FFFFFF"
+                font-family="Helvetica Neue, Helvetica, Arial, sans-serif"> Frank</text>
+            <text class="caption" text-anchor="middle" pointer-events="none" x="0" y="10"
+                font-size="10px" fill="#FFFFFF"
+                font-family="Helvetica Neue, Helvetica, Arial, sans-serif"> Herbert</text>
+        </g>
+        <g class="node" aria-label="graph-node4"
+            transform="translate(-186.05271446184184,68.126660602815)">
+            <circle class="b-outline" cx="0" cy="0" r="25" fill="#8DCC93" stroke="#5db665"
+                stroke-width="2px" />
+            <text class="caption" text-anchor="middle" pointer-events="none" x="0" y="5"
+                font-size="10px" fill="#2A2C34"
+                font-family="Helvetica Neue, Helvetica, Arial, sans-serif"> 0</text>
+        </g>
+    </g>
+</svg>
