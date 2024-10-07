@@ -30,9 +30,7 @@ def test_embed_query(MockSentenceTransformer: MagicMock) -> None:
     instance = SentenceTransformerEmbeddings()
     result = instance.embed_query("test query")
 
-    mock_model.encode.assert_called_with(
-        ["test query"]
-    )
+    mock_model.encode.assert_called_with(["test query"])
     assert isinstance(result, list)
     assert result == [0.1, 0.2, 0.3]
 
