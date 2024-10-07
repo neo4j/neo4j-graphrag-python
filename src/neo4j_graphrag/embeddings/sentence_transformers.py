@@ -15,8 +15,13 @@
 
 from typing import Any
 
-import numpy as np
-import torch
+try:
+    import numpy as np
+    import sentence_transformers
+    import torch
+except ImportError:
+    sentence_transformers = None  # type: ignore
+
 
 from neo4j_graphrag.embeddings.base import Embedder
 
@@ -25,15 +30,12 @@ class SentenceTransformerEmbeddings(Embedder):
     def __init__(
         self, model: str = "all-MiniLM-L6-v2", *args: Any, **kwargs: Any
     ) -> None:
-        try:
-            from sentence_transformers import SentenceTransformer
-        except ImportError as e:
+        if sentence_transformers is None:
             raise ImportError(
                 "Could not import sentence_transformers python package. "
                 "Please install it with `pip install sentence-transformers`."
-            ) from e
-
-        self.model = SentenceTransformer(model, *args, **kwargs)
+            )
+        self.model = sentence_transformers.SentenceTransformer(model, *args, **kwargs)
 
     def embed_query(self, text: str) -> Any:
         result = self.model.encode([text])
