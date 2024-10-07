@@ -17,13 +17,15 @@ from __future__ import annotations
 import asyncio
 
 import neo4j
-from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
-from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
 from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
     OnError,
 )
 from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
+from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
+from neo4j_graphrag.experimental.components.resolver import (
+    SinglePropertyExactMatchResolver,
+)
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
     SchemaEntity,
@@ -34,13 +36,12 @@ from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter i
     FixedSizeSplitter,
 )
 from neo4j_graphrag.experimental.pipeline import Pipeline
-from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.llm import LLMInterface, OpenAILLM
 
 
 async def define_and_run_pipeline(
     neo4j_driver: neo4j.AsyncDriver, llm: LLMInterface
-) -> PipelineResult:
+) -> None:
     """This is where we define and run the KG builder pipeline, instantiating a few
     components:
     - Text Splitter: in this example we use the fixed size text splitter
@@ -55,43 +56,41 @@ async def define_and_run_pipeline(
     """
     pipe = Pipeline()
     # define the components
+    pipe.add_component(PdfLoader(), "loader")
     pipe.add_component(
-        # chunk_size=50 for the sake of this demo
-        FixedSizeSplitter(chunk_size=4000, chunk_overlap=200),
+        FixedSizeSplitter(),
         "splitter",
     )
-    pipe.add_component(TextChunkEmbedder(embedder=OpenAIEmbeddings()), "chunk_embedder")
     pipe.add_component(SchemaBuilder(), "schema")
     pipe.add_component(
         LLMEntityRelationExtractor(
             llm=llm,
-            on_error=OnError.RAISE,
+            on_error=OnError.IGNORE,
         ),
         "extractor",
     )
     pipe.add_component(Neo4jWriter(neo4j_driver), "writer")
+    pipe.add_component(SinglePropertyExactMatchResolver(neo4j_driver), "resolver")
     # define the execution order of component
     # and how the output of previous components must be used
-    pipe.connect("splitter", "chunk_embedder", input_config={"text_chunks": "splitter"})
-    pipe.connect("schema", "extractor", input_config={"schema": "schema"})
+    pipe.connect("loader", "splitter", {"text": "loader.text"})
+    pipe.connect("splitter", "extractor", input_config={"chunks": "splitter"})
     pipe.connect(
-        "chunk_embedder", "extractor", input_config={"chunks": "chunk_embedder"}
+        "schema",
+        "extractor",
+        input_config={"schema": "schema", "document_info": "loader.document_info"},
     )
     pipe.connect(
         "extractor",
         "writer",
         input_config={"graph": "extractor"},
     )
+    pipe.connect("writer", "resolver", {})
     # user input:
     # the initial text
     # and the list of entities and relations we are looking for
     pipe_inputs = {
-        "splitter": {
-            "text": """Albert Einstein was a German physicist born in 1879 who
-            wrote many groundbreaking papers especially about general relativity
-            and quantum mechanics. He worked for many different institutions, including
-            the University of Bern in Switzerland and the University of Oxford."""
-        },
+        "loader": {},
         "schema": {
             "entities": [
                 SchemaEntity(
@@ -109,37 +108,35 @@ async def define_and_run_pipeline(
                         SchemaProperty(name="country", type="STRING"),
                     ],
                 ),
-                SchemaEntity(
-                    label="Field",
-                    properties=[
-                        SchemaProperty(name="name", type="STRING"),
-                    ],
-                ),
             ],
             "relations": [
                 SchemaRelation(
-                    label="WORKED_ON",
+                    label="WORKED_FOR",
                 ),
                 SchemaRelation(
-                    label="WORKED_FOR",
+                    label="FRIEND",
+                ),
+                SchemaRelation(
+                    label="ENEMY",
                 ),
             ],
             "potential_schema": [
-                ("Person", "WORKED_ON", "Field"),
                 ("Person", "WORKED_FOR", "Organization"),
+                ("Person", "FRIEND", "Person"),
+                ("Person", "ENEMY", "Person"),
             ],
         },
-        "extractor": {
-            "document_info": {
-                "path": "my text",
-            }
-        },
     }
-    # run the pipeline
-    return await pipe.run(pipe_inputs)
+    # run the pipeline for each documents
+    for document in [
+        "examples/pipeline/Harry Potter and the Chamber of Secrets Summary.pdf",
+        "examples/pipeline/Harry Potter and the Death Hallows Summary.pdf",
+    ]:
+        pipe_inputs["loader"]["filepath"] = document
+        await pipe.run(pipe_inputs)
 
 
-async def main() -> PipelineResult:
+async def main() -> None:
     llm = OpenAILLM(
         model_name="gpt-4o",
         model_params={
@@ -150,12 +147,10 @@ async def main() -> PipelineResult:
     driver = neo4j.AsyncGraphDatabase.driver(
         "bolt://localhost:7687", auth=("neo4j", "password")
     )
-    res = await define_and_run_pipeline(driver, llm)
+    await define_and_run_pipeline(driver, llm)
     await driver.close()
     await llm.async_client.close()
-    return res
 
 
 if __name__ == "__main__":
-    res = asyncio.run(main())
-    print(res)
+    asyncio.run(main())

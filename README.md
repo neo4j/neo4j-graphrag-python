@@ -36,6 +36,48 @@ Follow installation instructions [here](https://pygraphviz.github.io/documentati
 
 ## Examples
 
+### Knowledge graph construction
+
+```python
+from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
+from neo4j_graphrag.llm.openai_llm import OpenAILLM
+
+# Instantiate Entity and Relation objects
+entities = ["PERSON", "ORGANIZATION", "LOCATION"]
+relations = ["SITUATED_AT", "INTERACTS", "LED_BY"]
+potential_schema = [
+    ("PERSON", "SITUATED_AT", "LOCATION"),
+    ("PERSON", "INTERACTS", "PERSON"),
+    ("ORGANIZATION", "LED_BY", "PERSON"),
+]
+
+# Instantiate the LLM
+llm = OpenAILLM(
+    model_name="gpt-4o",
+    model_params={
+        "max_tokens": 2000,
+        "response_format": {"type": "json_object"},
+    },
+)
+
+# Create an instance of the SimpleKGPipeline
+kg_builder = SimpleKGPipeline(
+    llm=llm,
+    driver=driver,
+    embedder=OpenAIEmbeddings(),
+    file_path=file_path,
+    entities=entities,
+    relations=relations,
+)
+
+await kg_builder.run_async(text="""
+    Albert Einstein was a German physicist born in 1879 who wrote many groundbreaking
+    papers especially about general relativity and quantum mechanics.
+""")
+```
+
+
+
 ### Creating a vector index
 
 When creating a vector index, make sure you match the number of dimensions in the index with the number of dimensions the embeddings have.
