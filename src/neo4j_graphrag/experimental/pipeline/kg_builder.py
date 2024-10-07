@@ -81,7 +81,7 @@ class SimpleKGPipeline:
         text_splitter (Optional[Any]): A text splitter component. Defaults to FixedSizeSplitter().
         pdf_loader (Optional[Any]): A PDF loader component. Defaults to PdfLoader().
         kg_writer (Optional[Any]): A knowledge graph writer component. Defaults to Neo4jWriter().
-        on_error (str): Error handling strategy. Defaults to "CONTINUE". Possible values: "RAISE" or "IGNORE".
+        on_error (str): Error handling strategy. Defaults to "CONTINUE". Possible values: "RAISE" or "CONTINUE".
         perform_entity_resolution (bool): Merge entities with same label and name. Default: True
         text_splitter (Optional[Any]): A text splitter component. Defaults to FixedSizeSplitter().
         prompt_template (str): A custom prompt template to use for extraction.
