@@ -19,7 +19,7 @@ try:
     import numpy as np
     import sentence_transformers
     import torch
-except ImportError as e:
+except ImportError:
     sentence_transformers = None  # type: ignore
 
 

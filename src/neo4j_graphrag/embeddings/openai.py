@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 import abc
-from typing import Any, Type
+from typing import Any
 
 from neo4j_graphrag.embeddings.base import Embedder
 
