@@ -71,14 +71,30 @@ LLMEntityRelationExtractor
     :members: run
 
 
+SinglePropertyExactMatchResolver
+================================
+
+.. autoclass:: neo4j_graphrag.experimental.components.resolver.SinglePropertyExactMatchResolver
+    :members: run
+
+
 .. _pipeline-section:
 
 ********
 Pipeline
 ********
 
+Pipeline
+========
+
 .. autoclass:: neo4j_graphrag.experimental.pipeline.Pipeline
     :members: run, add_component, connect, get_pygraphviz_graph
+
+SimpleKGPipeline
+================
+
+.. autoclass:: neo4j_graphrag.experimental.pipeline.kg_builder.SimpleKGPipeline
+    :members: run_async
 
 
 .. _retrievers-section:

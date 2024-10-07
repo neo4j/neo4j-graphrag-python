@@ -2,6 +2,15 @@
 
 ## Next
 
+### Fixed
+- Fix a bug where `openai` Python client and `numpy` were required to import any embedder or LLM.
+
+## 1.0.0a1
+
+## 1.0.0a0
+
+- Added `SinglePropertyExactMatchResolver` component allowing to merge entities with exact same property (e.g. name)
+
 ## 0.7.0
 
 ### Added

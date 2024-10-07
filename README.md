@@ -64,7 +64,7 @@ llm = OpenAILLM(
 kg_builder = SimpleKGPipeline(
     llm=llm,
     driver=driver,
-    file_path=file_path,
+    embedder=OpenAIEmbeddings(),
     entities=entities,
     relations=relations,
 )

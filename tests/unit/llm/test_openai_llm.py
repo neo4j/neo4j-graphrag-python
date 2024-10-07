@@ -25,9 +25,9 @@ def test_openai_llm_missing_dependency() -> None:
         OpenAILLM(model_name="gpt-4o")
 
 
-@patch("neo4j_graphrag.llm.openai_llm.OpenAILLM.client_class")
+@patch("neo4j_graphrag.llm.openai_llm.openai")
 def test_openai_llm_happy_path(mock_openai: Mock) -> None:
-    mock_openai.return_value.chat.completions.create.return_value = MagicMock(
+    mock_openai.OpenAI.return_value.chat.completions.create.return_value = MagicMock(
         choices=[MagicMock(message=MagicMock(content="openai chat response"))],
     )
     llm = OpenAILLM(api_key="my key", model_name="gpt")
@@ -42,10 +42,12 @@ def test_azure_openai_llm_missing_dependency() -> None:
         AzureOpenAILLM(model_name="gpt-4o")
 
 
-@patch("neo4j_graphrag.llm.openai_llm.AzureOpenAILLM.client_class")
+@patch("neo4j_graphrag.llm.openai_llm.openai")
 def test_azure_openai_llm_happy_path(mock_openai: Mock) -> None:
-    mock_openai.return_value.chat.completions.create.return_value = MagicMock(
-        choices=[MagicMock(message=MagicMock(content="openai chat response"))],
+    mock_openai.AzureOpenAI.return_value.chat.completions.create.return_value = (
+        MagicMock(
+            choices=[MagicMock(message=MagicMock(content="openai chat response"))],
+        )
     )
     llm = AzureOpenAILLM(
         model_name="gpt",

@@ -16,6 +16,7 @@ from unittest.mock import MagicMock, patch
 
 import neo4j
 import pytest
+from neo4j_graphrag.embeddings import Embedder
 from neo4j_graphrag.experimental.components.entity_relation_extractor import OnError
 from neo4j_graphrag.experimental.components.schema import SchemaEntity, SchemaRelation
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
@@ -28,19 +29,23 @@ from neo4j_graphrag.llm.base import LLMInterface
 async def test_knowledge_graph_builder_init_with_text() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
+    embedder = MagicMock(spec=Embedder)
 
     kg_builder = SimpleKGPipeline(
         llm=llm,
         driver=driver,
+        embedder=embedder,
         from_pdf=False,
     )
 
     assert kg_builder.llm == llm
     assert kg_builder.driver == driver
+    assert kg_builder.embedder == embedder
     assert kg_builder.from_pdf is False
     assert kg_builder.entities == []
     assert kg_builder.relations == []
     assert kg_builder.potential_schema == []
+    assert "pdf_loader" not in kg_builder.pipeline
 
     text_input = "May thy knife chip and shatter."
 
@@ -59,10 +64,12 @@ async def test_knowledge_graph_builder_init_with_text() -> None:
 async def test_knowledge_graph_builder_init_with_file_path() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
+    embedder = MagicMock(spec=Embedder)
 
     kg_builder = SimpleKGPipeline(
         llm=llm,
         driver=driver,
+        embedder=embedder,
         from_pdf=True,
     )
 
@@ -72,6 +79,7 @@ async def test_knowledge_graph_builder_init_with_file_path() -> None:
     assert kg_builder.entities == []
     assert kg_builder.relations == []
     assert kg_builder.potential_schema == []
+    assert "pdf_loader" in kg_builder.pipeline
 
     file_path = "path/to/test.pdf"
 
@@ -90,10 +98,12 @@ async def test_knowledge_graph_builder_init_with_file_path() -> None:
 async def test_knowledge_graph_builder_run_with_both_inputs() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
+    embedder = MagicMock(spec=Embedder)
 
     kg_builder = SimpleKGPipeline(
         llm=llm,
         driver=driver,
+        embedder=embedder,
         from_pdf=True,
     )
 
@@ -112,11 +122,13 @@ async def test_knowledge_graph_builder_run_with_both_inputs() -> None:
 async def test_knowledge_graph_builder_run_with_no_inputs() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
+    embedder = MagicMock(spec=Embedder)
 
     kg_builder = SimpleKGPipeline(
         llm=llm,
         driver=driver,
-        from_pdf=True,  # or False
+        embedder=embedder,
+        from_pdf=True,
     )
 
     with pytest.raises(PipelineDefinitionError) as exc_info:
@@ -131,10 +143,12 @@ async def test_knowledge_graph_builder_run_with_no_inputs() -> None:
 async def test_knowledge_graph_builder_document_info_with_file() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
+    embedder = MagicMock(spec=Embedder)
 
     kg_builder = SimpleKGPipeline(
         llm=llm,
         driver=driver,
+        embedder=embedder,
         from_pdf=True,
     )
 
@@ -157,10 +171,12 @@ async def test_knowledge_graph_builder_document_info_with_file() -> None:
 async def test_knowledge_graph_builder_document_info_with_text() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
+    embedder = MagicMock(spec=Embedder)
 
     kg_builder = SimpleKGPipeline(
         llm=llm,
         driver=driver,
+        embedder=embedder,
         from_pdf=False,
     )
 
@@ -182,6 +198,7 @@ async def test_knowledge_graph_builder_document_info_with_text() -> None:
 async def test_knowledge_graph_builder_with_entities_and_file() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
+    embedder = MagicMock(spec=Embedder)
 
     entities = ["Document", "Section"]
     relations = ["CONTAINS"]
@@ -190,6 +207,7 @@ async def test_knowledge_graph_builder_with_entities_and_file() -> None:
     kg_builder = SimpleKGPipeline(
         llm=llm,
         driver=driver,
+        embedder=embedder,
         entities=entities,
         relations=relations,
         potential_schema=potential_schema,
@@ -219,10 +237,12 @@ async def test_knowledge_graph_builder_with_entities_and_file() -> None:
 def test_simple_kg_pipeline_on_error_conversion() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
+    embedder = MagicMock(spec=Embedder)
 
     kg_builder = SimpleKGPipeline(
         llm=llm,
         driver=driver,
+        embedder=embedder,
         on_error="RAISE",
     )
 
@@ -232,12 +252,30 @@ def test_simple_kg_pipeline_on_error_conversion() -> None:
 def test_simple_kg_pipeline_on_error_invalid_value() -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
+    embedder = MagicMock(spec=Embedder)
 
     with pytest.raises(PipelineDefinitionError) as exc_info:
         SimpleKGPipeline(
             llm=llm,
             driver=driver,
+            embedder=embedder,
             on_error="IGNORE",
         )
 
     assert "Expected 'RAISE' or 'CONTINUE'" in str(exc_info.value)
+
+
+def test_simple_kg_pipeline_no_entity_resolution() -> None:
+    llm = MagicMock(spec=LLMInterface)
+    driver = MagicMock(spec=neo4j.Driver)
+    embedder = MagicMock(spec=Embedder)
+
+    kg_builder = SimpleKGPipeline(
+        llm=llm,
+        driver=driver,
+        embedder=embedder,
+        on_error="CONTINUE",
+        perform_entity_resolution=False,
+    )
+
+    assert "resolver" not in kg_builder.pipeline
