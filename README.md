@@ -87,9 +87,8 @@ kg_builder = SimpleKGPipeline(
 )
 
 await kg_builder.run_async(
-    text="""Dune is a 1965 epic science fiction novel by American author Frank Herbert,
-        originally published as two separate serials (1963-64 novel Dune World and
-        1965 novel Prophet of Dune) in Analog magazine."""
+    text=""""The son of Duke Leto Atreides and the Lady Jessica, Paul is the heir of
+        House Atreides, an aristocratic family that rules the planet Caladan."""
 )
 ```
 
