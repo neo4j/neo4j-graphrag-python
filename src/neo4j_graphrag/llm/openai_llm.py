@@ -14,7 +14,8 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Optional, Type
+import abc
+from typing import Any, Optional
 
 from ..exceptions import LLMGenerationError
 from .base import LLMInterface
@@ -26,32 +27,30 @@ except ImportError:
     openai = None  # type: ignore
 
 
-class OpenAILLM(LLMInterface):
-    client_class: Type[openai.OpenAI] = openai.OpenAI
-    async_client_class: Type[openai.AsyncOpenAI] = openai.AsyncOpenAI
+class BaseOpenAILLM(LLMInterface, abc.ABC):
+    client: Any
+    async_client: Any
 
     def __init__(
         self,
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
-        **kwargs: Any,
     ):
         """
+        Base class for OpenAI LLM.
+
+        Makes sure the openai Python client is installed during init.
 
         Args:
             model_name (str):
             model_params (str): Parameters like temperature that will be passed to the model when text is sent to it
-            kwargs: All other parameters will be passed to the openai.OpenAI init.
-
         """
         if openai is None:
             raise ImportError(
                 "Could not import openai Python client. "
                 "Please install it with `pip install openai`."
             )
-        super().__init__(model_name, model_params, **kwargs)
-        self.client = self.client_class(**kwargs)
-        self.async_client = self.async_client_class(**kwargs)
+        super().__init__(model_name, model_params)
 
     def get_messages(
         self,
@@ -76,7 +75,7 @@ class OpenAILLM(LLMInterface):
         """
         try:
             response = self.client.chat.completions.create(
-                messages=self.get_messages(input),  # type: ignore
+                messages=self.get_messages(input),
                 model=self.model_name,
                 **self.model_params,
             )
@@ -100,7 +99,7 @@ class OpenAILLM(LLMInterface):
         """
         try:
             response = await self.async_client.chat.completions.create(
-                messages=self.get_messages(input),  # type: ignore
+                messages=self.get_messages(input),
                 model=self.model_name,
                 **self.model_params,
             )
@@ -110,6 +109,42 @@ class OpenAILLM(LLMInterface):
             raise LLMGenerationError(e)
 
 
-class AzureOpenAILLM(OpenAILLM):
-    client_class: Type[openai.OpenAI] = openai.AzureOpenAI
-    async_client_class: Type[openai.AsyncOpenAI] = openai.AsyncAzureOpenAI
+class OpenAILLM(BaseOpenAILLM):
+    def __init__(
+        self,
+        model_name: str,
+        model_params: Optional[dict[str, Any]] = None,
+        **kwargs: Any,
+    ):
+        """OpenAI LLM
+
+        Wrapper for the openai Python client LLM.
+
+        Args:
+            model_name (str):
+            model_params (str): Parameters like temperature that will be passed to the model when text is sent to it
+            kwargs: All other parameters will be passed to the openai.OpenAI init.
+        """
+        super().__init__(model_name, model_params)
+        self.client = openai.OpenAI(**kwargs)
+        self.async_client = openai.AsyncOpenAI(**kwargs)
+
+
+class AzureOpenAILLM(BaseOpenAILLM):
+    def __init__(
+        self,
+        model_name: str,
+        model_params: Optional[dict[str, Any]] = None,
+        **kwargs: Any,
+    ):
+        """Azure OpenAI LLM. Use this class when using an OpenAI model
+        hosted on Microsoft Azure.
+
+        Args:
+            model_name (str):
+            model_params (str): Parameters like temperature that will be passed to the model when text is sent to it
+            kwargs: All other parameters will be passed to the openai.OpenAI init.
+        """
+        super().__init__(model_name, model_params)
+        self.client = openai.AzureOpenAI(**kwargs)
+        self.async_client = openai.AsyncAzureOpenAI(**kwargs)

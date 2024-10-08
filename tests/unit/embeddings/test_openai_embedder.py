@@ -27,9 +27,9 @@ def test_openai_embedder_missing_dependency() -> None:
         OpenAIEmbeddings()
 
 
-@patch("neo4j_graphrag.embeddings.openai.OpenAIEmbeddings.client_class")
+@patch("neo4j_graphrag.embeddings.openai.openai")
 def test_openai_embedder_happy_path(mock_openai: Mock) -> None:
-    mock_openai.return_value.embeddings.create.return_value = MagicMock(
+    mock_openai.OpenAI.return_value.embeddings.create.return_value = MagicMock(
         data=[MagicMock(embedding=[1.0, 2.0])],
     )
     embedder = OpenAIEmbeddings(api_key="my key")
@@ -44,9 +44,9 @@ def test_azure_openai_embedder_missing_dependency() -> None:
         AzureOpenAIEmbeddings()
 
 
-@patch("neo4j_graphrag.embeddings.openai.AzureOpenAIEmbeddings.client_class")
+@patch("neo4j_graphrag.embeddings.openai.openai")
 def test_azure_openai_embedder_happy_path(mock_openai: Mock) -> None:
-    mock_openai.return_value.embeddings.create.return_value = MagicMock(
+    mock_openai.AzureOpenAI.return_value.embeddings.create.return_value = MagicMock(
         data=[MagicMock(embedding=[1.0, 2.0])],
     )
     embedder = AzureOpenAIEmbeddings(
