@@ -14,12 +14,12 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Optional, Union
+from typing import Any, Callable, Optional, Union
 
 import neo4j
 
-if TYPE_CHECKING:
-    from pinecone import Pinecone
+
+from pinecone import Pinecone
 
 from pydantic import (
     BaseModel,
