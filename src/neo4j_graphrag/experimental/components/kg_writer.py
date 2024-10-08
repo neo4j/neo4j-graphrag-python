@@ -234,5 +234,4 @@ class Neo4jWriter(KGWriter):
             logger.exception(e)
             return KGWriterModel(status="FAILURE", metadata={"error": str(e)})
         finally:
-            print("Finally", notification_level)
             notification_logger.setLevel(notification_level)
