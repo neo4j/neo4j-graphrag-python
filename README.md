@@ -54,12 +54,12 @@ AUTH = ("neo4j", "password")
 driver = GraphDatabase.driver(URI, auth=AUTH)
 
 # Instantiate Entity and Relation objects
-entities = ["Book", "Genre", "Person", "Date"]
-relations = ["AUTHORED_BY", "CATEGORIZED_BY", "PUBLISHED_ON"]
+entities = ["Person", "House", "Planet"]
+relations = ["PARENT_OF", "HEIR_OF", "RULES"]
 potential_schema = [
-    ("Book", "AUTHORED_BY", "Person"),
-    ("Book", "CATEGORIZED_BY", "Genre"),
-    ("Book", "PUBLISHED_ON", "Date"),
+    ("Person", "PARENT_OF", "Person"),
+    ("Person", "HEIR_OF", "House"),
+    ("House", "RULES", "Planet")
 ]
 
 # Instantiate an Embedder object
