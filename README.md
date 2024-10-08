@@ -38,18 +38,32 @@ Follow installation instructions [here](https://pygraphviz.github.io/documentati
 
 ### Knowledge graph construction
 
+**NOTE: The [APOC core library](https://neo4j.com/labs/apoc/) must be installed in your Neo4j instance in order to use this feature**
+
+Assumption: Neo4j running
+
 ```python
+from neo4j import GraphDatabase
+from neo4j_graphrag.embeddings import OpenAIEmbeddings
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.llm.openai_llm import OpenAILLM
 
+# Connect to Neo4j database
+URI = "neo4j://localhost:7687"
+AUTH = ("neo4j", "password")
+driver = GraphDatabase.driver(URI, auth=AUTH)
+
 # Instantiate Entity and Relation objects
-entities = ["PERSON", "ORGANIZATION", "LOCATION"]
-relations = ["SITUATED_AT", "INTERACTS", "LED_BY"]
+entities = ["Person", "House", "Planet"]
+relations = ["PARENT_OF", "HEIR_OF", "RULES"]
 potential_schema = [
-    ("PERSON", "SITUATED_AT", "LOCATION"),
-    ("PERSON", "INTERACTS", "PERSON"),
-    ("ORGANIZATION", "LED_BY", "PERSON"),
+    ("Person", "PARENT_OF", "Person"),
+    ("Person", "HEIR_OF", "House"),
+    ("House", "RULES", "Planet")
 ]
+
+# Instantiate an Embedder object
+embedder = OpenAIEmbeddings(model="text-embedding-3-large")
 
 # Instantiate the LLM
 llm = OpenAILLM(
@@ -57,24 +71,30 @@ llm = OpenAILLM(
     model_params={
         "max_tokens": 2000,
         "response_format": {"type": "json_object"},
+        "temperature": 0,
     },
 )
 
-# Create an instance of the SimpleKGPipeline
+# Instantiate the SimpleKGPipeline
 kg_builder = SimpleKGPipeline(
     llm=llm,
     driver=driver,
-    embedder=OpenAIEmbeddings(),
+    embedder=embedder,
     entities=entities,
     relations=relations,
+    on_error="CONTINUE",
+    from_pdf=False,
 )
 
-await kg_builder.run_async(text="""
-    Albert Einstein was a German physicist born in 1879 who wrote many groundbreaking
-    papers especially about general relativity and quantum mechanics.
-""")
+await kg_builder.run_async(
+    text=""""The son of Duke Leto Atreides and the Lady Jessica, Paul is the heir of
+        House Atreides, an aristocratic family that rules the planet Caladan."""
+)
 ```
 
+Example knowledge graph created using the above code:
+
+![Example knowledge graph](images/kg_construction.svg)
 
 
 ### Creating a vector index
