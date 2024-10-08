@@ -8,10 +8,14 @@
 ### Changed
 - The value associated to the enum field `OnError.IGNORE` has been changed from "CONTINUE" to "IGNORE" to stick to the convention and match the field name.
 
+### Added
+- Added `SinglePropertyExactMatchResolver` component allowing to merge entities with exact same property (e.g. name)
+
 ## 1.0.0a1
 
 ## 1.0.0a0
 
+### Added
 - Added `SinglePropertyExactMatchResolver` component allowing to merge entities with exact same property (e.g. name)
 
 ## 0.7.0
