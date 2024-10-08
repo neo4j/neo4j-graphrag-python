@@ -10,6 +10,7 @@
 
 ### Added
 - Added `SinglePropertyExactMatchResolver` component allowing to merge entities with exact same property (e.g. name)
+- Added the `SimpleKGPipeline` class, a simplified abstraction layer to streamline knowledge graph building processes from text documents.
 
 ## 1.0.0a1
 
