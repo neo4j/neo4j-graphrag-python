@@ -2,6 +2,8 @@
 
 ## Next
 
+## 1.0.0
+
 ### Fixed
 - Fix a bug where `openai` Python client and `numpy` were required to import any embedder or LLM.
 
