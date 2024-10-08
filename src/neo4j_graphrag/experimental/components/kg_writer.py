@@ -193,6 +193,12 @@ class Neo4jWriter(KGWriter):
         Args:
             graph (Neo4jGraph): The knowledge graph to upsert into the database.
         """
+        # we disable the notification logger to get rid of the deprecation
+        # warning about Cypher subqueries. Once the queries are updated
+        # for Neo4j 5.23, we can remove this line and the 'finally' block
+        notification_logger = logging.getLogger("neo4j.notifications")
+        notification_level = notification_logger.level
+        notification_logger.setLevel(logging.ERROR)
         try:
             if inspect.iscoroutinefunction(self.driver.execute_query):
                 await self._async_db_setup()
@@ -227,3 +233,6 @@ class Neo4jWriter(KGWriter):
         except neo4j.exceptions.ClientError as e:
             logger.exception(e)
             return KGWriterModel(status="FAILURE", metadata={"error": str(e)})
+        finally:
+            print("Finally", notification_level)
+            notification_logger.setLevel(notification_level)
