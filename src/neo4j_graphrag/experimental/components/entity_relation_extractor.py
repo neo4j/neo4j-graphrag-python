@@ -45,7 +45,11 @@ logger = logging.getLogger(__name__)
 
 class OnError(enum.Enum):
     RAISE = "RAISE"
-    IGNORE = "CONTINUE"
+    IGNORE = "IGNORE"
+
+    @classmethod
+    def possible_values(cls) -> List[str]:
+        return [e.value for e in cls]
 
 
 CHUNK_NODE_LABEL = "Chunk"
