@@ -259,10 +259,10 @@ def test_simple_kg_pipeline_on_error_invalid_value() -> None:
             llm=llm,
             driver=driver,
             embedder=embedder,
-            on_error="IGNORE",
+            on_error="INVALID_VALUE",
         )
 
-    assert "Expected 'RAISE' or 'CONTINUE'" in str(exc_info.value)
+    assert "Expected one of ['RAISE', 'IGNORE']" in str(exc_info.value)
 
 
 def test_simple_kg_pipeline_no_entity_resolution() -> None:
@@ -274,7 +274,7 @@ def test_simple_kg_pipeline_no_entity_resolution() -> None:
         llm=llm,
         driver=driver,
         embedder=embedder,
-        on_error="CONTINUE",
+        on_error="IGNORE",
         perform_entity_resolution=False,
     )
 
