@@ -23,5 +23,5 @@ retriever = VectorRetriever(
 )
 
 # Perform the similarity search for a vector query
-query_vector = []
+query_vector: list[float] = []
 print(retriever.search(query_vector=query_vector, top_k=5))

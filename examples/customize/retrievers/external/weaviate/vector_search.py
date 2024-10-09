@@ -1,7 +1,17 @@
+"""This example demonstrates how to use WeaviateNeo4jRetriever, ie vectors are
+stored in the Weaviate database.
+
+See the [README](./README.md) for more
+information about how spin up a Weaviate and Neo4j databases if needed.
+
+In this example, search is performed from an already existing vector.
+"""
+
 from neo4j import GraphDatabase
 from neo4j_graphrag.retrievers import WeaviateNeo4jRetriever
-
 from weaviate.connect.helpers import connect_to_local
+
+from examples.old.embedding_biology import EMBEDDING_BIOLOGY
 
 NEO4J_URL = "neo4j://localhost:7687"
 NEO4J_AUTH = ("neo4j", "password")
@@ -17,10 +27,7 @@ def main() -> None:
                 id_property_external="neo4j_id",
                 id_property_neo4j="id",
             )
-
-            # Weaviate is configured to embed the text on the server side
-            # see populate_dbs.py for the configuration
-            res = retriever.search(query_text="biology", top_k=2)
+            res = retriever.search(query_vector=EMBEDDING_BIOLOGY, top_k=2)
             print(res)
 
 
