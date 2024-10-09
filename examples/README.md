@@ -12,8 +12,8 @@ are listed in [the last section of this file](#customize).
 
 ## Build Knowledge Graph
 
-- [End to end PDF to graph pipeline](build_graph/kg_builder_from_pdf.py)
-- [End to end text to graph pipeline](build_graph/kg_builder_from_text.py)
+- [End to end PDF to graph simple pipeline](build_graph/simple_kg_builder_from_pdf.py)
+- [End to end text to graph simple pipeline](build_graph/simple_kg_builder_from_text.py)
 
 
 ## Retrieve
@@ -28,8 +28,18 @@ are listed in [the last section of this file](#customize).
 
 ### External Retrievers
 
-- [Weaviate](old/weaviate)
+#### Weaviate
+
+- [Vector search](customize/retrievers/external/weaviate/vector_search.py)
+- [Text search with local embeder](customize/retrievers/external/weaviate/text_search_local_embedder.py)
+- [Text search with remote embeder](customize/retrievers/external/weaviate/text_search_remote_embedder.py)
+
+#### Pinecone
+
 - [Pinecone](old/pinecone)
+
+### Qdrant
+
 - [Qdrant]()
 
 
@@ -42,7 +52,7 @@ are listed in [the last section of this file](#customize).
 
 ### Retriever
 
-- [Result format](customize/retrievers/result_formatter.py)
+- [Control result format](customize/retrievers/result_formatter.py) (for `VectorRetriever`, `HybridRetriever`, `VectorCypherRetriever` and `HybridCypherRetriever`)
 
 ### LLMs
 
@@ -63,17 +73,19 @@ are listed in [the last section of this file](#customize).
 
 ### Embedders
 
-- [OpenAI]()
-- [Azure OpenAI]()
-- [VertexAI]()
-- [MistalAI]()
-- [Ollama]()
-- [Custom LLM]()
+- [OpenAI](./customize/embeddings/openai_embeddings.py)
+- [Azure OpenAI](./customize/embeddings/azure_openai_embeddings.py)
+- [VertexAI](./customize/embeddings/vertexai_embeddings.py)
+- [MistralAI](./customize/embeddings/mistalai_embeddings.py)
+- [Cohere](./customize/embeddings/cohere_embeddings.py)
+- [Ollama](./customize/embeddings/ollama_embeddings.py)
+- [Custom LLM](./customize/embeddings/custom_embeddings.py)
 
 
 ### KG Construction - Pipeline
 
-- [End to end example with explicit components]()
+- [End to end example with explicit components and text input](./customize/build_graph/pipeline/kg_builder_from_text.py)
+- [End to end example with explicit components and PDF input](./customize/build_graph/pipeline/kg_builder_from_pdf.py)
 
 ### Components
 
