@@ -15,14 +15,6 @@
 
 from typing import Any
 
-try:
-    import numpy as np
-    import sentence_transformers
-    import torch
-except ImportError:
-    sentence_transformers = None  # type: ignore
-
-
 from neo4j_graphrag.embeddings.base import Embedder
 
 
@@ -30,19 +22,25 @@ class SentenceTransformerEmbeddings(Embedder):
     def __init__(
         self, model: str = "all-MiniLM-L6-v2", *args: Any, **kwargs: Any
     ) -> None:
-        if sentence_transformers is None:
+        try:
+            import numpy as np
+            import sentence_transformers
+            import torch
+        except ImportError:
             raise ImportError(
                 "Could not import sentence_transformers python package. "
                 "Please install it with `pip install sentence-transformers`."
             )
+        self.torch = torch
+        self.np = np
         self.model = sentence_transformers.SentenceTransformer(model, *args, **kwargs)
 
     def embed_query(self, text: str) -> Any:
         result = self.model.encode([text])
-        if isinstance(result, torch.Tensor) or isinstance(result, np.ndarray):
+        if isinstance(result, self.torch.Tensor) or isinstance(result, self.np.ndarray):
             return result.flatten().tolist()
         elif isinstance(result, list) and all(
-            isinstance(x, torch.Tensor) for x in result
+            isinstance(x, self.torch.Tensor) for x in result
         ):
             return [item for tensor in result for item in tensor.flatten().tolist()]
         else:
