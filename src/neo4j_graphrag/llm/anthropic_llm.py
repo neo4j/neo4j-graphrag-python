@@ -19,13 +19,6 @@ from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface
 from neo4j_graphrag.llm.types import LLMResponse
 
-try:
-    import anthropic
-    from anthropic import APIError
-except ImportError:
-    anthropic = None  # type: ignore
-    APIError = None  # type: ignore
-
 
 class AnthropicLLM(LLMInterface):
     """Interface for large language models on Anthropic
@@ -58,12 +51,15 @@ class AnthropicLLM(LLMInterface):
         model_params: Optional[dict[str, Any]] = None,
         **kwargs: Any,
     ):
-        if anthropic is None:
+        try:
+            import anthropic
+        except ImportError:
             raise ImportError(
                 "Could not import Anthropic Python client. "
                 "Please install it with `pip install anthropic`."
             )
         super().__init__(model_name, model_params)
+        self.anthropic = anthropic
         self.client = anthropic.Anthropic(**kwargs)
         self.async_client = anthropic.AsyncAnthropic(**kwargs)
 
@@ -88,7 +84,7 @@ class AnthropicLLM(LLMInterface):
                 **self.model_params,
             )
             return LLMResponse(content=response.content)
-        except APIError as e:
+        except self.anthropic.APIError as e:
             raise LLMGenerationError(e)
 
     async def ainvoke(self, input: str) -> LLMResponse:
@@ -112,5 +108,5 @@ class AnthropicLLM(LLMInterface):
                 **self.model_params,
             )
             return LLMResponse(content=response.content)
-        except APIError as e:
+        except self.anthropic.APIError as e:
             raise LLMGenerationError(e)

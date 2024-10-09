@@ -13,20 +13,31 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch, Mock
 
 import pytest
 from neo4j_graphrag.llm.anthropic_llm import AnthropicLLM
 
+import anthropic
 
-@patch("neo4j_graphrag.llm.anthropic_llm.anthropic", None)
-def test_anthropic_llm_missing_dependency() -> None:
+
+def get_mock_anthropic() -> MagicMock:
+    mock = MagicMock()
+    mock.APIError = anthropic.APIError
+    return mock
+
+
+@patch("builtins.__import__", side_effect=ImportError)
+def test_anthropic_llm_missing_dependency(mock_import: Mock) -> None:
     with pytest.raises(ImportError):
         AnthropicLLM(model_name="claude-3-opus-20240229")
 
 
-@patch("neo4j_graphrag.llm.anthropic_llm.anthropic")
-def test_anthropic_invoke_happy_path(mock_anthropic: MagicMock) -> None:
+@patch("builtins.__import__")
+def test_anthropic_invoke_happy_path(mock_import: Mock) -> None:
+    mock_anthropic = get_mock_anthropic()
+    mock_import.return_value = mock_anthropic
+
     mock_anthropic.Anthropic.return_value.messages.create.return_value = MagicMock(
         content="generated text"
     )
@@ -43,8 +54,11 @@ def test_anthropic_invoke_happy_path(mock_anthropic: MagicMock) -> None:
 
 
 @pytest.mark.asyncio
-@patch("neo4j_graphrag.llm.anthropic_llm.anthropic")
-async def test_anthropic_ainvoke_happy_path(mock_anthropic: MagicMock) -> None:
+@patch("builtins.__import__")
+async def test_anthropic_ainvoke_happy_path(mock_import: Mock) -> None:
+    mock_anthropic = get_mock_anthropic()
+    mock_import.return_value = mock_anthropic
+
     mock_response = AsyncMock()
     mock_response.content = "Return text"
     mock_model = mock_anthropic.AsyncAnthropic.return_value
