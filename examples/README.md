@@ -36,7 +36,9 @@ are listed in [the last section of this file](#customize).
 
 #### Pinecone
 
-- [Pinecone](old/pinecone)
+- [Vector search](./customize/retrievers/external/pinecone/vector_search.py)
+- [Text search](./customize/retrievers/external/pinecone/text_search.py)
+
 
 ### Qdrant
 
