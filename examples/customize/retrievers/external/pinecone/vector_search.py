@@ -9,7 +9,7 @@ In this example, search is performed from an already computed vector.
 from neo4j import GraphDatabase
 from neo4j_graphrag.retrievers import PineconeNeo4jRetriever
 
-from examples.old.embedding_biology import EMBEDDING_BIOLOGY
+from examples.customize.embedding_biology import EMBEDDING_BIOLOGY
 from pinecone import Pinecone
 
 NEO4J_AUTH = ("neo4j", "password")
