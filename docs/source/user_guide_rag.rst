@@ -677,7 +677,7 @@ Also see :ref:`pineconeneo4jretriever`.
 .. _qdrant-neo4j-retriever-user-guide:
 
 Qdrant Retrievers
--------------------
+-----------------
 
 .. note::
 
