@@ -20,13 +20,6 @@ from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface
 from neo4j_graphrag.llm.types import LLMResponse
 
-try:
-    import cohere
-    from cohere.core import ApiError
-except ImportError:
-    cohere = None  # type: ignore
-    ApiError = Exception  # type: ignore[assignment, misc]
-
 
 class CohereLLM(LLMInterface):
     """Interface for large language models on the Cohere platform
@@ -55,12 +48,18 @@ class CohereLLM(LLMInterface):
         model_params: Optional[dict[str, Any]] = None,
         **kwargs: Any,
     ) -> None:
-        if cohere is None:
+        super().__init__(model_name, model_params)
+        try:
+            import cohere
+        except ImportError:
             raise ImportError(
                 "Could not import cohere python client. "
                 "Please install it with `pip install cohere`."
             )
-        super().__init__(model_name, model_params)
+
+        self.cohere = cohere
+        self.cohere_api_error = cohere.core.api_error.ApiError
+
         self.client = cohere.Client(**kwargs)
         self.async_client = cohere.AsyncClient(**kwargs)
 
@@ -78,7 +77,7 @@ class CohereLLM(LLMInterface):
                 message=input,
                 model=self.model_name,
             )
-        except ApiError as e:
+        except self.cohere_api_error as e:
             raise LLMGenerationError(e)
         return LLMResponse(
             content=res.text,
@@ -98,7 +97,7 @@ class CohereLLM(LLMInterface):
                 message=input,
                 model=self.model_name,
             )
-        except ApiError as e:
+        except self.cohere_api_error as e:
             raise LLMGenerationError(e)
         return LLMResponse(
             content=res.text,
