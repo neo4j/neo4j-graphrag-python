@@ -20,7 +20,7 @@ from typing import Any, Callable, Optional
 import neo4j
 from pydantic import ValidationError
 
-from neo4j_graphrag.embedder import Embedder
+from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.exceptions import (
     EmbeddingRequiredError,
     RetrieverInitializationError,
@@ -59,6 +59,12 @@ class VectorRetriever(Retriever):
 
       retriever = VectorRetriever(driver, "vector-index-name", custom_embedder)
       retriever.search(query_text="Find me a book about Fremen", top_k=5)
+
+    or if the vector embedding of the query text is available:
+
+    .. code-block:: python
+
+      retriever.search(query_vector=..., top_k=5)
 
     Args:
         driver (neo4j.Driver): The Neo4j Python driver.

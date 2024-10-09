@@ -16,10 +16,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any, Dict, List
 
 import neo4j
-from langchain_text_splitters import CharacterTextSplitter
 from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
     OnError,
@@ -31,75 +29,18 @@ from neo4j_graphrag.experimental.components.schema import (
     SchemaEntity,
     SchemaRelation,
 )
-from neo4j_graphrag.experimental.components.text_splitters.langchain import (
-    LangChainTextSplitterAdapter,
+from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
+    FixedSizeSplitter,
 )
-from neo4j_graphrag.experimental.pipeline import Component, DataModel
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
-from neo4j_graphrag.llm import OpenAILLM
-from pydantic import BaseModel, validate_call
+from neo4j_graphrag.llm import LLMInterface, OpenAILLM
 
 logging.basicConfig(level=logging.INFO)
 
 
-class DocumentChunkModel(DataModel):
-    chunks: list[str]
-
-
-class DocumentChunker(Component):
-    async def run(self, text: str) -> DocumentChunkModel:
-        chunks = [t.strip() for t in text.split(".") if t.strip()]
-        return DocumentChunkModel(chunks=chunks)
-
-
-class EntityModel(BaseModel):
-    label: str
-    properties: dict[str, str]
-
-
-class Neo4jGraph(DataModel):
-    entities: list[dict[str, Any]]
-    relations: list[dict[str, Any]]
-
-
-class ERExtractor(Component):
-    async def _process_chunk(self, chunk: str, schema: str) -> Dict[str, Any]:
-        return {
-            "entities": [{"label": "Person", "properties": {"name": "John Doe"}}],
-            "relations": [],
-        }
-
-    async def run(self, chunks: List[str], schema: str) -> Neo4jGraph:
-        tasks = [self._process_chunk(chunk, schema) for chunk in chunks]
-        result = await asyncio.gather(*tasks)
-        merged_result: dict[str, Any] = {"entities": [], "relations": []}
-        for res in result:
-            merged_result["entities"] += res["entities"]
-            merged_result["relations"] += res["relations"]
-        return Neo4jGraph(
-            entities=merged_result["entities"], relations=merged_result["relations"]
-        )
-
-
-class WriterModel(DataModel):
-    status: str
-    entities: list[EntityModel]
-    relations: list[EntityModel]
-
-
-class Writer(Component):
-    @validate_call
-    async def run(self, graph: Neo4jGraph) -> WriterModel:
-        entities = graph.entities
-        relations = graph.relations
-        return WriterModel(
-            status="OK",
-            entities=[EntityModel(**e) for e in entities],
-            relations=[EntityModel(**r) for r in relations],
-        )
-
-
-async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
+async def define_and_run_pipeline(
+    neo4j_driver: neo4j.AsyncDriver, llm: LLMInterface
+) -> PipelineResult:
     from neo4j_graphrag.experimental.pipeline import Pipeline
 
     # Instantiate Entity and Relation objects
@@ -142,19 +83,12 @@ async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
     pipe = Pipeline()
     pipe.add_component(PdfLoader(), "pdf_loader")
     pipe.add_component(
-        LangChainTextSplitterAdapter(CharacterTextSplitter(separator=". \n")),
-        "splitter",
+        FixedSizeSplitter(chunk_size=4000, chunk_overlap=200), "splitter"
     )
     pipe.add_component(SchemaBuilder(), "schema")
     pipe.add_component(
         LLMEntityRelationExtractor(
-            llm=OpenAILLM(
-                model_name="gpt-4o",
-                model_params={
-                    "max_tokens": 2000,
-                    "response_format": {"type": "json_object"},
-                },
-            ),
+            llm=llm,
             on_error=OnError.RAISE,
         ),
         "extractor",
@@ -189,8 +123,23 @@ async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
     return await pipe.run(pipe_inputs)
 
 
-if __name__ == "__main__":
-    with neo4j.GraphDatabase.driver(
+async def main() -> PipelineResult:
+    llm = OpenAILLM(
+        model_name="gpt-4o",
+        model_params={
+            "max_tokens": 2000,
+            "response_format": {"type": "json_object"},
+        },
+    )
+    driver = neo4j.AsyncGraphDatabase.driver(
         "bolt://localhost:7687", auth=("neo4j", "password")
-    ) as driver:
-        print(asyncio.run(main(driver)))
+    )
+    res = await define_and_run_pipeline(driver, llm)
+    await driver.close()
+    await llm.async_client.close()
+    return res
+
+
+if __name__ == "__main__":
+    res = asyncio.run(main())
+    print(res)

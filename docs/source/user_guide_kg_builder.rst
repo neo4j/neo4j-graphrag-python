@@ -11,8 +11,6 @@ unstructured data.
 
     This feature is still experimental. API changes and bug fixes are expected.
 
-    It is not recommended to use it in production yet.
-
 
 ******************
 Pipeline Structure
@@ -27,6 +25,7 @@ A Knowledge Graph (KG) construction pipeline requires a few components:
 - **LexicalGraphBuilder**: build the lexical graph (Document, Chunk and their relationships) (optional).
 - **Entity and relation extractor**: extract relevant entities and relations from the text.
 - **Knowledge Graph writer**: save the identified entities and relations.
+- **Entity resolver**: merge similar entities into a single node.
 
 .. image:: images/kg_builder_pipeline.png
   :alt: KG Builder pipeline
@@ -77,7 +76,7 @@ This package currently supports text extraction from PDFs:
     from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
 
     loader = PdfLoader()
-    loader.run(path=Path("my_file.pdf"))
+    await loader.run(path=Path("my_file.pdf"))
 
 To implement your own loader, use the `DataLoader` interface:
 
@@ -97,18 +96,26 @@ Document Splitter
 =================
 
 Document splitters, as the name indicate, split documents into smaller chunks
-that can be processed within the LLM token limits. Wrappers for LangChain and LlamaIndex
-text splitters are included in this package:
+that can be processed within the LLM token limits:
 
+.. code:: python
+
+    from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import FixedSizeSplitter
+
+    splitter = FixedSizeSplitter(chunk_size=4000, chunk_overlap=200)
+    splitter.run(text="Hello World. Life is beautiful.")
+
+
+Wrappers for LangChain and LlamaIndex text splitters are included in this package:
 
 .. code:: python
 
     from langchain_text_splitters import CharacterTextSplitter
     from neo4j_graphrag.experimental.components.text_splitters.langchain import LangChainTextSplitterAdapter
     splitter = LangChainTextSplitterAdapter(
-        CharacterTextSplitter(chunk_size=500, chunk_overlap=100, separator=".")
+        CharacterTextSplitter(chunk_size=4000, chunk_overlap=200, separator=".")
     )
-    splitter.run(text="Hello World. Life is beautiful.")
+    await splitter.run(text="Hello World. Life is beautiful.")
 
 
 Also see :ref:`langchaintextsplitteradapter` and :ref:`llamaindextextsplitteradapter`.
@@ -148,7 +155,7 @@ Example usage:
     from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
     from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
     text_chunk_embedder = TextChunkEmbedder(embedder=OpenAIEmbeddings())
-    text_chunk_embedder.run(text_chunks=TextChunks(chunks=[TextChunk(text="my_text")]))
+    await text_chunk_embedder.run(text_chunks=TextChunks(chunks=[TextChunk(text="my_text")]))
 
 .. note::
 
@@ -217,7 +224,7 @@ Here is a code block illustrating these concepts:
 
     schema_builder = SchemaBuilder()
 
-    schema_builder.run(
+    await schema_builder.run(
         entities=[
             SchemaEntity(
                 label="Person",
@@ -267,7 +274,7 @@ It can be used in this way:
     from neo4j_graphrag.experimental.components.entity_relation_extractor import (
         LLMEntityRelationExtractor,
     )
-    from neo4j_graphrag.llm import OpenAILLM
+    from neo4j_graphrag.llm.openai import OpenAILLM
 
     extractor = LLMEntityRelationExtractor(
         llm=OpenAILLM(
@@ -278,6 +285,8 @@ It can be used in this way:
             },
         )
     )
+    await extractor.run(chunks=TextChunks(chunks=[TextChunk(text="some text")]))
+
 
 .. warning::
 
@@ -337,12 +346,12 @@ The default prompt uses the :ref:`erextractiontemplate`. It is possible to provi
 
     extractor = LLMEntityRelationExtractor(
         llm=....,
-        prompt="this is my prompt",
+        prompt="Extract entities from {text}",
     )
 
 The following variables can be used in the prompt:
 
-- `text` (str): the text to be analyzed.
+- `text` (str): the text to be analyzed (mandatory).
 - `schema` (str): the graph schema to be used.
 - `examples` (str): examples for few-shot learning.
 
@@ -366,17 +375,17 @@ If more customization is needed, it is possible to subclass the `EntityRelationE
 
     class MyExtractor(EntityRelationExtractor):
 
-    @validate_call
-    async def run(self, chunks: TextChunks, **kwargs: Any) -> Neo4jGraph:
-        return Neo4jGraph(
-            nodes=[
-                Neo4jNode(id="0", label="Person", properties={"name": "A. Einstein"}),
-                Neo4jNode(id="1", label="Concept", properties={"name": "Theory of relativity"}),
-            ],
-            relationships=[
-                Neo4jRelationship(type="PROPOSED_BY", start_node_id="1", end_node_id="0", properties={"year": 1915})
-            ],
-        )
+        @validate_call
+        async def run(self, chunks: TextChunks, **kwargs: Any) -> Neo4jGraph:
+            return Neo4jGraph(
+                nodes=[
+                    Neo4jNode(id="0", label="Person", properties={"name": "A. Einstein"}),
+                    Neo4jNode(id="1", label="Concept", properties={"name": "Theory of relativity"}),
+                ],
+                relationships=[
+                    Neo4jRelationship(type="PROPOSED_BY", start_node_id="1", end_node_id="0", properties={"year": 1915})
+                ],
+            )
 
 
 See :ref:`entityrelationextractor`.
@@ -402,9 +411,15 @@ to a Neo4j database:
     ) as driver:
         writer = Neo4jWriter(driver)
         graph = Neo4jGraph(nodes=[], relationships=[])
-        asyncio.run(writer.run(graph=graph))
+        await writer.run(graph)
 
-See :ref:`neo4jgraph` for the description of the input type.
+To improve insert performances, it is possible to act on two parameters:
+
+- `batch_size`: the number of nodes/relationships to be processed in each batch (default is 1000).
+- `max_concurrency`: the max number of concurrent queries (default is 5).
+
+See :ref:`neo4jgraph`.
+
 
 It is possible to create a custom writer using the `KGWriter` interface:
 
@@ -435,3 +450,44 @@ It is possible to create a custom writer using the `KGWriter` interface:
 
 
 See :ref:`kgwritermodel` and :ref:`kgwriter` in API reference.
+
+
+Entity Resolver
+===============
+
+The KG Writer component creates new nodes for each identified entity
+without making assumptions about entity similarity. The Entity Resolver
+is responsible for refining the created knowledge graph by merging entity
+nodes that represent the same real-world object.
+
+In practice, this package implements a single resolver that merges nodes
+with the same label and identical "name" property.
+
+.. warning::
+
+    The `SinglePropertyExactMatchResolver` **replaces** the nodes created by the KG writer.
+
+
+It can be used like this:
+
+.. code:: python
+    from neo4j_graphrag.experimental.components.resolver import (
+        SinglePropertyExactMatchResolver,
+    )
+    resolver = SinglePropertyExactMatchResolver(driver)
+    res = await resolver.run()
+
+.. warning::
+
+    By default, all nodes with the __Entity__ label will be resolved.
+    To exclude specific nodes, a filter_query can be added to the query.
+    For example, if a `:Resolved` label has been applied to already resolved entities
+    in the graph, these entities can be excluded with the following approach:
+
+    .. code:: python
+
+        from neo4j_graphrag.experimental.components.resolver import (
+            SinglePropertyExactMatchResolver,
+        )
+        resolver = SinglePropertyExactMatchResolver(driver, filter_query="WHERE not entity:Resolved")
+        res = await resolver.run()

@@ -24,7 +24,11 @@ from datetime import datetime
 from timeit import default_timer
 from typing import Any, AsyncGenerator, Optional
 
-import pygraphviz as pgv
+try:
+    import pygraphviz as pgv
+except ImportError:
+    pgv = None
+
 from pydantic import BaseModel, Field
 
 from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
@@ -191,8 +195,9 @@ class Orchestrator:
         for d in dependencies:
             d_status = await self.get_status_for_component(d.start)
             if d_status != RunStatus.DONE:
-                logger.warning(
-                    f"Missing dependency {d.start} for {task.name} (status: {d_status})"
+                logger.debug(
+                    f"Missing dependency {d.start} for {task.name} (status: {d_status}). "
+                    "Will try again when dependency is complete."
                 )
                 raise PipelineMissingDependencyError()
 
@@ -386,6 +391,12 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         G.draw(path)
 
     def get_pygraphviz_graph(self, hide_unused_outputs: bool = True) -> pgv.AGraph:
+        if pgv is None:
+            raise ImportError(
+                "Could not import pygraphviz. "
+                "Follow installation instruction in pygraphviz documentation "
+                "to get it up and running on your system."
+            )
         self.validate_parameter_mapping()
         G = pgv.AGraph(strict=False, directed=True)
         # create a node for each component
@@ -595,6 +606,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
     async def run(self, data: dict[str, Any]) -> PipelineResult:
         logger.debug("Starting pipeline")
         start_time = default_timer()
+        self.invalidate()
         self.validate_input_data(data)
         orchestrator = Orchestrator(self)
         await orchestrator.run(data)

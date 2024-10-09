@@ -15,13 +15,12 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 import neo4j
-from pinecone import Pinecone
 from pydantic import ValidationError
 
-from neo4j_graphrag.embedder import Embedder
+from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.exceptions import (
     EmbeddingRequiredError,
     RetrieverInitializationError,
@@ -40,6 +39,9 @@ from neo4j_graphrag.types import (
     RawSearchResult,
     RetrieverResultItem,
 )
+
+if TYPE_CHECKING:
+    from pinecone import Pinecone
 
 logger = logging.getLogger(__name__)
 

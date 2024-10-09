@@ -18,7 +18,7 @@ from unittest.mock import MagicMock, patch
 
 import neo4j
 import pytest
-from neo4j_graphrag.embedder import Embedder
+from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.llm import LLMInterface
 from neo4j_graphrag.retrievers import (
     HybridRetriever,
@@ -32,6 +32,11 @@ from neo4j_graphrag.types import RetrieverResultItem
 @pytest.fixture(scope="function")
 def driver() -> MagicMock:
     return MagicMock(spec=neo4j.Driver)
+
+
+@pytest.fixture(scope="function")
+def async_driver() -> MagicMock:
+    return MagicMock(spec=neo4j.AsyncDriver)
 
 
 @pytest.fixture(scope="function")

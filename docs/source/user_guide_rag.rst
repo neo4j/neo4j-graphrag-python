@@ -25,7 +25,7 @@ In practice, it's done with only a few lines of code:
     from neo4j_graphrag.retrievers import VectorRetriever
     from neo4j_graphrag.llm import OpenAILLM
     from neo4j_graphrag.generation import GraphRAG
-    from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
+    from neo4j_graphrag.embeddings import OpenAIEmbeddings
 
     # 1. Neo4j driver
     URI = "neo4j://localhost:7687"
@@ -56,6 +56,12 @@ In practice, it's done with only a few lines of code:
     print(response.answer)
 
 
+.. note::
+
+    In order to run this code, the `openai` Python package needs to be installed:
+    `pip install openai`
+
+
 The following sections provide more details about how to customize this code.
 
 ******************************
@@ -67,12 +73,134 @@ Each component can be configured individually: the LLM and the prompt.
 Using Another LLM Model
 ========================
 
-If OpenAI can not be used, there are two available alternatives:
+If OpenAI cannot be used directly, there are a few available alternatives:
 
-1. Utilize any LangChain chat model.
-2. Implement a custom interface.
+- Use Azure OpenAI (GPT...).
+- Use Google VertexAI (Gemini...).
+- Use Anthropic LLM (Claude...).
+- Use Cohere.
+- Use a local Ollama model.
+- Implement a custom interface.
+- Utilize any LangChain chat model.
 
-Both options are illustrated below, using a local Ollama model as an example.
+All options are illustrated below.
+
+Using Azure Open AI LLM
+-----------------------
+
+It is possible to use Azure OpenAI switching to the `AzureOpenAILLM` class:
+
+.. code:: python
+
+    from neo4j_graphrag.llm import AzureOpenAILLM
+    llm = AzureOpenAILLM(
+        model_name="gpt-4o",
+        azure_endpoint="https://example-endpoint.openai.azure.com/",  # update with your endpoint
+        api_version="2024-06-01",  # update appropriate version
+        api_key="...",  # api_key is optional and can also be set with OPENAI_API_KEY env var
+    )
+    llm.invoke("say something")
+
+Check the OpenAI Python client [documentation](https://github.com/openai/openai-python?tab=readme-ov-file#microsoft-azure-openai)
+to learn more about the configuration.
+
+.. note::
+
+    In order to run this code, the `openai` Python package needs to be installed:
+    `pip install openai`
+
+
+See :ref:`azureopenaillm`.
+
+
+Using VertexAI LLM
+------------------
+
+To use VertexAI, instantiate the `VertexAILLM` class:
+
+.. code:: python
+
+    from neo4j_graphrag.llm import VertexAILLM
+    from vertexai.generative_models import GenerationConfig
+
+    generation_config = GenerationConfig(temperature=0.0)
+    llm = VertexAILLM(
+        model_name="gemini-1.5-flash-001", generation_config=generation_config
+    )
+    llm.invoke("say something")
+
+
+.. note::
+
+    In order to run this code, the `google-cloud-aiplatform` Python package needs to be installed:
+    `pip install google-cloud-aiplatform`
+
+
+See :ref:`vertexaillm`.
+
+
+Using Anthropic LLM
+-------------------
+
+To use Anthropic, instantiate the `AnthropicLLM` class:
+
+.. code:: python
+
+    from neo4j_graphrag.llm import AnthropicLLM
+
+    llm = AnthropicLLM(
+        model_name="claude-3-opus-20240229",
+        model_params={"max_tokens": 1000},  # max_tokens must be specified
+        api_key=api_key,  # can also set `ANTHROPIC_API_KEY` in env vars
+    )
+    llm.invoke("say something")
+
+
+.. note::
+
+    In order to run this code, the `anthropic` Python package needs to be installed:
+    `pip install anthropic`
+
+See :ref:`anthropicllm`.
+
+
+Using Cohere LLM
+----------------
+
+To use Cohere, instantiate the `CohereLLM` class:
+
+.. code:: python
+
+    from neo4j_graphrag.llm import CohereLLM
+
+    llm = CohereLLM(
+        model_name="command-r",
+        api_key=api_key,  # can also set `CO_API_KEY` in env vars
+    )
+    llm.invoke("say something")
+
+
+.. note::
+
+    In order to run this code, the `cohere` Python package needs to be installed:
+    `pip install cohere`
+
+
+See :ref:`coherellm`.
+
+
+Using a Local Model via Ollama
+-------------------------------
+
+Similarly to the official OpenAI Python client, the `OpenAILLM` can be
+used with Ollama. Assuming Ollama is running on the default address `127.0.0.1:11434`,
+it can be queried using the following:
+
+.. code:: python
+
+    from neo4j_graphrag.llm import OpenAILLM
+    llm = OpenAILLM(api_key="ollama", base_url="http://127.0.0.1:11434/v1", model_name="orca-mini")
+    llm.invoke("say something")
 
 
 Using a Model from LangChain
@@ -99,10 +227,11 @@ It is however not mandatory to use LangChain. The alternative is to implement
 a custom model.
 
 Using a Custom Model
------------------------------
+--------------------
 
-To avoid LangChain, developers can create a custom LLM class by subclassing
-the `LLMInterface`. Here's an example using the Python Ollama client:
+If the provided implementations do not match their needs, developers can create a
+custom LLM class by subclassing the `LLMInterface`.
+Here's an example using the Python Ollama client:
 
 
 .. code:: python
@@ -122,6 +251,10 @@ the `LLMInterface`. Here's an example using the Python Ollama client:
             return LLMResponse(
                 content=response["message"]["content"]
             )
+
+        async def ainvoke(self, input: str) -> LLMResponse:
+            return self.invoke(input)  # TODO: implement async with ollama.AsyncClient
+
 
     # retriever = ...
 
@@ -260,13 +393,20 @@ into a vector is required. Therefore, the retriever requires knowledge of an emb
 Embedders
 -----------------------------
 
-Currently, this package supports two embedders: `OpenAIEmbeddings` and `SentenceTransformerEmbeddings`.
+Currently, this package supports the following embedders:
 
-The `OpenAIEmbedder` was illustrated previously. Here is how to use the `SentenceTransformerEmbeddings`:
+- :ref:`openaiembeddings`
+- :ref:`sentencetransformerembeddings`
+- :ref:`vertexaiembeddings`
+- :ref:`mistralaiembeddings`
+- :ref:`cohereembeddings`
+- :ref:`azureopenaiembeddings`
+
+The `OpenAIEmbeddings` was illustrated previously. Here is how to use the `SentenceTransformerEmbeddings`:
 
 .. code:: python
 
-    from neo4j_graphrag.embeddings.sentence_transformers import SentenceTransformerEmbeddings
+    from neo4j_graphrag.embeddings import SentenceTransformerEmbeddings
 
     embedder = SentenceTransformerEmbeddings(model="all-MiniLM-L6-v2")  # Note: this is the default model
 
@@ -277,7 +417,7 @@ the following implementation of an embedder that wraps the `OllamaEmbedding` mod
 .. code:: python
 
     from llama_index.embeddings.ollama import OllamaEmbedding
-    from neo4j_graphrag.embedder import Embedder
+    from neo4j_graphrag.embeddings.base import Embedder
 
     class OllamaEmbedder(Embedder):
         def __init__(self, ollama_embedding):
@@ -290,10 +430,10 @@ the following implementation of an embedder that wraps the `OllamaEmbedding` mod
             return embedding[0]
 
     ollama_embedding = OllamaEmbedding(
-                model_name="llama3",
-                base_url="http://localhost:11434",
-                ollama_additional_kwargs={"mirostat": 0},
-            )
+        model_name="llama3",
+        base_url="http://localhost:11434",
+        ollama_additional_kwargs={"mirostat": 0},
+    )
     embedder = OllamaEmbedder(ollama_embedding)
     vector = embedder.embed_query("some text")
 
@@ -607,7 +747,7 @@ LLMs can be different.
 
     from neo4j import GraphDatabase
     from neo4j_graphrag.retrievers import Text2CypherRetriever
-    from neo4j_graphrag.llm import OpenAILLM
+    from neo4j_graphrag.llm.openai import OpenAILLM
 
     URI = "neo4j://localhost:7687"
     AUTH = ("neo4j", "password")
