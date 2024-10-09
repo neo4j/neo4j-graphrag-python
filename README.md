@@ -43,6 +43,8 @@ Follow installation instructions [here](https://pygraphviz.github.io/documentati
 Assumption: Neo4j running
 
 ```python
+import asyncio
+
 from neo4j import GraphDatabase
 from neo4j_graphrag.embeddings import OpenAIEmbeddings
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
@@ -59,7 +61,7 @@ relations = ["PARENT_OF", "HEIR_OF", "RULES"]
 potential_schema = [
     ("Person", "PARENT_OF", "Person"),
     ("Person", "HEIR_OF", "House"),
-    ("House", "RULES", "Planet")
+    ("House", "RULES", "Planet"),
 ]
 
 # Instantiate an Embedder object
@@ -82,13 +84,15 @@ kg_builder = SimpleKGPipeline(
     embedder=embedder,
     entities=entities,
     relations=relations,
-    on_error="CONTINUE",
+    on_error="IGNORE",
     from_pdf=False,
 )
 
-await kg_builder.run_async(
-    text=""""The son of Duke Leto Atreides and the Lady Jessica, Paul is the heir of
+asyncio.run(
+    kg_builder.run_async(
+        text=""""The son of Duke Leto Atreides and the Lady Jessica, Paul is the heir of
         House Atreides, an aristocratic family that rules the planet Caladan."""
+    )
 )
 ```
 
