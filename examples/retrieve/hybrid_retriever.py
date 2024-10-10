@@ -2,26 +2,28 @@
 using OpenAI embeddings. OPENAI_API_KEY needs to be set in the environment for
 this example to run.
 
-It shows how to use a vector-only retriever to find context
-similar to a query **text** using vector similarity.
+It shows how to use a hybrid retriever to find context
+similar to a query **text** using vector+text similarity.
 """
 
 import neo4j
 from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
-from neo4j_graphrag.retrievers import VectorRetriever
+from neo4j_graphrag.retrievers import HybridRetriever
 
 # Define database credentials
 URI = "neo4j+s://demo.neo4jlabs.com"
 AUTH = ("recommendations", "recommendations")
 DATABASE = "recommendations"
 INDEX_NAME = "moviePlotsEmbedding"
+FULLTEXT_INDEX_NAME = "movieFulltext"
 
 
 with neo4j.GraphDatabase.driver(URI, auth=AUTH, database=DATABASE) as driver:
     # Initialize the retriever
-    retriever = VectorRetriever(
+    retriever = HybridRetriever(
         driver=driver,
-        index_name=INDEX_NAME,
+        vector_index_name=INDEX_NAME,
+        fulltext_index_name=FULLTEXT_INDEX_NAME,
         embedder=OpenAIEmbeddings(),
         # optionally, provide a list of properties to fetch (default fetch all)
         # return_properties=[],
@@ -36,3 +38,7 @@ with neo4j.GraphDatabase.driver(URI, auth=AUTH, database=DATABASE) as driver:
     # (retrieve the top 5 most similar nodes)
     query_text = "Find me a movie about aliens"
     print(retriever.search(query_text=query_text, top_k=5))
+
+    # note: it is also possible to query from a query_vector directly:
+    # query_vector: list[float] = [...]
+    # retriever.search(query_vector=query_vector, top_k=5)

@@ -1,27 +1,30 @@
-"""This example assumes a Neo4j database is running and
-contain some data with a vector index. Vector index name update
-is required (see INDEX_NAME).
+"""This example uses an example Movie database where movies' plots are embedded
+using OpenAI embeddings. OPENAI_API_KEY needs to be set in the environment for
+this example to run.
 
 It shows how to use a vector-only retriever to find context
 similar to a query **vector** using vector similarity.
 """
 
-from neo4j import GraphDatabase
+import neo4j
 from neo4j_graphrag.retrievers import VectorRetriever
+from avatar_embeddings import AVATAR_EMBEDDINGS
 
-INDEX_NAME = "my-index-name"  # UPDATE THIS LINE
 
-# Connect to Neo4j database
-URI = "neo4j://localhost:7687"
-AUTH = ("neo4j", "password")
-driver = GraphDatabase.driver(URI, auth=AUTH)
+# Define database credentials
+URI = "neo4j+s://demo.neo4jlabs.com"
+AUTH = ("recommendations", "recommendations")
+DATABASE = "recommendations"
+INDEX_NAME = "moviePlotsEmbedding"
 
-# Initialize the retriever
-retriever = VectorRetriever(
-    driver=driver,
-    index_name=INDEX_NAME,
-)
 
-# Perform the similarity search for a vector query
-query_vector: list[float] = []
-print(retriever.search(query_vector=query_vector, top_k=5))
+with neo4j.GraphDatabase.driver(URI, auth=AUTH, database=DATABASE) as driver:
+    # Initialize the retriever
+    retriever = VectorRetriever(
+        driver=driver,
+        index_name=INDEX_NAME,
+    )
+
+    # Perform the similarity search for a vector query
+    query_vector: list[float] = AVATAR_EMBEDDINGS
+    print(retriever.search(query_vector=query_vector, top_k=5))

@@ -4,19 +4,21 @@ this example to run.
 
 Also requires minimal Cypher knowledge to write the retrieval query.
 
-It shows how to use a vector-cypher retriever to find context
-similar to a query **text** using vector similarity + graph traversal.
+It shows how to use a hybrid retriever to find context
+similar to a query **text** using vector+text similarity
+and graph traversal.
 """
 
 import neo4j
 from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
-from neo4j_graphrag.retrievers import VectorCypherRetriever
+from neo4j_graphrag.retrievers import HybridCypherRetriever
 
 # Define database credentials
 URI = "neo4j+s://demo.neo4jlabs.com"
 AUTH = ("recommendations", "recommendations")
 DATABASE = "recommendations"
 INDEX_NAME = "moviePlotsEmbedding"
+FULLTEXT_INDEX_NAME = "movieFulltext"
 
 # for each Movie node matched by the vector search, retrieve more context:
 # the name of all actors starring in that movie
@@ -24,9 +26,10 @@ RETRIEVAL_QUERY = " MATCH (node)<-[:ACTED_IN]-(p:Person) RETURN node.title as mo
 
 with neo4j.GraphDatabase.driver(URI, auth=AUTH, database=DATABASE) as driver:
     # Initialize the retriever
-    retriever = VectorCypherRetriever(
+    retriever = HybridCypherRetriever(
         driver=driver,
-        index_name=INDEX_NAME,
+        vector_index_name=INDEX_NAME,
+        fulltext_index_name=FULLTEXT_INDEX_NAME,
         # note: embedder is optional if you only use query_vector
         embedder=OpenAIEmbeddings(),
         retrieval_query=RETRIEVAL_QUERY,

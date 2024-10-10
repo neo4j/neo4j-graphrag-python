@@ -11,6 +11,7 @@ similar to a query **text** using vector similarity + graph traversal.
 import neo4j
 from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
 from neo4j_graphrag.retrievers import VectorCypherRetriever
+from neo4j_graphrag.types import RetrieverResultItem
 
 # Define database credentials
 URI = "neo4j+s://demo.neo4jlabs.com"
@@ -22,6 +23,20 @@ INDEX_NAME = "moviePlotsEmbedding"
 # the name of all actors starring in that movie
 RETRIEVAL_QUERY = " MATCH (node)<-[:ACTED_IN]-(p:Person) RETURN node.title as movieTitle, node.plot as moviePlot, collect(p.name) as actors, score as similarityScore"
 
+def my_result_formatter(record: neo4j.Record) -> RetrieverResultItem:
+    """The record is a row output from the RETRIEVAL_QUERY so it our case it contains
+    the following keys:
+    - movieTitle
+    - moviePlot
+    - actors
+    - similarityScore
+    """
+    return RetrieverResultItem(
+        content=f"Movie title: {record.get('movieTitle')}, Plot: {record.get('moviePlot')}, Actors: {record.get('actors')}",
+        metadata={"score": record.get("similarityScore")},
+    )
+
+
 with neo4j.GraphDatabase.driver(URI, auth=AUTH, database=DATABASE) as driver:
     # Initialize the retriever
     retriever = VectorCypherRetriever(
@@ -30,9 +45,7 @@ with neo4j.GraphDatabase.driver(URI, auth=AUTH, database=DATABASE) as driver:
         # note: embedder is optional if you only use query_vector
         embedder=OpenAIEmbeddings(),
         retrieval_query=RETRIEVAL_QUERY,
-        # optionally, configure how to format the results
-        # (see corresponding example in 'customize' directory)
-        # result_formatter=None,
+        result_formatter=my_result_formatter,
         # optionally, set neo4j database
         # neo4j_database="neo4j",
     )
@@ -41,7 +54,3 @@ with neo4j.GraphDatabase.driver(URI, auth=AUTH, database=DATABASE) as driver:
     # (retrieve the top 5 most similar nodes)
     query_text = "Who were the actors in Avatar?"
     print(retriever.search(query_text=query_text, top_k=5))
-
-    # note: it is also possible to query from a query_vector directly:
-    # query_vector: list[float] = [...]
-    # retriever.search(query_vector=query_vector, top_k=5)

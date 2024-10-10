@@ -20,10 +20,10 @@ are listed in [the last section of this file](#customize).
 
 - [Retriever from an embedding vector](retrieve/similarity_search_for_vector.py)
 - [Retriever from a text](retrieve/similarity_search_for_text.py)
-- [Retriever with pre-filters](customize/retrievers/use_pre_filters.py)
-- [Advanced retrieval with VectorCypherRetriever](retrieve/vector_cypher_retriever.py)
-- [Hybrid retriever]()
-- [Write a custom retriever]()
+- [Graph-based retrieval with VectorCypherRetriever](retrieve/vector_cypher_retriever.py)
+- [Hybrid retriever](./retrieve/hybrid_retriever.py)
+- [Hybrid Cypher retriever](./retrieve/hybrid_cypher_retriever.py)
+- [Text2Cypher retriever](./retrieve/text2cypher_search.py)
 
 
 ### External Retrievers
@@ -54,7 +54,9 @@ are listed in [the last section of this file](#customize).
 
 ### Retriever
 
-- [Control result format](customize/retrievers/result_formatter.py) (for `VectorRetriever`, `HybridRetriever`, `VectorCypherRetriever` and `HybridCypherRetriever`)
+- [Control result format for VectorRetriever](customize/retrievers/result_formatter_vector_retriever.py)
+- [Control result format for VectorCypherRetriever](customize/retrievers/result_formatter_vector_cypher_retriever.py)
+
 
 ### LLMs
 

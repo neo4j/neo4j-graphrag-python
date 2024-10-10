@@ -1,15 +1,19 @@
-from neo4j import GraphDatabase
+"""The example leverages the Text2CypherRetriever to fetch some context.
+It uses the OpenAILLM, hence the OPENAI_API_KEY needs to be set in the
+environment for this example to run.
+"""
+
+import neo4j
 from neo4j_graphrag.llm import OpenAILLM
 from neo4j_graphrag.retrievers import Text2CypherRetriever
 
-URI = "neo4j://localhost:7687"
-AUTH = ("neo4j", "password")
-
-# Connect to Neo4j database
-driver = GraphDatabase.driver(URI, auth=AUTH)
+# Define database credentials
+URI = "neo4j+s://demo.neo4jlabs.com"
+AUTH = ("recommendations", "recommendations")
+DATABASE = "recommendations"
 
 # Create LLM object
-llm = OpenAILLM(model_name="gpt-3.5-turbo", model_params={"temperature": 0})
+llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0})
 
 # (Optional) Specify your own Neo4j schema
 neo4j_schema = """
@@ -33,14 +37,18 @@ examples = [
     "USER INPUT: 'Which actors starred in the Matrix?' QUERY: MATCH (p:Person)-[:ACTED_IN]->(m:Movie) WHERE m.title = 'The Matrix' RETURN p.name"
 ]
 
-# Initialize the retriever
-retriever = Text2CypherRetriever(
-    driver=driver,
-    llm=llm,
-    neo4j_schema=neo4j_schema,
-    examples=examples,
-)
+with neo4j.GraphDatabase.driver(URI, auth=AUTH) as driver:
+    # Initialize the retriever
+    retriever = Text2CypherRetriever(
+        driver=driver,
+        llm=llm,
+        neo4j_schema=neo4j_schema,
+        examples=examples,
+        # optionally, you can also provide your own prompt
+        # for the text2Cypher generation step
+        # custom_prompt="",
+    )
 
-# Generate a Cypher query using the LLM, send it to the Neo4j database, and return the results
-query_text = "Which movies did Hugo Weaving star in?"
-print(retriever.search(query_text=query_text))
+    # Generate a Cypher query using the LLM, send it to the Neo4j database, and return the results
+    query_text = "Which movies did Hugo Weaving star in?"
+    print(retriever.search(query_text=query_text))
