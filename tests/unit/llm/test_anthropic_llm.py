@@ -17,14 +17,18 @@ from unittest.mock import AsyncMock, MagicMock, patch, Mock
 
 import pytest
 from neo4j_graphrag.llm.anthropic_llm import AnthropicLLM
-
+import sys
 import anthropic
+from typing import Generator
 
 
-def get_mock_anthropic() -> MagicMock:
+@pytest.fixture
+def mock_anthropic() -> Generator[MagicMock, None, None]:
     mock = MagicMock()
     mock.APIError = anthropic.APIError
-    return mock
+
+    with patch.dict(sys.modules, {"anthropic": mock}):
+        yield mock
 
 
 @patch("builtins.__import__", side_effect=ImportError)
@@ -33,11 +37,7 @@ def test_anthropic_llm_missing_dependency(mock_import: Mock) -> None:
         AnthropicLLM(model_name="claude-3-opus-20240229")
 
 
-@patch("builtins.__import__")
-def test_anthropic_invoke_happy_path(mock_import: Mock) -> None:
-    mock_anthropic = get_mock_anthropic()
-    mock_import.return_value = mock_anthropic
-
+def test_anthropic_invoke_happy_path(mock_anthropic: Mock) -> None:
     mock_anthropic.Anthropic.return_value.messages.create.return_value = MagicMock(
         content="generated text"
     )
@@ -54,11 +54,7 @@ def test_anthropic_invoke_happy_path(mock_import: Mock) -> None:
 
 
 @pytest.mark.asyncio
-@patch("builtins.__import__")
-async def test_anthropic_ainvoke_happy_path(mock_import: Mock) -> None:
-    mock_anthropic = get_mock_anthropic()
-    mock_import.return_value = mock_anthropic
-
+async def test_anthropic_ainvoke_happy_path(mock_anthropic: Mock) -> None:
     mock_response = AsyncMock()
     mock_response.content = "Return text"
     mock_model = mock_anthropic.AsyncAnthropic.return_value

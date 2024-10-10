@@ -19,12 +19,17 @@ import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm import LLMResponse
 from neo4j_graphrag.llm.cohere_llm import CohereLLM
+import sys
+from typing import Generator
 
 
-def get_mock_cohere() -> MagicMock:
+@pytest.fixture
+def mock_cohere() -> Generator[MagicMock, None, None]:
     mock_cohere = MagicMock()
     mock_cohere.core.api_error.ApiError = cohere.core.ApiError
-    return mock_cohere
+
+    with patch.dict(sys.modules, {"cohere": mock_cohere}):
+        yield mock_cohere
 
 
 @patch("builtins.__import__", side_effect=ImportError)
@@ -33,11 +38,7 @@ def test_cohere_llm_missing_dependency(mock_import: Mock) -> None:
         CohereLLM(model_name="something")
 
 
-@patch("builtins.__import__")
-def test_cohere_llm_happy_path(mock_import: Mock) -> None:
-    mock_cohere = get_mock_cohere()
-    mock_import.return_value = mock_cohere
-
+def test_cohere_llm_happy_path(mock_cohere: Mock) -> None:
     mock_cohere.Client.return_value.chat.return_value = MagicMock(
         text="cohere response text"
     )
@@ -48,11 +49,7 @@ def test_cohere_llm_happy_path(mock_import: Mock) -> None:
 
 
 @pytest.mark.asyncio
-@patch("builtins.__import__")
-async def test_cohere_llm_happy_path_async(mock_import: Mock) -> None:
-    mock_cohere = get_mock_cohere()
-    mock_import.return_value = mock_cohere
-
+async def test_cohere_llm_happy_path_async(mock_cohere: Mock) -> None:
     async_mock = Mock()
     async_mock.chat = AsyncMock(return_value=MagicMock(text="cohere response text"))
     mock_cohere.AsyncClient.return_value = async_mock
@@ -62,11 +59,7 @@ async def test_cohere_llm_happy_path_async(mock_import: Mock) -> None:
     assert res.content == "cohere response text"
 
 
-@patch("builtins.__import__")
-def test_cohere_llm_failed(mock_import: Mock) -> None:
-    mock_cohere = get_mock_cohere()
-    mock_import.return_value = mock_cohere
-
+def test_cohere_llm_failed(mock_cohere: Mock) -> None:
     mock_cohere.Client.return_value.chat.side_effect = cohere.core.ApiError
     embedder = CohereLLM(model_name="something")
     with pytest.raises(LLMGenerationError) as excinfo:
@@ -75,11 +68,7 @@ def test_cohere_llm_failed(mock_import: Mock) -> None:
 
 
 @pytest.mark.asyncio
-@patch("builtins.__import__")
-async def test_cohere_llm_failed_async(mock_import: Mock) -> None:
-    mock_cohere = get_mock_cohere()
-    mock_import.return_value = mock_cohere
-
+async def test_cohere_llm_failed_async(mock_cohere: Mock) -> None:
     mock_cohere.AsyncClient.return_value.chat.side_effect = cohere.core.ApiError
     embedder = CohereLLM(model_name="something")
 
