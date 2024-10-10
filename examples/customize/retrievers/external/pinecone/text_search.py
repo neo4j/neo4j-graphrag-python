@@ -8,9 +8,10 @@ In this example, search is performed from a text. Embeddings are computed
 using OpenAI models. See [../../embeddings/](../../embeddings/) for examples
 using other supported embedders.
 """
+
 from neo4j import GraphDatabase
-from neo4j_graphrag.retrievers import PineconeNeo4jRetriever
 from neo4j_graphrag.embeddings import OpenAIEmbeddings
+from neo4j_graphrag.retrievers import PineconeNeo4jRetriever
 from pinecone import Pinecone
 
 NEO4J_AUTH = ("neo4j", "password")

@@ -4,6 +4,7 @@
 
 Requires OPENAI_API_KEY to be in the env var.
 """
+
 import neo4j
 from langchain.chat_models import ChatOpenAI
 from langchain.embeddings import OpenAIEmbeddings

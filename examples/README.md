@@ -20,7 +20,7 @@ are listed in [the last section of this file](#customize).
 
 - [Retriever from an embedding vector](retrieve/similarity_search_for_vector.py)
 - [Retriever from a text](retrieve/similarity_search_for_text.py)
-- [Retriever with pre-filters](old/vector_search_with_filters.py)
+- [Retriever with pre-filters](customize/retrievers/use_pre_filters.py)
 - [Advanced retrieval with VectorCypherRetriever](retrieve/vector_cypher_retriever.py)
 - [Hybrid retriever]()
 - [Write a custom retriever]()
@@ -47,7 +47,7 @@ are listed in [the last section of this file](#customize).
 
 ## Answer: GraphRAG
 
-- [End to end GraphRAG](./answer/)
+- [End to end GraphRAG](./answer/graphrag.py)
 
 
 ## Customize
@@ -89,28 +89,37 @@ are listed in [the last section of this file](#customize).
 - [End to end example with explicit components and text input](./customize/build_graph/pipeline/kg_builder_from_text.py)
 - [End to end example with explicit components and PDF input](./customize/build_graph/pipeline/kg_builder_from_pdf.py)
 
-### Components
+#### Components
 
 - Loaders:
-  - [Load PDF file]()
-  - [Custom]()
+  - [Load PDF file](./customize/build_graph/components/loaders/pdf_loader.py)
+  - [Custom](./customize/build_graph/components/loaders/custom_loader.py)
 - Text Splitter:
   - [Fixed size splitter](./customize/build_graph/components/splitters/fixed_size_splitter.py)
-  - [Splitter from LangChain]()
-  - [Splitter from LLamaIndex]()
-  - [Custom]()
+  - [Splitter from LangChain](./customize/build_graph/components/splitters/langhchain_splitter.py)
+  - [Splitter from LLamaIndex](./customize/build_graph/components/splitters/llamaindex_splitter.py)
+  - [Custom](./customize/build_graph/components/splitters/custom_splitter.py)
 - [Chunk embedder]()
 - Schema Builder:
-  - [User-defined]()
-  - [Custom]()
+  - [User-defined](./customize/build_graph/components/schema_builders/schema.py)
 - Entity Relation Extractor:
-  - [LLM-based]()
-  - [Custom]()
+  - [LLM-based](./customize/build_graph/components/extractors/llm_entity_relation_extractor.py)
+  - [LLM-based with custom prompt](./customize/build_graph/components/extractors/llm_entity_relation_extractor_with_custom_prompt.py)
+  - [Custom](./customize/build_graph/components/extractors/custom_extractor.py)
 - Knowledge Graph Writer:
-  - [Neo4j writer]()
-  - [Custom]()
+  - [Neo4j writer](./customize/build_graph/components/writers/neo4j_writer.py)
+  - [Custom](./customize/build_graph/components/writers/custom_writer.py)
 - Entity Resolver:
-  - [...]()
+  - [SinglePropertyExactMatchResolver](./customize/build_graph/components/resolvers/simple_entity_resolver.py)
+  - [SinglePropertyExactMatchResolver with pre-filter](./customize/build_graph/components/resolvers/simple_entity_resolver_pre_filter.py)
+  - [Custom resolver](./customize/build_graph/components/resolvers/custom_resolver.py)
+- [Custom component](./customize/build_graph/components/custom_component.py)
+
+
+### Answer: GraphRAG
+
+- [LangChain compatibility](./customize/answer/langchain_compatiblity.py)
+- [Use a custom prompt](./customize/answer/custom_prompt.py)
 
 
 ## Database Setup
