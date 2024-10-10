@@ -32,14 +32,13 @@ jobs:
           key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
       - name: Install dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --extras external_clients
+        run: poetry install --no-interaction
       - name: Check format and linting
         run: |
-          poetry run ruff check --select I .
           poetry run ruff check .
           poetry run ruff format --check .
       - name: Run strict mypy check
-        run: poetry run mypy --strict --ignore-missing-imports --allow-subclassing-any --allow-untyped-calls .
+        run: poetry run mypy .
       - name: Run unit tests and check coverage
         run: |
           poetry run coverage run -m pytest tests/unit
