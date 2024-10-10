@@ -327,6 +327,8 @@ We provide implementations for the following retrievers:
      - Use this retriever when vectors are saved in a Weaviate vector database
    * - :ref:`PineconeNeo4jRetriever <pinecone-neo4j-retriever-user-guide>`
      - Use this retriever when vectors are saved in a Pinecone vector database
+   * - :ref:`QdrantNeo4jRetriever <qdrant-neo4j-retriever-user-guide>`
+     - Use this retriever when vectors are saved in a Qdrant vector database
 
 Retrievers all expose a `search` method that we will discuss in the next sections.
 
@@ -671,6 +673,35 @@ Pinecone Retrievers
     )
 
 Also see :ref:`pineconeneo4jretriever`.
+
+.. _qdrant-neo4j-retriever-user-guide:
+
+Qdrant Retrievers
+-----------------
+
+.. note::
+
+    In order to import this retriever, the Qdrant Python client must be installed:
+    `pip install qdrant-client`
+
+
+.. code:: python
+
+    from qdrant_client import QdrantClient
+    from neo4j_graphrag.retrievers import QdrantNeo4jRetriever
+
+    client = QdrantClient(...)  # construct the Qdrant client instance
+
+    retriever = QdrantNeo4jRetriever(
+        driver=driver,
+        client=client,
+        collection_name="my-collection",
+        id_property_external="neo4j_id",    # The payload field that contains identifier to a corresponding Neo4j node id property
+        id_property_neo4j="id",
+        embedder=embedder,
+    )
+
+See :ref:`qdrantneo4jretriever`.
 
 
 Other Retrievers
