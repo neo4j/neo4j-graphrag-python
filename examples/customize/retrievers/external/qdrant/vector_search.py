@@ -2,7 +2,7 @@ from neo4j import GraphDatabase
 from neo4j_graphrag.retrievers import QdrantNeo4jRetriever
 from qdrant_client import QdrantClient
 
-from examples.embedding_biology import EMBEDDING_BIOLOGY
+from examples.data.embedding_biology import EMBEDDING_BIOLOGY
 
 NEO4J_URL = "neo4j://localhost:7687"
 NEO4J_AUTH = ("neo4j", "password")

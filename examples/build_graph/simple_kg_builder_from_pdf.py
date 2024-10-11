@@ -7,8 +7,8 @@ if needed.
 OPENAI_API_KEY needs to be in the env vars.
 """
 
-import os
 import asyncio
+import os
 from pathlib import Path
 
 import neo4j
@@ -17,7 +17,6 @@ from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.llm import LLMInterface
 from neo4j_graphrag.llm.openai_llm import OpenAILLM
-
 
 # Neo4j db infos
 URI = "neo4j://localhost:7687"

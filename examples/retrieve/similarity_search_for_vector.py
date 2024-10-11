@@ -8,8 +8,8 @@ similar to a query **vector** using vector similarity.
 
 import neo4j
 from neo4j_graphrag.retrievers import VectorRetriever
-from avatar_embeddings import AVATAR_EMBEDDINGS
 
+from examples.data.embeddings_avatar import EMBEDDINGS_AVATAR
 
 # Define database credentials
 URI = "neo4j+s://demo.neo4jlabs.com"
@@ -26,5 +26,5 @@ with neo4j.GraphDatabase.driver(URI, auth=AUTH, database=DATABASE) as driver:
     )
 
     # Perform the similarity search for a vector query
-    query_vector: list[float] = AVATAR_EMBEDDINGS
+    query_vector: list[float] = EMBEDDINGS_AVATAR
     print(retriever.search(query_vector=query_vector, top_k=5))

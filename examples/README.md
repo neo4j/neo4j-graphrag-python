@@ -42,7 +42,8 @@ are listed in [the last section of this file](#customize).
 
 ### Qdrant
 
-- [Qdrant]()
+- [Vector search](./customize/retrievers/external/qdrant/vector_search.py)
+- [Text search](./customize/retrievers/external/qdrant/text_search.py)
 
 
 ## Answer: GraphRAG

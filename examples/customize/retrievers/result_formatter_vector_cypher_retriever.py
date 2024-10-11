@@ -23,6 +23,7 @@ INDEX_NAME = "moviePlotsEmbedding"
 # the name of all actors starring in that movie
 RETRIEVAL_QUERY = " MATCH (node)<-[:ACTED_IN]-(p:Person) RETURN node.title as movieTitle, node.plot as moviePlot, collect(p.name) as actors, score as similarityScore"
 
+
 def my_result_formatter(record: neo4j.Record) -> RetrieverResultItem:
     """The record is a row output from the RETRIEVAL_QUERY so it our case it contains
     the following keys:

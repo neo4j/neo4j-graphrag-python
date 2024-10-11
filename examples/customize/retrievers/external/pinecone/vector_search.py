@@ -11,7 +11,7 @@ from neo4j import GraphDatabase
 from neo4j_graphrag.retrievers import PineconeNeo4jRetriever
 from pinecone import Pinecone
 
-from examples.customize.embedding_biology import EMBEDDING_BIOLOGY
+from examples.data.embedding_biology import EMBEDDING_BIOLOGY
 
 NEO4J_AUTH = ("neo4j", "password")
 NEO4J_URL = "neo4j://localhost:7687"
