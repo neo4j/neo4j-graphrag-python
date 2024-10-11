@@ -18,7 +18,7 @@ def main() -> None:
             client=pc_client,
             index_name="jeopardy",
             id_property_neo4j="id",
-            embedder=embedder,  # type: ignore
+            embedder=embedder,
         )
 
         res = retriever.search(query_text="biology", top_k=2)

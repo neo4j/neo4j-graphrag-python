@@ -17,7 +17,7 @@ def main() -> None:
                 collection="Jeopardy",
                 id_property_external="neo4j_id",
                 id_property_neo4j="id",
-                embedder=embedder,  # type: ignore
+                embedder=embedder,
             )
 
             res = retriever.search(query_text="biology", top_k=2)
