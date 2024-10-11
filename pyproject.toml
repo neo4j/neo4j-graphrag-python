@@ -31,6 +31,7 @@ from = "src"
 python = "^3.9.0"
 neo4j = "^5.17.0"
 pydantic = "^2.6.3"
+urllib3 = "<2"
 weaviate-client = {version = "^4.6.1", optional = true}
 pinecone-client = {version = "^4.1.0", optional = true}
 types-mock = "^5.1.0.20240425"
@@ -45,6 +46,7 @@ google-cloud-aiplatform = {version = "^1.66.0", optional = true}
 cohere = {version = "^5.9.0", optional = true}
 anthropic = { version = "^0.34.2", optional = true}
 mistralai = {version = "^1.0.3", optional = true}
+qdrant-client = {version = "^1.11.3", optional = true}
 
 [tool.poetry.group.dev.dependencies]
 pylint = "^3.1.0"
@@ -81,10 +83,10 @@ google-cloud-aiplatform = {version = "^1.66.0"}
 cohere = {version = "^5.9.0"}
 anthropic = { version = "^0.34.2"}
 mistralai = {version = "^1.0.3"}
-
+qdrant-client = {version = "^1.11.3"}
 
 [tool.poetry.extras]
-external_clients = ["weaviate-client", "pinecone-client", "google-cloud-aiplatform", "cohere", "anthropic", "mistralai"]
+external_clients = ["weaviate-client", "pinecone-client", "google-cloud-aiplatform", "cohere", "anthropic", "mistralai", "qdrant-client"]
 kg_creation_tools = ["pygraphviz"]
 
 [build-system]
