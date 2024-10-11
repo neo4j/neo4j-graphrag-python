@@ -194,7 +194,7 @@ Install dependencies
 
 .. code:: bash
 
-    poetry install
+    poetry install --all-extras
 
 ***************
 Getting started
