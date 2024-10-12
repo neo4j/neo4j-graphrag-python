@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import inspect
-from typing import Any, Optional, Union
+from typing import Any, List, Optional, Union, Tuple
 
 import neo4j
 
@@ -37,3 +37,13 @@ async def execute_query(
     # but we're sure at this stage we do not have a coroutine anymore
     records, _, _ = driver.execute_query(query, **kwargs)  # type: ignore[misc]
     return records  # type: ignore[no-any-return]
+
+
+def potential_schema_to_entity_and_relation_list(potential_schema: List[Tuple[str, str, str]]) -> Tuple[List[str], List[str]]:
+    entities = set()
+    relations = set()
+    for source, rel, target in potential_schema:
+        entities.add(source)
+        entities.add(target)
+        relations.add(rel)
+    return list(entities), list(relations)
