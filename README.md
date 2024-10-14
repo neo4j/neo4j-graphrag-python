@@ -261,34 +261,36 @@ and/or [Discord](https://discord.gg/neo4j).
 
 When you're finished with your changes, create a pull request (PR) using the following workflow.
 
--   Ensure that you have [signed the CLA](https://neo4j.com/developer/contributing-code/#sign-cla).
--   Ensure that the base of your PR is set to `main`.
--   Don't forget to [link your PR to an issue](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue)
+- Ensure that you have [signed the CLA](https://neo4j.com/developer/contributing-code/#sign-cla).
+- Ensure that the base of your PR is set to `main`.
+- Don't forget to [link your PR to an issue](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue)
     if you are solving one.
--   Check the checkbox to [allow maintainer edits](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/allowing-changes-to-a-pull-request-branch-created-from-a-fork)
+- Check the checkbox to [allow maintainer edits](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/allowing-changes-to-a-pull-request-branch-created-from-a-fork)
     so that maintainers can make any necessary tweaks and update your branch for merge.
--   Reviewers may ask for changes to be made before a PR can be merged, either using
+- Reviewers may ask for changes to be made before a PR can be merged, either using
     [suggested changes](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/incorporating-feedback-in-your-pull-request)
     or normal pull request comments. You can apply suggested changes directly through
     the UI. Any other changes can be made in your fork and committed to the PR branch.
--   As you update your PR and apply changes, mark each conversation as [resolved](https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/commenting-on-a-pull-request#resolving-conversations).
--   Update the `CHANGELOG.md` if you have made significant changes to the project, these include:
-    -   Major changes:
-        -   New features
-        -   Bug fixes with high impact
-        -   Breaking changes
-    -   Minor changes:
-        -   Documentation improvements
-        -   Code refactoring without functional impact
-        -   Minor bug fixes
--   Keep `CHANGELOG.md` changes brief and focus on the most important changes.
+- As you update your PR and apply changes, mark each conversation as [resolved](https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/commenting-on-a-pull-request#resolving-conversations).
+- Update the `CHANGELOG.md` if you have made significant changes to the project, these include:
+  - Major changes:
+    - New features
+    - Bug fixes with high impact
+    - Breaking changes
+  - Minor changes:
+    - Documentation improvements
+    - Code refactoring without functional impact
+    - Minor bug fixes
+- Keep `CHANGELOG.md` changes brief and focus on the most important changes.
 
 ### Updating the `CHANGELOG.md`
 
 1. You can automatically generate a changelog suggestion for your PR by commenting on it [using CodiumAI](https://github.com/CodiumAI-Agent):
+
 ```
 @CodiumAI-Agent /update_changelog
 ```
+
 2. Edit the suggestion if necessary and update the appropriate subsection in the `CHANGELOG.md` file under 'Next'.
 3. Commit the changes.
 
@@ -306,9 +308,9 @@ poetry run pytest tests/unit
 
 To execute end-to-end (e2e) tests, you need the following services to be running locally:
 
--   neo4j
--   weaviate
--   weaviate-text2vec-transformers
+- neo4j
+- weaviate
+- weaviate-text2vec-transformers
 
 The simplest way to set these up is by using Docker Compose:
 
@@ -326,5 +328,5 @@ poetry run pytest tests/e2e
 
 ## ℹ️ Additional Information
 
--   [The official Neo4j Python driver](https://github.com/neo4j/neo4j-python-driver)
--   [Neo4j GenAI integrations](https://neo4j.com/docs/cypher-manual/current/genai-integrations/)
+- [The official Neo4j Python driver](https://github.com/neo4j/neo4j-python-driver)
+- [Neo4j GenAI integrations](https://neo4j.com/docs/cypher-manual/current/genai-integrations/)
