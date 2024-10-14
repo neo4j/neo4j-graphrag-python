@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.8', '3.12']
+        python-version: ['3.9', '3.12']
         neo4j-version:
           - 5
         neo4j-edition:
@@ -45,6 +45,10 @@ jobs:
         ports:
           - 7687:7687
           - 7474:7474
+      qdrant:
+        image: qdrant/qdrant
+        ports:
+          - 6333:6333
 
     steps:
       - name: Install graphviz package

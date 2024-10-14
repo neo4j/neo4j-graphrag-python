@@ -51,13 +51,13 @@ class Neo4jNode(BaseModel):
     Attributes:
         id (str): The ID of the node.
         label (str): The label of the node.
-        properties (Optional[dict[str, Any]]): A dictionary of properties attached to the node.
+        properties (dict[str, Any]): A dictionary of properties attached to the node.
         embedding_properties (Optional[dict[str, list[float]]]): A list of embedding properties attached to the node.
     """
 
     id: str
     label: str
-    properties: Optional[dict[str, Any]] = None
+    properties: dict[str, Any] = {}
     embedding_properties: Optional[dict[str, list[float]]] = None
 
     @field_validator("properties", "embedding_properties")
@@ -77,14 +77,14 @@ class Neo4jRelationship(BaseModel):
         start_node_id (str): The ID of the start node.
         end_node_id (str): The ID of the end node.
         type (str): The relationship type.
-        properties (Optional[dict[str, Any]]): A dictionary of properties attached to the relationship.
+        properties (dict[str, Any]): A dictionary of properties attached to the relationship.
         embedding_properties (Optional[dict[str, list[float]]]): A list of embedding properties attached to the relationship.
     """
 
     start_node_id: str
     end_node_id: str
     type: str
-    properties: Optional[dict[str, Any]] = None
+    properties: dict[str, Any] = {}
     embedding_properties: Optional[dict[str, list[float]]] = None
 
 
@@ -98,3 +98,8 @@ class Neo4jGraph(DataModel):
 
     nodes: list[Neo4jNode] = []
     relationships: list[Neo4jRelationship] = []
+
+
+class ResolutionStats(DataModel):
+    number_of_nodes_to_resolve: int
+    number_of_created_nodes: Optional[int] = None

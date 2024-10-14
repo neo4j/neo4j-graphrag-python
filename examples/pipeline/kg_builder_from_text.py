@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import asyncio
-import logging.config
 
 import neo4j
 from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
@@ -36,30 +35,12 @@ from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter i
 )
 from neo4j_graphrag.experimental.pipeline import Pipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
-from neo4j_graphrag.llm import OpenAILLM
-
-# set log level to DEBUG for all neo4j_graphrag.* loggers
-logging.config.dictConfig(
-    {
-        "version": 1,
-        "handlers": {
-            "console": {
-                "class": "logging.StreamHandler",
-            }
-        },
-        "loggers": {
-            "root": {
-                "handlers": ["console"],
-            },
-            "neo4j_graphrag": {
-                "level": "DEBUG",
-            },
-        },
-    }
-)
+from neo4j_graphrag.llm import LLMInterface, OpenAILLM
 
 
-async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
+async def define_and_run_pipeline(
+    neo4j_driver: neo4j.AsyncDriver, llm: LLMInterface
+) -> PipelineResult:
     """This is where we define and run the KG builder pipeline, instantiating a few
     components:
     - Text Splitter: in this example we use the fixed size text splitter
@@ -83,13 +64,7 @@ async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
     pipe.add_component(SchemaBuilder(), "schema")
     pipe.add_component(
         LLMEntityRelationExtractor(
-            llm=OpenAILLM(
-                model_name="gpt-4o",
-                model_params={
-                    "max_tokens": 1000,
-                    "response_format": {"type": "json_object"},
-                },
-            ),
+            llm=llm,
             on_error=OnError.RAISE,
         ),
         "extractor",
@@ -164,8 +139,23 @@ async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
     return await pipe.run(pipe_inputs)
 
 
-if __name__ == "__main__":
-    with neo4j.GraphDatabase.driver(
+async def main() -> PipelineResult:
+    llm = OpenAILLM(
+        model_name="gpt-4o",
+        model_params={
+            "max_tokens": 1000,
+            "response_format": {"type": "json_object"},
+        },
+    )
+    driver = neo4j.AsyncGraphDatabase.driver(
         "bolt://localhost:7687", auth=("neo4j", "password")
-    ) as driver:
-        print(asyncio.run(main(driver)))
+    )
+    res = await define_and_run_pipeline(driver, llm)
+    await driver.close()
+    await llm.async_client.close()
+    return res
+
+
+if __name__ == "__main__":
+    res = asyncio.run(main())
+    print(res)

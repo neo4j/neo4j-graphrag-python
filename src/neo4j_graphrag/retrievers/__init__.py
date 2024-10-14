@@ -40,3 +40,10 @@ try:
     __all__.append("WeaviateNeo4jRetriever")
 except ImportError:
     pass
+
+try:
+    from .external.qdrant.qdrant import QdrantNeo4jRetriever  # noqa: F401
+
+    __all__.append("QdrantNeo4jRetriever")
+except ImportError:
+    pass

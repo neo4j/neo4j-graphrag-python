@@ -42,27 +42,31 @@ FULL_TEXT_SEARCH_QUERY = (
 )
 
 UPSERT_NODE_QUERY = (
-    "MERGE (n:__Entity__ {{id: $id}}) "
-    "WITH n SET n:`{label}`, n += $properties "
-    "WITH n CALL {{ "
-    "WITH n WITH n WHERE $embeddings IS NOT NULL "
-    "UNWIND keys($embeddings) as emb "
-    "CALL db.create.setNodeVectorProperty(n, emb, $embeddings[emb]) "
-    "}} "
+    "UNWIND $rows AS row "
+    "CREATE (n:__KGBuilder__ {id: row.id}) "
+    "SET n += row.properties "
+    "WITH n, row CALL apoc.create.addLabels(n, row.labels) YIELD node "
+    "WITH node as n, row CALL { "
+    "WITH n, row WITH n, row WHERE row.embedding_properties IS NOT NULL "
+    "UNWIND keys(row.embedding_properties) as emb "
+    "CALL db.create.setNodeVectorProperty(n, emb, row.embedding_properties[emb]) "
+    "RETURN count(*) as nbEmb "
+    "} "
     "RETURN elementId(n)"
 )
 
 UPSERT_RELATIONSHIP_QUERY = (
-    "MATCH (start:__Entity__ {{ id: $start_node_id }}) "
-    "MATCH (end:__Entity__ {{ id: $end_node_id }}) "
-    "MERGE (start)-[r:`{type}`]->(end) "
-    "WITH r SET r += $properties "
-    "WITH r CALL {{ "
-    "WITH r WITH r WHERE $embeddings IS NOT NULL "
-    "UNWIND keys($embeddings) as emb "
-    "CALL db.create.setRelationshipVectorProperty(r, emb, $embeddings[emb]) "
-    "}} "
-    "RETURN elementId(r)"
+    "UNWIND $rows as row "
+    "MATCH (start:__KGBuilder__ {id: row.start_node_id}) "
+    "MATCH (end:__KGBuilder__ {id: row.end_node_id}) "
+    "WITH start, end, row "
+    "CALL apoc.merge.relationship(start, row.type, {}, row.properties, end, row.properties) YIELD rel  "
+    "WITH rel, row CALL { "
+    "WITH rel, row WITH rel, row WHERE row.embedding_properties IS NOT NULL "
+    "UNWIND keys(row.embedding_properties) as emb "
+    "CALL db.create.setRelationshipVectorProperty(rel, emb, row.embedding_properties[emb]) "
+    "} "
+    "RETURN elementId(rel)"
 )
 
 UPSERT_VECTOR_ON_NODE_QUERY = (

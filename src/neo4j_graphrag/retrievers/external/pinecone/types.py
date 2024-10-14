@@ -17,7 +17,10 @@ from __future__ import annotations
 from typing import Any, Callable, Optional, Union
 
 import neo4j
+
+
 from pinecone import Pinecone
+
 from pydantic import (
     BaseModel,
     ConfigDict,

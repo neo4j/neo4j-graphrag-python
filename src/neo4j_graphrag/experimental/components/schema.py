@@ -19,7 +19,7 @@ from typing import Any, Dict, List, Literal, Tuple
 from pydantic import BaseModel, ValidationError, model_validator, validate_call
 
 from neo4j_graphrag.exceptions import SchemaValidationError
-from neo4j_graphrag.experimental.pipeline import Component, DataModel
+from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
 
 
 class SchemaProperty(BaseModel):

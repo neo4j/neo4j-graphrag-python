@@ -2,13 +2,31 @@
 
 ## Next
 
+## 1.0.0
+
+### Fixed
+- Fix a bug where `openai` Python client and `numpy` were required to import any embedder or LLM.
+
+### Changed
+- The value associated to the enum field `OnError.IGNORE` has been changed from "CONTINUE" to "IGNORE" to stick to the convention and match the field name.
+
+### Added
+- Added `SinglePropertyExactMatchResolver` component allowing to merge entities with exact same property (e.g. name)
+- Added the `SimpleKGPipeline` class, a simplified abstraction layer to streamline knowledge graph building processes from text documents.
+
+## 1.0.0a1
+
+## 1.0.0a0
+
+### Added
+- Added `SinglePropertyExactMatchResolver` component allowing to merge entities with exact same property (e.g. name)
+
+## 0.7.0
+
 ### Added
 - Added AzureOpenAILLM and AzureOpenAIEmbeddings to support Azure served OpenAI models
 - Added `template` validation in `PromptTemplate` class upon construction.
-- `custom_prompt` arg is now converted to `Text2CypherTemplate` class within the `Text2CypherRetriever.get_search_results` method.
-- `Text2CypherTemplate` and `RAGTemplate` prompt templates now require `query_text` arg and will error if it is not present. Previous `query_text` aliases may be used, but will warn of deprecation.
 - Examples demonstrating the use of Mistral embeddings and LLM in RAG pipelines.
-- Fixed bug in `Text2CypherRetriever` using `custom_prompt` arg where the `search` method would not inject the `query_text` content.
 - Added feature to include kwargs in `Text2CypherRetriever.search()` that will be injected into a custom prompt, if provided.
 - Added validation to `custom_prompt` parameter of `Text2CypherRetriever` to ensure that `query_text` placeholder exists in prompt.
 - Introduced a fixed size text splitter component for splitting text into specified fixed size chunks with overlap. Updated examples and tests to utilize this new component.
@@ -17,17 +35,23 @@
 - Added support for Cohere LLM and embeddings - added optional dependency to `cohere`.
 - Added support for Anthropic LLM - added optional dependency to `anthropic`.
 - Added support for MistralAI LLM - added optional dependency to `mistralai`.
+- Added support for Qdrant - added optional dependency to `qdrant-client`.
 
 ### Fixed
 - Resolved import issue with the Vertex AI Embeddings class.
+- Fixed bug in `Text2CypherRetriever` using `custom_prompt` arg where the `search` method would not inject the `query_text` content.
+- `custom_prompt` arg is now converted to `Text2CypherTemplate` class within the `Text2CypherRetriever.get_search_results` method.
+- `Text2CypherTemplate` and `RAGTemplate` prompt templates now require `query_text` arg and will error if it is not present. Previous `query_text` aliases may be used, but will warn of deprecation.
 - Resolved issue where Neo4jWriter component would raise an error if the start or end node ID was not defined properly in the input.
 - Resolved issue where relationship types was not escaped in the insert Cypher query.
-- Improved query performance in Neo4jWriter.
+- Improved query performance in Neo4jWriter: created nodes now have a generic `__KGBuilder__` label and an index is created on the `__KGBuilder__.id` property. Moreover, insertion queries are now batched. Batch size can be controlled using the `batch_size` parameter in the `Neo4jWriter` component.
 
 ### Changed
 - Moved the Embedder class to the neo4j_graphrag.embeddings directory for better organization alongside other custom embedders.
 - Removed query argument from the GraphRAG class' `.search` method; users must now use `query_text`.
 - Neo4jWriter component now runs a single query to merge node and set its embeddings if any.
+- Nodes created by the `Neo4jWriter` now have an extra `__KGBuilder__` label. Nodes from the entity graph also have an `__Entity__` label.
+- Dropped support for Python 3.8 (end of life).
 
 ## 0.6.3
 ### Changed
