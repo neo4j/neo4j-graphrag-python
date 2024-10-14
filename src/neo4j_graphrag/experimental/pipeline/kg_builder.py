@@ -43,7 +43,6 @@ from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionEr
 from neo4j_graphrag.experimental.pipeline.pipeline import Pipeline, PipelineResult
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 from neo4j_graphrag.llm.base import LLMInterface
-from neo4j_graphrag.utils import potential_schema_to_entity_and_relation_list
 
 
 class SimpleKGPipelineConfig(BaseModel):
@@ -77,8 +76,18 @@ class SimpleKGPipeline:
         llm (LLMInterface): An instance of an LLM to use for entity and relation extraction.
         driver (neo4j.Driver): A Neo4j driver instance for database connection.
         embedder (Embedder): An instance of an embedder used to generate chunk embeddings from text chunks.
-        entities (Optional[List[EntityInputType]]): A list of entity labels as strings.
-        relations (Optional[List[RelationInputType]]): A list of relation labels as strings.
+        entities (Optional[List[Union[str, dict[str, str], SchemaEntity]]]): A list of either:
+
+            - str: entity labels
+            - dict: with label and description keys
+            - SchemaEntity
+
+        relations (Optional[List[Union[str, dict[str, str], SchemaRelation]]]): A list of either:
+
+            - str: relation label
+            - dict: with label and description keys
+            - SchemaRelation
+
         potential_schema (Optional[List[tuple]]): A list of potential schema relationships.
         from_pdf (bool): Determines whether to include the PdfLoader in the pipeline.
                          If True, expects `file_path` input in `run` methods.
@@ -108,8 +117,6 @@ class SimpleKGPipeline:
         perform_entity_resolution: bool = True,
     ):
         self.potential_schema = potential_schema or []
-        if potential_schema and (not entities) and (not relations):
-            entities, relations = potential_schema_to_entity_and_relation_list(potential_schema)
         self.entities = [self.to_schema_entity(e) for e in entities or []]
         self.relations = [self.to_schema_relation(r) for r in relations or []]
 

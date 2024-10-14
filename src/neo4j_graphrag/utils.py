@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import inspect
-from typing import Any, List, Optional, Union, Tuple
+from typing import Any, List, Optional, Tuple, Union
 
 import neo4j
 
@@ -39,7 +39,9 @@ async def execute_query(
     return records  # type: ignore[no-any-return]
 
 
-def potential_schema_to_entity_and_relation_list(potential_schema: List[Tuple[str, str, str]]) -> Tuple[List[str], List[str]]:
+def potential_schema_to_entity_and_relation_list(
+    potential_schema: List[Tuple[str, str, str]],
+) -> Tuple[List[str], List[str]]:
     entities = set()
     relations = set()
     for source, rel, target in potential_schema:
