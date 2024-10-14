@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Neo4j GraphRAG for Python
-=========================
+GraphRAG for Python
+===================
 
 This package contains the official Neo4j GraphRAG features for Python.
 
