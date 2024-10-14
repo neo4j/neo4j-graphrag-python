@@ -547,7 +547,7 @@ The `VectorCypherRetriever` allows full utilization of Neo4j's graph nature by
 enhancing context through graph traversal.
 
 Retrieval Query
------------------------------
+---------------
 
 When crafting the retrieval query, it's important to note two available variables
 are in the query scope:
@@ -560,26 +560,27 @@ certain movie properties, the retrieval query can be structured as follows:
 
 .. code:: python
 
+    retrieval_query = "MATCH (node)<-[:ACTED_IN]-(p:Person) RETURN node.title as movieTitle, node.plot as movieDescription, collect(p.name) as actors, score"
     retriever = VectorCypherRetriever(
         driver,
         index_name=INDEX_NAME,
-        retrieval_query="MATCH (node)<-[:ACTED_IN]-(p:Person) RETURN node.title as movieTitle, node.plot as movieDescription, collect(p.name) as actors, score",
+        retrieval_query=retrieval_query,
     )
 
 
+It is recommended that the retrieval query returns node properties, as opposed to nodes.
+
+
 Format the Results
------------------------------
+------------------
 
 .. warning::
 
     This API is in beta mode and will be subject to change in the future.
 
-For improved readability and ease in prompt-engineering, formatting the result to suit
-specific needs involves providing a `record_formatter` function to the Cypher retrievers.
-This function processes the Neo4j record from the retrieval query, returning a
-`RetrieverResultItem` with `content` (str) and `metadata` (dict) fields. The `content`
-field is used for passing data to the LLM, while `metadata` can serve debugging purposes
-and provide additional context.
+The result_formatter function customizes the output of Cypher retrievers for improved prompt engineering and readability. It converts each Neo4j record into a RetrieverResultItem with two fields: `content` and `metadata`.
+
+The `content` field is a formatted string containing the key information intended for the language model, such as movie titles or descriptions. The `metadata` field holds additional details, useful for debugging or providing extra context, like scores or node properties.
 
 
 .. code:: python
