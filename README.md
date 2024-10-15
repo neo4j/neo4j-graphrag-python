@@ -257,10 +257,39 @@ and/or [Discord](https://discord.gg/neo4j).
 2. Install Python and Poetry.
 3. Create a working branch from `main` and start with your changes!
 
+### Code Formatting and Linting
+
+Our codebase follows strict formatting and linting standards using [Ruff](https://docs.astral.sh/ruff/) for code quality checks and [Mypy](https://github.com/python/mypy) for type checking.
+Before contributing, ensure that all code is properly formatted, free of linting issues, and includes accurate type annotations.
+
+- To install Ruff, follow the instructions [here](https://docs.astral.sh/ruff/installation/).
+- To set up Mypy, follow the steps outlined [here](https://mypy.readthedocs.io/en/stable/getting_started.html#installing-and-running-mypy).
+
+Adherence to these standards is required for contributions to be accepted.
+
+#### Using Pre-commit
+
+We recommend setting up [pre-commit](https://pre-commit.com/) to automate code quality checks.
+This ensures your changes meet our guidelines before committing.
+
+1. Install pre-commit by following the [installation guide](https://pre-commit.com/#install).
+2. Set up the pre-commit hooks by running:
+
+   ```bash
+   pre-commit install
+   ```
+
+3. To manually check if a file meets the quality requirements, run:
+
+   ```bash
+   pre-commit run --file path/to/file
+   ```
+
 ### Pull Requests
 
 When you're finished with your changes, create a pull request (PR) using the following workflow.
 
+- Ensure you have formatted and linted your code.
 - Ensure that you have [signed the CLA](https://neo4j.com/developer/contributing-code/#sign-cla).
 - Ensure that the base of your PR is set to `main`.
 - Don't forget to [link your PR to an issue](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue)
