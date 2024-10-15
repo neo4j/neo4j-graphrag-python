@@ -30,7 +30,7 @@ from neo4j_graphrag.indexes import (
 
 def test_create_vector_index_happy_path(driver: MagicMock) -> None:
     create_query = (
-        "CREATE VECTOR INDEX $name FOR (n:People) ON n.name OPTIONS "
+        "CREATE VECTOR INDEX $name IF NOT EXISTS FOR (n:People) ON n.name OPTIONS "
         "{ indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }"
     )
 
@@ -45,7 +45,7 @@ def test_create_vector_index_happy_path(driver: MagicMock) -> None:
 
 def test_create_vector_index_ensure_escaping(driver: MagicMock) -> None:
     create_query = (
-        "CREATE VECTOR INDEX $name FOR (n:People) ON n.name OPTIONS "
+        "CREATE VECTOR INDEX $name IF NOT EXISTS FOR (n:People) ON n.name OPTIONS "
         "{ indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }"
     )
 
@@ -120,7 +120,7 @@ def test_create_fulltext_index_happy_path(driver: MagicMock) -> None:
     label = "node-label"
     text_node_properties = ["property-1", "property-2"]
     create_query = (
-        "CREATE FULLTEXT INDEX $name "
+        "CREATE FULLTEXT INDEX $name IF NOT EXISTS "
         f"FOR (n:`{label}`) ON EACH "
         f"[{', '.join(['n.`' + property + '`' for property in text_node_properties])}]"
     )
@@ -159,7 +159,7 @@ def test_create_fulltext_index_ensure_escaping(driver: MagicMock) -> None:
     label = "node-label"
     text_node_properties = ["property-1", "property-2"]
     create_query = (
-        "CREATE FULLTEXT INDEX $name "
+        "CREATE FULLTEXT INDEX $name IF NOT EXISTS "
         f"FOR (n:`{label}`) ON EACH "
         f"[{', '.join(['n.`' + property + '`' for property in text_node_properties])}]"
     )
