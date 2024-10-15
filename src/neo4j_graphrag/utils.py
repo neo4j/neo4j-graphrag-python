@@ -15,6 +15,8 @@
 from __future__ import annotations
 
 from typing import Optional
+import asyncio
+import concurrent.futures
 
 
 def validate_search_query_input(
@@ -22,3 +24,26 @@ def validate_search_query_input(
 ) -> None:
     if not (bool(query_vector) ^ bool(query_text)):
         raise ValueError("You must provide exactly one of query_vector or query_text.")
+
+
+def run_sync(function, *args, **kwargs):
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        future = executor.submit(lambda: asyncio.run(function(*args, **kwargs)))
+        return_value = future.result()
+        return return_value
+
+
+if __name__ == "__main__":
+    async def async_run(char: str, repeat: int = 2) -> str:
+        await asyncio.sleep(5)
+        return char * repeat
+
+    async def async_run_multiple(char, n=10):
+        return await asyncio.gather(*[
+            async_run(char)
+            for _ in range(n)
+        ])
+
+    print(
+        run_sync(async_run_multiple, "abc")
+    )
