@@ -36,7 +36,7 @@ Installation instructions can be found [here](https://pygraphviz.github.io/docum
 
 The scripts below demonstrate how to get started with the package and make use of its key features.
 To run these examples, ensure that you have a Neo4j instance up and running and update the `NEO4J_URI`, `NEO4J_USERNAME`, and `NEO4J_PASSWORD` variables in each script with the details of your Neo4j instance.
-Also make sure to export your Open AI key as an environment variable named `OPENAI_API_KEY`.
+For the examples, make sure to export your OpenAI key as an environment variable named `OPENAI_API_KEY`.
 Additional examples are available in the `examples` folder.
 
 ### Knowledge Graph Construction
