@@ -107,7 +107,7 @@ def create_vector_index(
 
     try:
         query = (
-            f"CREATE VECTOR INDEX $name {"" if fail_if_exists else "IF NOT EXISTS"} FOR (n:{label}) ON n.{embedding_property} OPTIONS "
+            f"CREATE VECTOR INDEX $name {'' if fail_if_exists else 'IF NOT EXISTS'} FOR (n:{label}) ON n.{embedding_property} OPTIONS "
             "{ indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }"
         )
         logger.info(f"Creating vector index named '{name}'")
@@ -184,7 +184,7 @@ def create_fulltext_index(
 
     try:
         query = (
-            f"CREATE FULLTEXT INDEX $name {"" if fail_if_exists else "IF NOT EXISTS"} "
+            f"CREATE FULLTEXT INDEX $name {'' if fail_if_exists else 'IF NOT EXISTS'} "
             f"FOR (n:`{label}`) ON EACH "
             f"[{', '.join(['n.`' + prop + '`' for prop in node_properties])}]"
         )
