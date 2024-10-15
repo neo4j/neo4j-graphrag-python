@@ -43,6 +43,23 @@ def test_create_vector_index_happy_path(driver: MagicMock) -> None:
     )
 
 
+def test_create_vector_index_fail_if_exists(driver: MagicMock) -> None:
+    create_query = (
+        "CREATE VECTOR INDEX $name  FOR (n:People) ON n.name OPTIONS "
+        "{ indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }"
+    )
+
+    create_vector_index(
+        driver, "my-index", "People", "name", 2048, "cosine", fail_if_exists=True
+    )
+
+    driver.execute_query.assert_called_once_with(
+        create_query,
+        {"name": "my-index", "dimensions": 2048, "similarity_fn": "cosine"},
+        database_=None,
+    )
+
+
 def test_create_vector_index_ensure_escaping(driver: MagicMock) -> None:
     create_query = (
         "CREATE VECTOR INDEX $name IF NOT EXISTS FOR (n:People) ON n.name OPTIONS "
@@ -126,6 +143,26 @@ def test_create_fulltext_index_happy_path(driver: MagicMock) -> None:
     )
 
     create_fulltext_index(driver, "my-index", label, text_node_properties)
+
+    driver.execute_query.assert_called_once_with(
+        create_query,
+        {"name": "my-index"},
+        database_=None,
+    )
+
+
+def test_create_fulltext_index_fail_if_exists(driver: MagicMock) -> None:
+    label = "node-label"
+    text_node_properties = ["property-1", "property-2"]
+    create_query = (
+        "CREATE FULLTEXT INDEX $name  "
+        f"FOR (n:`{label}`) ON EACH "
+        f"[{', '.join(['n.`' + property + '`' for property in text_node_properties])}]"
+    )
+
+    create_fulltext_index(
+        driver, "my-index", label, text_node_properties, fail_if_exists=True
+    )
 
     driver.execute_query.assert_called_once_with(
         create_query,
