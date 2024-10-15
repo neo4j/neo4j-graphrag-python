@@ -2,6 +2,9 @@
 
 ## Next
 
+### Changed
+- Comprehensive rewrite of the README to improve clarity and provide detailed usage examples.
+
 ## 1.0.0
 
 ### Fixed
