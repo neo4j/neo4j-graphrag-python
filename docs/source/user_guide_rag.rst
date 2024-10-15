@@ -560,7 +560,14 @@ certain movie properties, the retrieval query can be structured as follows:
 
 .. code:: python
 
-    retrieval_query = "MATCH (node)<-[:ACTED_IN]-(p:Person) RETURN node.title as movieTitle, node.plot as movieDescription, collect(p.name) as actors, score"
+    retrieval_query = """
+        MATCH
+        (actor:Actor)-[:ACTED_IN]->(node)
+        RETURN
+        node.title AS movie_title,
+        node.plot AS movie_plot,
+        collect(actor.name) AS actors;
+    """
     retriever = VectorCypherRetriever(
         driver,
         index_name=INDEX_NAME,
@@ -739,7 +746,7 @@ Also note that there is an helper function to create a full-text index (see `the
 .. _hybrid-cypher-retriever-user-guide:
 
 Hybrid Cypher Retrievers
-------------------------------------
+------------------------
 
 In an hybrid cypher retriever, results are searched for in both a vector and a
 full-text index. Once the similar nodes are identified, a retrieval query can traverse
