@@ -543,8 +543,8 @@ See also :ref:`vectorretriever`.
 Vector Cypher Retriever
 =======================
 
-The `VectorCypherRetriever` allows full utilization of Neo4j's graph nature by
-enhancing context through graph traversal.
+The `VectorCypherRetriever` fully leverages Neo4j's graph capabilities by combining vector-based similarity searches with graph traversal techniques. It processes a query embedding to perform a similarity search against a specified vector index, retrieves relevant node variables, and then executes a Cypher query to traverse the graph based on these nodes. This integration ensures that retrievals are both semantically meaningful and contextually enriched by the underlying graph structure.
+
 
 Retrieval Query
 ---------------
