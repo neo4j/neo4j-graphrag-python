@@ -220,6 +220,8 @@ class VectorCypherRetriever(Retriever):
 
     Note: `node` is a variable from the base query that can be used in `retrieval_query` as seen in the example below.
 
+    The retrieval_query is additional Cypher that can allow for graph traversal after retrieving `node`.
+
     Example:
 
     .. code-block:: python
@@ -243,6 +245,7 @@ class VectorCypherRetriever(Retriever):
         result_formatter (Optional[Callable[[neo4j.Record], RetrieverResultItem]]): Provided custom function to transform a neo4j.Record to a RetrieverResultItem.
         neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
+    Read more in the :ref:`User Guide <vector-cypher-retriever-user-guide>`.
     """
 
     def __init__(
