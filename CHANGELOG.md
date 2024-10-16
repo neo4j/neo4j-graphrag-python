@@ -94,7 +94,8 @@
 ### IMPORTANT NOTICE
 - The `neo4j-genai` package is now deprecated. Users are advised to switch to the new package `neo4j-graphrag`.
 ### Added
-- Ability to visualise pipeline with `my_pipeline.draw("pipeline.png")`
+- Ability to visualise pipeline with `my_pipeline.draw("pipeline.png")`.
+- `LexicalGraphBuilder` component to create the lexical graph without entity-relation extraction.
 
 ### Fixed
 - Pipelines now return correct results when the same pipeline is run in parallel.
