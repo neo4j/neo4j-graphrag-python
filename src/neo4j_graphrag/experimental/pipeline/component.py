@@ -21,6 +21,7 @@ from typing import Any, get_type_hints
 from pydantic import BaseModel
 
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
+from neo4j_graphrag.utils import async_to_sync
 
 
 class DataModel(BaseModel):
@@ -63,6 +64,8 @@ class ComponentMeta(abc.ABCMeta):
                 }
                 for f, field in return_model.model_fields.items()
             }
+            # create sync method:
+            attrs["run_sync"] = async_to_sync(run_method)
         return type.__new__(meta, name, bases, attrs)
 
 

@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import inspect
+from functools import wraps
 from typing import Any, Optional, Union
 import asyncio
 import concurrent.futures
@@ -48,18 +49,8 @@ def run_sync(function, *args, **kwargs):
         return return_value
 
 
-
-if __name__ == "__main__":
-    async def async_run(char: str, repeat: int = 2) -> str:
-        await asyncio.sleep(5)
-        return char * repeat
-
-    async def async_run_multiple(char, n=10):
-        return await asyncio.gather(*[
-            async_run(char)
-            for _ in range(n)
-        ])
-
-    print(
-        run_sync(async_run_multiple, "abc")
-    )
+def async_to_sync(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return run_sync(func, *args, **kwargs)
+    return wrapper
