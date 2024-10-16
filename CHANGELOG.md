@@ -2,6 +2,8 @@
 
 ## Next
 
+## 1.1.0
+
 ### Added
 - Introduced a fail_if_exist option to index creation functions to control behavior when an index already exists.
 
