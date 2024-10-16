@@ -1,7 +1,7 @@
 from random import random
 
-from langchain_openai import OpenAIEmbeddings
 from neo4j import GraphDatabase
+from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
 from neo4j_graphrag.indexes import create_vector_index
 from neo4j_graphrag.retrievers import VectorRetriever
 
@@ -19,7 +19,7 @@ driver = GraphDatabase.driver(URI, auth=AUTH)
 embedder = OpenAIEmbeddings(model="text-embedding-3-large")
 
 # Initialize the retriever
-retriever = VectorRetriever(driver, INDEX_NAME, embedder)  # type: ignore
+retriever = VectorRetriever(driver, INDEX_NAME, embedder)
 
 # Creating the index
 create_vector_index(
