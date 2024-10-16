@@ -101,7 +101,7 @@ kg_builder = SimpleKGPipeline(
 
 # Run the pipeline on a piece of text
 text = (
-    "The son of Duke Leto Atreides and the Lady Jessica, Paul is the heir of House"
+    "The son of Duke Leto Atreides and the Lady Jessica, Paul is the heir of House "
     "Atreides, an aristocratic family that rules the planet Caladan."
 )
 asyncio.run(kg_builder.run_async(text=text))
@@ -164,7 +164,7 @@ embedder = OpenAIEmbeddings(model="text-embedding-3-large")
 
 # Generate an embedding for some text
 text = (
-    "The son of Duke Leto Atreides and the Lady Jessica, Paul is the heir of House"
+    "The son of Duke Leto Atreides and the Lady Jessica, Paul is the heir of House "
     "Atreides, an aristocratic family that rules the planet Caladan."
 )
 vector = embedder.embed_query(text)

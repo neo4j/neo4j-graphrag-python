@@ -117,6 +117,7 @@ def test_create_schema_model_valid_data(
     )
     assert schema_instance.entities["AGE"]["description"] == "Age of a person in years."
 
+    assert schema_instance.relations
     assert (
         schema_instance.relations["EMPLOYED_BY"]["description"]
         == "Indicates employment relationship."
@@ -134,6 +135,7 @@ def test_create_schema_model_valid_data(
         {"description": "", "name": "end_time", "type": "LOCAL_DATETIME"},
     ]
 
+    assert schema_instance.potential_schema
     assert schema_instance.potential_schema == potential_schema
 
 
@@ -159,6 +161,7 @@ def test_create_schema_model_missing_description(
 
     assert schema_instance.entities["ORGANIZATION"]["description"] == ""
     assert schema_instance.entities["AGE"]["description"] == ""
+    assert schema_instance.relations
     assert schema_instance.relations["ORGANIZED_BY"]["description"] == ""
     assert schema_instance.relations["ATTENDED_BY"]["description"] == ""
 
@@ -242,6 +245,7 @@ async def test_run_method(
     )
     assert schema.entities["AGE"]["description"] == "Age of a person in years."
 
+    assert schema.relations
     assert (
         schema.relations["EMPLOYED_BY"]["description"]
         == "Indicates employment relationship."
@@ -255,6 +259,7 @@ async def test_run_method(
         == "Indicates attendance at an event."
     )
 
+    assert schema.potential_schema
     assert schema.potential_schema == potential_schema
 
 
@@ -327,6 +332,7 @@ def test_create_schema_model_missing_properties(
         schema_instance.entities["AGE"]["properties"] == []
     ), "Expected empty properties for AGE"
 
+    assert schema_instance.relations
     assert (
         schema_instance.relations["EMPLOYED_BY"]["properties"] == []
     ), "Expected empty properties for EMPLOYED_BY"
@@ -336,3 +342,80 @@ def test_create_schema_model_missing_properties(
     assert (
         schema_instance.relations["ATTENDED_BY"]["properties"] == []
     ), "Expected empty properties for ATTENDED_BY"
+
+
+def test_create_schema_model_no_potential_schema(
+    schema_builder: SchemaBuilder,
+    valid_entities: list[SchemaEntity],
+    valid_relations: list[SchemaRelation],
+) -> None:
+    schema_instance = schema_builder.create_schema_model(
+        valid_entities, valid_relations
+    )
+
+    assert (
+        schema_instance.entities["PERSON"]["description"]
+        == "An individual human being."
+    )
+    assert schema_instance.entities["PERSON"]["properties"] == [
+        {"description": "", "name": "birth date", "type": "ZONED_DATETIME"},
+        {"description": "", "name": "name", "type": "STRING"},
+    ]
+    assert (
+        schema_instance.entities["ORGANIZATION"]["description"]
+        == "A structured group of people with a common purpose."
+    )
+    assert schema_instance.entities["AGE"]["description"] == "Age of a person in years."
+
+    assert schema_instance.relations
+    assert (
+        schema_instance.relations["EMPLOYED_BY"]["description"]
+        == "Indicates employment relationship."
+    )
+    assert (
+        schema_instance.relations["ORGANIZED_BY"]["description"]
+        == "Indicates organization responsible for an event."
+    )
+    assert (
+        schema_instance.relations["ATTENDED_BY"]["description"]
+        == "Indicates attendance at an event."
+    )
+    assert schema_instance.relations["EMPLOYED_BY"]["properties"] == [
+        {"description": "", "name": "start_time", "type": "LOCAL_DATETIME"},
+        {"description": "", "name": "end_time", "type": "LOCAL_DATETIME"},
+    ]
+
+
+def test_create_schema_model_no_relations_or_potential_schema(
+    schema_builder: SchemaBuilder,
+    valid_entities: list[SchemaEntity],
+) -> None:
+    schema_instance = schema_builder.create_schema_model(valid_entities)
+
+    assert (
+        schema_instance.entities["PERSON"]["description"]
+        == "An individual human being."
+    )
+    assert schema_instance.entities["PERSON"]["properties"] == [
+        {"description": "", "name": "birth date", "type": "ZONED_DATETIME"},
+        {"description": "", "name": "name", "type": "STRING"},
+    ]
+    assert (
+        schema_instance.entities["ORGANIZATION"]["description"]
+        == "A structured group of people with a common purpose."
+    )
+    assert schema_instance.entities["AGE"]["description"] == "Age of a person in years."
+
+
+def test_create_schema_model_missing_relations(
+    schema_builder: SchemaBuilder,
+    valid_entities: list[SchemaEntity],
+    potential_schema: list[tuple[str, str, str]],
+) -> None:
+    with pytest.raises(SchemaValidationError) as exc_info:
+        schema_builder.create_schema_model(
+            entities=valid_entities, potential_schema=potential_schema
+        )
+    assert "Relations must also be provided when using a potential schema." in str(
+        exc_info.value
+    ), "Should fail due to missing relations"
