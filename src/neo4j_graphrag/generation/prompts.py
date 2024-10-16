@@ -167,7 +167,7 @@ Return result as JSON using the following format:
 {{"nodes": [ {{"id": "0", "label": "Person", "properties": {{"name": "John"}} }}],
 "relationships": [{{"type": "KNOWS", "start_node_id": "0", "end_node_id": "1", "properties": {{"since": "2024-08-01"}} }}] }}
 
-Use only fhe following nodes and relationships (if provided):
+Use only the following nodes and relationships (if provided):
 {schema}
 
 Assign a unique ID (string) to each node, and reuse it to define relationships.
