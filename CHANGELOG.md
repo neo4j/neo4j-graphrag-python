@@ -5,7 +5,8 @@
 ## 1.1.0
 
 ### Added
-- Introduced a fail_if_exist option to index creation functions to control behavior when an index already exists.
+- Introduced a `fail_if_exist` option to index creation functions to control behavior when an index already exists.
+- Added Qdrant retriever in neo4j_graphrag.retrievers.
 
 ### Changed
 - Comprehensive rewrite of the README to improve clarity and provide detailed usage examples.
