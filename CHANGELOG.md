@@ -2,6 +2,9 @@
 
 ## Next
 
+### Added
+- Made `relations` and `potential_schema` optional in `SchemaBuilder`.
+
 ## 1.1.0
 
 ### Added
