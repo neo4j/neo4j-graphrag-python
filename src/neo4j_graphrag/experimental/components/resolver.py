@@ -19,6 +19,7 @@ import neo4j
 
 from neo4j_graphrag.experimental.components.types import ResolutionStats
 from neo4j_graphrag.experimental.pipeline import Component
+from neo4j_graphrag.utils import async_to_sync
 
 
 class EntityResolver(Component, abc.ABC):
@@ -136,3 +137,5 @@ class SinglePropertyExactMatchResolver(EntityResolver):
             number_of_nodes_to_resolve=number_of_nodes_to_resolve,
             number_of_created_nodes=number_of_created_nodes,
         )
+
+    run_sync = async_to_sync(run)

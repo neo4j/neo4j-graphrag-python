@@ -24,6 +24,8 @@ from collections import defaultdict
 from timeit import default_timer
 from typing import Any, AsyncGenerator, Optional
 
+from neo4j_graphrag.utils import async_to_sync
+
 try:
     import pygraphviz as pgv
 except ImportError:
@@ -106,6 +108,8 @@ class TaskPipelineNode(PipelineNode):
         res = await self.execute(**inputs)
         logger.debug(f"TASK RESULT {self.name=} {res=}")
         return res
+
+    run_sync = async_to_sync(run)
 
 
 class Orchestrator:
@@ -638,3 +642,5 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
             run_id=orchestrator.run_id,
             result=await self.final_results.get(orchestrator.run_id),
         )
+
+    run_sync = async_to_sync(run)
