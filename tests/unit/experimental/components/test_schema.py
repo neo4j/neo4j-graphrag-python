@@ -117,6 +117,7 @@ def test_create_schema_model_valid_data(
     )
     assert schema_instance.entities["AGE"]["description"] == "Age of a person in years."
 
+    assert schema_instance.relations
     assert (
         schema_instance.relations["EMPLOYED_BY"]["description"]
         == "Indicates employment relationship."
@@ -134,6 +135,7 @@ def test_create_schema_model_valid_data(
         {"description": "", "name": "end_time", "type": "LOCAL_DATETIME"},
     ]
 
+    assert schema_instance.potential_schema
     assert schema_instance.potential_schema == potential_schema
 
 
@@ -159,6 +161,7 @@ def test_create_schema_model_missing_description(
 
     assert schema_instance.entities["ORGANIZATION"]["description"] == ""
     assert schema_instance.entities["AGE"]["description"] == ""
+    assert schema_instance.relations
     assert schema_instance.relations["ORGANIZED_BY"]["description"] == ""
     assert schema_instance.relations["ATTENDED_BY"]["description"] == ""
 
@@ -242,6 +245,7 @@ async def test_run_method(
     )
     assert schema.entities["AGE"]["description"] == "Age of a person in years."
 
+    assert schema.relations
     assert (
         schema.relations["EMPLOYED_BY"]["description"]
         == "Indicates employment relationship."
@@ -255,6 +259,7 @@ async def test_run_method(
         == "Indicates attendance at an event."
     )
 
+    assert schema.potential_schema
     assert schema.potential_schema == potential_schema
 
 
@@ -327,6 +332,7 @@ def test_create_schema_model_missing_properties(
         schema_instance.entities["AGE"]["properties"] == []
     ), "Expected empty properties for AGE"
 
+    assert schema_instance.relations
     assert (
         schema_instance.relations["EMPLOYED_BY"]["properties"] == []
     ), "Expected empty properties for EMPLOYED_BY"
