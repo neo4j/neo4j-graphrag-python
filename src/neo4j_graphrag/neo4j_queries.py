@@ -115,19 +115,33 @@ UPSERT_VECTOR_ON_RELATIONSHIP_QUERY = (
 )
 
 
-def _get_hybrid_query() -> str:
-    return (
-        f"CALL {{ {VECTOR_INDEX_QUERY} "
-        f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS vector_index_max_score "
-        f"UNWIND nodes AS n "
-        f"RETURN n.node AS node, (n.score / vector_index_max_score) AS score "
-        f"UNION "
-        f"{FULL_TEXT_SEARCH_QUERY} "
-        f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS ft_index_max_score "
-        f"UNWIND nodes AS n "
-        f"RETURN n.node AS node, (n.score / ft_index_max_score) AS score }} "
-        f"WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k"
-    )
+def _get_hybrid_query(neo4j_version_is_5_23_or_above: bool) -> str:
+    if neo4j_version_is_5_23_or_above:
+        return (
+            f"CALL () {{ {VECTOR_INDEX_QUERY} "
+            f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS vector_index_max_score "
+            f"UNWIND nodes AS n "
+            f"RETURN n.node AS node, (n.score / vector_index_max_score) AS score "
+            f"UNION "
+            f"{FULL_TEXT_SEARCH_QUERY} "
+            f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS ft_index_max_score "
+            f"UNWIND nodes AS n "
+            f"RETURN n.node AS node, (n.score / ft_index_max_score) AS score }} "
+            f"WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k"
+        )
+    else:
+        return (
+            f"CALL {{ {VECTOR_INDEX_QUERY} "
+            f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS vector_index_max_score "
+            f"UNWIND nodes AS n "
+            f"RETURN n.node AS node, (n.score / vector_index_max_score) AS score "
+            f"UNION "
+            f"{FULL_TEXT_SEARCH_QUERY} "
+            f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS ft_index_max_score "
+            f"UNWIND nodes AS n "
+            f"RETURN n.node AS node, (n.score / ft_index_max_score) AS score }} "
+            f"WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k"
+        )
 
 
 def _get_filtered_vector_query(
@@ -168,6 +182,7 @@ def get_search_query(
     embedding_node_property: Optional[str] = None,
     embedding_dimension: Optional[int] = None,
     filters: Optional[dict[str, Any]] = None,
+    neo4j_version_is_5_23_or_above: bool = False,
 ) -> tuple[str, dict[str, Any]]:
     """Build the search query, including pre-filtering if needed, and return clause.
 
@@ -189,7 +204,7 @@ def get_search_query(
     if search_type == SearchType.HYBRID:
         if filters:
             raise Exception("Filters are not supported with Hybrid Search")
-        query = _get_hybrid_query()
+        query = _get_hybrid_query(neo4j_version_is_5_23_or_above)
         params: dict[str, Any] = {}
     elif search_type == SearchType.VECTOR:
         if filters:
