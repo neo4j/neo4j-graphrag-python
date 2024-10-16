@@ -15,28 +15,11 @@
 
 from __future__ import annotations
 
-import abc
 from typing import Any
-
 from neo4j_graphrag.embeddings.base import Embedder
 
-try:
-    import openai
-except ImportError:
-    openai = None  # type: ignore
 
-
-class BaseOpenAIEmbeddings(Embedder, abc.ABC):
-    def __init__(self, model: str = "text-embedding-ada-002", **kwargs: Any) -> None:
-        if openai is None:
-            raise ImportError(
-                "Could not import openai python client. "
-                "Please install it with `pip install openai`."
-            )
-        self.model = model
-
-
-class OpenAIEmbeddings(BaseOpenAIEmbeddings):
+class OpenAIEmbeddings(Embedder):
     """
     OpenAI embeddings class.
     This class uses the OpenAI python client to generate embeddings for text data.
@@ -47,8 +30,16 @@ class OpenAIEmbeddings(BaseOpenAIEmbeddings):
     """
 
     def __init__(self, model: str = "text-embedding-ada-002", **kwargs: Any) -> None:
-        super().__init__(model, **kwargs)
-        self.openai_client = openai.OpenAI(**kwargs)
+        try:
+            import openai
+        except ImportError:
+            raise ImportError(
+                "Could not import openai python client. "
+                "Please install it with `pip install openai`."
+            )
+        self.openai = openai
+        self.model = model
+        self.openai_client = self.openai.OpenAI(**kwargs)
 
     def embed_query(self, text: str, **kwargs: Any) -> list[float]:
         """
@@ -67,4 +58,4 @@ class OpenAIEmbeddings(BaseOpenAIEmbeddings):
 class AzureOpenAIEmbeddings(OpenAIEmbeddings):
     def __init__(self, model: str = "text-embedding-ada-002", **kwargs: Any) -> None:
         super().__init__(model, **kwargs)
-        self.openai_client = openai.AzureOpenAI(**kwargs)
+        self.openai_client = self.openai.AzureOpenAI(**kwargs)

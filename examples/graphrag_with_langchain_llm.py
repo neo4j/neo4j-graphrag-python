@@ -48,7 +48,7 @@ retriever = VectorCypherRetriever(
     embedder=embedder,  # type: ignore
 )
 
-llm = ChatOpenAI(model_name="gpt-4o", temperature=0)  # type: ignore
+llm = ChatOpenAI(model_name="gpt-4o", temperature=0)
 
 rag = GraphRAG(retriever=retriever, llm=llm)
 
