@@ -55,6 +55,20 @@ UPSERT_NODE_QUERY = (
     "RETURN elementId(n)"
 )
 
+UPSERT_NODE_QUERY_VARIABLE_SCOPE_CLAUSE = (
+    "UNWIND $rows AS row "
+    "CREATE (n:__KGBuilder__ {id: row.id}) "
+    "SET n += row.properties "
+    "WITH n, row CALL apoc.create.addLabels(n, row.labels) YIELD node "
+    "WITH node as n, row CALL (n, row) { "
+    "WITH n, row WITH n, row WHERE row.embedding_properties IS NOT NULL "
+    "UNWIND keys(row.embedding_properties) as emb "
+    "CALL db.create.setNodeVectorProperty(n, emb, row.embedding_properties[emb]) "
+    "RETURN count(*) as nbEmb "
+    "} "
+    "RETURN elementId(n)"
+)
+
 UPSERT_RELATIONSHIP_QUERY = (
     "UNWIND $rows as row "
     "MATCH (start:__KGBuilder__ {id: row.start_node_id}) "
@@ -62,6 +76,21 @@ UPSERT_RELATIONSHIP_QUERY = (
     "WITH start, end, row "
     "CALL apoc.merge.relationship(start, row.type, {}, row.properties, end, row.properties) YIELD rel  "
     "WITH rel, row CALL { "
+    "WITH rel, row WITH rel, row WHERE row.embedding_properties IS NOT NULL "
+    "UNWIND keys(row.embedding_properties) as emb "
+    "CALL db.create.setRelationshipVectorProperty(rel, emb, row.embedding_properties[emb]) "
+    "} "
+    "RETURN elementId(rel)"
+)
+
+
+UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE = (
+    "UNWIND $rows as row "
+    "MATCH (start:__KGBuilder__ {id: row.start_node_id}) "
+    "MATCH (end:__KGBuilder__ {id: row.end_node_id}) "
+    "WITH start, end, row "
+    "CALL apoc.merge.relationship(start, row.type, {}, row.properties, end, row.properties) YIELD rel  "
+    "WITH rel, row CALL (rel, row) { "
     "WITH rel, row WITH rel, row WHERE row.embedding_properties IS NOT NULL "
     "UNWIND keys(row.embedding_properties) as emb "
     "CALL db.create.setRelationshipVectorProperty(rel, emb, row.embedding_properties[emb]) "
