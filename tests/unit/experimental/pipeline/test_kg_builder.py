@@ -12,7 +12,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from unittest.mock import MagicMock, patch
+from unittest import mock
+from unittest.mock import MagicMock, Mock, patch
 
 import neo4j
 import pytest
@@ -25,8 +26,12 @@ from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.llm.base import LLMInterface
 
 
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._get_version",
+    return_value=(5, 23, 0),
+)
 @pytest.mark.asyncio
-async def test_knowledge_graph_builder_init_with_text() -> None:
+async def test_knowledge_graph_builder_init_with_text(_: Mock) -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
     embedder = MagicMock(spec=Embedder)
@@ -60,8 +65,12 @@ async def test_knowledge_graph_builder_init_with_text() -> None:
         assert pipe_inputs["splitter"]["text"] == text_input
 
 
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._get_version",
+    return_value=(5, 23, 0),
+)
 @pytest.mark.asyncio
-async def test_knowledge_graph_builder_init_with_file_path() -> None:
+async def test_knowledge_graph_builder_init_with_file_path(_: Mock) -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
     embedder = MagicMock(spec=Embedder)
@@ -94,8 +103,12 @@ async def test_knowledge_graph_builder_init_with_file_path() -> None:
         assert pipe_inputs["pdf_loader"]["filepath"] == file_path
 
 
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._get_version",
+    return_value=(5, 23, 0),
+)
 @pytest.mark.asyncio
-async def test_knowledge_graph_builder_run_with_both_inputs() -> None:
+async def test_knowledge_graph_builder_run_with_both_inputs(_: Mock) -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
     embedder = MagicMock(spec=Embedder)
@@ -118,8 +131,12 @@ async def test_knowledge_graph_builder_run_with_both_inputs() -> None:
     ) or "Expected 'text' argument when 'from_pdf' is False." in str(exc_info.value)
 
 
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._get_version",
+    return_value=(5, 23, 0),
+)
 @pytest.mark.asyncio
-async def test_knowledge_graph_builder_run_with_no_inputs() -> None:
+async def test_knowledge_graph_builder_run_with_no_inputs(_: Mock) -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
     embedder = MagicMock(spec=Embedder)
@@ -139,8 +156,12 @@ async def test_knowledge_graph_builder_run_with_no_inputs() -> None:
     ) or "Expected 'text' argument when 'from_pdf' is False." in str(exc_info.value)
 
 
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._get_version",
+    return_value=(5, 23, 0),
+)
 @pytest.mark.asyncio
-async def test_knowledge_graph_builder_document_info_with_file() -> None:
+async def test_knowledge_graph_builder_document_info_with_file(_: Mock) -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
     embedder = MagicMock(spec=Embedder)
@@ -167,8 +188,12 @@ async def test_knowledge_graph_builder_document_info_with_file() -> None:
         assert "extractor" not in pipe_inputs
 
 
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._get_version",
+    return_value=(5, 23, 0),
+)
 @pytest.mark.asyncio
-async def test_knowledge_graph_builder_document_info_with_text() -> None:
+async def test_knowledge_graph_builder_document_info_with_text(_: Mock) -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
     embedder = MagicMock(spec=Embedder)
@@ -194,8 +219,12 @@ async def test_knowledge_graph_builder_document_info_with_text() -> None:
         assert pipe_inputs["splitter"] == {"text": text_input}
 
 
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._get_version",
+    return_value=(5, 23, 0),
+)
 @pytest.mark.asyncio
-async def test_knowledge_graph_builder_with_entities_and_file() -> None:
+async def test_knowledge_graph_builder_with_entities_and_file(_: Mock) -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
     embedder = MagicMock(spec=Embedder)
@@ -234,7 +263,11 @@ async def test_knowledge_graph_builder_with_entities_and_file() -> None:
         assert pipe_inputs["schema"]["potential_schema"] == potential_schema
 
 
-def test_simple_kg_pipeline_on_error_conversion() -> None:
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._get_version",
+    return_value=(5, 23, 0),
+)
+def test_simple_kg_pipeline_on_error_conversion(_: Mock) -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
     embedder = MagicMock(spec=Embedder)
@@ -265,7 +298,11 @@ def test_simple_kg_pipeline_on_error_invalid_value() -> None:
     assert "Expected one of ['RAISE', 'IGNORE']" in str(exc_info.value)
 
 
-def test_simple_kg_pipeline_no_entity_resolution() -> None:
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._get_version",
+    return_value=(5, 23, 0),
+)
+def test_simple_kg_pipeline_no_entity_resolution(_: Mock) -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
     embedder = MagicMock(spec=Embedder)
