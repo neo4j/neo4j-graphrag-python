@@ -7,11 +7,10 @@ information about how spin up a Weaviate and Neo4j databases if needed.
 In this example, search is performed from an already existing vector.
 """
 
+from embedding_biology import EMBEDDING_BIOLOGY
 from neo4j import GraphDatabase
 from neo4j_graphrag.retrievers import WeaviateNeo4jRetriever
 from weaviate.connect.helpers import connect_to_local
-
-from examples.data.embedding_biology import EMBEDDING_BIOLOGY
 
 NEO4J_URL = "neo4j://localhost:7687"
 NEO4J_AUTH = ("neo4j", "password")

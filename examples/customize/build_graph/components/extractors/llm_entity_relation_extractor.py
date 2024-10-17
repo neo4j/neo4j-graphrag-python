@@ -27,5 +27,7 @@ async def main(llm: LLMInterface) -> Neo4jGraph:
         # optional: tune the max_concurrency parameter to optimize speed
         # max_concurrency=5,
     )
-    graph = await extractor.run(chunks=TextChunks(chunks=[TextChunk(text="....")]))
+    graph = await extractor.run(
+        chunks=TextChunks(chunks=[TextChunk(text="....", index=0)])
+    )
     return graph

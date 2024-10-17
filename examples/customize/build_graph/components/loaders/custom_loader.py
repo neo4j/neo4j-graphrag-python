@@ -18,8 +18,8 @@ class MyLoader(DataLoader):
         # Implement logic here
         return PdfDocument(
             text="<extracted text>",
-            document_infos=DocumentInfo(
-                path=filepath,
+            document_info=DocumentInfo(
+                path=str(filepath),
                 # optionally, add some metadata as a dict
                 metadata=None,
             ),

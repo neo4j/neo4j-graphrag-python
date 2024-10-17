@@ -30,20 +30,20 @@ are listed in [the last section of this file](#customize).
 
 #### Weaviate
 
-- [Vector search](customize/retrievers/external/weaviate/vector_search.py)
-- [Text search with local embeder](customize/retrievers/external/weaviate/text_search_local_embedder.py)
-- [Text search with remote embeder](customize/retrievers/external/weaviate/text_search_remote_embedder.py)
+- [Vector search](customize/retrievers/external/weaviate/weaviate_vector_search.py)
+- [Text search with local embeder](customize/retrievers/external/weaviate/weaviate_text_search_local_embedder.py)
+- [Text search with remote embeder](customize/retrievers/external/weaviate/weaviate_text_search_remote_embedder.py)
 
 #### Pinecone
 
-- [Vector search](./customize/retrievers/external/pinecone/vector_search.py)
-- [Text search](./customize/retrievers/external/pinecone/text_search.py)
+- [Vector search](./customize/retrievers/external/pinecone/pinecone_vector_search.py)
+- [Text search](./customize/retrievers/external/pinecone/pinecone_text_search.py)
 
 
 ### Qdrant
 
-- [Vector search](./customize/retrievers/external/qdrant/vector_search.py)
-- [Text search](./customize/retrievers/external/qdrant/text_search.py)
+- [Vector search](./customize/retrievers/external/qdrant/qdrant_vector_search.py)
+- [Text search](./customize/retrievers/external/qdrant/qdrant_text_search.py)
 
 
 ## Answer: GraphRAG

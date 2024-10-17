@@ -1,9 +1,9 @@
 import neo4j
 from neo4j_graphrag.experimental.components.kg_writer import (
     KGWriterModel,
-    Neo4jGraph,
     Neo4jWriter,
 )
+from neo4j_graphrag.experimental.components.types import Neo4jGraph
 
 
 async def main(driver: neo4j.Driver, graph: Neo4jGraph) -> KGWriterModel:

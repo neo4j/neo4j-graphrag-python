@@ -13,7 +13,7 @@ from neo4j_graphrag.experimental.components.resolver import (
 from neo4j_graphrag.experimental.components.types import ResolutionStats
 
 
-async def main(driver: neo4j.Driver):
+async def main(driver: neo4j.Driver) -> None:
     resolver = SinglePropertyExactMatchResolver(
         driver,
         # optionally, change the property used for resolution (default is "name")

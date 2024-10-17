@@ -7,9 +7,8 @@ similar to a query **vector** using vector similarity.
 """
 
 import neo4j
+from embedding_avatar import EMBEDDINGS_AVATAR
 from neo4j_graphrag.retrievers import VectorRetriever
-
-from examples.data.embeddings_avatar import EMBEDDINGS_AVATAR
 
 # Define database credentials
 URI = "neo4j+s://demo.neo4jlabs.com"

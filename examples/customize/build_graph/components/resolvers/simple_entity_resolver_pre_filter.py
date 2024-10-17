@@ -17,7 +17,7 @@ from neo4j_graphrag.experimental.components.resolver import (
 from neo4j_graphrag.experimental.components.types import ResolutionStats
 
 
-async def main(driver: neo4j.Driver):
+async def main(driver: neo4j.Driver) -> None:
     resolver = SinglePropertyExactMatchResolver(
         driver,
         # let's filter out some entities assuming the EntityToExclude label
