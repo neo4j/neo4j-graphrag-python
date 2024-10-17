@@ -5,6 +5,10 @@
 ### Added
 - Made `relations` and `potential_schema` optional in `SchemaBuilder`.
 
+### Changed
+- `HybridRetriever` now filters out the embedding property index in `self.vector_index_name` from the retriever result by default.
+
+
 ## 1.1.0
 
 ### Added
