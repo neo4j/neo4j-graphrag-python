@@ -1,5 +1,23 @@
 from __future__ import annotations
-
+import logging.config
+logging.config.dictConfig(
+    {
+        "version": 1,
+        "handlers": {
+            "console": {
+                "class": "logging.StreamHandler",
+            }
+        },
+        "loggers": {
+            "root": {
+                "handlers": ["console"],
+            },
+            "neo4j_graphrag": {
+                "level": "DEBUG",
+            },
+        },
+    }
+)
 from random import random
 
 from neo4j import GraphDatabase
