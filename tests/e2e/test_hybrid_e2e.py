@@ -43,7 +43,7 @@ def test_hybrid_retriever_search_text(
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
 def test_hybrid_retriever_no_neo4j_deprecation_warning(
-    driver: Driver, random_embedder: Embedder, caplog
+    driver: Driver, random_embedder: Embedder, caplog: pytest.LogCaptureFixture
 ) -> None:
     retriever = HybridRetriever(
         driver, "vector-index-name", "fulltext-index-name", random_embedder

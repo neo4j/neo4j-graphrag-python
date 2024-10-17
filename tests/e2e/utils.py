@@ -17,7 +17,6 @@ from __future__ import annotations
 import hashlib
 import json
 import os.path
-from contextlib import contextmanager
 from typing import Any, Literal
 
 import neo4j
@@ -557,25 +556,3 @@ def build_data_objects(
             )
 
     return neo4j_objs, question_objs
-
-
-@contextmanager
-def capture_notifications(driver: neo4j.Driver):
-    original_execute_query = driver.execute_query
-
-    notifications = []
-
-    def execute_query_wrapper(*args, **kwargs):
-        result = original_execute_query(*args, **kwargs)
-        # result is (records, summary, keys)
-        _, summary, _ = result
-        print("summary", summary)
-        if summary and summary.notifications:
-            notifications.extend(summary.notifications)
-        return result
-
-    driver.execute_query = execute_query_wrapper
-    try:
-        yield notifications
-    finally:
-        driver.execute_query = original_execute_query

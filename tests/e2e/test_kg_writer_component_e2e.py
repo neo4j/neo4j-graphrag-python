@@ -106,7 +106,7 @@ async def test_kg_writer(driver: neo4j.Driver) -> None:
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
 async def test_kg_writer_no_neo4j_deprecation_warning(
-    driver: neo4j.Driver, caplog
+    driver: neo4j.Driver, caplog: pytest.LogCaptureFixture
 ) -> None:
     start_node = Neo4jNode(
         id="1",
