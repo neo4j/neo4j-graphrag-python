@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import copy
 import logging
 from typing import Any, Callable, Optional
 
@@ -184,13 +185,10 @@ class HybridRetriever(Retriever):
             query_vector = self.embedder.embed_query(query_text)
             parameters["query_vector"] = query_vector
 
-        search_query, _ = get_search_query(
-            SearchType.HYBRID,
-            self.return_properties,
-            neo4j_version_is_5_23_or_above=self.neo4j_version_is_5_23_or_above,
-        )
-
-        logger.debug("HybridRetriever Cypher parameters: %s", parameters)
+        search_query, _ = get_search_query(SearchType.HYBRID, self.return_properties)
+        sanitized_parameters = copy.deepcopy(parameters)
+        sanitized_parameters["query_vector"] = "[...]" if "query_vector" in sanitized_parameters else None
+        logger.debug("HybridRetriever Cypher parameters: %s", sanitized_parameters)
         logger.debug("HybridRetriever Cypher query: %s", search_query)
 
         records, _, _ = self.driver.execute_query(
@@ -340,13 +338,12 @@ class HybridCypherRetriever(Retriever):
             del parameters["query_params"]
 
         search_query, _ = get_search_query(
-            SearchType.HYBRID,
-            retrieval_query=self.retrieval_query,
-            neo4j_version_is_5_23_or_above=self.neo4j_version_is_5_23_or_above,
+            SearchType.HYBRID, retrieval_query=self.retrieval_query
         )
-
-        logger.debug("HybridCypherRetriever Cypher parameters: %s", parameters)
-        logger.debug("HybridCypherRetriever Cypher query: %s", search_query)
+        sanitized_parameters = copy.deepcopy(parameters)
+        sanitized_parameters["query_vector"] = "[...]" if "query_vector" in sanitized_parameters else None
+        logger.debug("HybridRetriever Cypher parameters: %s", sanitized_parameters)
+        logger.debug("HybridRetriever Cypher query: %s", search_query)
 
         records, _, _ = self.driver.execute_query(
             search_query, parameters, database_=self.neo4j_database
