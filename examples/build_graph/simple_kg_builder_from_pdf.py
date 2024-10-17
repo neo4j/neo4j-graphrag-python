@@ -24,7 +24,8 @@ AUTH = ("neo4j", "password")
 DATABASE = "neo4j"
 
 
-FILE_PATH = Path("examples/data/Harry Potter and the Chamber of Secrets Summary.pdf")
+root_dir = Path(__file__).parents[4]
+file_path = root_dir / "data" / "Harry Potter and the Chamber of Secrets Summary.pdf"
 
 
 # Instantiate Entity and Relation objects. This defines the
@@ -51,7 +52,7 @@ async def define_and_run_pipeline(
         relations=RELATIONS,
         potential_schema=POTENTIAL_SCHEMA,
     )
-    return await kg_builder.run_async(file_path=FILE_PATH)
+    return await kg_builder.run_async(file_path=str(file_path))
 
 
 async def main() -> PipelineResult:

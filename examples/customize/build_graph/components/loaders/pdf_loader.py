@@ -5,15 +5,14 @@ from pathlib import Path
 
 from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
 
+root_dir = Path(__file__).parents[4]
+file_path = root_dir / "data" / "Harry Potter and the Chamber of Secrets Summary.pdf"
 
-async def main():
+
+async def main() -> None:
     loader = PdfLoader()
-    document = await loader.run(
-        filepath=Path(
-            "../../../../data/Harry Potter and the Chamber of Secrets Summary.pdf"
-        )
-    )
-    print(document.text[:30])
+    document = await loader.run(filepath=file_path)
+    print(document.text[:200])
     print(document.document_info)
 
 
