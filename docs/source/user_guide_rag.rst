@@ -15,7 +15,7 @@ To perform a GraphRAG query using the `neo4j-graphrag` package, a few components
 
 1. A Neo4j driver: used to query your Neo4j database.
 2. A Retriever: the `neo4j-graphrag` package provides some implementations (see the :ref:`dedicated section <retriever-configuration>`) and lets you write your own if none of the provided implementations matches your needs (see :ref:`how to write a custom retriever <custom-retriever>`).
-3. An LLM: to generate the answer, we need to call an LLM model. The neo4j-graphrag package currently only provides implementation for the OpenAI LLMs, but its interface is compatible with LangChain and let developers write their own interface if needed.
+3. An LLM: to generate the answer, we need to call an LLM model. The neo4j-graphrag package's LLM interface is compatible with LangChain. Developers can also write their own interface if needed.
 
 In practice, it's done with only a few lines of code:
 
@@ -249,8 +249,7 @@ Its interface is compatible with our `GraphRAG` interface, facilitating integrat
     print(response.answer)
 
 
-It is however not mandatory to use LangChain. The alternative is to implement
-a custom model.
+It is however not mandatory to use LangChain.
 
 Using a Custom Model
 --------------------
@@ -569,11 +568,11 @@ See also :ref:`vectorretriever`.
 Vector Cypher Retriever
 =======================
 
-The `VectorCypherRetriever` allows full utilization of Neo4j's graph nature by
-enhancing context through graph traversal.
+The `VectorCypherRetriever` fully leverages Neo4j's graph capabilities by combining vector-based similarity searches with graph traversal techniques. It processes a query embedding to perform a similarity search against a specified vector index, retrieves relevant node variables, and then executes a Cypher query to traverse the graph based on these nodes. This integration ensures that retrievals are both semantically meaningful and contextually enriched by the underlying graph structure.
+
 
 Retrieval Query
------------------------------
+---------------
 
 When crafting the retrieval query, it's important to note two available variables
 are in the query scope:
@@ -586,26 +585,34 @@ certain movie properties, the retrieval query can be structured as follows:
 
 .. code:: python
 
+    retrieval_query = """
+        MATCH
+        (actor:Actor)-[:ACTED_IN]->(node)
+        RETURN
+        node.title AS movie_title,
+        node.plot AS movie_plot,
+        collect(actor.name) AS actors;
+    """
     retriever = VectorCypherRetriever(
         driver,
         index_name=INDEX_NAME,
-        retrieval_query="MATCH (node)<-[:ACTED_IN]-(p:Person) RETURN node.title as movieTitle, node.plot as movieDescription, collect(p.name) as actors, score",
+        retrieval_query=retrieval_query,
     )
 
 
+It is recommended that the retrieval query returns node properties, as opposed to nodes.
+
+
 Format the Results
------------------------------
+------------------
 
 .. warning::
 
     This API is in beta mode and will be subject to change in the future.
 
-For improved readability and ease in prompt-engineering, formatting the result to suit
-specific needs involves providing a `record_formatter` function to the Cypher retrievers.
-This function processes the Neo4j record from the retrieval query, returning a
-`RetrieverResultItem` with `content` (str) and `metadata` (dict) fields. The `content`
-field is used for passing data to the LLM, while `metadata` can serve debugging purposes
-and provide additional context.
+The result_formatter function customizes the output of Cypher retrievers for improved prompt engineering and readability. It converts each Neo4j record into a RetrieverResultItem with two fields: `content` and `metadata`.
+
+The `content` field is a formatted string containing the key information intended for the language model, such as movie titles or descriptions. The `metadata` field holds additional details, useful for debugging or providing extra context, like scores or node properties.
 
 
 .. code:: python
@@ -764,7 +771,7 @@ Also note that there is an helper function to create a full-text index (see `the
 .. _hybrid-cypher-retriever-user-guide:
 
 Hybrid Cypher Retrievers
-------------------------------------
+------------------------
 
 In an hybrid cypher retriever, results are searched for in both a vector and a
 full-text index. Once the similar nodes are identified, a retrieval query can traverse

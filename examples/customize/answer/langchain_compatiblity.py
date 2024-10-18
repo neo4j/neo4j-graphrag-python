@@ -6,9 +6,9 @@ Requires OPENAI_API_KEY to be in the env var.
 """
 
 import neo4j
-from langchain.chat_models import ChatOpenAI
-from langchain.embeddings import OpenAIEmbeddings
+from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
 from neo4j_graphrag.generation import GraphRAG
+from neo4j_graphrag.llm import OpenAILLM
 from neo4j_graphrag.retrievers import VectorCypherRetriever
 
 URI = "neo4j://localhost:7687"
@@ -32,7 +32,7 @@ retriever = VectorCypherRetriever(
     embedder=embedder,  # type: ignore
 )
 
-llm = ChatOpenAI(model_name="gpt-4o", temperature=0)  # type: ignore
+llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0})
 
 rag = GraphRAG(retriever=retriever, llm=llm)
 

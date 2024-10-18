@@ -1,46 +1,55 @@
-# Neo4j GraphRAG package for Python
+# Neo4j GraphRAG Package for Python
 
-This repository contains the official Neo4j GraphRAG features for Python.
+The official Neo4j GraphRAG package for Python enables developers to build [graph retrieval augmented generation (GraphRAG)](https://neo4j.com/blog/graphrag-manifesto/) applications using the power of Neo4j and Python.
+As a first-party library, it offers a robust, feature-rich, and high-performance solution, with the added assurance of long-term support and maintenance directly from Neo4j.
 
-The purpose of this package is to provide a first party package to developers,
-where Neo4j can guarantee long term commitment and maintenance as well as being
-fast to ship new features and high performing patterns and methods.
+## 📄 Documentation
 
-Documentation: https://neo4j.com/docs/neo4j-graphrag-python/
+Documentation can be found [here](https://neo4j.com/docs/neo4j-graphrag-python/)
 
-Python versions supported:
+## 🐍 Python Version Support
 
-* Python 3.12 supported.
-* Python 3.11 supported.
-* Python 3.10 supported.
-* Python 3.9 supported.
+| Version | Supported? |
+| ------- | ---------: |
+| 3.12    | &check;    |
+| 3.11    | &check;    |
+| 3.10    | &check;    |
+| 3.9     | &check;    |
+| 3.8     | &cross;    |
 
-# Usage
+## 📦 Installation
 
-## Installation
-
-This package requires Python (>=3.9).
-
-To install the latest stable version, use:
+To install the latest stable version, run:
 
 ```shell
 pip install neo4j-graphrag
 ```
 
-### Optional dependencies
+### Optional Dependencies
 
 #### pygraphviz
 
 `pygraphviz` is used for visualizing pipelines.
-Follow installation instructions [here](https://pygraphviz.github.io/documentation/stable/install.html).
+Installation instructions can be found [here](https://pygraphviz.github.io/documentation/stable/install.html).
 
-## Examples
+## 💻 Example Usage
 
-### Knowledge graph construction
+The scripts below demonstrate how to get started with the package and make use of its key features.
+To run these examples, ensure that you have a Neo4j instance up and running and update the `NEO4J_URI`, `NEO4J_USERNAME`, and `NEO4J_PASSWORD` variables in each script with the details of your Neo4j instance.
+For the examples, make sure to export your OpenAI key as an environment variable named `OPENAI_API_KEY`.
+Additional examples are available in the `examples` folder.
+
+### Knowledge Graph Construction
 
 **NOTE: The [APOC core library](https://neo4j.com/labs/apoc/) must be installed in your Neo4j instance in order to use this feature**
 
-Assumption: Neo4j running
+This package offers two methods for constructing a knowledge graph.
+
+The `Pipeline` class provides extensive customization options, making it ideal for advanced use cases.
+See the `examples/pipeline` folder for examples of how to use this class.
+
+For a more streamlined approach, the `SimpleKGPipeline` class offers a simplified abstraction layer over the `Pipeline`, making it easier to build knowledge graphs.
+Both classes support working directly with text and PDFs.
 
 ```python
 import asyncio
@@ -50,12 +59,14 @@ from neo4j_graphrag.embeddings import OpenAIEmbeddings
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.llm.openai_llm import OpenAILLM
 
-# Connect to Neo4j database
-URI = "neo4j://localhost:7687"
-AUTH = ("neo4j", "password")
-driver = GraphDatabase.driver(URI, auth=AUTH)
+NEO4J_URI = "neo4j://localhost:7687"
+NEO4J_USERNAME = "neo4j"
+NEO4J_PASSWORD = "password"
 
-# Instantiate Entity and Relation objects
+# Connect to the Neo4j database
+driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
+
+# List the entities and relations the LLM should look for in the text
 entities = ["Person", "House", "Planet"]
 relations = ["PARENT_OF", "HEIR_OF", "RULES"]
 potential_schema = [
@@ -64,7 +75,7 @@ potential_schema = [
     ("House", "RULES", "Planet"),
 ]
 
-# Instantiate an Embedder object
+# Create an Embedder object
 embedder = OpenAIEmbeddings(model="text-embedding-3-large")
 
 # Instantiate the LLM
@@ -88,137 +99,151 @@ kg_builder = SimpleKGPipeline(
     from_pdf=False,
 )
 
-asyncio.run(
-    kg_builder.run_async(
-        text=""""The son of Duke Leto Atreides and the Lady Jessica, Paul is the heir of
-        House Atreides, an aristocratic family that rules the planet Caladan."""
-    )
+# Run the pipeline on a piece of text
+text = (
+    "The son of Duke Leto Atreides and the Lady Jessica, Paul is the heir of House "
+    "Atreides, an aristocratic family that rules the planet Caladan."
 )
+asyncio.run(kg_builder.run_async(text=text))
+driver.close()
 ```
 
-Example knowledge graph created using the above code:
+Example knowledge graph created using the above script:
 
 ![Example knowledge graph](images/kg_construction.svg)
 
+### Creating a Vector Index
 
-### Creating a vector index
-
-When creating a vector index, make sure you match the number of dimensions in the index with the number of dimensions the embeddings have.
-
-Assumption: Neo4j running
+When creating a vector index, make sure you match the number of dimensions in the index with the number of dimensions your embeddings have.
 
 ```python
 from neo4j import GraphDatabase
 from neo4j_graphrag.indexes import create_vector_index
 
-URI = "neo4j://localhost:7687"
-AUTH = ("neo4j", "password")
-
+NEO4J_URI = "neo4j://localhost:7687"
+NEO4J_USERNAME = "neo4j"
+NEO4J_PASSWORD = "password"
 INDEX_NAME = "vector-index-name"
 
-# Connect to Neo4j database
-driver = GraphDatabase.driver(URI, auth=AUTH)
+# Connect to the Neo4j database
+driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
 
-# Creating the index
+# Create the index
 create_vector_index(
     driver,
     INDEX_NAME,
-    label="Document",
-    embedding_property="vectorProperty",
-    dimensions=1536,
+    label="Chunk",
+    embedding_property="embedding",
+    dimensions=3072,
     similarity_fn="euclidean",
 )
-
+driver.close()
 ```
 
-### Populating the Neo4j Vector Index
+### Populating a Vector Index
 
-Note that the below example is not the only way you can upsert data into your Neo4j database. For example, you could also leverage [the Neo4j Python driver](https://github.com/neo4j/neo4j-python-driver).
+This example demonstrates one method for upserting data in your Neo4j database.
+It's important to note that there are alternative approaches, such as using the [Neo4j Python driver](https://github.com/neo4j/neo4j-python-driver).
 
-Assumption: Neo4j running with a defined vector index
+Ensure that your vector index is created prior to executing this example.
 
 ```python
 from neo4j import GraphDatabase
+from neo4j_graphrag.embeddings import OpenAIEmbeddings
 from neo4j_graphrag.indexes import upsert_vector
 
-URI = "neo4j://localhost:7687"
-AUTH = ("neo4j", "password")
+NEO4J_URI = "neo4j://localhost:7687"
+NEO4J_USERNAME = "neo4j"
+NEO4J_PASSWORD = "password"
 
-# Connect to Neo4j database
-driver = GraphDatabase.driver(URI, auth=AUTH)
+# Connect to the Neo4j database
+driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
+
+# Create an Embedder object
+embedder = OpenAIEmbeddings(model="text-embedding-3-large")
+
+# Generate an embedding for some text
+text = (
+    "The son of Duke Leto Atreides and the Lady Jessica, Paul is the heir of House "
+    "Atreides, an aristocratic family that rules the planet Caladan."
+)
+vector = embedder.embed_query(text)
 
 # Upsert the vector
-vector = ...
 upsert_vector(
     driver,
-    node_id=1,
-    embedding_property="vectorProperty",
+    node_id=0,
+    embedding_property="embedding",
     vector=vector,
 )
+driver.close()
 ```
 
-### Performing a similarity search
+### Performing a Similarity Search
 
-Assumption: Neo4j running with populated vector index in place.
+Please note that when querying a Neo4j vector index _approximate_ nearest neighbor search is used, which may not always deliver exact results.
+For more information, refer to the Neo4j documentation on [limitations and issues of vector indexes](https://neo4j.com/docs/cypher-manual/current/indexes/semantic-indexes/vector-indexes/#limitations-and-issues).
 
-Limitation: The query over the vector index is an _approximate_ nearest neighbor search and may not give exact results. [See this reference for more details](https://neo4j.com/docs/cypher-manual/current/indexes/semantic-indexes/vector-indexes/#limitations-and-issues).
+In the example below, we perform a simple vector search using a retriever that conducts a similarity search over the `vector-index-name` vector index.
 
-While the library has more retrievers than shown here, the following examples should be able to get you started.
+This library provides more retrievers beyond just the `VectorRetriever`.
+See the `examples` folder for examples of how to use these retrievers.
 
-In the following example, we use a simple vector search as retriever,
-that will perform a similarity search over the `index-name` vector index
-in Neo4j.
+Before running this example, make sure your vector index has been created and populated.
 
 ```python
 from neo4j import GraphDatabase
-from neo4j_graphrag.retrievers import VectorRetriever
-from neo4j_graphrag.llm import OpenAILLM
-from neo4j_graphrag.generation import GraphRAG
 from neo4j_graphrag.embeddings import OpenAIEmbeddings
+from neo4j_graphrag.generation import GraphRAG
+from neo4j_graphrag.llm import OpenAILLM
+from neo4j_graphrag.retrievers import VectorRetriever
 
-URI = "neo4j://localhost:7687"
-AUTH = ("neo4j", "password")
-
+NEO4J_URI = "neo4j://localhost:7687"
+NEO4J_USERNAME = "neo4j"
+NEO4J_PASSWORD = "password"
 INDEX_NAME = "vector-index-name"
 
-# Connect to Neo4j database
-driver = GraphDatabase.driver(URI, auth=AUTH)
+# Connect to the Neo4j database
+driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
 
-# Create Embedder object
+# Create an Embedder object
 embedder = OpenAIEmbeddings(model="text-embedding-3-large")
 
 # Initialize the retriever
 retriever = VectorRetriever(driver, INDEX_NAME, embedder)
 
-# Initialize the LLM
-# Note: An OPENAI_API_KEY environment variable is required here
+# Instantiate the LLM
 llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0})
 
-# Initialize the RAG pipeline
+# Instantiate the RAG pipeline
 rag = GraphRAG(retriever=retriever, llm=llm)
 
 # Query the graph
-query_text = "How do I do similarity search in Neo4j?"
+query_text = "Who is Paul Atreides?"
 response = rag.search(query_text=query_text, retriever_config={"top_k": 5})
 print(response.answer)
+driver.close()
 ```
 
-# Development
+## 🤝 Contributing
 
-## Install dependencies
+You must sign the [contributors license agreement](https://neo4j.com/developer/contributing-code/#sign-cla) in order to make contributions to this project.
+
+### Install Dependencies
+
+Our Python dependencies are managed using Poetry.
+If Poetry is not yet installed on your system, you can follow the instructions [here](https://python-poetry.org/) to set it up.
+To begin development on this project, start by cloning the repository and then install all necessary dependencies, including the development dependencies, with the following command:
 
 ```bash
-poetry install
+poetry install --with dev
 ```
 
-## Getting started
-
-### Issues
+### Reporting Issues
 
 If you have a bug to report or feature to request, first
 [search to see if an issue already exists](https://docs.github.com/en/github/searching-for-information-on-github/searching-on-github/searching-issues-and-pull-requests#search-by-the-title-body-or-comments).
-If a related issue doesn't exist, please raise a new issue using the relevant
-[issue form](https://github.com/neo4j/neo4j-graphrag-python/issues/new/choose).
+If a related issue doesn't exist, please raise a new issue using the [issue form](https://github.com/neo4j/neo4j-graphrag-python/issues/new/choose).
 
 If you're a Neo4j Enterprise customer, you can also reach out to [Customer Support](http://support.neo4j.com/).
 
@@ -226,54 +251,83 @@ If you don't have a bug to report or feature request, but you need a hand with
 the library; community support is available via [Neo4j Online Community](https://community.neo4j.com/)
 and/or [Discord](https://discord.gg/neo4j).
 
-### Make changes
+### Workflow for Contributions
 
 1. Fork the repository.
 2. Install Python and Poetry.
 3. Create a working branch from `main` and start with your changes!
 
-### Pull request
+### Code Formatting and Linting
 
-When you're finished with your changes, create a pull request, also known as a PR.
+Our codebase follows strict formatting and linting standards using [Ruff](https://docs.astral.sh/ruff/) for code quality checks and [Mypy](https://github.com/python/mypy) for type checking.
+Before contributing, ensure that all code is properly formatted, free of linting issues, and includes accurate type annotations.
 
--   Ensure that you have [signed the CLA](https://neo4j.com/developer/contributing-code/#sign-cla).
--   Ensure that the base of your PR is set to `main`.
--   Don't forget to [link your PR to an issue](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue)
+- To install Ruff, follow the instructions [here](https://docs.astral.sh/ruff/installation/).
+- To set up Mypy, follow the steps outlined [here](https://mypy.readthedocs.io/en/stable/getting_started.html#installing-and-running-mypy).
+
+Adherence to these standards is required for contributions to be accepted.
+
+#### Using Pre-commit
+
+We recommend setting up [pre-commit](https://pre-commit.com/) to automate code quality checks.
+This ensures your changes meet our guidelines before committing.
+
+1. Install pre-commit by following the [installation guide](https://pre-commit.com/#install).
+2. Set up the pre-commit hooks by running:
+
+   ```bash
+   pre-commit install
+   ```
+
+3. To manually check if a file meets the quality requirements, run:
+
+   ```bash
+   pre-commit run --file path/to/file
+   ```
+
+### Pull Requests
+
+When you're finished with your changes, create a pull request (PR) using the following workflow.
+
+- Ensure you have formatted and linted your code.
+- Ensure that you have [signed the CLA](https://neo4j.com/developer/contributing-code/#sign-cla).
+- Ensure that the base of your PR is set to `main`.
+- Don't forget to [link your PR to an issue](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue)
     if you are solving one.
--   Enable the checkbox to [allow maintainer edits](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/allowing-changes-to-a-pull-request-branch-created-from-a-fork)
+- Check the checkbox to [allow maintainer edits](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/allowing-changes-to-a-pull-request-branch-created-from-a-fork)
     so that maintainers can make any necessary tweaks and update your branch for merge.
--   Reviewers may ask for changes to be made before a PR can be merged, either using
+- Reviewers may ask for changes to be made before a PR can be merged, either using
     [suggested changes](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/incorporating-feedback-in-your-pull-request)
     or normal pull request comments. You can apply suggested changes directly through
-    the UI, and any other changes can be made in your fork and committed to the PR branch.
--   As you update your PR and apply changes, mark each conversation as [resolved](https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/commenting-on-a-pull-request#resolving-conversations).
--   Update the `CHANGELOG.md` if you have made significant changes to the project, these include:
-    -   Major changes:
-        -   New features
-        -   Bug fixes with high impact
-        -   Breaking changes
-    -   Minor changes:
-        -   Documentation improvements
-        -   Code refactoring without functional impact
-        -   Minor bug fixes
--   Keep `CHANGELOG.md` changes brief and focus on the most important changes.
+    the UI. Any other changes can be made in your fork and committed to the PR branch.
+- As you update your PR and apply changes, mark each conversation as [resolved](https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/commenting-on-a-pull-request#resolving-conversations).
+- Update the `CHANGELOG.md` if you have made significant changes to the project, these include:
+  - Major changes:
+    - New features
+    - Bug fixes with high impact
+    - Breaking changes
+  - Minor changes:
+    - Documentation improvements
+    - Code refactoring without functional impact
+    - Minor bug fixes
+- Keep `CHANGELOG.md` changes brief and focus on the most important changes.
 
 ### Updating the `CHANGELOG.md`
 
-1. When opening a PR, you can generate an edit suggestion by commenting on the GitHub PR [using CodiumAI](https://github.com/CodiumAI-Agent):
+1. You can automatically generate a changelog suggestion for your PR by commenting on it [using CodiumAI](https://github.com/CodiumAI-Agent):
 
 ```
 @CodiumAI-Agent /update_changelog
 ```
 
-2. Use this as a suggestion and update the `CHANGELOG.md` content under 'Next'.
+2. Edit the suggestion if necessary and update the appropriate subsection in the `CHANGELOG.md` file under 'Next'.
 3. Commit the changes.
 
-## Run tests
+## 🧪 Tests
 
-### Unit tests
+### Unit Tests
 
-This should run out of the box once the dependencies are installed.
+Install the project dependencies then run the following command to run the unit tests locally:
 
 ```bash
 poetry run pytest tests/unit
@@ -281,27 +335,27 @@ poetry run pytest tests/unit
 
 ### E2E tests
 
-To run e2e tests you'd need to have some services running locally:
+To execute end-to-end (e2e) tests, you need the following services to be running locally:
 
--   neo4j
--   weaviate
--   weaviate-text2vec-transformers
+- neo4j
+- weaviate
+- weaviate-text2vec-transformers
 
-The easiest way to get it up and running is via Docker compose:
+The simplest way to set these up is by using Docker Compose:
 
 ```bash
 docker compose -f tests/e2e/docker-compose.yml up
 ```
 
-_(pro tip: if you suspect something in the databases are cached, run `docker compose -f tests/e2e/docker-compose.yml down` to remove them completely)_
+_(tip: If you encounter any caching issues within the databases, you can completely remove them by running `docker compose -f tests/e2e/docker-compose.yml down`)_
 
-Once the services are running, execute the following command to run the e2e tests.
+Once all the services are running, execute the following command to run the e2e tests:
 
 ```bash
 poetry run pytest tests/e2e
 ```
 
-## Further information
+## ℹ️ Additional Information
 
--   [The official Neo4j Python driver](https://github.com/neo4j/neo4j-python-driver)
--   [Neo4j GenAI integrations](https://neo4j.com/docs/cypher-manual/current/genai-integrations/)
+- [The official Neo4j Python driver](https://github.com/neo4j/neo4j-python-driver)
+- [Neo4j GenAI integrations](https://neo4j.com/docs/cypher-manual/current/genai-integrations/)

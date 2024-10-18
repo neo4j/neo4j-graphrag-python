@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Neo4j GraphRAG for Python
-=========================
+GraphRAG for Python
+===================
 
 This package contains the official Neo4j GraphRAG features for Python.
 
@@ -152,8 +152,8 @@ While the library has more retrievers than shown here, the following examples sh
 .. code:: python
 
     from neo4j import GraphDatabase
+    from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
     from neo4j_graphrag.retrievers import VectorRetriever
-    from langchain_openai import OpenAIEmbeddings
 
     URI = "neo4j://localhost:7687"
     AUTH = ("neo4j", "password")

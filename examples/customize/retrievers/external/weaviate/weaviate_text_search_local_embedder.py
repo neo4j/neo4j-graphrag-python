@@ -10,6 +10,9 @@ WeaviateNeo4jRetriever.
 
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from neo4j import GraphDatabase
+from neo4j_graphrag.embeddings.sentence_transformers import (
+    SentenceTransformerEmbeddings,
+)
 from neo4j_graphrag.retrievers import WeaviateNeo4jRetriever
 from weaviate.connect.helpers import connect_to_local
 
@@ -20,14 +23,14 @@ NEO4J_AUTH = ("neo4j", "password")
 def main() -> None:
     with GraphDatabase.driver(NEO4J_URL, auth=NEO4J_AUTH) as neo4j_driver:
         with connect_to_local() as w_client:
-            embedder = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+            embedder = SentenceTransformerEmbeddings(model="all-MiniLM-L6-v2")
             retriever = WeaviateNeo4jRetriever(
                 driver=neo4j_driver,
                 client=w_client,
                 collection="Jeopardy",
                 id_property_external="neo4j_id",
                 id_property_neo4j="id",
-                embedder=embedder,  # type: ignore
+                embedder=embedder,
             )
 
             res = retriever.search(query_text="biology", top_k=2)
