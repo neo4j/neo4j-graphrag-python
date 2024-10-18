@@ -123,7 +123,7 @@ class VectorRetriever(Retriever):
         self._node_label = None
         self._embedding_node_property = None
         self._embedding_dimension = None
-        self._fetch_index_infos()
+        self._fetch_index_infos(self.index_name)
 
     def default_record_formatter(self, record: neo4j.Record) -> RetrieverResultItem:
         """
@@ -287,7 +287,7 @@ class VectorCypherRetriever(Retriever):
         self._node_label = None
         self._node_embedding_property = None
         self._embedding_dimension = None
-        self._fetch_index_infos()
+        self._fetch_index_infos(self.index_name)
 
     def get_search_results(
         self,

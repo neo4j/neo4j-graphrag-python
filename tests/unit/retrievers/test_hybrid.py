@@ -157,9 +157,11 @@ def test_hybrid_cypher_retriever_invalid_database_name(
     assert "Input should be a valid string" in str(exc_info.value)
 
 
+@patch("neo4j_graphrag.retrievers.HybridRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.HybridRetriever._verify_version")
 def test_hybrid_search_text_happy_path(
     _verify_version_mock: MagicMock,
+    _fetch_index_infos_mock: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
     neo4j_record: MagicMock,
@@ -174,12 +176,17 @@ def test_hybrid_search_text_happy_path(
     retriever = HybridRetriever(
         driver, vector_index_name, fulltext_index_name, embedder
     )
+    retriever._embedding_node_property = (
+        "embedding"  # variable normally filled by fetch_index_infos
+    )
     retriever.driver.execute_query.return_value = [  # type: ignore
         [neo4j_record],
         None,
         None,
     ]
-    search_query, _ = get_search_query(SearchType.HYBRID)
+    search_query, _ = get_search_query(
+        SearchType.HYBRID, embedding_node_property="embedding"
+    )
 
     records = retriever.search(query_text=query_text, top_k=top_k)
 
@@ -203,9 +210,11 @@ def test_hybrid_search_text_happy_path(
     )
 
 
+@patch("neo4j_graphrag.retrievers.HybridRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.HybridRetriever._verify_version")
 def test_hybrid_search_favors_query_vector_over_embedding_vector(
     _verify_version_mock: MagicMock,
+    _fetch_index_infos_mock: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
     neo4j_record: MagicMock,
@@ -279,9 +288,11 @@ def test_hybrid_search_retriever_search_missing_embedder_for_text(
         )
 
 
+@patch("neo4j_graphrag.retrievers.HybridRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.HybridRetriever._verify_version")
 def test_hybrid_retriever_return_properties(
     _verify_version_mock: MagicMock,
+    _fetch_index_infos_mock: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
     neo4j_record: MagicMock,
