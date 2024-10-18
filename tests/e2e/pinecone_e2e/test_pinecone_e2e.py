@@ -84,6 +84,8 @@ def test_pinecone_neo4j_vector_input(driver: MagicMock, client: MagicMock) -> No
             r"labels=frozenset\({'Question'}\) properties={'question': 'In 1953 Watson \& "
             "Crick built a model of the molecular structure of this, the gene-carrying "
             "substance', 'id': 'question_c458c6f64d8d47429636bc5a94c97f51'}> "
+            r"nodeLabels=\['Question'\] "
+            "id='.+' "
             r"score=0.232427984>"
         )
         assert re.match(pattern, results.items[0].content)
@@ -130,6 +132,8 @@ def test_pinecone_neo4j_text_input(
             r"labels=frozenset\({'Question'}\) properties={'question': 'In 1953 Watson \& "
             "Crick built a model of the molecular structure of this, the gene-carrying "
             "substance', 'id': 'question_c458c6f64d8d47429636bc5a94c97f51'}> "
+            r"nodeLabels=\['Question'\] "
+            "id='.+' "
             r"score=0.232427984>"
         )
         assert re.match(pattern, results.items[0].content)

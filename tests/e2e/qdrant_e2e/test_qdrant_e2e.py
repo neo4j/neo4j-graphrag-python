@@ -67,12 +67,13 @@ def test_qdrant_neo4j_vector_input(driver: Driver, qdrant_client: QdrantClient) 
     assert isinstance(results, RetrieverResult)
     assert len(results.items) == top_k
     assert isinstance(results.items[0], RetrieverResultItem)
-    print("Results are: ", results.items)
     pattern = (
         r"<Record node=<Node element_id='.+' "
         r"labels=frozenset\({'Question'}\) properties={'question': 'In 1953 Watson \& "
         "Crick built a model of the molecular structure of this, the gene-carrying "
         "substance', 'id': 'question_c458c6f64d8d47429636bc5a94c97f51'}> "
+        r"nodeLabels=\['Question'\] "
+        "id='.+' "
         r"score=0.2[0-9]+>"
     )
     assert re.match(pattern, results.items[0].content)
@@ -104,6 +105,8 @@ def test_qdrant_neo4j_text_input_local_embedder(
         r"labels=frozenset\({'Question'}\) properties={'question': 'In 1953 Watson \& "
         "Crick built a model of the molecular structure of this, the gene-carrying "
         "substance', 'id': 'question_c458c6f64d8d47429636bc5a94c97f51'}> "
+        r"nodeLabels=\['Question'\] "
+        "id='.+' "
         r"score=0.2[0-9]+>"
     )
     assert re.match(pattern, results.items[0].content)
