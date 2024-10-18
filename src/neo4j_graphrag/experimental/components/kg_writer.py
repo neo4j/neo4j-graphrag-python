@@ -33,7 +33,12 @@ from neo4j_graphrag.experimental.components.types import (
     Neo4jRelationship,
 )
 from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
-from neo4j_graphrag.neo4j_queries import UPSERT_NODE_QUERY, UPSERT_RELATIONSHIP_QUERY
+from neo4j_graphrag.neo4j_queries import (
+    UPSERT_NODE_QUERY,
+    UPSERT_NODE_QUERY_VARIABLE_SCOPE_CLAUSE,
+    UPSERT_RELATIONSHIP_QUERY,
+    UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +118,7 @@ class Neo4jWriter(KGWriter):
         self.neo4j_database = neo4j_database
         self.batch_size = batch_size
         self.max_concurrency = max_concurrency
+        self.is_version_5_23_or_above = self._check_if_version_5_23_or_above()
 
     def _db_setup(self) -> None:
         # create index on __Entity__.id
@@ -147,7 +153,12 @@ class Neo4jWriter(KGWriter):
             nodes (list[Neo4jNode]): The nodes batch to upsert into the database.
         """
         parameters = {"rows": self._nodes_to_rows(nodes)}
-        self.driver.execute_query(UPSERT_NODE_QUERY, parameters_=parameters)
+        if self.is_version_5_23_or_above:
+            self.driver.execute_query(
+                UPSERT_NODE_QUERY_VARIABLE_SCOPE_CLAUSE, parameters_=parameters
+            )
+        else:
+            self.driver.execute_query(UPSERT_NODE_QUERY, parameters_=parameters)
 
     async def _async_upsert_nodes(
         self,
@@ -161,7 +172,32 @@ class Neo4jWriter(KGWriter):
         """
         async with sem:
             parameters = {"rows": self._nodes_to_rows(nodes)}
-            await self.driver.execute_query(UPSERT_NODE_QUERY, parameters_=parameters)
+            await self.driver.execute_query(
+                UPSERT_NODE_QUERY_VARIABLE_SCOPE_CLAUSE, parameters_=parameters
+            )
+
+    def _get_version(self) -> tuple[int, ...]:
+        records, _, _ = self.driver.execute_query(
+            "CALL dbms.components()", database_=self.neo4j_database
+        )
+        version = records[0]["versions"][0]
+        # Drop everything after the '-' first
+        version_main, *_ = version.split("-")
+        # Convert each number between '.' into int
+        version_tuple = tuple(map(int, version_main.split(".")))
+        # If no patch version, consider it's 0
+        if len(version_tuple) < 3:
+            version_tuple = (*version_tuple, 0)
+        return version_tuple
+
+    def _check_if_version_5_23_or_above(self) -> bool:
+        """
+        Check if the connected Neo4j database version supports the required features.
+
+        Sets a flag if the connected Neo4j version is 5.23 or above.
+        """
+        version_tuple = self._get_version()
+        return version_tuple >= (5, 23, 0)
 
     def _upsert_relationships(self, rels: list[Neo4jRelationship]) -> None:
         """Upserts a single relationship into the Neo4j database.
@@ -170,7 +206,12 @@ class Neo4jWriter(KGWriter):
             rels (list[Neo4jRelationship]): The relationships batch to upsert into the database.
         """
         parameters = {"rows": [rel.model_dump() for rel in rels]}
-        self.driver.execute_query(UPSERT_RELATIONSHIP_QUERY, parameters_=parameters)
+        if self.is_version_5_23_or_above:
+            self.driver.execute_query(
+                UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE, parameters_=parameters
+            )
+        else:
+            self.driver.execute_query(UPSERT_RELATIONSHIP_QUERY, parameters_=parameters)
 
     async def _async_upsert_relationships(
         self, rels: list[Neo4jRelationship], sem: asyncio.Semaphore
@@ -182,9 +223,15 @@ class Neo4jWriter(KGWriter):
         """
         async with sem:
             parameters = {"rows": [rel.model_dump() for rel in rels]}
-            await self.driver.execute_query(
-                UPSERT_RELATIONSHIP_QUERY, parameters_=parameters
-            )
+            if self.is_version_5_23_or_above:
+                await self.driver.execute_query(
+                    UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE,
+                    parameters_=parameters,
+                )
+            else:
+                await self.driver.execute_query(
+                    UPSERT_RELATIONSHIP_QUERY, parameters_=parameters
+                )
 
     @validate_call
     async def run(self, graph: Neo4jGraph) -> KGWriterModel:
@@ -193,12 +240,6 @@ class Neo4jWriter(KGWriter):
         Args:
             graph (Neo4jGraph): The knowledge graph to upsert into the database.
         """
-        # we disable the notification logger to get rid of the deprecation
-        # warning about Cypher subqueries. Once the queries are updated
-        # for Neo4j 5.23, we can remove this line and the 'finally' block
-        notification_logger = logging.getLogger("neo4j.notifications")
-        notification_level = notification_logger.level
-        notification_logger.setLevel(logging.ERROR)
         try:
             if inspect.iscoroutinefunction(self.driver.execute_query):
                 await self._async_db_setup()
@@ -233,5 +274,3 @@ class Neo4jWriter(KGWriter):
         except neo4j.exceptions.ClientError as e:
             logger.exception(e)
             return KGWriterModel(status="FAILURE", metadata={"error": str(e)})
-        finally:
-            notification_logger.setLevel(notification_level)

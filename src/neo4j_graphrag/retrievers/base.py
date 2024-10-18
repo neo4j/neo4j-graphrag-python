@@ -101,6 +101,14 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
             version_tuple = (*version_tuple, 0)
         return version_tuple, "aura" in version
 
+    def _check_if_version_5_23_or_above(self, version_tuple: tuple[int, ...]) -> bool:
+        """
+        Check if the connected Neo4j database version supports the required features.
+
+        Sets a flag if the connected Neo4j version is 5.23 or above.
+        """
+        return version_tuple >= (5, 23, 0)
+
     def _verify_version(self) -> None:
         """
         Check if the connected Neo4j database version supports vector indexing.
@@ -111,6 +119,9 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
         not supported.
         """
         version_tuple, is_aura = self._get_version()
+        self.neo4j_version_is_5_23_or_above = self._check_if_version_5_23_or_above(
+            version_tuple
+        )
 
         if is_aura:
             target_version = (5, 18, 0)
