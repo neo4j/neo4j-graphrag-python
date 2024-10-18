@@ -6,10 +6,10 @@ Requires OPENAI_API_KEY to be in the env var.
 """
 
 import neo4j
+from langchain_openai.chat_models import ChatOpenAI
+from langchain_openai.embeddings import OpenAIEmbeddings
 from neo4j_graphrag.generation import GraphRAG
 from neo4j_graphrag.retrievers import VectorCypherRetriever
-from langchain_openai.embeddings import OpenAIEmbeddings
-from langchain_openai.chat_models import ChatOpenAI
 
 # Define database credentials
 URI = "neo4j+s://demo.neo4jlabs.com"
