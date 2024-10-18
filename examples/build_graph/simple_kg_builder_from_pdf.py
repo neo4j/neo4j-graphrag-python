@@ -8,7 +8,6 @@ OPENAI_API_KEY needs to be in the env vars.
 """
 
 import asyncio
-import os
 from pathlib import Path
 
 import neo4j

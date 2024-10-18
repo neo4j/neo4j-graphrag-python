@@ -8,7 +8,6 @@ In this example, we are embeddings a text and provide a local embeder to the
 WeaviateNeo4jRetriever.
 """
 
-from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from neo4j import GraphDatabase
 from neo4j_graphrag.embeddings.sentence_transformers import (
     SentenceTransformerEmbeddings,

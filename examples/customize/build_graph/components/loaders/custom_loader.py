@@ -8,18 +8,22 @@ from neo4j_graphrag.experimental.components.pdf_loader import (
     DocumentInfo,
     PdfDocument,
 )
-from pydantic import validate_call
+from pydantic import BaseModel, validate_call
+
+
+class InputModel(BaseModel):
+    filepath: Path
+    metadata: Optional[Dict[str, str]] = None
 
 
 class MyLoader(DataLoader):
-    async def run(
-        self, filepath: Path, metadata: Optional[Dict[str, str]] = None
-    ) -> PdfDocument:
+    @validate_call
+    async def run(self, data: InputModel) -> PdfDocument:
         # Implement logic here
         return PdfDocument(
             text="<extracted text>",
             document_info=DocumentInfo(
-                path=str(filepath),
+                path=str(data.filepath),
                 # optionally, add some metadata as a dict
                 metadata=None,
             ),
