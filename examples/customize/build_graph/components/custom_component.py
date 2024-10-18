@@ -57,8 +57,10 @@ if __name__ == "__main__":
     import asyncio
 
     c = MyComponent(min_value=0, max_value=10)
-    print(asyncio.run(
-        c.run(
-            inputs={"text": "Hello"}  # type: ignore
+    print(
+        asyncio.run(
+            c.run(
+                inputs={"text": "Hello"}  # type: ignore
+            )
         )
-    ))
+    )

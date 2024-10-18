@@ -12,7 +12,9 @@ from neo4j_graphrag.experimental.components.pdf_loader import (
 
 class MyLoader(DataLoader):
     async def run(
-        self, filepath: Path, metadata: Optional[Dict[str, str]] = None,
+        self,
+        filepath: Path,
+        metadata: Optional[Dict[str, str]] = None,
     ) -> PdfDocument:
         # Implement logic here
         return PdfDocument(
