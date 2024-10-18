@@ -3,9 +3,9 @@
 This folder contains examples usage for the different features
 supported by the `neo4j-graphrag` package:
 
-- Build Knowledge Graph from PDF or text
-- Retrieve information from the graph
-- Answer questions
+- [Build Knowledge Graph](#build-knowledge-graph) from PDF or text
+- [Retrieve](#retrieve) information from the graph
+- [Question Answering](#answer-graphrag) (Q&A)
 
 Each of these steps have many customization options which
 are listed in [the last section of this file](#customize).
