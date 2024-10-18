@@ -22,6 +22,8 @@ query_text = "Find me a book about Fremen"
 pre_filters = {"int_property": {"$gt": 100}}
 print(
     retriever.search(
-        query_text=query_text, top_k=1, filters=pre_filters,
+        query_text=query_text,
+        top_k=1,
+        filters=pre_filters,
     )
 )
