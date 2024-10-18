@@ -79,7 +79,8 @@ async def main(neo4j_driver: neo4j.Driver) -> None:
 
     # Run the knowledge graph building process with text input
     text_input = "John Doe lives in New York City."
-    text_result = await kg_builder_text.run_async(text=text_input)
+    # text_result = await kg_builder_text.run_async(text=text_input)
+    text_result = kg_builder_text.run(text=text_input)
     print(f"Text Processing Result: {text_result}")
 
     await llm.async_client.close()

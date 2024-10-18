@@ -43,6 +43,7 @@ from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionEr
 from neo4j_graphrag.experimental.pipeline.pipeline import Pipeline, PipelineResult
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 from neo4j_graphrag.llm.base import LLMInterface
+from neo4j_graphrag.utils import run_sync
 
 
 class SimpleKGPipelineConfig(BaseModel):
@@ -224,6 +225,10 @@ class SimpleKGPipeline:
         """
         pipe_inputs = self._prepare_inputs(file_path=file_path, text=text)
         return await self.pipeline.run(pipe_inputs)
+
+    def run(self, file_path: Optional[str] = None, text: Optional[str] = None) -> PipelineResult:
+        """Run pipeline synchronously"""
+        return run_sync(self, file_path=file_path, text=text)
 
     def _prepare_inputs(
         self, file_path: Optional[str], text: Optional[str]

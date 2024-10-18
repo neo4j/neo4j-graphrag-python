@@ -15,7 +15,10 @@
 from __future__ import annotations
 
 import inspect
+from functools import wraps
 from typing import Any, Optional, Union
+import asyncio
+import concurrent.futures
 
 import neo4j
 
@@ -37,3 +40,17 @@ async def execute_query(
     # but we're sure at this stage we do not have a coroutine anymore
     records, _, _ = driver.execute_query(query, **kwargs)  # type: ignore[misc]
     return records  # type: ignore[no-any-return]
+
+
+def run_sync(function, *args, **kwargs):
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        future = executor.submit(lambda: asyncio.run(function(*args, **kwargs)))
+        return_value = future.result()
+        return return_value
+
+
+def async_to_sync(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return run_sync(func, *args, **kwargs)
+    return wrapper
