@@ -19,8 +19,9 @@ retriever = VectorRetriever(driver, INDEX_NAME, embedder=OpenAIEmbeddings())
 
 # Perform the search
 query_text = "Find me a book about Fremen"
+pre_filters = {"int_property": {"$gt": 100}}
 print(
     retriever.search(
-        query_text=query_text, top_k=1, filters={"int_property": {"$gt": 100}}
+        query_text=query_text, top_k=1, filters=pre_filters,
     )
 )
