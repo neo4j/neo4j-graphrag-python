@@ -125,8 +125,8 @@ are listed in [the last section of this file](#customize).
 - [Use a custom prompt](./customize/answer/custom_prompt.py)
 
 
-## Database Setup
+## Database Operations
 
-- [Create vector index]()
-- [Create full text index]()
-- [Populate vector index]()
+- [Create vector index](database_operations/create_vector_index.py)
+- [Create full text index](create_fulltext_index.py)
+- [Populate vector index](populate_vector_index.py)
