@@ -8,8 +8,6 @@
 
 ### Changed
 - Vector and Hybrid retrievers used with `return_properties` now also return the node labels (`nodeLabels`) and the node's element ID (`id`).
-
-### Changed
 - `HybridRetriever` now filters out the embedding property index in `self.vector_index_name` from the retriever result by default.
 
 
