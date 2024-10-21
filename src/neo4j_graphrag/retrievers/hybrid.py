@@ -341,7 +341,7 @@ class HybridCypherRetriever(Retriever):
             SearchType.HYBRID, retrieval_query=self.retrieval_query
         )
         sanitized_parameters = copy.deepcopy(parameters)
-        sanitized_parameters["query_vector"] = "[...]" if "query_vector" in sanitized_parameters else None
+        sanitized_parameters["query_vector"] = "..." if "query_vector" in sanitized_parameters else None
         logger.debug("HybridRetriever Cypher parameters: %s", sanitized_parameters)
         logger.debug("HybridRetriever Cypher query: %s", search_query)
 
