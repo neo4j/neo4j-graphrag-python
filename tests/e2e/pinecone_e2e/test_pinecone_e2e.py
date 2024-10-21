@@ -18,8 +18,10 @@ from unittest import mock
 from unittest.mock import MagicMock
 
 import pytest
-from langchain_huggingface.embeddings import HuggingFaceEmbeddings
-from neo4j_graphrag.embedder import Embedder
+from neo4j_graphrag.embeddings.base import Embedder
+from neo4j_graphrag.embeddings.sentence_transformers import (
+    SentenceTransformerEmbeddings,
+)
 from neo4j_graphrag.retrievers import PineconeNeo4jRetriever
 from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
 from pinecone import Pinecone
@@ -28,8 +30,10 @@ from ..utils import EMBEDDING_BIOLOGY, build_data_objects, populate_neo4j
 
 
 @pytest.fixture(scope="module")
-def sentence_transformer_embedder() -> Generator[HuggingFaceEmbeddings, Any, Any]:
-    embedder = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+def sentence_transformer_embedder() -> (
+    Generator[SentenceTransformerEmbeddings, Any, Any]
+):
+    embedder = SentenceTransformerEmbeddings(model="all-MiniLM-L6-v2")
     yield embedder
 
 

@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 import tempfile
 from unittest import mock
-from unittest.mock import AsyncMock, call
+from unittest.mock import AsyncMock, call, patch
 
 import pytest
 from neo4j_graphrag.experimental.pipeline import Component, Pipeline
@@ -97,12 +97,72 @@ def test_pipeline_parameter_validation_one_component_all_good() -> None:
     assert is_valid is True
 
 
+def test_pipeline_invalidate() -> None:
+    pipe = Pipeline()
+    pipe.is_validated = True
+    pipe.param_mapping = {"a": {"key": {"component": "component", "param": "param"}}}
+    pipe.missing_inputs = {"a": ["other_key"]}
+    pipe.invalidate()
+    assert pipe.is_validated is False
+    assert len(pipe.param_mapping) == 0
+    assert len(pipe.missing_inputs) == 0
+
+
+def test_pipeline_parameter_validation_called_twice() -> None:
+    pipe = Pipeline()
+    component_a = ComponentPassThrough()
+    component_b = ComponentPassThrough()
+    pipe.add_component(component_a, "a")
+    pipe.add_component(component_b, "b")
+    pipe.connect("a", "b", {"value": "a.result"})
+    is_valid = pipe.validate_parameter_mapping_for_task(pipe.get_node_by_name("b"))
+    assert is_valid is True
+    with pytest.raises(PipelineDefinitionError):
+        pipe.validate_parameter_mapping_for_task(pipe.get_node_by_name("b"))
+    pipe.invalidate()
+    is_valid = pipe.validate_parameter_mapping_for_task(pipe.get_node_by_name("b"))
+    assert is_valid is True
+
+
 def test_pipeline_parameter_validation_one_component_input_param_missing() -> None:
     pipe = Pipeline()
     component_a = ComponentPassThrough()
     pipe.add_component(component_a, "a")
     pipe.validate_parameter_mapping_for_task(pipe.get_node_by_name("a"))
     assert pipe.missing_inputs["a"] == ["value"]
+
+
+def test_pipeline_parameter_validation_param_mapped_twice() -> None:
+    pipe = Pipeline()
+    component_a = ComponentPassThrough()
+    component_b = ComponentPassThrough()
+    component_c = ComponentPassThrough()
+    pipe.add_component(component_a, "a")
+    pipe.add_component(component_b, "b")
+    pipe.add_component(component_c, "c")
+    pipe.connect("a", "c", {"value": "a.result"})
+    pipe.connect("b", "c", {"value": "b.result"})
+    with pytest.raises(PipelineDefinitionError) as excinfo:
+        pipe.validate_parameter_mapping_for_task(pipe.get_node_by_name("c"))
+        assert (
+            "Parameter 'value' already mapped to {'component': 'a', 'param': 'result'}"
+            in str(excinfo)
+        )
+
+
+def test_pipeline_parameter_validation_unexpected_input() -> None:
+    pipe = Pipeline()
+    component_a = ComponentPassThrough()
+    component_b = ComponentPassThrough()
+    pipe.add_component(component_a, "a")
+    pipe.add_component(component_b, "b")
+    pipe.connect("a", "b", {"unexpected_input_name": "a.result"})
+    with pytest.raises(PipelineDefinitionError) as excinfo:
+        pipe.validate_parameter_mapping_for_task(pipe.get_node_by_name("b"))
+        assert (
+            "Parameter 'unexpected_input_name' is not a valid input for component 'b' of type 'ComponentPassThrough'"
+            in str(excinfo)
+        )
 
 
 def test_pipeline_parameter_validation_connected_components_input() -> None:
@@ -335,3 +395,12 @@ def test_pipeline_draw() -> None:
     pipe.draw(t.name)
     content = t.file.read()
     assert len(content) > 0
+
+
+@patch("neo4j_graphrag.experimental.pipeline.pipeline.pgv", None)
+def test_pipeline_draw_missing_pygraphviz_dep() -> None:
+    pipe = Pipeline()
+    pipe.add_component(ComponentAdd(), "add")
+    t = tempfile.NamedTemporaryFile()
+    with pytest.raises(ImportError):
+        pipe.draw(t.name)

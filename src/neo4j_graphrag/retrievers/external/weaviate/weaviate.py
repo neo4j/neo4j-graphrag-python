@@ -15,14 +15,13 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 import neo4j
 import weaviate.classes as wvc
 from pydantic import ValidationError
-from weaviate.client import WeaviateClient
 
-from neo4j_graphrag.embedder import Embedder
+from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.exceptions import (
     RetrieverInitializationError,
     SearchValidationError,
@@ -42,6 +41,9 @@ from neo4j_graphrag.types import (
 )
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from weaviate.client import WeaviateClient
 
 
 class WeaviateNeo4jRetriever(ExternalRetriever):

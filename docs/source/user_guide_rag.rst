@@ -15,7 +15,7 @@ To perform a GraphRAG query using the `neo4j-graphrag` package, a few components
 
 1. A Neo4j driver: used to query your Neo4j database.
 2. A Retriever: the `neo4j-graphrag` package provides some implementations (see the :ref:`dedicated section <retriever-configuration>`) and lets you write your own if none of the provided implementations matches your needs (see :ref:`how to write a custom retriever <custom-retriever>`).
-3. An LLM: to generate the answer, we need to call an LLM model. The neo4j-graphrag package currently only provides implementation for the OpenAI LLMs, but its interface is compatible with LangChain and let developers write their own interface if needed.
+3. An LLM: to generate the answer, we need to call an LLM model. The neo4j-graphrag package's LLM interface is compatible with LangChain. Developers can also write their own interface if needed.
 
 In practice, it's done with only a few lines of code:
 
@@ -25,7 +25,7 @@ In practice, it's done with only a few lines of code:
     from neo4j_graphrag.retrievers import VectorRetriever
     from neo4j_graphrag.llm import OpenAILLM
     from neo4j_graphrag.generation import GraphRAG
-    from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
+    from neo4j_graphrag.embeddings import OpenAIEmbeddings
 
     # 1. Neo4j driver
     URI = "neo4j://localhost:7687"
@@ -56,6 +56,12 @@ In practice, it's done with only a few lines of code:
     print(response.answer)
 
 
+.. note::
+
+    In order to run this code, the `openai` Python package needs to be installed:
+    `pip install openai`
+
+
 The following sections provide more details about how to customize this code.
 
 ******************************
@@ -67,12 +73,160 @@ Each component can be configured individually: the LLM and the prompt.
 Using Another LLM Model
 ========================
 
-If OpenAI can not be used, there are two available alternatives:
+If OpenAI cannot be used directly, there are a few available alternatives:
 
-1. Utilize any LangChain chat model.
-2. Implement a custom interface.
+- Use Azure OpenAI (GPT...).
+- Use Google VertexAI (Gemini...).
+- Use Anthropic LLM (Claude...).
+- Use Mistral LLM
+- Use Cohere.
+- Use a local Ollama model.
+- Implement a custom interface.
+- Utilize any LangChain chat model.
 
-Both options are illustrated below, using a local Ollama model as an example.
+All options are illustrated below.
+
+Using Azure Open AI LLM
+-----------------------
+
+It is possible to use Azure OpenAI switching to the `AzureOpenAILLM` class:
+
+.. code:: python
+
+    from neo4j_graphrag.llm import AzureOpenAILLM
+    llm = AzureOpenAILLM(
+        model_name="gpt-4o",
+        azure_endpoint="https://example-endpoint.openai.azure.com/",  # update with your endpoint
+        api_version="2024-06-01",  # update appropriate version
+        api_key="...",  # api_key is optional and can also be set with OPENAI_API_KEY env var
+    )
+    llm.invoke("say something")
+
+Check the OpenAI Python client [documentation](https://github.com/openai/openai-python?tab=readme-ov-file#microsoft-azure-openai)
+to learn more about the configuration.
+
+.. note::
+
+    In order to run this code, the `openai` Python package needs to be installed:
+    `pip install openai`
+
+
+See :ref:`azureopenaillm`.
+
+
+Using VertexAI LLM
+------------------
+
+To use VertexAI, instantiate the `VertexAILLM` class:
+
+.. code:: python
+
+    from neo4j_graphrag.llm import VertexAILLM
+    from vertexai.generative_models import GenerationConfig
+
+    generation_config = GenerationConfig(temperature=0.0)
+    llm = VertexAILLM(
+        model_name="gemini-1.5-flash-001", generation_config=generation_config
+    )
+    llm.invoke("say something")
+
+
+.. note::
+
+    In order to run this code, the `google-cloud-aiplatform` Python package needs to be installed:
+    `pip install google-cloud-aiplatform`
+
+
+See :ref:`vertexaillm`.
+
+
+Using Anthropic LLM
+-------------------
+
+To use Anthropic, instantiate the `AnthropicLLM` class:
+
+.. code:: python
+
+    from neo4j_graphrag.llm import AnthropicLLM
+
+    llm = AnthropicLLM(
+        model_name="claude-3-opus-20240229",
+        model_params={"max_tokens": 1000},  # max_tokens must be specified
+        api_key=api_key,  # can also set `ANTHROPIC_API_KEY` in env vars
+    )
+    llm.invoke("say something")
+
+
+.. note::
+
+    In order to run this code, the `anthropic` Python package needs to be installed:
+    `pip install anthropic`
+
+See :ref:`anthropicllm`.
+
+
+Using MistralAI LLM
+-------------------
+
+To use MistralAI, instantiate the `MistralAILLM` class:
+
+.. code:: python
+
+    from neo4j_graphrag.llm import MistralAILLM
+
+    llm = MistralAILLM(
+        model_name="mistral-small-latest",
+        api_key=api_key,  # can also set `MISTRAL_API_KEY` in env vars
+    )
+    llm.invoke("say something")
+
+
+.. note::
+
+    In order to run this code, the `mistralai` Python package needs to be installed:
+    `pip install mistralai`
+
+See :ref:`mistralaillm`.
+
+
+
+Using Cohere LLM
+----------------
+
+To use Cohere, instantiate the `CohereLLM` class:
+
+.. code:: python
+
+    from neo4j_graphrag.llm import CohereLLM
+
+    llm = CohereLLM(
+        model_name="command-r",
+        api_key=api_key,  # can also set `CO_API_KEY` in env vars
+    )
+    llm.invoke("say something")
+
+
+.. note::
+
+    In order to run this code, the `cohere` Python package needs to be installed:
+    `pip install cohere`
+
+
+See :ref:`coherellm`.
+
+
+Using a Local Model via Ollama
+-------------------------------
+
+Similarly to the official OpenAI Python client, the `OpenAILLM` can be
+used with Ollama. Assuming Ollama is running on the default address `127.0.0.1:11434`,
+it can be queried using the following:
+
+.. code:: python
+
+    from neo4j_graphrag.llm import OpenAILLM
+    llm = OpenAILLM(api_key="ollama", base_url="http://127.0.0.1:11434/v1", model_name="orca-mini")
+    llm.invoke("say something")
 
 
 Using a Model from LangChain
@@ -95,14 +249,14 @@ Its interface is compatible with our `GraphRAG` interface, facilitating integrat
     print(response.answer)
 
 
-It is however not mandatory to use LangChain. The alternative is to implement
-a custom model.
+It is however not mandatory to use LangChain.
 
 Using a Custom Model
------------------------------
+--------------------
 
-To avoid LangChain, developers can create a custom LLM class by subclassing
-the `LLMInterface`. Here's an example using the Python Ollama client:
+If the provided implementations do not match their needs, developers can create a
+custom LLM class by subclassing the `LLMInterface`.
+Here's an example using the Python Ollama client:
 
 
 .. code:: python
@@ -122,6 +276,10 @@ the `LLMInterface`. Here's an example using the Python Ollama client:
             return LLMResponse(
                 content=response["message"]["content"]
             )
+
+        async def ainvoke(self, input: str) -> LLMResponse:
+            return self.invoke(input)  # TODO: implement async with ollama.AsyncClient
+
 
     # retriever = ...
 
@@ -194,6 +352,8 @@ We provide implementations for the following retrievers:
      - Use this retriever when vectors are saved in a Weaviate vector database
    * - :ref:`PineconeNeo4jRetriever <pinecone-neo4j-retriever-user-guide>`
      - Use this retriever when vectors are saved in a Pinecone vector database
+   * - :ref:`QdrantNeo4jRetriever <qdrant-neo4j-retriever-user-guide>`
+     - Use this retriever when vectors are saved in a Qdrant vector database
 
 Retrievers all expose a `search` method that we will discuss in the next sections.
 
@@ -260,13 +420,20 @@ into a vector is required. Therefore, the retriever requires knowledge of an emb
 Embedders
 -----------------------------
 
-Currently, this package supports two embedders: `OpenAIEmbeddings` and `SentenceTransformerEmbeddings`.
+Currently, this package supports the following embedders:
 
-The `OpenAIEmbedder` was illustrated previously. Here is how to use the `SentenceTransformerEmbeddings`:
+- :ref:`openaiembeddings`
+- :ref:`sentencetransformerembeddings`
+- :ref:`vertexaiembeddings`
+- :ref:`mistralaiembeddings`
+- :ref:`cohereembeddings`
+- :ref:`azureopenaiembeddings`
+
+The `OpenAIEmbeddings` was illustrated previously. Here is how to use the `SentenceTransformerEmbeddings`:
 
 .. code:: python
 
-    from neo4j_graphrag.embeddings.sentence_transformers import SentenceTransformerEmbeddings
+    from neo4j_graphrag.embeddings import SentenceTransformerEmbeddings
 
     embedder = SentenceTransformerEmbeddings(model="all-MiniLM-L6-v2")  # Note: this is the default model
 
@@ -277,7 +444,7 @@ the following implementation of an embedder that wraps the `OllamaEmbedding` mod
 .. code:: python
 
     from llama_index.embeddings.ollama import OllamaEmbedding
-    from neo4j_graphrag.embedder import Embedder
+    from neo4j_graphrag.embeddings.base import Embedder
 
     class OllamaEmbedder(Embedder):
         def __init__(self, ollama_embedding):
@@ -290,10 +457,10 @@ the following implementation of an embedder that wraps the `OllamaEmbedding` mod
             return embedding[0]
 
     ollama_embedding = OllamaEmbedding(
-                model_name="llama3",
-                base_url="http://localhost:11434",
-                ollama_additional_kwargs={"mirostat": 0},
-            )
+        model_name="llama3",
+        base_url="http://localhost:11434",
+        ollama_additional_kwargs={"mirostat": 0},
+    )
     embedder = OllamaEmbedder(ollama_embedding)
     vector = embedder.embed_query("some text")
 
@@ -401,11 +568,11 @@ See also :ref:`vectorretriever`.
 Vector Cypher Retriever
 =======================
 
-The `VectorCypherRetriever` allows full utilization of Neo4j's graph nature by
-enhancing context through graph traversal.
+The `VectorCypherRetriever` fully leverages Neo4j's graph capabilities by combining vector-based similarity searches with graph traversal techniques. It processes a query embedding to perform a similarity search against a specified vector index, retrieves relevant node variables, and then executes a Cypher query to traverse the graph based on these nodes. This integration ensures that retrievals are both semantically meaningful and contextually enriched by the underlying graph structure.
+
 
 Retrieval Query
------------------------------
+---------------
 
 When crafting the retrieval query, it's important to note two available variables
 are in the query scope:
@@ -418,26 +585,34 @@ certain movie properties, the retrieval query can be structured as follows:
 
 .. code:: python
 
+    retrieval_query = """
+        MATCH
+        (actor:Actor)-[:ACTED_IN]->(node)
+        RETURN
+        node.title AS movie_title,
+        node.plot AS movie_plot,
+        collect(actor.name) AS actors;
+    """
     retriever = VectorCypherRetriever(
         driver,
         index_name=INDEX_NAME,
-        retrieval_query="MATCH (node)<-[:ACTED_IN]-(p:Person) RETURN node.title as movieTitle, node.plot as movieDescription, collect(p.name) as actors, score",
+        retrieval_query=retrieval_query,
     )
 
 
+It is recommended that the retrieval query returns node properties, as opposed to nodes.
+
+
 Format the Results
------------------------------
+------------------
 
 .. warning::
 
     This API is in beta mode and will be subject to change in the future.
 
-For improved readability and ease in prompt-engineering, formatting the result to suit
-specific needs involves providing a `record_formatter` function to the Cypher retrievers.
-This function processes the Neo4j record from the retrieval query, returning a
-`RetrieverResultItem` with `content` (str) and `metadata` (dict) fields. The `content`
-field is used for passing data to the LLM, while `metadata` can serve debugging purposes
-and provide additional context.
+The result_formatter function customizes the output of Cypher retrievers for improved prompt engineering and readability. It converts each Neo4j record into a RetrieverResultItem with two fields: `content` and `metadata`.
+
+The `content` field is a formatted string containing the key information intended for the language model, such as movie titles or descriptions. The `metadata` field holds additional details, useful for debugging or providing extra context, like scores or node properties.
 
 
 .. code:: python
@@ -532,6 +707,35 @@ Pinecone Retrievers
 
 Also see :ref:`pineconeneo4jretriever`.
 
+.. _qdrant-neo4j-retriever-user-guide:
+
+Qdrant Retrievers
+-----------------
+
+.. note::
+
+    In order to import this retriever, the Qdrant Python client must be installed:
+    `pip install qdrant-client`
+
+
+.. code:: python
+
+    from qdrant_client import QdrantClient
+    from neo4j_graphrag.retrievers import QdrantNeo4jRetriever
+
+    client = QdrantClient(...)  # construct the Qdrant client instance
+
+    retriever = QdrantNeo4jRetriever(
+        driver=driver,
+        client=client,
+        collection_name="my-collection",
+        id_property_external="neo4j_id",    # The payload field that contains identifier to a corresponding Neo4j node id property
+        id_property_neo4j="id",
+        embedder=embedder,
+    )
+
+See :ref:`qdrantneo4jretriever`.
+
 
 Other Retrievers
 ===================
@@ -567,7 +771,7 @@ Also note that there is an helper function to create a full-text index (see `the
 .. _hybrid-cypher-retriever-user-guide:
 
 Hybrid Cypher Retrievers
-------------------------------------
+------------------------
 
 In an hybrid cypher retriever, results are searched for in both a vector and a
 full-text index. Once the similar nodes are identified, a retrieval query can traverse
@@ -607,7 +811,7 @@ LLMs can be different.
 
     from neo4j import GraphDatabase
     from neo4j_graphrag.retrievers import Text2CypherRetriever
-    from neo4j_graphrag.llm import OpenAILLM
+    from neo4j_graphrag.llm.openai import OpenAILLM
 
     URI = "neo4j://localhost:7687"
     AUTH = ("neo4j", "password")

@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, Optional
+from typing import Any, Callable, Dict, Optional
 
 import neo4j
 from neo4j.exceptions import CypherSyntaxError, DriverError, Neo4jError
@@ -103,6 +103,8 @@ class Text2CypherRetriever(Retriever):
                     if validated_data.neo4j_schema_model
                     else get_schema(validated_data.driver_model.driver)
                 )
+            else:
+                self.neo4j_schema = ""
 
         except (Neo4jError, DriverError) as e:
             error_message = getattr(e, "message", str(e))
@@ -111,14 +113,14 @@ class Text2CypherRetriever(Retriever):
             ) from e
 
     def get_search_results(
-        self,
-        query_text: str,
+        self, query_text: str, prompt_params: Optional[Dict[str, Any]] = None
     ) -> RawSearchResult:
         """Converts query_text to a Cypher query using an LLM.
            Retrieve records from a Neo4j database using the generated Cypher query.
 
         Args:
             query_text (str): The natural language query used to search the Neo4j database.
+            prompt_params (Dict[str, Any]): additional values to inject into the custom prompt, if it is provided. Example: {'schema': 'this is the graph schema'}
 
         Raises:
             SearchValidationError: If validation of the input arguments fail.
@@ -132,15 +134,27 @@ class Text2CypherRetriever(Retriever):
         except ValidationError as e:
             raise SearchValidationError(e.errors()) from e
 
-        if not self.custom_prompt:
-            prompt_template = Text2CypherTemplate()
-            prompt = prompt_template.format(
-                schema=self.neo4j_schema,
-                examples="\n".join(self.examples) if self.examples else "",
-                query=validated_data.query_text,
+        prompt_template = Text2CypherTemplate(template=self.custom_prompt)
+
+        if prompt_params is not None:
+            # parse the schema and examples inputs
+            examples_to_use = prompt_params.get("examples") or (
+                "\n".join(self.examples) if self.examples else ""
             )
+            schema_to_use = prompt_params.get("schema") or self.neo4j_schema
+            prompt_params.pop("examples", None)
+            prompt_params.pop("schema", None)
         else:
-            prompt = self.custom_prompt
+            examples_to_use = "\n".join(self.examples) if self.examples else ""
+            schema_to_use = self.neo4j_schema
+            prompt_params = dict()
+
+        prompt = prompt_template.format(
+            schema=schema_to_use,
+            examples=examples_to_use,
+            query_text=validated_data.query_text,
+            **prompt_params,
+        )
 
         logger.debug("Text2CypherRetriever prompt: %s", prompt)
 

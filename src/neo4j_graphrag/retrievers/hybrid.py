@@ -20,7 +20,7 @@ from typing import Any, Callable, Optional
 import neo4j
 from pydantic import ValidationError
 
-from neo4j_graphrag.embedder import Embedder
+from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.exceptions import (
     EmbeddingRequiredError,
     RetrieverInitializationError,
@@ -184,7 +184,11 @@ class HybridRetriever(Retriever):
             query_vector = self.embedder.embed_query(query_text)
             parameters["query_vector"] = query_vector
 
-        search_query, _ = get_search_query(SearchType.HYBRID, self.return_properties)
+        search_query, _ = get_search_query(
+            SearchType.HYBRID,
+            self.return_properties,
+            neo4j_version_is_5_23_or_above=self.neo4j_version_is_5_23_or_above,
+        )
 
         logger.debug("HybridRetriever Cypher parameters: %s", parameters)
         logger.debug("HybridRetriever Cypher query: %s", search_query)
@@ -336,7 +340,9 @@ class HybridCypherRetriever(Retriever):
             del parameters["query_params"]
 
         search_query, _ = get_search_query(
-            SearchType.HYBRID, retrieval_query=self.retrieval_query
+            SearchType.HYBRID,
+            retrieval_query=self.retrieval_query,
+            neo4j_version_is_5_23_or_above=self.neo4j_version_is_5_23_or_above,
         )
 
         logger.debug("HybridCypherRetriever Cypher parameters: %s", parameters)

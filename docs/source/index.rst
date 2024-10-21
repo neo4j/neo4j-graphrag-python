@@ -3,14 +3,18 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Neo4j GraphRAG for Python
-=========================
+GraphRAG for Python
+===================
 
-This repository contains the official Neo4j GraphRAG features for Python.
+This package contains the official Neo4j GraphRAG features for Python.
 
 The purpose of this package is to provide a first party package to developers,
 where Neo4j can guarantee long term commitment and maintenance as well as being
 fast to ship new features and high performing patterns and methods.
+
+⚠️ This package is a renamed continuation of `neo4j-genai`.
+The package `neo4j-genai` is deprecated and will no longer be maintained.
+We encourage all users to migrate to this new package to continue receiving updates and support.
 
 Neo4j versions supported:
 
@@ -23,7 +27,6 @@ Python versions supported:
 * Python 3.11
 * Python 3.10
 * Python 3.9
-* Python 3.8
 
 
 ******
@@ -41,6 +44,7 @@ Topics
     :caption: Contents:
     :hidden:
 
+    Introduction <self>
     user_guide_rag.rst
     user_guide_kg_builder.rst
     user_guide_pipeline.rst
@@ -55,7 +59,7 @@ Usage
 Installation
 ************
 
-This package requires Python (>=3.8.1).
+This package requires Python (>=3.9).
 
 To install the latest stable version, use:
 
@@ -148,8 +152,8 @@ While the library has more retrievers than shown here, the following examples sh
 .. code:: python
 
     from neo4j import GraphDatabase
+    from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
     from neo4j_graphrag.retrievers import VectorRetriever
-    from langchain_openai import OpenAIEmbeddings
 
     URI = "neo4j://localhost:7687"
     AUTH = ("neo4j", "password")

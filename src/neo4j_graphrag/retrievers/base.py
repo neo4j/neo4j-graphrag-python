@@ -87,6 +87,28 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
         if self.VERIFY_NEO4J_VERSION:
             self._verify_version()
 
+    def _get_version(self) -> tuple[tuple[int, ...], bool]:
+        records, _, _ = self.driver.execute_query(
+            "CALL dbms.components()", database_=self.neo4j_database
+        )
+        version = records[0]["versions"][0]
+        # drop everything after the '-' first
+        version_main, *_ = version.split("-")
+        # convert each number between '.' into int
+        version_tuple = tuple(map(int, version_main.split(".")))
+        # if no patch version, consider it's 0
+        if len(version_tuple) < 3:
+            version_tuple = (*version_tuple, 0)
+        return version_tuple, "aura" in version
+
+    def _check_if_version_5_23_or_above(self, version_tuple: tuple[int, ...]) -> bool:
+        """
+        Check if the connected Neo4j database version supports the required features.
+
+        Sets a flag if the connected Neo4j version is 5.23 or above.
+        """
+        return version_tuple >= (5, 23, 0)
+
     def _verify_version(self) -> None:
         """
         Check if the connected Neo4j database version supports vector indexing.
@@ -96,19 +118,14 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
         indexing. Raises a Neo4jMinVersionError if the connected Neo4j version is
         not supported.
         """
-        records, _, _ = self.driver.execute_query(
-            "CALL dbms.components()", database_=self.neo4j_database
+        version_tuple, is_aura = self._get_version()
+        self.neo4j_version_is_5_23_or_above = self._check_if_version_5_23_or_above(
+            version_tuple
         )
-        version = records[0]["versions"][0]
 
-        if "aura" in version:
-            version_tuple = (
-                *tuple(map(int, version.split("-")[0].split("."))),
-                0,
-            )
+        if is_aura:
             target_version = (5, 18, 0)
         else:
-            version_tuple = tuple(map(int, version.split(".")))
             target_version = (5, 18, 1)
 
         if version_tuple < target_version:

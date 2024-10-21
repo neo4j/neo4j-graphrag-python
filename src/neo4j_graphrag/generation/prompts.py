@@ -14,9 +14,13 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import warnings
 from typing import Any, Optional
 
-from neo4j_graphrag.exceptions import PromptMissingInputError
+from neo4j_graphrag.exceptions import (
+    PromptMissingInputError,
+    PromptMissingPlaceholderError,
+)
 
 
 class PromptTemplate:
@@ -29,7 +33,7 @@ class PromptTemplate:
     """
 
     DEFAULT_TEMPLATE: str = ""
-    EXPECTED_INPUTS: list[str] = []
+    EXPECTED_INPUTS: list[str] = list()
 
     def __init__(
         self,
@@ -38,6 +42,12 @@ class PromptTemplate:
     ) -> None:
         self.template = template or self.DEFAULT_TEMPLATE
         self.expected_inputs = expected_inputs or self.EXPECTED_INPUTS
+
+        for e in self.expected_inputs:
+            if f"{{{e}}}" not in self.template:
+                raise PromptMissingPlaceholderError(
+                    f"`template` is missing placeholder {e}"
+                )
 
     def _format(self, **kwargs: Any) -> str:
         for e in self.EXPECTED_INPUTS:
@@ -108,17 +118,41 @@ Examples (optional):
 {examples}
 
 Input:
-{query}
+{query_text}
 
 Do not use any properties or relationships not included in the schema.
 Do not include triple backticks ``` or any additional text except the generated Cypher statement in your response.
 
 Cypher query:
 """
-    EXPECTED_INPUTS = ["schema", "query", "examples"]
+    EXPECTED_INPUTS = ["query_text"]
 
-    def format(self, query: str, schema: str, examples: str) -> str:
-        return super().format(query=query, schema=schema, examples=examples)
+    def format(
+        self,
+        schema: Optional[str] = None,
+        examples: Optional[str] = None,
+        query_text: str = "",
+        query: Optional[str] = None,
+        **kwargs: Any,
+    ) -> str:
+        if query is not None:
+            if query_text:
+                warnings.warn(
+                    "Both 'query' and 'query_text' are provided, 'query_text' will be used.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+            elif isinstance(query, str):
+                warnings.warn(
+                    "'query' is deprecated and will be removed in a future version, please use 'query_text' instead.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                query_text = query
+
+        return super().format(
+            query_text=query_text, schema=schema, examples=examples, **kwargs
+        )
 
 
 class ERExtractionTemplate(PromptTemplate):
@@ -133,7 +167,7 @@ Return result as JSON using the following format:
 {{"nodes": [ {{"id": "0", "label": "Person", "properties": {{"name": "John"}} }}],
 "relationships": [{{"type": "KNOWS", "start_node_id": "0", "end_node_id": "1", "properties": {{"since": "2024-08-01"}} }}] }}
 
-Use only fhe following nodes and relationships (if provided):
+Use only the following nodes and relationships (if provided):
 {schema}
 
 Assign a unique ID (string) to each node, and reuse it to define relationships.
@@ -151,5 +185,10 @@ Input text:
 """
     EXPECTED_INPUTS = ["text"]
 
-    def format(self, text: str, schema: dict[str, Any], examples: str) -> str:
+    def format(
+        self,
+        schema: dict[str, Any],
+        examples: str,
+        text: str = "",
+    ) -> str:
         return super().format(text=text, schema=schema, examples=examples)

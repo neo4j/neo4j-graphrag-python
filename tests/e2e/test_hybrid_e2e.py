@@ -12,10 +12,11 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import logging
 
 import pytest
 from neo4j import Driver
-from neo4j_graphrag.embedder import Embedder
+from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.retrievers import (
     HybridCypherRetriever,
     HybridRetriever,
@@ -38,6 +39,26 @@ def test_hybrid_retriever_search_text(
     assert len(results.items) == 5
     for result in results.items:
         assert isinstance(result, RetrieverResultItem)
+
+
+@pytest.mark.usefixtures("setup_neo4j_for_retrieval")
+def test_hybrid_retriever_no_neo4j_deprecation_warning(
+    driver: Driver, random_embedder: Embedder, caplog: pytest.LogCaptureFixture
+) -> None:
+    retriever = HybridRetriever(
+        driver, "vector-index-name", "fulltext-index-name", random_embedder
+    )
+
+    top_k = 5
+    with caplog.at_level(logging.WARNING):
+        retriever.search(query_text="Find me a book about Fremen", top_k=top_k)
+
+    for record in caplog.records:
+        if (
+            "Neo.ClientNotification.Statement.FeatureDeprecationWarning"
+            in record.message
+        ):
+            assert False, f"Deprecation warning found in logs: {record.message}"
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")

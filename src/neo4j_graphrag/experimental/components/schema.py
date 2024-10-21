@@ -14,12 +14,12 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
 from pydantic import BaseModel, ValidationError, model_validator, validate_call
 
 from neo4j_graphrag.exceptions import SchemaValidationError
-from neo4j_graphrag.experimental.pipeline import Component, DataModel
+from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
 
 
 class SchemaProperty(BaseModel):
@@ -72,8 +72,8 @@ class SchemaConfig(DataModel):
     """
 
     entities: Dict[str, Dict[str, Any]]
-    relations: Dict[str, Dict[str, Any]]
-    potential_schema: List[Tuple[str, str, str]]
+    relations: Optional[Dict[str, Dict[str, Any]]]
+    potential_schema: Optional[List[Tuple[str, str, str]]]
 
     @model_validator(mode="before")
     def check_schema(cls, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -81,19 +81,24 @@ class SchemaConfig(DataModel):
         relations = data.get("relations", {}).keys()
         potential_schema = data.get("potential_schema", [])
 
-        for entity1, relation, entity2 in potential_schema:
-            if entity1 not in entities:
+        if potential_schema:
+            if not relations:
                 raise SchemaValidationError(
-                    f"Entity '{entity1}' is not defined in the provided entities."
+                    "Relations must also be provided when using a potential schema."
                 )
-            if relation not in relations:
-                raise SchemaValidationError(
-                    f"Relation '{relation}' is not defined in the provided relations."
-                )
-            if entity2 not in entities:
-                raise SchemaValidationError(
-                    f"Entity '{entity2}' is not defined in the provided entities."
-                )
+            for entity1, relation, entity2 in potential_schema:
+                if entity1 not in entities:
+                    raise SchemaValidationError(
+                        f"Entity '{entity1}' is not defined in the provided entities."
+                    )
+                if relation not in relations:
+                    raise SchemaValidationError(
+                        f"Relation '{relation}' is not defined in the provided relations."
+                    )
+                if entity2 not in entities:
+                    raise SchemaValidationError(
+                        f"Entity '{entity2}' is not defined in the provided entities."
+                    )
 
         return data
 
@@ -160,8 +165,8 @@ class SchemaBuilder(Component):
     @staticmethod
     def create_schema_model(
         entities: List[SchemaEntity],
-        relations: List[SchemaRelation],
-        potential_schema: List[Tuple[str, str, str]],
+        relations: Optional[List[SchemaRelation]] = None,
+        potential_schema: Optional[List[Tuple[str, str, str]]] = None,
     ) -> SchemaConfig:
         """
         Creates a SchemaConfig object from Lists of Entity and Relation objects
@@ -176,9 +181,11 @@ class SchemaBuilder(Component):
             SchemaConfig: A configured schema object.
         """
         entity_dict = {entity.label: entity.model_dump() for entity in entities}
-        relation_dict = {
-            relation.label: relation.model_dump() for relation in relations
-        }
+        relation_dict = (
+            {relation.label: relation.model_dump() for relation in relations}
+            if relations
+            else {}
+        )
 
         try:
             return SchemaConfig(
@@ -193,8 +200,8 @@ class SchemaBuilder(Component):
     async def run(
         self,
         entities: List[SchemaEntity],
-        relations: List[SchemaRelation],
-        potential_schema: List[Tuple[str, str, str]],
+        relations: Optional[List[SchemaRelation]] = None,
+        potential_schema: Optional[List[Tuple[str, str, str]]] = None,
     ) -> SchemaConfig:
         """
         Asynchronously constructs and returns a SchemaConfig object.
