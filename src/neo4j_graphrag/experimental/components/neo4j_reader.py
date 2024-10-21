@@ -17,6 +17,7 @@ from __future__ import annotations
 from typing import Union
 
 import neo4j
+from pydantic import validate_call
 
 from neo4j_graphrag.experimental.components.types import (
     LexicalGraphConfig,
@@ -48,6 +49,7 @@ class Neo4jChunkReader(Component):
             f"ORDER BY c.{index_property}"
         )
 
+    @validate_call
     async def run(
         self,
         lexical_graph_config: LexicalGraphConfig = LexicalGraphConfig(),
