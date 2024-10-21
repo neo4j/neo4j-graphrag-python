@@ -5,6 +5,9 @@
 ### Added
 - Made `relations` and `potential_schema` optional in `SchemaBuilder`.
 
+### Changed
+- Vector and Hybrid retrievers used with `return_properties` now also return the node labels (`nodeLabels`) and the node's element ID (`id`).
+
 ## 1.1.0
 
 ### Added
