@@ -32,7 +32,9 @@ class LlamaIndexTextSplitterAdapter(TextSplitter):
     .. code-block:: python
 
         from llama_index.core.node_parser.text.sentence import SentenceSplitter
-        from neo4j_graphrag.experimental.components.text_splitters.langchain import LangChainTextSplitterAdapter
+        from neo4j_graphrag.experimental.components.text_splitters.llamaindex import (
+            LlamaIndexTextSplitterAdapter,
+        )
         from neo4j_graphrag.experimental.pipeline import Pipeline
 
         pipeline = Pipeline()

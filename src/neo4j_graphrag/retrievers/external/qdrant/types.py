@@ -14,45 +14,39 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Callable, Optional, Union
+from typing import Callable, Optional
 
 import neo4j
-from pinecone import Pinecone
 from pydantic import (
     BaseModel,
     ConfigDict,
     field_validator,
 )
+from qdrant_client import QdrantClient
 
 from neo4j_graphrag.types import (
     EmbedderModel,
     Neo4jDriverModel,
     RetrieverResultItem,
-    VectorSearchModel,
 )
 
 
-class PineconeSearchModel(VectorSearchModel):
-    pinecone_filter: Optional[
-        dict[str, Union[str, float, int, bool, list[Any], dict[Any, Any]]]
-    ] = None
-
-
-class PineconeClientModel(BaseModel):
-    client: Pinecone
+class QdrantClientModel(BaseModel):
+    client: QdrantClient
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @field_validator("client")
-    def check_client(cls, value: Pinecone) -> Pinecone:
-        if not isinstance(value, Pinecone):
-            raise ValueError("Provided client needs to be of type Pinecone")
+    def check_client(cls, value: QdrantClient) -> QdrantClient:
+        if not isinstance(value, QdrantClient):
+            raise ValueError("Provided client needs to be of type QdrantClient")
         return value
 
 
-class PineconeNeo4jRetrieverModel(BaseModel):
+class QdrantNeo4jRetrieverModel(BaseModel):
     driver_model: Neo4jDriverModel
-    client_model: PineconeClientModel
-    index_name: str
+    client_model: QdrantClientModel
+    collection_name: str
+    id_property_external: str
     id_property_neo4j: str
     embedder_model: Optional[EmbedderModel] = None
     return_properties: Optional[list[str]] = None

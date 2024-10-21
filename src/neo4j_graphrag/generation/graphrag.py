@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import logging
+import warnings
 from typing import Any, Optional
 
 from pydantic import ValidationError
@@ -84,12 +85,18 @@ class GraphRAG:
         query_text: str = "",
         examples: str = "",
         retriever_config: Optional[dict[str, Any]] = None,
-        return_context: bool = False,
+        return_context: bool | None = None,
     ) -> RagResultModel:
-        """This method performs a full RAG search:
-        1. Retrieval: context retrieval
-        2. Augmentation: prompt formatting
-        3. Generation: answer generation with LLM
+        """
+        .. warning::
+            The default value of 'return_context' will change from 'False' to 'True' in a future version.
+
+
+        This method performs a full RAG search:
+            1. Retrieval: context retrieval
+            2. Augmentation: prompt formatting
+            3. Generation: answer generation with LLM
+
 
         Args:
             query_text (str): The user question
@@ -102,6 +109,12 @@ class GraphRAG:
             RagResultModel: The LLM-generated answer
 
         """
+        if return_context is None:
+            warnings.warn(
+                "The default value of 'return_context' will change from 'False' to 'True' in a future version.",
+                DeprecationWarning,
+            )
+            return_context = False
         try:
             validated_data = RagSearchModel(
                 query_text=query_text,

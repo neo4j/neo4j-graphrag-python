@@ -2,22 +2,21 @@ from neo4j import GraphDatabase
 from neo4j_graphrag.embeddings.sentence_transformers import (
     SentenceTransformerEmbeddings,
 )
-from neo4j_graphrag.retrievers import PineconeNeo4jRetriever
-from pinecone import Pinecone
+from neo4j_graphrag.retrievers import QdrantNeo4jRetriever
+from qdrant_client import QdrantClient
 
-NEO4J_AUTH = ("neo4j", "password")
 NEO4J_URL = "neo4j://localhost:7687"
-PC_API_KEY = "API_KEY"
+NEO4J_AUTH = ("neo4j", "password")
 
 
 def main() -> None:
     with GraphDatabase.driver(NEO4J_URL, auth=NEO4J_AUTH) as neo4j_driver:
-        pc_client = Pinecone(PC_API_KEY)
         embedder = SentenceTransformerEmbeddings(model="all-MiniLM-L6-v2")
-        retriever = PineconeNeo4jRetriever(
+        retriever = QdrantNeo4jRetriever(
             driver=neo4j_driver,
-            client=pc_client,
-            index_name="jeopardy",
+            client=QdrantClient(url="http://localhost:6333"),
+            collection_name="Jeopardy",
+            id_property_external="neo4j_id",
             id_property_neo4j="id",
             embedder=embedder,
         )

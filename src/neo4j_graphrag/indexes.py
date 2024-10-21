@@ -38,6 +38,7 @@ def create_vector_index(
     embedding_property: str,
     dimensions: int,
     similarity_fn: Literal["euclidean", "cosine"],
+    fail_if_exists: bool = False,
     neo4j_database: Optional[str] = None,
 ) -> None:
     """
@@ -46,7 +47,6 @@ def create_vector_index(
 
     See Cypher manual on `creating vector indexes <https://neo4j.com/docs/cypher-manual/current/indexes/semantic-indexes/vector-indexes/#create-vector-index>`_.
 
-    Important: This operation will fail if an index with the same name already exists.
     Ensure that the index name provided is unique within the database context.
 
     Example:
@@ -72,6 +72,7 @@ def create_vector_index(
             embedding_property="vectorProperty",
             dimensions=1536,
             similarity_fn="euclidean",
+            fail_if_exists=False,
         )
 
 
@@ -83,6 +84,7 @@ def create_vector_index(
         dimensions (int): Vector embedding dimension
         similarity_fn (str): case-insensitive values for the vector similarity function:
             ``euclidean`` or ``cosine``.
+        fail_if_exists (bool): If True raise an error if the index already exists. Defaults to False.
         neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
     Raises:
@@ -105,7 +107,7 @@ def create_vector_index(
 
     try:
         query = (
-            f"CREATE VECTOR INDEX $name FOR (n:{label}) ON n.{embedding_property} OPTIONS "
+            f"CREATE VECTOR INDEX $name {'' if fail_if_exists else 'IF NOT EXISTS'} FOR (n:{label}) ON n.{embedding_property} OPTIONS "
             "{ indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }"
         )
         logger.info(f"Creating vector index named '{name}'")
@@ -123,6 +125,7 @@ def create_fulltext_index(
     name: str,
     label: str,
     node_properties: list[str],
+    fail_if_exists: bool = False,
     neo4j_database: Optional[str] = None,
 ) -> None:
     """
@@ -131,7 +134,6 @@ def create_fulltext_index(
 
     See Cypher manual on `creating fulltext indexes <https://neo4j.com/docs/cypher-manual/current/indexes/semantic-indexes/full-text-indexes/#create-full-text-indexes>`_.
 
-    Important: This operation will fail if an index with the same name already exists.
     Ensure that the index name provided is unique within the database context.
 
     Example:
@@ -155,6 +157,7 @@ def create_fulltext_index(
             INDEX_NAME,
             label="Document",
             node_properties=["vectorProperty"],
+            fail_if_exists=False,
         )
 
 
@@ -163,6 +166,7 @@ def create_fulltext_index(
         name (str): The unique name of the index.
         label (str): The node label to be indexed.
         node_properties (list[str]): The node properties to create the fulltext index on.
+        fail_if_exists (bool): If True raise an error if the index already exists. Defaults to False.
         neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
     Raises:
@@ -180,7 +184,7 @@ def create_fulltext_index(
 
     try:
         query = (
-            "CREATE FULLTEXT INDEX $name "
+            f"CREATE FULLTEXT INDEX $name {'' if fail_if_exists else 'IF NOT EXISTS'} "
             f"FOR (n:`{label}`) ON EACH "
             f"[{', '.join(['n.`' + prop + '`' for prop in node_properties])}]"
         )

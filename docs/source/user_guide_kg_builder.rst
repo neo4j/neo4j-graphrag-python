@@ -471,6 +471,7 @@ with the same label and identical "name" property.
 It can be used like this:
 
 .. code:: python
+
     from neo4j_graphrag.experimental.components.resolver import (
         SinglePropertyExactMatchResolver,
     )

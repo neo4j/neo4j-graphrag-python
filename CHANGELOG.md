@@ -2,6 +2,19 @@
 
 ## Next
 
+### Added
+- Made `relations` and `potential_schema` optional in `SchemaBuilder`.
+- Added a check to prevent the use of deprecated Cypher syntax for Neo4j versions 5.23.0 and above.
+
+## 1.1.0
+
+### Added
+- Introduced a `fail_if_exist` option to index creation functions to control behavior when an index already exists.
+- Added Qdrant retriever in neo4j_graphrag.retrievers.
+
+### Changed
+- Comprehensive rewrite of the README to improve clarity and provide detailed usage examples.
+
 ## 1.0.0
 
 ### Fixed
@@ -35,6 +48,7 @@
 - Added support for Cohere LLM and embeddings - added optional dependency to `cohere`.
 - Added support for Anthropic LLM - added optional dependency to `anthropic`.
 - Added support for MistralAI LLM - added optional dependency to `mistralai`.
+- Added support for Qdrant - added optional dependency to `qdrant-client`.
 
 ### Fixed
 - Resolved import issue with the Vertex AI Embeddings class.

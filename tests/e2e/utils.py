@@ -22,6 +22,7 @@ from typing import Any, Literal
 import neo4j
 import weaviate.classes as wvc
 from neo4j_graphrag.indexes import create_vector_index, drop_index_if_exists
+from qdrant_client import models
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -466,7 +467,7 @@ def populate_neo4j(
 
 
 def build_data_objects(
-    q_vector_fmt: Literal["weaviate", "pinecone", "neo4j"],
+    q_vector_fmt: Literal["weaviate", "pinecone", "neo4j", "qdrant"],
 ) -> tuple[dict[str, Any], list[Any]]:
     # read file from disk
     # this file is from https://github.com/weaviate-tutorials/quickstart/tree/main/data
@@ -488,7 +489,7 @@ def build_data_objects(
     ]
     neo4j_objs["nodes"] += unique_categories
 
-    for d in data:
+    for i, d in enumerate(data):
         id = hashlib.md5(d["Question"].encode()).hexdigest()
         question_properties = {
             "id": f"question_{id}",
@@ -541,7 +542,17 @@ def build_data_objects(
         elif q_vector_fmt == "neo4j":
             # vector inserted into the neo4j object, nothing to do here
             pass
+        elif q_vector_fmt == "qdrant":
+            question_objs.append(
+                models.PointStruct(
+                    id=i,
+                    payload={"neo4j_id": f"question_{id}"},
+                    vector=d["vector"],
+                )
+            )
         else:
-            raise ValueError("q_vector_fmt must be either weaviate, pinecone or neo4j")
+            raise ValueError(
+                "q_vector_fmt must be either weaviate, pinecone, neo4j or qdrant"
+            )
 
     return neo4j_objs, question_objs
