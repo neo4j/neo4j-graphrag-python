@@ -3,13 +3,12 @@ from __future__ import annotations
 import asyncio
 
 import neo4j
-from langchain_text_splitters import CharacterTextSplitter
 from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
 from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
 from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
 from neo4j_graphrag.experimental.components.lexical_graph import LexicalGraphBuilder
-from neo4j_graphrag.experimental.components.text_splitters.langchain import (
-    LangChainTextSplitterAdapter,
+from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
+    FixedSizeSplitter,
 )
 from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
 from neo4j_graphrag.experimental.pipeline import Pipeline
@@ -17,25 +16,28 @@ from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 
 
 async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
-    """This is where we define and run the KG builder pipeline, instantiating a few
-    components:
-    - Text Splitter: in this example we use a text splitter from the LangChain package
+    """This is where we define and run the Lexical Graph builder pipeline, instantiating
+    a few components:
+
+    - Text Splitter: to split the text into manageable chunks of fixed size
     - Chunk Embedder: to embed the chunks' text
-    - Lexical Graph Builder: to build the lexical graph
+    - Lexical Graph Builder: to build the lexical graph, ie creating the chunk nodes and relationships between them
     - KG writer: save the lexical graph to Neo4j
     """
     pipe = Pipeline()
     # define the components
     pipe.add_component(
-        LangChainTextSplitterAdapter(
-            # chunk_size=50 for the sake of this demo
-            CharacterTextSplitter(chunk_size=50, chunk_overlap=10, separator=".")
-        ),
+        FixedSizeSplitter(chunk_size=20, chunk_overlap=1),
         "splitter",
     )
     pipe.add_component(TextChunkEmbedder(embedder=OpenAIEmbeddings()), "chunk_embedder")
+    # optional: define some custom node labels for the lexical graph:
+    lexical_graph_config = LexicalGraphConfig(
+        id_prefix="example",
+        chunk_node_label="TextPart",
+    )
     pipe.add_component(
-        LexicalGraphBuilder(LexicalGraphConfig(id_prefix="example")),
+        LexicalGraphBuilder(lexical_graph_config),
         "lexical_graph_builder",
     )
     pipe.add_component(Neo4jWriter(neo4j_driver), "writer")
@@ -50,7 +52,10 @@ async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
     pipe.connect(
         "lexical_graph_builder",
         "writer",
-        input_config={"graph": "lexical_graph_builder.graph"},
+        input_config={
+            "graph": "lexical_graph_builder.graph",
+            "lexical_graph_config": "lexical_graph_builder.config",
+        },
     )
     # user input:
     # the initial text
@@ -66,7 +71,7 @@ async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
             "document_info": {
                 # 'path' can be anything
                 "path": "example/lexical_graph_from_text.py"
-            }
+            },
         },
     }
     # run the pipeline
