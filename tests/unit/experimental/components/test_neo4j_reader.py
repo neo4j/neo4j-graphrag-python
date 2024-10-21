@@ -12,34 +12,28 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, Mock
 
 import neo4j
 import pytest
 from neo4j_graphrag.experimental.components.neo4j_reader import (
     Neo4jChunkReader,
-    Neo4jRecords,
 )
-from neo4j_graphrag.experimental.components.types import TextChunks
-
-from tests.unit.experimental.components.lexical_graph import LexicalGraphConfig
+from neo4j_graphrag.experimental.components.types import LexicalGraphConfig, TextChunks
 
 
-@patch("neo4j_graphrag.experimental.components.neo4j_reader.Neo4jReader.run")
 @pytest.mark.asyncio
-async def test_neo4j_chunk_reader(mock_reader: MagicMock, driver: neo4j.Driver) -> None:
-    mock_reader.return_value = Neo4jRecords(
-        records=[
-            neo4j.Record(
-                {"chunk": {"index": 0, "text": "some text", "other": "property"}}
-            )
-        ]
+async def test_neo4j_chunk_reader(driver: Mock) -> None:
+    driver.execute_query.return_value = (
+        [neo4j.Record({"chunk": {"index": 0, "text": "some text", "id": "azerty"}})],
+        None,
+        None,
     )
     chunk_reader = Neo4jChunkReader(driver)
     res = await chunk_reader.run()
 
-    mock_reader.assert_awaited_once_with(
-        "MATCH (c:`Chunk`) RETURN c { .*, embedding: null } as chunk ORDER BY c.index"
+    driver.execute_query.assert_called_once_with(
+        "MATCH (c:`Chunk`) RETURN c { .*, id: elementId(c), embedding: null } as chunk ORDER BY c.index"
     )
 
     assert isinstance(res, TextChunks)
@@ -47,20 +41,26 @@ async def test_neo4j_chunk_reader(mock_reader: MagicMock, driver: neo4j.Driver) 
     chunk = res.chunks[0]
     assert chunk.text == "some text"
     assert chunk.index == 0
-    assert chunk.metadata == {"other": "property"}
+    assert chunk.metadata == {"id": "azerty"}
 
 
-@patch("neo4j_graphrag.experimental.components.neo4j_reader.Neo4jReader.run")
 @pytest.mark.asyncio
-async def test_neo4j_chunk_reader_custom_lg_config(
-    mock_reader: MagicMock, driver: neo4j.Driver
-) -> None:
-    mock_reader.return_value = Neo4jRecords(
-        records=[
+async def test_neo4j_chunk_reader_custom_lg_config(driver: Mock) -> None:
+    driver.execute_query.return_value = (
+        [
             neo4j.Record(
-                {"chunk": {"k": 0, "content": "some text", "other": "property"}}
+                {
+                    "chunk": {
+                        "k": 0,
+                        "content": "some text",
+                        "id": "azerty",
+                        "other": "property",
+                    }
+                }
             )
-        ]
+        ],
+        None,
+        None,
     )
     chunk_reader = Neo4jChunkReader(driver)
     res = await chunk_reader.run(
@@ -71,8 +71,8 @@ async def test_neo4j_chunk_reader_custom_lg_config(
         )
     )
 
-    mock_reader.assert_awaited_once_with(
-        "MATCH (c:`Page`) RETURN c { .*, embedding: null } as chunk ORDER BY c.index"
+    driver.execute_query.assert_called_once_with(
+        "MATCH (c:`Page`) RETURN c { .*, id: elementId(c), embedding: null } as chunk ORDER BY c.k"
     )
 
     assert isinstance(res, TextChunks)
@@ -80,16 +80,13 @@ async def test_neo4j_chunk_reader_custom_lg_config(
     chunk = res.chunks[0]
     assert chunk.text == "some text"
     assert chunk.index == 0
-    assert chunk.metadata == {"other": "property"}
+    assert chunk.metadata == {"id": "azerty", "other": "property"}
 
 
-@patch("neo4j_graphrag.experimental.components.neo4j_reader.Neo4jReader.run")
 @pytest.mark.asyncio
-async def test_neo4j_chunk_reader_do_not_fetch_embedding(
-    mock_reader: MagicMock, driver: neo4j.Driver
-) -> None:
-    mock_reader.return_value = Neo4jRecords(
-        records=[
+async def test_neo4j_chunk_reader_do_not_fetch_embedding(driver: Mock) -> None:
+    driver.execute_query.return_value = (
+        [
             neo4j.Record(
                 {
                     "chunk": {
@@ -97,16 +94,19 @@ async def test_neo4j_chunk_reader_do_not_fetch_embedding(
                         "text": "some text",
                         "other": "property",
                         "embedding": [1.0, 2.0, 3.0],
+                        "id": "azerty",
                     }
                 }
             )
-        ]
+        ],
+        None,
+        None,
     )
     chunk_reader = Neo4jChunkReader(driver, fetch_embeddings=True)
     res = await chunk_reader.run()
 
-    mock_reader.assert_awaited_once_with(
-        "MATCH (c:`Chunk`) RETURN c {.*} as chunk ORDER BY c.index"
+    driver.execute_query.assert_called_once_with(
+        "MATCH (c:`Chunk`) RETURN c { .*, id: elementId(c) } as chunk ORDER BY c.index"
     )
 
     assert isinstance(res, TextChunks)
@@ -114,4 +114,8 @@ async def test_neo4j_chunk_reader_do_not_fetch_embedding(
     chunk = res.chunks[0]
     assert chunk.text == "some text"
     assert chunk.index == 0
-    assert chunk.metadata == {"other": "property", "embedding": [1.0, 2.0, 3.0]}
+    assert chunk.metadata == {
+        "other": "property",
+        "id": "azerty",
+        "embedding": [1.0, 2.0, 3.0],
+    }

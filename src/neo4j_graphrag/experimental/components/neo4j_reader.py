@@ -14,34 +14,17 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Union
 
 import neo4j
-from pydantic import ConfigDict
 
-from neo4j_graphrag.experimental.components.types import TextChunk, TextChunks
-from neo4j_graphrag.experimental.pipeline import Component, DataModel
-from tests.unit.experimental.components.lexical_graph import LexicalGraphConfig
-
-
-class Neo4jRecords(DataModel):
-    records: List[neo4j.Record]
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-
-class Neo4jReader(Component):
-    def __init__(self, driver: neo4j.driver):
-        self.driver = driver
-
-    async def run(
-        self, query: str, parameters: Optional[Dict[str, Any]] = None
-    ) -> Neo4jRecords:
-        if isinstance(self.driver, neo4j.AsyncDriver):
-            result = await self.driver.execute_query(query, parameters_=parameters)
-        else:
-            result = self.driver.execute_query(query, parameters_=parameters)
-        return Neo4jRecords(records=result.records)
+from neo4j_graphrag.experimental.components.types import (
+    LexicalGraphConfig,
+    TextChunk,
+    TextChunks,
+)
+from neo4j_graphrag.experimental.pipeline import Component
+from neo4j_graphrag.utils import execute_query
 
 
 class Neo4jChunkReader(Component):
@@ -50,21 +33,18 @@ class Neo4jChunkReader(Component):
         driver: Union[neo4j.AsyncDriver, neo4j.Driver],
         fetch_embeddings: bool = False,
     ):
-        self.reader = Neo4jReader(driver)
+        self.driver = driver
         self.fetch_embeddings = fetch_embeddings
 
     def _get_query(
         self, chunk_label: str, embedding_property: str, index_property: str
     ) -> str:
-        if self.fetch_embeddings:
-            return (
-                f"MATCH (c:`{chunk_label}`) "
-                "RETURN c {.*} as chunk "
-                f"ORDER BY c.{index_property}"
-            )
+        return_properties = [".*", "id: elementId(c)"]
+        if not self.fetch_embeddings:
+            return_properties.append(f"{embedding_property}: null")
         return (
             f"MATCH (c:`{chunk_label}`) "
-            f"RETURN c {{ .*, {embedding_property}: null }} as chunk "
+            f"RETURN c {{ { ', '.join(return_properties) } }} as chunk "
             f"ORDER BY c.{index_property}"
         )
 
@@ -77,9 +57,9 @@ class Neo4jChunkReader(Component):
             lexical_graph_config.chunk_embedding_property,
             lexical_graph_config.chunk_index_property,
         )
-        result = await self.reader.run(query)
+        result = await execute_query(self.driver, query)
         chunks = []
-        for record in result.records:
+        for record in result:
             chunk = record.get("chunk")
             text = chunk.pop(lexical_graph_config.chunk_text_property, "")
             index = chunk.pop(lexical_graph_config.chunk_index_property, None)
