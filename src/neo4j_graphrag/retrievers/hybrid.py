@@ -185,7 +185,11 @@ class HybridRetriever(Retriever):
             query_vector = self.embedder.embed_query(query_text)
             parameters["query_vector"] = query_vector
 
-        search_query, _ = get_search_query(SearchType.HYBRID, self.return_properties)
+        search_query, _ = get_search_query(
+            SearchType.HYBRID,
+            self.return_properties,
+            neo4j_version_is_5_23_or_above=self.neo4j_version_is_5_23_or_above,
+        )
         sanitized_parameters = copy.deepcopy(parameters)
         sanitized_parameters["query_vector"] = (
             "..." if "query_vector" in sanitized_parameters else None
@@ -340,7 +344,9 @@ class HybridCypherRetriever(Retriever):
             del parameters["query_params"]
 
         search_query, _ = get_search_query(
-            SearchType.HYBRID, retrieval_query=self.retrieval_query
+            SearchType.HYBRID,
+            retrieval_query=self.retrieval_query,
+            neo4j_version_is_5_23_or_above=self.neo4j_version_is_5_23_or_above,
         )
         sanitized_parameters = copy.deepcopy(parameters)
         sanitized_parameters["query_vector"] = (
