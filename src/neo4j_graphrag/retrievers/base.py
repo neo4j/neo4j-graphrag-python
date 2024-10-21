@@ -131,8 +131,12 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
         if version_tuple < target_version:
             raise Neo4jVersionError()
 
-    def _fetch_index_infos(self) -> None:
-        """Fetch the node label and embedding property from the index definition"""
+    def _fetch_index_infos(self, vector_index_name: str) -> None:
+        """Fetch the node label and embedding property from the index definition
+
+        Args:
+            vector_index_name (str): Name of the vector index
+        """
         query = (
             "SHOW VECTOR INDEXES "
             "YIELD name, labelsOrTypes, properties, options "
@@ -141,7 +145,7 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
             "options.indexConfig.`vector.dimensions` as dimensions"
         )
         query_result = self.driver.execute_query(
-            query, {"index_name": self.index_name}, database_=self.neo4j_database
+            query, {"index_name": vector_index_name}, database_=self.neo4j_database
         )
         try:
             result = query_result.records[0]
