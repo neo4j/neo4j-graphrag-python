@@ -167,7 +167,7 @@ Example usage:
         os.environ["OPENAI_API_KEY"] = "sk-..."
 
 
-If OpenAI is not an option, see :ref:`embedders` to learn how to use sentence-transformers or create your own embedder.
+If OpenAI is not an option, see :ref:`embedders` to learn how to use other supported embedders.
 
 The embeddings are added to each chunk metadata, and will be saved as a Chunk node property in the graph if
 `create_lexical_graph` is enabled in the `EntityRelationExtractor` (keep reading).
@@ -188,8 +188,9 @@ Example usage:
 .. code:: python
 
     from neo4j_graphrag.experimental.pipeline.components.lexical_graph_builder import LexicalGraphBuilder
+    from neo4j_graphrag.experimental.pipeline.components.types import LexicalGraphConfig
 
-    lexical_graph_builder = LexicalGraphBuilder(id_prefix="example")
+    lexical_graph_builder = LexicalGraphBuilder(config=LexicalGraphConfig(id_prefix="example"))
     graph = await lexical_graph_builder.run(
         text_chunks=TextChunks(chunks=[
             TextChunk(text="some text", index=0),
