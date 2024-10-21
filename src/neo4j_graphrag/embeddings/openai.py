@@ -64,7 +64,20 @@ class OpenAIEmbeddings(BaseOpenAIEmbeddings):
         return response.data[0].embedding
 
 
-class AzureOpenAIEmbeddings(OpenAIEmbeddings):
+class AzureOpenAIEmbeddings(BaseOpenAIEmbeddings):
     def __init__(self, model: str = "text-embedding-ada-002", **kwargs: Any) -> None:
         super().__init__(model, **kwargs)
         self.openai_client = openai.AzureOpenAI(**kwargs)
+
+    def embed_query(self, text: str, **kwargs: Any) -> list[float]:
+        """
+        Generate embeddings for a given query using a OpenAI text embedding model.
+
+        Args:
+            text (str): The text to generate an embedding for.
+            **kwargs (Any): Additional arguments to pass to the OpenAI embedding generation function.
+        """
+        response = self.openai_client.embeddings.create(
+            input=text, model=self.model, **kwargs
+        )
+        return response.data[0].embedding
