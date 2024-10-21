@@ -39,6 +39,7 @@ def test_hybrid_retriever_search_text(
     assert len(results.items) == 5
     for result in results.items:
         assert isinstance(result, RetrieverResultItem)
+        assert "'vectorProperty': None," in result.content
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
