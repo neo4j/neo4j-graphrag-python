@@ -23,9 +23,9 @@ from typing import Any, Generator, Literal, Optional
 import neo4j
 from pydantic import validate_call
 
-from neo4j_graphrag.experimental.components.entity_relation_extractor import (
-    CHUNK_NODE_LABEL,
-    DOCUMENT_NODE_LABEL,
+from neo4j_graphrag.experimental.components.lexical_graph import (
+    DEFAULT_CHUNK_NODE_LABEL,
+    DEFAULT_DOCUMENT_NODE_LABEL,
 )
 from neo4j_graphrag.experimental.components.types import (
     Neo4jGraph,
@@ -139,7 +139,7 @@ class Neo4jWriter(KGWriter):
         rows = []
         for node in nodes:
             labels = [node.label]
-            if node.label not in (CHUNK_NODE_LABEL, DOCUMENT_NODE_LABEL):
+            if node.label not in (DEFAULT_CHUNK_NODE_LABEL, DEFAULT_DOCUMENT_NODE_LABEL):
                 labels.append("__Entity__")
             row = node.model_dump()
             row["labels"] = labels

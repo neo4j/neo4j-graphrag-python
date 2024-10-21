@@ -14,20 +14,22 @@ from neo4j_graphrag.experimental.components.types import (
 )
 from neo4j_graphrag.experimental.pipeline import Component, DataModel
 
-DOCUMENT_NODE_LABEL = "Document"
-CHUNK_NODE_LABEL = "Chunk"
-CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE = "FROM_DOCUMENT"
-NEXT_CHUNK_RELATIONSHIP_TYPE = "NEXT_CHUNK"
-NODE_TO_CHUNK_RELATIONSHIP_TYPE = "FROM_CHUNK"
+DEFAULT_DOCUMENT_NODE_LABEL = "Document"
+DEFAULT_CHUNK_NODE_LABEL = "Chunk"
+DEFAULT_CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE = "FROM_DOCUMENT"
+DEFAULT_NEXT_CHUNK_RELATIONSHIP_TYPE = "NEXT_CHUNK"
+DEFAULT_NODE_TO_CHUNK_RELATIONSHIP_TYPE = "FROM_CHUNK"
+DEFAULT_CHUNK_EMBEDDING_PROPERTY = "embedding"
 
 
 class LexicalGraphConfig(BaseModel):
     id_prefix: str = ""
-    document_node_label: str = DOCUMENT_NODE_LABEL
-    chunk_node_label: str = CHUNK_NODE_LABEL
-    chunk_to_document_relationship_type: str = CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE
-    next_chunk_relationship_type: str = NEXT_CHUNK_RELATIONSHIP_TYPE
-    node_to_chunk_relationship_type: str = NODE_TO_CHUNK_RELATIONSHIP_TYPE
+    document_node_label: str = DEFAULT_DOCUMENT_NODE_LABEL
+    chunk_node_label: str = DEFAULT_CHUNK_NODE_LABEL
+    chunk_to_document_relationship_type: str = DEFAULT_CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE
+    next_chunk_relationship_type: str = DEFAULT_NEXT_CHUNK_RELATIONSHIP_TYPE
+    node_to_chunk_relationship_type: str = DEFAULT_NODE_TO_CHUNK_RELATIONSHIP_TYPE
+    chunk_embedding_property: str = DEFAULT_CHUNK_EMBEDDING_PROPERTY
 
 
 class LexicalGraphResult(DataModel):
@@ -113,9 +115,9 @@ class LexicalGraphBuilder(Component):
         )
 
     def create_chunk_node(self, chunk: TextChunk) -> Neo4jNode:
-        """Create chunk node with properties 'text', 'index' and any 'metadata' added during
-        the process. Special case for the potential chunk embedding property that
-        gets added as an embedding_property"""
+        """Create chunk node with properties 'text', 'index' and any 'metadata'
+        added during the process. Special case for the potential chunk embedding
+        property that gets added as an embedding_property"""
         chunk_id = self.chunk_id(chunk.index)
         chunk_properties: Dict[str, Any] = {
             "text": chunk.text,
@@ -124,7 +126,7 @@ class LexicalGraphBuilder(Component):
         embedding_properties = {}
         if chunk.metadata:
             if "embedding" in chunk.metadata:
-                embedding_properties["embedding"] = chunk.metadata.pop("embedding")
+                embedding_properties[self.config.chunk_embedding_property] = chunk.metadata.pop("embedding")
             chunk_properties.update(chunk.metadata)
         return Neo4jNode(
             id=chunk_id,
@@ -178,9 +180,11 @@ class LexicalGraphBuilder(Component):
         Updates `chunk_graph` in place.
         """
         for node in chunk_graph.nodes:
-            if node.label in (CHUNK_NODE_LABEL, DOCUMENT_NODE_LABEL):
+            if node.label in (self.config.chunk_node_label, self.config.document_node_label):
                 continue
-            node_to_chunk_rel = self.create_node_to_chunk_rel(
-                node, self.chunk_id(chunk.index)
-            )
+            if chunk.metadata and (id := chunk.metadata.get("id")):
+                chunk_id = id
+            else:
+                chunk_id = self.chunk_id(chunk.index)
+            node_to_chunk_rel = self.create_node_to_chunk_rel(node, chunk_id)
             chunk_graph.relationships.append(node_to_chunk_rel)

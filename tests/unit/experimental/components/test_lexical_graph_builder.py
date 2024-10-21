@@ -16,10 +16,10 @@ from __future__ import annotations
 
 import pytest
 from neo4j_graphrag.experimental.components.lexical_graph import (
-    CHUNK_NODE_LABEL,
-    CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE,
-    DOCUMENT_NODE_LABEL,
-    NEXT_CHUNK_RELATIONSHIP_TYPE,
+    DEFAULT_CHUNK_NODE_LABEL,
+    DEFAULT_CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE,
+    DEFAULT_DOCUMENT_NODE_LABEL,
+    DEFAULT_NEXT_CHUNK_RELATIONSHIP_TYPE,
     LexicalGraphBuilder,
     LexicalGraphConfig,
     LexicalGraphResult,
@@ -93,16 +93,16 @@ async def test_lexical_graph_builder_run_with_document() -> None:
     assert len(nodes) == 3
     document = nodes[0]
     assert document.id == "test_lexical_graph"
-    assert document.label == DOCUMENT_NODE_LABEL
+    assert document.label == DEFAULT_DOCUMENT_NODE_LABEL
     assert document.properties == {"path": "test_lexical_graph"}
     chunk1 = nodes[1]
-    assert chunk1.label == CHUNK_NODE_LABEL
+    assert chunk1.label == DEFAULT_CHUNK_NODE_LABEL
     chunk2 = nodes[2]
-    assert chunk2.label == CHUNK_NODE_LABEL
+    assert chunk2.label == DEFAULT_CHUNK_NODE_LABEL
     assert len(graph.relationships) == 3
     for relationship in graph.relationships[:2]:
-        assert relationship.type == CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE
-    assert graph.relationships[2].type == NEXT_CHUNK_RELATIONSHIP_TYPE
+        assert relationship.type == DEFAULT_CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE
+    assert graph.relationships[2].type == DEFAULT_NEXT_CHUNK_RELATIONSHIP_TYPE
 
 
 @pytest.mark.asyncio
@@ -123,11 +123,11 @@ async def test_lexical_graph_builder_run_no_document() -> None:
     nodes = graph.nodes
     assert len(nodes) == 2
     chunk1 = nodes[0]
-    assert chunk1.label == CHUNK_NODE_LABEL
+    assert chunk1.label == DEFAULT_CHUNK_NODE_LABEL
     chunk2 = nodes[1]
-    assert chunk2.label == CHUNK_NODE_LABEL
+    assert chunk2.label == DEFAULT_CHUNK_NODE_LABEL
     assert len(graph.relationships) == 1
-    assert graph.relationships[0].type == NEXT_CHUNK_RELATIONSHIP_TYPE
+    assert graph.relationships[0].type == DEFAULT_NEXT_CHUNK_RELATIONSHIP_TYPE
 
 
 @pytest.mark.asyncio
