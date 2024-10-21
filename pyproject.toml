@@ -82,6 +82,7 @@ cohere = {version = "^5.9.0"}
 anthropic = { version = "^0.34.2"}
 mistralai = {version = "^1.0.3"}
 qdrant-client = {version = "^1.11.3"}
+langchain-openai = "^0.2.2"  # needed in the examples
 
 [tool.poetry.extras]
 external_clients = ["weaviate-client", "pinecone-client", "google-cloud-aiplatform", "cohere", "anthropic", "mistralai", "qdrant-client"]
