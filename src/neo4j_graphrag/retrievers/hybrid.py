@@ -117,6 +117,9 @@ class HybridRetriever(Retriever):
             else None
         )
         self.result_formatter = validated_data.result_formatter
+        self._embedding_node_property = None
+        self._embedding_dimension = None
+        self._fetch_index_infos(self.vector_index_name)
 
     def default_record_formatter(self, record: neo4j.Record) -> RetrieverResultItem:
         """
@@ -187,6 +190,7 @@ class HybridRetriever(Retriever):
         search_query, _ = get_search_query(
             SearchType.HYBRID,
             self.return_properties,
+            embedding_node_property=self._embedding_node_property,
             neo4j_version_is_5_23_or_above=self.neo4j_version_is_5_23_or_above,
         )
 
