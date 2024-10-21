@@ -253,5 +253,5 @@ def get_query_tail(
         return retrieval_query
     if return_properties:
         return_properties_cypher = ", ".join([f".{prop}" for prop in return_properties])
-        return f"RETURN node {{{return_properties_cypher}}} as node, score"
+        return f"RETURN node {{{return_properties_cypher}}} AS node, labels(node) AS nodeLabels, elementId(node) AS id, score"
     return fallback_return if fallback_return else ""
