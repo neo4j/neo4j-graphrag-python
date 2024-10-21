@@ -26,13 +26,11 @@ from typing import Any, List, Optional, Union
 from pydantic import ValidationError, validate_call
 
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.experimental.components.lexical_graph import (
-    LexicalGraphBuilder,
-    LexicalGraphConfig,
-)
+from neo4j_graphrag.experimental.components.lexical_graph import LexicalGraphBuilder
 from neo4j_graphrag.experimental.components.pdf_loader import DocumentInfo
 from neo4j_graphrag.experimental.components.schema import SchemaConfig
 from neo4j_graphrag.experimental.components.types import (
+    LexicalGraphConfig,
     Neo4jGraph,
     TextChunk,
     TextChunks,
@@ -227,7 +225,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         try:
             result = json.loads(llm_result.content)
         except json.JSONDecodeError:
-            logger.warning(
+            logger.info(
                 f"LLM response is not valid JSON {llm_result.content} for chunk_index={chunk.index}. Trying to fix it."
             )
             fixed_content = fix_invalid_json(llm_result.content)
@@ -318,8 +316,16 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         examples: str = "",
         **kwargs: Any,
     ) -> Neo4jGraph:
-        """Perform entity and relation extraction for all chunks in a list."""
-        run_id = str(datetime.now().timestamp())
+        """Perform entity and relation extraction for all chunks in a list.
+
+        Args:
+            chunks (TextChunks): List of text chunks to extract entities and relations from.
+            document_info (Optional[DocumentInfo], optional): Document the chunks are coming from. Used in the lexical graph creation step.
+            lexical_graph_config (Optional[LexicalGraphConfig], optional): Lexical graph configuration to customize node labels and relationship types in the lexical graph.
+            schema (SchemaConfig | None): Definition of the schema to guide the LLM in its extraction. Caution: at the moment, there is no guarantee that the extracted entities and relations will strictly obey the schema.
+            examples (str): Examples for few-shot learning in the prompt.
+        """
+        run_id = str(int(datetime.now().timestamp()))
         lexical_graph_builder = None
         lexical_graph = None
         if self.create_lexical_graph:

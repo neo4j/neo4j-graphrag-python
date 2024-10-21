@@ -2,39 +2,19 @@ import asyncio
 import warnings
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, validate_call
+from pydantic import validate_call
 
 from neo4j_graphrag.experimental.components.pdf_loader import DocumentInfo
 from neo4j_graphrag.experimental.components.types import (
+    GraphResult,
+    LexicalGraphConfig,
     Neo4jGraph,
     Neo4jNode,
     Neo4jRelationship,
     TextChunk,
     TextChunks,
 )
-from neo4j_graphrag.experimental.pipeline import Component, DataModel
-
-DEFAULT_DOCUMENT_NODE_LABEL = "Document"
-DEFAULT_CHUNK_NODE_LABEL = "Chunk"
-DEFAULT_CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE = "FROM_DOCUMENT"
-DEFAULT_NEXT_CHUNK_RELATIONSHIP_TYPE = "NEXT_CHUNK"
-DEFAULT_NODE_TO_CHUNK_RELATIONSHIP_TYPE = "FROM_CHUNK"
-DEFAULT_CHUNK_EMBEDDING_PROPERTY = "embedding"
-
-
-class LexicalGraphConfig(BaseModel):
-    id_prefix: str = ""
-    document_node_label: str = DEFAULT_DOCUMENT_NODE_LABEL
-    chunk_node_label: str = DEFAULT_CHUNK_NODE_LABEL
-    chunk_to_document_relationship_type: str = DEFAULT_CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE
-    next_chunk_relationship_type: str = DEFAULT_NEXT_CHUNK_RELATIONSHIP_TYPE
-    node_to_chunk_relationship_type: str = DEFAULT_NODE_TO_CHUNK_RELATIONSHIP_TYPE
-    chunk_embedding_property: str = DEFAULT_CHUNK_EMBEDDING_PROPERTY
-
-
-class LexicalGraphResult(DataModel):
-    config: LexicalGraphConfig
-    graph: Neo4jGraph
+from neo4j_graphrag.experimental.pipeline import Component
 
 
 class LexicalGraphBuilder(Component):
@@ -57,7 +37,7 @@ class LexicalGraphBuilder(Component):
         self,
         text_chunks: TextChunks,
         document_info: Optional[DocumentInfo] = None,
-    ) -> LexicalGraphResult:
+    ) -> GraphResult:
         if document_info is None:
             warnings.warn(
                 "No document metadata provided, the document node won't be created in the lexical graph"
@@ -73,7 +53,7 @@ class LexicalGraphBuilder(Component):
             for chunk in text_chunks.chunks
         ]
         await asyncio.gather(*tasks)
-        return LexicalGraphResult(
+        return GraphResult(
             config=self.config,
             graph=graph,
         )
@@ -126,7 +106,9 @@ class LexicalGraphBuilder(Component):
         embedding_properties = {}
         if chunk.metadata:
             if "embedding" in chunk.metadata:
-                embedding_properties[self.config.chunk_embedding_property] = chunk.metadata.pop("embedding")
+                embedding_properties[self.config.chunk_embedding_property] = (
+                    chunk.metadata.pop("embedding")
+                )
             chunk_properties.update(chunk.metadata)
         return Neo4jNode(
             id=chunk_id,
@@ -180,7 +162,10 @@ class LexicalGraphBuilder(Component):
         Updates `chunk_graph` in place.
         """
         for node in chunk_graph.nodes:
-            if node.label in (self.config.chunk_node_label, self.config.document_node_label):
+            if node.label in (
+                self.config.chunk_node_label,
+                self.config.document_node_label,
+            ):
                 continue
             if chunk.metadata and (id := chunk.metadata.get("id")):
                 chunk_id = id

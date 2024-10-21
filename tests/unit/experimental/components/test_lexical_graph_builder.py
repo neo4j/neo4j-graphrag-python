@@ -15,17 +15,15 @@
 from __future__ import annotations
 
 import pytest
-from neo4j_graphrag.experimental.components.lexical_graph import (
+from neo4j_graphrag.experimental.components.lexical_graph import LexicalGraphBuilder
+from neo4j_graphrag.experimental.components.pdf_loader import DocumentInfo
+from neo4j_graphrag.experimental.components.types import (
     DEFAULT_CHUNK_NODE_LABEL,
     DEFAULT_CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE,
     DEFAULT_DOCUMENT_NODE_LABEL,
     DEFAULT_NEXT_CHUNK_RELATIONSHIP_TYPE,
-    LexicalGraphBuilder,
+    GraphResult,
     LexicalGraphConfig,
-    LexicalGraphResult,
-)
-from neo4j_graphrag.experimental.components.pdf_loader import DocumentInfo
-from neo4j_graphrag.experimental.components.types import (
     Neo4jNode,
     TextChunk,
     TextChunks,
@@ -87,7 +85,7 @@ async def test_lexical_graph_builder_run_with_document() -> None:
         ),
         document_info=DocumentInfo(path="test_lexical_graph"),
     )
-    assert isinstance(result, LexicalGraphResult)
+    assert isinstance(result, GraphResult)
     graph = result.graph
     nodes = graph.nodes
     assert len(nodes) == 3
@@ -118,7 +116,7 @@ async def test_lexical_graph_builder_run_no_document() -> None:
             ]
         ),
     )
-    assert isinstance(result, LexicalGraphResult)
+    assert isinstance(result, GraphResult)
     graph = result.graph
     nodes = graph.nodes
     assert len(nodes) == 2
@@ -150,7 +148,7 @@ async def test_lexical_graph_builder_run_custom_labels() -> None:
         ),
         document_info=DocumentInfo(path="test_lexical_graph"),
     )
-    assert isinstance(result, LexicalGraphResult)
+    assert isinstance(result, GraphResult)
     graph = result.graph
     nodes = graph.nodes
     assert len(nodes) == 3

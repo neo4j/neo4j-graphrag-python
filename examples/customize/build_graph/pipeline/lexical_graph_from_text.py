@@ -7,13 +7,11 @@ from langchain_text_splitters import CharacterTextSplitter
 from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
 from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
 from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
-from neo4j_graphrag.experimental.components.lexical_graph import (
-    LexicalGraphBuilder,
-    LexicalGraphConfig,
-)
+from neo4j_graphrag.experimental.components.lexical_graph import LexicalGraphBuilder
 from neo4j_graphrag.experimental.components.text_splitters.langchain import (
     LangChainTextSplitterAdapter,
 )
+from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
 from neo4j_graphrag.experimental.pipeline import Pipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 

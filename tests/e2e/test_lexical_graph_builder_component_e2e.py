@@ -20,11 +20,12 @@ from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
 )
 from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
-from neo4j_graphrag.experimental.components.lexical_graph import (
-    LexicalGraphBuilder,
+from neo4j_graphrag.experimental.components.lexical_graph import LexicalGraphBuilder
+from neo4j_graphrag.experimental.components.types import (
     LexicalGraphConfig,
+    TextChunk,
+    TextChunks,
 )
-from neo4j_graphrag.experimental.components.types import TextChunk, TextChunks
 from neo4j_graphrag.experimental.pipeline import Pipeline
 from neo4j_graphrag.llm import LLMResponse
 
@@ -46,7 +47,12 @@ async def test_lexical_graph_component_alone_default_config(
             }
         }
     )
-    assert result.result == {"writer": {"status": "SUCCESS"}}
+    assert result.result == {
+        "writer": {
+            "status": "SUCCESS",
+            "metadata": {"node_count": 1, "relationship_count": 0},
+        }
+    }
     default_config = LexicalGraphConfig()
     created_chunks = driver.execute_query(
         f"MATCH (n:{default_config.chunk_node_label}) RETURN n"
@@ -116,8 +122,14 @@ async def test_lexical_graph_before_extractor_custom_prefix(
         {"lexical_graph": {"text_chunks": chunks}, "extractor": {"chunks": chunks}}
     )
     assert result.result == {
-        "eg_writer": {"status": "SUCCESS"},
-        "lg_writer": {"status": "SUCCESS"},
+        "eg_writer": {
+            "status": "SUCCESS",
+            "metadata": {"node_count": 2, "relationship_count": 3},
+        },
+        "lg_writer": {
+            "status": "SUCCESS",
+            "metadata": {"node_count": 1, "relationship_count": 0},
+        },
     }
 
     # check the lexical graph has been created
