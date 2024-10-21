@@ -5,6 +5,7 @@
 ### Added
 - Made `relations` and `potential_schema` optional in `SchemaBuilder`.
 - Added a check to prevent the use of deprecated Cypher syntax for Neo4j versions 5.23.0 and above.
+- Added a `LexicalGraphBuilder` component to enable the import of the lexical graph (document, chunks) without performing entity and relation extraction.
 
 ### Changed
 - Vector and Hybrid retrievers used with `return_properties` now also return the node labels (`nodeLabels`) and the node's element ID (`id`).
