@@ -13,11 +13,10 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.9', '3.10', '3.11', '3.12']
-        neo4j-version:
-          - 5
-        neo4j-edition:
-          - community
-          - enterprise
+        neo4j-tag:
+          - '5-community'
+          - '5-enterprise'
+          - 'latest'
     services:
       t2v-transformers:
         image: cr.weaviate.io/semitechnologies/transformers-inference:sentence-transformers-all-MiniLM-L6-v2-onnx
@@ -41,7 +40,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       neo4j:
-        image: neo4j:${{ matrix.neo4j-version }}-${{ matrix.neo4j-edition }}
+        image: neo4j:${{ matrix.neo4j-tag }}
         env:
           NEO4J_AUTH: neo4j/password
           NEO4J_ACCEPT_LICENSE_AGREEMENT: 'eval'
@@ -100,7 +99,7 @@ jobs:
       - name: Run tests
         shell: bash
         run: |
-          if [[ "${{ matrix.neo4j-edition }}" == "community" ]]; then
+          if [[ "${{ matrix.neo4j-tag }}" == "latest" || "${{ matrix.neo4j-tag }}" == *-community ]]; then
               poetry run pytest -m 'not enterprise_only' ./tests/e2e
           else
               poetry run pytest ./tests/e2e

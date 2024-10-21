@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 import neo4j
 import weaviate.classes as wvc

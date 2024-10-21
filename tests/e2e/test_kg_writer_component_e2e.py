@@ -12,6 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import logging
 
 import neo4j
 import pytest
@@ -100,3 +101,42 @@ async def test_kg_writer(driver: neo4j.Driver) -> None:
         for key, val in node_with_two_embeddings.embedding_properties.items():
             assert key in node_c.keys()
             assert val == node_c.get(key)
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
+async def test_kg_writer_no_neo4j_deprecation_warning(
+    driver: neo4j.Driver, caplog: pytest.LogCaptureFixture
+) -> None:
+    start_node = Neo4jNode(
+        id="1",
+        label="MyLabel",
+        properties={"chunk": 1},
+        embedding_properties={"vectorProperty": [1.0, 2.0, 3.0]},
+    )
+    end_node = Neo4jNode(
+        id="2",
+        label="MyLabel",
+        properties={},
+        embedding_properties=None,
+    )
+    relationship = Neo4jRelationship(
+        start_node_id="1", end_node_id="2", type="MY_RELATIONSHIP"
+    )
+    graph = Neo4jGraph(
+        nodes=[start_node, end_node],
+        relationships=[relationship],
+    )
+
+    neo4j_writer = Neo4jWriter(driver=driver)
+    with caplog.at_level(logging.WARNING):
+        res = await neo4j_writer.run(graph=graph)
+
+    for record in caplog.records:
+        if (
+            "Neo.ClientNotification.Statement.FeatureDeprecationWarning"
+            in record.message
+        ):
+            assert False, f"Deprecation warning found in logs: {record.message}"
+
+    assert res.status == "SUCCESS"
