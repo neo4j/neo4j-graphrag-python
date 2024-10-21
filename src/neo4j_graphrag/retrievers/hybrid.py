@@ -191,6 +191,7 @@ class HybridRetriever(Retriever):
             SearchType.HYBRID,
             self.return_properties,
             embedding_node_property=self._embedding_node_property,
+            neo4j_version_is_5_23_or_above=self.neo4j_version_is_5_23_or_above,
         )
 
         logger.debug("HybridRetriever Cypher parameters: %s", parameters)
@@ -343,7 +344,9 @@ class HybridCypherRetriever(Retriever):
             del parameters["query_params"]
 
         search_query, _ = get_search_query(
-            SearchType.HYBRID, retrieval_query=self.retrieval_query
+            SearchType.HYBRID,
+            retrieval_query=self.retrieval_query,
+            neo4j_version_is_5_23_or_above=self.neo4j_version_is_5_23_or_above,
         )
 
         logger.debug("HybridCypherRetriever Cypher parameters: %s", parameters)

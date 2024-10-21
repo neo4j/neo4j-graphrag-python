@@ -67,7 +67,6 @@ def test_qdrant_neo4j_vector_input(driver: Driver, qdrant_client: QdrantClient) 
     assert isinstance(results, RetrieverResult)
     assert len(results.items) == top_k
     assert isinstance(results.items[0], RetrieverResultItem)
-    print("Results are: ", results.items)
     pattern = (
         r"<Record node=<Node element_id='.+' "
         r"labels=frozenset\({'Question'}\) properties={'question': 'In 1953 Watson \& "
