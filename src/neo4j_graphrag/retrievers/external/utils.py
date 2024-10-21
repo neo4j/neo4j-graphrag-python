@@ -31,5 +31,5 @@ def get_match_query(
     return match_query + get_query_tail(
         return_properties=return_properties,
         retrieval_query=retrieval_query,
-        fallback_return="RETURN node, labels(node) AS nodeLabels, elementId(node) AS id, score",
+        fallback_return="RETURN node, score",
     )
