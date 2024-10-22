@@ -338,7 +338,7 @@ If this 'lexical graph' is not desired, set the `created_lexical_graph` to `Fals
     )
 
 
-.. node::
+.. note::
 
     If `self.create_lexical_graph` is set to `True`, the document and chunk nodes will be created.
 
