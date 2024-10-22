@@ -176,7 +176,7 @@ The embeddings are added to each chunk metadata, and will be saved as a Chunk no
 Lexical Graph Builder
 =====================
 
-Once the chunks are extracted and, if needed, embedded, a graph can be created. The lexical graph contains:
+Once the chunks are extracted and embedded (if required), a graph can be created. The lexical graph contains:
 
 - `Document` node: represent the processed document and have a `path` property.
 - `Chunk` nodes: represent the text chunks. They have a `text` property and, if computed, an `embedding` property.
