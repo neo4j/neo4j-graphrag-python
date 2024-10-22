@@ -117,6 +117,9 @@ class HybridRetriever(Retriever):
             else None
         )
         self.result_formatter = validated_data.result_formatter
+        self._embedding_node_property = None
+        self._embedding_dimension = None
+        self._fetch_index_infos(self.vector_index_name)
 
     def default_record_formatter(self, record: neo4j.Record) -> RetrieverResultItem:
         """
@@ -184,7 +187,12 @@ class HybridRetriever(Retriever):
             query_vector = self.embedder.embed_query(query_text)
             parameters["query_vector"] = query_vector
 
-        search_query, _ = get_search_query(SearchType.HYBRID, self.return_properties)
+        search_query, _ = get_search_query(
+            SearchType.HYBRID,
+            self.return_properties,
+            embedding_node_property=self._embedding_node_property,
+            neo4j_version_is_5_23_or_above=self.neo4j_version_is_5_23_or_above,
+        )
 
         logger.debug("HybridRetriever Cypher parameters: %s", parameters)
         logger.debug("HybridRetriever Cypher query: %s", search_query)
@@ -336,7 +344,9 @@ class HybridCypherRetriever(Retriever):
             del parameters["query_params"]
 
         search_query, _ = get_search_query(
-            SearchType.HYBRID, retrieval_query=self.retrieval_query
+            SearchType.HYBRID,
+            retrieval_query=self.retrieval_query,
+            neo4j_version_is_5_23_or_above=self.neo4j_version_is_5_23_or_above,
         )
 
         logger.debug("HybridCypherRetriever Cypher parameters: %s", parameters)

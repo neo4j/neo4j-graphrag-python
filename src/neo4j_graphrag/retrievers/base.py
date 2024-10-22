@@ -101,6 +101,14 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
             version_tuple = (*version_tuple, 0)
         return version_tuple, "aura" in version
 
+    def _check_if_version_5_23_or_above(self, version_tuple: tuple[int, ...]) -> bool:
+        """
+        Check if the connected Neo4j database version supports the required features.
+
+        Sets a flag if the connected Neo4j version is 5.23 or above.
+        """
+        return version_tuple >= (5, 23, 0)
+
     def _verify_version(self) -> None:
         """
         Check if the connected Neo4j database version supports vector indexing.
@@ -111,6 +119,9 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
         not supported.
         """
         version_tuple, is_aura = self._get_version()
+        self.neo4j_version_is_5_23_or_above = self._check_if_version_5_23_or_above(
+            version_tuple
+        )
 
         if is_aura:
             target_version = (5, 18, 0)
@@ -120,8 +131,12 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
         if version_tuple < target_version:
             raise Neo4jVersionError()
 
-    def _fetch_index_infos(self) -> None:
-        """Fetch the node label and embedding property from the index definition"""
+    def _fetch_index_infos(self, vector_index_name: str) -> None:
+        """Fetch the node label and embedding property from the index definition
+
+        Args:
+            vector_index_name (str): Name of the vector index
+        """
         query = (
             "SHOW VECTOR INDEXES "
             "YIELD name, labelsOrTypes, properties, options "
@@ -130,7 +145,7 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
             "options.indexConfig.`vector.dimensions` as dimensions"
         )
         query_result = self.driver.execute_query(
-            query, {"index_name": self.index_name}, database_=self.neo4j_database
+            query, {"index_name": vector_index_name}, database_=self.neo4j_database
         )
         try:
             result = query_result.records[0]
