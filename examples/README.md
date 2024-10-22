@@ -67,7 +67,7 @@ are listed in [the last section of this file](#customize).
 - [MistralAI](./customize/llms/mistalai_llm.py)
 - [Cohere](./customize/llms/cohere_llm.py)
 - [Anthropic (Claude)](./customize/llms/anthropic_llm.py)
-- [Ollama]()
+- [Ollama](./customize/llms/ollama_llm.py)
 - [Custom LLM](./customize/llms/custom_llm.py)
 
 
@@ -91,6 +91,7 @@ are listed in [the last section of this file](#customize).
 
 - [End to end example with explicit components and text input](./customize/build_graph/pipeline/kg_builder_from_text.py)
 - [End to end example with explicit components and PDF input](./customize/build_graph/pipeline/kg_builder_from_pdf.py)
+- [Process multiple documents](./customize/build_graph/pipeline/kg_builder_two_documents_entity_resolution.py)
 
 #### Components
 
