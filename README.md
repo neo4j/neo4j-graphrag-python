@@ -110,7 +110,7 @@ driver.close()
 
 Example knowledge graph created using the above script:
 
-![Example knowledge graph](images/kg_construction.svg)
+![Example knowledge graph](https://raw.githubusercontent.com/neo4j/neo4j-graphrag-python/fd276af0069e4dd1769255d358793cc96e299bf3/images/kg_construction.svg)
 
 ### Creating a Vector Index
 
