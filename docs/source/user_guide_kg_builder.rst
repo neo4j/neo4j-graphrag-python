@@ -338,6 +338,13 @@ If this 'lexical graph' is not desired, set the `created_lexical_graph` to `Fals
     )
 
 
+.. node::
+
+    If `self.create_lexical_graph` is set to `True`, the document and chunk nodes will be created.
+
+    If `self.create_lexical_graph` is set to `False` but `lexical_graph_config` is provided, the document and chunk node won't be created but the relationship between the chunk and the entities extracted from it will still be added to the graph.
+
+
 Customizing the Prompt
 ----------------------
 
