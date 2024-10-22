@@ -30,14 +30,14 @@ retriever = VectorCypherRetriever(
     driver,
     index_name=INDEX,
     retrieval_query="WITH node, score RETURN node.title as title, node.plot as plot",
-    embedder=embedder,  # type: ignore
+    embedder=embedder,
 )
 
 llm = ChatOpenAI(model="gpt-4o", temperature=0)
 
 rag = GraphRAG(
     retriever=retriever,
-    llm=llm,  # type: ignore
+    llm=llm,
 )
 
 result = rag.search("Tell me more about Avatar movies")
