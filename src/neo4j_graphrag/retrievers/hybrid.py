@@ -195,9 +195,8 @@ class HybridRetriever(Retriever):
             neo4j_version_is_5_23_or_above=self.neo4j_version_is_5_23_or_above,
         )
         sanitized_parameters = copy.deepcopy(parameters)
-        sanitized_parameters["query_vector"] = (
-            "..." if "query_vector" in sanitized_parameters else None
-        )
+        if "query_vector" in sanitized_parameters:
+            sanitized_parameters["query_vector"] = "..."
         logger.debug("HybridRetriever Cypher parameters: %s", sanitized_parameters)
         logger.debug("HybridRetriever Cypher query: %s", search_query)
 
@@ -353,10 +352,8 @@ class HybridCypherRetriever(Retriever):
             neo4j_version_is_5_23_or_above=self.neo4j_version_is_5_23_or_above,
         )
         sanitized_parameters = copy.deepcopy(parameters)
-        sanitized_parameters["query_vector"] = (
-            "..." if "query_vector" in sanitized_parameters else None
-        )
-        print("logger", logger)
+        if "query_vector" in sanitized_parameters:
+            sanitized_parameters["query_vector"] = "..."
         logger.debug("HybridRetriever Cypher parameters: %s", sanitized_parameters)
         logger.debug("HybridRetriever Cypher query: %s", search_query)
 
