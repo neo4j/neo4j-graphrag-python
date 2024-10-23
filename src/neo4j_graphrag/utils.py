@@ -14,8 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
-import inspect
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 import neo4j
 
@@ -28,12 +27,10 @@ def validate_search_query_input(
 
 
 async def execute_query(
-    driver: Union[neo4j.Driver, neo4j.AsyncDriver], query: str, **kwargs: Any
-) -> list[neo4j.Record]:
-    if inspect.iscoroutinefunction(driver.execute_query):
-        records, _, _ = await driver.execute_query(query, **kwargs)
-        return records  # type: ignore[no-any-return]
-    # ignoring type because mypy complains about coroutine
-    # but we're sure at this stage we do not have a coroutine anymore
-    records, _, _ = driver.execute_query(query, **kwargs)  # type: ignore[misc]
-    return records  # type: ignore[no-any-return]
+    driver: neo4j.Driver | neo4j.AsyncDriver, query: str, **kwargs: Any
+) -> Any:
+    if isinstance(driver, neo4j.AsyncDriver):
+        result = await driver.execute_query(query, **kwargs)
+    else:
+        result = driver.execute_query(query, **kwargs)
+    return result

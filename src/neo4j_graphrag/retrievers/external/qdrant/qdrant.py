@@ -50,7 +50,7 @@ class QdrantNeo4jRetriever(ExternalRetriever):
 
     Example:
 
-        .. code-block:: python
+    .. code-block:: python
 
           from neo4j import GraphDatabase
           from neo4j_graphrag.retrievers import QdrantNeo4jRetriever
@@ -152,7 +152,7 @@ class QdrantNeo4jRetriever(ExternalRetriever):
 
         Example:
 
-            .. code-block:: python
+        .. code-block:: python
 
             from neo4j import GraphDatabase
             from neo4j_graphrag.retrievers import QdrantNeo4jRetriever

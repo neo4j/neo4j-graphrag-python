@@ -102,7 +102,7 @@ It is possible to use Azure OpenAI switching to the `AzureOpenAILLM` class:
     )
     llm.invoke("say something")
 
-Check the OpenAI Python client [documentation](https://github.com/openai/openai-python?tab=readme-ov-file#microsoft-azure-openai)
+Check the OpenAI Python client `documentation <https://github.com/openai/openai-python?tab=readme-ov-file#microsoft-azure-openai>`_.
 to learn more about the configuration.
 
 .. note::
@@ -766,7 +766,7 @@ be provided when instantiating the retriever:
 
 See :ref:`hybridretriever`.
 
-Also note that there is an helper function to create a full-text index (see `the API documentation <create-fulltext-index>`_).
+Also note that there is an helper function to create a full-text index  (see :ref:`the API documentation<create-fulltext-index>`).
 
 .. _hybrid-cypher-retriever-user-guide:
 

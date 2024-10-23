@@ -87,15 +87,15 @@ SinglePropertyExactMatchResolver
 
 .. _pipeline-section:
 
-********
-Pipeline
-********
+*********
+Pipelines
+*********
 
 Pipeline
 ========
 
 .. autoclass:: neo4j_graphrag.experimental.pipeline.Pipeline
-    :members: run, add_component, connect, get_pygraphviz_graph
+    :members: run, add_component, connect, draw
 
 SimpleKGPipeline
 ================

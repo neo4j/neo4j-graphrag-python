@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import copy
 import logging
 from typing import Any, Callable, Optional
 
@@ -193,8 +194,10 @@ class HybridRetriever(Retriever):
             embedding_node_property=self._embedding_node_property,
             neo4j_version_is_5_23_or_above=self.neo4j_version_is_5_23_or_above,
         )
-
-        logger.debug("HybridRetriever Cypher parameters: %s", parameters)
+        sanitized_parameters = copy.deepcopy(parameters)
+        if "query_vector" in sanitized_parameters:
+            sanitized_parameters["query_vector"] = "..."
+        logger.debug("HybridRetriever Cypher parameters: %s", sanitized_parameters)
         logger.debug("HybridRetriever Cypher query: %s", search_query)
 
         records, _, _ = self.driver.execute_query(
@@ -348,9 +351,11 @@ class HybridCypherRetriever(Retriever):
             retrieval_query=self.retrieval_query,
             neo4j_version_is_5_23_or_above=self.neo4j_version_is_5_23_or_above,
         )
-
-        logger.debug("HybridCypherRetriever Cypher parameters: %s", parameters)
-        logger.debug("HybridCypherRetriever Cypher query: %s", search_query)
+        sanitized_parameters = copy.deepcopy(parameters)
+        if "query_vector" in sanitized_parameters:
+            sanitized_parameters["query_vector"] = "..."
+        logger.debug("HybridRetriever Cypher parameters: %s", sanitized_parameters)
+        logger.debug("HybridRetriever Cypher query: %s", search_query)
 
         records, _, _ = self.driver.execute_query(
             search_query, parameters, database_=self.neo4j_database
