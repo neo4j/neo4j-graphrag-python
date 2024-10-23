@@ -38,21 +38,18 @@ class Neo4jChunkReader(Component):
         self,
         chunk_label: str,
         index_property: str,
-        text_property: str,
         embedding_property: str,
     ) -> str:
-        return_properties = [
-            ".*",
-            f"text: c.{text_property}",
-            f"index: c.{index_property}",
-        ]
+        return_properties = [".*"]
         if not self.fetch_embeddings:
             return_properties.append(f"{embedding_property}: null")
-        return (
+        query = (
             f"MATCH (c:`{chunk_label}`) "
             f"RETURN c {{ { ', '.join(return_properties) } }} as chunk "
-            f"ORDER BY c.{index_property}"
         )
+        if index_property:
+            query += f"ORDER BY c.{index_property}"
+        return query
 
     @validate_call
     async def run(
@@ -62,7 +59,6 @@ class Neo4jChunkReader(Component):
         query = self._get_query(
             lexical_graph_config.chunk_node_label,
             lexical_graph_config.chunk_index_property,
-            lexical_graph_config.chunk_text_property,
             lexical_graph_config.chunk_embedding_property,
         )
         result, _, _ = self.driver.execute_query(query)
@@ -70,7 +66,7 @@ class Neo4jChunkReader(Component):
         for record in result:
             chunk = record.get("chunk")
             text = chunk.pop(lexical_graph_config.chunk_text_property, "")
-            index = chunk.pop(lexical_graph_config.chunk_index_property, None)
+            index = chunk.pop(lexical_graph_config.chunk_index_property, -1)
             chunks.append(
                 TextChunk(
                     text=text,

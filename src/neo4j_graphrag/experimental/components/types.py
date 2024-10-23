@@ -110,9 +110,9 @@ DEFAULT_CHUNK_NODE_LABEL = "Chunk"
 DEFAULT_CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE = "FROM_DOCUMENT"
 DEFAULT_NEXT_CHUNK_RELATIONSHIP_TYPE = "NEXT_CHUNK"
 DEFAULT_NODE_TO_CHUNK_RELATIONSHIP_TYPE = "FROM_CHUNK"
-DEFAULT_CHUNK_EMBEDDING_PROPERTY = "embedding"
-DEFAULT_CHUNK_TEXT_PROPERTY = "text"
 DEFAULT_CHUNK_INDEX_PROPERTY = "index"
+DEFAULT_CHUNK_TEXT_PROPERTY = "text"
+DEFAULT_CHUNK_EMBEDDING_PROPERTY = "embedding"
 
 
 class LexicalGraphConfig(BaseModel):
@@ -126,9 +126,9 @@ class LexicalGraphConfig(BaseModel):
     )
     next_chunk_relationship_type: str = DEFAULT_NEXT_CHUNK_RELATIONSHIP_TYPE
     node_to_chunk_relationship_type: str = DEFAULT_NODE_TO_CHUNK_RELATIONSHIP_TYPE
-    chunk_embedding_property: str = DEFAULT_CHUNK_EMBEDDING_PROPERTY
-    chunk_text_property: str = DEFAULT_CHUNK_TEXT_PROPERTY
     chunk_index_property: str = DEFAULT_CHUNK_INDEX_PROPERTY
+    chunk_text_property: str = DEFAULT_CHUNK_TEXT_PROPERTY
+    chunk_embedding_property: str = DEFAULT_CHUNK_EMBEDDING_PROPERTY
 
     @property
     def lexical_graph_node_labels(self) -> tuple[str, ...]:
