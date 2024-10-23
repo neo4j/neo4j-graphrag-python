@@ -40,7 +40,7 @@ class Neo4jChunkReader(Component):
     def _get_query(
         self, chunk_label: str, embedding_property: str, index_property: str
     ) -> str:
-        return_properties = [".*", "id: elementId(c)"]
+        return_properties = [".*"]
         if not self.fetch_embeddings:
             return_properties.append(f"{embedding_property}: null")
         return (
@@ -59,7 +59,7 @@ class Neo4jChunkReader(Component):
             lexical_graph_config.chunk_embedding_property,
             lexical_graph_config.chunk_index_property,
         )
-        result = await execute_query(self.driver, query)
+        result, _, _ = await execute_query(self.driver, query)
         chunks = []
         for record in result:
             chunk = record.get("chunk")

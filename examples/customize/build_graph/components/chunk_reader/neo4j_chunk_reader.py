@@ -6,7 +6,7 @@ from neo4j_graphrag.experimental.components.types import LexicalGraphConfig, Tex
 
 
 async def main(driver: neo4j.Driver) -> TextChunks:
-    config = LexicalGraphConfig(
+    config = LexicalGraphConfig(  # only needed to overwrite the default values
         chunk_node_label="TextPart",
     )
     reader = Neo4jChunkReader(driver)

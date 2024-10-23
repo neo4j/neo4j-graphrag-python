@@ -21,11 +21,9 @@ from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
 )
 from neo4j_graphrag.experimental.components.neo4j_reader import Neo4jChunkReader
-from neo4j_graphrag.experimental.components.types import TextChunk
+from neo4j_graphrag.experimental.components.types import LexicalGraphConfig, TextChunk
 from neo4j_graphrag.experimental.pipeline import Pipeline
 from neo4j_graphrag.llm import LLMResponse
-
-from tests.unit.experimental.components.lexical_graph import LexicalGraphConfig
 
 
 @pytest.mark.asyncio
