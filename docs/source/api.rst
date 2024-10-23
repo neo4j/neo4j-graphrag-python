@@ -58,6 +58,14 @@ LexicalGraphBuilder
     :members:
     :exclude-members: component_inputs, component_outputs
 
+
+Neo4jChunkReader
+================
+
+.. autoclass:: neo4j_graphrag.experimental.components.neo4j_reader.Neo4jChunkReader
+    :members:
+    :exclude-members: component_inputs, component_outputs
+
 SchemaBuilder
 =============
 

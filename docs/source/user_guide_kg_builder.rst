@@ -16,7 +16,7 @@ unstructured data.
 Pipeline Structure
 ******************
 
-A Knowledge Graph (KG) construction pipeline requires a few components:
+A Knowledge Graph (KG) construction pipeline requires a few components (some of the below components are optional):
 
 - **Document parser**: extract text from files (PDFs, ...).
 - **Document chunker**: split the text into smaller pieces of text, manageable by the LLM context window (token limit).
@@ -203,6 +203,47 @@ Example usage:
     )
 
 See :ref:`kg-writer-section` to learn how to write the resulting nodes and relationships to Neo4j.
+
+
+Neo4j Chunk Reader
+==================
+
+The Neo4j chunk reader component is used to read text chunks from Neo4j. Text chunks can be created
+by the lexical graph builder or another process.
+
+.. code:: python
+
+    import neo4j
+    from neo4j_graphrag.experimental.components.neo4j_reader import Neo4jChunkReader
+    from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
+
+    reader = Neo4jChunkReader(driver)
+    result = await reader.run()
+
+
+Configure node labels and relationship types
+---------------------------------------------
+
+Optionally, the document and chunk node labels can be configured using a `LexicalGraphConfig` object:
+
+.. code:: python
+
+    from neo4j_graphrag.experimental.components.neo4j_reader import Neo4jChunkReader
+    from neo4j_graphrag.experimental.components.types import LexicalGraphConfig, TextChunks
+
+    # optionally, define a LexicalGraphConfig object
+    # shown below with the default values
+    config = LexicalGraphConfig(
+        id_prefix="",  # used to prefix the chunk and document IDs
+        chunk_node_label="Chunk",
+        document_node_label="Document",
+        chunk_to_document_relationship_type="PART_OF_DOCUMENT",
+        next_chunk_relationship_type="NEXT_CHUNK",
+        node_to_chunk_relationship_type="PART_OF_CHUNK",
+        chunk_embedding_property="embeddings",
+    )
+    reader = Neo4jChunkReader(driver)
+    result = await reader.run(lexical_graph_config=config)
 
 
 Schema Builder
