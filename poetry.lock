@@ -5282,10 +5282,11 @@ llama-index = ["llama-index"]
 mistralai = ["mistralai"]
 openai = ["openai"]
 pinecone = ["pinecone-client"]
+qdrant = ["qdrant-client"]
 sentence-transformers = ["sentence-transformers"]
 weaviate = ["weaviate-client"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9.0"
-content-hash = "7af2ca263477ac5a3ecbc02e3db0296b7c1b827f65c56916571cfe08effd0dc9"
+content-hash = "2c9e8b757cedf21df15db6643baf99f62631befdcbda3028c5125f4643199683"
