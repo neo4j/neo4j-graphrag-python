@@ -116,6 +116,8 @@ DEFAULT_CHUNK_INDEX_PROPERTY = "index"
 
 
 class LexicalGraphConfig(BaseModel):
+    """Configure all labels and property names in the lexical graph."""
+
     id_prefix: str = ""
     document_node_label: str = DEFAULT_DOCUMENT_NODE_LABEL
     chunk_node_label: str = DEFAULT_CHUNK_NODE_LABEL
@@ -129,8 +131,8 @@ class LexicalGraphConfig(BaseModel):
     chunk_index_property: str = DEFAULT_CHUNK_INDEX_PROPERTY
 
     @property
-    def lexical_graph_node_labels(self) -> tuple[str, str]:
-        return (self.document_node_label, self.chunk_node_label)
+    def lexical_graph_node_labels(self) -> tuple[str, ...]:
+        return self.document_node_label, self.chunk_node_label
 
 
 class GraphResult(DataModel):

@@ -35,9 +35,17 @@ class Neo4jChunkReader(Component):
         self.fetch_embeddings = fetch_embeddings
 
     def _get_query(
-        self, chunk_label: str, embedding_property: str, index_property: str
+        self,
+        chunk_label: str,
+        index_property: str,
+        text_property: str,
+        embedding_property: str,
     ) -> str:
-        return_properties = [".*"]
+        return_properties = [
+            ".*",
+            f"text: c.{text_property}",
+            f"index: c.{index_property}",
+        ]
         if not self.fetch_embeddings:
             return_properties.append(f"{embedding_property}: null")
         return (
@@ -53,8 +61,9 @@ class Neo4jChunkReader(Component):
     ) -> TextChunks:
         query = self._get_query(
             lexical_graph_config.chunk_node_label,
-            lexical_graph_config.chunk_embedding_property,
             lexical_graph_config.chunk_index_property,
+            lexical_graph_config.chunk_text_property,
+            lexical_graph_config.chunk_embedding_property,
         )
         result, _, _ = self.driver.execute_query(query)
         chunks = []

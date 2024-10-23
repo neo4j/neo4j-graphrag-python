@@ -185,8 +185,9 @@ async def main(driver: neo4j.Driver) -> PipelineResult:
     # optional: define some custom node labels for the lexical graph:
     lexical_graph_config = LexicalGraphConfig(
         id_prefix="example",
-        chunk_node_label="TextPart",
-        document_node_label="Text",
+        document_node_label="Book",  # default: "Document"
+        chunk_node_label="Chapter",  # default "Chunk"
+        chunk_text_property="content",  # default: "text"
     )
     text = """Albert Einstein was a German physicist born in 1879 who
             wrote many groundbreaking papers especially about general relativity
