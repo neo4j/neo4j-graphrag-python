@@ -177,7 +177,9 @@ The embeddings are added to each chunk metadata, and will be saved as a Chunk no
 Lexical Graph Builder
 =====================
 
-Once the chunks are extracted and embedded (if required), a graph can be created. The lexical graph contains:
+Once the chunks are extracted and embedded (if required), a graph can be created.
+
+The **lexical graph** contains:
 
 - `Document` node: represent the processed document and have a `path` property.
 - `Chunk` nodes: represent the text chunks. They have a `text` property and, if computed, an `embedding` property.
@@ -323,11 +325,12 @@ This behaviour can be changed by using the `on_error` flag in the `LLMEntityRela
 In this scenario, any failing chunk will make the whole pipeline fail (for all chunks), and no data
 will be saved to Neo4j.
 
+.. _lexical-graph-in-er-extraction:
 
 Lexical Graph
 -------------
 
-By default, the `LLMEntityRelationExtractor` also creates the lexical graph, adding a `FROM_CHUNK` relationship between any extracted entity and the chunk it has been identified into.
+By default, the `LLMEntityRelationExtractor` also creates the :ref:`lexical graph<lexical-graph-builder>`.
 
 If this 'lexical graph' is not desired, set the `created_lexical_graph` to `False` in the extractor constructor:
 
@@ -341,9 +344,17 @@ If this 'lexical graph' is not desired, set the `created_lexical_graph` to `Fals
 
 .. note::
 
-    If `self.create_lexical_graph` is set to `True`, the document and chunk nodes will be created.
+    - If `self.create_lexical_graph` is set to `True`, the complete lexical graph
+      will be created, including the document and chunk nodes, along with the relationships
+      between entities and the chunk they were extracted from.
+    - If `self.create_lexical_graph` is set to `False` but `lexical_graph_config`
+      is provided, the document and chunk nodes won't be created. However, relationships
+      between chunks and the entities extracted from them will still be added to the graph.
 
-    If `self.create_lexical_graph` is set to `False` but `lexical_graph_config` is provided, the document and chunk node won't be created but the relationship between the chunk and the entities extracted from it will still be added to the graph.
+.. warning::
+
+    If omitting `self.create_lexical_graph` and the chunk does not exist,
+    this will result in no relationship being created in the database by the writer.
 
 
 Customizing the Prompt

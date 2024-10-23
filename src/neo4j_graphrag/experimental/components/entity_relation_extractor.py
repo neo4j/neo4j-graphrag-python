@@ -318,14 +318,10 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
     ) -> Neo4jGraph:
         """Perform entity and relation extraction for all chunks in a list.
 
-        Optionally, creates the "lexical graph", i.e. adds nodes and relationships
+        Optionally, creates the "lexical graph" by adding nodes and relationships
         to represent the document and its chunks in the returned graph
-        (Read more in the :ref:`User Guide <lexical-graph-builder>`)
-
-        Note: if `self.create_lexical_graph` is set to `True`, the document and chunk nodes
-        will be created. If `self.create_lexical_graph` is set to `False` but `lexical_graph_config`
-        is provided, only the relationship between the chunk and the entities extracted from it
-        will be added to the graph. If the chunk does not exist, no relationship will be created.
+        (For more details, see the :ref:`Lexical Graph Builder doc <lexical-graph-builder>` and
+        the :ref:`User Guide <lexical-graph-in-er-extraction>`)
 
         Args:
             chunks (TextChunks): List of text chunks to extract entities and relations from.
