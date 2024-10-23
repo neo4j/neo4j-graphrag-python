@@ -5,9 +5,12 @@
 ### Added
 - Made `relations` and `potential_schema` optional in `SchemaBuilder`.
 - Added a check to prevent the use of deprecated Cypher syntax for Neo4j versions 5.23.0 and above.
+- Added a `LexicalGraphBuilder` component to enable the import of the lexical graph (document, chunks) without performing entity and relation extraction.
 
 ### Changed
 - Vector and Hybrid retrievers used with `return_properties` now also return the node labels (`nodeLabels`) and the node's element ID (`id`).
+- `HybridRetriever` now filters out the embedding property index in `self.vector_index_name` from the retriever result by default.
+
 
 ## 1.1.0
 
@@ -98,7 +101,8 @@
 ### IMPORTANT NOTICE
 - The `neo4j-genai` package is now deprecated. Users are advised to switch to the new package `neo4j-graphrag`.
 ### Added
-- Ability to visualise pipeline with `my_pipeline.draw("pipeline.png")`
+- Ability to visualise pipeline with `my_pipeline.draw("pipeline.png")`.
+- `LexicalGraphBuilder` component to create the lexical graph without entity-relation extraction.
 
 ### Fixed
 - Pipelines now return correct results when the same pipeline is run in parallel.

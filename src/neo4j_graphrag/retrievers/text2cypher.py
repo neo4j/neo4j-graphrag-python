@@ -51,7 +51,7 @@ class Text2CypherRetriever(Retriever):
     then retrieves records from a Neo4j database using the generated Cypher query
 
     Args:
-        driver (neo4j.driver): The Neo4j Python driver.
+        driver (neo4j.Driver): The Neo4j Python driver.
         llm (neo4j_graphrag.generation.llm.LLMInterface): LLM object to generate the Cypher query.
         neo4j_schema (Optional[str]): Neo4j schema used to generate the Cypher query.
         examples (Optional[list[str], optional): Optional user input/query pairs for the LLM to use as examples.

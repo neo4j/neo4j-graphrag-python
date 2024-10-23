@@ -54,7 +54,10 @@ template = RagTemplate(
 
 rag = GraphRAG(retriever=retriever, llm=llm, prompt_template=template)
 
-result = rag.search("Tell me more about Avatar movies")
+result = rag.search(
+    "Tell me more about Avatar movies",
+    return_context=True,
+)
 print(result.answer)
 
 driver.close()
