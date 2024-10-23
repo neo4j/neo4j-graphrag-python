@@ -23,11 +23,8 @@ from typing import Any, Generator, Literal, Optional
 import neo4j
 from pydantic import validate_call
 
-from neo4j_graphrag.experimental.components.entity_relation_extractor import (
-    CHUNK_NODE_LABEL,
-    DOCUMENT_NODE_LABEL,
-)
 from neo4j_graphrag.experimental.components.types import (
+    LexicalGraphConfig,
     Neo4jGraph,
     Neo4jNode,
     Neo4jRelationship,
@@ -69,12 +66,17 @@ class KGWriter(Component):
 
     @abstractmethod
     @validate_call
-    async def run(self, graph: Neo4jGraph) -> KGWriterModel:
+    async def run(
+        self,
+        graph: Neo4jGraph,
+        lexical_graph_config: LexicalGraphConfig = LexicalGraphConfig(),
+    ) -> KGWriterModel:
         """
         Writes the graph to a data store.
 
         Args:
             graph (Neo4jGraph): The knowledge graph to write to the data store.
+            lexical_graph_config (LexicalGraphConfig): Node labels and relationship types in the lexical graph.
         """
         pass
 
@@ -135,24 +137,28 @@ class Neo4jWriter(KGWriter):
         )
 
     @staticmethod
-    def _nodes_to_rows(nodes: list[Neo4jNode]) -> list[dict[str, Any]]:
+    def _nodes_to_rows(
+        nodes: list[Neo4jNode], lexical_graph_config: LexicalGraphConfig
+    ) -> list[dict[str, Any]]:
         rows = []
         for node in nodes:
             labels = [node.label]
-            if node.label not in (CHUNK_NODE_LABEL, DOCUMENT_NODE_LABEL):
+            if node.label not in lexical_graph_config.lexical_graph_node_labels:
                 labels.append("__Entity__")
             row = node.model_dump()
             row["labels"] = labels
             rows.append(row)
         return rows
 
-    def _upsert_nodes(self, nodes: list[Neo4jNode]) -> None:
+    def _upsert_nodes(
+        self, nodes: list[Neo4jNode], lexical_graph_config: LexicalGraphConfig
+    ) -> None:
         """Upserts a single node into the Neo4j database."
 
         Args:
             nodes (list[Neo4jNode]): The nodes batch to upsert into the database.
         """
-        parameters = {"rows": self._nodes_to_rows(nodes)}
+        parameters = {"rows": self._nodes_to_rows(nodes, lexical_graph_config)}
         if self.is_version_5_23_or_above:
             self.driver.execute_query(
                 UPSERT_NODE_QUERY_VARIABLE_SCOPE_CLAUSE, parameters_=parameters
@@ -163,6 +169,7 @@ class Neo4jWriter(KGWriter):
     async def _async_upsert_nodes(
         self,
         nodes: list[Neo4jNode],
+        lexical_graph_config: LexicalGraphConfig,
         sem: asyncio.Semaphore,
     ) -> None:
         """Asynchronously upserts a single node into the Neo4j database."
@@ -171,7 +178,7 @@ class Neo4jWriter(KGWriter):
             nodes (list[Neo4jNode]): The nodes batch to upsert into the database.
         """
         async with sem:
-            parameters = {"rows": self._nodes_to_rows(nodes)}
+            parameters = {"rows": self._nodes_to_rows(nodes, lexical_graph_config)}
             await self.driver.execute_query(
                 UPSERT_NODE_QUERY_VARIABLE_SCOPE_CLAUSE, parameters_=parameters
             )
@@ -234,18 +241,23 @@ class Neo4jWriter(KGWriter):
                 )
 
     @validate_call
-    async def run(self, graph: Neo4jGraph) -> KGWriterModel:
+    async def run(
+        self,
+        graph: Neo4jGraph,
+        lexical_graph_config: LexicalGraphConfig = LexicalGraphConfig(),
+    ) -> KGWriterModel:
         """Upserts a knowledge graph into a Neo4j database.
 
         Args:
             graph (Neo4jGraph): The knowledge graph to upsert into the database.
+            lexical_graph_config (LexicalGraphConfig):
         """
         try:
             if inspect.iscoroutinefunction(self.driver.execute_query):
                 await self._async_db_setup()
                 sem = asyncio.Semaphore(self.max_concurrency)
                 node_tasks = [
-                    self._async_upsert_nodes(batch, sem)
+                    self._async_upsert_nodes(batch, lexical_graph_config, sem)
                     for batch in batched(graph.nodes, self.batch_size)
                 ]
                 await asyncio.gather(*node_tasks)
@@ -259,7 +271,7 @@ class Neo4jWriter(KGWriter):
                 self._db_setup()
 
                 for batch in batched(graph.nodes, self.batch_size):
-                    self._upsert_nodes(batch)
+                    self._upsert_nodes(batch, lexical_graph_config)
 
                 for batch in batched(graph.relationships, self.batch_size):
                     self._upsert_relationships(batch)

@@ -5,7 +5,11 @@ from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     OnError,
 )
 from neo4j_graphrag.experimental.components.pdf_loader import DocumentInfo
-from neo4j_graphrag.experimental.components.types import Neo4jGraph, TextChunks
+from neo4j_graphrag.experimental.components.types import (
+    LexicalGraphConfig,
+    Neo4jGraph,
+    TextChunks,
+)
 
 
 class MyExtractor(EntityRelationExtractor):
@@ -27,6 +31,7 @@ class MyExtractor(EntityRelationExtractor):
         self,
         chunks: TextChunks,
         document_info: Optional[DocumentInfo] = None,
+        lexical_graph_config: Optional[LexicalGraphConfig] = None,
         **kwargs: Any,
     ) -> Neo4jGraph:
         # Implement your logic here

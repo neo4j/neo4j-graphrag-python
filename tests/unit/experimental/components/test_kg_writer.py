@@ -20,6 +20,7 @@ from unittest.mock import MagicMock, Mock
 import pytest
 from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter, batched
 from neo4j_graphrag.experimental.components.types import (
+    LexicalGraphConfig,
     Neo4jGraph,
     Neo4jNode,
     Neo4jRelationship,
@@ -57,7 +58,7 @@ def test_batched() -> None:
 def test_upsert_nodes(_: Mock, driver: MagicMock) -> None:
     neo4j_writer = Neo4jWriter(driver=driver)
     node = Neo4jNode(id="1", label="Label", properties={"key": "value"})
-    neo4j_writer._upsert_nodes(nodes=[node])
+    neo4j_writer._upsert_nodes(nodes=[node], lexical_graph_config=LexicalGraphConfig())
     driver.execute_query.assert_called_once_with(
         UPSERT_NODE_QUERY,
         parameters_={
@@ -94,7 +95,7 @@ def test_upsert_nodes_with_embedding(
         embedding_properties={"embeddingProp": [1.0, 2.0, 3.0]},
     )
     driver.execute_query.return_value.records = [{"elementId(n)": 1}]
-    neo4j_writer._upsert_nodes(nodes=[node])
+    neo4j_writer._upsert_nodes(nodes=[node], lexical_graph_config=LexicalGraphConfig())
     driver.execute_query.assert_any_call(
         UPSERT_NODE_QUERY,
         parameters_={
