@@ -2,7 +2,7 @@
 a specific signature for the run method, which makes it very flexible.
 """
 
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 import neo4j
 from neo4j_graphrag.experimental.components.resolver import EntityResolver
@@ -12,7 +12,7 @@ from neo4j_graphrag.experimental.components.types import ResolutionStats
 class MyEntityResolver(EntityResolver):
     def __init__(
         self,
-        driver: Union[neo4j.Driver, neo4j.AsyncDriver],
+        driver: neo4j.Driver,
         filter_query: Optional[str] = None,
     ) -> None:
         super().__init__(driver, filter_query)
