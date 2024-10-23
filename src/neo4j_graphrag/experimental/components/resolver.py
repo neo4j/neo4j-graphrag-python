@@ -56,14 +56,14 @@ class SinglePropertyExactMatchResolver(EntityResolver):
 
     .. code-block:: python
 
-        from neo4j import AsyncGraphDatabase
+        from neo4j import GraphDatabase
         from neo4j_graphrag.experimental.components.resolver import SinglePropertyExactMatchResolver
 
         URI = "neo4j://localhost:7687"
         AUTH = ("neo4j", "password")
         DATABASE = "neo4j"
 
-        driver = AsyncGraphDatabase.driver(URI, auth=AUTH, database=DATABASE)
+        driver = GraphDatabase.driver(URI, auth=AUTH, database=DATABASE)
         resolver = SinglePropertyExactMatchResolver(driver=driver, neo4j_database=DATABASE)
         await resolver.run()  # no expected parameters
 
