@@ -433,10 +433,8 @@ to a Neo4j database:
         graph = Neo4jGraph(nodes=[], relationships=[])
         await writer.run(graph)
 
-To improve insert performances, it is possible to act on two parameters:
-
-- `batch_size`: the number of nodes/relationships to be processed in each batch (default is 1000).
-- `max_concurrency`: the max number of concurrent queries (default is 5).
+Adjust the batch_size parameter of `Neo4jWriter` to optimize insert performance.
+This parameter controls the number of nodes or relationships inserted per batch, with a default value of 1000.
 
 See :ref:`neo4jgraph`.
 
