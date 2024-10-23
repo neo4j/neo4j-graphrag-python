@@ -172,6 +172,7 @@ If OpenAI is not an option, see :ref:`embedders` to learn how to use other suppo
 The embeddings are added to each chunk metadata, and will be saved as a Chunk node property in the graph if
 `create_lexical_graph` is enabled in the `EntityRelationExtractor` (keep reading).
 
+.. _lexical-graph-builder:
 
 Lexical Graph Builder
 =====================
