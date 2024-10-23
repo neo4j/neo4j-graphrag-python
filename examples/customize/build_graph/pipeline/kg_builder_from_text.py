@@ -44,6 +44,7 @@ async def define_and_run_pipeline(
     """This is where we define and run the KG builder pipeline, instantiating a few
     components:
     - Text Splitter: in this example we use the fixed size text splitter
+    - Chunk Embedder: to embed the chunks' text
     - Schema Builder: this component takes a list of entities, relationships and
         possible triplets as inputs, validate them and return a schema ready to use
         for the rest of the pipeline

@@ -26,7 +26,7 @@ class EntityResolver(Component, abc.ABC):
     """Entity resolution base class
 
     Args:
-        driver (neo4j.driver): The Neo4j driver to connect to the database.
+        driver (neo4j.Driver): The Neo4j driver to connect to the database.
         filter_query (Optional[str]): Cypher query to select the entities to resolve. By default, all nodes with __Entity__ label are used
     """
 
@@ -47,7 +47,7 @@ class SinglePropertyExactMatchResolver(EntityResolver):
     """Resolve entities with same label and exact same property (default is "name").
 
     Args:
-        driver (neo4j.driver): The Neo4j driver to connect to the database.
+        driver (neo4j.Driver): The Neo4j driver to connect to the database.
         filter_query (Optional[str]): To reduce the resolution scope, add a Cypher WHERE clause.
         resolve_property (str): The property that will be compared (default: "name"). If values match exactly, entities are merged.
         neo4j_database (Optional[str]): The name of the Neo4j database to write to. Defaults to 'neo4j' if not provided.
@@ -94,7 +94,7 @@ class SinglePropertyExactMatchResolver(EntityResolver):
         if self.filter_query:
             match_query += self.filter_query
         stat_query = f"{match_query} RETURN count(entity) as c"
-        records = await execute_query(
+        records, _, _ = await execute_query(
             self.driver,
             stat_query,
             database_=self.database,
@@ -130,7 +130,7 @@ class SinglePropertyExactMatchResolver(EntityResolver):
             "YIELD node "
             "RETURN count(node) as c "
         )
-        records = await execute_query(
+        records, _, _ = await execute_query(
             self.driver,
             merge_nodes_query,
             database_=self.database,
