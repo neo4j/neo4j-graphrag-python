@@ -13,7 +13,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from unittest.mock import MagicMock
-from venv import create
 
 import neo4j
 import pytest
@@ -69,6 +68,7 @@ async def test_neo4j_reader_in_pipeline(driver: neo4j.Driver, llm: MagicMock) ->
     pipeline_output = await pipeline.run({})
     created_graph = pipeline_output.result["extractor"]
     assert len(created_graph["nodes"]) == 1
+    # no lexical graph, so no relationship to the chunk
     assert len(created_graph["relationships"]) == 0
 
 

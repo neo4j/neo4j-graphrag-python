@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock
 
 import neo4j
 import pytest
@@ -33,7 +33,7 @@ async def test_neo4j_chunk_reader(driver: Mock) -> None:
     res = await chunk_reader.run()
 
     driver.execute_query.assert_called_once_with(
-        "MATCH (c:`Chunk`) RETURN c { .*, id: elementId(c), embedding: null } as chunk ORDER BY c.index"
+        "MATCH (c:`Chunk`) RETURN c { .*, embedding: null } as chunk ORDER BY c.index"
     )
 
     assert isinstance(res, TextChunks)
@@ -72,7 +72,7 @@ async def test_neo4j_chunk_reader_custom_lg_config(driver: Mock) -> None:
     )
 
     driver.execute_query.assert_called_once_with(
-        "MATCH (c:`Page`) RETURN c { .*, id: elementId(c), embedding: null } as chunk ORDER BY c.k"
+        "MATCH (c:`Page`) RETURN c { .*, embedding: null } as chunk ORDER BY c.k"
     )
 
     assert isinstance(res, TextChunks)
@@ -106,7 +106,7 @@ async def test_neo4j_chunk_reader_do_not_fetch_embedding(driver: Mock) -> None:
     res = await chunk_reader.run()
 
     driver.execute_query.assert_called_once_with(
-        "MATCH (c:`Chunk`) RETURN c { .*, id: elementId(c) } as chunk ORDER BY c.index"
+        "MATCH (c:`Chunk`) RETURN c { .* } as chunk ORDER BY c.index"
     )
 
     assert isinstance(res, TextChunks)
