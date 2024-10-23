@@ -14,8 +14,6 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Union
-
 import neo4j
 from pydantic import validate_call
 
@@ -25,13 +23,12 @@ from neo4j_graphrag.experimental.components.types import (
     TextChunks,
 )
 from neo4j_graphrag.experimental.pipeline import Component
-from neo4j_graphrag.utils import execute_query
 
 
 class Neo4jChunkReader(Component):
     def __init__(
         self,
-        driver: Union[neo4j.AsyncDriver, neo4j.Driver],
+        driver: neo4j.Driver,
         fetch_embeddings: bool = False,
     ):
         self.driver = driver
@@ -59,7 +56,7 @@ class Neo4jChunkReader(Component):
             lexical_graph_config.chunk_embedding_property,
             lexical_graph_config.chunk_index_property,
         )
-        result, _, _ = await execute_query(self.driver, query)
+        result, _, _ = self.driver.execute_query(query)
         chunks = []
         for record in result:
             chunk = record.get("chunk")
