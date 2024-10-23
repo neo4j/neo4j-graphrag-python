@@ -40,7 +40,10 @@ rag = GraphRAG(
     llm=llm,  # type: ignore[arg-type, unused-ignore]
 )
 
-result = rag.search("Tell me more about Avatar movies")
+result = rag.search(
+    "Tell me more about Avatar movies",
+    return_context=False,
+)
 print(result.answer)
 
 driver.close()
