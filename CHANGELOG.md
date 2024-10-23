@@ -11,6 +11,8 @@
 ### Changed
 - Vector and Hybrid retrievers used with `return_properties` now also return the node labels (`nodeLabels`) and the node's element ID (`id`).
 - `HybridRetriever` now filters out the embedding property index in `self.vector_index_name` from the retriever result by default.
+- Removed support for neo4j.AsyncDriver in the KG creation pipeline, affecting Neo4jWriter and related components.
+- Updated examples and unit tests to reflect the removal of async driver support.
 
 
 ## 1.1.0

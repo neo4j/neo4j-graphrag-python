@@ -14,9 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Optional
-
-import neo4j
+from typing import Optional
 
 
 def validate_search_query_input(
@@ -24,13 +22,3 @@ def validate_search_query_input(
 ) -> None:
     if not (bool(query_vector) ^ bool(query_text)):
         raise ValueError("You must provide exactly one of query_vector or query_text.")
-
-
-async def execute_query(
-    driver: neo4j.Driver | neo4j.AsyncDriver, query: str, **kwargs: Any
-) -> Any:
-    if isinstance(driver, neo4j.AsyncDriver):
-        result = await driver.execute_query(query, **kwargs)
-    else:
-        result = driver.execute_query(query, **kwargs)
-    return result
