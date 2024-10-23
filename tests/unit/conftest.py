@@ -35,11 +35,6 @@ def driver() -> MagicMock:
 
 
 @pytest.fixture(scope="function")
-def async_driver() -> MagicMock:
-    return MagicMock(spec=neo4j.AsyncDriver)
-
-
-@pytest.fixture(scope="function")
 def embedder() -> MagicMock:
     return MagicMock(spec=Embedder)
 
