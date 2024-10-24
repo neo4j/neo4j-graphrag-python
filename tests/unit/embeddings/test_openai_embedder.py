@@ -71,3 +71,26 @@ def test_azure_openai_embedder_happy_path(mock_import: Mock) -> None:
     res = embedder.embed_query("my text")
     assert isinstance(res, list)
     assert res == [1.0, 2.0]
+
+
+def test_azure_openai_embedder_does_not_call_openai_client() -> None:
+    with patch(
+        "neo4j_graphrag.embeddings.openai.openai.OpenAI"
+    ) as mock_openai_client, patch(
+        "neo4j_graphrag.embeddings.openai.openai.AzureOpenAI"
+    ) as mock_azure_openai_client:
+        mock_azure_openai_client.return_value = MagicMock()
+
+        AzureOpenAIEmbeddings(
+            model="text-embedding-ada-002",
+            azure_endpoint="https://test.openai.azure.com/",
+            api_key="my_key",
+            api_version="2023-05-15",
+        )
+
+        mock_openai_client.assert_not_called()
+        mock_azure_openai_client.assert_called_once_with(
+            azure_endpoint="https://test.openai.azure.com/",
+            api_key="my_key",
+            api_version="2023-05-15",
+        )
