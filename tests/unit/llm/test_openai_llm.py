@@ -12,12 +12,12 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from unittest.mock import MagicMock, patch, Mock
+from unittest.mock import MagicMock, Mock, patch
 
+import openai
 import pytest
 from neo4j_graphrag.llm import LLMResponse
 from neo4j_graphrag.llm.openai_llm import AzureOpenAILLM, OpenAILLM
-import openai
 
 
 def get_mock_openai() -> MagicMock:

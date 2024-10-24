@@ -13,6 +13,8 @@
 - Removed support for neo4j.AsyncDriver in the KG creation pipeline, affecting Neo4jWriter and related components.
 - Updated examples and unit tests to reflect the removal of async driver support.
 
+### Fixed
+- Resolved issue with `AzureOpenAIEmbeddings` incorrectly inheriting from `OpenAIEmbeddings`, now inherits from `BaseOpenAIEmbeddings`.
 
 ## 1.1.0
 
