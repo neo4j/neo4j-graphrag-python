@@ -74,7 +74,7 @@ async def test_neo4j_reader_in_pipeline(driver: neo4j.Driver, llm: MagicMock) ->
 
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("setup_neo4j_for_kg_construction_with_chunks")
-async def test_neo4j_reader_in_pipeline_with_lexical_graph(
+async def test_neo4j_reader_in_pipeline_with_lexical_graph_config(
     driver: neo4j.Driver, llm: MagicMock
 ) -> None:
     llm.ainvoke.side_effect = [
@@ -100,7 +100,7 @@ async def test_neo4j_reader_in_pipeline_with_lexical_graph(
         LLMEntityRelationExtractor(llm, create_lexical_graph=False), "extractor"
     )
     pipeline.connect("reader", "extractor", {"chunks": "reader"})
-    lg_config = LexicalGraphConfig()
+    lg_config = LexicalGraphConfig(node_to_chunk_relationship_type="COMES_FROM")
     pipeline_output = await pipeline.run(
         {
             "extractor": {
@@ -114,4 +114,5 @@ async def test_neo4j_reader_in_pipeline_with_lexical_graph(
     assert (
         created_graph["relationships"][0]["type"]
         == lg_config.node_to_chunk_relationship_type
+        == "COMES_FROM"
     )

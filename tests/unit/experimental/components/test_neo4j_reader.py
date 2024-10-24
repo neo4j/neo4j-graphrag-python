@@ -84,7 +84,7 @@ async def test_neo4j_chunk_reader_custom_lg_config(driver: Mock) -> None:
 
 
 @pytest.mark.asyncio
-async def test_neo4j_chunk_reader_do_not_fetch_embedding(driver: Mock) -> None:
+async def test_neo4j_chunk_reader_fetch_embedding(driver: Mock) -> None:
     driver.execute_query.return_value = (
         [
             neo4j.Record(
