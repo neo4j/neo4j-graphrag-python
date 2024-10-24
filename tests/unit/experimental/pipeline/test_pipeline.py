@@ -22,6 +22,7 @@ from unittest.mock import AsyncMock, call, patch
 import pytest
 from neo4j_graphrag.experimental.pipeline import Component, Pipeline
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
+from neo4j_graphrag.experimental.pipeline.pipeline import RunResult
 
 from .components import (
     ComponentAdd,
@@ -404,3 +405,8 @@ def test_pipeline_draw_missing_pygraphviz_dep() -> None:
     t = tempfile.NamedTemporaryFile()
     with pytest.raises(ImportError):
         pipe.draw(t.name)
+
+
+def test_run_result_no_warning(recwarn) -> None:
+    RunResult()
+    assert len(recwarn) == 0
