@@ -40,7 +40,7 @@ from neo4j_graphrag.llm import LLMInterface, OpenAILLM
 
 
 async def define_and_run_pipeline(
-    neo4j_driver: neo4j.AsyncDriver, llm: LLMInterface
+    neo4j_driver: neo4j.Driver, llm: LLMInterface
 ) -> None:
     """This is where we define and run the KG builder pipeline, instantiating a few
     components:
@@ -144,11 +144,11 @@ async def main() -> None:
             "response_format": {"type": "json_object"},
         },
     )
-    driver = neo4j.AsyncGraphDatabase.driver(
+    driver = neo4j.GraphDatabase.driver(
         "bolt://localhost:7687", auth=("neo4j", "password")
     )
     await define_and_run_pipeline(driver, llm)
-    await driver.close()
+    driver.close()
     await llm.async_client.close()
 
 

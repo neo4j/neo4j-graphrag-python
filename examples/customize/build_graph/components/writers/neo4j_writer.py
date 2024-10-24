@@ -11,10 +11,9 @@ async def main(driver: neo4j.Driver, graph: Neo4jGraph) -> KGWriterModel:
         driver,
         # optionally, configure the neo4j database
         # neo4j_database="neo4j",
-        # you can tune batch_size and max_concurrency to
+        # you can tune batch_size to
         # improve speed
         # batch_size=1000,
-        # max_concurrency=5,
     )
     result = await writer.run(graph=graph)
     return result

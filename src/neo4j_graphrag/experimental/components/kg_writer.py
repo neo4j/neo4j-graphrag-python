@@ -14,8 +14,6 @@
 #  limitations under the License.
 from __future__ import annotations
 
-import asyncio
-import inspect
 import logging
 from abc import abstractmethod
 from typing import Any, Generator, Literal, Optional
@@ -87,13 +85,13 @@ class Neo4jWriter(KGWriter):
     Args:
         driver (neo4j.driver): The Neo4j driver to connect to the database.
         neo4j_database (Optional[str]): The name of the Neo4j database to write to. Defaults to 'neo4j' if not provided.
-        max_concurrency (int): The maximum number of concurrent tasks which can be used to make requests to the LLM.
+        batch_size (int): The number of nodes or relationships to write to the database in a batch. Defaults to 1000.
 
     Example:
 
     .. code-block:: python
 
-        from neo4j import AsyncGraphDatabase
+        from neo4j import GraphDatabase
         from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
         from neo4j_graphrag.experimental.pipeline import Pipeline
 
@@ -101,7 +99,7 @@ class Neo4jWriter(KGWriter):
         AUTH = ("neo4j", "password")
         DATABASE = "neo4j"
 
-        driver = AsyncGraphDatabase.driver(URI, auth=AUTH, database=DATABASE)
+        driver = GraphDatabase.driver(URI, auth=AUTH, database=DATABASE)
         writer = Neo4jWriter(driver=driver, neo4j_database=DATABASE)
 
         pipeline = Pipeline()
@@ -111,28 +109,19 @@ class Neo4jWriter(KGWriter):
 
     def __init__(
         self,
-        driver: neo4j.driver,
+        driver: neo4j.Driver,
         neo4j_database: Optional[str] = None,
         batch_size: int = 1000,
-        max_concurrency: int = 5,
     ):
         self.driver = driver
         self.neo4j_database = neo4j_database
         self.batch_size = batch_size
-        self.max_concurrency = max_concurrency
         self.is_version_5_23_or_above = self._check_if_version_5_23_or_above()
 
     def _db_setup(self) -> None:
         # create index on __Entity__.id
         # used when creating the relationships
         self.driver.execute_query(
-            "CREATE INDEX __entity__id IF NOT EXISTS  FOR (n:__KGBuilder__) ON (n.id)"
-        )
-
-    async def _async_db_setup(self) -> None:
-        # create index on __Entity__.id
-        # used when creating the relationships
-        await self.driver.execute_query(
             "CREATE INDEX __entity__id IF NOT EXISTS  FOR (n:__KGBuilder__) ON (n.id)"
         )
 
@@ -165,23 +154,6 @@ class Neo4jWriter(KGWriter):
             )
         else:
             self.driver.execute_query(UPSERT_NODE_QUERY, parameters_=parameters)
-
-    async def _async_upsert_nodes(
-        self,
-        nodes: list[Neo4jNode],
-        lexical_graph_config: LexicalGraphConfig,
-        sem: asyncio.Semaphore,
-    ) -> None:
-        """Asynchronously upserts a single node into the Neo4j database."
-
-        Args:
-            nodes (list[Neo4jNode]): The nodes batch to upsert into the database.
-        """
-        async with sem:
-            parameters = {"rows": self._nodes_to_rows(nodes, lexical_graph_config)}
-            await self.driver.execute_query(
-                UPSERT_NODE_QUERY_VARIABLE_SCOPE_CLAUSE, parameters_=parameters
-            )
 
     def _get_version(self) -> tuple[int, ...]:
         records, _, _ = self.driver.execute_query(
@@ -220,26 +192,6 @@ class Neo4jWriter(KGWriter):
         else:
             self.driver.execute_query(UPSERT_RELATIONSHIP_QUERY, parameters_=parameters)
 
-    async def _async_upsert_relationships(
-        self, rels: list[Neo4jRelationship], sem: asyncio.Semaphore
-    ) -> None:
-        """Asynchronously upserts a single relationship into the Neo4j database.
-
-        Args:
-            rels (list[Neo4jRelationship]): The relationships batch to upsert into the database.
-        """
-        async with sem:
-            parameters = {"rows": [rel.model_dump() for rel in rels]}
-            if self.is_version_5_23_or_above:
-                await self.driver.execute_query(
-                    UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE,
-                    parameters_=parameters,
-                )
-            else:
-                await self.driver.execute_query(
-                    UPSERT_RELATIONSHIP_QUERY, parameters_=parameters
-                )
-
     @validate_call
     async def run(
         self,
@@ -253,28 +205,13 @@ class Neo4jWriter(KGWriter):
             lexical_graph_config (LexicalGraphConfig):
         """
         try:
-            if inspect.iscoroutinefunction(self.driver.execute_query):
-                await self._async_db_setup()
-                sem = asyncio.Semaphore(self.max_concurrency)
-                node_tasks = [
-                    self._async_upsert_nodes(batch, lexical_graph_config, sem)
-                    for batch in batched(graph.nodes, self.batch_size)
-                ]
-                await asyncio.gather(*node_tasks)
+            self._db_setup()
 
-                rel_tasks = [
-                    self._async_upsert_relationships(batch, sem)
-                    for batch in batched(graph.relationships, self.batch_size)
-                ]
-                await asyncio.gather(*rel_tasks)
-            else:
-                self._db_setup()
+            for batch in batched(graph.nodes, self.batch_size):
+                self._upsert_nodes(batch, lexical_graph_config)
 
-                for batch in batched(graph.nodes, self.batch_size):
-                    self._upsert_nodes(batch, lexical_graph_config)
-
-                for batch in batched(graph.relationships, self.batch_size):
-                    self._upsert_relationships(batch)
+            for batch in batched(graph.relationships, self.batch_size):
+                self._upsert_relationships(batch)
 
             return KGWriterModel(
                 status="SUCCESS",
