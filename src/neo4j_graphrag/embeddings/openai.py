@@ -15,19 +15,15 @@
 
 from __future__ import annotations
 
+import abc
 from typing import Any
 
 from neo4j_graphrag.embeddings.base import Embedder
 
 
-class OpenAIEmbeddings(Embedder):
+class BaseOpenAIEmbeddings(Embedder, abc.ABC):
     """
-    OpenAI embeddings class.
-    This class uses the OpenAI python client to generate embeddings for text data.
-
-    Args:
-        model (str): The name of the OpenAI embedding model to use. Defaults to "text-embedding-ada-002".
-        kwargs: All other parameters will be passed to the openai.OpenAI init.
+    Abstract base class for OpenAI embeddings.
     """
 
     def __init__(self, model: str = "text-embedding-ada-002", **kwargs: Any) -> None:
@@ -40,11 +36,41 @@ class OpenAIEmbeddings(Embedder):
             )
         self.openai = openai
         self.model = model
-        self.openai_client = self.openai.OpenAI(**kwargs)
+        self.openai_client = self._initialize_client(**kwargs)
+
+    @abc.abstractmethod
+    def _initialize_client(self, **kwargs: Any) -> Any:
+        """
+        Initialize the OpenAI client.
+        Must be implemented by subclasses.
+        """
+        pass
+
+    @abc.abstractmethod
+    def embed_query(self, text: str, **kwargs: Any) -> list[float]:
+        """
+        Generate embeddings for a given query.
+        Must be implemented by subclasses.
+        """
+        pass
+
+
+class OpenAIEmbeddings(BaseOpenAIEmbeddings):
+    """
+    OpenAI embeddings class.
+    This class uses the OpenAI python client to generate embeddings for text data.
+
+    Args:
+        model (str): The name of the OpenAI embedding model to use. Defaults to "text-embedding-ada-002".
+        kwargs: All other parameters will be passed to the openai.OpenAI init.
+    """
+
+    def _initialize_client(self, **kwargs: Any) -> Any:
+        return self.openai.OpenAI(**kwargs)
 
     def embed_query(self, text: str, **kwargs: Any) -> list[float]:
         """
-        Generate embeddings for a given query using a OpenAI text embedding model.
+        Generate embeddings for a given query using an OpenAI text embedding model.
 
         Args:
             text (str): The text to generate an embedding for.
@@ -53,10 +79,35 @@ class OpenAIEmbeddings(Embedder):
         response = self.openai_client.embeddings.create(
             input=text, model=self.model, **kwargs
         )
-        return response.data[0].embedding
+        embedding: list[float] = response.data[0].embedding
+        return embedding
 
 
-class AzureOpenAIEmbeddings(OpenAIEmbeddings):
-    def __init__(self, model: str = "text-embedding-ada-002", **kwargs: Any) -> None:
-        super().__init__(model, **kwargs)
-        self.openai_client = self.openai.AzureOpenAI(**kwargs)
+class AzureOpenAIEmbeddings(BaseOpenAIEmbeddings):
+    """
+    Azure OpenAI embeddings class.
+    This class uses the Azure OpenAI python client to generate embeddings for text data.
+
+    Args:
+        model (str): The name of the Azure OpenAI embedding model to use. Defaults to "text-embedding-ada-002".
+        kwargs: All other parameters will be passed to the openai.AzureOpenAI init.
+    """
+
+    def _initialize_client(self, **kwargs: Any) -> Any:
+        return self.openai.AzureOpenAI(**kwargs)
+
+    def embed_query(self, text: str, **kwargs: Any) -> list[float]:
+        """
+        Generate embeddings for a given query using an Azure OpenAI text embedding model.
+
+        Args:
+            text (str): The text to generate an embedding for.
+            **kwargs (Any): Additional arguments to pass to the Azure OpenAI embedding generation function.
+        """
+        response = self.openai_client.embeddings.create(
+            input=text,
+            engine=self.model,
+            **kwargs,
+        )
+        embedding: list[float] = response.data[0].embedding
+        return embedding

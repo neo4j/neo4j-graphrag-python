@@ -14,12 +14,12 @@
 #  limitations under the License.
 from unittest.mock import MagicMock, Mock, patch
 
+import openai
 import pytest
 from neo4j_graphrag.embeddings.openai import (
     AzureOpenAIEmbeddings,
     OpenAIEmbeddings,
 )
-import openai
 
 
 def get_mock_openai() -> MagicMock:
@@ -74,13 +74,11 @@ def test_azure_openai_embedder_happy_path(mock_import: Mock) -> None:
 
 
 def test_azure_openai_embedder_does_not_call_openai_client() -> None:
-    with patch(
-        "neo4j_graphrag.embeddings.openai.openai.OpenAI"
-    ) as mock_openai_client, patch(
-        "neo4j_graphrag.embeddings.openai.openai.AzureOpenAI"
-    ) as mock_azure_openai_client:
-        mock_azure_openai_client.return_value = MagicMock()
+    from unittest.mock import patch
 
+    mock_openai = get_mock_openai()
+
+    with patch.dict("sys.modules", {"openai": mock_openai}):
         AzureOpenAIEmbeddings(
             model="text-embedding-ada-002",
             azure_endpoint="https://test.openai.azure.com/",
@@ -88,8 +86,8 @@ def test_azure_openai_embedder_does_not_call_openai_client() -> None:
             api_version="2023-05-15",
         )
 
-        mock_openai_client.assert_not_called()
-        mock_azure_openai_client.assert_called_once_with(
+        mock_openai.OpenAI.assert_not_called()
+        mock_openai.AzureOpenAI.assert_called_once_with(
             azure_endpoint="https://test.openai.azure.com/",
             api_key="my_key",
             api_version="2023-05-15",

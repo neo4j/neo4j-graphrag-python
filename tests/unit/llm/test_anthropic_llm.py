@@ -13,13 +13,13 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch, Mock
+import sys
+from typing import Generator
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
+import anthropic
 import pytest
 from neo4j_graphrag.llm.anthropic_llm import AnthropicLLM
-import sys
-import anthropic
-from typing import Generator
 
 
 @pytest.fixture
