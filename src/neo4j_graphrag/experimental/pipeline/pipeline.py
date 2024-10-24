@@ -15,12 +15,12 @@
 from __future__ import annotations
 
 import asyncio
+import datetime
 import enum
 import logging
 import uuid
 import warnings
 from collections import defaultdict
-from datetime import datetime
 from timeit import default_timer
 from typing import Any, AsyncGenerator, Optional
 
@@ -61,7 +61,9 @@ class RunStatus(enum.Enum):
 class RunResult(BaseModel):
     status: RunStatus = RunStatus.DONE
     result: Optional[DataModel] = None
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime.datetime = Field(
+        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc)
+    )
 
 
 class TaskPipelineNode(PipelineNode):
