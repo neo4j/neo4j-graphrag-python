@@ -114,8 +114,8 @@ class LexicalGraphBuilder(Component):
         property that gets added as an embedding_property"""
         chunk_id = self.chunk_id(chunk.index)
         chunk_properties: Dict[str, Any] = {
-            "text": chunk.text,
-            "index": chunk.index,
+            self.config.chunk_text_property: chunk.text,
+            self.config.chunk_index_property: chunk.index,
         }
         embedding_properties = {}
         if chunk.metadata:

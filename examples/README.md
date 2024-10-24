@@ -92,6 +92,8 @@ are listed in [the last section of this file](#customize).
 - [End to end example with explicit components and text input](./customize/build_graph/pipeline/kg_builder_from_text.py)
 - [End to end example with explicit components and PDF input](./customize/build_graph/pipeline/kg_builder_from_pdf.py)
 - [Process multiple documents](./customize/build_graph/pipeline/kg_builder_two_documents_entity_resolution.py)
+- [Export lexical graph creation into another pipeline](./customize/build_graph/pipeline/text_to_lexical_graph_to_entity_graph_two_pipelines.py)
+
 
 #### Components
 

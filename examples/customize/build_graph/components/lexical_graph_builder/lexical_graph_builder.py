@@ -10,7 +10,6 @@ from neo4j_graphrag.experimental.components.types import (
 
 
 async def main() -> GraphResult:
-    """ """
     # optionally, define a LexicalGraphConfig object
     # shown below with default values
     config = LexicalGraphConfig(
