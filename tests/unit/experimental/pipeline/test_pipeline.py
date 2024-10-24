@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import tempfile
+from typing import Sized
 from unittest import mock
 from unittest.mock import AsyncMock, call, patch
 
@@ -407,6 +408,6 @@ def test_pipeline_draw_missing_pygraphviz_dep() -> None:
         pipe.draw(t.name)
 
 
-def test_run_result_no_warning(recwarn) -> None:
+def test_run_result_no_warning(recwarn: Sized) -> None:
     RunResult()
     assert len(recwarn) == 0
