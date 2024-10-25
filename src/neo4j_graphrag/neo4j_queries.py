@@ -100,7 +100,7 @@ UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE = (
 
 UPSERT_VECTOR_ON_NODE_QUERY = (
     "MATCH (n) "
-    "WHERE elementId(n) = $id "
+    "WHERE elementId(n) = $node_id "
     "WITH n "
     "CALL db.create.setNodeVectorProperty(n, $embedding_property, $vector) "
     "RETURN n"
@@ -108,7 +108,7 @@ UPSERT_VECTOR_ON_NODE_QUERY = (
 
 UPSERT_VECTOR_ON_RELATIONSHIP_QUERY = (
     "MATCH ()-[r]->() "
-    "WHERE elementId(r) = $id "
+    "WHERE elementId(r) = $rel_id "
     "WITH r "
     "CALL db.create.setRelationshipVectorProperty(r, $embedding_property, $vector) "
     "RETURN r"

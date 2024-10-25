@@ -288,7 +288,7 @@ def upsert_vector(
     """
     try:
         parameters = {
-            "id": node_id,
+            "node_id": node_id,
             "embedding_property": embedding_property,
             "vector": vector,
         }
@@ -344,7 +344,7 @@ def upsert_vector_on_relationship(
     """
     try:
         parameters = {
-            "id": rel_id,
+            "rel_id": rel_id,
             "embedding_property": embedding_property,
             "vector": vector,
         }
@@ -401,7 +401,7 @@ async def async_upsert_vector(
     """
     try:
         parameters = {
-            "id": node_id,
+            "node_id": node_id,
             "embedding_property": embedding_property,
             "vector": vector,
         }
@@ -458,7 +458,7 @@ async def async_upsert_vector_on_relationship(
     """
     try:
         parameters = {
-            "id": rel_id,
+            "rel_id": rel_id,
             "embedding_property": embedding_property,
             "vector": vector,
         }
