@@ -65,7 +65,7 @@ jobs:
       - name: Set Python version for Poetry
         run: poetry env use python${{ matrix.python-version }}
       - name: Install dependencies
-        run: poetry install --with ${{ matrix.vendor }}
+        run: poetry install --extras ${{ matrix.vendor }}
       - name: Run unit tests and check coverage
         run: |
           poetry run pytest -k ${{ matrix.vendor }} tests/unit
