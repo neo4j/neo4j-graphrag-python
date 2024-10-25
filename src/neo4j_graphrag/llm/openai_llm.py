@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import abc
-from typing import Any, Optional, TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING, Any, Iterable, Optional
 
 from ..exceptions import LLMGenerationError
 from .base import LLMInterface
