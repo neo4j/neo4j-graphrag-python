@@ -18,6 +18,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from neo4j_graphrag.llm.anthropic_llm import AnthropicLLM
 
+pytestmark = pytest.mark.anthropic
+
 
 @patch("neo4j_graphrag.llm.anthropic_llm.anthropic", None)
 def test_anthropic_llm_missing_dependency() -> None:

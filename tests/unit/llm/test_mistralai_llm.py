@@ -20,6 +20,8 @@ from mistralai.models.sdkerror import SDKError
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm import LLMResponse, MistralAILLM
 
+pytestmark = pytest.mark.mistralai
+
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral", None)
 def test_mistral_ai_llm_missing_dependency() -> None:
