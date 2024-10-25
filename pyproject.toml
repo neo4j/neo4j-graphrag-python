@@ -31,62 +31,49 @@ from = "src"
 python = "^3.9.0"
 neo4j = "^5.17.0"
 pydantic = "^2.6.3"
-urllib3 = "<2"
-weaviate-client = {version = "^4.6.1", optional = true}
-pinecone-client = {version = "^4.1.0", optional = true}
-types-mock = "^5.1.0.20240425"
-eval-type-backport = "^0.2.0"
-pypdf = "^4.3.1"
-fsspec = "^2024.9.0"
+fsspec = {version = "^2024.9.0", optional = true}
+langchain-text-splitters = {version = "^0.3.0", optional = true }
+pypdf = {version = "^4.3.1", optional = true}
 pygraphviz = [
     {version = "^1.13.0", python = ">=3.10,<4.0.0", optional = true},
     {version = "^1.0.0", python = "<3.10", optional = true}
 ]
-google-cloud-aiplatform = {version = "^1.66.0", optional = true}
+weaviate-client = {version = "^4.6.1", optional = true }
+pinecone-client = {version = "^4.1.0", optional = true }
+google-cloud-aiplatform = {version = "^1.66.0", optional = true }
 cohere = {version = "^5.9.0", optional = true}
-anthropic = { version = "^0.34.2", optional = true}
 mistralai = {version = "^1.0.3", optional = true}
 qdrant-client = {version = "^1.11.3", optional = true}
+llama-index = {version = "^0.10.55", optional = true }
+openai = {version = "^1.51.1", optional = true }
+anthropic = { version = "^0.36.0", optional = true}
+sentence-transformers = {version = "^3.0.0", optional = true }
 
 [tool.poetry.group.dev.dependencies]
-pylint = "^3.1.0"
+urllib3 = "<2"
+ruff = "^0.3.0"
 mypy = "^1.10.0"
 pytest = "^8.0.2"
-pytest-mock = "^3.12.0"
-pre-commit = { version = "^3.6.2", python = "^3.9" }
 coverage = "^7.4.3"
-ruff = "^0.3.0"
-langchain-text-splitters = "^0.3.0"
-weaviate-client = "^4.6.1"
-sentence-transformers = "^3.0.0"
-pinecone-client = "^4.1.0"
-requests = "^2.32.0"
-sphinx = { version = "^7.2.6", python = "^3.9" }
-tox = "^4.15.1"
-numpy = [
-    {version = "^1.24.0", python = "<3.12"},
-    {version = "^1.26.0", python = ">=3.12"}
-]
-scipy = [
-    {version = "^1", python = "<3.12"},
-    {version = "^1.7.0", python = ">=3.12"}
-]
-llama-index = "^0.10.55"
 pytest-asyncio = "^0.23.8"
-pygraphviz = [
-    {version = "^1.13.0", python = ">=3.10,<4.0.0"},
-    {version = "^1.0.0", python = "<3.10"}
-]
-google-cloud-aiplatform = {version = "^1.66.0"}
-cohere = {version = "^5.9.0"}
-anthropic = { version = "^0.34.2"}
-mistralai = {version = "^1.0.3"}
-qdrant-client = {version = "^1.11.3"}
-langchain-openai = "^0.2.2"  # needed in the examples
+pre-commit = { version = "^3.6.2", python = "^3.9" }
+sphinx = { version = "^7.2.6", python = "^3.9" }
+langchain-openai = {version = "^0.2.2", optional = true }
+langchain-huggingface = {version = "^0.1.0", optional = true }
 
 [tool.poetry.extras]
-external_clients = ["weaviate-client", "pinecone-client", "google-cloud-aiplatform", "cohere", "anthropic", "mistralai", "qdrant-client"]
+weaviate = ["weaviate-client"]
+pinecone = ["pinecone-client"]
+google = ["google-cloud-aiplatform"]
+cohere = ["cohere"]
+anthropic = ["anthropic"]
+openai = ["openai"]
+mistralai = ["mistralai"]
+qdrant = ["qdrant-client"]
 kg_creation_tools = ["pygraphviz"]
+sentence-transformers = ["sentence-transformers"]
+experimental = ["pypdf", "fsspec", "langchain-text-splitters", "pygraphviz", "llama-index"]
+examples = ["langchain-openai", "langchain-huggingface"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -100,9 +87,6 @@ filterwarnings = [
 
 [tool.coverage.paths]
 source = ["src"]
-
-[tool.pylint."MESSAGES CONTROL"]
-disable="C0114,C0115"
 
 [tool.mypy]
 strict = true

@@ -19,16 +19,26 @@ from neo4j_graphrag.embeddings.openai import (
     AzureOpenAIEmbeddings,
     OpenAIEmbeddings,
 )
+import openai
 
 
-@patch("neo4j_graphrag.embeddings.openai.openai", None)
-def test_openai_embedder_missing_dependency() -> None:
+def get_mock_openai() -> MagicMock:
+    mock = MagicMock()
+    mock.OpenAIError = openai.OpenAIError
+    return mock
+
+
+@patch("builtins.__import__", side_effect=ImportError)
+def test_openai_embedder_missing_dependency(mock_import: Mock) -> None:
     with pytest.raises(ImportError):
         OpenAIEmbeddings()
 
 
-@patch("neo4j_graphrag.embeddings.openai.openai")
-def test_openai_embedder_happy_path(mock_openai: Mock) -> None:
+@patch("builtins.__import__")
+def test_openai_embedder_happy_path(mock_import: Mock) -> None:
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
     mock_openai.OpenAI.return_value.embeddings.create.return_value = MagicMock(
         data=[MagicMock(embedding=[1.0, 2.0])],
     )
@@ -38,14 +48,17 @@ def test_openai_embedder_happy_path(mock_openai: Mock) -> None:
     assert res == [1.0, 2.0]
 
 
-@patch("neo4j_graphrag.embeddings.openai.openai", None)
-def test_azure_openai_embedder_missing_dependency() -> None:
+@patch("builtins.__import__", side_effect=ImportError)
+def test_azure_openai_embedder_missing_dependency(mock_import: Mock) -> None:
     with pytest.raises(ImportError):
         AzureOpenAIEmbeddings()
 
 
-@patch("neo4j_graphrag.embeddings.openai.openai")
-def test_azure_openai_embedder_happy_path(mock_openai: Mock) -> None:
+@patch("builtins.__import__")
+def test_azure_openai_embedder_happy_path(mock_import: Mock) -> None:
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
     mock_openai.AzureOpenAI.return_value.embeddings.create.return_value = MagicMock(
         data=[MagicMock(embedding=[1.0, 2.0])],
     )
