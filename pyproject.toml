@@ -84,6 +84,10 @@ testpaths = ["tests"]
 filterwarnings = [
     "",
 ]
+markers = [
+    "anthropic: marks tests for anthropic env only",
+    "mistralai: marks tests for mistral env only",
+]
 
 [tool.coverage.paths]
 source = ["src"]

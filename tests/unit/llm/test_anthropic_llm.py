@@ -22,6 +22,9 @@ import pytest
 from neo4j_graphrag.llm.anthropic_llm import AnthropicLLM
 
 
+pytestmark = pytest.mark.anthropic
+
+
 @pytest.fixture
 def mock_anthropic() -> Generator[MagicMock, None, None]:
     mock = MagicMock()
