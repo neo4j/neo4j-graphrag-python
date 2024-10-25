@@ -77,7 +77,7 @@ jobs:
           key: ${{ runner.os }}-venv-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
       - name: Install dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --no-cache --with dev
+        run: poetry install --no-interaction --no-cache --with dev --all-extras
       - name: Clear Poetry cache
         run: poetry cache clear --all .
       - name: Show disk usage after Poetry installation

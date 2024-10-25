@@ -15,21 +15,22 @@
 from __future__ import annotations
 
 import abc
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Iterable, Optional
 
 from ..exceptions import LLMGenerationError
 from .base import LLMInterface
 from .types import LLMResponse
 
-try:
+if TYPE_CHECKING:
     import openai
-except ImportError:
-    openai = None  # type: ignore
+    from openai.types.chat.chat_completion_message_param import (
+        ChatCompletionMessageParam,
+    )
 
 
 class BaseOpenAILLM(LLMInterface, abc.ABC):
-    client: Any
-    async_client: Any
+    client: openai.OpenAI
+    async_client: openai.AsyncOpenAI
 
     def __init__(
         self,
@@ -45,17 +46,20 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
             model_name (str):
             model_params (str): Parameters like temperature that will be passed to the model when text is sent to it
         """
-        if openai is None:
+        try:
+            import openai
+        except ImportError:
             raise ImportError(
                 "Could not import openai Python client. "
                 "Please install it with `pip install openai`."
             )
+        self.openai = openai
         super().__init__(model_name, model_params)
 
     def get_messages(
         self,
         input: str,
-    ) -> list[dict[str, str]]:
+    ) -> Iterable[ChatCompletionMessageParam]:
         return [
             {"role": "system", "content": input},
         ]
@@ -81,7 +85,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
             )
             content = response.choices[0].message.content or ""
             return LLMResponse(content=content)
-        except openai.OpenAIError as e:
+        except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
     async def ainvoke(self, input: str) -> LLMResponse:
@@ -105,7 +109,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
             )
             content = response.choices[0].message.content or ""
             return LLMResponse(content=content)
-        except openai.OpenAIError as e:
+        except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
 
@@ -126,8 +130,8 @@ class OpenAILLM(BaseOpenAILLM):
             kwargs: All other parameters will be passed to the openai.OpenAI init.
         """
         super().__init__(model_name, model_params)
-        self.client = openai.OpenAI(**kwargs)
-        self.async_client = openai.AsyncOpenAI(**kwargs)
+        self.client = self.openai.OpenAI(**kwargs)
+        self.async_client = self.openai.AsyncOpenAI(**kwargs)
 
 
 class AzureOpenAILLM(BaseOpenAILLM):
@@ -146,5 +150,5 @@ class AzureOpenAILLM(BaseOpenAILLM):
             kwargs: All other parameters will be passed to the openai.OpenAI init.
         """
         super().__init__(model_name, model_params)
-        self.client = openai.AzureOpenAI(**kwargs)
-        self.async_client = openai.AsyncAzureOpenAI(**kwargs)
+        self.client = self.openai.AzureOpenAI(**kwargs)
+        self.async_client = self.openai.AsyncAzureOpenAI(**kwargs)
