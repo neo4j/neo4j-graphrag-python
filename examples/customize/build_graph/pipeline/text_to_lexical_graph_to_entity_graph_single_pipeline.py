@@ -1,8 +1,7 @@
-"""In this example, we implement a single pipelines with two neo4j writer to
-deal with the lexical graph (Document and Chunks) and the entity graph (entities and
-relations extracted from the text)
+"""In this example, we set up a single pipeline with two Neo4j writers:
+ one for creating the lexical graph (Document and Chunks)
+ and another for creating the entity graph (entities and relations derived from the text).
 """
-
 from __future__ import annotations
 
 import asyncio
