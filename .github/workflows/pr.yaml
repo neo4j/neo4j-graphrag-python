@@ -89,7 +89,7 @@ jobs:
       - name: Set Python version for Poetry
         run: poetry env use python${{ matrix.python-version }}
       - name: Install dependencies
-        run: poetry install --with mistral
+        run: poetry install --with mistralai
       - name: Run unit tests and check coverage
         run: |
           poetry run coverage run -m pytest -k mistralai tests/unit
