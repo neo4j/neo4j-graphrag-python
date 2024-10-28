@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import warnings
 from typing import Any, Optional
 
 from neo4j_graphrag.filters import get_metadata_filter
@@ -201,6 +202,11 @@ def get_search_query(
         tuple[str, dict[str, Any]]: query and parameters
 
     """
+    warnings.warn(
+        "The default returned 'id' field in the search results will be renamed to 'node_id' in a future version.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     if search_type == SearchType.HYBRID:
         if filters:
             raise Exception("Filters are not supported with Hybrid Search")
