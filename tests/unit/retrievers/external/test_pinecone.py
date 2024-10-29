@@ -17,6 +17,9 @@ from unittest.mock import MagicMock
 
 import neo4j
 import pytest
+
+pytest.importorskip("pinecone", "Pinecone is not installed")
+
 from neo4j_graphrag.exceptions import RetrieverInitializationError
 from neo4j_graphrag.retrievers import PineconeNeo4jRetriever
 from neo4j_graphrag.retrievers.external.utils import get_match_query

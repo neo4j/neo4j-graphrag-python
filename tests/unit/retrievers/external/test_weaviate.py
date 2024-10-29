@@ -19,6 +19,9 @@ from unittest.mock import MagicMock
 
 import neo4j
 import pytest
+
+pytest.importorskip("weaviate", "Weaviate is not installed")
+
 from neo4j_graphrag.exceptions import RetrieverInitializationError
 from neo4j_graphrag.retrievers import WeaviateNeo4jRetriever
 from neo4j_graphrag.retrievers.external.utils import get_match_query

@@ -17,9 +17,14 @@ import sys
 from typing import Generator
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
-import anthropic
+try:
+    import anthropic
+except ImportError:
+    anthropic = None
 import pytest
 from neo4j_graphrag.llm.anthropic_llm import AnthropicLLM
+
+pytestmark = pytest.mark.anthropic
 
 
 @pytest.fixture

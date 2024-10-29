@@ -17,6 +17,8 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 from neo4j_graphrag.embeddings.vertexai import VertexAIEmbeddings
 
+pytestmark = pytest.mark.google
+
 
 @patch("neo4j_graphrag.embeddings.vertexai.vertexai", None)
 def test_vertexai_embedder_missing_dependency() -> None:
