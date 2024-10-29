@@ -17,6 +17,8 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 from neo4j_graphrag.embeddings.cohere import CohereEmbeddings
 
+pytestmark = pytest.mark.cohere
+
 
 @patch("neo4j_graphrag.embeddings.cohere.cohere", None)
 def test_cohere_embedder_missing_cohere_dependency() -> None:

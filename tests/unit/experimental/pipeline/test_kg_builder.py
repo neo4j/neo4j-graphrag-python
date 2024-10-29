@@ -18,11 +18,14 @@ from unittest.mock import MagicMock, Mock, patch
 import neo4j
 import pytest
 from neo4j_graphrag.embeddings import Embedder
-from neo4j_graphrag.experimental.components.entity_relation_extractor import OnError
-from neo4j_graphrag.experimental.components.schema import SchemaEntity, SchemaRelation
-from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
-from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
-from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
+try:
+    from neo4j_graphrag.experimental.components.entity_relation_extractor import OnError
+    from neo4j_graphrag.experimental.components.schema import SchemaEntity, SchemaRelation
+    from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
+    from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
+    from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
+except ImportError:
+    pass
 from neo4j_graphrag.llm.base import LLMInterface
 
 

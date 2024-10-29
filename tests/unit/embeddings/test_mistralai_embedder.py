@@ -17,6 +17,8 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 from neo4j_graphrag.embeddings import MistralAIEmbeddings
 
+pytestmark = pytest.mark.mistralai
+
 
 @patch("neo4j_graphrag.embeddings.mistral.Mistral", None)
 def test_mistralai_embedder_missing_dependency() -> None:

@@ -13,9 +13,14 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from unittest.mock import MagicMock, Mock, patch
-
-import openai
 import pytest
+
+pytestmark = pytest.mark.openai
+
+try:
+    import openai
+except ImportError:
+    pass
 from neo4j_graphrag.embeddings.openai import (
     AzureOpenAIEmbeddings,
     OpenAIEmbeddings,

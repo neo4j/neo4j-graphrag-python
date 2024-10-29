@@ -71,7 +71,7 @@ openai = ["openai"]
 mistralai = ["mistralai"]
 qdrant = ["qdrant-client"]
 kg_creation_tools = ["pygraphviz"]
-sentence-transformers = ["sentence-transformers"]
+sentence_transformers = ["sentence-transformers"]
 experimental = ["pypdf", "fsspec", "langchain-text-splitters", "pygraphviz", "llama-index"]
 examples = ["langchain-openai", "langchain-huggingface"]
 
@@ -86,7 +86,12 @@ filterwarnings = [
 ]
 markers = [
     "anthropic: marks tests for anthropic env only",
+    "cohere: marks tests for cohere env only",
     "mistralai: marks tests for mistral env only",
+    "sentence_transformers: marks tests for sentence_transformers env only",
+    "openai: marks tests for openai env only",
+    "vertexai: marks tests for vertexai env only",
+    "experimental: marks tests for experimental features",
 ]
 
 [tool.coverage.paths]

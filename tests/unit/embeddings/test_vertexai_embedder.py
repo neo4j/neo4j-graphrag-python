@@ -18,6 +18,9 @@ import pytest
 from neo4j_graphrag.embeddings.vertexai import VertexAIEmbeddings
 
 
+pytestmark = pytest.mark.vertexai
+
+
 @patch("neo4j_graphrag.embeddings.vertexai.vertexai", None)
 def test_vertexai_embedder_missing_dependency() -> None:
     with pytest.raises(ImportError):

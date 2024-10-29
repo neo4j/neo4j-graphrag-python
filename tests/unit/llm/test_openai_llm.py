@@ -14,7 +14,10 @@
 #  limitations under the License.
 from unittest.mock import MagicMock, Mock, patch
 
-import openai
+try:
+    import openai
+except ImportError:
+    openai = None
 import pytest
 from neo4j_graphrag.llm import LLMResponse
 from neo4j_graphrag.llm.openai_llm import AzureOpenAILLM, OpenAILLM

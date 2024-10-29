@@ -48,7 +48,7 @@ jobs:
     strategy:
       matrix:
         python-version: [ '3.9', '3.12' ]
-        vendor: ["anthropic", "mistralai"]
+        vendor: ["anthropic", "cohere", "mistralai", "openai", "sentence_transformers", "vertexai"]
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4

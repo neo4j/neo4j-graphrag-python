@@ -1,8 +1,13 @@
+import pytest
 from unittest.mock import MagicMock, Mock, patch
 
-import numpy as np
-import pytest
-import torch
+pytestmark = pytest.mark.sentence_transformers
+
+try:
+    import numpy as np
+    import torch
+except ImportError:
+    np = None
 from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.embeddings.sentence_transformers import (
     SentenceTransformerEmbeddings,
@@ -18,6 +23,7 @@ def get_mock_sentence_transformers() -> MagicMock:
     return mock
 
 
+@pytest.mark.skipif(np is None, reason="numpy is not installed")
 @patch("builtins.__import__")
 def test_initialization(mock_import: Mock) -> None:
     MockSentenceTransformer = get_mock_sentence_transformers()
@@ -27,6 +33,7 @@ def test_initialization(mock_import: Mock) -> None:
     assert isinstance(instance, Embedder)
 
 
+@pytest.mark.skipif(np is None, reason="numpy is not installed")
 @patch("builtins.__import__")
 def test_initialization_with_custom_model(mock_import: Mock) -> None:
     MockSentenceTransformer = get_mock_sentence_transformers()
@@ -36,6 +43,7 @@ def test_initialization_with_custom_model(mock_import: Mock) -> None:
     MockSentenceTransformer.SentenceTransformer.assert_called_with(custom_model)
 
 
+@pytest.mark.skipif(np is None, reason="numpy is not installed")
 @patch("builtins.__import__")
 def test_embed_query(mock_import: Mock) -> None:
     MockSentenceTransformer = get_mock_sentence_transformers()
