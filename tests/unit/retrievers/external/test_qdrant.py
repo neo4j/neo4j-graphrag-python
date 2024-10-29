@@ -24,6 +24,7 @@ from neo4j_graphrag.exceptions import RetrieverInitializationError
 from neo4j_graphrag.retrievers import QdrantNeo4jRetriever
 from neo4j_graphrag.retrievers.external.utils import get_match_query
 from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
+
 try:
     from qdrant_client import QdrantClient
     from qdrant_client.http.models import QueryResponse, ScoredPoint

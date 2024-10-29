@@ -18,9 +18,13 @@ from unittest.mock import MagicMock, Mock, patch
 import neo4j
 import pytest
 from neo4j_graphrag.embeddings import Embedder
+
 try:
     from neo4j_graphrag.experimental.components.entity_relation_extractor import OnError
-    from neo4j_graphrag.experimental.components.schema import SchemaEntity, SchemaRelation
+    from neo4j_graphrag.experimental.components.schema import (
+        SchemaEntity,
+        SchemaRelation,
+    )
     from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
     from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
     from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult

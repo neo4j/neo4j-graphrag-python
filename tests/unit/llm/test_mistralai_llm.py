@@ -20,7 +20,6 @@ from mistralai.models.sdkerror import SDKError
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm import LLMResponse, MistralAILLM
 
-
 pytestmark = pytest.mark.mistralai
 
 

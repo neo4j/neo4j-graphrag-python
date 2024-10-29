@@ -90,7 +90,7 @@ markers = [
     "mistralai: marks tests for mistral env only",
     "sentence_transformers: marks tests for sentence_transformers env only",
     "openai: marks tests for openai env only",
-    "vertexai: marks tests for vertexai env only",
+    "google: marks tests for vertexai env only",
     "experimental: marks tests for experimental features",
 ]
 

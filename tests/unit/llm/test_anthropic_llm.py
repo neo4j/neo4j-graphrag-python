@@ -24,7 +24,6 @@ except ImportError:
 import pytest
 from neo4j_graphrag.llm.anthropic_llm import AnthropicLLM
 
-
 pytestmark = pytest.mark.anthropic
 
 

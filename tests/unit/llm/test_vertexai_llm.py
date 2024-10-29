@@ -18,7 +18,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 import pytest
 from neo4j_graphrag.llm.vertexai_llm import VertexAILLM
 
-pytestmark = pytest.mark.vertexai
+pytestmark = pytest.mark.google
 
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel", None)

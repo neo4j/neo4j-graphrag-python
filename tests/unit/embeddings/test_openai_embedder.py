@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from unittest.mock import MagicMock, Mock, patch
+
 import pytest
 
 pytestmark = pytest.mark.openai
