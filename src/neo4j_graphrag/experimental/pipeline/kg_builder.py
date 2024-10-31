@@ -39,6 +39,7 @@ from neo4j_graphrag.experimental.components.schema import (
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
     FixedSizeSplitter,
 )
+from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
 from neo4j_graphrag.experimental.pipeline.pipeline import Pipeline, PipelineResult
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate
@@ -59,6 +60,7 @@ class SimpleKGPipelineConfig(BaseModel):
     on_error: OnError = OnError.RAISE
     prompt_template: Union[ERExtractionTemplate, str] = ERExtractionTemplate()
     perform_entity_resolution: bool = True
+    lexical_graph_config: Optional[LexicalGraphConfig] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -84,6 +86,7 @@ class SimpleKGPipeline:
         on_error (str): Error handling strategy for the Entity and relation extractor. Defaults to "IGNORE", where chunk will be ignored if extraction fails. Possible values: "RAISE" or "IGNORE".
         perform_entity_resolution (bool): Merge entities with same label and name. Default: True
         prompt_template (str): A custom prompt template to use for extraction.
+        lexical_graph_config (Optional[LexicalGraphConfig], optional): Lexical graph configuration to customize node labels and relationship types in the lexical graph.
     """
 
     def __init__(
@@ -101,6 +104,7 @@ class SimpleKGPipeline:
         on_error: str = "IGNORE",
         prompt_template: Union[ERExtractionTemplate, str] = ERExtractionTemplate(),
         perform_entity_resolution: bool = True,
+        lexical_graph_config: Optional[LexicalGraphConfig] = None,
     ):
         self.entities = [SchemaEntity(label=label) for label in entities or []]
         self.relations = [SchemaRelation(label=label) for label in relations or []]
@@ -127,6 +131,7 @@ class SimpleKGPipeline:
             prompt_template=prompt_template,
             embedder=embedder,
             perform_entity_resolution=perform_entity_resolution,
+            lexical_graph_config=lexical_graph_config,
         )
 
         self.from_pdf = config.from_pdf
@@ -141,6 +146,7 @@ class SimpleKGPipeline:
         )
         self.prompt_template = config.prompt_template
         self.perform_entity_resolution = config.perform_entity_resolution
+        self.lexical_graph_config = config.lexical_graph_config
 
         self.pipeline = self._build_pipeline()
 
@@ -154,6 +160,7 @@ class SimpleKGPipeline:
                 llm=self.llm,
                 on_error=self.on_error,
                 prompt_template=self.prompt_template,
+                lexical_graph_config=self.lexical_graph_config,
             ),
             "extractor",
         )

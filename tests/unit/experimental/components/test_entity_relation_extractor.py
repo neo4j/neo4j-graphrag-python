@@ -27,6 +27,7 @@ from neo4j_graphrag.experimental.components.entity_relation_extractor import (
 )
 from neo4j_graphrag.experimental.components.pdf_loader import DocumentInfo
 from neo4j_graphrag.experimental.components.types import (
+    LexicalGraphConfig,
     Neo4jGraph,
     TextChunk,
     TextChunks,
@@ -49,6 +50,28 @@ async def test_extractor_happy_path_no_entities_no_document() -> None:
     assert len(result.nodes) == 1
     assert result.nodes[0].label == "Chunk"
     assert result.relationships == []
+
+
+@pytest.mark.asyncio
+async def test_extractor_happy_path_with_lexical_graph_config() -> None:
+    llm = MagicMock(spec=LLMInterface)
+    llm.ainvoke.return_value = LLMResponse(content='{"nodes": [], "relationships": []}')
+
+    extractor = LLMEntityRelationExtractor(
+        llm=llm,
+        lexical_graph_config=LexicalGraphConfig(
+            document_node_label="testDocumentNode",
+            chunk_node_label="testChunkNode",
+        ),
+    )
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
+    document_info = DocumentInfo(path="path")
+    result = await extractor.run(chunks=chunks, document_info=document_info)
+
+    assert isinstance(result, Neo4jGraph)
+    # one Chunk node and one Document node
+    assert len(result.nodes) == 2
+    assert set(n.label for n in result.nodes) == {"testDocumentNode", "testChunkNode"}
 
 
 @pytest.mark.asyncio

@@ -20,6 +20,7 @@ import pytest
 from neo4j_graphrag.embeddings import Embedder
 from neo4j_graphrag.experimental.components.entity_relation_extractor import OnError
 from neo4j_graphrag.experimental.components.schema import SchemaEntity, SchemaRelation
+from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
@@ -316,3 +317,25 @@ def test_simple_kg_pipeline_no_entity_resolution(_: Mock) -> None:
     )
 
     assert "resolver" not in kg_builder.pipeline
+
+
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._get_version",
+    return_value=(5, 23, 0),
+)
+@pytest.mark.asyncio
+def test_simple_kg_pipeline_lexical_graph_config_attribute(_: Mock) -> None:
+    llm = MagicMock(spec=LLMInterface)
+    driver = MagicMock(spec=neo4j.Driver)
+    embedder = MagicMock(spec=Embedder)
+
+    lexical_graph_config = LexicalGraphConfig()
+    kg_builder = SimpleKGPipeline(
+        llm=llm,
+        driver=driver,
+        embedder=embedder,
+        on_error="IGNORE",
+        lexical_graph_config=lexical_graph_config,
+    )
+
+    assert kg_builder.lexical_graph_config == lexical_graph_config
