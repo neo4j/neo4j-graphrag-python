@@ -2,6 +2,9 @@
 
 ## Next
 
+### Added
+- Introduced optional lexical graph configuration for SimpleKGPipeline, enhancing flexibility in customizing node labels and relationship types in the lexical graph.
+
 ## 1.2.0
 
 ### Added
