@@ -23,7 +23,7 @@ def test_vector_search_basic() -> None:
     expected = (
         "CALL db.index.vector.queryNodes($vector_index_name, $top_k, $query_vector) "
         "YIELD node, score "
-        "RETURN node { .*, `None`: null } AS node, labels(node) AS nodeLabels, elementId(node) AS nodeId, elementId(node) AS id, score"
+        "RETURN node { .*, `None`: null } AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score"
     )
     result, params = get_search_query(SearchType.VECTOR)
     assert result.strip() == expected.strip()
@@ -45,7 +45,7 @@ def test_hybrid_search_basic() -> None:
         "RETURN n.node AS node, (n.score / ft_index_max_score) AS score "
         "} "
         "WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k "
-        "RETURN node { .*, `None`: null } AS node, labels(node) AS nodeLabels, elementId(node) AS nodeId, elementId(node) AS id, score"
+        "RETURN node { .*, `None`: null } AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score"
     )
     result, _ = get_search_query(SearchType.HYBRID)
     assert result.strip() == expected.strip()
@@ -56,7 +56,7 @@ def test_vector_search_with_properties() -> None:
     expected = (
         "CALL db.index.vector.queryNodes($vector_index_name, $top_k, $query_vector) "
         "YIELD node, score "
-        "RETURN node {.name, .age} AS node, labels(node) AS nodeLabels, elementId(node) AS nodeId, elementId(node) AS id, score"
+        "RETURN node {.name, .age} AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score"
     )
     result, _ = get_search_query(SearchType.VECTOR, return_properties=properties)
     assert result.strip() == expected.strip()
@@ -82,7 +82,7 @@ def test_vector_search_with_filters(_mock: Any) -> None:
         "WITH node, "
         "vector.similarity.cosine(node.`vector`, $query_vector) AS score "
         "ORDER BY score DESC LIMIT $top_k "
-        "RETURN node { .*, `vector`: null } AS node, labels(node) AS nodeLabels, elementId(node) AS nodeId, elementId(node) AS id, score"
+        "RETURN node { .*, `vector`: null } AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score"
     )
     result, params = get_search_query(
         SearchType.VECTOR,
@@ -108,7 +108,7 @@ def test_vector_search_with_params_from_filters(_mock: Any) -> None:
         "WITH node, "
         "vector.similarity.cosine(node.`vector`, $query_vector) AS score "
         "ORDER BY score DESC LIMIT $top_k "
-        "RETURN node { .*, `vector`: null } AS node, labels(node) AS nodeLabels, elementId(node) AS nodeId, elementId(node) AS id, score"
+        "RETURN node { .*, `vector`: null } AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score"
     )
     result, params = get_search_query(
         SearchType.VECTOR,
@@ -159,7 +159,7 @@ def test_hybrid_search_with_properties() -> None:
         "RETURN n.node AS node, (n.score / ft_index_max_score) AS score "
         "} "
         "WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k "
-        "RETURN node {.name, .age} AS node, labels(node) AS nodeLabels, elementId(node) AS nodeId, elementId(node) AS id, score"
+        "RETURN node {.name, .age} AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score"
     )
     result, _ = get_search_query(SearchType.HYBRID, return_properties=properties)
     assert result.strip() == expected.strip()
@@ -174,7 +174,7 @@ def test_get_query_tail_with_retrieval_query() -> None:
 
 def test_get_query_tail_with_properties() -> None:
     properties = ["name", "age"]
-    expected = "RETURN node {.name, .age} AS node, labels(node) AS nodeLabels, elementId(node) AS nodeId, elementId(node) AS id, score"
+    expected = "RETURN node {.name, .age} AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score"
     result = get_query_tail(return_properties=properties)
     assert result.strip() == expected.strip()
 
@@ -204,7 +204,7 @@ def test_get_query_tail_ordering_no_retrieval_query() -> None:
     properties = ["name", "age"]
     fallback = "HELLO"
 
-    expected = "RETURN node {.name, .age} AS node, labels(node) AS nodeLabels, elementId(node) AS nodeId, elementId(node) AS id, score"
+    expected = "RETURN node {.name, .age} AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score"
     result = get_query_tail(
         return_properties=properties,
         fallback_return=fallback,

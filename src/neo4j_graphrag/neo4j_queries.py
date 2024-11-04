@@ -203,7 +203,7 @@ def get_search_query(
 
     """
     warnings.warn(
-        "The default returned 'id' field in the search results will be removed. Please switch to using 'nodeId' instead.",
+        "The default returned 'id' field in the search results will be removed. Please switch to using 'elementId' instead.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -233,7 +233,7 @@ def get_search_query(
     query_tail = get_query_tail(
         retrieval_query,
         return_properties,
-        fallback_return=f"RETURN node {{ .*, `{embedding_node_property}`: null }} AS node, labels(node) AS nodeLabels, elementId(node) AS nodeId, elementId(node) AS id, score",
+        fallback_return=f"RETURN node {{ .*, `{embedding_node_property}`: null }} AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score",
     )
     return f"{query} {query_tail}", params
 
@@ -259,5 +259,5 @@ def get_query_tail(
         return retrieval_query
     if return_properties:
         return_properties_cypher = ", ".join([f".{prop}" for prop in return_properties])
-        return f"RETURN node {{{return_properties_cypher}}} AS node, labels(node) AS nodeLabels, elementId(node) AS nodeId, elementId(node) AS id, score"
+        return f"RETURN node {{{return_properties_cypher}}} AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score"
     return fallback_return if fallback_return else ""
