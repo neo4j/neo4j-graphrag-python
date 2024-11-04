@@ -177,7 +177,6 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
     Args:
         llm (LLMInterface): The language model to use for extraction.
         prompt_template (ERExtractionTemplate | str): A custom prompt template to use for extraction.
-        lexical_graph_config (Optional[LexicalGraphConfig], optional): Lexical graph configuration to customize node labels and relationship types in the lexical graph.
         create_lexical_graph (bool): Whether to include the text chunks in the graph in addition to the extracted entities and relations. Defaults to True.
         on_error (OnError): What to do when an error occurs during extraction. Defaults to raising an error.
         max_concurrency (int): The maximum number of concurrent tasks which can be used to make requests to the LLM.
@@ -202,7 +201,6 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         self,
         llm: LLMInterface,
         prompt_template: ERExtractionTemplate | str = ERExtractionTemplate(),
-        lexical_graph_config: Optional[LexicalGraphConfig] = None,
         create_lexical_graph: bool = True,
         on_error: OnError = OnError.RAISE,
         max_concurrency: int = 5,
@@ -215,7 +213,6 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         else:
             template = prompt_template
         self.prompt_template = template
-        self.lexical_graph_config = lexical_graph_config
 
     async def extract_for_chunk(
         self, schema: SchemaConfig, examples: str, chunk: TextChunk
@@ -337,11 +334,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         lexical_graph_builder = None
         lexical_graph = None
         if self.create_lexical_graph:
-            config = (
-                lexical_graph_config
-                or self.lexical_graph_config
-                or LexicalGraphConfig()
-            )
+            config = lexical_graph_config or LexicalGraphConfig()
             lexical_graph_builder = LexicalGraphBuilder(config=config)
             lexical_graph_result = await lexical_graph_builder.run(
                 text_chunks=chunks, document_info=document_info

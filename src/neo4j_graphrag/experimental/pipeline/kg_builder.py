@@ -160,7 +160,6 @@ class SimpleKGPipeline:
                 llm=self.llm,
                 on_error=self.on_error,
                 prompt_template=self.prompt_template,
-                lexical_graph_config=self.lexical_graph_config,
             ),
             "extractor",
         )
@@ -258,5 +257,10 @@ class SimpleKGPipeline:
             pipe_inputs["pdf_loader"] = {"filepath": file_path}
         else:
             pipe_inputs["splitter"] = {"text": text}
+
+        if self.lexical_graph_config:
+            pipe_inputs["extractor"] = {
+                "lexical_graph_config": self.lexical_graph_config
+            }
 
         return pipe_inputs
