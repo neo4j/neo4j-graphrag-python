@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Union, Sequence
 
 import neo4j
 from pydantic import BaseModel, ConfigDict, Field
@@ -81,14 +81,12 @@ class SimpleKGPipeline:
         entities (Optional[List[Union[str, dict[str, str], SchemaEntity]]]): A list of either:
 
             - str: entity labels
-            - dict: with label and description keys
-            - SchemaEntity
+            - dict: following the SchemaEntity schema, ie with label, description and properties keys
 
         relations (Optional[List[Union[str, dict[str, str], SchemaRelation]]]): A list of either:
 
             - str: relation label
-            - dict: with label and description keys
-            - SchemaRelation
+            - dict: following the SchemaRelation schema, ie with label, description and properties keys
 
         potential_schema (Optional[List[tuple]]): A list of potential schema relationships.
         from_pdf (bool): Determines whether to include the PdfLoader in the pipeline.
@@ -108,8 +106,8 @@ class SimpleKGPipeline:
         llm: LLMInterface,
         driver: neo4j.Driver,
         embedder: Embedder,
-        entities: Optional[List[EntityInputType]] = None,
-        relations: Optional[List[RelationInputType]] = None,
+        entities: Optional[Sequence[EntityInputType]] = None,
+        relations: Optional[Sequence[RelationInputType]] = None,
         potential_schema: Optional[List[tuple[str, str, str]]] = None,
         from_pdf: bool = True,
         text_splitter: Optional[Any] = None,

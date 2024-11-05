@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
-
+from typing import Any, Union
 from pydantic import BaseModel, ConfigDict
 
 from neo4j_graphrag.experimental.pipeline.component import Component
