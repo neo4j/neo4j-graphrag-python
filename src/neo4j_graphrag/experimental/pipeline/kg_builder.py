@@ -42,6 +42,10 @@ from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter i
 from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
 from neo4j_graphrag.experimental.pipeline.pipeline import Pipeline, PipelineResult
+from neo4j_graphrag.experimental.pipeline.types import (
+    EntityInputType,
+    RelationInputType,
+)
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 from neo4j_graphrag.llm.base import LLMInterface
 
@@ -63,10 +67,6 @@ class SimpleKGPipelineConfig(BaseModel):
     lexical_graph_config: Optional[LexicalGraphConfig] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
-
-
-EntityInputType = Union[str, dict[str, Any]]
-RelationInputType = Union[str, dict[str, Any]]
 
 
 class SimpleKGPipeline:

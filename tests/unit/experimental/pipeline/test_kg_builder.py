@@ -19,8 +19,11 @@ import neo4j
 import pytest
 from neo4j_graphrag.embeddings import Embedder
 from neo4j_graphrag.experimental.components.entity_relation_extractor import OnError
-from neo4j_graphrag.experimental.components.schema import SchemaEntity, SchemaRelation, \
-    SchemaProperty
+from neo4j_graphrag.experimental.components.schema import (
+    SchemaEntity,
+    SchemaProperty,
+    SchemaRelation,
+)
 from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
@@ -382,45 +385,45 @@ async def test_knowledge_graph_builder_with_lexical_graph_config(_: Mock) -> Non
         }
 
 
-def test_knowledge_graph_builder_to_schema_entity_method():
-    assert SimpleKGPipeline.to_schema_entity("EntityType") == SchemaEntity(label="EntityType")
-    assert SimpleKGPipeline.to_schema_entity({
-        "label": "EntityType"
-    }) == SchemaEntity(label="EntityType")
-    assert SimpleKGPipeline.to_schema_entity({
-        "label": "EntityType",
-        "description": "A special entity"
-    }) == SchemaEntity(label="EntityType", description="A special entity")
-    assert SimpleKGPipeline.to_schema_entity({
-        "label": "EntityType",
-        "properties": []
-    }) == SchemaEntity(label="EntityType")
-    assert SimpleKGPipeline.to_schema_entity({
-        "label": "EntityType",
-        "properties": [{"name": "entityProperty", "type": "DATE"}]
-    }) == SchemaEntity(
+def test_knowledge_graph_builder_to_schema_entity_method() -> None:
+    assert SimpleKGPipeline.to_schema_entity("EntityType") == SchemaEntity(
+        label="EntityType"
+    )
+    assert SimpleKGPipeline.to_schema_entity({"label": "EntityType"}) == SchemaEntity(
+        label="EntityType"
+    )
+    assert SimpleKGPipeline.to_schema_entity(
+        {"label": "EntityType", "description": "A special entity"}
+    ) == SchemaEntity(label="EntityType", description="A special entity")
+    assert SimpleKGPipeline.to_schema_entity(
+        {"label": "EntityType", "properties": []}
+    ) == SchemaEntity(label="EntityType")
+    assert SimpleKGPipeline.to_schema_entity(
+        {
+            "label": "EntityType",
+            "properties": [{"name": "entityProperty", "type": "DATE"}],
+        }
+    ) == SchemaEntity(
         label="EntityType",
-        properties=[SchemaProperty(name="entityProperty", type="DATE")]
+        properties=[SchemaProperty(name="entityProperty", type="DATE")],
     )
 
 
-def test_knowledge_graph_builder_to_schema_relation_method():
-    assert SimpleKGPipeline.to_schema_relation("REL_TYPE") == SchemaRelation(label="REL_TYPE")
-    assert SimpleKGPipeline.to_schema_relation({
-        "label": "REL_TYPE"
-    }) == SchemaRelation(label="REL_TYPE")
-    assert SimpleKGPipeline.to_schema_relation({
-        "label": "REL_TYPE",
-        "description": "A rel type"
-    }) == SchemaRelation(label="REL_TYPE", description="A rel type")
-    assert SimpleKGPipeline.to_schema_relation({
-        "label": "REL_TYPE",
-        "properties": []
-    }) == SchemaRelation(label="REL_TYPE")
-    assert SimpleKGPipeline.to_schema_relation({
-        "label": "REL_TYPE",
-        "properties": [{"name": "relProperty", "type": "DATE"}]
-    }) == SchemaRelation(
-        label="REL_TYPE",
-        properties=[SchemaProperty(name="relProperty", type="DATE")]
+def test_knowledge_graph_builder_to_schema_relation_method() -> None:
+    assert SimpleKGPipeline.to_schema_relation("REL_TYPE") == SchemaRelation(
+        label="REL_TYPE"
+    )
+    assert SimpleKGPipeline.to_schema_relation({"label": "REL_TYPE"}) == SchemaRelation(
+        label="REL_TYPE"
+    )
+    assert SimpleKGPipeline.to_schema_relation(
+        {"label": "REL_TYPE", "description": "A rel type"}
+    ) == SchemaRelation(label="REL_TYPE", description="A rel type")
+    assert SimpleKGPipeline.to_schema_relation(
+        {"label": "REL_TYPE", "properties": []}
+    ) == SchemaRelation(label="REL_TYPE")
+    assert SimpleKGPipeline.to_schema_relation(
+        {"label": "REL_TYPE", "properties": [{"name": "relProperty", "type": "DATE"}]}
+    ) == SchemaRelation(
+        label="REL_TYPE", properties=[SchemaProperty(name="relProperty", type="DATE")]
     )
