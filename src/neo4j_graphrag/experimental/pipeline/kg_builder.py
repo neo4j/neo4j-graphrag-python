@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Union, Sequence
+from typing import Any, List, Optional, Sequence, Union
 
 import neo4j
 from pydantic import BaseModel, ConfigDict, Field
