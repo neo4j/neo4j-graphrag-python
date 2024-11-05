@@ -65,8 +65,8 @@ class SimpleKGPipelineConfig(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
-EntityInputType = Union[str, dict[str, str], SchemaEntity]
-RelationInputType = Union[str, dict[str, str], SchemaRelation]
+EntityInputType = Union[str, dict[str, Any]]
+RelationInputType = Union[str, dict[str, Any]]
 
 
 class SimpleKGPipeline:
@@ -166,16 +166,12 @@ class SimpleKGPipeline:
 
     @staticmethod
     def to_schema_entity(entity: EntityInputType) -> SchemaEntity:
-        if isinstance(entity, SchemaEntity):
-            return entity
         if isinstance(entity, dict):
             return SchemaEntity(**entity)
         return SchemaEntity(label=entity)
 
     @staticmethod
     def to_schema_relation(relation: RelationInputType) -> SchemaRelation:
-        if isinstance(relation, SchemaRelation):
-            return relation
         if isinstance(relation, dict):
             return SchemaRelation(**relation)
         return SchemaRelation(label=relation)
