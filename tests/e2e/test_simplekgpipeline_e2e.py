@@ -20,6 +20,7 @@ from unittest.mock import MagicMock
 import neo4j
 import pytest
 from neo4j_graphrag.embeddings.base import Embedder
+from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.llm import LLMInterface, LLMResponse
 
@@ -111,6 +112,11 @@ async def test_pipeline_builder_happy_path(
         ("ORGANIZATION", "LED_BY", "PERSON"),
     ]
 
+    # Additional arguments
+    lexical_graph_config = LexicalGraphConfig(chunk_node_label="chunkNodeLabel")
+    from_pdf = False
+    on_error = "RAISE"
+
     # Create an instance of the SimpleKGPipeline
     kg_builder_text = SimpleKGPipeline(
         llm=llm,
@@ -119,8 +125,9 @@ async def test_pipeline_builder_happy_path(
         entities=entities,
         relations=relations,
         potential_schema=potential_schema,
-        from_pdf=False,
-        on_error="RAISE",
+        from_pdf=from_pdf,
+        on_error=on_error,
+        lexical_graph_config=lexical_graph_config,
     )
 
     # Run the knowledge graph building process with text input
