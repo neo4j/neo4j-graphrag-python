@@ -21,12 +21,41 @@ DATABASE = "neo4j"
 
 # Text to process
 TEXT = """The son of Duke Leto Atreides and the Lady Jessica, Paul is the heir of House Atreides,
-an aristocratic family that rules the planet Caladan."""
+an aristocratic family that rules the planet Caladan, the rainy planet, since 10191."""
 
 # Instantiate Entity and Relation objects. This defines the
 # entities and relations the LLM will be looking for in the text.
-ENTITIES = ["Person", "House", "Planet"]
-RELATIONS = ["PARENT_OF", "HEIR_OF", "RULES"]
+ENTITIES = [
+    # entities can be defined with a simple label...
+    "Person",
+    # ... or with a dict if more details are needed,
+    # such as a description:
+    {
+        "label": "House",
+        "description": "Family the person belongs to"
+    },
+    # or a list of properties the LLM will try to attach to the entity:
+    {
+        "label": "Planet",
+        "properties": [
+            {"name": "weather", "type": "STRING"}
+        ]
+    }
+]
+# same thing for relationships:
+RELATIONS = [
+    "PARENT_OF",
+    {
+        "label": "HEIR_OF",
+        "description": "Used for inheritor relationship between father and sons",
+    },
+    {
+        "label": "RULES",
+        "properties": [
+            {"name": "fromYear", "type": "INTEGER"}
+        ]
+    }
+]
 POTENTIAL_SCHEMA = [
     ("Person", "PARENT_OF", "Person"),
     ("Person", "HEIR_OF", "House"),
