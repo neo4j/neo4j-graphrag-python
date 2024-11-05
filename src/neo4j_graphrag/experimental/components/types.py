@@ -103,3 +103,38 @@ class Neo4jGraph(DataModel):
 class ResolutionStats(DataModel):
     number_of_nodes_to_resolve: int
     number_of_created_nodes: Optional[int] = None
+
+
+DEFAULT_DOCUMENT_NODE_LABEL = "Document"
+DEFAULT_CHUNK_NODE_LABEL = "Chunk"
+DEFAULT_CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE = "FROM_DOCUMENT"
+DEFAULT_NEXT_CHUNK_RELATIONSHIP_TYPE = "NEXT_CHUNK"
+DEFAULT_NODE_TO_CHUNK_RELATIONSHIP_TYPE = "FROM_CHUNK"
+DEFAULT_CHUNK_INDEX_PROPERTY = "index"
+DEFAULT_CHUNK_TEXT_PROPERTY = "text"
+DEFAULT_CHUNK_EMBEDDING_PROPERTY = "embedding"
+
+
+class LexicalGraphConfig(BaseModel):
+    """Configure all labels and property names in the lexical graph."""
+
+    id_prefix: str = ""
+    document_node_label: str = DEFAULT_DOCUMENT_NODE_LABEL
+    chunk_node_label: str = DEFAULT_CHUNK_NODE_LABEL
+    chunk_to_document_relationship_type: str = (
+        DEFAULT_CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE
+    )
+    next_chunk_relationship_type: str = DEFAULT_NEXT_CHUNK_RELATIONSHIP_TYPE
+    node_to_chunk_relationship_type: str = DEFAULT_NODE_TO_CHUNK_RELATIONSHIP_TYPE
+    chunk_index_property: str = DEFAULT_CHUNK_INDEX_PROPERTY
+    chunk_text_property: str = DEFAULT_CHUNK_TEXT_PROPERTY
+    chunk_embedding_property: str = DEFAULT_CHUNK_EMBEDDING_PROPERTY
+
+    @property
+    def lexical_graph_node_labels(self) -> tuple[str, ...]:
+        return self.document_node_label, self.chunk_node_label
+
+
+class GraphResult(DataModel):
+    graph: Neo4jGraph
+    config: LexicalGraphConfig

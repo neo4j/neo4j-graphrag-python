@@ -76,7 +76,7 @@ SchemaEntity
 SchemaRelation
 ==============
 
-.. autoclass:: neo4j_graphrag.experimental.components.schema.SchemaEntity
+.. autoclass:: neo4j_graphrag.experimental.components.schema.SchemaRelation
 
 SchemaConfig
 ============

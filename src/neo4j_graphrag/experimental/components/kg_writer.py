@@ -14,8 +14,6 @@
 #  limitations under the License.
 from __future__ import annotations
 
-import asyncio
-import inspect
 import logging
 from abc import abstractmethod
 from typing import Any, Generator, Literal, Optional
@@ -23,17 +21,19 @@ from typing import Any, Generator, Literal, Optional
 import neo4j
 from pydantic import validate_call
 
-from neo4j_graphrag.experimental.components.entity_relation_extractor import (
-    CHUNK_NODE_LABEL,
-    DOCUMENT_NODE_LABEL,
-)
 from neo4j_graphrag.experimental.components.types import (
+    LexicalGraphConfig,
     Neo4jGraph,
     Neo4jNode,
     Neo4jRelationship,
 )
 from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
-from neo4j_graphrag.neo4j_queries import UPSERT_NODE_QUERY, UPSERT_RELATIONSHIP_QUERY
+from neo4j_graphrag.neo4j_queries import (
+    UPSERT_NODE_QUERY,
+    UPSERT_NODE_QUERY_VARIABLE_SCOPE_CLAUSE,
+    UPSERT_RELATIONSHIP_QUERY,
+    UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -64,12 +64,17 @@ class KGWriter(Component):
 
     @abstractmethod
     @validate_call
-    async def run(self, graph: Neo4jGraph) -> KGWriterModel:
+    async def run(
+        self,
+        graph: Neo4jGraph,
+        lexical_graph_config: LexicalGraphConfig = LexicalGraphConfig(),
+    ) -> KGWriterModel:
         """
         Writes the graph to a data store.
 
         Args:
             graph (Neo4jGraph): The knowledge graph to write to the data store.
+            lexical_graph_config (LexicalGraphConfig): Node labels and relationship types in the lexical graph.
         """
         pass
 
@@ -80,13 +85,13 @@ class Neo4jWriter(KGWriter):
     Args:
         driver (neo4j.driver): The Neo4j driver to connect to the database.
         neo4j_database (Optional[str]): The name of the Neo4j database to write to. Defaults to 'neo4j' if not provided.
-        max_concurrency (int): The maximum number of concurrent tasks which can be used to make requests to the LLM.
+        batch_size (int): The number of nodes or relationships to write to the database in a batch. Defaults to 1000.
 
     Example:
 
     .. code-block:: python
 
-        from neo4j import AsyncGraphDatabase
+        from neo4j import GraphDatabase
         from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
         from neo4j_graphrag.experimental.pipeline import Pipeline
 
@@ -94,7 +99,7 @@ class Neo4jWriter(KGWriter):
         AUTH = ("neo4j", "password")
         DATABASE = "neo4j"
 
-        driver = AsyncGraphDatabase.driver(URI, auth=AUTH, database=DATABASE)
+        driver = GraphDatabase.driver(URI, auth=AUTH, database=DATABASE)
         writer = Neo4jWriter(driver=driver, neo4j_database=DATABASE)
 
         pipeline = Pipeline()
@@ -104,15 +109,14 @@ class Neo4jWriter(KGWriter):
 
     def __init__(
         self,
-        driver: neo4j.driver,
+        driver: neo4j.Driver,
         neo4j_database: Optional[str] = None,
         batch_size: int = 1000,
-        max_concurrency: int = 5,
     ):
         self.driver = driver
         self.neo4j_database = neo4j_database
         self.batch_size = batch_size
-        self.max_concurrency = max_concurrency
+        self.is_version_5_23_or_above = self._check_if_version_5_23_or_above()
 
     def _db_setup(self) -> None:
         # create index on __Entity__.id
@@ -121,47 +125,58 @@ class Neo4jWriter(KGWriter):
             "CREATE INDEX __entity__id IF NOT EXISTS  FOR (n:__KGBuilder__) ON (n.id)"
         )
 
-    async def _async_db_setup(self) -> None:
-        # create index on __Entity__.id
-        # used when creating the relationships
-        await self.driver.execute_query(
-            "CREATE INDEX __entity__id IF NOT EXISTS  FOR (n:__KGBuilder__) ON (n.id)"
-        )
-
     @staticmethod
-    def _nodes_to_rows(nodes: list[Neo4jNode]) -> list[dict[str, Any]]:
+    def _nodes_to_rows(
+        nodes: list[Neo4jNode], lexical_graph_config: LexicalGraphConfig
+    ) -> list[dict[str, Any]]:
         rows = []
         for node in nodes:
             labels = [node.label]
-            if node.label not in (CHUNK_NODE_LABEL, DOCUMENT_NODE_LABEL):
+            if node.label not in lexical_graph_config.lexical_graph_node_labels:
                 labels.append("__Entity__")
             row = node.model_dump()
             row["labels"] = labels
             rows.append(row)
         return rows
 
-    def _upsert_nodes(self, nodes: list[Neo4jNode]) -> None:
+    def _upsert_nodes(
+        self, nodes: list[Neo4jNode], lexical_graph_config: LexicalGraphConfig
+    ) -> None:
         """Upserts a single node into the Neo4j database."
 
         Args:
             nodes (list[Neo4jNode]): The nodes batch to upsert into the database.
         """
-        parameters = {"rows": self._nodes_to_rows(nodes)}
-        self.driver.execute_query(UPSERT_NODE_QUERY, parameters_=parameters)
+        parameters = {"rows": self._nodes_to_rows(nodes, lexical_graph_config)}
+        if self.is_version_5_23_or_above:
+            self.driver.execute_query(
+                UPSERT_NODE_QUERY_VARIABLE_SCOPE_CLAUSE, parameters_=parameters
+            )
+        else:
+            self.driver.execute_query(UPSERT_NODE_QUERY, parameters_=parameters)
 
-    async def _async_upsert_nodes(
-        self,
-        nodes: list[Neo4jNode],
-        sem: asyncio.Semaphore,
-    ) -> None:
-        """Asynchronously upserts a single node into the Neo4j database."
+    def _get_version(self) -> tuple[int, ...]:
+        records, _, _ = self.driver.execute_query(
+            "CALL dbms.components()", database_=self.neo4j_database
+        )
+        version = records[0]["versions"][0]
+        # Drop everything after the '-' first
+        version_main, *_ = version.split("-")
+        # Convert each number between '.' into int
+        version_tuple = tuple(map(int, version_main.split(".")))
+        # If no patch version, consider it's 0
+        if len(version_tuple) < 3:
+            version_tuple = (*version_tuple, 0)
+        return version_tuple
 
-        Args:
-            nodes (list[Neo4jNode]): The nodes batch to upsert into the database.
+    def _check_if_version_5_23_or_above(self) -> bool:
         """
-        async with sem:
-            parameters = {"rows": self._nodes_to_rows(nodes)}
-            await self.driver.execute_query(UPSERT_NODE_QUERY, parameters_=parameters)
+        Check if the connected Neo4j database version supports the required features.
+
+        Sets a flag if the connected Neo4j version is 5.23 or above.
+        """
+        version_tuple = self._get_version()
+        return version_tuple >= (5, 23, 0)
 
     def _upsert_relationships(self, rels: list[Neo4jRelationship]) -> None:
         """Upserts a single relationship into the Neo4j database.
@@ -170,58 +185,33 @@ class Neo4jWriter(KGWriter):
             rels (list[Neo4jRelationship]): The relationships batch to upsert into the database.
         """
         parameters = {"rows": [rel.model_dump() for rel in rels]}
-        self.driver.execute_query(UPSERT_RELATIONSHIP_QUERY, parameters_=parameters)
-
-    async def _async_upsert_relationships(
-        self, rels: list[Neo4jRelationship], sem: asyncio.Semaphore
-    ) -> None:
-        """Asynchronously upserts a single relationship into the Neo4j database.
-
-        Args:
-            rels (list[Neo4jRelationship]): The relationships batch to upsert into the database.
-        """
-        async with sem:
-            parameters = {"rows": [rel.model_dump() for rel in rels]}
-            await self.driver.execute_query(
-                UPSERT_RELATIONSHIP_QUERY, parameters_=parameters
+        if self.is_version_5_23_or_above:
+            self.driver.execute_query(
+                UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE, parameters_=parameters
             )
+        else:
+            self.driver.execute_query(UPSERT_RELATIONSHIP_QUERY, parameters_=parameters)
 
     @validate_call
-    async def run(self, graph: Neo4jGraph) -> KGWriterModel:
+    async def run(
+        self,
+        graph: Neo4jGraph,
+        lexical_graph_config: LexicalGraphConfig = LexicalGraphConfig(),
+    ) -> KGWriterModel:
         """Upserts a knowledge graph into a Neo4j database.
 
         Args:
             graph (Neo4jGraph): The knowledge graph to upsert into the database.
+            lexical_graph_config (LexicalGraphConfig):
         """
-        # we disable the notification logger to get rid of the deprecation
-        # warning about Cypher subqueries. Once the queries are updated
-        # for Neo4j 5.23, we can remove this line and the 'finally' block
-        notification_logger = logging.getLogger("neo4j.notifications")
-        notification_level = notification_logger.level
-        notification_logger.setLevel(logging.ERROR)
         try:
-            if inspect.iscoroutinefunction(self.driver.execute_query):
-                await self._async_db_setup()
-                sem = asyncio.Semaphore(self.max_concurrency)
-                node_tasks = [
-                    self._async_upsert_nodes(batch, sem)
-                    for batch in batched(graph.nodes, self.batch_size)
-                ]
-                await asyncio.gather(*node_tasks)
+            self._db_setup()
 
-                rel_tasks = [
-                    self._async_upsert_relationships(batch, sem)
-                    for batch in batched(graph.relationships, self.batch_size)
-                ]
-                await asyncio.gather(*rel_tasks)
-            else:
-                self._db_setup()
+            for batch in batched(graph.nodes, self.batch_size):
+                self._upsert_nodes(batch, lexical_graph_config)
 
-                for batch in batched(graph.nodes, self.batch_size):
-                    self._upsert_nodes(batch)
-
-                for batch in batched(graph.relationships, self.batch_size):
-                    self._upsert_relationships(batch)
+            for batch in batched(graph.relationships, self.batch_size):
+                self._upsert_relationships(batch)
 
             return KGWriterModel(
                 status="SUCCESS",
@@ -233,5 +223,3 @@ class Neo4jWriter(KGWriter):
         except neo4j.exceptions.ClientError as e:
             logger.exception(e)
             return KGWriterModel(status="FAILURE", metadata={"error": str(e)})
-        finally:
-            notification_logger.setLevel(notification_level)

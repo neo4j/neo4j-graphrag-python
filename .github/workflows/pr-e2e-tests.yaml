@@ -16,10 +16,8 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.9', '3.12']
-        neo4j-version:
-          - 5
-        neo4j-edition:
-          - enterprise
+        neo4j-tag:
+          - 'latest'
     services:
       t2v-transformers:
         image: cr.weaviate.io/semitechnologies/transformers-inference:sentence-transformers-all-MiniLM-L6-v2-onnx
@@ -37,7 +35,7 @@ jobs:
           - 8080:8080
           - 50051:50051
       neo4j:
-        image: neo4j:${{ matrix.neo4j-version }}-${{ matrix.neo4j-edition }}
+        image: neo4j:${{ matrix.neo4j-tag }}
         env:
           NEO4J_AUTH: neo4j/password
           NEO4J_ACCEPT_LICENSE_AGREEMENT: 'eval'
@@ -45,6 +43,10 @@ jobs:
         ports:
           - 7687:7687
           - 7474:7474
+      qdrant:
+        image: qdrant/qdrant
+        ports:
+          - 6333:6333
 
     steps:
       - name: Install graphviz package
@@ -75,7 +77,7 @@ jobs:
           key: ${{ runner.os }}-venv-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
       - name: Install dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --no-cache --with dev
+        run: poetry install --no-interaction --no-cache --with dev --all-extras
       - name: Clear Poetry cache
         run: poetry cache clear --all .
       - name: Show disk usage after Poetry installation
@@ -89,7 +91,7 @@ jobs:
       - name: Run tests
         shell: bash
         run: |
-          if [[ "${{ matrix.neo4j-edition }}" == "community" ]]; then
+          if [[ "${{ matrix.neo4j-tag }}" == "latest" || "${{ matrix.neo4j-tag }}" == *-community ]]; then
               poetry run pytest -m 'not enterprise_only' ./tests/e2e
           else
               poetry run pytest ./tests/e2e

@@ -2,6 +2,35 @@
 
 ## Next
 
+### Added
+- Introduced optional lexical graph configuration for SimpleKGPipeline, enhancing flexibility in customizing node labels and relationship types in the lexical graph.
+
+## 1.2.0
+
+### Added
+- Made `relations` and `potential_schema` optional in `SchemaBuilder`.
+- Added a check to prevent the use of deprecated Cypher syntax for Neo4j versions 5.23.0 and above.
+- Added a `LexicalGraphBuilder` component to enable the import of the lexical graph (document, chunks) without performing entity and relation extraction.
+- Added a `Neo4jChunkReader` component to be able to read chunk text from the database.
+
+### Changed
+- Vector and Hybrid retrievers used with `return_properties` now also return the node labels (`nodeLabels`) and the node's element ID (`id`).
+- `HybridRetriever` now filters out the embedding property index in `self.vector_index_name` from the retriever result by default.
+- Removed support for neo4j.AsyncDriver in the KG creation pipeline, affecting Neo4jWriter and related components.
+- Updated examples and unit tests to reflect the removal of async driver support.
+
+### Fixed
+- Resolved issue with `AzureOpenAIEmbeddings` incorrectly inheriting from `OpenAIEmbeddings`, now inherits from `BaseOpenAIEmbeddings`.
+
+## 1.1.0
+
+### Added
+- Introduced a `fail_if_exist` option to index creation functions to control behavior when an index already exists.
+- Added Qdrant retriever in neo4j_graphrag.retrievers.
+
+### Changed
+- Comprehensive rewrite of the README to improve clarity and provide detailed usage examples.
+
 ## 1.0.0
 
 ### Fixed
@@ -35,6 +64,7 @@
 - Added support for Cohere LLM and embeddings - added optional dependency to `cohere`.
 - Added support for Anthropic LLM - added optional dependency to `anthropic`.
 - Added support for MistralAI LLM - added optional dependency to `mistralai`.
+- Added support for Qdrant - added optional dependency to `qdrant-client`.
 
 ### Fixed
 - Resolved import issue with the Vertex AI Embeddings class.
@@ -81,7 +111,8 @@
 ### IMPORTANT NOTICE
 - The `neo4j-genai` package is now deprecated. Users are advised to switch to the new package `neo4j-graphrag`.
 ### Added
-- Ability to visualise pipeline with `my_pipeline.draw("pipeline.png")`
+- Ability to visualise pipeline with `my_pipeline.draw("pipeline.png")`.
+- `LexicalGraphBuilder` component to create the lexical graph without entity-relation extraction.
 
 ### Fixed
 - Pipelines now return correct results when the same pipeline is run in parallel.

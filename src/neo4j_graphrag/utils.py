@@ -14,10 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
-import inspect
-from typing import Any, List, Optional, Tuple, Union
-
-import neo4j
+from typing import Optional
 
 
 def validate_search_query_input(
@@ -25,27 +22,3 @@ def validate_search_query_input(
 ) -> None:
     if not (bool(query_vector) ^ bool(query_text)):
         raise ValueError("You must provide exactly one of query_vector or query_text.")
-
-
-async def execute_query(
-    driver: Union[neo4j.Driver, neo4j.AsyncDriver], query: str, **kwargs: Any
-) -> list[neo4j.Record]:
-    if inspect.iscoroutinefunction(driver.execute_query):
-        records, _, _ = await driver.execute_query(query, **kwargs)
-        return records  # type: ignore[no-any-return]
-    # ignoring type because mypy complains about coroutine
-    # but we're sure at this stage we do not have a coroutine anymore
-    records, _, _ = driver.execute_query(query, **kwargs)  # type: ignore[misc]
-    return records  # type: ignore[no-any-return]
-
-
-def potential_schema_to_entity_and_relation_list(
-    potential_schema: List[Tuple[str, str, str]],
-) -> Tuple[List[str], List[str]]:
-    entities = set()
-    relations = set()
-    for source, rel, target in potential_schema:
-        entities.add(source)
-        entities.add(target)
-        relations.add(rel)
-    return list(entities), list(relations)

@@ -16,12 +16,13 @@ unstructured data.
 Pipeline Structure
 ******************
 
-A Knowledge Graph (KG) construction pipeline requires a few components:
+A Knowledge Graph (KG) construction pipeline requires a few components (some of the below components are optional):
 
 - **Document parser**: extract text from files (PDFs, ...).
 - **Document chunker**: split the text into smaller pieces of text, manageable by the LLM context window (token limit).
 - **Chunk embedder** (optional): compute the chunk embeddings.
 - **Schema builder**: provide a schema to ground the LLM extracted entities and relations and obtain an easily navigable KG.
+- **LexicalGraphBuilder**: build the lexical graph (Document, Chunk and their relationships) (optional).
 - **Entity and relation extractor**: extract relevant entities and relations from the text.
 - **Knowledge Graph writer**: save the identified entities and relations.
 - **Entity resolver**: merge similar entities into a single node.
@@ -33,7 +34,7 @@ A Knowledge Graph (KG) construction pipeline requires a few components:
 This package contains the interface and implementations for each of these components, which are detailed in the following sections.
 
 To see an end-to-end example of a Knowledge Graph construction pipeline,
-refer to `this example <https://github.com/neo4j/neo4j-graphrag-python/blob/main/examples/pipeline/kg_builder.py>`_.
+refer to the `example folder <https://github.com/neo4j/neo4j-graphrag-python/blob/main/examples/>`_ in the project GitHub repository.
 
 **********************************
 Knowledge Graph Builder Components
@@ -166,10 +167,83 @@ Example usage:
         os.environ["OPENAI_API_KEY"] = "sk-..."
 
 
-If OpenAI is not an option, see :ref:`embedders` to learn how to use sentence-transformers or create your own embedder.
+If OpenAI is not an option, see :ref:`embedders` to learn how to use other supported embedders.
 
 The embeddings are added to each chunk metadata, and will be saved as a Chunk node property in the graph if
 `create_lexical_graph` is enabled in the `EntityRelationExtractor` (keep reading).
+
+.. _lexical-graph-builder:
+
+Lexical Graph Builder
+=====================
+
+Once the chunks are extracted and embedded (if required), a graph can be created.
+
+The **lexical graph** contains:
+
+- `Document` node: represent the processed document and have a `path` property.
+- `Chunk` nodes: represent the text chunks. They have a `text` property and, if computed, an `embedding` property.
+- `NEXT_CHUNK` relationships between one chunk node and the next one in the document. It can be used to enhance the context in a RAG application.
+- `FROM_DOCUMENT` relationship between each chunk and the document it was built from.
+
+Example usage:
+
+.. code:: python
+
+    from neo4j_graphrag.experimental.pipeline.components.lexical_graph_builder import LexicalGraphBuilder
+    from neo4j_graphrag.experimental.pipeline.components.types import LexicalGraphConfig
+
+    lexical_graph_builder = LexicalGraphBuilder(config=LexicalGraphConfig(id_prefix="example"))
+    graph = await lexical_graph_builder.run(
+        text_chunks=TextChunks(chunks=[
+            TextChunk(text="some text", index=0),
+            TextChunk(text="some text", index=1),
+        ]),
+        document_info=DocumentInfo(path="my_document.pdf"),
+    )
+
+See :ref:`kg-writer-section` to learn how to write the resulting nodes and relationships to Neo4j.
+
+
+Neo4j Chunk Reader
+==================
+
+The Neo4j chunk reader component is used to read text chunks from Neo4j. Text chunks can be created
+by the lexical graph builder or another process.
+
+.. code:: python
+
+    import neo4j
+    from neo4j_graphrag.experimental.components.neo4j_reader import Neo4jChunkReader
+    from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
+
+    reader = Neo4jChunkReader(driver)
+    result = await reader.run()
+
+
+Configure node labels and relationship types
+---------------------------------------------
+
+Optionally, the document and chunk node labels can be configured using a `LexicalGraphConfig` object:
+
+.. code:: python
+
+    from neo4j_graphrag.experimental.components.neo4j_reader import Neo4jChunkReader
+    from neo4j_graphrag.experimental.components.types import LexicalGraphConfig, TextChunks
+
+    # optionally, define a LexicalGraphConfig object
+    # shown below with the default values
+    config = LexicalGraphConfig(
+        id_prefix="",  # used to prefix the chunk and document IDs
+        chunk_node_label="Chunk",
+        document_node_label="Document",
+        chunk_to_document_relationship_type="PART_OF_DOCUMENT",
+        next_chunk_relationship_type="NEXT_CHUNK",
+        node_to_chunk_relationship_type="PART_OF_CHUNK",
+        chunk_embedding_property="embeddings",
+    )
+    reader = Neo4jChunkReader(driver)
+    result = await reader.run(lexical_graph_config=config)
 
 
 Schema Builder
@@ -292,17 +366,12 @@ This behaviour can be changed by using the `on_error` flag in the `LLMEntityRela
 In this scenario, any failing chunk will make the whole pipeline fail (for all chunks), and no data
 will be saved to Neo4j.
 
+.. _lexical-graph-in-er-extraction:
 
 Lexical Graph
 -------------
 
-By default, the `LLMEntityRelationExtractor` adds some extra nodes and relationships to the extracted graph:
-
-- `Document` node: represent the processed document and have a `path` property.
-- `Chunk` nodes: represent the text chunks. They have a `text` property and, if computed, an `embedding` property.
-- `NEXT_CHUNK` relationships between one chunk node and the next one in the document. It can be used to enhance the context in a RAG application.
-- `FROM_CHUNK` relationship between any extracted entity and the chunk it has been identified into.
-- `FROM_DOCUMENT` relationship between each chunk and the document it was built from.
+By default, the `LLMEntityRelationExtractor` also creates the :ref:`lexical graph<lexical-graph-builder>`.
 
 If this 'lexical graph' is not desired, set the `created_lexical_graph` to `False` in the extractor constructor:
 
@@ -312,6 +381,21 @@ If this 'lexical graph' is not desired, set the `created_lexical_graph` to `Fals
         llm=....,
         create_lexical_graph=False,
     )
+
+
+.. note::
+
+    - If `self.create_lexical_graph` is set to `True`, the complete lexical graph
+      will be created, including the document and chunk nodes, along with the relationships
+      between entities and the chunk they were extracted from.
+    - If `self.create_lexical_graph` is set to `False` but `lexical_graph_config`
+      is provided, the document and chunk nodes won't be created. However, relationships
+      between chunks and the entities extracted from them will still be added to the graph.
+
+.. warning::
+
+    If omitting `self.create_lexical_graph` and the chunk does not exist,
+    this will result in no relationship being created in the database by the writer.
 
 
 Customizing the Prompt
@@ -368,6 +452,8 @@ If more customization is needed, it is possible to subclass the `EntityRelationE
 See :ref:`entityrelationextractor`.
 
 
+.. _kg-writer-section:
+
 Knowledge Graph Writer
 ======================
 
@@ -388,10 +474,8 @@ to a Neo4j database:
         graph = Neo4jGraph(nodes=[], relationships=[])
         await writer.run(graph)
 
-To improve insert performances, it is possible to act on two parameters:
-
-- `batch_size`: the number of nodes/relationships to be processed in each batch (default is 1000).
-- `max_concurrency`: the max number of concurrent queries (default is 5).
+Adjust the batch_size parameter of `Neo4jWriter` to optimize insert performance.
+This parameter controls the number of nodes or relationships inserted per batch, with a default value of 1000.
 
 See :ref:`neo4jgraph`.
 
@@ -421,7 +505,7 @@ It is possible to create a custom writer using the `KGWriter` interface:
 
 .. note::
 
-    The `validate_call` decorator is required when the input parameter contain a `pydantic` model.
+    The `validate_call` decorator is required when the input parameter contain a `Pydantic` model.
 
 
 See :ref:`kgwritermodel` and :ref:`kgwriter` in API reference.
@@ -446,6 +530,7 @@ with the same label and identical "name" property.
 It can be used like this:
 
 .. code:: python
+
     from neo4j_graphrag.experimental.components.resolver import (
         SinglePropertyExactMatchResolver,
     )

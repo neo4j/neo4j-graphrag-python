@@ -1,29 +1,45 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import numpy as np
 import pytest
+import torch
 from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.embeddings.sentence_transformers import (
     SentenceTransformerEmbeddings,
 )
 
 
-@patch("neo4j_graphrag.embeddings.sentence_transformers.sentence_transformers")
-def test_initialization(MockSentenceTransformer: MagicMock) -> None:
+def get_mock_sentence_transformers() -> MagicMock:
+    mock = MagicMock()
+    # I know, I know... ¯\_(ツ)_/¯
+    # This is to cover the if type checks in the embed_query method
+    mock.Tensor = torch.Tensor
+    mock.ndarray = np.ndarray
+    return mock
+
+
+@patch("builtins.__import__")
+def test_initialization(mock_import: Mock) -> None:
+    MockSentenceTransformer = get_mock_sentence_transformers()
+    mock_import.return_value = MockSentenceTransformer
     instance = SentenceTransformerEmbeddings()
     MockSentenceTransformer.SentenceTransformer.assert_called_with("all-MiniLM-L6-v2")
     assert isinstance(instance, Embedder)
 
 
-@patch("neo4j_graphrag.embeddings.sentence_transformers.sentence_transformers")
-def test_initialization_with_custom_model(MockSentenceTransformer: MagicMock) -> None:
+@patch("builtins.__import__")
+def test_initialization_with_custom_model(mock_import: Mock) -> None:
+    MockSentenceTransformer = get_mock_sentence_transformers()
+    mock_import.return_value = MockSentenceTransformer
     custom_model = "distilbert-base-nli-stsb-mean-tokens"
     SentenceTransformerEmbeddings(model=custom_model)
     MockSentenceTransformer.SentenceTransformer.assert_called_with(custom_model)
 
 
-@patch("neo4j_graphrag.embeddings.sentence_transformers.sentence_transformers")
-def test_embed_query(MockSentenceTransformer: MagicMock) -> None:
+@patch("builtins.__import__")
+def test_embed_query(mock_import: Mock) -> None:
+    MockSentenceTransformer = get_mock_sentence_transformers()
+    mock_import.return_value = MockSentenceTransformer
     mock_model = MockSentenceTransformer.SentenceTransformer.return_value
     mock_model.encode.return_value = np.array([[0.1, 0.2, 0.3]])
 
@@ -35,10 +51,7 @@ def test_embed_query(MockSentenceTransformer: MagicMock) -> None:
     assert result == [0.1, 0.2, 0.3]
 
 
-@patch(
-    "neo4j_graphrag.embeddings.sentence_transformers.sentence_transformers",
-    None,
-)
-def test_import_error() -> None:
+@patch("builtins.__import__", side_effect=ImportError)
+def test_import_error(mock_import: Mock) -> None:
     with pytest.raises(ImportError):
         SentenceTransformerEmbeddings()
