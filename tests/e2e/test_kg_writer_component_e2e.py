@@ -40,7 +40,7 @@ async def test_kg_writer(driver: neo4j.Driver) -> None:
         embedding_properties=None,
     )
     relationship = Neo4jRelationship(
-        start_node_id="1", end_node_id="2", type="MY_RELATIONSHIP"
+        start_element_id="1", end_element_id="2", type="MY_RELATIONSHIP"
     )
     node_with_two_embeddings = Neo4jNode(
         id="3",
@@ -87,8 +87,8 @@ async def test_kg_writer(driver: neo4j.Driver) -> None:
 
     rel = record["r"]
     assert rel.type == relationship.type
-    assert relationship.start_node_id == rel.start_node.get("id")
-    assert relationship.end_node_id == rel.end_node.get("id")
+    assert relationship.start_element_id == rel.start_node.get("id")
+    assert relationship.end_element_id == rel.end_node.get("id")
 
     query = """
     MATCH (c:MyLabel {id: '3'})
@@ -121,7 +121,7 @@ async def test_kg_writer_no_neo4j_deprecation_warning(
         embedding_properties=None,
     )
     relationship = Neo4jRelationship(
-        start_node_id="1", end_node_id="2", type="MY_RELATIONSHIP"
+        start_element_id="1", end_element_id="2", type="MY_RELATIONSHIP"
     )
     graph = Neo4jGraph(
         nodes=[start_node, end_node],

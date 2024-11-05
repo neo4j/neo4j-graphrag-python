@@ -288,7 +288,7 @@ def upsert_vector(
     """
     try:
         parameters = {
-            "node_id": node_id,
+            "element_id": node_id,
             "embedding_property": embedding_property,
             "vector": vector,
         }
@@ -344,7 +344,7 @@ def upsert_vector_on_relationship(
     """
     try:
         parameters = {
-            "rel_id": rel_id,
+            "element_id": rel_id,
             "embedding_property": embedding_property,
             "vector": vector,
         }

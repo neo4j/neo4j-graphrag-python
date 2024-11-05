@@ -444,7 +444,7 @@ If more customization is needed, it is possible to subclass the `EntityRelationE
                     Neo4jNode(id="1", label="Concept", properties={"name": "Theory of relativity"}),
                 ],
                 relationships=[
-                    Neo4jRelationship(type="PROPOSED_BY", start_node_id="1", end_node_id="0", properties={"year": 1915})
+                    Neo4jRelationship(type="PROPOSED_BY", start_element_id="1", end_element_id="0", properties={"year": 1915})
                 ],
             )
 

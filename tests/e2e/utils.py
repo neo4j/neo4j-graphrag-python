@@ -438,8 +438,8 @@ def populate_neo4j(
     category_nodes_cypher = (
         "UNWIND $nodes as node MERGE (n:Category {id: node.id}) ON CREATE SET n = node"
     )
-    belongs_to_relationships_cypher = "UNWIND $relationships as rel MATCH (q:Question {id: rel.start_node_id}), (c:Category {id: rel.end_node_id}) MERGE (q)-[r:BELONGS_TO]->(c)"
-    has_answer_relationships_cypher = "UNWIND $relationships as rel MATCH (q:Question {id: rel.start_node_id}), (a:Answer {id: rel.end_node_id}) MERGE (q)-[r:HAS_ANSWER]->(a)"
+    belongs_to_relationships_cypher = "UNWIND $relationships as rel MATCH (q:Question {id: rel.start_element_id}), (c:Category {id: rel.end_element_id}) MERGE (q)-[r:BELONGS_TO]->(c)"
+    has_answer_relationships_cypher = "UNWIND $relationships as rel MATCH (q:Question {id: rel.start_element_id}), (a:Answer {id: rel.end_element_id}) MERGE (q)-[r:HAS_ANSWER]->(a)"
     neo4j_driver.execute_query(question_nodes_cypher, {"nodes": question_nodes})
     neo4j_driver.execute_query(answer_nodes_cypher, {"nodes": answer_nodes})
     neo4j_driver.execute_query(category_nodes_cypher, {"nodes": category_nodes})
@@ -514,16 +514,16 @@ def build_data_objects(
         )
         neo4j_objs["relationships"].append(
             {
-                "start_node_id": f"question_{id}",
-                "end_node_id": f"answer_{id}",
+                "start_element_id": f"question_{id}",
+                "end_element_id": f"answer_{id}",
                 "type": "HAS_ANSWER",
                 "properties": {},
             }
         )
         neo4j_objs["relationships"].append(
             {
-                "start_node_id": f"question_{id}",
-                "end_node_id": d["Category"],
+                "start_element_id": f"question_{id}",
+                "end_element_id": d["Category"],
                 "type": "BELONGS_TO",
                 "properties": {},
             }

@@ -165,8 +165,8 @@ class EntityRelationExtractor(Component, abc.ABC):
                 node.properties = {}
             node.properties.update({"chunk_index": chunk_index})
         for rel in graph.relationships:
-            rel.start_node_id = f"{prefix}:{rel.start_node_id}"
-            rel.end_node_id = f"{prefix}:{rel.end_node_id}"
+            rel.start_element_id = f"{prefix}:{rel.start_element_id}"
+            rel.end_element_id = f"{prefix}:{rel.end_element_id}"
         return graph
 
 

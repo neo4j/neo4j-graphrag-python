@@ -94,8 +94,8 @@ async def test_lexical_graph_before_extractor_custom_prefix(
                     "relationships": [
                         {
                             "type": "KNOWS",
-                            "start_node_id": "0",
-                            "end_node_id": "1"
+                            "start_element_id": "0",
+                            "end_element_id": "1"
                         },
                     ]
                 }"""

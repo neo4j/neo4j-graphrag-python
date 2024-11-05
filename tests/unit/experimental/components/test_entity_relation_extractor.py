@@ -111,8 +111,8 @@ async def test_extractor_happy_path_non_empty_result() -> None:
     assert entity.properties == {"chunk_index": 0}
     assert len(result.relationships) == 2
     assert result.relationships[0].type == "FROM_DOCUMENT"
-    assert result.relationships[0].start_node_id.endswith(":0")
-    assert result.relationships[0].end_node_id == "path"
+    assert result.relationships[0].start_element_id.endswith(":0")
+    assert result.relationships[0].end_element_id == "path"
     assert result.relationships[1].type == "FROM_CHUNK"
 
 

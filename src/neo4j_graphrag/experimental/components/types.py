@@ -74,15 +74,15 @@ class Neo4jRelationship(BaseModel):
     """Represents a Neo4j relationship.
 
     Attributes:
-        start_node_id (str): The ID of the start node.
-        end_node_id (str): The ID of the end node.
+        start_element_id (str): The ID of the start node.
+        end_element_id (str): The ID of the end node.
         type (str): The relationship type.
         properties (dict[str, Any]): A dictionary of properties attached to the relationship.
         embedding_properties (Optional[dict[str, list[float]]]): A list of embedding properties attached to the relationship.
     """
 
-    start_node_id: str
-    end_node_id: str
+    start_element_id: str
+    end_element_id: str
     type: str
     properties: dict[str, Any] = {}
     embedding_properties: Optional[dict[str, list[float]]] = None

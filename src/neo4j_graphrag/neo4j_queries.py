@@ -72,8 +72,8 @@ UPSERT_NODE_QUERY_VARIABLE_SCOPE_CLAUSE = (
 
 UPSERT_RELATIONSHIP_QUERY = (
     "UNWIND $rows as row "
-    "MATCH (start:__KGBuilder__ {id: row.start_node_id}) "
-    "MATCH (end:__KGBuilder__ {id: row.end_node_id}) "
+    "MATCH (start:__KGBuilder__ {id: row.start_element_id}) "
+    "MATCH (end:__KGBuilder__ {id: row.end_element_id}) "
     "WITH start, end, row "
     "CALL apoc.merge.relationship(start, row.type, {}, row.properties, end, row.properties) YIELD rel  "
     "WITH rel, row CALL { "
@@ -87,8 +87,8 @@ UPSERT_RELATIONSHIP_QUERY = (
 
 UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE = (
     "UNWIND $rows as row "
-    "MATCH (start:__KGBuilder__ {id: row.start_node_id}) "
-    "MATCH (end:__KGBuilder__ {id: row.end_node_id}) "
+    "MATCH (start:__KGBuilder__ {id: row.start_element_id}) "
+    "MATCH (end:__KGBuilder__ {id: row.end_element_id}) "
     "WITH start, end, row "
     "CALL apoc.merge.relationship(start, row.type, {}, row.properties, end, row.properties) YIELD rel  "
     "WITH rel, row CALL (rel, row) { "
@@ -101,7 +101,7 @@ UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE = (
 
 UPSERT_VECTOR_ON_NODE_QUERY = (
     "MATCH (n) "
-    "WHERE elementId(n) = $node_id "
+    "WHERE elementId(n) = $element_id "
     "WITH n "
     "CALL db.create.setNodeVectorProperty(n, $embedding_property, $vector) "
     "RETURN n"
@@ -109,7 +109,7 @@ UPSERT_VECTOR_ON_NODE_QUERY = (
 
 UPSERT_VECTOR_ON_RELATIONSHIP_QUERY = (
     "MATCH ()-[r]->() "
-    "WHERE elementId(r) = $rel_id "
+    "WHERE elementId(r) = $element_id "
     "WITH r "
     "CALL db.create.setRelationshipVectorProperty(r, $embedding_property, $vector) "
     "RETURN r"

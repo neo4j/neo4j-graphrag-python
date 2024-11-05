@@ -192,13 +192,13 @@ async def test_pipeline_builder_happy_path(
                         "relationships": [
                             {
                                 "type": "KNOWS",
-                                "start_node_id": "0",
-                                "end_node_id": "1"
+                                "start_element_id": "0",
+                                "end_element_id": "1"
                             },
                             {
                                 "type": "LED_BY",
-                                "start_node_id": "2",
-                                "end_node_id": "1"
+                                "start_element_id": "2",
+                                "end_element_id": "1"
                             }
                         ]
                     }"""
@@ -359,13 +359,13 @@ async def test_pipeline_builder_failing_chunk_raise(
                         "relationships": [
                             {
                                 "type": "KNOWS",
-                                "start_node_id": "0",
-                                "end_node_id": "1"
+                                "start_element_id": "0",
+                                "end_element_id": "1"
                             },
                             {
                                 "type": "LED_BY",
-                                "start_node_id": "2",
-                                "end_node_id": "1"
+                                "start_element_id": "2",
+                                "end_element_id": "1"
                             }
                         ]
                     }"""
@@ -438,13 +438,13 @@ async def test_pipeline_builder_failing_chunk_do_not_raise(
                         "relationships": [
                             {
                                 "type": "KNOWS",
-                                "start_node_id": "0",
-                                "end_node_id": "1"
+                                "start_element_id": "0",
+                                "end_element_id": "1"
                             },
                             {
                                 "type": "LED_BY",
-                                "start_node_id": "2",
-                                "end_node_id": "1"
+                                "start_element_id": "2",
+                                "end_element_id": "1"
                             }
                         ]
                     }"""
@@ -556,8 +556,8 @@ async def test_pipeline_builder_two_documents(
                         "relationships": [
                             {
                                 "type": "MEMBER_OF",
-                                "start_node_id": "0",
-                                "end_node_id": "1"
+                                "start_element_id": "0",
+                                "end_element_id": "1"
                             }
                         ]
                     }"""
@@ -583,8 +583,8 @@ async def test_pipeline_builder_two_documents(
                         "relationships": [
                             {
                                 "type": "KNOWS",
-                                "start_node_id": "10",
-                                "end_node_id": "11"
+                                "start_element_id": "10",
+                                "end_element_id": "11"
                             }
                         ]
                     }"""
