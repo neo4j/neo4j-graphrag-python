@@ -72,8 +72,8 @@ UPSERT_NODE_QUERY_VARIABLE_SCOPE_CLAUSE = (
 
 UPSERT_RELATIONSHIP_QUERY = (
     "UNWIND $rows as row "
-    "MATCH (start:__KGBuilder__ {id: row.start_element_id}) "
-    "MATCH (end:__KGBuilder__ {id: row.end_element_id}) "
+    "MATCH (start:__KGBuilder__ {id: row.start_node_id}) "
+    "MATCH (end:__KGBuilder__ {id: row.end_node_id}) "
     "WITH start, end, row "
     "CALL apoc.merge.relationship(start, row.type, {}, row.properties, end, row.properties) YIELD rel  "
     "WITH rel, row CALL { "
@@ -87,8 +87,8 @@ UPSERT_RELATIONSHIP_QUERY = (
 
 UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE = (
     "UNWIND $rows as row "
-    "MATCH (start:__KGBuilder__ {id: row.start_element_id}) "
-    "MATCH (end:__KGBuilder__ {id: row.end_element_id}) "
+    "MATCH (start:__KGBuilder__ {id: row.start_node_id}) "
+    "MATCH (end:__KGBuilder__ {id: row.end_node_id}) "
     "WITH start, end, row "
     "CALL apoc.merge.relationship(start, row.type, {}, row.properties, end, row.properties) YIELD rel  "
     "WITH rel, row CALL (rel, row) { "

@@ -123,8 +123,8 @@ def test_upsert_nodes_with_embedding(
 def test_upsert_relationship(_: Mock, driver: MagicMock) -> None:
     neo4j_writer = Neo4jWriter(driver=driver)
     rel = Neo4jRelationship(
-        start_element_id="1",
-        end_element_id="2",
+        start_node_id="1",
+        end_node_id="2",
         type="RELATIONSHIP",
         properties={"key": "value"},
     )
@@ -133,8 +133,8 @@ def test_upsert_relationship(_: Mock, driver: MagicMock) -> None:
         "rows": [
             {
                 "type": "RELATIONSHIP",
-                "start_element_id": "1",
-                "end_element_id": "2",
+                "start_node_id": "1",
+                "end_node_id": "2",
                 "properties": {"key": "value"},
                 "embedding_properties": None,
             }
@@ -157,8 +157,8 @@ def test_upsert_relationship(_: Mock, driver: MagicMock) -> None:
 def test_upsert_relationship_with_embedding(_: Mock, driver: MagicMock) -> None:
     neo4j_writer = Neo4jWriter(driver=driver)
     rel = Neo4jRelationship(
-        start_element_id="1",
-        end_element_id="2",
+        start_node_id="1",
+        end_node_id="2",
         type="RELATIONSHIP",
         properties={"key": "value"},
         embedding_properties={"embeddingProp": [1.0, 2.0, 3.0]},
@@ -169,8 +169,8 @@ def test_upsert_relationship_with_embedding(_: Mock, driver: MagicMock) -> None:
         "rows": [
             {
                 "type": "RELATIONSHIP",
-                "start_element_id": "1",
-                "end_element_id": "2",
+                "start_node_id": "1",
+                "end_node_id": "2",
                 "properties": {"key": "value"},
                 "embedding_properties": {"embeddingProp": [1.0, 2.0, 3.0]},
             }
@@ -194,7 +194,7 @@ def test_upsert_relationship_with_embedding(_: Mock, driver: MagicMock) -> None:
 async def test_run(_: Mock, driver: MagicMock) -> None:
     neo4j_writer = Neo4jWriter(driver=driver)
     node = Neo4jNode(id="1", label="Label")
-    rel = Neo4jRelationship(start_element_id="1", end_element_id="2", type="RELATIONSHIP")
+    rel = Neo4jRelationship(start_node_id="1", end_node_id="2", type="RELATIONSHIP")
     graph = Neo4jGraph(nodes=[node], relationships=[rel])
     await neo4j_writer.run(graph=graph)
     driver.execute_query.assert_any_call(
@@ -215,8 +215,8 @@ async def test_run(_: Mock, driver: MagicMock) -> None:
         "rows": [
             {
                 "type": "RELATIONSHIP",
-                "start_element_id": "1",
-                "end_element_id": "2",
+                "start_node_id": "1",
+                "end_node_id": "2",
                 "properties": {},
                 "embedding_properties": None,
             }
@@ -240,7 +240,7 @@ async def test_run_is_version_below_5_23(_: Mock) -> None:
     neo4j_writer = Neo4jWriter(driver=driver)
 
     node = Neo4jNode(id="1", label="Label")
-    rel = Neo4jRelationship(start_element_id="1", end_element_id="2", type="RELATIONSHIP")
+    rel = Neo4jRelationship(start_node_id="1", end_node_id="2", type="RELATIONSHIP")
     graph = Neo4jGraph(nodes=[node], relationships=[rel])
     await neo4j_writer.run(graph=graph)
 
@@ -262,8 +262,8 @@ async def test_run_is_version_below_5_23(_: Mock) -> None:
         "rows": [
             {
                 "type": "RELATIONSHIP",
-                "start_element_id": "1",
-                "end_element_id": "2",
+                "start_node_id": "1",
+                "end_node_id": "2",
                 "properties": {},
                 "embedding_properties": None,
             }
@@ -288,7 +288,7 @@ async def test_run_is_version_5_23_or_above(_: Mock) -> None:
     neo4j_writer.is_version_5_23_or_above = True
 
     node = Neo4jNode(id="1", label="Label")
-    rel = Neo4jRelationship(start_element_id="1", end_element_id="2", type="RELATIONSHIP")
+    rel = Neo4jRelationship(start_node_id="1", end_node_id="2", type="RELATIONSHIP")
     graph = Neo4jGraph(nodes=[node], relationships=[rel])
     await neo4j_writer.run(graph=graph)
 
@@ -310,8 +310,8 @@ async def test_run_is_version_5_23_or_above(_: Mock) -> None:
         "rows": [
             {
                 "type": "RELATIONSHIP",
-                "start_element_id": "1",
-                "end_element_id": "2",
+                "start_node_id": "1",
+                "end_node_id": "2",
                 "properties": {},
                 "embedding_properties": None,
             }

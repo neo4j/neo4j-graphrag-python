@@ -137,8 +137,8 @@ class LexicalGraphBuilder(Component):
         """Create the relationship between a chunk and the document it belongs to."""
         chunk_id = self.chunk_id(chunk.index)
         return Neo4jRelationship(
-            start_element_id=chunk_id,
-            end_element_id=document_id,
+            start_node_id=chunk_id,
+            end_node_id=document_id,
             type=self.config.chunk_to_document_relationship_type,
         )
 
@@ -151,8 +151,8 @@ class LexicalGraphBuilder(Component):
         previous_chunk_id = self.chunk_id(chunk.index - 1)
         return Neo4jRelationship(
             type=self.config.next_chunk_relationship_type,
-            start_element_id=previous_chunk_id,
-            end_element_id=chunk_id,
+            start_node_id=previous_chunk_id,
+            end_node_id=chunk_id,
         )
 
     def create_node_to_chunk_rel(
@@ -160,8 +160,8 @@ class LexicalGraphBuilder(Component):
     ) -> Neo4jRelationship:
         """Create relationship between a chunk and entities found in that chunk"""
         return Neo4jRelationship(
-            start_element_id=node.id,
-            end_element_id=chunk_id,
+            start_node_id=node.id,
+            end_node_id=chunk_id,
             type=self.config.node_to_chunk_relationship_type,
         )
 
