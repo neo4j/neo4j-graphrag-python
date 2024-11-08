@@ -225,7 +225,7 @@ def test_match_query_with_return_properties() -> None:
         "WITH match_param[0] AS match_id_value, match_param[1] AS score "
         "MATCH (node) "
         "WHERE node[$id_property] = match_id_value "
-        "RETURN node {.name, .age} AS node, labels(node) AS nodeLabels, elementId(node) AS id, score"
+        "RETURN node {.name, .age} AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score"
     )
     assert match_query.strip() == expected.strip()
 

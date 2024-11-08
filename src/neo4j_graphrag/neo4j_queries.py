@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import warnings
 from typing import Any, Optional
 
 from neo4j_graphrag.filters import get_metadata_filter
@@ -100,7 +101,7 @@ UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE = (
 
 UPSERT_VECTOR_ON_NODE_QUERY = (
     "MATCH (n) "
-    "WHERE elementId(n) = $id "
+    "WHERE elementId(n) = $node_element_id "
     "WITH n "
     "CALL db.create.setNodeVectorProperty(n, $embedding_property, $vector) "
     "RETURN n"
@@ -108,7 +109,7 @@ UPSERT_VECTOR_ON_NODE_QUERY = (
 
 UPSERT_VECTOR_ON_RELATIONSHIP_QUERY = (
     "MATCH ()-[r]->() "
-    "WHERE elementId(r) = $id "
+    "WHERE elementId(r) = $rel_element_id "
     "WITH r "
     "CALL db.create.setRelationshipVectorProperty(r, $embedding_property, $vector) "
     "RETURN r"
@@ -201,6 +202,11 @@ def get_search_query(
         tuple[str, dict[str, Any]]: query and parameters
 
     """
+    warnings.warn(
+        "The default returned 'id' field in the search results will be removed. Please switch to using 'elementId' instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     if search_type == SearchType.HYBRID:
         if filters:
             raise Exception("Filters are not supported with Hybrid Search")
@@ -227,7 +233,7 @@ def get_search_query(
     query_tail = get_query_tail(
         retrieval_query,
         return_properties,
-        fallback_return=f"RETURN node {{ .*, `{embedding_node_property}`: null }} AS node, labels(node) AS nodeLabels, elementId(node) AS id, score",
+        fallback_return=f"RETURN node {{ .*, `{embedding_node_property}`: null }} AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score",
     )
     return f"{query} {query_tail}", params
 
@@ -253,5 +259,5 @@ def get_query_tail(
         return retrieval_query
     if return_properties:
         return_properties_cypher = ", ".join([f".{prop}" for prop in return_properties])
-        return f"RETURN node {{{return_properties_cypher}}} AS node, labels(node) AS nodeLabels, elementId(node) AS id, score"
+        return f"RETURN node {{{return_properties_cypher}}} AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score"
     return fallback_return if fallback_return else ""
