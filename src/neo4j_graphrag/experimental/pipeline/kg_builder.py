@@ -165,13 +165,13 @@ class SimpleKGPipeline:
     @staticmethod
     def to_schema_entity(entity: EntityInputType) -> SchemaEntity:
         if isinstance(entity, dict):
-            return SchemaEntity(**entity)
+            return SchemaEntity.model_validate(entity)
         return SchemaEntity(label=entity)
 
     @staticmethod
     def to_schema_relation(relation: RelationInputType) -> SchemaRelation:
         if isinstance(relation, dict):
-            return SchemaRelation(**relation)
+            return SchemaRelation.model_validate(relation)
         return SchemaRelation(label=relation)
 
     def _build_pipeline(self) -> Pipeline:

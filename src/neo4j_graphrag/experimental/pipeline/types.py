@@ -39,5 +39,10 @@ class PipelineConfig(BaseModel):
     connections: list[ConnectionConfig]
 
 
-EntityInputType = Union[str, dict[str, Any]]
-RelationInputType = Union[str, dict[str, Any]]
+EntityInputType = Union[str, dict[str, Union[str, list[dict[str, str]]]]]
+RelationInputType = Union[str, dict[str, Union[str, list[dict[str, str]]]]]
+"""Types derived from the SchemaEntity and SchemaRelation types,
+ so the possible types for dict values are:
+- str (for label and description)
+- list[dict[str, str]] (for properties)
+"""
