@@ -14,7 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Union
+from typing import Union
 
 from pydantic import BaseModel, ConfigDict
 
