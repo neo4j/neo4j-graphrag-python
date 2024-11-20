@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Sequence, Union
 
 import neo4j
 from pydantic import BaseModel, ConfigDict, Field
@@ -42,6 +42,10 @@ from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter i
 from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
 from neo4j_graphrag.experimental.pipeline.pipeline import Pipeline, PipelineResult
+from neo4j_graphrag.experimental.pipeline.types import (
+    EntityInputType,
+    RelationInputType,
+)
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 from neo4j_graphrag.llm.base import LLMInterface
 
@@ -74,8 +78,16 @@ class SimpleKGPipeline:
         llm (LLMInterface): An instance of an LLM to use for entity and relation extraction.
         driver (neo4j.Driver): A Neo4j driver instance for database connection.
         embedder (Embedder): An instance of an embedder used to generate chunk embeddings from text chunks.
-        entities (Optional[List[str]]): A list of entity labels as strings.
-        relations (Optional[List[str]]): A list of relation labels as strings.
+        entities (Optional[List[Union[str, dict[str, str], SchemaEntity]]]): A list of either:
+
+            - str: entity labels
+            - dict: following the SchemaEntity schema, ie with label, description and properties keys
+
+        relations (Optional[List[Union[str, dict[str, str], SchemaRelation]]]): A list of either:
+
+            - str: relation label
+            - dict: following the SchemaRelation schema, ie with label, description and properties keys
+
         potential_schema (Optional[List[tuple]]): A list of potential schema relationships.
         from_pdf (bool): Determines whether to include the PdfLoader in the pipeline.
                          If True, expects `file_path` input in `run` methods.
@@ -94,8 +106,8 @@ class SimpleKGPipeline:
         llm: LLMInterface,
         driver: neo4j.Driver,
         embedder: Embedder,
-        entities: Optional[List[str]] = None,
-        relations: Optional[List[str]] = None,
+        entities: Optional[Sequence[EntityInputType]] = None,
+        relations: Optional[Sequence[RelationInputType]] = None,
         potential_schema: Optional[List[tuple[str, str, str]]] = None,
         from_pdf: bool = True,
         text_splitter: Optional[Any] = None,
@@ -106,9 +118,9 @@ class SimpleKGPipeline:
         perform_entity_resolution: bool = True,
         lexical_graph_config: Optional[LexicalGraphConfig] = None,
     ):
-        self.entities = [SchemaEntity(label=label) for label in entities or []]
-        self.relations = [SchemaRelation(label=label) for label in relations or []]
-        self.potential_schema = potential_schema if potential_schema is not None else []
+        self.potential_schema = potential_schema or []
+        self.entities = [self.to_schema_entity(e) for e in entities or []]
+        self.relations = [self.to_schema_relation(r) for r in relations or []]
 
         try:
             on_error_enum = OnError(on_error)
@@ -149,6 +161,18 @@ class SimpleKGPipeline:
         self.lexical_graph_config = config.lexical_graph_config
 
         self.pipeline = self._build_pipeline()
+
+    @staticmethod
+    def to_schema_entity(entity: EntityInputType) -> SchemaEntity:
+        if isinstance(entity, dict):
+            return SchemaEntity.model_validate(entity)
+        return SchemaEntity(label=entity)
+
+    @staticmethod
+    def to_schema_relation(relation: RelationInputType) -> SchemaRelation:
+        if isinstance(relation, dict):
+            return SchemaRelation.model_validate(relation)
+        return SchemaRelation(label=relation)
 
     def _build_pipeline(self) -> Pipeline:
         pipe = Pipeline()

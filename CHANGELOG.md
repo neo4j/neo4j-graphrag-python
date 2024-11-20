@@ -4,6 +4,7 @@
 
 ### Added
 - Introduced optional lexical graph configuration for SimpleKGPipeline, enhancing flexibility in customizing node labels and relationship types in the lexical graph.
+- Ability to provide description and list of properties for entities and relations in the SimpleKGPipeline constructor.
 
 ## 1.2.0
 
