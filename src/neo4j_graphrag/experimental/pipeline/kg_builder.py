@@ -65,6 +65,7 @@ class SimpleKGPipelineConfig(BaseModel):
     prompt_template: Union[ERExtractionTemplate, str] = ERExtractionTemplate()
     perform_entity_resolution: bool = True
     lexical_graph_config: Optional[LexicalGraphConfig] = None
+    neo4j_database: Optional[str] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -117,6 +118,7 @@ class SimpleKGPipeline:
         prompt_template: Union[ERExtractionTemplate, str] = ERExtractionTemplate(),
         perform_entity_resolution: bool = True,
         lexical_graph_config: Optional[LexicalGraphConfig] = None,
+        neo4j_database: Optional[str] = None,
     ):
         self.potential_schema = potential_schema or []
         self.entities = [self.to_schema_entity(e) for e in entities or []]
@@ -144,6 +146,7 @@ class SimpleKGPipeline:
             embedder=embedder,
             perform_entity_resolution=perform_entity_resolution,
             lexical_graph_config=lexical_graph_config,
+            neo4j_database=neo4j_database,
         )
 
         self.from_pdf = config.from_pdf
@@ -154,11 +157,14 @@ class SimpleKGPipeline:
         self.on_error = config.on_error
         self.pdf_loader = config.pdf_loader if pdf_loader is not None else PdfLoader()
         self.kg_writer = (
-            config.kg_writer if kg_writer is not None else Neo4jWriter(driver)
+            config.kg_writer
+            if kg_writer is not None
+            else Neo4jWriter(driver, neo4j_database=config.neo4j_database)
         )
         self.prompt_template = config.prompt_template
         self.perform_entity_resolution = config.perform_entity_resolution
         self.lexical_graph_config = config.lexical_graph_config
+        self.neo4j_database = config.neo4j_database
 
         self.pipeline = self._build_pipeline()
 
@@ -233,7 +239,10 @@ class SimpleKGPipeline:
 
         if self.perform_entity_resolution:
             pipe.add_component(
-                SinglePropertyExactMatchResolver(self.driver), "resolver"
+                SinglePropertyExactMatchResolver(
+                    self.driver, neo4j_database=self.neo4j_database
+                ),
+                "resolver",
             )
             pipe.connect("writer", "resolver", {})
 
