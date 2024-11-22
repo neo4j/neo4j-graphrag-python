@@ -38,7 +38,7 @@ def my_result_formatter(record: neo4j.Record) -> RetrieverResultItem:
     )
 
 
-with neo4j.GraphDatabase.driver(URI, auth=AUTH, database=DATABASE) as driver:
+with neo4j.GraphDatabase.driver(URI, auth=AUTH) as driver:
     # Initialize the retriever
     retriever = VectorCypherRetriever(
         driver=driver,
@@ -48,7 +48,7 @@ with neo4j.GraphDatabase.driver(URI, auth=AUTH, database=DATABASE) as driver:
         retrieval_query=RETRIEVAL_QUERY,
         result_formatter=my_result_formatter,
         # optionally, set neo4j database
-        # neo4j_database="neo4j",
+        neo4j_database=DATABASE,
     )
 
     # Perform the similarity search for a text query

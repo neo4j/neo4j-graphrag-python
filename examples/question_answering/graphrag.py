@@ -35,7 +35,6 @@ def formatter(record: neo4j.Record) -> RetrieverResultItem:
 driver = neo4j.GraphDatabase.driver(
     URI,
     auth=AUTH,
-    database=DATABASE,
 )
 
 embedder = OpenAIEmbeddings()
@@ -46,6 +45,7 @@ retriever = VectorCypherRetriever(
     retrieval_query="with node, score return node.title as title, node.plot as plot",
     result_formatter=formatter,
     embedder=embedder,
+    neo4j_database=DATABASE,
 )
 
 llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0})

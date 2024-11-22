@@ -84,7 +84,7 @@ class Neo4jWriter(KGWriter):
 
     Args:
         driver (neo4j.driver): The Neo4j driver to connect to the database.
-        neo4j_database (str): The name of the Neo4j database to write to, if different from the driver's one.
+        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to the server's default database ("neo4j" by default) (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
         batch_size (int): The number of nodes or relationships to write to the database in a batch. Defaults to 1000.
 
     Example:
@@ -99,8 +99,8 @@ class Neo4jWriter(KGWriter):
         AUTH = ("neo4j", "password")
         DATABASE = "neo4j"
 
-        driver = GraphDatabase.driver(URI, auth=AUTH, database=DATABASE)
-        writer = Neo4jWriter(driver=driver)
+        driver = GraphDatabase.driver(URI, auth=AUTH)
+        writer = Neo4jWriter(driver=driver, neo4j_database=DATABASE)
 
         pipeline = Pipeline()
         pipeline.add_component(writer, "writer")

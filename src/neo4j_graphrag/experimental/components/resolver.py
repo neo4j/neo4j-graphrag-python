@@ -49,7 +49,7 @@ class SinglePropertyExactMatchResolver(EntityResolver):
         driver (neo4j.Driver): The Neo4j driver to connect to the database.
         filter_query (Optional[str]): To reduce the resolution scope, add a Cypher WHERE clause.
         resolve_property (str): The property that will be compared (default: "name"). If values match exactly, entities are merged.
-        neo4j_database (Optional[str]): The name of the Neo4j database to write to. Defaults to 'neo4j' if not provided.
+        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to the server's default database ("neo4j" by default) (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
     Example:
 
@@ -62,8 +62,8 @@ class SinglePropertyExactMatchResolver(EntityResolver):
         AUTH = ("neo4j", "password")
         DATABASE = "neo4j"
 
-        driver = GraphDatabase.driver(URI, auth=AUTH, database=DATABASE)
-        resolver = SinglePropertyExactMatchResolver(driver=driver)
+        driver = GraphDatabase.driver(URI, auth=AUTH)
+        resolver = SinglePropertyExactMatchResolver(driver=driver, neo4j_database=DATABASE)
         await resolver.run()  # no expected parameters
 
     """

@@ -29,12 +29,12 @@ async def test_neo4j_chunk_reader(driver: Mock) -> None:
         None,
         None,
     )
-    chunk_reader = Neo4jChunkReader(driver)
+    chunk_reader = Neo4jChunkReader(driver, neo4j_database="mydb")
     res = await chunk_reader.run()
 
     driver.execute_query.assert_called_once_with(
         "MATCH (c:`Chunk`) RETURN c { .*, embedding: null } as chunk ORDER BY c.index",
-        database_=None,
+        database_="mydb",
     )
 
     assert isinstance(res, TextChunks)

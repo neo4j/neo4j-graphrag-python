@@ -33,7 +33,7 @@ class Neo4jChunkReader(Component):
     Args:
         driver (neo4j.driver): The Neo4j driver to connect to the database.
         fetch_embeddings (bool): If True, the embedding property is also returned. Default to False.
-        neo4j_database (str): The name of the Neo4j database to write to, if different from the driver's one.
+        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to the server's default database ("neo4j" by default) (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
     Example:
 
@@ -46,8 +46,8 @@ class Neo4jChunkReader(Component):
         AUTH = ("neo4j", "password")
         DATABASE = "neo4j"
 
-        driver = GraphDatabase.driver(URI, auth=AUTH, database=DATABASE)
-        reader = Neo4jChunkReader(driver=driver)
+        driver = GraphDatabase.driver(URI, auth=AUTH)
+        reader = Neo4jChunkReader(driver=driver, neo4j_database=DATABASE)
         await reader.run()
 
     """

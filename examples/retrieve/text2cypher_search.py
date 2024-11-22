@@ -47,6 +47,7 @@ with neo4j.GraphDatabase.driver(URI, auth=AUTH) as driver:
         # optionally, you can also provide your own prompt
         # for the text2Cypher generation step
         # custom_prompt="",
+        neo4j_database=DATABASE,
     )
 
     # Generate a Cypher query using the LLM, send it to the Neo4j database, and return the results
