@@ -21,7 +21,7 @@ from neo4j_graphrag.llm.openai_llm import OpenAILLM
 # Neo4j db infos
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
-DATABASE = "neo4j"
+DATABASE = "newdb"
 
 # Text to process
 TEXT = """The son of Duke Leto Atreides and the Lady Jessica, Paul is the heir of House Atreides,
@@ -67,6 +67,7 @@ async def define_and_run_pipeline(
         relations=RELATIONS,
         potential_schema=POTENTIAL_SCHEMA,
         from_pdf=False,
+        neo4j_database=DATABASE,
     )
     return await kg_builder.run_async(text=TEXT)
 
@@ -79,7 +80,7 @@ async def main() -> PipelineResult:
             "response_format": {"type": "json_object"},
         },
     )
-    with neo4j.GraphDatabase.driver(URI, auth=AUTH, database=DATABASE) as driver:
+    with neo4j.GraphDatabase.driver(URI, auth=AUTH) as driver:
         res = await define_and_run_pipeline(driver, llm)
     await llm.async_client.close()
     return res
