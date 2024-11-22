@@ -14,6 +14,8 @@
 #  limitations under the License.
 from __future__ import annotations
 
+from typing import Optional
+
 import neo4j
 from pydantic import validate_call
 
@@ -26,13 +28,39 @@ from neo4j_graphrag.experimental.pipeline import Component
 
 
 class Neo4jChunkReader(Component):
+    """Reads text chunks from a Neo4j database.
+
+    Args:
+        driver (neo4j.driver): The Neo4j driver to connect to the database.
+        fetch_embeddings (bool): If True, the embedding property is also returned. Default to False.
+        neo4j_database (str): The name of the Neo4j database to write to, if different from the driver's one.
+
+    Example:
+
+    .. code-block:: python
+
+        from neo4j import GraphDatabase
+        from neo4j_graphrag.experimental.components.neo4j_reader import Neo4jChunkReader
+
+        URI = "neo4j://localhost:7687"
+        AUTH = ("neo4j", "password")
+        DATABASE = "neo4j"
+
+        driver = GraphDatabase.driver(URI, auth=AUTH, database=DATABASE)
+        reader = Neo4jChunkReader(driver=driver)
+        await reader.run()
+
+    """
+
     def __init__(
         self,
         driver: neo4j.Driver,
         fetch_embeddings: bool = False,
+        neo4j_database: Optional[str] = None,
     ):
         self.driver = driver
         self.fetch_embeddings = fetch_embeddings
+        self.neo4j_database = neo4j_database
 
     def _get_query(
         self,
@@ -56,12 +84,20 @@ class Neo4jChunkReader(Component):
         self,
         lexical_graph_config: LexicalGraphConfig = LexicalGraphConfig(),
     ) -> TextChunks:
+        """Reads text chunks from a Neo4j database.
+
+        Args:
+            lexical_graph_config (LexicalGraphConfig): Node labels and relationship types for the lexical graph.
+        """
         query = self._get_query(
             lexical_graph_config.chunk_node_label,
             lexical_graph_config.chunk_index_property,
             lexical_graph_config.chunk_embedding_property,
         )
-        result, _, _ = self.driver.execute_query(query)
+        result, _, _ = self.driver.execute_query(
+            query,
+            database_=self.neo4j_database,
+        )
         chunks = []
         for record in result:
             chunk = record.get("chunk")

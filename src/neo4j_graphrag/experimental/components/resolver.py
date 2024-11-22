@@ -63,7 +63,7 @@ class SinglePropertyExactMatchResolver(EntityResolver):
         DATABASE = "neo4j"
 
         driver = GraphDatabase.driver(URI, auth=AUTH, database=DATABASE)
-        resolver = SinglePropertyExactMatchResolver(driver=driver, neo4j_database=DATABASE)
+        resolver = SinglePropertyExactMatchResolver(driver=driver)
         await resolver.run()  # no expected parameters
 
     """
@@ -77,7 +77,7 @@ class SinglePropertyExactMatchResolver(EntityResolver):
     ) -> None:
         super().__init__(driver, filter_query)
         self.resolve_property = resolve_property
-        self.database = neo4j_database
+        self.neo4j_database = neo4j_database
 
     async def run(self) -> ResolutionStats:
         """Resolve entities based on the following rule:
@@ -93,7 +93,9 @@ class SinglePropertyExactMatchResolver(EntityResolver):
         if self.filter_query:
             match_query += self.filter_query
         stat_query = f"{match_query} RETURN count(entity) as c"
-        records, _, _ = self.driver.execute_query(stat_query, database_=self.database)
+        records, _, _ = self.driver.execute_query(
+            stat_query, database_=self.neo4j_database
+        )
         number_of_nodes_to_resolve = records[0].get("c")
         if number_of_nodes_to_resolve == 0:
             return ResolutionStats(
@@ -126,7 +128,7 @@ class SinglePropertyExactMatchResolver(EntityResolver):
             "RETURN count(node) as c "
         )
         records, _, _ = self.driver.execute_query(
-            merge_nodes_query, database_=self.database
+            merge_nodes_query, database_=self.neo4j_database
         )
         number_of_created_nodes = records[0].get("c")
         return ResolutionStats(
