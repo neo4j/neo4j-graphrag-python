@@ -72,6 +72,7 @@ def test_upsert_nodes(_: Mock, driver: MagicMock) -> None:
                 }
             ]
         },
+        database_=None,
     )
 
 
@@ -109,6 +110,7 @@ def test_upsert_nodes_with_embedding(
                 }
             ]
         },
+        database_=None,
     )
 
 
@@ -143,6 +145,7 @@ def test_upsert_relationship(_: Mock, driver: MagicMock) -> None:
     driver.execute_query.assert_called_once_with(
         UPSERT_RELATIONSHIP_QUERY,
         parameters_=parameters,
+        database_=None,
     )
 
 
@@ -179,6 +182,7 @@ def test_upsert_relationship_with_embedding(_: Mock, driver: MagicMock) -> None:
     driver.execute_query.assert_any_call(
         UPSERT_RELATIONSHIP_QUERY,
         parameters_=parameters,
+        database_=None,
     )
 
 
@@ -210,6 +214,7 @@ async def test_run(_: Mock, driver: MagicMock) -> None:
                 }
             ]
         },
+        database_=None,
     )
     parameters_ = {
         "rows": [
@@ -225,6 +230,7 @@ async def test_run(_: Mock, driver: MagicMock) -> None:
     driver.execute_query.assert_any_call(
         UPSERT_RELATIONSHIP_QUERY,
         parameters_=parameters_,
+        database_=None,
     )
 
 
@@ -257,6 +263,7 @@ async def test_run_is_version_below_5_23(_: Mock) -> None:
                 }
             ]
         },
+        database_=None,
     )
     parameters_ = {
         "rows": [
@@ -272,6 +279,7 @@ async def test_run_is_version_below_5_23(_: Mock) -> None:
     driver.execute_query.assert_any_call(
         UPSERT_RELATIONSHIP_QUERY,
         parameters_=parameters_,
+        database_=None,
     )
 
 
@@ -305,6 +313,7 @@ async def test_run_is_version_5_23_or_above(_: Mock) -> None:
                 }
             ]
         },
+        database_=None,
     )
     parameters_ = {
         "rows": [
@@ -320,4 +329,5 @@ async def test_run_is_version_5_23_or_above(_: Mock) -> None:
     driver.execute_query.assert_any_call(
         UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE,
         parameters_=parameters_,
+        database_=None,
     )
