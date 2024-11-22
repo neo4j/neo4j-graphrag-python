@@ -3,12 +3,18 @@
 ## Next
 
 ### Added
-- Introduced optional lexical graph configuration for SimpleKGPipeline, enhancing flexibility in customizing node labels and relationship types in the lexical graph.
+- Introduced optional lexical graph configuration for `SimpleKGPipeline`, enhancing flexibility in customizing node labels and relationship types in the lexical graph.
+- Introduced optional `neo4j_database` parameter for `SimpleKGPipeline` to create the graph in a non-default database.
+- Introduced optional `neo4j_database` parameter for `Neo4jChunkReader` to read chunks from a non-default database.
+- Introduced optional `neo4j_database` parameter for `Text2CypherRetriever` to run the generated query against a non-default database.
 - Ability to provide description and list of properties for entities and relations in the SimpleKGPipeline constructor.
 - Ability to run queries against a custom `neo4j_database` for the `Text2CypherRetriever` and the `Neo4jChunkReader` component (was already possible with other retrievers and components).
 
 ### Fixed
 - `neo4j_database` parameter is now used for all queries in the `Neo4jWriter`.
+
+### Changed
+- Updated all examples to use `neo4j_database` parameter instead of an undocumented neo4j driver constructor.
 
 ## 1.2.0
 
