@@ -23,7 +23,6 @@ INDEX = "moviePlotsEmbedding"
 driver = neo4j.GraphDatabase.driver(
     URI,
     auth=AUTH,
-    database=DATABASE,
 )
 
 embedder = OpenAIEmbeddings()
@@ -33,6 +32,7 @@ retriever = VectorCypherRetriever(
     index_name=INDEX,
     retrieval_query="WITH node, score RETURN node.title as title, node.plot as plot",
     embedder=embedder,
+    neo4j_database=DATABASE,
 )
 
 llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0})

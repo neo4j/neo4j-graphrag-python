@@ -17,11 +17,12 @@ DATABASE = "recommendations"
 INDEX_NAME = "moviePlotsEmbedding"
 
 
-with neo4j.GraphDatabase.driver(URI, auth=AUTH, database=DATABASE) as driver:
+with neo4j.GraphDatabase.driver(URI, auth=AUTH) as driver:
     # Initialize the retriever
     retriever = VectorRetriever(
         driver=driver,
         index_name=INDEX_NAME,
+        neo4j_database=DATABASE,
     )
 
     # Perform the similarity search for a vector query

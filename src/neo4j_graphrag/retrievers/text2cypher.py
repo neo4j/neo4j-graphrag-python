@@ -71,6 +71,7 @@ class Text2CypherRetriever(Retriever):
             Callable[[neo4j.Record], RetrieverResultItem]
         ] = None,
         custom_prompt: Optional[str] = None,
+        neo4j_database: Optional[str] = None,
     ) -> None:
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -85,11 +86,14 @@ class Text2CypherRetriever(Retriever):
                 examples=examples,
                 result_formatter=result_formatter,
                 custom_prompt=custom_prompt,
+                neo4j_database=neo4j_database,
             )
         except ValidationError as e:
             raise RetrieverInitializationError(e.errors()) from e
 
-        super().__init__(validated_data.driver_model.driver)
+        super().__init__(
+            validated_data.driver_model.driver, validated_data.neo4j_database
+        )
         self.llm = validated_data.llm_model.llm
         self.examples = validated_data.examples
         self.result_formatter = validated_data.result_formatter
@@ -162,7 +166,9 @@ class Text2CypherRetriever(Retriever):
             llm_result = self.llm.invoke(prompt)
             t2c_query = llm_result.content
             logger.debug("Text2CypherRetriever Cypher query: %s", t2c_query)
-            records, _, _ = self.driver.execute_query(query_=t2c_query)
+            records, _, _ = self.driver.execute_query(
+                query_=t2c_query, database_=self.neo4j_database
+            )
         except CypherSyntaxError as e:
             raise Text2CypherRetrievalError(
                 f"Failed to get search result: {e.message}"

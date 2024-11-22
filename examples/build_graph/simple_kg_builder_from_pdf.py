@@ -50,6 +50,7 @@ async def define_and_run_pipeline(
         entities=ENTITIES,
         relations=RELATIONS,
         potential_schema=POTENTIAL_SCHEMA,
+        neo4j_database=DATABASE,
     )
     return await kg_builder.run_async(file_path=str(file_path))
 
@@ -62,7 +63,7 @@ async def main() -> PipelineResult:
             "response_format": {"type": "json_object"},
         },
     )
-    with neo4j.GraphDatabase.driver(URI, auth=AUTH, database=DATABASE) as driver:
+    with neo4j.GraphDatabase.driver(URI, auth=AUTH) as driver:
         res = await define_and_run_pipeline(driver, llm)
     await llm.async_client.close()
     return res
