@@ -12,6 +12,8 @@
 
 ### Changed
 - Updated all examples to use `neo4j_database` parameter instead of an undocumented neo4j driver constructor.
+- All `READ` queries are now routed to a reader replica (for clusters). This impacts all retrievers, the `Neo4jChunkReader` and `SinglePropertyExactMatchResolver` components.
+
 
 ## 1.2.0
 
