@@ -56,8 +56,8 @@ class LexicalGraphBuilder(Component):
     ) -> GraphResult:
         if document_info is None:
             logger.info(
-                "No document metadata provided, "
-                "the document node won't be created in the lexical graph"
+                "Document node not created in the lexical graph "
+                "because no document metadata is provided"
             )
         graph = Neo4jGraph()
         document_id = None
