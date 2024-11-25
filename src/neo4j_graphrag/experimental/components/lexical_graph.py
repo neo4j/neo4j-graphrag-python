@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import asyncio
-import warnings
+import logging
 from typing import Any, Dict, Optional
 
 from pydantic import validate_call
@@ -29,6 +29,8 @@ from neo4j_graphrag.experimental.components.types import (
     TextChunks,
 )
 from neo4j_graphrag.experimental.pipeline import Component
+
+logger = logging.getLogger(__name__)
 
 
 class LexicalGraphBuilder(Component):
@@ -53,8 +55,9 @@ class LexicalGraphBuilder(Component):
         document_info: Optional[DocumentInfo] = None,
     ) -> GraphResult:
         if document_info is None:
-            warnings.warn(
-                "No document metadata provided, the document node won't be created in the lexical graph"
+            logger.info(
+                "Document node not created in the lexical graph "
+                "because no document metadata is provided"
             )
         graph = Neo4jGraph()
         document_id = None

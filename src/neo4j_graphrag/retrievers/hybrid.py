@@ -201,7 +201,10 @@ class HybridRetriever(Retriever):
         logger.debug("HybridRetriever Cypher query: %s", search_query)
 
         records, _, _ = self.driver.execute_query(
-            search_query, parameters, database_=self.neo4j_database
+            search_query,
+            parameters,
+            database_=self.neo4j_database,
+            routing_=neo4j.RoutingControl.READ,
         )
         return RawSearchResult(
             records=records,
@@ -358,7 +361,10 @@ class HybridCypherRetriever(Retriever):
         logger.debug("HybridRetriever Cypher query: %s", search_query)
 
         records, _, _ = self.driver.execute_query(
-            search_query, parameters, database_=self.neo4j_database
+            search_query,
+            parameters,
+            database_=self.neo4j_database,
+            routing_=neo4j.RoutingControl.READ,
         )
         return RawSearchResult(
             records=records,

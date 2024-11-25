@@ -137,6 +137,7 @@ def test_similarity_search_vector_happy_path(
             "query_vector": query_vector,
         },
         database_=database,
+        routing_=neo4j.RoutingControl.READ,
     )
     assert records == RetrieverResult(
         items=[
@@ -182,6 +183,7 @@ def test_similarity_search_text_happy_path(
             "query_vector": embed_query_vector,
         },
         database_=None,
+        routing_=neo4j.RoutingControl.READ,
     )
     assert records == RetrieverResult(
         items=[
@@ -234,6 +236,7 @@ def test_similarity_search_text_return_properties(
             "query_vector": embed_query_vector,
         },
         database_=None,
+        routing_=neo4j.RoutingControl.READ,
     )
     assert records == RetrieverResult(
         items=[
@@ -397,6 +400,7 @@ def test_retrieval_query_happy_path(
             "query_vector": embed_query_vector,
         },
         database_=database,
+        routing_=neo4j.RoutingControl.READ,
     )
     assert records == RetrieverResult(
         items=[
@@ -458,6 +462,7 @@ def test_retrieval_query_with_result_format_function(
             "query_vector": embed_query_vector,
         },
         database_=None,
+        routing_=neo4j.RoutingControl.READ,
     )
     assert records == RetrieverResult(
         items=[
@@ -520,6 +525,7 @@ def test_retrieval_query_with_params(
             "param": "dummy-param",
         },
         database_=None,
+        routing_=neo4j.RoutingControl.READ,
     )
 
     assert records == RetrieverResult(

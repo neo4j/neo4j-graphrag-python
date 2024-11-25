@@ -167,7 +167,9 @@ class Text2CypherRetriever(Retriever):
             t2c_query = llm_result.content
             logger.debug("Text2CypherRetriever Cypher query: %s", t2c_query)
             records, _, _ = self.driver.execute_query(
-                query_=t2c_query, database_=self.neo4j_database
+                query_=t2c_query,
+                database_=self.neo4j_database,
+                routing_=neo4j.RoutingControl.READ,
             )
         except CypherSyntaxError as e:
             raise Text2CypherRetrievalError(
