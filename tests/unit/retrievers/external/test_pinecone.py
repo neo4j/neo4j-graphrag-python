@@ -99,6 +99,7 @@ def test_pinecone_retriever_search_happy_path(
                 "id_property": "sync_id",
             },
             database_=None,
+            routing_=neo4j.RoutingControl.READ,
         )
 
     assert records == RetrieverResult(
@@ -171,6 +172,7 @@ def test_pinecone_retriever_search_return_properties(
                 "id_property": "sync_id",
             },
             database_=None,
+            routing_=neo4j.RoutingControl.READ,
         )
 
     assert records == RetrieverResult(
@@ -230,6 +232,7 @@ def test_pinecone_retriever_search_retrieval_query(
                 "id_property": "sync_id",
             },
             database_=None,
+            routing_=neo4j.RoutingControl.READ,
         )
 
     assert records == RetrieverResult(

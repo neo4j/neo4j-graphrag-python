@@ -80,6 +80,7 @@ def test_text_search_remote_vector_store_happy_path(driver: MagicMock) -> None:
             "id_property": "sync_id",
         },
         database_=None,
+        routing_=neo4j.RoutingControl.READ,
     )
     assert records == RetrieverResult(
         items=[
@@ -146,6 +147,7 @@ def test_text_search_remote_vector_store_return_properties(driver: MagicMock) ->
             "id_property": "sync_id",
         },
         database_=None,
+        routing_=neo4j.RoutingControl.READ,
     )
     assert records == RetrieverResult(
         items=[
@@ -193,6 +195,7 @@ def test_text_search_remote_vector_store_retrieval_query(driver: MagicMock) -> N
             "id_property": "sync_id",
         },
         database_=None,
+        routing_=neo4j.RoutingControl.READ,
     )
 
     assert records == RetrieverResult(

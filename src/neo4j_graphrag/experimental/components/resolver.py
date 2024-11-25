@@ -94,7 +94,8 @@ class SinglePropertyExactMatchResolver(EntityResolver):
             match_query += self.filter_query
         stat_query = f"{match_query} RETURN count(entity) as c"
         records, _, _ = self.driver.execute_query(
-            stat_query, database_=self.neo4j_database
+            stat_query,
+            database_=self.neo4j_database,
         )
         number_of_nodes_to_resolve = records[0].get("c")
         if number_of_nodes_to_resolve == 0:

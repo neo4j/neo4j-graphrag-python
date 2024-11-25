@@ -89,7 +89,9 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
 
     def _get_version(self) -> tuple[tuple[int, ...], bool]:
         records, _, _ = self.driver.execute_query(
-            "CALL dbms.components()", database_=self.neo4j_database
+            "CALL dbms.components()",
+            database_=self.neo4j_database,
+            routing_=neo4j.RoutingControl.READ,
         )
         version = records[0]["versions"][0]
         # drop everything after the '-' first
@@ -145,7 +147,10 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
             "options.indexConfig.`vector.dimensions` as dimensions"
         )
         query_result = self.driver.execute_query(
-            query, {"index_name": vector_index_name}, database_=self.neo4j_database
+            query,
+            {"index_name": vector_index_name},
+            database_=self.neo4j_database,
+            routing_=neo4j.RoutingControl.READ,
         )
         try:
             result = query_result.records[0]

@@ -97,6 +97,7 @@ class Neo4jChunkReader(Component):
         result, _, _ = self.driver.execute_query(
             query,
             database_=self.neo4j_database,
+            routing_=neo4j.RoutingControl.READ,
         )
         chunks = []
         for record in result:
