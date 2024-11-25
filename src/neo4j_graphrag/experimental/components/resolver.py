@@ -49,7 +49,7 @@ class SinglePropertyExactMatchResolver(EntityResolver):
         driver (neo4j.Driver): The Neo4j driver to connect to the database.
         filter_query (Optional[str]): To reduce the resolution scope, add a Cypher WHERE clause.
         resolve_property (str): The property that will be compared (default: "name"). If values match exactly, entities are merged.
-        neo4j_database (Optional[str]): The name of the Neo4j database to write to. Defaults to 'neo4j' if not provided.
+        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to the server's default database ("neo4j" by default) (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
     Example:
 
@@ -62,7 +62,7 @@ class SinglePropertyExactMatchResolver(EntityResolver):
         AUTH = ("neo4j", "password")
         DATABASE = "neo4j"
 
-        driver = GraphDatabase.driver(URI, auth=AUTH, database=DATABASE)
+        driver = GraphDatabase.driver(URI, auth=AUTH)
         resolver = SinglePropertyExactMatchResolver(driver=driver, neo4j_database=DATABASE)
         await resolver.run()  # no expected parameters
 
@@ -77,7 +77,7 @@ class SinglePropertyExactMatchResolver(EntityResolver):
     ) -> None:
         super().__init__(driver, filter_query)
         self.resolve_property = resolve_property
-        self.database = neo4j_database
+        self.neo4j_database = neo4j_database
 
     async def run(self) -> ResolutionStats:
         """Resolve entities based on the following rule:
@@ -93,7 +93,10 @@ class SinglePropertyExactMatchResolver(EntityResolver):
         if self.filter_query:
             match_query += self.filter_query
         stat_query = f"{match_query} RETURN count(entity) as c"
-        records, _, _ = self.driver.execute_query(stat_query, database_=self.database)
+        records, _, _ = self.driver.execute_query(
+            stat_query,
+            database_=self.neo4j_database,
+        )
         number_of_nodes_to_resolve = records[0].get("c")
         if number_of_nodes_to_resolve == 0:
             return ResolutionStats(
@@ -126,7 +129,7 @@ class SinglePropertyExactMatchResolver(EntityResolver):
             "RETURN count(node) as c "
         )
         records, _, _ = self.driver.execute_query(
-            merge_nodes_query, database_=self.database
+            merge_nodes_query, database_=self.neo4j_database
         )
         number_of_created_nodes = records[0].get("c")
         return ResolutionStats(

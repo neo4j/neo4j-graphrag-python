@@ -21,7 +21,6 @@ INDEX = "moviePlotsEmbedding"
 driver = neo4j.GraphDatabase.driver(
     URI,
     auth=AUTH,
-    database=DATABASE,
 )
 
 embedder = OpenAIEmbeddings(model="text-embedding-ada-002")
@@ -31,6 +30,7 @@ retriever = VectorCypherRetriever(
     index_name=INDEX,
     retrieval_query="WITH node, score RETURN node.title as title, node.plot as plot",
     embedder=embedder,  # type: ignore[arg-type, unused-ignore]
+    neo4j_database=DATABASE,
 )
 
 llm = ChatOpenAI(model="gpt-4o", temperature=0)

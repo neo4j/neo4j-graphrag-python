@@ -84,7 +84,7 @@ class Neo4jWriter(KGWriter):
 
     Args:
         driver (neo4j.driver): The Neo4j driver to connect to the database.
-        neo4j_database (Optional[str]): The name of the Neo4j database to write to. Defaults to 'neo4j' if not provided.
+        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to the server's default database ("neo4j" by default) (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
         batch_size (int): The number of nodes or relationships to write to the database in a batch. Defaults to 1000.
 
     Example:
@@ -99,7 +99,7 @@ class Neo4jWriter(KGWriter):
         AUTH = ("neo4j", "password")
         DATABASE = "neo4j"
 
-        driver = GraphDatabase.driver(URI, auth=AUTH, database=DATABASE)
+        driver = GraphDatabase.driver(URI, auth=AUTH)
         writer = Neo4jWriter(driver=driver, neo4j_database=DATABASE)
 
         pipeline = Pipeline()
@@ -119,10 +119,11 @@ class Neo4jWriter(KGWriter):
         self.is_version_5_23_or_above = self._check_if_version_5_23_or_above()
 
     def _db_setup(self) -> None:
-        # create index on __Entity__.id
+        # create index on __KGBuilder__.id
         # used when creating the relationships
         self.driver.execute_query(
-            "CREATE INDEX __entity__id IF NOT EXISTS  FOR (n:__KGBuilder__) ON (n.id)"
+            "CREATE INDEX __entity__id IF NOT EXISTS  FOR (n:__KGBuilder__) ON (n.id)",
+            database_=self.neo4j_database,
         )
 
     @staticmethod
@@ -150,10 +151,16 @@ class Neo4jWriter(KGWriter):
         parameters = {"rows": self._nodes_to_rows(nodes, lexical_graph_config)}
         if self.is_version_5_23_or_above:
             self.driver.execute_query(
-                UPSERT_NODE_QUERY_VARIABLE_SCOPE_CLAUSE, parameters_=parameters
+                UPSERT_NODE_QUERY_VARIABLE_SCOPE_CLAUSE,
+                parameters_=parameters,
+                database_=self.neo4j_database,
             )
         else:
-            self.driver.execute_query(UPSERT_NODE_QUERY, parameters_=parameters)
+            self.driver.execute_query(
+                UPSERT_NODE_QUERY,
+                parameters_=parameters,
+                database_=self.neo4j_database,
+            )
 
     def _get_version(self) -> tuple[int, ...]:
         records, _, _ = self.driver.execute_query(
@@ -187,10 +194,16 @@ class Neo4jWriter(KGWriter):
         parameters = {"rows": [rel.model_dump() for rel in rels]}
         if self.is_version_5_23_or_above:
             self.driver.execute_query(
-                UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE, parameters_=parameters
+                UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE,
+                parameters_=parameters,
+                database_=self.neo4j_database,
             )
         else:
-            self.driver.execute_query(UPSERT_RELATIONSHIP_QUERY, parameters_=parameters)
+            self.driver.execute_query(
+                UPSERT_RELATIONSHIP_QUERY,
+                parameters_=parameters,
+                database_=self.neo4j_database,
+            )
 
     @validate_call
     async def run(
@@ -202,7 +215,7 @@ class Neo4jWriter(KGWriter):
 
         Args:
             graph (Neo4jGraph): The knowledge graph to upsert into the database.
-            lexical_graph_config (LexicalGraphConfig):
+            lexical_graph_config (LexicalGraphConfig): Node labels and relationship types for the lexical graph.
         """
         try:
             self._db_setup()

@@ -80,7 +80,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         embedder (Optional[Embedder]): Embedder object to embed query text.
         return_properties (Optional[list[str]]): List of node properties to return.
         result_formatter (Optional[Callable[[neo4j.Record], RetrieverResultItem]]): Function to transform a neo4j.Record to a RetrieverResultItem.
-        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
+        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to the server's default database ("neo4j" by default) (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
     Raises:
         RetrieverInitializationError: If validation of the input arguments fail.
@@ -245,7 +245,10 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         logger.debug("Weaviate Store Cypher query: %s", search_query)
 
         records, _, _ = self.driver.execute_query(
-            search_query, parameters, database_=self.neo4j_database
+            search_query,
+            parameters,
+            database_=self.neo4j_database,
+            routing_=neo4j.RoutingControl.READ,
         )
 
         return RawSearchResult(records=records)

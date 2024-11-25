@@ -14,6 +14,7 @@
 #  limitations under the License.
 from unittest.mock import MagicMock, patch
 
+import neo4j
 import pytest
 from neo4j.exceptions import CypherSyntaxError, Neo4jError
 from neo4j_graphrag.exceptions import (
@@ -116,8 +117,13 @@ def test_t2c_retriever_happy_path(
     query_text = "may thy knife chip and shatter"
     neo4j_schema = "dummy-schema"
     examples = ["example-1", "example-2"]
+    neo4j_database = "mydb"
     retriever = Text2CypherRetriever(
-        driver=driver, llm=llm, neo4j_schema=neo4j_schema, examples=examples
+        driver=driver,
+        llm=llm,
+        neo4j_schema=neo4j_schema,
+        examples=examples,
+        neo4j_database=neo4j_database,
     )
     llm.invoke.return_value = LLMResponse(content=t2c_query)
     driver.execute_query.return_value = (
@@ -133,7 +139,11 @@ def test_t2c_retriever_happy_path(
     )
     retriever.search(query_text=query_text)
     llm.invoke.assert_called_once_with(prompt)
-    driver.execute_query.assert_called_once_with(query_=t2c_query)
+    driver.execute_query.assert_called_once_with(
+        query_=t2c_query,
+        database_=neo4j_database,
+        routing_=neo4j.RoutingControl.READ,
+    )
 
 
 @patch("neo4j_graphrag.retrievers.Text2CypherRetriever._verify_version")

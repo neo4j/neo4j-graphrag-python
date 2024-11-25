@@ -78,7 +78,7 @@ class VectorRetriever(Retriever):
             -   node: Represents the node retrieved from the vector index search.
             -   score: Denotes the similarity score.
 
-        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
+        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to the server's default database ("neo4j" by default) (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
     Raises:
         RetrieverInitializationError: If validation of the input arguments fail.
@@ -207,7 +207,10 @@ class VectorRetriever(Retriever):
         logger.debug("VectorRetriever Cypher query: %s", search_query)
 
         records, _, _ = self.driver.execute_query(
-            search_query, parameters, database_=self.neo4j_database
+            search_query,
+            parameters,
+            database_=self.neo4j_database,
+            routing_=neo4j.RoutingControl.READ,
         )
         return RawSearchResult(records=records)
 
@@ -243,7 +246,7 @@ class VectorCypherRetriever(Retriever):
         retrieval_query (str): Cypher query that gets appended.
         embedder (Optional[Embedder]): Embedder object to embed query text.
         result_formatter (Optional[Callable[[neo4j.Record], RetrieverResultItem]]): Provided custom function to transform a neo4j.Record to a RetrieverResultItem.
-        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
+        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to the server's default database ("neo4j" by default) (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
     Read more in the :ref:`User Guide <vector-cypher-retriever-user-guide>`.
     """
@@ -363,7 +366,10 @@ class VectorCypherRetriever(Retriever):
         logger.debug("VectorCypherRetriever Cypher query: %s", search_query)
 
         records, _, _ = self.driver.execute_query(
-            search_query, parameters, database_=self.neo4j_database
+            search_query,
+            parameters,
+            database_=self.neo4j_database,
+            routing_=neo4j.RoutingControl.READ,
         )
         return RawSearchResult(
             records=records,

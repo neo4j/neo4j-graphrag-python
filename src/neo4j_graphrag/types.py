@@ -241,3 +241,4 @@ class Text2CypherRetrieverModel(BaseModel):
     examples: Optional[list[str]] = None
     result_formatter: Optional[Callable[[neo4j.Record], RetrieverResultItem]] = None
     custom_prompt: Optional[str] = None
+    neo4j_database: Optional[str] = None

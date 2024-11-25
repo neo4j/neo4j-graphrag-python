@@ -3,6 +3,8 @@ and ingest text into a Neo4j Knowledge Graph.
 
 This example assumes a Neo4j db is up and running. Update the credentials below
 if needed.
+
+NB: when building a KG from text, no 'Document' node is created in the Knowledge Graph.
 """
 
 import asyncio
@@ -11,6 +13,10 @@ import neo4j
 from neo4j_graphrag.embeddings import OpenAIEmbeddings
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
+from neo4j_graphrag.experimental.pipeline.types import (
+    EntityInputType,
+    RelationInputType,
+)
 from neo4j_graphrag.llm import LLMInterface
 from neo4j_graphrag.llm.openai_llm import OpenAILLM
 
@@ -21,12 +27,28 @@ DATABASE = "neo4j"
 
 # Text to process
 TEXT = """The son of Duke Leto Atreides and the Lady Jessica, Paul is the heir of House Atreides,
-an aristocratic family that rules the planet Caladan."""
+an aristocratic family that rules the planet Caladan, the rainy planet, since 10191."""
 
 # Instantiate Entity and Relation objects. This defines the
 # entities and relations the LLM will be looking for in the text.
-ENTITIES = ["Person", "House", "Planet"]
-RELATIONS = ["PARENT_OF", "HEIR_OF", "RULES"]
+ENTITIES: list[EntityInputType] = [
+    # entities can be defined with a simple label...
+    "Person",
+    # ... or with a dict if more details are needed,
+    # such as a description:
+    {"label": "House", "description": "Family the person belongs to"},
+    # or a list of properties the LLM will try to attach to the entity:
+    {"label": "Planet", "properties": [{"name": "weather", "type": "STRING"}]},
+]
+# same thing for relationships:
+RELATIONS: list[RelationInputType] = [
+    "PARENT_OF",
+    {
+        "label": "HEIR_OF",
+        "description": "Used for inheritor relationship between father and sons",
+    },
+    {"label": "RULES", "properties": [{"name": "fromYear", "type": "INTEGER"}]},
+]
 POTENTIAL_SCHEMA = [
     ("Person", "PARENT_OF", "Person"),
     ("Person", "HEIR_OF", "House"),
@@ -47,6 +69,7 @@ async def define_and_run_pipeline(
         relations=RELATIONS,
         potential_schema=POTENTIAL_SCHEMA,
         from_pdf=False,
+        neo4j_database=DATABASE,
     )
     return await kg_builder.run_async(text=TEXT)
 
@@ -59,7 +82,7 @@ async def main() -> PipelineResult:
             "response_format": {"type": "json_object"},
         },
     )
-    with neo4j.GraphDatabase.driver(URI, auth=AUTH, database=DATABASE) as driver:
+    with neo4j.GraphDatabase.driver(URI, auth=AUTH) as driver:
         res = await define_and_run_pipeline(driver, llm)
     await llm.async_client.close()
     return res

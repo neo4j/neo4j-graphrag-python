@@ -15,6 +15,7 @@
 
 from unittest.mock import MagicMock, patch
 
+import neo4j
 import pytest
 from neo4j_graphrag.exceptions import (
     EmbeddingRequiredError,
@@ -204,6 +205,7 @@ def test_hybrid_search_text_happy_path(
             "query_vector": embed_query_vector,
         },
         database_=None,
+        routing_=neo4j.RoutingControl.READ,
     )
     embedder.embed_query.assert_called_once_with(query_text)
     assert records == RetrieverResult(
@@ -262,6 +264,7 @@ def test_hybrid_search_favors_query_vector_over_embedding_vector(
             "query_vector": query_vector,
         },
         database_=database,
+        routing_=neo4j.RoutingControl.READ,
     )
     embedder.embed_query.assert_not_called()
 
@@ -344,6 +347,7 @@ def test_hybrid_retriever_return_properties(
             "query_vector": embed_query_vector,
         },
         database_=None,
+        routing_=neo4j.RoutingControl.READ,
     )
     assert records == RetrieverResult(
         items=[
@@ -410,6 +414,7 @@ def test_hybrid_cypher_retrieval_query_with_params(
             "param": "dummy-param",
         },
         database_=None,
+        routing_=neo4j.RoutingControl.READ,
     )
 
     assert records == RetrieverResult(

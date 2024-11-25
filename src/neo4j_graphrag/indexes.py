@@ -85,7 +85,7 @@ def create_vector_index(
         similarity_fn (str): case-insensitive values for the vector similarity function:
             ``euclidean`` or ``cosine``.
         fail_if_exists (bool): If True raise an error if the index already exists. Defaults to False.
-        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
+        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to the server's default database ("neo4j" by default) (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
     Raises:
         ValueError: If validation of the input arguments fail.
@@ -167,7 +167,7 @@ def create_fulltext_index(
         label (str): The node label to be indexed.
         node_properties (list[str]): The node properties to create the fulltext index on.
         fail_if_exists (bool): If True raise an error if the index already exists. Defaults to False.
-        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
+        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to the server's default database ("neo4j" by default) (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
     Raises:
         ValueError: If validation of the input arguments fail.
@@ -229,7 +229,7 @@ def drop_index_if_exists(
     Args:
         driver (neo4j.Driver): Neo4j Python driver instance.
         name (str): The name of the index to delete.
-        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
+        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to the server's default database ("neo4j" by default) (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
     Raises:
         neo4j.exceptions.ClientError: If dropping of index fails.
@@ -281,7 +281,7 @@ def upsert_vector(
         node_id (int): The element id of the node.
         embedding_property (str): The name of the property to store the vector in.
         vector (list[float]): The vector to store.
-        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
+        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to the server's default database ("neo4j" by default) (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
     Raises:
         Neo4jInsertionError: If upserting of the vector fails.
@@ -337,7 +337,7 @@ def upsert_vector_on_relationship(
         rel_id (int): The element id of the relationship.
         embedding_property (str): The name of the property to store the vector in.
         vector (list[float]): The vector to store.
-        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
+        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to the server's default database ("neo4j" by default) (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
     Raises:
         Neo4jInsertionError: If upserting of the vector fails.
@@ -394,7 +394,7 @@ async def async_upsert_vector(
         node_id (int): The element id of the node.
         embedding_property (str): The name of the property to store the vector in.
         vector (list[float]): The vector to store.
-        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
+        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to the server's default database ("neo4j" by default) (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
     Raises:
         Neo4jInsertionError: If upserting of the vector fails.
@@ -451,7 +451,7 @@ async def async_upsert_vector_on_relationship(
         rel_id (int): The element id of the relationship.
         embedding_property (str): The name of the property to store the vector in.
         vector (list[float]): The vector to store.
-        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to "neo4j" in the database (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
+        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to the server's default database ("neo4j" by default) (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
 
     Raises:
         Neo4jInsertionError: If upserting of the vector fails.

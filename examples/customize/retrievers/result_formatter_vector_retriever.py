@@ -35,7 +35,7 @@ INDEX_NAME = "moviePlotsEmbedding"
 
 
 # Connect to Neo4j database
-driver = neo4j.GraphDatabase.driver(URI, auth=AUTH, database=DATABASE)
+driver = neo4j.GraphDatabase.driver(URI, auth=AUTH)
 
 
 query_text = "Find a movie about astronauts"
@@ -52,6 +52,7 @@ retriever = VectorRetriever(
     index_name=INDEX_NAME,
     embedder=OpenAIEmbeddings(),
     return_properties=["title", "plot"],
+    neo4j_database=DATABASE,
 )
 print(retriever.search(query_text=query_text, top_k=top_k_results))
 print()

@@ -29,11 +29,13 @@ async def test_neo4j_chunk_reader(driver: Mock) -> None:
         None,
         None,
     )
-    chunk_reader = Neo4jChunkReader(driver)
+    chunk_reader = Neo4jChunkReader(driver, neo4j_database="mydb")
     res = await chunk_reader.run()
 
     driver.execute_query.assert_called_once_with(
-        "MATCH (c:`Chunk`) RETURN c { .*, embedding: null } as chunk ORDER BY c.index"
+        "MATCH (c:`Chunk`) RETURN c { .*, embedding: null } as chunk ORDER BY c.index",
+        database_="mydb",
+        routing_=neo4j.RoutingControl.READ,
     )
 
     assert isinstance(res, TextChunks)
@@ -72,7 +74,9 @@ async def test_neo4j_chunk_reader_custom_lg_config(driver: Mock) -> None:
     )
 
     driver.execute_query.assert_called_once_with(
-        "MATCH (c:`Page`) RETURN c { .*, embedding: null } as chunk ORDER BY c.k"
+        "MATCH (c:`Page`) RETURN c { .*, embedding: null } as chunk ORDER BY c.k",
+        database_=None,
+        routing_=neo4j.RoutingControl.READ,
     )
 
     assert isinstance(res, TextChunks)
@@ -106,7 +110,9 @@ async def test_neo4j_chunk_reader_fetch_embedding(driver: Mock) -> None:
     res = await chunk_reader.run()
 
     driver.execute_query.assert_called_once_with(
-        "MATCH (c:`Chunk`) RETURN c { .* } as chunk ORDER BY c.index"
+        "MATCH (c:`Chunk`) RETURN c { .* } as chunk ORDER BY c.index",
+        database_=None,
+        routing_=neo4j.RoutingControl.READ,
     )
 
     assert isinstance(res, TextChunks)
