@@ -3,6 +3,8 @@ and ingest text into a Neo4j Knowledge Graph.
 
 This example assumes a Neo4j db is up and running. Update the credentials below
 if needed.
+
+NB: when building a KG from text, no 'Document' node is created in the Knowledge Graph.
 """
 
 import asyncio
@@ -21,7 +23,7 @@ from neo4j_graphrag.llm.openai_llm import OpenAILLM
 # Neo4j db infos
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
-DATABASE = "newdb"
+DATABASE = "neo4j"
 
 # Text to process
 TEXT = """The son of Duke Leto Atreides and the Lady Jessica, Paul is the heir of House Atreides,
