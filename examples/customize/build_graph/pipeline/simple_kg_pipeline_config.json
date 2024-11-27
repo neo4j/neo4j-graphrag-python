@@ -1,0 +1,42 @@
+{
+    "version_": "1",
+    "neo4j_config": {
+        "uri": {
+            "resolver_": "ENV",
+            "var_": "NEO4J_URI"
+        },
+        "user": {
+            "resolver_": "ENV",
+            "var_": "NEO4J_USER"
+        },
+        "password": {
+            "resolver_": "ENV",
+            "var_": "NEO4J_PASSWORD"
+        },
+        "database": {
+            "resolver_": "ENV",
+            "var_": "NEO4J_DATABASE"
+        }
+    },
+    "llm_config": {
+        "name_": "openai",
+        "class_": "OpenAILLM",
+        "params_": {
+            "api_key": {
+                "resolver_": "ENV",
+                "var_": "OPENAI_API_KEY"
+            },
+            "model_name": "gpt-4o"
+        }
+    },
+    "embedder_config": {
+        "name_": "openai",
+        "class_": "OpenAIEmbeddings",
+        "params_": {
+            "api_key": {
+                "resolver_": "ENV",
+                "var_": "OPENAI_API_KEY"
+            }
+        }
+    }
+}
