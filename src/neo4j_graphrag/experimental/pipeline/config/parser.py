@@ -101,7 +101,9 @@ class SimpleKGPipelineConfigParser:
             from_pdf=self.config.from_pdf,
             entities=list(self.config.entities) if self.config.entities else [],
             relations=list(self.config.relations) if self.config.relations else [],
-            potential_schema=list(self.config.potential_schema) if self.config.potential_schema else [],
+            potential_schema=list(self.config.potential_schema)
+            if self.config.potential_schema
+            else [],
             pdf_loader=self._get_object(
                 self.config.pdf_loader,
                 optional_module="neo4j_graphrag.experimental.components.pdf_loader",

@@ -14,7 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Self, Tuple, Union
 
 from pydantic import BaseModel, ValidationError, model_validator, validate_call
 
@@ -55,6 +55,14 @@ class SchemaEntity(BaseModel):
     description: str = ""
     properties: List[SchemaProperty] = []
 
+    @classmethod
+    def from_text_or_dict(
+        cls, input: str | dict[str, Union[str, dict[str, str]]]
+    ) -> Self:
+        if isinstance(input, str):
+            return cls(label=input)
+        return cls.model_validate(input)
+
 
 class SchemaRelation(BaseModel):
     """
@@ -64,6 +72,14 @@ class SchemaRelation(BaseModel):
     label: str
     description: str = ""
     properties: List[SchemaProperty] = []
+
+    @classmethod
+    def from_text_or_dict(
+        cls, input: str | dict[str, Union[str, dict[str, str]]]
+    ) -> Self:
+        if isinstance(input, str):
+            return cls(label=input)
+        return cls.model_validate(input)
 
 
 class SchemaConfig(DataModel):

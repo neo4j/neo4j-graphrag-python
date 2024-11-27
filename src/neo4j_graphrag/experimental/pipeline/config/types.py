@@ -47,17 +47,9 @@ class ClassConfig(BaseModel):
     params_: dict[str, ParamConfig]
 
 
-class SimpleKGPipelineConfig(BasePipelineV1Config):
-    neo4j_config: DriverConfig
-    llm_config: ClassConfig
-    embedder_config: ClassConfig
+class SimpleKGPipelineExposedParamConfig(BaseModel):
     from_pdf: bool = False
-    entities: Optional[Sequence[EntityInputType]] = None
-    relations: Optional[Sequence[RelationInputType]] = None
     potential_schema: Optional[list[tuple[str, str, str]]] = None
-    pdf_loader: ClassConfig | None = None
-    text_splitter: ClassConfig | None = None
-    kg_writer: ClassConfig | None = None
     on_error: OnError = OnError.IGNORE
     prompt_template: Union[ERExtractionTemplate, str] = ERExtractionTemplate()
     perform_entity_resolution: bool = True
@@ -67,3 +59,14 @@ class SimpleKGPipelineConfig(BasePipelineV1Config):
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
     )
+
+
+class SimpleKGPipelineConfig(BasePipelineV1Config, SimpleKGPipelineExposedParamConfig):
+    neo4j_config: DriverConfig
+    llm_config: ClassConfig
+    embedder_config: ClassConfig
+    pdf_loader: ClassConfig | None = None
+    text_splitter: ClassConfig | None = None
+    kg_writer: ClassConfig | None = None
+    entities: Optional[Sequence[EntityInputType]] = None
+    relations: Optional[Sequence[RelationInputType]] = None
