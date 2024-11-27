@@ -254,6 +254,9 @@ async def test_knowledge_graph_builder_with_entities_and_file(_: Mock) -> None:
 
     file_path = "path/to/test.pdf"
 
+    internal_entities = [SchemaEntity(label=label) for label in entities]
+    internal_relations = [SchemaRelation(label=label) for label in relations]
+
     with patch.object(
         kg_builder.pipeline,
         "run",
