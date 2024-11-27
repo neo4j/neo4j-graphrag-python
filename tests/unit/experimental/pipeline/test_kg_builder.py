@@ -21,7 +21,6 @@ from neo4j_graphrag.embeddings import Embedder
 from neo4j_graphrag.experimental.components.entity_relation_extractor import OnError
 from neo4j_graphrag.experimental.components.schema import (
     SchemaEntity,
-    SchemaProperty,
     SchemaRelation,
 )
 from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
