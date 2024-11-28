@@ -41,6 +41,7 @@ class ParamFromEnvConfig(ParamToResolveConfig):
 
 
 ParamConfig = Union[
+    float,
     str,
     ParamFromEnvConfig,
     dict[str, Any],

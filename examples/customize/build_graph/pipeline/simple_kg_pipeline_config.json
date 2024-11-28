@@ -46,15 +46,12 @@
         ["Person", "WORKS_FOR", "Organization"],
         ["Organization", "DIRECTED_BY", "Person"]
     ],
-    "components": [
-        {
-            "_name": "text_splitter",
-            "_class": "text_splitters.fixed_size_splitter.FixedSizeSplitter",
-            "_params": {
-                "chunk_size":  100,
-                "chunk_overlap": 10
-            }
+    "text_splitter": {
+        "class_": "fixed_size_splitter.FixedSizeSplitter",
+        "params_": {
+            "chunk_size":  100,
+            "chunk_overlap": 10
         }
-    ],
+    },
     "perform_entity_resolution": false
 }
