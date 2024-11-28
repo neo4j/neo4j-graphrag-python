@@ -18,7 +18,7 @@ from __future__ import annotations
 from typing import Any, List, Optional, Sequence, Union
 
 import neo4j
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field, field_validator
 
 from neo4j_graphrag.embeddings import Embedder
 from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
@@ -26,7 +26,7 @@ from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
     OnError,
 )
-from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
+from neo4j_graphrag.experimental.components.kg_writer import KGWriter, Neo4jWriter
 from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
 from neo4j_graphrag.experimental.components.resolver import (
     SinglePropertyExactMatchResolver,
@@ -36,10 +36,14 @@ from neo4j_graphrag.experimental.components.schema import (
     SchemaEntity,
     SchemaRelation,
 )
+from neo4j_graphrag.experimental.components.text_splitters.base import TextSplitter
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
     FixedSizeSplitter,
 )
 from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
+from neo4j_graphrag.experimental.pipeline.config.types import (
+    SimpleKGPipelineExposedParamConfig,
+)
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
 from neo4j_graphrag.experimental.pipeline.pipeline import Pipeline, PipelineResult
 from neo4j_graphrag.experimental.pipeline.types import (
@@ -50,24 +54,27 @@ from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 from neo4j_graphrag.llm.base import LLMInterface
 
 
-class SimpleKGPipelineConfig(BaseModel):
+class SimpleKGPipelineModel(SimpleKGPipelineExposedParamConfig):
     llm: LLMInterface
     driver: neo4j.Driver
-    from_pdf: bool
     embedder: Embedder
+    pdf_loader: PdfLoader | None = None
+    kg_writer: KGWriter | None = None
+    text_splitter: TextSplitter | None = None
     entities: list[SchemaEntity] = Field(default_factory=list)
     relations: list[SchemaRelation] = Field(default_factory=list)
-    potential_schema: list[tuple[str, str, str]] = Field(default_factory=list)
-    pdf_loader: Any = None
-    kg_writer: Any = None
-    text_splitter: Any = None
-    on_error: OnError = OnError.RAISE
-    prompt_template: Union[ERExtractionTemplate, str] = ERExtractionTemplate()
-    perform_entity_resolution: bool = True
-    lexical_graph_config: Optional[LexicalGraphConfig] = None
-    neo4j_database: Optional[str] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_validator("entities", mode="before")
+    @classmethod
+    def validate_entities(cls, entities: list[SchemaEntity]) -> list[SchemaEntity]:
+        return [SchemaEntity.from_text_or_dict(e) for e in entities]
+
+    @field_validator("relations", mode="before")
+    @classmethod
+    def validate_relations(cls, relations: list[SchemaRelation]) -> list[SchemaRelation]:
+        return [SchemaRelation.from_text_or_dict(r) for r in relations]
 
 
 class SimpleKGPipeline:
@@ -121,8 +128,8 @@ class SimpleKGPipeline:
         neo4j_database: Optional[str] = None,
     ):
         self.potential_schema = potential_schema or []
-        self.entities = [self.to_schema_entity(e) for e in entities or []]
-        self.relations = [self.to_schema_relation(r) for r in relations or []]
+        self.entities = entities or []
+        self.relations = relations or []
 
         try:
             on_error_enum = OnError(on_error)
@@ -131,7 +138,7 @@ class SimpleKGPipeline:
                 f"Invalid value for on_error: {on_error}. Expected one of {OnError.possible_values()}."
             )
 
-        config = SimpleKGPipelineConfig(
+        config = SimpleKGPipelineModel(
             llm=llm,
             driver=driver,
             entities=self.entities,
@@ -167,18 +174,6 @@ class SimpleKGPipeline:
         self.neo4j_database = config.neo4j_database
 
         self.pipeline = self._build_pipeline()
-
-    @staticmethod
-    def to_schema_entity(entity: EntityInputType) -> SchemaEntity:
-        if isinstance(entity, dict):
-            return SchemaEntity.model_validate(entity)
-        return SchemaEntity(label=entity)
-
-    @staticmethod
-    def to_schema_relation(relation: RelationInputType) -> SchemaRelation:
-        if isinstance(relation, dict):
-            return SchemaRelation.model_validate(relation)
-        return SchemaRelation(label=relation)
 
     def _build_pipeline(self) -> Pipeline:
         pipe = Pipeline()
