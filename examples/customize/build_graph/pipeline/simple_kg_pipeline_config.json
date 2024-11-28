@@ -38,5 +38,6 @@
                 "var_": "OPENAI_API_KEY"
             }
         }
-    }
+    },
+    "from_pdf": false
 }
