@@ -50,8 +50,7 @@ class SimpleKGPipelineConfigParser:
         self.config = config
 
     def _get_class(self, klass_path: str, optional_module: Optional[str] = None) -> Any:
-        """Get class type from string and an optional module
-        """
+        """Get class type from string and an optional module"""
         *modules, klass_name = klass_path.rsplit(".", 1)
         module_name = modules[0] if modules else optional_module
         if module_name is None:
@@ -108,15 +107,15 @@ class SimpleKGPipelineConfigParser:
         embedder = klass(**init_params)
         return embedder
 
-    def _resolve_param(
-        self, param: ParamConfig
-    ) -> Union[float, str, dict[str, Any]]:
+    def _resolve_param(self, param: ParamConfig) -> Union[float, str, dict[str, Any]]:
         """Resolve parameter"""
         if not isinstance(param, ParamToResolveConfig):
             return param
         resolver_name = param.resolver_
         if resolver_name not in PARAM_RESOLVERS:
-            raise ValueError(f"Resolver {resolver_name} not found in {PARAM_RESOLVERS.keys()}")
+            raise ValueError(
+                f"Resolver {resolver_name} not found in {PARAM_RESOLVERS.keys()}"
+            )
         resolver_klass = PARAM_RESOLVERS[resolver_name]
         resolver = resolver_klass()
         return resolver.resolve(param)
@@ -162,8 +161,7 @@ class SimpleKGPipelineConfigParser:
         )
 
     def parse(self) -> SimpleKGPipeline:
-        """Parse a config object into a SimpleKGPipeline instance
-        """
+        """Parse a config object into a SimpleKGPipeline instance"""
         input_model = self._parse_config()
         return SimpleKGPipeline(**input_model.model_dump())
 

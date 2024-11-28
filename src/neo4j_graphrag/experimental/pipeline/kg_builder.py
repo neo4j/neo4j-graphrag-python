@@ -73,7 +73,9 @@ class SimpleKGPipelineModel(SimpleKGPipelineExposedParamConfig):
 
     @field_validator("relations", mode="before")
     @classmethod
-    def validate_relations(cls, relations: list[SchemaRelation]) -> list[SchemaRelation]:
+    def validate_relations(
+        cls, relations: list[SchemaRelation]
+    ) -> list[SchemaRelation]:
         return [SchemaRelation.from_text_or_dict(r) for r in relations]
 
 
