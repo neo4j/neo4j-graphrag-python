@@ -2,6 +2,8 @@
 
 ## Next
 
+## 1.2.1
+
 ### Added
 - Introduced optional lexical graph configuration for `SimpleKGPipeline`, enhancing flexibility in customizing node labels and relationship types in the lexical graph.
 - Introduced optional `neo4j_database` parameter for `SimpleKGPipeline`, `Neo4jChunkReader`and `Text2CypherRetriever`.
