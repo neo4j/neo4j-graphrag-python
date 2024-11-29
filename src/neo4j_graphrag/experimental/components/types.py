@@ -14,11 +14,35 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Optional
+import uuid
+from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 from neo4j_graphrag.experimental.pipeline.component import DataModel
+
+
+class DocumentInfo(DataModel):
+    """A document loaded by a DataLoader.
+
+    Attributes:
+        path (str): Document path.
+        metadata (Optional[dict[str, Any]]): Metadata associated with this document.
+        uid (str): Unique identifier for this document.
+    """
+
+    path: str
+    metadata: Optional[Dict[str, str]] = None
+    uid: str = Field(default_factory=lambda: str(uuid.uuid4()))
+
+    @property
+    def document_id(self) -> str:
+        return self.uid
+
+
+class PdfDocument(DataModel):
+    text: str
+    document_info: DocumentInfo
 
 
 class TextChunk(BaseModel):
@@ -27,12 +51,18 @@ class TextChunk(BaseModel):
     Attributes:
         text (str): The raw chunk text.
         index (int): The position of this chunk in the original document.
-        metadata (Optional[dict[str, Any]]): Metadata associated with this chunk such as the id of the next chunk in the original document.
+        metadata (Optional[dict[str, Any]]): Metadata associated with this chunk.
+        uid (str): Unique identifier for this chunk.
     """
 
     text: str
     index: int
     metadata: Optional[dict[str, Any]] = None
+    uid: str = Field(default_factory=lambda: str(uuid.uuid4()))
+
+    @property
+    def chunk_id(self) -> str:
+        return self.uid
 
 
 class TextChunks(DataModel):
@@ -110,6 +140,7 @@ DEFAULT_CHUNK_NODE_LABEL = "Chunk"
 DEFAULT_CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE = "FROM_DOCUMENT"
 DEFAULT_NEXT_CHUNK_RELATIONSHIP_TYPE = "NEXT_CHUNK"
 DEFAULT_NODE_TO_CHUNK_RELATIONSHIP_TYPE = "FROM_CHUNK"
+DEFAULT_CHUNK_ID_PROPERTY = "id"
 DEFAULT_CHUNK_INDEX_PROPERTY = "index"
 DEFAULT_CHUNK_TEXT_PROPERTY = "text"
 DEFAULT_CHUNK_EMBEDDING_PROPERTY = "embedding"
@@ -126,6 +157,7 @@ class LexicalGraphConfig(BaseModel):
     )
     next_chunk_relationship_type: str = DEFAULT_NEXT_CHUNK_RELATIONSHIP_TYPE
     node_to_chunk_relationship_type: str = DEFAULT_NODE_TO_CHUNK_RELATIONSHIP_TYPE
+    chunk_id_property: str = DEFAULT_CHUNK_ID_PROPERTY
     chunk_index_property: str = DEFAULT_CHUNK_INDEX_PROPERTY
     chunk_text_property: str = DEFAULT_CHUNK_TEXT_PROPERTY
     chunk_embedding_property: str = DEFAULT_CHUNK_EMBEDDING_PROPERTY

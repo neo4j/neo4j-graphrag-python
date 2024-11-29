@@ -4,8 +4,8 @@ from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     EntityRelationExtractor,
     OnError,
 )
-from neo4j_graphrag.experimental.components.pdf_loader import DocumentInfo
 from neo4j_graphrag.experimental.components.types import (
+    DocumentInfo,
     LexicalGraphConfig,
     Neo4jGraph,
     TextChunks,

@@ -19,7 +19,7 @@ import asyncio
 import enum
 import json
 import logging
-from datetime import datetime
+import re
 from typing import Any, List, Optional, Union, cast
 
 import json_repair
@@ -27,9 +27,9 @@ from pydantic import ValidationError, validate_call
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.experimental.components.lexical_graph import LexicalGraphBuilder
-from neo4j_graphrag.experimental.components.pdf_loader import DocumentInfo
 from neo4j_graphrag.experimental.components.schema import SchemaConfig
 from neo4j_graphrag.experimental.components.types import (
+    DocumentInfo,
     LexicalGraphConfig,
     Neo4jGraph,
     TextChunk,
@@ -141,17 +141,19 @@ class EntityRelationExtractor(Component, abc.ABC):
         pass
 
     def update_ids(
-        self, graph: Neo4jGraph, chunk_index: int, run_id: str
+        self,
+        graph: Neo4jGraph,
+        chunk: TextChunk,
     ) -> Neo4jGraph:
-        """Make node IDs unique across chunks and pipeline runs by
-        prefixing them with a custom prefix (set in the run method)
-        and chunk index."""
-        prefix = f"{run_id}:{chunk_index}"
+        """Make node IDs unique across chunks, document and pipeline runs
+        by prefixing them with a unique prefix.
+        """
+        prefix = f"{chunk.chunk_id}"
         for node in graph.nodes:
             node.id = f"{prefix}:{node.id}"
             if node.properties is None:
                 node.properties = {}
-            node.properties.update({"chunk_index": chunk_index})
+            node.properties.update({"chunk_index": chunk.index})
         for rel in graph.relationships:
             rel.start_node_id = f"{prefix}:{rel.start_node_id}"
             rel.end_node_id = f"{prefix}:{rel.end_node_id}"
@@ -241,14 +243,13 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         self,
         chunk_graph: Neo4jGraph,
         chunk: TextChunk,
-        run_id: str,
         lexical_graph_builder: Optional[LexicalGraphBuilder] = None,
     ) -> None:
         """Perform post-processing after entity and relation extraction:
         - Update node IDs to make them unique across chunks
         - Build the lexical graph if requested
         """
-        self.update_ids(chunk_graph, chunk.index, run_id)
+        self.update_ids(chunk_graph, chunk)
         if lexical_graph_builder:
             await lexical_graph_builder.process_chunk_extracted_entities(
                 chunk_graph,
@@ -271,7 +272,6 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
     async def run_for_chunk(
         self,
         sem: asyncio.Semaphore,
-        run_id: str,
         chunk: TextChunk,
         schema: SchemaConfig,
         examples: str,
@@ -283,7 +283,6 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             await self.post_process_chunk(
                 chunk_graph,
                 chunk,
-                run_id,
                 lexical_graph_builder,
             )
             return chunk_graph
@@ -312,7 +311,6 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             schema (SchemaConfig | None): Definition of the schema to guide the LLM in its extraction. Caution: at the moment, there is no guarantee that the extracted entities and relations will strictly obey the schema.
             examples (str): Examples for few-shot learning in the prompt.
         """
-        run_id = str(int(datetime.now().timestamp()))
         lexical_graph_builder = None
         lexical_graph = None
         if self.create_lexical_graph:
@@ -330,7 +328,6 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         tasks = [
             self.run_for_chunk(
                 sem,
-                run_id,
                 chunk,
                 schema,
                 examples,
