@@ -87,7 +87,8 @@ async def test_lexical_graph_builder_run_with_document() -> None:
     document = nodes[0]
     assert document.id == doc_uid
     assert document.label == DEFAULT_DOCUMENT_NODE_LABEL
-    assert document.properties == {"path": "test_lexical_graph"}
+    assert document.properties["path"] == "test_lexical_graph"
+    assert document.properties["createdAt"] is not None
     chunk1 = nodes[1]
     assert chunk1.label == DEFAULT_CHUNK_NODE_LABEL
     chunk2 = nodes[2]
@@ -148,7 +149,7 @@ async def test_lexical_graph_builder_run_custom_labels() -> None:
     document = nodes[0]
     assert document.id == doc_uid
     assert document.label == "Report"
-    assert document.properties == {"path": "test_lexical_graph"}
+    assert document.properties["path"] == "test_lexical_graph"
     chunk1 = nodes[1]
     assert chunk1.label == "Page"
     chunk2 = nodes[2]
