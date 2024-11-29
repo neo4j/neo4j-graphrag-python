@@ -12,13 +12,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from unittest.mock import MagicMock
-
 import neo4j
 import pytest
-from neo4j_graphrag.experimental.components.entity_relation_extractor import (
-    LLMEntityRelationExtractor,
-)
 from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
 from neo4j_graphrag.experimental.components.lexical_graph import LexicalGraphBuilder
 from neo4j_graphrag.experimental.components.types import (
@@ -27,7 +22,6 @@ from neo4j_graphrag.experimental.components.types import (
     TextChunks,
 )
 from neo4j_graphrag.experimental.pipeline import Pipeline
-from neo4j_graphrag.llm import LLMResponse
 
 
 @pytest.mark.asyncio
