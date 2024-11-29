@@ -25,8 +25,8 @@ from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     balance_curly_braces,
     fix_invalid_json,
 )
-from neo4j_graphrag.experimental.components.pdf_loader import DocumentInfo
 from neo4j_graphrag.experimental.components.types import (
+    DocumentInfo,
     Neo4jGraph,
     TextChunk,
     TextChunks,
@@ -107,13 +107,13 @@ async def test_extractor_happy_path_non_empty_result() -> None:
     chunk_entity = result.nodes[1]
     assert chunk_entity.label == "Chunk"
     entity = result.nodes[2]
-    assert entity.id.endswith("0:0")
+    assert entity.id == f"{chunk_entity.id}:0"
     assert entity.label == "Person"
     assert entity.properties == {"chunk_index": 0}
     assert len(result.relationships) == 2
     assert result.relationships[0].type == "FROM_DOCUMENT"
-    assert result.relationships[0].start_node_id.endswith(":0")
-    assert result.relationships[0].end_node_id == "path"
+    assert result.relationships[0].start_node_id == f"{chunk_entity.id}"
+    assert result.relationships[0].end_node_id == f"{doc.id}"
     assert result.relationships[1].type == "FROM_CHUNK"
 
 

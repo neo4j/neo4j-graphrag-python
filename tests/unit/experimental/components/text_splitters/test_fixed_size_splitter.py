@@ -12,6 +12,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from itertools import zip_longest
+
 import pytest
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
     FixedSizeSplitter,
@@ -34,7 +36,10 @@ async def test_split_text_no_overlap() -> None:
         TextChunk(text="nd sh", index=4),
         TextChunk(text="atter", index=5),
     ]
-    assert chunks.chunks == expected_chunks
+    for actual, expected in zip_longest(chunks.chunks, expected_chunks):
+        assert actual.text == expected.text
+        assert actual.index == expected.index
+        assert expected.uid is not None
 
 
 @pytest.mark.asyncio
@@ -50,7 +55,10 @@ async def test_split_text_with_overlap() -> None:
         TextChunk(text="ip and sha", index=2),
         TextChunk(text="hatter", index=3),
     ]
-    assert chunks.chunks == expected_chunks
+    for actual, expected in zip_longest(chunks.chunks, expected_chunks):
+        assert actual.text == expected.text
+        assert actual.index == expected.index
+        assert expected.uid is not None
 
 
 @pytest.mark.asyncio
