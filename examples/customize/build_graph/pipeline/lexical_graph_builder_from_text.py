@@ -33,7 +33,6 @@ async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
     pipe.add_component(TextChunkEmbedder(embedder=OpenAIEmbeddings()), "chunk_embedder")
     # optional: define some custom node labels for the lexical graph:
     lexical_graph_config = LexicalGraphConfig(
-        id_prefix="example",
         chunk_node_label="TextPart",
     )
     pipe.add_component(
