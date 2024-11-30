@@ -14,7 +14,7 @@
 #  limitations under the License.
 
 import os
-from typing import Any, Optional
+from typing import Any
 
 from .types import ParamFromEnvConfig, ParamResolverEnum, ParamToResolveConfig
 
@@ -46,7 +46,7 @@ class EnvParamResolver(ParamResolver):
 
     name = ParamResolverEnum.ENV
 
-    def resolve(self, param: ParamFromEnvConfig) -> Optional[str]:
+    def resolve(self, param: ParamFromEnvConfig) -> Any:
         return os.environ.get(param.var_)
 
 

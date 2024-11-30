@@ -14,29 +14,34 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Union
+from collections import defaultdict
+from typing import Any, Union
 
 from pydantic import BaseModel, ConfigDict
 
 from neo4j_graphrag.experimental.pipeline.component import Component
 
 
-class ComponentConfig(BaseModel):
+class ComponentDefinition(BaseModel):
     name: str
     component: Component
+    run_params: dict[str, Any] = {}
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
-class ConnectionConfig(BaseModel):
+class ConnectionDefinition(BaseModel):
     start: str
     end: str
     input_config: dict[str, str]
 
 
-class PipelineConfig(BaseModel):
-    components: list[ComponentConfig]
-    connections: list[ConnectionConfig]
+class PipelineDefinition(BaseModel):
+    components: list[ComponentDefinition]
+    connections: list[ConnectionDefinition]
+
+    def get_run_params(self) -> defaultdict[str, dict[str, Any]]:
+        return defaultdict(dict, {c.name: c.run_params for c in self.components})
 
 
 EntityInputType = Union[str, dict[str, Union[str, list[dict[str, str]]]]]
