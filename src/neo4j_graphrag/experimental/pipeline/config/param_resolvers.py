@@ -16,8 +16,12 @@
 import os
 from typing import Any
 
-from .types import ParamFromEnvConfig, ParamResolverEnum, ParamToResolveConfig, \
-    ParamFromKeyConfig
+from .types import (
+    ParamFromEnvConfig,
+    ParamFromKeyConfig,
+    ParamResolverEnum,
+    ParamToResolveConfig,
+)
 
 
 class ParamResolver:
