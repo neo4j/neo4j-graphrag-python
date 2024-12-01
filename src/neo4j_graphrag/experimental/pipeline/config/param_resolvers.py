@@ -16,13 +16,17 @@
 import os
 from typing import Any
 
-from .types import ParamFromEnvConfig, ParamResolverEnum, ParamToResolveConfig
+from .types import ParamFromEnvConfig, ParamResolverEnum, ParamToResolveConfig, \
+    ParamFromKeyConfig
 
 
 class ParamResolver:
     """A base class for all parameter resolvers."""
 
     name: ParamResolverEnum
+
+    def __init__(self, data: dict[str, Any]) -> None:
+        self.data = data
 
     def resolve(self, param: ParamToResolveConfig) -> Any:
         raise NotImplementedError
@@ -50,9 +54,48 @@ class EnvParamResolver(ParamResolver):
         return os.environ.get(param.var_)
 
 
+class ConfigKeyParamResolver(ParamResolver):
+    """Resolve a parameter by searching through the
+    config file. A parameter is defined by a `key_`.
+
+    It is possible to access nested keys by separating
+    each key with dots. For instance:
+
+    Example:
+
+    .. code-block:: python
+
+        data = {
+            "shared": {
+                "env": "LOCAL"
+            },
+            "section": {
+                "env": {
+                    "resolver_": "KEY",
+                    "key_": "shared.env"
+                }
+            }
+        }
+
+        resolver = ConfigKeyParamResolver(data)
+        resolver.resolve("shared.env")
+        # Output: "LOCAL"
+    """
+
+    name = ParamResolverEnum.CONFIG_KEY
+    KEY_SEP = "."
+
+    def resolve(self, param: ParamFromKeyConfig) -> Any:
+        d = self.data
+        for k in param.key_.split(self.KEY_SEP):
+            d = d[k]
+        return d
+
+
 PARAM_RESOLVERS = {
     resolver.name: resolver
     for resolver in [
         EnvParamResolver,
+        ConfigKeyParamResolver,
     ]
 }

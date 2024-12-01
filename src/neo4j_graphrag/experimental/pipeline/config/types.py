@@ -29,6 +29,8 @@ from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 
 class ParamResolverEnum(str, enum.Enum):
     ENV = "ENV"
+    CONFIG_ARRAY = "CONFIG_ARRAY"
+    CONFIG_KEY = "CONFIG_KEY"
 
 
 class ParamToResolveConfig(BaseModel):
@@ -40,10 +42,16 @@ class ParamFromEnvConfig(ParamToResolveConfig):
     var_: str
 
 
+class ParamFromKeyConfig(ParamToResolveConfig):
+    resolver_: Literal[ParamResolverEnum.CONFIG_KEY] = ParamResolverEnum.CONFIG_KEY
+    key_: str
+
+
 ParamConfig = Union[
     float,
     str,
     ParamFromEnvConfig,
+    ParamFromKeyConfig,
     dict[str, Any],
 ]
 
