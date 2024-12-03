@@ -57,8 +57,10 @@ class SchemaEntity(BaseModel):
 
     @classmethod
     def from_text_or_dict(
-        cls, input: str | dict[str, Union[str, dict[str, str]]]
+        cls, input: SchemaEntity | str | dict[str, Union[str, dict[str, str]]]
     ) -> Self:
+        if isinstance(input, SchemaEntity):
+            return input
         if isinstance(input, str):
             return cls(label=input)
         return cls.model_validate(input)
@@ -75,8 +77,10 @@ class SchemaRelation(BaseModel):
 
     @classmethod
     def from_text_or_dict(
-        cls, input: str | dict[str, Union[str, dict[str, str]]]
+        cls, input: SchemaRelation | str | dict[str, Union[str, dict[str, str]]]
     ) -> Self:
+        if isinstance(input, SchemaRelation):
+            return input
         if isinstance(input, str):
             return cls(label=input)
         return cls.model_validate(input)

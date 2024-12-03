@@ -12,7 +12,7 @@ import asyncio
 # env vars manually set for testing:
 import os
 
-from neo4j_graphrag.experimental.pipeline.config.parser import SimpleKGPipelineBuilder
+from neo4j_graphrag.experimental.pipeline.config.config_poc import PipelineRunner
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 
 os.environ["NEO4J_URI"] = "bolt://localhost:7687"
@@ -28,8 +28,8 @@ an aristocratic family that rules the planet Caladan, the rainy planet, since 10
 
 async def main() -> PipelineResult:
     file_path = "examples/customize/build_graph/pipeline/simple_kg_pipeline_config.json"
-    pipeline = SimpleKGPipelineBuilder.from_config_file(file_path)
-    return await pipeline.run_async(text=TEXT)
+    pipeline = PipelineRunner.from_config_file(file_path)
+    return await pipeline.run({"text":TEXT})
 
 
 if __name__ == "__main__":
