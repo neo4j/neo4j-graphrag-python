@@ -57,7 +57,10 @@ class TextChunkEmbedder(Component):
         metadata = text_chunk.metadata if text_chunk.metadata else {}
         metadata["embedding"] = embedding
         return TextChunk(
-            text=text_chunk.text, index=text_chunk.index, metadata=metadata
+            text=text_chunk.text,
+            index=text_chunk.index,
+            metadata=metadata,
+            uid=text_chunk.uid,
         )
 
     @validate_call
