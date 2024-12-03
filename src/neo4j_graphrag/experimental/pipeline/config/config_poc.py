@@ -7,7 +7,17 @@ import enum
 import importlib
 from collections import Counter
 from pathlib import Path
-from typing import Annotated, Any, ClassVar, Literal, Optional, Self, Union
+from typing import (
+    Annotated,
+    Any,
+    ClassVar,
+    Generic,
+    Literal,
+    Optional,
+    Self,
+    TypeVar,
+    Union,
+)
 
 import neo4j
 from pydantic import (
@@ -20,7 +30,7 @@ from pydantic import (
     Tag,
     field_validator,
 )
-from pydantic.utils import deep_update
+from pydantic.v1.utils import deep_update
 
 from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
 from neo4j_graphrag.experimental.pipeline import Component, Pipeline
@@ -50,16 +60,26 @@ class AbstractConfig(BaseModel, abc.ABC):
     RESOLVER_KEY: ClassVar[str] = "resolver_"
 
     _global_data: dict[str, Any] = PrivateAttr({})
+    """Additional parameter ignored by all model_* methods."""
 
     @classmethod
     def _get_class(cls, class_path: str, optional_module: Optional[str] = None) -> type:
-        """Get class from string and an optional module"""
+        """Get class from string and an optional module
+
+        Will first try to import the class from `class_path` alone. If it results in an ImportError,
+        will try to import from `f'{optional_module}.{class_path}'`
+
+        Args:
+            class_path (str): Class path with format 'my_module.MyClass'.
+            optional_module (Optional[str]): Optional module path. Used to provide a default path for some known objects and simplify the notation.
+
+        Raises:
+            ValueError: if the class can't be imported, even using the optional module.
+        """
         *modules, class_name = class_path.rsplit(".", 1)
         module_name = modules[0] if modules else optional_module
         if module_name is None:
-            module_name = "."
-            # logger.debug(...)
-            # raise ValueError("Must specify a module to import class from")
+            raise ValueError("Must specify a module to import class from")
         try:
             module = importlib.import_module(module_name)
             klass = getattr(module, class_name)
@@ -71,35 +91,43 @@ class AbstractConfig(BaseModel, abc.ABC):
         return klass  # type: ignore[no-any-return]
 
     def resolve_param(self, param: ParamConfig) -> Any:
+        """Finds the parameter value from its definition."""
         if not isinstance(param, ParamToResolveConfig):
+            # some parameters do not have to be resolved, real
+            # values are already provided
             return param
+        # all ParamToResolveConfig have a resolver_ field
         resolver_name = param.resolver_
         if resolver_name not in PARAM_RESOLVERS:
             raise ValueError(
                 f"Resolver {resolver_name} not found in {PARAM_RESOLVERS.keys()}"
             )
-        resolver_klass = PARAM_RESOLVERS[resolver_name]
-        resolver = resolver_klass(self._global_data)
+        resolver_class = PARAM_RESOLVERS[resolver_name]
+        resolver = resolver_class(self._global_data)
         return resolver.resolve(param)
 
     def resolve_params(self, params: dict[str, ParamConfig]) -> dict[str, Any]:
-        """Resolve parameters"""
+        """Resolve all parameters
+
+        Returning dict[str, Any] because parameters can be anything (str, float, list, dict...)
+        """
         return {
             param_name: self.resolve_param(param)
             for param_name, param in params.items()
         }
 
     @abc.abstractmethod
-    def parse(self) -> Any:
+    def parse(self, resolved_data: dict[str, Any] | None = None) -> Any:
         raise NotImplementedError()
 
 
-class ObjectConfig(AbstractConfig):
+T = TypeVar("T")
+"""Generic type to help (a bit) mypy with the return type of the parse method"""
+
+
+class ObjectConfig(AbstractConfig, Generic[T]):
     """A config class to represent an object from a class name
     and its constructor parameters.
-
-    Since they can be included in a list, objects must have a name
-    to uniquely identify them.
     """
 
     class_: str | None = Field(default=None, validate_default=True)
@@ -117,6 +145,7 @@ class ObjectConfig(AbstractConfig):
     @field_validator("params_")
     @classmethod
     def validate_params(cls, params_: dict[str, Any]) -> dict[str, Any]:
+        """Make sure all required parameters are provided."""
         for p in cls.REQUIRED_PARAMS:
             if p not in params_:
                 raise ValueError(f"Missing parameter {p}")
@@ -128,98 +157,144 @@ class ObjectConfig(AbstractConfig):
     def get_interface(self) -> type:
         return self.INTERFACE
 
-    def parse(self) -> Any:
+    def parse(self, resolved_data: dict[str, Any] | None = None) -> T:
+        """Import `class_`, resolve `params_` and instantiate object."""
+        self._global_data = resolved_data or {}
         if self.class_ is None:
-            raise ValueError(f"Class {self.class_} is not defined")
+            raise ValueError("`class_` is not defined")
         klass = self._get_class(self.class_, self.get_module())
         if not issubclass(klass, self.get_interface()):
             raise ValueError(
-                f"Invalid class {klass}. Expected a subclass of {self.get_interface()}"
+                f"Invalid class '{klass}'. Expected a subclass of '{self.get_interface()}'"
             )
         params = self.resolve_params(self.params_)
-        obj = klass(**params)
-        return obj
+        try:
+            obj = klass(**params)
+        except TypeError as e:
+            raise e
+        return obj  # type: ignore[return-value]
 
 
-class Neo4jDriverConfig(ObjectConfig):
+class Neo4jDriverConfig(ObjectConfig[neo4j.Driver]):
     REQUIRED_PARAMS = ["uri", "user", "password"]
 
     @field_validator("class_", mode="before")
     @classmethod
     def validate_class(cls, class_: Any) -> str:
+        """`class_` parameter is not used because we're always using the sync driver."""
         if class_:
             # logger.info("Parameter class_ is not used")
             ...
         # not used
         return "not used"
 
-    def parse(self) -> neo4j.Driver:
+    def parse(self, resolved_data: dict[str, Any] | None = None) -> neo4j.Driver:
+        print(self.params_)
         params = self.resolve_params(self.params_)
-        uri = params.pop("uri")
+        uri = params.pop(
+            "uri"
+        )  # we know these params are there because of the required params validator
         user = params.pop("user")
         password = params.pop("password")
         driver = neo4j.GraphDatabase.driver(uri, auth=(user, password), **params)
         return driver
 
 
-class Neo4jDriverType(RootModel):
+# note: using the notation with RootModel + root: <type> field
+# instead of RootModel[<type>] for clarity
+# but this requires the type: ignore comment below
+class Neo4jDriverType(RootModel):  # type: ignore[type-arg]
+    """A model to wrap neo4j.Driver and Neo4jDriverConfig objects.
+
+    The `parse` method always returns a neo4j.Driver.
+    """
+
     root: Union[neo4j.Driver, Neo4jDriverConfig]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def parse(self) -> neo4j.Driver:
+    def parse(self, resolved_data: dict[str, Any] | None = None) -> neo4j.Driver:
         if isinstance(self.root, neo4j.Driver):
             return self.root
+        # self.root is a Neo4jDriverConfig object
         return self.root.parse()
 
 
-class LLMConfig(ObjectConfig):
+class LLMConfig(ObjectConfig[LLMInterface]):
+    """Configuration for any LLMInterface object.
+
+    By default, will try to import from `neo4j_graphrag.llm`.
+    """
+
     DEFAULT_MODULE = "neo4j_graphrag.llm"
     INTERFACE = LLMInterface
 
 
-class LLMType(RootModel):
+class LLMType(RootModel):  # type: ignore[type-arg]
     root: Union[LLMInterface, LLMConfig]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def parse(self) -> LLMInterface:
+    def parse(self, resolved_data: dict[str, Any] | None = None) -> LLMInterface:
         if isinstance(self.root, LLMInterface):
             return self.root
         return self.root.parse()
 
 
-class ComponentConfig(ObjectConfig):
+class ComponentConfig(ObjectConfig[Component]):
+    """A config model for all components.
+
+    In addition to the object config, components can have pre-defined parameters
+    that will be passed to the `run` method, ie `run_params_`.
+    """
+
     run_params_: dict[str, ParamConfig] = {}
 
     DEFAULT_MODULE = "neo4j_graphrag.experimental.components"
     INTERFACE = Component
 
 
-class ComponentType(RootModel):
+class ComponentType(RootModel):  # type: ignore[type-arg]
     root: Union[Component, ComponentConfig]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
+    def parse(self, resolved_data: dict[str, Any] | None = None) -> Component:
+        if isinstance(self.root, Component):
+            return self.root
+        return self.root.parse(resolved_data)
 
-class PipelineTemplateType(str, enum.Enum):
+
+class PipelineType(str, enum.Enum):
+    """Pipeline type:
+
+    NONE => Pipeline
+    SIMPLE_KG_PIPELINE ~> SimpleKGPipeline
+    """
     NONE = "none"
     SIMPLE_KG_PIPELINE = "SimpleKGPipeline"
 
 
 class AbstractPipelineConfig(AbstractConfig):
+    """This class defines the fields possibly used by all pipelines: neo4j drivers, LLMs...
+
+    neo4j_config, llm_config can be provided by user as a single item or a dict of items.
+    Validators deal with type conversion so that the field in all instances is a dict of items.
+    """
     neo4j_config: dict[str, Neo4jDriverType] = {}
-    llm_config: dict[str, LLMConfig] = {}
+    llm_config: dict[str, LLMType] = {}
     # extra parameters values that can be used in different places of the config file
     extras: dict[str, Any] = {}
 
     DEFAULT_NAME: ClassVar[str] = "default"
+    """Name of the default item in dict
+    """
 
     @field_validator("neo4j_config", mode="before")
     @classmethod
     def validate_drivers(
-        cls, drivers: Union[Neo4jDriverType, dict[str, Neo4jDriverType]]
-    ) -> dict[str, Neo4jDriverType]:
+        cls, drivers: Union[Neo4jDriverType, dict[str, Any]]
+    ) -> dict[str, Any]:
         if not isinstance(drivers, dict) or "params_" in drivers:
             return {cls.DEFAULT_NAME: drivers}
         return drivers
@@ -227,8 +302,8 @@ class AbstractPipelineConfig(AbstractConfig):
     @field_validator("llm_config", mode="before")
     @classmethod
     def validate_llms(
-        cls, llms: Union[LLMType, dict[str, LLMType]]
-    ) -> dict[str, LLMType]:
+        cls, llms: Union[LLMType, dict[str, Any]]
+    ) -> dict[str, Any]:
         if not isinstance(llms, dict) or "params_" in llms:
             return {cls.DEFAULT_NAME: llms}
         return llms
@@ -246,27 +321,16 @@ class AbstractPipelineConfig(AbstractConfig):
         return lst
 
     def _resolve_component(self, config: ComponentConfig) -> Component:
-        klass_path = config.class_
-        if klass_path is None:
-            raise ValueError(f"Class {klass_path} is not defined")
-        try:
-            klass = self._get_class(
-                klass_path, optional_module="neo4j_graphrag.experimental.components"
-            )
-        except ValueError:
-            raise ValueError(f"Component '{klass_path}' not found")
-        component_init_params = self.resolve_params(config.params_)
-        component = klass(**component_init_params)
-        return component
+        return config.parse(self._global_data)
 
     def _resolve_component_definition(
         self, name: str, config: ComponentType
     ) -> ComponentDefinition:
-        component = config.root
-        component_run_params = {}
-        if not isinstance(component, Component):
-            component = self._resolve_component(config.root)
-            component_run_params = self.resolve_params(config.root.run_params_)
+        component = config.parse(self._global_data)
+        if hasattr(config, "run_params_"):
+            component_run_params = self.resolve_params(config.run_params_)
+        else:
+            component_run_params = {}
         return ComponentDefinition(
             name=name,
             component=component,
@@ -274,8 +338,18 @@ class AbstractPipelineConfig(AbstractConfig):
         )
 
     def _parse_global_data(self) -> dict[str, Any]:
-        drivers = {d: config.parse() for d, config in self.neo4j_config.items()}
-        llms = {llm: config.parse() for llm, config in self.llm_config.items()}
+        """Global data contains data that can be referenced in other parts of the
+        config. Typically, neo4j drivers and llms can be referenced in component input
+        parameters (see ConfigKeyParamResolver)
+        """
+        drivers: dict[str, neo4j.Driver] = {
+            driver_name: driver_config.parse()
+            for driver_name, driver_config in self.neo4j_config.items()
+        }
+        llms: dict[str, LLMInterface] = {
+            llm_name: llm_config.parse()
+            for llm_name, llm_config in self.llm_config.items()
+        }
         return {
             "neo4j_config": drivers,
             "llm_config": llms,
@@ -288,18 +362,26 @@ class AbstractPipelineConfig(AbstractConfig):
     def _get_connections(self) -> list[ConnectionDefinition]:
         return []
 
-    def parse(self) -> PipelineDefinition:
+    def parse(self, resolved_data: dict[str, Any] | None = None) -> PipelineDefinition:
+        """Parse the full config and returns a PipelineDefinition object, containing instantiated
+        components and a list of connections.
+        """
         self._global_data = self._parse_global_data()
         return PipelineDefinition(
             components=self._get_components(),
             connections=self._get_connections(),
         )
 
+    def get_run_params(self, user_input: dict[str, Any]) -> dict[str, Any]:
+        return {}
+
 
 class PipelineConfig(AbstractPipelineConfig):
+    """Configuration class for raw pipelines. Config must contain all components and connections.
+    """
     component_config: dict[str, ComponentType]
     connection_config: list[ConnectionDefinition]
-    template_: Literal[PipelineTemplateType.NONE] = PipelineTemplateType.NONE
+    template_: Literal[PipelineType.NONE] = PipelineType.NONE
 
     def _get_connections(self) -> list[ConnectionDefinition]:
         return self.connection_config
@@ -312,6 +394,14 @@ class PipelineConfig(AbstractPipelineConfig):
 
 
 class TemplatePipelineConfig(AbstractPipelineConfig):
+    """This class represent a 'template' pipeline, ie pipeline with pre-defined default
+    components and fixed connections.
+
+    Component names are defined in the COMPONENTS class var. For each of them,
+    a `_get_<component_name>` method must be implemented that returns the proper
+    component. Optionally, `_get_<component_name>_run_params` can be implemented to
+    deal with parameters required by the component's run method.
+    """
     COMPONENTS: ClassVar[list[str]] = []
 
     def _get_components(self) -> list[ComponentDefinition]:
@@ -332,6 +422,9 @@ class TemplatePipelineConfig(AbstractPipelineConfig):
             )
         return components
 
+    def get_run_params(self, user_input: dict[str, Any]) -> dict[str, Any]:
+        return {}
+
 
 class SimpleKGPipelineConfig(TemplatePipelineConfig):
     COMPONENTS: ClassVar[list[str]] = [
@@ -343,8 +436,8 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         # "entity_resolver",
     ]
 
-    template_: Literal[PipelineTemplateType.SIMPLE_KG_PIPELINE] = (
-        PipelineTemplateType.SIMPLE_KG_PIPELINE
+    template_: Literal[PipelineType.SIMPLE_KG_PIPELINE] = (
+        PipelineType.SIMPLE_KG_PIPELINE
     )
     from_pdf: bool = False
     potential_schema: Optional[list[tuple[str, str, str]]] = None
@@ -367,27 +460,42 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             return self._resolve_component(self.pdf_loader)
         return PdfLoader()
 
+    def get_run_params(self, user_input: dict[str, Any]) -> dict[str, Any]:
+        return {}
 
-def get_discriminator_value(model: Any) -> PipelineTemplateType:
+
+def get_discriminator_value(model: Any) -> PipelineType:
     template_ = None
     if "template_" in model:
         template_ = model["template_"]
     if hasattr(model, "template_"):
         template_ = model.template_
-    return PipelineTemplateType(template_) or PipelineTemplateType.NONE
+    return PipelineType(template_) or PipelineType.NONE
 
 
 class PipelineConfigWrapper(BaseModel):
+    """The pipeline config wrapper will parse the right pipeline config based on the `template_` field.
+    """
     config: Union[
-        Annotated[PipelineConfig, Tag(PipelineTemplateType.NONE)],
-        Annotated[SimpleKGPipelineConfig, Tag(PipelineTemplateType.SIMPLE_KG_PIPELINE)],
+        Annotated[PipelineConfig, Tag(PipelineType.NONE)],
+        Annotated[SimpleKGPipelineConfig, Tag(PipelineType.SIMPLE_KG_PIPELINE)],
     ] = Field(discriminator=Discriminator(get_discriminator_value))
 
-    def parse(self) -> PipelineDefinition:
-        return self.config.parse()
+    def parse(self, resolved_data: dict[str, Any] | None = None) -> PipelineDefinition:
+        return self.config.parse(resolved_data)
+
+    def get_run_params(self, user_input: dict[str, Any]) -> dict[str, Any]:
+        return self.config.get_run_params({})
 
 
 class PipelineRunner:
+    """Pipeline runner builds a pipeline from different objects and exposes a run method to run pipeline
+
+    Pipeline can be built from:
+    - A PipelineDefinition (`__init__` method)
+    - A PipelineConfig (`from_config` method)
+    - A config file (`from_config_file` method)
+    """
     def __init__(self, pipeline_definition: PipelineDefinition) -> None:
         self.pipeline = Pipeline.from_definition(pipeline_definition)
         self.run_params = pipeline_definition.get_run_params()
@@ -411,6 +519,7 @@ class PipelineRunner:
         return wrapper.parse()
 
     async def run(self, data: dict[str, Any]) -> PipelineResult:
+        # pipeline_conditional_run_params = self.
         run_param = deep_update(self.run_params, data)
         return await self.pipeline.run(data=run_param)
 
@@ -429,7 +538,7 @@ if __name__ == "__main__":
 
     config = SimpleKGPipelineConfig.model_validate(
         {
-            "template_": PipelineTemplateType.SIMPLE_KG_PIPELINE.value,
+            "template_": PipelineType.SIMPLE_KG_PIPELINE.value,
             "neo4j_config": neo4j.GraphDatabase.driver("bolt://", auth=("", "")),
             "from_pdf": True,
         }
