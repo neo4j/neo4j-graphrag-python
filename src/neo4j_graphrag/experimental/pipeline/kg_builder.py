@@ -18,6 +18,7 @@ from __future__ import annotations
 from typing import Any, List, Optional, Sequence, Union
 
 import neo4j
+from pydantic import ValidationError
 
 from neo4j_graphrag.embeddings import Embedder
 from neo4j_graphrag.experimental.components.schema import (
@@ -29,6 +30,7 @@ from neo4j_graphrag.experimental.pipeline.config.config_poc import (
     PipelineRunner,
     SimpleKGPipelineConfig,
 )
+from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.experimental.pipeline.types import (
     EntityInputType,
@@ -88,24 +90,28 @@ class SimpleKGPipeline:
         lexical_graph_config: Optional[LexicalGraphConfig] = None,
         neo4j_database: Optional[str] = None,
     ):
-        config = SimpleKGPipelineConfig(
-            llm_config=llm,
-            neo4j_config=driver,
-            embedder_config=embedder,
-            entities=entities or [],
-            relations=relations or [],
-            potential_schema=potential_schema,
-            from_pdf=from_pdf,
-            pdf_loader=pdf_loader,
-            kg_writer=kg_writer,
-            text_splitter=text_splitter,
-            on_error=on_error,
-            prompt_template=prompt_template,
-            embedder=embedder,
-            perform_entity_resolution=perform_entity_resolution,
-            lexical_graph_config=lexical_graph_config,
-            neo4j_database=neo4j_database,
-        )
+        try:
+            config = SimpleKGPipelineConfig(
+                llm_config=llm,
+                neo4j_config=driver,
+                embedder_config=embedder,
+                entities=entities or [],
+                relations=relations or [],
+                potential_schema=potential_schema,
+                from_pdf=from_pdf,
+                pdf_loader=pdf_loader,
+                kg_writer=kg_writer,
+                text_splitter=text_splitter,
+                on_error=on_error,
+                prompt_template=prompt_template,
+                embedder=embedder,
+                perform_entity_resolution=perform_entity_resolution,
+                lexical_graph_config=lexical_graph_config,
+                neo4j_database=neo4j_database,
+            )
+        except ValidationError as e:
+            raise PipelineDefinitionError() from e
+
         self.runner = PipelineRunner.from_config(config)
 
     async def run_async(

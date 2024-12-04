@@ -41,7 +41,9 @@ class PipelineDefinition(BaseModel):
     connections: list[ConnectionDefinition]
 
     def get_run_params(self) -> defaultdict[str, dict[str, Any]]:
-        return defaultdict(dict, {c.name: c.run_params for c in self.components})
+        return defaultdict(
+            dict, {c.name: c.run_params for c in self.components if c.run_params}
+        )
 
 
 EntityInputType = Union[str, dict[str, Union[str, list[dict[str, str]]]]]

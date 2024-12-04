@@ -62,6 +62,7 @@ from neo4j_graphrag.experimental.pipeline.config.types import (
     ParamConfig,
     ParamToResolveConfig,
 )
+from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.experimental.pipeline.types import (
     ComponentDefinition,
@@ -513,7 +514,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         "pdf_loader",
         "splitter",
         "chunk_embedder",
-        "schema_builder",
+        "schema",
         "extractor",
         "writer",
         "resolver",
@@ -554,10 +555,10 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     def _get_chunk_embedder(self) -> TextChunkEmbedder:
         return TextChunkEmbedder(embedder=self.get_default_embedder())
 
-    def _get_schema_builder(self) -> SchemaBuilder:
+    def _get_schema(self) -> SchemaBuilder:
         return SchemaBuilder()
 
-    def _get_run_params_for_schema_builder(self) -> dict[str, Any]:
+    def _get_run_params_for_schema(self) -> dict[str, Any]:
         return {
             "entities": [SchemaEntity.from_text_or_dict(e) for e in self.entities],
             "relations": [SchemaRelation.from_text_or_dict(r) for r in self.relations],
@@ -595,10 +596,10 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             )
             connections.append(
                 ConnectionDefinition(
-                    start="schema_builder",
+                    start="schema",
                     end="extractor",
                     input_config={
-                        "schema": "schema_builder",
+                        "schema": "schema",
                         "document_info": "pdf_loader.document_info",
                     },
                 )
@@ -606,10 +607,10 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         else:
             connections.append(
                 ConnectionDefinition(
-                    start="schema_builder",
+                    start="schema",
                     end="extractor",
                     input_config={
-                        "schema": "schema_builder",
+                        "schema": "schema",
                     },
                 )
             )
@@ -658,10 +659,25 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             run_params["extractor"] = {
                 "lexical_graph_config": self.lexical_graph_config
             }
+        text = user_input.get("text")
+        file_path = user_input.get("file_path")
+        if not ((text is None) ^ (file_path is None)):
+            # exactly one of text or user_input must be set
+            raise PipelineDefinitionError(
+                "Use either 'text' (when from_pdf=False) or 'file_path' (when from_pdf=True) argument."
+            )
         if self.from_pdf:
-            run_params["pdf_loader"] = {"filepath": user_input["filepath"]}
+            if not file_path:
+                raise PipelineDefinitionError(
+                    "Expected 'file_path' argument when 'from_pdf' is True."
+                )
+            run_params["pdf_loader"] = {"filepath": file_path}
         else:
-            run_params["splitter"] = {"text": user_input["text"]}
+            if not text:
+                raise PipelineDefinitionError(
+                    "Expected 'text' argument when 'from_pdf' is False."
+                )
+            run_params["splitter"] = {"text": text}
         return run_params
 
 
@@ -701,7 +717,7 @@ class PipelineRunner:
     def __init__(
         self,
         pipeline_definition: PipelineDefinition,
-        config: PipelineConfigWrapper | None = None,
+        config: AbstractPipelineConfig | None = None,
     ) -> None:
         self.config = config
         self.pipeline = Pipeline.from_definition(pipeline_definition)
@@ -710,7 +726,7 @@ class PipelineRunner:
     @classmethod
     def from_config(cls, config: AbstractPipelineConfig | dict[str, Any]) -> Self:
         wrapper = PipelineConfigWrapper.model_validate({"config": config})
-        return cls(wrapper.parse(), config=wrapper)
+        return cls(wrapper.parse(), config=wrapper.config)
 
     @classmethod
     def from_config_file(cls, file_path: Union[str, Path]) -> Self:
