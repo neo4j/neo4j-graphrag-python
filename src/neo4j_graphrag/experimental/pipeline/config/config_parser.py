@@ -2,6 +2,8 @@
 such as the SimpleKGPipeline.
 """
 
+from __future__ import annotations
+
 import abc
 import enum
 import importlib
