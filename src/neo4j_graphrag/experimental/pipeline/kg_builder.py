@@ -18,65 +18,24 @@ from __future__ import annotations
 from typing import Any, List, Optional, Sequence, Union
 
 import neo4j
-from pydantic import ConfigDict, Field, field_validator
 
 from neo4j_graphrag.embeddings import Embedder
-from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
-from neo4j_graphrag.experimental.components.entity_relation_extractor import (
-    LLMEntityRelationExtractor,
-    OnError,
-)
-from neo4j_graphrag.experimental.components.kg_writer import KGWriter, Neo4jWriter
-from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
-from neo4j_graphrag.experimental.components.resolver import (
-    SinglePropertyExactMatchResolver,
-)
 from neo4j_graphrag.experimental.components.schema import (
-    SchemaBuilder,
     SchemaEntity,
     SchemaRelation,
 )
-from neo4j_graphrag.experimental.components.text_splitters.base import TextSplitter
-from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
-    FixedSizeSplitter,
-)
 from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
-from neo4j_graphrag.experimental.pipeline.config.types import (
-    SimpleKGPipelineExposedParamConfig,
+from neo4j_graphrag.experimental.pipeline.config.config_poc import (
+    PipelineRunner,
+    SimpleKGPipelineConfig,
 )
-from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
-from neo4j_graphrag.experimental.pipeline.pipeline import Pipeline, PipelineResult
+from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.experimental.pipeline.types import (
     EntityInputType,
     RelationInputType,
 )
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 from neo4j_graphrag.llm.base import LLMInterface
-
-
-class SimpleKGPipelineModel(SimpleKGPipelineExposedParamConfig):
-    llm: LLMInterface
-    driver: neo4j.Driver
-    embedder: Embedder
-    pdf_loader: PdfLoader | None = None
-    kg_writer: KGWriter | None = None
-    text_splitter: TextSplitter | None = None
-    entities: list[SchemaEntity] = Field(default_factory=list)
-    relations: list[SchemaRelation] = Field(default_factory=list)
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    @field_validator("entities", mode="before")
-    @classmethod
-    def validate_entities(cls, entities: list[SchemaEntity]) -> list[SchemaEntity]:
-        return [SchemaEntity.from_text_or_dict(e) for e in entities]
-
-    @field_validator("relations", mode="before")
-    @classmethod
-    def validate_relations(
-        cls, relations: list[SchemaRelation]
-    ) -> list[SchemaRelation]:
-        return [SchemaRelation.from_text_or_dict(r) for r in relations]
 
 
 class SimpleKGPipeline:
@@ -129,121 +88,25 @@ class SimpleKGPipeline:
         lexical_graph_config: Optional[LexicalGraphConfig] = None,
         neo4j_database: Optional[str] = None,
     ):
-        self.potential_schema = potential_schema or []
-        self.entities = entities or []
-        self.relations = relations or []
-
-        try:
-            on_error_enum = OnError(on_error)
-        except ValueError:
-            raise PipelineDefinitionError(
-                f"Invalid value for on_error: {on_error}. Expected one of {OnError.possible_values()}."
-            )
-
-        config = SimpleKGPipelineModel(
-            llm=llm,
-            driver=driver,
-            entities=self.entities,
-            relations=self.relations,
-            potential_schema=self.potential_schema,
+        config = SimpleKGPipelineConfig(
+            llm_config=llm,
+            neo4j_config=driver,
+            embedder_config=embedder,
+            entities=entities or [],
+            relations=relations or [],
+            potential_schema=potential_schema,
             from_pdf=from_pdf,
             pdf_loader=pdf_loader,
             kg_writer=kg_writer,
             text_splitter=text_splitter,
-            on_error=on_error_enum,
+            on_error=on_error,
             prompt_template=prompt_template,
             embedder=embedder,
             perform_entity_resolution=perform_entity_resolution,
             lexical_graph_config=lexical_graph_config,
             neo4j_database=neo4j_database,
         )
-
-        self.from_pdf = config.from_pdf
-        self.llm = config.llm
-        self.driver = config.driver
-        self.embedder = config.embedder
-        self.text_splitter = config.text_splitter or FixedSizeSplitter()
-        self.on_error = config.on_error
-        self.pdf_loader = config.pdf_loader if pdf_loader is not None else PdfLoader()
-        self.kg_writer = (
-            config.kg_writer
-            if kg_writer is not None
-            else Neo4jWriter(driver, neo4j_database=config.neo4j_database)
-        )
-        self.prompt_template = config.prompt_template
-        self.perform_entity_resolution = config.perform_entity_resolution
-        self.lexical_graph_config = config.lexical_graph_config
-        self.neo4j_database = config.neo4j_database
-
-        self.pipeline = self._build_pipeline()
-
-    def _build_pipeline(self) -> Pipeline:
-        pipe = Pipeline()
-
-        pipe.add_component(self.text_splitter, "splitter")
-        pipe.add_component(SchemaBuilder(), "schema")
-        pipe.add_component(
-            LLMEntityRelationExtractor(
-                llm=self.llm,
-                on_error=self.on_error,
-                prompt_template=self.prompt_template,
-            ),
-            "extractor",
-        )
-        pipe.add_component(TextChunkEmbedder(embedder=self.embedder), "chunk_embedder")
-        pipe.add_component(self.kg_writer, "writer")
-
-        if self.from_pdf:
-            pipe.add_component(self.pdf_loader, "pdf_loader")
-
-            pipe.connect(
-                "pdf_loader",
-                "splitter",
-                input_config={"text": "pdf_loader.text"},
-            )
-
-            pipe.connect(
-                "schema",
-                "extractor",
-                input_config={
-                    "schema": "schema",
-                    "document_info": "pdf_loader.document_info",
-                },
-            )
-        else:
-            pipe.connect(
-                "schema",
-                "extractor",
-                input_config={
-                    "schema": "schema",
-                },
-            )
-
-        pipe.connect(
-            "splitter", "chunk_embedder", input_config={"text_chunks": "splitter"}
-        )
-
-        pipe.connect(
-            "chunk_embedder", "extractor", input_config={"chunks": "chunk_embedder"}
-        )
-
-        # Connect extractor to writer
-        pipe.connect(
-            "extractor",
-            "writer",
-            input_config={"graph": "extractor"},
-        )
-
-        if self.perform_entity_resolution:
-            pipe.add_component(
-                SinglePropertyExactMatchResolver(
-                    self.driver, neo4j_database=self.neo4j_database
-                ),
-                "resolver",
-            )
-            pipe.connect("writer", "resolver", {})
-
-        return pipe
+        self.runner = PipelineRunner.from_config(config)
 
     async def run_async(
         self, file_path: Optional[str] = None, text: Optional[str] = None
@@ -258,39 +121,4 @@ class SimpleKGPipeline:
         Returns:
             PipelineResult: The result of the pipeline execution.
         """
-        pipe_inputs = self._prepare_inputs(file_path=file_path, text=text)
-        return await self.pipeline.run(pipe_inputs)
-
-    def _prepare_inputs(
-        self, file_path: Optional[str], text: Optional[str]
-    ) -> dict[str, Any]:
-        if self.from_pdf:
-            if file_path is None or text is not None:
-                raise PipelineDefinitionError(
-                    "Expected 'file_path' argument when 'from_pdf' is True."
-                )
-        else:
-            if text is None or file_path is not None:
-                raise PipelineDefinitionError(
-                    "Expected 'text' argument when 'from_pdf' is False."
-                )
-
-        pipe_inputs: dict[str, Any] = {
-            "schema": {
-                "entities": self.entities,
-                "relations": self.relations,
-                "potential_schema": self.potential_schema,
-            },
-        }
-
-        if self.from_pdf:
-            pipe_inputs["pdf_loader"] = {"filepath": file_path}
-        else:
-            pipe_inputs["splitter"] = {"text": text}
-
-        if self.lexical_graph_config:
-            pipe_inputs["extractor"] = {
-                "lexical_graph_config": self.lexical_graph_config
-            }
-
-        return pipe_inputs
+        return await self.runner.run({"file_path": file_path, "text": text})
