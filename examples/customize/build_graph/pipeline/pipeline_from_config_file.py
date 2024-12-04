@@ -1,6 +1,4 @@
-"""In this example, the pipeline is defined in a JSON ('simple_kg_pipeline_config.json')
-or YAML ('simple_kg_pipeline_config.yaml') file.
-
+"""In this example, the pipeline is defined in a JSON file 'pipeline_config.json'.
 According to the configuration file, some parameters will be read from the env vars
 (Neo4j credentials and the OpenAI API key).
 """
@@ -25,9 +23,8 @@ os.environ["NEO4J_PASSWORD"] = "password"
 
 
 root_dir = Path(__file__).parent
-file_path = root_dir / "simple_kg_pipeline_config.yaml"
-# file_path = root_dir / "simple_kg_pipeline_config.json"
-
+# file_path = root_dir / "pipeline_config.json"
+file_path = root_dir / "pipeline_config.yaml"
 
 # Text to process
 TEXT = """The son of Duke Leto Atreides and the Lady Jessica, Paul is the heir of House Atreides,
@@ -36,7 +33,7 @@ an aristocratic family that rules the planet Caladan, the rainy planet, since 10
 
 async def main() -> PipelineResult:
     pipeline = PipelineRunner.from_config_file(file_path)
-    return await pipeline.run({"text": TEXT})
+    return await pipeline.run({"splitter": {"text": TEXT}})
 
 
 if __name__ == "__main__":
