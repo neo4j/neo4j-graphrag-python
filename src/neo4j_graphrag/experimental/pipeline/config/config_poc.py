@@ -34,14 +34,26 @@ from pydantic.v1.utils import deep_update
 
 from neo4j_graphrag.embeddings import Embedder
 from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
-from neo4j_graphrag.experimental.components.entity_relation_extractor import OnError, EntityRelationExtractor, \
-    LLMEntityRelationExtractor
+from neo4j_graphrag.experimental.components.entity_relation_extractor import (
+    EntityRelationExtractor,
+    LLMEntityRelationExtractor,
+    OnError,
+)
 from neo4j_graphrag.experimental.components.kg_writer import KGWriter, Neo4jWriter
 from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
-from neo4j_graphrag.experimental.components.resolver import EntityResolver, SinglePropertyExactMatchResolver
-from neo4j_graphrag.experimental.components.schema import SchemaBuilder, SchemaEntity, SchemaRelation
+from neo4j_graphrag.experimental.components.resolver import (
+    EntityResolver,
+    SinglePropertyExactMatchResolver,
+)
+from neo4j_graphrag.experimental.components.schema import (
+    SchemaBuilder,
+    SchemaEntity,
+    SchemaRelation,
+)
 from neo4j_graphrag.experimental.components.text_splitters.base import TextSplitter
-from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import FixedSizeSplitter
+from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
+    FixedSizeSplitter,
+)
 from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
 from neo4j_graphrag.experimental.pipeline import Component, Pipeline
 from neo4j_graphrag.experimental.pipeline.config.param_resolvers import PARAM_RESOLVERS
@@ -54,7 +66,9 @@ from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.experimental.pipeline.types import (
     ComponentDefinition,
     ConnectionDefinition,
-    PipelineDefinition, EntityInputType, RelationInputType,
+    EntityInputType,
+    PipelineDefinition,
+    RelationInputType,
 )
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 from neo4j_graphrag.llm import LLMInterface
@@ -302,6 +316,7 @@ class PipelineType(str, enum.Enum):
     NONE => Pipeline
     SIMPLE_KG_PIPELINE ~> SimpleKGPipeline
     """
+
     NONE = "none"
     SIMPLE_KG_PIPELINE = "SimpleKGPipeline"
 
@@ -312,6 +327,7 @@ class AbstractPipelineConfig(AbstractConfig):
     neo4j_config, llm_config can be provided by user as a single item or a dict of items.
     Validators deal with type conversion so that the field in all instances is a dict of items.
     """
+
     neo4j_config: dict[str, Neo4jDriverType] = {}
     llm_config: dict[str, LLMType] = {}
     embedder_config: dict[str, EmbedderType] = {}
@@ -333,9 +349,7 @@ class AbstractPipelineConfig(AbstractConfig):
 
     @field_validator("llm_config", mode="before")
     @classmethod
-    def validate_llms(
-        cls, llms: Union[LLMType, dict[str, Any]]
-    ) -> dict[str, Any]:
+    def validate_llms(cls, llms: Union[LLMType, dict[str, Any]]) -> dict[str, Any]:
         if not isinstance(llms, dict) or "params_" in llms:
             return {cls.DEFAULT_NAME: llms}
         return llms
@@ -444,8 +458,8 @@ class AbstractPipelineConfig(AbstractConfig):
 
 
 class PipelineConfig(AbstractPipelineConfig):
-    """Configuration class for raw pipelines. Config must contain all components and connections.
-    """
+    """Configuration class for raw pipelines. Config must contain all components and connections."""
+
     component_config: dict[str, ComponentType]
     connection_config: list[ConnectionDefinition]
     template_: Literal[PipelineType.NONE] = PipelineType.NONE
@@ -469,6 +483,7 @@ class TemplatePipelineConfig(AbstractPipelineConfig):
     component. Optionally, `_get_<component_name>_run_params` can be implemented to
     deal with parameters required by the component's run method.
     """
+
     COMPONENTS: ClassVar[list[str]] = []
 
     def _get_components(self) -> list[ComponentDefinition]:
@@ -559,9 +574,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     def _get_writer(self) -> KGWriter:
         if self.kg_writer:
             return self.kg_writer.parse(self._global_data)  # type: ignore
-        return Neo4jWriter(
-            driver=self.get_default_neo4j_driver()
-        )
+        return Neo4jWriter(driver=self.get_default_neo4j_driver())
 
     def _get_resolver(self) -> EntityResolver | None:
         if not self.perform_entity_resolution:
@@ -573,55 +586,69 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     def _get_connections(self) -> list[ConnectionDefinition]:
         connections = []
         if self.from_pdf:
-            connections.append(ConnectionDefinition(
-                start="pdf_loader",
-                end="splitter",
-                input_config={"text": "pdf_loader.text"},
-            ))
-            connections.append(ConnectionDefinition(
-                start="schema_builder",
-                end="extractor",
-                input_config={
-                    "schema": "schema_builder",
-                    "document_info": "pdf_loader.document_info",
-                },
-            ))
+            connections.append(
+                ConnectionDefinition(
+                    start="pdf_loader",
+                    end="splitter",
+                    input_config={"text": "pdf_loader.text"},
+                )
+            )
+            connections.append(
+                ConnectionDefinition(
+                    start="schema_builder",
+                    end="extractor",
+                    input_config={
+                        "schema": "schema_builder",
+                        "document_info": "pdf_loader.document_info",
+                    },
+                )
+            )
         else:
-            connections.append(ConnectionDefinition(
-                start="schema_builder",
+            connections.append(
+                ConnectionDefinition(
+                    start="schema_builder",
+                    end="extractor",
+                    input_config={
+                        "schema": "schema_builder",
+                    },
+                )
+            )
+        connections.append(
+            ConnectionDefinition(
+                start="splitter",
+                end="chunk_embedder",
+                input_config={
+                    "text_chunks": "splitter",
+                },
+            )
+        )
+        connections.append(
+            ConnectionDefinition(
+                start="chunk_embedder",
                 end="extractor",
                 input_config={
-                    "schema": "schema_builder",
+                    "chunks": "chunk_embedder",
                 },
-            ))
-        connections.append(ConnectionDefinition(
-            start="splitter",
-            end="chunk_embedder",
-            input_config={
-                "text_chunks": "splitter",
-            },
-        ))
-        connections.append(ConnectionDefinition(
-            start="chunk_embedder",
-            end="extractor",
-            input_config={
-                "chunks": "chunk_embedder",
-            },
-        ))
-        connections.append(ConnectionDefinition(
-            start="extractor",
-            end="writer",
-            input_config={
-                "graph": "extractor",
-            },
-        ))
+            )
+        )
+        connections.append(
+            ConnectionDefinition(
+                start="extractor",
+                end="writer",
+                input_config={
+                    "graph": "extractor",
+                },
+            )
+        )
 
         if self.perform_entity_resolution:
-            connections.append(ConnectionDefinition(
-                start="writer",
-                end="resolver",
-                input_config={},
-            ))
+            connections.append(
+                ConnectionDefinition(
+                    start="writer",
+                    end="resolver",
+                    input_config={},
+                )
+            )
 
         return connections
 
@@ -648,8 +675,8 @@ def _get_discriminator_value(model: Any) -> PipelineType:
 
 
 class PipelineConfigWrapper(BaseModel):
-    """The pipeline config wrapper will parse the right pipeline config based on the `template_` field.
-    """
+    """The pipeline config wrapper will parse the right pipeline config based on the `template_` field."""
+
     config: Union[
         Annotated[PipelineConfig, Tag(PipelineType.NONE)],
         Annotated[SimpleKGPipelineConfig, Tag(PipelineType.SIMPLE_KG_PIPELINE)],
@@ -670,7 +697,12 @@ class PipelineRunner:
     - A PipelineConfig (`from_config` method)
     - A config file (`from_config_file` method)
     """
-    def __init__(self, pipeline_definition: PipelineDefinition, config: PipelineConfigWrapper | None = None) -> None:
+
+    def __init__(
+        self,
+        pipeline_definition: PipelineDefinition,
+        config: PipelineConfigWrapper | None = None,
+    ) -> None:
         self.config = config
         self.pipeline = Pipeline.from_definition(pipeline_definition)
         self.run_params = pipeline_definition.get_run_params()

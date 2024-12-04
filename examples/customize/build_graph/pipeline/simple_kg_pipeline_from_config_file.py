@@ -11,6 +11,7 @@ import asyncio
 # load_dotenv()
 # env vars manually set for testing:
 import os
+from pathlib import Path
 
 from neo4j_graphrag.experimental.pipeline.config.config_poc import PipelineRunner
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
@@ -21,15 +22,19 @@ os.environ["NEO4J_PASSWORD"] = "password"
 # os.environ["OPENAI_API_KEY"] = "sk-..."
 
 
+root_dir = Path(__file__).parent
+file_path = root_dir / "simple_kg_pipeline_config.yaml"
+# file_path = root_dir / "simple_kg_pipeline_config.json"
+
+
 # Text to process
 TEXT = """The son of Duke Leto Atreides and the Lady Jessica, Paul is the heir of House Atreides,
 an aristocratic family that rules the planet Caladan, the rainy planet, since 10191."""
 
 
 async def main() -> PipelineResult:
-    file_path = "examples/customize/build_graph/pipeline/simple_kg_pipeline_config.json"
     pipeline = PipelineRunner.from_config_file(file_path)
-    return await pipeline.run({"text":TEXT})
+    return await pipeline.run({"text": TEXT})
 
 
 if __name__ == "__main__":
