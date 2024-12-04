@@ -14,9 +14,10 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, Optional, Self, Tuple, Union
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
 from pydantic import BaseModel, ValidationError, model_validator, validate_call
+from typing_extensions import Self
 
 from neo4j_graphrag.exceptions import SchemaValidationError
 from neo4j_graphrag.experimental.pipeline.component import Component, DataModel

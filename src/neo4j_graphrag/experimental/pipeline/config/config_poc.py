@@ -14,7 +14,6 @@ from typing import (
     Generic,
     Literal,
     Optional,
-    Self,
     TypeVar,
     Union,
 )
@@ -31,6 +30,7 @@ from pydantic import (
     field_validator,
 )
 from pydantic.v1.utils import deep_update
+from typing_extensions import Self
 
 from neo4j_graphrag.embeddings import Embedder
 from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
@@ -742,43 +742,3 @@ class PipelineRunner:
         else:
             run_param = deep_update(self.run_params, data)
         return await self.pipeline.run(data=run_param)
-
-
-if __name__ == "__main__":
-    from dotenv import load_dotenv
-
-    load_dotenv()
-
-    import asyncio
-
-    file_path = "examples/customize/build_graph/pipeline/pipeline_config.json"
-    runner = PipelineRunner.from_config_file(file_path)
-    print(runner)
-    # print(asyncio.run(runner.run({"splitter": {"text": "blabla"}})))
-
-    config = SimpleKGPipelineConfig.model_validate(
-        {
-            "template_": PipelineType.SIMPLE_KG_PIPELINE.value,
-            "neo4j_config": neo4j.GraphDatabase.driver("bolt://", auth=("", "")),
-            "from_pdf": True,
-        }
-    )
-    print(config)
-    runner = PipelineRunner.from_config(config)
-    print(runner.pipeline._nodes)
-
-
-"""
-        {
-            "name_": "embedder",
-            "class_": "embedder.TextChunkEmbedder",
-            "params_": {
-                "embedder": {
-                    "resolver_": "CONFIG_ARRAY",
-                    "array_": "embedder_config",
-                    "name_": "openai"
-                }
-            }
-        },
-
-"""

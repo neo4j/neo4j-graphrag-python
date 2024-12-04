@@ -197,7 +197,7 @@ def test_simple_kg_pipeline_on_error_invalid_value() -> None:
     driver = MagicMock(spec=neo4j.Driver)
     embedder = MagicMock(spec=Embedder)
 
-    with pytest.raises(PipelineDefinitionError) as exc_info:
+    with pytest.raises(PipelineDefinitionError):
         SimpleKGPipeline(
             llm=llm,
             driver=driver,
