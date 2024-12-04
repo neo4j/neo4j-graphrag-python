@@ -13,8 +13,8 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import asyncio
+import datetime
 import logging
-from datetime import datetime
 from itertools import zip_longest
 from typing import Any, Dict, Optional
 
@@ -112,7 +112,7 @@ class LexicalGraphBuilder(Component):
             label=self.config.document_node_label,
             properties={
                 "path": document_info.path,
-                "createdAt": str(datetime.now()),
+                "createdAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
                 **document_metadata,
             },
         )
