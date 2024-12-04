@@ -14,6 +14,7 @@ from typing import (
     Generic,
     Literal,
     Optional,
+    Sequence,
     TypeVar,
     Union,
 )
@@ -56,9 +57,8 @@ from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter i
 )
 from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
 from neo4j_graphrag.experimental.pipeline import Component, Pipeline
-from neo4j_graphrag.experimental.pipeline.config.param_resolvers import PARAM_RESOLVERS
-from neo4j_graphrag.experimental.pipeline.config.reader import ConfigReader
-from neo4j_graphrag.experimental.pipeline.config.types import (
+from neo4j_graphrag.experimental.pipeline.config.config_reader import ConfigReader
+from neo4j_graphrag.experimental.pipeline.config.param_resolver import (
     ParamConfig,
     ParamToResolveConfig,
 )
@@ -123,14 +123,7 @@ class AbstractConfig(BaseModel, abc.ABC):
             # values are already provided
             return param
         # all ParamToResolveConfig have a resolver_ field
-        resolver_name = param.resolver_
-        if resolver_name not in PARAM_RESOLVERS:
-            raise ValueError(
-                f"Resolver {resolver_name} not found in {PARAM_RESOLVERS.keys()}"
-            )
-        resolver_class = PARAM_RESOLVERS[resolver_name]
-        resolver = resolver_class(self._global_data)
-        return resolver.resolve(param)
+        return param.resolve(self._global_data)
 
     def resolve_params(self, params: dict[str, ParamConfig]) -> dict[str, Any]:
         """Resolve all parameters
@@ -438,21 +431,21 @@ class AbstractPipelineConfig(AbstractConfig):
 
     def get_neo4j_driver_by_name(self, name: str) -> neo4j.Driver:
         drivers = self._global_data.get("neo4j_config", {})
-        return drivers.get(name)
+        return drivers.get(name)  # type: ignore[no-any-return]
 
     def get_default_neo4j_driver(self) -> neo4j.Driver:
         return self.get_neo4j_driver_by_name(self.DEFAULT_NAME)
 
     def get_llm_by_name(self, name: str) -> LLMInterface:
         llms = self._global_data.get("llm_config", {})
-        return llms.get(name)
+        return llms.get(name)  # type: ignore[no-any-return]
 
     def get_default_llm(self) -> LLMInterface:
         return self.get_llm_by_name(self.DEFAULT_NAME)
 
     def get_embedder_by_name(self, name: str) -> Embedder:
         embedders = self._global_data.get("embedder_config", {})
-        return embedders.get(name)
+        return embedders.get(name)  # type: ignore[no-any-return]
 
     def get_default_embedder(self) -> Embedder:
         return self.get_embedder_by_name(self.DEFAULT_NAME)
@@ -525,8 +518,8 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     )
 
     from_pdf: bool = False
-    entities: list[EntityInputType] = []
-    relations: list[RelationInputType] = []
+    entities: Sequence[EntityInputType] = []
+    relations: Sequence[RelationInputType] = []
     potential_schema: Optional[list[tuple[str, str, str]]] = None
     on_error: OnError = OnError.IGNORE
     prompt_template: Union[ERExtractionTemplate, str] = ERExtractionTemplate()

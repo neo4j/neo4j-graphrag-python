@@ -22,7 +22,7 @@ from pydantic import ValidationError
 
 from neo4j_graphrag.embeddings import Embedder
 from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
-from neo4j_graphrag.experimental.pipeline.config.config_poc import (
+from neo4j_graphrag.experimental.pipeline.config.config_parser import (
     PipelineRunner,
     SimpleKGPipelineConfig,
 )
@@ -88,9 +88,10 @@ class SimpleKGPipeline:
     ):
         try:
             config = SimpleKGPipelineConfig(
-                llm_config=llm,
-                neo4j_config=driver,
-                embedder_config=embedder,
+                # argument type are fixed in the Config object
+                llm_config=llm,  # type: ignore[arg-type]
+                neo4j_config=driver,  # type: ignore[arg-type]
+                embedder_config=embedder,  # type: ignore[arg-type]
                 entities=entities or [],
                 relations=relations or [],
                 potential_schema=potential_schema,
@@ -98,9 +99,8 @@ class SimpleKGPipeline:
                 pdf_loader=pdf_loader,
                 kg_writer=kg_writer,
                 text_splitter=text_splitter,
-                on_error=on_error,
+                on_error=on_error,  # type: ignore[arg-type]
                 prompt_template=prompt_template,
-                embedder=embedder,
                 perform_entity_resolution=perform_entity_resolution,
                 lexical_graph_config=lexical_graph_config,
                 neo4j_database=neo4j_database,

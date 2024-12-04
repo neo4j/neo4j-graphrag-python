@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, Mock, patch
 import neo4j
 import pytest
 
-from neo4j_graphrag.experimental.pipeline.config.config_poc import (
+from neo4j_graphrag.experimental.pipeline.config.config_parser import (
     AbstractPipelineConfig,
     LLMConfig,
     LLMType,

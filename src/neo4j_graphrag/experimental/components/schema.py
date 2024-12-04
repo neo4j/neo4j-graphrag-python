@@ -21,6 +21,10 @@ from typing_extensions import Self
 
 from neo4j_graphrag.exceptions import SchemaValidationError
 from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
+from neo4j_graphrag.experimental.pipeline.types import (
+    EntityInputType,
+    RelationInputType,
+)
 
 
 class SchemaProperty(BaseModel):
@@ -57,9 +61,7 @@ class SchemaEntity(BaseModel):
     properties: List[SchemaProperty] = []
 
     @classmethod
-    def from_text_or_dict(
-        cls, input: SchemaEntity | str | dict[str, Union[str, dict[str, str]]]
-    ) -> Self:
+    def from_text_or_dict(cls, input: EntityInputType) -> Self:
         if isinstance(input, SchemaEntity):
             return input
         if isinstance(input, str):
@@ -77,9 +79,7 @@ class SchemaRelation(BaseModel):
     properties: List[SchemaProperty] = []
 
     @classmethod
-    def from_text_or_dict(
-        cls, input: SchemaRelation | str | dict[str, Union[str, dict[str, str]]]
-    ) -> Self:
+    def from_text_or_dict(cls, input: RelationInputType) -> Self:
         if isinstance(input, SchemaRelation):
             return input
         if isinstance(input, str):

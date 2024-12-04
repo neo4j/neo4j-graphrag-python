@@ -61,10 +61,11 @@ class ConfigReader:
     def _guess_format_and_read(self, file_path: Path) -> dict[str, Any]:
         extension = file_path.suffix.lower()
         # Note: .suffix returns an empty string if Path has no extension
+        # if not returning a dict, pasing will fail later on
         if extension in [".json"]:
-            return self.read_json(file_path)
+            return self.read_json(file_path)  # type: ignore[no-any-return]
         if extension in [".yaml", ".yml"]:
-            return self.read_yaml(file_path)
+            return self.read_yaml(file_path)  # type: ignore[no-any-return]
         raise ValueError(f"Unsupported extension: {extension}")
 
     def read(self, file_path: Path) -> dict[str, Any]:

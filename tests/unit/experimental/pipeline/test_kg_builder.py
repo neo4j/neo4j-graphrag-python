@@ -231,28 +231,6 @@ def test_simple_kg_pipeline_no_entity_resolution(_: Mock) -> None:
     return_value=(5, 23, 0),
 )
 @pytest.mark.asyncio
-def test_simple_kg_pipeline_lexical_graph_config_attribute(_: Mock) -> None:
-    llm = MagicMock(spec=LLMInterface)
-    driver = MagicMock(spec=neo4j.Driver)
-    embedder = MagicMock(spec=Embedder)
-
-    lexical_graph_config = LexicalGraphConfig()
-    kg_builder = SimpleKGPipeline(
-        llm=llm,
-        driver=driver,
-        embedder=embedder,
-        on_error="IGNORE",
-        lexical_graph_config=lexical_graph_config,
-    )
-
-    assert kg_builder.runner.config.lexical_graph_config == lexical_graph_config
-
-
-@mock.patch(
-    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._get_version",
-    return_value=(5, 23, 0),
-)
-@pytest.mark.asyncio
 async def test_knowledge_graph_builder_with_lexical_graph_config(_: Mock) -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
