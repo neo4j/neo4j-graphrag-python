@@ -38,7 +38,7 @@ from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter i
     FixedSizeSplitter,
 )
 from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
-from neo4j_graphrag.experimental.pipeline.config.object_config import ComponentConfig
+from neo4j_graphrag.experimental.pipeline.config.object_config import ComponentType
 from neo4j_graphrag.experimental.pipeline.config.template_pipeline.base import (
     TemplatePipelineConfig,
 )
@@ -77,9 +77,9 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     lexical_graph_config: Optional[LexicalGraphConfig] = None
     neo4j_database: Optional[str] = None
 
-    pdf_loader: Optional[ComponentConfig] = None
-    kg_writer: Optional[ComponentConfig] = None
-    text_splitter: Optional[ComponentConfig] = None
+    pdf_loader: Optional[ComponentType] = None
+    kg_writer: Optional[ComponentType] = None
+    text_splitter: Optional[ComponentType] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -118,13 +118,17 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     def _get_writer(self) -> KGWriter:
         if self.kg_writer:
             return self.kg_writer.parse(self._global_data)  # type: ignore
-        return Neo4jWriter(driver=self.get_default_neo4j_driver())
+        return Neo4jWriter(
+            driver=self.get_default_neo4j_driver(),
+            neo4j_database=self.neo4j_database,
+        )
 
     def _get_resolver(self) -> Optional[EntityResolver]:
         if not self.perform_entity_resolution:
             return None
         return SinglePropertyExactMatchResolver(
             driver=self.get_default_neo4j_driver(),
+            neo4j_database=self.neo4j_database,
         )
 
     def _get_connections(self) -> list[ConnectionDefinition]:

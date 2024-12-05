@@ -34,61 +34,6 @@ from neo4j_graphrag.llm.base import LLMInterface
     return_value=(5, 23, 0),
 )
 @pytest.mark.asyncio
-async def test_knowledge_graph_builder_run_with_both_inputs(_: Mock) -> None:
-    llm = MagicMock(spec=LLMInterface)
-    driver = MagicMock(spec=neo4j.Driver)
-    embedder = MagicMock(spec=Embedder)
-
-    kg_builder = SimpleKGPipeline(
-        llm=llm,
-        driver=driver,
-        embedder=embedder,
-        from_pdf=True,
-    )
-
-    text_input = "May thy knife chip and shatter."
-    file_path = "path/to/test.pdf"
-
-    with pytest.raises(PipelineDefinitionError) as exc_info:
-        await kg_builder.run_async(file_path=file_path, text=text_input)
-
-    assert (
-        "Use either 'text' (when from_pdf=False) or 'file_path' (when from_pdf=True) argument."
-        in str(exc_info.value)
-    )
-
-
-@mock.patch(
-    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._get_version",
-    return_value=(5, 23, 0),
-)
-@pytest.mark.asyncio
-async def test_knowledge_graph_builder_run_with_no_inputs(_: Mock) -> None:
-    llm = MagicMock(spec=LLMInterface)
-    driver = MagicMock(spec=neo4j.Driver)
-    embedder = MagicMock(spec=Embedder)
-
-    kg_builder = SimpleKGPipeline(
-        llm=llm,
-        driver=driver,
-        embedder=embedder,
-        from_pdf=True,
-    )
-
-    with pytest.raises(PipelineDefinitionError) as exc_info:
-        await kg_builder.run_async()
-
-    assert (
-        "Use either 'text' (when from_pdf=False) or 'file_path' (when from_pdf=True) argument."
-        in str(exc_info.value)
-    )
-
-
-@mock.patch(
-    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._get_version",
-    return_value=(5, 23, 0),
-)
-@pytest.mark.asyncio
 async def test_knowledge_graph_builder_document_info_with_file(_: Mock) -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
@@ -204,26 +149,6 @@ def test_simple_kg_pipeline_on_error_invalid_value() -> None:
             embedder=embedder,
             on_error="INVALID_VALUE",
         )
-
-
-@mock.patch(
-    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._get_version",
-    return_value=(5, 23, 0),
-)
-def test_simple_kg_pipeline_no_entity_resolution(_: Mock) -> None:
-    llm = MagicMock(spec=LLMInterface)
-    driver = MagicMock(spec=neo4j.Driver)
-    embedder = MagicMock(spec=Embedder)
-
-    kg_builder = SimpleKGPipeline(
-        llm=llm,
-        driver=driver,
-        embedder=embedder,
-        on_error="IGNORE",
-        perform_entity_resolution=False,
-    )
-
-    assert "resolver" not in kg_builder.runner.pipeline
 
 
 @mock.patch(

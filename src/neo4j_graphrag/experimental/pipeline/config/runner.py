@@ -106,10 +106,12 @@ class PipelineRunner:
         data = ConfigReader().read(file_path)
         return cls.from_config(data)
 
-    async def run(self, data: dict[str, Any]) -> PipelineResult:
+    async def run(self, user_input: dict[str, Any]) -> PipelineResult:
         # pipeline_conditional_run_params = self.
         if self.config:
-            run_param = deep_update(self.run_params, self.config.get_run_params(data))
+            run_param = deep_update(
+                self.run_params, self.config.get_run_params(user_input)
+            )
         else:
-            run_param = deep_update(self.run_params, data)
+            run_param = deep_update(self.run_params, user_input)
         return await self.pipeline.run(data=run_param)
