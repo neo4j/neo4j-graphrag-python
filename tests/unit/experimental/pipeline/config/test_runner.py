@@ -35,7 +35,7 @@ def test_pipeline_runner_from_def_empty(mock_from_definition: Mock) -> None:
     mock_from_definition.assert_called_once()
 
 
-def test_pipeline_runner_from_config():
+def test_pipeline_runner_from_config() -> None:
     config = PipelineConfig(component_config={}, connection_config=[])
     runner = PipelineRunner.from_config(config)
     assert runner.config is not None
