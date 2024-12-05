@@ -18,9 +18,11 @@ No data validation performed at this stage.
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
+import fsspec
 import yaml
+from fsspec.implementations.local import LocalFileSystem
 
 
 class ConfigReader:
@@ -51,18 +53,20 @@ class ConfigReader:
 
     """
 
-    @staticmethod
-    def read_json(file_path: Path) -> Any:
-        with open(file_path, "r") as f:
+    def __init__(self, fs: Optional[fsspec.AbstractFileSystem] = None) -> None:
+        self.fs = fs or LocalFileSystem()
+
+    def read_json(self, file_path: str) -> Any:
+        with self.fs.open(file_path, "r") as f:
             return json.load(f)
 
-    @staticmethod
-    def read_yaml(file_path: Path) -> Any:
-        with open(file_path, "r") as f:
+    def read_yaml(self, file_path: str) -> Any:
+        with self.fs.open(file_path, "r") as f:
             return yaml.safe_load(f)
 
-    def _guess_format_and_read(self, file_path: Path) -> dict[str, Any]:
-        extension = file_path.suffix.lower()
+    def _guess_format_and_read(self, file_path: str) -> dict[str, Any]:
+        p = Path(file_path)
+        extension = p.suffix.lower()
         # Note: .suffix returns an empty string if Path has no extension
         # if not returning a dict, parsing will fail later on
         if extension in [".json"]:
@@ -71,6 +75,6 @@ class ConfigReader:
             return self.read_yaml(file_path)  # type: ignore[no-any-return]
         raise ValueError(f"Unsupported extension: {extension}")
 
-    def read(self, file_path: Path) -> dict[str, Any]:
+    def read(self, file_path: str) -> dict[str, Any]:
         data = self._guess_format_and_read(file_path)
         return data

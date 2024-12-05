@@ -101,8 +101,8 @@ class PipelineRunner:
 
     @classmethod
     def from_config_file(cls, file_path: Union[str, Path]) -> Self:
-        if not isinstance(file_path, Path):
-            file_path = Path(file_path)
+        if not isinstance(file_path, str):
+            file_path = str(file_path)
         data = ConfigReader().read(file_path)
         return cls.from_config(data)
 
