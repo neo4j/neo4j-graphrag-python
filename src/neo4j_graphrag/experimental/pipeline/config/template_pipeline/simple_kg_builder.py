@@ -77,13 +77,13 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     lexical_graph_config: Optional[LexicalGraphConfig] = None
     neo4j_database: Optional[str] = None
 
-    pdf_loader: ComponentConfig | None = None
-    kg_writer: ComponentConfig | None = None
-    text_splitter: ComponentConfig | None = None
+    pdf_loader: Optional[ComponentConfig] = None
+    kg_writer: Optional[ComponentConfig] = None
+    text_splitter: Optional[ComponentConfig] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def _get_pdf_loader(self) -> PdfLoader | None:
+    def _get_pdf_loader(self) -> Optional[PdfLoader]:
         if not self.from_pdf:
             return None
         if self.pdf_loader:
@@ -120,7 +120,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             return self.kg_writer.parse(self._global_data)  # type: ignore
         return Neo4jWriter(driver=self.get_default_neo4j_driver())
 
-    def _get_resolver(self) -> EntityResolver | None:
+    def _get_resolver(self) -> Optional[EntityResolver]:
         if not self.perform_entity_resolution:
             return None
         return SinglePropertyExactMatchResolver(

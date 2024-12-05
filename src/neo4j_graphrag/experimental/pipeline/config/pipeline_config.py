@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Any, ClassVar, Literal, Union
+from typing import Any, ClassVar, Literal, Optional, Union
 
 import neo4j
 from pydantic import field_validator
@@ -129,7 +129,9 @@ class AbstractPipelineConfig(AbstractConfig):
     def _get_connections(self) -> list[ConnectionDefinition]:
         return []
 
-    def parse(self, resolved_data: dict[str, Any] | None = None) -> PipelineDefinition:
+    def parse(
+        self, resolved_data: Optional[dict[str, Any]] = None
+    ) -> PipelineDefinition:
         """Parse the full config and returns a PipelineDefinition object, containing instantiated
         components and a list of connections.
         """
