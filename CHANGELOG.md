@@ -2,6 +2,9 @@
 
 ## Next
 
+### Added
+- Ability to create a Pipeline or SimpleKGPipeline from a config file. See [the example](examples/build_graph/from_config_files/simple_kg_pipeline_from_config_file.py).
+
 ## 1.2.1
 
 ### Added
