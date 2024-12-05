@@ -22,8 +22,8 @@ from pydantic import ValidationError
 
 from neo4j_graphrag.embeddings import Embedder
 from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
-from neo4j_graphrag.experimental.pipeline.config.config_parser import (
-    PipelineRunner,
+from neo4j_graphrag.experimental.pipeline.config.runner import PipelineRunner
+from neo4j_graphrag.experimental.pipeline.config.template_pipeline import (
     SimpleKGPipelineConfig,
 )
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError

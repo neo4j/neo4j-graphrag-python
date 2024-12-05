@@ -15,7 +15,7 @@ import asyncio
 import os
 from pathlib import Path
 
-from neo4j_graphrag.experimental.pipeline.config.config_parser import PipelineRunner
+from neo4j_graphrag.experimental.pipeline.config.runner import PipelineRunner
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 
 os.environ["NEO4J_URI"] = "bolt://localhost:7687"

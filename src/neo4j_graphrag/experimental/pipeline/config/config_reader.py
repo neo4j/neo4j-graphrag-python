@@ -12,6 +12,9 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+"""Read JSON or YAML files and returns a dict.
+No data validation performed at this stage.
+"""
 
 import json
 from pathlib import Path
@@ -61,7 +64,7 @@ class ConfigReader:
     def _guess_format_and_read(self, file_path: Path) -> dict[str, Any]:
         extension = file_path.suffix.lower()
         # Note: .suffix returns an empty string if Path has no extension
-        # if not returning a dict, pasing will fail later on
+        # if not returning a dict, parsing will fail later on
         if extension in [".json"]:
             return self.read_json(file_path)  # type: ignore[no-any-return]
         if extension in [".yaml", ".yml"]:
