@@ -12,7 +12,6 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 from neo4j_graphrag.experimental.pipeline import Pipeline
@@ -53,5 +52,5 @@ def test_pipeline_runner_from_config_file(
     mock_read.return_value = {"dict": "with data"}
     PipelineRunner.from_config_file("file.yaml")
 
-    mock_read.assert_called_once_with(Path("file.yaml"))
+    mock_read.assert_called_once_with("file.yaml")
     mock_from_config.assert_called_once_with({"dict": "with data"})
