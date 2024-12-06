@@ -123,10 +123,10 @@ class PipelineRunner:
         )
         result = await self.pipeline.run(data=run_param)
         if self.do_cleaning:
-            self.close()
+            await self.close()
         return result
 
-    def close(self) -> None:
+    async def close(self) -> None:
         logger.debug("PIPELINE_RUNNER: cleaning up (closing instantiated drivers...)")
         if self.config:
-            self.config.close()
+            await self.config.close()
