@@ -97,7 +97,9 @@ class PipelineRunner:
         self.do_cleaning = do_cleaning
 
     @classmethod
-    def from_config(cls, config: AbstractPipelineConfig | dict[str, Any], do_cleaning: bool = False) -> Self:
+    def from_config(
+        cls, config: AbstractPipelineConfig | dict[str, Any], do_cleaning: bool = False
+    ) -> Self:
         wrapper = PipelineConfigWrapper.model_validate({"config": config})
         return cls(wrapper.parse(), config=wrapper.config, do_cleaning=do_cleaning)
 
