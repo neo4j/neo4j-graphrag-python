@@ -509,3 +509,10 @@ PipelineStatusUpdateError
 
 .. autoclass:: neo4j_graphrag.experimental.pipeline.exceptions.PipelineStatusUpdateError
    :show-inheritance:
+
+
+JSONRepairError
+===============
+
+.. autoclass:: neo4j_graphrag.experimental.pipeline.exceptions.JSONRepairError
+   :show-inheritance:

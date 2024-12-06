@@ -31,3 +31,9 @@ class PipelineStatusUpdateError(Neo4jGraphRagError):
     """Raises when trying an invalid change of state (e.g. DONE => DOING)"""
 
     pass
+
+
+class JSONRepairError(Neo4jGraphRagError):
+    """Raised when JSON repair fails to produce valid JSON."""
+
+    pass
