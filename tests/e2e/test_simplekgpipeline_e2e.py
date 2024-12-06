@@ -14,36 +14,13 @@
 #  limitations under the License.
 from __future__ import annotations
 
-import os
 from unittest.mock import MagicMock
 
 import neo4j
 import pytest
-from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
-from neo4j_graphrag.llm import LLMInterface, LLMResponse
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-
-@pytest.fixture
-def llm() -> LLMInterface:
-    llm = MagicMock(spec=LLMInterface)
-    return llm
-
-
-@pytest.fixture
-def embedder() -> Embedder:
-    embedder = MagicMock(spec=Embedder)
-    return embedder
-
-
-@pytest.fixture
-def harry_potter_text() -> str:
-    with open(os.path.join(BASE_DIR, "data/harry_potter.txt"), "r") as f:
-        text = f.read()
-    return text
+from neo4j_graphrag.llm import LLMResponse
 
 
 @pytest.mark.asyncio

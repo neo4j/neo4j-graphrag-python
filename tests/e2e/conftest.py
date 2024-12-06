@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import os
 import random
 import string
 import uuid
@@ -33,6 +34,8 @@ from neo4j_graphrag.retrievers import VectorRetriever
 
 from ..e2e.utils import EMBEDDING_BIOLOGY
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 
 @pytest.fixture(scope="module")
 def driver() -> Generator[Any, Any, Any]:
@@ -46,6 +49,12 @@ def driver() -> Generator[Any, Any, Any]:
 @pytest.fixture(scope="function")
 def llm() -> MagicMock:
     return MagicMock(spec=LLMInterface)
+
+
+@pytest.fixture
+def embedder() -> Embedder:
+    embedder = MagicMock(spec=Embedder)
+    return embedder
 
 
 class RandomEmbedder(Embedder):
@@ -73,6 +82,31 @@ def biology_embedder() -> BiologyEmbedder:
 @pytest.fixture(scope="function")
 def retriever_mock() -> MagicMock:
     return MagicMock(spec=VectorRetriever)
+
+
+@pytest.fixture
+def harry_potter_text() -> str:
+    with open(os.path.join(BASE_DIR, "data/documents/harry_potter.txt"), "r") as f:
+        text = f.read()
+    return text
+
+
+@pytest.fixture
+def harry_potter_text_part1() -> str:
+    with open(
+        os.path.join(BASE_DIR, "data/documents/harry_potter_part1.txt"), "r"
+    ) as f:
+        text = f.read()
+    return text
+
+
+@pytest.fixture
+def harry_potter_text_part2() -> str:
+    with open(
+        os.path.join(BASE_DIR, "data/documents/harry_potter_part2.txt"), "r"
+    ) as f:
+        text = f.read()
+    return text
 
 
 @pytest.fixture(scope="module")

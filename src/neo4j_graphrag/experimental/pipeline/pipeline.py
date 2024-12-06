@@ -44,9 +44,9 @@ from neo4j_graphrag.experimental.pipeline.pipeline_graph import (
 )
 from neo4j_graphrag.experimental.pipeline.stores import InMemoryStore, ResultStore
 from neo4j_graphrag.experimental.pipeline.types import (
-    ComponentConfig,
-    ConnectionConfig,
-    PipelineConfig,
+    ComponentDefinition,
+    ConnectionDefinition,
+    PipelineDefinition,
 )
 
 logger = logging.getLogger(__name__)
@@ -349,16 +349,34 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
 
     @classmethod
     def from_template(
-        cls, pipeline_template: PipelineConfig, store: Optional[ResultStore] = None
+        cls, pipeline_template: PipelineDefinition, store: Optional[ResultStore] = None
     ) -> Pipeline:
-        """Create a Pipeline from a pydantic model defining the components and their connections"""
+        warnings.warn(
+            "from_template is deprecated, use from_definition instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return cls.from_definition(pipeline_template, store)
+
+    @classmethod
+    def from_definition(
+        cls,
+        pipeline_definition: PipelineDefinition,
+        store: Optional[ResultStore] = None,
+    ) -> Pipeline:
+        """Create a Pipeline from a pydantic model defining the components and their connections
+
+        Args:
+            pipeline_definition (PipelineDefinition): An object defining components and how they are connected to each other.
+            store (Optional[ResultStore]): Where the results are stored. By default, uses the InMemoryStore.
+        """
         pipeline = Pipeline(store=store)
-        for component in pipeline_template.components:
+        for component in pipeline_definition.components:
             pipeline.add_component(
                 component.component,
                 component.name,
             )
-        for edge in pipeline_template.connections:
+        for edge in pipeline_definition.connections:
             pipeline_edge = PipelineEdge(
                 edge.start, edge.end, data={"input_config": edge.input_config}
             )
@@ -369,18 +387,18 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         component_config = []
         for name, task in self._nodes.items():
             component_config.append(
-                ComponentConfig(name=name, component=task.component)
+                ComponentDefinition(name=name, component=task.component)
             )
         connection_config = []
         for edge in self._edges:
             connection_config.append(
-                ConnectionConfig(
+                ConnectionDefinition(
                     start=edge.start,
                     end=edge.end,
                     input_config=edge.data["input_config"] if edge.data else {},
                 )
             )
-        pipeline_config = PipelineConfig(
+        pipeline_config = PipelineDefinition(
             components=component_config, connections=connection_config
         )
         return pipeline_config.model_dump()

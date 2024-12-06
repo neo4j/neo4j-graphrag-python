@@ -397,7 +397,7 @@ However, in most cases, a text (from the user) will be provided instead of a vec
 In this scenario, an `Embedder` is required.
 
 Search Similar Text
------------------------------
+--------------------
 
 When searching for a text, specifying how the retriever transforms (embeds) the text
 into a vector is required. Therefore, the retriever requires knowledge of an embedder:
@@ -418,7 +418,7 @@ into a vector is required. Therefore, the retriever requires knowledge of an emb
 
 
 Embedders
------------------------------
+---------
 
 Currently, this package supports the following embedders:
 
@@ -485,7 +485,7 @@ using the `return_properties` parameter:
 
 
 Pre-Filters
------------------------------
+-----------
 
 When performing a similarity search, one may have constraints to apply.
 For instance, filtering out movies released before 2000. This can be achieved

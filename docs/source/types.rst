@@ -82,3 +82,62 @@ SchemaConfig
 ============
 
 .. autoclass:: neo4j_graphrag.experimental.components.schema.SchemaConfig
+
+LexicalGraphConfig
+===================
+
+.. autoclass:: neo4j_graphrag.experimental.components.types.LexicalGraphConfig
+
+
+Neo4jDriverType
+===============
+
+.. autoclass:: neo4j_graphrag.experimental.pipeline.config.object_config.Neo4jDriverType
+
+
+Neo4jDriverConfig
+=================
+
+.. autoclass:: neo4j_graphrag.experimental.pipeline.config.object_config.Neo4jDriverConfig
+
+
+LLMType
+=======
+
+.. autoclass:: neo4j_graphrag.experimental.pipeline.config.object_config.LLMType
+
+
+LLMConfig
+=========
+
+.. autoclass:: neo4j_graphrag.experimental.pipeline.config.object_config.LLMConfig
+
+
+EmbedderType
+============
+
+.. autoclass:: neo4j_graphrag.experimental.pipeline.config.object_config.EmbedderType
+
+
+EmbedderConfig
+==============
+
+.. autoclass:: neo4j_graphrag.experimental.pipeline.config.object_config.EmbedderConfig
+
+
+ComponentType
+=============
+
+.. autoclass:: neo4j_graphrag.experimental.pipeline.config.object_config.ComponentType
+
+
+ComponentConfig
+===============
+
+.. autoclass:: neo4j_graphrag.experimental.pipeline.config.object_config.ComponentConfig
+
+
+ParamFromEnvConfig
+==================
+
+.. autoclass:: neo4j_graphrag.experimental.pipeline.config.param_resolver.ParamFromEnvConfig

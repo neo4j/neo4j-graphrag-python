@@ -17,9 +17,14 @@ from __future__ import annotations
 from typing import Any, Dict, List, Literal, Optional, Tuple
 
 from pydantic import BaseModel, ValidationError, model_validator, validate_call
+from typing_extensions import Self
 
 from neo4j_graphrag.exceptions import SchemaValidationError
 from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
+from neo4j_graphrag.experimental.pipeline.types import (
+    EntityInputType,
+    RelationInputType,
+)
 
 
 class SchemaProperty(BaseModel):
@@ -55,6 +60,14 @@ class SchemaEntity(BaseModel):
     description: str = ""
     properties: List[SchemaProperty] = []
 
+    @classmethod
+    def from_text_or_dict(cls, input: EntityInputType) -> Self:
+        if isinstance(input, SchemaEntity):
+            return input
+        if isinstance(input, str):
+            return cls(label=input)
+        return cls.model_validate(input)
+
 
 class SchemaRelation(BaseModel):
     """
@@ -64,6 +77,14 @@ class SchemaRelation(BaseModel):
     label: str
     description: str = ""
     properties: List[SchemaProperty] = []
+
+    @classmethod
+    def from_text_or_dict(cls, input: RelationInputType) -> Self:
+        if isinstance(input, SchemaRelation):
+            return input
+        if isinstance(input, str):
+            return cls(label=input)
+        return cls.model_validate(input)
 
 
 class SchemaConfig(DataModel):
