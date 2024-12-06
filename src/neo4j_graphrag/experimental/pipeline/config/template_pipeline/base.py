@@ -40,7 +40,7 @@ class TemplatePipelineConfig(AbstractPipelineConfig):
         method = getattr(self, f"_get_{component_name}")
         component = method()
         if component is None:
-            return
+            return None
         method = getattr(self, f"_get_run_params_for_{component_name}", None)
         run_params = method() if method else {}
         component_definition = ComponentDefinition(
