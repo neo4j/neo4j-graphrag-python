@@ -6,6 +6,7 @@ According to the configuration file, some parameters will be read from the env v
 """
 
 import asyncio
+import logging
 
 ## If env vars are in a .env file, uncomment:
 ## (requires pip install python-dotenv)
@@ -17,6 +18,9 @@ from pathlib import Path
 
 from neo4j_graphrag.experimental.pipeline.config.runner import PipelineRunner
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
+
+logging.basicConfig()
+logging.getLogger("neo4j_graphrag").setLevel(logging.DEBUG)
 
 os.environ["NEO4J_URI"] = "bolt://localhost:7687"
 os.environ["NEO4J_USER"] = "neo4j"

@@ -118,11 +118,15 @@ class PipelineRunner:
             )
         else:
             run_param = deep_update(self.run_params, user_input)
+        logger.info(
+            f"PIPELINE_RUNNER: starting pipeline {self.pipeline} with run_params={run_param}"
+        )
         result = await self.pipeline.run(data=run_param)
         if self.do_cleaning:
             self.close()
         return result
 
     def close(self) -> None:
+        logger.debug("PIPELINE_RUNNER: cleaning up (closing instantiated drivers...)")
         if self.config:
             self.config.close()

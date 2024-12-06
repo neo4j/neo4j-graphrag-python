@@ -12,12 +12,15 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Any, ClassVar
+import logging
+from typing import Any, ClassVar, Optional
 
 from neo4j_graphrag.experimental.pipeline.config.pipeline_config import (
     AbstractPipelineConfig,
 )
 from neo4j_graphrag.experimental.pipeline.types import ComponentDefinition
+
+logger = logging.getLogger(__name__)
 
 
 class TemplatePipelineConfig(AbstractPipelineConfig):
@@ -33,22 +36,27 @@ class TemplatePipelineConfig(AbstractPipelineConfig):
 
     COMPONENTS: ClassVar[list[str]] = []
 
+    def _get_component(self, component_name: str) -> Optional[ComponentDefinition]:
+        method = getattr(self, f"_get_{component_name}")
+        component = method()
+        if component is None:
+            return
+        method = getattr(self, f"_get_run_params_for_{component_name}", None)
+        run_params = method() if method else {}
+        component_definition = ComponentDefinition(
+            name=component_name,
+            component=component,
+            run_params=run_params,
+        )
+        logger.debug(f"TEMPLATE_PIPELINE: resolved component {component_definition}")
+        return component_definition
+
     def _get_components(self) -> list[ComponentDefinition]:
         components = []
         for component_name in self.COMPONENTS:
-            method = getattr(self, f"_get_{component_name}")
-            component = method()
-            if component is None:
-                continue
-            method = getattr(self, f"_get_run_params_for_{component_name}", None)
-            run_params = method() if method else {}
-            components.append(
-                ComponentDefinition(
-                    name=component_name,
-                    component=component,
-                    run_params=run_params,
-                )
-            )
+            comp = self._get_component(component_name)
+            if comp is not None:
+                components.append(comp)
         return components
 
     def get_run_params(self, user_input: dict[str, Any]) -> dict[str, Any]:

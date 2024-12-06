@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+import logging
 from typing import Any, ClassVar, Literal, Optional, Union
 
 import neo4j
@@ -33,6 +34,8 @@ from neo4j_graphrag.experimental.pipeline.types import (
     PipelineDefinition,
 )
 from neo4j_graphrag.llm import LLMInterface
+
+logger = logging.getLogger(__name__)
 
 
 class AbstractPipelineConfig(AbstractConfig):
@@ -84,11 +87,13 @@ class AbstractPipelineConfig(AbstractConfig):
             component_run_params = self.resolve_params(config.root.run_params_)
         else:
             component_run_params = {}
-        return ComponentDefinition(
+        component_def = ComponentDefinition(
             name=name,
             component=component,
             run_params=component_run_params,
         )
+        logger.debug(f"PIPELINE_CONFIG: resolved component {component_def}")
+        return component_def
 
     def _parse_global_data(self) -> dict[str, Any]:
         """Global data contains data that can be referenced in other parts of the
@@ -104,6 +109,7 @@ class AbstractPipelineConfig(AbstractConfig):
         extra_data = {
             "extras": self.resolve_params(self.extras),
         }
+        logger.debug(f"PIPELINE_CONFIG: resolved 'extras': {extra_data}")
         drivers: dict[str, neo4j.Driver] = {
             driver_name: driver_config.parse(extra_data)
             for driver_name, driver_config in self.neo4j_config.items()
@@ -116,12 +122,14 @@ class AbstractPipelineConfig(AbstractConfig):
             embedder_name: embedder_config.parse(extra_data)
             for embedder_name, embedder_config in self.embedder_config.items()
         }
-        return {
+        global_data = {
             **extra_data,
             "neo4j_config": drivers,
             "llm_config": llms,
             "embedder_config": embedders,
         }
+        logger.debug(f"PIPELINE_CONFIG: resolved globals: {global_data}")
+        return global_data
 
     def _get_components(self) -> list[ComponentDefinition]:
         return []
@@ -145,7 +153,10 @@ class AbstractPipelineConfig(AbstractConfig):
         return user_input
 
     def close(self) -> None:
-        for driver in self._global_data.get("neo4j_config", {}).values():
+        drivers = self._global_data.get("neo4j_config", {})
+        for driver_name in drivers:
+            driver = drivers[driver_name]
+            logger.debug(f"PIPELINE_CONFIG: closing driver {driver_name}: {driver}")
             driver.close()
 
     def get_neo4j_driver_by_name(self, name: str) -> neo4j.Driver:

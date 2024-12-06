@@ -17,12 +17,15 @@ No data validation performed at this stage.
 """
 
 import json
+import logging
 from pathlib import Path
 from typing import Any, Optional
 
 import fsspec
 import yaml
 from fsspec.implementations.local import LocalFileSystem
+
+logger = logging.getLogger(__name__)
 
 
 class ConfigReader:
@@ -57,10 +60,12 @@ class ConfigReader:
         self.fs = fs or LocalFileSystem()
 
     def read_json(self, file_path: str) -> Any:
+        logger.debug(f"CONFIG_READER: read from json {file_path}")
         with self.fs.open(file_path, "r") as f:
             return json.load(f)
 
     def read_yaml(self, file_path: str) -> Any:
+        logger.debug(f"CONFIG_READER: read from yaml {file_path}")
         with self.fs.open(file_path, "r") as f:
             return yaml.safe_load(f)
 

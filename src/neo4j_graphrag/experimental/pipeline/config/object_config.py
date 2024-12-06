@@ -118,8 +118,9 @@ class ObjectConfig(AbstractConfig, Generic[T]):
     def parse(self, resolved_data: dict[str, Any] | None = None) -> T:
         """Import `class_`, resolve `params_` and instantiate object."""
         self._global_data = resolved_data or {}
+        logger.debug(f"OBJECT_CONFIG: parsing {self} using {resolved_data}")
         if self.class_ is None:
-            raise ValueError("`class_` is not defined")
+            raise ValueError(f"`class_` is not required to parse object {self}")
         klass = self._get_class(self.class_, self.get_module())
         if not issubclass(klass, self.get_interface()):
             raise ValueError(
@@ -129,6 +130,9 @@ class ObjectConfig(AbstractConfig, Generic[T]):
         try:
             obj = klass(**params)
         except TypeError as e:
+            logger.error(
+                "OBJECT_CONFIG: failed to instantiate object due to improperly configured parameters"
+            )
             raise e
         return cast(T, obj)
 
@@ -147,9 +151,8 @@ class Neo4jDriverConfig(ObjectConfig[neo4j.Driver]):
 
     def parse(self, resolved_data: dict[str, Any] | None = None) -> neo4j.Driver:
         params = self.resolve_params(self.params_)
-        uri = params.pop(
-            "uri"
-        )  # we know these params are there because of the required params validator
+        # we know these params are there because of the required params validator
+        uri = params.pop("uri")
         user = params.pop("user")
         password = params.pop("password")
         driver = neo4j.GraphDatabase.driver(uri, auth=(user, password), **params)
