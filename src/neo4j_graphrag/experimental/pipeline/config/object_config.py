@@ -130,8 +130,7 @@ class ObjectConfig(AbstractConfig, Generic[T]):
             obj = klass(**params)
         except TypeError as e:
             raise e
-        # here we still need to ignore type because _get_class returns Any
-        return obj  # type: ignore[return-value]
+        return cast(T, obj)
 
 
 class Neo4jDriverConfig(ObjectConfig[neo4j.Driver]):
