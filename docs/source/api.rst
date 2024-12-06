@@ -124,6 +124,23 @@ SimpleKGPipeline
     :members: run_async
 
 
+************
+Config files
+************
+
+
+SimpleKGPipelineConfig
+======================
+
+.. autoclass:: neo4j_graphrag.experimental.pipeline.config.template_pipeline.simple_kg_builder.SimpleKGPipelineConfig
+
+
+PipelineRunner
+==============
+
+.. autoclass:: neo4j_graphrag.experimental.pipeline.config.runner.PipelineRunner
+
+
 .. _retrievers-section:
 
 **********
