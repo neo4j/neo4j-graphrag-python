@@ -19,9 +19,10 @@ import asyncio
 import enum
 import json
 import logging
-import re
 from datetime import datetime
 from typing import Any, List, Optional, Union
+
+import json_repair
 
 from pydantic import ValidationError, validate_call
 
@@ -36,6 +37,7 @@ from neo4j_graphrag.experimental.components.types import (
     TextChunks,
 )
 from neo4j_graphrag.experimental.pipeline.component import Component
+from neo4j_graphrag.experimental.pipeline.exceptions import JSONRepairError
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate, PromptTemplate
 from neo4j_graphrag.llm import LLMInterface
 
@@ -100,28 +102,19 @@ def balance_curly_braces(json_string: str) -> str:
     return "".join(fixed_json)
 
 
-def fix_invalid_json(invalid_json_string: str) -> str:
-    # Fix missing quotes around field names
-    invalid_json_string = re.sub(
-        r"([{,]\s*)(\w+)(\s*:)", r'\1"\2"\3', invalid_json_string
-    )
+def fix_invalid_json(raw_json: str) -> str:
+    repaired_json = json_repair.repair_json(raw_json)
 
-    # Fix missing quotes around string values, correctly ignoring null, true, false, and numeric values
-    invalid_json_string = re.sub(
-        r"(?<=:\s)(?!(null|true|false|\d+\.?\d*))([a-zA-Z_][a-zA-Z0-9_]*)\s*(?=[,}])",
-        r'"\2"',
-        invalid_json_string,
-    )
+    if isinstance(repaired_json, str):
+        repaired_json = repaired_json.strip()
+    else:
+        repaired_json = ""
 
-    # Correct the specific issue: remove trailing commas within arrays or objects before closing braces or brackets
-    invalid_json_string = re.sub(r",\s*(?=[}\]])", "", invalid_json_string)
-
-    # Normalize excessive curly braces
-    invalid_json_string = re.sub(r"{{+", "{", invalid_json_string)
-    invalid_json_string = re.sub(r"}}+", "}", invalid_json_string)
-
-    # Balance curly braces
-    return balance_curly_braces(invalid_json_string)
+    if repaired_json.strip() == '""':
+        raise JSONRepairError("JSON repair resulted in an empty or invalid JSON.")
+    if not repaired_json.strip():
+        raise JSONRepairError("JSON repair resulted in an empty string.")
+    return repaired_json
 
 
 class EntityRelationExtractor(Component, abc.ABC):
@@ -223,24 +216,18 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         )
         llm_result = await self.llm.ainvoke(prompt)
         try:
-            result = json.loads(llm_result.content)
-        except json.JSONDecodeError:
-            logger.info(
-                f"LLM response is not valid JSON {llm_result.content} for chunk_index={chunk.index}. Trying to fix it."
-            )
-            fixed_content = fix_invalid_json(llm_result.content)
-            try:
-                result = json.loads(fixed_content)
-            except json.JSONDecodeError as e:
-                if self.on_error == OnError.RAISE:
-                    raise LLMGenerationError(
-                        f"LLM response is not valid JSON {fixed_content}: {e}"
-                    )
-                else:
-                    logger.error(
-                        f"LLM response is not valid JSON {llm_result.content} for chunk_index={chunk.index}"
-                    )
-                result = {"nodes": [], "relationships": []}
+            llm_generated_json = fix_invalid_json(llm_result.content)
+            result = json.loads(llm_generated_json)
+        except (json.JSONDecodeError, JSONRepairError) as e:
+            if self.on_error == OnError.RAISE:
+                raise LLMGenerationError(
+                    f"LLM response is not valid JSON {llm_result.content}: {e}"
+                )
+            else:
+                logger.error(
+                    f"LLM response is not valid JSON {llm_result.content} for chunk_index={chunk.index}"
+                )
+            result = {"nodes": [], "relationships": []}
         try:
             chunk_graph = Neo4jGraph(**result)
         except ValidationError as e:
