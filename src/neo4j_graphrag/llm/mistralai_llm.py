@@ -84,10 +84,10 @@ class MistralAILLM(LLMInterface):
                 messages=self.get_messages(input),
                 **self.model_params,
             )
-            if response is None or response.choices is None or not response.choices:
+            if response is None or not response.choices:
                 content = ""
             else:
-                content = response.choices[0].message.content or ""
+                content = str(response.choices[0].message.content) or ""
             return LLMResponse(content=content)
         except SDKError as e:
             raise LLMGenerationError(e)
@@ -111,10 +111,10 @@ class MistralAILLM(LLMInterface):
                 messages=self.get_messages(input),
                 **self.model_params,
             )
-            if response is None or response.choices is None or not response.choices:
+            if response is None or not response.choices:
                 content = ""
             else:
-                content = response.choices[0].message.content or ""
+                content = str(response.choices[0].message.content) or ""
             return LLMResponse(content=content)
         except SDKError as e:
             raise LLMGenerationError(e)
