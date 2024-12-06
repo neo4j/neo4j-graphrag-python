@@ -144,6 +144,10 @@ class AbstractPipelineConfig(AbstractConfig):
     def get_run_params(self, user_input: dict[str, Any]) -> dict[str, Any]:
         return user_input
 
+    def close(self) -> None:
+        for driver in self._global_data.get("neo4j_config", {}).values():
+            driver.close()
+
     def get_neo4j_driver_by_name(self, name: str) -> neo4j.Driver:
         drivers: dict[str, neo4j.Driver] = self._global_data.get("neo4j_config", {})
         return drivers[name]

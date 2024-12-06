@@ -89,22 +89,24 @@ class PipelineRunner:
         self,
         pipeline_definition: PipelineDefinition,
         config: AbstractPipelineConfig | None = None,
+        do_cleaning: bool = False,
     ) -> None:
         self.config = config
         self.pipeline = Pipeline.from_definition(pipeline_definition)
         self.run_params = pipeline_definition.get_run_params()
+        self.do_cleaning = do_cleaning
 
     @classmethod
-    def from_config(cls, config: AbstractPipelineConfig | dict[str, Any]) -> Self:
+    def from_config(cls, config: AbstractPipelineConfig | dict[str, Any], do_cleaning: bool = False) -> Self:
         wrapper = PipelineConfigWrapper.model_validate({"config": config})
-        return cls(wrapper.parse(), config=wrapper.config)
+        return cls(wrapper.parse(), config=wrapper.config, do_cleaning=do_cleaning)
 
     @classmethod
     def from_config_file(cls, file_path: Union[str, Path]) -> Self:
         if not isinstance(file_path, str):
             file_path = str(file_path)
         data = ConfigReader().read(file_path)
-        return cls.from_config(data)
+        return cls.from_config(data, do_cleaning=True)
 
     async def run(self, user_input: dict[str, Any]) -> PipelineResult:
         # pipeline_conditional_run_params = self.
@@ -114,4 +116,11 @@ class PipelineRunner:
             )
         else:
             run_param = deep_update(self.run_params, user_input)
-        return await self.pipeline.run(data=run_param)
+        result = await self.pipeline.run(data=run_param)
+        if self.do_cleaning:
+            self.close()
+        return result
+
+    def close(self) -> None:
+        if self.config:
+            self.config.close()
