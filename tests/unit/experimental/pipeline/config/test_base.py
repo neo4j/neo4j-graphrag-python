@@ -14,40 +14,10 @@
 #  limitations under the License.
 from unittest.mock import patch
 
-import pytest
-from neo4j_graphrag.experimental.pipeline import Pipeline
 from neo4j_graphrag.experimental.pipeline.config.base import AbstractConfig
 from neo4j_graphrag.experimental.pipeline.config.param_resolver import (
     ParamToResolveConfig,
 )
-
-
-def test_get_class_no_optional_module() -> None:
-    c = AbstractConfig()
-    klass = c._get_class("neo4j_graphrag.experimental.pipeline.Pipeline")
-    assert klass == Pipeline
-
-
-def test_get_class_optional_module() -> None:
-    c = AbstractConfig()
-    klass = c._get_class(
-        "Pipeline", optional_module="neo4j_graphrag.experimental.pipeline"
-    )
-    assert klass == Pipeline
-
-
-def test_get_class_path_and_optional_module() -> None:
-    c = AbstractConfig()
-    klass = c._get_class(
-        "pipeline.Pipeline", optional_module="neo4j_graphrag.experimental"
-    )
-    assert klass == Pipeline
-
-
-def test_get_class_wrong_path() -> None:
-    c = AbstractConfig()
-    with pytest.raises(ValueError):
-        c._get_class("MyClass")
 
 
 def test_resolve_param_with_param_to_resolve_object() -> None:

@@ -18,13 +18,16 @@ config dict with 'class_' and 'params_' keys.
 
 from __future__ import annotations
 
+import importlib
 import logging
 from typing import (
     Any,
     ClassVar,
     Generic,
+    Optional,
     TypeVar,
     Union,
+    cast,
 )
 
 import neo4j
@@ -83,6 +86,34 @@ class ObjectConfig(AbstractConfig, Generic[T]):
 
     def get_interface(self) -> type:
         return self.INTERFACE
+
+    @classmethod
+    def _get_class(cls, class_path: str, optional_module: Optional[str] = None) -> type:
+        """Get class from string and an optional module
+
+        Will first try to import the class from `class_path` alone. If it results in an ImportError,
+        will try to import from `f'{optional_module}.{class_path}'`
+
+        Args:
+            class_path (str): Class path with format 'my_module.MyClass'.
+            optional_module (Optional[str]): Optional module path. Used to provide a default path for some known objects and simplify the notation.
+
+        Raises:
+            ValueError: if the class can't be imported, even using the optional module.
+        """
+        *modules, class_name = class_path.rsplit(".", 1)
+        module_name = modules[0] if modules else optional_module
+        if module_name is None:
+            raise ValueError("Must specify a module to import class from")
+        try:
+            module = importlib.import_module(module_name)
+            klass = getattr(module, class_name)
+        except (ImportError, AttributeError):
+            if optional_module and module_name != optional_module:
+                full_klass_path = optional_module + "." + class_path
+                return cls._get_class(full_klass_path)
+            raise ValueError(f"Could not find {class_name} in {module_name}")
+        return cast(type, klass)
 
     def parse(self, resolved_data: dict[str, Any] | None = None) -> T:
         """Import `class_`, resolve `params_` and instantiate object."""

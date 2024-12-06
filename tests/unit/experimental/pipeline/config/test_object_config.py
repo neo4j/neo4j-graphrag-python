@@ -15,7 +15,9 @@
 from unittest.mock import patch
 
 import neo4j
+import pytest
 from neo4j_graphrag.embeddings import Embedder, OpenAIEmbeddings
+from neo4j_graphrag.experimental.pipeline import Pipeline
 from neo4j_graphrag.experimental.pipeline.config.object_config import (
     EmbedderConfig,
     EmbedderType,
@@ -23,8 +25,37 @@ from neo4j_graphrag.experimental.pipeline.config.object_config import (
     LLMType,
     Neo4jDriverConfig,
     Neo4jDriverType,
+    ObjectConfig,
 )
 from neo4j_graphrag.llm import LLMInterface, OpenAILLM
+
+
+def test_get_class_no_optional_module() -> None:
+    c: ObjectConfig[object] = ObjectConfig()
+    klass = c._get_class("neo4j_graphrag.experimental.pipeline.Pipeline")
+    assert klass == Pipeline
+
+
+def test_get_class_optional_module() -> None:
+    c: ObjectConfig[object] = ObjectConfig()
+    klass = c._get_class(
+        "Pipeline", optional_module="neo4j_graphrag.experimental.pipeline"
+    )
+    assert klass == Pipeline
+
+
+def test_get_class_path_and_optional_module() -> None:
+    c: ObjectConfig[object] = ObjectConfig()
+    klass = c._get_class(
+        "pipeline.Pipeline", optional_module="neo4j_graphrag.experimental"
+    )
+    assert klass == Pipeline
+
+
+def test_get_class_wrong_path() -> None:
+    c: ObjectConfig[object] = ObjectConfig()
+    with pytest.raises(ValueError):
+        c._get_class("MyClass")
 
 
 def test_neo4j_driver_config() -> None:
