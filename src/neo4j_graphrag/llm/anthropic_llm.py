@@ -110,3 +110,6 @@ class AnthropicLLM(LLMInterface):
             return LLMResponse(content=response.content)
         except self.anthropic.APIError as e:
             raise LLMGenerationError(e)
+
+    def chat(self, input: str, chat_history: list[str]) -> LLMResponse:
+        pass

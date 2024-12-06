@@ -33,7 +33,7 @@ def test_openai_llm_missing_dependency(mock_import: Mock) -> None:
 
 
 @patch("builtins.__import__")
-def test_openai_llm_happy_path(mock_import: Mock) -> None:
+def test_openai_llm_invoke_happy_path(mock_import: Mock) -> None:
     mock_openai = get_mock_openai()
     mock_import.return_value = mock_openai
     mock_openai.OpenAI.return_value.chat.completions.create.return_value = MagicMock(
@@ -42,6 +42,20 @@ def test_openai_llm_happy_path(mock_import: Mock) -> None:
     llm = OpenAILLM(api_key="my key", model_name="gpt")
 
     res = llm.invoke("my text")
+    assert isinstance(res, LLMResponse)
+    assert res.content == "openai chat response"
+
+
+@patch("builtins.__import__")
+def test_openai_llm_chat_happy_path(mock_import: Mock) -> None:
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+    mock_openai.OpenAI.return_value.chat.completions.create.return_value = MagicMock(
+        choices=[MagicMock(message=MagicMock(content="openai chat response"))],
+    )
+    llm = OpenAILLM(api_key="my key", model_name="gpt")
+
+    res = llm.chat("my question", ["user message", "assistant message"])
     assert isinstance(res, LLMResponse)
     assert res.content == "openai chat response"
 
@@ -71,3 +85,28 @@ def test_azure_openai_llm_happy_path(mock_import: Mock) -> None:
     res = llm.invoke("my text")
     assert isinstance(res, LLMResponse)
     assert res.content == "openai chat response"
+
+
+def test_openai_llm_get_conversation_history() -> None:
+    system_instruction = "You are a helpful assistant."
+    question = "When does it set?"
+    chat_history = [
+        "When does the sun come up in the summer?",
+        "Usually around 6am.",
+        "What about next season?",
+        "Around 8am.",
+    ]
+    expected_response = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "When does the sun come up in the summer?"},
+        {"role": "assistant", "content": "Usually around 6am."},
+        {"role": "user", "content": "What about next season?"},
+        {"role": "assistant", "content": "Around 8am."},
+        {"role": "user", "content": "When does it set?"},
+    ]
+
+    llm = OpenAILLM(
+        api_key="my key", model_name="gpt", system_instruction=system_instruction
+    )
+    response = llm.get_conversation_history(question, chat_history)
+    assert response == expected_response

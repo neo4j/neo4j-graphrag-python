@@ -83,6 +83,7 @@ class GraphRAG:
     def search(
         self,
         query_text: str = "",
+        chat_history: Optional[list[str]] = None,
         examples: str = "",
         retriever_config: Optional[dict[str, Any]] = None,
         return_context: bool | None = None,
@@ -100,6 +101,7 @@ class GraphRAG:
 
         Args:
             query_text (str): The user question
+            chat_history: (Optional[list]): A list of previous messages in the conversation
             examples (str): Examples added to the LLM prompt.
             retriever_config (Optional[dict]): Parameters passed to the retriever
                 search method; e.g.: top_k
@@ -134,7 +136,10 @@ class GraphRAG:
         )
         logger.debug(f"RAG: retriever_result={retriever_result}")
         logger.debug(f"RAG: prompt={prompt}")
-        answer = self.llm.invoke(prompt)
+        if chat_history is not None:
+            answer = self.llm.chat(prompt, chat_history)
+        else:
+            answer = self.llm.invoke(prompt)
         result: dict[str, Any] = {"answer": answer.content}
         if return_context:
             result["retriever_result"] = retriever_result

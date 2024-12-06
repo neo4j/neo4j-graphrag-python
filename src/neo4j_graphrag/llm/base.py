@@ -33,10 +33,12 @@ class LLMInterface(ABC):
         self,
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
+        system_instruction: Optional[str] = None,
         **kwargs: Any,
     ):
         self.model_name = model_name
         self.model_params = model_params or {}
+        self.system_instruction = system_instruction
 
     @abstractmethod
     def invoke(self, input: str) -> LLMResponse:
@@ -44,6 +46,21 @@ class LLMInterface(ABC):
 
         Args:
             input (str): Text sent to the LLM
+
+        Returns:
+            LLMResponse: The response from the LLM.
+
+        Raises:
+            LLMGenerationError: If anything goes wrong.
+        """
+
+    @abstractmethod
+    def chat(self, input: str, chat_history: list[str]) -> LLMResponse:
+        """Sends a text input and a converstion history to the LLM and retrieves a response.
+
+        Args:
+            input (str): Text sent to the LLM
+            chat_history (list[str]]): A list of previous messages in the conversation
 
         Returns:
             LLMResponse: The response from the LLM.
