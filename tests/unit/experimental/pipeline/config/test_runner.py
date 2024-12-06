@@ -53,4 +53,4 @@ def test_pipeline_runner_from_config_file(
     PipelineRunner.from_config_file("file.yaml")
 
     mock_read.assert_called_once_with("file.yaml")
-    mock_from_config.assert_called_once_with({"dict": "with data"})
+    mock_from_config.assert_called_once_with({"dict": "with data"}, do_cleaning=True)
