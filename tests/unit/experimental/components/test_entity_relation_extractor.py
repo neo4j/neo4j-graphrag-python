@@ -145,10 +145,10 @@ async def test_extractor_llm_ainvoke_failed() -> None:
 
 
 @pytest.mark.asyncio
-async def test_extractor_llm_badly_formatted_json() -> None:
+async def test_extractor_llm_unfixable_json() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(
-        content='{"nodes": [{"id": "0", "label": "Person", "properties": {}}], "relationships": [}'
+        content='{"nodes": [{"id": "0", "label": "Person", "properties": {}}], "relationships": }'
     )
 
     extractor = LLMEntityRelationExtractor(
@@ -156,7 +156,8 @@ async def test_extractor_llm_badly_formatted_json() -> None:
     )
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
 
-    await extractor.run(chunks=chunks)
+    with pytest.raises(LLMGenerationError):
+        await extractor.run(chunks=chunks)
 
 
 @pytest.mark.asyncio
