@@ -110,9 +110,9 @@ def fix_invalid_json(raw_json: str) -> str:
     else:
         repaired_json = ""
 
-    if repaired_json.strip() == '""':
+    if repaired_json == '""':
         raise JSONRepairError("JSON repair resulted in an empty or invalid JSON.")
-    if not repaired_json.strip():
+    if not repaired_json:
         raise JSONRepairError("JSON repair resulted in an empty string.")
     return repaired_json
 
