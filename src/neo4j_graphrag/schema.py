@@ -204,7 +204,10 @@ def get_structured_schema(driver: neo4j.Driver) -> dict[str, Any]:
         for data in query_database(
             driver,
             REL_QUERY,
-            params={"EXCLUDED_LABELS": EXCLUDED_LABELS + [BASE_ENTITY_LABEL]},
+            params={
+                "EXCLUDED_LABELS": EXCLUDED_LABELS
+                + [BASE_ENTITY_LABEL, BASE_KG_BUILDER_LABEL]
+            },
         )
     ]
 
