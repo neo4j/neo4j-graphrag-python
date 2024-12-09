@@ -19,6 +19,7 @@ from typing import Any, Optional
 import neo4j
 from neo4j.exceptions import ClientError
 
+BASE_KG_BUILDER_LABEL = "__KGBuilder__"
 BASE_ENTITY_LABEL = "__Entity__"
 EXCLUDED_LABELS = ["_Bloom_Perspective_", "_Bloom_Scene_"]
 EXCLUDED_RELS = ["_Bloom_HAS_SCENE_"]
@@ -82,13 +83,23 @@ def get_schema(
     driver: neo4j.Driver,
 ) -> str:
     """
-    Returns the schema of the graph.
+    Returns the schema of the graph as a string with following format:
+
+    .. code-block:: text
+
+        Node properties:
+        Person {id: INTEGER, name: STRING}
+        Relationship properties:
+        KNOWS {fromDate: DATE}
+        The relationships:
+        (:Person)-[:KNOWS]->(:Person)
 
     Args:
         driver (neo4j.Driver): Neo4j Python driver instance.
 
     Returns:
         str: the graph schema information in a serialized format.
+
     """
     structured_schema = get_structured_schema(driver)
 
@@ -129,6 +140,40 @@ def get_structured_schema(driver: neo4j.Driver) -> dict[str, Any]:
     """
     Returns the structured schema of the graph.
 
+    Returns a dict with following format:
+
+    .. code:: python
+
+        {
+            'node_props': {
+                'Person': [{'property': 'id', 'type': 'INTEGER'}, {'property': 'name', 'type': 'STRING'}]
+            },
+            'rel_props': {
+                'KNOWS': [{'property': 'fromDate', 'type': 'DATE'}]
+            },
+            'relationships': [
+                {'start': 'Person', 'type': 'KNOWS', 'end': 'Person'}
+            ],
+            'metadata': {
+                'constraint': [
+                    {'id': 7, 'name': 'person_id', 'type': 'UNIQUENESS', 'entityType': 'NODE', 'labelsOrTypes': ['Persno'], 'properties': ['id'], 'ownedIndex': 'person_id', 'propertyType': None},
+                ],
+                'index': [
+                    {'label': 'Person', 'properties': ['name'], 'size': 2, 'type': 'RANGE', 'valuesSelectivity': 1.0, 'distinctValues': 2.0},
+                ]
+            }
+        }
+
+    Note:
+        The internal structure of the returned dict depends on the apoc.meta.data
+        and apoc.schema.nodes procedures.
+
+    Warning:
+        Some labels are excluded from the output schema:
+
+        - The `__Entity__` and `__KGBuilder__` node labels which are created by the KG Builder pipeline within this package
+        - Some labels related to Bloom internals.
+
     Args:
         driver (neo4j.Driver): Neo4j Python driver instance.
 
@@ -140,7 +185,7 @@ def get_structured_schema(driver: neo4j.Driver) -> dict[str, Any]:
         for data in query_database(
             driver,
             NODE_PROPERTIES_QUERY,
-            params={"EXCLUDED_LABELS": EXCLUDED_LABELS + [BASE_ENTITY_LABEL]},
+            params={"EXCLUDED_LABELS": EXCLUDED_LABELS + [BASE_ENTITY_LABEL, BASE_KG_BUILDER_LABEL]},
         )
     ]
 
