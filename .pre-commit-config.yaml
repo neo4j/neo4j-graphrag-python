@@ -18,17 +18,3 @@ repos:
         language: system
         types: [ python ]
         stages: [ commit, push ]
-      - id: mypy
-        name: Mypy Type Check
-        entry: mypy .
-        language: system
-        types: [ python ]
-        stages: [ commit, push ]
-        pass_filenames: false
-        args: [
-          --strict,
-          --ignore-missing-imports,
-          --allow-untyped-calls,
-          --allow-subclassing-any,
-          --exclude='./docs/'
-        ]

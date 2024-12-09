@@ -118,3 +118,6 @@ class MistralAILLM(LLMInterface):
             return LLMResponse(content=content)
         except SDKError as e:
             raise LLMGenerationError(e)
+
+    def chat(self, input: str, chat_history: list[str]) -> LLMResponse:
+        pass

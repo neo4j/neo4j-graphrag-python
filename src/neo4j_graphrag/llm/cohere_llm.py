@@ -102,3 +102,6 @@ class CohereLLM(LLMInterface):
         return LLMResponse(
             content=res.text,
         )
+
+    def chat(self, input: str, chat_history: list[str]) -> LLMResponse:
+        pass

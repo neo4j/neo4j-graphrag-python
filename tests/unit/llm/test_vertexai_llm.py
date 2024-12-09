@@ -16,7 +16,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
-from neo4j_graphrag.llm.vertexai_llm import VertexAILLM
+from neo4j_graphrag.llm.vertexai_llm import VertexAILLM, Part, Content
 
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel", None)
@@ -52,3 +52,36 @@ async def test_vertexai_ainvoke_happy_path(GenerativeModelMock: MagicMock) -> No
     response = await llm.ainvoke(input_text)
     assert response.content == "Return text"
     llm.model.generate_content_async.assert_called_once_with(input_text, **model_params)
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_get_conversation_history(GenerativeModelMock: MagicMock) -> None:
+    system_instruction = "You are a helpful assistant."
+    question = "When does it set?"
+    chat_history = [
+        "When does the sun come up in the summer?",
+        "Usually around 6am.",
+        "What about next season?",
+        "Around 8am.",
+    ]
+    expected_response = [
+        Content(
+            role="user",
+            parts=[Part.from_text("When does the sun come up in the summer?")],
+        ),
+        Content(role="model", parts=[Part.from_text("Usually around 6am.")]),
+        Content(role="user", parts=[Part.from_text("What about next season?")]),
+        Content(role="model", parts=[Part.from_text("Around 8am.")]),
+        Content(role="user", parts=[Part.from_text("When does it set?")]),
+    ]
+
+    llm = VertexAILLM(
+        model_name="gemini-1.5-flash-001", system_instruction=system_instruction
+    )
+    response = llm.get_conversation_history(question, chat_history)
+
+    assert llm.system_instruction == system_instruction
+    assert len(response) == len(expected_response)
+    for actual, expected in zip(response, expected_response):
+        assert actual.role == expected.role
+        assert actual.parts[0].text == expected.parts[0].text
