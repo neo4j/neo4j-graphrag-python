@@ -192,7 +192,7 @@ async def test_extractor_llm_badly_formatted_json_gets_fixed() -> None:
     )
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
     res = await extractor.run(chunks=chunks)
-    print("res.nodes", res.nodes)
+
     assert len(res.nodes) == 1
     assert res.nodes[0].label == "Person"
     assert res.nodes[0].properties == {"chunk_index": 0}
