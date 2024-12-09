@@ -37,7 +37,7 @@ from neo4j_graphrag.experimental.components.types import (
     TextChunks,
 )
 from neo4j_graphrag.experimental.pipeline.component import Component
-from neo4j_graphrag.experimental.pipeline.exceptions import JSONRepairError
+from neo4j_graphrag.experimental.pipeline.exceptions import InvalidJSONError
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate, PromptTemplate
 from neo4j_graphrag.llm import LLMInterface
 
@@ -111,9 +111,9 @@ def fix_invalid_json(raw_json: str) -> str:
         repaired_json = ""
 
     if repaired_json == '""':
-        raise JSONRepairError("JSON repair resulted in an empty or invalid JSON.")
+        raise InvalidJSONError("JSON repair resulted in an empty or invalid JSON.")
     if not repaired_json:
-        raise JSONRepairError("JSON repair resulted in an empty string.")
+        raise InvalidJSONError("JSON repair resulted in an empty string.")
     return repaired_json
 
 
@@ -218,7 +218,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         try:
             llm_generated_json = fix_invalid_json(llm_result.content)
             result = json.loads(llm_generated_json)
-        except (json.JSONDecodeError, JSONRepairError) as e:
+        except (json.JSONDecodeError, InvalidJSONError) as e:
             if self.on_error == OnError.RAISE:
                 raise LLMGenerationError(
                     f"LLM response is not valid JSON {llm_result.content}: {e}"

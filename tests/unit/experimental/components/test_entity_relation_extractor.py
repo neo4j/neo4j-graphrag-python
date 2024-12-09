@@ -31,7 +31,7 @@ from neo4j_graphrag.experimental.components.types import (
     TextChunk,
     TextChunks,
 )
-from neo4j_graphrag.experimental.pipeline.exceptions import JSONRepairError
+from neo4j_graphrag.experimental.pipeline.exceptions import InvalidJSONError
 from neo4j_graphrag.llm import LLMInterface, LLMResponse
 
 
@@ -215,7 +215,7 @@ def test_fix_invalid_json_empty_result() -> None:
     json_string = "invalid json"
 
     with patch("json_repair.repair_json", return_value=""):
-        with pytest.raises(JSONRepairError):
+        with pytest.raises(InvalidJSONError):
             fix_invalid_json(json_string)
 
 

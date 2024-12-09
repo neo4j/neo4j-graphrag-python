@@ -33,7 +33,7 @@ class PipelineStatusUpdateError(Neo4jGraphRagError):
     pass
 
 
-class JSONRepairError(Neo4jGraphRagError):
+class InvalidJSONError(Neo4jGraphRagError):
     """Raised when JSON repair fails to produce valid JSON."""
 
     pass

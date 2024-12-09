@@ -511,8 +511,8 @@ PipelineStatusUpdateError
    :show-inheritance:
 
 
-JSONRepairError
-===============
+InvalidJSONError
+================
 
-.. autoclass:: neo4j_graphrag.experimental.pipeline.exceptions.JSONRepairError
+.. autoclass:: neo4j_graphrag.experimental.pipeline.exceptions.InvalidJSONError
    :show-inheritance:
