@@ -2,6 +2,9 @@
 
 ## Next
 
+### Fixed
+- Added schema functions to the documentation.
+
 ## 1.2.1
 
 ### Added
