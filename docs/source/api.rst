@@ -384,6 +384,8 @@ Errors
 
   * :class:`neo4j_graphrag.experimental.pipeline.exceptions.PipelineStatusUpdateError`
 
+  * :class:`neo4j_graphrag.experimental.pipeline.exceptions.InvalidJSONError`
+
 
 Neo4jGraphRagError
 ==================
