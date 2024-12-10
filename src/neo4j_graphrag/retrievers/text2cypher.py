@@ -48,7 +48,12 @@ class Text2CypherRetriever(Retriever):
     """
     Allows for the retrieval of records from a Neo4j database using natural language.
     Converts a user's natural language query to a Cypher query using an LLM,
-    then retrieves records from a Neo4j database using the generated Cypher query
+    then retrieves records from a Neo4j database using the generated Cypher query.
+
+    Note:
+
+        If providing a custom prompt with '{schema}' placeholder and no 'neo4j_schema'
+        input, the schema will be inferred (see :ref:`get_schema` function).
 
     Args:
         driver (neo4j.Driver): The Neo4j Python driver.
@@ -98,23 +103,21 @@ class Text2CypherRetriever(Retriever):
         self.examples = validated_data.examples
         self.result_formatter = validated_data.result_formatter
         self.custom_prompt = validated_data.custom_prompt
-        try:
-            if (
-                not validated_data.custom_prompt
-            ):  # don't need schema for a custom prompt
-                self.neo4j_schema = (
-                    validated_data.neo4j_schema_model.neo4j_schema
-                    if validated_data.neo4j_schema_model
-                    else get_schema(validated_data.driver_model.driver)
-                )
-            else:
-                self.neo4j_schema = ""
-
-        except (Neo4jError, DriverError) as e:
-            error_message = getattr(e, "message", str(e))
-            raise SchemaFetchError(
-                f"Failed to fetch schema for Text2CypherRetriever: {error_message}"
-            ) from e
+        neo4j_schema = ""
+        if (
+            validated_data.neo4j_schema_model
+            and validated_data.neo4j_schema_model.neo4j_schema
+        ):
+            neo4j_schema = validated_data.neo4j_schema_model.neo4j_schema
+        elif self.custom_prompt is None or "{schema}" in self.custom_prompt:
+            try:
+                neo4j_schema = get_schema(validated_data.driver_model.driver)
+            except (Neo4jError, DriverError) as e:
+                error_message = getattr(e, "message", str(e))
+                raise SchemaFetchError(
+                    f"Failed to fetch schema for Text2CypherRetriever: {error_message}"
+                ) from e
+        self.neo4j_schema = neo4j_schema
 
     def get_search_results(
         self, query_text: str, prompt_params: Optional[Dict[str, Any]] = None
@@ -142,12 +145,10 @@ class Text2CypherRetriever(Retriever):
 
         if prompt_params is not None:
             # parse the schema and examples inputs
-            examples_to_use = prompt_params.get("examples") or (
+            examples_to_use = prompt_params.pop("examples", None) or (
                 "\n".join(self.examples) if self.examples else ""
             )
-            schema_to_use = prompt_params.get("schema") or self.neo4j_schema
-            prompt_params.pop("examples", None)
-            prompt_params.pop("schema", None)
+            schema_to_use = prompt_params.pop("schema", None) or self.neo4j_schema
         else:
             examples_to_use = "\n".join(self.examples) if self.examples else ""
             schema_to_use = self.neo4j_schema

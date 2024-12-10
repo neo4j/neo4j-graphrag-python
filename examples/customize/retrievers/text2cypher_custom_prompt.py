@@ -1,5 +1,6 @@
-"""The example leverages the Text2CypherRetriever to fetch some context.
-It uses the OpenAILLM, hence the OPENAI_API_KEY needs to be set in the
+"""The example shows how to provide a custom prompt to Text2CypherRetriever.
+
+Example using the OpenAILLM, hence the OPENAI_API_KEY needs to be set in the
 environment for this example to run.
 """
 
@@ -16,8 +17,10 @@ DATABASE = "recommendations"
 llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0})
 
 # (Optional) Specify your own Neo4j schema
+# (also see get_structured_schema and get_schema functions)
 neo4j_schema = """
 Node properties:
+User {name: STRING}
 Person {name: STRING, born: INTEGER}
 Movie {tagline: STRING, title: STRING, released: INTEGER}
 Relationship properties:
@@ -27,13 +30,25 @@ REVIEWED {summary: STRING, rating: INTEGER}
 The relationships:
 (:Person)-[:ACTED_IN]->(:Movie)
 (:Person)-[:DIRECTED]->(:Movie)
-(:Person)-[:REVIEWED]->(:Movie)
+(:User)-[:REVIEWED]->(:Movie)
 """
 
-# (Optional) Provide user input/query pairs for the LLM to use as examples
-examples = [
-    "USER INPUT: 'Which actors starred in the Matrix?' QUERY: MATCH (p:Person)-[:ACTED_IN]->(m:Movie) WHERE m.title = 'The Matrix' RETURN p.name"
-]
+prompt = """Task: Generate a Cypher statement for querying a Neo4j graph database from a user input.
+
+Do not use any properties or relationships not included in the schema.
+Do not include triple backticks ``` or any additional text except the generated Cypher statement in your response.
+
+Always filter movies that have not already been reviewed by the user with name: '{user_name}' using for instance:
+(m:Movie)<-[:REVIEWED]-(:User {{name: <the_user_name>}})
+
+Schema:
+{schema}
+
+Input:
+{query_text}
+
+Cypher query:
+"""
 
 with neo4j.GraphDatabase.driver(URI, auth=AUTH) as driver:
     # Initialize the retriever
@@ -41,13 +56,16 @@ with neo4j.GraphDatabase.driver(URI, auth=AUTH) as driver:
         driver=driver,
         llm=llm,
         neo4j_schema=neo4j_schema,
-        examples=examples,
-        # optionally, you can also provide your own prompt
-        # for the text2Cypher generation step
-        # custom_prompt="",
+        # here we provide a custom prompt
+        custom_prompt=prompt,
         neo4j_database=DATABASE,
     )
 
     # Generate a Cypher query using the LLM, send it to the Neo4j database, and return the results
     query_text = "Which movies did Hugo Weaving star in?"
-    print(retriever.search(query_text=query_text))
+    print(
+        retriever.search(
+            query_text=query_text,
+            prompt_params={"user_name": "the user asking question"},
+        )
+    )
