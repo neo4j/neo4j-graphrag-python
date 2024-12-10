@@ -49,6 +49,7 @@ class MistralAILLM(LLMInterface):
             model_name (str):
             model_params (str): Parameters like temperature and such that will be
              passed to the chat completions endpoint
+            system_instruction: Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
             kwargs: All other parameters will be passed to the Mistral client.
 
         """

@@ -45,7 +45,8 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
 
         Args:
             model_name (str):
-            model_params (str): Parameters like temperature that will be passed to the model when text is sent to it
+            model_params (str): Parameters like temperature that will be passed to the model when text is sent to it. Defaults to None.
+            system_instruction: Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
         """
         try:
             import openai
@@ -123,6 +124,7 @@ class OpenAILLM(BaseOpenAILLM):
         self,
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
+        system_instruction: Optional[str] = None,
         **kwargs: Any,
     ):
         """OpenAI LLM
@@ -131,10 +133,11 @@ class OpenAILLM(BaseOpenAILLM):
 
         Args:
             model_name (str):
-            model_params (str): Parameters like temperature that will be passed to the model when text is sent to it
+            model_params (str): Parameters like temperature that will be passed to the model when text is sent to it. Defaults to None.
+            system_instruction: Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
             kwargs: All other parameters will be passed to the openai.OpenAI init.
         """
-        super().__init__(model_name, model_params)
+        super().__init__(model_name, model_params, system_instruction)
         self.client = self.openai.OpenAI(**kwargs)
         self.async_client = self.openai.AsyncOpenAI(**kwargs)
 
@@ -144,6 +147,7 @@ class AzureOpenAILLM(BaseOpenAILLM):
         self,
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
+        system_instruction: Optional[str] = None,
         **kwargs: Any,
     ):
         """Azure OpenAI LLM. Use this class when using an OpenAI model
@@ -151,9 +155,10 @@ class AzureOpenAILLM(BaseOpenAILLM):
 
         Args:
             model_name (str):
-            model_params (str): Parameters like temperature that will be passed to the model when text is sent to it
+            model_params (str): Parameters like temperature that will be passed to the model when text is sent to it. Defaults to None.
+            system_instruction: Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
             kwargs: All other parameters will be passed to the openai.OpenAI init.
         """
-        super().__init__(model_name, model_params)
+        super().__init__(model_name, model_params, system_instruction)
         self.client = self.openai.AzureOpenAI(**kwargs)
         self.async_client = self.openai.AsyncAzureOpenAI(**kwargs)

@@ -27,6 +27,7 @@ class CohereLLM(LLMInterface):
     Args:
         model_name (str, optional): Name of the LLM to use. Defaults to "gemini-1.5-flash-001".
         model_params (Optional[dict], optional): Additional parameters passed to the model when text is sent to it. Defaults to None.
+        system_instruction: Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
         **kwargs (Any): Arguments passed to the model when for the class is initialised. Defaults to None.
 
     Raises:
