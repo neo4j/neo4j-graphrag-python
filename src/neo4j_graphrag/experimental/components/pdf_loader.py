@@ -62,13 +62,10 @@ def is_default_fs(fs: fsspec.AbstractFileSystem) -> bool:
 class PdfLoader(DataLoader):
     @staticmethod
     def load_file(
-        file: Union[Path, str],
+        file: str,
         fs: AbstractFileSystem,
     ) -> str:
         """Parse PDF file and return text."""
-        if not isinstance(file, Path):
-            file = Path(file)
-
         try:
             with fs.open(file, "rb") as fp:
                 stream = fp if is_default_fs(fs) else io.BytesIO(fp.read())
@@ -85,16 +82,21 @@ class PdfLoader(DataLoader):
 
     async def run(
         self,
-        filepath: Path,
+        filepath: Union[str, Path],
         metadata: Optional[Dict[str, str]] = None,
-        fs: Optional[AbstractFileSystem] = None,
+        fs: Optional[Union[AbstractFileSystem, str]] = None,
     ) -> PdfDocument:
-        fs = fs or LocalFileSystem()
+        if not isinstance(filepath, str):
+            filepath = str(filepath)
+        if isinstance(fs, str):
+            fs = fsspec.filesystem(fs)
+        elif fs is None:
+            fs = LocalFileSystem()
         text = self.load_file(filepath, fs)
         return PdfDocument(
             text=text,
             document_info=DocumentInfo(
-                path=str(filepath),
+                path=filepath,
                 metadata=self.get_document_metadata(text, metadata),
             ),
         )
