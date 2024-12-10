@@ -36,6 +36,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         self,
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
+        system_instruction: Optional[str] = None,
     ):
         """
         Base class for OpenAI LLM.
@@ -54,7 +55,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
                 "Please install it with `pip install openai`."
             )
         self.openai = openai
-        super().__init__(model_name, model_params)
+        super().__init__(model_name, model_params, system_instruction)
 
     def get_messages(
         self,
@@ -63,6 +64,32 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         return [
             {"role": "system", "content": input},
         ]
+
+    def get_conversation_history(
+        self,
+        input: str,
+        chat_history: list[str],
+    ) -> Iterable[ChatCompletionMessageParam]:
+        messages = [{"role": "system", "content": self.system_instruction}]
+        for i, message in enumerate(chat_history):
+            if i % 2 == 0:
+                messages.append({"role": "user", "content": message})
+            else:
+                messages.append({"role": "assistant", "content": message})
+        messages.append({"role": "user", "content": input})
+        return messages
+
+    def chat(self, input: str, chat_history: list[str]) -> LLMResponse:
+        try:
+            response = self.client.chat.completions.create(
+                messages=self.get_conversation_history(input, chat_history),
+                model=self.model_name,
+                **self.model_params,
+            )
+            content = response.choices[0].message.content or ""
+            return LLMResponse(content=content)
+        except self.openai.OpenAIError as e:
+            raise LLMGenerationError(e)
 
     def invoke(self, input: str) -> LLMResponse:
         """Sends a text input to the OpenAI chat completion model
@@ -118,6 +145,7 @@ class OpenAILLM(BaseOpenAILLM):
         self,
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
+        system_instruction: Optional[str] = None,
         **kwargs: Any,
     ):
         """OpenAI LLM
@@ -129,7 +157,7 @@ class OpenAILLM(BaseOpenAILLM):
             model_params (str): Parameters like temperature that will be passed to the model when text is sent to it
             kwargs: All other parameters will be passed to the openai.OpenAI init.
         """
-        super().__init__(model_name, model_params)
+        super().__init__(model_name, model_params, system_instruction)
         self.client = self.openai.OpenAI(**kwargs)
         self.async_client = self.openai.AsyncOpenAI(**kwargs)
 
@@ -139,6 +167,7 @@ class AzureOpenAILLM(BaseOpenAILLM):
         self,
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
+        system_instruction: Optional[str] = None,
         **kwargs: Any,
     ):
         """Azure OpenAI LLM. Use this class when using an OpenAI model
@@ -149,6 +178,6 @@ class AzureOpenAILLM(BaseOpenAILLM):
             model_params (str): Parameters like temperature that will be passed to the model when text is sent to it
             kwargs: All other parameters will be passed to the openai.OpenAI init.
         """
-        super().__init__(model_name, model_params)
+        super().__init__(model_name, model_params, system_instruction)
         self.client = self.openai.AzureOpenAI(**kwargs)
         self.async_client = self.openai.AsyncAzureOpenAI(**kwargs)
