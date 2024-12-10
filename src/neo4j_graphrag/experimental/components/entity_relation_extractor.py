@@ -20,7 +20,7 @@ import enum
 import json
 import logging
 from datetime import datetime
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Union, cast
 
 import json_repair
 
@@ -104,11 +104,7 @@ def balance_curly_braces(json_string: str) -> str:
 
 def fix_invalid_json(raw_json: str) -> str:
     repaired_json = json_repair.repair_json(raw_json)
-
-    if isinstance(repaired_json, str):
-        repaired_json = repaired_json.strip()
-    else:
-        repaired_json = ""
+    repaired_json = cast(str, repaired_json).strip()
 
     if repaired_json == '""':
         raise InvalidJSONError("JSON repair resulted in an empty or invalid JSON.")
