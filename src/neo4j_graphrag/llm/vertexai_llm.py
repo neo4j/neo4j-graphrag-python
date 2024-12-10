@@ -55,6 +55,7 @@ class VertexAILLM(LLMInterface):
         self,
         model_name: str = "gemini-1.5-flash-001",
         model_params: Optional[dict[str, Any]] = None,
+        system_instruction: Optional[str] = None,
         **kwargs: Any,
     ):
         if GenerativeModel is None or ResponseValidationError is None:
@@ -63,7 +64,7 @@ class VertexAILLM(LLMInterface):
                 "Please install it with `pip install google-cloud-aiplatform`."
             )
         super().__init__(model_name, model_params)
-        self.model = GenerativeModel(model_name=model_name, **kwargs)
+        self.model = GenerativeModel(model_name=model_name, system_instruction=[system_instruction], **kwargs)
 
     def invoke(self, input: str) -> LLMResponse:
         """Sends text to the LLM and returns a response.

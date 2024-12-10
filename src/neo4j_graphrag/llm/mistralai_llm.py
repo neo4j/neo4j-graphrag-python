@@ -40,6 +40,7 @@ class MistralAILLM(LLMInterface):
         self,
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
+        system_instruction: Optional[str] = None,
         **kwargs: Any,
     ):
         """
@@ -56,7 +57,7 @@ class MistralAILLM(LLMInterface):
                 "Could not import Mistral Python client. "
                 "Please install it with `pip install mistralai`."
             )
-        super().__init__(model_name, model_params)
+        super().__init__(model_name, model_params, system_instruction)
         api_key = kwargs.pop("api_key", None)
         if api_key is None:
             api_key = os.getenv("MISTRAL_API_KEY", "")

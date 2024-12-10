@@ -36,6 +36,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         self,
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
+        system_instruction: Optional[str] = None,
     ):
         """
         Base class for OpenAI LLM.
@@ -54,7 +55,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
                 "Please install it with `pip install openai`."
             )
         self.openai = openai
-        super().__init__(model_name, model_params)
+        super().__init__(model_name, model_params, system_instruction)
 
     def get_messages(
         self,

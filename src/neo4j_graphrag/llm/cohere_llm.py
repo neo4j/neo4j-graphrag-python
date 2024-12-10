@@ -46,9 +46,10 @@ class CohereLLM(LLMInterface):
         self,
         model_name: str = "",
         model_params: Optional[dict[str, Any]] = None,
+        system_instruction: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
-        super().__init__(model_name, model_params)
+        super().__init__(model_name, model_params, system_instruction)
         try:
             import cohere
         except ImportError:
