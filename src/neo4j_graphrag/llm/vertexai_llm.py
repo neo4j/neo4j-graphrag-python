@@ -64,13 +64,16 @@ class VertexAILLM(LLMInterface):
                 "Please install it with `pip install google-cloud-aiplatform`."
             )
         super().__init__(model_name, model_params)
-        self.model = GenerativeModel(model_name=model_name, system_instruction=[system_instruction], **kwargs)
+        self.model = GenerativeModel(
+            model_name=model_name, system_instruction=[system_instruction], **kwargs
+        )
 
-    def invoke(self, input: str) -> LLMResponse:
+    def invoke(self, input: str, chat_history: Optional[list[dict[str, str]]] = None) -> LLMResponse:
         """Sends text to the LLM and returns a response.
 
         Args:
             input (str): The text to send to the LLM.
+            chat_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
 
         Returns:
             LLMResponse: The response from the LLM.
@@ -81,11 +84,14 @@ class VertexAILLM(LLMInterface):
         except ResponseValidationError as e:
             raise LLMGenerationError(e)
 
-    async def ainvoke(self, input: str) -> LLMResponse:
+    async def ainvoke(
+        self, input: str, chat_history: Optional[list[dict[str, str]]] = None
+    ) -> LLMResponse:
         """Asynchronously sends text to the LLM and returns a response.
 
         Args:
             input (str): The text to send to the LLM.
+            chat_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
 
         Returns:
             LLMResponse: The response from the LLM.

@@ -64,11 +64,12 @@ class CohereLLM(LLMInterface):
         self.client = cohere.Client(**kwargs)
         self.async_client = cohere.AsyncClient(**kwargs)
 
-    def invoke(self, input: str) -> LLMResponse:
+    def invoke(self, input: str, chat_history: Optional[list[dict[str, str]]] = None) -> LLMResponse:
         """Sends text to the LLM and returns a response.
 
         Args:
             input (str): The text to send to the LLM.
+            chat_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
 
         Returns:
             LLMResponse: The response from the LLM.
@@ -84,11 +85,14 @@ class CohereLLM(LLMInterface):
             content=res.text,
         )
 
-    async def ainvoke(self, input: str) -> LLMResponse:
+    async def ainvoke(
+        self, input: str, chat_history: Optional[list[dict[str, str]]] = None
+    ) -> LLMResponse:
         """Asynchronously sends text to the LLM and returns a response.
 
         Args:
             input (str): The text to send to the LLM.
+            chat_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
 
         Returns:
             LLMResponse: The response from the LLM.

@@ -66,12 +66,13 @@ class MistralAILLM(LLMInterface):
     def get_messages(self, input: str) -> list[MessageType]:
         return [UserMessage(content=input)]
 
-    def invoke(self, input: str) -> LLMResponse:
+    def invoke(self, input: str, chat_history: Optional[list[dict[str, str]]] = None) -> LLMResponse:
         """Sends a text input to the Mistral chat completion model
         and returns the response's content.
 
         Args:
-            input (str): Text sent to the LLM
+            input (str): Text sent to the LLM.
+            chat_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
 
         Returns:
             LLMResponse: The response from MistralAI.
@@ -93,12 +94,15 @@ class MistralAILLM(LLMInterface):
         except SDKError as e:
             raise LLMGenerationError(e)
 
-    async def ainvoke(self, input: str) -> LLMResponse:
+    async def ainvoke(
+        self, input: str, chat_history: Optional[list[dict[str, str]]] = None
+    ) -> LLMResponse:
         """Asynchronously sends a text input to the MistralAI chat
         completion model and returns the response's content.
 
         Args:
-            input (str): Text sent to the LLM
+            input (str): Text sent to the LLM.
+            chat_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
 
         Returns:
             LLMResponse: The response from MistralAI.
