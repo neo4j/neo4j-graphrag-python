@@ -17,9 +17,11 @@ from __future__ import annotations
 import abc
 from typing import TYPE_CHECKING, Any, Iterable, Optional
 
+from pydantic import ValidationError
+
 from ..exceptions import LLMGenerationError
 from .base import LLMInterface
-from .types import LLMResponse
+from .types import LLMResponse, SystemMessage, UserMessage, MessageList
 
 if TYPE_CHECKING:
     import openai
@@ -61,10 +63,19 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
     def get_messages(
         self,
         input: str,
+        chat_history: list,
     ) -> Iterable[ChatCompletionMessageParam]:
-        return [
-            {"role": "system", "content": input},
-        ]
+        messages = []
+        if self.system_instruction:
+            messages.append(SystemMessage(content=self.system_instruction).model_dump())
+        if chat_history:
+            try:
+                MessageList(messages=chat_history)
+            except ValidationError as e:
+                raise LLMGenerationError(e.errors()) from e
+            messages.extend(chat_history)
+        messages.append(UserMessage(content=input).model_dump())
+        return messages
 
     def invoke(self, input: str, chat_history: Optional[list[dict[str, str]]] = None) -> LLMResponse:
         """Sends a text input to the OpenAI chat completion model
@@ -82,7 +93,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         """
         try:
             response = self.client.chat.completions.create(
-                messages=self.get_messages(input),
+                messages=self.get_messages(input, chat_history),
                 model=self.model_name,
                 **self.model_params,
             )
@@ -109,7 +120,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         """
         try:
             response = await self.async_client.chat.completions.create(
-                messages=self.get_messages(input),
+                messages=self.get_messages(input, chat_history),
                 model=self.model_name,
                 **self.model_params,
             )
