@@ -19,9 +19,6 @@ from neo4j_graphrag.exceptions import LLMGenerationError
 from .base import LLMInterface
 from .types import LLMResponse
 
-if TYPE_CHECKING:
-    import ollama
-
 
 class OllamaLLM(LLMInterface):
     def __init__(
