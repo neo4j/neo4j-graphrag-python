@@ -22,7 +22,6 @@ import logging
 from typing import Any, List, Optional, Union, cast
 
 import json_repair
-
 from pydantic import ValidationError, validate_call
 
 from neo4j_graphrag.exceptions import LLMGenerationError
