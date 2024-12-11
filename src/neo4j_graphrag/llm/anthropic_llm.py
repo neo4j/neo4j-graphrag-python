@@ -15,9 +15,11 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+from pydantic import ValidationError
+
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface
-from neo4j_graphrag.llm.types import LLMResponse
+from neo4j_graphrag.llm.types import LLMResponse, MessageList, UserMessage
 
 
 class AnthropicLLM(LLMInterface):
@@ -65,6 +67,21 @@ class AnthropicLLM(LLMInterface):
         self.client = anthropic.Anthropic(**kwargs)
         self.async_client = anthropic.AsyncAnthropic(**kwargs)
 
+    def get_messages(
+        self,
+        input: str,
+        chat_history: list,
+    ) -> list:
+        messages = []
+        if chat_history:
+            try:
+                MessageList(messages=chat_history)
+            except ValidationError as e:
+                raise LLMGenerationError(e.errors()) from e
+            messages.extend(chat_history)
+        messages.append(UserMessage(content=input).model_dump())
+        return messages
+
     def invoke(self, input: str, chat_history: Optional[list[dict[str, str]]] = None) -> LLMResponse:
         """Sends text to the LLM and returns a response.
 
@@ -76,14 +93,11 @@ class AnthropicLLM(LLMInterface):
             LLMResponse: The response from the LLM.
         """
         try:
+            messages = self.get_messages(input, chat_history)
             response = self.client.messages.create(
                 model=self.model_name,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": input,
-                    }
-                ],
+                system = self.system_instruction,
+                messages = messages,
                 **self.model_params,
             )
             return LLMResponse(content=response.content)
@@ -103,14 +117,11 @@ class AnthropicLLM(LLMInterface):
             LLMResponse: The response from the LLM.
         """
         try:
+            messages = self.get_messages(input, chat_history)
             response = await self.async_client.messages.create(
                 model=self.model_name,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": input,
-                    }
-                ],
+                system = self.system_instruction,
+                messages = messages,
                 **self.model_params,
             )
             return LLMResponse(content=response.content)

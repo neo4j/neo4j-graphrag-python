@@ -48,7 +48,7 @@ def test_openai_llm_happy_path(mock_import: Mock) -> None:
 
 
 @patch("builtins.__import__")
-def test_openai_llm_happy_path_with_chat_history(mock_import: Mock) -> None:
+def test_openai_llm_with_chat_history_happy_path(mock_import: Mock) -> None:
     mock_openai = get_mock_openai()
     mock_import.return_value = mock_openai
     mock_openai.OpenAI.return_value.chat.completions.create.return_value = MagicMock(
@@ -67,7 +67,7 @@ def test_openai_llm_happy_path_with_chat_history(mock_import: Mock) -> None:
 
 
 @patch("builtins.__import__")
-def test_openai_llm_chat_history_validation_error(mock_import: Mock) -> None:
+def test_openai_llm_with_chat_history_validation_error(mock_import: Mock) -> None:
     mock_openai = get_mock_openai()
     mock_import.return_value = mock_openai
     mock_openai.OpenAI.return_value.chat.completions.create.return_value = MagicMock(
@@ -114,7 +114,7 @@ def test_azure_openai_llm_happy_path(mock_import: Mock) -> None:
 
 
 @patch("builtins.__import__")
-def test_azure_openai_llm_happy_path_with_chat_history(mock_import: Mock) -> None:
+def test_azure_openai_llm_with_chat_history_happy_path(mock_import: Mock) -> None:
     mock_openai = get_mock_openai()
     mock_import.return_value = mock_openai
     mock_openai.AzureOpenAI.return_value.chat.completions.create.return_value = (
@@ -142,7 +142,7 @@ def test_azure_openai_llm_happy_path_with_chat_history(mock_import: Mock) -> Non
 
 
 @patch("builtins.__import__")
-def test_azure_openai_llm_chat_history_validation_error(mock_import: Mock) -> None:
+def test_azure_openai_llm_with_chat_history_validation_error(mock_import: Mock) -> None:
     mock_openai = get_mock_openai()
     mock_import.return_value = mock_openai
     mock_openai.AzureOpenAI.return_value.chat.completions.create.return_value = (
