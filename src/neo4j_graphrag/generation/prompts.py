@@ -192,3 +192,31 @@ Input text:
         text: str = "",
     ) -> str:
         return super().format(text=text, schema=schema, examples=examples)
+    
+
+class ChatSummaryTemplate(PromptTemplate):
+    DEFAULT_TEMPLATE = """
+Summarize the chat history:
+
+{chat_history}
+"""
+    EXPECTED_INPUTS = ["chat_history"]
+
+    def format(self, chat_history: list[dict[str, str]]) -> str:
+        message_list = [': '.join([f"{value}" for _, value in message.items()]) for message in chat_history]
+        history = '\n'.join(message_list)
+        return super().format(chat_history=history)
+
+
+class ConversationTemplate(PromptTemplate):
+    DEFAULT_TEMPLATE = """
+Chat Summary: 
+{summary}
+
+Current Query: 
+{current_query}
+"""
+    EXPECTED_INPUTS = ["summary", "current_query"]
+
+    def format(self, summary: str, current_query: str) -> str:
+        return super().format(summary=summary, current_query=current_query)
