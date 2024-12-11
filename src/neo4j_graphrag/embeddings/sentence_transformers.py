@@ -29,7 +29,7 @@ class SentenceTransformerEmbeddings(Embedder):
         except ImportError:
             raise ImportError(
                 "Could not import sentence_transformers python package. "
-                "Please install it with `pip install sentence-transformers`."
+                'Please install it with `pip install "neo4j-graphrag[sentence-transformers]"`.'
             )
         self.torch = torch
         self.np = np

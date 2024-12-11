@@ -37,7 +37,7 @@ class BaseOpenAIEmbeddings(Embedder, abc.ABC):
         except ImportError:
             raise ImportError(
                 "Could not import openai python client. "
-                "Please install it with `pip install openai`."
+                'Please install it with `pip install "neo4j-graphrag[openai]"`.'
             )
         self.openai = openai
         self.model = model

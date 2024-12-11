@@ -416,7 +416,7 @@ FilterValidationError
 
 
 EmbeddingsGenerationError
-========================
+=========================
 
 .. autoclass:: neo4j_graphrag.exceptions.EmbeddingsGenerationError
    :show-inheritance:

@@ -54,7 +54,7 @@ class CohereLLM(LLMInterface):
         except ImportError:
             raise ImportError(
                 "Could not import cohere python client. "
-                "Please install it with `pip install cohere`."
+                'Please install it with `pip install "neo4j-graphrag[cohere]"`.'
             )
 
         self.cohere = cohere

@@ -27,6 +27,32 @@ pip install neo4j-graphrag
 
 ### Optional Dependencies
 
+This package has some optional features that can be enabled using
+the extra dependencies described below:
+
+- LLM providers (at least one is required for RAG and KG Builder Pipeline):
+    - **openai**: LLMs from OpenAI (including AzureOpenAI)
+    - **google**: LLMs from Vertex AI
+    - **cohere**: LLMs from Cohere
+    - **anthropic**: LLMs from Anthropic
+    - **mistralai**: LLMs from MistralAI
+- **sentence-transformers** : to use embeddings from the `sentence-transformers` Python package
+- Vector database (to use :ref:`External Retrievers`):
+    - **weaviate**: store vectors in Weaviate
+    - **pinecone**: store vectors in Pinecone
+    - **qdrant**: store vectors in Qdrant
+- **experimental**: experimental features such as the Knowledge Graph creation pipelines.
+    - Warning: this dependency group requires `pygraphviz`. See below for installation instructions.
+
+
+Install package with optional dependencies with (for instance):
+
+```shell
+pip install "neo4j-graphrag[openai]"
+# or
+pip install "neo4j-graphrag[openai, experimental]"
+```
+
 #### pygraphviz
 
 `pygraphviz` is used for visualizing pipelines.
