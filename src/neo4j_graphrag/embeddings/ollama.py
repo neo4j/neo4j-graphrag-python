@@ -20,11 +20,6 @@ from typing import Any
 from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.exceptions import EmbeddingsGenerationError
 
-try:
-    import ollama
-except ImportError:
-    ollama = None  # type: ignore
-
 
 class OllamaEmbeddings(Embedder):
     """
@@ -36,9 +31,11 @@ class OllamaEmbeddings(Embedder):
     """
 
     def __init__(self, model: str, **kwargs: Any) -> None:
-        if ollama is None:
+        try:
+            import ollama
+        except ImportError:
             raise ImportError(
-                "Could not import ollama. "
+                "Could not import ollama python client. "
                 "Please install it with `pip install ollama`."
             )
         self.model = model
