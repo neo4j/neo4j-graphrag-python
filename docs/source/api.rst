@@ -340,6 +340,11 @@ Database Interaction
 
 .. autofunction:: neo4j_graphrag.indexes.async_upsert_vector_on_relationship
 
+.. autofunction:: neo4j_graphrag.schema.get_structured_schema
+
+.. autofunction:: neo4j_graphrag.schema.get_schema
+
+
 ******
 Errors
 ******
@@ -379,6 +384,8 @@ Errors
 
   * :class:`neo4j_graphrag.experimental.pipeline.exceptions.PipelineStatusUpdateError`
 
+  * :class:`neo4j_graphrag.experimental.pipeline.exceptions.InvalidJSONError`
+
 
 Neo4jGraphRagError
 ==================
@@ -405,6 +412,13 @@ FilterValidationError
 =====================
 
 .. autoclass:: neo4j_graphrag.exceptions.FilterValidationError
+   :show-inheritance:
+
+
+EmbeddingsGenerationError
+========================
+
+.. autoclass:: neo4j_graphrag.exceptions.EmbeddingsGenerationError
    :show-inheritance:
 
 
@@ -496,4 +510,11 @@ PipelineStatusUpdateError
 =========================
 
 .. autoclass:: neo4j_graphrag.experimental.pipeline.exceptions.PipelineStatusUpdateError
+   :show-inheritance:
+
+
+InvalidJSONError
+================
+
+.. autoclass:: neo4j_graphrag.experimental.pipeline.exceptions.InvalidJSONError
    :show-inheritance:

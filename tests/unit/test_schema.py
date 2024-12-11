@@ -20,6 +20,7 @@ from unittest.mock import MagicMock, patch
 from neo4j import Driver
 from neo4j_graphrag.schema import (
     BASE_ENTITY_LABEL,
+    BASE_KG_BUILDER_LABEL,
     EXCLUDED_LABELS,
     EXCLUDED_RELS,
     INDEX_QUERY,
@@ -84,7 +85,10 @@ def test_get_structured_schema_happy_path(driver: MagicMock) -> None:
     assert 5 == driver.execute_query.call_count
     driver.execute_query.assert_any_call(
         NODE_PROPERTIES_QUERY,
-        {"EXCLUDED_LABELS": EXCLUDED_LABELS + [BASE_ENTITY_LABEL]},
+        {
+            "EXCLUDED_LABELS": EXCLUDED_LABELS
+            + [BASE_ENTITY_LABEL, BASE_KG_BUILDER_LABEL]
+        },
     )
     driver.execute_query.assert_any_call(
         REL_PROPERTIES_QUERY,
@@ -92,7 +96,10 @@ def test_get_structured_schema_happy_path(driver: MagicMock) -> None:
     )
     driver.execute_query.assert_any_call(
         REL_QUERY,
-        {"EXCLUDED_LABELS": EXCLUDED_LABELS + [BASE_ENTITY_LABEL]},
+        {
+            "EXCLUDED_LABELS": EXCLUDED_LABELS
+            + [BASE_ENTITY_LABEL, BASE_KG_BUILDER_LABEL]
+        },
     )
     driver.execute_query.assert_any_call("SHOW CONSTRAINTS", {})
     driver.execute_query.assert_any_call(INDEX_QUERY, {})

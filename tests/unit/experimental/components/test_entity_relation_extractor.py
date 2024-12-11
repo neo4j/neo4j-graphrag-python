@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import json
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
@@ -31,6 +31,7 @@ from neo4j_graphrag.experimental.components.types import (
     TextChunk,
     TextChunks,
 )
+from neo4j_graphrag.experimental.pipeline.exceptions import InvalidJSONError
 from neo4j_graphrag.llm import LLMInterface, LLMResponse
 
 
@@ -144,16 +145,17 @@ async def test_extractor_llm_ainvoke_failed() -> None:
 
 
 @pytest.mark.asyncio
-async def test_extractor_llm_badly_formatted_json() -> None:
+async def test_extractor_llm_unfixable_json() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(
-        content='{"nodes": [{"id": "0", "label": "Person", "properties": {}}], "relationships": [}'
+        content='{"nodes": [{"id": "0", "label": "Person", "properties": {}}], "relationships": }'
     )
 
     extractor = LLMEntityRelationExtractor(
         llm=llm,
     )
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
+
     with pytest.raises(LLMGenerationError):
         await extractor.run(chunks=chunks)
 
@@ -177,7 +179,7 @@ async def test_extractor_llm_invalid_json() -> None:
 
 
 @pytest.mark.asyncio
-async def test_extractor_llm_badly_formatted_json_do_not_raise() -> None:
+async def test_extractor_llm_badly_formatted_json_gets_fixed() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(
         content='{"nodes": [{"id": "0", "label": "Person", "properties": {}}], "relationships": [}'
@@ -190,7 +192,11 @@ async def test_extractor_llm_badly_formatted_json_do_not_raise() -> None:
     )
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
     res = await extractor.run(chunks=chunks)
-    assert res.nodes == []
+
+    assert len(res.nodes) == 1
+    assert res.nodes[0].label == "Person"
+    assert res.nodes[0].properties == {"chunk_index": 0}
+    assert res.nodes[0].embedding_properties is None
     assert res.relationships == []
 
 
@@ -203,6 +209,14 @@ async def test_extractor_custom_prompt() -> None:
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
     await extractor.run(chunks=chunks)
     llm.ainvoke.assert_called_once_with("this is my prompt")
+
+
+def test_fix_invalid_json_empty_result() -> None:
+    json_string = "invalid json"
+
+    with patch("json_repair.repair_json", return_value=""):
+        with pytest.raises(InvalidJSONError):
+            fix_invalid_json(json_string)
 
 
 def test_fix_unquoted_keys() -> None:
