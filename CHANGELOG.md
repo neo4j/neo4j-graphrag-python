@@ -8,9 +8,11 @@
 
 ## Changed
 - Updated LLM prompts to include stricter instructions for generating valid JSON.
+- The `id_prefix` parameter in the `LexicalGraphConfig` is deprecated.
 
 ### Fixed
 - Added schema functions to the documentation.
+- IDs for the Document and Chunk nodes in the lexical graph are now randomly generated and unique across multiple runs, fixing issues in the lexical graph where relationships were created between chunks that were created by different pipeline runs.
 
 ## 1.2.1
 

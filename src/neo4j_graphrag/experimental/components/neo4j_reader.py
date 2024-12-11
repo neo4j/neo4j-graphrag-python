@@ -102,13 +102,14 @@ class Neo4jChunkReader(Component):
         chunks = []
         for record in result:
             chunk = record.get("chunk")
-            text = chunk.pop(lexical_graph_config.chunk_text_property, "")
-            index = chunk.pop(lexical_graph_config.chunk_index_property, -1)
-            chunks.append(
-                TextChunk(
-                    text=text,
-                    index=index,
-                    metadata=chunk,
-                )
-            )
+            input_data = {
+                "text": chunk.pop(lexical_graph_config.chunk_text_property, ""),
+                "index": chunk.pop(lexical_graph_config.chunk_index_property, -1),
+            }
+            if (
+                uid := chunk.pop(lexical_graph_config.chunk_id_property, None)
+            ) is not None:
+                input_data["uid"] = uid
+            input_data["metadata"] = chunk
+            chunks.append(TextChunk(**input_data))
         return TextChunks(chunks=chunks)

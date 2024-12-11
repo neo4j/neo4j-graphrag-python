@@ -184,7 +184,6 @@ async def read_chunk_and_perform_entity_extraction(
 async def main(driver: neo4j.Driver) -> PipelineResult:
     # optional: define some custom node labels for the lexical graph:
     lexical_graph_config = LexicalGraphConfig(
-        id_prefix="example",
         document_node_label="Book",  # default: "Document"
         chunk_node_label="Chapter",  # default "Chunk"
         chunk_text_property="content",  # default: "text"
