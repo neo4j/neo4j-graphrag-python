@@ -13,13 +13,19 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
 
 from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface
 from neo4j_graphrag.llm.types import LLMResponse, MessageList, UserMessage
+
+try:
+    import anthropic
+    from anthropic.types.message_param import MessageParam
+except ImportError:
+    anthropic = None
 
 
 class AnthropicLLM(LLMInterface):
@@ -55,9 +61,7 @@ class AnthropicLLM(LLMInterface):
         system_instruction: Optional[str] = None,
         **kwargs: Any,
     ):
-        try:
-            import anthropic
-        except ImportError:
+        if anthropic is None:
             raise ImportError(
                 "Could not import Anthropic Python client. "
                 "Please install it with `pip install anthropic`."
@@ -67,11 +71,7 @@ class AnthropicLLM(LLMInterface):
         self.client = anthropic.Anthropic(**kwargs)
         self.async_client = anthropic.AsyncAnthropic(**kwargs)
 
-    def get_messages(
-        self,
-        input: str,
-        chat_history: list,
-    ) -> list:
+    def get_messages(self, input: str, chat_history: list) -> Iterable[MessageParam]:
         messages = []
         if chat_history:
             try:
@@ -95,7 +95,7 @@ class AnthropicLLM(LLMInterface):
         try:
             messages = self.get_messages(input, chat_history)
             response = self.client.messages.create(
-                model=self.model_name,
+                model = self.model_name,
                 system = self.system_instruction,
                 messages = messages,
                 **self.model_params,
@@ -119,7 +119,7 @@ class AnthropicLLM(LLMInterface):
         try:
             messages = self.get_messages(input, chat_history)
             response = await self.async_client.messages.create(
-                model=self.model_name,
+                model = self.model_name,
                 system = self.system_instruction,
                 messages = messages,
                 **self.model_params,

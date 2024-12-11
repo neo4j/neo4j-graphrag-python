@@ -23,23 +23,15 @@ from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.anthropic_llm import AnthropicLLM
 
 
-@pytest.fixture
-def mock_anthropic() -> Generator[MagicMock, None, None]:
-    mock = MagicMock()
-    mock.APIError = anthropic.APIError
-
-    with patch.dict(sys.modules, {"anthropic": mock}):
-        yield mock
-
-
-@patch("builtins.__import__", side_effect=ImportError)
-def test_anthropic_llm_missing_dependency(mock_import: Mock) -> None:
+@patch("neo4j_graphrag.llm.anthropic_llm.anthropic", None)
+def test_anthropic_llm_missing_dependency() -> None:
     with pytest.raises(ImportError):
         AnthropicLLM(model_name="claude-3-opus-20240229")
 
 
+@patch("neo4j_graphrag.llm.anthropic_llm.anthropic.Anthropic")
 def test_anthropic_invoke_happy_path(mock_anthropic: Mock) -> None:
-    mock_anthropic.Anthropic.return_value.messages.create.return_value = MagicMock(
+    mock_anthropic.return_value.messages.create.return_value = MagicMock(
         content="generated text"
     )
     model_params = {"temperature": 0.3}
@@ -55,8 +47,9 @@ def test_anthropic_invoke_happy_path(mock_anthropic: Mock) -> None:
     )
 
 
+@patch("neo4j_graphrag.llm.anthropic_llm.anthropic.Anthropic")
 def test_anthropic_invoke_with_chat_history_happy_path(mock_anthropic: Mock) -> None:
-    mock_anthropic.Anthropic.return_value.messages.create.return_value = MagicMock(
+    mock_anthropic.return_value.messages.create.return_value = MagicMock(
         content="generated text"
     )
     model_params = {"temperature": 0.3}
@@ -79,8 +72,9 @@ def test_anthropic_invoke_with_chat_history_happy_path(mock_anthropic: Mock) -> 
     )
 
 
+@patch("neo4j_graphrag.llm.anthropic_llm.anthropic.Anthropic")
 def test_anthropic_invoke_with_chat_history_validation_error(mock_anthropic: Mock) -> None:
-    mock_anthropic.Anthropic.return_value.messages.create.return_value = MagicMock(
+    mock_anthropic.return_value.messages.create.return_value = MagicMock(
         content="generated text"
     )
     model_params = {"temperature": 0.3}
@@ -98,10 +92,11 @@ def test_anthropic_invoke_with_chat_history_validation_error(mock_anthropic: Moc
 
 
 @pytest.mark.asyncio
+@patch("neo4j_graphrag.llm.anthropic_llm.anthropic.AsyncAnthropic")
 async def test_anthropic_ainvoke_happy_path(mock_anthropic: Mock) -> None:
     mock_response = AsyncMock()
     mock_response.content = "Return text"
-    mock_model = mock_anthropic.AsyncAnthropic.return_value
+    mock_model = mock_anthropic.return_value
     mock_model.messages.create = AsyncMock(return_value=mock_response)
     model_params = {"temperature": 0.3}
     llm = AnthropicLLM("claude-3-opus-20240229", model_params)
