@@ -210,6 +210,12 @@ AzureOpenAIEmbeddings
 .. autoclass:: neo4j_graphrag.embeddings.openai.AzureOpenAIEmbeddings
     :members:
 
+OllamaEmbeddings
+================
+
+.. autoclass:: neo4j_graphrag.embeddings.ollama.OllamaEmbeddings
+    :members:
+
 VertexAIEmbeddings
 ==================
 
@@ -256,6 +262,12 @@ AzureOpenAILLM
 .. autoclass:: neo4j_graphrag.llm.openai_llm.AzureOpenAILLM
     :members:
     :undoc-members: get_messages, client_class, async_client_class
+
+OllamaLLM
+---------
+
+.. autoclass:: neo4j_graphrag.llm.ollama_llm.OllamaLLM
+    :members:
 
 
 VertexAILLM

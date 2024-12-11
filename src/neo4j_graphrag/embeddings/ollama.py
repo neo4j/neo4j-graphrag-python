@@ -15,55 +15,53 @@
 
 from __future__ import annotations
 
-import os
 from typing import Any
 
 from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.exceptions import EmbeddingsGenerationError
 
 try:
-    from mistralai import Mistral
+    import ollama
 except ImportError:
-    Mistral = None  # type: ignore
+    ollama = None  # type: ignore
 
 
-class MistralAIEmbeddings(Embedder):
+class OllamaEmbeddings(Embedder):
     """
-    Mistral AI embeddings class.
-    This class uses the Mistral AI Python client to generate vector embeddings for text data.
+    Ollama embeddings class.
+    This class uses the ollama Python client to generate vector embeddings for text data.
 
     Args:
         model (str): The name of the Mistral AI text embedding model to use. Defaults to "mistral-embed".
     """
 
-    def __init__(self, model: str = "mistral-embed", **kwargs: Any) -> None:
-        if Mistral is None:
+    def __init__(self, model: str, **kwargs: Any) -> None:
+        if ollama is None:
             raise ImportError(
-                "Could not import mistralai. "
-                "Please install it with `pip install mistralai`."
+                "Could not import ollama. "
+                "Please install it with `pip install ollama`."
             )
-        api_key = kwargs.pop("api_key", None)
-        if api_key is None:
-            api_key = os.getenv("MISTRAL_API_KEY", "")
         self.model = model
-        self.mistral_client = Mistral(api_key=api_key, **kwargs)
+        self.client = ollama.Client(**kwargs)
 
     def embed_query(self, text: str, **kwargs: Any) -> list[float]:
         """
-        Generate embeddings for a given query using a Mistral AI text embedding model.
+        Generate embeddings for a given query using an Ollama text embedding model.
 
         Args:
             text (str): The text to generate an embedding for.
-            **kwargs (Any): Additional keyword arguments to pass to the Mistral AI client.
+            **kwargs (Any): Additional keyword arguments to pass to the Ollama client.
         """
-        embeddings_batch_response = self.mistral_client.embeddings.create(
-            model=self.model, inputs=[text], **kwargs
+        embeddings_response = self.client.embed(
+            model=self.model,
+            input=text,
+            **kwargs,
         )
-        if embeddings_batch_response is None or not embeddings_batch_response.data:
+
+        if embeddings_response is None or embeddings_response.embeddings is None:
             raise EmbeddingsGenerationError("Failed to retrieve embeddings.")
 
-        embedding = embeddings_batch_response.data[0].embedding
-
+        embedding = embeddings_response.embeddings
         if not isinstance(embedding, list):
             raise EmbeddingsGenerationError("Embedding is not a list of floats.")
 
