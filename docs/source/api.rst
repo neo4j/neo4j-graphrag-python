@@ -9,17 +9,18 @@ API Documentation
 Components
 **********
 
-KGWriter
-========
+DataLoader
+==========
 
-.. autoclass:: neo4j_graphrag.experimental.components.kg_writer.KGWriter
-    :members: run
+.. autoclass:: neo4j_graphrag.experimental.components.pdf_loader.DataLoader
+    :members: run, get_document_metadata
 
-Neo4jWriter
-===========
 
-.. autoclass:: neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter
-    :members: run
+PdfLoader
+=========
+
+.. autoclass:: neo4j_graphrag.experimental.components.pdf_loader.PdfLoader
+    :members: run, load_file
 
 TextSplitter
 ============
@@ -85,6 +86,17 @@ LLMEntityRelationExtractor
 .. autoclass:: neo4j_graphrag.experimental.components.entity_relation_extractor.LLMEntityRelationExtractor
     :members: run
 
+KGWriter
+========
+
+.. autoclass:: neo4j_graphrag.experimental.components.kg_writer.KGWriter
+    :members: run
+
+Neo4jWriter
+===========
+
+.. autoclass:: neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter
+    :members: run
 
 SinglePropertyExactMatchResolver
 ================================
@@ -110,6 +122,23 @@ SimpleKGPipeline
 
 .. autoclass:: neo4j_graphrag.experimental.pipeline.kg_builder.SimpleKGPipeline
     :members: run_async
+
+
+************
+Config files
+************
+
+
+SimpleKGPipelineConfig
+======================
+
+.. autoclass:: neo4j_graphrag.experimental.pipeline.config.template_pipeline.simple_kg_builder.SimpleKGPipelineConfig
+
+
+PipelineRunner
+==============
+
+.. autoclass:: neo4j_graphrag.experimental.pipeline.config.runner.PipelineRunner
 
 
 .. _retrievers-section:
@@ -210,6 +239,12 @@ AzureOpenAIEmbeddings
 .. autoclass:: neo4j_graphrag.embeddings.openai.AzureOpenAIEmbeddings
     :members:
 
+OllamaEmbeddings
+================
+
+.. autoclass:: neo4j_graphrag.embeddings.ollama.OllamaEmbeddings
+    :members:
+
 VertexAIEmbeddings
 ==================
 
@@ -256,6 +291,12 @@ AzureOpenAILLM
 .. autoclass:: neo4j_graphrag.llm.openai_llm.AzureOpenAILLM
     :members:
     :undoc-members: get_messages, client_class, async_client_class
+
+OllamaLLM
+---------
+
+.. autoclass:: neo4j_graphrag.llm.ollama_llm.OllamaLLM
+    :members:
 
 
 VertexAILLM
@@ -349,6 +390,11 @@ Database Interaction
 
 .. autofunction:: neo4j_graphrag.indexes.async_upsert_vector_on_relationship
 
+.. autofunction:: neo4j_graphrag.schema.get_structured_schema
+
+.. autofunction:: neo4j_graphrag.schema.get_schema
+
+
 ******
 Errors
 ******
@@ -388,6 +434,8 @@ Errors
 
   * :class:`neo4j_graphrag.experimental.pipeline.exceptions.PipelineStatusUpdateError`
 
+  * :class:`neo4j_graphrag.experimental.pipeline.exceptions.InvalidJSONError`
+
 
 Neo4jGraphRagError
 ==================
@@ -414,6 +462,13 @@ FilterValidationError
 =====================
 
 .. autoclass:: neo4j_graphrag.exceptions.FilterValidationError
+   :show-inheritance:
+
+
+EmbeddingsGenerationError
+=========================
+
+.. autoclass:: neo4j_graphrag.exceptions.EmbeddingsGenerationError
    :show-inheritance:
 
 
@@ -505,4 +560,11 @@ PipelineStatusUpdateError
 =========================
 
 .. autoclass:: neo4j_graphrag.experimental.pipeline.exceptions.PipelineStatusUpdateError
+   :show-inheritance:
+
+
+InvalidJSONError
+================
+
+.. autoclass:: neo4j_graphrag.experimental.pipeline.exceptions.InvalidJSONError
    :show-inheritance:

@@ -14,6 +14,7 @@ are listed in [the last section of this file](#customize).
 
 - [End to end PDF to graph simple pipeline](build_graph/simple_kg_builder_from_pdf.py)
 - [End to end text to graph simple pipeline](build_graph/simple_kg_builder_from_text.py)
+- [Build KG pipeline from config file](build_graph/from_config_files/simple_kg_pipeline_from_config_file.py)
 
 
 ## Retrieve
@@ -94,6 +95,7 @@ are listed in [the last section of this file](#customize).
 - [End to end example with explicit components and PDF input](./customize/build_graph/pipeline/kg_builder_from_pdf.py)
 - [Process multiple documents](./customize/build_graph/pipeline/kg_builder_two_documents_entity_resolution.py)
 - [Export lexical graph creation into another pipeline](./customize/build_graph/pipeline/text_to_lexical_graph_to_entity_graph_two_pipelines.py)
+- [Build pipeline from config file](customize/build_graph/pipeline/from_config_files/pipeline_from_config_file.py)
 
 
 #### Components
