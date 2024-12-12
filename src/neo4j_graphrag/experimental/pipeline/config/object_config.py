@@ -12,8 +12,19 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-"""Config for all parameters that can be both provided as object instance and
+"""Config for all parameters that can be both provided as object instance or
 config dict with 'class_' and 'params_' keys.
+
+Nomenclature in this file:
+
+- `*Config` models are used to represent "things" as dict to be used in a config file.
+    e.g.:
+    - neo4j.Driver => {"uri": "", "user": "", "password": ""}
+    - LLMInterface => {"class_": "OpenAI", "params_": {"model_name": "gpt-4o"}}
+- `*Type` models are wrappers around an object and a 'Config' the object can be created
+    from. They are used to allow the instantiation of "PipelineConfig" either from
+    instantiated objects (when used in code) and from a config dict (when used to
+    load config from file).
 """
 
 from __future__ import annotations
@@ -176,7 +187,7 @@ class Neo4jDriverType(RootModel):  # type: ignore[type-arg]
         if isinstance(self.root, neo4j.Driver):
             return self.root
         # self.root is a Neo4jDriverConfig object
-        return self.root.parse()
+        return self.root.parse(resolved_data)
 
 
 class LLMConfig(ObjectConfig[LLMInterface]):
@@ -190,6 +201,11 @@ class LLMConfig(ObjectConfig[LLMInterface]):
 
 
 class LLMType(RootModel):  # type: ignore[type-arg]
+    """A model to wrap LLMInterface and LLMConfig objects.
+
+    The `parse` method always returns an object inheriting from LLMInterface.
+    """
+
     root: Union[LLMInterface, LLMConfig]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -197,7 +213,7 @@ class LLMType(RootModel):  # type: ignore[type-arg]
     def parse(self, resolved_data: dict[str, Any] | None = None) -> LLMInterface:
         if isinstance(self.root, LLMInterface):
             return self.root
-        return self.root.parse()
+        return self.root.parse(resolved_data)
 
 
 class EmbedderConfig(ObjectConfig[Embedder]):
@@ -211,6 +227,11 @@ class EmbedderConfig(ObjectConfig[Embedder]):
 
 
 class EmbedderType(RootModel):  # type: ignore[type-arg]
+    """A model to wrap Embedder and EmbedderConfig objects.
+
+    The `parse` method always returns an object inheriting from Embedder.
+    """
+
     root: Union[Embedder, EmbedderConfig]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -218,7 +239,7 @@ class EmbedderType(RootModel):  # type: ignore[type-arg]
     def parse(self, resolved_data: dict[str, Any] | None = None) -> Embedder:
         if isinstance(self.root, Embedder):
             return self.root
-        return self.root.parse()
+        return self.root.parse(resolved_data)
 
 
 class ComponentConfig(ObjectConfig[Component]):
