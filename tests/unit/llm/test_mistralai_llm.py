@@ -22,13 +22,13 @@ from neo4j_graphrag.llm import LLMResponse, MistralAILLM
 
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral", None)
-def test_mistral_ai_llm_missing_dependency() -> None:
+def test_mistralai_llm_missing_dependency() -> None:
     with pytest.raises(ImportError):
         MistralAILLM(model_name="mistral-model")
 
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
-def test_mistral_ai_llm_invoke(mock_mistral: Mock) -> None:
+def test_mistralai_llm_invoke(mock_mistral: Mock) -> None:
     mock_mistral_instance = mock_mistral.return_value
 
     chat_response_mock = MagicMock()
@@ -46,9 +46,64 @@ def test_mistral_ai_llm_invoke(mock_mistral: Mock) -> None:
     assert res.content == "mistral response"
 
 
+@patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
+def test_mistralai_llm_invoke_with_chat_history(mock_mistral: Mock) -> None:
+    mock_mistral_instance = mock_mistral.return_value
+    chat_response_mock = MagicMock()
+    chat_response_mock.choices = [
+        MagicMock(message=MagicMock(content="mistral response"))
+    ]
+    mock_mistral_instance.chat.complete.return_value = chat_response_mock
+    model = "mistral-model"
+    system_instruction = "You are a helpful assistant."
+
+    llm = MistralAILLM(model_name=model, system_instruction=system_instruction)
+
+    chat_history = [
+        {"role": "user", "content": "When does the sun come up in the summer?"},
+        {"role": "assistant", "content": "Usually around 6am."},
+    ]
+    question = "What about next season?"
+    res = llm.invoke(question, chat_history)
+
+    assert isinstance(res, LLMResponse)
+    assert res.content == "mistral response"
+    messages = [{"role": "system", "content": system_instruction}]
+    messages.extend(chat_history)
+    messages.append({"role": "user", "content": question})
+    llm.client.chat.complete.assert_called_once_with(
+        messages=messages,
+        model=model,
+    )
+
+
+@patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
+def test_mistralai_llm_invoke_with_chat_history_validation_error(mock_mistral: Mock) -> None:
+    mock_mistral_instance = mock_mistral.return_value
+    chat_response_mock = MagicMock()
+    chat_response_mock.choices = [
+        MagicMock(message=MagicMock(content="mistral response"))
+    ]
+    mock_mistral_instance.chat.complete.return_value = chat_response_mock
+    model = "mistral-model"
+    system_instruction = "You are a helpful assistant."
+
+    llm = MistralAILLM(model_name=model, system_instruction=system_instruction)
+
+    chat_history = [
+        {"role": "user", "content": "When does the sun come up in the summer?"},
+        {"role": "monkey", "content": "Usually around 6am."},
+    ]
+    question = "What about next season?"
+
+    with pytest.raises(LLMGenerationError) as exc_info:
+        llm.invoke(question, chat_history)
+    assert "Input should be 'user' or 'assistant'" in str(exc_info.value)
+
+
 @pytest.mark.asyncio
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
-async def test_mistral_ai_llm_ainvoke(mock_mistral: Mock) -> None:
+async def test_mistralai_llm_ainvoke(mock_mistral: Mock) -> None:
     mock_mistral_instance = mock_mistral.return_value
 
     async def mock_complete_async(*args: Any, **kwargs: Any) -> MagicMock:
@@ -69,7 +124,7 @@ async def test_mistral_ai_llm_ainvoke(mock_mistral: Mock) -> None:
 
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
-def test_mistral_ai_llm_invoke_sdkerror(mock_mistral: Mock) -> None:
+def test_mistralai_llm_invoke_sdkerror(mock_mistral: Mock) -> None:
     mock_mistral_instance = mock_mistral.return_value
     mock_mistral_instance.chat.complete.side_effect = SDKError("Some error")
 
@@ -81,7 +136,7 @@ def test_mistral_ai_llm_invoke_sdkerror(mock_mistral: Mock) -> None:
 
 @pytest.mark.asyncio
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
-async def test_mistral_ai_llm_ainvoke_sdkerror(mock_mistral: Mock) -> None:
+async def test_mistralai_llm_ainvoke_sdkerror(mock_mistral: Mock) -> None:
     mock_mistral_instance = mock_mistral.return_value
 
     async def mock_complete_async(*args: Any, **kwargs: Any) -> None:

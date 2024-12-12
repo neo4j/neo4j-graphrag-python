@@ -16,20 +16,15 @@ from __future__ import annotations
 
 import os
 from typing import Any, Optional, Union
+from pydantic import ValidationError
 
-from ..exceptions import LLMGenerationError
-from .base import LLMInterface
-from .types import LLMResponse
+from neo4j_graphrag.exceptions import LLMGenerationError
+from neo4j_graphrag.llm.base import LLMInterface
+from neo4j_graphrag.llm.types import LLMResponse, MessageList, SystemMessage, UserMessage
 
 try:
-    from mistralai import Mistral
-    from mistralai.models.assistantmessage import AssistantMessage
+    from mistralai import Mistral, Messages
     from mistralai.models.sdkerror import SDKError
-    from mistralai.models.systemmessage import SystemMessage
-    from mistralai.models.toolmessage import ToolMessage
-    from mistralai.models.usermessage import UserMessage
-
-    MessageType = Union[AssistantMessage, SystemMessage, ToolMessage, UserMessage]
 except ImportError:
     Mistral = None  # type: ignore
     SDKError = None  # type: ignore
@@ -63,9 +58,19 @@ class MistralAILLM(LLMInterface):
         if api_key is None:
             api_key = os.getenv("MISTRAL_API_KEY", "")
         self.client = Mistral(api_key=api_key, **kwargs)
-
-    def get_messages(self, input: str) -> list[MessageType]:
-        return [UserMessage(content=input)]
+    
+    def get_messages(self, input: str, chat_history: list) -> list[Messages]:
+        messages = []
+        if self.system_instruction:
+            messages.append(SystemMessage(content=self.system_instruction).model_dump())
+        if chat_history:
+            try:
+                MessageList(messages=chat_history)
+            except ValidationError as e:
+                raise LLMGenerationError(e.errors()) from e
+            messages.extend(chat_history)
+        messages.append(UserMessage(content=input).model_dump())
+        return messages
 
     def invoke(self, input: str, chat_history: Optional[list[dict[str, str]]] = None) -> LLMResponse:
         """Sends a text input to the Mistral chat completion model
@@ -82,9 +87,10 @@ class MistralAILLM(LLMInterface):
             LLMGenerationError: If anything goes wrong.
         """
         try:
+            messages = self.get_messages(input, chat_history)
             response = self.client.chat.complete(
                 model=self.model_name,
-                messages=self.get_messages(input),
+                messages=messages,
                 **self.model_params,
             )
             if response is None or response.choices is None or not response.choices:
@@ -112,9 +118,10 @@ class MistralAILLM(LLMInterface):
             LLMGenerationError: If anything goes wrong.
         """
         try:
+            messages = self.get_messages(input, chat_history)
             response = await self.client.chat.complete_async(
                 model=self.model_name,
-                messages=self.get_messages(input),
+                messages=messages,
                 **self.model_params,
             )
             if response is None or response.choices is None or not response.choices:
