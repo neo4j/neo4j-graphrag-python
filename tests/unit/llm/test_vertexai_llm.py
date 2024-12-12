@@ -13,10 +13,13 @@
 #  limitations under the License.
 from __future__ import annotations
 
+from unittest import mock
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
+from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.vertexai_llm import VertexAILLM
+from vertexai.generative_models import Content, Part
 
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel", None)
@@ -36,7 +39,59 @@ def test_vertexai_invoke_happy_path(GenerativeModelMock: MagicMock) -> None:
     input_text = "may thy knife chip and shatter"
     response = llm.invoke(input_text)
     assert response.content == "Return text"
-    llm.model.generate_content.assert_called_once_with(input_text, **model_params)
+    llm.model.generate_content.assert_called_once_with([mock.ANY], **model_params)
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_get_messages(GenerativeModelMock: MagicMock) -> None:
+    system_instruction = "You are a helpful assistant."
+    model_name = "gemini-1.5-flash-001"
+    question = "When does it set?"
+    chat_history = [
+        {"role": "user", "content": "When does the sun come up in the summer?"},
+        {"role": "assistant", "content": "Usually around 6am."},
+        {"role": "user", "content": "What about next season?"},
+        {"role": "assistant", "content": "Around 8am."},
+    ]
+    expected_response = [
+        Content(
+            role="user",
+            parts=[Part.from_text("When does the sun come up in the summer?")],
+        ),
+        Content(role="model", parts=[Part.from_text("Usually around 6am.")]),
+        Content(role="user", parts=[
+                Part.from_text("What about next season?")]),
+        Content(role="model", parts=[Part.from_text("Around 8am.")]),
+        Content(role="user", parts=[Part.from_text("When does it set?")]),
+    ]
+
+    llm = VertexAILLM(
+        model_name=model_name, system_instruction=system_instruction
+    )
+    response = llm.get_messages(question, chat_history)
+
+    GenerativeModelMock.assert_called_once_with(model_name=model_name, system_instruction=[system_instruction])
+    assert len(response) == len(expected_response)
+    for actual, expected in zip(response, expected_response):
+        assert actual.role == expected.role
+        assert actual.parts[0].text == expected.parts[0].text
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_get_messages_validation_error(GenerativeModelMock: MagicMock) -> None:
+    system_instruction = "You are a helpful assistant."
+    model_name = "gemini-1.5-flash-001"
+    question = "hi!"
+    chat_history = [
+        {"role": "model", "content": "hello!"},
+    ]
+
+    llm = VertexAILLM(
+        model_name=model_name, system_instruction=system_instruction
+    )
+    with pytest.raises(LLMGenerationError) as exc_info:
+        llm.invoke(question, chat_history)
+    assert "Input should be 'user' or 'assistant'" in str(exc_info.value)
 
 
 @pytest.mark.asyncio
@@ -51,4 +106,4 @@ async def test_vertexai_ainvoke_happy_path(GenerativeModelMock: MagicMock) -> No
     input_text = "may thy knife chip and shatter"
     response = await llm.ainvoke(input_text)
     assert response.content == "Return text"
-    llm.model.generate_content_async.assert_called_once_with(input_text, **model_params)
+    llm.model.generate_content_async.assert_called_once_with([mock.ANY], **model_params)

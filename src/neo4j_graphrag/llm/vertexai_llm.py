@@ -15,12 +15,19 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+from pydantic import ValidationError
+
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface
-from neo4j_graphrag.llm.types import LLMResponse
+from neo4j_graphrag.llm.types import LLMResponse, MessageList
 
 try:
-    from vertexai.generative_models import GenerativeModel, ResponseValidationError
+    from vertexai.generative_models import (
+        GenerativeModel,
+        ResponseValidationError,
+        Part,
+        Content,
+    )
 except ImportError:
     GenerativeModel = None
     ResponseValidationError = None
@@ -69,6 +76,24 @@ class VertexAILLM(LLMInterface):
             model_name=model_name, system_instruction=[system_instruction], **kwargs
         )
 
+
+    def get_messages(self, input: str, chat_history: list[str]) -> list[Content]:
+        messages = []
+        if chat_history:
+            try:
+                MessageList(messages=chat_history)
+            except ValidationError as e:
+                raise LLMGenerationError(e.errors()) from e
+            
+            for message in chat_history:
+                if message.get("role") == "user":
+                    messages.append(Content(role="user", parts=[Part.from_text(message.get("content"))]))
+                elif message.get("role") == "assistant":
+                    messages.append(Content(role="model", parts=[Part.from_text(message.get("content"))]))
+
+        messages.append(Content(role="user", parts=[Part.from_text(input)]))
+        return messages
+
     def invoke(self, input: str, chat_history: Optional[list[dict[str, str]]] = None) -> LLMResponse:
         """Sends text to the LLM and returns a response.
 
@@ -80,7 +105,8 @@ class VertexAILLM(LLMInterface):
             LLMResponse: The response from the LLM.
         """
         try:
-            response = self.model.generate_content(input, **self.model_params)
+            messages = self.get_messages(input, chat_history)
+            response = self.model.generate_content(messages, **self.model_params)
             return LLMResponse(content=response.text)
         except ResponseValidationError as e:
             raise LLMGenerationError(e)
@@ -98,8 +124,9 @@ class VertexAILLM(LLMInterface):
             LLMResponse: The response from the LLM.
         """
         try:
+            messages = self.get_messages(input, chat_history)
             response = await self.model.generate_content_async(
-                input, **self.model_params
+                messages, **self.model_params
             )
             return LLMResponse(content=response.text)
         except ResponseValidationError as e:
