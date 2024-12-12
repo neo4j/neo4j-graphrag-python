@@ -330,7 +330,6 @@ def test_t2c_retriever_with_custom_prompt_and_schema(
         None,
         None,
     )
-    get_schema_mock.return_value = "my schema"
 
     retriever = Text2CypherRetriever(driver=driver, llm=llm, custom_prompt=prompt)
     retriever.search(
@@ -338,5 +337,5 @@ def test_t2c_retriever_with_custom_prompt_and_schema(
         prompt_params={},
     )
 
-    get_schema_mock.assert_called_once()
-    llm.invoke.assert_called_once_with("""This is a custom prompt. test my schema""")
+    get_schema_mock.assert_not_called()
+    llm.invoke.assert_called_once_with("""This is a custom prompt. test """)

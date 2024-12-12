@@ -7,6 +7,7 @@ environment for this example to run.
 import neo4j
 from neo4j_graphrag.llm import OpenAILLM
 from neo4j_graphrag.retrievers import Text2CypherRetriever
+from neo4j_graphrag.schema import get_schema
 
 # Define database credentials
 URI = "neo4j+s://demo.neo4jlabs.com"
@@ -66,6 +67,10 @@ with neo4j.GraphDatabase.driver(URI, auth=AUTH) as driver:
     print(
         retriever.search(
             query_text=query_text,
-            prompt_params={"user_name": "the user asking question"},
+            prompt_params={
+                # you have to specify all placeholder except the {query_text} one
+                "schema": get_schema(driver),
+                "user_name": "the user asking question",
+            },
         )
     )
