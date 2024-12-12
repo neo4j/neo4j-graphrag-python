@@ -28,8 +28,8 @@ class CohereEmbeddings(Embedder):
     def __init__(self, model: str = "", **kwargs: Any) -> None:
         if cohere is None:
             raise ImportError(
-                "Could not import cohere python client. "
-                'Please install it with `pip install "neo4j-graphrag[cohere]"`.'
+                """Could not import cohere python client.
+                Please install it with `pip install "neo4j-graphrag[cohere]"`."""
             )
         self.model = model
         self.client = cohere.Client(**kwargs)

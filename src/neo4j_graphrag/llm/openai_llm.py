@@ -50,8 +50,8 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
             import openai
         except ImportError:
             raise ImportError(
-                "Could not import openai Python client. "
-                'Please install it with `pip install "neo4j-graphrag[openai]"`.'
+                """Could not import openai Python client.
+                Please install it with `pip install "neo4j-graphrag[openai]"`."""
             )
         self.openai = openai
         super().__init__(model_name, model_params)

@@ -53,8 +53,8 @@ class MistralAILLM(LLMInterface):
         """
         if Mistral is None:
             raise ImportError(
-                "Could not import Mistral Python client. "
-                'Please install it with `pip install "neo4j-graphrag[mistralai]"`.'
+                """Could not import Mistral Python client.
+                Please install it with `pip install "neo4j-graphrag[mistralai]"`."""
             )
         super().__init__(model_name, model_params)
         api_key = kwargs.pop("api_key", None)

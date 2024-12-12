@@ -39,8 +39,8 @@ class MistralAIEmbeddings(Embedder):
     def __init__(self, model: str = "mistral-embed", **kwargs: Any) -> None:
         if Mistral is None:
             raise ImportError(
-                "Could not import mistralai. "
-                'Please install it with `pip install "neo4j-graphrag[mistralai]"`.'
+                """Could not import mistralai.
+                Please install it with `pip install "neo4j-graphrag[mistralai]"`."""
             )
         api_key = kwargs.pop("api_key", None)
         if api_key is None:

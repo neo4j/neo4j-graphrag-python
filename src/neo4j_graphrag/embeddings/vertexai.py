@@ -36,8 +36,8 @@ class VertexAIEmbeddings(Embedder):
     def __init__(self, model: str = "text-embedding-004") -> None:
         if vertexai is None:
             raise ImportError(
-                "Could not import Vertex AI Python client. "
-                'Please install it with `pip install "neo4j-graphrag[google]"`.'
+                """Could not import Vertex AI Python client.
+                Please install it with `pip install "neo4j-graphrag[google]"`."""
             )
         self.vertexai_model = (
             vertexai.language_models.TextEmbeddingModel.from_pretrained(model)
