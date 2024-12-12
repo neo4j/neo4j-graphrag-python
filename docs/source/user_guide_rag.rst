@@ -218,14 +218,13 @@ See :ref:`coherellm`.
 Using a Local Model via Ollama
 -------------------------------
 
-Similarly to the official OpenAI Python client, the `OpenAILLM` can be
-used with Ollama. Assuming Ollama is running on the default address `127.0.0.1:11434`,
+Assuming Ollama is running on the default address `127.0.0.1:11434`,
 it can be queried using the following:
 
 .. code:: python
 
-    from neo4j_graphrag.llm import OpenAILLM
-    llm = OpenAILLM(api_key="ollama", base_url="http://127.0.0.1:11434/v1", model_name="orca-mini")
+    from neo4j_graphrag.llm import OllamaLLM
+    llm = OllamaLLM(model_name="orca-mini")
     llm.invoke("say something")
 
 
@@ -428,6 +427,7 @@ Currently, this package supports the following embedders:
 - :ref:`mistralaiembeddings`
 - :ref:`cohereembeddings`
 - :ref:`azureopenaiembeddings`
+- :ref:`ollamaembeddings`
 
 The `OpenAIEmbeddings` was illustrated previously. Here is how to use the `SentenceTransformerEmbeddings`:
 
@@ -438,31 +438,7 @@ The `OpenAIEmbeddings` was illustrated previously. Here is how to use the `Sente
     embedder = SentenceTransformerEmbeddings(model="all-MiniLM-L6-v2")  # Note: this is the default model
 
 
-If another embedder is desired, a custom embedder can be created. For example, consider
-the following implementation of an embedder that wraps the `OllamaEmbedding` model from LlamaIndex:
-
-.. code:: python
-
-    from llama_index.embeddings.ollama import OllamaEmbedding
-    from neo4j_graphrag.embeddings.base import Embedder
-
-    class OllamaEmbedder(Embedder):
-        def __init__(self, ollama_embedding):
-            self.embedder = ollama_embedding
-
-        def embed_query(self, text: str) -> list[float]:
-            embedding = self.embedder.get_text_embedding_batch(
-                [text], show_progress=True
-            )
-            return embedding[0]
-
-    ollama_embedding = OllamaEmbedding(
-        model_name="llama3",
-        base_url="http://localhost:11434",
-        ollama_additional_kwargs={"mirostat": 0},
-    )
-    embedder = OllamaEmbedder(ollama_embedding)
-    vector = embedder.embed_query("some text")
+If another embedder is desired, a custom embedder can be created, using the `Embedder` interface.
 
 
 Other Vector Retriever Configuration

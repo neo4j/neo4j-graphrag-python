@@ -88,6 +88,7 @@ Extra dependencies can be installed with:
 List of extra dependencies:
 
 - LLM providers (at least one is required for RAG and KG Builder Pipeline):
+    - **ollama**: LLMs from Ollama
     - **openai**: LLMs from OpenAI (including AzureOpenAI)
     - **google**: LLMs from Vertex AI
     - **cohere**: LLMs from Cohere
