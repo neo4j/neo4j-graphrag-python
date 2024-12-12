@@ -37,11 +37,11 @@ def test_t2c_retriever_initialization(driver: MagicMock, llm: MagicMock) -> None
         mock_verify.assert_called_once()
 
 
-@patch("neo4j_graphrag.retrievers.text2cypher.get_schema")
 @patch("neo4j_graphrag.retrievers.base.Retriever._verify_version")
+@patch("neo4j_graphrag.retrievers.text2cypher.get_schema")
 def test_t2c_retriever_schema_retrieval(
-    _verify_version_mock: MagicMock,
     get_schema_mock: MagicMock,
+    _verify_version_mock: MagicMock,
     driver: MagicMock,
     llm: MagicMock,
 ) -> None:
@@ -49,11 +49,11 @@ def test_t2c_retriever_schema_retrieval(
     get_schema_mock.assert_called_once()
 
 
-@patch("neo4j_graphrag.retrievers.text2cypher.get_schema")
 @patch("neo4j_graphrag.retrievers.base.Retriever._verify_version")
+@patch("neo4j_graphrag.retrievers.text2cypher.get_schema")
 def test_t2c_retriever_schema_retrieval_failure(
-    _verify_version_mock: MagicMock,
     get_schema_mock: MagicMock,
+    _verify_version_mock: MagicMock,
     driver: MagicMock,
     llm: MagicMock,
 ) -> None:
