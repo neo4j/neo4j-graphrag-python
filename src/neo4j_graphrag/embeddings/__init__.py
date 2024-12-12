@@ -15,6 +15,7 @@
 from .base import Embedder
 from .cohere import CohereEmbeddings
 from .mistral import MistralAIEmbeddings
+from .ollama import OllamaEmbeddings
 from .openai import AzureOpenAIEmbeddings, OpenAIEmbeddings
 from .sentence_transformers import SentenceTransformerEmbeddings
 from .vertexai import VertexAIEmbeddings
@@ -22,6 +23,7 @@ from .vertexai import VertexAIEmbeddings
 __all__ = [
     "Embedder",
     "SentenceTransformerEmbeddings",
+    "OllamaEmbeddings",
     "OpenAIEmbeddings",
     "AzureOpenAIEmbeddings",
     "VertexAIEmbeddings",

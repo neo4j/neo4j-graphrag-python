@@ -55,8 +55,8 @@ class AnthropicLLM(LLMInterface):
             import anthropic
         except ImportError:
             raise ImportError(
-                "Could not import Anthropic Python client. "
-                "Please install it with `pip install anthropic`."
+                """Could not import Anthropic Python client.
+                Please install it with `pip install "neo4j-graphrag[anthropic]"`."""
             )
         super().__init__(model_name, model_params)
         self.anthropic = anthropic

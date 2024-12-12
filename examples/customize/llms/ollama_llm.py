@@ -1,12 +1,11 @@
-from neo4j_graphrag.llm import LLMResponse, OpenAILLM
+"""This example demonstrate how to invoke an LLM using a local model
+served by Ollama.
+"""
 
-# not used but needs to be provided
-api_key = "ollama"
+from neo4j_graphrag.llm import LLMResponse, OllamaLLM
 
-llm = OpenAILLM(
-    base_url="http://localhost:11434/v1",
+llm = OllamaLLM(
     model_name="<model_name>",
-    api_key=api_key,
 )
 res: LLMResponse = llm.invoke("What is the additive color model?")
 print(res.content)
