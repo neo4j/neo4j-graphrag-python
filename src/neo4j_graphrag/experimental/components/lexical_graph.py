@@ -42,6 +42,7 @@ class LexicalGraphBuilder(Component):
     - A relationship between a chunk and the next one in the document
     """
 
+    @validate_call
     def __init__(
         self,
         config: LexicalGraphConfig = LexicalGraphConfig(),
