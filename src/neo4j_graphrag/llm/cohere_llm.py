@@ -14,11 +14,18 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
+from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface
-from neo4j_graphrag.llm.types import LLMResponse
+from neo4j_graphrag.llm.types import LLMResponse, MessageList, SystemMessage, UserMessage
+
+try:
+    import cohere
+    from cohere import ChatMessages
+except ImportError:
+    cohere = None
 
 
 class CohereLLM(LLMInterface):
@@ -50,20 +57,30 @@ class CohereLLM(LLMInterface):
         system_instruction: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
-        super().__init__(model_name, model_params, system_instruction)
-        try:
-            import cohere
-        except ImportError:
+        if cohere is None:
             raise ImportError(
-                "Could not import cohere python client. "
+                "Could not import Cohere Python client. "
                 "Please install it with `pip install cohere`."
             )
-
+        super().__init__(model_name, model_params, system_instruction)
         self.cohere = cohere
         self.cohere_api_error = cohere.core.api_error.ApiError
 
-        self.client = cohere.Client(**kwargs)
-        self.async_client = cohere.AsyncClient(**kwargs)
+        self.client = cohere.ClientV2(**kwargs)
+        self.async_client = cohere.AsyncClientV2(**kwargs)
+
+    def get_messages(self, input: str, chat_history: list) -> ChatMessages: # type: ignore
+        messages = []
+        if self.system_instruction:
+            messages.append(SystemMessage(content=self.system_instruction).model_dump())
+        if chat_history:
+            try:
+                MessageList(messages=chat_history)
+            except ValidationError as e:
+                raise LLMGenerationError(e.errors()) from e
+            messages.extend(chat_history)
+        messages.append(UserMessage(content=input).model_dump())
+        return messages
 
     def invoke(self, input: str, chat_history: Optional[list[dict[str, str]]] = None) -> LLMResponse:
         """Sends text to the LLM and returns a response.
@@ -76,14 +93,15 @@ class CohereLLM(LLMInterface):
             LLMResponse: The response from the LLM.
         """
         try:
+            messages = self.get_messages(input, chat_history)
             res = self.client.chat(
-                message=input,
+                messages=messages,
                 model=self.model_name,
             )
         except self.cohere_api_error as e:
             raise LLMGenerationError(e)
         return LLMResponse(
-            content=res.text,
+            content=res.message.content[0].text,
         )
 
     async def ainvoke(
@@ -99,12 +117,13 @@ class CohereLLM(LLMInterface):
             LLMResponse: The response from the LLM.
         """
         try:
-            res = await self.async_client.chat(
-                message=input,
+            messages = self.get_messages(input, chat_history)
+            res = self.async_client.chat(
+                messages=messages,
                 model=self.model_name,
             )
         except self.cohere_api_error as e:
             raise LLMGenerationError(e)
         return LLMResponse(
-            content=res.text,
+            content=res.message.content[0].text,
         )
