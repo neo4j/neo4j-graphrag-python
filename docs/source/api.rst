@@ -9,17 +9,18 @@ API Documentation
 Components
 **********
 
-KGWriter
-========
+DataLoader
+==========
 
-.. autoclass:: neo4j_graphrag.experimental.components.kg_writer.KGWriter
-    :members: run
+.. autoclass:: neo4j_graphrag.experimental.components.pdf_loader.DataLoader
+    :members: run, get_document_metadata
 
-Neo4jWriter
-===========
 
-.. autoclass:: neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter
-    :members: run
+PdfLoader
+=========
+
+.. autoclass:: neo4j_graphrag.experimental.components.pdf_loader.PdfLoader
+    :members: run, load_file
 
 TextSplitter
 ============
@@ -85,6 +86,17 @@ LLMEntityRelationExtractor
 .. autoclass:: neo4j_graphrag.experimental.components.entity_relation_extractor.LLMEntityRelationExtractor
     :members: run
 
+KGWriter
+========
+
+.. autoclass:: neo4j_graphrag.experimental.components.kg_writer.KGWriter
+    :members: run
+
+Neo4jWriter
+===========
+
+.. autoclass:: neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter
+    :members: run
 
 SinglePropertyExactMatchResolver
 ================================
@@ -110,6 +122,23 @@ SimpleKGPipeline
 
 .. autoclass:: neo4j_graphrag.experimental.pipeline.kg_builder.SimpleKGPipeline
     :members: run_async
+
+
+************
+Config files
+************
+
+
+SimpleKGPipelineConfig
+======================
+
+.. autoclass:: neo4j_graphrag.experimental.pipeline.config.template_pipeline.simple_kg_builder.SimpleKGPipelineConfig
+
+
+PipelineRunner
+==============
+
+.. autoclass:: neo4j_graphrag.experimental.pipeline.config.runner.PipelineRunner
 
 
 .. _retrievers-section:
