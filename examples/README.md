@@ -58,7 +58,8 @@ are listed in [the last section of this file](#customize).
 
 - [Control result format for VectorRetriever](customize/retrievers/result_formatter_vector_retriever.py)
 - [Control result format for VectorCypherRetriever](customize/retrievers/result_formatter_vector_cypher_retriever.py)
-
+- [Use pre-filters](customize/retrievers/use_pre_filters.py)
+- [Text2Cypher: use a custom prompt](customize/retrievers/text2cypher_custom_prompt.py)
 
 ### LLMs
 
@@ -74,7 +75,7 @@ are listed in [the last section of this file](#customize).
 
 ### Prompts
 
-- [Using a custom prompt](old/graphrag_custom_prompt.py)
+- [Using a custom prompt for RAG](customize/answer/custom_prompt.py)
 
 
 ### Embedders

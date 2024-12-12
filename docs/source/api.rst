@@ -338,12 +338,21 @@ RagTemplate
 
 .. autoclass:: neo4j_graphrag.generation.prompts.RagTemplate
     :members:
+    :exclude-members: format
 
 ERExtractionTemplate
 --------------------
 
 .. autoclass:: neo4j_graphrag.generation.prompts.ERExtractionTemplate
     :members:
+    :exclude-members: format
+
+Text2CypherTemplate
+--------------------
+
+.. autoclass:: neo4j_graphrag.generation.prompts.Text2CypherTemplate
+    :members:
+    :exclude-members: format
 
 
 ****
