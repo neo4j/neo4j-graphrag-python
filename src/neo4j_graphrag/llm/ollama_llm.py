@@ -12,12 +12,20 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
+
+from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 
 from .base import LLMInterface
-from .types import LLMResponse
+from .types import LLMResponse, SystemMessage, UserMessage, MessageList
+
+try:
+    import ollama
+    from ollama import Message
+except ImportError:
+    ollama = None
 
 
 class OllamaLLM(LLMInterface):
@@ -25,16 +33,15 @@ class OllamaLLM(LLMInterface):
         self,
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
+        system_instruction: Optional[str] = None,
         **kwargs: Any,
     ):
-        try:
-            import ollama
-        except ImportError:
+        if ollama is None:
             raise ImportError(
                 "Could not import ollama Python client. "
                 "Please install it with `pip install ollama`."
             )
-        super().__init__(model_name, model_params, **kwargs)
+        super().__init__(model_name, model_params, system_instruction, **kwargs)
         self.ollama = ollama
         self.client = ollama.Client(
             **kwargs,
@@ -43,32 +50,43 @@ class OllamaLLM(LLMInterface):
             **kwargs,
         )
 
-    def invoke(self, input: str) -> LLMResponse:
+    def get_messages(
+        self, input: str, chat_history: Optional[list[Any]] = None
+    ) -> Iterable[Message]:
+        messages = []
+        if self.system_instruction:
+            messages.append(SystemMessage(content=self.system_instruction).model_dump())
+        if chat_history:
+            try:
+                MessageList(messages=chat_history)
+            except ValidationError as e:
+                raise LLMGenerationError(e.errors()) from e
+            messages.extend(chat_history)
+        messages.append(UserMessage(content=input).model_dump())
+        return messages
+
+    def invoke(
+        self, input: str, chat_history: Optional[list[Any]] = None
+    ) -> LLMResponse:
         try:
             response = self.client.chat(
                 model=self.model_name,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": input,
-                    },
-                ],
+                messages=self.get_messages(input, chat_history),
+                options=self.model_params,
             )
             content = response.message.content or ""
             return LLMResponse(content=content)
         except self.ollama.ResponseError as e:
             raise LLMGenerationError(e)
 
-    async def ainvoke(self, input: str) -> LLMResponse:
+    async def ainvoke(
+        self, input: str, chat_history: Optional[list[Any]] = None
+    ) -> LLMResponse:
         try:
             response = await self.async_client.chat(
                 model=self.model_name,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": input,
-                    },
-                ],
+                messages=self.get_messages(input, chat_history),
+                options=self.model_params,
             )
             content = response.message.content or ""
             return LLMResponse(content=content)
