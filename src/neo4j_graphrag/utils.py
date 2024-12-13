@@ -14,7 +14,9 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, Any
+
+from pydantic import BaseModel
 
 
 def validate_search_query_input(
@@ -22,3 +24,41 @@ def validate_search_query_input(
 ) -> None:
     if not (bool(query_vector) ^ bool(query_text)):
         raise ValueError("You must provide exactly one of query_vector or query_text.")
+
+
+
+class Prettyfier:
+    """Prettyfy object for logging.
+
+    I.e.: truncate long lists.
+     """
+    def __init__(self, max_items_in_list: int = 5):
+        self.max_items_in_list = max_items_in_list
+
+    def _prettyfy_dict(self, value: dict[Any, Any]) -> dict[Any, Any]:
+        return {
+            k: self(v)  # prettyfy each value
+            for k, v in value.items()
+        }
+
+    def _prettyfy_list(self, value: list[Any]) -> list[Any]:
+        items = [
+            self(v)  # prettify each item
+            for v in value[:self.max_items_in_list]
+        ]
+        remaining_items = len(value) - len(items)
+        if remaining_items > 0:
+            items.append(f"...truncated {remaining_items} items...")
+        return items
+
+    def __call__(self, value: Any) -> Any:
+        if isinstance(value, dict):
+            return self._prettyfy_dict(value)
+        if isinstance(value, BaseModel):
+            return self(value.model_dump())
+        if isinstance(value, list):
+            return self._prettyfy_list(value)
+        return value
+
+
+prettyfier = Prettyfier()
