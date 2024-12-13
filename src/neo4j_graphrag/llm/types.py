@@ -7,7 +7,7 @@ class LLMResponse(BaseModel):
 
 
 class BaseMessage(BaseModel):
-    role: Literal["user", "assistant"]
+    role: Literal["user", "assistant", "system"]
     content: str
 
 

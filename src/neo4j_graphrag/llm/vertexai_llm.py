@@ -76,7 +76,9 @@ class VertexAILLM(LLMInterface):
             model_name=model_name, system_instruction=[system_instruction], **kwargs
         )
 
-    def get_messages(self, input: str, chat_history: list[str]) -> list[Content]:
+    def get_messages(
+        self, input: str, chat_history: Optional[list[Any]] = None
+    ) -> list[Content]:
         messages = []
         if chat_history:
             try:
@@ -102,7 +104,7 @@ class VertexAILLM(LLMInterface):
         return messages
 
     def invoke(
-        self, input: str, chat_history: Optional[list[dict[str, str]]] = None
+        self, input: str, chat_history: Optional[list[Any]] = None
     ) -> LLMResponse:
         """Sends text to the LLM and returns a response.
 
@@ -121,7 +123,7 @@ class VertexAILLM(LLMInterface):
             raise LLMGenerationError(e)
 
     async def ainvoke(
-        self, input: str, chat_history: Optional[list[dict[str, str]]] = None
+        self, input: str, chat_history: Optional[list[Any]] = None
     ) -> LLMResponse:
         """Asynchronously sends text to the LLM and returns a response.
 

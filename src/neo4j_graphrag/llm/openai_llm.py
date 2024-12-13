@@ -61,7 +61,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         super().__init__(model_name, model_params, system_instruction)
 
     def get_messages(
-        self, input: str, chat_history: list
+        self, input: str, chat_history: Optional[list[Any]] = None
     ) -> Iterable[ChatCompletionMessageParam]:
         messages = []
         if self.system_instruction:
@@ -76,7 +76,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         return messages
 
     def invoke(
-        self, input: str, chat_history: Optional[list[dict[str, str]]] = None
+        self, input: str, chat_history: Optional[list[Any]] = None
     ) -> LLMResponse:
         """Sends a text input to the OpenAI chat completion model
         and returns the response's content.
@@ -103,7 +103,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
             raise LLMGenerationError(e)
 
     async def ainvoke(
-        self, input: str, chat_history: Optional[list[dict[str, str]]] = None
+        self, input: str, chat_history: Optional[list[Any]] = None
     ) -> LLMResponse:
         """Asynchronously sends a text input to the OpenAI chat
         completion model and returns the response's content.

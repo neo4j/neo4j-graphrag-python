@@ -31,8 +31,8 @@ try:
     from mistralai import Mistral, Messages
     from mistralai.models.sdkerror import SDKError
 except ImportError:
-    Mistral = None  # type: ignore
-    SDKError = None  # type: ignore
+    Mistral = None
+    SDKError = None
 
 
 class MistralAILLM(LLMInterface):
@@ -64,7 +64,9 @@ class MistralAILLM(LLMInterface):
             api_key = os.getenv("MISTRAL_API_KEY", "")
         self.client = Mistral(api_key=api_key, **kwargs)
 
-    def get_messages(self, input: str, chat_history: list) -> list[Messages]:
+    def get_messages(
+        self, input: str, chat_history: Optional[list[Any]] = None
+    ) -> list[Messages]:
         messages = []
         if self.system_instruction:
             messages.append(SystemMessage(content=self.system_instruction).model_dump())
@@ -78,7 +80,7 @@ class MistralAILLM(LLMInterface):
         return messages
 
     def invoke(
-        self, input: str, chat_history: Optional[list[dict[str, str]]] = None
+        self, input: str, chat_history: Optional[list[Any]] = None
     ) -> LLMResponse:
         """Sends a text input to the Mistral chat completion model
         and returns the response's content.
@@ -110,7 +112,7 @@ class MistralAILLM(LLMInterface):
             raise LLMGenerationError(e)
 
     async def ainvoke(
-        self, input: str, chat_history: Optional[list[dict[str, str]]] = None
+        self, input: str, chat_history: Optional[list[Any]] = None
     ) -> LLMResponse:
         """Asynchronously sends a text input to the MistralAI chat
         completion model and returns the response's content.

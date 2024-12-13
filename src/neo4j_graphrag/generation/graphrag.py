@@ -146,7 +146,9 @@ class GraphRAG:
             result["retriever_result"] = retriever_result
         return RagResultModel(**result)
 
-    def build_query(self, query_text: str, chat_history: list[dict[str, str]]) -> str:
+    def build_query(
+        self, query_text: str, chat_history: Optional[list[dict[str, str]]] = None
+    ) -> str:
         if chat_history:
             summarization_prompt = ChatSummaryTemplate().format(
                 chat_history=chat_history

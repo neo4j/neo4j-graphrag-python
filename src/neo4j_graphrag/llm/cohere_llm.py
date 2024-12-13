@@ -74,7 +74,9 @@ class CohereLLM(LLMInterface):
         self.client = cohere.ClientV2(**kwargs)
         self.async_client = cohere.AsyncClientV2(**kwargs)
 
-    def get_messages(self, input: str, chat_history: list) -> ChatMessages:  # type: ignore
+    def get_messages(
+        self, input: str, chat_history: Optional[list[Any]] = None
+    ) -> ChatMessages:
         messages = []
         if self.system_instruction:
             messages.append(SystemMessage(content=self.system_instruction).model_dump())
@@ -88,7 +90,7 @@ class CohereLLM(LLMInterface):
         return messages
 
     def invoke(
-        self, input: str, chat_history: Optional[list[dict[str, str]]] = None
+        self, input: str, chat_history: Optional[list[Any]] = None
     ) -> LLMResponse:
         """Sends text to the LLM and returns a response.
 
@@ -112,7 +114,7 @@ class CohereLLM(LLMInterface):
         )
 
     async def ainvoke(
-        self, input: str, chat_history: Optional[list[dict[str, str]]] = None
+        self, input: str, chat_history: Optional[list[Any]] = None
     ) -> LLMResponse:
         """Asynchronously sends text to the LLM and returns a response.
 

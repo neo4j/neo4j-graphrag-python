@@ -71,7 +71,9 @@ class AnthropicLLM(LLMInterface):
         self.client = anthropic.Anthropic(**kwargs)
         self.async_client = anthropic.AsyncAnthropic(**kwargs)
 
-    def get_messages(self, input: str, chat_history: list) -> Iterable[MessageParam]:
+    def get_messages(
+        self, input: str, chat_history: Optional[list[Any]] = None
+    ) -> Iterable[MessageParam]:
         messages = []
         if chat_history:
             try:
@@ -83,7 +85,7 @@ class AnthropicLLM(LLMInterface):
         return messages
 
     def invoke(
-        self, input: str, chat_history: Optional[list[dict[str, str]]] = None
+        self, input: str, chat_history: Optional[list[Any]] = None
     ) -> LLMResponse:
         """Sends text to the LLM and returns a response.
 
@@ -107,7 +109,7 @@ class AnthropicLLM(LLMInterface):
             raise LLMGenerationError(e)
 
     async def ainvoke(
-        self, input: str, chat_history: Optional[list[dict[str, str]]] = None
+        self, input: str, chat_history: Optional[list[Any]] = None
     ) -> LLMResponse:
         """Asynchronously sends text to the LLM and returns a response.
 
