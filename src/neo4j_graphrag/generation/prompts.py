@@ -174,7 +174,11 @@ Assign a unique ID (string) to each node, and reuse it to define relationships.
 Do respect the source and target node types for relationship and
 the relationship direction.
 
-Do not return any additional information other than the JSON in it.
+Make sure you adhere to the following rules to produce valid JSON objects:
+- Do not return any additional information other than the JSON in it.
+- Omit any backticks around the JSON - simply output the JSON on its own.
+- The JSON object must not wrapped into a list - it is its own JSON object.
+- Property names must be enclosed in double quotes
 
 Examples:
 {examples}

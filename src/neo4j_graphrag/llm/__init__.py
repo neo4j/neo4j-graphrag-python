@@ -16,6 +16,7 @@ from .anthropic_llm import AnthropicLLM
 from .base import LLMInterface
 from .cohere_llm import CohereLLM
 from .mistralai_llm import MistralAILLM
+from .ollama_llm import OllamaLLM
 from .openai_llm import AzureOpenAILLM, OpenAILLM
 from .types import LLMResponse
 from .vertexai_llm import VertexAILLM
@@ -25,6 +26,7 @@ __all__ = [
     "CohereLLM",
     "LLMResponse",
     "LLMInterface",
+    "OllamaLLM",
     "OpenAILLM",
     "VertexAILLM",
     "AzureOpenAILLM",

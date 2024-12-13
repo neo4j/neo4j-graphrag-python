@@ -39,8 +39,8 @@ class MistralAIEmbeddings(Embedder):
     def __init__(self, model: str = "mistral-embed", **kwargs: Any) -> None:
         if Mistral is None:
             raise ImportError(
-                "Could not import mistralai. "
-                "Please install it with `pip install mistralai`."
+                """Could not import mistralai.
+                Please install it with `pip install "neo4j-graphrag[mistralai]"`."""
             )
         api_key = kwargs.pop("api_key", None)
         if api_key is None:
@@ -57,8 +57,7 @@ class MistralAIEmbeddings(Embedder):
             **kwargs (Any): Additional keyword arguments to pass to the Mistral AI client.
         """
         embeddings_batch_response = self.mistral_client.embeddings.create(
-            model=self.model,
-            inputs=[text],
+            model=self.model, inputs=[text], **kwargs
         )
         if embeddings_batch_response is None or not embeddings_batch_response.data:
             raise EmbeddingsGenerationError("Failed to retrieve embeddings.")

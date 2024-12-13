@@ -218,14 +218,13 @@ See :ref:`coherellm`.
 Using a Local Model via Ollama
 -------------------------------
 
-Similarly to the official OpenAI Python client, the `OpenAILLM` can be
-used with Ollama. Assuming Ollama is running on the default address `127.0.0.1:11434`,
+Assuming Ollama is running on the default address `127.0.0.1:11434`,
 it can be queried using the following:
 
 .. code:: python
 
-    from neo4j_graphrag.llm import OpenAILLM
-    llm = OpenAILLM(api_key="ollama", base_url="http://127.0.0.1:11434/v1", model_name="orca-mini")
+    from neo4j_graphrag.llm import OllamaLLM
+    llm = OllamaLLM(model_name="orca-mini")
     llm.invoke("say something")
 
 
@@ -397,7 +396,7 @@ However, in most cases, a text (from the user) will be provided instead of a vec
 In this scenario, an `Embedder` is required.
 
 Search Similar Text
------------------------------
+--------------------
 
 When searching for a text, specifying how the retriever transforms (embeds) the text
 into a vector is required. Therefore, the retriever requires knowledge of an embedder:
@@ -418,7 +417,7 @@ into a vector is required. Therefore, the retriever requires knowledge of an emb
 
 
 Embedders
------------------------------
+---------
 
 Currently, this package supports the following embedders:
 
@@ -428,6 +427,7 @@ Currently, this package supports the following embedders:
 - :ref:`mistralaiembeddings`
 - :ref:`cohereembeddings`
 - :ref:`azureopenaiembeddings`
+- :ref:`ollamaembeddings`
 
 The `OpenAIEmbeddings` was illustrated previously. Here is how to use the `SentenceTransformerEmbeddings`:
 
@@ -438,31 +438,7 @@ The `OpenAIEmbeddings` was illustrated previously. Here is how to use the `Sente
     embedder = SentenceTransformerEmbeddings(model="all-MiniLM-L6-v2")  # Note: this is the default model
 
 
-If another embedder is desired, a custom embedder can be created. For example, consider
-the following implementation of an embedder that wraps the `OllamaEmbedding` model from LlamaIndex:
-
-.. code:: python
-
-    from llama_index.embeddings.ollama import OllamaEmbedding
-    from neo4j_graphrag.embeddings.base import Embedder
-
-    class OllamaEmbedder(Embedder):
-        def __init__(self, ollama_embedding):
-            self.embedder = ollama_embedding
-
-        def embed_query(self, text: str) -> list[float]:
-            embedding = self.embedder.get_text_embedding_batch(
-                [text], show_progress=True
-            )
-            return embedding[0]
-
-    ollama_embedding = OllamaEmbedding(
-        model_name="llama3",
-        base_url="http://localhost:11434",
-        ollama_additional_kwargs={"mirostat": 0},
-    )
-    embedder = OllamaEmbedder(ollama_embedding)
-    vector = embedder.embed_query("some text")
+If another embedder is desired, a custom embedder can be created, using the `Embedder` interface.
 
 
 Other Vector Retriever Configuration
@@ -485,7 +461,7 @@ using the `return_properties` parameter:
 
 
 Pre-Filters
------------------------------
+-----------
 
 When performing a similarity search, one may have constraints to apply.
 For instance, filtering out movies released before 2000. This can be achieved

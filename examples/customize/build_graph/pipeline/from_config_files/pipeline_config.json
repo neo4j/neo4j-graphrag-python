@@ -1,0 +1,68 @@
+{
+    "version_": "1",
+    "template_": "none",
+    "name": "",
+    "neo4j_config": {
+        "params_": {
+            "uri": {
+                "resolver_": "ENV",
+                "var_": "NEO4J_URI"
+            },
+            "user": {
+                "resolver_": "ENV",
+                "var_": "NEO4J_USER"
+            },
+            "password": {
+                "resolver_": "ENV",
+                "var_": "NEO4J_PASSWORD"
+            }
+        }
+    },
+    "extras": {
+        "database": "neo4j"
+    },
+    "component_config": {
+        "splitter": {
+            "class_": "text_splitters.fixed_size_splitter.FixedSizeSplitter"
+        },
+        "builder": {
+            "class_": "lexical_graph.LexicalGraphBuilder",
+            "params_": {
+                "config": {
+                    "chunk_node_label": "TextPart"
+                }
+            }
+        },
+        "writer": {
+            "name_": "writer",
+            "class_": "kg_writer.Neo4jWriter",
+            "params_": {
+                "driver": {
+                    "resolver_": "CONFIG_KEY",
+                    "key_": "neo4j_config.default"
+                },
+                "neo4j_database": {
+                    "resolver_": "CONFIG_KEY",
+                    "key_": "extras.database"
+                }
+            }
+        }
+    },
+    "connection_config": [
+        {
+            "start": "splitter",
+            "end": "builder",
+            "input_config": {
+                "text_chunks": "splitter"
+            }
+        },
+        {
+            "start": "builder",
+            "end": "writer",
+            "input_config": {
+                "graph": "builder.graph",
+                "lexical_graph_config": "builder.config"
+            }
+        }
+    ]
+}

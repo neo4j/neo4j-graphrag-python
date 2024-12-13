@@ -50,8 +50,8 @@ class MistralAILLM(LLMInterface):
         """
         if Mistral is None:
             raise ImportError(
-                "Could not import Mistral Python client. "
-                "Please install it with `pip install mistralai`."
+                """Could not import Mistral Python client.
+                Please install it with `pip install "neo4j-graphrag[mistralai]"`."""
             )
         super().__init__(model_name, model_params, system_instruction)
         api_key = kwargs.pop("api_key", None)
@@ -93,10 +93,11 @@ class MistralAILLM(LLMInterface):
                 messages=messages,
                 **self.model_params,
             )
-            if response is None or response.choices is None or not response.choices:
-                content = ""
-            else:
-                content = response.choices[0].message.content or ""
+            content: str = ""
+            if response and response.choices:
+                possible_content = response.choices[0].message.content
+                if isinstance(possible_content, str):
+                    content = possible_content
             return LLMResponse(content=content)
         except SDKError as e:
             raise LLMGenerationError(e)
@@ -124,10 +125,11 @@ class MistralAILLM(LLMInterface):
                 messages=messages,
                 **self.model_params,
             )
-            if response is None or response.choices is None or not response.choices:
-                content = ""
-            else:
-                content = response.choices[0].message.content or ""
+            content: str = ""
+            if response and response.choices:
+                possible_content = response.choices[0].message.content
+                if isinstance(possible_content, str):
+                    content = possible_content
             return LLMResponse(content=content)
         except SDKError as e:
             raise LLMGenerationError(e)

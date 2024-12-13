@@ -19,6 +19,7 @@ import pytest
 from neo4j.exceptions import CypherSyntaxError, Neo4jError
 from neo4j_graphrag.exceptions import (
     RetrieverInitializationError,
+    SchemaFetchError,
     SearchValidationError,
     Text2CypherRetrievalError,
 )
@@ -39,8 +40,8 @@ def test_t2c_retriever_initialization(driver: MagicMock, llm: MagicMock) -> None
 @patch("neo4j_graphrag.retrievers.base.Retriever._verify_version")
 @patch("neo4j_graphrag.retrievers.text2cypher.get_schema")
 def test_t2c_retriever_schema_retrieval(
-    _verify_version_mock: MagicMock,
     get_schema_mock: MagicMock,
+    _verify_version_mock: MagicMock,
     driver: MagicMock,
     llm: MagicMock,
 ) -> None:
@@ -51,13 +52,13 @@ def test_t2c_retriever_schema_retrieval(
 @patch("neo4j_graphrag.retrievers.base.Retriever._verify_version")
 @patch("neo4j_graphrag.retrievers.text2cypher.get_schema")
 def test_t2c_retriever_schema_retrieval_failure(
-    _verify_version_mock: MagicMock,
     get_schema_mock: MagicMock,
+    _verify_version_mock: MagicMock,
     driver: MagicMock,
     llm: MagicMock,
 ) -> None:
     get_schema_mock.side_effect = Neo4jError
-    with pytest.raises(Neo4jError):
+    with pytest.raises(SchemaFetchError):
         Text2CypherRetriever(driver, llm)
 
 
@@ -310,3 +311,31 @@ def test_t2c_retriever_with_custom_prompt_bad_prompt_params(
     llm.invoke.assert_called_once_with(
         """This is a custom prompt. test ['example A', 'example B']"""
     )
+
+
+@patch("neo4j_graphrag.retrievers.base.Retriever._verify_version")
+@patch("neo4j_graphrag.retrievers.text2cypher.get_schema")
+def test_t2c_retriever_with_custom_prompt_and_schema(
+    get_schema_mock: MagicMock,
+    _verify_version_mock: MagicMock,
+    driver: MagicMock,
+    llm: MagicMock,
+    neo4j_record: MagicMock,
+) -> None:
+    prompt = "This is a custom prompt. {query_text} {schema}"
+    query = "test"
+
+    driver.execute_query.return_value = (
+        [neo4j_record],
+        None,
+        None,
+    )
+
+    retriever = Text2CypherRetriever(driver=driver, llm=llm, custom_prompt=prompt)
+    retriever.search(
+        query_text=query,
+        prompt_params={},
+    )
+
+    get_schema_mock.assert_not_called()
+    llm.invoke.assert_called_once_with("""This is a custom prompt. test """)

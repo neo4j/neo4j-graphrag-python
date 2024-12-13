@@ -124,31 +124,6 @@ def kg_builder_pipeline(
     return pipe
 
 
-@pytest.fixture
-def harry_potter_text() -> str:
-    with open(os.path.join(BASE_DIR, "data/harry_potter.txt"), "r") as f:
-        text = f.read()
-    return text
-
-
-@pytest.fixture
-def harry_potter_text_part1() -> str:
-    with open(
-        os.path.join(BASE_DIR, "data/documents/harry_potter_part1.txt"), "r"
-    ) as f:
-        text = f.read()
-    return text
-
-
-@pytest.fixture
-def harry_potter_text_part2() -> str:
-    with open(
-        os.path.join(BASE_DIR, "data/documents/harry_potter_part2.txt"), "r"
-    ) as f:
-        text = f.read()
-    return text
-
-
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
 async def test_pipeline_builder_happy_path(
