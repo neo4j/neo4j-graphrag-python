@@ -72,6 +72,37 @@ To install the latest stable version, use:
 
    It is always recommended to install python packages for user space in a virtual environment.
 
+*********************
+Optional Dependencies
+*********************
+
+Extra dependencies can be installed with:
+
+.. code:: bash
+
+    pip install "neo4j-graphrag[openai]"
+    # or
+    pip install "neo4j-graphrag[openai, experimental]"
+
+
+List of extra dependencies:
+
+- LLM providers (at least one is required for RAG and KG Builder Pipeline):
+    - **ollama**: LLMs from Ollama
+    - **openai**: LLMs from OpenAI (including AzureOpenAI)
+    - **google**: LLMs from Vertex AI
+    - **cohere**: LLMs from Cohere
+    - **anthropic**: LLMs from Anthropic
+    - **mistralai**: LLMs from MistralAI
+- **sentence-transformers** : to use embeddings from the `sentence-transformers` Python package
+- Vector database (to use :ref:`External Retrievers`):
+    - **weaviate**: store vectors in Weaviate
+    - **pinecone**: store vectors in Pinecone
+    - **qdrant**: store vectors in Qdrant
+- **experimental**: experimental features such as the Knowledge Graph creation pipelines.
+    - Warning: this requires `pygraphviz`. Installation instructions can be found `here <https://pygraphviz.github.io/documentation/stable/install.html>`_.
+
+
 ********
 Examples
 ********
