@@ -15,12 +15,17 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Optional, Union
+from typing import Any, Optional
 from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface
-from neo4j_graphrag.llm.types import LLMResponse, MessageList, SystemMessage, UserMessage
+from neo4j_graphrag.llm.types import (
+    LLMResponse,
+    MessageList,
+    SystemMessage,
+    UserMessage,
+)
 
 try:
     from mistralai import Mistral, Messages
@@ -58,7 +63,7 @@ class MistralAILLM(LLMInterface):
         if api_key is None:
             api_key = os.getenv("MISTRAL_API_KEY", "")
         self.client = Mistral(api_key=api_key, **kwargs)
-    
+
     def get_messages(self, input: str, chat_history: list) -> list[Messages]:
         messages = []
         if self.system_instruction:
@@ -72,7 +77,9 @@ class MistralAILLM(LLMInterface):
         messages.append(UserMessage(content=input).model_dump())
         return messages
 
-    def invoke(self, input: str, chat_history: Optional[list[dict[str, str]]] = None) -> LLMResponse:
+    def invoke(
+        self, input: str, chat_history: Optional[list[dict[str, str]]] = None
+    ) -> LLMResponse:
         """Sends a text input to the Mistral chat completion model
         and returns the response's content.
 

@@ -14,7 +14,6 @@
 #  limitations under the License.
 from __future__ import annotations
 
-import json
 import logging
 import warnings
 from typing import Any, Optional
@@ -25,7 +24,11 @@ from neo4j_graphrag.exceptions import (
     RagInitializationError,
     SearchValidationError,
 )
-from neo4j_graphrag.generation.prompts import RagTemplate, ChatSummaryTemplate, ConversationTemplate
+from neo4j_graphrag.generation.prompts import (
+    RagTemplate,
+    ChatSummaryTemplate,
+    ConversationTemplate,
+)
 from neo4j_graphrag.generation.types import RagInitModel, RagResultModel, RagSearchModel
 from neo4j_graphrag.llm import LLMInterface
 from neo4j_graphrag.retrievers.base import Retriever
@@ -142,10 +145,14 @@ class GraphRAG:
         if return_context:
             result["retriever_result"] = retriever_result
         return RagResultModel(**result)
-    
+
     def build_query(self, query_text: str, chat_history: list[dict[str, str]]) -> str:
         if chat_history:
-            summarization_prompt = ChatSummaryTemplate().format(chat_history=chat_history)
+            summarization_prompt = ChatSummaryTemplate().format(
+                chat_history=chat_history
+            )
             summary = self.llm.invoke(summarization_prompt).content
-            return ConversationTemplate().format(summary=summary, current_query=query_text)
+            return ConversationTemplate().format(
+                summary=summary, current_query=query_text
+            )
         return query_text

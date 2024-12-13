@@ -14,12 +14,17 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Iterable, Optional
+from typing import Any, Optional
 from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface
-from neo4j_graphrag.llm.types import LLMResponse, MessageList, SystemMessage, UserMessage
+from neo4j_graphrag.llm.types import (
+    LLMResponse,
+    MessageList,
+    SystemMessage,
+    UserMessage,
+)
 
 try:
     import cohere
@@ -69,7 +74,7 @@ class CohereLLM(LLMInterface):
         self.client = cohere.ClientV2(**kwargs)
         self.async_client = cohere.AsyncClientV2(**kwargs)
 
-    def get_messages(self, input: str, chat_history: list) -> ChatMessages: # type: ignore
+    def get_messages(self, input: str, chat_history: list) -> ChatMessages:  # type: ignore
         messages = []
         if self.system_instruction:
             messages.append(SystemMessage(content=self.system_instruction).model_dump())
@@ -82,7 +87,9 @@ class CohereLLM(LLMInterface):
         messages.append(UserMessage(content=input).model_dump())
         return messages
 
-    def invoke(self, input: str, chat_history: Optional[list[dict[str, str]]] = None) -> LLMResponse:
+    def invoke(
+        self, input: str, chat_history: Optional[list[dict[str, str]]] = None
+    ) -> LLMResponse:
         """Sends text to the LLM and returns a response.
 
         Args:

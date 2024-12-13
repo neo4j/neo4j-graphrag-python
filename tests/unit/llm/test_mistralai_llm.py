@@ -78,7 +78,9 @@ def test_mistralai_llm_invoke_with_chat_history(mock_mistral: Mock) -> None:
 
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
-def test_mistralai_llm_invoke_with_chat_history_validation_error(mock_mistral: Mock) -> None:
+def test_mistralai_llm_invoke_with_chat_history_validation_error(
+    mock_mistral: Mock,
+) -> None:
     mock_mistral_instance = mock_mistral.return_value
     chat_response_mock = MagicMock()
     chat_response_mock.choices = [

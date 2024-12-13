@@ -13,11 +13,8 @@
 #  limitations under the License.
 from __future__ import annotations
 
-import sys
-from typing import Generator
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
-import anthropic
 import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.anthropic_llm import AnthropicLLM
@@ -54,17 +51,21 @@ def test_anthropic_invoke_with_chat_history_happy_path(mock_anthropic: Mock) -> 
     )
     model_params = {"temperature": 0.3}
     system_instruction = "You are a helpful assistant."
-    llm = AnthropicLLM("claude-3-opus-20240229", model_params=model_params, system_instruction=system_instruction)
+    llm = AnthropicLLM(
+        "claude-3-opus-20240229",
+        model_params=model_params,
+        system_instruction=system_instruction,
+    )
     chat_history = [
         {"role": "user", "content": "When does the sun come up in the summer?"},
         {"role": "assistant", "content": "Usually around 6am."},
     ]
     question = "What about next season?"
-    
+
     response = llm.invoke(question, chat_history)
     assert response.content == "generated text"
     chat_history.append({"role": "user", "content": question})
-    llm.client.messages.create.assert_called_once_with(  # type: ignore
+    llm.client.messages.create.assert_called_once_with(
         messages=chat_history,
         model="claude-3-opus-20240229",
         system=system_instruction,
@@ -73,13 +74,19 @@ def test_anthropic_invoke_with_chat_history_happy_path(mock_anthropic: Mock) -> 
 
 
 @patch("neo4j_graphrag.llm.anthropic_llm.anthropic.Anthropic")
-def test_anthropic_invoke_with_chat_history_validation_error(mock_anthropic: Mock) -> None:
+def test_anthropic_invoke_with_chat_history_validation_error(
+    mock_anthropic: Mock,
+) -> None:
     mock_anthropic.return_value.messages.create.return_value = MagicMock(
         content="generated text"
     )
     model_params = {"temperature": 0.3}
     system_instruction = "You are a helpful assistant."
-    llm = AnthropicLLM("claude-3-opus-20240229", model_params=model_params, system_instruction=system_instruction)
+    llm = AnthropicLLM(
+        "claude-3-opus-20240229",
+        model_params=model_params,
+        system_instruction=system_instruction,
+    )
     chat_history = [
         {"role": "human", "content": "When does the sun come up in the summer?"},
         {"role": "assistant", "content": "Usually around 6am."},

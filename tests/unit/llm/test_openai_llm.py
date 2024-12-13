@@ -97,8 +97,7 @@ def test_azure_openai_llm_happy_path(mock_import: Mock) -> None:
     mock_import.return_value = mock_openai
     mock_openai.AzureOpenAI.return_value.chat.completions.create.return_value = (
         MagicMock(
-            choices=[MagicMock(message=MagicMock(
-                content="openai chat response"))],
+            choices=[MagicMock(message=MagicMock(content="openai chat response"))],
         )
     )
     llm = AzureOpenAILLM(
@@ -119,8 +118,7 @@ def test_azure_openai_llm_with_chat_history_happy_path(mock_import: Mock) -> Non
     mock_import.return_value = mock_openai
     mock_openai.AzureOpenAI.return_value.chat.completions.create.return_value = (
         MagicMock(
-            choices=[MagicMock(message=MagicMock(
-                content="openai chat response"))],
+            choices=[MagicMock(message=MagicMock(content="openai chat response"))],
         )
     )
     llm = AzureOpenAILLM(
@@ -147,8 +145,7 @@ def test_azure_openai_llm_with_chat_history_validation_error(mock_import: Mock) 
     mock_import.return_value = mock_openai
     mock_openai.AzureOpenAI.return_value.chat.completions.create.return_value = (
         MagicMock(
-            choices=[MagicMock(message=MagicMock(
-                content="openai chat response"))],
+            choices=[MagicMock(message=MagicMock(content="openai chat response"))],
         )
     )
     llm = AzureOpenAILLM(
@@ -165,4 +162,7 @@ def test_azure_openai_llm_with_chat_history_validation_error(mock_import: Mock) 
 
     with pytest.raises(LLMGenerationError) as exc_info:
         llm.invoke(question, chat_history)
-    assert "{'type': 'missing', 'loc': ('messages', 0, 'role'), 'msg': 'Field required'," in str(exc_info.value)
+    assert (
+        "{'type': 'missing', 'loc': ('messages', 0, 'role'), 'msg': 'Field required',"
+        in str(exc_info.value)
+    )

@@ -76,7 +76,6 @@ class VertexAILLM(LLMInterface):
             model_name=model_name, system_instruction=[system_instruction], **kwargs
         )
 
-
     def get_messages(self, input: str, chat_history: list[str]) -> list[Content]:
         messages = []
         if chat_history:
@@ -84,17 +83,27 @@ class VertexAILLM(LLMInterface):
                 MessageList(messages=chat_history)
             except ValidationError as e:
                 raise LLMGenerationError(e.errors()) from e
-            
+
             for message in chat_history:
                 if message.get("role") == "user":
-                    messages.append(Content(role="user", parts=[Part.from_text(message.get("content"))]))
+                    messages.append(
+                        Content(
+                            role="user", parts=[Part.from_text(message.get("content"))]
+                        )
+                    )
                 elif message.get("role") == "assistant":
-                    messages.append(Content(role="model", parts=[Part.from_text(message.get("content"))]))
+                    messages.append(
+                        Content(
+                            role="model", parts=[Part.from_text(message.get("content"))]
+                        )
+                    )
 
         messages.append(Content(role="user", parts=[Part.from_text(input)]))
         return messages
 
-    def invoke(self, input: str, chat_history: Optional[list[dict[str, str]]] = None) -> LLMResponse:
+    def invoke(
+        self, input: str, chat_history: Optional[list[dict[str, str]]] = None
+    ) -> LLMResponse:
         """Sends text to the LLM and returns a response.
 
         Args:

@@ -82,7 +82,9 @@ class AnthropicLLM(LLMInterface):
         messages.append(UserMessage(content=input).model_dump())
         return messages
 
-    def invoke(self, input: str, chat_history: Optional[list[dict[str, str]]] = None) -> LLMResponse:
+    def invoke(
+        self, input: str, chat_history: Optional[list[dict[str, str]]] = None
+    ) -> LLMResponse:
         """Sends text to the LLM and returns a response.
 
         Args:
@@ -95,9 +97,9 @@ class AnthropicLLM(LLMInterface):
         try:
             messages = self.get_messages(input, chat_history)
             response = self.client.messages.create(
-                model = self.model_name,
-                system = self.system_instruction,
-                messages = messages,
+                model=self.model_name,
+                system=self.system_instruction,
+                messages=messages,
                 **self.model_params,
             )
             return LLMResponse(content=response.content)
@@ -119,9 +121,9 @@ class AnthropicLLM(LLMInterface):
         try:
             messages = self.get_messages(input, chat_history)
             response = await self.async_client.messages.create(
-                model = self.model_name,
-                system = self.system_instruction,
-                messages = messages,
+                model=self.model_name,
+                system=self.system_instruction,
+                messages=messages,
                 **self.model_params,
             )
             return LLMResponse(content=response.content)

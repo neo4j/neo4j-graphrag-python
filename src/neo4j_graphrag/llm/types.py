@@ -14,6 +14,7 @@ class BaseMessage(BaseModel):
 class UserMessage(BaseMessage):
     role: Literal["user"] = "user"
 
+
 class SystemMessage(BaseMessage):
     role: Literal["system"] = "system"
 

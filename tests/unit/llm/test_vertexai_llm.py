@@ -59,18 +59,17 @@ def test_vertexai_get_messages(GenerativeModelMock: MagicMock) -> None:
             parts=[Part.from_text("When does the sun come up in the summer?")],
         ),
         Content(role="model", parts=[Part.from_text("Usually around 6am.")]),
-        Content(role="user", parts=[
-                Part.from_text("What about next season?")]),
+        Content(role="user", parts=[Part.from_text("What about next season?")]),
         Content(role="model", parts=[Part.from_text("Around 8am.")]),
         Content(role="user", parts=[Part.from_text("When does it set?")]),
     ]
 
-    llm = VertexAILLM(
-        model_name=model_name, system_instruction=system_instruction
-    )
+    llm = VertexAILLM(model_name=model_name, system_instruction=system_instruction)
     response = llm.get_messages(question, chat_history)
 
-    GenerativeModelMock.assert_called_once_with(model_name=model_name, system_instruction=[system_instruction])
+    GenerativeModelMock.assert_called_once_with(
+        model_name=model_name, system_instruction=[system_instruction]
+    )
     assert len(response) == len(expected_response)
     for actual, expected in zip(response, expected_response):
         assert actual.role == expected.role
@@ -86,9 +85,7 @@ def test_vertexai_get_messages_validation_error(GenerativeModelMock: MagicMock) 
         {"role": "model", "content": "hello!"},
     ]
 
-    llm = VertexAILLM(
-        model_name=model_name, system_instruction=system_instruction
-    )
+    llm = VertexAILLM(model_name=model_name, system_instruction=system_instruction)
     with pytest.raises(LLMGenerationError) as exc_info:
         llm.invoke(question, chat_history)
     assert "Input should be 'user' or 'assistant'" in str(exc_info.value)

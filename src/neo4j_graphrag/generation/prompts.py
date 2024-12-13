@@ -192,7 +192,7 @@ Input text:
         text: str = "",
     ) -> str:
         return super().format(text=text, schema=schema, examples=examples)
-    
+
 
 class ChatSummaryTemplate(PromptTemplate):
     DEFAULT_TEMPLATE = """
@@ -203,8 +203,11 @@ Summarize the chat history:
     EXPECTED_INPUTS = ["chat_history"]
 
     def format(self, chat_history: list[dict[str, str]]) -> str:
-        message_list = [': '.join([f"{value}" for _, value in message.items()]) for message in chat_history]
-        history = '\n'.join(message_list)
+        message_list = [
+            ": ".join([f"{value}" for _, value in message.items()])
+            for message in chat_history
+        ]
+        history = "\n".join(message_list)
         return super().format(chat_history=history)
 
 

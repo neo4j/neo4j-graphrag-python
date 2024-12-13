@@ -29,11 +29,11 @@ def test_cohere_llm_missing_dependency() -> None:
 
 @patch("neo4j_graphrag.llm.cohere_llm.cohere.AsyncClientV2")
 @patch("neo4j_graphrag.llm.cohere_llm.cohere.ClientV2")
-def test_cohere_llm_invoke_happy_path(mock_cohere: Mock, mock_async_cohere:Mock) -> None:
+def test_cohere_llm_invoke_happy_path(
+    mock_cohere: Mock, mock_async_cohere: Mock
+) -> None:
     chat_response_mock = MagicMock()
-    chat_response_mock.message.content = [
-        MagicMock(text="cohere response text")
-    ]
+    chat_response_mock.message.content = [MagicMock(text="cohere response text")]
     mock_cohere.return_value.chat.return_value = chat_response_mock
 
     llm = CohereLLM(model_name="something")
@@ -44,11 +44,11 @@ def test_cohere_llm_invoke_happy_path(mock_cohere: Mock, mock_async_cohere:Mock)
 
 @patch("neo4j_graphrag.llm.cohere_llm.cohere.AsyncClientV2")
 @patch("neo4j_graphrag.llm.cohere_llm.cohere.ClientV2")
-def test_cohere_llm_invoke_with_chat_history_happy_path(mock_cohere: Mock, mock_async_cohere:Mock) -> None:
+def test_cohere_llm_invoke_with_chat_history_happy_path(
+    mock_cohere: Mock, mock_async_cohere: Mock
+) -> None:
     chat_response_mock = MagicMock()
-    chat_response_mock.message.content = [
-        MagicMock(text="cohere response text")
-    ]
+    chat_response_mock.message.content = [MagicMock(text="cohere response text")]
     mock_cohere.return_value.chat.return_value = chat_response_mock
 
     system_instruction = "You are a helpful assistant."
@@ -58,7 +58,7 @@ def test_cohere_llm_invoke_with_chat_history_happy_path(mock_cohere: Mock, mock_
         {"role": "assistant", "content": "Usually around 6am."},
     ]
     question = "What about next season?"
-    
+
     res = llm.invoke(question, chat_history)
     assert isinstance(res, LLMResponse)
     assert res.content == "cohere response text"
@@ -73,11 +73,11 @@ def test_cohere_llm_invoke_with_chat_history_happy_path(mock_cohere: Mock, mock_
 
 @patch("neo4j_graphrag.llm.cohere_llm.cohere.AsyncClientV2")
 @patch("neo4j_graphrag.llm.cohere_llm.cohere.ClientV2")
-def test_cohere_llm_invoke_with_chat_history_validation_error(mock_cohere: Mock, mock_async_cohere:Mock) -> None:
+def test_cohere_llm_invoke_with_chat_history_validation_error(
+    mock_cohere: Mock, mock_async_cohere: Mock
+) -> None:
     chat_response_mock = MagicMock()
-    chat_response_mock.message.content = [
-        MagicMock(text="cohere response text")
-    ]
+    chat_response_mock.message.content = [MagicMock(text="cohere response text")]
     mock_cohere.return_value.chat.return_value = chat_response_mock
 
     system_instruction = "You are a helpful assistant."
@@ -96,11 +96,11 @@ def test_cohere_llm_invoke_with_chat_history_validation_error(mock_cohere: Mock,
 @pytest.mark.asyncio
 @patch("neo4j_graphrag.llm.cohere_llm.cohere.AsyncClientV2")
 @patch("neo4j_graphrag.llm.cohere_llm.cohere.ClientV2")
-async def test_cohere_llm_ainvoke_happy_path_async(mock_cohere: Mock, mock_async_cohere:Mock) -> None:
+async def test_cohere_llm_ainvoke_happy_path_async(
+    mock_cohere: Mock, mock_async_cohere: Mock
+) -> None:
     chat_response_mock = AsyncMock()
-    chat_response_mock.message.content = [
-        AsyncMock(text="cohere response text")
-    ]
+    chat_response_mock.message.content = [AsyncMock(text="cohere response text")]
     mock_async_cohere.return_value.chat.return_value = chat_response_mock
 
     llm = CohereLLM(model_name="something")
@@ -111,7 +111,7 @@ async def test_cohere_llm_ainvoke_happy_path_async(mock_cohere: Mock, mock_async
 
 @patch("neo4j_graphrag.llm.cohere_llm.cohere.AsyncClientV2")
 @patch("neo4j_graphrag.llm.cohere_llm.cohere.ClientV2")
-def test_cohere_llm_failed(mock_cohere: Mock, mock_async_cohere:Mock) -> None:
+def test_cohere_llm_failed(mock_cohere: Mock, mock_async_cohere: Mock) -> None:
     mock_cohere.return_value.chat.side_effect = cohere.core.ApiError
     llm = CohereLLM(model_name="something")
     with pytest.raises(LLMGenerationError) as excinfo:
@@ -122,7 +122,9 @@ def test_cohere_llm_failed(mock_cohere: Mock, mock_async_cohere:Mock) -> None:
 @pytest.mark.asyncio
 @patch("neo4j_graphrag.llm.cohere_llm.cohere.AsyncClientV2")
 @patch("neo4j_graphrag.llm.cohere_llm.cohere.ClientV2")
-async def test_cohere_llm_ainvoke_failed_async(mock_cohere: Mock, mock_async_cohere:Mock) -> None:
+async def test_cohere_llm_ainvoke_failed_async(
+    mock_cohere: Mock, mock_async_cohere: Mock
+) -> None:
     mock_async_cohere.return_value.chat.side_effect = cohere.core.ApiError
     llm = CohereLLM(model_name="something")
 

@@ -42,7 +42,9 @@ class LLMInterface(ABC):
         self.system_instruction = system_instruction
 
     @abstractmethod
-    def invoke(self, input: str, chat_history: Optional[list[dict[str, str]]] = None) -> LLMResponse:
+    def invoke(
+        self, input: str, chat_history: Optional[list[dict[str, str]]] = None
+    ) -> LLMResponse:
         """Sends a text input to the LLM and retrieves a response.
 
         Args:
