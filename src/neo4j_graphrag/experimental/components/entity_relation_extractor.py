@@ -38,6 +38,7 @@ from neo4j_graphrag.experimental.pipeline.component import Component
 from neo4j_graphrag.experimental.pipeline.exceptions import InvalidJSONError
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate, PromptTemplate
 from neo4j_graphrag.llm import LLMInterface
+from neo4j_graphrag.utils import prettyfier
 
 logger = logging.getLogger(__name__)
 
@@ -221,8 +222,9 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                 )
             else:
                 logger.error(
-                    f"LLM response is not valid JSON {llm_result.content} for chunk_index={chunk.index}"
+                    f"LLM response is not valid JSON for chunk_index={chunk.index}"
                 )
+                logger.debug(f"Invalid JSON: {llm_result.content}")
             result = {"nodes": [], "relationships": []}
         try:
             chunk_graph = Neo4jGraph(**result)
@@ -233,8 +235,9 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                 )
             else:
                 logger.error(
-                    f"LLM response has improper format {result} for chunk_index={chunk.index}"
+                    f"LLM response has improper format for chunk_index={chunk.index}"
                 )
+                logger.debug(f"Invalid JSON format: {result}")
             chunk_graph = Neo4jGraph()
         return chunk_graph
 
@@ -336,5 +339,5 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         ]
         chunk_graphs: list[Neo4jGraph] = list(await asyncio.gather(*tasks))
         graph = self.combine_chunk_graphs(lexical_graph, chunk_graphs)
-        logger.debug(f"{self.__class__.__name__}: {graph}")
+        logger.debug(f"Extracted graph: {prettyfier(graph)}")
         return graph
