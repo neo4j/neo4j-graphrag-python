@@ -18,11 +18,11 @@ Pipeline Structure
 
 A Knowledge Graph (KG) construction pipeline requires a few components (some of the below components are optional):
 
-- **Document parser**: extract text from files (PDFs, ...).
-- **Document chunker**: split the text into smaller pieces of text, manageable by the LLM context window (token limit).
+- **Data loader**: extract text from files (PDFs, ...).
+- **Text splitter**: split the text into smaller pieces of text (chunks), manageable by the LLM context window (token limit).
 - **Chunk embedder** (optional): compute the chunk embeddings.
 - **Schema builder**: provide a schema to ground the LLM extracted entities and relations and obtain an easily navigable KG.
-- **LexicalGraphBuilder**: build the lexical graph (Document, Chunk and their relationships) (optional).
+- **Lexical graph builder**: build the lexical graph (Document, Chunk and their relationships) (optional).
 - **Entity and relation extractor**: extract relevant entities and relations from the text.
 - **Knowledge Graph writer**: save the identified entities and relations.
 - **Entity resolver**: merge similar entities into a single node.
@@ -34,7 +34,486 @@ A Knowledge Graph (KG) construction pipeline requires a few components (some of 
 This package contains the interface and implementations for each of these components, which are detailed in the following sections.
 
 To see an end-to-end example of a Knowledge Graph construction pipeline,
-refer to the `example folder <https://github.com/neo4j/neo4j-graphrag-python/blob/main/examples/>`_ in the project GitHub repository.
+visit the `example folder <https://github.com/neo4j/neo4j-graphrag-python/blob/main/examples/>`_
+in the project's GitHub repository.
+
+
+******************
+Simple KG Pipeline
+******************
+
+The simplest way to begin building a KG from unstructured data using this package
+is utilizing the `SimpleKGPipeline` interface:
+
+.. code:: python
+
+    from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
+
+    kg_builder = SimpleKGPipeline(
+        llm=llm, # an LLMInterface for Entity and Relation extraction
+        driver=neo4j_driver,  # a neo4j driver to write results to graph
+        embedder=embedder,  # an Embedder for chunks
+        from_pdf=True,   # set to False if parsing an already extracted text
+    )
+    await kg_builder.run_async(file_path=str(file_path))
+    # await kg_builder.run_async(text="my text")  # if using from_pdf=False
+
+
+See:
+
+- :ref:`Using Another LLM Model` to learn how to instantiate the `llm`
+- :ref:`Embedders` to learn how to instantiate the `embedder`
+
+
+The following section outlines the configuration parameters for this class.
+
+Customizing the SimpleKGPipeline
+================================
+
+Graph Schema
+------------
+
+It is possible to guide the LLM by supplying a list of entities, relationships,
+and instructions on how to connect them. However, note that the extracted graph
+may not fully adhere to these guidelines. Entities and relationships can be
+represented as either simple strings (for their labels) or dictionaries. If using
+a dictionary, it must include a label key and can optionally include description
+and properties keys, as shown below:
+
+.. code:: python
+
+    ENTITIES = [
+        # entities can be defined with a simple label...
+        "Person",
+        # ... or with a dict if more details are needed,
+        # such as a description:
+        {"label": "House", "description": "Family the person belongs to"},
+        # or a list of properties the LLM will try to attach to the entity:
+        {"label": "Planet", "properties": [{"name": "weather", "type": "STRING"}]},
+    ]
+    # same thing for relationships:
+    RELATIONS = [
+        "PARENT_OF",
+        {
+            "label": "HEIR_OF",
+            "description": "Used for inheritor relationship between father and sons",
+        },
+        {"label": "RULES", "properties": [{"name": "fromYear", "type": "INTEGER"}]},
+    ]
+
+The `potential_schema` is defined by a list of triplet in the format:
+`(source_node_label, relationship_label, target_node_label)`. For instance:
+
+
+.. code:: python
+
+    POTENTIAL_SCHEMA = [
+        ("Person", "PARENT_OF", "Person"),
+        ("Person", "HEIR_OF", "House"),
+        ("House", "RULES", "Planet"),
+    ]
+
+This schema information can be provided to the `SimpleKGBuilder` as demonstrated below:
+
+.. code:: python
+
+    kg_builder = SimpleKGPipeline(
+        # ...
+        entities=ENTITIES,
+        relations=RELATIONS,
+        potential_schema=POTENTIAL_SCHEMA,
+        # ...
+    )
+
+Prompt Template, Lexical Graph Config and Error Behavior
+--------------------------------------------------------
+
+These parameters are part of the `EntityAndRelationExtractor` component.
+For detailed information, refer to the section on :ref:`Entity and Relation Extractor`.
+They are also accessible via the `SimpleKGPipeline` interface.
+
+.. code:: python
+
+    kg_builder = SimpleKGPipeline(
+        # ...
+        prompt_template="",
+        lexical_graph_config=my_config,
+        on_error="RAISE",
+        # ...
+    )
+
+Skip Entity Resolution
+----------------------
+
+By default, after each run, an Entity Resolution step is performed to merge nodes
+that share the same label and name property. To disable this behavior, adjust
+the following parameter:
+
+.. code:: python
+
+    kg_builder = SimpleKGPipeline(
+        # ...
+        perform_entity_resolution=False,
+        # ...
+    )
+
+Neo4j Database
+--------------
+
+To write to a non-default Neo4j database, specify the database name using this parameter:
+
+.. code:: python
+
+    kg_builder = SimpleKGPipeline(
+        # ...
+        neo4j_database="myDb",
+        # ...
+    )
+
+Using Custom Components
+-----------------------
+
+For advanced customization or when using a custom implementation, you can pass
+instances of specific components to the `SimpleKGPipeline`. The components that can
+customized at the moment are:
+
+- `text_splitter`: must be an instance of :ref:`TextSplitter`
+- `pdf_loader`: must be an instance of :ref:`PdfLoader`
+- `kg_writer`: must be an instance of :ref:`KGWriter`
+
+For instance, the following code can be used to customize the chunk size and
+chunk overlap in the text splitter component:
+
+.. code:: python
+
+    from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
+        FixedSizeSplitter,
+    )
+
+    text_splitter = FixedSizeSplitter(chunk_size=500, chunk_overlap=100)
+
+    kg_builder = SimpleKGPipeline(
+        # ...
+        text_splitter=text_splitter,
+        # ...
+    )
+
+
+Using a Config file
+===================
+
+.. code:: python
+
+    from neo4j_graphrag.experimental.pipeline.config.runner import PipelineRunner
+
+    file_path = "my_config.json"
+
+    pipeline = PipelineRunner.from_config_file(file_path)
+    await pipeline.run({"text": "my text"})
+
+
+The config file can be written in either JSON or YAML format.
+
+Here is an example of a base configuration file in JSON format:
+
+.. code:: json
+
+    {
+        "version_": 1,
+        "template_": "SimpleKGPipeline",
+        "neo4j_config": {},
+        "llm_config": {},
+        "embedder_config": {}
+    }
+
+And like this in YAML:
+
+.. code:: yaml
+
+    version_: 1
+    template_: SimpleKGPipeline
+    neo4j_config:
+    llm_config:
+    embedder_config:
+
+
+Defining a Neo4j Driver
+-----------------------
+
+Below is an example of configuring a Neo4j driver in a JSON configuration file:
+
+.. code:: json
+
+    {
+        "neo4j_config": {
+            "params_": {
+                "uri": "bolt://...",
+                "user": "neo4j",
+                "password": "password"
+            }
+        }
+    }
+
+Same for YAML:
+
+.. code:: yaml
+
+    neo4j_config:
+        params_:
+            uri: bolt://
+            user: neo4j
+            password: password
+
+In some cases, it may be necessary to avoid hard-coding sensitive values,
+such as passwords or API keys, to ensure security. To address this, the configuration
+parser supports parameter resolution methods.
+
+Parameter resolution
+--------------------
+
+To instruct the configuration parser to read a parameter from an environment variable,
+use the following syntax:
+
+.. code:: json
+
+    {
+        "neo4j_config": {
+            "params_": {
+                "uri": "bolt://...",
+                "user": "neo4j",
+                "password": {
+                    "resolver_": "ENV",
+                    "var_": "NEO4J_PASSWORD"
+                }
+            }
+        }
+    }
+
+And for YAML:
+
+.. code:: yaml
+
+    neo4j_config:
+      params_:
+        uri: bolt://
+        user: neo4j
+        password:
+          resolver_: ENV
+          var_: NEO4J_PASSWORD
+
+- The `resolver_=ENV` key is mandatory and its value cannot be altered.
+- The `var_` key specifies the name of the environment variable to be read.
+
+This syntax can be applied to all parameters.
+
+
+Defining an LLM
+----------------
+
+Below is an example of configuring an LLM in a JSON configuration file:
+
+.. code:: json
+
+    {
+        "llm_config": {
+            "class_": "OpenAILLM",
+            "params_": {
+                "mode_name": "gpt-4o",
+                "api_key": {
+                    "resolver_": "ENV",
+                    "var_": "OPENAI_API_KEY",
+                },
+                "model_params": {
+                    "temperature": 0,
+                    "max_tokens": 2000,
+                    "response_format": {"type": "json_object"}
+                }
+            }
+        }
+    }
+
+And the equivalent YAML:
+
+.. code:: yaml
+
+    llm_config:
+      class_: OpenAILLM
+      params_:
+        model_name: gpt-4o
+        api_key:
+          resolver_: ENV
+          var_: OPENAI_API_KEY
+        model_params:
+          temperature: 0
+          max_tokens: 2000
+          response_format:
+            type: json_object
+
+- The `class_` key specifies the path to the class to be instantiated.
+- The `params_` key contains the parameters to be passed to the class constructor.
+
+When using an LLM implementation provided by this package, the full path in the `class_` key
+can be omitted (the parser will automatically import from `neo4j_graphrag.llm`).
+For custom implementations, the full path must be explicitly specified,
+for example: `my_package.my_llm.MyLLM`.
+
+Defining an Embedder
+--------------------
+
+The same principles apply to `embedder_config`:
+
+.. code:: json
+
+    {
+        "embedder_config": {
+            "class_": "OpenAIEmbeddings",
+            "params_": {
+                "mode": "text-embedding-ada-002",
+                "api_key": {
+                    "resolver_": "ENV",
+                    "var_": "OPENAI_API_KEY",
+                }
+            }
+        }
+    }
+
+Or the YAML version:
+
+.. code:: yaml
+
+    embedder_config:
+      class_: OpenAIEmbeddings
+      params_:
+        api_key:
+          resolver_: ENV
+          var_: OPENAI_API_KEY
+
+- For embedder implementations from this package, the full path can be omitted in the `class_` key (the parser will import from `neo4j_graphrag.embeddings`).
+- For custom implementations, the full path must be provided, for example: `my_package.my_embedding.MyEmbedding`.
+
+
+Other configuration
+-------------------
+
+The other parameters exposed in the :ref:`SimpleKGPipeline` can also be configured
+within the configuration file.
+
+.. code:: json
+
+    {
+        "from_pdf": false,
+        "perform_entity_resolution": true,
+        "neo4j_database": "myDb",
+        "on_error": "IGNORE",
+        "prompt_template": "...",
+        "entities": [
+            "Person",
+            {
+                "label": "House",
+                "description": "Family the person belongs to",
+                "properties": [
+                    {"name": "name", "type": "STRING"}
+                ]
+            },
+            {
+                "label": "Planet",
+                "properties": [
+                    {"name": "name", "type": "STRING"},
+                    {"name": "weather", "type": "STRING"}
+                ]
+            }
+        ],
+        "relations": [
+            "PARENT_OF",
+            {
+                "label": "HEIR_OF",
+                "description": "Used for inheritor relationship between father and sons"
+            },
+            {
+                "label": "RULES",
+                "properties": [
+                    {"name": "fromYear", "type": "INTEGER"}
+                ]
+            }
+        ],
+        "potential_schema": [
+            ["Person", "PARENT_OF", "Person"],
+            ["Person", "HEIR_OF", "House"],
+            ["House", "RULES", "Planet"]
+        ],
+        "lexical_graph_config": {
+            "chunk_node_label": "TextPart"
+        }
+    }
+
+
+or in YAML:
+
+.. code:: yaml
+
+    from_pdf: false
+    perform_entity_resolution: true
+    neo4j_database: myDb
+    on_error: IGNORE
+    prompt_template: ...
+    entities:
+      - label: Person
+      - label: House
+        description: Family the person belongs to
+        properties:
+          - name: name
+            type: STRING
+      - label: Planet
+        properties:
+          - name: name
+            type: STRING
+          - name: weather
+            type: STRING
+    relations:
+      - label: PARENT_OF
+      - label: HEIR_OF
+        description: Used for inheritor relationship between father and sons
+      - label: RULES
+        properties:
+          - name: fromYear
+            type: INTEGER
+    potential_schema:
+      - ["Person", "PARENT_OF", "Person"]
+      - ["Person", "HEIR_OF", "House"]
+      - ["House", "RULES", "Planet"]
+    lexical_graph_config:
+        chunk_node_label: TextPart
+
+
+It is also possible to further customize components, with a syntax similar to the one
+used for `llm_config` or `embedder_config`:
+
+.. code:: json
+
+    {
+        "text_splitter": {
+            "class_": "text_splitters.FixedSizeSplitter",
+            "params_": {
+                "chunk_size": 500,
+                "chunk_overlap": 100
+            }
+        }
+
+    }
+
+The YAML equivalent:
+
+.. code:: yaml
+
+    text_splitter:
+      class_: text_splitters.fixed_size_splitter.FixedSizeSplitter
+      params_:
+        chunk_size: 100
+        chunk_overlap: 10
+
+The `neo4j_graphrag.experimental.components` prefix will be appended automatically
+if needed.
+
 
 **********************************
 Knowledge Graph Builder Components
@@ -63,10 +542,10 @@ They can also be used within a pipeline:
     pipeline.add_component(my_component, "component_name")
 
 
-Document Parser
-===============
+Data Loader
+============
 
-Document parsers start from a file path and return the text extracted from this file.
+Data loaders start from a file path and return the text extracted from this file.
 
 This package currently supports text extraction from PDFs:
 
@@ -92,8 +571,8 @@ To implement your own loader, use the `DataLoader` interface:
 
 
 
-Document Splitter
-=================
+Text Splitter
+==============
 
 Document splitters, as the name indicate, split documents into smaller chunks
 that can be processed within the LLM token limits:

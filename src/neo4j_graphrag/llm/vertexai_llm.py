@@ -68,8 +68,8 @@ class VertexAILLM(LLMInterface):
     ):
         if GenerativeModel is None or ResponseValidationError is None:
             raise ImportError(
-                "Could not import Vertex AI Python client. "
-                "Please install it with `pip install google-cloud-aiplatform`."
+                """Could not import Vertex AI Python client.
+                Please install it with `pip install "neo4j-graphrag[google]"`."""
             )
         super().__init__(model_name, model_params)
         self.model = GenerativeModel(

@@ -22,13 +22,11 @@ Person {name: STRING, born: INTEGER}
 Movie {tagline: STRING, title: STRING, released: INTEGER}
 Relationship properties:
 ACTED_IN {roles: LIST}
+DIRECTED {}
 REVIEWED {summary: STRING, rating: INTEGER}
 The relationships:
 (:Person)-[:ACTED_IN]->(:Movie)
 (:Person)-[:DIRECTED]->(:Movie)
-(:Person)-[:PRODUCED]->(:Movie)
-(:Person)-[:WROTE]->(:Movie)
-(:Person)-[:FOLLOWS]->(:Person)
 (:Person)-[:REVIEWED]->(:Movie)
 """
 
