@@ -24,6 +24,7 @@ from neo4j_graphrag.llm.types import (
     MessageList,
     SystemMessage,
     UserMessage,
+    BaseMessage,
 )
 
 if TYPE_CHECKING:
@@ -74,7 +75,7 @@ class CohereLLM(LLMInterface):
         self.async_client = cohere.AsyncClientV2(**kwargs)
 
     def get_messages(
-        self, input: str, message_history: Optional[list[Any]] = None
+        self, input: str, message_history: Optional[list[BaseMessage]] = None
     ) -> ChatMessages:
         messages = []
         if self.system_instruction:
@@ -89,7 +90,7 @@ class CohereLLM(LLMInterface):
         return messages
 
     def invoke(
-        self, input: str, message_history: Optional[list[Any]] = None
+        self, input: str, message_history: Optional[list[BaseMessage]] = None
     ) -> LLMResponse:
         """Sends text to the LLM and returns a response.
 
@@ -113,7 +114,7 @@ class CohereLLM(LLMInterface):
         )
 
     async def ainvoke(
-        self, input: str, message_history: Optional[list[Any]] = None
+        self, input: str, message_history: Optional[list[BaseMessage]] = None
     ) -> LLMResponse:
         """Asynchronously sends text to the LLM and returns a response.
 

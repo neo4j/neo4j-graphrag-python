@@ -19,7 +19,7 @@ from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface
-from neo4j_graphrag.llm.types import LLMResponse, MessageList
+from neo4j_graphrag.llm.types import LLMResponse, MessageList, BaseMessage
 
 try:
     from vertexai.generative_models import (
@@ -77,7 +77,7 @@ class VertexAILLM(LLMInterface):
         self.model_params = kwargs
 
     def get_messages(
-        self, input: str, message_history: Optional[list[Any]] = None
+        self, input: str, message_history: Optional[list[BaseMessage]] = None
     ) -> list[Content]:
         messages = []
         if message_history:
@@ -87,16 +87,16 @@ class VertexAILLM(LLMInterface):
                 raise LLMGenerationError(e.errors()) from e
 
             for message in message_history:
-                if message.get("role") == "user":
+                if message.role == "user":
                     messages.append(
                         Content(
-                            role="user", parts=[Part.from_text(message.get("content"))]
+                            role="user", parts=[Part.from_text(message.content)]
                         )
                     )
-                elif message.get("role") == "assistant":
+                elif message.role == "assistant":
                     messages.append(
                         Content(
-                            role="model", parts=[Part.from_text(message.get("content"))]
+                            role="model", parts=[Part.from_text(message.content)]
                         )
                     )
 
@@ -106,7 +106,7 @@ class VertexAILLM(LLMInterface):
     def invoke(
         self,
         input: str,
-        message_history: Optional[list[Any]] = None,
+        message_history: Optional[list[BaseMessage]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Sends text to the LLM and returns a response.
@@ -137,7 +137,7 @@ class VertexAILLM(LLMInterface):
             raise LLMGenerationError(e)
 
     async def ainvoke(
-        self, input: str, message_history: Optional[list[Any]] = None
+        self, input: str, message_history: Optional[list[BaseMessage]] = None
     ) -> LLMResponse:
         """Asynchronously sends text to the LLM and returns a response.
 

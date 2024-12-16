@@ -21,7 +21,7 @@ from pydantic import ValidationError
 
 from ..exceptions import LLMGenerationError
 from .base import LLMInterface
-from .types import LLMResponse, SystemMessage, UserMessage, MessageList
+from .types import LLMResponse, SystemMessage, UserMessage, MessageList, BaseMessage
 
 if TYPE_CHECKING:
     import openai
@@ -63,7 +63,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
     def get_messages(
         self,
         input: str,
-        message_history: Optional[list[Any]] = None,
+        message_history: Optional[list[BaseMessage]] = None,
         system_instruction: Optional[str] = None,
     ) -> Iterable[ChatCompletionMessageParam]:
         messages = []
@@ -86,7 +86,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
     def invoke(
         self,
         input: str,
-        message_history: Optional[list[Any]] = None,
+        message_history: Optional[list[BaseMessage]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Sends a text input to the OpenAI chat completion model
@@ -115,7 +115,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
             raise LLMGenerationError(e)
 
     async def ainvoke(
-        self, input: str, message_history: Optional[list[Any]] = None
+        self, input: str, message_history: Optional[list[BaseMessage]] = None
     ) -> LLMResponse:
         """Asynchronously sends a text input to the OpenAI chat
         completion model and returns the response's content.

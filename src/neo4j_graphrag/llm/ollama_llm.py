@@ -19,7 +19,7 @@ from pydantic import ValidationError
 from neo4j_graphrag.exceptions import LLMGenerationError
 
 from .base import LLMInterface
-from .types import LLMResponse, SystemMessage, UserMessage, MessageList
+from .types import LLMResponse, SystemMessage, UserMessage, MessageList, BaseMessage
 
 if TYPE_CHECKING:
     from ollama import Message
@@ -50,7 +50,7 @@ class OllamaLLM(LLMInterface):
         )
 
     def get_messages(
-        self, input: str, message_history: Optional[list[Any]] = None
+        self, input: str, message_history: Optional[list[BaseMessage]] = None
     ) -> Sequence[Message]:
         messages = []
         if self.system_instruction:
@@ -65,7 +65,7 @@ class OllamaLLM(LLMInterface):
         return messages
 
     def invoke(
-        self, input: str, message_history: Optional[list[Any]] = None
+        self, input: str, message_history: Optional[list[BaseMessage]] = None
     ) -> LLMResponse:
         try:
             response = self.client.chat(
@@ -79,7 +79,7 @@ class OllamaLLM(LLMInterface):
             raise LLMGenerationError(e)
 
     async def ainvoke(
-        self, input: str, message_history: Optional[list[Any]] = None
+        self, input: str, message_history: Optional[list[BaseMessage]] = None
     ) -> LLMResponse:
         try:
             response = await self.async_client.chat(

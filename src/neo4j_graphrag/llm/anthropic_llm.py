@@ -19,7 +19,7 @@ from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface
-from neo4j_graphrag.llm.types import LLMResponse, MessageList, UserMessage
+from neo4j_graphrag.llm.types import LLMResponse, MessageList, UserMessage, BaseMessage
 
 if TYPE_CHECKING:
     from anthropic.types.message_param import MessageParam
@@ -71,7 +71,7 @@ class AnthropicLLM(LLMInterface):
         self.async_client = anthropic.AsyncAnthropic(**kwargs)
 
     def get_messages(
-        self, input: str, message_history: Optional[list[Any]] = None
+        self, input: str, message_history: Optional[list[BaseMessage]] = None
     ) -> Iterable[MessageParam]:
         messages = []
         if message_history:
@@ -84,7 +84,7 @@ class AnthropicLLM(LLMInterface):
         return messages
 
     def invoke(
-        self, input: str, message_history: Optional[list[Any]] = None
+        self, input: str, message_history: Optional[list[BaseMessage]] = None
     ) -> LLMResponse:
         """Sends text to the LLM and returns a response.
 
@@ -108,7 +108,7 @@ class AnthropicLLM(LLMInterface):
             raise LLMGenerationError(e)
 
     async def ainvoke(
-        self, input: str, message_history: Optional[list[Any]] = None
+        self, input: str, message_history: Optional[list[BaseMessage]] = None
     ) -> LLMResponse:
         """Asynchronously sends text to the LLM and returns a response.
 

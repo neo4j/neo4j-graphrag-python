@@ -25,6 +25,7 @@ from neo4j_graphrag.llm.types import (
     MessageList,
     SystemMessage,
     UserMessage,
+    BaseMessage,
 )
 
 try:
@@ -65,7 +66,7 @@ class MistralAILLM(LLMInterface):
         self.client = Mistral(api_key=api_key, **kwargs)
 
     def get_messages(
-        self, input: str, message_history: Optional[list[Any]] = None
+        self, input: str, message_history: Optional[list[BaseMessage]] = None
     ) -> list[Messages]:
         messages = []
         if self.system_instruction:
@@ -80,7 +81,7 @@ class MistralAILLM(LLMInterface):
         return messages
 
     def invoke(
-        self, input: str, message_history: Optional[list[Any]] = None
+        self, input: str, message_history: Optional[list[BaseMessage]] = None
     ) -> LLMResponse:
         """Sends a text input to the Mistral chat completion model
         and returns the response's content.
@@ -112,7 +113,7 @@ class MistralAILLM(LLMInterface):
             raise LLMGenerationError(e)
 
     async def ainvoke(
-        self, input: str, message_history: Optional[list[Any]] = None
+        self, input: str, message_history: Optional[list[BaseMessage]] = None
     ) -> LLMResponse:
         """Asynchronously sends a text input to the MistralAI chat
         completion model and returns the response's content.
