@@ -64,7 +64,7 @@ def test_ollama_llm_happy_path(mock_import: Mock) -> None:
 
 
 @patch("builtins.__import__")
-def test_ollama_invoke_with_chat_history_happy_path(mock_import: Mock) -> None:
+def test_ollama_invoke_with_message_history_happy_path(mock_import: Mock) -> None:
     mock_ollama = get_mock_ollama()
     mock_import.return_value = mock_ollama
     mock_ollama.Client.return_value.chat.return_value = MagicMock(
@@ -78,16 +78,16 @@ def test_ollama_invoke_with_chat_history_happy_path(mock_import: Mock) -> None:
         model_params=model_params,
         system_instruction=system_instruction,
     )
-    chat_history = [
+    message_history = [
         {"role": "user", "content": "When does the sun come up in the summer?"},
         {"role": "assistant", "content": "Usually around 6am."},
     ]
     question = "What about next season?"
 
-    response = llm.invoke(question, chat_history)
+    response = llm.invoke(question, message_history)
     assert response.content == "ollama chat response"
     messages = [{"role": "system", "content": system_instruction}]
-    messages.extend(chat_history)
+    messages.extend(message_history)
     messages.append({"role": "user", "content": question})
     llm.client.chat.assert_called_once_with(
         model=model, messages=messages, options=model_params
@@ -95,7 +95,7 @@ def test_ollama_invoke_with_chat_history_happy_path(mock_import: Mock) -> None:
 
 
 @patch("builtins.__import__")
-def test_ollama_invoke_with_chat_history_validation_error(mock_import: Mock) -> None:
+def test_ollama_invoke_with_message_history_validation_error(mock_import: Mock) -> None:
     mock_ollama = get_mock_ollama()
     mock_import.return_value = mock_ollama
     mock_ollama.ResponseError = ollama.ResponseError
@@ -107,14 +107,14 @@ def test_ollama_invoke_with_chat_history_validation_error(mock_import: Mock) -> 
         model_params=model_params,
         system_instruction=system_instruction,
     )
-    chat_history = [
+    message_history = [
         {"role": "human", "content": "When does the sun come up in the summer?"},
         {"role": "assistant", "content": "Usually around 6am."},
     ]
     question = "What about next season?"
 
     with pytest.raises(LLMGenerationError) as exc_info:
-        llm.invoke(question, chat_history)
+        llm.invoke(question, message_history)
     assert "Input should be 'user', 'assistant' or 'system" in str(exc_info.value)
 
 

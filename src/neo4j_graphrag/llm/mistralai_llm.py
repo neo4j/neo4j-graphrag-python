@@ -65,29 +65,29 @@ class MistralAILLM(LLMInterface):
         self.client = Mistral(api_key=api_key, **kwargs)
 
     def get_messages(
-        self, input: str, chat_history: Optional[list[Any]] = None
+        self, input: str, message_history: Optional[list[Any]] = None
     ) -> list[Messages]:
         messages = []
         if self.system_instruction:
             messages.append(SystemMessage(content=self.system_instruction).model_dump())
-        if chat_history:
+        if message_history:
             try:
-                MessageList(messages=chat_history)
+                MessageList(messages=message_history)
             except ValidationError as e:
                 raise LLMGenerationError(e.errors()) from e
-            messages.extend(chat_history)
+            messages.extend(message_history)
         messages.append(UserMessage(content=input).model_dump())
         return messages
 
     def invoke(
-        self, input: str, chat_history: Optional[list[Any]] = None
+        self, input: str, message_history: Optional[list[Any]] = None
     ) -> LLMResponse:
         """Sends a text input to the Mistral chat completion model
         and returns the response's content.
 
         Args:
             input (str): Text sent to the LLM.
-            chat_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
 
         Returns:
             LLMResponse: The response from MistralAI.
@@ -96,7 +96,7 @@ class MistralAILLM(LLMInterface):
             LLMGenerationError: If anything goes wrong.
         """
         try:
-            messages = self.get_messages(input, chat_history)
+            messages = self.get_messages(input, message_history)
             response = self.client.chat.complete(
                 model=self.model_name,
                 messages=messages,
@@ -112,14 +112,14 @@ class MistralAILLM(LLMInterface):
             raise LLMGenerationError(e)
 
     async def ainvoke(
-        self, input: str, chat_history: Optional[list[Any]] = None
+        self, input: str, message_history: Optional[list[Any]] = None
     ) -> LLMResponse:
         """Asynchronously sends a text input to the MistralAI chat
         completion model and returns the response's content.
 
         Args:
             input (str): Text sent to the LLM.
-            chat_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
 
         Returns:
             LLMResponse: The response from MistralAI.
@@ -128,7 +128,7 @@ class MistralAILLM(LLMInterface):
             LLMGenerationError: If anything goes wrong.
         """
         try:
-            messages = self.get_messages(input, chat_history)
+            messages = self.get_messages(input, message_history)
             response = await self.client.chat.complete_async(
                 model=self.model_name,
                 messages=messages,

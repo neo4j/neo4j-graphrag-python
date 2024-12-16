@@ -77,16 +77,16 @@ class VertexAILLM(LLMInterface):
         self.model_params = kwargs
 
     def get_messages(
-        self, input: str, chat_history: Optional[list[Any]] = None
+        self, input: str, message_history: Optional[list[Any]] = None
     ) -> list[Content]:
         messages = []
-        if chat_history:
+        if message_history:
             try:
-                MessageList(messages=chat_history)
+                MessageList(messages=message_history)
             except ValidationError as e:
                 raise LLMGenerationError(e.errors()) from e
 
-            for message in chat_history:
+            for message in message_history:
                 if message.get("role") == "user":
                     messages.append(
                         Content(
@@ -106,14 +106,14 @@ class VertexAILLM(LLMInterface):
     def invoke(
         self,
         input: str,
-        chat_history: Optional[list[Any]] = None,
+        message_history: Optional[list[Any]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Sends text to the LLM and returns a response.
 
         Args:
             input (str): The text to send to the LLM.
-            chat_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
             system_instruction (Optional[str]): An option to override the llm system message for this invokation.
 
         Returns:
@@ -130,26 +130,26 @@ class VertexAILLM(LLMInterface):
             **self.model_params,
         )
         try:
-            messages = self.get_messages(input, chat_history)
+            messages = self.get_messages(input, message_history)
             response = self.model.generate_content(messages, **self.model_params)
             return LLMResponse(content=response.text)
         except ResponseValidationError as e:
             raise LLMGenerationError(e)
 
     async def ainvoke(
-        self, input: str, chat_history: Optional[list[Any]] = None
+        self, input: str, message_history: Optional[list[Any]] = None
     ) -> LLMResponse:
         """Asynchronously sends text to the LLM and returns a response.
 
         Args:
             input (str): The text to send to the LLM.
-            chat_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
 
         Returns:
             LLMResponse: The response from the LLM.
         """
         try:
-            messages = self.get_messages(input, chat_history)
+            messages = self.get_messages(input, message_history)
             response = await self.model.generate_content_async(
                 messages, **self.model_params
             )

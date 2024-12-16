@@ -47,24 +47,24 @@ def test_cohere_llm_happy_path(mock_cohere: Mock) -> None:
     assert res.content == "cohere response text"
 
 
-def test_cohere_llm_invoke_with_chat_history_happy_path(mock_cohere: Mock) -> None:
+def test_cohere_llm_invoke_with_message_history_happy_path(mock_cohere: Mock) -> None:
     chat_response_mock = MagicMock()
     chat_response_mock.message.content = [MagicMock(text="cohere response text")]
     mock_cohere.ClientV2.return_value.chat.return_value = chat_response_mock
 
     system_instruction = "You are a helpful assistant."
     llm = CohereLLM(model_name="something", system_instruction=system_instruction)
-    chat_history = [
+    message_history = [
         {"role": "user", "content": "When does the sun come up in the summer?"},
         {"role": "assistant", "content": "Usually around 6am."},
     ]
     question = "What about next season?"
 
-    res = llm.invoke(question, chat_history)
+    res = llm.invoke(question, message_history)
     assert isinstance(res, LLMResponse)
     assert res.content == "cohere response text"
     messages = [{"role": "system", "content": system_instruction}]
-    messages.extend(chat_history)
+    messages.extend(message_history)
     messages.append({"role": "user", "content": question})
     llm.client.chat.assert_called_once_with(
         messages=messages,
@@ -72,7 +72,7 @@ def test_cohere_llm_invoke_with_chat_history_happy_path(mock_cohere: Mock) -> No
     )
 
 
-def test_cohere_llm_invoke_with_chat_history_validation_error(
+def test_cohere_llm_invoke_with_message_history_validation_error(
     mock_cohere: Mock,
 ) -> None:
     chat_response_mock = MagicMock()
@@ -81,14 +81,14 @@ def test_cohere_llm_invoke_with_chat_history_validation_error(
 
     system_instruction = "You are a helpful assistant."
     llm = CohereLLM(model_name="something", system_instruction=system_instruction)
-    chat_history = [
+    message_history = [
         {"role": "robot", "content": "When does the sun come up in the summer?"},
         {"role": "assistant", "content": "Usually around 6am."},
     ]
     question = "What about next season?"
 
     with pytest.raises(LLMGenerationError) as exc_info:
-        llm.invoke(question, chat_history)
+        llm.invoke(question, message_history)
     assert "Input should be 'user' or 'assistant'" in str(exc_info.value)
 
 

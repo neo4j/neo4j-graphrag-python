@@ -200,25 +200,25 @@ Input text:
 
 class ChatSummaryTemplate(PromptTemplate):
     DEFAULT_TEMPLATE = """
-Summarize the chat history:
+Summarize the message history:
 
-{chat_history}
+{message_history}
 """
-    EXPECTED_INPUTS = ["chat_history"]
+    EXPECTED_INPUTS = ["message_history"]
     SYSTEM_MESSAGE = "You are a summarization assistant. Summarize the given text in no more than 200 words"
 
-    def format(self, chat_history: list[dict[str, str]]) -> str:
+    def format(self, message_history: list[dict[str, str]]) -> str:
         message_list = [
             ": ".join([f"{value}" for _, value in message.items()])
-            for message in chat_history
+            for message in message_history
         ]
         history = "\n".join(message_list)
-        return super().format(chat_history=history)
+        return super().format(message_history=history)
 
 
 class ConversationTemplate(PromptTemplate):
     DEFAULT_TEMPLATE = """
-Chat Summary: 
+Message Summary: 
 {summary}
 
 Current Query: 

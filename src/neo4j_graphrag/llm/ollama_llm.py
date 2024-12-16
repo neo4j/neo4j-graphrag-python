@@ -50,27 +50,27 @@ class OllamaLLM(LLMInterface):
         )
 
     def get_messages(
-        self, input: str, chat_history: Optional[list[Any]] = None
+        self, input: str, message_history: Optional[list[Any]] = None
     ) -> Sequence[Message]:
         messages = []
         if self.system_instruction:
             messages.append(SystemMessage(content=self.system_instruction).model_dump())
-        if chat_history:
+        if message_history:
             try:
-                MessageList(messages=chat_history)
+                MessageList(messages=message_history)
             except ValidationError as e:
                 raise LLMGenerationError(e.errors()) from e
-            messages.extend(chat_history)
+            messages.extend(message_history)
         messages.append(UserMessage(content=input).model_dump())
         return messages
 
     def invoke(
-        self, input: str, chat_history: Optional[list[Any]] = None
+        self, input: str, message_history: Optional[list[Any]] = None
     ) -> LLMResponse:
         try:
             response = self.client.chat(
                 model=self.model_name,
-                messages=self.get_messages(input, chat_history),
+                messages=self.get_messages(input, message_history),
                 options=self.model_params,
             )
             content = response.message.content or ""
@@ -79,12 +79,12 @@ class OllamaLLM(LLMInterface):
             raise LLMGenerationError(e)
 
     async def ainvoke(
-        self, input: str, chat_history: Optional[list[Any]] = None
+        self, input: str, message_history: Optional[list[Any]] = None
     ) -> LLMResponse:
         try:
             response = await self.async_client.chat(
                 model=self.model_name,
-                messages=self.get_messages(input, chat_history),
+                messages=self.get_messages(input, message_history),
                 options=self.model_params,
             )
             content = response.message.content or ""

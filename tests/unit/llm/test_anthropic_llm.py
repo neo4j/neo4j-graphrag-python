@@ -56,7 +56,7 @@ def test_anthropic_invoke_happy_path(mock_anthropic: Mock) -> None:
     )
 
 
-def test_anthropic_invoke_with_chat_history_happy_path(mock_anthropic: Mock) -> None:
+def test_anthropic_invoke_with_message_history_happy_path(mock_anthropic: Mock) -> None:
     mock_anthropic.Anthropic.return_value.messages.create.return_value = MagicMock(
         content="generated text"
     )
@@ -67,24 +67,24 @@ def test_anthropic_invoke_with_chat_history_happy_path(mock_anthropic: Mock) -> 
         model_params=model_params,
         system_instruction=system_instruction,
     )
-    chat_history = [
+    message_history = [
         {"role": "user", "content": "When does the sun come up in the summer?"},
         {"role": "assistant", "content": "Usually around 6am."},
     ]
     question = "What about next season?"
 
-    response = llm.invoke(question, chat_history)
+    response = llm.invoke(question, message_history)
     assert response.content == "generated text"
-    chat_history.append({"role": "user", "content": question})
+    message_history.append({"role": "user", "content": question})
     llm.client.messages.create.assert_called_once_with(
-        messages=chat_history,
+        messages=message_history,
         model="claude-3-opus-20240229",
         system=system_instruction,
         **model_params,
     )
 
 
-def test_anthropic_invoke_with_chat_history_validation_error(
+def test_anthropic_invoke_with_message_history_validation_error(
     mock_anthropic: Mock,
 ) -> None:
     mock_anthropic.Anthropic.return_value.messages.create.return_value = MagicMock(
@@ -97,14 +97,14 @@ def test_anthropic_invoke_with_chat_history_validation_error(
         model_params=model_params,
         system_instruction=system_instruction,
     )
-    chat_history = [
+    message_history = [
         {"role": "human", "content": "When does the sun come up in the summer?"},
         {"role": "assistant", "content": "Usually around 6am."},
     ]
     question = "What about next season?"
 
     with pytest.raises(LLMGenerationError) as exc_info:
-        llm.invoke(question, chat_history)
+        llm.invoke(question, message_history)
     assert "Input should be 'user' or 'assistant'" in str(exc_info.value)
 
 

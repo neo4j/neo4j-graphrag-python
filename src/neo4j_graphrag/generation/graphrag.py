@@ -87,7 +87,7 @@ class GraphRAG:
     def search(
         self,
         query_text: str = "",
-        chat_history: Optional[list[dict[str, str]]] = None,
+        message_history: Optional[list[dict[str, str]]] = None,
         examples: str = "",
         retriever_config: Optional[dict[str, Any]] = None,
         return_context: bool | None = None,
@@ -105,7 +105,7 @@ class GraphRAG:
 
         Args:
             query_text (str): The user question.
-            chat_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
             examples (str): Examples added to the LLM prompt.
             retriever_config (Optional[dict]): Parameters passed to the retriever.
                 search method; e.g.: top_k
@@ -130,7 +130,7 @@ class GraphRAG:
             )
         except ValidationError as e:
             raise SearchValidationError(e.errors())
-        query = self.build_query(validated_data.query_text, chat_history)
+        query = self.build_query(validated_data.query_text, message_history)
         retriever_result: RetrieverResult = self.retriever.search(
             query_text=query, **validated_data.retriever_config
         )
@@ -140,18 +140,18 @@ class GraphRAG:
         )
         logger.debug(f"RAG: retriever_result={retriever_result}")
         logger.debug(f"RAG: prompt={prompt}")
-        answer = self.llm.invoke(prompt, chat_history)
+        answer = self.llm.invoke(prompt, message_history)
         result: dict[str, Any] = {"answer": answer.content}
         if return_context:
             result["retriever_result"] = retriever_result
         return RagResultModel(**result)
 
     def build_query(
-        self, query_text: str, chat_history: Optional[list[dict[str, str]]] = None
+        self, query_text: str, message_history: Optional[list[dict[str, str]]] = None
     ) -> str:
-        if chat_history:
+        if message_history:
             summarization_prompt = ChatSummaryTemplate().format(
-                chat_history=chat_history
+                message_history=message_history
             )
             summary = self.llm.invoke(
                 input=summarization_prompt,

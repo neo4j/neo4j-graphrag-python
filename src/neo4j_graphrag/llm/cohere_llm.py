@@ -74,34 +74,34 @@ class CohereLLM(LLMInterface):
         self.async_client = cohere.AsyncClientV2(**kwargs)
 
     def get_messages(
-        self, input: str, chat_history: Optional[list[Any]] = None
+        self, input: str, message_history: Optional[list[Any]] = None
     ) -> ChatMessages:
         messages = []
         if self.system_instruction:
             messages.append(SystemMessage(content=self.system_instruction).model_dump())
-        if chat_history:
+        if message_history:
             try:
-                MessageList(messages=chat_history)
+                MessageList(messages=message_history)
             except ValidationError as e:
                 raise LLMGenerationError(e.errors()) from e
-            messages.extend(chat_history)
+            messages.extend(message_history)
         messages.append(UserMessage(content=input).model_dump())
         return messages
 
     def invoke(
-        self, input: str, chat_history: Optional[list[Any]] = None
+        self, input: str, message_history: Optional[list[Any]] = None
     ) -> LLMResponse:
         """Sends text to the LLM and returns a response.
 
         Args:
             input (str): The text to send to the LLM.
-            chat_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
 
         Returns:
             LLMResponse: The response from the LLM.
         """
         try:
-            messages = self.get_messages(input, chat_history)
+            messages = self.get_messages(input, message_history)
             res = self.client.chat(
                 messages=messages,
                 model=self.model_name,
@@ -113,19 +113,19 @@ class CohereLLM(LLMInterface):
         )
 
     async def ainvoke(
-        self, input: str, chat_history: Optional[list[Any]] = None
+        self, input: str, message_history: Optional[list[Any]] = None
     ) -> LLMResponse:
         """Asynchronously sends text to the LLM and returns a response.
 
         Args:
             input (str): The text to send to the LLM.
-            chat_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
 
         Returns:
             LLMResponse: The response from the LLM.
         """
         try:
-            messages = self.get_messages(input, chat_history)
+            messages = self.get_messages(input, message_history)
             res = self.async_client.chat(
                 messages=messages,
                 model=self.model_name,

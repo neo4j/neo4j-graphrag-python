@@ -45,14 +45,14 @@ class LLMInterface(ABC):
     def invoke(
         self,
         input: str,
-        chat_history: Optional[list[dict[str, str]]] = None,
+        message_history: Optional[list[dict[str, str]]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Sends a text input to the LLM and retrieves a response.
 
         Args:
             input (str): Text sent to the LLM.
-            chat_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
             system_instruction (Optional[str]): An option to override the llm system message for this invokation.
 
         Returns:
@@ -64,13 +64,13 @@ class LLMInterface(ABC):
 
     @abstractmethod
     async def ainvoke(
-        self, input: str, chat_history: Optional[list[dict[str, str]]] = None
+        self, input: str, message_history: Optional[list[dict[str, str]]] = None
     ) -> LLMResponse:
         """Asynchronously sends a text input to the LLM and retrieves a response.
 
         Args:
             input (str): Text sent to the LLM.
-            chat_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
 
 
         Returns:

@@ -89,7 +89,7 @@ Answer:
     assert res.retriever_result is None
 
 
-def test_graphrag_happy_path_with_chat_history(
+def test_graphrag_happy_path_with_message_history(
     retriever_mock: MagicMock, llm: MagicMock
 ) -> None:
     rag = GraphRAG(
@@ -106,11 +106,11 @@ def test_graphrag_happy_path_with_chat_history(
         LLMResponse(content="llm generated summary"),
         LLMResponse(content="llm generated text"),
     ]
-    chat_history = [
+    message_history = [
         {"role": "user", "content": "initial question"},
         {"role": "assistant", "content": "answer to initial question"},
     ]
-    res = rag.search("question", chat_history)
+    res = rag.search("question", message_history)
 
     expected_retriever_query_text = """
 Chat Summary: 
@@ -146,7 +146,7 @@ Answer:
     )
     assert llm.invoke.call_count == 2
     llm.invoke.assert_has_calls(
-        [call(first_invokation), call(second_invokation, chat_history)]
+        [call(first_invokation), call(second_invokation, message_history)]
     )
 
     assert isinstance(res, RagResultModel)
@@ -174,14 +174,14 @@ def test_graphrag_search_error(retriever_mock: MagicMock, llm: MagicMock) -> Non
 
 
 def test_chat_summary_template() -> None:
-    chat_history = [
+    message_history = [
         {"role": "user", "content": "initial question"},
         {"role": "assistant", "content": "answer to initial question"},
         {"role": "user", "content": "second question"},
         {"role": "assistant", "content": "answer to second question"},
     ]
     template = ChatSummaryTemplate()
-    prompt = template.format(chat_history=chat_history)
+    prompt = template.format(message_history=message_history)
     assert (
         prompt
         == """
