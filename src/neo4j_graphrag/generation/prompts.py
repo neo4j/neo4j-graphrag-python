@@ -205,6 +205,7 @@ Summarize the chat history:
 {chat_history}
 """
     EXPECTED_INPUTS = ["chat_history"]
+    SYSTEM_MESSAGE = "You are a summarization assistant. Summarize the given text in no more than 200 words"
 
     def format(self, chat_history: list[dict[str, str]]) -> str:
         message_list = [

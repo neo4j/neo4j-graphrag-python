@@ -43,13 +43,14 @@ class LLMInterface(ABC):
 
     @abstractmethod
     def invoke(
-        self, input: str, chat_history: Optional[list[dict[str, str]]] = None
+        self, input: str, chat_history: Optional[list[dict[str, str]]] = None, system_instruction: Optional[str] = None
     ) -> LLMResponse:
         """Sends a text input to the LLM and retrieves a response.
 
         Args:
             input (str): Text sent to the LLM.
             chat_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invokation.
 
         Returns:
             LLMResponse: The response from the LLM.

@@ -153,7 +153,8 @@ class GraphRAG:
             summarization_prompt = ChatSummaryTemplate().format(
                 chat_history=chat_history
             )
-            summary = self.llm.invoke(summarization_prompt).content
+            summary = self.llm.invoke(
+                input=summarization_prompt, system_instruction=summarization_prompt.SYSTEM_MESSAGE).content
             return ConversationTemplate().format(
                 summary=summary, current_query=query_text
             )

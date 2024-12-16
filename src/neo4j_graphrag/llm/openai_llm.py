@@ -61,11 +61,12 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         super().__init__(model_name, model_params, system_instruction)
 
     def get_messages(
-        self, input: str, chat_history: Optional[list[Any]] = None
+        self, input: str, chat_history: Optional[list[Any]] = None, system_instruction: Optional[str] = None
     ) -> Iterable[ChatCompletionMessageParam]:
         messages = []
-        if self.system_instruction:
-            messages.append(SystemMessage(content=self.system_instruction).model_dump())
+        system_message = system_instruction if system_instruction is not None else self.system_instruction
+        if system_message:
+            messages.append(SystemMessage(content=system_message).model_dump())
         if chat_history:
             try:
                 MessageList(messages=chat_history)
@@ -76,7 +77,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         return messages
 
     def invoke(
-        self, input: str, chat_history: Optional[list[Any]] = None
+        self, input: str, chat_history: Optional[list[Any]] = None, system_instruction: Optional[str] = None
     ) -> LLMResponse:
         """Sends a text input to the OpenAI chat completion model
         and returns the response's content.
@@ -84,6 +85,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         Args:
             input (str): Text sent to the LLM.
             chat_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invokation.
 
         Returns:
             LLMResponse: The response from OpenAI.
@@ -93,7 +95,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         """
         try:
             response = self.client.chat.completions.create(
-                messages=self.get_messages(input, chat_history),
+                messages=self.get_messages(input, chat_history, system_instruction),
                 model=self.model_name,
                 **self.model_params,
             )

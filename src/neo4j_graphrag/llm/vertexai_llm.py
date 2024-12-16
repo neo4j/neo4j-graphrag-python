@@ -72,9 +72,9 @@ class VertexAILLM(LLMInterface):
                 Please install it with `pip install "neo4j-graphrag[google]"`."""
             )
         super().__init__(model_name, model_params)
-        self.model = GenerativeModel(
-            model_name=model_name, system_instruction=[system_instruction], **kwargs
-        )
+        self.model_name = model_name
+        self.system_instruction = system_instruction
+        self.model_params = kwargs
 
     def get_messages(
         self, input: str, chat_history: Optional[list[Any]] = None
@@ -104,17 +104,22 @@ class VertexAILLM(LLMInterface):
         return messages
 
     def invoke(
-        self, input: str, chat_history: Optional[list[Any]] = None
+        self, input: str, chat_history: Optional[list[Any]] = None, system_instruction: Optional[str] = None
     ) -> LLMResponse:
         """Sends text to the LLM and returns a response.
 
         Args:
             input (str): The text to send to the LLM.
             chat_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invokation.
 
         Returns:
             LLMResponse: The response from the LLM.
         """
+        system_message = system_instruction if system_instruction is not None else self.system_instruction
+        self.model = GenerativeModel(
+            model_name=self.model_name, system_instruction=[system_message], **self.model_params
+        )
         try:
             messages = self.get_messages(input, chat_history)
             response = self.model.generate_content(messages, **self.model_params)
