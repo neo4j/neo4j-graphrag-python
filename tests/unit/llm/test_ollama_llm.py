@@ -22,14 +22,22 @@ from neo4j_graphrag.llm import LLMResponse
 from neo4j_graphrag.llm.ollama_llm import OllamaLLM
 
 
-@patch("neo4j_graphrag.llm.ollama_llm.ollama", None)
-def test_ollama_llm_missing_dependency() -> None:
+def get_mock_ollama() -> MagicMock:
+    mock = MagicMock()
+    mock.ResponseError = ollama.ResponseError
+    return mock
+
+
+@patch("builtins.__import__", side_effect=ImportError)
+def test_ollama_llm_missing_dependency(mock_import: Mock) -> None:
     with pytest.raises(ImportError):
         OllamaLLM(model_name="gpt-4o")
 
 
-@patch("neo4j_graphrag.llm.ollama_llm.ollama")
-def test_ollama_llm_happy_path(mock_ollama: Mock) -> None:
+@patch("builtins.__import__")
+def test_ollama_llm_happy_path(mock_import: Mock) -> None:
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
     mock_ollama.Client.return_value.chat.return_value = MagicMock(
         message=MagicMock(content="ollama chat response"),
     )
@@ -55,8 +63,10 @@ def test_ollama_llm_happy_path(mock_ollama: Mock) -> None:
     )
 
 
-@patch("neo4j_graphrag.llm.ollama_llm.ollama")
-def test_ollama_invoke_with_chat_history_happy_path(mock_ollama: Mock) -> None:
+@patch("builtins.__import__")
+def test_ollama_invoke_with_chat_history_happy_path(mock_import: Mock) -> None:
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
     mock_ollama.Client.return_value.chat.return_value = MagicMock(
         message=MagicMock(content="ollama chat response"),
     )
@@ -84,13 +94,10 @@ def test_ollama_invoke_with_chat_history_happy_path(mock_ollama: Mock) -> None:
     )
 
 
-@patch("neo4j_graphrag.llm.ollama_llm.ollama")
-def test_ollama_invoke_with_chat_history_validation_error(
-    mock_ollama: Mock,
-) -> None:
-    mock_ollama.Client.return_value.chat.return_value = MagicMock(
-        message=MagicMock(content="ollama chat response"),
-    )
+@patch("builtins.__import__")
+def test_ollama_invoke_with_chat_history_validation_error(mock_import: Mock) -> None:
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
     mock_ollama.ResponseError = ollama.ResponseError
     model = "gpt"
     model_params = {"temperature": 0.3}
@@ -112,8 +119,11 @@ def test_ollama_invoke_with_chat_history_validation_error(
 
 
 @pytest.mark.asyncio
-@patch("neo4j_graphrag.llm.ollama_llm.ollama")
-async def test_ollama_ainvoke_happy_path(mock_ollama: Mock) -> None:
+@patch("builtins.__import__")
+async def test_ollama_ainvoke_happy_path(mock_import: Mock) -> None:
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+
     async def mock_chat_async(*args: Any, **kwargs: Any) -> MagicMock:
         return MagicMock(
             message=MagicMock(content="ollama chat response"),

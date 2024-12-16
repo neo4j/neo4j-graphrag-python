@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Any, Iterable, Optional
+from typing import Any, Optional, Sequence, TYPE_CHECKING
 
 from pydantic import ValidationError
 
@@ -21,11 +21,9 @@ from neo4j_graphrag.exceptions import LLMGenerationError
 from .base import LLMInterface
 from .types import LLMResponse, SystemMessage, UserMessage, MessageList
 
-try:
+if TYPE_CHECKING:
     import ollama
     from ollama import Message
-except ImportError:
-    ollama = None
 
 
 class OllamaLLM(LLMInterface):
@@ -36,7 +34,9 @@ class OllamaLLM(LLMInterface):
         system_instruction: Optional[str] = None,
         **kwargs: Any,
     ):
-        if ollama is None:
+        try:
+            import ollama
+        except ImportError:
             raise ImportError(
                 "Could not import ollama Python client. "
                 "Please install it with `pip install ollama`."
@@ -52,7 +52,7 @@ class OllamaLLM(LLMInterface):
 
     def get_messages(
         self, input: str, chat_history: Optional[list[Any]] = None
-    ) -> Iterable[Message]:
+    ) -> Sequence[Message]:
         messages = []
         if self.system_instruction:
             messages.append(SystemMessage(content=self.system_instruction).model_dump())

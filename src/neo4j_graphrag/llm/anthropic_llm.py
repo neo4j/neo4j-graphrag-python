@@ -13,7 +13,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable, Optional, TYPE_CHECKING
 
 from pydantic import ValidationError
 
@@ -21,11 +21,9 @@ from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface
 from neo4j_graphrag.llm.types import LLMResponse, MessageList, UserMessage
 
-try:
+if TYPE_CHECKING:
     import anthropic
     from anthropic.types.message_param import MessageParam
-except ImportError:
-    anthropic = None
 
 
 class AnthropicLLM(LLMInterface):
@@ -61,7 +59,9 @@ class AnthropicLLM(LLMInterface):
         system_instruction: Optional[str] = None,
         **kwargs: Any,
     ):
-        if anthropic is None:
+        try:
+            import anthropic
+        except ImportError:
             raise ImportError(
                 """Could not import Anthropic Python client.
                 Please install it with `pip install "neo4j-graphrag[anthropic]"`."""

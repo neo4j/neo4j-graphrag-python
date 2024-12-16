@@ -14,7 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
@@ -26,11 +26,9 @@ from neo4j_graphrag.llm.types import (
     UserMessage,
 )
 
-try:
+if TYPE_CHECKING:
     import cohere
     from cohere import ChatMessages
-except ImportError:
-    cohere = None
 
 
 class CohereLLM(LLMInterface):
@@ -62,7 +60,9 @@ class CohereLLM(LLMInterface):
         system_instruction: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
-        if cohere is None:
+        try:
+            import cohere
+        except ImportError:
             raise ImportError(
                 """Could not import cohere python client.
                 Please install it with `pip install "neo4j-graphrag[cohere]"`."""
