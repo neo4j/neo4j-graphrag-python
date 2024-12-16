@@ -7,18 +7,21 @@ As a first-party library, it offers a robust, feature-rich, and high-performance
 
 Documentation can be found [here](https://neo4j.com/docs/neo4j-graphrag-python/)
 
-### Blog posts
+### Resources
 
 A series of blog posts demonstrating how to use this package:
 
-- Build a Knowledge Graph and chat with your data:
+- Build a Knowledge Graph and use GenAI to answer questions:
   - [GraphRAG Python Package: Accelerating GenAI With Knowledge Graphs](https://neo4j.com/blog/graphrag-python-package/)
-- Retrievers: when your graph is already populated:
+- Retrievers: when the Neo4j graph is already populated:
   - [Getting Started With the Neo4j GraphRAG Python Package](https://neo4j.com/developer-blog/get-started-graphrag-python-package/)
   - [Enriching Vector Search With Graph Traversal Using the GraphRAG Python Package](https://neo4j.com/developer-blog/graph-traversal-graphrag-python-package/)
   - [Hybrid Retrieval for GraphRAG Applications Using the GraphRAG Python Package](https://neo4j.com/developer-blog/hybrid-retrieval-graphrag-python-package/)
   - [Enhancing Hybrid Retrieval With Graph Traversal Using the GraphRAG Python Package](https://neo4j.com/developer-blog/enhancing-hybrid-retrieval-graphrag-python-package/)
   - [Effortless RAG With Text2CypherRetriever](https://medium.com/neo4j/effortless-rag-with-text2cypherretriever-cb1a781ca53c)
+
+A list of Neo4j GenAI-related features can also be found at [Neo4j GenAI Ecosystem](https://neo4j.com/labs/genai-ecosystem/).
+
 
 ## 🐍 Python Version Support
 
