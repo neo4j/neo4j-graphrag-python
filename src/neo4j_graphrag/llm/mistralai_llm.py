@@ -66,11 +66,19 @@ class MistralAILLM(LLMInterface):
         self.client = Mistral(api_key=api_key, **kwargs)
 
     def get_messages(
-        self, input: str, message_history: Optional[list[BaseMessage]] = None
+        self,
+        input: str,
+        message_history: Optional[list[BaseMessage]] = None,
+        system_instruction: Optional[str] = None,
     ) -> list[Messages]:
         messages = []
-        if self.system_instruction:
-            messages.append(SystemMessage(content=self.system_instruction).model_dump())
+        system_message = (
+            system_instruction
+            if system_instruction is not None
+            else self.system_instruction
+        )
+        if system_message:
+            messages.append(SystemMessage(content=system_message).model_dump())
         if message_history:
             try:
                 MessageList(messages=message_history)
@@ -81,7 +89,10 @@ class MistralAILLM(LLMInterface):
         return messages
 
     def invoke(
-        self, input: str, message_history: Optional[list[BaseMessage]] = None
+        self,
+        input: str,
+        message_history: Optional[list[BaseMessage]] = None,
+        system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Sends a text input to the Mistral chat completion model
         and returns the response's content.
@@ -89,6 +100,7 @@ class MistralAILLM(LLMInterface):
         Args:
             input (str): Text sent to the LLM.
             message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invokation.
 
         Returns:
             LLMResponse: The response from MistralAI.
@@ -97,7 +109,7 @@ class MistralAILLM(LLMInterface):
             LLMGenerationError: If anything goes wrong.
         """
         try:
-            messages = self.get_messages(input, message_history)
+            messages = self.get_messages(input, message_history, system_instruction)
             response = self.client.chat.complete(
                 model=self.model_name,
                 messages=messages,
@@ -113,7 +125,10 @@ class MistralAILLM(LLMInterface):
             raise LLMGenerationError(e)
 
     async def ainvoke(
-        self, input: str, message_history: Optional[list[BaseMessage]] = None
+        self,
+        input: str,
+        message_history: Optional[list[BaseMessage]] = None,
+        system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Asynchronously sends a text input to the MistralAI chat
         completion model and returns the response's content.
@@ -121,6 +136,7 @@ class MistralAILLM(LLMInterface):
         Args:
             input (str): Text sent to the LLM.
             message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invokation.
 
         Returns:
             LLMResponse: The response from MistralAI.
@@ -129,7 +145,7 @@ class MistralAILLM(LLMInterface):
             LLMGenerationError: If anything goes wrong.
         """
         try:
-            messages = self.get_messages(input, message_history)
+            messages = self.get_messages(input, message_history, system_instruction)
             response = await self.client.chat.complete_async(
                 model=self.model_name,
                 messages=messages,

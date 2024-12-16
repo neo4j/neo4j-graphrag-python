@@ -84,22 +84,31 @@ class AnthropicLLM(LLMInterface):
         return messages
 
     def invoke(
-        self, input: str, message_history: Optional[list[BaseMessage]] = None
+        self,
+        input: str,
+        message_history: Optional[list[BaseMessage]] = None,
+        system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Sends text to the LLM and returns a response.
 
         Args:
             input (str): The text to send to the LLM.
             message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invokation.
 
         Returns:
             LLMResponse: The response from the LLM.
         """
         try:
             messages = self.get_messages(input, message_history)
+            system_message = (
+                system_instruction
+                if system_instruction is not None
+                else self.system_instruction
+            )
             response = self.client.messages.create(
                 model=self.model_name,
-                system=self.system_instruction,
+                system=system_message,
                 messages=messages,
                 **self.model_params,
             )
@@ -108,22 +117,31 @@ class AnthropicLLM(LLMInterface):
             raise LLMGenerationError(e)
 
     async def ainvoke(
-        self, input: str, message_history: Optional[list[BaseMessage]] = None
+        self,
+        input: str,
+        message_history: Optional[list[BaseMessage]] = None,
+        system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Asynchronously sends text to the LLM and returns a response.
 
         Args:
             input (str): The text to send to the LLM.
             message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invokation.
 
         Returns:
             LLMResponse: The response from the LLM.
         """
         try:
             messages = self.get_messages(input, message_history)
+            system_message = (
+                system_instruction
+                if system_instruction is not None
+                else self.system_instruction
+            )
             response = await self.async_client.messages.create(
                 model=self.model_name,
-                system=self.system_instruction,
+                system=system_message,
                 messages=messages,
                 **self.model_params,
             )

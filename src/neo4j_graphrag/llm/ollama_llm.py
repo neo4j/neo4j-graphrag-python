@@ -50,11 +50,19 @@ class OllamaLLM(LLMInterface):
         )
 
     def get_messages(
-        self, input: str, message_history: Optional[list[BaseMessage]] = None
+        self,
+        input: str,
+        message_history: Optional[list[BaseMessage]] = None,
+        system_instruction: Optional[str] = None,
     ) -> Sequence[Message]:
         messages = []
-        if self.system_instruction:
-            messages.append(SystemMessage(content=self.system_instruction).model_dump())
+        system_message = (
+            system_instruction
+            if system_instruction is not None
+            else self.system_instruction
+        )
+        if system_message:
+            messages.append(SystemMessage(content=system_message).model_dump())
         if message_history:
             try:
                 MessageList(messages=message_history)
@@ -65,12 +73,25 @@ class OllamaLLM(LLMInterface):
         return messages
 
     def invoke(
-        self, input: str, message_history: Optional[list[BaseMessage]] = None
+        self,
+        input: str,
+        message_history: Optional[list[BaseMessage]] = None,
+        system_instruction: Optional[str] = None,
     ) -> LLMResponse:
+        """Sends text to the LLM and returns a response.
+
+        Args:
+            input (str): The text to send to the LLM.
+            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invokation.
+
+        Returns:
+            LLMResponse: The response from the LLM.
+        """
         try:
             response = self.client.chat(
                 model=self.model_name,
-                messages=self.get_messages(input, message_history),
+                messages=self.get_messages(input, message_history, system_instruction),
                 options=self.model_params,
             )
             content = response.message.content or ""
@@ -79,12 +100,29 @@ class OllamaLLM(LLMInterface):
             raise LLMGenerationError(e)
 
     async def ainvoke(
-        self, input: str, message_history: Optional[list[BaseMessage]] = None
+        self,
+        input: str,
+        message_history: Optional[list[BaseMessage]] = None,
+        system_instruction: Optional[str] = None,
     ) -> LLMResponse:
+        """Asynchronously sends a text input to the OpenAI chat
+        completion model and returns the response's content.
+
+        Args:
+            input (str): Text sent to the LLM.
+            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invokation.
+
+        Returns:
+            LLMResponse: The response from OpenAI.
+
+        Raises:
+            LLMGenerationError: If anything goes wrong.
+        """
         try:
             response = await self.async_client.chat(
                 model=self.model_name,
-                messages=self.get_messages(input, message_history),
+                messages=self.get_messages(input, message_history, system_instruction),
                 options=self.model_params,
             )
             content = response.message.content or ""

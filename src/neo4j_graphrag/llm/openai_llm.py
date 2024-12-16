@@ -115,7 +115,10 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
             raise LLMGenerationError(e)
 
     async def ainvoke(
-        self, input: str, message_history: Optional[list[BaseMessage]] = None
+        self,
+        input: str,
+        message_history: Optional[list[BaseMessage]] = None,
+        system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Asynchronously sends a text input to the OpenAI chat
         completion model and returns the response's content.
@@ -123,6 +126,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         Args:
             input (str): Text sent to the LLM.
             message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invokation.
 
         Returns:
             LLMResponse: The response from OpenAI.
@@ -132,7 +136,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         """
         try:
             response = await self.async_client.chat.completions.create(
-                messages=self.get_messages(input, message_history),
+                messages=self.get_messages(input, message_history, system_instruction),
                 model=self.model_name,
                 **self.model_params,
             )

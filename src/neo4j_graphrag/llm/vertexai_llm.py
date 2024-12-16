@@ -89,15 +89,11 @@ class VertexAILLM(LLMInterface):
             for message in message_history:
                 if message.role == "user":
                     messages.append(
-                        Content(
-                            role="user", parts=[Part.from_text(message.content)]
-                        )
+                        Content(role="user", parts=[Part.from_text(message.content)])
                     )
                 elif message.role == "assistant":
                     messages.append(
-                        Content(
-                            role="model", parts=[Part.from_text(message.content)]
-                        )
+                        Content(role="model", parts=[Part.from_text(message.content)])
                     )
 
         messages.append(Content(role="user", parts=[Part.from_text(input)]))
@@ -137,18 +133,32 @@ class VertexAILLM(LLMInterface):
             raise LLMGenerationError(e)
 
     async def ainvoke(
-        self, input: str, message_history: Optional[list[BaseMessage]] = None
+        self,
+        input: str,
+        message_history: Optional[list[BaseMessage]] = None,
+        system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Asynchronously sends text to the LLM and returns a response.
 
         Args:
             input (str): The text to send to the LLM.
             message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invokation.
 
         Returns:
             LLMResponse: The response from the LLM.
         """
         try:
+            system_message = (
+                system_instruction
+                if system_instruction is not None
+                else self.system_instruction
+            )
+            self.model = GenerativeModel(
+                model_name=self.model_name,
+                system_instruction=[system_message],
+                **self.model_params,
+            )
             messages = self.get_messages(input, message_history)
             response = await self.model.generate_content_async(
                 messages, **self.model_params
