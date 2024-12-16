@@ -14,11 +14,15 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Optional, TYPE_CHECKING
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, RootModel
 
 from neo4j_graphrag.experimental.pipeline.component import DataModel
+
+
+if TYPE_CHECKING:
+    from pydantic._internal import _repr
 
 
 class TextChunk(BaseModel):
@@ -44,6 +48,20 @@ class TextChunks(DataModel):
 
     chunks: list[TextChunk]
 
+
+# class Embeddings(RootModel):
+#     """A wrapper around list[float] to represent embeddings.
+#     Used to improve logging of vectors by not showing the full vector.
+#     """
+#     root: list[float]
+#
+#     # def __rep_str__(self, sep: str = ", ") -> str:
+#     #     return f"<Embeddings: dimension={len(self.root)}, vector[:3]={self.root[:3]}>"
+#
+#     def __repr_args__(self) -> _repr.ReprArgs:
+#         yield 'dimension', len(self.root)
+#         yield 'vector', self.root[:3]
+#
 
 class Neo4jNode(BaseModel):
     """Represents a Neo4j node.
@@ -98,6 +116,9 @@ class Neo4jGraph(DataModel):
 
     nodes: list[Neo4jNode] = []
     relationships: list[Neo4jRelationship] = []
+
+    # def __str__(self) -> str:
+    #     return f"<Neo4jGraph: {len(self.nodes)} nodes, {len(self.relationships)} relationships>"
 
 
 class ResolutionStats(DataModel):

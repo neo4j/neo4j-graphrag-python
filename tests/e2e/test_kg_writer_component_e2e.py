@@ -76,7 +76,7 @@ async def test_kg_writer(driver: neo4j.Driver) -> None:
     if start_node.embedding_properties:  # for mypy
         for key, val in start_node.embedding_properties.items():
             assert key in node_a.keys()
-            assert node_a.get(key) == [1.0, 2.0, 3.0]
+            assert val.root == node_a.get(key)
 
     node_b = record["b"]
     assert end_node.label in list(node_b.labels)
@@ -100,7 +100,7 @@ async def test_kg_writer(driver: neo4j.Driver) -> None:
     if node_with_two_embeddings.embedding_properties:  # for mypy
         for key, val in node_with_two_embeddings.embedding_properties.items():
             assert key in node_c.keys()
-            assert val == node_c.get(key)
+            assert val.root == node_c.get(key)
 
 
 @pytest.mark.asyncio

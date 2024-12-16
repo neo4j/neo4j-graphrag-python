@@ -70,6 +70,7 @@ class PipelineConfigWrapper(BaseModel):
     ] = Field(discriminator=Discriminator(_get_discriminator_value))
 
     def parse(self, resolved_data: dict[str, Any] | None = None) -> PipelineDefinition:
+        logger.debug("PIPELINE_CONFIG: start parsing config...")
         return self.config.parse(resolved_data)
 
     def get_run_params(self, user_input: dict[str, Any]) -> dict[str, Any]:
@@ -101,10 +102,12 @@ class PipelineRunner:
         cls, config: AbstractPipelineConfig | dict[str, Any], do_cleaning: bool = False
     ) -> Self:
         wrapper = PipelineConfigWrapper.model_validate({"config": config})
+        logger.debug(f"PIPELINE_RUNNER: instantiate Pipeline from config type: {wrapper.config.template_}")
         return cls(wrapper.parse(), config=wrapper.config, do_cleaning=do_cleaning)
 
     @classmethod
     def from_config_file(cls, file_path: Union[str, Path]) -> Self:
+        logger.info(f"PIPELINE_RUNNER: reading config file from {file_path}")
         if not isinstance(file_path, str):
             file_path = str(file_path)
         data = ConfigReader().read(file_path)
