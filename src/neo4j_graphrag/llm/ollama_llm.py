@@ -22,7 +22,6 @@ from .base import LLMInterface
 from .types import LLMResponse, SystemMessage, UserMessage, MessageList
 
 if TYPE_CHECKING:
-    import ollama
     from ollama import Message
 
 

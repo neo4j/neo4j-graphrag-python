@@ -27,7 +27,6 @@ from neo4j_graphrag.llm.types import (
 )
 
 if TYPE_CHECKING:
-    import cohere
     from cohere import ChatMessages
 
 

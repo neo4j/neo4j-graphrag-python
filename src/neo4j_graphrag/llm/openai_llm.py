@@ -61,10 +61,17 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         super().__init__(model_name, model_params, system_instruction)
 
     def get_messages(
-        self, input: str, chat_history: Optional[list[Any]] = None, system_instruction: Optional[str] = None
+        self,
+        input: str,
+        chat_history: Optional[list[Any]] = None,
+        system_instruction: Optional[str] = None,
     ) -> Iterable[ChatCompletionMessageParam]:
         messages = []
-        system_message = system_instruction if system_instruction is not None else self.system_instruction
+        system_message = (
+            system_instruction
+            if system_instruction is not None
+            else self.system_instruction
+        )
         if system_message:
             messages.append(SystemMessage(content=system_message).model_dump())
         if chat_history:
@@ -77,7 +84,10 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         return messages
 
     def invoke(
-        self, input: str, chat_history: Optional[list[Any]] = None, system_instruction: Optional[str] = None
+        self,
+        input: str,
+        chat_history: Optional[list[Any]] = None,
+        system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Sends a text input to the OpenAI chat completion model
         and returns the response's content.

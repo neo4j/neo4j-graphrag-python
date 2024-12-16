@@ -22,7 +22,6 @@ from neo4j_graphrag.llm.base import LLMInterface
 from neo4j_graphrag.llm.types import LLMResponse, MessageList, UserMessage
 
 if TYPE_CHECKING:
-    import anthropic
     from anthropic.types.message_param import MessageParam
 
 

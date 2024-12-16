@@ -104,7 +104,10 @@ class VertexAILLM(LLMInterface):
         return messages
 
     def invoke(
-        self, input: str, chat_history: Optional[list[Any]] = None, system_instruction: Optional[str] = None
+        self,
+        input: str,
+        chat_history: Optional[list[Any]] = None,
+        system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Sends text to the LLM and returns a response.
 
@@ -116,9 +119,15 @@ class VertexAILLM(LLMInterface):
         Returns:
             LLMResponse: The response from the LLM.
         """
-        system_message = system_instruction if system_instruction is not None else self.system_instruction
+        system_message = (
+            system_instruction
+            if system_instruction is not None
+            else self.system_instruction
+        )
         self.model = GenerativeModel(
-            model_name=self.model_name, system_instruction=[system_message], **self.model_params
+            model_name=self.model_name,
+            system_instruction=[system_message],
+            **self.model_params,
         )
         try:
             messages = self.get_messages(input, chat_history)
