@@ -58,7 +58,7 @@ def test_ollama_llm_happy_path(mock_import: Mock) -> None:
         {"role": "system", "content": system_instruction},
         {"role": "user", "content": question},
     ]
-    llm.client.chat.assert_called_once_with(
+    llm.client.chat.assert_called_once_with(  # type: ignore[attr-defined]
         model=model, messages=messages, options=model_params
     )
 
@@ -89,7 +89,7 @@ def test_ollama_invoke_with_message_history_happy_path(mock_import: Mock) -> Non
     messages = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
-    llm.client.chat.assert_called_once_with(
+    llm.client.chat.assert_called_once_with(  # type: ignore[attr-defined]
         model=model, messages=messages, options=model_params
     )
 

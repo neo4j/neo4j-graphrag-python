@@ -76,7 +76,7 @@ def test_anthropic_invoke_with_message_history_happy_path(mock_anthropic: Mock) 
     response = llm.invoke(question, message_history)
     assert response.content == "generated text"
     message_history.append({"role": "user", "content": question})
-    llm.client.messages.create.assert_called_once_with(
+    llm.client.messages.create.assert_called_once_with(  # type: ignore[attr-defined]
         messages=message_history,
         model="claude-3-opus-20240229",
         system=system_instruction,

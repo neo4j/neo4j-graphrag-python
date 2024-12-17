@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Optional
+from typing import Any, Optional, cast
 from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
@@ -31,8 +31,8 @@ try:
     from mistralai import Mistral, Messages
     from mistralai.models.sdkerror import SDKError
 except ImportError:
-    Mistral = None
-    SDKError = None
+    Mistral = None  # type: ignore
+    SDKError = None  # type: ignore
 
 
 class MistralAILLM(LLMInterface):
@@ -85,7 +85,7 @@ class MistralAILLM(LLMInterface):
                 raise LLMGenerationError(e.errors()) from e
             messages.extend(message_history)
         messages.append(UserMessage(content=input).model_dump())
-        return messages
+        return cast(list[Messages], messages)
 
     def invoke(
         self,

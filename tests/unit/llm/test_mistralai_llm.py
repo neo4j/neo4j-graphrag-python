@@ -71,7 +71,7 @@ def test_mistralai_llm_invoke_with_message_history(mock_mistral: Mock) -> None:
     messages = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
-    llm.client.chat.complete.assert_called_once_with(
+    llm.client.chat.complete.assert_called_once_with(  # type: ignore[attr-defined]
         messages=messages,
         model=model,
     )
