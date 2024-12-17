@@ -17,7 +17,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
-from .types import LLMResponse, BaseMessage
+from .types import LLMResponse
 
 
 class LLMInterface(ABC):
@@ -45,7 +45,7 @@ class LLMInterface(ABC):
     def invoke(
         self,
         input: str,
-        message_history: Optional[list[BaseMessage]] = None,
+        message_history: Optional[list[dict[str, str]]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Sends a text input to the LLM and retrieves a response.
@@ -66,7 +66,7 @@ class LLMInterface(ABC):
     async def ainvoke(
         self,
         input: str,
-        message_history: Optional[list[BaseMessage]] = None,
+        message_history: Optional[list[dict[str, str]]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Asynchronously sends a text input to the LLM and retrieves a response.

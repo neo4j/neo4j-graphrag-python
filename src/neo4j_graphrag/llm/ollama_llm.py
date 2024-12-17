@@ -12,14 +12,14 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Any, Optional, Sequence, TYPE_CHECKING
+from typing import Any, Optional, Sequence, TYPE_CHECKING, cast
 
 from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 
 from .base import LLMInterface
-from .types import LLMResponse, SystemMessage, UserMessage, MessageList, BaseMessage
+from .types import LLMResponse, SystemMessage, UserMessage, MessageList
 
 if TYPE_CHECKING:
     from ollama import Message
@@ -52,7 +52,7 @@ class OllamaLLM(LLMInterface):
     def get_messages(
         self,
         input: str,
-        message_history: Optional[list[BaseMessage]] = None,
+        message_history: Optional[list[dict[str, str]]] = None,
         system_instruction: Optional[str] = None,
     ) -> Sequence[Message]:
         messages = []
@@ -65,17 +65,17 @@ class OllamaLLM(LLMInterface):
             messages.append(SystemMessage(content=system_message).model_dump())
         if message_history:
             try:
-                MessageList(messages=message_history)
+                MessageList(messages=message_history)  # type: ignore
             except ValidationError as e:
                 raise LLMGenerationError(e.errors()) from e
             messages.extend(message_history)
         messages.append(UserMessage(content=input).model_dump())
-        return messages
+        return cast(Sequence[Message], messages)
 
     def invoke(
         self,
         input: str,
-        message_history: Optional[list[BaseMessage]] = None,
+        message_history: Optional[list[dict[str, str]]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Sends text to the LLM and returns a response.
@@ -102,7 +102,7 @@ class OllamaLLM(LLMInterface):
     async def ainvoke(
         self,
         input: str,
-        message_history: Optional[list[BaseMessage]] = None,
+        message_history: Optional[list[dict[str, str]]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Asynchronously sends a text input to the OpenAI chat

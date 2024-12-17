@@ -13,13 +13,13 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Iterable, Optional, TYPE_CHECKING
+from typing import Any, Iterable, Optional, TYPE_CHECKING, cast
 
 from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface
-from neo4j_graphrag.llm.types import LLMResponse, MessageList, UserMessage, BaseMessage
+from neo4j_graphrag.llm.types import LLMResponse, MessageList, UserMessage
 
 if TYPE_CHECKING:
     from anthropic.types.message_param import MessageParam
@@ -71,22 +71,22 @@ class AnthropicLLM(LLMInterface):
         self.async_client = anthropic.AsyncAnthropic(**kwargs)
 
     def get_messages(
-        self, input: str, message_history: Optional[list[BaseMessage]] = None
+        self, input: str, message_history: Optional[list[dict[str, str]]] = None
     ) -> Iterable[MessageParam]:
         messages = []
         if message_history:
             try:
-                MessageList(messages=message_history)
+                MessageList(messages=message_history)  # type: ignore
             except ValidationError as e:
                 raise LLMGenerationError(e.errors()) from e
             messages.extend(message_history)
         messages.append(UserMessage(content=input).model_dump())
-        return messages
+        return cast(Iterable[MessageParam], messages)
 
     def invoke(
         self,
         input: str,
-        message_history: Optional[list[BaseMessage]] = None,
+        message_history: Optional[list[dict[str, str]]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Sends text to the LLM and returns a response.
@@ -108,18 +108,18 @@ class AnthropicLLM(LLMInterface):
             )
             response = self.client.messages.create(
                 model=self.model_name,
-                system=system_message,
+                system=system_message,  # type: ignore
                 messages=messages,
                 **self.model_params,
             )
-            return LLMResponse(content=response.content)
+            return LLMResponse(content=response.content)  # type: ignore
         except self.anthropic.APIError as e:
             raise LLMGenerationError(e)
 
     async def ainvoke(
         self,
         input: str,
-        message_history: Optional[list[BaseMessage]] = None,
+        message_history: Optional[list[dict[str, str]]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Asynchronously sends text to the LLM and returns a response.
@@ -141,10 +141,10 @@ class AnthropicLLM(LLMInterface):
             )
             response = await self.async_client.messages.create(
                 model=self.model_name,
-                system=system_message,
+                system=system_message,  # type: ignore
                 messages=messages,
                 **self.model_params,
             )
-            return LLMResponse(content=response.content)
+            return LLMResponse(content=response.content)  # type: ignore
         except self.anthropic.APIError as e:
             raise LLMGenerationError(e)

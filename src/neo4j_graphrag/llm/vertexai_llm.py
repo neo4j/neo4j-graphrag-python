@@ -19,7 +19,7 @@ from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface
-from neo4j_graphrag.llm.types import LLMResponse, MessageList, BaseMessage
+from neo4j_graphrag.llm.types import LLMResponse, MessageList
 
 try:
     from vertexai.generative_models import (
@@ -74,26 +74,30 @@ class VertexAILLM(LLMInterface):
         super().__init__(model_name, model_params)
         self.model_name = model_name
         self.system_instruction = system_instruction
-        self.model_params = kwargs
+        self.options = kwargs
 
     def get_messages(
-        self, input: str, message_history: Optional[list[BaseMessage]] = None
+        self, input: str, message_history: Optional[list[dict[str, str]]] = None
     ) -> list[Content]:
         messages = []
         if message_history:
             try:
-                MessageList(messages=message_history)
+                MessageList(messages=message_history)  # type: ignore
             except ValidationError as e:
                 raise LLMGenerationError(e.errors()) from e
 
             for message in message_history:
-                if message.role == "user":
+                if message.get("role") == "user":
                     messages.append(
-                        Content(role="user", parts=[Part.from_text(message.content)])
+                        Content(
+                            role="user", parts=[Part.from_text(message.get("content"))]
+                        )
                     )
-                elif message.role == "assistant":
+                elif message.get("role") == "assistant":
                     messages.append(
-                        Content(role="model", parts=[Part.from_text(message.content)])
+                        Content(
+                            role="model", parts=[Part.from_text(message.get("content"))]
+                        )
                     )
 
         messages.append(Content(role="user", parts=[Part.from_text(input)]))
@@ -102,7 +106,7 @@ class VertexAILLM(LLMInterface):
     def invoke(
         self,
         input: str,
-        message_history: Optional[list[BaseMessage]] = None,
+        message_history: Optional[list[dict[str, str]]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Sends text to the LLM and returns a response.
@@ -123,7 +127,7 @@ class VertexAILLM(LLMInterface):
         self.model = GenerativeModel(
             model_name=self.model_name,
             system_instruction=[system_message],
-            **self.model_params,
+            **self.options,
         )
         try:
             messages = self.get_messages(input, message_history)
@@ -135,7 +139,7 @@ class VertexAILLM(LLMInterface):
     async def ainvoke(
         self,
         input: str,
-        message_history: Optional[list[BaseMessage]] = None,
+        message_history: Optional[list[dict[str, str]]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Asynchronously sends text to the LLM and returns a response.
@@ -157,7 +161,7 @@ class VertexAILLM(LLMInterface):
             self.model = GenerativeModel(
                 model_name=self.model_name,
                 system_instruction=[system_message],
-                **self.model_params,
+                **self.options,
             )
             messages = self.get_messages(input, message_history)
             response = await self.model.generate_content_async(

@@ -17,7 +17,6 @@ from __future__ import annotations
 import warnings
 from typing import Any, Optional
 
-from neo4j_graphrag.llm.types import BaseMessage
 from neo4j_graphrag.exceptions import (
     PromptMissingInputError,
     PromptMissingPlaceholderError,
@@ -208,9 +207,10 @@ Summarize the message history:
     EXPECTED_INPUTS = ["message_history"]
     SYSTEM_MESSAGE = "You are a summarization assistant. Summarize the given text in no more than 200 words"
 
-    def format(self, message_history: list[BaseMessage]) -> str:
+    def format(self, message_history: list[dict[str, str]]) -> str:
         message_list = [
-            f"{message.role}: {message.content}" for message in message_history
+            ": ".join([f"{value}" for _, value in message.items()])
+            for message in message_history
         ]
         history = "\n".join(message_list)
         return super().format(message_history=history)
