@@ -30,15 +30,20 @@ def test_vertexai_llm_missing_dependency() -> None:
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
 def test_vertexai_invoke_happy_path(GenerativeModelMock: MagicMock) -> None:
+    system_instruction = "You are a helpful assistant."
+    model_name = "gemini-1.5-flash-001"
+    input_text = "may thy knife chip and shatter"
     mock_response = Mock()
     mock_response.text = "Return text"
     mock_model = GenerativeModelMock.return_value
     mock_model.generate_content.return_value = mock_response
     model_params = {"temperature": 0.5}
-    llm = VertexAILLM("gemini-1.5-flash-001", model_params)
-    input_text = "may thy knife chip and shatter"
+    llm = VertexAILLM(model_name, model_params, system_instruction)
     response = llm.invoke(input_text)
     assert response.content == "Return text"
+    GenerativeModelMock.assert_called_once_with(
+        model_name=model_name, system_instruction=[system_instruction]
+    )
     llm.model.generate_content.assert_called_once_with([mock.ANY], **model_params)
 
 
@@ -67,9 +72,7 @@ def test_vertexai_get_messages(GenerativeModelMock: MagicMock) -> None:
     llm = VertexAILLM(model_name=model_name, system_instruction=system_instruction)
     response = llm.get_messages(question, message_history)
 
-    GenerativeModelMock.assert_called_once_with(
-        model_name=model_name, system_instruction=[system_instruction]
-    )
+    GenerativeModelMock.assert_not_called
     assert len(response) == len(expected_response)
     for actual, expected in zip(response, expected_response):
         assert actual.role == expected.role
@@ -88,7 +91,7 @@ def test_vertexai_get_messages_validation_error(GenerativeModelMock: MagicMock) 
     llm = VertexAILLM(model_name=model_name, system_instruction=system_instruction)
     with pytest.raises(LLMGenerationError) as exc_info:
         llm.invoke(question, message_history)
-    assert "Input should be 'user' or 'assistant'" in str(exc_info.value)
+    assert "Input should be 'user', 'assistant' or 'system" in str(exc_info.value)
 
 
 @pytest.mark.asyncio

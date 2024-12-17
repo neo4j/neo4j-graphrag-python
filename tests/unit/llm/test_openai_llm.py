@@ -82,7 +82,7 @@ def test_openai_llm_with_message_history_validation_error(mock_import: Mock) -> 
 
     with pytest.raises(LLMGenerationError) as exc_info:
         llm.invoke(question, message_history)
-    assert "Input should be 'user' or 'assistant'" in str(exc_info.value)
+    assert "Input should be 'user', 'assistant' or 'system'" in str(exc_info.value)
 
 
 @patch("builtins.__import__", side_effect=ImportError)
@@ -158,13 +158,10 @@ def test_azure_openai_llm_with_message_history_validation_error(
     )
 
     message_history = [
-        {"content": "When does the sun come up in the summer?"},
+        {"role": "user", "content": 33},
     ]
     question = "What about next season?"
 
     with pytest.raises(LLMGenerationError) as exc_info:
-        llm.invoke(question, message_history)
-    assert (
-        "{'type': 'missing', 'loc': ('messages', 0, 'role'), 'msg': 'Field required',"
-        in str(exc_info.value)
-    )
+        llm.invoke(question, message_history)  # type: ignore
+    assert "Input should be a valid string" in str(exc_info.value)

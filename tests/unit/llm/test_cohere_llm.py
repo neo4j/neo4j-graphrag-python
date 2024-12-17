@@ -89,7 +89,7 @@ def test_cohere_llm_invoke_with_message_history_validation_error(
 
     with pytest.raises(LLMGenerationError) as exc_info:
         llm.invoke(question, message_history)
-    assert "Input should be 'user' or 'assistant'" in str(exc_info.value)
+    assert "Input should be 'user', 'assistant' or 'system" in str(exc_info.value)
 
 
 @pytest.mark.asyncio

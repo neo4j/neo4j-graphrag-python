@@ -113,19 +113,20 @@ def test_graphrag_happy_path_with_message_history(
     res = rag.search("question", message_history)
 
     expected_retriever_query_text = """
-Chat Summary: 
+Message Summary: 
 llm generated summary
 
 Current Query: 
 question
 """
 
-    first_invokation = """
-Summarize the chat history:
+    first_invokation_input = """
+Summarize the message history:
 
 user: initial question
 assistant: answer to initial question
 """
+    first_invokation_system_instruction = "You are a summarization assistant. Summarize the given text in no more than 200 words"
     second_invokation = """Answer the user question using the following context
 
 Context:
@@ -146,7 +147,13 @@ Answer:
     )
     assert llm.invoke.call_count == 2
     llm.invoke.assert_has_calls(
-        [call(first_invokation), call(second_invokation, message_history)]
+        [
+            call(
+                input=first_invokation_input,
+                system_instruction=first_invokation_system_instruction,
+            ),
+            call(second_invokation, message_history),
+        ]
     )
 
     assert isinstance(res, RagResultModel)
@@ -185,7 +192,7 @@ def test_chat_summary_template() -> None:
     assert (
         prompt
         == """
-Summarize the chat history:
+Summarize the message history:
 
 user: initial question
 assistant: answer to initial question
@@ -203,7 +210,7 @@ def test_conversation_template() -> None:
     assert (
         prompt
         == """
-Chat Summary: 
+Message Summary: 
 llm generated chat summary
 
 Current Query: 
