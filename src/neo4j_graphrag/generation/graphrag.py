@@ -25,6 +25,7 @@ from neo4j_graphrag.exceptions import (
     SearchValidationError,
 )
 from neo4j_graphrag.generation.prompts import (
+    SUMMARY_SYSTEM_MESSAGE,
     RagTemplate,
     ChatSummaryTemplate,
     ConversationTemplate,
@@ -151,14 +152,10 @@ class GraphRAG:
         self, query_text: str, message_history: Optional[list[LLMMessage]] = None
     ) -> str:
         if message_history:
-            summarization_prompt = ChatSummaryTemplate().format(
-                message_history=message_history  # type: ignore
-            )
+            summarization_prompt = ChatSummaryTemplate(message_history=message_history)
             summary = self.llm.invoke(
                 input=summarization_prompt,
-                system_instruction=ChatSummaryTemplate().SYSTEM_MESSAGE,
+                system_instruction=SUMMARY_SYSTEM_MESSAGE,
             ).content
-            return ConversationTemplate().format(
-                summary=summary, current_query=query_text
-            )
+            return ConversationTemplate(summary=summary, current_query=query_text)
         return query_text

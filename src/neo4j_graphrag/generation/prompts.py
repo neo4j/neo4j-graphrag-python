@@ -21,6 +21,7 @@ from neo4j_graphrag.exceptions import (
     PromptMissingInputError,
     PromptMissingPlaceholderError,
 )
+from neo4j_graphrag.llm.types import LLMMessage
 
 
 class PromptTemplate:
@@ -198,33 +199,27 @@ Input text:
         return super().format(text=text, schema=schema, examples=examples)
 
 
-class ChatSummaryTemplate(PromptTemplate):
-    DEFAULT_TEMPLATE = """
+SUMMARY_SYSTEM_MESSAGE = "You are a summarization assistant. Summarize the given text in no more than 200 words"
+
+
+def ChatSummaryTemplate(message_history: list[LLMMessage]) -> str:
+    message_list = [
+        ": ".join([f"{value}" for _, value in message.items()])
+        for message in message_history
+    ]
+    history = "\n".join(message_list)
+    return f"""
 Summarize the message history:
 
-{message_history}
+{history}
 """
-    EXPECTED_INPUTS = ["message_history"]
-    SYSTEM_MESSAGE = "You are a summarization assistant. Summarize the given text in no more than 200 words"
-
-    def format(self, message_history: list[dict[str, str]]) -> str:
-        message_list = [
-            ": ".join([f"{value}" for _, value in message.items()])
-            for message in message_history
-        ]
-        history = "\n".join(message_list)
-        return super().format(message_history=history)
 
 
-class ConversationTemplate(PromptTemplate):
-    DEFAULT_TEMPLATE = """
+def ConversationTemplate(summary: str, current_query: str) -> str:
+    return f"""
 Message Summary: 
 {summary}
 
 Current Query: 
 {current_query}
 """
-    EXPECTED_INPUTS = ["summary", "current_query"]
-
-    def format(self, summary: str, current_query: str) -> str:
-        return super().format(summary=summary, current_query=current_query)

@@ -187,8 +187,7 @@ def test_chat_summary_template() -> None:
         {"role": "user", "content": "second question"},
         {"role": "assistant", "content": "answer to second question"},
     ]
-    template = ChatSummaryTemplate()
-    prompt = template.format(message_history=message_history)
+    prompt = ChatSummaryTemplate(message_history=message_history)  # type: ignore
     assert (
         prompt
         == """
@@ -203,8 +202,7 @@ assistant: answer to second question
 
 
 def test_conversation_template() -> None:
-    template = ConversationTemplate()
-    prompt = template.format(
+    prompt = ConversationTemplate(
         summary="llm generated chat summary", current_query="latest question"
     )
     assert (
