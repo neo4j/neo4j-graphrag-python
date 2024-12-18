@@ -13,7 +13,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Iterable, Optional, TYPE_CHECKING, cast
+from typing import Any, Iterable, Optional, TYPE_CHECKING
 
 from pydantic import ValidationError
 
@@ -81,7 +81,7 @@ class AnthropicLLM(LLMInterface):
                 raise LLMGenerationError(e.errors()) from e
             messages.extend(message_history)
         messages.append(UserMessage(content=input).model_dump())
-        return cast(Iterable[MessageParam], messages)
+        return messages  # type: ignore
 
     def invoke(
         self,

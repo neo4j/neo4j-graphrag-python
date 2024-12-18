@@ -14,7 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional, cast
+from typing import TYPE_CHECKING, Any, Optional
 from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
@@ -94,7 +94,7 @@ class CohereLLM(LLMInterface):
                 raise LLMGenerationError(e.errors()) from e
             messages.extend(message_history)
         messages.append(UserMessage(content=input).model_dump())
-        return cast(ChatMessages, messages)
+        return messages  # type: ignore
 
     def invoke(
         self,

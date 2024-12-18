@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING, Any, Iterable, Optional, cast
+from typing import TYPE_CHECKING, Any, Iterable, Optional
 
 from pydantic import ValidationError
 
@@ -81,7 +81,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
                 raise LLMGenerationError(e.errors()) from e
             messages.extend(message_history)
         messages.append(UserMessage(content=input).model_dump())
-        return cast(Iterable[ChatCompletionMessageParam], messages)
+        return messages  # type: ignore
 
     def invoke(
         self,
