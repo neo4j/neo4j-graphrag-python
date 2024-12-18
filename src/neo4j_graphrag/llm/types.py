@@ -1,8 +1,13 @@
 from pydantic import BaseModel
-from typing import Literal
+from typing import Literal, TypedDict
 
 
 class LLMResponse(BaseModel):
+    content: str
+
+
+class LLMMessage(TypedDict):
+    role: Literal["system", "user", "assistant"]
     content: str
 
 

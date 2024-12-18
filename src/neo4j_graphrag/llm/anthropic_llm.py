@@ -13,13 +13,19 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Iterable, Optional, TYPE_CHECKING
+from typing import Any, Iterable, Optional, TYPE_CHECKING, cast
 
 from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface
-from neo4j_graphrag.llm.types import LLMResponse, MessageList, UserMessage
+from neo4j_graphrag.llm.types import (
+    BaseMessage,
+    LLMMessage,
+    LLMResponse,
+    MessageList,
+    UserMessage,
+)
 
 if TYPE_CHECKING:
     from anthropic.types.message_param import MessageParam
@@ -71,22 +77,22 @@ class AnthropicLLM(LLMInterface):
         self.async_client = anthropic.AsyncAnthropic(**kwargs)
 
     def get_messages(
-        self, input: str, message_history: Optional[list[dict[str, str]]] = None
+        self, input: str, message_history: Optional[list[LLMMessage]] = None
     ) -> Iterable[MessageParam]:
-        messages = []
+        messages: list[dict[str, str]] = []
         if message_history:
             try:
-                MessageList(messages=message_history)  # type: ignore
+                MessageList(messages=cast(list[BaseMessage], message_history))
             except ValidationError as e:
                 raise LLMGenerationError(e.errors()) from e
-            messages.extend(message_history)
+            messages.extend(cast(Iterable[dict[str, Any]], message_history))
         messages.append(UserMessage(content=input).model_dump())
         return messages  # type: ignore
 
     def invoke(
         self,
         input: str,
-        message_history: Optional[list[dict[str, str]]] = None,
+        message_history: Optional[list[LLMMessage]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Sends text to the LLM and returns a response.
@@ -119,7 +125,7 @@ class AnthropicLLM(LLMInterface):
     async def ainvoke(
         self,
         input: str,
-        message_history: Optional[list[dict[str, str]]] = None,
+        message_history: Optional[list[LLMMessage]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Asynchronously sends text to the LLM and returns a response.

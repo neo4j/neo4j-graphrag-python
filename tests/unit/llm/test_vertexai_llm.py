@@ -13,11 +13,13 @@
 #  limitations under the License.
 from __future__ import annotations
 
+from typing import cast
 from unittest import mock
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
+from neo4j_graphrag.llm.types import LLMMessage
 from neo4j_graphrag.llm.vertexai_llm import VertexAILLM
 from vertexai.generative_models import Content, Part
 
@@ -70,7 +72,7 @@ def test_vertexai_get_messages(GenerativeModelMock: MagicMock) -> None:
     ]
 
     llm = VertexAILLM(model_name=model_name, system_instruction=system_instruction)
-    response = llm.get_messages(question, message_history)
+    response = llm.get_messages(question, cast(list[LLMMessage], message_history))
 
     GenerativeModelMock.assert_not_called
     assert len(response) == len(expected_response)
@@ -90,7 +92,7 @@ def test_vertexai_get_messages_validation_error(GenerativeModelMock: MagicMock) 
 
     llm = VertexAILLM(model_name=model_name, system_instruction=system_instruction)
     with pytest.raises(LLMGenerationError) as exc_info:
-        llm.invoke(question, message_history)
+        llm.invoke(question, cast(list[LLMMessage], message_history))
     assert "Input should be 'user', 'assistant' or 'system" in str(exc_info.value)
 
 

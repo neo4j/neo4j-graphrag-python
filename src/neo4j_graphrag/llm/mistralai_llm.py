@@ -15,12 +15,14 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Optional, cast
+from typing import Any, Iterable, Optional, cast
 from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface
 from neo4j_graphrag.llm.types import (
+    BaseMessage,
+    LLMMessage,
     LLMResponse,
     MessageList,
     SystemMessage,
@@ -67,7 +69,7 @@ class MistralAILLM(LLMInterface):
     def get_messages(
         self,
         input: str,
-        message_history: Optional[list[dict[str, str]]] = None,
+        message_history: Optional[list[LLMMessage]] = None,
         system_instruction: Optional[str] = None,
     ) -> list[Messages]:
         messages = []
@@ -80,17 +82,17 @@ class MistralAILLM(LLMInterface):
             messages.append(SystemMessage(content=system_message).model_dump())
         if message_history:
             try:
-                MessageList(messages=message_history)  # type: ignore
+                MessageList(messages=cast(list[BaseMessage], message_history))
             except ValidationError as e:
                 raise LLMGenerationError(e.errors()) from e
-            messages.extend(message_history)
+            messages.extend(cast(Iterable[dict[str, Any]], message_history))
         messages.append(UserMessage(content=input).model_dump())
         return cast(list[Messages], messages)
 
     def invoke(
         self,
         input: str,
-        message_history: Optional[list[dict[str, str]]] = None,
+        message_history: Optional[list[LLMMessage]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Sends a text input to the Mistral chat completion model
@@ -126,7 +128,7 @@ class MistralAILLM(LLMInterface):
     async def ainvoke(
         self,
         input: str,
-        message_history: Optional[list[dict[str, str]]] = None,
+        message_history: Optional[list[LLMMessage]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Asynchronously sends a text input to the MistralAI chat

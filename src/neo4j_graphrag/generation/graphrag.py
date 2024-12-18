@@ -31,6 +31,7 @@ from neo4j_graphrag.generation.prompts import (
 )
 from neo4j_graphrag.generation.types import RagInitModel, RagResultModel, RagSearchModel
 from neo4j_graphrag.llm import LLMInterface
+from neo4j_graphrag.llm.types import LLMMessage
 from neo4j_graphrag.retrievers.base import Retriever
 from neo4j_graphrag.types import RetrieverResult
 
@@ -87,7 +88,7 @@ class GraphRAG:
     def search(
         self,
         query_text: str = "",
-        message_history: Optional[list[dict[str, str]]] = None,
+        message_history: Optional[list[LLMMessage]] = None,
         examples: str = "",
         retriever_config: Optional[dict[str, Any]] = None,
         return_context: bool | None = None,
@@ -147,11 +148,11 @@ class GraphRAG:
         return RagResultModel(**result)
 
     def build_query(
-        self, query_text: str, message_history: Optional[list[dict[str, str]]] = None
+        self, query_text: str, message_history: Optional[list[LLMMessage]] = None
     ) -> str:
         if message_history:
             summarization_prompt = ChatSummaryTemplate().format(
-                message_history=message_history
+                message_history=message_history  # type: ignore
             )
             summary = self.llm.invoke(
                 input=summarization_prompt,

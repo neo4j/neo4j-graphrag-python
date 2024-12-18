@@ -60,7 +60,7 @@ def test_cohere_llm_invoke_with_message_history_happy_path(mock_cohere: Mock) ->
     ]
     question = "What about next season?"
 
-    res = llm.invoke(question, message_history)
+    res = llm.invoke(question, message_history)  # type: ignore
     assert isinstance(res, LLMResponse)
     assert res.content == "cohere response text"
     messages = [{"role": "system", "content": system_instruction}]
@@ -88,7 +88,7 @@ def test_cohere_llm_invoke_with_message_history_validation_error(
     question = "What about next season?"
 
     with pytest.raises(LLMGenerationError) as exc_info:
-        llm.invoke(question, message_history)
+        llm.invoke(question, message_history)  # type: ignore
     assert "Input should be 'user', 'assistant' or 'system" in str(exc_info.value)
 
 

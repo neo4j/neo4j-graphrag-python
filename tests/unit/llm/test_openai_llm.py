@@ -61,7 +61,7 @@ def test_openai_llm_with_message_history_happy_path(mock_import: Mock) -> None:
     ]
     question = "What about next season?"
 
-    res = llm.invoke(question, message_history)
+    res = llm.invoke(question, message_history)  # type: ignore
     assert isinstance(res, LLMResponse)
     assert res.content == "openai chat response"
 
@@ -81,7 +81,7 @@ def test_openai_llm_with_message_history_validation_error(mock_import: Mock) -> 
     question = "What about next season?"
 
     with pytest.raises(LLMGenerationError) as exc_info:
-        llm.invoke(question, message_history)
+        llm.invoke(question, message_history)  # type: ignore
     assert "Input should be 'user', 'assistant' or 'system'" in str(exc_info.value)
 
 
@@ -134,7 +134,7 @@ def test_azure_openai_llm_with_message_history_happy_path(mock_import: Mock) -> 
     ]
     question = "What about next season?"
 
-    res = llm.invoke(question, message_history)
+    res = llm.invoke(question, message_history)  # type: ignore
     assert isinstance(res, LLMResponse)
     assert res.content == "openai chat response"
 

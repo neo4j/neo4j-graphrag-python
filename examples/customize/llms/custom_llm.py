@@ -3,6 +3,7 @@ import string
 from typing import Any, Optional
 
 from neo4j_graphrag.llm import LLMInterface, LLMResponse
+from neo4j_graphrag.llm.types import LLMMessage
 
 
 class CustomLLM(LLMInterface):
@@ -12,7 +13,7 @@ class CustomLLM(LLMInterface):
     def invoke(
         self,
         input: str,
-        message_history: Optional[list[dict[str, str]]] = None,
+        message_history: Optional[list[LLMMessage]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         content: str = (
@@ -23,7 +24,7 @@ class CustomLLM(LLMInterface):
     async def ainvoke(
         self,
         input: str,
-        message_history: Optional[list[dict[str, str]]] = None,
+        message_history: Optional[list[LLMMessage]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         raise NotImplementedError()

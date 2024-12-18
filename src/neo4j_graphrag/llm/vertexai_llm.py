@@ -13,13 +13,13 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface
-from neo4j_graphrag.llm.types import LLMResponse, MessageList
+from neo4j_graphrag.llm.types import BaseMessage, LLMMessage, LLMResponse, MessageList
 
 try:
     from vertexai.generative_models import (
@@ -77,12 +77,12 @@ class VertexAILLM(LLMInterface):
         self.options = kwargs
 
     def get_messages(
-        self, input: str, message_history: Optional[list[dict[str, str]]] = None
+        self, input: str, message_history: Optional[list[LLMMessage]] = None
     ) -> list[Content]:
         messages = []
         if message_history:
             try:
-                MessageList(messages=message_history)  # type: ignore
+                MessageList(messages=cast(list[BaseMessage], message_history))
             except ValidationError as e:
                 raise LLMGenerationError(e.errors()) from e
 
@@ -106,7 +106,7 @@ class VertexAILLM(LLMInterface):
     def invoke(
         self,
         input: str,
-        message_history: Optional[list[dict[str, str]]] = None,
+        message_history: Optional[list[LLMMessage]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Sends text to the LLM and returns a response.
@@ -139,7 +139,7 @@ class VertexAILLM(LLMInterface):
     async def ainvoke(
         self,
         input: str,
-        message_history: Optional[list[dict[str, str]]] = None,
+        message_history: Optional[list[LLMMessage]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Asynchronously sends text to the LLM and returns a response.

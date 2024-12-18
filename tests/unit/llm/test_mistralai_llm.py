@@ -64,7 +64,7 @@ def test_mistralai_llm_invoke_with_message_history(mock_mistral: Mock) -> None:
         {"role": "assistant", "content": "Usually around 6am."},
     ]
     question = "What about next season?"
-    res = llm.invoke(question, message_history)
+    res = llm.invoke(question, message_history)  # type: ignore
 
     assert isinstance(res, LLMResponse)
     assert res.content == "mistral response"
@@ -99,7 +99,7 @@ def test_mistralai_llm_invoke_with_message_history_validation_error(
     question = "What about next season?"
 
     with pytest.raises(LLMGenerationError) as exc_info:
-        llm.invoke(question, message_history)
+        llm.invoke(question, message_history)  # type: ignore
     assert "Input should be 'user', 'assistant' or 'system" in str(exc_info.value)
 
 

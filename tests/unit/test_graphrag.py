@@ -110,7 +110,7 @@ def test_graphrag_happy_path_with_message_history(
         {"role": "user", "content": "initial question"},
         {"role": "assistant", "content": "answer to initial question"},
     ]
-    res = rag.search("question", message_history)
+    res = rag.search("question", message_history)  # type: ignore
 
     expected_retriever_query_text = """
 Message Summary: 

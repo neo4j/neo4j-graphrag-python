@@ -15,13 +15,20 @@
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING, Any, Iterable, Optional
+from typing import TYPE_CHECKING, Any, Iterable, Optional, cast
 
 from pydantic import ValidationError
 
 from ..exceptions import LLMGenerationError
 from .base import LLMInterface
-from .types import LLMResponse, SystemMessage, UserMessage, MessageList
+from .types import (
+    BaseMessage,
+    LLMMessage,
+    LLMResponse,
+    SystemMessage,
+    UserMessage,
+    MessageList,
+)
 
 if TYPE_CHECKING:
     import openai
@@ -63,7 +70,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
     def get_messages(
         self,
         input: str,
-        message_history: Optional[list[dict[str, str]]] = None,
+        message_history: Optional[list[LLMMessage]] = None,
         system_instruction: Optional[str] = None,
     ) -> Iterable[ChatCompletionMessageParam]:
         messages = []
@@ -76,17 +83,17 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
             messages.append(SystemMessage(content=system_message).model_dump())
         if message_history:
             try:
-                MessageList(messages=message_history)  # type: ignore
+                MessageList(messages=cast(list[BaseMessage], message_history))
             except ValidationError as e:
                 raise LLMGenerationError(e.errors()) from e
-            messages.extend(message_history)
+            messages.extend(cast(Iterable[dict[str, Any]], message_history))
         messages.append(UserMessage(content=input).model_dump())
         return messages  # type: ignore
 
     def invoke(
         self,
         input: str,
-        message_history: Optional[list[dict[str, str]]] = None,
+        message_history: Optional[list[LLMMessage]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Sends a text input to the OpenAI chat completion model
@@ -117,7 +124,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
     async def ainvoke(
         self,
         input: str,
-        message_history: Optional[list[dict[str, str]]] = None,
+        message_history: Optional[list[LLMMessage]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Asynchronously sends a text input to the OpenAI chat

@@ -84,7 +84,7 @@ def test_ollama_invoke_with_message_history_happy_path(mock_import: Mock) -> Non
     ]
     question = "What about next season?"
 
-    response = llm.invoke(question, message_history)
+    response = llm.invoke(question, message_history)  # type: ignore
     assert response.content == "ollama chat response"
     messages = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
@@ -114,7 +114,7 @@ def test_ollama_invoke_with_message_history_validation_error(mock_import: Mock) 
     question = "What about next season?"
 
     with pytest.raises(LLMGenerationError) as exc_info:
-        llm.invoke(question, message_history)
+        llm.invoke(question, message_history)  # type: ignore
     assert "Input should be 'user', 'assistant' or 'system" in str(exc_info.value)
 
 
