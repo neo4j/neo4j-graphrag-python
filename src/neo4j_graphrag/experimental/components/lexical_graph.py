@@ -13,13 +13,15 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import asyncio
+import datetime
 import logging
+from itertools import zip_longest
 from typing import Any, Dict, Optional
 
 from pydantic import validate_call
 
-from neo4j_graphrag.experimental.components.pdf_loader import DocumentInfo
 from neo4j_graphrag.experimental.components.types import (
+    DocumentInfo,
     GraphResult,
     LexicalGraphConfig,
     Neo4jGraph,
@@ -61,41 +63,43 @@ class LexicalGraphBuilder(Component):
                 "because no document metadata is provided"
             )
         graph = Neo4jGraph()
-        document_id = None
         if document_info:
             document_node = self.create_document_node(document_info)
             graph.nodes.append(document_node)
-            document_id = document_node.id
-        tasks = [
-            self.process_chunk(graph, chunk, document_id)
-            for chunk in text_chunks.chunks
-        ]
-        await asyncio.gather(*tasks)
+        if len(text_chunks.chunks) > 0:
+            tasks = [
+                self.process_chunk(graph, chunk, next_chunk, document_info)
+                for chunk, next_chunk in zip_longest(
+                    text_chunks.chunks, text_chunks.chunks[1:]
+                )
+            ]
+            await asyncio.gather(*tasks)
         return GraphResult(
             config=self.config,
             graph=graph,
         )
 
-    def chunk_id(self, chunk_index: int) -> str:
-        return f"{self.config.id_prefix}:{chunk_index}"
-
     async def process_chunk(
         self,
         graph: Neo4jGraph,
         chunk: TextChunk,
-        document_id: Optional[str] = None,
+        next_chunk: Optional[TextChunk],
+        document_info: Optional[DocumentInfo] = None,
     ) -> None:
         """Add chunks and relationships between them (NEXT_CHUNK)
 
         Updates `graph` in place.
         """
-        if document_id:
-            chunk_to_doc_rel = self.create_chunk_to_document_rel(chunk, document_id)
-            graph.relationships.append(chunk_to_doc_rel)
         chunk_node = self.create_chunk_node(chunk)
         graph.nodes.append(chunk_node)
-        if chunk.index > 0:
-            next_chunk_rel = self.create_next_chunk_relationship(chunk)
+        if document_info:
+            chunk_to_doc_rel = self.create_chunk_to_document_rel(
+                chunk,
+                document_info,
+            )
+            graph.relationships.append(chunk_to_doc_rel)
+        if next_chunk:
+            next_chunk_rel = self.create_next_chunk_relationship(chunk, next_chunk)
             graph.relationships.append(next_chunk_rel)
 
     def create_document_node(self, document_info: DocumentInfo) -> Neo4jNode:
@@ -104,19 +108,23 @@ class LexicalGraphBuilder(Component):
         """
         document_metadata = document_info.metadata or {}
         return Neo4jNode(
-            id=document_info.path,
+            id=document_info.document_id,
             label=self.config.document_node_label,
             properties={
                 "path": document_info.path,
+                "createdAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
                 **document_metadata,
             },
         )
 
-    def create_chunk_node(self, chunk: TextChunk) -> Neo4jNode:
+    def create_chunk_node(
+        self,
+        chunk: TextChunk,
+    ) -> Neo4jNode:
         """Create chunk node with properties 'text', 'index' and any 'metadata'
         added during the process. Special case for the potential chunk embedding
         property that gets added as an embedding_property"""
-        chunk_id = self.chunk_id(chunk.index)
+        chunk_id = chunk.chunk_id
         chunk_properties: Dict[str, Any] = {
             self.config.chunk_text_property: chunk.text,
             self.config.chunk_index_property: chunk.index,
@@ -136,27 +144,27 @@ class LexicalGraphBuilder(Component):
         )
 
     def create_chunk_to_document_rel(
-        self, chunk: TextChunk, document_id: str
+        self,
+        chunk: TextChunk,
+        document_info: DocumentInfo,
     ) -> Neo4jRelationship:
         """Create the relationship between a chunk and the document it belongs to."""
-        chunk_id = self.chunk_id(chunk.index)
         return Neo4jRelationship(
-            start_node_id=chunk_id,
-            end_node_id=document_id,
+            start_node_id=chunk.chunk_id,
+            end_node_id=document_info.document_id,
             type=self.config.chunk_to_document_relationship_type,
         )
 
     def create_next_chunk_relationship(
         self,
         chunk: TextChunk,
+        next_chunk: TextChunk,
     ) -> Neo4jRelationship:
         """Create relationship between a chunk and the next one"""
-        chunk_id = self.chunk_id(chunk.index)
-        previous_chunk_id = self.chunk_id(chunk.index - 1)
         return Neo4jRelationship(
             type=self.config.next_chunk_relationship_type,
-            start_node_id=previous_chunk_id,
-            end_node_id=chunk_id,
+            start_node_id=chunk.chunk_id,
+            end_node_id=next_chunk.chunk_id,
         )
 
     def create_node_to_chunk_rel(
@@ -185,9 +193,5 @@ class LexicalGraphBuilder(Component):
                 self.config.document_node_label,
             ):
                 continue
-            if chunk.metadata and (id := chunk.metadata.get("id")):
-                chunk_id = id
-            else:
-                chunk_id = self.chunk_id(chunk.index)
-            node_to_chunk_rel = self.create_node_to_chunk_rel(node, chunk_id)
+            node_to_chunk_rel = self.create_node_to_chunk_rel(node, chunk.chunk_id)
             chunk_graph.relationships.append(node_to_chunk_rel)

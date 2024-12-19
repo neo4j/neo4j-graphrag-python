@@ -9,12 +9,6 @@ from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.llm import LLMResponse
 
 
-@pytest.fixture(scope="function", autouse=True)
-def clear_db(driver: neo4j.Driver) -> Any:
-    driver.execute_query("MATCH (n) DETACH DELETE n")
-    yield
-
-
 @pytest.mark.asyncio
 async def test_pipeline_from_json_config(harry_potter_text: str, driver: Mock) -> None:
     os.environ["NEO4J_URI"] = "neo4j://localhost:7687"
