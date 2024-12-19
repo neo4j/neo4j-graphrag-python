@@ -32,10 +32,16 @@ async def test_neo4j_reader(driver: neo4j.Driver) -> None:
     res = await reader.run()
     assert len(res.chunks) == 2
     assert res.chunks[0] == TextChunk(
-        index=0, text="some text", metadata={"id": "0", "embedding": None}
+        index=0,
+        text="some text",
+        metadata={"embedding": None},
+        uid="0",
     )
     assert res.chunks[1] == TextChunk(
-        index=1, text="some longer text", metadata={"id": "1", "embedding": None}
+        index=1,
+        text="some longer text",
+        metadata={"embedding": None},
+        uid="1",
     )
 
 
