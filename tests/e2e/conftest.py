@@ -46,6 +46,12 @@ def driver() -> Generator[Any, Any, Any]:
     driver.close()
 
 
+@pytest.fixture(scope="function", autouse=True)
+def clear_db(driver: Driver) -> Any:
+    driver.execute_query("MATCH (n) DETACH DELETE n")
+    yield
+
+
 @pytest.fixture(scope="function")
 def llm() -> MagicMock:
     return MagicMock(spec=LLMInterface)

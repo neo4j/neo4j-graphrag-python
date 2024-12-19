@@ -5080,6 +5080,17 @@ docs = ["furo (>=2023.7.26)", "proselint (>=0.13)", "sphinx (>=7.1.2,!=7.3)", "s
 test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess (>=1)", "flaky (>=3.7)", "packaging (>=23.1)", "pytest (>=7.4)", "pytest-env (>=0.8.2)", "pytest-freezer (>=0.4.8)", "pytest-mock (>=3.11.1)", "pytest-randomly (>=3.12)", "pytest-timeout (>=2.1)", "setuptools (>=68)", "time-machine (>=2.10)"]
 
 [[package]]
+name = "weaviate"
+version = "0.1.2"
+description = "A placeholder package for the Weaviate name"
+optional = false
+python-versions = "*"
+files = [
+    {file = "weaviate-0.1.2-py3-none-any.whl", hash = "sha256:40f1c1cf0b769036315d2b6026c8cd823a3a6e951c90d4e70a001a770ba8a444"},
+    {file = "weaviate-0.1.2.tar.gz", hash = "sha256:a381b8bb0eb236bd10256def8612953ed9024e6738b8a259e7ec11e626ae0665"},
+]
+
+[[package]]
 name = "weaviate-client"
 version = "4.10.2"
 description = "A python native Weaviate client"
@@ -5306,4 +5317,4 @@ weaviate = ["weaviate-client"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9.0"
-content-hash = "e7c42a84eefc50ce165d6603f7b90788e33108651ca01351a4ed33cfb29ab20d"
+content-hash = "b05fbd4ce521d080d3dc2b7d2fa6a8e66cdc88b60f635b627aa7e7cd81ea65d4"
