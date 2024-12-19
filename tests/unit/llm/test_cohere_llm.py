@@ -72,6 +72,61 @@ def test_cohere_llm_invoke_with_message_history_happy_path(mock_cohere: Mock) ->
     )
 
 
+def test_cohere_llm_invoke_with_message_history_and_system_instruction(
+    mock_cohere: Mock,
+) -> None:
+    chat_response_mock = MagicMock()
+    chat_response_mock.message.content = [MagicMock(text="cohere response text")]
+    mock_cohere.ClientV2.return_value.chat.return_value = chat_response_mock
+
+    initial_instruction = "You are a helpful assistant."
+    llm = CohereLLM(model_name="gpt", system_instruction=initial_instruction)
+    message_history = [
+        {"role": "user", "content": "When does the sun come up in the summer?"},
+        {"role": "assistant", "content": "Usually around 6am."},
+    ]
+    question = "What about next season?"
+
+    # first invokation - initial instructions
+    res = llm.invoke(question, message_history)  # type: ignore
+    assert isinstance(res, LLMResponse)
+    assert res.content == "cohere response text"
+    messages = [{"role": "system", "content": initial_instruction}]
+    messages.extend(message_history)
+    messages.append({"role": "user", "content": question})
+    llm.client.chat.assert_called_once_with(
+        messages=messages,
+        model="gpt",
+    )
+
+    # second invokation - override instructions
+    override_instruction = "Ignore all previous instructions"
+    res = llm.invoke(question, message_history, override_instruction)  # type: ignore
+    assert isinstance(res, LLMResponse)
+    assert res.content == "cohere response text"
+    messages = [{"role": "system", "content": override_instruction}]
+    messages.extend(message_history)
+    messages.append({"role": "user", "content": question})
+    llm.client.chat.assert_called_with(
+        messages=messages,
+        model="gpt",
+    )
+
+    # third invokation - default instructions
+    res = llm.invoke(question, message_history)  # type: ignore
+    assert isinstance(res, LLMResponse)
+    assert res.content == "cohere response text"
+    messages = [{"role": "system", "content": initial_instruction}]
+    messages.extend(message_history)
+    messages.append({"role": "user", "content": question})
+    llm.client.chat.assert_called_with(
+        messages=messages,
+        model="gpt",
+    )
+
+    assert llm.client.chat.call_count == 3
+
+
 def test_cohere_llm_invoke_with_message_history_validation_error(
     mock_cohere: Mock,
 ) -> None:

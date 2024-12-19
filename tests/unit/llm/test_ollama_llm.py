@@ -95,6 +95,63 @@ def test_ollama_invoke_with_message_history_happy_path(mock_import: Mock) -> Non
 
 
 @patch("builtins.__import__")
+def test_ollama_invoke_with_message_history_and_system_instruction(
+    mock_import: Mock,
+) -> None:
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+    mock_ollama.Client.return_value.chat.return_value = MagicMock(
+        message=MagicMock(content="ollama chat response"),
+    )
+    model = "gpt"
+    model_params = {"temperature": 0.3}
+    system_instruction = "You are a helpful assistant."
+    llm = OllamaLLM(
+        model,
+        model_params=model_params,
+        system_instruction=system_instruction,
+    )
+    message_history = [
+        {"role": "user", "content": "When does the sun come up in the summer?"},
+        {"role": "assistant", "content": "Usually around 6am."},
+    ]
+    question = "What about next season?"
+
+    # first invokation - initial instructions
+    response = llm.invoke(question, message_history)  # type: ignore
+    assert response.content == "ollama chat response"
+    messages = [{"role": "system", "content": system_instruction}]
+    messages.extend(message_history)
+    messages.append({"role": "user", "content": question})
+    llm.client.chat.assert_called_once_with(  # type: ignore[attr-defined]
+        model=model, messages=messages, options=model_params
+    )
+
+    # second invokation - override instructions
+    override_instruction = "Ignore all previous instructions"
+    response = llm.invoke(question, message_history, override_instruction)  # type: ignore
+    assert response.content == "ollama chat response"
+    messages = [{"role": "system", "content": override_instruction}]
+    messages.extend(message_history)
+    messages.append({"role": "user", "content": question})
+    llm.client.chat.assert_called_with(  # type: ignore[attr-defined]
+        model=model, messages=messages, options=model_params
+    )
+
+    # third invokation - default instructions
+    response = llm.invoke(question, message_history)  # type: ignore
+    assert response.content == "ollama chat response"
+    messages = [{"role": "system", "content": system_instruction}]
+    messages.extend(message_history)
+    messages.append({"role": "user", "content": question})
+    llm.client.chat.assert_called_with(  # type: ignore[attr-defined]
+        model=model, messages=messages, options=model_params
+    )
+
+    assert llm.client.chat.call_count == 3  # type: ignore
+
+
+@patch("builtins.__import__")
 def test_ollama_invoke_with_message_history_validation_error(mock_import: Mock) -> None:
     mock_ollama = get_mock_ollama()
     mock_import.return_value = mock_ollama

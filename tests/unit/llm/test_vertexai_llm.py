@@ -32,6 +32,28 @@ def test_vertexai_llm_missing_dependency() -> None:
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
 def test_vertexai_invoke_happy_path(GenerativeModelMock: MagicMock) -> None:
+    model_name = "gemini-1.5-flash-001"
+    input_text = "may thy knife chip and shatter"
+    mock_response = Mock()
+    mock_response.text = "Return text"
+    mock_model = GenerativeModelMock.return_value
+    mock_model.generate_content.return_value = mock_response
+    model_params = {"temperature": 0.5}
+    llm = VertexAILLM(model_name, model_params)
+
+    response = llm.invoke(input_text)
+    assert response.content == "Return text"
+    GenerativeModelMock.assert_called_once_with(
+        model_name=model_name, system_instruction=[None]
+    )
+    user_message = mock.ANY
+    llm.model.generate_content.assert_called_once_with(user_message, **model_params)
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_invoke_with_message_history_and_system_instruction(
+    GenerativeModelMock: MagicMock,
+) -> None:
     system_instruction = "You are a helpful assistant."
     model_name = "gemini-1.5-flash-001"
     input_text = "may thy knife chip and shatter"
@@ -41,12 +63,25 @@ def test_vertexai_invoke_happy_path(GenerativeModelMock: MagicMock) -> None:
     mock_model.generate_content.return_value = mock_response
     model_params = {"temperature": 0.5}
     llm = VertexAILLM(model_name, model_params, system_instruction)
+
     response = llm.invoke(input_text)
     assert response.content == "Return text"
     GenerativeModelMock.assert_called_once_with(
         model_name=model_name, system_instruction=[system_instruction]
     )
-    llm.model.generate_content.assert_called_once_with([mock.ANY], **model_params)
+    user_message = mock.ANY
+    llm.model.generate_content.assert_called_once_with(user_message, **model_params)
+
+    message_history = [
+        {"role": "user", "content": "hello!"},
+        {"role": "assistant", "content": "hi."},
+    ]
+    response = llm.invoke(input_text, message_history, "new instructions")  # type:ignore
+    GenerativeModelMock.assert_called_with(
+        model_name=model_name, system_instruction=["new instructions"]
+    )
+    messages = [mock.ANY, mock.ANY, mock.ANY]
+    llm.model.generate_content.assert_called_with(messages, **model_params)
 
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
