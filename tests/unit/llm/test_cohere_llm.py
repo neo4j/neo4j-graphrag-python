@@ -27,7 +27,6 @@ from neo4j_graphrag.llm.cohere_llm import CohereLLM
 def mock_cohere() -> Generator[MagicMock, None, None]:
     mock_cohere = MagicMock()
     mock_cohere.core.api_error.ApiError = cohere.core.ApiError
-
     with patch.dict(sys.modules, {"cohere": mock_cohere}):
         yield mock_cohere
 
@@ -39,39 +38,140 @@ def test_cohere_llm_missing_dependency(mock_import: Mock) -> None:
 
 
 def test_cohere_llm_happy_path(mock_cohere: Mock) -> None:
-    mock_cohere.Client.return_value.chat.return_value = MagicMock(
-        text="cohere response text"
-    )
-    embedder = CohereLLM(model_name="something")
-    res = embedder.invoke("my text")
+    chat_response_mock = MagicMock()
+    chat_response_mock.message.content = [MagicMock(text="cohere response text")]
+    mock_cohere.ClientV2.return_value.chat.return_value = chat_response_mock
+    llm = CohereLLM(model_name="something")
+    res = llm.invoke("my text")
     assert isinstance(res, LLMResponse)
     assert res.content == "cohere response text"
 
 
+def test_cohere_llm_invoke_with_message_history_happy_path(mock_cohere: Mock) -> None:
+    chat_response_mock = MagicMock()
+    chat_response_mock.message.content = [MagicMock(text="cohere response text")]
+    mock_cohere.ClientV2.return_value.chat.return_value = chat_response_mock
+
+    system_instruction = "You are a helpful assistant."
+    llm = CohereLLM(model_name="something", system_instruction=system_instruction)
+    message_history = [
+        {"role": "user", "content": "When does the sun come up in the summer?"},
+        {"role": "assistant", "content": "Usually around 6am."},
+    ]
+    question = "What about next season?"
+
+    res = llm.invoke(question, message_history)  # type: ignore
+    assert isinstance(res, LLMResponse)
+    assert res.content == "cohere response text"
+    messages = [{"role": "system", "content": system_instruction}]
+    messages.extend(message_history)
+    messages.append({"role": "user", "content": question})
+    llm.client.chat.assert_called_once_with(
+        messages=messages,
+        model="something",
+    )
+
+
+def test_cohere_llm_invoke_with_message_history_and_system_instruction(
+    mock_cohere: Mock,
+) -> None:
+    chat_response_mock = MagicMock()
+    chat_response_mock.message.content = [MagicMock(text="cohere response text")]
+    mock_cohere.ClientV2.return_value.chat.return_value = chat_response_mock
+
+    initial_instruction = "You are a helpful assistant."
+    llm = CohereLLM(model_name="gpt", system_instruction=initial_instruction)
+    message_history = [
+        {"role": "user", "content": "When does the sun come up in the summer?"},
+        {"role": "assistant", "content": "Usually around 6am."},
+    ]
+    question = "What about next season?"
+
+    # first invokation - initial instructions
+    res = llm.invoke(question, message_history)  # type: ignore
+    assert isinstance(res, LLMResponse)
+    assert res.content == "cohere response text"
+    messages = [{"role": "system", "content": initial_instruction}]
+    messages.extend(message_history)
+    messages.append({"role": "user", "content": question})
+    llm.client.chat.assert_called_once_with(
+        messages=messages,
+        model="gpt",
+    )
+
+    # second invokation - override instructions
+    override_instruction = "Ignore all previous instructions"
+    res = llm.invoke(question, message_history, override_instruction)  # type: ignore
+    assert isinstance(res, LLMResponse)
+    assert res.content == "cohere response text"
+    messages = [{"role": "system", "content": override_instruction}]
+    messages.extend(message_history)
+    messages.append({"role": "user", "content": question})
+    llm.client.chat.assert_called_with(
+        messages=messages,
+        model="gpt",
+    )
+
+    # third invokation - default instructions
+    res = llm.invoke(question, message_history)  # type: ignore
+    assert isinstance(res, LLMResponse)
+    assert res.content == "cohere response text"
+    messages = [{"role": "system", "content": initial_instruction}]
+    messages.extend(message_history)
+    messages.append({"role": "user", "content": question})
+    llm.client.chat.assert_called_with(
+        messages=messages,
+        model="gpt",
+    )
+
+    assert llm.client.chat.call_count == 3
+
+
+def test_cohere_llm_invoke_with_message_history_validation_error(
+    mock_cohere: Mock,
+) -> None:
+    chat_response_mock = MagicMock()
+    chat_response_mock.message.content = [MagicMock(text="cohere response text")]
+    mock_cohere.ClientV2.return_value.chat.return_value = chat_response_mock
+
+    system_instruction = "You are a helpful assistant."
+    llm = CohereLLM(model_name="something", system_instruction=system_instruction)
+    message_history = [
+        {"role": "robot", "content": "When does the sun come up in the summer?"},
+        {"role": "assistant", "content": "Usually around 6am."},
+    ]
+    question = "What about next season?"
+
+    with pytest.raises(LLMGenerationError) as exc_info:
+        llm.invoke(question, message_history)  # type: ignore
+    assert "Input should be 'user', 'assistant' or 'system" in str(exc_info.value)
+
+
 @pytest.mark.asyncio
 async def test_cohere_llm_happy_path_async(mock_cohere: Mock) -> None:
-    async_mock = Mock()
-    async_mock.chat = AsyncMock(return_value=MagicMock(text="cohere response text"))
-    mock_cohere.AsyncClient.return_value = async_mock
-    embedder = CohereLLM(model_name="something")
-    res = await embedder.ainvoke("my text")
+    chat_response_mock = AsyncMock()
+    chat_response_mock.message.content = [AsyncMock(text="cohere response text")]
+    mock_cohere.AsyncClientV2.return_value.chat.return_value = chat_response_mock
+
+    llm = CohereLLM(model_name="something")
+    res = await llm.ainvoke("my text")
     assert isinstance(res, LLMResponse)
     assert res.content == "cohere response text"
 
 
 def test_cohere_llm_failed(mock_cohere: Mock) -> None:
-    mock_cohere.Client.return_value.chat.side_effect = cohere.core.ApiError
-    embedder = CohereLLM(model_name="something")
+    mock_cohere.ClientV2.return_value.chat.side_effect = cohere.core.ApiError
+    llm = CohereLLM(model_name="something")
     with pytest.raises(LLMGenerationError) as excinfo:
-        embedder.invoke("my text")
+        llm.invoke("my text")
     assert "ApiError" in str(excinfo)
 
 
 @pytest.mark.asyncio
 async def test_cohere_llm_failed_async(mock_cohere: Mock) -> None:
-    mock_cohere.AsyncClient.return_value.chat.side_effect = cohere.core.ApiError
-    embedder = CohereLLM(model_name="something")
+    mock_cohere.AsyncClientV2.return_value.chat.side_effect = cohere.core.ApiError
+    llm = CohereLLM(model_name="something")
 
     with pytest.raises(LLMGenerationError) as excinfo:
-        await embedder.ainvoke("my text")
+        await llm.ainvoke("my text")
     assert "ApiError" in str(excinfo)

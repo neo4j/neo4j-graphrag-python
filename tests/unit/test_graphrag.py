@@ -12,12 +12,16 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
 from neo4j_graphrag.exceptions import RagInitializationError, SearchValidationError
 from neo4j_graphrag.generation.graphrag import GraphRAG
-from neo4j_graphrag.generation.prompts import RagTemplate
+from neo4j_graphrag.generation.prompts import (
+    RagTemplate,
+    ChatSummaryTemplate,
+    ConversationTemplate,
+)
 from neo4j_graphrag.generation.types import RagResultModel
 from neo4j_graphrag.llm import LLMResponse
 from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
@@ -62,7 +66,8 @@ def test_graphrag_happy_path(retriever_mock: MagicMock, llm: MagicMock) -> None:
     res = rag.search("question")
 
     retriever_mock.search.assert_called_once_with(query_text="question")
-    llm.invoke.assert_called_once_with("""Answer the user question using the following context
+    llm.invoke.assert_called_once_with(
+        """Answer the user question using the following context
 
 Context:
 item content 1
@@ -75,7 +80,81 @@ Question:
 question
 
 Answer:
-""")
+""",
+        None,
+    )
+
+    assert isinstance(res, RagResultModel)
+    assert res.answer == "llm generated text"
+    assert res.retriever_result is None
+
+
+def test_graphrag_happy_path_with_message_history(
+    retriever_mock: MagicMock, llm: MagicMock
+) -> None:
+    rag = GraphRAG(
+        retriever=retriever_mock,
+        llm=llm,
+    )
+    retriever_mock.search.return_value = RetrieverResult(
+        items=[
+            RetrieverResultItem(content="item content 1"),
+            RetrieverResultItem(content="item content 2"),
+        ]
+    )
+    llm.invoke.side_effect = [
+        LLMResponse(content="llm generated summary"),
+        LLMResponse(content="llm generated text"),
+    ]
+    message_history = [
+        {"role": "user", "content": "initial question"},
+        {"role": "assistant", "content": "answer to initial question"},
+    ]
+    res = rag.search("question", message_history)  # type: ignore
+
+    expected_retriever_query_text = """
+Message Summary: 
+llm generated summary
+
+Current Query: 
+question
+"""
+
+    first_invokation_input = """
+Summarize the message history:
+
+user: initial question
+assistant: answer to initial question
+"""
+    first_invokation_system_instruction = "You are a summarization assistant. Summarize the given text in no more than 200 words"
+    second_invokation = """Answer the user question using the following context
+
+Context:
+item content 1
+item content 2
+
+Examples:
+
+
+Question:
+question
+
+Answer:
+"""
+
+    retriever_mock.search.assert_called_once_with(
+        query_text=expected_retriever_query_text
+    )
+    assert llm.invoke.call_count == 2
+    llm.invoke.assert_has_calls(
+        [
+            call(
+                input=first_invokation_input,
+                system_instruction=first_invokation_system_instruction,
+            ),
+            call(second_invokation, message_history),
+        ]
+    )
 
     assert isinstance(res, RagResultModel)
     assert res.answer == "llm generated text"
@@ -99,3 +178,40 @@ def test_graphrag_search_error(retriever_mock: MagicMock, llm: MagicMock) -> Non
     with pytest.raises(SearchValidationError) as excinfo:
         rag.search(10)  # type: ignore
     assert "Input should be a valid string" in str(excinfo)
+
+
+def test_chat_summary_template() -> None:
+    message_history = [
+        {"role": "user", "content": "initial question"},
+        {"role": "assistant", "content": "answer to initial question"},
+        {"role": "user", "content": "second question"},
+        {"role": "assistant", "content": "answer to second question"},
+    ]
+    prompt = ChatSummaryTemplate(message_history=message_history)  # type: ignore
+    assert (
+        prompt
+        == """
+Summarize the message history:
+
+user: initial question
+assistant: answer to initial question
+user: second question
+assistant: answer to second question
+"""
+    )
+
+
+def test_conversation_template() -> None:
+    prompt = ConversationTemplate(
+        summary="llm generated chat summary", current_query="latest question"
+    )
+    assert (
+        prompt
+        == """
+Message Summary: 
+llm generated chat summary
+
+Current Query: 
+latest question
+"""
+    )

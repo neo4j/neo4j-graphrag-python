@@ -72,7 +72,8 @@ Question:
 biology
 
 Answer:
-"""
+""",
+        None,
     )
     assert isinstance(result, RagResultModel)
     assert result.answer == "some text"
@@ -117,7 +118,8 @@ Question:
 biology
 
 Answer:
-"""
+""",
+        None,
     )
     assert isinstance(result, RagResultModel)
     assert result.answer == "some text"
@@ -163,7 +165,8 @@ Question:
 biology
 
 Answer:
-"""
+""",
+        None,
     )
     assert result.answer == "some text"
 

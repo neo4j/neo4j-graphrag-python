@@ -13,14 +13,21 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Optional, cast
+
+from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface
-from neo4j_graphrag.llm.types import LLMResponse
+from neo4j_graphrag.llm.types import BaseMessage, LLMMessage, LLMResponse, MessageList
 
 try:
-    from vertexai.generative_models import GenerativeModel, ResponseValidationError
+    from vertexai.generative_models import (
+        GenerativeModel,
+        ResponseValidationError,
+        Part,
+        Content,
+    )
 except ImportError:
     GenerativeModel = None
     ResponseValidationError = None
@@ -32,6 +39,7 @@ class VertexAILLM(LLMInterface):
     Args:
         model_name (str, optional): Name of the LLM to use. Defaults to "gemini-1.5-flash-001".
         model_params (Optional[dict], optional): Additional parameters passed to the model when text is sent to it. Defaults to None.
+        system_instruction: Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
         **kwargs (Any): Arguments passed to the model when for the class is initialised. Defaults to None.
 
     Raises:
@@ -55,6 +63,7 @@ class VertexAILLM(LLMInterface):
         self,
         model_name: str = "gemini-1.5-flash-001",
         model_params: Optional[dict[str, Any]] = None,
+        system_instruction: Optional[str] = None,
         **kwargs: Any,
     ):
         if GenerativeModel is None or ResponseValidationError is None:
@@ -63,35 +72,100 @@ class VertexAILLM(LLMInterface):
                 Please install it with `pip install "neo4j-graphrag[google]"`."""
             )
         super().__init__(model_name, model_params)
-        self.model = GenerativeModel(model_name=model_name, **kwargs)
+        self.model_name = model_name
+        self.system_instruction = system_instruction
+        self.options = kwargs
 
-    def invoke(self, input: str) -> LLMResponse:
+    def get_messages(
+        self, input: str, message_history: Optional[list[LLMMessage]] = None
+    ) -> list[Content]:
+        messages = []
+        if message_history:
+            try:
+                MessageList(messages=cast(list[BaseMessage], message_history))
+            except ValidationError as e:
+                raise LLMGenerationError(e.errors()) from e
+
+            for message in message_history:
+                if message.get("role") == "user":
+                    messages.append(
+                        Content(
+                            role="user", parts=[Part.from_text(message.get("content"))]
+                        )
+                    )
+                elif message.get("role") == "assistant":
+                    messages.append(
+                        Content(
+                            role="model", parts=[Part.from_text(message.get("content"))]
+                        )
+                    )
+
+        messages.append(Content(role="user", parts=[Part.from_text(input)]))
+        return messages
+
+    def invoke(
+        self,
+        input: str,
+        message_history: Optional[list[LLMMessage]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> LLMResponse:
         """Sends text to the LLM and returns a response.
 
         Args:
             input (str): The text to send to the LLM.
+            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invokation.
 
         Returns:
             LLMResponse: The response from the LLM.
         """
+        system_message = (
+            system_instruction
+            if system_instruction is not None
+            else self.system_instruction
+        )
+        self.model = GenerativeModel(
+            model_name=self.model_name,
+            system_instruction=[system_message],
+            **self.options,
+        )
         try:
-            response = self.model.generate_content(input, **self.model_params)
+            messages = self.get_messages(input, message_history)
+            response = self.model.generate_content(messages, **self.model_params)
             return LLMResponse(content=response.text)
         except ResponseValidationError as e:
             raise LLMGenerationError(e)
 
-    async def ainvoke(self, input: str) -> LLMResponse:
+    async def ainvoke(
+        self,
+        input: str,
+        message_history: Optional[list[LLMMessage]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> LLMResponse:
         """Asynchronously sends text to the LLM and returns a response.
 
         Args:
             input (str): The text to send to the LLM.
+            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invokation.
 
         Returns:
             LLMResponse: The response from the LLM.
         """
         try:
+            system_message = (
+                system_instruction
+                if system_instruction is not None
+                else self.system_instruction
+            )
+            self.model = GenerativeModel(
+                model_name=self.model_name,
+                system_instruction=[system_message],
+                **self.options,
+            )
+            messages = self.get_messages(input, message_history)
             response = await self.model.generate_content_async(
-                input, **self.model_params
+                messages, **self.model_params
             )
             return LLMResponse(content=response.text)
         except ResponseValidationError as e:

@@ -12,12 +12,25 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Any, Optional
+from __future__ import annotations
+from typing import Any, Iterable, Optional, Sequence, TYPE_CHECKING, cast
+
+from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 
 from .base import LLMInterface
-from .types import LLMResponse
+from .types import (
+    BaseMessage,
+    LLMMessage,
+    LLMResponse,
+    SystemMessage,
+    UserMessage,
+    MessageList,
+)
+
+if TYPE_CHECKING:
+    from ollama import Message
 
 
 class OllamaLLM(LLMInterface):
@@ -25,6 +38,7 @@ class OllamaLLM(LLMInterface):
         self,
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
+        system_instruction: Optional[str] = None,
         **kwargs: Any,
     ):
         try:
@@ -34,7 +48,7 @@ class OllamaLLM(LLMInterface):
                 "Could not import ollama Python client. "
                 "Please install it with `pip install ollama`."
             )
-        super().__init__(model_name, model_params, **kwargs)
+        super().__init__(model_name, model_params, system_instruction, **kwargs)
         self.ollama = ollama
         self.client = ollama.Client(
             **kwargs,
@@ -43,32 +57,81 @@ class OllamaLLM(LLMInterface):
             **kwargs,
         )
 
-    def invoke(self, input: str) -> LLMResponse:
+    def get_messages(
+        self,
+        input: str,
+        message_history: Optional[list[LLMMessage]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> Sequence[Message]:
+        messages = []
+        system_message = (
+            system_instruction
+            if system_instruction is not None
+            else self.system_instruction
+        )
+        if system_message:
+            messages.append(SystemMessage(content=system_message).model_dump())
+        if message_history:
+            try:
+                MessageList(messages=cast(list[BaseMessage], message_history))
+            except ValidationError as e:
+                raise LLMGenerationError(e.errors()) from e
+            messages.extend(cast(Iterable[dict[str, Any]], message_history))
+        messages.append(UserMessage(content=input).model_dump())
+        return messages  # type: ignore
+
+    def invoke(
+        self,
+        input: str,
+        message_history: Optional[list[LLMMessage]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> LLMResponse:
+        """Sends text to the LLM and returns a response.
+
+        Args:
+            input (str): The text to send to the LLM.
+            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invokation.
+
+        Returns:
+            LLMResponse: The response from the LLM.
+        """
         try:
             response = self.client.chat(
                 model=self.model_name,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": input,
-                    },
-                ],
+                messages=self.get_messages(input, message_history, system_instruction),
+                options=self.model_params,
             )
             content = response.message.content or ""
             return LLMResponse(content=content)
         except self.ollama.ResponseError as e:
             raise LLMGenerationError(e)
 
-    async def ainvoke(self, input: str) -> LLMResponse:
+    async def ainvoke(
+        self,
+        input: str,
+        message_history: Optional[list[LLMMessage]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> LLMResponse:
+        """Asynchronously sends a text input to the OpenAI chat
+        completion model and returns the response's content.
+
+        Args:
+            input (str): Text sent to the LLM.
+            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invokation.
+
+        Returns:
+            LLMResponse: The response from OpenAI.
+
+        Raises:
+            LLMGenerationError: If anything goes wrong.
+        """
         try:
             response = await self.async_client.chat(
                 model=self.model_name,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": input,
-                    },
-                ],
+                messages=self.get_messages(input, message_history, system_instruction),
+                options=self.model_params,
             )
             content = response.message.content or ""
             return LLMResponse(content=content)
