@@ -52,6 +52,7 @@ json-repair = "^0.30.2"
 types-pyyaml = "^6.0.12.20240917"
 ollama = {version = "^0.4.4", optional = true}
 uuid = "^1.30"
+weaviate = "^0.1.2"
 
 [tool.poetry.group.dev.dependencies]
 urllib3 = "<2"

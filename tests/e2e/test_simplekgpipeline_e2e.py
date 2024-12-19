@@ -108,5 +108,148 @@ async def test_pipeline_builder_happy_path(
     )
 
     # Run the knowledge graph building process with text input
-    text_input = "John Doe lives in New York City."
-    await kg_builder_text.run_async(text=text_input)
+    await kg_builder_text.run_async(text=harry_potter_text)
+
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
+async def test_pipeline_builder_two_documents(
+    harry_potter_text_part1: str,
+    harry_potter_text_part2: str,
+    llm: MagicMock,
+    embedder: MagicMock,
+    driver: neo4j.Driver,
+) -> None:
+    """When everything works as expected, extracted entities, relations and text
+    chunks must be in the DB
+    """
+    driver.execute_query("MATCH (n) DETACH DELETE n")
+    embedder.embed_query.return_value = [1, 2, 3]
+    llm.ainvoke.side_effect = [
+        # first document
+        # first chunk
+        LLMResponse(
+            content="""{
+                        "nodes": [
+                            {
+                                "id": "0",
+                                "label": "Person",
+                                "properties": {
+                                    "name": "Harry Potter"
+                                }
+                            },
+                        ],
+                        "relationships": []
+                    }"""
+        ),
+        # second chunk
+        LLMResponse(content='{"nodes": [], "relationships": []}'),
+        # second document
+        # first chunk
+        LLMResponse(
+            content="""{
+                        "nodes": [
+                            {
+                                "id": "0",
+                                "label": "Person",
+                                "properties": {
+                                    "name": "Hermione Granger"
+                                }
+                            },
+                        ],
+                        "relationships": []
+                    }"""
+        ),
+        # second chunk
+        LLMResponse(content='{"nodes": [], "relationships": []}'),
+    ]
+
+    # Create an instance of the SimpleKGPipeline
+    kg_builder_text = SimpleKGPipeline(
+        llm=llm,
+        driver=driver,
+        embedder=embedder,
+        from_pdf=False,
+    )
+
+    # Run the knowledge graph building process with text input
+    await kg_builder_text.run_async(text=harry_potter_text_part1)
+    await kg_builder_text.run_async(text=harry_potter_text_part2)
+
+    # check graph content
+    records, _, _ = driver.execute_query("MATCH (n) RETURN n")
+    print(records)
+
+    assert False
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
+async def test_pipeline_builder_same_document_two_runs(
+    harry_potter_text_part1: str,
+    llm: MagicMock,
+    embedder: MagicMock,
+    driver: neo4j.Driver,
+) -> None:
+    """When everything works as expected, extracted entities, relations and text
+    chunks must be in the DB
+    """
+    driver.execute_query("MATCH (n) DETACH DELETE n")
+    embedder.embed_query.return_value = [1, 2, 3]
+    llm.ainvoke.side_effect = [
+        # first run
+        # first chunk
+        LLMResponse(
+            content="""{
+                        "nodes": [
+                            {
+                                "id": "0",
+                                "label": "Person",
+                                "properties": {
+                                    "name": "Harry Potter"
+                                }
+                            },
+                        ],
+                        "relationships": []
+                    }"""
+        ),
+        # second chunk
+        LLMResponse(content='{"nodes": [], "relationships": []}'),
+        # second run
+        # first chunk
+        LLMResponse(
+            content="""{
+                        "nodes": [
+                            {
+                                "id": "0",
+                                "label": "Person",
+                                "properties": {
+                                    "name": "Harry Potter"
+                                }
+                            },
+                        ],
+                        "relationships": []
+                    }"""
+        ),
+        # second chunk
+        LLMResponse(content='{"nodes": [], "relationships": []}'),
+    ]
+
+    # Create an instance of the SimpleKGPipeline
+    kg_builder_text = SimpleKGPipeline(
+        llm=llm,
+        driver=driver,
+        embedder=embedder,
+        from_pdf=False,
+    )
+
+    # Run the knowledge graph building process with text input
+    await kg_builder_text.run_async(text=harry_potter_text_part1)
+    await kg_builder_text.run_async(text=harry_potter_text_part1)
+
+    # check graph content
+    records, _, _ = driver.execute_query("MATCH (n) RETURN n")
+    print(records)
+
+    assert False
