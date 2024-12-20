@@ -2,6 +2,14 @@
 
 ## Next
 
+### Added
+- Support for conversations with message history, including a new `message_history` parameter for LLM interactions.
+- Ability to include system instructions and override them for specific invocations.
+- Summarization of chat history to enhance query embedding and context handling.
+
+### Changed
+- Updated LLM implementations to handle message history consistently across providers.
+
 ## 1.3.0
 
 ### Added
