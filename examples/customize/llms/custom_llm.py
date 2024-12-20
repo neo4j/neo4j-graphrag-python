@@ -7,7 +7,9 @@ from neo4j_graphrag.llm.types import LLMMessage
 
 
 class CustomLLM(LLMInterface):
-    def __init__(self, model_name: str, **kwargs: Any):
+    def __init__(
+        self, model_name: str, system_instruction: Optional[str] = None, **kwargs: Any
+    ):
         super().__init__(model_name, **kwargs)
 
     def invoke(
