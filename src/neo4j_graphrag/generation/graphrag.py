@@ -24,12 +24,7 @@ from neo4j_graphrag.exceptions import (
     RagInitializationError,
     SearchValidationError,
 )
-from neo4j_graphrag.generation.prompts import (
-    SUMMARY_SYSTEM_MESSAGE,
-    RagTemplate,
-    ChatSummaryTemplate,
-    ConversationTemplate,
-)
+from neo4j_graphrag.generation.prompts import RagTemplate
 from neo4j_graphrag.generation.types import RagInitModel, RagResultModel, RagSearchModel
 from neo4j_graphrag.llm import LLMInterface
 from neo4j_graphrag.llm.types import LLMMessage
@@ -151,11 +146,35 @@ class GraphRAG:
     def build_query(
         self, query_text: str, message_history: Optional[list[LLMMessage]] = None
     ) -> str:
+        summary_system_message = "You are a summarization assistant. Summarize the given text in no more than 300 words."
         if message_history:
-            summarization_prompt = ChatSummaryTemplate(message_history=message_history)
+            summarization_prompt = self.chat_summary_prompt(
+                message_history=message_history
+            )
             summary = self.llm.invoke(
                 input=summarization_prompt,
-                system_instruction=SUMMARY_SYSTEM_MESSAGE,
+                system_instruction=summary_system_message,
             ).content
-            return ConversationTemplate(summary=summary, current_query=query_text)
+            return self.conversation_prompt(summary=summary, current_query=query_text)
         return query_text
+
+    def chat_summary_prompt(self, message_history: list[LLMMessage]) -> str:
+        message_list = [
+            ": ".join([f"{value}" for _, value in message.items()])
+            for message in message_history
+        ]
+        history = "\n".join(message_list)
+        return f"""
+Summarize the message history:
+
+{history}
+"""
+
+    def conversation_prompt(self, summary: str, current_query: str) -> str:
+        return f"""
+Message Summary: 
+{summary}
+
+Current Query: 
+{current_query}
+"""

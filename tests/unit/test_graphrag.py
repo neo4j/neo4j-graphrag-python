@@ -17,11 +17,7 @@ from unittest.mock import MagicMock, call
 import pytest
 from neo4j_graphrag.exceptions import RagInitializationError, SearchValidationError
 from neo4j_graphrag.generation.graphrag import GraphRAG
-from neo4j_graphrag.generation.prompts import (
-    RagTemplate,
-    ChatSummaryTemplate,
-    ConversationTemplate,
-)
+from neo4j_graphrag.generation.prompts import RagTemplate
 from neo4j_graphrag.generation.types import RagResultModel
 from neo4j_graphrag.llm import LLMResponse
 from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
@@ -126,7 +122,7 @@ Summarize the message history:
 user: initial question
 assistant: answer to initial question
 """
-    first_invokation_system_instruction = "You are a summarization assistant. Summarize the given text in no more than 200 words"
+    first_invokation_system_instruction = "You are a summarization assistant. Summarize the given text in no more than 300 words."
     second_invokation = """Answer the user question using the following context
 
 Context:
@@ -180,14 +176,18 @@ def test_graphrag_search_error(retriever_mock: MagicMock, llm: MagicMock) -> Non
     assert "Input should be a valid string" in str(excinfo)
 
 
-def test_chat_summary_template() -> None:
+def test_chat_summary_template(retriever_mock: MagicMock, llm: MagicMock) -> None:
     message_history = [
         {"role": "user", "content": "initial question"},
         {"role": "assistant", "content": "answer to initial question"},
         {"role": "user", "content": "second question"},
         {"role": "assistant", "content": "answer to second question"},
     ]
-    prompt = ChatSummaryTemplate(message_history=message_history)  # type: ignore
+    rag = GraphRAG(
+        retriever=retriever_mock,
+        llm=llm,
+    )
+    prompt = rag.chat_summary_prompt(message_history=message_history)  # type: ignore
     assert (
         prompt
         == """
@@ -201,8 +201,12 @@ assistant: answer to second question
     )
 
 
-def test_conversation_template() -> None:
-    prompt = ConversationTemplate(
+def test_conversation_template(retriever_mock: MagicMock, llm: MagicMock) -> None:
+    rag = GraphRAG(
+        retriever=retriever_mock,
+        llm=llm,
+    )
+    prompt = rag.conversation_prompt(
         summary="llm generated chat summary", current_query="latest question"
     )
     assert (

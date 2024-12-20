@@ -21,7 +21,6 @@ from neo4j_graphrag.exceptions import (
     PromptMissingInputError,
     PromptMissingPlaceholderError,
 )
-from neo4j_graphrag.llm.types import LLMMessage
 
 
 class PromptTemplate:
@@ -197,29 +196,3 @@ Input text:
         text: str = "",
     ) -> str:
         return super().format(text=text, schema=schema, examples=examples)
-
-
-SUMMARY_SYSTEM_MESSAGE = "You are a summarization assistant. Summarize the given text in no more than 200 words"
-
-
-def ChatSummaryTemplate(message_history: list[LLMMessage]) -> str:
-    message_list = [
-        ": ".join([f"{value}" for _, value in message.items()])
-        for message in message_history
-    ]
-    history = "\n".join(message_list)
-    return f"""
-Summarize the message history:
-
-{history}
-"""
-
-
-def ConversationTemplate(summary: str, current_query: str) -> str:
-    return f"""
-Message Summary: 
-{summary}
-
-Current Query: 
-{current_query}
-"""
