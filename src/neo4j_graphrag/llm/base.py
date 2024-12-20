@@ -17,7 +17,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
-from .types import LLMResponse
+from .types import LLMMessage, LLMResponse
 
 
 class LLMInterface(ABC):
@@ -26,6 +26,7 @@ class LLMInterface(ABC):
     Args:
         model_name (str): The name of the language model.
         model_params (Optional[dict], optional): Additional parameters passed to the model when text is sent to it. Defaults to None.
+        system_instruction: Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
         **kwargs (Any): Arguments passed to the model when for the class is initialised. Defaults to None.
     """
 
@@ -33,17 +34,26 @@ class LLMInterface(ABC):
         self,
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
+        system_instruction: Optional[str] = None,
         **kwargs: Any,
     ):
         self.model_name = model_name
         self.model_params = model_params or {}
+        self.system_instruction = system_instruction
 
     @abstractmethod
-    def invoke(self, input: str) -> LLMResponse:
+    def invoke(
+        self,
+        input: str,
+        message_history: Optional[list[LLMMessage]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> LLMResponse:
         """Sends a text input to the LLM and retrieves a response.
 
         Args:
-            input (str): Text sent to the LLM
+            input (str): Text sent to the LLM.
+            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invokation.
 
         Returns:
             LLMResponse: The response from the LLM.
@@ -53,11 +63,18 @@ class LLMInterface(ABC):
         """
 
     @abstractmethod
-    async def ainvoke(self, input: str) -> LLMResponse:
+    async def ainvoke(
+        self,
+        input: str,
+        message_history: Optional[list[LLMMessage]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> LLMResponse:
         """Asynchronously sends a text input to the LLM and retrieves a response.
 
         Args:
-            input (str): Text sent to the LLM
+            input (str): Text sent to the LLM.
+            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invokation.
 
         Returns:
             LLMResponse: The response from the LLM.
