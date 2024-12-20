@@ -2,9 +2,11 @@
 
 Building the docs requires Python 3.8.1+
 
-Ensure the dev dependencies in `pyproject.toml` are installed.
+1. Ensure the dev dependencies in `pyproject.toml` are installed.
 
-From the root directory, run the Makefile:
+2. Add your changes to the appropriate `.rst` source file in `docs/source` directory.
+
+3. From the root directory, run the Makefile:
 
 ```
 make -C docs html
