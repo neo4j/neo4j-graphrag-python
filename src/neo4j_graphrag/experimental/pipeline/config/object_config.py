@@ -254,6 +254,10 @@ class ComponentConfig(ObjectConfig[Component]):
     DEFAULT_MODULE = "neo4j_graphrag.experimental.components"
     INTERFACE = Component
 
+    def get_run_params(self, resolved_data: dict[str, Any]) -> dict[str, Any]:
+        self._global_data = resolved_data
+        return self.resolve_params(self.run_params_)
+
 
 class ComponentType(RootModel):  # type: ignore[type-arg]
     root: Union[Component, ComponentConfig]
@@ -264,3 +268,8 @@ class ComponentType(RootModel):  # type: ignore[type-arg]
         if isinstance(self.root, Component):
             return self.root
         return self.root.parse(resolved_data)
+
+    def get_run_params(self, resolved_data: dict[str, Any]) -> dict[str, Any]:
+        if isinstance(self.root, Component):
+            return {}
+        return self.root.get_run_params(resolved_data)

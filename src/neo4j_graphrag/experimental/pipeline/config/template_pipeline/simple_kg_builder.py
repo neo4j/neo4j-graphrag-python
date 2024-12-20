@@ -90,10 +90,22 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             return self.pdf_loader.parse(self._global_data)  # type: ignore
         return PdfLoader()
 
+    def _get_run_params_for_pdf_loader(self) -> dict[str, Any]:
+        if not self.from_pdf:
+            return {}
+        if self.pdf_loader:
+            return self.pdf_loader.get_run_params(self._global_data)
+        return {}
+
     def _get_splitter(self) -> TextSplitter:
         if self.text_splitter:
             return self.text_splitter.parse(self._global_data)  # type: ignore
         return FixedSizeSplitter()
+
+    def _get_run_params_for_splitter(self) -> dict[str, Any]:
+        if self.text_splitter:
+            return self.text_splitter.get_run_params(self._global_data)
+        return {}
 
     def _get_chunk_embedder(self) -> TextChunkEmbedder:
         return TextChunkEmbedder(embedder=self.get_default_embedder())
@@ -122,6 +134,11 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             driver=self.get_default_neo4j_driver(),
             neo4j_database=self.neo4j_database,
         )
+
+    def _get_run_params_for_writer(self) -> dict[str, Any]:
+        if self.kg_writer:
+            return self.kg_writer.get_run_params(self._global_data)
+        return {}
 
     def _get_resolver(self) -> Optional[EntityResolver]:
         if not self.perform_entity_resolution:
