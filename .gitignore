@@ -12,3 +12,9 @@ docs/build/
 .DS_Store
 .venv
 .tox/
+
+# Test and data files
+data/
+test_*.py
+create_pdf.py
+*.svg
