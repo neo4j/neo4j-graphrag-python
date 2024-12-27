@@ -1,0 +1,78 @@
+version: '3'
+
+vars:
+  GRAPHVIZ_VERSION: 8.1.0
+  LOCAL_PREFIX: /home/gonzo/local
+
+tasks:
+  install-graphviz:
+    desc: Download, build and install Graphviz from source
+    cmds:
+      - mkdir -p {{.LOCAL_PREFIX}}
+      - |
+        if [ ! -f "graphviz-{{.GRAPHVIZ_VERSION}}.tar.gz" ]; then
+          wget https://gitlab.com/api/v4/projects/4207231/packages/generic/graphviz-releases/{{.GRAPHVIZ_VERSION}}/graphviz-{{.GRAPHVIZ_VERSION}}.tar.gz
+        fi
+      - tar -xzf graphviz-{{.GRAPHVIZ_VERSION}}.tar.gz
+      - cd graphviz-{{.GRAPHVIZ_VERSION}} && ./configure --prefix={{.LOCAL_PREFIX}}
+      - cd graphviz-{{.GRAPHVIZ_VERSION}} && make
+      - cd graphviz-{{.GRAPHVIZ_VERSION}} && make install
+
+  setup-env:
+    desc: Set up environment variables for Graphviz
+    cmds:
+      - |
+        cat > setup_graphviz_env.sh << 'EOF'
+        #!/bin/bash
+        # Add Graphviz libraries to LD_LIBRARY_PATH
+        export LD_LIBRARY_PATH={{.LOCAL_PREFIX}}/lib:$LD_LIBRARY_PATH
+        # Add Graphviz binaries to PATH
+        export PATH={{.LOCAL_PREFIX}}/bin:$PATH
+        EOF
+      - chmod +x setup_graphviz_env.sh
+
+  install-build-deps:
+    desc: Install necessary build dependencies
+    cmds:
+      - sudo apt-get update
+      - sudo apt-get install -y build-essential python3-dev
+
+  install-experimental:
+    desc: Install project with experimental features
+    deps: [install-build-deps]
+    env:
+      LD_LIBRARY_PATH: '{{.LOCAL_PREFIX}}/lib'
+      PATH: '{{.LOCAL_PREFIX}}/bin:/usr/bin:{{.PATH}}'
+      CFLAGS: '-I{{.LOCAL_PREFIX}}/include'
+      LDFLAGS: '-L{{.LOCAL_PREFIX}}/lib'
+    cmds:
+      - poetry install --extras experimental
+
+  test-graphviz:
+    desc: Test Graphviz installation with a simple Python script
+    cmds:
+      - |
+        cat > test_graphviz.py << 'EOF'
+        import pygraphviz as pgv
+        # Create a new graph
+        G = pgv.AGraph()
+        # Add some nodes and edges
+        G.add_edge(1, 2)
+        G.add_edge(2, 3)
+        G.add_edge(3, 1)
+        # Set the layout
+        G.layout(prog='dot')
+        # Save the graph as SVG
+        G.draw('test.svg')
+        print("Graph has been created and saved as test.svg")
+        EOF
+      - env LD_LIBRARY_PATH={{.LOCAL_PREFIX}}/lib PATH={{.LOCAL_PREFIX}}/bin:$PATH poetry run python test_graphviz.py
+
+  all:
+    desc: Run all setup tasks in order
+    cmds:
+      - task: install-graphviz
+      - task: setup-env
+      - task: install-build-deps
+      - task: install-experimental
+      - task: test-graphviz
