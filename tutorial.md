@@ -614,3 +614,321 @@ The GraphRAG Python package makes it easier than ever to go from documents to kn
 *   [Explore GenAI Resources](https://neo4j.com/generativeai/#h-explore-genai-resources)
 
 ****Join one of our upcoming webinars on October 24 to learn more:****
+
+Advanced GraphRAG Patterns and Customization
+------------------------------------------
+
+While the basic GraphRAG setup is powerful, you can enhance your application with advanced patterns and customizations. Let's explore some advanced techniques:
+
+### 1. Custom Retrieval Patterns
+
+You can create custom retrievers by extending the `VectorRetriever` class. Here's an example that combines vector similarity, full-text search, and graph traversal:
+
+```python
+from neo4j_graphrag.retrievers import VectorRetriever
+from typing import List, Dict, Any
+
+class HybridRetriever(VectorRetriever):
+    def __init__(self, neo4j_driver, embedding_model):
+        super().__init__(
+            neo4j_driver,
+            embedding_model=embedding_model,
+            node_label="Chunk",
+            embedding_property="embedding",
+            text_property="text"
+        )
+    
+    def retrieve(self, query: str) -> List[Dict[str, Any]]:
+        # Generate query embedding
+        query_embedding = self.embedding_model.embed_query(query)
+        
+        # Cypher query combining multiple retrieval strategies
+        cypher_query = """
+        CALL db.index.vector.queryNodes('chunk_embeddings', $k, $embedding)
+        YIELD node as chunk, score as vector_score
+        WHERE chunk:Chunk
+        
+        // Full-text search on chunk content
+        CALL db.index.fulltext.queryNodes('chunk_text', $query)
+        YIELD node as text_chunk, score as text_score
+        WHERE text_chunk = chunk
+        
+        // Graph traversal to related entities
+        MATCH (chunk)-[r]->(entity:__Entity__)
+        WHERE entity.type IN ['Disease', 'Symptom', 'Treatment', 'Biomarker']
+        
+        // Combine scores and return results
+        RETURN 
+            chunk,
+            collect(distinct entity) as entities,
+            vector_score * 0.6 + text_score * 0.4 as combined_score
+        ORDER BY combined_score DESC
+        LIMIT 5
+        """
+        
+        # Execute query with parameters
+        results = self.neo4j_driver.execute_query(
+            cypher_query,
+            embedding=query_embedding,
+            query=query,
+            k=10
+        )
+        
+        return [record.data() for record in results]
+```
+
+This custom retriever:
+1. Uses vector similarity to find relevant chunks
+2. Applies full-text search to prioritize chunks with matching terms
+3. Traverses to specific entity types
+4. Combines scores for better ranking
+
+### 2. Custom Prompt Templates
+
+You can create domain-specific prompt templates to guide the LLM's responses:
+
+```python
+from neo4j_graphrag import GraphRAG
+
+medical_prompt = """You are a medical research assistant analyzing information about Systemic Lupus Erythematosus (SLE).
+Use ONLY the provided context to answer questions. If the information is not in the context, say "I don't have enough information to answer that."
+
+For treatments and medications:
+- Specify the purpose and typical usage
+- Note any mentioned side effects or contraindications
+- Indicate if it's a first-line or alternative treatment
+
+For symptoms and biomarkers:
+- Categorize them by severity or frequency if mentioned
+- Include any specific diagnostic criteria
+- Note any correlations with disease progression
+
+Context:
+{context}
+
+Question: {question}
+
+Answer: Let me analyze the research data provided:"""
+
+# Create GraphRAG instance with custom prompt
+rag = GraphRAG(
+    llm=llm,
+    retriever=hybrid_retriever,
+    prompt_template=medical_prompt
+)
+```
+
+### 3. Result Post-processing
+
+You can add post-processing steps to enhance the retrieved results:
+
+```python
+class EnhancedGraphRAG(GraphRAG):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+    
+    def post_process_results(self, results):
+        """Enhance retrieved results with additional information"""
+        enhanced_results = []
+        
+        for result in results:
+            # Add citation information
+            if "chunk" in result:
+                with self.neo4j_driver.session() as session:
+                    citation = session.run("""
+                        MATCH (c:Chunk)-[:PART_OF]->(d:Document)
+                        WHERE id(c) = $chunk_id
+                        RETURN d.title, d.authors, d.year
+                    """, chunk_id=result["chunk"].id).single()
+                    
+                    if citation:
+                        result["citation"] = {
+                            "title": citation["d.title"],
+                            "authors": citation["d.authors"],
+                            "year": citation["d.year"]
+                        }
+            
+            # Group entities by type
+            if "entities" in result:
+                grouped_entities = {}
+                for entity in result["entities"]:
+                    entity_type = entity.type
+                    if entity_type not in grouped_entities:
+                        grouped_entities[entity_type] = []
+                    grouped_entities[entity_type].append(entity)
+                result["grouped_entities"] = grouped_entities
+            
+            enhanced_results.append(result)
+        
+        return enhanced_results
+    
+    def query(self, question: str) -> str:
+        results = self.retriever.retrieve(question)
+        enhanced_results = self.post_process_results(results)
+        return self.generate_response(question, enhanced_results)
+```
+
+### 4. Performance Optimization
+
+For better performance in production:
+
+1. **Batch Processing**:
+   ```python
+   # Process multiple chunks in parallel
+   from concurrent.futures import ThreadPoolExecutor
+   
+   def process_chunks_parallel(chunks, max_workers=4):
+       with ThreadPoolExecutor(max_workers=max_workers) as executor:
+           futures = [executor.submit(process_single_chunk, chunk) 
+                     for chunk in chunks]
+           results = [f.result() for f in futures]
+       return results
+   ```
+
+2. **Caching Results**:
+   ```python
+   from functools import lru_cache
+   
+   @lru_cache(maxsize=1000)
+   def cached_vector_search(query_text: str):
+       embedding = embedder.embed_query(query_text)
+       return retriever.retrieve_by_vector(embedding)
+   ```
+
+3. **Index Optimization**:
+   ```python
+   # Create composite index for better performance
+   CREATE INDEX chunk_metadata IF NOT EXISTS
+   FOR (c:Chunk)
+   ON (c.doc_id, c.position)
+   ```
+
+### 5. Monitoring and Logging
+
+Add monitoring to track your GraphRAG pipeline's performance:
+
+```python
+import logging
+from datetime import datetime
+from typing import Dict, Any
+
+class MonitoredGraphRAG(GraphRAG):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.logger = logging.getLogger("graphrag")
+        
+    def query(self, question: str) -> Dict[str, Any]:
+        start_time = datetime.now()
+        
+        # Track retrieval metrics
+        retrieval_start = datetime.now()
+        results = self.retriever.retrieve(question)
+        retrieval_time = (datetime.now() - retrieval_start).total_seconds()
+        
+        # Track LLM metrics
+        llm_start = datetime.now()
+        response = self.generate_response(question, results)
+        llm_time = (datetime.now() - llm_start).total_seconds()
+        
+        # Log performance metrics
+        self.logger.info({
+            "question": question,
+            "retrieval_time": retrieval_time,
+            "llm_time": llm_time,
+            "total_time": (datetime.now() - start_time).total_seconds(),
+            "num_results": len(results)
+        })
+        
+        return {
+            "response": response,
+            "metrics": {
+                "retrieval_time": retrieval_time,
+                "llm_time": llm_time,
+                "num_results": len(results)
+            }
+        }
+```
+
+These advanced patterns enable you to:
+- Create more sophisticated retrieval strategies
+- Provide better context to the LLM
+- Add valuable metadata to results
+- Optimize performance
+- Monitor system behavior
+
+Choose the patterns that best fit your use case and gradually incorporate them as your application evolves.
+
+Visualizing Your Knowledge Graph
+-------------------------------
+
+The GraphRAG Python package supports visualization of your knowledge graph using Graphviz. This can be particularly helpful for understanding the structure of your data and debugging your graph patterns. Here's how to create a visualization:
+
+```python
+import pygraphviz as pgv
+from neo4j_graphrag.retrievers import VectorRetriever
+
+# Create a graph visualization
+G = pgv.AGraph(strict=False, directed=True)
+
+# Get a subgraph of our knowledge graph
+retriever = VectorRetriever(
+    neo4j_driver,
+    embedding_model=embedder,
+    node_label="Chunk",
+    embedding_property="embedding",
+    text_property="text",
+    k=3  # Number of similar chunks to retrieve
+)
+
+# Query for some nodes and relationships
+results = retriever.retrieve("What are the common biomarkers for SLE?")
+
+# Add nodes and edges to the visualization
+for record in results:
+    # Add nodes
+    G.add_node(record["chunk"].id, label=record["chunk"].text[:50] + "...")
+    for entity in record.get("entities", []):
+        G.add_node(entity.id, label=entity.type)
+        # Add relationships
+        G.add_edge(record["chunk"].id, entity.id)
+
+# Set visualization attributes
+G.graph_attr["rankdir"] = "LR"  # Left to right layout
+G.node_attr["shape"] = "box"
+G.node_attr["style"] = "rounded"
+G.edge_attr["color"] = "blue"
+
+# Generate the visualization
+G.layout(prog="dot")  # Use dot layout algorithm
+G.draw("knowledge_graph.svg")  # Save as SVG
+```
+
+This code will create a visualization of a subgraph focused on biomarkers in SLE, showing how text chunks are connected to extracted entities. The visualization will be saved as an SVG file, which can be viewed in any web browser or image viewer.
+
+Some tips for working with graph visualizations:
+
+1. **Layout Algorithms**: Graphviz provides several layout algorithms:
+   - `dot`: Hierarchical layout (default)
+   - `neato`: Spring model layout
+   - `fdp`: Force-directed layout
+   - `circo`: Circular layout
+   - `twopi`: Radial layout
+
+2. **Customizing Appearance**:
+   - Use `graph_attr` to set graph-wide attributes
+   - Use `node_attr` for node appearance
+   - Use `edge_attr` for edge appearance
+   - Individual nodes and edges can be styled using the `attr` dictionary
+
+3. **Large Graphs**:
+   - For large graphs, consider limiting the number of nodes displayed
+   - Use subgraphs to focus on specific parts of your knowledge graph
+   - Experiment with different layout algorithms for better readability
+
+The visualization can help you:
+- Verify entity extraction and relationships
+- Understand the connection patterns in your data
+- Present your knowledge graph structure to stakeholders
+- Debug retrieval patterns
+
+{{ ... }}
