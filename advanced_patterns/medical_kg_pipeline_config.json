@@ -1,0 +1,76 @@
+{
+    "version_": "1",
+    "template_": "SimpleKGPipeline",
+    "neo4j_config": {
+        "params_": {
+            "uri": {
+                "resolver_": "ENV",
+                "var_": "NEO4J_URI"
+            },
+            "user": {
+                "resolver_": "ENV",
+                "var_": "NEO4J_USERNAME"
+            },
+            "password": {
+                "resolver_": "ENV",
+                "var_": "NEO4J_PASSWORD"
+            }
+        }
+    },
+    "llm_config": {
+        "class_": "OpenAILLM",
+        "params_": {
+            "api_key": {
+                "resolver_": "ENV",
+                "var_": "OPENAI_API_KEY"
+            },
+            "model_name": "gpt-4",
+            "model_params": {
+                "temperature": 0
+            }
+        }
+    },
+    "embedder_config": {
+        "class_": "OpenAIEmbeddings",
+        "params_": {
+            "api_key": {
+                "resolver_": "ENV",
+                "var_": "OPENAI_API_KEY"
+            }
+        }
+    },
+    "from_pdf": true,
+    "perform_entity_resolution": true,
+    "on_error": "IGNORE",
+    "prompt_template": "You are a medical researcher tasked with extracting information from papers and structuring it in a property graph to inform further medical and research Q&A.\n\nInput text: {text}\n\nExtract the entities (nodes) and specify their type from the input text. Also extract the relationships between these nodes. The relationship direction goes from the start node to the end node.\n\nGuidelines:\n1. Focus on medical entities like diseases, symptoms, biomarkers, treatments, and biological processes\n2. Extract specific values, measurements, and ranges when available\n3. Preserve hierarchical relationships (e.g., a protein being part of a pathway)\n4. Note temporal relationships and sequences of events\n5. Capture research findings and their evidence levels\n\nReturn ONLY a JSON object with the following structure:\n{{\n    \"nodes\": [\n        {{\n            \"id\": \"string\",\n            \"type\": \"string\",\n            \"properties\": {{\n                \"name\": \"string\",\n                \"value\": \"string or number\",\n                \"unit\": \"string\"\n            }}\n        }}\n    ],\n    \"relationships\": [\n        {{\n            \"from\": \"string\",\n            \"to\": \"string\",\n            \"type\": \"string\",\n            \"properties\": {{\n            }}\n        }}\n    ]\n}}",
+    "entities": [
+        "Disease",
+        "Symptom",
+        "Biomarker",
+        "Treatment",
+        "Drug",
+        "BiologicalProcess",
+        "Protein",
+        "Gene",
+        "Cell",
+        "Tissue",
+        "Organ",
+        "Patient",
+        "Study",
+        "Finding",
+        "Evidence"
+    ],
+    "relations": [
+        "CAUSES",
+        "INDICATES",
+        "TREATS",
+        "PART_OF",
+        "INTERACTS_WITH",
+        "REGULATES",
+        "ASSOCIATED_WITH",
+        "FOUND_IN",
+        "MEASURED_IN",
+        "STUDIED_IN",
+        "SUPPORTED_BY"
+    ]
+}

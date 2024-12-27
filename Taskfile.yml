@@ -1,5 +1,7 @@
 version: '3'
 
+dotenv: ['.env']
+
 vars:
   GRAPHVIZ_VERSION: 8.1.0
   LOCAL_PREFIX: /home/gonzo/local
@@ -37,16 +39,78 @@ tasks:
       - sudo apt-get update
       - sudo apt-get install -y build-essential python3-dev
 
-  install-experimental:
-    desc: Install project with experimental features
-    deps: [install-build-deps]
-    env:
-      LD_LIBRARY_PATH: '{{.LOCAL_PREFIX}}/lib'
-      PATH: '{{.LOCAL_PREFIX}}/bin:/usr/bin:{{.PATH}}'
-      CFLAGS: '-I{{.LOCAL_PREFIX}}/include'
-      LDFLAGS: '-L{{.LOCAL_PREFIX}}/lib'
+  install:
+    desc: Install the package and dependencies with poetry
     cmds:
-      - poetry install --extras experimental
+      - poetry install --with dev --extras "all"
+
+  setup-kg:
+    desc: Setup the knowledge graph with medical papers
+    deps: [install]
+    cmds:
+      - poetry run python advanced_patterns/setup_knowledge_graph.py
+    env:
+      NEO4J_URI: '{{.NEO4J_URI}}'
+      NEO4J_USERNAME: '{{.NEO4J_USERNAME}}'
+      NEO4J_PASSWORD: '{{.NEO4J_PASSWORD}}'
+      OPENAI_API_KEY: '{{.OPENAI_API_KEY}}'
+
+  run-example:
+    desc: Run the GraphRAG example
+    deps: [install]
+    cmds:
+      - poetry run python advanced_patterns/example.py
+    env:
+      NEO4J_URI: '{{.NEO4J_URI}}'
+      NEO4J_USERNAME: '{{.NEO4J_USERNAME}}'
+      NEO4J_PASSWORD: '{{.NEO4J_PASSWORD}}'
+      OPENAI_API_KEY: '{{.OPENAI_API_KEY}}'
+
+  clean:
+    desc: Clean up generated files
+    cmds:
+      - rm -rf build/
+      - rm -rf dist/
+      - rm -rf *.egg-info/
+      - find . -type d -name __pycache__ -exec rm -rf {} +
+      - find . -type f -name "*.pyc" -delete
+      - find . -type f -name "*.pyo" -delete
+      - find . -type f -name "*.pyd" -delete
+
+  test:
+    desc: Run tests
+    deps: [install]
+    cmds:
+      - poetry run pytest tests/
+
+  lint:
+    desc: Run linters
+    deps: [install]
+    cmds:
+      - poetry run black .
+      - poetry run isort .
+      - poetry run flake8 .
+
+  build:
+    desc: Build the package
+    deps: [clean]
+    cmds:
+      - poetry build
+
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  all:
+    desc: Run all setup tasks in order
+    cmds:
+      - task: install-graphviz
+      - task: setup-env
+      - task: install-build-deps
+      - task: install
+      - task: test-graphviz
+      - task: visualize-graph
 
   test-graphviz:
     desc: Test Graphviz installation with a simple Python script
@@ -68,11 +132,30 @@ tasks:
         EOF
       - env LD_LIBRARY_PATH={{.LOCAL_PREFIX}}/lib PATH={{.LOCAL_PREFIX}}/bin:$PATH poetry run python test_graphviz.py
 
-  all:
-    desc: Run all setup tasks in order
+  visualize-graph:
+    desc: Run the graph visualization script
+    deps: [install]
+    env:
+      LD_LIBRARY_PATH: '{{.LOCAL_PREFIX}}/lib'
+      PATH: '{{.LOCAL_PREFIX}}/bin:/usr/bin:{{.PATH}}'
     cmds:
-      - task: install-graphviz
-      - task: setup-env
-      - task: install-build-deps
-      - task: install-experimental
-      - task: test-graphviz
+      - poetry run python visualize_graph.py
+
+  clean-visualizations:
+    desc: Remove generated visualization files
+    cmds:
+      - rm -f knowledge_graph*.svg
+
+  run-advanced-examples:
+    desc: Run the advanced GraphRAG pattern examples
+    deps: [install]
+    env:
+      LD_LIBRARY_PATH: '{{.LOCAL_PREFIX}}/lib'
+      PATH: '{{.LOCAL_PREFIX}}/bin:/usr/bin:{{.PATH}}'
+    cmds:
+      - poetry run python advanced_patterns/example.py
+
+  clean-logs:
+    desc: Remove generated log files
+    cmds:
+      - rm -f graphrag.log
