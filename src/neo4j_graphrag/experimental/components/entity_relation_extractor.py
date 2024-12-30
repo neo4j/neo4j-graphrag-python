@@ -19,7 +19,6 @@ import asyncio
 import enum
 import json
 import logging
-import re
 from typing import Any, List, Optional, Union, cast
 
 import json_repair
