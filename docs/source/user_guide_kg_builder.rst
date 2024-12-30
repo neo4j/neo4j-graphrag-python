@@ -672,7 +672,7 @@ Example usage:
     from neo4j_graphrag.experimental.pipeline.components.lexical_graph_builder import LexicalGraphBuilder
     from neo4j_graphrag.experimental.pipeline.components.types import LexicalGraphConfig
 
-    lexical_graph_builder = LexicalGraphBuilder(config=LexicalGraphConfig(id_prefix="example"))
+    lexical_graph_builder = LexicalGraphBuilder(config=LexicalGraphConfig())
     graph = await lexical_graph_builder.run(
         text_chunks=TextChunks(chunks=[
             TextChunk(text="some text", index=0),
@@ -713,7 +713,6 @@ Optionally, the document and chunk node labels can be configured using a `Lexica
     # optionally, define a LexicalGraphConfig object
     # shown below with the default values
     config = LexicalGraphConfig(
-        id_prefix="",  # used to prefix the chunk and document IDs
         chunk_node_label="Chunk",
         document_node_label="Document",
         chunk_to_document_relationship_type="PART_OF_DOCUMENT",
