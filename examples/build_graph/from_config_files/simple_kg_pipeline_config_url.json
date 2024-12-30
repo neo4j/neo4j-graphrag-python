@@ -1,0 +1,118 @@
+{
+    "version_": "1",
+    "template_": "SimpleKGPipeline",
+    "neo4j_config": {
+        "params_": {
+            "uri": {
+                "resolver_": "ENV",
+                "var_": "NEO4J_URI"
+            },
+            "user": {
+                "resolver_": "ENV",
+                "var_": "NEO4J_USER"
+            },
+            "password": {
+                "resolver_": "ENV",
+                "var_": "NEO4J_PASSWORD"
+            }
+        }
+    },
+    "llm_config": {
+        "class_": "OpenAILLM",
+        "params_": {
+            "api_key": {
+                "resolver_": "ENV",
+                "var_": "OPENAI_API_KEY"
+            },
+            "model_name": "gpt-4o",
+            "model_params": {
+                "temperature": 0,
+                "max_tokens": 2000,
+                "response_format": {"type": "json_object"}
+            }
+        }
+    },
+    "embedder_config": {
+        "class_": "OpenAIEmbeddings",
+        "params_": {
+            "api_key": {
+                "resolver_": "ENV",
+                "var_": "OPENAI_API_KEY"
+            }
+        }
+    },
+    "from_pdf": true,
+    "entities": [
+        "Person",
+        {
+            "label": "House",
+            "description": "Family the person belongs to",
+            "properties": [
+                {
+                    "name": "name",
+                    "type": "STRING"
+                }
+            ]
+        },
+        {
+            "label": "Planet",
+            "properties": [
+                {
+                    "name": "name",
+                    "type": "STRING"
+                },
+                {
+                    "name": "weather",
+                    "type": "STRING"
+                }
+            ]
+        }
+    ],
+    "relations": [
+        "PARENT_OF",
+        {
+            "label": "HEIR_OF",
+            "description": "Used for inheritor relationship between father and sons"
+        },
+        {
+            "label": "RULES",
+            "properties": [
+                {
+                    "name": "fromYear",
+                    "type": "INTEGER"
+                }
+            ]
+        }
+    ],
+    "potential_schema": [
+        [
+            "Person",
+            "PARENT_OF",
+            "Person"
+        ],
+        [
+            "Person",
+            "HEIR_OF",
+            "House"
+        ],
+        [
+            "House",
+            "RULES",
+            "Planet"
+        ]
+    ],
+    "text_splitter": {
+        "class_": "text_splitters.fixed_size_splitter.FixedSizeSplitter",
+        "params_": {
+            "chunk_size": 100,
+            "chunk_overlap": 10
+        }
+    },
+    "pdf_loader": {
+        "class_": "pdf_loader.PdfLoader",
+        "run_params_": {
+            "fs": "http"
+        }
+    },
+    "perform_entity_resolution": true
+}

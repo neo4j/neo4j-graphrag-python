@@ -30,17 +30,17 @@ def pdf_loader() -> PdfLoader:
 
 
 @pytest.fixture
-def dummy_pdf_path() -> Path:
-    return BASE_DIR / "sample_data/lorem_ipsum.pdf"
+def dummy_pdf_path() -> str:
+    return str(BASE_DIR / "sample_data/lorem_ipsum.pdf")
 
 
-def test_pdf_loading(pdf_loader: PdfLoader, dummy_pdf_path: Path) -> None:
+def test_pdf_loading(pdf_loader: PdfLoader, dummy_pdf_path: str) -> None:
     expected_content = "Lorem ipsum dolor sit amet."
     actual_content = pdf_loader.load_file(dummy_pdf_path, fs=LocalFileSystem())
     assert actual_content == expected_content
 
 
-def test_pdf_processing_error(pdf_loader: PdfLoader, dummy_pdf_path: Path) -> None:
+def test_pdf_processing_error(pdf_loader: PdfLoader, dummy_pdf_path: str) -> None:
     with patch(
         "fsspec.implementations.local.LocalFileSystem.open",
         side_effect=Exception("Failed to open"),
