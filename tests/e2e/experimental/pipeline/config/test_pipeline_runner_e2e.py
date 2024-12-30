@@ -13,12 +13,20 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import os
+from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from neo4j import Driver
 from neo4j_graphrag.experimental.pipeline.config.runner import PipelineRunner
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.llm import LLMResponse
+
+
+@pytest.fixture(scope="function", autouse=True)
+def clear_db(driver: Driver) -> Any:
+    driver.execute_query("MATCH (n) DETACH DELETE n")
+    yield
 
 
 @pytest.mark.asyncio

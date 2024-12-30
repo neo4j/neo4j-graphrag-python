@@ -14,13 +14,21 @@
 #  limitations under the License.
 from __future__ import annotations
 
+from typing import Any
 from unittest.mock import MagicMock
 
 import neo4j
 import pytest
+from neo4j import Driver
 from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.llm import LLMResponse
+
+
+@pytest.fixture(scope="function", autouse=True)
+def clear_db(driver: Driver) -> Any:
+    driver.execute_query("MATCH (n) DETACH DELETE n")
+    yield
 
 
 @pytest.mark.asyncio
