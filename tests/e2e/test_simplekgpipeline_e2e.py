@@ -111,7 +111,6 @@ async def test_pipeline_builder_happy_path(
     await kg_builder_text.run_async(text=harry_potter_text)
 
 
-
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
 async def test_pipeline_builder_two_documents(

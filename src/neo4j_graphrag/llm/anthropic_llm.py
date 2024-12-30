@@ -13,7 +13,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Iterable, Optional, TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, Iterable, Optional, cast
 
 from pydantic import ValidationError
 

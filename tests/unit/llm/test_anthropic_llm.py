@@ -18,7 +18,6 @@ from typing import Generator
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import anthropic
-
 import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.anthropic_llm import AnthropicLLM
