@@ -48,6 +48,7 @@ from neo4j_graphrag.experimental.pipeline.config.template_pipeline.simple_kg_bui
 from neo4j_graphrag.experimental.pipeline.config.types import PipelineType
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.experimental.pipeline.types import PipelineDefinition
+from neo4j_graphrag.utils import prettyfier
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +103,9 @@ class PipelineRunner:
         cls, config: AbstractPipelineConfig | dict[str, Any], do_cleaning: bool = False
     ) -> Self:
         wrapper = PipelineConfigWrapper.model_validate({"config": config})
-        logger.debug(f"PIPELINE_RUNNER: instantiate Pipeline from config type: {wrapper.config.template_}")
+        logger.debug(
+            f"PIPELINE_RUNNER: instantiate Pipeline from config type: {wrapper.config.template_}"
+        )
         return cls(wrapper.parse(), config=wrapper.config, do_cleaning=do_cleaning)
 
     @classmethod
@@ -122,7 +125,7 @@ class PipelineRunner:
         else:
             run_param = deep_update(self.run_params, user_input)
         logger.info(
-            f"PIPELINE_RUNNER: starting pipeline {self.pipeline} with run_params={run_param}"
+            f"PIPELINE_RUNNER: starting pipeline {self.pipeline} with run_params={prettyfier(run_param)}"
         )
         result = await self.pipeline.run(data=run_param)
         if self.do_cleaning:

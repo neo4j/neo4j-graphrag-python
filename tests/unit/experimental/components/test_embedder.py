@@ -17,7 +17,6 @@ from unittest.mock import MagicMock
 import pytest
 from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
 from neo4j_graphrag.experimental.components.types import (
-    Embeddings,
     TextChunk,
     TextChunks,
 )
@@ -37,4 +36,4 @@ async def test_text_chunk_embedder_run(embedder: MagicMock) -> None:
         assert isinstance(chunk, TextChunk)
         assert chunk.metadata is not None
         assert "embedding" in chunk.metadata.keys()
-        assert isinstance(chunk.metadata["embedding"], Embeddings)
+        assert isinstance(chunk.metadata["embedding"], list)

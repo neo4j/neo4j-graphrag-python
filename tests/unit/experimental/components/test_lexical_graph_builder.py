@@ -28,7 +28,7 @@ from neo4j_graphrag.experimental.components.types import (
     LexicalGraphConfig,
     Neo4jNode,
     TextChunk,
-    TextChunks, Embeddings,
+    TextChunks,
 )
 
 
@@ -64,7 +64,7 @@ def test_lexical_graph_builder_create_chunk_node_metadata_embedding() -> None:
     assert isinstance(node, Neo4jNode)
     assert node.id is not None
     assert node.properties == {"index": 0, "text": "text chunk", "status": "ok"}
-    assert node.embedding_properties == {"embedding": Embeddings([1, 2, 3])}
+    assert node.embedding_properties == {"embedding": [1, 2, 3]}
 
 
 @pytest.mark.asyncio

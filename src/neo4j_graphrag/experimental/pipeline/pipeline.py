@@ -104,7 +104,9 @@ class TaskPipelineNode(PipelineNode):
         start_time = default_timer()
         res = await self.execute(**inputs)
         end_time = default_timer()
-        logger.debug(f"TASK FINISHED {self.name} in {end_time - start_time} res={prettyfier(res)}")
+        logger.debug(
+            f"TASK FINISHED {self.name} in {end_time - start_time} res={prettyfier(res)}"
+        )
         return res
 
 
@@ -141,7 +143,9 @@ class Orchestrator:
         try:
             await self.set_task_status(task.name, RunStatus.RUNNING)
         except PipelineStatusUpdateError:
-            logger.debug(f"ORCHESTRATOR: TASK ABORTED: {task.name} is already running or done, aborting")
+            logger.debug(
+                f"ORCHESTRATOR: TASK ABORTED: {task.name} is already running or done, aborting"
+            )
             return None
         res = await task.run(inputs)
         await self.set_task_status(task.name, RunStatus.DONE)
@@ -228,7 +232,9 @@ class Orchestrator:
                 await self.check_dependencies_complete(next_node)
             except PipelineMissingDependencyError:
                 continue
-            logger.debug(f"ORCHESTRATOR {self.run_id}: enqueuing next task: {next_node.name}")
+            logger.debug(
+                f"ORCHESTRATOR {self.run_id}: enqueuing next task: {next_node.name}"
+            )
             yield next_node
         return
 

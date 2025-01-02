@@ -22,7 +22,8 @@ from neo4j_graphrag.llm import LLMInterface
 from neo4j_graphrag.llm.openai_llm import OpenAILLM
 
 logging.basicConfig()
-logging.getLogger("neo4j_graphrag").setLevel(logging.DEBUG)
+# logging.getLogger("neo4j_graphrag").setLevel(logging.DEBUG)
+logging.getLogger("neo4j_graphrag").setLevel(logging.INFO)
 
 
 # Neo4j db infos

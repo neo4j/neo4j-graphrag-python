@@ -217,9 +217,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             result = json.loads(llm_generated_json)
         except (json.JSONDecodeError, InvalidJSONError) as e:
             if self.on_error == OnError.RAISE:
-                raise LLMGenerationError(
-                    f"LLM response is not valid JSON {llm_result.content}: {e}"
-                )
+                raise LLMGenerationError("LLM response is not valid JSON") from e
             else:
                 logger.error(
                     f"LLM response is not valid JSON for chunk_index={chunk.index}"
@@ -230,9 +228,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             chunk_graph = Neo4jGraph(**result)
         except ValidationError as e:
             if self.on_error == OnError.RAISE:
-                raise LLMGenerationError(
-                    f"LLM response has improper format {result}: {e}"
-                )
+                raise LLMGenerationError("LLM response has improper format") from e
             else:
                 logger.error(
                     f"LLM response has improper format for chunk_index={chunk.index}"
