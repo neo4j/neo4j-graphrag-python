@@ -212,8 +212,10 @@ def setup_neo4j_for_kg_construction(driver: Driver) -> None:
 
 
 @pytest.fixture(scope="module")
-@pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
-def setup_neo4j_for_kg_construction_with_chunks(driver: Driver) -> None:
+def setup_neo4j_for_kg_construction_with_chunks(
+    driver: Driver,
+    setup_neo4j_for_kg_construction: Any,
+) -> None:
     driver.execute_query("MATCH (n) DETACH DELETE n")
     driver.execute_query('CREATE (:Chunk {id: "0", index: 0, text: "some text"})')
     driver.execute_query(

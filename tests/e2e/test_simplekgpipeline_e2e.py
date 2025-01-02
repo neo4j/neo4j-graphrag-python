@@ -20,6 +20,10 @@ from unittest.mock import MagicMock
 import neo4j
 import pytest
 from neo4j import Driver
+
+from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
+    FixedSizeSplitter,
+)
 from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.llm import LLMResponse
@@ -178,6 +182,8 @@ async def test_pipeline_builder_two_documents(
         driver=driver,
         embedder=embedder,
         from_pdf=False,
+        # in order to have 2 chunks:
+        text_splitter=FixedSizeSplitter(chunk_size=400, chunk_overlap=5),
     )
 
     # Run the knowledge graph building process with text input
@@ -185,10 +191,17 @@ async def test_pipeline_builder_two_documents(
     await kg_builder_text.run_async(text=harry_potter_text_part2)
 
     # check graph content
-    records, _, _ = driver.execute_query("MATCH (n) RETURN n")
-    print(records)
+    # check lexical graph content
+    records, _, _ = driver.execute_query(
+        "MATCH (start:Chunk)-[rel:NEXT_CHUNK]->(end:Chunk) RETURN start, rel, end"
+    )
+    assert len(records) == 2  # one for each run
 
-    assert False
+    # check entity -> chunk relationships
+    records, _, _ = driver.execute_query(
+        "MATCH (chunk:Chunk)<-[rel:FROM_CHUNK]-(entity:__Entity__) RETURN chunk, rel, entity"
+    )
+    assert len(records) == 2  # two entities according to mocked LLMResponse
 
 
 @pytest.mark.asyncio
@@ -249,14 +262,22 @@ async def test_pipeline_builder_same_document_two_runs(
         driver=driver,
         embedder=embedder,
         from_pdf=False,
+        # in order to have 2 chunks:
+        text_splitter=FixedSizeSplitter(chunk_size=400, chunk_overlap=5),
     )
 
     # Run the knowledge graph building process with text input
     await kg_builder_text.run_async(text=harry_potter_text_part1)
     await kg_builder_text.run_async(text=harry_potter_text_part1)
 
-    # check graph content
-    records, _, _ = driver.execute_query("MATCH (n) RETURN n")
-    print(records)
+    # check lexical graph content
+    records, _, _ = driver.execute_query(
+        "MATCH (start:Chunk)-[rel:NEXT_CHUNK]->(end:Chunk) RETURN start, rel, end"
+    )
+    assert len(records) == 2  # one for each run
 
-    assert False
+    # check entity -> chunk relationships
+    records, _, _ = driver.execute_query(
+        "MATCH (chunk:Chunk)<-[rel:FROM_CHUNK]-(entity:__Entity__) RETURN chunk, rel, entity"
+    )
+    assert len(records) == 2  # two entities according to mocked LLMResponse
