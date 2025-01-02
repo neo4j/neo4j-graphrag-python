@@ -1,5 +1,6 @@
-from pydantic import BaseModel
 from typing import Literal, TypedDict
+
+from pydantic import BaseModel
 
 
 class LLMResponse(BaseModel):

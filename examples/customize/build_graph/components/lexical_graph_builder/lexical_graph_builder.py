@@ -13,7 +13,6 @@ async def main() -> GraphResult:
     # optionally, define a LexicalGraphConfig object
     # shown below with default values
     config = LexicalGraphConfig(
-        id_prefix="",  # used to prefix the chunk and document IDs
         chunk_node_label="Chunk",
         document_node_label="Document",
         chunk_to_document_relationship_type="PART_OF_DOCUMENT",

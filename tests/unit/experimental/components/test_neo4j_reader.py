@@ -41,9 +41,10 @@ async def test_neo4j_chunk_reader(driver: Mock) -> None:
     assert isinstance(res, TextChunks)
     assert len(res.chunks) == 1
     chunk = res.chunks[0]
+    assert chunk.uid == "azerty"
     assert chunk.text == "some text"
     assert chunk.index == 0
-    assert chunk.metadata == {"id": "azerty"}
+    assert chunk.metadata == {}
 
 
 @pytest.mark.asyncio
@@ -82,9 +83,10 @@ async def test_neo4j_chunk_reader_custom_lg_config(driver: Mock) -> None:
     assert isinstance(res, TextChunks)
     assert len(res.chunks) == 1
     chunk = res.chunks[0]
+    assert chunk.uid == "azerty"
     assert chunk.text == "some text"
     assert chunk.index == 0
-    assert chunk.metadata == {"id": "azerty", "other": "property"}
+    assert chunk.metadata == {"other": "property"}
 
 
 @pytest.mark.asyncio
@@ -118,10 +120,10 @@ async def test_neo4j_chunk_reader_fetch_embedding(driver: Mock) -> None:
     assert isinstance(res, TextChunks)
     assert len(res.chunks) == 1
     chunk = res.chunks[0]
+    assert chunk.uid == "azerty"
     assert chunk.text == "some text"
     assert chunk.index == 0
     assert chunk.metadata == {
         "other": "property",
-        "id": "azerty",
         "embedding": [1.0, 2.0, 3.0],
     }

@@ -23,10 +23,10 @@ from neo4j_graphrag.llm.types import BaseMessage, LLMMessage, LLMResponse, Messa
 
 try:
     from vertexai.generative_models import (
-        GenerativeModel,
-        ResponseValidationError,
-        Part,
         Content,
+        GenerativeModel,
+        Part,
+        ResponseValidationError,
     )
 except ImportError:
     GenerativeModel = None

@@ -39,6 +39,12 @@ RagResultModel
 
 .. autoclass:: neo4j_graphrag.generation.types.RagResultModel
 
+DocumentInfo
+============
+
+.. autoclass:: neo4j_graphrag.experimental.components.types.DocumentInfo
+
+
 TextChunk
 =========
 

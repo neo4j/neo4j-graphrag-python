@@ -672,7 +672,7 @@ Example usage:
     from neo4j_graphrag.experimental.pipeline.components.lexical_graph_builder import LexicalGraphBuilder
     from neo4j_graphrag.experimental.pipeline.components.types import LexicalGraphConfig
 
-    lexical_graph_builder = LexicalGraphBuilder(config=LexicalGraphConfig(id_prefix="example"))
+    lexical_graph_builder = LexicalGraphBuilder(config=LexicalGraphConfig())
     graph = await lexical_graph_builder.run(
         text_chunks=TextChunks(chunks=[
             TextChunk(text="some text", index=0),
@@ -713,7 +713,6 @@ Optionally, the document and chunk node labels can be configured using a `Lexica
     # optionally, define a LexicalGraphConfig object
     # shown below with the default values
     config = LexicalGraphConfig(
-        id_prefix="",  # used to prefix the chunk and document IDs
         chunk_node_label="Chunk",
         document_node_label="Document",
         chunk_to_document_relationship_type="PART_OF_DOCUMENT",
@@ -998,7 +997,7 @@ without making assumptions about entity similarity. The Entity Resolver
 is responsible for refining the created knowledge graph by merging entity
 nodes that represent the same real-world object.
 
-In practice, this package implements a single resolver that merges nodes
+In practice, this package implements a simple resolver that merges nodes
 with the same label and identical "name" property.
 
 .. warning::
@@ -1018,15 +1017,30 @@ It can be used like this:
 
 .. warning::
 
-    By default, all nodes with the __Entity__ label will be resolved.
-    To exclude specific nodes, a filter_query can be added to the query.
-    For example, if a `:Resolved` label has been applied to already resolved entities
-    in the graph, these entities can be excluded with the following approach:
+    By default, all nodes with the `__Entity__` label will be resolved.
+    This behavior can be controled using the `filter_query` parameter described below.
 
-    .. code:: python
+Filter Query Parameter
+----------------------
 
-        from neo4j_graphrag.experimental.components.resolver import (
-            SinglePropertyExactMatchResolver,
-        )
-        resolver = SinglePropertyExactMatchResolver(driver, filter_query="WHERE not entity:Resolved")
-        res = await resolver.run()
+To exclude specific nodes from the resolution, a `filter_query` can be added to the query.
+For example, if a `:Resolved` label has been applied to already resolved entities
+in the graph, these entities can be excluded with the following approach:
+
+.. code:: python
+
+    from neo4j_graphrag.experimental.components.resolver import (
+        SinglePropertyExactMatchResolver,
+    )
+    filter_query = "WHERE NOT entity:Resolved"
+    resolver = SinglePropertyExactMatchResolver(driver, filter_query=filter_query)
+    res = await resolver.run()
+
+
+Similar approach can be used to exclude entities created from a previous pipeline
+run on the same document, assuming a label `OldDocument` has been assigned to the
+previously created document node:
+
+.. code:: python
+
+    filter_query = "WHERE NOT EXISTS((entity)-[:FROM_DOCUMENT]->(:OldDocument))"

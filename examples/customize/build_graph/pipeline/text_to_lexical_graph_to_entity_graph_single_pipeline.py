@@ -164,7 +164,6 @@ async def define_and_run_pipeline(
 async def main(driver: neo4j.Driver) -> PipelineResult:
     # optional: define some custom node labels for the lexical graph:
     lexical_graph_config = LexicalGraphConfig(
-        id_prefix="example",
         chunk_node_label="TextPart",
         document_node_label="Text",
     )

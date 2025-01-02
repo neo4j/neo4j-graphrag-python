@@ -23,7 +23,7 @@ AUTH = ("neo4j", "password")
 DATABASE = "neo4j"
 
 
-root_dir = Path(__file__).parents[4]
+root_dir = Path(__file__).parents[1]
 file_path = root_dir / "data" / "Harry Potter and the Chamber of Secrets Summary.pdf"
 
 

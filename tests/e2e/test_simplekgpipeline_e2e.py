@@ -14,13 +14,25 @@
 #  limitations under the License.
 from __future__ import annotations
 
+from typing import Any
 from unittest.mock import MagicMock
 
 import neo4j
 import pytest
+from neo4j import Driver
+
+from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
+    FixedSizeSplitter,
+)
 from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.llm import LLMResponse
+
+
+@pytest.fixture(scope="function", autouse=True)
+def clear_db(driver: Driver) -> Any:
+    driver.execute_query("MATCH (n) DETACH DELETE n")
+    yield
 
 
 @pytest.mark.asyncio
@@ -108,5 +120,164 @@ async def test_pipeline_builder_happy_path(
     )
 
     # Run the knowledge graph building process with text input
-    text_input = "John Doe lives in New York City."
-    await kg_builder_text.run_async(text=text_input)
+    await kg_builder_text.run_async(text=harry_potter_text)
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
+async def test_pipeline_builder_two_documents(
+    harry_potter_text_part1: str,
+    harry_potter_text_part2: str,
+    llm: MagicMock,
+    embedder: MagicMock,
+    driver: neo4j.Driver,
+) -> None:
+    """When everything works as expected, extracted entities, relations and text
+    chunks must be in the DB
+    """
+    driver.execute_query("MATCH (n) DETACH DELETE n")
+    embedder.embed_query.return_value = [1, 2, 3]
+    llm.ainvoke.side_effect = [
+        # first document
+        # first chunk
+        LLMResponse(
+            content="""{
+                        "nodes": [
+                            {
+                                "id": "0",
+                                "label": "Person",
+                                "properties": {
+                                    "name": "Harry Potter"
+                                }
+                            },
+                        ],
+                        "relationships": []
+                    }"""
+        ),
+        # second chunk
+        LLMResponse(content='{"nodes": [], "relationships": []}'),
+        # second document
+        # first chunk
+        LLMResponse(
+            content="""{
+                        "nodes": [
+                            {
+                                "id": "0",
+                                "label": "Person",
+                                "properties": {
+                                    "name": "Hermione Granger"
+                                }
+                            },
+                        ],
+                        "relationships": []
+                    }"""
+        ),
+        # second chunk
+        LLMResponse(content='{"nodes": [], "relationships": []}'),
+    ]
+
+    # Create an instance of the SimpleKGPipeline
+    kg_builder_text = SimpleKGPipeline(
+        llm=llm,
+        driver=driver,
+        embedder=embedder,
+        from_pdf=False,
+        # in order to have 2 chunks:
+        text_splitter=FixedSizeSplitter(chunk_size=400, chunk_overlap=5),
+    )
+
+    # Run the knowledge graph building process with text input
+    await kg_builder_text.run_async(text=harry_potter_text_part1)
+    await kg_builder_text.run_async(text=harry_potter_text_part2)
+
+    # check graph content
+    # check lexical graph content
+    records, _, _ = driver.execute_query(
+        "MATCH (start:Chunk)-[rel:NEXT_CHUNK]->(end:Chunk) RETURN start, rel, end"
+    )
+    assert len(records) == 2  # one for each run
+
+    # check entity -> chunk relationships
+    records, _, _ = driver.execute_query(
+        "MATCH (chunk:Chunk)<-[rel:FROM_CHUNK]-(entity:__Entity__) RETURN chunk, rel, entity"
+    )
+    assert len(records) == 2  # two entities according to mocked LLMResponse
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
+async def test_pipeline_builder_same_document_two_runs(
+    harry_potter_text_part1: str,
+    llm: MagicMock,
+    embedder: MagicMock,
+    driver: neo4j.Driver,
+) -> None:
+    """When everything works as expected, extracted entities, relations and text
+    chunks must be in the DB
+    """
+    driver.execute_query("MATCH (n) DETACH DELETE n")
+    embedder.embed_query.return_value = [1, 2, 3]
+    llm.ainvoke.side_effect = [
+        # first run
+        # first chunk
+        LLMResponse(
+            content="""{
+                        "nodes": [
+                            {
+                                "id": "0",
+                                "label": "Person",
+                                "properties": {
+                                    "name": "Harry Potter"
+                                }
+                            },
+                        ],
+                        "relationships": []
+                    }"""
+        ),
+        # second chunk
+        LLMResponse(content='{"nodes": [], "relationships": []}'),
+        # second run
+        # first chunk
+        LLMResponse(
+            content="""{
+                        "nodes": [
+                            {
+                                "id": "0",
+                                "label": "Person",
+                                "properties": {
+                                    "name": "Harry Potter"
+                                }
+                            },
+                        ],
+                        "relationships": []
+                    }"""
+        ),
+        # second chunk
+        LLMResponse(content='{"nodes": [], "relationships": []}'),
+    ]
+
+    # Create an instance of the SimpleKGPipeline
+    kg_builder_text = SimpleKGPipeline(
+        llm=llm,
+        driver=driver,
+        embedder=embedder,
+        from_pdf=False,
+        # in order to have 2 chunks:
+        text_splitter=FixedSizeSplitter(chunk_size=400, chunk_overlap=5),
+    )
+
+    # Run the knowledge graph building process with text input
+    await kg_builder_text.run_async(text=harry_potter_text_part1)
+    await kg_builder_text.run_async(text=harry_potter_text_part1)
+
+    # check lexical graph content
+    records, _, _ = driver.execute_query(
+        "MATCH (start:Chunk)-[rel:NEXT_CHUNK]->(end:Chunk) RETURN start, rel, end"
+    )
+    assert len(records) == 2  # one for each run
+
+    # check entity -> chunk relationships
+    records, _, _ = driver.execute_query(
+        "MATCH (chunk:Chunk)<-[rel:FROM_CHUNK]-(entity:__Entity__) RETURN chunk, rel, entity"
+    )
+    assert len(records) == 2  # two entities according to mocked LLMResponse

@@ -13,7 +13,8 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
-from typing import Any, Iterable, Optional, Sequence, TYPE_CHECKING, cast
+
+from typing import TYPE_CHECKING, Any, Iterable, Optional, Sequence, cast
 
 from pydantic import ValidationError
 
@@ -24,9 +25,9 @@ from .types import (
     BaseMessage,
     LLMMessage,
     LLMResponse,
+    MessageList,
     SystemMessage,
     UserMessage,
-    MessageList,
 )
 
 if TYPE_CHECKING:
