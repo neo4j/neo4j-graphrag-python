@@ -126,6 +126,8 @@ class SimpleKGPipeline:
         """
         return await self.runner.run({"file_path": file_path, "text": text})
 
-    def run(self, file_path: Optional[str] = None, text: Optional[str] = None) -> PipelineResult:
+    def run(
+        self, file_path: Optional[str] = None, text: Optional[str] = None
+    ) -> PipelineResult:
         """Run pipeline synchronously"""
-        return run_sync(self, file_path=file_path, text=text)
+        return run_sync(self.run_async, file_path=file_path, text=text)

@@ -14,10 +14,10 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from functools import wraps
-from typing import Optional
 import asyncio
 import concurrent.futures
+from functools import wraps
+from typing import Optional
 
 
 def validate_search_query_input(
@@ -38,4 +38,5 @@ def async_to_sync(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         return run_sync(func, *args, **kwargs)
+
     return wrapper
