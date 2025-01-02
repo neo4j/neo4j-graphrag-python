@@ -48,6 +48,7 @@ from neo4j_graphrag.experimental.pipeline.config.template_pipeline.simple_kg_bui
 from neo4j_graphrag.experimental.pipeline.config.types import PipelineType
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.experimental.pipeline.types import PipelineDefinition
+from neo4j_graphrag.utils import async_to_sync
 
 logger = logging.getLogger(__name__)
 
@@ -130,3 +131,6 @@ class PipelineRunner:
         logger.debug("PIPELINE_RUNNER: cleaning up (closing instantiated drivers...)")
         if self.config:
             await self.config.close()
+
+    run_sync = async_to_sync(run)
+    close_sync = async_to_sync(close)

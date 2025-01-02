@@ -22,6 +22,8 @@ from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 logging.basicConfig()
 logging.getLogger("neo4j_graphrag").setLevel(logging.DEBUG)
 
+ASYNC = False
+
 os.environ["NEO4J_URI"] = "bolt://localhost:7687"
 os.environ["NEO4J_USER"] = "neo4j"
 os.environ["NEO4J_PASSWORD"] = "password"
@@ -38,10 +40,22 @@ TEXT = """The son of Duke Leto Atreides and the Lady Jessica, Paul is the heir o
 an aristocratic family that rules the planet Caladan, the rainy planet, since 10191."""
 
 
-async def main() -> PipelineResult:
-    pipeline = PipelineRunner.from_config_file(file_path)
+def get_pipeline(file_path):
+    return PipelineRunner.from_config_file(file_path)
+
+
+async def main(file_path) -> PipelineResult:
+    pipeline = get_pipeline(file_path)
     return await pipeline.run({"text": TEXT})
 
 
+def main_sync(file_path) -> PipelineResult:
+    pipeline = get_pipeline(file_path)
+    return pipeline.run_sync({"text": TEXT})
+
+
 if __name__ == "__main__":
-    print(asyncio.run(main()))
+    if ASYNC:
+        print(asyncio.run(main(file_path)))
+    else:
+        print(main_sync(file_path))
