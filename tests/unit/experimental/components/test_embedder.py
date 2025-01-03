@@ -37,3 +37,5 @@ async def test_text_chunk_embedder_run(embedder: MagicMock) -> None:
         assert chunk.metadata is not None
         assert "embedding" in chunk.metadata.keys()
         assert isinstance(chunk.metadata["embedding"], list)
+        for i in chunk.metadata["embedding"]:
+            assert isinstance(i, float)
