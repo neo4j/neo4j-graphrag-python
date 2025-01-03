@@ -13,7 +13,7 @@
 
 ### Fixed
 - IDs for the Document and Chunk nodes in the lexical graph are now randomly generated and unique across multiple runs, fixing issues in the lexical graph where relationships were created between chunks that were created by different pipeline runs.
-
+- Improve logging for a better debugging experience: long lists and strings are now truncated. The max length can be controlled using the `LOGGING__MAX_LIST_LENGTH` and `LOGGING__MAX_STRING_LENGTH` env variables.
 
 ## 1.3.0
 
