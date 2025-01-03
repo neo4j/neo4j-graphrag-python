@@ -24,7 +24,7 @@ from collections import defaultdict
 from timeit import default_timer
 from typing import Any, AsyncGenerator, Optional
 
-from neo4j_graphrag.utils import prettyfier
+from neo4j_graphrag.utils.logging import prettyfier
 
 try:
     import pygraphviz as pgv

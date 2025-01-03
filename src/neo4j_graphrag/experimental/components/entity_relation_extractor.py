@@ -38,7 +38,7 @@ from neo4j_graphrag.experimental.pipeline.component import Component
 from neo4j_graphrag.experimental.pipeline.exceptions import InvalidJSONError
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate, PromptTemplate
 from neo4j_graphrag.llm import LLMInterface
-from neo4j_graphrag.utils import prettyfier
+from neo4j_graphrag.utils.logging import prettyfier
 
 logger = logging.getLogger(__name__)
 

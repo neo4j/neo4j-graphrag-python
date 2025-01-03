@@ -14,26 +14,32 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Optional, Any
+import os
+from typing import Any, Optional
 
 from pydantic import BaseModel
 
-
-def validate_search_query_input(
-    query_text: Optional[str] = None, query_vector: Optional[list[float]] = None
-) -> None:
-    if not (bool(query_vector) ^ bool(query_text)):
-        raise ValueError("You must provide exactly one of query_vector or query_text.")
-
+DEFAULT_MAX_LIST_LENGTH: int = 5
+DEFAULT_MAX_STRING_LENGTH: int = 200
 
 
 class Prettyfier:
-    """Prettyfy object for logging.
+    """Prettyfy any object for logging.
 
-    I.e.: truncate long lists.
-     """
-    def __init__(self, max_items_in_list: int = 5):
-        self.max_items_in_list = max_items_in_list
+    I.e.: truncate long lists and strings, even nested.
+
+    Max list and string length can be configured using env variables:
+    - LOGGING__MAX_LIST_LENGTH (int)
+    - LOGGING__MAX_STRING_LENGTH (int)
+    """
+
+    def __init__(self) -> None:
+        self.max_list_length = int(os.environ.get(
+            "LOGGING__MAX_LIST_LENGTH", DEFAULT_MAX_LIST_LENGTH
+        ))
+        self.max_string_length = int(os.environ.get(
+            "LOGGING__MAX_STRING_LENGTH", DEFAULT_MAX_STRING_LENGTH
+        ))
 
     def _prettyfy_dict(self, value: dict[Any, Any]) -> dict[Any, Any]:
         return {
@@ -44,20 +50,30 @@ class Prettyfier:
     def _prettyfy_list(self, value: list[Any]) -> list[Any]:
         items = [
             self(v)  # prettify each item
-            for v in value[:self.max_items_in_list]
+            for v in value[: self.max_list_length]
         ]
         remaining_items = len(value) - len(items)
         if remaining_items > 0:
-            items.append(f"...truncated {remaining_items} items...")
+            items.append(f"... ({remaining_items} items)")
         return items
 
+    def _prettyfy_str(self, value: str) -> str:
+        new_value = value[: self.max_string_length]
+        remaining_chars = len(value) - len(new_value)
+        if remaining_chars > 0:
+            new_value += f"... ({remaining_chars} chars)"
+        return new_value
+
     def __call__(self, value: Any) -> Any:
+        """Takes any value and returns a prettified version for logging."""
         if isinstance(value, dict):
             return self._prettyfy_dict(value)
         if isinstance(value, BaseModel):
             return self(value.model_dump())
         if isinstance(value, list):
             return self._prettyfy_list(value)
+        if isinstance(value, str):
+            return self._prettyfy_str(value)
         return value
 
 
