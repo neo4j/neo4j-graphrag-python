@@ -37,12 +37,14 @@ def test_hybrid_search_basic() -> None:
         "YIELD node, score "
         "WITH collect({node:node, score:score}) AS nodes, max(score) AS vector_index_max_score "
         "UNWIND nodes AS n "
-        "RETURN n.node AS node, (n.score / vector_index_max_score) AS score UNION "
+        "RETURN n.node AS node, CASE WHEN (n.score / vector_index_max_score) >= $threshold_vector_index "
+        "THEN (n.score / vector_index_max_score) ELSE 0 END AS score UNION "
         "CALL db.index.fulltext.queryNodes($fulltext_index_name, $query_text, {limit: $top_k}) "
         "YIELD node, score "
         "WITH collect({node:node, score:score}) AS nodes, max(score) AS ft_index_max_score "
         "UNWIND nodes AS n "
-        "RETURN n.node AS node, (n.score / ft_index_max_score) AS score "
+        "RETURN n.node AS node, CASE WHEN (n.score / ft_index_max_score) >= $threshold_fulltext_index "
+        "THEN (n.score / ft_index_max_score) ELSE 0 END AS score "
         "} "
         "WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k "
         "RETURN node { .*, `None`: null } AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score"
@@ -129,17 +131,20 @@ def test_hybrid_search_with_retrieval_query() -> None:
         "YIELD node, score "
         "WITH collect({node:node, score:score}) AS nodes, max(score) AS vector_index_max_score "
         "UNWIND nodes AS n "
-        "RETURN n.node AS node, (n.score / vector_index_max_score) AS score UNION "
+        "RETURN n.node AS node, CASE WHEN (n.score / vector_index_max_score) >= $threshold_vector_index THEN (n.score / vector_index_max_score) ELSE 0 END AS score UNION "
         "CALL db.index.fulltext.queryNodes($fulltext_index_name, $query_text, {limit: $top_k}) "
         "YIELD node, score "
         "WITH collect({node:node, score:score}) AS nodes, max(score) AS ft_index_max_score "
         "UNWIND nodes AS n "
-        "RETURN n.node AS node, (n.score / ft_index_max_score) AS score "
+        "RETURN n.node AS node, CASE WHEN (n.score / ft_index_max_score) >= $threshold_fulltext_index THEN (n.score / ft_index_max_score) ELSE 0 END AS score "
         "} "
         "WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k "
         + retrieval_query
     )
-    result, _ = get_search_query(SearchType.HYBRID, retrieval_query=retrieval_query)
+    result, _ = get_search_query(
+        SearchType.HYBRID,
+        retrieval_query=retrieval_query,
+    )
     assert result.strip() == expected.strip()
 
 
@@ -151,17 +156,20 @@ def test_hybrid_search_with_properties() -> None:
         "YIELD node, score "
         "WITH collect({node:node, score:score}) AS nodes, max(score) AS vector_index_max_score "
         "UNWIND nodes AS n "
-        "RETURN n.node AS node, (n.score / vector_index_max_score) AS score UNION "
+        "RETURN n.node AS node, CASE WHEN (n.score / vector_index_max_score) >= $threshold_vector_index THEN (n.score / vector_index_max_score) ELSE 0 END AS score UNION "
         "CALL db.index.fulltext.queryNodes($fulltext_index_name, $query_text, {limit: $top_k}) "
         "YIELD node, score "
         "WITH collect({node:node, score:score}) AS nodes, max(score) AS ft_index_max_score "
         "UNWIND nodes AS n "
-        "RETURN n.node AS node, (n.score / ft_index_max_score) AS score "
+        "RETURN n.node AS node, CASE WHEN (n.score / ft_index_max_score) >= $threshold_fulltext_index THEN (n.score / ft_index_max_score) ELSE 0 END AS score "
         "} "
         "WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k "
         "RETURN node {.name, .age} AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score"
     )
-    result, _ = get_search_query(SearchType.HYBRID, return_properties=properties)
+    result, _ = get_search_query(
+        SearchType.HYBRID,
+        return_properties=properties,
+    )
     assert result.strip() == expected.strip()
 
 
