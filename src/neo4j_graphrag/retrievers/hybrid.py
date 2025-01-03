@@ -141,6 +141,8 @@ class HybridRetriever(Retriever):
         query_text: str,
         query_vector: Optional[list[float]] = None,
         top_k: int = 5,
+        threshold_vector_index: float = 0.0,
+        threshold_fulltext_index: float = 0.0,
     ) -> RawSearchResult:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         Both query_vector and query_text can be provided.
@@ -159,6 +161,8 @@ class HybridRetriever(Retriever):
             query_text (str): The text to get the closest neighbors of.
             query_vector (Optional[list[float]], optional): The vector embeddings to get the closest neighbors of. Defaults to None.
             top_k (int, optional): The number of neighbors to return. Defaults to 5.
+            threshold_vector_index (float, optional): The minimum normalized score from the vector index to include in the top k search.
+            threshold_fulltext_index (float, optional): The minimum normalized score from the fulltext index to include in the top k search.
 
         Raises:
             SearchValidationError: If validation of the input arguments fail.
@@ -179,6 +183,9 @@ class HybridRetriever(Retriever):
         parameters = validated_data.model_dump(exclude_none=True)
         parameters["vector_index_name"] = self.vector_index_name
         parameters["fulltext_index_name"] = self.fulltext_index_name
+
+        parameters["threshold_vector_index"] = threshold_vector_index
+        parameters["threshold_fulltext_index"] = threshold_fulltext_index
 
         if query_text and not query_vector:
             if not self.embedder:
@@ -296,6 +303,8 @@ class HybridCypherRetriever(Retriever):
         query_vector: Optional[list[float]] = None,
         top_k: int = 5,
         query_params: Optional[dict[str, Any]] = None,
+        threshold_vector_index: float = 0.0,
+        threshold_fulltext_index: float = 0.0,
     ) -> RawSearchResult:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         Both query_vector and query_text can be provided.
@@ -313,6 +322,8 @@ class HybridCypherRetriever(Retriever):
             query_vector (Optional[list[float]]): The vector embeddings to get the closest neighbors of. Defaults to None.
             top_k (int): The number of neighbors to return. Defaults to 5.
             query_params (Optional[dict[str, Any]]): Parameters for the Cypher query. Defaults to None.
+            threshold_vector_index (float, optional): The minimum normalized score from the vector index to include in the top k search.
+            threshold_fulltext_index (float, optional): The minimum normalized score from the fulltext index to include in the top k search.
 
         Raises:
             SearchValidationError: If validation of the input arguments fail.
@@ -334,6 +345,9 @@ class HybridCypherRetriever(Retriever):
         parameters = validated_data.model_dump(exclude_none=True)
         parameters["vector_index_name"] = self.vector_index_name
         parameters["fulltext_index_name"] = self.fulltext_index_name
+
+        parameters["threshold_vector_index"] = threshold_vector_index
+        parameters["threshold_fulltext_index"] = threshold_fulltext_index
 
         if query_text and not query_vector:
             if not self.embedder:
