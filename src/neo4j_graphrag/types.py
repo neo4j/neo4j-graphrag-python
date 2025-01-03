@@ -26,7 +26,7 @@ from pydantic import (
     model_validator,
 )
 
-from neo4j_graphrag.utils import validate_search_query_input
+from neo4j_graphrag.utils.validation import validate_search_query_input
 
 
 class RawSearchResult(BaseModel):
