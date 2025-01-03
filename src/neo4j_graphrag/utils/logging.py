@@ -34,12 +34,12 @@ class Prettyfier:
     """
 
     def __init__(self) -> None:
-        self.max_list_length = int(os.environ.get(
-            "LOGGING__MAX_LIST_LENGTH", DEFAULT_MAX_LIST_LENGTH
-        ))
-        self.max_string_length = int(os.environ.get(
-            "LOGGING__MAX_STRING_LENGTH", DEFAULT_MAX_STRING_LENGTH
-        ))
+        self.max_list_length = int(
+            os.environ.get("LOGGING__MAX_LIST_LENGTH", DEFAULT_MAX_LIST_LENGTH)
+        )
+        self.max_string_length = int(
+            os.environ.get("LOGGING__MAX_STRING_LENGTH", DEFAULT_MAX_STRING_LENGTH)
+        )
 
     def _prettyfy_dict(self, value: dict[Any, Any]) -> dict[Any, Any]:
         return {
