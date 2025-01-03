@@ -25,9 +25,9 @@ from .types import (
     BaseMessage,
     LLMMessage,
     LLMResponse,
+    MessageList,
     SystemMessage,
     UserMessage,
-    MessageList,
 )
 
 if TYPE_CHECKING:

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import os
 from typing import Any, Iterable, Optional, cast
+
 from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
@@ -30,7 +31,7 @@ from neo4j_graphrag.llm.types import (
 )
 
 try:
-    from mistralai import Mistral, Messages
+    from mistralai import Messages, Mistral
     from mistralai.models.sdkerror import SDKError
 except ImportError:
     Mistral = None  # type: ignore

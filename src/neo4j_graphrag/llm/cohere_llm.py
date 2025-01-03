@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Iterable, Optional, cast
+
 from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError

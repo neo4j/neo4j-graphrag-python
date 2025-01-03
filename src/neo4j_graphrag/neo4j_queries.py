@@ -178,6 +178,7 @@ def _get_filtered_vector_query(
     query_params["embedding_dimension"] = embedding_dimension
     return f"{base_query} AND ({where_filters}) {vector_query}", query_params
 
+
 def get_search_query(
     search_type: SearchType,
     return_properties: Optional[list[str]] = None,
