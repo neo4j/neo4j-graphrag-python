@@ -24,7 +24,7 @@ from collections import defaultdict
 from timeit import default_timer
 from typing import Any, AsyncGenerator, Optional
 
-from neo4j_graphrag.utils.logging import prettyfier
+from neo4j_graphrag.utils.logging import prettify
 
 try:
     import pygraphviz as pgv
@@ -100,12 +100,12 @@ class TaskPipelineNode(PipelineNode):
 
     async def run(self, inputs: dict[str, Any]) -> RunResult | None:
         """Main method to execute the task."""
-        logger.debug(f"TASK START {self.name=} input={prettyfier(inputs)}")
+        logger.debug(f"TASK START {self.name=} input={prettify(inputs)}")
         start_time = default_timer()
         res = await self.execute(**inputs)
         end_time = default_timer()
         logger.debug(
-            f"TASK FINISHED {self.name} in {end_time - start_time} res={prettyfier(res)}"
+            f"TASK FINISHED {self.name} in {end_time - start_time} res={prettify(res)}"
         )
         return res
 

@@ -23,7 +23,7 @@ DEFAULT_MAX_LIST_LENGTH: int = 5
 DEFAULT_MAX_STRING_LENGTH: int = 200
 
 
-class Prettyfier:
+class Prettifyer:
     """Prettyfy any object for logging.
 
     I.e.: truncate long lists and strings, even nested.
@@ -77,4 +77,4 @@ class Prettyfier:
         return value
 
 
-prettyfier = Prettyfier()
+prettify = Prettifyer()

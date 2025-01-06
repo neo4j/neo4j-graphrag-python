@@ -38,7 +38,7 @@ from neo4j_graphrag.experimental.pipeline.component import Component
 from neo4j_graphrag.experimental.pipeline.exceptions import InvalidJSONError
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate, PromptTemplate
 from neo4j_graphrag.llm import LLMInterface
-from neo4j_graphrag.utils.logging import prettyfier
+from neo4j_graphrag.utils.logging import prettify
 
 logger = logging.getLogger(__name__)
 
@@ -335,5 +335,5 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         ]
         chunk_graphs: list[Neo4jGraph] = list(await asyncio.gather(*tasks))
         graph = self.combine_chunk_graphs(lexical_graph, chunk_graphs)
-        logger.debug(f"Extracted graph: {prettyfier(graph)}")
+        logger.debug(f"Extracted graph: {prettify(graph)}")
         return graph
