@@ -20,7 +20,6 @@ from unittest.mock import MagicMock
 import neo4j
 import pytest
 from neo4j import Driver
-
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
     FixedSizeSplitter,
 )

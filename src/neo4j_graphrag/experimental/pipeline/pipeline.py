@@ -24,6 +24,8 @@ from collections import defaultdict
 from timeit import default_timer
 from typing import Any, AsyncGenerator, Optional
 
+from neo4j_graphrag.utils.logging import prettify
+
 try:
     import pygraphviz as pgv
 except ImportError:
@@ -90,21 +92,21 @@ class TaskPipelineNode(PipelineNode):
             if the task run successfully, None if the status update
             was unsuccessful.
         """
-        logger.debug(f"Running component {self.name} with {kwargs}")
-        start_time = default_timer()
         component_result = await self.component.run(**kwargs)
         run_result = RunResult(
             result=component_result,
         )
-        end_time = default_timer()
-        logger.debug(f"Component {self.name} finished in {end_time - start_time}s")
         return run_result
 
     async def run(self, inputs: dict[str, Any]) -> RunResult | None:
         """Main method to execute the task."""
-        logger.debug(f"TASK START {self.name=} {inputs=}")
+        logger.debug(f"TASK START {self.name=} input={prettify(inputs)}")
+        start_time = default_timer()
         res = await self.execute(**inputs)
-        logger.debug(f"TASK RESULT {self.name=} {res=}")
+        end_time = default_timer()
+        logger.debug(
+            f"TASK FINISHED {self.name} in {end_time - start_time} res={prettify(res)}"
+        )
         return res
 
 
@@ -141,7 +143,9 @@ class Orchestrator:
         try:
             await self.set_task_status(task.name, RunStatus.RUNNING)
         except PipelineStatusUpdateError:
-            logger.info(f"Component {task.name} already running or done")
+            logger.debug(
+                f"ORCHESTRATOR: TASK ABORTED: {task.name} is already running or done, aborting"
+            )
             return None
         res = await task.run(inputs)
         await self.set_task_status(task.name, RunStatus.DONE)
@@ -198,7 +202,8 @@ class Orchestrator:
             d_status = await self.get_status_for_component(d.start)
             if d_status != RunStatus.DONE:
                 logger.debug(
-                    f"Missing dependency {d.start} for {task.name} (status: {d_status}). "
+                    f"ORCHESTRATOR {self.run_id}: TASK DELAYED: Missing dependency {d.start} for {task.name} "
+                    f"(status: {d_status}). "
                     "Will try again when dependency is complete."
                 )
                 raise PipelineMissingDependencyError()
@@ -227,6 +232,9 @@ class Orchestrator:
                 await self.check_dependencies_complete(next_node)
             except PipelineMissingDependencyError:
                 continue
+            logger.debug(
+                f"ORCHESTRATOR {self.run_id}: enqueuing next task: {next_node.name}"
+            )
             yield next_node
         return
 
@@ -315,7 +323,6 @@ class Orchestrator:
         (node without any parent). Then the callback on_task_complete
         will handle the task dependencies.
         """
-        logger.debug(f"PIPELINE START {data=}")
         tasks = [self.run_task(root, data) for root in self.pipeline.roots()]
         await asyncio.gather(*tasks)
 
@@ -624,15 +631,16 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         return True
 
     async def run(self, data: dict[str, Any]) -> PipelineResult:
-        logger.debug("Starting pipeline")
+        logger.debug("PIPELINE START")
         start_time = default_timer()
         self.invalidate()
         self.validate_input_data(data)
         orchestrator = Orchestrator(self)
+        logger.debug(f"PIPELINE ORCHESTRATOR: {orchestrator.run_id}")
         await orchestrator.run(data)
         end_time = default_timer()
         logger.debug(
-            f"Pipeline {orchestrator.run_id} finished in {end_time - start_time}s"
+            f"PIPELINE FINISHED {orchestrator.run_id} in {end_time - start_time}s"
         )
         return PipelineResult(
             run_id=orchestrator.run_id,

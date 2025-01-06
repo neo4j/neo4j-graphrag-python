@@ -8,6 +8,7 @@ NB: when building a KG from text, no 'Document' node is created in the Knowledge
 """
 
 import asyncio
+import logging
 
 import neo4j
 from neo4j_graphrag.embeddings import OpenAIEmbeddings
@@ -19,6 +20,11 @@ from neo4j_graphrag.experimental.pipeline.types import (
 )
 from neo4j_graphrag.llm import LLMInterface
 from neo4j_graphrag.llm.openai_llm import OpenAILLM
+
+logging.basicConfig()
+logging.getLogger("neo4j_graphrag").setLevel(logging.DEBUG)
+# logging.getLogger("neo4j_graphrag").setLevel(logging.INFO)
+
 
 # Neo4j db infos
 URI = "neo4j://localhost:7687"
