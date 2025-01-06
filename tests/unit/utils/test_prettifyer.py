@@ -29,7 +29,7 @@ def test_prettifyer_long_str() -> None:
     p = Prettifyer()
     value = "ab" * 200
     pretty_value = p._prettyfy_str(value)
-    assert pretty_value == "ab" * 100 + f"... (200 chars)"
+    assert pretty_value == "ab" * 100 + "... (200 chars)"
 
 
 @patch("neo4j_graphrag.utils.logging.os.environ")
@@ -106,13 +106,13 @@ def test_prettify_function() -> None:
             "key": {
                 "key0.1": "ab" * 200,
                 "key0.2": ["a"] * 10,
-                "key0.3": {"key0.3.1": "a short strng"},
+                "key0.3": {"key0.3.1": "a short string"},
             }
         }
     ) == {
         "key": {
-            "key0.1": "ab" * 100 + f"... (200 chars)",
+            "key0.1": "ab" * 100 + "... (200 chars)",
             "key0.2": ["a"] * 5 + ["... (5 items)"],
-            "key0.3": {"key0.3.1": "a short strng"},
+            "key0.3": {"key0.3.1": "a short string"},
         }
     }
