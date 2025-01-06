@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from unittest.mock import call, patch, Mock
+from unittest.mock import Mock, call, patch
 
 from neo4j_graphrag.utils.logging import Prettifyer, prettify
 
@@ -101,20 +101,18 @@ def test_prettifyer_dict_nested() -> None:
 
 
 def test_prettify_function() -> None:
-    assert prettify({
-        "key": {
-            "key0.1": "ab" * 200,
-            "key0.2": ["a"] * 10,
-            "key0.3": {
-                "key0.3.1": "a short strng"
+    assert prettify(
+        {
+            "key": {
+                "key0.1": "ab" * 200,
+                "key0.2": ["a"] * 10,
+                "key0.3": {"key0.3.1": "a short strng"},
             }
         }
-    }) == {
+    ) == {
         "key": {
             "key0.1": "ab" * 100 + f"... (200 chars)",
             "key0.2": ["a"] * 5 + ["... (5 items)"],
-            "key0.3": {
-                "key0.3.1": "a short strng"
-            }
+            "key0.3": {"key0.3.1": "a short strng"},
         }
     }
