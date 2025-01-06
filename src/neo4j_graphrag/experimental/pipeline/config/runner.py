@@ -104,7 +104,7 @@ class PipelineRunner:
     ) -> Self:
         wrapper = PipelineConfigWrapper.model_validate({"config": config})
         logger.debug(
-            f"PIPELINE_RUNNER: instantiate Pipeline from config type: {wrapper.config.template_}"
+            f"PIPELINE_RUNNER: instantiating Pipeline from config type: {wrapper.config.template_}"
         )
         return cls(wrapper.parse(), config=wrapper.config, do_cleaning=do_cleaning)
 
