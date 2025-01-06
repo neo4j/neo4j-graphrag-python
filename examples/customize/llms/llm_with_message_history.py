@@ -4,6 +4,7 @@ and an LLM about Tom Hanks.
 
 OpenAILLM can be replaced by any supported LLM from this package.
 """
+
 from neo4j_graphrag.llm import LLMResponse, OpenAILLM
 
 # set api key here on in the OPENAI_API_KEY env var
@@ -24,15 +25,19 @@ for question in questions:
         question,
         message_history=history,
     )
-    history.append({
-        "role": "user",
-        "content": question,
-    })
-    history.append({
-        "role": "assistant",
-        "content": res.content,
-    })
+    history.append(
+        {
+            "role": "user",
+            "content": question,
+        }
+    )
+    history.append(
+        {
+            "role": "assistant",
+            "content": res.content,
+        }
+    )
 
-    print("#"*50, question)
+    print("#" * 50, question)
     print(res.content)
-    print("#"*50)
+    print("#" * 50)
