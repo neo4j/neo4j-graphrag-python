@@ -119,14 +119,15 @@ class VertexAILLM(LLMInterface):
         Returns:
             LLMResponse: The response from the LLM.
         """
-        system_message = (
+        system_instruction = (
             system_instruction
             if system_instruction is not None
             else self.system_instruction
         )
+        system_message = [system_instruction] if system_instruction is not None else []
         self.model = GenerativeModel(
             model_name=self.model_name,
-            system_instruction=[system_message],
+            system_instruction=system_message,
             **self.options,
         )
         try:
