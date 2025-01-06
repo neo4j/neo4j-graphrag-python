@@ -23,7 +23,7 @@ DEFAULT_MAX_LIST_LENGTH: int = 5
 DEFAULT_MAX_STRING_LENGTH: int = 200
 
 
-class Prettifyer:
+class Prettifier:
     """Prettyfy any object for logging.
 
     I.e.: truncate long lists and strings, even nested.
@@ -41,13 +41,13 @@ class Prettifyer:
             os.environ.get("LOGGING__MAX_STRING_LENGTH", DEFAULT_MAX_STRING_LENGTH)
         )
 
-    def _prettyfy_dict(self, value: dict[Any, Any]) -> dict[Any, Any]:
+    def _prettify_dict(self, value: dict[Any, Any]) -> dict[Any, Any]:
         return {
             k: self(v)  # prettyfy each value
             for k, v in value.items()
         }
 
-    def _prettyfy_list(self, value: list[Any]) -> list[Any]:
+    def _prettify_list(self, value: list[Any]) -> list[Any]:
         items = [
             self(v)  # prettify each item
             for v in value[: self.max_list_length]
@@ -57,7 +57,7 @@ class Prettifyer:
             items.append(f"... ({remaining_items} items)")
         return items
 
-    def _prettyfy_str(self, value: str) -> str:
+    def _prettify_str(self, value: str) -> str:
         new_value = value[: self.max_string_length]
         remaining_chars = len(value) - len(new_value)
         if remaining_chars > 0:
@@ -67,14 +67,14 @@ class Prettifyer:
     def __call__(self, value: Any) -> Any:
         """Takes any value and returns a prettified version for logging."""
         if isinstance(value, dict):
-            return self._prettyfy_dict(value)
+            return self._prettify_dict(value)
         if isinstance(value, BaseModel):
             return self(value.model_dump())
         if isinstance(value, list):
-            return self._prettyfy_list(value)
+            return self._prettify_list(value)
         if isinstance(value, str):
-            return self._prettyfy_str(value)
+            return self._prettify_str(value)
         return value
 
 
-prettify = Prettifyer()
+prettify = Prettifier()
