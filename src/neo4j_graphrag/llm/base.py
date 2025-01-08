@@ -25,8 +25,7 @@ class LLMInterface(ABC):
 
     Args:
         model_name (str): The name of the language model.
-        model_params (Optional[dict], optional): Additional parameters passed to the model when text is sent to it. Defaults to None.
-        system_instruction: Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
+        model_params (Optional[dict]): Additional parameters passed to the model when text is sent to it. Defaults to None.
         **kwargs (Any): Arguments passed to the model when for the class is initialised. Defaults to None.
     """
 
@@ -34,12 +33,10 @@ class LLMInterface(ABC):
         self,
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
-        system_instruction: Optional[str] = None,
         **kwargs: Any,
     ):
         self.model_name = model_name
         self.model_params = model_params or {}
-        self.system_instruction = system_instruction
 
     @abstractmethod
     def invoke(
