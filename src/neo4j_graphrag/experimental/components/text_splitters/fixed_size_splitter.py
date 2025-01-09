@@ -18,12 +18,66 @@ from neo4j_graphrag.experimental.components.text_splitters.base import TextSplit
 from neo4j_graphrag.experimental.components.types import TextChunk, TextChunks
 
 
+def _adjust_chunk_start(text: str, proposed_start: int) -> int:
+    """
+    Shift the starting index backward if it lands in the middle of a word.
+    If no whitespace is found, use the proposed start.
+
+     Args:
+        text (str): The text being split.
+        proposed_start (int): The initial starting index of the chunk.
+
+    Returns:
+        int: The adjusted starting index, ensuring the chunk does not begin in the
+             middle of a word if possible.
+    """
+    start = proposed_start
+    if start > 0 and not text[start].isspace() and not text[start - 1].isspace():
+        while start > 0 and not text[start - 1].isspace():
+            start -= 1
+
+        # fallback if no whitespace is found
+        if start == 0 and not text[0].isspace():
+            start = proposed_start
+    return start
+
+
+def _adjust_chunk_end(text: str, start: int, approximate_end: int) -> int:
+    """
+    Shift the ending index backward if it lands in the middle of a word.
+    If no whitespace is found, use 'approximate_end'.
+
+    Args:
+        text (str): The full text being split.
+        start (int): The adjusted starting index for this chunk.
+        approximate_end (int): The initial end index.
+
+    Returns:
+        int: The adjusted ending index, ensuring the chunk does not end in the middle of
+            a word if possible.
+    """
+    end = approximate_end
+    if end < len(text):
+        while end > start and not text[end - 1].isspace():
+            end -= 1
+
+        # fallback if no whitespace is found
+        if end == start:
+            end = approximate_end
+    return end
+
+
 class FixedSizeSplitter(TextSplitter):
-    """Text splitter which splits the input text into fixed size chunks with optional overlap.
+    """Text splitter which splits the input text into fixed or approximate fixed size
+       chunks with optional overlap.
 
     Args:
         chunk_size (int): The number of characters in each chunk.
-        chunk_overlap (int): The number of characters from the previous chunk to overlap with each chunk. Must be less than `chunk_size`.
+        chunk_overlap (int): The number of characters from the previous chunk to overlap
+                            with each chunk. Must be less than `chunk_size`.
+        approximate (bool): If True, avoids splitting words in the middle at chunk
+                            boundaries. Defaults to True.
+
 
     Example:
 
@@ -33,16 +87,17 @@ class FixedSizeSplitter(TextSplitter):
         from neo4j_graphrag.experimental.pipeline import Pipeline
 
         pipeline = Pipeline()
-        text_splitter = FixedSizeSplitter(chunk_size=4000, chunk_overlap=200)
+        text_splitter = FixedSizeSplitter(chunk_size=4000, chunk_overlap=200, approximate=True)
         pipeline.add_component(text_splitter, "text_splitter")
     """
 
     @validate_call
-    def __init__(self, chunk_size: int = 4000, chunk_overlap: int = 200) -> None:
+    def __init__(self, chunk_size: int = 4000, chunk_overlap: int = 200, approximate: bool = True) -> None:
         if chunk_overlap >= chunk_size:
             raise ValueError("chunk_overlap must be strictly less than chunk_size")
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
+        self.approximate = approximate
 
     @validate_call
     async def run(self, text: str) -> TextChunks:
@@ -56,10 +111,25 @@ class FixedSizeSplitter(TextSplitter):
         """
         chunks = []
         index = 0
-        for i in range(0, len(text), self.chunk_size - self.chunk_overlap):
-            start = i
-            end = min(start + self.chunk_size, len(text))
+        step = self.chunk_size - self.chunk_overlap
+        text_length = len(text)
+
+        i = 0
+        while i < text_length:
+            if self.approximate:
+                # adjust start and end to avoid cutting words in the middle
+                start = _adjust_chunk_start(text, i)
+                approximate_end = min(start + self.chunk_size, text_length)
+                end = _adjust_chunk_end(text, start, approximate_end)
+            else:
+                # fixed size splitting with possibly words cut in half at chunk boundaries
+                start = i
+                end = min(start + self.chunk_size, text_length)
+
             chunk_text = text[start:end]
             chunks.append(TextChunk(text=chunk_text, index=index))
             index += 1
+
+            i = max(start + step, end)
+
         return TextChunks(chunks=chunks)
