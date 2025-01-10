@@ -58,7 +58,7 @@ def _adjust_chunk_end(text: str, start: int, approximate_end: int) -> int:
     """
     end = approximate_end
     if end < len(text):
-        while end > start and not text[end - 1].isspace():
+        while end > start and not text[end].isspace() and not text[end-1].isspace():
             end -= 1
 
         # fallback if no whitespace is found
@@ -114,22 +114,31 @@ class FixedSizeSplitter(TextSplitter):
         step = self.chunk_size - self.chunk_overlap
         text_length = len(text)
 
-        i = 0
-        while i < text_length:
+        approximate_start = 0
+        skip_adjust_chunk_start = False
+        while approximate_start < text_length:
             if self.approximate:
+                if skip_adjust_chunk_start:
+                    start = approximate_start
+                else:
+                    start = _adjust_chunk_start(text, approximate_start)
                 # adjust start and end to avoid cutting words in the middle
-                start = _adjust_chunk_start(text, i)
                 approximate_end = min(start + self.chunk_size, text_length)
                 end = _adjust_chunk_end(text, start, approximate_end)
+                # when avoiding splitting words in the middle is not possible, revert to initial chunk end and skip adjusting next chunk start
+                if end == approximate_end:
+                    skip_adjust_chunk_start = True
+                else:
+                    skip_adjust_chunk_start = False
             else:
-                # fixed size splitting with possibly words cut in half at chunk boundaries
-                start = i
+                # apply fixed size splitting with possibly words cut in half at chunk boundaries
+                start = approximate_start
                 end = min(start + self.chunk_size, text_length)
 
             chunk_text = text[start:end]
             chunks.append(TextChunk(text=chunk_text, index=index))
             index += 1
 
-            i = max(start + step, end)
+            approximate_start = start + step
 
         return TextChunks(chunks=chunks)
