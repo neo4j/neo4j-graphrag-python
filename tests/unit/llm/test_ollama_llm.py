@@ -117,7 +117,9 @@ def test_ollama_invoke_with_message_history_and_system_instruction(
     question = "What about next season?"
 
     response = llm.invoke(
-        question, message_history, system_instruction=system_instruction
+        question,
+        message_history,  # type: ignore
+        system_instruction=system_instruction,
     )  # type: ignore
     assert response.content == "ollama chat response"
     messages = [{"role": "system", "content": system_instruction}]
@@ -126,7 +128,7 @@ def test_ollama_invoke_with_message_history_and_system_instruction(
     llm.client.chat.assert_called_once_with(  # type: ignore[attr-defined]
         model=model, messages=messages, options=model_params
     )
-    assert llm.client.chat.call_count == 1
+    assert llm.client.chat.call_count == 1  # type: ignore
 
 
 @patch("builtins.__import__")

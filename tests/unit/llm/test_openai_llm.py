@@ -102,7 +102,7 @@ def test_openai_llm_with_message_history_and_system_instruction(
         model="gpt",
     )
 
-    assert llm.client.chat.completions.create.call_count == 1
+    assert llm.client.chat.completions.create.call_count == 1  # type: ignore
 
 
 @patch("builtins.__import__")

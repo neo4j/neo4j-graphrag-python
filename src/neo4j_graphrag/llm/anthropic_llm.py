@@ -108,7 +108,7 @@ class AnthropicLLM(LLMInterface):
             messages = self.get_messages(input, message_history)
             response = self.client.messages.create(
                 model=self.model_name,
-                system=system_instruction,
+                system=system_instruction or "",
                 messages=messages,
                 **self.model_params,
             )

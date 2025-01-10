@@ -95,7 +95,7 @@ def test_vertexai_get_messages(GenerativeModelMock: MagicMock) -> None:
     ]
 
     llm = VertexAILLM(model_name=model_name)
-    response = llm.get_messages(question, [LLMMessage(**m) for m in message_history])
+    response = llm.get_messages(question, [LLMMessage(m) for m in message_history])
 
     GenerativeModelMock.assert_not_called()
     assert len(response) == len(expected_response)

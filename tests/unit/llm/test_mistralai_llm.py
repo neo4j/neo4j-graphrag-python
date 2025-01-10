@@ -108,7 +108,7 @@ def test_mistralai_llm_invoke_with_message_history_and_system_instruction(
         model=model,
     )
 
-    assert llm.client.chat.complete.call_count == 1
+    assert llm.client.chat.complete.call_count == 1  # type: ignore
 
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
