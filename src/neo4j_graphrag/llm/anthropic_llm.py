@@ -112,7 +112,7 @@ class AnthropicLLM(LLMInterface):
                 messages=messages,
                 **self.model_params,
             )
-            return LLMResponse(content=response.content)  # type: ignore
+            return LLMResponse(content=response.content)
         except self.anthropic.APIError as e:
             raise LLMGenerationError(e)
 

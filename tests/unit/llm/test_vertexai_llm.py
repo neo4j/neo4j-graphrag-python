@@ -77,7 +77,7 @@ def test_vertexai_invoke_with_message_history_and_system_instruction(
 def test_vertexai_get_messages(GenerativeModelMock: MagicMock) -> None:
     model_name = "gemini-1.5-flash-001"
     question = "When does it set?"
-    message_history = [
+    message_history: list[LLMMessage] = [
         {"role": "user", "content": "When does the sun come up in the summer?"},
         {"role": "assistant", "content": "Usually around 6am."},
         {"role": "user", "content": "What about next season?"},
@@ -95,7 +95,7 @@ def test_vertexai_get_messages(GenerativeModelMock: MagicMock) -> None:
     ]
 
     llm = VertexAILLM(model_name=model_name)
-    response = llm.get_messages(question, [LLMMessage(m) for m in message_history])
+    response = llm.get_messages(question, message_history)
 
     GenerativeModelMock.assert_not_called()
     assert len(response) == len(expected_response)

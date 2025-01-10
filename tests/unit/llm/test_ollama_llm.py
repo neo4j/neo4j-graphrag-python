@@ -120,7 +120,7 @@ def test_ollama_invoke_with_message_history_and_system_instruction(
         question,
         message_history,  # type: ignore
         system_instruction=system_instruction,
-    )  # type: ignore
+    )
     assert response.content == "ollama chat response"
     messages = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
