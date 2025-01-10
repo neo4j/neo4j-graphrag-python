@@ -39,7 +39,6 @@ class OllamaLLM(LLMInterface):
         self,
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
-        system_instruction: Optional[str] = None,
         **kwargs: Any,
     ):
         try:
@@ -49,7 +48,7 @@ class OllamaLLM(LLMInterface):
                 "Could not import ollama Python client. "
                 "Please install it with `pip install ollama`."
             )
-        super().__init__(model_name, model_params, system_instruction, **kwargs)
+        super().__init__(model_name, model_params, **kwargs)
         self.ollama = ollama
         self.client = ollama.Client(
             **kwargs,
@@ -65,13 +64,8 @@ class OllamaLLM(LLMInterface):
         system_instruction: Optional[str] = None,
     ) -> Sequence[Message]:
         messages = []
-        system_message = (
-            system_instruction
-            if system_instruction is not None
-            else self.system_instruction
-        )
-        if system_message:
-            messages.append(SystemMessage(content=system_message).model_dump())
+        if system_instruction:
+            messages.append(SystemMessage(content=system_instruction).model_dump())
         if message_history:
             try:
                 MessageList(messages=cast(list[BaseMessage], message_history))

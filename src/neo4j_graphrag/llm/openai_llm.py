@@ -45,7 +45,6 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         self,
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
-        system_instruction: Optional[str] = None,
     ):
         """
         Base class for OpenAI LLM.
@@ -55,7 +54,6 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         Args:
             model_name (str):
             model_params (str): Parameters like temperature that will be passed to the model when text is sent to it. Defaults to None.
-            system_instruction: Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
         """
         try:
             import openai
@@ -65,7 +63,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
                 Please install it with `pip install "neo4j-graphrag[openai]"`."""
             )
         self.openai = openai
-        super().__init__(model_name, model_params, system_instruction)
+        super().__init__(model_name, model_params)
 
     def get_messages(
         self,
@@ -74,13 +72,8 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         system_instruction: Optional[str] = None,
     ) -> Iterable[ChatCompletionMessageParam]:
         messages = []
-        system_message = (
-            system_instruction
-            if system_instruction is not None
-            else self.system_instruction
-        )
-        if system_message:
-            messages.append(SystemMessage(content=system_message).model_dump())
+        if system_instruction:
+            messages.append(SystemMessage(content=system_instruction).model_dump())
         if message_history:
             try:
                 MessageList(messages=cast(list[BaseMessage], message_history))
@@ -158,7 +151,6 @@ class OpenAILLM(BaseOpenAILLM):
         self,
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
-        system_instruction: Optional[str] = None,
         **kwargs: Any,
     ):
         """OpenAI LLM
@@ -168,10 +160,9 @@ class OpenAILLM(BaseOpenAILLM):
         Args:
             model_name (str):
             model_params (str): Parameters like temperature that will be passed to the model when text is sent to it. Defaults to None.
-            system_instruction: Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
             kwargs: All other parameters will be passed to the openai.OpenAI init.
         """
-        super().__init__(model_name, model_params, system_instruction)
+        super().__init__(model_name, model_params)
         self.client = self.openai.OpenAI(**kwargs)
         self.async_client = self.openai.AsyncOpenAI(**kwargs)
 
@@ -190,9 +181,8 @@ class AzureOpenAILLM(BaseOpenAILLM):
         Args:
             model_name (str):
             model_params (str): Parameters like temperature that will be passed to the model when text is sent to it. Defaults to None.
-            system_instruction: Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
             kwargs: All other parameters will be passed to the openai.OpenAI init.
         """
-        super().__init__(model_name, model_params, system_instruction)
+        super().__init__(model_name, model_params)
         self.client = self.openai.AzureOpenAI(**kwargs)
         self.async_client = self.openai.AsyncAzureOpenAI(**kwargs)

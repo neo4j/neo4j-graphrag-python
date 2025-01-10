@@ -88,8 +88,8 @@ def test_mistralai_llm_invoke_with_message_history_and_system_instruction(
     ]
     mock_mistral_instance.chat.complete.return_value = chat_response_mock
     model = "mistral-model"
-    initial_instruction = "You are a helpful assistant."
-    llm = MistralAILLM(model_name=model, system_instruction=initial_instruction)
+    system_instruction = "You are a helpful assistant."
+    llm = MistralAILLM(model_name=model)
     message_history = [
         {"role": "user", "content": "When does the sun come up in the summer?"},
         {"role": "assistant", "content": "Usually around 6am."},
@@ -97,10 +97,10 @@ def test_mistralai_llm_invoke_with_message_history_and_system_instruction(
     question = "What about next season?"
 
     # first invokation - initial instructions
-    res = llm.invoke(question, message_history)  # type: ignore
+    res = llm.invoke(question, message_history, system_instruction=system_instruction)  # type: ignore
     assert isinstance(res, LLMResponse)
     assert res.content == "mistral response"
-    messages = [{"role": "system", "content": initial_instruction}]
+    messages = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
     llm.client.chat.complete.assert_called_once_with(  # type: ignore[attr-defined]
@@ -108,32 +108,7 @@ def test_mistralai_llm_invoke_with_message_history_and_system_instruction(
         model=model,
     )
 
-    # second invokation - override instructions
-    override_instruction = "Ignore all previous instructions"
-    res = llm.invoke(question, message_history, override_instruction)  # type: ignore
-    assert isinstance(res, LLMResponse)
-    assert res.content == "mistral response"
-    messages = [{"role": "system", "content": override_instruction}]
-    messages.extend(message_history)
-    messages.append({"role": "user", "content": question})
-    llm.client.chat.complete.assert_called_with(  # type: ignore
-        messages=messages,
-        model=model,
-    )
-
-    # third invokation - default instructions
-    res = llm.invoke(question, message_history)  # type: ignore
-    assert isinstance(res, LLMResponse)
-    assert res.content == "mistral response"
-    messages = [{"role": "system", "content": initial_instruction}]
-    messages.extend(message_history)
-    messages.append({"role": "user", "content": question})
-    llm.client.chat.complete.assert_called_with(  # type: ignore
-        messages=messages,
-        model=model,
-    )
-
-    assert llm.client.chat.complete.call_count == 3  # type: ignore
+    assert llm.client.chat.complete.call_count == 1
 
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")

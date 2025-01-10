@@ -62,9 +62,9 @@ def test_vertexai_invoke_with_message_history_and_system_instruction(
     mock_model = GenerativeModelMock.return_value
     mock_model.generate_content.return_value = mock_response
     model_params = {"temperature": 0.5}
-    llm = VertexAILLM(model_name, model_params, system_instruction)
+    llm = VertexAILLM(model_name, model_params)
 
-    response = llm.invoke(input_text)
+    response = llm.invoke(input_text, system_instruction=system_instruction)
     assert response.content == "Return text"
     GenerativeModelMock.assert_called_once_with(
         model_name=model_name, system_instruction=[system_instruction]
@@ -72,21 +72,9 @@ def test_vertexai_invoke_with_message_history_and_system_instruction(
     user_message = mock.ANY
     llm.model.generate_content.assert_called_once_with(user_message, **model_params)
 
-    message_history = [
-        {"role": "user", "content": "hello!"},
-        {"role": "assistant", "content": "hi."},
-    ]
-    response = llm.invoke(input_text, message_history, "new instructions")  # type:ignore
-    GenerativeModelMock.assert_called_with(
-        model_name=model_name, system_instruction=["new instructions"]
-    )
-    messages = [mock.ANY, mock.ANY, mock.ANY]
-    llm.model.generate_content.assert_called_with(messages, **model_params)
-
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
 def test_vertexai_get_messages(GenerativeModelMock: MagicMock) -> None:
-    system_instruction = "You are a helpful assistant."
     model_name = "gemini-1.5-flash-001"
     question = "When does it set?"
     message_history = [
@@ -106,10 +94,10 @@ def test_vertexai_get_messages(GenerativeModelMock: MagicMock) -> None:
         Content(role="user", parts=[Part.from_text("When does it set?")]),
     ]
 
-    llm = VertexAILLM(model_name=model_name, system_instruction=system_instruction)
-    response = llm.get_messages(question, cast(list[LLMMessage], message_history))
+    llm = VertexAILLM(model_name=model_name)
+    response = llm.get_messages(question, [LLMMessage(**m) for m in message_history])
 
-    GenerativeModelMock.assert_not_called
+    GenerativeModelMock.assert_not_called()
     assert len(response) == len(expected_response)
     for actual, expected in zip(response, expected_response):
         assert actual.role == expected.role

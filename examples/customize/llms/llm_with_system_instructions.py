@@ -24,5 +24,5 @@ print(res.content)
 
 
 # system instruction can be overwritten for each invoke:
-res: LLMResponse = llm.invoke(question, system_instruction="Answer with a joke")
-print(res.content)
+other_res: LLMResponse = llm.invoke(question, system_instruction="Answer with a joke")
+print(other_res.content)

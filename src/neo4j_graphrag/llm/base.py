@@ -17,7 +17,10 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
-from .types import LLMMessage, LLMResponse
+from .types import (
+    LLMMessage,
+    LLMResponse,
+)
 
 
 class LLMInterface(ABC):

@@ -59,7 +59,6 @@ class CohereLLM(LLMInterface):
         self,
         model_name: str = "",
         model_params: Optional[dict[str, Any]] = None,
-        system_instruction: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
         try:
@@ -69,7 +68,7 @@ class CohereLLM(LLMInterface):
                 """Could not import cohere python client.
                 Please install it with `pip install "neo4j-graphrag[cohere]"`."""
             )
-        super().__init__(model_name, model_params, system_instruction)
+        super().__init__(model_name, model_params)
         self.cohere = cohere
         self.cohere_api_error = cohere.core.api_error.ApiError
 
@@ -83,13 +82,8 @@ class CohereLLM(LLMInterface):
         system_instruction: Optional[str] = None,
     ) -> ChatMessages:
         messages = []
-        system_message = (
-            system_instruction
-            if system_instruction is not None
-            else self.system_instruction
-        )
-        if system_message:
-            messages.append(SystemMessage(content=system_message).model_dump())
+        if system_instruction:
+            messages.append(SystemMessage(content=system_instruction).model_dump())
         if message_history:
             try:
                 MessageList(messages=cast(list[BaseMessage], message_history))

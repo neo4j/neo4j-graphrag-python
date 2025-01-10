@@ -19,11 +19,11 @@ questions = [
     "Wow, that's impressive. And what about his personal life, does he have children?",
 ]
 
-history = []
+history: list[dict[str, str]] = []
 for question in questions:
     res: LLMResponse = llm.invoke(
         question,
-        message_history=history,
+        message_history=history,  # type: ignore
     )
     history.append(
         {

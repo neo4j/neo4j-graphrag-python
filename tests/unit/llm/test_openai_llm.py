@@ -80,9 +80,10 @@ def test_openai_llm_with_message_history_and_system_instruction(
     mock_openai.OpenAI.return_value.chat.completions.create.return_value = MagicMock(
         choices=[MagicMock(message=MagicMock(content="openai chat response"))],
     )
-    initial_instruction = "You are a helpful assistent."
+    system_instruction = "You are a helpful assistent."
     llm = OpenAILLM(
-        api_key="my key", model_name="gpt", system_instruction=initial_instruction
+        api_key="my key",
+        model_name="gpt",
     )
     message_history = [
         {"role": "user", "content": "When does the sun come up in the summer?"},
@@ -90,11 +91,10 @@ def test_openai_llm_with_message_history_and_system_instruction(
     ]
     question = "What about next season?"
 
-    # first invokation - initial instructions
-    res = llm.invoke(question, message_history)  # type: ignore
+    res = llm.invoke(question, message_history, system_instruction=system_instruction)  # type: ignore
     assert isinstance(res, LLMResponse)
     assert res.content == "openai chat response"
-    messages = [{"role": "system", "content": initial_instruction}]
+    messages = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
     llm.client.chat.completions.create.assert_called_once_with(  # type: ignore
@@ -102,32 +102,7 @@ def test_openai_llm_with_message_history_and_system_instruction(
         model="gpt",
     )
 
-    # second invokation - override instructions
-    override_instruction = "Ignore all previous instructions"
-    res = llm.invoke(question, message_history, override_instruction)  # type: ignore
-    assert isinstance(res, LLMResponse)
-    assert res.content == "openai chat response"
-    messages = [{"role": "system", "content": override_instruction}]
-    messages.extend(message_history)
-    messages.append({"role": "user", "content": question})
-    llm.client.chat.completions.create.assert_called_with(  # type: ignore
-        messages=messages,
-        model="gpt",
-    )
-
-    # third invokation - default instructions
-    res = llm.invoke(question, message_history)  # type: ignore
-    assert isinstance(res, LLMResponse)
-    assert res.content == "openai chat response"
-    messages = [{"role": "system", "content": initial_instruction}]
-    messages.extend(message_history)
-    messages.append({"role": "user", "content": question})
-    llm.client.chat.completions.create.assert_called_with(  # type: ignore
-        messages=messages,
-        model="gpt",
-    )
-
-    assert llm.client.chat.completions.create.call_count == 3  # type: ignore
+    assert llm.client.chat.completions.create.call_count == 1
 
 
 @patch("builtins.__import__")

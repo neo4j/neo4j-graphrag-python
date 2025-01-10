@@ -61,7 +61,6 @@ class AnthropicLLM(LLMInterface):
         self,
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
-        system_instruction: Optional[str] = None,
         **kwargs: Any,
     ):
         try:
@@ -71,7 +70,7 @@ class AnthropicLLM(LLMInterface):
                 """Could not import Anthropic Python client.
                 Please install it with `pip install "neo4j-graphrag[anthropic]"`."""
             )
-        super().__init__(model_name, model_params, system_instruction)
+        super().__init__(model_name, model_params)
         self.anthropic = anthropic
         self.client = anthropic.Anthropic(**kwargs)
         self.async_client = anthropic.AsyncAnthropic(**kwargs)
@@ -107,14 +106,9 @@ class AnthropicLLM(LLMInterface):
         """
         try:
             messages = self.get_messages(input, message_history)
-            system_message = (
-                system_instruction
-                if system_instruction is not None
-                else self.system_instruction
-            )
             response = self.client.messages.create(
                 model=self.model_name,
-                system=system_message,  # type: ignore
+                system=system_instruction,
                 messages=messages,
                 **self.model_params,
             )
@@ -140,14 +134,9 @@ class AnthropicLLM(LLMInterface):
         """
         try:
             messages = self.get_messages(input, message_history)
-            system_message = (
-                system_instruction
-                if system_instruction is not None
-                else self.system_instruction
-            )
             response = await self.async_client.messages.create(
                 model=self.model_name,
-                system=system_message,  # type: ignore
+                system=system_instruction,  # type: ignore
                 messages=messages,
                 **self.model_params,
             )
