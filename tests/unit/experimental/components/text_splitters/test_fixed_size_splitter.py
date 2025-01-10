@@ -26,7 +26,8 @@ async def test_split_text_no_overlap() -> None:
     text = "may thy knife chip and shatter"
     chunk_size = 5
     chunk_overlap = 0
-    splitter = FixedSizeSplitter(chunk_size, chunk_overlap)
+    approximate = False
+    splitter = FixedSizeSplitter(chunk_size, chunk_overlap, approximate)
     chunks = await splitter.run(text)
     expected_chunks = [
         TextChunk(text="may t", index=0),
@@ -47,7 +48,8 @@ async def test_split_text_with_overlap() -> None:
     text = "may thy knife chip and shatter"
     chunk_size = 10
     chunk_overlap = 2
-    splitter = FixedSizeSplitter(chunk_size, chunk_overlap)
+    approximate = False
+    splitter = FixedSizeSplitter(chunk_size, chunk_overlap, approximate)
     chunks = await splitter.run(text)
     expected_chunks = [
         TextChunk(text="may thy kn", index=0),
@@ -66,7 +68,8 @@ async def test_split_text_empty_string() -> None:
     text = ""
     chunk_size = 5
     chunk_overlap = 1
-    splitter = FixedSizeSplitter(chunk_size, chunk_overlap)
+    approximate = False
+    splitter = FixedSizeSplitter(chunk_size, chunk_overlap, approximate)
     chunks = await splitter.run(text)
     assert chunks.chunks == []
 
