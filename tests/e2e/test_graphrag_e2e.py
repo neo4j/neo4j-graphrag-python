@@ -72,7 +72,7 @@ biology
 Answer:
 """,
         None,
-        system_instruction="Answer the user question using the provided context."
+        system_instruction="Answer the user question using the provided context.",
     )
     assert isinstance(result, RagResultModel)
     assert result.answer == "some text"
@@ -117,7 +117,7 @@ biology
 Answer:
 """,
         None,
-        system_instruction="Answer the user question using the provided context."
+        system_instruction="Answer the user question using the provided context.",
     )
     assert isinstance(result, RagResultModel)
     assert result.answer == "some text"
@@ -163,7 +163,7 @@ biology
 Answer:
 """,
         None,
-        system_instruction="Answer the user question using the provided context."
+        system_instruction="Answer the user question using the provided context.",
     )
     assert result.answer == "some text"
 
