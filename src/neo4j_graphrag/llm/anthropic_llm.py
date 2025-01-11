@@ -108,7 +108,7 @@ class AnthropicLLM(LLMInterface):
             messages = self.get_messages(input, message_history)
             response = self.client.messages.create(
                 model=self.model_name,
-                system=system_instruction or "",
+                system=system_instruction or self.anthropic.NOT_GIVEN,
                 messages=messages,
                 **self.model_params,
             )
@@ -136,7 +136,7 @@ class AnthropicLLM(LLMInterface):
             messages = self.get_messages(input, message_history)
             response = await self.async_client.messages.create(
                 model=self.model_name,
-                system=system_instruction,  # type: ignore
+                system=system_instruction or self.anthropic.NOT_GIVEN,  # type: ignore
                 messages=messages,
                 **self.model_params,
             )
