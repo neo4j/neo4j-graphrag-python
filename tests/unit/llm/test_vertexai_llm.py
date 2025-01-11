@@ -44,14 +44,19 @@ def test_vertexai_invoke_happy_path(GenerativeModelMock: MagicMock) -> None:
     response = llm.invoke(input_text)
     assert response.content == "Return text"
     GenerativeModelMock.assert_called_once_with(
-        model_name=model_name, system_instruction=[None]
+        model_name=model_name, system_instruction=[]
     )
     user_message = mock.ANY
     llm.model.generate_content.assert_called_once_with(user_message, **model_params)
+    last_call = llm.model.generate_content.call_args_list[0]
+    content = last_call.args[0]
+    assert len(content) == 1
+    assert content[0].role == "user"
+    assert content[0].parts[0].text == input_text
 
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
-def test_vertexai_invoke_with_message_history_and_system_instruction(
+def test_vertexai_invoke_with_system_instruction(
     GenerativeModelMock: MagicMock,
 ) -> None:
     system_instruction = "You are a helpful assistant."
@@ -71,6 +76,37 @@ def test_vertexai_invoke_with_message_history_and_system_instruction(
     )
     user_message = mock.ANY
     llm.model.generate_content.assert_called_once_with(user_message, **model_params)
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_invoke_with_message_history_and_system_instruction(
+    GenerativeModelMock: MagicMock,
+) -> None:
+    system_instruction = "You are a helpful assistant."
+    model_name = "gemini-1.5-flash-001"
+    mock_response = Mock()
+    mock_response.text = "Return text"
+    mock_model = GenerativeModelMock.return_value
+    mock_model.generate_content.return_value = mock_response
+    model_params = {"temperature": 0.5}
+    llm = VertexAILLM(model_name, model_params)
+
+    message_history = [
+        {"role": "user", "content": "When does the sun come up in the summer?"},
+        {"role": "assistant", "content": "Usually around 6am."},
+    ]
+    question = "What about next season?"
+
+    response = llm.invoke(question, message_history, system_instruction=system_instruction)
+    assert response.content == "Return text"
+    GenerativeModelMock.assert_called_once_with(
+        model_name=model_name, system_instruction=[system_instruction]
+    )
+    user_message = mock.ANY
+    llm.model.generate_content.assert_called_once_with(user_message, **model_params)
+    last_call = llm.model.generate_content.call_args_list[0]
+    content = last_call.args[0]
+    assert len(content) == 3  # question + 2 messages in history
 
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
