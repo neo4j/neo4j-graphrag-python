@@ -57,14 +57,14 @@ def test_mistralai_llm_invoke_with_message_history(mock_mistral: Mock) -> None:
     model = "mistral-model"
     system_instruction = "You are a helpful assistant."
 
-    llm = MistralAILLM(model_name=model, system_instruction=system_instruction)
+    llm = MistralAILLM(model_name=model)
 
     message_history = [
         {"role": "user", "content": "When does the sun come up in the summer?"},
         {"role": "assistant", "content": "Usually around 6am."},
     ]
     question = "What about next season?"
-    res = llm.invoke(question, message_history)  # type: ignore
+    res = llm.invoke(question, message_history, system_instruction=system_instruction)  # type: ignore
 
     assert isinstance(res, LLMResponse)
     assert res.content == "mistral response"
