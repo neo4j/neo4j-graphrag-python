@@ -97,7 +97,9 @@ def test_vertexai_invoke_with_message_history_and_system_instruction(
     ]
     question = "What about next season?"
 
-    response = llm.invoke(question, message_history, system_instruction=system_instruction)
+    response = llm.invoke(
+        question, message_history, system_instruction=system_instruction
+    )
     assert response.content == "Return text"
     GenerativeModelMock.assert_called_once_with(
         model_name=model_name, system_instruction=[system_instruction]

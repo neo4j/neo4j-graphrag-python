@@ -147,7 +147,7 @@ Answer:
             call(
                 second_invokation,
                 message_history,
-                system_instruction='Answer the user question using the provided context.'
+                system_instruction="Answer the user question using the provided context.",
             ),
         ]
     )
@@ -166,9 +166,7 @@ def test_graphrag_happy_path_custom_system_instruction(
         llm=llm,
         prompt_template=prompt_template,
     )
-    retriever_mock.search.return_value = RetrieverResult(
-        items=[]
-    )
+    retriever_mock.search.return_value = RetrieverResult(items=[])
     llm.invoke.side_effect = [
         LLMResponse(content="llm generated text"),
     ]
@@ -180,7 +178,7 @@ def test_graphrag_happy_path_custom_system_instruction(
             call(
                 mock.ANY,
                 None,  # no message history
-                system_instruction='Custom instruction',
+                system_instruction="Custom instruction",
             ),
         ]
     )
