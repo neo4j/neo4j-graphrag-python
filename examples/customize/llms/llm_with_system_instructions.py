@@ -12,17 +12,12 @@ api_key = None
 llm = OpenAILLM(
     model_name="gpt-4o",
     api_key=api_key,
-    system_instruction="Answer with a serious tone",
 )
 
 question = "How fast is Santa Claus during the Christmas eve?"
 
 res: LLMResponse = llm.invoke(
     question,
+    system_instruction="Answer with a serious tone",
 )
 print(res.content)
-
-
-# system instruction can be overwritten for each invoke:
-other_res: LLMResponse = llm.invoke(question, system_instruction="Answer with a joke")
-print(other_res.content)

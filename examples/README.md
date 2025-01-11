@@ -51,6 +51,7 @@ are listed in [the last section of this file](#customize).
 ## Answer: GraphRAG
 
 - [End to end GraphRAG](./answer/graphrag.py)
+- [GraphRAG with message history](./question_answering/graphrag_with_message_history.py)
 
 
 ## Customize
@@ -72,6 +73,9 @@ are listed in [the last section of this file](#customize).
 - [Anthropic (Claude)](./customize/llms/anthropic_llm.py)
 - [Ollama](./customize/llms/ollama_llm.py)
 - [Custom LLM](./customize/llms/custom_llm.py)
+
+- [Message history](./customize/llms/llm_with_message_history.py)
+- [System Instruction](./customize/llms/llm_with_system_instructions.py)
 
 
 ### Prompts

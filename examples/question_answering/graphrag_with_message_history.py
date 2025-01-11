@@ -65,7 +65,7 @@ for question in questions:
     )
 
     answer = result.answer
-    print("#" * 50, question, history)
+    print("#" * 50, question)
     print(answer)
     print("#" * 50)
 
