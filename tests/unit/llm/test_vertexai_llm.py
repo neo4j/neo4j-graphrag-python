@@ -99,8 +99,8 @@ def test_vertexai_invoke_with_message_history_and_system_instruction(
 
     response = llm.invoke(
         question,
-        message_history,
-        system_instruction=system_instruction,  # type: ignore
+        message_history,  # type: ignore
+        system_instruction=system_instruction,
     )
     assert response.content == "Return text"
     GenerativeModelMock.assert_called_once_with(
