@@ -188,7 +188,6 @@ async def test_ollama_ainvoke_happy_path(mock_import: Mock) -> None:
     mock_ollama.AsyncClient.return_value.chat = mock_chat_async
     model = "gpt"
     model_params = {"temperature": 0.3}
-    system_instruction = "You are a helpful assistant."
     question = "What is graph RAG?"
     llm = OllamaLLM(
         model,
