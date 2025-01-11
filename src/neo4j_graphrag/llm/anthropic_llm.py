@@ -136,10 +136,10 @@ class AnthropicLLM(LLMInterface):
             messages = self.get_messages(input, message_history)
             response = await self.async_client.messages.create(
                 model=self.model_name,
-                system=system_instruction or self.anthropic.NOT_GIVEN,  # type: ignore
+                system=system_instruction or self.anthropic.NOT_GIVEN,
                 messages=messages,
                 **self.model_params,
             )
-            return LLMResponse(content=response.content)  # type: ignore
+            return LLMResponse(content=response.content)
         except self.anthropic.APIError as e:
             raise LLMGenerationError(e)
