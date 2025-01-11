@@ -4,8 +4,8 @@
 
 ### Added
 - Support for conversations with message history, including a new `message_history` parameter for LLM interactions.
-- Ability to include system instructions and override them for specific invocations.
-- Summarization of chat history to enhance query embedding and context handling.
+- Ability to include system instructions in LLM invoke method.
+- Summarization of chat history to enhance query embedding and context handling in GraphRAG.
 
 ### Changed
 - Updated LLM implementations to handle message history consistently across providers.
