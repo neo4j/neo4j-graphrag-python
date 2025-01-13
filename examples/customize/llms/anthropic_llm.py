@@ -2,8 +2,6 @@ from neo4j_graphrag.llm import AnthropicLLM, LLMResponse
 
 # set api key here on in the ANTHROPIC_API_KEY env var
 api_key = None
-# api_key = "sk-..."
-
 
 llm = AnthropicLLM(
     model_name="claude-3-opus-20240229",

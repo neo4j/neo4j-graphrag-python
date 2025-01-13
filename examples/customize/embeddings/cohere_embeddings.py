@@ -2,7 +2,6 @@ from neo4j_graphrag.embeddings import CohereEmbeddings
 
 # set api key here on in the CO_API_KEY env var
 api_key = None
-# api_key = "sk-..."
 
 embeder = CohereEmbeddings(
     model="embed-english-v3.0",
