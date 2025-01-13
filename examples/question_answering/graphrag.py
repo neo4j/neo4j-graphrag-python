@@ -16,9 +16,10 @@ from neo4j_graphrag.llm import OpenAILLM
 from neo4j_graphrag.retrievers import VectorCypherRetriever
 from neo4j_graphrag.types import RetrieverResultItem
 
-URI = "neo4j://localhost:7687"
-AUTH = ("neo4j", "password")
-DATABASE = "neo4j"
+# Define database credentials
+URI = "neo4j+s://demo.neo4jlabs.com"
+AUTH = ("recommendations", "recommendations")
+DATABASE = "recommendations"
 INDEX = "moviePlotsEmbedding"
 
 

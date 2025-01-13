@@ -12,6 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from unittest import mock
 from unittest.mock import MagicMock, call
 
 import pytest
@@ -30,9 +31,7 @@ def test_graphrag_prompt_template() -> None:
     )
     assert (
         prompt
-        == """Answer the user question using the following context
-
-Context:
+        == """Context:
 my context
 
 Examples:
@@ -63,9 +62,7 @@ def test_graphrag_happy_path(retriever_mock: MagicMock, llm: MagicMock) -> None:
 
     retriever_mock.search.assert_called_once_with(query_text="question")
     llm.invoke.assert_called_once_with(
-        """Answer the user question using the following context
-
-Context:
+        """Context:
 item content 1
 item content 2
 
@@ -77,7 +74,8 @@ question
 
 Answer:
 """,
-        None,
+        None,  # message history
+        system_instruction="Answer the user question using the provided context.",
     )
 
     assert isinstance(res, RagResultModel)
@@ -109,10 +107,10 @@ def test_graphrag_happy_path_with_message_history(
     res = rag.search("question", message_history)  # type: ignore
 
     expected_retriever_query_text = """
-Message Summary: 
+Message Summary:
 llm generated summary
 
-Current Query: 
+Current Query:
 question
 """
 
@@ -123,9 +121,7 @@ user: initial question
 assistant: answer to initial question
 """
     first_invokation_system_instruction = "You are a summarization assistant. Summarize the given text in no more than 300 words."
-    second_invokation = """Answer the user question using the following context
-
-Context:
+    second_invokation = """Context:
 item content 1
 item content 2
 
@@ -148,13 +144,46 @@ Answer:
                 input=first_invokation_input,
                 system_instruction=first_invokation_system_instruction,
             ),
-            call(second_invokation, message_history),
+            call(
+                second_invokation,
+                message_history,
+                system_instruction="Answer the user question using the provided context.",
+            ),
         ]
     )
 
     assert isinstance(res, RagResultModel)
     assert res.answer == "llm generated text"
     assert res.retriever_result is None
+
+
+def test_graphrag_happy_path_custom_system_instruction(
+    retriever_mock: MagicMock, llm: MagicMock
+) -> None:
+    prompt_template = RagTemplate(system_instructions="Custom instruction")
+    rag = GraphRAG(
+        retriever=retriever_mock,
+        llm=llm,
+        prompt_template=prompt_template,
+    )
+    retriever_mock.search.return_value = RetrieverResult(items=[])
+    llm.invoke.side_effect = [
+        LLMResponse(content="llm generated text"),
+    ]
+    res = rag.search("question")
+
+    assert llm.invoke.call_count == 1
+    llm.invoke.assert_has_calls(
+        [
+            call(
+                mock.ANY,
+                None,  # no message history
+                system_instruction="Custom instruction",
+            ),
+        ]
+    )
+
+    assert res.answer == "llm generated text"
 
 
 def test_graphrag_initialization_error(llm: MagicMock) -> None:
@@ -212,10 +241,10 @@ def test_conversation_template(retriever_mock: MagicMock, llm: MagicMock) -> Non
     assert (
         prompt
         == """
-Message Summary: 
+Message Summary:
 llm generated chat summary
 
-Current Query: 
+Current Query:
 latest question
 """
     )

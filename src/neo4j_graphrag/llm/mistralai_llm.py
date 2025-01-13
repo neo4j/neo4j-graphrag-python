@@ -43,7 +43,6 @@ class MistralAILLM(LLMInterface):
         self,
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
-        system_instruction: Optional[str] = None,
         **kwargs: Any,
     ):
         """
@@ -52,7 +51,6 @@ class MistralAILLM(LLMInterface):
             model_name (str):
             model_params (str): Parameters like temperature and such that will be
              passed to the chat completions endpoint
-            system_instruction: Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
             kwargs: All other parameters will be passed to the Mistral client.
 
         """
@@ -61,7 +59,7 @@ class MistralAILLM(LLMInterface):
                 """Could not import Mistral Python client.
                 Please install it with `pip install "neo4j-graphrag[mistralai]"`."""
             )
-        super().__init__(model_name, model_params, system_instruction)
+        super().__init__(model_name, model_params)
         api_key = kwargs.pop("api_key", None)
         if api_key is None:
             api_key = os.getenv("MISTRAL_API_KEY", "")
@@ -74,13 +72,8 @@ class MistralAILLM(LLMInterface):
         system_instruction: Optional[str] = None,
     ) -> list[Messages]:
         messages = []
-        system_message = (
-            system_instruction
-            if system_instruction is not None
-            else self.system_instruction
-        )
-        if system_message:
-            messages.append(SystemMessage(content=system_message).model_dump())
+        if system_instruction:
+            messages.append(SystemMessage(content=system_instruction).model_dump())
         if message_history:
             try:
                 MessageList(messages=cast(list[BaseMessage], message_history))

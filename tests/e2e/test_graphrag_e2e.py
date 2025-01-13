@@ -59,9 +59,7 @@ def test_graphrag_happy_path(
     )
 
     llm.invoke.assert_called_once_with(
-        """Answer the user question using the following context
-
-Context:
+        """Context:
 <Record node={'question': 'In 1953 Watson & Crick built a model of the molecular structure of this, the gene-carrying substance'}>
 <Record node={'question': 'This organ removes excess glucose from the blood & stores it as glycogen'}>
 
@@ -74,6 +72,7 @@ biology
 Answer:
 """,
         None,
+        system_instruction="Answer the user question using the provided context.",
     )
     assert isinstance(result, RagResultModel)
     assert result.answer == "some text"
@@ -105,9 +104,7 @@ def test_graphrag_happy_path_return_context(
     )
 
     llm.invoke.assert_called_once_with(
-        """Answer the user question using the following context
-
-Context:
+        """Context:
 <Record node={'question': 'In 1953 Watson & Crick built a model of the molecular structure of this, the gene-carrying substance'}>
 <Record node={'question': 'This organ removes excess glucose from the blood & stores it as glycogen'}>
 
@@ -120,6 +117,7 @@ biology
 Answer:
 """,
         None,
+        system_instruction="Answer the user question using the provided context.",
     )
     assert isinstance(result, RagResultModel)
     assert result.answer == "some text"
@@ -152,9 +150,7 @@ def test_graphrag_happy_path_examples(
     )
 
     llm.invoke.assert_called_once_with(
-        """Answer the user question using the following context
-
-Context:
+        """Context:
 <Record node={'question': 'In 1953 Watson & Crick built a model of the molecular structure of this, the gene-carrying substance'}>
 <Record node={'question': 'This organ removes excess glucose from the blood & stores it as glycogen'}>
 
@@ -167,6 +163,7 @@ biology
 Answer:
 """,
         None,
+        system_instruction="Answer the user question using the provided context.",
     )
     assert result.answer == "some text"
 

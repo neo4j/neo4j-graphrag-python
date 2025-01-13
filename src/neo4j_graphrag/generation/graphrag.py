@@ -137,7 +137,11 @@ class GraphRAG:
         )
         logger.debug(f"RAG: retriever_result={retriever_result}")
         logger.debug(f"RAG: prompt={prompt}")
-        answer = self.llm.invoke(prompt, message_history)
+        answer = self.llm.invoke(
+            prompt,
+            message_history,
+            system_instruction=self.prompt_template.system_instructions,
+        )
         result: dict[str, Any] = {"answer": answer.content}
         if return_context:
             result["retriever_result"] = retriever_result
@@ -172,9 +176,9 @@ Summarize the message history:
 
     def conversation_prompt(self, summary: str, current_query: str) -> str:
         return f"""
-Message Summary: 
+Message Summary:
 {summary}
 
-Current Query: 
+Current Query:
 {current_query}
 """

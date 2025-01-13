@@ -32,6 +32,7 @@ class PromptTemplate:
     missing, a `PromptMissingInputError` is raised.
     """
 
+    DEFAULT_SYSTEM_INSTRUCTIONS: str = ""
     DEFAULT_TEMPLATE: str = ""
     EXPECTED_INPUTS: list[str] = list()
 
@@ -39,9 +40,13 @@ class PromptTemplate:
         self,
         template: Optional[str] = None,
         expected_inputs: Optional[list[str]] = None,
+        system_instructions: Optional[str] = None,
     ) -> None:
         self.template = template or self.DEFAULT_TEMPLATE
         self.expected_inputs = expected_inputs or self.EXPECTED_INPUTS
+        self.system_instructions = (
+            system_instructions or self.DEFAULT_SYSTEM_INSTRUCTIONS
+        )
 
         for e in self.expected_inputs:
             if f"{{{e}}}" not in self.template:
@@ -88,9 +93,8 @@ class PromptTemplate:
 
 
 class RagTemplate(PromptTemplate):
-    DEFAULT_TEMPLATE = """Answer the user question using the following context
-
-Context:
+    DEFAULT_SYSTEM_INSTRUCTIONS = "Answer the user question using the provided context."
+    DEFAULT_TEMPLATE = """Context:
 {context}
 
 Examples:

@@ -43,21 +43,43 @@ def test_ollama_llm_happy_path(mock_import: Mock) -> None:
     )
     model = "gpt"
     model_params = {"temperature": 0.3}
-    system_instruction = "You are a helpful assistant."
     question = "What is graph RAG?"
     llm = OllamaLLM(
         model,
         model_params=model_params,
-        system_instruction=system_instruction,
     )
 
     res = llm.invoke(question)
     assert isinstance(res, LLMResponse)
     assert res.content == "ollama chat response"
     messages = [
-        {"role": "system", "content": system_instruction},
         {"role": "user", "content": question},
     ]
+    llm.client.chat.assert_called_once_with(  # type: ignore[attr-defined]
+        model=model, messages=messages, options=model_params
+    )
+
+
+@patch("builtins.__import__")
+def test_ollama_invoke_with_system_instruction_happy_path(mock_import: Mock) -> None:
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+    mock_ollama.Client.return_value.chat.return_value = MagicMock(
+        message=MagicMock(content="ollama chat response"),
+    )
+    model = "gpt"
+    model_params = {"temperature": 0.3}
+    llm = OllamaLLM(
+        model,
+        model_params=model_params,
+    )
+    system_instruction = "You are a helpful assistant."
+    question = "What about next season?"
+
+    response = llm.invoke(question, system_instruction=system_instruction)
+    assert response.content == "ollama chat response"
+    messages = [{"role": "system", "content": system_instruction}]
+    messages.append({"role": "user", "content": question})
     llm.client.chat.assert_called_once_with(  # type: ignore[attr-defined]
         model=model, messages=messages, options=model_params
     )
@@ -72,11 +94,9 @@ def test_ollama_invoke_with_message_history_happy_path(mock_import: Mock) -> Non
     )
     model = "gpt"
     model_params = {"temperature": 0.3}
-    system_instruction = "You are a helpful assistant."
     llm = OllamaLLM(
         model,
         model_params=model_params,
-        system_instruction=system_instruction,
     )
     message_history = [
         {"role": "user", "content": "When does the sun come up in the summer?"},
@@ -86,8 +106,7 @@ def test_ollama_invoke_with_message_history_happy_path(mock_import: Mock) -> Non
 
     response = llm.invoke(question, message_history)  # type: ignore
     assert response.content == "ollama chat response"
-    messages = [{"role": "system", "content": system_instruction}]
-    messages.extend(message_history)
+    messages = [m for m in message_history]
     messages.append({"role": "user", "content": question})
     llm.client.chat.assert_called_once_with(  # type: ignore[attr-defined]
         model=model, messages=messages, options=model_params
@@ -109,7 +128,6 @@ def test_ollama_invoke_with_message_history_and_system_instruction(
     llm = OllamaLLM(
         model,
         model_params=model_params,
-        system_instruction=system_instruction,
     )
     message_history = [
         {"role": "user", "content": "When does the sun come up in the summer?"},
@@ -117,8 +135,11 @@ def test_ollama_invoke_with_message_history_and_system_instruction(
     ]
     question = "What about next season?"
 
-    # first invokation - initial instructions
-    response = llm.invoke(question, message_history)  # type: ignore
+    response = llm.invoke(
+        question,
+        message_history,  # type: ignore
+        system_instruction=system_instruction,
+    )
     assert response.content == "ollama chat response"
     messages = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
@@ -126,29 +147,7 @@ def test_ollama_invoke_with_message_history_and_system_instruction(
     llm.client.chat.assert_called_once_with(  # type: ignore[attr-defined]
         model=model, messages=messages, options=model_params
     )
-
-    # second invokation - override instructions
-    override_instruction = "Ignore all previous instructions"
-    response = llm.invoke(question, message_history, override_instruction)  # type: ignore
-    assert response.content == "ollama chat response"
-    messages = [{"role": "system", "content": override_instruction}]
-    messages.extend(message_history)
-    messages.append({"role": "user", "content": question})
-    llm.client.chat.assert_called_with(  # type: ignore[attr-defined]
-        model=model, messages=messages, options=model_params
-    )
-
-    # third invokation - default instructions
-    response = llm.invoke(question, message_history)  # type: ignore
-    assert response.content == "ollama chat response"
-    messages = [{"role": "system", "content": system_instruction}]
-    messages.extend(message_history)
-    messages.append({"role": "user", "content": question})
-    llm.client.chat.assert_called_with(  # type: ignore[attr-defined]
-        model=model, messages=messages, options=model_params
-    )
-
-    assert llm.client.chat.call_count == 3  # type: ignore
+    assert llm.client.chat.call_count == 1  # type: ignore
 
 
 @patch("builtins.__import__")
@@ -189,12 +188,10 @@ async def test_ollama_ainvoke_happy_path(mock_import: Mock) -> None:
     mock_ollama.AsyncClient.return_value.chat = mock_chat_async
     model = "gpt"
     model_params = {"temperature": 0.3}
-    system_instruction = "You are a helpful assistant."
     question = "What is graph RAG?"
     llm = OllamaLLM(
         model,
         model_params=model_params,
-        system_instruction=system_instruction,
     )
 
     res = await llm.ainvoke(question)
