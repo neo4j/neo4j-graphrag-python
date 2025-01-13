@@ -116,9 +116,10 @@ class FixedSizeSplitter(TextSplitter):
         step = self.chunk_size - self.chunk_overlap
         text_length = len(text)
         approximate_start = 0
-
         skip_adjust_chunk_start = False
-        while approximate_start < text_length:
+        end = 0
+
+        while end < text_length:
             if self.approximate:
                 start = (
                     approximate_start
