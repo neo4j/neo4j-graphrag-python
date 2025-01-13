@@ -25,6 +25,7 @@ from neo4j_graphrag.experimental.components.types import (
     TextChunks,
 )
 from neo4j_graphrag.experimental.pipeline import Component
+from neo4j_graphrag.utils import driver_config
 
 
 class Neo4jChunkReader(Component):
@@ -58,7 +59,7 @@ class Neo4jChunkReader(Component):
         fetch_embeddings: bool = False,
         neo4j_database: Optional[str] = None,
     ):
-        self.driver = driver
+        self.driver = driver_config.override_user_agent(driver)
         self.fetch_embeddings = fetch_embeddings
         self.neo4j_database = neo4j_database
 

@@ -30,6 +30,7 @@ from neo4j_graphrag.utils.version_utils import (
     has_vector_index_support,
     is_version_5_23_or_above,
 )
+from neo4j_graphrag.utils import driver_config
 
 T = ParamSpec("T")
 P = TypeVar("P")
@@ -88,7 +89,7 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
     VERIFY_NEO4J_VERSION = True
 
     def __init__(self, driver: neo4j.Driver, neo4j_database: Optional[str] = None):
-        self.driver = driver
+        self.driver = driver_config.override_user_agent(driver)
         self.neo4j_database = neo4j_database
         if self.VERIFY_NEO4J_VERSION:
             version_tuple, is_aura, _ = get_version(self.driver, self.neo4j_database)
