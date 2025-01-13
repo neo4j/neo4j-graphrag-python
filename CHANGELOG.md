@@ -2,6 +2,8 @@
 
 ## Next
 
+## 1.4.0
+
 ### Added
 - Support for conversations with message history, including a new `message_history` parameter for LLM interactions.
 - Ability to include system instructions in LLM invoke method.
