@@ -18,27 +18,27 @@ from neo4j_graphrag.experimental.components.text_splitters.base import TextSplit
 from neo4j_graphrag.experimental.components.types import TextChunk, TextChunks
 
 
-def _adjust_chunk_start(text: str, proposed_start: int) -> int:
+def _adjust_chunk_start(text: str, approximate_start: int) -> int:
     """
     Shift the starting index backward if it lands in the middle of a word.
     If no whitespace is found, use the proposed start.
 
      Args:
         text (str): The text being split.
-        proposed_start (int): The initial starting index of the chunk.
+        approximate_start (int): The initial starting index of the chunk.
 
     Returns:
         int: The adjusted starting index, ensuring the chunk does not begin in the
              middle of a word if possible.
     """
-    start = proposed_start
+    start = approximate_start
     if start > 0 and not text[start].isspace() and not text[start - 1].isspace():
         while start > 0 and not text[start - 1].isspace():
             start -= 1
 
         # fallback if no whitespace is found
         if start == 0 and not text[0].isspace():
-            start = proposed_start
+            start = approximate_start
     return start
 
 
@@ -113,25 +113,25 @@ class FixedSizeSplitter(TextSplitter):
         index = 0
         step = self.chunk_size - self.chunk_overlap
         text_length = len(text)
-
         approximate_start = 0
+
         skip_adjust_chunk_start = False
         while approximate_start < text_length:
             if self.approximate:
-                if skip_adjust_chunk_start:
-                    start = approximate_start
-                else:
-                    start = _adjust_chunk_start(text, approximate_start)
+                start = (
+                    approximate_start
+                    if skip_adjust_chunk_start
+                    else _adjust_chunk_start(text, approximate_start)
+                )
                 # adjust start and end to avoid cutting words in the middle
                 approximate_end = min(start + self.chunk_size, text_length)
                 end = _adjust_chunk_end(text, start, approximate_end)
-                # when avoiding splitting words in the middle is not possible, revert to initial chunk end and skip adjusting next chunk start
-                if end == approximate_end:
-                    skip_adjust_chunk_start = True
-                else:
-                    skip_adjust_chunk_start = False
+                # when avoiding splitting words in the middle is not possible, revert to
+                # initial chunk end and skip adjusting next chunk start
+                skip_adjust_chunk_start = (end == approximate_end)
             else:
-                # apply fixed size splitting with possibly words cut in half at chunk boundaries
+                # apply fixed size splitting with possibly words cut in half at chunk
+                # boundaries
                 start = approximate_start
                 end = min(start + self.chunk_size, text_length)
 
