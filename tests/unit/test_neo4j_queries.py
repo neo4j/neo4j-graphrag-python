@@ -37,7 +37,6 @@ def test_hybrid_search_basic() -> None:
   UNWIND nodes AS n
   WITH n.node AS node, CASE WHEN (n.score / vector_index_max_score) >= $threshold_vector_index
   THEN (n.score / vector_index_max_score) ELSE 0 END AS score
-  WHERE score > 0
   RETURN node, score
   UNION
   CALL db.index.fulltext.queryNodes($fulltext_index_name, $query_text, {limit: $top_k}) YIELD node, score
@@ -45,7 +44,6 @@ def test_hybrid_search_basic() -> None:
   UNWIND nodes AS n
   WITH n.node AS node, CASE WHEN (n.score / ft_index_max_score) >= $threshold_fulltext_index
   THEN (n.score / ft_index_max_score) ELSE 0 END AS score
-  WHERE score > 0
   RETURN node, score
 }
 WITH node, max(score) AS score
@@ -133,7 +131,6 @@ def test_hybrid_search_with_retrieval_query() -> None:
   UNWIND nodes AS n
   WITH n.node AS node, CASE WHEN (n.score / vector_index_max_score) >= $threshold_vector_index
   THEN (n.score / vector_index_max_score) ELSE 0 END AS score
-  WHERE score > 0
   RETURN node, score
   UNION
   CALL db.index.fulltext.queryNodes($fulltext_index_name, $query_text, {{limit: $top_k}}) YIELD node, score
@@ -141,7 +138,6 @@ def test_hybrid_search_with_retrieval_query() -> None:
   UNWIND nodes AS n
   WITH n.node AS node, CASE WHEN (n.score / ft_index_max_score) >= $threshold_fulltext_index
   THEN (n.score / ft_index_max_score) ELSE 0 END AS score
-  WHERE score > 0
   RETURN node, score
 }}
 WITH node, max(score) AS score

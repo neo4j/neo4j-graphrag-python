@@ -116,23 +116,28 @@ UPSERT_VECTOR_ON_RELATIONSHIP_QUERY = (
 )
 
 
-def _get_hybrid_query(neo4j_version_is_5_23_or_above: bool) -> str:
+def _get_hybrid_query(
+    neo4j_version_is_5_23_or_above: bool,
+    threshold_vector_index: float = 0.0,
+    threshold_fulltext_index: float = 0.0,
+) -> str:
+    vector_where_clause = "WHERE score > 0" if threshold_vector_index > 0 else ""
+    fulltext_where_clause = "WHERE score > 0" if threshold_fulltext_index > 0 else ""
+
     if neo4j_version_is_5_23_or_above:
         return f"""CALL () {{
   {VECTOR_INDEX_QUERY}
   WITH collect({{node:node, score:score}}) AS nodes, max(score) AS vector_index_max_score
   UNWIND nodes AS n
   WITH n.node AS node, CASE WHEN (n.score / vector_index_max_score) >= $threshold_vector_index
-  THEN (n.score / vector_index_max_score) ELSE 0 END AS score
-  WHERE score > 0
+  THEN (n.score / vector_index_max_score) ELSE 0 END AS score{vector_where_clause}
   RETURN node, score
   UNION
   {FULL_TEXT_SEARCH_QUERY}
   WITH collect({{node:node, score:score}}) AS nodes, max(score) AS ft_index_max_score
   UNWIND nodes AS n
   WITH n.node AS node, CASE WHEN (n.score / ft_index_max_score) >= $threshold_fulltext_index
-  THEN (n.score / ft_index_max_score) ELSE 0 END AS score
-  WHERE score > 0
+  THEN (n.score / ft_index_max_score) ELSE 0 END AS score{fulltext_where_clause}
   RETURN node, score
 }}
 WITH node, max(score) AS score
@@ -143,16 +148,14 @@ ORDER BY score DESC LIMIT $top_k"""
   WITH collect({{node:node, score:score}}) AS nodes, max(score) AS vector_index_max_score
   UNWIND nodes AS n
   WITH n.node AS node, CASE WHEN (n.score / vector_index_max_score) >= $threshold_vector_index
-  THEN (n.score / vector_index_max_score) ELSE 0 END AS score
-  WHERE score > 0
+  THEN (n.score / vector_index_max_score) ELSE 0 END AS score{vector_where_clause}
   RETURN node, score
   UNION
   {FULL_TEXT_SEARCH_QUERY}
   WITH collect({{node:node, score:score}}) AS nodes, max(score) AS ft_index_max_score
   UNWIND nodes AS n
   WITH n.node AS node, CASE WHEN (n.score / ft_index_max_score) >= $threshold_fulltext_index
-  THEN (n.score / ft_index_max_score) ELSE 0 END AS score
-  WHERE score > 0
+  THEN (n.score / ft_index_max_score) ELSE 0 END AS score{fulltext_where_clause}
   RETURN node, score
 }}
 WITH node, max(score) AS score
