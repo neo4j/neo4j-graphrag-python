@@ -37,7 +37,12 @@ with neo4j.GraphDatabase.driver(URI, auth=AUTH) as driver:
     # Perform the similarity search for a text query
     # (retrieve the top 5 most similar nodes)
     query_text = "Find me a movie about aliens"
-    print(retriever.search(query_text=query_text, top_k=5))
+    results = retriever.search(
+        query_text=query_text,
+        top_k=5,
+    )
+
+    print(results.items[0].metadata)
 
     # note: it is also possible to query from a query_vector directly:
     # query_vector: list[float] = [...]

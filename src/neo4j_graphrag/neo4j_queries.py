@@ -118,35 +118,45 @@ UPSERT_VECTOR_ON_RELATIONSHIP_QUERY = (
 
 def _get_hybrid_query(neo4j_version_is_5_23_or_above: bool) -> str:
     if neo4j_version_is_5_23_or_above:
-        return (
-            f"CALL () {{ {VECTOR_INDEX_QUERY} "
-            f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS vector_index_max_score "
-            f"UNWIND nodes AS n "
-            f"RETURN n.node AS node, CASE WHEN (n.score / vector_index_max_score) >= $threshold_vector_index "
-            f"THEN (n.score / vector_index_max_score) ELSE 0 END AS score "
-            f"UNION "
-            f"{FULL_TEXT_SEARCH_QUERY} "
-            f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS ft_index_max_score "
-            f"UNWIND nodes AS n "
-            f"RETURN n.node AS node, CASE WHEN (n.score / ft_index_max_score) >= $threshold_fulltext_index "
-            f"THEN (n.score / ft_index_max_score) ELSE 0 END AS score }} "
-            f"WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k"
-        )
+        return f"""CALL () {{
+  {VECTOR_INDEX_QUERY}
+  WITH collect({{node:node, score:score}}) AS nodes, max(score) AS vector_index_max_score
+  UNWIND nodes AS n
+  WITH n.node AS node, CASE WHEN (n.score / vector_index_max_score) >= $threshold_vector_index
+  THEN (n.score / vector_index_max_score) ELSE 0 END AS score
+  WHERE score > 0
+  RETURN node, score
+  UNION
+  {FULL_TEXT_SEARCH_QUERY}
+  WITH collect({{node:node, score:score}}) AS nodes, max(score) AS ft_index_max_score
+  UNWIND nodes AS n
+  WITH n.node AS node, CASE WHEN (n.score / ft_index_max_score) >= $threshold_fulltext_index
+  THEN (n.score / ft_index_max_score) ELSE 0 END AS score
+  WHERE score > 0
+  RETURN node, score
+}}
+WITH node, max(score) AS score
+ORDER BY score DESC LIMIT $top_k"""
     else:
-        return (
-            f"CALL {{ {VECTOR_INDEX_QUERY} "
-            f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS vector_index_max_score "
-            f"UNWIND nodes AS n "
-            f"RETURN n.node AS node, CASE WHEN (n.score / vector_index_max_score) >= $threshold_vector_index "
-            f"THEN (n.score / vector_index_max_score) ELSE 0 END AS score "
-            f"UNION "
-            f"{FULL_TEXT_SEARCH_QUERY} "
-            f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS ft_index_max_score "
-            f"UNWIND nodes AS n "
-            f"RETURN n.node AS node, CASE WHEN (n.score / ft_index_max_score) >= $threshold_fulltext_index "
-            f"THEN (n.score / ft_index_max_score) ELSE 0 END AS score }} "
-            f"WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k"
-        )
+        return f"""CALL {{
+  {VECTOR_INDEX_QUERY}
+  WITH collect({{node:node, score:score}}) AS nodes, max(score) AS vector_index_max_score
+  UNWIND nodes AS n
+  WITH n.node AS node, CASE WHEN (n.score / vector_index_max_score) >= $threshold_vector_index
+  THEN (n.score / vector_index_max_score) ELSE 0 END AS score
+  WHERE score > 0
+  RETURN node, score
+  UNION
+  {FULL_TEXT_SEARCH_QUERY}
+  WITH collect({{node:node, score:score}}) AS nodes, max(score) AS ft_index_max_score
+  UNWIND nodes AS n
+  WITH n.node AS node, CASE WHEN (n.score / ft_index_max_score) >= $threshold_fulltext_index
+  THEN (n.score / ft_index_max_score) ELSE 0 END AS score
+  WHERE score > 0
+  RETURN node, score
+}}
+WITH node, max(score) AS score
+ORDER BY score DESC LIMIT $top_k"""
 
 
 def _get_filtered_vector_query(

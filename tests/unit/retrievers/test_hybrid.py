@@ -418,6 +418,8 @@ def test_hybrid_cypher_retrieval_query_with_params(
             "fulltext_index_name": fulltext_index_name,
             "query_vector": embed_query_vector,
             "param": "dummy-param",
+            "threshold_vector_index": 0.0,
+            "threshold_fulltext_index": 0.0,
         },
         database_=None,
         routing_=neo4j.RoutingControl.READ,
