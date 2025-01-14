@@ -55,10 +55,12 @@ class OllamaEmbeddings(Embedder):
             **kwargs,
         )
 
-        if embeddings_response is None or embeddings_response.embeddings is None:
+        if embeddings_response is None or not embeddings_response.embeddings:
             raise EmbeddingsGenerationError("Failed to retrieve embeddings.")
 
-        embedding = embeddings_response.embeddings
+        embeddings = embeddings_response.embeddings
+        # client always returns a sequence of sequences
+        embedding = embeddings[0]
         if not isinstance(embedding, list):
             raise EmbeddingsGenerationError("Embedding is not a list of floats.")
 
