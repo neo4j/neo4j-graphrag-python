@@ -48,6 +48,12 @@ class HybridRetriever(Retriever):
     """
     Provides retrieval method using combination of vector search over embeddings and
     fulltext search.
+
+    The retriever uses both the vector and fulltext indexes.  It uses the user query to
+    search both indexes, retrieving nodes and their corresponding scores.
+    After normalizing the scores from each set of results, it merges them, ranks the
+    combined results by score, and returns the top matches.
+
     If an embedder is provided, it needs to have the required Embedder type.
 
     Example:
@@ -223,6 +229,12 @@ class HybridCypherRetriever(Retriever):
     Provides retrieval method using combination of vector search over embeddings and
     fulltext search, augmented by a Cypher query.
     This retriever builds on HybridRetriever.
+
+    The retriever uses both the vector and fulltext indexes.  It uses the user query to
+    search both indexes, retrieving nodes and their corresponding scores.
+    After normalizing the scores from each set of results, it merges them, ranks the
+    combined results by score, and returns the top matches.
+
     If an embedder is provided, it needs to have the required Embedder type.
 
     Note: `node` is a variable from the base query that can be used in `retrieval_query` as seen in the example below.
