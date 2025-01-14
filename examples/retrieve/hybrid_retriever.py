@@ -40,6 +40,8 @@ with neo4j.GraphDatabase.driver(URI, auth=AUTH) as driver:
     results = retriever.search(
         query_text=query_text,
         top_k=5,
+        threshold_vector_index=0.1,
+        threshold_fulltext_index=0.8,
     )
 
     print(results.items[0].metadata)
