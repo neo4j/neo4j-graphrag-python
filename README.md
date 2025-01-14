@@ -58,7 +58,7 @@ the extra dependencies described below:
     - **weaviate**: store vectors in Weaviate
     - **pinecone**: store vectors in Pinecone
     - **qdrant**: store vectors in Qdrant
-- **experimental**: experimental features such as the Knowledge Graph creation pipelines.
+- **experimental**: experimental features mainly related to the Knowledge Graph creation pipelines.
     - Warning: this dependency group requires `pygraphviz`. See below for installation instructions.
 
 
@@ -66,8 +66,6 @@ Install package with optional dependencies with (for instance):
 
 ```shell
 pip install "neo4j-graphrag[openai]"
-# or
-pip install "neo4j-graphrag[openai, experimental]"
 ```
 
 #### pygraphviz

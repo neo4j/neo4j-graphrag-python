@@ -35,8 +35,8 @@ class OllamaEmbeddings(Embedder):
             import ollama
         except ImportError:
             raise ImportError(
-                "Could not import ollama python client. "
-                "Please install it with `pip install ollama`."
+                """Could not import ollama python client.
+                Please install it with `pip install "neo4j_graphrag[ollama]"`."""
             )
         self.model = model
         self.client = ollama.Client(**kwargs)

@@ -81,8 +81,6 @@ Extra dependencies can be installed with:
 .. code:: bash
 
     pip install "neo4j-graphrag[openai]"
-    # or
-    pip install "neo4j-graphrag[openai, experimental]"
 
 
 List of extra dependencies:
@@ -99,7 +97,7 @@ List of extra dependencies:
     - **weaviate**: store vectors in Weaviate
     - **pinecone**: store vectors in Pinecone
     - **qdrant**: store vectors in Qdrant
-- **experimental**: experimental features such as the Knowledge Graph creation pipelines.
+- **experimental**: experimental features mainly from the Knowledge Graph creation pipelines.
     - Warning: this requires `pygraphviz`. Installation instructions can be found `here <https://pygraphviz.github.io/documentation/stable/install.html>`_.
 
 

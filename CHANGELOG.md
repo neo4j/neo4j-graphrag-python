@@ -2,6 +2,14 @@
 
 ## Next
 
+### Fixed
+
+#### Dependencies
+
+- PyYAML dependency was missing and has been added.
+- Weaviate was unintentionally added as a mandatory dependency in previous version, this behavior has been reverted.
+- PyPDF and fsspec are not optional anymore so that SimpleKGPipeline examples can run out of the box (they just require the independent installation of openai python package if using OpenAI).
+
 ## 1.4.0
 
 ### Added
