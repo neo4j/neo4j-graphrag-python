@@ -2,6 +2,8 @@
 
 ## Next
 
+## 1.4.2
+
 ### Fixed
 
 - Fix a bug where the `OllamaEmbedder` would return a `list[list[float]]` instead of the expected `list[float]`.
