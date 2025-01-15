@@ -24,6 +24,7 @@
 - Support for conversations with message history, including a new `message_history` parameter for LLM interactions.
 - Ability to include system instructions in LLM invoke method.
 - Summarization of chat history to enhance query embedding and context handling in GraphRAG.
+- Support for thresholding on vector and fulltext indexes in Hybrid retrievers, enabling users to set importance levels for search results.
 
 ### Changed
 - Updated LLM implementations to handle message history consistently across providers.
