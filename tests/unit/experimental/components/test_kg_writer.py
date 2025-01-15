@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+from typing import Tuple
 from unittest import mock
 from unittest.mock import MagicMock, Mock
 
@@ -331,3 +332,45 @@ async def test_run_is_version_5_23_or_above(_: Mock) -> None:
         parameters_=parameters_,
         database_=None,
     )
+
+
+@pytest.mark.parametrize(
+    "description, version, version_tuple, is_5_23_or_above",
+    [
+        ("SemVer, < 5.23", "5.22.0", (5, 22, 0), False),
+        ("SemVer, > 5.23", "5.24.0", (5, 24, 0), True),
+        ("SemVer, < 5.23, Aura", "5.22-aura", (5, 22, 0), False),
+        ("SemVer, > 5.23, Aura", "5.24-aura", (5, 24, 0), True),
+        ("CalVer", "2025.01.0", (2025, 1, 0), True),
+        ("CalVer, Aura", "2025.01-aura", (2025, 1, 0), True),
+    ],
+)
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._db_setup",
+    return_value=None,
+)
+def test_get_version(
+    _: Mock,
+    driver: MagicMock,
+    description: str,
+    version: str,
+    version_tuple: Tuple[int],
+    is_5_23_or_above: bool,
+) -> None:
+    execute_query_mock = MagicMock(
+        return_value=(
+            [
+                {"versions": [version]},
+            ],
+            None,
+            None,
+        )
+    )
+    driver.execute_query = execute_query_mock
+    neo4j_writer = Neo4jWriter(driver=driver)
+    assert (
+        version_tuple == neo4j_writer._get_version()
+    ), f"Failed version_tuple test case: {description}"
+    assert (
+        neo4j_writer.is_version_5_23_or_above is is_5_23_or_above
+    ), f"Failed is_version_5_23_or_above test case: {description}"
