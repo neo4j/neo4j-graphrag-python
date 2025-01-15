@@ -32,6 +32,8 @@ from neo4j_graphrag.types import RawSearchResult, RetrieverResult
         (["5.19.0"], ((5, 19, 0), False)),
         (["4.3.5"], ((4, 3, 5), False)),
         (["5.23.0-6698"], ((5, 23, 0), False)),
+        (["2025.01.0"], ((2025, 1, 0), False)),
+        (["2025.01-aura"], ((2025, 1, 0), True)),
     ],
 )
 def test_retriever_get_version(
@@ -58,6 +60,8 @@ def test_retriever_get_version(
         (((5, 19, 0), False), None),
         (((4, 3, 5), False), Neo4jVersionError),
         (((5, 23, 0), False), None),
+        (((2025, 1, 0), False), None),
+        (((2025, 1, 0), True), None),
     ],
 )
 @patch("neo4j_graphrag.retrievers.base.Retriever._get_version")
