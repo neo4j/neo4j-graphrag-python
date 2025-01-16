@@ -116,33 +116,50 @@ UPSERT_VECTOR_ON_RELATIONSHIP_QUERY = (
 )
 
 
-def _get_hybrid_query(neo4j_version_is_5_23_or_above: bool) -> str:
+def _get_hybrid_query(
+    neo4j_version_is_5_23_or_above: bool,
+    threshold_vector_index: float = 0.0,
+    threshold_fulltext_index: float = 0.0,
+) -> str:
+    vector_where_clause = "WHERE score > 0" if threshold_vector_index > 0 else ""
+    fulltext_where_clause = "WHERE score > 0" if threshold_fulltext_index > 0 else ""
+
     if neo4j_version_is_5_23_or_above:
-        return (
-            f"CALL () {{ {VECTOR_INDEX_QUERY} "
-            f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS vector_index_max_score "
-            f"UNWIND nodes AS n "
-            f"RETURN n.node AS node, (n.score / vector_index_max_score) AS score "
-            f"UNION "
-            f"{FULL_TEXT_SEARCH_QUERY} "
-            f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS ft_index_max_score "
-            f"UNWIND nodes AS n "
-            f"RETURN n.node AS node, (n.score / ft_index_max_score) AS score }} "
-            f"WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k"
-        )
+        return f"""CALL () {{
+  {VECTOR_INDEX_QUERY}
+  WITH collect({{node:node, score:score}}) AS nodes, max(score) AS vector_index_max_score
+  UNWIND nodes AS n
+  WITH n.node AS node, CASE WHEN (n.score / vector_index_max_score) >= $threshold_vector_index
+  THEN (n.score / vector_index_max_score) ELSE 0 END AS score {vector_where_clause}
+  RETURN node, score
+  UNION
+  {FULL_TEXT_SEARCH_QUERY}
+  WITH collect({{node:node, score:score}}) AS nodes, max(score) AS ft_index_max_score
+  UNWIND nodes AS n
+  WITH n.node AS node, CASE WHEN (n.score / ft_index_max_score) >= $threshold_fulltext_index
+  THEN (n.score / ft_index_max_score) ELSE 0 END AS score {fulltext_where_clause}
+  RETURN node, score
+}}
+WITH node, max(score) AS score
+ORDER BY score DESC LIMIT $top_k"""
     else:
-        return (
-            f"CALL {{ {VECTOR_INDEX_QUERY} "
-            f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS vector_index_max_score "
-            f"UNWIND nodes AS n "
-            f"RETURN n.node AS node, (n.score / vector_index_max_score) AS score "
-            f"UNION "
-            f"{FULL_TEXT_SEARCH_QUERY} "
-            f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS ft_index_max_score "
-            f"UNWIND nodes AS n "
-            f"RETURN n.node AS node, (n.score / ft_index_max_score) AS score }} "
-            f"WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k"
-        )
+        return f"""CALL {{
+  {VECTOR_INDEX_QUERY}
+  WITH collect({{node:node, score:score}}) AS nodes, max(score) AS vector_index_max_score
+  UNWIND nodes AS n
+  WITH n.node AS node, CASE WHEN (n.score / vector_index_max_score) >= $threshold_vector_index
+  THEN (n.score / vector_index_max_score) ELSE 0 END AS score{vector_where_clause}
+  RETURN node, score
+  UNION
+  {FULL_TEXT_SEARCH_QUERY}
+  WITH collect({{node:node, score:score}}) AS nodes, max(score) AS ft_index_max_score
+  UNWIND nodes AS n
+  WITH n.node AS node, CASE WHEN (n.score / ft_index_max_score) >= $threshold_fulltext_index
+  THEN (n.score / ft_index_max_score) ELSE 0 END AS score{fulltext_where_clause}
+  RETURN node, score
+}}
+WITH node, max(score) AS score
+ORDER BY score DESC LIMIT $top_k"""
 
 
 def _get_filtered_vector_query(
@@ -186,7 +203,6 @@ def get_search_query(
     neo4j_version_is_5_23_or_above: bool = False,
 ) -> tuple[str, dict[str, Any]]:
     """Build the search query, including pre-filtering if needed, and return clause.
-
     Args
         search_type: Search type we want to search for:
         return_properties (list[str]): list of property names to return.
@@ -197,10 +213,8 @@ def get_search_query(
         embedding_node_property (str): the name of the property holding the embeddings
         embedding_dimension (int): the dimension of the embeddings
         filters (dict[str, Any]): filters used to pre-filter the nodes before vector search
-
     Returns:
         tuple[str, dict[str, Any]]: query and parameters
-
     """
     warnings.warn(
         "The default returned 'id' field in the search results will be removed. Please switch to using 'elementId' instead.",
