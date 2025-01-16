@@ -13,7 +13,7 @@ docker compose -f tests/e2e/docker-compose.yml up
 Run this from the project root to write data to both dbs.
 
 ```
-poetry run python tests/e2e/weaviate_e2e/populate_dbs.py
+poetry run python -m tests/e2e/weaviate_e2e/populate_dbs.py
 ```
 
 ### Install Weaviate client
@@ -28,11 +28,11 @@ pip install weaviate-client
 
 ```
 # search by vector
-poetry run python -m examples.weaviate.vector_search
+poetry run python -m examples.customize.retrievers.external.weaviate.vector_search
 
 # search by text, with embeddings generated locally (via embedder argument)
-poetry run python -m examples.weaviate.text_search_local_embedder
+poetry run python -m examples.customize.retrievers.external.weaviate.text_search_local_embedder
 
 # search by text, with embeddings generated on the Weaviate side, via configured vectorizer
-poetry run python -m examples.weaviate.text_search_remote_embedder
+poetry run python -m examples.customize.retrievers.external.weaviate.text_search_remote_embedder
 ```
