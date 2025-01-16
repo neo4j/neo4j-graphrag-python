@@ -130,14 +130,14 @@ def _get_hybrid_query(
   WITH collect({{node:node, score:score}}) AS nodes, max(score) AS vector_index_max_score
   UNWIND nodes AS n
   WITH n.node AS node, CASE WHEN (n.score / vector_index_max_score) >= $threshold_vector_index
-  THEN (n.score / vector_index_max_score) ELSE 0 END AS score{vector_where_clause}
+  THEN (n.score / vector_index_max_score) ELSE 0 END AS score {vector_where_clause}
   RETURN node, score
   UNION
   {FULL_TEXT_SEARCH_QUERY}
   WITH collect({{node:node, score:score}}) AS nodes, max(score) AS ft_index_max_score
   UNWIND nodes AS n
   WITH n.node AS node, CASE WHEN (n.score / ft_index_max_score) >= $threshold_fulltext_index
-  THEN (n.score / ft_index_max_score) ELSE 0 END AS score{fulltext_where_clause}
+  THEN (n.score / ft_index_max_score) ELSE 0 END AS score {fulltext_where_clause}
   RETURN node, score
 }}
 WITH node, max(score) AS score
