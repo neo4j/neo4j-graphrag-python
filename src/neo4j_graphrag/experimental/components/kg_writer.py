@@ -34,6 +34,7 @@ from neo4j_graphrag.neo4j_queries import (
     UPSERT_RELATIONSHIP_QUERY,
     UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE,
 )
+from neo4j_graphrag.utils import telemetry
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +114,7 @@ class Neo4jWriter(KGWriter):
         neo4j_database: Optional[str] = None,
         batch_size: int = 1000,
     ):
-        self.driver = driver
+        self.driver = telemetry.override_user_agent(driver)
         self.neo4j_database = neo4j_database
         self.batch_size = batch_size
         self.is_version_5_23_or_above = self._check_if_version_5_23_or_above()

@@ -24,6 +24,7 @@ from typing_extensions import ParamSpec
 
 from neo4j_graphrag.exceptions import Neo4jVersionError
 from neo4j_graphrag.types import RawSearchResult, RetrieverResult, RetrieverResultItem
+from neo4j_graphrag.utils import telemetry
 
 T = ParamSpec("T")
 P = TypeVar("P")
@@ -82,7 +83,7 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
     VERIFY_NEO4J_VERSION = True
 
     def __init__(self, driver: neo4j.Driver, neo4j_database: Optional[str] = None):
-        self.driver = driver
+        self.driver = telemetry.override_user_agent(driver)
         self.neo4j_database = neo4j_database
         if self.VERIFY_NEO4J_VERSION:
             self._verify_version()
