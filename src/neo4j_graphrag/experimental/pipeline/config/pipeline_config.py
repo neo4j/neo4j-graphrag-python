@@ -27,6 +27,9 @@ from neo4j_graphrag.experimental.pipeline.config.object_config import (
     LLMType,
     Neo4jDriverType,
 )
+from neo4j_graphrag.experimental.pipeline.config.param_resolver import (
+    ParamConfig,
+)
 from neo4j_graphrag.experimental.pipeline.config.types import PipelineType
 from neo4j_graphrag.experimental.pipeline.types import (
     ComponentDefinition,
@@ -48,7 +51,7 @@ class AbstractPipelineConfig(AbstractConfig):
     llm_config: dict[str, LLMType] = {}
     embedder_config: dict[str, EmbedderType] = {}
     # extra parameters values that can be used in different places of the config file
-    extras: dict[str, Any] = {}
+    extras: dict[str, ParamConfig] = {}
 
     DEFAULT_NAME: ClassVar[str] = "default"
     """Name of the default item in dict
