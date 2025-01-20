@@ -58,7 +58,7 @@ def _adjust_chunk_end(text: str, start: int, approximate_end: int) -> int:
     """
     end = approximate_end
     if end < len(text):
-        while end > start and not text[end].isspace() and not text[end-1].isspace():
+        while end > start and not text[end].isspace() and not text[end - 1].isspace():
             end -= 1
 
         # fallback if no whitespace is found
@@ -92,7 +92,9 @@ class FixedSizeSplitter(TextSplitter):
     """
 
     @validate_call
-    def __init__(self, chunk_size: int = 4000, chunk_overlap: int = 200, approximate: bool = True) -> None:
+    def __init__(
+        self, chunk_size: int = 4000, chunk_overlap: int = 200, approximate: bool = True
+    ) -> None:
         if chunk_size <= 0:
             raise ValueError("chunk_size must be strictly greater than 0")
         if chunk_overlap >= chunk_size:
@@ -131,7 +133,7 @@ class FixedSizeSplitter(TextSplitter):
                 end = _adjust_chunk_end(text, start, approximate_end)
                 # when avoiding splitting words in the middle is not possible, revert to
                 # initial chunk end and skip adjusting next chunk start
-                skip_adjust_chunk_start = (end == approximate_end)
+                skip_adjust_chunk_start = end == approximate_end
             else:
                 # apply fixed size splitting with possibly words cut in half at chunk
                 # boundaries

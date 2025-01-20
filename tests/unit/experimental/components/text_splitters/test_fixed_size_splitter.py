@@ -16,7 +16,9 @@ from itertools import zip_longest
 
 import pytest
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
-    FixedSizeSplitter, _adjust_chunk_start, _adjust_chunk_end,
+    FixedSizeSplitter,
+    _adjust_chunk_end,
+    _adjust_chunk_start,
 )
 from neo4j_graphrag.experimental.components.types import TextChunk
 
@@ -101,7 +103,11 @@ def test_invalid_chunk_size() -> None:
         ("Hello World", 0, 0),
     ],
 )
-def test_adjust_chunk_start(text, approximate_start, expected_start):
+def test_adjust_chunk_start(
+    text: str,
+    approximate_start: int,
+    expected_start: int
+) -> None:
     """
     Test that the _adjust_chunk_start function correctly shifts
     the start index to avoid breaking words, unless no whitespace is found.
@@ -125,7 +131,12 @@ def test_adjust_chunk_start(text, approximate_start, expected_start):
         ("Hello World", 6, 15, 15),
     ],
 )
-def test_adjust_chunk_end(text, start, approximate_end, expected_end):
+def test_adjust_chunk_end(
+    text: str,
+    start: int,
+    approximate_end: int,
+    expected_end: int
+) -> None:
     """
     Test that the _adjust_chunk_end function correctly shifts
     the end index to avoid breaking words, unless no whitespace is found.
@@ -144,13 +155,7 @@ def test_adjust_chunk_end(text, start, approximate_end, expected_end):
             10,
             2,
             True,
-            [
-                "Hello ",
-                "World, ",
-                "this is a ",
-                "a test ",
-                "message."
-            ],
+            ["Hello ", "World, ", "this is a ", "a test ", "message."],
         ),
         # Case: fixed size splitting
         (
@@ -158,13 +163,7 @@ def test_adjust_chunk_end(text, start, approximate_end, expected_end):
             10,
             2,
             False,
-            [
-                "Hello Worl",
-                "rld, this ",
-                "s is a tes",
-                "est messag",
-                "age."
-            ],
+            ["Hello Worl", "rld, this ", "s is a tes", "est messag", "age."],
         ),
         # Case: short text => only one chunk
         (
@@ -193,8 +192,12 @@ def test_adjust_chunk_end(text, start, approximate_end, expected_end):
     ],
 )
 async def test_fixed_size_splitter_run(
-    text, chunk_size, chunk_overlap, approximate, expected_chunks
-):
+    text: str,
+    chunk_size: int,
+    chunk_overlap: int,
+    approximate: bool,
+    expected_chunks: list[str]
+) -> None:
     """
     Test that 'FixedSizeSplitter.run' returns the expected chunks
     for different configurations.

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 
-import neo4j
 from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
 from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
 from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
@@ -13,6 +12,8 @@ from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter i
 from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
 from neo4j_graphrag.experimental.pipeline import Pipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
+
+import neo4j
 
 
 async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
@@ -78,7 +79,5 @@ async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
 
 
 if __name__ == "__main__":
-    with neo4j.GraphDatabase.driver(
-        "bolt://localhost:7687", auth=("neo4j", "password")
-    ) as driver:
+    with neo4j.GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "password")) as driver:
         print(asyncio.run(main(driver)))

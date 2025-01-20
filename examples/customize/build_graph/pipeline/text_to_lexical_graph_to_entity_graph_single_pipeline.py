@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import asyncio
 
-import neo4j
 from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
 from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
 from neo4j_graphrag.experimental.components.entity_relation_extractor import (
@@ -28,6 +27,8 @@ from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
 from neo4j_graphrag.experimental.pipeline import Pipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.llm import LLMInterface, OpenAILLM
+
+import neo4j
 
 
 async def define_and_run_pipeline(
@@ -56,7 +57,7 @@ async def define_and_run_pipeline(
     pipe = Pipeline()
     # define the components
     pipe.add_component(
-        FixedSizeSplitter(chunk_size=200, chunk_overlap=50,approximate=False),
+        FixedSizeSplitter(chunk_size=200, chunk_overlap=50, approximate=False),
         "splitter",
     )
     pipe.add_component(TextChunkEmbedder(embedder=OpenAIEmbeddings()), "chunk_embedder")
@@ -92,9 +93,7 @@ async def define_and_run_pipeline(
     )
     # define the execution order of component
     # and how the output of previous components must be used
-    pipe.connect(
-        "chunk_embedder", "extractor", input_config={"chunks": "chunk_embedder"}
-    )
+    pipe.connect("chunk_embedder", "extractor", input_config={"chunks": "chunk_embedder"})
     pipe.connect("schema", "extractor", input_config={"schema": "schema"})
     pipe.connect(
         "extractor",
@@ -189,7 +188,5 @@ async def main(driver: neo4j.Driver) -> PipelineResult:
 
 
 if __name__ == "__main__":
-    with neo4j.GraphDatabase.driver(
-        "bolt://localhost:7687", auth=("neo4j", "password")
-    ) as driver:
+    with neo4j.GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "password")) as driver:
         print(asyncio.run(main(driver)))

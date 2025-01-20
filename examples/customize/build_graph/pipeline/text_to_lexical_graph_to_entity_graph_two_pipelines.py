@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import asyncio
 
-import neo4j
 from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
 from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
 from neo4j_graphrag.experimental.components.entity_relation_extractor import (
@@ -30,6 +29,8 @@ from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
 from neo4j_graphrag.experimental.pipeline import Pipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.llm import LLMInterface, OpenAILLM
+
+import neo4j
 
 
 async def build_lexical_graph(
@@ -200,15 +201,11 @@ async def main(driver: neo4j.Driver) -> PipelineResult:
         },
     )
     await build_lexical_graph(driver, lexical_graph_config, text=text)
-    res = await read_chunk_and_perform_entity_extraction(
-        driver, llm, lexical_graph_config
-    )
+    res = await read_chunk_and_perform_entity_extraction(driver, llm, lexical_graph_config)
     await llm.async_client.close()
     return res
 
 
 if __name__ == "__main__":
-    with neo4j.GraphDatabase.driver(
-        "bolt://localhost:7687", auth=("neo4j", "password")
-    ) as driver:
+    with neo4j.GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "password")) as driver:
         print(asyncio.run(main(driver)))
