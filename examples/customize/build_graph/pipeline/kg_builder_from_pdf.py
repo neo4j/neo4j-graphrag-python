@@ -83,7 +83,7 @@ async def define_and_run_pipeline(
     pipe = Pipeline()
     pipe.add_component(PdfLoader(), "pdf_loader")
     pipe.add_component(
-        FixedSizeSplitter(chunk_size=4000, chunk_overlap=200), "splitter"
+        FixedSizeSplitter(chunk_size=4000, chunk_overlap=200, approximate=False), "splitter"
     )
     pipe.add_component(SchemaBuilder(), "schema")
     pipe.add_component(

@@ -58,7 +58,7 @@ async def define_and_run_pipeline(
     # define the components
     pipe.add_component(
         # chunk_size=50 for the sake of this demo
-        FixedSizeSplitter(chunk_size=4000, chunk_overlap=200),
+        FixedSizeSplitter(chunk_size=4000, chunk_overlap=200, approximate=False),
         "splitter",
     )
     pipe.add_component(TextChunkEmbedder(embedder=OpenAIEmbeddings()), "chunk_embedder")

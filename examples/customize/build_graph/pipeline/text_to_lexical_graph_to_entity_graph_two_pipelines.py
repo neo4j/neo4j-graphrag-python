@@ -47,7 +47,7 @@ async def build_lexical_graph(
     pipe = Pipeline()
     # define the components
     pipe.add_component(
-        FixedSizeSplitter(chunk_size=200, chunk_overlap=50),
+        FixedSizeSplitter(chunk_size=200, chunk_overlap=50, approximate=False),
         "splitter",
     )
     pipe.add_component(TextChunkEmbedder(embedder=OpenAIEmbeddings()), "chunk_embedder")
