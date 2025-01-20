@@ -15,13 +15,13 @@
 from unittest.mock import Mock, patch
 
 import pytest
-from neo4j_graphrag.experimental.pipeline import Component
-from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
-from neo4j_graphrag.experimental.pipeline.pipeline import (
-    Orchestrator,
+from neo4j_graphrag.experimental.pipeline import (
+    Component,
     Pipeline,
-    RunStatus,
 )
+from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
+from neo4j_graphrag.experimental.pipeline.orchestrator import Orchestrator
+from neo4j_graphrag.experimental.pipeline.types import RunStatus
 
 from tests.unit.experimental.pipeline.components import (
     ComponentNoParam,

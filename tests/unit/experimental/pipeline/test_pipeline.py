@@ -23,7 +23,7 @@ from unittest.mock import AsyncMock, call, patch
 import pytest
 from neo4j_graphrag.experimental.pipeline import Component, Pipeline
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
-from neo4j_graphrag.experimental.pipeline.pipeline import RunResult
+from neo4j_graphrag.experimental.pipeline.types import RunResult
 
 from .components import (
     ComponentAdd,

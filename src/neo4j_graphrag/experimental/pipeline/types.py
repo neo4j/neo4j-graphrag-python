@@ -14,12 +14,14 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import datetime
+import enum
 from collections import defaultdict
-from typing import Any, Union
+from typing import Any, Optional, Union
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
-from neo4j_graphrag.experimental.pipeline.component import Component
+from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
 
 
 class ComponentDefinition(BaseModel):
@@ -44,6 +46,20 @@ class PipelineDefinition(BaseModel):
         return defaultdict(
             dict, {c.name: c.run_params for c in self.components if c.run_params}
         )
+
+
+class RunStatus(enum.Enum):
+    UNKNOWN = "UNKNOWN"
+    RUNNING = "RUNNING"
+    DONE = "DONE"
+
+
+class RunResult(BaseModel):
+    status: RunStatus = RunStatus.DONE
+    result: Optional[DataModel] = None
+    timestamp: datetime.datetime = Field(
+        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc)
+    )
 
 
 EntityInputType = Union[str, dict[str, Union[str, list[dict[str, str]]]]]
