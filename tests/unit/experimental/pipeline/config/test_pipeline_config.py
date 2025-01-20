@@ -12,7 +12,9 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from unittest.mock import Mock, patch
+import json
+import tempfile
+from unittest.mock import MagicMock, Mock, patch
 
 import neo4j
 from neo4j_graphrag.embeddings import Embedder
@@ -30,6 +32,7 @@ from neo4j_graphrag.experimental.pipeline.config.param_resolver import (
 from neo4j_graphrag.experimental.pipeline.config.pipeline_config import (
     AbstractPipelineConfig,
 )
+from neo4j_graphrag.experimental.pipeline.config.runner import PipelineRunner
 from neo4j_graphrag.experimental.pipeline.types import ComponentDefinition
 from neo4j_graphrag.llm import LLMInterface
 
@@ -376,3 +379,68 @@ def test_abstract_pipeline_config_resolve_component_definition_with_run_params(
     assert component_definition.component == component
     assert component_definition.run_params == {"param": "resolver param result"}
     mock_resolve_params.assert_called_once_with({"param1": "value1"})
+
+
+@patch(
+    "neo4j_graphrag.experimental.pipeline.config.object_config.Neo4jDriverConfig.parse"
+)
+@patch("os.environ.get")
+def test_simple_kg_pipeline_config_from_file(
+    mock_getenv: Mock,
+    mock_neo4j_config: Mock,
+) -> None:
+    mock_getenv.return_value = "some_value"
+    neo4j_driver_mock = MagicMock()
+    neo4j_driver_mock.return_value.execute_query.return_value = ("5.23", None, None)
+    mock_neo4j_config.return_value.execute_query.return_value = ([{"versions":  ["5.23"]}], None, None)
+    json_config_dict = {
+        "version_": "1",
+        "template_": "SimpleKGPipeline",
+        "extras": {
+            "openai_api_key": {
+                "resolver_": "ENV",
+                "var_": "MY_ENV_VAR"
+            },
+        },
+        "neo4j_config": {
+            "params_": {
+                "uri": "bolt://myhost",
+                "user": "neo4j",
+                "password": "password",
+            }
+        },
+        "llm_config": {
+            "class_": "OpenAILLM",
+            "params_": {
+                "model_name": "gpt-4o",
+                "api_key": {
+                    "resolver_": "CONFIG_KEY",
+                    "key_": "extras.openai_api_key",
+                }
+            }
+        },
+        "embedder_config": {
+            "class_": "OpenAIEmbeddings",
+            "params_": {
+                "api_key": {
+                    "resolver_": "CONFIG_KEY",
+                    "key_": "extras.openai_api_key",
+                }
+            },
+        }
+    }
+    json_string = json.dumps(json_config_dict)
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as fp:
+        fp.write(json_string)
+        fp.close()
+        # the file is closed, but not removed
+        # open the file again by using its name
+        runner = PipelineRunner.from_config_file(fp.name)
+        config = runner.config
+
+    assert config is not None
+    # check 'extras' have been resolved
+    assert config._global_data["extras"] == {"openai_api_key": "some_value"}
+    # check api key is propagated to the LLM
+    default_llm = config._global_data["llm_config"]["default"]
+    assert default_llm.client.api_key == "some_value"
