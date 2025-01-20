@@ -392,15 +392,16 @@ def test_simple_kg_pipeline_config_from_file(
     mock_getenv.return_value = "some_value"
     neo4j_driver_mock = MagicMock()
     neo4j_driver_mock.return_value.execute_query.return_value = ("5.23", None, None)
-    mock_neo4j_config.return_value.execute_query.return_value = ([{"versions":  ["5.23"]}], None, None)
+    mock_neo4j_config.return_value.execute_query.return_value = (
+        [{"versions": ["5.23"]}],
+        None,
+        None,
+    )
     json_config_dict = {
         "version_": "1",
         "template_": "SimpleKGPipeline",
         "extras": {
-            "openai_api_key": {
-                "resolver_": "ENV",
-                "var_": "MY_ENV_VAR"
-            },
+            "openai_api_key": {"resolver_": "ENV", "var_": "MY_ENV_VAR"},
         },
         "neo4j_config": {
             "params_": {
@@ -416,8 +417,8 @@ def test_simple_kg_pipeline_config_from_file(
                 "api_key": {
                     "resolver_": "CONFIG_KEY",
                     "key_": "extras.openai_api_key",
-                }
-            }
+                },
+            },
         },
         "embedder_config": {
             "class_": "OpenAIEmbeddings",
@@ -427,7 +428,7 @@ def test_simple_kg_pipeline_config_from_file(
                     "key_": "extras.openai_api_key",
                 }
             },
-        }
+        },
     }
     json_string = json.dumps(json_config_dict)
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as fp:
