@@ -402,7 +402,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         return True
 
     async def get_final_results(self, run_id: str) -> dict[str, Any]:
-        return await self.final_results.get(run_id)
+        return await self.final_results.get(run_id)  # type: ignore[no-any-return]
 
     async def run(self, data: dict[str, Any]) -> PipelineResult:
         logger.debug("PIPELINE START")

@@ -29,11 +29,11 @@ class EventType(enum.Enum):
 
     @property
     def is_pipeline_event(self) -> bool:
-        return self in [self.PIPELINE_STARTED, self.PIPELINE_FINISHED]
+        return self in [EventType.PIPELINE_STARTED, EventType.PIPELINE_FINISHED]
 
     @property
     def is_task_event(self) -> bool:
-        return self in [self.TASK_STARTED, self.TASK_FINISHED]
+        return self in [EventType.TASK_STARTED, EventType.TASK_FINISHED]
 
 
 class Event(BaseModel):
