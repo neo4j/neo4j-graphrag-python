@@ -33,6 +33,7 @@ from neo4j_graphrag.experimental.pipeline.component import Component
 from neo4j_graphrag.experimental.pipeline.exceptions import (
     PipelineDefinitionError,
 )
+from neo4j_graphrag.experimental.pipeline.notification import EventCallbackProtocol
 from neo4j_graphrag.experimental.pipeline.orchestrator import Orchestrator
 from neo4j_graphrag.experimental.pipeline.pipeline_graph import (
     PipelineEdge,
@@ -102,7 +103,9 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
     and their execution order are defined"""
 
     def __init__(
-        self, store: Optional[ResultStore] = None, callback: Optional[Any] = None
+        self,
+        store: Optional[ResultStore] = None,
+        callback: Optional[EventCallbackProtocol] = None,
     ) -> None:
         super().__init__()
         self.store = store or InMemoryStore()
@@ -398,6 +401,9 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         self.missing_inputs[task.name] = missing_inputs
         return True
 
+    async def get_final_results(self, run_id: str) -> dict[str, Any]:
+        return await self.final_results.get(run_id)
+
     async def run(self, data: dict[str, Any]) -> PipelineResult:
         logger.debug("PIPELINE START")
         start_time = default_timer()
@@ -412,5 +418,5 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         )
         return PipelineResult(
             run_id=orchestrator.run_id,
-            result=await self.final_results.get(orchestrator.run_id),
+            result=await self.get_final_results(orchestrator.run_id),
         )

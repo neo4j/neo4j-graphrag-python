@@ -12,6 +12,14 @@ class EventType(enum.Enum):
     TASK_FINISHED = "TASK_FINISHED"
     PIPELINE_FINISHED = "PIPELINE_FINISHED"
 
+    @property
+    def is_pipeline_event(self) -> bool:
+        return self in [self.PIPELINE_STARTED, self.PIPELINE_FINISHED]
+
+    @property
+    def is_task_event(self) -> bool:
+        return self in [self.TASK_STARTED, self.TASK_FINISHED]
+
 
 class Event(BaseModel):
     event_type: EventType
@@ -29,12 +37,12 @@ class ComponentEvent(Event):
     component_name: str
 
 
-class EventCallBackProtocol(Protocol):
+class EventCallbackProtocol(Protocol):
     def __call__(self, event: Event) -> Awaitable[None]: ...
 
 
 class EventNotifier:
-    def __init__(self, callback: EventCallBackProtocol | None) -> None:
+    def __init__(self, callback: EventCallbackProtocol | None) -> None:
         self.callback = callback
 
     async def notify(self, event: Event) -> None:
@@ -88,7 +96,7 @@ class EventNotifier:
         output_data: Optional[dict[str, Any]] = None,
     ) -> None:
         event = ComponentEvent(
-            event_type=EventType.TASK_STARTED,
+            event_type=EventType.TASK_FINISHED,
             run_id=run_id,
             component_name=task_name,
             timestamp=datetime.datetime.utcnow(),

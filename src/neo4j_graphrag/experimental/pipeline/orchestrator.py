@@ -73,8 +73,10 @@ class Orchestrator:
                 f"ORCHESTRATOR: TASK ABORTED: {task.name} is already running or done, aborting"
             )
             return None
+        await self.event_notifier.notify_task_started(self.run_id, task.name, inputs)
         res = await task.run(inputs)
         await self.set_task_status(task.name, RunStatus.DONE)
+        await self.event_notifier.notify_task_finished(self.run_id, task.name, inputs)
         if res:
             await self.on_task_complete(data=data, task=task, result=res)
 
@@ -249,5 +251,9 @@ class Orchestrator:
         (node without any parent). Then the callback on_task_complete
         will handle the task dependencies.
         """
+        await self.event_notifier.notify_pipeline_started(self.run_id, data)
         tasks = [self.run_task(root, data) for root in self.pipeline.roots()]
         await asyncio.gather(*tasks)
+        await self.event_notifier.notify_pipeline_finished(
+            self.run_id, await self.pipeline.get_final_results(self.run_id)
+        )
