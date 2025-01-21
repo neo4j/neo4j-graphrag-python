@@ -1,6 +1,12 @@
 {
     "version_": "1",
     "template_": "SimpleKGPipeline",
+    "extras": {
+        "openai_api_key": {
+            "resolver_": "ENV",
+            "var_": "MY_OPENAI_KEY"
+        }
+    },
     "neo4j_config": {
         "params_": {
             "uri": {
@@ -36,8 +42,8 @@
         "class_": "OpenAIEmbeddings",
         "params_": {
             "api_key": {
-                "resolver_": "ENV",
-                "var_": "OPENAI_API_KEY"
+                "resolver_": "CONFIG_KEY",
+                "key_": "extras.openai_api_key"
             }
         }
     },
