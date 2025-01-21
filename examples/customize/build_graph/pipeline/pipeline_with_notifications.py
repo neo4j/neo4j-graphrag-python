@@ -1,6 +1,7 @@
 """This example demonstrates how to use event callback to receive notifications
 about the pipeline progress.
 """
+
 from __future__ import annotations
 
 import asyncio
