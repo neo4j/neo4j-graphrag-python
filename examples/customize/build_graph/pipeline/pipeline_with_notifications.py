@@ -12,9 +12,8 @@ from neo4j_graphrag.experimental.components.lexical_graph import LexicalGraphBui
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
     FixedSizeSplitter,
 )
-from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
 from neo4j_graphrag.experimental.pipeline import Pipeline
-from neo4j_graphrag.experimental.pipeline.notification import Event, EventType
+from neo4j_graphrag.experimental.pipeline.notification import Event
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 
 logger = logging.getLogger(__name__)
