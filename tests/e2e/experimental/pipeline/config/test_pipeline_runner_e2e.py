@@ -134,22 +134,28 @@ async def test_simple_kg_pipeline_from_json_config(
     runner = PipelineRunner.from_config_file(
         "tests/e2e/data/config_files/simple_kg_pipeline_config.json"
     )
+
+    # check extras and API keys are handled as expected
     config = runner.config
+    assert config is not None
+    # extras must be resolved:
     assert config._global_data["extras"] == {"openai_api_key": "my-openai-key"}
+    # API key for LLM is read from "extras" (see config file)
     default_llm = config._global_data["llm_config"]["default"]
-    assert default_llm.client.api_key == "my-openai-key"  # read from extras
+    assert default_llm.client.api_key == "my-openai-key"
+    # API key for embedder is read from env vars (see config file)
     default_embedder = config._global_data["embedder_config"]["default"]
     assert default_embedder.client.api_key == "sk-my-secret-key"  # read from env vaf
 
+    # then run pipeline and check results
     res = await runner.run({"file_path": "tests/e2e/data/documents/harry_potter.pdf"})
     assert isinstance(res, PipelineResult)
-    # print(await runner.pipeline.store.get_result_for_component(res.run_id, "splitter"))
     assert res.result["resolver"] == {
         "number_of_nodes_to_resolve": 3,
         "number_of_created_nodes": 3,
     }
     nodes = driver.execute_query("MATCH (n) RETURN n")
-    # 1 chunk + 1 document + 3 nodes
+    # 1 chunk + 1 document + 3 __Entity__ nodes
     assert len(nodes.records) == 5
 
 
