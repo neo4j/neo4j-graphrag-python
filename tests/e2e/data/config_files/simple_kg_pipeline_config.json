@@ -4,7 +4,7 @@
     "extras": {
         "openai_api_key": {
             "resolver_": "ENV",
-            "key_": "MY_OPENAI_KEY"
+            "var_": "MY_OPENAI_KEY"
         }
     },
     "neo4j_config": {

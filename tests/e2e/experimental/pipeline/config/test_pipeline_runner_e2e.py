@@ -140,12 +140,12 @@ async def test_simple_kg_pipeline_from_json_config(
     assert config is not None
     # extras must be resolved:
     assert config._global_data["extras"] == {"openai_api_key": "my-openai-key"}
-    # API key for LLM is read from "extras" (see config file)
+    # API key for LLM is read from env vars (see config file)
     default_llm = config._global_data["llm_config"]["default"]
-    assert default_llm.client.api_key == "my-openai-key"
-    # API key for embedder is read from env vars (see config file)
+    assert default_llm.client.api_key == "sk-my-secret-key"
+    # API key for embedder is read from extras (see config file)
     default_embedder = config._global_data["embedder_config"]["default"]
-    assert default_embedder.client.api_key == "sk-my-secret-key"  # read from env vaf
+    assert default_embedder.client.api_key == "my-openai-key"
 
     # then run pipeline and check results
     res = await runner.run({"file_path": "tests/e2e/data/documents/harry_potter.pdf"})
