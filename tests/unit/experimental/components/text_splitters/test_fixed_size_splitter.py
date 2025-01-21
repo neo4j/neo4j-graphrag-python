@@ -103,7 +103,9 @@ def test_invalid_chunk_size() -> None:
         ("Hello World", 0, 0),
     ],
 )
-def test_adjust_chunk_start(text: str, approximate_start: int, expected_start: int) -> None:
+def test_adjust_chunk_start(
+    text: str, approximate_start: int, expected_start: int
+) -> None:
     """
     Test that the _adjust_chunk_start function correctly shifts
     the start index to avoid breaking words, unless no whitespace is found.
@@ -127,7 +129,9 @@ def test_adjust_chunk_start(text: str, approximate_start: int, expected_start: i
         ("Hello World", 6, 15, 15),
     ],
 )
-def test_adjust_chunk_end(text: str, start: int, approximate_end: int, expected_end: int) -> None:
+def test_adjust_chunk_end(
+    text: str, start: int, approximate_end: int, expected_end: int
+) -> None:
     """
     Test that the _adjust_chunk_end function correctly shifts
     the end index to avoid breaking words, unless no whitespace is found.
@@ -183,7 +187,11 @@ def test_adjust_chunk_end(text: str, start: int, approximate_end: int, expected_
     ],
 )
 async def test_fixed_size_splitter_run(
-    text: str, chunk_size: int, chunk_overlap: int, approximate: bool, expected_chunks: list[str]
+    text: str,
+    chunk_size: int,
+    chunk_overlap: int,
+    approximate: bool,
+    expected_chunks: list[str],
 ) -> None:
     """
     Test that 'FixedSizeSplitter.run' returns the expected chunks

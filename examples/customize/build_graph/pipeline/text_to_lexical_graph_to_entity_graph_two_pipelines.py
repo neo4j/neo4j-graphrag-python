@@ -201,11 +201,15 @@ async def main(driver: neo4j.Driver) -> PipelineResult:
         },
     )
     await build_lexical_graph(driver, lexical_graph_config, text=text)
-    res = await read_chunk_and_perform_entity_extraction(driver, llm, lexical_graph_config)
+    res = await read_chunk_and_perform_entity_extraction(
+        driver, llm, lexical_graph_config
+    )
     await llm.async_client.close()
     return res
 
 
 if __name__ == "__main__":
-    with neo4j.GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "password")) as driver:
+    with neo4j.GraphDatabase.driver(
+        "bolt://localhost:7687", auth=("neo4j", "password")
+    ) as driver:
         print(asyncio.run(main(driver)))

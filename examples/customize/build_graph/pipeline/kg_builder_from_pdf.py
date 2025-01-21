@@ -39,7 +39,9 @@ import neo4j
 logging.basicConfig(level=logging.INFO)
 
 
-async def define_and_run_pipeline(neo4j_driver: neo4j.Driver, llm: LLMInterface) -> PipelineResult:
+async def define_and_run_pipeline(
+    neo4j_driver: neo4j.Driver, llm: LLMInterface
+) -> PipelineResult:
     from neo4j_graphrag.experimental.pipeline import Pipeline
 
     # Instantiate Entity and Relation objects
@@ -56,7 +58,9 @@ async def define_and_run_pipeline(neo4j_driver: neo4j.Driver, llm: LLMInterface)
         ),
     ]
     relations = [
-        SchemaRelation(label="SITUATED_AT", description="Indicates the location of a person."),
+        SchemaRelation(
+            label="SITUATED_AT", description="Indicates the location of a person."
+        ),
         SchemaRelation(
             label="LED_BY",
             description="Indicates the leader of an organization.",
@@ -65,7 +69,9 @@ async def define_and_run_pipeline(neo4j_driver: neo4j.Driver, llm: LLMInterface)
             label="OWNS",
             description="Indicates the ownership of an item such as a Horcrux.",
         ),
-        SchemaRelation(label="INTERACTS", description="The interaction between two people."),
+        SchemaRelation(
+            label="INTERACTS", description="The interaction between two people."
+        ),
     ]
     potential_schema = [
         ("PERSON", "SITUATED_AT", "LOCATION"),
@@ -78,7 +84,8 @@ async def define_and_run_pipeline(neo4j_driver: neo4j.Driver, llm: LLMInterface)
     pipe = Pipeline()
     pipe.add_component(PdfLoader(), "pdf_loader")
     pipe.add_component(
-        FixedSizeSplitter(chunk_size=4000, chunk_overlap=200, approximate=False), "splitter"
+        FixedSizeSplitter(chunk_size=4000, chunk_overlap=200, approximate=False),
+        "splitter",
     )
     pipe.add_component(SchemaBuilder(), "schema")
     pipe.add_component(
@@ -126,7 +133,9 @@ async def main() -> PipelineResult:
             "response_format": {"type": "json_object"},
         },
     )
-    driver = neo4j.GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "password"))
+    driver = neo4j.GraphDatabase.driver(
+        "bolt://localhost:7687", auth=("neo4j", "password")
+    )
     res = await define_and_run_pipeline(driver, llm)
     driver.close()
     await llm.async_client.close()

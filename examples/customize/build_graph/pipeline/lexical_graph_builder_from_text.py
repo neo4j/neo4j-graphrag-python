@@ -79,5 +79,7 @@ async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
 
 
 if __name__ == "__main__":
-    with neo4j.GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "password")) as driver:
+    with neo4j.GraphDatabase.driver(
+        "bolt://localhost:7687", auth=("neo4j", "password")
+    ) as driver:
         print(asyncio.run(main(driver)))

@@ -39,7 +39,9 @@ from neo4j_graphrag.llm import LLMInterface, OpenAILLM
 import neo4j
 
 
-async def define_and_run_pipeline(neo4j_driver: neo4j.Driver, llm: LLMInterface) -> PipelineResult:
+async def define_and_run_pipeline(
+    neo4j_driver: neo4j.Driver, llm: LLMInterface
+) -> PipelineResult:
     """This is where we define and run the KG builder pipeline, instantiating a few
     components:
     - Text Splitter: in this example we use the fixed size text splitter
@@ -74,7 +76,9 @@ async def define_and_run_pipeline(neo4j_driver: neo4j.Driver, llm: LLMInterface)
     # and how the output of previous components must be used
     pipe.connect("splitter", "chunk_embedder", input_config={"text_chunks": "splitter"})
     pipe.connect("schema", "extractor", input_config={"schema": "schema"})
-    pipe.connect("chunk_embedder", "extractor", input_config={"chunks": "chunk_embedder"})
+    pipe.connect(
+        "chunk_embedder", "extractor", input_config={"chunks": "chunk_embedder"}
+    )
     pipe.connect(
         "extractor",
         "writer",
@@ -145,7 +149,9 @@ async def main() -> PipelineResult:
             "response_format": {"type": "json_object"},
         },
     )
-    driver = neo4j.GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "password"))
+    driver = neo4j.GraphDatabase.driver(
+        "bolt://localhost:7687", auth=("neo4j", "password")
+    )
     res = await define_and_run_pipeline(driver, llm)
     driver.close()
     await llm.async_client.close()

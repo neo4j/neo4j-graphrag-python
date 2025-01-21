@@ -93,7 +93,9 @@ async def define_and_run_pipeline(
     )
     # define the execution order of component
     # and how the output of previous components must be used
-    pipe.connect("chunk_embedder", "extractor", input_config={"chunks": "chunk_embedder"})
+    pipe.connect(
+        "chunk_embedder", "extractor", input_config={"chunks": "chunk_embedder"}
+    )
     pipe.connect("schema", "extractor", input_config={"schema": "schema"})
     pipe.connect(
         "extractor",
@@ -188,5 +190,7 @@ async def main(driver: neo4j.Driver) -> PipelineResult:
 
 
 if __name__ == "__main__":
-    with neo4j.GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "password")) as driver:
+    with neo4j.GraphDatabase.driver(
+        "bolt://localhost:7687", auth=("neo4j", "password")
+    ) as driver:
         print(asyncio.run(main(driver)))
