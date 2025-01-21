@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import asyncio
 
-import neo4j
 from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
 from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
 from neo4j_graphrag.experimental.components.entity_relation_extractor import (
@@ -31,6 +30,8 @@ from neo4j_graphrag.experimental.pipeline import Pipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.llm import LLMInterface, OpenAILLM
 
+import neo4j
+
 
 async def build_lexical_graph(
     neo4j_driver: neo4j.Driver,
@@ -47,7 +48,7 @@ async def build_lexical_graph(
     pipe = Pipeline()
     # define the components
     pipe.add_component(
-        FixedSizeSplitter(chunk_size=200, chunk_overlap=50),
+        FixedSizeSplitter(chunk_size=200, chunk_overlap=50, approximate=False),
         "splitter",
     )
     pipe.add_component(TextChunkEmbedder(embedder=OpenAIEmbeddings()), "chunk_embedder")

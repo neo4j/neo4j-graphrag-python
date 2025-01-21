@@ -28,6 +28,7 @@
 ### Changed
 - Updated LLM implementations to handle message history consistently across providers.
 - The `id_prefix` parameter in the `LexicalGraphConfig` is deprecated.
+- Changed the default behaviour of `FixedSizeSplitter` to avoid words cut-off in the chunks whenever it is possible.
 
 ### Fixed
 - IDs for the Document and Chunk nodes in the lexical graph are now randomly generated and unique across multiple runs, fixing issues in the lexical graph where relationships were created between chunks that were created by different pipeline runs.

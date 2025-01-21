@@ -581,9 +581,12 @@ that can be processed within the LLM token limits:
 
     from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import FixedSizeSplitter
 
-    splitter = FixedSizeSplitter(chunk_size=4000, chunk_overlap=200)
+    splitter = FixedSizeSplitter(chunk_size=4000, chunk_overlap=200, approximate=False)
     splitter.run(text="Hello World. Life is beautiful.")
 
+.. note::
+
+    `approximate` flag is by default set to True to ensure clean chunk start and end (i.e. avoid words cut in the middle) whenever it is possible.
 
 Wrappers for LangChain and LlamaIndex text splitters are included in this package:
 

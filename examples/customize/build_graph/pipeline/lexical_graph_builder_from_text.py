@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 
-import neo4j
 from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
 from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
 from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
@@ -13,6 +12,8 @@ from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter i
 from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
 from neo4j_graphrag.experimental.pipeline import Pipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
+
+import neo4j
 
 
 async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
@@ -27,7 +28,7 @@ async def main(neo4j_driver: neo4j.Driver) -> PipelineResult:
     pipe = Pipeline()
     # define the components
     pipe.add_component(
-        FixedSizeSplitter(chunk_size=20, chunk_overlap=1),
+        FixedSizeSplitter(chunk_size=20, chunk_overlap=1, approximate=False),
         "splitter",
     )
     pipe.add_component(TextChunkEmbedder(embedder=OpenAIEmbeddings()), "chunk_embedder")

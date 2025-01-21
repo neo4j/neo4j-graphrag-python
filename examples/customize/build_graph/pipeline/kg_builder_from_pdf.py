@@ -17,7 +17,6 @@ from __future__ import annotations
 import asyncio
 import logging
 
-import neo4j
 from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
     OnError,
@@ -34,6 +33,8 @@ from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter i
 )
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.llm import LLMInterface, OpenAILLM
+
+import neo4j
 
 logging.basicConfig(level=logging.INFO)
 
@@ -83,7 +84,8 @@ async def define_and_run_pipeline(
     pipe = Pipeline()
     pipe.add_component(PdfLoader(), "pdf_loader")
     pipe.add_component(
-        FixedSizeSplitter(chunk_size=4000, chunk_overlap=200), "splitter"
+        FixedSizeSplitter(chunk_size=4000, chunk_overlap=200, approximate=False),
+        "splitter",
     )
     pipe.add_component(SchemaBuilder(), "schema")
     pipe.add_component(

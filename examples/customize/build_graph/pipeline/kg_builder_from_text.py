@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import asyncio
 
-import neo4j
 from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
 from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
 from neo4j_graphrag.experimental.components.entity_relation_extractor import (
@@ -36,6 +35,8 @@ from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter i
 from neo4j_graphrag.experimental.pipeline import Pipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.llm import LLMInterface, OpenAILLM
+
+import neo4j
 
 
 async def define_and_run_pipeline(
@@ -58,7 +59,7 @@ async def define_and_run_pipeline(
     # define the components
     pipe.add_component(
         # chunk_size=50 for the sake of this demo
-        FixedSizeSplitter(chunk_size=4000, chunk_overlap=200),
+        FixedSizeSplitter(chunk_size=4000, chunk_overlap=200, approximate=False),
         "splitter",
     )
     pipe.add_component(TextChunkEmbedder(embedder=OpenAIEmbeddings()), "chunk_embedder")
