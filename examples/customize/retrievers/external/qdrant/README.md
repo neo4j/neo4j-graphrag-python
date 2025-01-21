@@ -11,7 +11,7 @@ docker compose -f tests/e2e/docker-compose.yml up
 Run this from the project root to write data to both Neo4J and Qdrant.
 
 ```bash
-poetry run python -m tests/e2e/qdrant_e2e/populate_dbs.py
+poetry run python -m examples.customize.retrievers.external.qdrant.populate_dbs
 ```
 
 ### Install Qdrant client

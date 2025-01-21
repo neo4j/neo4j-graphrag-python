@@ -1,0 +1,16 @@
+version: "3.9"
+services:
+  neo4j:
+    image: neo4j:5.24-enterprise
+    ports:
+      - 7687:7687
+      - 7474:7474
+    environment:
+      NEO4J_AUTH: neo4j/password
+      NEO4J_ACCEPT_LICENSE_AGREEMENT: "eval"
+      NEO4J_PLUGINS: "[\"apoc\"]"
+
+  qdrant:
+    image: qdrant/qdrant
+    ports:
+      - 6333:6333
