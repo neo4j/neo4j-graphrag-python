@@ -129,10 +129,18 @@ async def test_simple_kg_pipeline_from_json_config(
     os.environ["NEO4J_USER"] = "neo4j"
     os.environ["NEO4J_PASSWORD"] = "password"
     os.environ["OPENAI_API_KEY"] = "sk-my-secret-key"
+    os.environ["MY_OPENAI_KEY"] = "my-openai-key"
 
     runner = PipelineRunner.from_config_file(
         "tests/e2e/data/config_files/simple_kg_pipeline_config.json"
     )
+    config = runner.config
+    assert config._global_data["extras"] == {"openai_api_key": "my-openai-key"}
+    default_llm = config._global_data["llm_config"]["default"]
+    assert default_llm.client.api_key == "my-openai-key"  # read from extras
+    default_embedder = config._global_data["embedder_config"]["default"]
+    assert default_embedder.client.api_key == "sk-my-secret-key"  # read from env vaf
+
     res = await runner.run({"file_path": "tests/e2e/data/documents/harry_potter.pdf"})
     assert isinstance(res, PipelineResult)
     # print(await runner.pipeline.store.get_result_for_component(res.run_id, "splitter"))
