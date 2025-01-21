@@ -18,13 +18,24 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 from typing import Any, Literal
 
 import neo4j
 from neo4j import GraphDatabase
 from neo4j_graphrag.indexes import create_vector_index, drop_index_if_exists
-from qdrant_client import QdrantClient, models
+
+try:
+    from qdrant_client import QdrantClient, models
+except ImportError as e:
+    missing_module = str(e).split("'")[1]
+    if missing_module == "qdrant_client":
+        raise ImportError(
+            "The 'qdrant-client' package is missing. Please install it by running "
+            '`poetry install --extras "qdrant"` or `pip install qdrant-client`, or follow the instructions '
+            "in the Qdrant examples section of the README at https://github.com/neo4j/neo4j-graphrag-python/"
+        ) from e
+    else:
+        raise
 
 # biology
 EMBEDDING_BIOLOGY = [
