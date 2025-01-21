@@ -1,6 +1,7 @@
 import datetime
 import enum
-from typing import Any, Optional
+from collections.abc import Awaitable
+from typing import Any, Optional, Protocol
 
 from pydantic import BaseModel
 
@@ -28,9 +29,12 @@ class ComponentEvent(Event):
     component_name: str
 
 
+class EventCallBackProtocol(Protocol):
+    def __call__(self, event: Event) -> Awaitable[None]: ...
+
+
 class EventNotifier:
-    def __init__(self, callback: Any) -> None:
-        # TODO: define protocol for callback
+    def __init__(self, callback: EventCallBackProtocol | None) -> None:
         self.callback = callback
 
     async def notify(self, event: Event) -> None:
