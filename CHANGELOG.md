@@ -2,9 +2,12 @@
 
 ## Next
 
+### Added
+
+- Ability to add event listener to get notifications about Pipeline progress.
+
 ### Changed
 - Changed the default behaviour of `FixedSizeSplitter` to avoid words cut-off in the chunks whenever it is possible.
-
 
 ## 1.4.2
 
