@@ -17,8 +17,6 @@ from __future__ import annotations
 import datetime
 from typing import Any, Optional
 
-from pydantic import BaseModel
-
 from neo4j_graphrag.experimental.pipeline.types import (
     Event,
     EventCallbackProtocol,
