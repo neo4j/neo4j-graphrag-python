@@ -15,48 +15,11 @@
 from __future__ import annotations
 
 import datetime
-import enum
-from collections.abc import Awaitable
-from typing import Any, Optional, Protocol
+from typing import Any, Optional
 
 from pydantic import BaseModel
 
-from neo4j_graphrag.experimental.pipeline.types import RunResult
-
-
-class EventType(enum.Enum):
-    PIPELINE_STARTED = "PIPELINE_STARTED"
-    TASK_STARTED = "TASK_STARTED"
-    TASK_FINISHED = "TASK_FINISHED"
-    PIPELINE_FINISHED = "PIPELINE_FINISHED"
-
-    @property
-    def is_pipeline_event(self) -> bool:
-        return self in [EventType.PIPELINE_STARTED, EventType.PIPELINE_FINISHED]
-
-    @property
-    def is_task_event(self) -> bool:
-        return self in [EventType.TASK_STARTED, EventType.TASK_FINISHED]
-
-
-class Event(BaseModel):
-    event_type: EventType
-    run_id: str
-    timestamp: datetime.datetime
-    message: Optional[str] = None
-    payload: Optional[dict[str, Any]] = None
-
-
-class PipelineEvent(Event):
-    pass
-
-
-class TaskEvent(Event):
-    task_name: str
-
-
-class EventCallbackProtocol(Protocol):
-    def __call__(self, event: Event) -> Awaitable[None]: ...
+from neo4j_graphrag.experimental.pipeline.types import RunResult, EventCallbackProtocol, Event, PipelineEvent, TaskEvent, EventType
 
 
 class EventNotifier:

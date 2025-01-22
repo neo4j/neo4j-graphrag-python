@@ -33,7 +33,6 @@ from neo4j_graphrag.experimental.pipeline.component import Component
 from neo4j_graphrag.experimental.pipeline.exceptions import (
     PipelineDefinitionError,
 )
-from neo4j_graphrag.experimental.pipeline.notification import EventCallbackProtocol
 from neo4j_graphrag.experimental.pipeline.orchestrator import Orchestrator
 from neo4j_graphrag.experimental.pipeline.pipeline_graph import (
     PipelineEdge,
@@ -44,6 +43,7 @@ from neo4j_graphrag.experimental.pipeline.stores import InMemoryStore, ResultSto
 from neo4j_graphrag.experimental.pipeline.types import (
     ComponentDefinition,
     ConnectionDefinition,
+    EventCallbackProtocol,
     PipelineDefinition,
     RunResult,
 )

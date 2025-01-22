@@ -24,13 +24,13 @@ from unittest.mock import AsyncMock, call, patch
 import pytest
 from neo4j_graphrag.experimental.pipeline import Component, Pipeline
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
-from neo4j_graphrag.experimental.pipeline.notification import (
+from neo4j_graphrag.experimental.pipeline.types import (
     EventCallbackProtocol,
     EventType,
     PipelineEvent,
+    RunResult,
     TaskEvent,
 )
-from neo4j_graphrag.experimental.pipeline.types import RunResult
 
 from .components import (
     ComponentAdd,
