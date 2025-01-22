@@ -19,7 +19,14 @@ from typing import Any, Optional
 
 from pydantic import BaseModel
 
-from neo4j_graphrag.experimental.pipeline.types import RunResult, EventCallbackProtocol, Event, PipelineEvent, TaskEvent, EventType
+from neo4j_graphrag.experimental.pipeline.types import (
+    Event,
+    EventCallbackProtocol,
+    EventType,
+    PipelineEvent,
+    RunResult,
+    TaskEvent,
+)
 
 
 class EventNotifier:
