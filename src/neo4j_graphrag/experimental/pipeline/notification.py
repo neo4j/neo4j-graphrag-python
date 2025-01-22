@@ -13,12 +13,15 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
+
 import datetime
 import enum
 from collections.abc import Awaitable
 from typing import Any, Optional, Protocol
 
 from pydantic import BaseModel
+
+from neo4j_graphrag.experimental.pipeline.types import RunResult
 
 
 class EventType(enum.Enum):
@@ -48,8 +51,8 @@ class PipelineEvent(Event):
     pass
 
 
-class ComponentEvent(Event):
-    component_name: str
+class TaskEvent(Event):
+    task_name: str
 
 
 class EventCallbackProtocol(Protocol):
@@ -94,10 +97,10 @@ class EventNotifier:
         task_name: str,
         input_data: Optional[dict[str, Any]] = None,
     ) -> None:
-        event = ComponentEvent(
+        event = TaskEvent(
             event_type=EventType.TASK_STARTED,
             run_id=run_id,
-            component_name=task_name,
+            task_name=task_name,
             timestamp=datetime.datetime.utcnow(),
             message=None,
             payload=input_data,
@@ -108,14 +111,16 @@ class EventNotifier:
         self,
         run_id: str,
         task_name: str,
-        output_data: Optional[dict[str, Any]] = None,
+        output_data: Optional[RunResult] = None,
     ) -> None:
-        event = ComponentEvent(
+        event = TaskEvent(
             event_type=EventType.TASK_FINISHED,
             run_id=run_id,
-            component_name=task_name,
+            task_name=task_name,
             timestamp=datetime.datetime.utcnow(),
             message=None,
-            payload=output_data,
+            payload=output_data.result.model_dump()
+            if output_data and output_data.result
+            else None,
         )
         await self.notify(event)

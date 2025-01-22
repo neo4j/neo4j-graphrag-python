@@ -76,7 +76,7 @@ class Orchestrator:
         await self.event_notifier.notify_task_started(self.run_id, task.name, inputs)
         res = await task.run(inputs)
         await self.set_task_status(task.name, RunStatus.DONE)
-        await self.event_notifier.notify_task_finished(self.run_id, task.name, inputs)
+        await self.event_notifier.notify_task_finished(self.run_id, task.name, res)
         if res:
             await self.on_task_complete(data=data, task=task, result=res)
 
