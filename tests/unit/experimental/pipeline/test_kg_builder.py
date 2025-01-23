@@ -30,8 +30,8 @@ from neo4j_graphrag.llm.base import LLMInterface
 
 
 @mock.patch(
-    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._get_version",
-    return_value=(5, 23, 0),
+    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    return_value=((5, 23, 0), False, False),
 )
 @pytest.mark.asyncio
 async def test_knowledge_graph_builder_document_info_with_file(_: Mock) -> None:
@@ -62,8 +62,8 @@ async def test_knowledge_graph_builder_document_info_with_file(_: Mock) -> None:
 
 
 @mock.patch(
-    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._get_version",
-    return_value=(5, 23, 0),
+    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    return_value=((5, 23, 0), False, False),
 )
 @pytest.mark.asyncio
 async def test_knowledge_graph_builder_document_info_with_text(_: Mock) -> None:
@@ -93,8 +93,8 @@ async def test_knowledge_graph_builder_document_info_with_text(_: Mock) -> None:
 
 
 @mock.patch(
-    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._get_version",
-    return_value=(5, 23, 0),
+    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    return_value=((5, 23, 0), False, False),
 )
 @pytest.mark.asyncio
 async def test_knowledge_graph_builder_with_entities_and_file(_: Mock) -> None:
@@ -152,8 +152,8 @@ def test_simple_kg_pipeline_on_error_invalid_value() -> None:
 
 
 @mock.patch(
-    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._get_version",
-    return_value=(5, 23, 0),
+    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    return_value=((5, 23, 0), False, False),
 )
 @pytest.mark.asyncio
 async def test_knowledge_graph_builder_with_lexical_graph_config(_: Mock) -> None:

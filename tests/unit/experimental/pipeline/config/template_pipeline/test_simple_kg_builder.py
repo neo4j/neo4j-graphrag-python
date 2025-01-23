@@ -153,8 +153,8 @@ def test_simple_kg_pipeline_config_extractor(mock_llm: Mock, llm: LLMInterface) 
 
 
 @patch(
-    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._get_version",
-    return_value=(5, 23, 0),
+    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    return_value=((5, 23, 0), False, False),
 )
 @patch(
     "neo4j_graphrag.experimental.pipeline.config.template_pipeline.simple_kg_builder.SimpleKGPipelineConfig.get_default_neo4j_driver"
@@ -175,8 +175,8 @@ def test_simple_kg_pipeline_config_writer(
 
 
 @patch(
-    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._get_version",
-    return_value=(5, 23, 0),
+    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    return_value=((5, 23, 0), False, False),
 )
 @patch("neo4j_graphrag.experimental.pipeline.config.object_config.ComponentType.parse")
 def test_simple_kg_pipeline_config_writer_overwrite(

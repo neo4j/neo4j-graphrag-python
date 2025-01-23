@@ -14,7 +14,6 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Tuple
 from unittest import mock
 from unittest.mock import MagicMock, Mock
 
@@ -49,8 +48,8 @@ def test_batched() -> None:
 
 
 @mock.patch(
-    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._get_version",
-    return_value=(5, 22, 0),
+    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    return_value=((5, 22, 0), False, False),
 )
 @mock.patch(
     "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._db_setup",
@@ -78,8 +77,8 @@ def test_upsert_nodes(_: Mock, driver: MagicMock) -> None:
 
 
 @mock.patch(
-    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._get_version",
-    return_value=(5, 22, 0),
+    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    return_value=((5, 22, 0), False, False),
 )
 @mock.patch(
     "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._db_setup",
@@ -116,8 +115,8 @@ def test_upsert_nodes_with_embedding(
 
 
 @mock.patch(
-    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._get_version",
-    return_value=(5, 22, 0),
+    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    return_value=((5, 22, 0), False, False),
 )
 @mock.patch(
     "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._db_setup",
@@ -151,8 +150,8 @@ def test_upsert_relationship(_: Mock, driver: MagicMock) -> None:
 
 
 @mock.patch(
-    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._get_version",
-    return_value=(5, 22, 0),
+    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    return_value=((5, 22, 0), False, False),
 )
 @mock.patch(
     "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._db_setup",
@@ -188,8 +187,8 @@ def test_upsert_relationship_with_embedding(_: Mock, driver: MagicMock) -> None:
 
 
 @mock.patch(
-    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._get_version",
-    return_value=(5, 22, 0),
+    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    return_value=((5, 22, 0), False, False),
 )
 @pytest.mark.asyncio
 @mock.patch(
@@ -242,7 +241,9 @@ async def test_run(_: Mock, driver: MagicMock) -> None:
 )
 async def test_run_is_version_below_5_23(_: Mock) -> None:
     driver = MagicMock()
-    driver.execute_query = Mock(return_value=([{"versions": ["5.22.0"]}], None, None))
+    driver.execute_query = Mock(
+        return_value=([{"versions": ["5.22.0"], "edition": "enterprise"}], None, None)
+    )
 
     neo4j_writer = Neo4jWriter(driver=driver)
 
@@ -291,7 +292,9 @@ async def test_run_is_version_below_5_23(_: Mock) -> None:
 )
 async def test_run_is_version_5_23_or_above(_: Mock) -> None:
     driver = MagicMock()
-    driver.execute_query = Mock(return_value=([{"versions": ["5.23.0"]}], None, None))
+    driver.execute_query = Mock(
+        return_value=([{"versions": ["5.23.0"], "edition": "enterpise"}], None, None)
+    )
 
     neo4j_writer = Neo4jWriter(driver=driver)
     neo4j_writer.is_version_5_23_or_above = True
@@ -335,14 +338,14 @@ async def test_run_is_version_5_23_or_above(_: Mock) -> None:
 
 
 @pytest.mark.parametrize(
-    "description, version, version_tuple, is_5_23_or_above",
+    "description, version, is_5_23_or_above",
     [
-        ("SemVer, < 5.23", "5.22.0", (5, 22, 0), False),
-        ("SemVer, > 5.23", "5.24.0", (5, 24, 0), True),
-        ("SemVer, < 5.23, Aura", "5.22-aura", (5, 22, 0), False),
-        ("SemVer, > 5.23, Aura", "5.24-aura", (5, 24, 0), True),
-        ("CalVer", "2025.01.0", (2025, 1, 0), True),
-        ("CalVer, Aura", "2025.01-aura", (2025, 1, 0), True),
+        ("SemVer, < 5.23", "5.22.0", False),
+        ("SemVer, > 5.23", "5.24.0", True),
+        ("SemVer, < 5.23, Aura", "5.22-aura", False),
+        ("SemVer, > 5.23, Aura", "5.24-aura", True),
+        ("CalVer", "2025.01.0", True),
+        ("CalVer, Aura", "2025.01-aura", True),
     ],
 )
 @mock.patch(
@@ -354,13 +357,12 @@ def test_get_version(
     driver: MagicMock,
     description: str,
     version: str,
-    version_tuple: Tuple[int],
     is_5_23_or_above: bool,
 ) -> None:
     execute_query_mock = MagicMock(
         return_value=(
             [
-                {"versions": [version]},
+                {"versions": [version], "edition": "enterprise"},
             ],
             None,
             None,
@@ -368,9 +370,6 @@ def test_get_version(
     )
     driver.execute_query = execute_query_mock
     neo4j_writer = Neo4jWriter(driver=driver)
-    assert (
-        version_tuple == neo4j_writer._get_version()
-    ), f"Failed version_tuple test case: {description}"
     assert (
         neo4j_writer.is_version_5_23_or_above is is_5_23_or_above
     ), f"Failed is_version_5_23_or_above test case: {description}"
