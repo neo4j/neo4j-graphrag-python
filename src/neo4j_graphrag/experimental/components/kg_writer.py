@@ -34,6 +34,10 @@ from neo4j_graphrag.neo4j_queries import (
     UPSERT_RELATIONSHIP_QUERY,
     UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE,
 )
+from neo4j_graphrag.utils.version_utils import (
+    get_version,
+    is_version_5_23_or_above,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +120,8 @@ class Neo4jWriter(KGWriter):
         self.driver = driver
         self.neo4j_database = neo4j_database
         self.batch_size = batch_size
-        self.is_version_5_23_or_above = self._check_if_version_5_23_or_above()
+        version_tuple, _, _ = get_version(self.driver, self.neo4j_database)
+        self.is_version_5_23_or_above = is_version_5_23_or_above(version_tuple)
 
     def _db_setup(self) -> None:
         # create index on __KGBuilder__.id
@@ -161,29 +166,6 @@ class Neo4jWriter(KGWriter):
                 parameters_=parameters,
                 database_=self.neo4j_database,
             )
-
-    def _get_version(self) -> tuple[int, ...]:
-        records, _, _ = self.driver.execute_query(
-            "CALL dbms.components()", database_=self.neo4j_database
-        )
-        version = records[0]["versions"][0]
-        # Drop everything after the '-' first
-        version_main, *_ = version.split("-")
-        # Convert each number between '.' into int
-        version_tuple = tuple(map(int, version_main.split(".")))
-        # If no patch version, consider it's 0
-        if len(version_tuple) < 3:
-            version_tuple = (*version_tuple, 0)
-        return version_tuple
-
-    def _check_if_version_5_23_or_above(self) -> bool:
-        """
-        Check if the connected Neo4j database version supports the required features.
-
-        Sets a flag if the connected Neo4j version is 5.23 or above.
-        """
-        version_tuple = self._get_version()
-        return version_tuple >= (5, 23, 0)
 
     def _upsert_relationships(self, rels: list[Neo4jRelationship]) -> None:
         """Upserts a single relationship into the Neo4j database.

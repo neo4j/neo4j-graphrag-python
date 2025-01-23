@@ -27,34 +27,33 @@ from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem, SearchTyp
 
 
 def test_vector_retriever_initialization(driver: MagicMock) -> None:
-    with patch(
-        "neo4j_graphrag.retrievers.base.Retriever._verify_version"
-    ) as mock_verify:
+    with patch("neo4j_graphrag.retrievers.base.get_version") as mock_get_version:
+        mock_get_version.return_value = ((5, 23, 0), False, False)
         HybridRetriever(
             driver=driver,
             vector_index_name="vector-index",
             fulltext_index_name="fulltext-index",
         )
-        mock_verify.assert_called_once()
+        mock_get_version.assert_called_once()
 
 
 def test_vector_cypher_retriever_initialization(driver: MagicMock) -> None:
-    with patch(
-        "neo4j_graphrag.retrievers.base.Retriever._verify_version"
-    ) as mock_verify:
+    with patch("neo4j_graphrag.retrievers.base.get_version") as mock_get_version:
+        mock_get_version.return_value = ((5, 23, 0), False, False)
         HybridCypherRetriever(
             driver=driver,
             vector_index_name="vector-index",
             fulltext_index_name="fulltext-index",
             retrieval_query="",
         )
-        mock_verify.assert_called_once()
+        mock_get_version.assert_called_once()
 
 
-@patch("neo4j_graphrag.retrievers.HybridRetriever._verify_version")
+@patch("neo4j_graphrag.retrievers.base.get_version")
 def test_hybrid_retriever_invalid_fulltext_index_name(
-    _verify_version_mock: MagicMock, driver: MagicMock
+    mock_get_version: MagicMock, driver: MagicMock
 ) -> None:
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     with pytest.raises(RetrieverInitializationError) as exc_info:
         HybridRetriever(
             driver=driver,
@@ -66,14 +65,15 @@ def test_hybrid_retriever_invalid_fulltext_index_name(
     assert "Input should be a valid string" in str(exc_info.value)
 
 
-@patch("neo4j_graphrag.retrievers.HybridRetriever._verify_version")
+@patch("neo4j_graphrag.retrievers.base.get_version")
 def test_hybrid_retriever_with_result_format_function(
-    _verify_version_mock: MagicMock,
+    mock_get_version: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
     neo4j_record: MagicMock,
     result_formatter: MagicMock,
 ) -> None:
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
     vector_index_name = "vector-index"
@@ -107,10 +107,11 @@ def test_hybrid_retriever_with_result_format_function(
     )
 
 
-@patch("neo4j_graphrag.retrievers.HybridRetriever._verify_version")
+@patch("neo4j_graphrag.retrievers.base.get_version")
 def test_hybrid_retriever_invalid_database_name(
-    _verify_version_mock: MagicMock, driver: MagicMock
+    mock_get_version: MagicMock, driver: MagicMock
 ) -> None:
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     with pytest.raises(RetrieverInitializationError) as exc_info:
         HybridRetriever(
             driver=driver,
@@ -123,10 +124,11 @@ def test_hybrid_retriever_invalid_database_name(
     assert "Input should be a valid string" in str(exc_info.value)
 
 
-@patch("neo4j_graphrag.retrievers.HybridCypherRetriever._verify_version")
+@patch("neo4j_graphrag.retrievers.base.get_version")
 def test_hybrid_cypher_retriever_invalid_retrieval_query(
-    _verify_version_mock: MagicMock, driver: MagicMock
+    mock_get_version: MagicMock, driver: MagicMock
 ) -> None:
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     with pytest.raises(RetrieverInitializationError) as exc_info:
         HybridCypherRetriever(
             driver=driver,
@@ -139,10 +141,11 @@ def test_hybrid_cypher_retriever_invalid_retrieval_query(
     assert "Input should be a valid string" in str(exc_info.value)
 
 
-@patch("neo4j_graphrag.retrievers.HybridCypherRetriever._verify_version")
+@patch("neo4j_graphrag.retrievers.base.get_version")
 def test_hybrid_cypher_retriever_invalid_database_name(
-    _verify_version_mock: MagicMock, driver: MagicMock
+    mock_get_version: MagicMock, driver: MagicMock
 ) -> None:
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     retrieval_query = """
         RETURN node.id AS node_id, node.text AS text, score, {test: $param} AS metadata
         """
@@ -160,14 +163,15 @@ def test_hybrid_cypher_retriever_invalid_database_name(
 
 
 @patch("neo4j_graphrag.retrievers.HybridRetriever._fetch_index_infos")
-@patch("neo4j_graphrag.retrievers.HybridRetriever._verify_version")
+@patch("neo4j_graphrag.retrievers.base.get_version")
 def test_hybrid_search_text_happy_path(
-    _verify_version_mock: MagicMock,
+    mock_get_version: MagicMock,
     _fetch_index_infos_mock: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
     neo4j_record: MagicMock,
 ) -> None:
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
     vector_index_name = "vector-index"
@@ -217,14 +221,15 @@ def test_hybrid_search_text_happy_path(
 
 
 @patch("neo4j_graphrag.retrievers.HybridRetriever._fetch_index_infos")
-@patch("neo4j_graphrag.retrievers.HybridRetriever._verify_version")
+@patch("neo4j_graphrag.retrievers.base.get_version")
 def test_hybrid_search_favors_query_vector_over_embedding_vector(
-    _verify_version_mock: MagicMock,
+    mock_get_version: MagicMock,
     _fetch_index_infos_mock: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
     neo4j_record: MagicMock,
 ) -> None:
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     embed_query_vector = [1.0 for _ in range(1536)]
     query_vector = [2.0 for _ in range(1536)]
 
@@ -300,14 +305,15 @@ def test_hybrid_search_retriever_search_missing_embedder_for_text(
 
 
 @patch("neo4j_graphrag.retrievers.HybridRetriever._fetch_index_infos")
-@patch("neo4j_graphrag.retrievers.HybridRetriever._verify_version")
+@patch("neo4j_graphrag.retrievers.base.get_version")
 def test_hybrid_retriever_return_properties(
-    _verify_version_mock: MagicMock,
+    mock_get_version: MagicMock,
     _fetch_index_infos_mock: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
     neo4j_record: MagicMock,
 ) -> None:
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
     vector_index_name = "vector-index"
@@ -357,13 +363,14 @@ def test_hybrid_retriever_return_properties(
     )
 
 
-@patch("neo4j_graphrag.retrievers.HybridCypherRetriever._verify_version")
+@patch("neo4j_graphrag.retrievers.base.get_version")
 def test_hybrid_cypher_retrieval_query_with_params(
-    _verify_version_mock: MagicMock,
+    mock_get_version: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
     neo4j_record: MagicMock,
 ) -> None:
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
     vector_index_name = "vector-index"
@@ -428,14 +435,15 @@ def test_hybrid_cypher_retrieval_query_with_params(
     )
 
 
-@patch("neo4j_graphrag.retrievers.HybridCypherRetriever._verify_version")
+@patch("neo4j_graphrag.retrievers.base.get_version")
 def test_hybrid_cypher_retriever_with_result_format_function(
-    _verify_version_mock: MagicMock,
+    mock_get_version: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
     neo4j_record: MagicMock,
     result_formatter: MagicMock,
 ) -> None:
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
     vector_index_name = "vector-index"

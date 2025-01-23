@@ -51,37 +51,35 @@ def retriever_mock() -> MagicMock:
 
 
 @pytest.fixture(scope="function")
-@patch("neo4j_graphrag.retrievers.VectorRetriever._verify_version")
-def vector_retriever(
-    _verify_version_mock: MagicMock, driver: MagicMock
-) -> VectorRetriever:
+@patch("neo4j_graphrag.retrievers.base.get_version")
+def vector_retriever(mock_get_version: MagicMock, driver: MagicMock) -> VectorRetriever:
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     return VectorRetriever(driver, "my-index")
 
 
 @pytest.fixture(scope="function")
-@patch("neo4j_graphrag.retrievers.VectorCypherRetriever._verify_version")
+@patch("neo4j_graphrag.retrievers.base.get_version")
 def vector_cypher_retriever(
-    _verify_version_mock: MagicMock, driver: MagicMock
+    mock_get_version: MagicMock, driver: MagicMock
 ) -> VectorCypherRetriever:
-    retrieval_query = """
-        RETURN node.id AS node_id, node.text AS text, score
-        """
+    mock_get_version.return_value = ((5, 23, 0), False, False)
+    retrieval_query = "RETURN node.id AS node_id, node.text AS text, score"
     return VectorCypherRetriever(driver, "my-index", retrieval_query)
 
 
 @pytest.fixture(scope="function")
-@patch("neo4j_graphrag.retrievers.HybridRetriever._verify_version")
-def hybrid_retriever(
-    _verify_version_mock: MagicMock, driver: MagicMock
-) -> HybridRetriever:
+@patch("neo4j_graphrag.retrievers.base.get_version")
+def hybrid_retriever(mock_get_version: MagicMock, driver: MagicMock) -> HybridRetriever:
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     return HybridRetriever(driver, "my-index", "my-fulltext-index")
 
 
 @pytest.fixture(scope="function")
-@patch("neo4j_graphrag.retrievers.Text2CypherRetriever._verify_version")
+@patch("neo4j_graphrag.retrievers.base.get_version")
 def t2c_retriever(
-    _verify_version_mock: MagicMock, driver: MagicMock, llm: MagicMock
+    mock_get_version: MagicMock, driver: MagicMock, llm: MagicMock
 ) -> Text2CypherRetriever:
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     return Text2CypherRetriever(driver, llm)
 
 
