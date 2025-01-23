@@ -12,18 +12,20 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from typing import Optional
+
 import neo4j
 
 
 def get_version(
-    driver: neo4j.Driver, database: str = "neo4j"
+    driver: neo4j.Driver, database: Optional[str] = None
 ) -> tuple[tuple[int, ...], bool]:
     """
     Retrieves the Neo4j database version and checks if it is running on the Aura platform.
 
     Args:
         driver (neo4j.Driver): Neo4j Python driver instance to execute the query.
-        database (str, optional): The name of the Neo4j database to query. Defaults to "neo4j".
+        database (str, optional): The name of the Neo4j database to query. Defaults to None.
 
     Returns:
         tuple[tuple[int, ...], bool]:

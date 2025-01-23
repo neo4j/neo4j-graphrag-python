@@ -24,6 +24,11 @@ from typing_extensions import ParamSpec
 
 from neo4j_graphrag.exceptions import Neo4jVersionError
 from neo4j_graphrag.types import RawSearchResult, RetrieverResult, RetrieverResultItem
+from neo4j_graphrag.utils.version_utils import (
+    get_version,
+    has_vector_index_support,
+    is_version_5_23_or_above,
+)
 
 T = ParamSpec("T")
 P = TypeVar("P")
@@ -85,53 +90,12 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
         self.driver = driver
         self.neo4j_database = neo4j_database
         if self.VERIFY_NEO4J_VERSION:
-            self._verify_version()
-
-    def _get_version(self) -> tuple[tuple[int, ...], bool]:
-        records, _, _ = self.driver.execute_query(
-            "CALL dbms.components()",
-            database_=self.neo4j_database,
-            routing_=neo4j.RoutingControl.READ,
-        )
-        version = records[0]["versions"][0]
-        # drop everything after the '-' first
-        version_main, *_ = version.split("-")
-        # convert each number between '.' into int
-        version_tuple = tuple(map(int, version_main.split(".")))
-        # if no patch version, consider it's 0
-        if len(version_tuple) < 3:
-            version_tuple = (*version_tuple, 0)
-        return version_tuple, "aura" in version
-
-    def _check_if_version_5_23_or_above(self, version_tuple: tuple[int, ...]) -> bool:
-        """
-        Check if the connected Neo4j database version supports the required features.
-
-        Sets a flag if the connected Neo4j version is 5.23 or above.
-        """
-        return version_tuple >= (5, 23, 0)
-
-    def _verify_version(self) -> None:
-        """
-        Check if the connected Neo4j database version supports vector indexing.
-
-        Queries the Neo4j database to retrieve its version and compares it
-        against a target version (5.18.1) that is known to support vector
-        indexing. Raises a Neo4jMinVersionError if the connected Neo4j version is
-        not supported.
-        """
-        version_tuple, is_aura = self._get_version()
-        self.neo4j_version_is_5_23_or_above = self._check_if_version_5_23_or_above(
-            version_tuple
-        )
-
-        if is_aura:
-            target_version = (5, 18, 0)
-        else:
-            target_version = (5, 18, 1)
-
-        if version_tuple < target_version:
-            raise Neo4jVersionError()
+            version_tuple, is_aura = get_version(self.driver, self.neo4j_database)
+            self.neo4j_version_is_5_23_or_above = is_version_5_23_or_above(
+                version_tuple
+            )
+            if not has_vector_index_support(version_tuple, is_aura):
+                raise Neo4jVersionError()
 
     def _fetch_index_infos(self, vector_index_name: str) -> None:
         """Fetch the node label and embedding property from the index definition
