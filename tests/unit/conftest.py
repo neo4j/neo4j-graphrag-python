@@ -53,7 +53,7 @@ def retriever_mock() -> MagicMock:
 @pytest.fixture(scope="function")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def vector_retriever(mock_get_version: MagicMock, driver: MagicMock) -> VectorRetriever:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     return VectorRetriever(driver, "my-index")
 
 
@@ -62,7 +62,7 @@ def vector_retriever(mock_get_version: MagicMock, driver: MagicMock) -> VectorRe
 def vector_cypher_retriever(
     mock_get_version: MagicMock, driver: MagicMock
 ) -> VectorCypherRetriever:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     retrieval_query = "RETURN node.id AS node_id, node.text AS text, score"
     return VectorCypherRetriever(driver, "my-index", retrieval_query)
 
@@ -70,7 +70,7 @@ def vector_cypher_retriever(
 @pytest.fixture(scope="function")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def hybrid_retriever(mock_get_version: MagicMock, driver: MagicMock) -> HybridRetriever:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     return HybridRetriever(driver, "my-index", "my-fulltext-index")
 
 
@@ -79,7 +79,7 @@ def hybrid_retriever(mock_get_version: MagicMock, driver: MagicMock) -> HybridRe
 def t2c_retriever(
     mock_get_version: MagicMock, driver: MagicMock, llm: MagicMock
 ) -> Text2CypherRetriever:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     return Text2CypherRetriever(driver, llm)
 
 

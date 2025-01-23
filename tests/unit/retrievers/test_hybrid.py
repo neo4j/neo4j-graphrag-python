@@ -28,7 +28,7 @@ from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem, SearchTyp
 
 def test_vector_retriever_initialization(driver: MagicMock) -> None:
     with patch("neo4j_graphrag.retrievers.base.get_version") as mock_get_version:
-        mock_get_version.return_value = ((5, 23, 0), False)
+        mock_get_version.return_value = ((5, 23, 0), False, False)
         HybridRetriever(
             driver=driver,
             vector_index_name="vector-index",
@@ -39,7 +39,7 @@ def test_vector_retriever_initialization(driver: MagicMock) -> None:
 
 def test_vector_cypher_retriever_initialization(driver: MagicMock) -> None:
     with patch("neo4j_graphrag.retrievers.base.get_version") as mock_get_version:
-        mock_get_version.return_value = ((5, 23, 0), False)
+        mock_get_version.return_value = ((5, 23, 0), False, False)
         HybridCypherRetriever(
             driver=driver,
             vector_index_name="vector-index",
@@ -53,7 +53,7 @@ def test_vector_cypher_retriever_initialization(driver: MagicMock) -> None:
 def test_hybrid_retriever_invalid_fulltext_index_name(
     mock_get_version: MagicMock, driver: MagicMock
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     with pytest.raises(RetrieverInitializationError) as exc_info:
         HybridRetriever(
             driver=driver,
@@ -73,7 +73,7 @@ def test_hybrid_retriever_with_result_format_function(
     neo4j_record: MagicMock,
     result_formatter: MagicMock,
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
     vector_index_name = "vector-index"
@@ -111,7 +111,7 @@ def test_hybrid_retriever_with_result_format_function(
 def test_hybrid_retriever_invalid_database_name(
     mock_get_version: MagicMock, driver: MagicMock
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     with pytest.raises(RetrieverInitializationError) as exc_info:
         HybridRetriever(
             driver=driver,
@@ -128,7 +128,7 @@ def test_hybrid_retriever_invalid_database_name(
 def test_hybrid_cypher_retriever_invalid_retrieval_query(
     mock_get_version: MagicMock, driver: MagicMock
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     with pytest.raises(RetrieverInitializationError) as exc_info:
         HybridCypherRetriever(
             driver=driver,
@@ -145,7 +145,7 @@ def test_hybrid_cypher_retriever_invalid_retrieval_query(
 def test_hybrid_cypher_retriever_invalid_database_name(
     mock_get_version: MagicMock, driver: MagicMock
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     retrieval_query = """
         RETURN node.id AS node_id, node.text AS text, score, {test: $param} AS metadata
         """
@@ -171,7 +171,7 @@ def test_hybrid_search_text_happy_path(
     embedder: MagicMock,
     neo4j_record: MagicMock,
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
     vector_index_name = "vector-index"
@@ -229,7 +229,7 @@ def test_hybrid_search_favors_query_vector_over_embedding_vector(
     embedder: MagicMock,
     neo4j_record: MagicMock,
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     embed_query_vector = [1.0 for _ in range(1536)]
     query_vector = [2.0 for _ in range(1536)]
 
@@ -313,7 +313,7 @@ def test_hybrid_retriever_return_properties(
     embedder: MagicMock,
     neo4j_record: MagicMock,
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
     vector_index_name = "vector-index"
@@ -370,7 +370,7 @@ def test_hybrid_cypher_retrieval_query_with_params(
     embedder: MagicMock,
     neo4j_record: MagicMock,
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
     vector_index_name = "vector-index"
@@ -443,7 +443,7 @@ def test_hybrid_cypher_retriever_with_result_format_function(
     neo4j_record: MagicMock,
     result_formatter: MagicMock,
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
     vector_index_name = "vector-index"

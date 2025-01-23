@@ -27,13 +27,13 @@ from neo4j_graphrag.types import RawSearchResult, RetrieverResult
 @pytest.mark.parametrize(
     "db_version,expected_exception",
     [
-        (((5, 18, 0), True), None),
-        (((5, 3, 0), True), Neo4jVersionError),
-        (((5, 19, 0), False), None),
-        (((4, 3, 5), False), Neo4jVersionError),
-        (((5, 23, 0), False), None),
-        (((2025, 1, 0), False), None),
-        (((2025, 1, 0), True), None),
+        (((5, 18, 0), True, True), None),
+        (((5, 3, 0), True, True), Neo4jVersionError),
+        (((5, 19, 0), False, True), None),
+        (((4, 3, 5), False, True), Neo4jVersionError),
+        (((5, 23, 0), False, True), None),
+        (((2025, 1, 0), False, True), None),
+        (((2025, 1, 0), True, True), None),
     ],
 )
 @patch("neo4j_graphrag.retrievers.base.get_version")
@@ -61,7 +61,7 @@ def test_retriever_search_docstring_copied(
     mock_get_version: MagicMock,
     driver: MagicMock,
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
 
     class MockRetriever(Retriever):
         def get_search_results(self, query: str, top_k: int = 10) -> RawSearchResult:
@@ -86,7 +86,7 @@ def test_retriever_search_docstring_unchanged(
     mock_get_version: MagicMock,
     driver: MagicMock,
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
 
     class MockRetrieverForNoise(Retriever):
         def get_search_results(self, query: str, top_k: int = 10) -> RawSearchResult:

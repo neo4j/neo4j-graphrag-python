@@ -31,7 +31,7 @@ from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
 
 def test_t2c_retriever_initialization(driver: MagicMock, llm: MagicMock) -> None:
     with patch("neo4j_graphrag.retrievers.base.get_version") as mock_get_version:
-        mock_get_version.return_value = ((5, 23, 0), False)
+        mock_get_version.return_value = ((5, 23, 0), False, False)
         Text2CypherRetriever(driver, llm, neo4j_schema="dummy-text")
         mock_get_version.assert_called_once()
 
@@ -44,7 +44,7 @@ def test_t2c_retriever_schema_retrieval(
     driver: MagicMock,
     llm: MagicMock,
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     Text2CypherRetriever(driver, llm)
     get_schema_mock.assert_called_once()
 
@@ -57,7 +57,7 @@ def test_t2c_retriever_schema_retrieval_failure(
     driver: MagicMock,
     llm: MagicMock,
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     get_schema_mock.side_effect = Neo4jError
     with pytest.raises(SchemaFetchError):
         Text2CypherRetriever(driver, llm)
@@ -67,7 +67,7 @@ def test_t2c_retriever_schema_retrieval_failure(
 def test_t2c_retriever_invalid_neo4j_schema(
     mock_get_version: MagicMock, driver: MagicMock, llm: MagicMock
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     with pytest.raises(RetrieverInitializationError) as exc_info:
         Text2CypherRetriever(
             driver=driver,
@@ -83,7 +83,7 @@ def test_t2c_retriever_invalid_neo4j_schema(
 def test_t2c_retriever_invalid_search_query(
     mock_get_version: MagicMock, driver: MagicMock, llm: MagicMock
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     with pytest.raises(SearchValidationError) as exc_info:
         retriever = Text2CypherRetriever(
             driver=driver, llm=llm, neo4j_schema="dummy-text"
@@ -98,7 +98,7 @@ def test_t2c_retriever_invalid_search_query(
 def test_t2c_retriever_invalid_search_examples(
     mock_get_version: MagicMock, driver: MagicMock, llm: MagicMock
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     with pytest.raises(RetrieverInitializationError) as exc_info:
         Text2CypherRetriever(
             driver=driver,
@@ -118,7 +118,7 @@ def test_t2c_retriever_happy_path(
     llm: MagicMock,
     neo4j_record: MagicMock,
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     t2c_query = "MATCH (n) RETURN n;"
     query_text = "may thy knife chip and shatter"
     neo4j_schema = "dummy-schema"
@@ -156,7 +156,7 @@ def test_t2c_retriever_happy_path(
 def test_t2c_retriever_cypher_error(
     mock_get_version: MagicMock, driver: MagicMock, llm: MagicMock
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     t2c_query = "this is not a cypher query"
     neo4j_schema = "dummy-schema"
     examples = ["example-1", "example-2"]
@@ -179,7 +179,7 @@ def test_t2c_retriever_with_result_format_function(
     neo4j_record: MagicMock,
     result_formatter: MagicMock,
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     retriever = Text2CypherRetriever(
         driver=driver, llm=llm, result_formatter=result_formatter
     )
@@ -211,7 +211,7 @@ def test_t2c_retriever_initialization_with_custom_prompt(
     llm: MagicMock,
     neo4j_record: MagicMock,
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     prompt = "This is a custom prompt. {query_text}"
     retriever = Text2CypherRetriever(driver=driver, llm=llm, custom_prompt=prompt)
     driver.execute_query.return_value = (
@@ -231,7 +231,7 @@ def test_t2c_retriever_initialization_with_custom_prompt_and_schema_and_examples
     llm: MagicMock,
     neo4j_record: MagicMock,
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     prompt = "This is a custom prompt. {query_text}"
     neo4j_schema = "dummy-schema"
     examples = ["example-1", "example-2"]
@@ -258,7 +258,7 @@ def test_t2c_retriever_initialization_with_custom_prompt_and_schema_and_examples
 def test_t2c_retriever_invalid_custom_prompt_type(
     mock_get_version: MagicMock, driver: MagicMock, llm: MagicMock
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     with pytest.raises(RetrieverInitializationError) as exc_info:
         Text2CypherRetriever(
             driver=driver,
@@ -276,7 +276,7 @@ def test_t2c_retriever_with_custom_prompt_prompt_params(
     llm: MagicMock,
     neo4j_record: MagicMock,
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     prompt = "This is a custom prompt. {query_text} {examples_custom}"
     query = "test"
     examples = ["example A", "example B"]
@@ -301,7 +301,7 @@ def test_t2c_retriever_with_custom_prompt_bad_prompt_params(
     llm: MagicMock,
     neo4j_record: MagicMock,
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     prompt = "This is a custom prompt. {query_text} {examples}"
     query = "test"
     examples = ["example A", "example B"]
@@ -334,7 +334,7 @@ def test_t2c_retriever_with_custom_prompt_and_schema(
     llm: MagicMock,
     neo4j_record: MagicMock,
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     prompt = "This is a custom prompt. {query_text} {schema}"
     query = "test"
 

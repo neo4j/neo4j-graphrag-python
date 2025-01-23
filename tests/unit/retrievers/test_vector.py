@@ -35,7 +35,7 @@ from neo4j_graphrag.types import (
 
 def test_vector_retriever_initialization(driver: MagicMock) -> None:
     with patch("neo4j_graphrag.retrievers.base.get_version") as mock_get_version:
-        mock_get_version.return_value = ((5, 23, 0), False)
+        mock_get_version.return_value = ((5, 23, 0), False, False)
         VectorRetriever(driver=driver, index_name="my-index")
         mock_get_version.assert_called_once()
 
@@ -44,7 +44,7 @@ def test_vector_retriever_initialization(driver: MagicMock) -> None:
 def test_vector_retriever_invalid_index_name(
     mock_get_version: MagicMock, driver: MagicMock
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     with pytest.raises(RetrieverInitializationError) as exc_info:
         VectorRetriever(driver=driver, index_name=42)  # type: ignore
 
@@ -56,7 +56,7 @@ def test_vector_retriever_invalid_index_name(
 def test_vector_retriever_invalid_database_name(
     mock_get_version: MagicMock, driver: MagicMock
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     with pytest.raises(RetrieverInitializationError) as exc_info:
         VectorRetriever(
             driver=driver,
@@ -72,7 +72,7 @@ def test_vector_retriever_invalid_database_name(
 def test_vector_cypher_retriever_invalid_retrieval_query(
     mock_get_version: MagicMock, driver: MagicMock
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     with pytest.raises(RetrieverInitializationError) as exc_info:
         VectorCypherRetriever(driver=driver, index_name="my-index", retrieval_query=42)  # type: ignore
 
@@ -84,7 +84,7 @@ def test_vector_cypher_retriever_invalid_retrieval_query(
 def test_vector_cypher_retriever_invalid_database_name(
     mock_get_version: MagicMock, driver: MagicMock
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     retrieval_query = """
         RETURN node.id AS node_id, node.text AS text, score
         """
@@ -102,7 +102,7 @@ def test_vector_cypher_retriever_invalid_database_name(
 
 def test_vector_cypher_retriever_initialization(driver: MagicMock) -> None:
     with patch("neo4j_graphrag.retrievers.base.get_version") as mock_get_version:
-        mock_get_version.return_value = ((5, 23, 0), False)
+        mock_get_version.return_value = ((5, 23, 0), False, False)
         VectorCypherRetriever(driver=driver, index_name="my-index", retrieval_query="")
         mock_get_version.assert_called_once()
 
@@ -115,7 +115,7 @@ def test_similarity_search_vector_happy_path(
     driver: MagicMock,
     neo4j_record: MagicMock,
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     index_name = "my-index"
     dimensions = 1536
     query_vector = [1.0 for _ in range(dimensions)]
@@ -162,7 +162,7 @@ def test_similarity_search_text_happy_path(
     embedder: MagicMock,
     neo4j_record: MagicMock,
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
     index_name = "my-index"
@@ -209,7 +209,7 @@ def test_similarity_search_text_return_properties(
     embedder: MagicMock,
     neo4j_record: MagicMock,
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     embed_query_vector = [1.0 for _ in range(3)]
     embedder.embed_query.return_value = embed_query_vector
     index_name = "my-index"
@@ -294,7 +294,7 @@ def test_vector_retriever_with_result_format_function(
     neo4j_record: MagicMock,
     result_formatter: MagicMock,
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
     index_name = "my-index"
@@ -366,7 +366,7 @@ def test_retrieval_query_happy_path(
     driver: MagicMock,
     embedder: MagicMock,
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
     index_name = "my-index"
@@ -430,7 +430,7 @@ def test_retrieval_query_with_result_format_function(
     neo4j_record: MagicMock,
     result_formatter: MagicMock,
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
     index_name = "my-index"
@@ -490,7 +490,7 @@ def test_retrieval_query_with_params(
     driver: MagicMock,
     embedder: MagicMock,
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
     index_name = "my-index"
@@ -556,7 +556,7 @@ def test_retrieval_query_cypher_error(
     driver: MagicMock,
     embedder: MagicMock,
 ) -> None:
-    mock_get_version.return_value = ((5, 23, 0), False)
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     embed_query_vector = [1.0 for _ in range(1536)]
     embedder.embed_query.return_value = embed_query_vector
     index_name = "my-index"

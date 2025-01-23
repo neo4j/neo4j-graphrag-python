@@ -19,7 +19,7 @@ import neo4j
 
 def get_version(
     driver: neo4j.Driver, database: Optional[str] = None
-) -> tuple[tuple[int, ...], bool]:
+) -> tuple[tuple[int, ...], bool, bool]:
     """
     Retrieves the Neo4j database version and checks if it is running on the Aura platform.
 
@@ -32,6 +32,7 @@ def get_version(
             - A tuple of integers representing the database version (major, minor, patch) or
                 (year, month, patch)  for later versions.
             - A boolean indicating whether the database is hosted on the Aura platform.
+            - A boolean indicating whether the database is running the enterprise edition.
     """
     records, _, _ = driver.execute_query(
         "CALL dbms.components()",
@@ -39,6 +40,7 @@ def get_version(
         routing_=neo4j.RoutingControl.READ,
     )
     version = records[0]["versions"][0]
+    edition = records[0]["edition"]
     # drop everything after the '-' first
     version_main, *_ = version.split("-")
     # convert each number between '.' into int
@@ -46,7 +48,7 @@ def get_version(
     # if no patch version, consider it's 0
     if len(version_tuple) < 3:
         version_tuple = (*version_tuple, 0)
-    return version_tuple, "aura" in version
+    return version_tuple, "aura" in version, edition == "enterprise"
 
 
 def is_version_5_23_or_above(version_tuple: tuple[int, ...]) -> bool:
@@ -63,10 +65,25 @@ def is_version_5_23_or_above(version_tuple: tuple[int, ...]) -> bool:
     return version_tuple >= (5, 23, 0)
 
 
-def has_vector_index_support(version_tuple: tuple[int, ...], is_aura: bool) -> bool:
+def has_vector_index_support(version_tuple: tuple[int, ...]) -> bool:
     """
     Checks if a Neo4j database supports vector indexing based on its version and platform.
-    For Aura databases, the minimum version is 5.18.0, while for non-Aura databases, it is 5.18.1.
+
+    Args:
+        version_tuple (neo4j.Driver): A tuple of integers representing the database version (major, minor, patch) or
+                (year, month, patch)  for later versions.
+
+    Returns:
+        bool: True if the connected Neo4j database version supports vector indexing, False otherwise.
+    """
+    return version_tuple >= (5, 11, 0)
+
+
+def has_metadata_filtering_support(
+    version_tuple: tuple[int, ...], is_aura: bool
+) -> bool:
+    """
+    Checks if a Neo4j database supports vector index metadata filtering based on its version and platform.
 
     Args:
         version_tuple (neo4j.Driver): A tuple of integers representing the database version (major, minor, patch) or
@@ -74,7 +91,7 @@ def has_vector_index_support(version_tuple: tuple[int, ...], is_aura: bool) -> b
         is_aura (bool): A boolean indicating whether the database is hosted on the Aura platform.
 
     Returns:
-        bool: True if the connected Neo4j database version supports vector indexing, False otherwise.
+        bool: True if the connected Neo4j database version supports vector index metadata filtering , False otherwise.
     """
     if is_aura:
         target_version = (5, 18, 0)

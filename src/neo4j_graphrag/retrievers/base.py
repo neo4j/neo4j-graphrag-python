@@ -26,6 +26,7 @@ from neo4j_graphrag.exceptions import Neo4jVersionError
 from neo4j_graphrag.types import RawSearchResult, RetrieverResult, RetrieverResultItem
 from neo4j_graphrag.utils.version_utils import (
     get_version,
+    has_metadata_filtering_support,
     has_vector_index_support,
     is_version_5_23_or_above,
 )
@@ -90,11 +91,13 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
         self.driver = driver
         self.neo4j_database = neo4j_database
         if self.VERIFY_NEO4J_VERSION:
-            version_tuple, is_aura = get_version(self.driver, self.neo4j_database)
+            version_tuple, is_aura, _ = get_version(self.driver, self.neo4j_database)
             self.neo4j_version_is_5_23_or_above = is_version_5_23_or_above(
                 version_tuple
             )
-            if not has_vector_index_support(version_tuple, is_aura):
+            if not has_vector_index_support(
+                version_tuple
+            ) or not has_metadata_filtering_support(version_tuple, is_aura):
                 raise Neo4jVersionError()
 
     def _fetch_index_infos(self, vector_index_name: str) -> None:
