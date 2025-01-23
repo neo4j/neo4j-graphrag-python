@@ -31,7 +31,7 @@ def populate_dbs(
         collection_name,
         vectorizer_config=wvc.config.Configure.Vectorizer.text2vec_transformers(),
         vector_index_config=wvc.config.Configure.VectorIndex.hnsw(
-            distance_metric=wvc.config.VectorDistances.COSINE  # select prefered distance metric
+            distance_metric=wvc.config.VectorDistances.COSINE  # select preferred distance metric
         ),
         properties=[
             wvc.config.Property(name="neo4j_id", data_type=wvc.config.DataType.TEXT),

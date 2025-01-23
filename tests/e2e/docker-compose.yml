@@ -10,8 +10,8 @@ services:
       - http
     image: cr.weaviate.io/semitechnologies/weaviate:1.25.1
     ports:
-      - 8080:8080
-      - 50051:50051
+      - "8080:8080"
+      - "50051:50051"
     restart: on-failure:0
     environment:
       TRANSFORMERS_INFERENCE_API: "http://t2v-transformers:8080"
@@ -22,7 +22,7 @@ services:
       ENABLE_MODULES: "text2vec-transformers"
       CLUSTER_HOSTNAME: "node1"
   t2v-transformers:
-    image: cr.weaviate.io/semitechnologies/transformers-inference:sentence-transformers-all-MiniLM-L6-v2-onnx
+    image: cr.weaviate.io/semitechnologies/transformers-inference:sentence-transformers-all-MiniLM-L6-v2
     environment:
       ENABLE_CUDA: "0"
   neo4j:
