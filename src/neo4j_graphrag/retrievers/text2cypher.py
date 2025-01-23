@@ -99,7 +99,13 @@ class Text2CypherRetriever(Retriever):
         self.result_formatter = validated_data.result_formatter
         self.custom_prompt = validated_data.custom_prompt
         if validated_data.custom_prompt:
-            neo4j_schema = ""
+            if (
+                validated_data.neo4j_schema_model
+                and validated_data.neo4j_schema_model.neo4j_schema
+            ):
+                neo4j_schema = validated_data.neo4j_schema_model.neo4j_schema
+            else:
+                neo4j_schema = ""
         else:
             if (
                 validated_data.neo4j_schema_model

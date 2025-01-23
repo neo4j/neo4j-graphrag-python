@@ -255,6 +255,71 @@ def test_t2c_retriever_initialization_with_custom_prompt_and_schema_and_examples
 
 
 @patch("neo4j_graphrag.retrievers.base.get_version")
+def test_t2c_retriever_initialization_with_custom_prompt_and_schema_and_examples_for_prompt_params(
+    _verify_version_mock: MagicMock,
+    driver: MagicMock,
+    llm: MagicMock,
+    neo4j_record: MagicMock,
+) -> None:
+    prompt = "This is a custom prompt. {query_text} {schema} {examples}"
+    neo4j_schema = "dummy-schema"
+    examples = ["example-1", "example-2"]
+
+    retriever = Text2CypherRetriever(
+        driver=driver,
+        llm=llm,
+        custom_prompt=prompt,
+        neo4j_schema=neo4j_schema,
+        examples=examples,
+    )
+
+    driver.execute_query.return_value = (
+        [neo4j_record],
+        None,
+        None,
+    )
+    retriever.search(query_text="test")
+
+    llm.invoke.assert_called_once_with(
+        "This is a custom prompt. test dummy-schema example-1\nexample-2"
+    )
+
+
+@patch("neo4j_graphrag.retrievers.base.get_version")
+def test_t2c_retriever_initialization_with_custom_prompt_and_unused_schema_and_examples(
+    _verify_version_mock: MagicMock,
+    driver: MagicMock,
+    llm: MagicMock,
+    neo4j_record: MagicMock,
+) -> None:
+    prompt = "This is a custom prompt. {query_text} {schema} {examples}"
+    neo4j_schema = "dummy-schema"
+    examples = ["example-1", "example-2"]
+
+    retriever = Text2CypherRetriever(
+        driver=driver,
+        llm=llm,
+        custom_prompt=prompt,
+        neo4j_schema=neo4j_schema,
+        examples=examples,
+    )
+
+    driver.execute_query.return_value = (
+        [neo4j_record],
+        None,
+        None,
+    )
+    retriever.search(
+        query_text="test",
+        prompt_params={"schema": "another-dummy-schema", "examples": "another-example"},
+    )
+
+    llm.invoke.assert_called_once_with(
+        "This is a custom prompt. test another-dummy-schema another-example"
+    )
+
+
+@patch("neo4j_graphrag.retrievers.base.get_version")
 def test_t2c_retriever_invalid_custom_prompt_type(
     mock_get_version: MagicMock, driver: MagicMock, llm: MagicMock
 ) -> None:
