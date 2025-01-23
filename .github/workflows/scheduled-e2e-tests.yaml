@@ -19,7 +19,7 @@ jobs:
           - 'latest'
     services:
       t2v-transformers:
-        image: cr.weaviate.io/semitechnologies/transformers-inference:sentence-transformers-all-MiniLM-L6-v2-onnx
+        image: cr.weaviate.io/semitechnologies/transformers-inference:sentence-transformers-all-MiniLM-L6-v2
         env:
           ENABLE_CUDA: '0'
         credentials:
