@@ -70,10 +70,9 @@ def vector_cypher_retriever(
 
 
 @pytest.fixture(scope="function")
-@patch("neo4j_graphrag.retrievers.HybridRetriever._verify_version")
-def hybrid_retriever(
-    _verify_version_mock: MagicMock, driver: MagicMock
-) -> HybridRetriever:
+@patch("neo4j_graphrag.retrievers.base.get_version")
+def hybrid_retriever(mock_get_version: MagicMock, driver: MagicMock) -> HybridRetriever:
+    mock_get_version.return_value = ((5, 23, 0), False)
     return HybridRetriever(driver, "my-index", "my-fulltext-index")
 
 
