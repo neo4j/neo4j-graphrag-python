@@ -357,6 +357,11 @@ can be omitted (the parser will automatically import from `neo4j_graphrag.llm`).
 For custom implementations, the full path must be explicitly specified,
 for example: `my_package.my_llm.MyLLM`.
 
+.. warning::
+
+    Check the :ref:`installation` section to make sure you have the required dependencies installed when using an LLM.
+
+
 Defining an Embedder
 --------------------
 
@@ -800,7 +805,7 @@ It can be used in this way:
     from neo4j_graphrag.experimental.components.entity_relation_extractor import (
         LLMEntityRelationExtractor,
     )
-    from neo4j_graphrag.llm.openai import OpenAILLM
+    from neo4j_graphrag.llm import OpenAILLM
 
     extractor = LLMEntityRelationExtractor(
         llm=OpenAILLM(
@@ -813,6 +818,10 @@ It can be used in this way:
     )
     await extractor.run(chunks=TextChunks(chunks=[TextChunk(text="some text")]))
 
+
+.. warning::
+
+    Using `OpenAILLM` requires the `openai` Python client. You can install it with `pip install "neo4j_graphrag[openai]"`.
 
 .. warning::
 
@@ -834,13 +843,7 @@ This behaviour can be changed by using the `on_error` flag in the `LLMEntityRela
     )
 
     extractor = LLMEntityRelationExtractor(
-        llm=OpenAILLM(
-            model_name="gpt-4o",
-            model_params={
-                "max_tokens": 1000,
-                "response_format": {"type": "json_object"},
-            },
-        ),
+        # ...
         on_error=OnError.RAISE,
     )
 

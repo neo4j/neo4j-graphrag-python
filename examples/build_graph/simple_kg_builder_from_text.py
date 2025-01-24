@@ -19,7 +19,7 @@ from neo4j_graphrag.experimental.pipeline.types import (
     RelationInputType,
 )
 from neo4j_graphrag.llm import LLMInterface
-from neo4j_graphrag.llm.openai_llm import OpenAILLM
+from neo4j_graphrag.llm import OpenAILLM
 
 logging.basicConfig()
 logging.getLogger("neo4j_graphrag").setLevel(logging.DEBUG)

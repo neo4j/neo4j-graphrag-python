@@ -98,7 +98,7 @@ import asyncio
 from neo4j import GraphDatabase
 from neo4j_graphrag.embeddings import OpenAIEmbeddings
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
-from neo4j_graphrag.llm.openai_llm import OpenAILLM
+from neo4j_graphrag.llm import OpenAILLM
 
 NEO4J_URI = "neo4j://localhost:7687"
 NEO4J_USERNAME = "neo4j"
@@ -148,6 +148,9 @@ text = (
 asyncio.run(kg_builder.run_async(text=text))
 driver.close()
 ```
+
+> Warning: In order to run this code, the `openai` Python package needs to be installed: `pip install "neo4j_graphrag[openai]"`
+
 
 Example knowledge graph created using the above script:
 

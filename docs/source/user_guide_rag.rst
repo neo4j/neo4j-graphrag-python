@@ -56,10 +56,9 @@ In practice, it's done with only a few lines of code:
     print(response.answer)
 
 
-.. note::
+.. warning::
 
-    In order to run this code, the `openai` Python package needs to be installed:
-    `pip install openai`
+    Using `OpenAILLM` requires the `openai` Python client. You can install it with `pip install "neo4j_graphrag[openai]"`.
 
 
 The following sections provide more details about how to customize this code.
@@ -108,7 +107,7 @@ to learn more about the configuration.
 .. note::
 
     In order to run this code, the `openai` Python package needs to be installed:
-    `pip install openai`
+    `pip install "neo4j_graphrag[openai]"`
 
 
 See :ref:`azureopenaillm`.
@@ -134,7 +133,7 @@ To use VertexAI, instantiate the `VertexAILLM` class:
 .. note::
 
     In order to run this code, the `google-cloud-aiplatform` Python package needs to be installed:
-    `pip install google-cloud-aiplatform`
+    `pip install "neo4j_grpahrag[vertexai]"`
 
 
 See :ref:`vertexaillm`.
@@ -160,7 +159,7 @@ To use Anthropic, instantiate the `AnthropicLLM` class:
 .. note::
 
     In order to run this code, the `anthropic` Python package needs to be installed:
-    `pip install anthropic`
+    `pip install "neo4j_graphrag[anthropic]"`
 
 See :ref:`anthropicllm`.
 
@@ -184,7 +183,7 @@ To use MistralAI, instantiate the `MistralAILLM` class:
 .. note::
 
     In order to run this code, the `mistralai` Python package needs to be installed:
-    `pip install mistralai`
+    `pip install "neo4j_graphrag[mistralai]"`
 
 See :ref:`mistralaillm`.
 
@@ -209,7 +208,7 @@ To use Cohere, instantiate the `CohereLLM` class:
 .. note::
 
     In order to run this code, the `cohere` Python package needs to be installed:
-    `pip install cohere`
+    `pip install "neo4j_graphrag[cohere]"`
 
 
 See :ref:`coherellm`.
@@ -630,7 +629,7 @@ Weaviate Retrievers
 .. note::
 
     In order to import this retriever, the Weaviate Python client must be installed:
-    `pip install weaviate-client`
+    `pip install "neo4j_graphrag[weaviate]"`
 
 
 .. code:: python
@@ -663,7 +662,7 @@ Pinecone Retrievers
 .. note::
 
     In order to import this retriever, the Pinecone Python client must be installed:
-    `pip install pinecone-client`
+    `pip install "neo4j_graphrag[pinecone]"`
 
 
 .. code:: python
@@ -691,7 +690,7 @@ Qdrant Retrievers
 .. note::
 
     In order to import this retriever, the Qdrant Python client must be installed:
-    `pip install qdrant-client`
+    `pip install "neo4j_graphrag[qdrant]"`
 
 
 .. code:: python
@@ -787,7 +786,7 @@ LLMs can be different.
 
     from neo4j import GraphDatabase
     from neo4j_graphrag.retrievers import Text2CypherRetriever
-    from neo4j_graphrag.llm.openai import OpenAILLM
+    from neo4j_graphrag.llm import OpenAILLM
 
     URI = "neo4j://localhost:7687"
     AUTH = ("neo4j", "password")
@@ -796,7 +795,7 @@ LLMs can be different.
     driver = GraphDatabase.driver(URI, auth=AUTH)
 
     # Create LLM object
-    llm = OpenAILLM(model_name="gpt-3.5-turbo")
+    llm = OpenAILLM(model_name="gpt-4o")
 
     # (Optional) Specify your own Neo4j schema
     neo4j_schema = """
@@ -832,6 +831,10 @@ LLMs can be different.
     query_text = "Which movies did Hugo Weaving star in?"
     print(retriever.search(query_text=query_text))
 
+
+.. warning::
+
+    Using `OpenAILLM` requires the `openai` Python client. You can install it with `pip install "neo4j_graphrag[openai]"`.
 
 .. note::
 
