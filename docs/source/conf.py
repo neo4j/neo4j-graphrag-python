@@ -45,6 +45,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
     "sphinx.ext.autosectionlabel",
+    "enum_tools.autoenum",
 ]
 
 # The suffix(es) of source filenames.

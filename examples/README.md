@@ -101,6 +101,7 @@ are listed in [the last section of this file](#customize).
 - [Process multiple documents](./customize/build_graph/pipeline/kg_builder_two_documents_entity_resolution.py)
 - [Export lexical graph creation into another pipeline](./customize/build_graph/pipeline/text_to_lexical_graph_to_entity_graph_two_pipelines.py)
 - [Build pipeline from config file](customize/build_graph/pipeline/from_config_files/pipeline_from_config_file.py)
+- [Add event listener to get notification about Pipeline progress](./customize/build_graph/pipeline/pipeline_with_notifications.py)
 
 
 #### Components

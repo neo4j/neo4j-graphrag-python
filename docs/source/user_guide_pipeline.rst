@@ -106,7 +106,6 @@ Pipelines can be visualized using the `draw` method:
 
 .. code:: python
 
-    import asyncio
     from neo4j_graphrag.experimental.pipeline import Pipeline
 
     pipe = Pipeline()
@@ -131,3 +130,45 @@ Here is an example of final result:
 
 .. image:: images/pipeline_full.png
   :alt: Pipeline visualisation
+
+
+************************
+Adding an Event Callback
+************************
+
+It is possible to add a callback to receive notification about pipeline progress:
+
+- `PIPELINE_STARTED`, when pipeline starts
+- `PIPELINE_FINISHED`, when pipeline ends
+- `TASK_STARTED`, when a task starts
+- `TASK_FINISHED`, when a task ends
+
+
+See :ref:`pipelineevent` and :ref:`taskevent` to see what is sent in each event type.
+
+.. code:: python
+
+    import asyncio
+    import logging
+
+    from neo4j_graphrag.experimental.pipeline import Pipeline
+    from neo4j_graphrag.experimental.pipeline.types import Event
+
+    logger = logging.getLogger(__name__)
+    logging.basicConfig()
+    logger.setLevel(logging.WARNING)
+
+
+    async def event_handler(event: Event) -> None:
+        """Function can do anything about the event,
+        here we're just logging it if it's a pipeline-level event.
+        """
+        if event.event_type.is_pipeline_event:
+            logger.warning(event)
+
+    pipeline = Pipeline(
+        callback=event_handler,
+    )
+    # ... add components, connect them as usual
+
+    await pipeline.run(...)

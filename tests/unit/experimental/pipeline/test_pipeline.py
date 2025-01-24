@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import asyncio
+import datetime
 import tempfile
 from typing import Sized
 from unittest import mock
@@ -23,7 +24,13 @@ from unittest.mock import AsyncMock, call, patch
 import pytest
 from neo4j_graphrag.experimental.pipeline import Component, Pipeline
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
-from neo4j_graphrag.experimental.pipeline.pipeline import RunResult
+from neo4j_graphrag.experimental.pipeline.types import (
+    EventCallbackProtocol,
+    EventType,
+    PipelineEvent,
+    RunResult,
+    TaskEvent,
+)
 
 from .components import (
     ComponentAdd,
@@ -411,3 +418,64 @@ def test_pipeline_draw_missing_pygraphviz_dep() -> None:
 def test_run_result_no_warning(recwarn: Sized) -> None:
     RunResult()
     assert len(recwarn) == 0
+
+
+@pytest.mark.asyncio
+async def test_pipeline_event_notification() -> None:
+    callback = AsyncMock(spec=EventCallbackProtocol)
+    pipe = Pipeline(callback=callback)
+    component_a = ComponentMultiply()
+    pipe.add_component(
+        component_a,
+        "a",
+    )
+    a_input_data = {"number1": 2, "number2": 3}
+    pipeline_result = await pipe.run({"a": a_input_data})
+
+    await_calls = callback.await_args_list
+
+    expected_event_list = [
+        PipelineEvent(
+            event_type=EventType.PIPELINE_STARTED,
+            run_id=pipeline_result.run_id,
+            timestamp=datetime.datetime.now(),
+            message=None,
+            payload={"a": a_input_data},
+        ),
+        TaskEvent(
+            event_type=EventType.TASK_STARTED,
+            run_id=pipeline_result.run_id,
+            task_name="a",
+            timestamp=datetime.datetime.now(),
+            message=None,
+            payload=a_input_data,
+        ),
+        TaskEvent(
+            event_type=EventType.TASK_FINISHED,
+            run_id=pipeline_result.run_id,
+            task_name="a",
+            timestamp=datetime.datetime.now(),
+            message=None,
+            payload={"result": 6},
+        ),
+        PipelineEvent(
+            event_type=EventType.PIPELINE_FINISHED,
+            run_id=pipeline_result.run_id,
+            timestamp=datetime.datetime.now(),
+            message=None,
+            payload={"a": {"result": 6}},
+        ),
+    ]
+    assert len(await_calls) == len(expected_event_list)
+
+    previous_ts = None
+    for await_call, expected_event in zip(await_calls, expected_event_list):
+        actual_event = await_call[0][0]
+        assert isinstance(actual_event, type(expected_event))
+        assert actual_event.event_type == expected_event.event_type
+        assert actual_event.run_id == expected_event.run_id
+        assert actual_event.message == expected_event.message
+        assert actual_event.payload == expected_event.payload
+        if previous_ts:
+            assert actual_event.timestamp > previous_ts
+        previous_ts = actual_event.timestamp

@@ -153,3 +153,27 @@ ParamFromEnvConfig
 ==================
 
 .. autoclass:: neo4j_graphrag.experimental.pipeline.config.param_resolver.ParamFromEnvConfig
+
+
+EventType
+=========
+
+.. autoenum:: neo4j_graphrag.experimental.pipeline.types.EventType
+
+
+PipelineEvent
+==============
+
+.. autoclass:: neo4j_graphrag.experimental.pipeline.types.PipelineEvent
+
+TaskEvent
+==============
+
+.. autoclass:: neo4j_graphrag.experimental.pipeline.types.TaskEvent
+
+
+EventCallbackProtocol
+=====================
+
+.. autoclass:: neo4j_graphrag.experimental.pipeline.types.EventCallbackProtocol
+    :members: __call__
