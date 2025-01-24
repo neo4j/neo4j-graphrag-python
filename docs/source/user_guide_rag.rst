@@ -561,12 +561,9 @@ certain movie properties, the retrieval query can be structured as follows:
 .. code:: python
 
     retrieval_query = """
-        MATCH
-        (actor:Actor)-[:ACTED_IN]->(node)
-        RETURN
-        node.title AS movie_title,
-        node.plot AS movie_plot,
-        collect(actor.name) AS actors;
+    RETURN  node.title as movie_title,
+            node.plot as movie_plot,
+            collect { MATCH (actor:Actor)-[:ACTED_IN]->(node) RETURN a.name } AS actors
     """
     retriever = VectorCypherRetriever(
         driver,
@@ -593,10 +590,10 @@ The `content` field is a formatted string containing the key information intende
 .. code:: python
 
     def result_formatter(record: neo4j.Record) -> RetrieverResultItem:
+        content=f"Movie title: {record.get('movie_title')}, description: {record.get('movie_description')}, actors: {record.get('actors')}",
         return RetrieverResultItem(
-            content=f"Movie title: {record.get('movieTitle')}, description: {record.get('movieDescription')}, actors: {record.get('actors')}",
             metadata={
-                "title": record.get('movieTitle'),
+                "title": record.get('movie_title'),
                 "score": record.get("score"),
             }
         )
@@ -604,7 +601,7 @@ The `content` field is a formatted string containing the key information intende
     retriever = VectorCypherRetriever(
         driver,
         index_name=INDEX_NAME,
-        retrieval_query="MATCH (node)<-[:ACTED_IN]-(p:Person) RETURN node.title as movieTitle, node.plot as movieDescription, collect(p.name) as actors, score",
+        retrieval_query="OPTIONAL MATCH (node)<-[:ACTED_IN]-(p:Person) RETURN node.title as movie_title, node.plot as movie_description, collect(p.name) as actors, score",
         result_formatter=result_formatter,
     )
 
@@ -763,7 +760,7 @@ the graph and return more context:
         driver,
         INDEX_NAME,
         FULLTEXT_INDEX_NAME,
-        retrieval_query="MATCH (node)-[:AUTHORED_BY]->(author:Author)" "RETURN author.name"
+        retrieval_query="MATCH (node)-[:AUTHORED_BY]->(author:Author) RETURN author.name"
         embedder=embedder,
     )
 
