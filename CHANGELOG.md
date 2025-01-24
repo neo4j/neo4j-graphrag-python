@@ -5,6 +5,7 @@
 ### Added
 
 - Ability to add event listener to get notifications about Pipeline progress.
+- Added py.typed so that mypy knows to use type annotations from the neo4j-graphrag package.
 
 ### Changed
 - Changed the default behaviour of `FixedSizeSplitter` to avoid words cut-off in the chunks whenever it is possible.
