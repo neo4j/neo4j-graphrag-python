@@ -561,8 +561,8 @@ certain movie properties, the retrieval query can be structured as follows:
 .. code:: python
 
     retrieval_query = """
-    RETURN  node.title as movie_title,
-            node.plot as movie_plot,
+    RETURN  node.title as movieTitle,
+            node.plot as moviePlot,
             collect { MATCH (actor:Actor)-[:ACTED_IN]->(node) RETURN a.name } AS actors
     """
     retriever = VectorCypherRetriever(
@@ -590,10 +590,10 @@ The `content` field is a formatted string containing the key information intende
 .. code:: python
 
     def result_formatter(record: neo4j.Record) -> RetrieverResultItem:
-        content=f"Movie title: {record.get('movie_title')}, description: {record.get('movie_description')}, actors: {record.get('actors')}",
+        content=f"Movie title: {record.get('movieTitle')}, description: {record.get('movieDescription')}, actors: {record.get('actors')}",
         return RetrieverResultItem(
             metadata={
-                "title": record.get('movie_title'),
+                "title": record.get('movieTitle'),
                 "score": record.get("score"),
             }
         )
@@ -601,7 +601,7 @@ The `content` field is a formatted string containing the key information intende
     retriever = VectorCypherRetriever(
         driver,
         index_name=INDEX_NAME,
-        retrieval_query="OPTIONAL MATCH (node)<-[:ACTED_IN]-(p:Person) RETURN node.title as movie_title, node.plot as movie_description, collect(p.name) as actors, score",
+        retrieval_query="OPTIONAL MATCH (node)<-[:ACTED_IN]-(p:Person) RETURN node.title as movieTitle, node.plot as movieDescription, collect(p.name) as actors, score",
         result_formatter=result_formatter,
     )
 
