@@ -28,6 +28,7 @@ RETURN  node.title as movieTitle,
         score as similarityScore
 """
 
+
 def my_result_formatter(record: neo4j.Record) -> RetrieverResultItem:
     """The record is a row output from the RETRIEVAL_QUERY so it our case it contains
     the following keys:
