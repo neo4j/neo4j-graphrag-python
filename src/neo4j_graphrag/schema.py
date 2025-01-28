@@ -160,14 +160,16 @@ def query_database(
     Returns:
         list[dict[str, Any]]: the result of the query in json format.
     """
+    if params is None:
+        params = {}
     if not session_params:
         try:
-            data, _, _ = driver.execute_query(
+            data = driver.execute_query(
                 Query(text=query, timeout=timeout),
                 database_=database,
                 parameters_=params,
             )
-            json_data = [r.data() for r in data]
+            json_data = [r.data() for r in data.records]
             if sanitize:
                 json_data = [value_sanitize(el) for el in json_data]
             return json_data
@@ -217,18 +219,19 @@ def get_schema(driver: neo4j.Driver, is_enhanced: bool = False) -> str:
 
     Args:
         driver (neo4j.Driver): Neo4j Python driver instance.
+        is_enhanced (bool): Flag indicating whether to format the schema with
+            detailed statistics (True) or in a simpler overview format (False).
 
     Returns:
         str: the graph schema information in a serialized format.
     """
-    structured_schema = get_structured_schema(driver)
-    if is_enhanced:
-        get_enhanced_schema(driver, structured_schema)
-
+    structured_schema = get_structured_schema(driver, is_enhanced)
     return format_schema(structured_schema, is_enhanced)
 
 
-def get_structured_schema(driver: neo4j.Driver) -> dict[str, Any]:
+def get_structured_schema(
+    driver: neo4j.Driver, is_enhanced: bool = False
+) -> dict[str, Any]:
     """
     Returns the structured schema of the graph.
 
@@ -268,6 +271,8 @@ def get_structured_schema(driver: neo4j.Driver) -> dict[str, Any]:
 
     Args:
         driver (neo4j.Driver): Neo4j Python driver instance.
+        is_enhanced (bool): Flag indicating whether to format the schema with
+            detailed statistics (True) or in a simpler overview format (False).
 
     Returns:
         dict[str, Any]: the graph schema information in a structured format.
@@ -311,12 +316,15 @@ def get_structured_schema(driver: neo4j.Driver) -> dict[str, Any]:
         constraint = []
         index = []
 
-    return {
+    structured_schema = {
         "node_props": {el["labels"]: el["properties"] for el in node_properties},
         "rel_props": {el["type"]: el["properties"] for el in rel_properties},
         "relationships": relationships,
         "metadata": {"constraint": constraint, "index": index},
     }
+    if is_enhanced:
+        enhance_schema(driver=driver, structured_schema=structured_schema)
+    return structured_schema
 
 
 def format_schema(schema: Dict[str, Any], is_enhanced: bool) -> str:
@@ -654,9 +662,7 @@ def get_enhanced_schema_cypher(
     return cypher_query
 
 
-def get_enhanced_schema(
-    driver: neo4j.Driver, structured_schema: Dict[str, Any]
-) -> None:
+def enhance_schema(driver: neo4j.Driver, structured_schema: Dict[str, Any]) -> None:
     """
     Enhance the structured schema with detailed property statistics.
 

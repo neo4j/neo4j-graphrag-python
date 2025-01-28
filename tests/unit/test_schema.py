@@ -18,7 +18,7 @@ from typing import Any, Dict
 from unittest.mock import MagicMock, patch
 
 import pytest
-from neo4j import Driver
+from neo4j import Driver, Query
 from neo4j.exceptions import Neo4jError
 from neo4j_graphrag.schema import (
     BASE_ENTITY_LABEL,
@@ -90,26 +90,51 @@ The relationships:
 def test_get_structured_schema_happy_path(driver: MagicMock) -> None:
     get_structured_schema(driver)
     assert 5 == driver.execute_query.call_count
-    driver.execute_query.assert_any_call(
-        NODE_PROPERTIES_QUERY,
-        {
-            "EXCLUDED_LABELS": EXCLUDED_LABELS
-            + [BASE_ENTITY_LABEL, BASE_KG_BUILDER_LABEL]
-        },
-    )
-    driver.execute_query.assert_any_call(
-        REL_PROPERTIES_QUERY,
-        {"EXCLUDED_LABELS": EXCLUDED_RELS},
-    )
-    driver.execute_query.assert_any_call(
-        REL_QUERY,
-        {
-            "EXCLUDED_LABELS": EXCLUDED_LABELS
-            + [BASE_ENTITY_LABEL, BASE_KG_BUILDER_LABEL]
-        },
-    )
-    driver.execute_query.assert_any_call("SHOW CONSTRAINTS", {})
-    driver.execute_query.assert_any_call(INDEX_QUERY, {})
+    calls = driver.execute_query.call_args_list
+
+    args, kwargs = calls[0]
+    query_obj = args[0]
+    assert isinstance(query_obj, Query)
+    assert query_obj.text == NODE_PROPERTIES_QUERY
+    assert query_obj.timeout is None
+    assert kwargs["database_"] is None
+    assert kwargs["parameters_"] == {
+        "EXCLUDED_LABELS": EXCLUDED_LABELS + [BASE_ENTITY_LABEL, BASE_KG_BUILDER_LABEL]
+    }
+
+    args, kwargs = calls[1]
+    query_obj = args[0]
+    assert isinstance(query_obj, Query)
+    assert query_obj.text == REL_PROPERTIES_QUERY
+    assert query_obj.timeout is None
+    assert kwargs["database_"] is None
+    assert kwargs["parameters_"] == {"EXCLUDED_LABELS": EXCLUDED_RELS}
+
+    args, kwargs = calls[2]
+    query_obj = args[0]
+    assert isinstance(query_obj, Query)
+    assert query_obj.text == REL_QUERY
+    assert query_obj.timeout is None
+    assert kwargs["database_"] is None
+    assert kwargs["parameters_"] == {
+        "EXCLUDED_LABELS": EXCLUDED_LABELS + [BASE_ENTITY_LABEL, BASE_KG_BUILDER_LABEL]
+    }
+
+    args, kwargs = calls[3]
+    query_obj = args[0]
+    assert isinstance(query_obj, Query)
+    assert query_obj.text == "SHOW CONSTRAINTS"
+    assert query_obj.timeout is None
+    assert kwargs["database_"] is None
+    assert kwargs["parameters_"] == {}
+
+    args, kwargs = calls[4]
+    query_obj = args[0]
+    assert isinstance(query_obj, Query)
+    assert query_obj.text == INDEX_QUERY
+    assert query_obj.timeout is None
+    assert kwargs["database_"] is None
+    assert kwargs["parameters_"] == {}
 
 
 @patch("neo4j_graphrag.schema.query_database", side_effect=_query_return_value)
