@@ -135,6 +135,7 @@ def query_database(
     driver: neo4j.Driver,
     query: str,
     params: Optional[dict[str, Any]] = None,
+    session_params: Optional[dict[str, Any]] = None,
     database: Optional[str] = None,
     timeout: Optional[float] = None,
     sanitize: bool = False,
@@ -145,8 +146,10 @@ def query_database(
     Args:
         driver (neo4j.Driver):  Neo4j Python driver instance.
         query (str): The cypher query.
-        params (dict, optional): The query parameters. Defaults to None.
-        database (str): The name of the database to connect to. Default is 'neo4j'.
+        params (Optional[dict[str, Any]]): The query parameters. Defaults to None.
+        session_params (Optional[dict[str, Any]]): Parameters to pass to the
+            session used for executing the query. Defaults to None.
+        database (Optional[str]): The name of the database to connect to. Default is 'neo4j'.
         timeout (Optional[float]): The timeout for transactions in seconds.
                 Useful for terminating long-running queries.
                 By default, there is no timeout set.
@@ -157,7 +160,7 @@ def query_database(
     Returns:
         list[dict[str, Any]]: the result of the query in json format.
     """
-    if params is None:
+    if not session_params:
         try:
             data, _, _ = driver.execute_query(
                 Query(text=query, timeout=timeout),
@@ -190,8 +193,8 @@ def query_database(
             ):
                 raise
     # fallback to allow implicit transactions
-    params = params or {"database": database}
-    with driver.session(**params) as session:
+    session_params = session_params or {"database": database}
+    with driver.session(**session_params) as session:
         result = session.run(Query(text=query, timeout=timeout), params)
         json_data = [r.data() for r in result]
         if sanitize:
