@@ -25,43 +25,41 @@ EXCLUDED_LABELS = ["_Bloom_Perspective_", "_Bloom_Scene_"]
 EXCLUDED_RELS = ["_Bloom_HAS_SCENE_"]
 EXHAUSTIVE_SEARCH_LIMIT = 10000
 LIST_LIMIT = 128
-# Threshold for returning all available prop values in graph schema
 DISTINCT_VALUE_LIMIT = 10
 
-NODE_PROPERTIES_QUERY = """
-CALL apoc.meta.data()
-YIELD label, other, elementType, type, property
-WHERE NOT type = "RELATIONSHIP" AND elementType = "node"
-    AND NOT label IN $EXCLUDED_LABELS
-WITH label AS nodeLabels, collect({property:property, type:type}) AS properties
-RETURN {labels: nodeLabels, properties: properties} AS output
-"""
+NODE_PROPERTIES_QUERY = (
+    "CALL apoc.meta.data() "
+    "YIELD label, other, elementType, type, property "
+    "WHERE NOT type = 'RELATIONSHIP' AND elementType = 'node' "
+    "AND NOT label IN $EXCLUDED_LABELS "
+    "WITH label AS nodeLabels, collect({property:property, type:type}) AS properties "
+    "RETURN {labels: nodeLabels, properties: properties} AS output"
+)
 
-REL_PROPERTIES_QUERY = """
-CALL apoc.meta.data()
-YIELD label, other, elementType, type, property
-WHERE NOT type = "RELATIONSHIP" AND elementType = "relationship"
-    AND NOT label in $EXCLUDED_LABELS
-WITH label AS nodeLabels, collect({property:property, type:type}) AS properties
-RETURN {type: nodeLabels, properties: properties} AS output
-"""
+REL_PROPERTIES_QUERY = (
+    "CALL apoc.meta.data() "
+    "YIELD label, other, elementType, type, property "
+    "WHERE NOT type = 'RELATIONSHIP' AND elementType = 'relationship' "
+    "AND NOT label in $EXCLUDED_LABELS "
+    "WITH label AS nodeLabels, collect({property:property, type:type}) AS properties "
+    "RETURN {type: nodeLabels, properties: properties} AS output"
+)
 
-REL_QUERY = """
-CALL apoc.meta.data()
-YIELD label, other, elementType, type, property
-WHERE type = "RELATIONSHIP" AND elementType = "node"
-UNWIND other AS other_node
-WITH * WHERE NOT label IN $EXCLUDED_LABELS
-    AND NOT other_node IN $EXCLUDED_LABELS
-RETURN {start: label, type: property, end: toString(other_node)} AS output
-"""
+REL_QUERY = (
+    "CALL apoc.meta.data() "
+    "YIELD label, other, elementType, type, property "
+    "WHERE type = 'RELATIONSHIP' AND elementType = 'node' "
+    "UNWIND other AS other_node "
+    "WITH * WHERE NOT label IN $EXCLUDED_LABELS "
+    "AND NOT other_node IN $EXCLUDED_LABELS "
+    "RETURN {start: label, type: property, end: toString(other_node)} AS output"
+)
 
-INDEX_QUERY = """
-CALL apoc.schema.nodes() YIELD label, properties, type, size, valuesSelectivity
-WHERE type = "RANGE" RETURN *,
-size * valuesSelectivity as distinctValues
-"""
-
+INDEX_QUERY = (
+    "CALL apoc.schema.nodes() YIELD label, properties, type, size, valuesSelectivity "
+    "WHERE type = 'RANGE' RETURN *, "
+    "size * valuesSelectivity as distinctValues"
+)
 
 SCHEMA_COUNTS_QUERY = (
     "CALL apoc.meta.graph({sample: 1000, maxRels: 100}) "
@@ -361,6 +359,30 @@ def get_enhanced_schema_cypher(
     exhaustive: bool,
     is_relationship: bool = False,
 ) -> str:
+    """
+    Build a Cypher query for enhanced schema information.
+
+    Constructs and returns a Cypher query string to gather detailed property
+    statistics for either nodes or relationships. Depending on whether the target
+    entities are below a certain threshold, it may collect exhaustive information
+    or simply sample a few records. This query retrieves data such as minimum and
+    maximum values, distinct value counts, and sample values.
+
+    Args:
+        driver (neo4j.Driver): Neo4j Python driver instance.
+        structured_schema (Dict[str, Any]): The current schema information
+            including metadata, indexes, and constraints.
+        label_or_type (str): The node label or relationship type to query.
+        properties (List[Dict[str, Any]]): A list of property definitions for
+            the node label or relationship type.
+        exhaustive (bool): Whether to perform an exhaustive search or a
+            sampled query approach.
+        is_relationship (bool, optional): Indicates if the query is for
+            a relationship type (True) or a node label (False). Defaults to False.
+
+    Returns:
+        str: A Cypher query string that gathers enhanced property metadata.
+    """
     if is_relationship:
         match_clause = f"MATCH ()-[n:`{label_or_type}`]->()"
     else:
@@ -519,6 +541,24 @@ def get_enhanced_schema_cypher(
 def get_enhanced_schema(
     driver: neo4j.Driver, structured_schema: Dict[str, Any]
 ) -> None:
+    """
+    Enhance the structured schema with detailed property statistics.
+
+    For each node label and relationship type in the structured schema, this
+    function queries the database to gather additional property statistics such
+    as minimum and maximum values, distinct value counts, and sample values.
+    These statistics are then merged into the provided structured schema
+    dictionary.
+
+    Args:
+        driver (neo4j.Driver): Neo4j Python driver instance.
+        structured_schema (Dict[str, Any]): The initial structured schema
+            containing node and relationship properties, which will be updated
+            with enhanced statistics.
+
+    Returns:
+        None
+    """
     schema_counts = query_database(driver, SCHEMA_COUNTS_QUERY)
     # Update node info
     for node in schema_counts[0]["nodes"]:
