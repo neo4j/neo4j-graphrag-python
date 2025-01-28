@@ -122,7 +122,6 @@ def get_schema(driver: neo4j.Driver, is_enhanced: bool = False) -> str:
 
     Returns:
         str: the graph schema information in a serialized format.
-
     """
     structured_schema = get_structured_schema(driver)
     if is_enhanced:
@@ -223,6 +222,25 @@ def get_structured_schema(driver: neo4j.Driver) -> dict[str, Any]:
 
 
 def format_schema(schema: Dict[str, Any], is_enhanced: bool) -> str:
+    """
+    Format the structured schema into a human-readable string.
+
+    Depending on the `is_enhanced` flag, this function either creates a concise
+    listing of node labels and relationship types alongside their properties or
+    generates an enhanced, more verbose representation with additional details like
+    example or available values and min/max statistics. It also includes a formatted
+    list of existing relationships.
+
+    Args:
+        schema (Dict[str, Any]): The structured schema dictionary, containing
+            properties for nodes and relationships as well as relationship definitions.
+        is_enhanced (bool): Flag indicating whether to format the schema with
+            detailed statistics (True) or in a simpler overview format (False).
+
+    Returns:
+        str: A formatted string representation of the graph schema, including
+        node properties, relationship properties, and relationship patterns.
+    """
     formatted_node_props = []
     formatted_rel_props = []
     if is_enhanced:
