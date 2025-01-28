@@ -6,9 +6,14 @@
 
 - Ability to add event listener to get notifications about Pipeline progress.
 - Added py.typed so that mypy knows to use type annotations from the neo4j-graphrag package.
+- Support for creating enhanced schemas with detailed property statistics.
+- New utility functions for schema formatting and value sanitization.
+- Updated unit and integration tests to cover enhanced schema functionality.
 
 ### Changed
+
 - Changed the default behaviour of `FixedSizeSplitter` to avoid words cut-off in the chunks whenever it is possible.
+- Refactored schema creation code to reduce duplication and improve maintainability.
 
 ## 1.4.2
 
