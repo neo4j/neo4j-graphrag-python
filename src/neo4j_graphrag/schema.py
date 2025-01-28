@@ -17,7 +17,8 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 import neo4j
-from neo4j.exceptions import ClientError, CypherTypeError
+from neo4j import Query
+from neo4j.exceptions import ClientError, CypherTypeError, Neo4jError
 
 BASE_KG_BUILDER_LABEL = "__KGBuilder__"
 BASE_ENTITY_LABEL = "__Entity__"
@@ -84,8 +85,59 @@ def clean_string_values(text: str) -> str:
     return text.replace("\n", " ").replace("\r", " ")
 
 
+def value_sanitize(d: Any) -> Any:
+    """Sanitize the input dictionary or list.
+
+    Sanitizes the input by removing embedding-like values,
+    lists with more than 128 elements, that are mostly irrelevant for
+    generating answers in a LLM context. These properties, if left in
+    results, can occupy significant context space and detract from
+    the LLM's performance by introducing unnecessary noise and cost.
+
+    Args:
+        d (Any): The input dictionary or list to sanitize.
+
+    Returns:
+        Any: The sanitized dictionary or list.
+    """
+    if isinstance(d, dict):
+        new_dict = {}
+        for key, value in d.items():
+            if isinstance(value, dict):
+                sanitized_value = value_sanitize(value)
+                if (
+                    sanitized_value is not None
+                ):  # Check if the sanitized value is not None
+                    new_dict[key] = sanitized_value
+            elif isinstance(value, list):
+                if len(value) < LIST_LIMIT:
+                    sanitized_value = value_sanitize(value)
+                    if (
+                        sanitized_value is not None
+                    ):  # Check if the sanitized value is not None
+                        new_dict[key] = sanitized_value
+                # Do not include the key if the list is oversized
+            else:
+                new_dict[key] = value
+        return new_dict
+    elif isinstance(d, list):
+        if len(d) < LIST_LIMIT:
+            return [
+                value_sanitize(item) for item in d if value_sanitize(item) is not None
+            ]
+        else:
+            return None
+    else:
+        return d
+
+
 def query_database(
-    driver: neo4j.Driver, query: str, params: Optional[dict[str, Any]] = None
+    driver: neo4j.Driver,
+    query: str,
+    params: Optional[dict[str, Any]] = None,
+    database: Optional[str] = None,
+    timeout: Optional[float] = None,
+    sanitize: bool = False,
 ) -> list[dict[str, Any]]:
     """
     Queries the database.
@@ -94,14 +146,57 @@ def query_database(
         driver (neo4j.Driver):  Neo4j Python driver instance.
         query (str): The cypher query.
         params (dict, optional): The query parameters. Defaults to None.
+        database (str): The name of the database to connect to. Default is 'neo4j'.
+        timeout (Optional[float]): The timeout for transactions in seconds.
+                Useful for terminating long-running queries.
+                By default, there is no timeout set.
+        sanitize (bool): A flag to indicate whether to remove lists with
+                more than 128 elements from results. Useful for removing
+                embedding-like properties from database responses. Default is False.
 
     Returns:
         list[dict[str, Any]]: the result of the query in json format.
     """
     if params is None:
-        params = {}
-    data = driver.execute_query(query, params)
-    return [r.data() for r in data.records]
+        try:
+            data, _, _ = driver.execute_query(
+                Query(text=query, timeout=timeout),
+                database_=database,
+                parameters_=params,
+            )
+            json_data = [r.data() for r in data]
+            if sanitize:
+                json_data = [value_sanitize(el) for el in json_data]
+            return json_data
+        except Neo4jError as e:
+            if not (
+                (
+                    (  # isCallInTransactionError
+                        e.code == "Neo.DatabaseError.Statement.ExecutionFailed"
+                        or e.code
+                        == "Neo.DatabaseError.Transaction.TransactionStartFailed"
+                    )
+                    and e.message is not None
+                    and "in an implicit transaction" in e.message
+                )
+                or (  # isPeriodicCommitError
+                    e.code == "Neo.ClientError.Statement.SemanticError"
+                    and e.message is not None
+                    and (
+                        "in an open transaction is not possible" in e.message
+                        or "tried to execute in an explicit transaction" in e.message
+                    )
+                )
+            ):
+                raise
+    # fallback to allow implicit transactions
+    params = params or {"database": database}
+    with driver.session(**params) as session:
+        result = session.run(Query(text=query, timeout=timeout), params)
+        json_data = [r.data() for r in result]
+        if sanitize:
+            json_data = [value_sanitize(el) for el in json_data]
+        return json_data
 
 
 def get_schema(driver: neo4j.Driver, is_enhanced: bool = False) -> str:
