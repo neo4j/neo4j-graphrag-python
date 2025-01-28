@@ -392,6 +392,8 @@ Database Interaction
 
 .. autofunction:: neo4j_graphrag.schema.clean_string_values
 
+.. autofunction:: neo4j_graphrag.schema.value_sanitize
+
 .. autofunction:: neo4j_graphrag.schema.query_database
 
 .. autofunction:: neo4j_graphrag.schema.get_schema
