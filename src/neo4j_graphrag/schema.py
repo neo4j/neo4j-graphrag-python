@@ -327,6 +327,98 @@ def get_structured_schema(
     return structured_schema
 
 
+def format_property(prop: Dict[str, Any]) -> Optional[str]:
+    """
+    Format a single property based on its type and available metadata.
+
+    Depending on the property type, this function provides either an example value,
+    a range (for numerical and date types), or a list of available options (for strings).
+    If the property is a list that exceeds a defined size limit, it is omitted.
+
+    Args:
+        prop (Dict[str, Any]): A dictionary containing details of the property,
+            including type, values, min/max, and other metadata.
+
+    Returns:
+        Optional[str]: A formatted string representing the property details,
+        or None if the property should be skipped (e.g., large lists).
+    """
+    if prop["type"] == "STRING" and prop.get("values"):
+        if prop.get("distinct_count", 11) > DISTINCT_VALUE_LIMIT:
+            return f'Example: "{clean_string_values(prop["values"][0])}"'
+        else:
+            return (
+                "Available options: "
+                + f'{[clean_string_values(el) for el in prop["values"]]}'
+            )
+    elif prop["type"] in [
+        "INTEGER",
+        "FLOAT",
+        "DATE",
+        "DATE_TIME",
+        "LOCAL_DATE_TIME",
+    ]:
+        if prop.get("min") and prop.get("max"):
+            return f'Min: {prop["min"]}, Max: {prop["max"]}'
+        else:
+            return f'Example: "{prop["values"][0]}"' if prop.get("values") else ""
+    elif prop["type"] == "LIST":
+        if not prop.get("min_size") or prop["min_size"] > LIST_LIMIT:
+            return None
+        else:
+            return f'Min Size: {prop["min_size"]}, Max Size: {prop["max_size"]}'
+    return ""
+
+
+def format_properties(property_dict: Dict[str, Any], is_enhanced: bool) -> List[str]:
+    """
+    Format a collection of properties for nodes or relationships.
+
+    If `is_enhanced` is True, properties are formatted with additional metadata,
+    such as example values or min/max statistics. Otherwise, they are presented in
+    a more compact form.
+
+    Args:
+        property_dict (Dict[str, Any]): A dictionary mapping labels (for nodes or relationships)
+            to lists of property definitions.
+        is_enhanced (bool): Flag indicating whether to format properties with additional details.
+
+    Returns:
+        List[str]: A list of formatted property descriptions.
+    """
+    formatted_props = []
+    if is_enhanced:
+        for label, props in property_dict.items():
+            formatted_props.append(f"- **{label}**")
+            for prop in props:
+                example = format_property(prop)
+                if example is not None:
+                    formatted_props.append(
+                        f"  - `{prop['property']}`: {prop['type']} {example}"
+                    )
+    else:
+        for label, props in property_dict.items():
+            props_str = ", ".join(
+                [f"{prop['property']}: {prop['type']}" for prop in props]
+            )
+            formatted_props.append(f"{label} {{{props_str}}}")
+    return formatted_props
+
+
+def format_relationships(rels: List[Dict[str, Any]]) -> List[str]:
+    """
+    Format relationships into a structured string representation.
+
+    Args:
+        rels (List[dict]): A list of dictionaries, each containing `start`, `type`, and `end`
+            to describe a relationship between two entities.
+
+    Returns:
+        List[str]: A list of formatted relationship strings.
+    """
+    return [f"(:{el['start']})-[:{el['type']}]->(:{el['end']})" for el in rels]
+
+
 def format_schema(schema: Dict[str, Any], is_enhanced: bool) -> str:
     """
     Format the structured schema into a human-readable string.
@@ -347,122 +439,9 @@ def format_schema(schema: Dict[str, Any], is_enhanced: bool) -> str:
         str: A formatted string representation of the graph schema, including
         node properties, relationship properties, and relationship patterns.
     """
-    formatted_node_props = []
-    formatted_rel_props = []
-    if is_enhanced:
-        # Enhanced formatting for nodes
-        for node_type, properties in schema["node_props"].items():
-            formatted_node_props.append(f"- **{node_type}**")
-            for prop in properties:
-                example = ""
-                if prop["type"] == "STRING" and prop.get("values"):
-                    if prop.get("distinct_count", 11) > DISTINCT_VALUE_LIMIT:
-                        example = (
-                            f'Example: "{clean_string_values(prop["values"][0])}"'
-                            if prop["values"]
-                            else ""
-                        )
-                    else:  # If less than 10 possible values return all
-                        example = (
-                            (
-                                "Available options: "
-                                f'{[clean_string_values(el) for el in prop["values"]]}'
-                            )
-                            if prop["values"]
-                            else ""
-                        )
-
-                elif prop["type"] in [
-                    "INTEGER",
-                    "FLOAT",
-                    "DATE",
-                    "DATE_TIME",
-                    "LOCAL_DATE_TIME",
-                ]:
-                    if prop.get("min") and prop.get("max"):
-                        example = f'Min: {prop["min"]}, Max: {prop["max"]}'
-                    else:
-                        example = (
-                            f'Example: "{prop["values"][0]}"'
-                            if prop.get("values")
-                            else ""
-                        )
-                elif prop["type"] == "LIST":
-                    # Skip embeddings
-                    if not prop.get("min_size") or prop["min_size"] > LIST_LIMIT:
-                        continue
-                    example = (
-                        f'Min Size: {prop["min_size"]}, Max Size: {prop["max_size"]}'
-                    )
-                formatted_node_props.append(
-                    f"  - `{prop['property']}`: {prop['type']} {example}"
-                )
-
-        # Enhanced formatting for relationships
-        for rel_type, properties in schema["rel_props"].items():
-            formatted_rel_props.append(f"- **{rel_type}**")
-            for prop in properties:
-                example = ""
-                if prop["type"] == "STRING" and prop.get("values"):
-                    if prop.get("distinct_count", 11) > DISTINCT_VALUE_LIMIT:
-                        example = (
-                            f'Example: "{clean_string_values(prop["values"][0])}"'
-                            if prop["values"]
-                            else ""
-                        )
-                    else:  # If less than 10 possible values return all
-                        example = (
-                            (
-                                "Available options: "
-                                f'{[clean_string_values(el) for el in prop["values"]]}'
-                            )
-                            if prop["values"]
-                            else ""
-                        )
-                elif prop["type"] in [
-                    "INTEGER",
-                    "FLOAT",
-                    "DATE",
-                    "DATE_TIME",
-                    "LOCAL_DATE_TIME",
-                ]:
-                    if prop.get("min") and prop.get("max"):  # If we have min/max
-                        example = f'Min: {prop["min"]}, Max: {prop["max"]}'
-                    else:  # return a single value
-                        example = (
-                            f'Example: "{prop["values"][0]}"' if prop["values"] else ""
-                        )
-                elif prop["type"] == "LIST":
-                    # Skip embeddings
-                    if not prop.get("min_size") or prop["min_size"] > LIST_LIMIT:
-                        continue
-                    example = (
-                        f'Min Size: {prop["min_size"]}, Max Size: {prop["max_size"]}'
-                    )
-                formatted_rel_props.append(
-                    f"  - `{prop['property']}`: {prop['type']} {example}"
-                )
-    else:
-        # Format node properties
-        for label, props in schema["node_props"].items():
-            props_str = ", ".join(
-                [f"{prop['property']}: {prop['type']}" for prop in props]
-            )
-            formatted_node_props.append(f"{label} {{{props_str}}}")
-
-        # Format relationship properties using structured_schema
-        for type, props in schema["rel_props"].items():
-            props_str = ", ".join(
-                [f"{prop['property']}: {prop['type']}" for prop in props]
-            )
-            formatted_rel_props.append(f"{type} {{{props_str}}}")
-
-    # Format relationships
-    formatted_rels = [
-        f"(:{el['start']})-[:{el['type']}]->(:{el['end']})"
-        for el in schema["relationships"]
-    ]
-
+    formatted_node_props = format_properties(schema["node_props"], is_enhanced)
+    formatted_rel_props = format_properties(schema["rel_props"], is_enhanced)
+    formatted_rels = format_relationships(schema["relationships"])
     return "\n".join(
         [
             "Node properties:",
