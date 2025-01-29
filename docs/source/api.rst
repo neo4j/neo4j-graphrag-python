@@ -390,21 +390,11 @@ Database Interaction
 
 .. autofunction:: neo4j_graphrag.indexes.async_upsert_vector_on_relationship
 
-.. autofunction:: neo4j_graphrag.schema.clean_string_values
-
-.. autofunction:: neo4j_graphrag.schema.value_sanitize
-
-.. autofunction:: neo4j_graphrag.schema.query_database
-
 .. autofunction:: neo4j_graphrag.schema.get_schema
 
 .. autofunction:: neo4j_graphrag.schema.get_structured_schema
 
 .. autofunction:: neo4j_graphrag.schema.format_schema
-
-.. autofunction:: neo4j_graphrag.schema.get_enhanced_schema_cypher
-
-.. autofunction:: neo4j_graphrag.schema.get_enhanced_schema
 
 
 ******
