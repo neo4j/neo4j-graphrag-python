@@ -14,7 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import neo4j
 from neo4j import Query
@@ -454,6 +454,150 @@ def format_schema(schema: Dict[str, Any], is_enhanced: bool) -> str:
     )
 
 
+def build_str_clauses(
+    prop_name: str,
+    driver: neo4j.Driver,
+    label_or_type: str,
+    exhaustive: bool,
+    prop_index: Optional[List[Any]] = None,
+) -> Tuple[List[str], List[str]]:
+    """
+    Build Cypher clauses for string property statistics.
+
+    Constructs and returns the parts of a Cypher query (`WITH` and `RETURN` clauses)
+    required to gather statistical information about a string property. Depending on
+    property index metadata and whether the query is exhaustive, this function may
+    retrieve a distinct set of values directly from an index or a truncated list of
+    distinct values from the actual nodes or relationships.
+
+    Args:
+        prop_name (str): The name of the string property.
+        driver (neo4j.Driver): Neo4j Python driver instance.
+        label_or_type (str): The node label or relationship type to query.
+        exhaustive (bool): Whether to perform an exhaustive search or a
+            sampled query approach.
+        prop_index (Optional[List[Any]]): Optional metadata about the property's
+            index. If provided, certain optimizations are applied based on
+            distinct value limits and index availability.
+
+    Returns:
+        Tuple[List[str], List[str]]:
+            A tuple of two lists. The first list contains the `WITH` clauses, and
+            the second list contains the corresponding `RETURN` clauses for the
+            string property.
+    """
+    with_clauses = []
+    return_clauses = []
+    if (
+        not exhaustive
+        and prop_index
+        and prop_index[0].get("size") > 0
+        and prop_index[0].get("distinctValues") <= DISTINCT_VALUE_LIMIT
+    ):
+        distinct_values = query_database(
+            driver,
+            f"CALL apoc.schema.properties.distinct("
+            f"'{label_or_type}', '{prop_name}') YIELD value",
+        )[0]["value"]
+        return_clauses.append(
+            (f"values: {distinct_values}," f" distinct_count: {len(distinct_values)}")
+        )
+    else:
+        with_clauses.append(
+            (
+                f"collect(distinct substring(toString(n.`{prop_name}`)"
+                f", 0, 50)) AS `{prop_name}_values`"
+            )
+        )
+        if not exhaustive:
+            return_clauses.append(f"values: `{prop_name}_values`")
+        else:
+            return_clauses.append(
+                (
+                    f"values:`{prop_name}_values`[..{DISTINCT_VALUE_LIMIT}],"
+                    f" distinct_count: size(`{prop_name}_values`)"
+                )
+            )
+    return with_clauses, return_clauses
+
+
+def build_list_clauses(prop_name: str) -> Tuple[str, str]:
+    """
+    Build Cypher clauses for list property size statistics.
+
+    Constructs and returns the parts of a Cypher query (`WITH` and `RETURN` clauses)
+    that gather minimum and maximum size information for properties that are lists.
+    These clauses compute the smallest and largest list lengths across the matched
+    entities.
+
+    Args:
+        prop_name (str): The name of the list property.
+
+    Returns:
+        Tuple[str, str]:
+            A tuple consisting of a single `WITH` clause (calculating min and max
+            sizes) and a corresponding `RETURN` clause that references these values.
+    """
+    with_clause = (
+        f"min(size(n.`{prop_name}`)) AS `{prop_name}_size_min`, "
+        f"max(size(n.`{prop_name}`)) AS `{prop_name}_size_max`"
+    )
+
+    return_clause = (
+        f"min_size: `{prop_name}_size_min`, " f"max_size: `{prop_name}_size_max`"
+    )
+    return with_clause, return_clause
+
+
+def build_num_date_clauses(
+    prop_name: str, exhaustive: bool, prop_index: Optional[List[Any]] = None
+) -> Tuple[List[str], List[str]]:
+    """
+    Build Cypher clauses for numeric and date/datetime property statistics.
+
+    Constructs and returns the parts of a Cypher query (`WITH` and `RETURN` clauses)
+    needed to gather statistical information about numeric or date/datetime
+    properties. Depending on whether there is an available index or an exhaustive
+    approach is required, this may collect a distinct set of values or compute
+    minimum, maximum, and distinct counts.
+
+    Args:
+        prop_name (str): The name of the numeric or date/datetime property.
+        exhaustive (bool): Whether to perform an exhaustive search or a
+            sampled query approach.
+        prop_index (Optional[List[Any]]): Optional metadata about the property's
+            index. If provided and the search is not exhaustive, it can be used
+            to optimize the retrieval of distinct values.
+
+    Returns:
+        Tuple[List[str], List[str]]:
+            A tuple of two lists. The first list contains the `WITH` clauses, and
+            the second list contains the corresponding `RETURN` clauses for the
+            numeric or date/datetime property.
+    """
+    with_clauses = []
+    return_clauses = []
+    if not prop_index and not exhaustive:
+        with_clauses.append(
+            f"collect(distinct toString(n.`{prop_name}`)) " f"AS `{prop_name}_values`"
+        )
+        return_clauses.append(f"values: `{prop_name}_values`")
+    else:
+        with_clauses.append(f"min(n.`{prop_name}`) AS `{prop_name}_min`")
+        with_clauses.append(f"max(n.`{prop_name}`) AS `{prop_name}_max`")
+        with_clauses.append(
+            f"count(distinct n.`{prop_name}`) AS `{prop_name}_distinct`"
+        )
+        return_clauses.append(
+            (
+                f"min: toString(`{prop_name}_min`), "
+                f"max: toString(`{prop_name}_max`), "
+                f"distinct_count: `{prop_name}_distinct`"
+            )
+        )
+    return with_clauses, return_clauses
+
+
 def get_enhanced_schema_cypher(
     driver: neo4j.Driver,
     structured_schema: Dict[str, Any],
@@ -494,148 +638,61 @@ def get_enhanced_schema_cypher(
     with_clauses = []
     return_clauses = []
     output_dict = {}
-    if exhaustive:
-        for prop in properties:
-            prop_name = prop["property"]
-            prop_type = prop["type"]
-            if prop_type == "STRING":
-                with_clauses.append(
-                    (
-                        f"collect(distinct substring(toString(n.`{prop_name}`)"
-                        f", 0, 50)) AS `{prop_name}_values`"
-                    )
-                )
-                return_clauses.append(
-                    (
-                        f"values:`{prop_name}_values`[..{DISTINCT_VALUE_LIMIT}],"
-                        f" distinct_count: size(`{prop_name}_values`)"
-                    )
-                )
-            elif prop_type in [
-                "INTEGER",
-                "FLOAT",
-                "DATE",
-                "DATE_TIME",
-                "LOCAL_DATE_TIME",
-            ]:
-                with_clauses.append(f"min(n.`{prop_name}`) AS `{prop_name}_min`")
-                with_clauses.append(f"max(n.`{prop_name}`) AS `{prop_name}_max`")
-                with_clauses.append(
-                    f"count(distinct n.`{prop_name}`) AS `{prop_name}_distinct`"
-                )
-                return_clauses.append(
-                    (
-                        f"min: toString(`{prop_name}_min`), "
-                        f"max: toString(`{prop_name}_max`), "
-                        f"distinct_count: `{prop_name}_distinct`"
-                    )
-                )
-            elif prop_type == "LIST":
-                with_clauses.append(
-                    (
-                        f"min(size(n.`{prop_name}`)) AS `{prop_name}_size_min`, "
-                        f"max(size(n.`{prop_name}`)) AS `{prop_name}_size_max`"
-                    )
-                )
-                return_clauses.append(
-                    f"min_size: `{prop_name}_size_min`, "
-                    f"max_size: `{prop_name}_size_max`"
-                )
-            elif prop_type in ["BOOLEAN", "POINT", "DURATION"]:
-                continue
-            output_dict[prop_name] = "{" + return_clauses.pop() + "}"
-    else:
-        # Just sample 5 random nodes
+    if not exhaustive:
+        # Sample 5 random nodes if not exhaustive
         match_clause += " WITH n LIMIT 5"
-        for prop in properties:
-            prop_name = prop["property"]
-            prop_type = prop["type"]
-
-            # Check if indexed property, we can still do exhaustive
-            prop_index = [
+    # Build the with and return clauses
+    for prop in properties:
+        prop_name = prop["property"]
+        prop_type = prop["type"]
+        # Check if indexed property, we can still do exhaustive
+        prop_index = (
+            [
                 el
                 for el in structured_schema["metadata"]["index"]
                 if el["label"] == label_or_type
                 and el["properties"] == [prop_name]
                 and el["type"] == "RANGE"
             ]
-            if prop_type == "STRING":
-                if (
-                    prop_index
-                    and prop_index[0].get("size") > 0
-                    and prop_index[0].get("distinctValues") <= DISTINCT_VALUE_LIMIT
-                ):
-                    distinct_values = query_database(
-                        driver,
-                        f"CALL apoc.schema.properties.distinct("
-                        f"'{label_or_type}', '{prop_name}') YIELD value",
-                    )[0]["value"]
-                    return_clauses.append(
-                        (
-                            f"values: {distinct_values},"
-                            f" distinct_count: {len(distinct_values)}"
-                        )
-                    )
-                else:
-                    with_clauses.append(
-                        (
-                            f"collect(distinct substring(toString(n.`{prop_name}`)"
-                            f", 0, 50)) AS `{prop_name}_values`"
-                        )
-                    )
-                    return_clauses.append(f"values: `{prop_name}_values`")
-            elif prop_type in [
-                "INTEGER",
-                "FLOAT",
-                "DATE",
-                "DATE_TIME",
-                "LOCAL_DATE_TIME",
-            ]:
-                if not prop_index:
-                    with_clauses.append(
-                        f"collect(distinct toString(n.`{prop_name}`)) "
-                        f"AS `{prop_name}_values`"
-                    )
-                    return_clauses.append(f"values: `{prop_name}_values`")
-                else:
-                    with_clauses.append(f"min(n.`{prop_name}`) AS `{prop_name}_min`")
-                    with_clauses.append(f"max(n.`{prop_name}`) AS `{prop_name}_max`")
-                    with_clauses.append(
-                        f"count(distinct n.`{prop_name}`) AS `{prop_name}_distinct`"
-                    )
-                    return_clauses.append(
-                        (
-                            f"min: toString(`{prop_name}_min`), "
-                            f"max: toString(`{prop_name}_max`), "
-                            f"distinct_count: `{prop_name}_distinct`"
-                        )
-                    )
-
-            elif prop_type == "LIST":
-                with_clauses.append(
-                    (
-                        f"min(size(n.`{prop_name}`)) AS `{prop_name}_size_min`, "
-                        f"max(size(n.`{prop_name}`)) AS `{prop_name}_size_max`"
-                    )
-                )
-                return_clauses.append(
-                    (
-                        f"min_size: `{prop_name}_size_min`, "
-                        f"max_size: `{prop_name}_size_max`"
-                    )
-                )
-            elif prop_type in ["BOOLEAN", "POINT", "DURATION"]:
-                continue
-
-            output_dict[prop_name] = "{" + return_clauses.pop() + "}"
-
+            if not exhaustive
+            else None
+        )
+        if prop_type == "STRING":
+            str_w_clauses, str_r_clauses = build_str_clauses(
+                prop_name=prop_name,
+                driver=driver,
+                label_or_type=label_or_type,
+                exhaustive=exhaustive,
+                prop_index=prop_index,
+            )
+            with_clauses += str_w_clauses
+            return_clauses += str_r_clauses
+        elif prop_type in [
+            "INTEGER",
+            "FLOAT",
+            "DATE",
+            "DATE_TIME",
+            "LOCAL_DATE_TIME",
+        ]:
+            num_date_w_clauses, num_date_r_clauses = build_num_date_clauses(
+                prop_name=prop_name, exhaustive=exhaustive, prop_index=prop_index
+            )
+            with_clauses += num_date_w_clauses
+            return_clauses += num_date_r_clauses
+        elif prop_type == "LIST":
+            list_w_clause, list_r_clause = build_list_clauses(prop_name=prop_name)
+            with_clauses.append(list_w_clause)
+            return_clauses.append(list_r_clause)
+        elif prop_type in ["BOOLEAN", "POINT", "DURATION"]:
+            continue
+        output_dict[prop_name] = "{" + return_clauses.pop() + "}"
+    # Combine with and return clauses
     with_clause = "WITH " + ",\n     ".join(with_clauses)
     return_clause = (
         "RETURN {"
         + ", ".join(f"`{k}`: {v}" for k, v in output_dict.items())
         + "} AS output"
     )
-
     # Combine all parts of the Cypher query
     cypher_query = "\n".join([match_clause, with_clause, return_clause])
     return cypher_query
