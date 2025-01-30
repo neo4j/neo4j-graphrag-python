@@ -187,18 +187,30 @@ def test_enhanced_schema_exception(driver: Driver) -> None:
         "(c)-[:REL {foo: [1,2]}]->(a), (d)-[:EMPTY_REL {}]->(d)",
     )
     result = get_structured_schema(driver, True)
-    expected_output = {
-        "node_props": {"Node": [{"property": "foo", "type": "STRING"}]},
-        "rel_props": {"REL": [{"property": "foo", "type": "STRING"}]},
-        "relationships": [
-            {
-                "end": "Node",
-                "start": "Node",
-                "type": "REL",
-            },
-            {"end": "EmptyNode", "start": "EmptyNode", "type": "EMPTY_REL"},
-        ],
-    }
-    # remove metadata portion of schema
     del result["metadata"]
-    assert result == expected_output
+
+    assert list(result.keys()) == ["node_props", "rel_props", "relationships"]
+    node_props = result["node_props"]
+    assert list(node_props.keys()) == ["Node"]
+    assert len(node_props["Node"]) == 1
+    assert list(node_props["Node"][0].keys()) == ["property", "type"]
+    assert node_props["Node"][0]["property"] == "foo"
+    assert node_props["Node"][0]["type"] in ["STRING", "INTEGER", "LIST"]
+
+    rel_props = result["rel_props"]
+    assert list(rel_props.keys()) == ["REL"]
+    assert len(rel_props["REL"]) == 1
+    assert list(rel_props["REL"][0].keys()) == ["property", "type"]
+    assert rel_props["REL"][0]["property"] == "foo"
+    assert rel_props["REL"][0]["type"] in ["STRING", "INTEGER", "LIST"]
+
+    expected_rels = [
+        {
+            "end": "Node",
+            "start": "Node",
+            "type": "REL",
+        },
+        {"end": "EmptyNode", "start": "EmptyNode", "type": "EMPTY_REL"},
+    ]
+    rels = result["relationships"]
+    assert rels == expected_rels

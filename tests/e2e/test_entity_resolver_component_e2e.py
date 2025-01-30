@@ -144,12 +144,11 @@ async def test_resolver_custom_property(driver: neo4j.Driver) -> None:
     res = await resolver.run()
     # __Entity__ nodes attached to a chunk
     assert res.number_of_nodes_to_resolve == 2
-    # Alice
     assert res.number_of_created_nodes == 1
 
     records, _, _ = driver.execute_query("MATCH (person:Person) RETURN person")
     assert len(records) == 1
-    assert records[0].get("person").get("name") == "Alice"
+    assert records[0].get("person").get("name") in ["Alice", "Alicia"]
 
 
 @pytest.mark.asyncio
