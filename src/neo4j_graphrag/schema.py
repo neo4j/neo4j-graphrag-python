@@ -727,7 +727,9 @@ def enhance_properties(
     excluded = EXCLUDED_RELS if is_relationship else EXCLUDED_LABELS
     if name in excluded:
         return
-    props = structured_schema["node_props"].get(name)
+    props = structured_schema["rel_props" if is_relationship else "node_props"].get(
+        name
+    )
     if not props:  # The node has no properties
         return
     enhanced_cypher = get_enhanced_schema_cypher(
