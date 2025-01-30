@@ -256,11 +256,12 @@ def test_t2c_retriever_initialization_with_custom_prompt_and_schema_and_examples
 
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_t2c_retriever_initialization_with_custom_prompt_and_schema_and_examples_for_prompt_params(
-    _verify_version_mock: MagicMock,
+    mock_get_version: MagicMock,
     driver: MagicMock,
     llm: MagicMock,
     neo4j_record: MagicMock,
 ) -> None:
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     prompt = "This is a custom prompt. {query_text} {schema} {examples}"
     neo4j_schema = "dummy-schema"
     examples = ["example-1", "example-2"]
@@ -287,11 +288,12 @@ def test_t2c_retriever_initialization_with_custom_prompt_and_schema_and_examples
 
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_t2c_retriever_initialization_with_custom_prompt_and_unused_schema_and_examples(
-    _verify_version_mock: MagicMock,
+    mock_get_version: MagicMock,
     driver: MagicMock,
     llm: MagicMock,
     neo4j_record: MagicMock,
 ) -> None:
+    mock_get_version.return_value = ((5, 23, 0), False, False)
     prompt = "This is a custom prompt. {query_text} {schema} {examples}"
     neo4j_schema = "dummy-schema"
     examples = ["example-1", "example-2"]
