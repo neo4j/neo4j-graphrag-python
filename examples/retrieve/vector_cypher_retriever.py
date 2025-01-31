@@ -23,7 +23,7 @@ INDEX_NAME = "moviePlotsEmbedding"
 RETRIEVAL_QUERY = """
 RETURN  node.title as movieTitle,
         node.plot as moviePlot,
-        collect { MATCH (actor:Actor)-[:ACTED_IN]->(node) RETURN a.name } AS actors,
+        collect { MATCH (actor:Actor)-[:ACTED_IN]->(node) RETURN actor.name } AS actors,
         score as similarityScore
 """
 

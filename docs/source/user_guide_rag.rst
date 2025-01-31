@@ -563,7 +563,7 @@ certain movie properties, the retrieval query can be structured as follows:
     retrieval_query = """
     RETURN  node.title as movieTitle,
             node.plot as moviePlot,
-            collect { MATCH (actor:Actor)-[:ACTED_IN]->(node) RETURN a.name } AS actors
+            collect { MATCH (actor:Actor)-[:ACTED_IN]->(node) RETURN actor.name } AS actors
     """
     retriever = VectorCypherRetriever(
         driver,
