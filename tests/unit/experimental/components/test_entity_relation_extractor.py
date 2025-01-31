@@ -181,7 +181,7 @@ async def test_extractor_llm_invalid_json() -> None:
 @pytest.mark.asyncio
 async def test_extractor_llm_invalid_json_is_a_list() -> None:
     """Test what happens when the returned JSON is a valid JSON list,
-     but it does not match the expected Pydantic model"""
+    but it does not match the expected Pydantic model"""
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(
         # missing "label" for entity
