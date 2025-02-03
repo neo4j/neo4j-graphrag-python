@@ -55,7 +55,7 @@ class Text2CypherRetriever(Retriever):
         llm (neo4j_graphrag.generation.llm.LLMInterface): LLM object to generate the Cypher query.
         neo4j_schema (Optional[str]): Neo4j schema used to generate the Cypher query.
         examples (Optional[list[str], optional): Optional user input/query pairs for the LLM to use as examples.
-        custom_prompt (Optional[str]): Optional custom prompt to use instead of auto generated prompt. Will not include the neo4j_schema or examples args, if provided.
+        custom_prompt (Optional[str]): Optional custom prompt to use instead of auto generated prompt. Will include the neo4j_schema for schema and examples for examples prompt parameters, if they are provided.
 
     Raises:
         RetrieverInitializationError: If validation of the input arguments fail.
@@ -99,7 +99,13 @@ class Text2CypherRetriever(Retriever):
         self.result_formatter = validated_data.result_formatter
         self.custom_prompt = validated_data.custom_prompt
         if validated_data.custom_prompt:
-            neo4j_schema = ""
+            if (
+                validated_data.neo4j_schema_model
+                and validated_data.neo4j_schema_model.neo4j_schema
+            ):
+                neo4j_schema = validated_data.neo4j_schema_model.neo4j_schema
+            else:
+                neo4j_schema = ""
         else:
             if (
                 validated_data.neo4j_schema_model
@@ -124,7 +130,7 @@ class Text2CypherRetriever(Retriever):
 
         Args:
             query_text (str): The natural language query used to search the Neo4j database.
-            prompt_params (Dict[str, Any]): additional values to inject into the custom prompt, if it is provided. Example: {'schema': 'this is the graph schema'}
+            prompt_params (Dict[str, Any]): additional values to inject into the custom prompt, if it is provided. If the schema or examples parameter is specified, it will overwrite the corresponding value passed during initialization. Example: {'schema': 'this is the graph schema'}
 
         Raises:
             SearchValidationError: If validation of the input arguments fail.
