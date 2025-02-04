@@ -44,7 +44,7 @@ def _query_return_value(*args: Any, **kwargs: Any) -> list[Any]:
             {
                 "output": {
                     "properties": [{"property": "property_a", "type": "STRING"}],
-                    "labels": "LabelA",
+                    "label": "LabelA",
                 }
             }
         ]

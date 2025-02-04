@@ -33,8 +33,8 @@ NODE_PROPERTIES_QUERY = (
     "YIELD label, other, elementType, type, property "
     "WHERE NOT type = 'RELATIONSHIP' AND elementType = 'node' "
     "AND NOT label IN $EXCLUDED_LABELS "
-    "WITH label AS nodeLabels, collect({property:property, type:type}) AS properties "
-    "RETURN {labels: nodeLabels, properties: properties} AS output"
+    "WITH label AS nodeLabel, collect({property:property, type:type}) AS properties "
+    "RETURN {label: nodeLabel, properties: properties} AS output"
 )
 
 REL_PROPERTIES_QUERY = (
@@ -42,8 +42,8 @@ REL_PROPERTIES_QUERY = (
     "YIELD label, other, elementType, type, property "
     "WHERE NOT type = 'RELATIONSHIP' AND elementType = 'relationship' "
     "AND NOT label in $EXCLUDED_LABELS "
-    "WITH label AS nodeLabels, collect({property:property, type:type}) AS properties "
-    "RETURN {type: nodeLabels, properties: properties} AS output"
+    "WITH label AS relType, collect({property:property, type:type}) AS properties "
+    "RETURN {type: relType, properties: properties} AS output"
 )
 
 REL_QUERY = (
@@ -293,7 +293,7 @@ def get_structured_schema(
         index = []
 
     structured_schema = {
-        "node_props": {el["labels"]: el["properties"] for el in node_properties},
+        "node_props": {el["label"]: el["properties"] for el in node_properties},
         "rel_props": {el["type"]: el["properties"] for el in rel_properties},
         "relationships": relationships,
         "metadata": {"constraint": constraint, "index": index},

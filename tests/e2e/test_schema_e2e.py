@@ -36,7 +36,7 @@ def test_cypher_returns_correct_node_properties(driver: Driver) -> None:
         {
             "output": {
                 "properties": [{"property": "property_a", "type": "STRING"}],
-                "labels": "LabelA",
+                "label": "LabelA",
             }
         }
     ]
