@@ -342,7 +342,7 @@ def _format_property(prop: Dict[str, Any]) -> Optional[str]:
         or None if the property should be skipped (e.g., large lists).
     """
     if prop["type"] == "STRING" and prop.get("values"):
-        if prop.get("distinct_count", 11) > DISTINCT_VALUE_LIMIT:
+        if prop.get("distinct_count", DISTINCT_VALUE_LIMIT+1) > DISTINCT_VALUE_LIMIT:
             return f'Example: "{_clean_string_values(prop["values"][0])}"'
         else:
             return (
