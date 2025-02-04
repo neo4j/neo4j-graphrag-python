@@ -112,7 +112,12 @@ class AnthropicLLM(LLMInterface):
                 messages=messages,
                 **self.model_params,
             )
-            return LLMResponse(content=response.content)
+            response_content = response.content
+            if response_content and len(response_content) > 0:
+                text = response_content[0].text
+            else:
+                raise LLMGenerationError("LLM returned empty response.")
+            return LLMResponse(content=text)
         except self.anthropic.APIError as e:
             raise LLMGenerationError(e)
 
@@ -140,6 +145,11 @@ class AnthropicLLM(LLMInterface):
                 messages=messages,
                 **self.model_params,
             )
-            return LLMResponse(content=response.content)
+            response_content = response.content
+            if response_content and len(response_content) > 0:
+                text = response_content[0].text
+            else:
+                raise LLMGenerationError("LLM returned empty response.")
+            return LLMResponse(content=text)
         except self.anthropic.APIError as e:
             raise LLMGenerationError(e)
