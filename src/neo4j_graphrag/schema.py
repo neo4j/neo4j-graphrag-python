@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import neo4j
 from neo4j import Query
-from neo4j.exceptions import ClientError, CypherTypeError, Neo4jError
+from neo4j.exceptions import ClientError, CypherTypeError
 
 BASE_KG_BUILDER_LABEL = "__KGBuilder__"
 BASE_ENTITY_LABEL = "__Entity__"
@@ -161,38 +161,16 @@ def query_database(
         list[dict[str, Any]]: the result of the query in json format.
     """
     if not session_params:
-        try:
-            data = driver.execute_query(
-                Query(text=query, timeout=timeout),
-                database_=database,
-                parameters_=params,
-            )
-            json_data = [r.data() for r in data.records]
-            if sanitize:
-                json_data = [_value_sanitize(el) for el in json_data]
-            return json_data
-        except Neo4jError as e:
-            if not (
-                (
-                    (  # isCallInTransactionError
-                        e.code == "Neo.DatabaseError.Statement.ExecutionFailed"
-                        or e.code
-                        == "Neo.DatabaseError.Transaction.TransactionStartFailed"
-                    )
-                    and e.message is not None
-                    and "in an implicit transaction" in e.message
-                )
-                or (  # isPeriodicCommitError
-                    e.code == "Neo.ClientError.Statement.SemanticError"
-                    and e.message is not None
-                    and (
-                        "in an open transaction is not possible" in e.message
-                        or "tried to execute in an explicit transaction" in e.message
-                    )
-                )
-            ):
-                raise
-    # Fallback to allow implicit transactions
+        data = driver.execute_query(
+            Query(text=query, timeout=timeout),
+            database_=database,
+            parameters_=params,
+        )
+        json_data = [r.data() for r in data.records]
+        if sanitize:
+            json_data = [_value_sanitize(el) for el in json_data]
+        return json_data
+
     session_params.setdefault("database", database)
     with driver.session(**session_params) as session:
         result = session.run(Query(text=query, timeout=timeout), params)

@@ -19,7 +19,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from neo4j import Driver, Query
-from neo4j.exceptions import Neo4jError
 from neo4j_graphrag.schema import (
     BASE_ENTITY_LABEL,
     BASE_KG_BUILDER_LABEL,
@@ -30,12 +29,11 @@ from neo4j_graphrag.schema import (
     NODE_PROPERTIES_QUERY,
     REL_PROPERTIES_QUERY,
     REL_QUERY,
+    _value_sanitize,
     format_schema,
     get_enhanced_schema_cypher,
     get_schema,
     get_structured_schema,
-    query_database,
-    _value_sanitize,
 )
 
 
@@ -210,34 +208,6 @@ def test__value_sanitize(
     assert (
         _value_sanitize(input_value) == expected_output
     ), f"Failed test case: {description}"
-
-
-def test_query_fallback_execution(driver: MagicMock) -> None:
-    """Test the fallback to allow for implicit transactions in query."""
-    err = Neo4jError()
-    err.code = "Neo.DatabaseError.Statement.ExecutionFailed"
-    err.message = "in an implicit transaction"
-    driver.execute_query.side_effect = err
-    mock_session = MagicMock()
-    mock_result = MagicMock()
-    mock_result.data.return_value = {
-        "key1": "value1",
-        "oversized_list": list(range(LIST_LIMIT + 1)),
-    }
-    mock_session.run.return_value = [mock_result]
-    driver.session.return_value.__enter__.return_value = mock_session
-    driver.session.return_value.__exit__.return_value = None
-    query = "MATCH (n) RETURN n;"
-    params = {"param1": "value1"}
-    json_data = query_database(
-        driver=driver, query=query, database="test_db", params=params, sanitize=True
-    )
-    driver.session.assert_called_with(database="test_db")
-    called_args, _ = mock_session.run.call_args
-    called_query = called_args[0]
-    assert called_query.text == query
-    assert called_args[1] == params
-    assert json_data == [{"key1": "value1"}]
 
 
 @pytest.mark.parametrize(
