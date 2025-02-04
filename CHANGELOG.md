@@ -10,6 +10,9 @@
 ### Changed
 - Changed the default behaviour of `FixedSizeSplitter` to avoid words cut-off in the chunks whenever it is possible.
 
+### Fixed
+- Removed the `uuid` package from dependencies (not needed with Python 3).
+
 ## 1.4.2
 
 ### Fixed
