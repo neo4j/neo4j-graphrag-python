@@ -117,32 +117,20 @@ UPSERT_VECTOR_ON_RELATIONSHIP_QUERY = (
 
 
 def _get_hybrid_query(neo4j_version_is_5_23_or_above: bool) -> str:
-    if neo4j_version_is_5_23_or_above:
-        return (
-            f"CALL () {{ {VECTOR_INDEX_QUERY} "
-            f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS vector_index_max_score "
-            f"UNWIND nodes AS n "
-            f"RETURN n.node AS node, (n.score / vector_index_max_score) AS score "
-            f"UNION "
-            f"{FULL_TEXT_SEARCH_QUERY} "
-            f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS ft_index_max_score "
-            f"UNWIND nodes AS n "
-            f"RETURN n.node AS node, (n.score / ft_index_max_score) AS score }} "
-            f"WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k"
-        )
-    else:
-        return (
-            f"CALL {{ {VECTOR_INDEX_QUERY} "
-            f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS vector_index_max_score "
-            f"UNWIND nodes AS n "
-            f"RETURN n.node AS node, (n.score / vector_index_max_score) AS score "
-            f"UNION "
-            f"{FULL_TEXT_SEARCH_QUERY} "
-            f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS ft_index_max_score "
-            f"UNWIND nodes AS n "
-            f"RETURN n.node AS node, (n.score / ft_index_max_score) AS score }} "
-            f"WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k"
-        )
+    call_prefix = "CALL () { " if neo4j_version_is_5_23_or_above else "CALL { "
+    query_body = (
+        f"{VECTOR_INDEX_QUERY} "
+        "WITH collect({node:node, score:score}) AS nodes, max(score) AS vector_index_max_score "
+        "UNWIND nodes AS n "
+        "RETURN n.node AS node, (n.score / vector_index_max_score) AS score "
+        "UNION "
+        f"{FULL_TEXT_SEARCH_QUERY} "
+        "WITH collect({node:node, score:score}) AS nodes, max(score) AS ft_index_max_score "
+        "UNWIND nodes AS n "
+        "RETURN n.node AS node, (n.score / ft_index_max_score) AS score } "
+        "WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k"
+    )
+    return call_prefix + query_body
 
 
 def _get_filtered_vector_query(
