@@ -42,7 +42,7 @@ def test_anthropic_llm_missing_dependency(mock_import: Mock) -> None:
 
 def test_anthropic_invoke_happy_path(mock_anthropic: Mock) -> None:
     mock_anthropic.Anthropic.return_value.messages.create.return_value = MagicMock(
-        content="generated text"
+        content=[MagicMock(text="generated text")]
     )
     model_params = {"temperature": 0.3}
     llm = AnthropicLLM("claude-3-opus-20240229", model_params=model_params)
@@ -59,7 +59,7 @@ def test_anthropic_invoke_happy_path(mock_anthropic: Mock) -> None:
 
 def test_anthropic_invoke_with_message_history_happy_path(mock_anthropic: Mock) -> None:
     mock_anthropic.Anthropic.return_value.messages.create.return_value = MagicMock(
-        content="generated text"
+        content=[MagicMock(text="generated text")]
     )
     model_params = {"temperature": 0.3}
     llm = AnthropicLLM(
@@ -87,7 +87,7 @@ def test_anthropic_invoke_with_system_instruction(
     mock_anthropic: Mock,
 ) -> None:
     mock_anthropic.Anthropic.return_value.messages.create.return_value = MagicMock(
-        content="generated text"
+        content=[MagicMock(text="generated text")]
     )
     model_params = {"temperature": 0.3}
     system_instruction = "You are a helpful assistant."
@@ -115,7 +115,7 @@ def test_anthropic_invoke_with_message_history_and_system_instruction(
     mock_anthropic: Mock,
 ) -> None:
     mock_anthropic.Anthropic.return_value.messages.create.return_value = MagicMock(
-        content="generated text"
+        content=[MagicMock(text="generated text")]
     )
     model_params = {"temperature": 0.3}
     system_instruction = "You are a helpful assistant."
@@ -147,7 +147,7 @@ def test_anthropic_invoke_with_message_history_validation_error(
     mock_anthropic: Mock,
 ) -> None:
     mock_anthropic.Anthropic.return_value.messages.create.return_value = MagicMock(
-        content="generated text"
+        content=[MagicMock(text="generated text")]
     )
     model_params = {"temperature": 0.3}
     system_instruction = "You are a helpful assistant."
@@ -170,7 +170,7 @@ def test_anthropic_invoke_with_message_history_validation_error(
 @pytest.mark.asyncio
 async def test_anthropic_ainvoke_happy_path(mock_anthropic: Mock) -> None:
     mock_response = AsyncMock()
-    mock_response.content = "Return text"
+    mock_response.content = [MagicMock(text="Return text")]
     mock_model = mock_anthropic.AsyncAnthropic.return_value
     mock_model.messages.create = AsyncMock(return_value=mock_response)
     model_params = {"temperature": 0.3}
