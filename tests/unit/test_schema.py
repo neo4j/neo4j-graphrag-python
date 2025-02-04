@@ -35,7 +35,7 @@ from neo4j_graphrag.schema import (
     get_schema,
     get_structured_schema,
     query_database,
-    value_sanitize,
+    _value_sanitize,
 )
 
 
@@ -203,12 +203,12 @@ def test_get_schema_ensure_structured_response(driver: MagicMock) -> None:
         ),
     ],
 )
-def test_value_sanitize(
+def test__value_sanitize(
     description: str, input_value: Dict[str, Any], expected_output: Any
 ) -> None:
-    """Test the value_sanitize function."""
+    """Test the _value_sanitize function."""
     assert (
-        value_sanitize(input_value) == expected_output
+        _value_sanitize(input_value) == expected_output
     ), f"Failed test case: {description}"
 
 

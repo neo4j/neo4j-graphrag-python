@@ -71,7 +71,7 @@ SCHEMA_COUNTS_QUERY = (
 )
 
 
-def clean_string_values(text: str) -> str:
+def _clean_string_values(text: str) -> str:
     """Clean string values for schema.
 
     Cleans the input text by replacing newline and carriage return characters.
@@ -85,7 +85,7 @@ def clean_string_values(text: str) -> str:
     return text.replace("\n", " ").replace("\r", " ")
 
 
-def value_sanitize(d: Any) -> Any:
+def _value_sanitize(d: Any) -> Any:
     """Sanitize the input dictionary or list.
 
     Sanitizes the input by removing embedding-like values,
@@ -104,14 +104,14 @@ def value_sanitize(d: Any) -> Any:
         new_dict = {}
         for key, value in d.items():
             if isinstance(value, dict):
-                sanitized_value = value_sanitize(value)
+                sanitized_value = _value_sanitize(value)
                 if (
                     sanitized_value is not None
                 ):  # Check if the sanitized value is not None
                     new_dict[key] = sanitized_value
             elif isinstance(value, list):
                 if len(value) < LIST_LIMIT:
-                    sanitized_value = value_sanitize(value)
+                    sanitized_value = _value_sanitize(value)
                     if (
                         sanitized_value is not None
                     ):  # Check if the sanitized value is not None
@@ -123,7 +123,7 @@ def value_sanitize(d: Any) -> Any:
     elif isinstance(d, list):
         if len(d) < LIST_LIMIT:
             return [
-                value_sanitize(item) for item in d if value_sanitize(item) is not None
+                _value_sanitize(item) for item in d if _value_sanitize(item) is not None
             ]
         else:
             return None
@@ -169,7 +169,7 @@ def query_database(
             )
             json_data = [r.data() for r in data.records]
             if sanitize:
-                json_data = [value_sanitize(el) for el in json_data]
+                json_data = [_value_sanitize(el) for el in json_data]
             return json_data
         except Neo4jError as e:
             if not (
@@ -198,7 +198,7 @@ def query_database(
         result = session.run(Query(text=query, timeout=timeout), params)
         json_data = [r.data() for r in result]
         if sanitize:
-            json_data = [value_sanitize(el) for el in json_data]
+            json_data = [_value_sanitize(el) for el in json_data]
         return json_data
 
 
@@ -325,7 +325,7 @@ def get_structured_schema(
     return structured_schema
 
 
-def format_property(prop: Dict[str, Any]) -> Optional[str]:
+def _format_property(prop: Dict[str, Any]) -> Optional[str]:
     """
     Format a single property based on its type and available metadata.
 
@@ -343,11 +343,11 @@ def format_property(prop: Dict[str, Any]) -> Optional[str]:
     """
     if prop["type"] == "STRING" and prop.get("values"):
         if prop.get("distinct_count", 11) > DISTINCT_VALUE_LIMIT:
-            return f'Example: "{clean_string_values(prop["values"][0])}"'
+            return f'Example: "{_clean_string_values(prop["values"][0])}"'
         else:
             return (
                 "Available options: "
-                + f'{[clean_string_values(el) for el in prop["values"]]}'
+                + f'{[_clean_string_values(el) for el in prop["values"]]}'
             )
     elif prop["type"] in [
         "INTEGER",
@@ -368,7 +368,7 @@ def format_property(prop: Dict[str, Any]) -> Optional[str]:
     return ""
 
 
-def format_properties(property_dict: Dict[str, Any], is_enhanced: bool) -> List[str]:
+def _format_properties(property_dict: Dict[str, Any], is_enhanced: bool) -> List[str]:
     """
     Format a collection of properties for nodes or relationships.
 
@@ -389,7 +389,7 @@ def format_properties(property_dict: Dict[str, Any], is_enhanced: bool) -> List[
         for label, props in property_dict.items():
             formatted_props.append(f"- **{label}**")
             for prop in props:
-                example = format_property(prop)
+                example = _format_property(prop)
                 if example is not None:
                     formatted_props.append(
                         f"  - `{prop['property']}`: {prop['type']} {example}"
@@ -403,7 +403,7 @@ def format_properties(property_dict: Dict[str, Any], is_enhanced: bool) -> List[
     return formatted_props
 
 
-def format_relationships(rels: List[Dict[str, Any]]) -> List[str]:
+def _format_relationships(rels: List[Dict[str, Any]]) -> List[str]:
     """
     Format relationships into a structured string representation.
 
@@ -437,9 +437,9 @@ def format_schema(schema: Dict[str, Any], is_enhanced: bool) -> str:
         str: A formatted string representation of the graph schema, including
         node properties, relationship properties, and relationship patterns.
     """
-    formatted_node_props = format_properties(schema["node_props"], is_enhanced)
-    formatted_rel_props = format_properties(schema["rel_props"], is_enhanced)
-    formatted_rels = format_relationships(schema["relationships"])
+    formatted_node_props = _format_properties(schema["node_props"], is_enhanced)
+    formatted_rel_props = _format_properties(schema["rel_props"], is_enhanced)
+    formatted_rels = _format_relationships(schema["relationships"])
     return "\n".join(
         [
             "Node properties:",
@@ -452,7 +452,7 @@ def format_schema(schema: Dict[str, Any], is_enhanced: bool) -> str:
     )
 
 
-def build_str_clauses(
+def _build_str_clauses(
     prop_name: str,
     driver: neo4j.Driver,
     label_or_type: str,
@@ -519,7 +519,7 @@ def build_str_clauses(
     return with_clauses, return_clauses
 
 
-def build_list_clauses(prop_name: str) -> Tuple[str, str]:
+def _build_list_clauses(prop_name: str) -> Tuple[str, str]:
     """
     Build Cypher clauses for list property size statistics.
 
@@ -547,7 +547,7 @@ def build_list_clauses(prop_name: str) -> Tuple[str, str]:
     return with_clause, return_clause
 
 
-def build_num_date_clauses(
+def _build_num_date_clauses(
     prop_name: str, exhaustive: bool, prop_index: Optional[List[Any]] = None
 ) -> Tuple[List[str], List[str]]:
     """
@@ -602,6 +602,7 @@ def get_enhanced_schema_cypher(
     label_or_type: str,
     properties: List[Dict[str, Any]],
     exhaustive: bool,
+    sample_size: int = 5,
     is_relationship: bool = False,
 ) -> str:
     """
@@ -622,6 +623,8 @@ def get_enhanced_schema_cypher(
             the node label or relationship type.
         exhaustive (bool): Whether to perform an exhaustive search or a
             sampled query approach.
+        sample_size (int): The number of nodes or relationships to sample when
+            exhaustive is False. Defaults to 5.
         is_relationship (bool, optional): Indicates if the query is for
             a relationship type (True) or a node label (False). Defaults to False.
 
@@ -637,8 +640,8 @@ def get_enhanced_schema_cypher(
     return_clauses = []
     output_dict = {}
     if not exhaustive:
-        # Sample 5 random nodes if not exhaustive
-        match_clause += " WITH n LIMIT 5"
+        # Sample random nodes if not exhaustive
+        match_clause += f" WITH n LIMIT {sample_size}"
     # Build the with and return clauses
     for prop in properties:
         prop_name = prop["property"]
@@ -656,7 +659,7 @@ def get_enhanced_schema_cypher(
             else None
         )
         if prop_type == "STRING":
-            str_w_clauses, str_r_clauses = build_str_clauses(
+            str_w_clauses, str_r_clauses = _build_str_clauses(
                 prop_name=prop_name,
                 driver=driver,
                 label_or_type=label_or_type,
@@ -672,13 +675,13 @@ def get_enhanced_schema_cypher(
             "DATE_TIME",
             "LOCAL_DATE_TIME",
         ]:
-            num_date_w_clauses, num_date_r_clauses = build_num_date_clauses(
+            num_date_w_clauses, num_date_r_clauses = _build_num_date_clauses(
                 prop_name=prop_name, exhaustive=exhaustive, prop_index=prop_index
             )
             with_clauses += num_date_w_clauses
             return_clauses += num_date_r_clauses
         elif prop_type == "LIST":
-            list_w_clause, list_r_clause = build_list_clauses(prop_name=prop_name)
+            list_w_clause, list_r_clause = _build_list_clauses(prop_name=prop_name)
             with_clauses.append(list_w_clause)
             return_clauses.append(list_r_clause)
         elif prop_type in ["BOOLEAN", "POINT", "DURATION"]:
