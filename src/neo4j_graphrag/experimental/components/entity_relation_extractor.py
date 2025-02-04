@@ -225,7 +225,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                 logger.debug(f"Invalid JSON: {llm_result.content}")
             result = {"nodes": [], "relationships": []}
         try:
-            chunk_graph = Neo4jGraph(**result)
+            chunk_graph = Neo4jGraph.model_validate(result)
         except ValidationError as e:
             if self.on_error == OnError.RAISE:
                 raise LLMGenerationError("LLM response has improper format") from e

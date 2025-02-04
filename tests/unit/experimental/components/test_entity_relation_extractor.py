@@ -179,6 +179,24 @@ async def test_extractor_llm_invalid_json() -> None:
 
 
 @pytest.mark.asyncio
+async def test_extractor_llm_invalid_json_is_a_list() -> None:
+    """Test what happens when the returned JSON is a valid JSON list,
+    but it does not match the expected Pydantic model"""
+    llm = MagicMock(spec=LLMInterface)
+    llm.ainvoke.return_value = LLMResponse(
+        # missing "label" for entity
+        content='[{"nodes": [{"id": 0, "entity_type": "Person", "properties": {}}], "relationships": []}]'
+    )
+
+    extractor = LLMEntityRelationExtractor(
+        llm=llm,
+    )
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
+    with pytest.raises(LLMGenerationError):
+        await extractor.run(chunks=chunks)
+
+
+@pytest.mark.asyncio
 async def test_extractor_llm_badly_formatted_json_gets_fixed() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(
