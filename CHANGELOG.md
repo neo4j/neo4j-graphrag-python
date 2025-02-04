@@ -12,6 +12,7 @@
 
 ### Fixed
 - Removed the `uuid` package from dependencies (not needed with Python 3).
+- Fixed a bug in the `AnthropicLLM` class preventing it from being used in `GraphRAG` pipeline.
 
 ## 1.4.2
 
