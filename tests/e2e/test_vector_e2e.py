@@ -27,7 +27,12 @@ def test_vector_retriever_search_text(
     retriever = VectorRetriever(driver, "vector-index-name", random_embedder)
 
     top_k = 5
-    results = retriever.search(query_text="Find me a book about Fremen", top_k=top_k)
+    effective_search_ratio = 2
+    results = retriever.search(
+        query_text="Find me a book about Fremen",
+        top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
+    )
 
     assert isinstance(results, RetrieverResult)
     assert len(results.items) == 5
@@ -48,7 +53,12 @@ def test_vector_cypher_retriever_search_text(
     )
 
     top_k = 5
-    results = retriever.search(query_text="Find me a book about Fremen", top_k=top_k)
+    effective_search_ratio = 2
+    results = retriever.search(
+        query_text="Find me a book about Fremen",
+        top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
+    )
 
     assert isinstance(results, RetrieverResult)
     assert len(results.items) == 5
@@ -62,7 +72,12 @@ def test_vector_retriever_search_vector(driver: Driver) -> None:
     retriever = VectorRetriever(driver, "vector-index-name")
 
     top_k = 5
-    results = retriever.search(query_vector=[1.0 for _ in range(1536)], top_k=top_k)
+    effective_search_ratio = 2
+    results = retriever.search(
+        query_vector=[1.0 for _ in range(1536)],
+        top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
+    )
 
     assert isinstance(results, RetrieverResult)
     assert len(results.items) == 5
@@ -79,7 +94,12 @@ def test_vector_cypher_retriever_search_vector(driver: Driver) -> None:
     retriever = VectorCypherRetriever(driver, "vector-index-name", retrieval_query)
 
     top_k = 5
-    results = retriever.search(query_vector=[1.0 for _ in range(1536)], top_k=top_k)
+    effective_search_ratio = 2
+    results = retriever.search(
+        query_vector=[1.0 for _ in range(1536)],
+        top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
+    )
 
     assert isinstance(results, RetrieverResult)
     assert len(results.items) == 5

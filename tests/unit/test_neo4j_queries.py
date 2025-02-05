@@ -21,8 +21,9 @@ from neo4j_graphrag.types import SearchType
 
 def test_vector_search_basic() -> None:
     expected = (
-        "CALL db.index.vector.queryNodes($vector_index_name, $top_k, $query_vector) "
+        "CALL db.index.vector.queryNodes($vector_index_name, $top_k * $effective_search_ratio, $query_vector) "
         "YIELD node, score "
+        "WITH node, score LIMIT $top_k "
         "RETURN node { .*, `None`: null } AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score"
     )
     result, params = get_search_query(SearchType.VECTOR)
@@ -33,8 +34,9 @@ def test_vector_search_basic() -> None:
 def test_hybrid_search_basic() -> None:
     expected = (
         "CALL { "
-        "CALL db.index.vector.queryNodes($vector_index_name, $top_k, $query_vector) "
+        "CALL db.index.vector.queryNodes($vector_index_name, $top_k * $effective_search_ratio, $query_vector) "
         "YIELD node, score "
+        "WITH node, score LIMIT $top_k "
         "WITH collect({node:node, score:score}) AS nodes, max(score) AS vector_index_max_score "
         "UNWIND nodes AS n "
         "RETURN n.node AS node, (n.score / vector_index_max_score) AS score UNION "
@@ -54,8 +56,9 @@ def test_hybrid_search_basic() -> None:
 def test_vector_search_with_properties() -> None:
     properties = ["name", "age"]
     expected = (
-        "CALL db.index.vector.queryNodes($vector_index_name, $top_k, $query_vector) "
+        "CALL db.index.vector.queryNodes($vector_index_name, $top_k * $effective_search_ratio, $query_vector) "
         "YIELD node, score "
+        "WITH node, score LIMIT $top_k "
         "RETURN node {.name, .age} AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score"
     )
     result, _ = get_search_query(SearchType.VECTOR, return_properties=properties)
@@ -65,8 +68,9 @@ def test_vector_search_with_properties() -> None:
 def test_vector_search_with_retrieval_query() -> None:
     retrieval_query = "MATCH (n) RETURN n LIMIT 10"
     expected = (
-        "CALL db.index.vector.queryNodes($vector_index_name, $top_k, $query_vector) "
-        "YIELD node, score " + retrieval_query
+        "CALL db.index.vector.queryNodes($vector_index_name, $top_k * $effective_search_ratio, $query_vector) "
+        "YIELD node, score "
+        "WITH node, score LIMIT $top_k " + retrieval_query
     )
     result, _ = get_search_query(SearchType.VECTOR, retrieval_query=retrieval_query)
     assert result.strip() == expected.strip()
@@ -125,8 +129,9 @@ def test_hybrid_search_with_retrieval_query() -> None:
     retrieval_query = "MATCH (n) RETURN n LIMIT 10"
     expected = (
         "CALL { "
-        "CALL db.index.vector.queryNodes($vector_index_name, $top_k, $query_vector) "
+        "CALL db.index.vector.queryNodes($vector_index_name, $top_k * $effective_search_ratio, $query_vector) "
         "YIELD node, score "
+        "WITH node, score LIMIT $top_k "
         "WITH collect({node:node, score:score}) AS nodes, max(score) AS vector_index_max_score "
         "UNWIND nodes AS n "
         "RETURN n.node AS node, (n.score / vector_index_max_score) AS score UNION "
@@ -147,8 +152,9 @@ def test_hybrid_search_with_properties() -> None:
     properties = ["name", "age"]
     expected = (
         "CALL { "
-        "CALL db.index.vector.queryNodes($vector_index_name, $top_k, $query_vector) "
+        "CALL db.index.vector.queryNodes($vector_index_name, $top_k * $effective_search_ratio, $query_vector) "
         "YIELD node, score "
+        "WITH node, score LIMIT $top_k "
         "WITH collect({node:node, score:score}) AS nodes, max(score) AS vector_index_max_score "
         "UNWIND nodes AS n "
         "RETURN n.node AS node, (n.score / vector_index_max_score) AS score UNION "

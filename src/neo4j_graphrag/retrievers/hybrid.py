@@ -141,6 +141,7 @@ class HybridRetriever(Retriever):
         query_text: str,
         query_vector: Optional[list[float]] = None,
         top_k: int = 5,
+        effective_search_ratio: int = 1,
     ) -> RawSearchResult:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         Both query_vector and query_text can be provided.
@@ -159,6 +160,8 @@ class HybridRetriever(Retriever):
             query_text (str): The text to get the closest neighbors of.
             query_vector (Optional[list[float]], optional): The vector embeddings to get the closest neighbors of. Defaults to None.
             top_k (int, optional): The number of neighbors to return. Defaults to 5.
+            effective_search_ratio (int): Controls the candidate pool size for the vector index by multiplying top_k to balance query
+                accuracy and performance. Defaults to 1.
 
         Raises:
             SearchValidationError: If validation of the input arguments fail.
@@ -172,6 +175,7 @@ class HybridRetriever(Retriever):
                 query_vector=query_vector,
                 query_text=query_text,
                 top_k=top_k,
+                effective_search_ratio=effective_search_ratio,
             )
         except ValidationError as e:
             raise SearchValidationError(e.errors()) from e
@@ -295,6 +299,7 @@ class HybridCypherRetriever(Retriever):
         query_text: str,
         query_vector: Optional[list[float]] = None,
         top_k: int = 5,
+        effective_search_ratio: int = 1,
         query_params: Optional[dict[str, Any]] = None,
     ) -> RawSearchResult:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
@@ -312,6 +317,8 @@ class HybridCypherRetriever(Retriever):
             query_text (str): The text to get the closest neighbors of.
             query_vector (Optional[list[float]]): The vector embeddings to get the closest neighbors of. Defaults to None.
             top_k (int): The number of neighbors to return. Defaults to 5.
+            effective_search_ratio (int): Controls the candidate pool size for the vector index by multiplying top_k to balance query
+                accuracy and performance. Defaults to 1.
             query_params (Optional[dict[str, Any]]): Parameters for the Cypher query. Defaults to None.
 
         Raises:
@@ -326,6 +333,7 @@ class HybridCypherRetriever(Retriever):
                 query_vector=query_vector,
                 query_text=query_text,
                 top_k=top_k,
+                effective_search_ratio=effective_search_ratio,
                 query_params=query_params,
             )
         except ValidationError as e:

@@ -21,8 +21,9 @@ from neo4j_graphrag.filters import get_metadata_filter
 from neo4j_graphrag.types import SearchType
 
 VECTOR_INDEX_QUERY = (
-    "CALL db.index.vector.queryNodes($vector_index_name, $top_k, $query_vector) "
-    "YIELD node, score"
+    "CALL db.index.vector.queryNodes($vector_index_name, $top_k * $effective_search_ratio, $query_vector) "
+    "YIELD node, score "
+    "WITH node, score LIMIT $top_k"
 )
 
 VECTOR_EXACT_QUERY = (
@@ -83,7 +84,6 @@ UPSERT_RELATIONSHIP_QUERY = (
     "} "
     "RETURN elementId(rel)"
 )
-
 
 UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE = (
     "UNWIND $rows as row "

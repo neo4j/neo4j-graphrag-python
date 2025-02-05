@@ -33,7 +33,12 @@ def test_hybrid_retriever_search_text(
     )
 
     top_k = 5
-    results = retriever.search(query_text="Find me a book about Fremen", top_k=top_k)
+    effective_search_ratio = 2
+    results = retriever.search(
+        query_text="Find me a book about Fremen",
+        top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
+    )
 
     assert isinstance(results, RetrieverResult)
     assert len(results.items) == 5
@@ -51,8 +56,13 @@ def test_hybrid_retriever_no_neo4j_deprecation_warning(
     )
 
     top_k = 5
+    effective_search_ratio = 2
     with caplog.at_level(logging.WARNING):
-        retriever.search(query_text="Find me a book about Fremen", top_k=top_k)
+        retriever.search(
+            query_text="Find me a book about Fremen",
+            top_k=top_k,
+            effective_search_ratio=effective_search_ratio,
+        )
 
     for record in caplog.records:
         if (
@@ -78,7 +88,12 @@ def test_hybrid_cypher_retriever_search_text(
     )
 
     top_k = 5
-    results = retriever.search(query_text="Find me a book about Fremen", top_k=top_k)
+    effective_search_ratio = 2
+    results = retriever.search(
+        query_text="Find me a book about Fremen",
+        top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
+    )
 
     assert isinstance(results, RetrieverResult)
     assert len(results.items) == 5
@@ -96,10 +111,12 @@ def test_hybrid_retriever_search_vector(driver: Driver) -> None:
     )
 
     top_k = 5
+    effective_search_ratio = 2
     results = retriever.search(
         query_text="Find me a book about Fremen",
         query_vector=[1.0 for _ in range(1536)],
         top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
     )
 
     assert isinstance(results, RetrieverResult)
@@ -121,10 +138,12 @@ def test_hybrid_cypher_retriever_search_vector(driver: Driver) -> None:
     )
 
     top_k = 5
+    effective_search_ratio = 2
     results = retriever.search(
         query_text="Find me a book about Fremen",
         query_vector=[1.0 for _ in range(1536)],
         top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
     )
 
     assert isinstance(results, RetrieverResult)
@@ -145,10 +164,12 @@ def test_hybrid_retriever_return_properties(driver: Driver) -> None:
     )
 
     top_k = 5
+    effective_search_ratio = 2
     results = retriever.search(
         query_text="Find me a book about Fremen",
         query_vector=[1.0 for _ in range(1536)],
         top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
     )
 
     assert isinstance(results, RetrieverResult)

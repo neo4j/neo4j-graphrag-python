@@ -178,6 +178,7 @@ def test_hybrid_search_text_happy_path(
     fulltext_index_name = "fulltext-index"
     query_text = "may thy knife chip and shatter"
     top_k = 5
+    effective_search_ratio = 2
 
     retriever = HybridRetriever(
         driver, vector_index_name, fulltext_index_name, embedder
@@ -197,13 +198,18 @@ def test_hybrid_search_text_happy_path(
         neo4j_version_is_5_23_or_above=retriever.neo4j_version_is_5_23_or_above,
     )
 
-    records = retriever.search(query_text=query_text, top_k=top_k)
+    records = retriever.search(
+        query_text=query_text,
+        top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
+    )
 
     retriever.driver.execute_query.assert_called_once_with(  # type: ignore
         search_query,
         {
             "vector_index_name": vector_index_name,
             "top_k": top_k,
+            "effective_search_ratio": effective_search_ratio,
             "query_text": query_text,
             "fulltext_index_name": fulltext_index_name,
             "query_vector": embed_query_vector,
@@ -238,6 +244,7 @@ def test_hybrid_search_favors_query_vector_over_embedding_vector(
     fulltext_index_name = "fulltext-index"
     query_text = "may thy knife chip and shatter"
     top_k = 5
+    effective_search_ratio = 2
     database = "neo4j"
     retriever = HybridRetriever(
         driver,
@@ -257,13 +264,19 @@ def test_hybrid_search_favors_query_vector_over_embedding_vector(
         neo4j_version_is_5_23_or_above=retriever.neo4j_version_is_5_23_or_above,
     )
 
-    retriever.search(query_text=query_text, query_vector=query_vector, top_k=top_k)
+    retriever.search(
+        query_text=query_text,
+        query_vector=query_vector,
+        top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
+    )
 
     retriever.driver.execute_query.assert_called_once_with(  # type: ignore
         search_query,
         {
             "vector_index_name": vector_index_name,
             "top_k": top_k,
+            "effective_search_ratio": effective_search_ratio,
             "query_text": query_text,
             "fulltext_index_name": fulltext_index_name,
             "query_vector": query_vector,
@@ -320,6 +333,7 @@ def test_hybrid_retriever_return_properties(
     fulltext_index_name = "fulltext-index"
     query_text = "may thy knife chip and shatter"
     top_k = 5
+    effective_search_ratio = 2
     return_properties = ["node-property-1", "node-property-2"]
     retriever = HybridRetriever(
         driver,
@@ -340,7 +354,11 @@ def test_hybrid_retriever_return_properties(
         neo4j_version_is_5_23_or_above=retriever.neo4j_version_is_5_23_or_above,
     )
 
-    records = retriever.search(query_text=query_text, top_k=top_k)
+    records = retriever.search(
+        query_text=query_text,
+        top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
+    )
 
     embedder.embed_query.assert_called_once_with(query_text)
     driver.execute_query.assert_called_once_with(
@@ -348,6 +366,7 @@ def test_hybrid_retriever_return_properties(
         {
             "vector_index_name": vector_index_name,
             "top_k": top_k,
+            "effective_search_ratio": effective_search_ratio,
             "query_text": query_text,
             "fulltext_index_name": fulltext_index_name,
             "query_vector": embed_query_vector,
@@ -377,6 +396,7 @@ def test_hybrid_cypher_retrieval_query_with_params(
     fulltext_index_name = "fulltext-index"
     query_text = "may thy knife chip and shatter"
     top_k = 5
+    effective_search_ratio = 2
     retrieval_query = """
         RETURN node.id AS node_id, node.text AS text, score, {test: $param} AS metadata
         """
@@ -405,6 +425,7 @@ def test_hybrid_cypher_retrieval_query_with_params(
     records = retriever.search(
         query_text=query_text,
         top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
         query_params=query_params,
     )
 
@@ -415,6 +436,7 @@ def test_hybrid_cypher_retrieval_query_with_params(
         {
             "vector_index_name": vector_index_name,
             "top_k": top_k,
+            "effective_search_ratio": effective_search_ratio,
             "query_text": query_text,
             "fulltext_index_name": fulltext_index_name,
             "query_vector": embed_query_vector,

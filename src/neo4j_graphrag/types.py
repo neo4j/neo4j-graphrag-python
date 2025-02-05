@@ -120,6 +120,7 @@ class VectorSearchModel(BaseModel):
     query_vector: Optional[list[float]] = None
     query_text: Optional[str] = None
     top_k: PositiveInt = 5
+    effective_search_ratio: PositiveInt = 1
     filters: Optional[dict[str, Any]] = None
 
     @model_validator(mode="before")
@@ -140,6 +141,7 @@ class HybridSearchModel(BaseModel):
     query_text: str
     query_vector: Optional[list[float]] = None
     top_k: PositiveInt = 5
+    effective_search_ratio: PositiveInt = 1
 
 
 class HybridCypherSearchModel(HybridSearchModel):
