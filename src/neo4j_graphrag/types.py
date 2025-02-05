@@ -159,6 +159,13 @@ class SearchType(str, Enum):
     HYBRID = "hybrid"
 
 
+class IndexType(str, Enum):
+    """Enumerator of the index types."""
+
+    NODE = "node"
+    RELATIONSHIP = "relationship"
+
+
 class EmbedderModel(BaseModel):
     embedder: Optional[Any]
     model_config = ConfigDict(arbitrary_types_allowed=True)

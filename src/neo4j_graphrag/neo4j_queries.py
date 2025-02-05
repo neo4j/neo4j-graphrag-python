@@ -17,13 +17,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from neo4j_graphrag.filters import get_metadata_filter
-from neo4j_graphrag.types import SearchType
-
-VECTOR_INDEX_QUERY = (
-    "CALL db.index.vector.queryNodes($vector_index_name, $top_k * $effective_search_ratio, $query_vector) "
-    "YIELD node, score "
-    "WITH node, score LIMIT $top_k"
-)
+from neo4j_graphrag.types import IndexType, SearchType
 
 VECTOR_EXACT_QUERY = (
     "WITH node, "
@@ -37,10 +31,6 @@ BASE_VECTOR_EXACT_QUERY = (
     "AND size(node.`{embedding_node_property}`) = toInteger($embedding_dimension)"
 )
 
-FULL_TEXT_SEARCH_QUERY = (
-    "CALL db.index.fulltext.queryNodes($fulltext_index_name, $query_text, {limit: $top_k}) "
-    "YIELD node, score"
-)
 
 UPSERT_NODE_QUERY = (
     "UNWIND $rows AS row "
@@ -115,19 +105,45 @@ UPSERT_VECTOR_ON_RELATIONSHIP_QUERY = (
 )
 
 
-def _get_hybrid_query(neo4j_version_is_5_23_or_above: bool) -> str:
+def _get_vector_search_query(index_type: IndexType = IndexType.NODE) -> str:
+    procedure = "queryNodes" if index_type == IndexType.NODE else "queryRelationships"
+    return (
+        f"CALL db.index.vector.{procedure}"
+        "($vector_index_name, $top_k * $effective_search_ratio, $query_vector) "
+        f"YIELD {index_type.value}, score "
+        f"WITH {index_type.value}, score LIMIT $top_k"
+    )
+
+
+def _get_full_text_search_query(index_type: IndexType = IndexType.NODE) -> str:
+    procedure = "queryNodes" if index_type == IndexType.NODE else "queryRelationships"
+    return (
+        f"CALL db.index.fulltext.{procedure}"
+        "($fulltext_index_name, $query_text, {limit: $top_k}) "
+        f"YIELD {index_type.value}, score"
+    )
+
+
+def _get_hybrid_query(
+    neo4j_version_is_5_23_or_above: bool, index_type: IndexType = IndexType.NODE
+) -> str:
     call_prefix = "CALL () { " if neo4j_version_is_5_23_or_above else "CALL { "
+    vector_search_query = _get_vector_search_query(index_type=index_type)
+    full_text_search_query = _get_full_text_search_query(index_type=index_type)
     query_body = (
-        f"{VECTOR_INDEX_QUERY} "
-        "WITH collect({node:node, score:score}) AS nodes, max(score) AS vector_index_max_score "
-        "UNWIND nodes AS n "
-        "RETURN n.node AS node, (n.score / vector_index_max_score) AS score "
+        f"{vector_search_query} "
+        f"WITH collect({{{index_type.value}:{index_type.value}, score:score}}) AS {index_type.value}s, "
+        "max(score) AS vector_index_max_score "
+        f"UNWIND {index_type.value}s AS n "
+        f"RETURN n.{index_type.value} AS {index_type.value}, (n.score / vector_index_max_score) AS score "
         "UNION "
-        f"{FULL_TEXT_SEARCH_QUERY} "
-        "WITH collect({node:node, score:score}) AS nodes, max(score) AS ft_index_max_score "
-        "UNWIND nodes AS n "
-        "RETURN n.node AS node, (n.score / ft_index_max_score) AS score } "
-        "WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k"
+        f"{full_text_search_query} "
+        f"WITH collect({{{index_type.value}:{index_type.value}, score:score}}) AS {index_type.value}s, "
+        "max(score) AS ft_index_max_score "
+        f"UNWIND {index_type.value}s AS n "
+        f"RETURN n.{index_type.value} AS {index_type.value}, (n.score / ft_index_max_score) AS score "
+        "} "
+        f"WITH {index_type.value}, max(score) AS score ORDER BY score DESC LIMIT $top_k"
     )
     return call_prefix + query_body
 
@@ -209,7 +225,7 @@ def get_search_query(
                     "Vector Search with filters requires: node_label, embedding_node_property, embedding_dimension"
                 )
         else:
-            query, params = VECTOR_INDEX_QUERY, {}
+            query, params = _get_vector_search_query(), {}
     else:
         raise ValueError(f"Search type is not supported: {search_type}")
     query_tail = get_query_tail(
@@ -241,5 +257,5 @@ def get_query_tail(
         return retrieval_query
     if return_properties:
         return_properties_cypher = ", ".join([f".{prop}" for prop in return_properties])
-        return f"RETURN node {{{return_properties_cypher}}} AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score"
+        return f"RETURN node {{{return_properties_cypher}}} AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, score"
     return fallback_return if fallback_return else ""
