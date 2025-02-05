@@ -2,6 +2,8 @@
 
 ## Next
 
+## 1.4.3
+
 ### Added
 
 - Ability to add event listener to get notifications about Pipeline progress.
