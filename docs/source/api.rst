@@ -394,6 +394,8 @@ Database Interaction
 
 .. autofunction:: neo4j_graphrag.schema.get_schema
 
+.. autofunction:: neo4j_graphrag.schema.format_schema
+
 
 ******
 Errors
