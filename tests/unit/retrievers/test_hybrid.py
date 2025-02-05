@@ -184,7 +184,7 @@ def test_hybrid_search_text_happy_path(
         driver, vector_index_name, fulltext_index_name, embedder
     )
     retriever.neo4j_version_is_5_23_or_above = True
-    retriever._embedding_node_property = (
+    retriever._embedding_property = (
         "embedding"  # variable normally filled by fetch_index_infos
     )
     retriever.driver.execute_query.return_value = [  # type: ignore
@@ -194,7 +194,7 @@ def test_hybrid_search_text_happy_path(
     ]
     search_query, _ = get_search_query(
         SearchType.HYBRID,
-        embedding_node_property="embedding",
+        embedding_property="embedding",
         neo4j_version_is_5_23_or_above=retriever.neo4j_version_is_5_23_or_above,
     )
 
@@ -349,8 +349,8 @@ def test_hybrid_retriever_return_properties(
         None,
     ]
     search_query, _ = get_search_query(
-        SearchType.HYBRID,
-        return_properties,
+        search_type=SearchType.HYBRID,
+        return_properties=return_properties,
         neo4j_version_is_5_23_or_above=retriever.neo4j_version_is_5_23_or_above,
     )
 
@@ -417,7 +417,7 @@ def test_hybrid_cypher_retrieval_query_with_params(
         None,
     ]
     search_query, _ = get_search_query(
-        SearchType.HYBRID,
+        search_type=SearchType.HYBRID,
         retrieval_query=retrieval_query,
         neo4j_version_is_5_23_or_above=retriever.neo4j_version_is_5_23_or_above,
     )

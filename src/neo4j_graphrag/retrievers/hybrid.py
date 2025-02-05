@@ -118,7 +118,7 @@ class HybridRetriever(Retriever):
             else None
         )
         self.result_formatter = validated_data.result_formatter
-        self._embedding_node_property = None
+        self._embedding_property = None
         self._embedding_dimension = None
         self._fetch_index_infos(self.vector_index_name)
 
@@ -193,9 +193,9 @@ class HybridRetriever(Retriever):
             parameters["query_vector"] = query_vector
 
         search_query, _ = get_search_query(
-            SearchType.HYBRID,
-            self.return_properties,
-            embedding_node_property=self._embedding_node_property,
+            search_type=SearchType.HYBRID,
+            return_properties=self.return_properties,
+            embedding_property=self._embedding_property,
             neo4j_version_is_5_23_or_above=self.neo4j_version_is_5_23_or_above,
         )
         sanitized_parameters = copy.deepcopy(parameters)
@@ -358,7 +358,7 @@ class HybridCypherRetriever(Retriever):
             del parameters["query_params"]
 
         search_query, _ = get_search_query(
-            SearchType.HYBRID,
+            search_type=SearchType.HYBRID,
             retrieval_query=self.retrieval_query,
             neo4j_version_is_5_23_or_above=self.neo4j_version_is_5_23_or_above,
         )

@@ -241,7 +241,9 @@ def test_similarity_search_text_return_properties(
         None,
         None,
     ]
-    search_query, _ = get_search_query(SearchType.VECTOR, return_properties)
+    search_query, _ = get_search_query(
+        search_type=SearchType.VECTOR, return_properties=return_properties
+    )
 
     records = retriever.search(
         query_text=query_text,

@@ -123,7 +123,7 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
         try:
             result = query_result.records[0]
             self._node_label = result["labels"][0]
-            self._embedding_node_property = result["properties"][0]
+            self._embedding_property = result["properties"][0]
             self._embedding_dimension = result["dimensions"]
         except IndexError as e:
             raise Exception(f"No index with name {self.index_name} found") from e
