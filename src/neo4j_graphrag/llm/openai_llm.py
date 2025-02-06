@@ -109,8 +109,19 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
                 model=self.model_name,
                 **self.model_params,
             )
-            content = response.choices[0].message.content or ""
-            return LLMResponse(content=content)
+            choice = response.choices[0]
+            content = choice.message.content or ""
+
+            function_call = getattr(choice.message, "function_call", None)
+
+            if function_call is not None:
+                function_call_info = {
+                    "name": function_call.name,
+                    "arguments": function_call.arguments,
+                }
+                return LLMResponse(content=content, function_call=function_call_info)
+            else:
+                return LLMResponse(content=content)
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
@@ -140,8 +151,19 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
                 model=self.model_name,
                 **self.model_params,
             )
-            content = response.choices[0].message.content or ""
-            return LLMResponse(content=content)
+            choice = response.choices[0]
+            content = choice.message.content or ""
+
+            function_call = getattr(choice.message, "function_call", None)
+
+            if function_call is not None:
+                function_call_info = {
+                    "name": function_call.name,
+                    "arguments": function_call.arguments,
+                }
+                return LLMResponse(content=content, function_calls=function_call_info)
+            else:
+                return LLMResponse(content=content)
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 

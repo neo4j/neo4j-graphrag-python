@@ -1,10 +1,11 @@
-from typing import Literal, TypedDict
+from typing import Literal, TypedDict, Optional, Any
 
 from pydantic import BaseModel
 
 
 class LLMResponse(BaseModel):
     content: str
+    function_call: Optional[dict[str, Any]] = None
 
 
 class LLMMessage(TypedDict):
