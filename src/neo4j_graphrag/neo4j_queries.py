@@ -110,7 +110,7 @@ UPSERT_VECTOR_ON_NODE_QUERY = (
     "MATCH (n) "
     "WHERE elementId(n) = $node_element_id "
     "WITH n "
-    "CALL db.create.setNodeVectorProperty(n, $embedding_node_property, $vector) "
+    "CALL db.create.setNodeVectorProperty(n, $embedding_property, $vector) "
     "RETURN n"
 )
 
@@ -118,7 +118,7 @@ UPSERT_VECTOR_ON_RELATIONSHIP_QUERY = (
     "MATCH ()-[r]->() "
     "WHERE elementId(r) = $rel_element_id "
     "WITH r "
-    "CALL db.create.setRelationshipVectorProperty(r, $embedding_node_property, $vector) "
+    "CALL db.create.setRelationshipVectorProperty(r, $embedding_property, $vector) "
     "RETURN r"
 )
 
