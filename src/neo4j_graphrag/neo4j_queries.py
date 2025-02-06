@@ -145,6 +145,7 @@ def _get_filtered_vector_query(
     node_label: str,
     embedding_node_property: str,
     embedding_dimension: int,
+    use_parallel_runtime: bool = False,
 ) -> tuple[str, dict[str, Any]]:
     """Build Cypher query for vector search with filters
     Uses exact KNN.
@@ -154,10 +155,17 @@ def _get_filtered_vector_query(
         node_label (str): node label we want to search for
         embedding_node_property (str): the name of the property holding the embeddings
         embedding_dimension (int): the dimension of the embeddings
+        use_parallel_runtime (bool): Whether or not use the parallel runtime to run the query.
+            Defaults to False.
 
     Returns:
         tuple[str, dict[str, Any]]: query and parameters
     """
+    parallel_query = (
+        "CYPHER runtime = parallel parallelRuntimeSupport=all "
+        if use_parallel_runtime
+        else ""
+    )
     where_filters, query_params = get_metadata_filter(filters, node_alias="node")
     base_query = BASE_VECTOR_EXACT_QUERY.format(
         node_label=node_label,
@@ -167,7 +175,10 @@ def _get_filtered_vector_query(
         embedding_node_property=embedding_node_property,
     )
     query_params["embedding_dimension"] = embedding_dimension
-    return f"{base_query} AND ({where_filters}) {vector_query}", query_params
+    return (
+        parallel_query + f"{base_query} AND ({where_filters}) {vector_query}",
+        query_params,
+    )
 
 
 def get_search_query(

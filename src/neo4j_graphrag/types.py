@@ -162,8 +162,19 @@ class SearchType(str, Enum):
 class IndexType(str, Enum):
     """Enumerator of the index types."""
 
-    NODE = "node"
-    RELATIONSHIP = "relationship"
+    NODE = "NODE"
+    RELATIONSHIP = "RELATIONSHIP"
+
+
+class DistanceStrategy(str, Enum):
+    """Enumerator of the Distance strategies for calculating distances
+    between vectors."""
+
+    EUCLIDEAN_DISTANCE = "EUCLIDEAN_DISTANCE"
+    MAX_INNER_PRODUCT = "MAX_INNER_PRODUCT"
+    DOT_PRODUCT = "DOT_PRODUCT"
+    JACCARD = "JACCARD"
+    COSINE = "COSINE"
 
 
 class EmbedderModel(BaseModel):
