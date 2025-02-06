@@ -91,7 +91,7 @@ def test_vector_search_with_filters(_mock: Any) -> None:
     result, params = get_search_query(
         SearchType.VECTOR,
         node_label="Label",
-        embedding_property="vector",
+        embedding_node_property="vector",
         embedding_dimension=1,
         filters={"field": "value"},
     )
@@ -117,7 +117,7 @@ def test_vector_search_with_params_from_filters(_mock: Any) -> None:
     result, params = get_search_query(
         SearchType.VECTOR,
         node_label="Label",
-        embedding_property="vector",
+        embedding_node_property="vector",
         embedding_dimension=1,
         filters={"field": "value"},
     )

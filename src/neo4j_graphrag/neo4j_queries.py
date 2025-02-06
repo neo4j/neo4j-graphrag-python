@@ -14,7 +14,6 @@
 #  limitations under the License.
 from __future__ import annotations
 
-import warnings
 from typing import Any, Optional
 
 from neo4j_graphrag.filters import get_metadata_filter
@@ -22,14 +21,14 @@ from neo4j_graphrag.types import IndexType, SearchType
 
 VECTOR_EXACT_QUERY = (
     "WITH node, "
-    "vector.similarity.cosine(node.`{embedding_property}`, $query_vector) AS score "
+    "vector.similarity.cosine(node.`{embedding_node_property}`, $query_vector) AS score "
     "ORDER BY score DESC LIMIT $top_k"
 )
 
 BASE_VECTOR_EXACT_QUERY = (
     "MATCH (node:`{node_label}`) "
-    "WHERE node.`{embedding_property}` IS NOT NULL "
-    "AND size(node.`{embedding_property}`) = toInteger($embedding_dimension)"
+    "WHERE node.`{embedding_node_property}` IS NOT NULL "
+    "AND size(node.`{embedding_node_property}`) = toInteger($embedding_dimension)"
 )
 
 
@@ -93,7 +92,7 @@ UPSERT_VECTOR_ON_NODE_QUERY = (
     "MATCH (n) "
     "WHERE elementId(n) = $node_element_id "
     "WITH n "
-    "CALL db.create.setNodeVectorProperty(n, $embedding_property, $vector) "
+    "CALL db.create.setNodeVectorProperty(n, $embedding_node_property, $vector) "
     "RETURN n"
 )
 
@@ -101,7 +100,7 @@ UPSERT_VECTOR_ON_RELATIONSHIP_QUERY = (
     "MATCH ()-[r]->() "
     "WHERE elementId(r) = $rel_element_id "
     "WITH r "
-    "CALL db.create.setRelationshipVectorProperty(r, $embedding_property, $vector) "
+    "CALL db.create.setRelationshipVectorProperty(r, $embedding_node_property, $vector) "
     "RETURN r"
 )
 
@@ -152,7 +151,7 @@ def _get_hybrid_query(
 def _get_filtered_vector_query(
     filters: dict[str, Any],
     node_label: str,
-    embedding_property: str,
+    embedding_node_property: str,
     embedding_dimension: int,
 ) -> tuple[str, dict[str, Any]]:
     """Build Cypher query for vector search with filters
@@ -161,7 +160,7 @@ def _get_filtered_vector_query(
     Args:
         filters (dict[str, Any]): filters used to pre-filter the nodes before vector search
         node_label (str): node label we want to search for
-        embedding_property (str): the name of the property holding the embeddings
+        embedding_node_property (str): the name of the property holding the embeddings
         embedding_dimension (int): the dimension of the embeddings
 
     Returns:
@@ -170,10 +169,10 @@ def _get_filtered_vector_query(
     where_filters, query_params = get_metadata_filter(filters, node_alias="node")
     base_query = BASE_VECTOR_EXACT_QUERY.format(
         node_label=node_label,
-        embedding_property=embedding_property,
+        embedding_node_property=embedding_node_property,
     )
     vector_query = VECTOR_EXACT_QUERY.format(
-        embedding_property=embedding_property,
+        embedding_node_property=embedding_node_property,
     )
     query_params["embedding_dimension"] = embedding_dimension
     return f"{base_query} AND ({where_filters}) {vector_query}", query_params
@@ -186,7 +185,6 @@ def get_search_query(
     retrieval_query: Optional[str] = None,
     node_label: Optional[str] = None,
     embedding_node_property: Optional[str] = None,
-    embedding_property: Optional[str] = None,
     embedding_dimension: Optional[int] = None,
     filters: Optional[dict[str, Any]] = None,
     neo4j_version_is_5_23_or_above: bool = False,
@@ -204,7 +202,7 @@ def get_search_query(
         retrieval_query (Optional[str]): Query used to retrieve search results.
             Cannot be provided alongside `return_properties`.
         node_label (Optional[str]): Label of the nodes to search.
-        embedding_property (Optional[str])): Name of the property containing the embeddings.
+        embedding_node_property (Optional[str])): Name of the property containing the embeddings.
         embedding_dimension (Optional[int]): Dimension of the embeddings.
         filters (Optional[dict[str, Any]]): Filters to pre-filter nodes before vector search.
         neo4j_version_is_5_23_or_above (Optional[bool]): Whether the Neo4j version is 5.23 or above.
@@ -218,21 +216,6 @@ def get_search_query(
         Exception: If Vector Search with filters is missing required parameters.
         ValueError: If an unsupported search type is provided.
     """
-    warnings.warn(
-        "embedding_node_property is deprecated, use embedding_property instead",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    if embedding_node_property:
-        if embedding_property:
-            warnings.warn(
-                "Both embedding_node_property and embedding_property provided, using embedding_property",
-                UserWarning,
-                stacklevel=2,
-            )
-        else:
-            embedding_property = embedding_node_property
-
     if index_type == IndexType.NODE:
         if search_type == SearchType.HYBRID:
             if filters:
@@ -243,25 +226,25 @@ def get_search_query(
             if filters:
                 if (
                     node_label is not None
-                    and embedding_property is not None
+                    and embedding_node_property is not None
                     and embedding_dimension is not None
                 ):
                     query, params = _get_filtered_vector_query(
                         filters,
                         node_label,
-                        embedding_property,
+                        embedding_node_property,
                         embedding_dimension,
                     )
                 else:
                     raise Exception(
-                        "Vector Search with filters requires: node_label, embedding_property, embedding_dimension"
+                        "Vector Search with filters requires: node_label, embedding_node_property, embedding_dimension"
                     )
             else:
                 query, params = _get_vector_search_query(index_type=index_type), {}
         else:
             raise ValueError(f"Search type is not supported: {search_type}")
         fallback_return = (
-            f"RETURN node {{ .*, `{embedding_property}`: null }} AS node, "
+            f"RETURN node {{ .*, `{embedding_node_property}`: null }} AS node, "
             "labels(node) AS nodeLabels, elementId(node) AS elementId, score"
         )
     elif index_type == IndexType.RELATIONSHIP:
@@ -272,7 +255,7 @@ def get_search_query(
         else:
             raise ValueError(f"Search type is not supported: {search_type}")
         fallback_return = (
-            f"RETURN relationship {{ .*, `{embedding_property}`: null }} AS relationship, "
+            f"RETURN relationship {{ .*, `{embedding_node_property}`: null }} AS relationship, "
             "elementId(relationship) AS elementId, score"
         )
     else:
