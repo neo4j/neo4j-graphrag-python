@@ -237,6 +237,8 @@ def test_hybrid_search_sanitizes_text(
     neo4j_record: MagicMock,
 ) -> None:
     mock_get_version.return_value = ((5, 23, 0), False, False)
+    embed_query_vector = [1.0 for _ in range(1536)]
+    embedder.embed_query.return_value = embed_query_vector
     vector_index_name = "vector-index"
     fulltext_index_name = "fulltext-index"
     query_text = 'may thy knife chip and shatter+-&|!(){}[]^"~*?:\\/'
@@ -257,6 +259,23 @@ def test_hybrid_search_sanitizes_text(
         effective_search_ratio=effective_search_ratio,
     )
     embedder.embed_query.assert_called_once_with(remove_lucene_chars(query_text))
+    search_query, _ = get_search_query(
+        SearchType.HYBRID,
+        neo4j_version_is_5_23_or_above=retriever.neo4j_version_is_5_23_or_above,
+    )
+    driver.execute_query.assert_called_once_with(
+        search_query,
+        {
+            "vector_index_name": vector_index_name,
+            "top_k": top_k,
+            "effective_search_ratio": effective_search_ratio,
+            "query_text": remove_lucene_chars(query_text),
+            "fulltext_index_name": fulltext_index_name,
+            "query_vector": embed_query_vector,
+        },
+        database_=None,
+        routing_=neo4j.RoutingControl.READ,
+    )
 
 
 @patch("neo4j_graphrag.retrievers.HybridRetriever._fetch_index_infos")
@@ -541,6 +560,8 @@ def test_hybrid_cypher_search_sanitizes_text(
     neo4j_record: MagicMock,
 ) -> None:
     mock_get_version.return_value = ((5, 23, 0), False, False)
+    embed_query_vector = [1.0 for _ in range(1536)]
+    embedder.embed_query.return_value = embed_query_vector
     vector_index_name = "vector-index"
     fulltext_index_name = "fulltext-index"
     query_text = 'may thy knife chip and shatter+-&|!(){}[]^"~*?:\\/'
@@ -567,3 +588,21 @@ def test_hybrid_cypher_search_sanitizes_text(
         effective_search_ratio=effective_search_ratio,
     )
     embedder.embed_query.assert_called_once_with(remove_lucene_chars(query_text))
+    search_query, _ = get_search_query(
+        SearchType.HYBRID,
+        retrieval_query=retrieval_query,
+        neo4j_version_is_5_23_or_above=retriever.neo4j_version_is_5_23_or_above,
+    )
+    driver.execute_query.assert_called_once_with(
+        search_query,
+        {
+            "vector_index_name": vector_index_name,
+            "top_k": top_k,
+            "effective_search_ratio": effective_search_ratio,
+            "query_text": remove_lucene_chars(query_text),
+            "fulltext_index_name": fulltext_index_name,
+            "query_vector": embed_query_vector,
+        },
+        database_=None,
+        routing_=neo4j.RoutingControl.READ,
+    )
