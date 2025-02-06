@@ -26,6 +26,7 @@ from neo4j_graphrag.exceptions import (
     RetrieverInitializationError,
     SearchValidationError,
 )
+from neo4j_graphrag.indexes import remove_lucene_chars
 from neo4j_graphrag.neo4j_queries import get_search_query
 from neo4j_graphrag.retrievers.base import Retriever
 from neo4j_graphrag.types import (
@@ -193,7 +194,8 @@ class VectorRetriever(Retriever):
                 raise EmbeddingRequiredError(
                     "Embedding method required for text query."
                 )
-            query_vector = self.embedder.embed_query(query_text)
+            sanitized_query_text = remove_lucene_chars(query_text)
+            query_vector = self.embedder.embed_query(sanitized_query_text)
             parameters["query_vector"] = query_vector
             del parameters["query_text"]
 
@@ -351,7 +353,8 @@ class VectorCypherRetriever(Retriever):
                 raise EmbeddingRequiredError(
                     "Embedding method required for text query."
                 )
-            parameters["query_vector"] = self.embedder.embed_query(query_text)
+            sanitized_query_text = remove_lucene_chars(query_text)
+            parameters["query_vector"] = self.embedder.embed_query(sanitized_query_text)
             del parameters["query_text"]
 
         if query_params:

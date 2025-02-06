@@ -21,6 +21,7 @@ from neo4j_graphrag.exceptions import (
     EmbeddingRequiredError,
     RetrieverInitializationError,
 )
+from neo4j_graphrag.indexes import remove_lucene_chars
 from neo4j_graphrag.neo4j_queries import get_search_query
 from neo4j_graphrag.retrievers import HybridCypherRetriever, HybridRetriever
 from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem, SearchType
@@ -224,6 +225,38 @@ def test_hybrid_search_text_happy_path(
         ],
         metadata={"__retriever": "HybridRetriever"},
     )
+
+
+@patch("neo4j_graphrag.retrievers.HybridRetriever._fetch_index_infos")
+@patch("neo4j_graphrag.retrievers.base.get_version")
+def test_hybrid_search_sanitizes_text(
+    mock_get_version: MagicMock,
+    _fetch_index_infos_mock: MagicMock,
+    driver: MagicMock,
+    embedder: MagicMock,
+    neo4j_record: MagicMock,
+) -> None:
+    mock_get_version.return_value = ((5, 23, 0), False, False)
+    vector_index_name = "vector-index"
+    fulltext_index_name = "fulltext-index"
+    query_text = 'may thy knife chip and shatter+-&|!(){}[]^"~*?:\\/'
+    top_k = 5
+    effective_search_ratio = 2
+    retriever = HybridRetriever(
+        driver, vector_index_name, fulltext_index_name, embedder
+    )
+    retriever.neo4j_version_is_5_23_or_above = True
+    retriever.driver.execute_query.return_value = [  # type: ignore
+        [neo4j_record],
+        None,
+        None,
+    ]
+    retriever.search(
+        query_text=query_text,
+        top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
+    )
+    embedder.embed_query.assert_called_once_with(remove_lucene_chars(query_text))
 
 
 @patch("neo4j_graphrag.retrievers.HybridRetriever._fetch_index_infos")
@@ -498,3 +531,39 @@ def test_hybrid_cypher_retriever_with_result_format_function(
         ],
         metadata={"__retriever": "HybridCypherRetriever"},
     )
+
+
+@patch("neo4j_graphrag.retrievers.base.get_version")
+def test_hybrid_cypher_search_sanitizes_text(
+    mock_get_version: MagicMock,
+    driver: MagicMock,
+    embedder: MagicMock,
+    neo4j_record: MagicMock,
+) -> None:
+    mock_get_version.return_value = ((5, 23, 0), False, False)
+    vector_index_name = "vector-index"
+    fulltext_index_name = "fulltext-index"
+    query_text = 'may thy knife chip and shatter+-&|!(){}[]^"~*?:\\/'
+    top_k = 5
+    effective_search_ratio = 2
+    retrieval_query = """
+    RETURN node.id AS node_id, node.text AS text, score, {test: $param} AS metadata
+    """
+    retriever = HybridCypherRetriever(
+        driver,
+        vector_index_name,
+        fulltext_index_name,
+        retrieval_query,
+        embedder,
+    )
+    retriever.driver.execute_query.return_value = [  # type: ignore
+        [neo4j_record],
+        None,
+        None,
+    ]
+    retriever.search(
+        query_text=query_text,
+        top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
+    )
+    embedder.embed_query.assert_called_once_with(remove_lucene_chars(query_text))

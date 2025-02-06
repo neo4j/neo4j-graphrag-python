@@ -469,3 +469,32 @@ async def async_upsert_vector_on_relationship(
         raise Neo4jInsertionError(
             f"Upserting vector to Neo4j failed: {e.message}"
         ) from e
+
+
+def remove_lucene_chars(text: str) -> str:
+    """Remove Lucene special characters"""
+    special_chars = [
+        "+",
+        "-",
+        "&",
+        "|",
+        "!",
+        "(",
+        ")",
+        "{",
+        "}",
+        "[",
+        "]",
+        "^",
+        '"',
+        "~",
+        "*",
+        "?",
+        ":",
+        "\\",
+        "/",
+    ]
+    for char in special_chars:
+        if char in text:
+            text = text.replace(char, " ")
+    return text.strip()
