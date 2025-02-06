@@ -19,6 +19,20 @@ from typing import Any, Optional
 from neo4j_graphrag.filters import get_metadata_filter
 from neo4j_graphrag.types import IndexType, SearchType
 
+NODE_VECTOR_INDEX_QUERY = (
+    "CALL db.index.vector.queryNodes"
+    "($vector_index_name, $top_k * $effective_search_ratio, $query_vector) "
+    "YIELD node, score "
+    "WITH node, score LIMIT $top_k"
+)
+
+REL_VECTOR_INDEX_QUERY = (
+    "CALL db.index.vector.queryRelationships"
+    "($vector_index_name, $top_k * $effective_search_ratio, $query_vector) "
+    "YIELD relationship, score "
+    "WITH relationship, score LIMIT $top_k"
+)
+
 VECTOR_EXACT_QUERY = (
     "WITH node, "
     "vector.similarity.cosine(node.`{embedding_node_property}`, $query_vector) AS score "
@@ -31,6 +45,10 @@ BASE_VECTOR_EXACT_QUERY = (
     "AND size(node.`{embedding_node_property}`) = toInteger($embedding_dimension)"
 )
 
+FULL_TEXT_SEARCH_QUERY = (
+    "CALL db.index.fulltext.queryNodes($fulltext_index_name, $query_text, {limit: $top_k}) "
+    "YIELD node, score"
+)
 
 UPSERT_NODE_QUERY = (
     "UNWIND $rows AS row "
@@ -105,45 +123,19 @@ UPSERT_VECTOR_ON_RELATIONSHIP_QUERY = (
 )
 
 
-def _get_vector_search_query(index_type: IndexType = IndexType.NODE) -> str:
-    procedure = "queryNodes" if index_type == IndexType.NODE else "queryRelationships"
-    return (
-        f"CALL db.index.vector.{procedure}"
-        "($vector_index_name, $top_k * $effective_search_ratio, $query_vector) "
-        f"YIELD {index_type.value}, score "
-        f"WITH {index_type.value}, score LIMIT $top_k"
-    )
-
-
-def _get_full_text_search_query(index_type: IndexType = IndexType.NODE) -> str:
-    procedure = "queryNodes" if index_type == IndexType.NODE else "queryRelationships"
-    return (
-        f"CALL db.index.fulltext.{procedure}"
-        "($fulltext_index_name, $query_text, {limit: $top_k}) "
-        f"YIELD {index_type.value}, score"
-    )
-
-
-def _get_hybrid_query(
-    neo4j_version_is_5_23_or_above: bool, index_type: IndexType = IndexType.NODE
-) -> str:
+def _get_hybrid_query(neo4j_version_is_5_23_or_above: bool) -> str:
     call_prefix = "CALL () { " if neo4j_version_is_5_23_or_above else "CALL { "
-    vector_search_query = _get_vector_search_query(index_type=index_type)
-    full_text_search_query = _get_full_text_search_query(index_type=index_type)
     query_body = (
-        f"{vector_search_query} "
-        f"WITH collect({{{index_type.value}:{index_type.value}, score:score}}) AS {index_type.value}s, "
-        "max(score) AS vector_index_max_score "
-        f"UNWIND {index_type.value}s AS n "
-        f"RETURN n.{index_type.value} AS {index_type.value}, (n.score / vector_index_max_score) AS score "
+        f"{NODE_VECTOR_INDEX_QUERY} "
+        "WITH collect({node:node, score:score}) AS nodes, max(score) AS vector_index_max_score "
+        "UNWIND nodes AS n "
+        "RETURN n.node AS node, (n.score / vector_index_max_score) AS score "
         "UNION "
-        f"{full_text_search_query} "
-        f"WITH collect({{{index_type.value}:{index_type.value}, score:score}}) AS {index_type.value}s, "
-        "max(score) AS ft_index_max_score "
-        f"UNWIND {index_type.value}s AS n "
-        f"RETURN n.{index_type.value} AS {index_type.value}, (n.score / ft_index_max_score) AS score "
-        "} "
-        f"WITH {index_type.value}, max(score) AS score ORDER BY score DESC LIMIT $top_k"
+        f"{FULL_TEXT_SEARCH_QUERY} "
+        "WITH collect({node:node, score:score}) AS nodes, max(score) AS ft_index_max_score "
+        "UNWIND nodes AS n "
+        "RETURN n.node AS node, (n.score / ft_index_max_score) AS score } "
+        "WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k"
     )
     return call_prefix + query_body
 
@@ -219,7 +211,7 @@ def get_search_query(
     if index_type == IndexType.NODE:
         if search_type == SearchType.HYBRID:
             if filters:
-                raise Exception("Filters are not supported with Hybrid Search")
+                raise Exception("Filters are not supported with hybrid search")
             query = _get_hybrid_query(neo4j_version_is_5_23_or_above)
             params: dict[str, Any] = {}
         elif search_type == SearchType.VECTOR:
@@ -240,7 +232,7 @@ def get_search_query(
                         "Vector Search with filters requires: node_label, embedding_node_property, embedding_dimension"
                     )
             else:
-                query, params = _get_vector_search_query(index_type=index_type), {}
+                query, params = NODE_VECTOR_INDEX_QUERY, {}
         else:
             raise ValueError(f"Search type is not supported: {search_type}")
         fallback_return = (
@@ -248,16 +240,18 @@ def get_search_query(
             "labels(node) AS nodeLabels, elementId(node) AS elementId, score"
         )
     elif index_type == IndexType.RELATIONSHIP:
+        if filters:
+            raise Exception("Filters are not supported for relationship indexes")
         if search_type == SearchType.HYBRID:
-            raise Exception("Hybrid search is not support for relationship indexes")
+            raise Exception("Hybrid search is not supported for relationship indexes")
         elif search_type == SearchType.VECTOR:
-            query, params = _get_vector_search_query(index_type=index_type), {}
+            query, params = REL_VECTOR_INDEX_QUERY, {}
+            fallback_return = (
+                f"RETURN relationship {{ .*, `{embedding_node_property}`: null }} AS relationship, "
+                "elementId(relationship) AS elementId, score"
+            )
         else:
             raise ValueError(f"Search type is not supported: {search_type}")
-        fallback_return = (
-            f"RETURN relationship {{ .*, `{embedding_node_property}`: null }} AS relationship, "
-            "elementId(relationship) AS elementId, score"
-        )
     else:
         raise ValueError(f"Index type is not supported: {index_type}")
 
