@@ -30,6 +30,7 @@ from neo4j_graphrag.experimental.pipeline.types import (
     PipelineEvent,
     RunResult,
     TaskEvent,
+    Event,
 )
 
 from .components import (
@@ -479,3 +480,14 @@ async def test_pipeline_event_notification() -> None:
         if previous_ts:
             assert actual_event.timestamp > previous_ts
         previous_ts = actual_event.timestamp
+
+
+def test_event_model_no_warning(recwarn: Sized) -> None:
+    event = Event(
+        event_type=EventType.PIPELINE_STARTED,
+        run_id="run_id",
+        message=None,
+        payload=None,
+    )
+    assert event.timestamp is not None
+    assert len(recwarn) == 0

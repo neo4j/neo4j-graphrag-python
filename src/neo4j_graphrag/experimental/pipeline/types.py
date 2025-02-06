@@ -82,7 +82,9 @@ class Event(BaseModel):
     event_type: EventType
     run_id: str
     """Pipeline unique run_id, same as the one returned in PipelineResult after pipeline.run"""
-    timestamp: datetime.datetime
+    timestamp: datetime.datetime = Field(
+        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc)
+    )
     message: Optional[str] = None
     """Optional information about the status"""
     payload: Optional[dict[str, Any]] = None

@@ -14,7 +14,6 @@
 #  limitations under the License.
 from __future__ import annotations
 
-import datetime
 from typing import Any, Optional
 
 from neo4j_graphrag.experimental.pipeline.types import (
@@ -41,7 +40,6 @@ class EventNotifier:
         event = PipelineEvent(
             event_type=EventType.PIPELINE_STARTED,
             run_id=run_id,
-            timestamp=datetime.datetime.utcnow(),
             message=None,
             payload=input_data,
         )
@@ -53,7 +51,6 @@ class EventNotifier:
         event = PipelineEvent(
             event_type=EventType.PIPELINE_FINISHED,
             run_id=run_id,
-            timestamp=datetime.datetime.utcnow(),
             message=None,
             payload=output_data,
         )
@@ -69,7 +66,6 @@ class EventNotifier:
             event_type=EventType.TASK_STARTED,
             run_id=run_id,
             task_name=task_name,
-            timestamp=datetime.datetime.utcnow(),
             message=None,
             payload=input_data,
         )
@@ -85,7 +81,6 @@ class EventNotifier:
             event_type=EventType.TASK_FINISHED,
             run_id=run_id,
             task_name=task_name,
-            timestamp=datetime.datetime.utcnow(),
             message=None,
             payload=output_data.result.model_dump()
             if output_data and output_data.result
