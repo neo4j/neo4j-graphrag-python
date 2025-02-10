@@ -5,6 +5,7 @@ This example illustrates:
 - VectorCypherRetriever with a custom formatter function to extract relevant
     context from neo4j result
 - Logging configuration
+- Function calling
 """
 
 import logging
@@ -79,16 +80,14 @@ llm = OpenAILLM(
     },
 )
 
+query_text = """
+Tell me more about Avatar movies and find
+out what streaming platform it is available on
+"""
+
 rag = GraphRAG(retriever=retriever, llm=llm)
 
-result = rag.search(
-    """
-        Tell me more about Avatar movies and find
-        out what streaming platform it is available
-        on
-    """,
-    return_context=True,
-)
+result = rag.search(query_text, return_context=True)
 
 
 def fetch_streaming_info(movie_title: str) -> str:
@@ -103,7 +102,15 @@ if result.function_call:
         args = json.loads(arguments_str)
         movie_title = args["movie_title"]
         streaming_info = fetch_streaming_info(movie_title)
-        print(f"Streaming Availability: {streaming_info}")
+
+        second_query = f"""
+                {query_text}
+                Also, you found that '{movie_title}' is available on {streaming_info}.
+                Please provide more details from the knowledge graph but do NOT call any function.
+                """
+
+        result_second = rag.search(second_query, return_context=True)
+        print("Second-pass answer:", result_second.answer)
 else:
     print(result.answer)
 
