@@ -123,6 +123,42 @@ UPSERT_VECTOR_ON_RELATIONSHIP_QUERY = (
 )
 
 
+def _get_upsert_texts_and_embeddings_query(
+    node_label: str,
+    text_property: str,
+    embedding_property: str,
+    neo4j_version_is_5_23_or_above: bool,
+) -> str:
+    """
+    Constructs a cypher query which allows for texts and embeddings to be upserted to a node.
+
+    Args:
+        node_label (str): The label for the node to be upserted.
+        text_node_property (str): The property name where text data will be stored.
+        embedding_node_property (str): The property name where embedding data will be stored.
+        neo4j_version_is_5_23_or_above (bool): Whether or not the version of Neo4j is
+            5.23 or above. If true, uses the updated syntax for call statements.
+
+    Returns:
+        str: The constructed Cypher query string.
+    """
+    call_prefix = (
+        "CALL (row) { " if neo4j_version_is_5_23_or_above else "CALL { WITH row "
+    )
+    query = (
+        "UNWIND $data AS row "
+        f"{call_prefix}"
+        f"MERGE (c:`{node_label}` {{id: row.id}}) "
+        "WITH c, row "
+        f"CALL db.create.setNodeVectorProperty(c, "
+        f"'{embedding_property}', row.embedding) "
+        f"SET c.`{text_property}` = row.text "
+        "SET c += row.metadata "
+        "} IN TRANSACTIONS OF 1000 ROWS "
+    )
+    return query
+
+
 def _get_hybrid_query(neo4j_version_is_5_23_or_above: bool) -> str:
     """
     Construct a cypher query for hybrid search.
