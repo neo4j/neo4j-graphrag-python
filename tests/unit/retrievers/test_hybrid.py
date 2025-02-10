@@ -21,7 +21,7 @@ from neo4j_graphrag.exceptions import (
     EmbeddingRequiredError,
     RetrieverInitializationError,
 )
-from neo4j_graphrag.indexes import remove_lucene_chars
+from neo4j_graphrag.indexes import _remove_lucene_chars
 from neo4j_graphrag.neo4j_queries import get_search_query
 from neo4j_graphrag.retrievers import HybridCypherRetriever, HybridRetriever
 from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem, SearchType
@@ -258,7 +258,7 @@ def test_hybrid_search_sanitizes_text(
         top_k=top_k,
         effective_search_ratio=effective_search_ratio,
     )
-    embedder.embed_query.assert_called_once_with(remove_lucene_chars(query_text))
+    embedder.embed_query.assert_called_once_with(_remove_lucene_chars(query_text))
     search_query, _ = get_search_query(
         SearchType.HYBRID,
         neo4j_version_is_5_23_or_above=retriever.neo4j_version_is_5_23_or_above,
@@ -269,7 +269,7 @@ def test_hybrid_search_sanitizes_text(
             "vector_index_name": vector_index_name,
             "top_k": top_k,
             "effective_search_ratio": effective_search_ratio,
-            "query_text": remove_lucene_chars(query_text),
+            "query_text": _remove_lucene_chars(query_text),
             "fulltext_index_name": fulltext_index_name,
             "query_vector": embed_query_vector,
         },
@@ -587,7 +587,7 @@ def test_hybrid_cypher_search_sanitizes_text(
         top_k=top_k,
         effective_search_ratio=effective_search_ratio,
     )
-    embedder.embed_query.assert_called_once_with(remove_lucene_chars(query_text))
+    embedder.embed_query.assert_called_once_with(_remove_lucene_chars(query_text))
     search_query, _ = get_search_query(
         SearchType.HYBRID,
         retrieval_query=retrieval_query,
@@ -599,7 +599,7 @@ def test_hybrid_cypher_search_sanitizes_text(
             "vector_index_name": vector_index_name,
             "top_k": top_k,
             "effective_search_ratio": effective_search_ratio,
-            "query_text": remove_lucene_chars(query_text),
+            "query_text": _remove_lucene_chars(query_text),
             "fulltext_index_name": fulltext_index_name,
             "query_vector": embed_query_vector,
         },

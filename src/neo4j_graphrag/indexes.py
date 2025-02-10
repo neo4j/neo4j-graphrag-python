@@ -471,7 +471,7 @@ async def async_upsert_vector_on_relationship(
         ) from e
 
 
-def remove_lucene_chars(text: str) -> str:
+def _remove_lucene_chars(text: str) -> str:
     """Remove Lucene special characters"""
     special_chars = [
         "+",

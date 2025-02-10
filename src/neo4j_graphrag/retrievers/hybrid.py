@@ -27,7 +27,7 @@ from neo4j_graphrag.exceptions import (
     RetrieverInitializationError,
     SearchValidationError,
 )
-from neo4j_graphrag.indexes import remove_lucene_chars
+from neo4j_graphrag.indexes import _remove_lucene_chars
 from neo4j_graphrag.neo4j_queries import get_search_query
 from neo4j_graphrag.retrievers.base import Retriever
 from neo4j_graphrag.types import (
@@ -184,7 +184,7 @@ class HybridRetriever(Retriever):
         parameters = validated_data.model_dump(exclude_none=True)
         parameters["vector_index_name"] = self.vector_index_name
         parameters["fulltext_index_name"] = self.fulltext_index_name
-        sanitized_query_text = remove_lucene_chars(query_text)
+        sanitized_query_text = _remove_lucene_chars(query_text)
         parameters["query_text"] = sanitized_query_text
 
         if query_text and not query_vector:
@@ -345,7 +345,7 @@ class HybridCypherRetriever(Retriever):
         parameters = validated_data.model_dump(exclude_none=True)
         parameters["vector_index_name"] = self.vector_index_name
         parameters["fulltext_index_name"] = self.fulltext_index_name
-        sanitized_query_text = remove_lucene_chars(query_text)
+        sanitized_query_text = _remove_lucene_chars(query_text)
         parameters["query_text"] = sanitized_query_text
 
         if query_text and not query_vector:

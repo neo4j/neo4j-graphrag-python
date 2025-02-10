@@ -23,7 +23,7 @@ from neo4j_graphrag.indexes import (
     create_fulltext_index,
     create_vector_index,
     drop_index_if_exists,
-    remove_lucene_chars,
+    _remove_lucene_chars,
     upsert_vector,
     upsert_vector_on_relationship,
 )
@@ -292,45 +292,45 @@ def test_upsert_vector_raises_neo4j_insertion_error(
 
 def test_escaping_lucene() -> None:
     """Test escaping lucene characters"""
-    assert remove_lucene_chars("Hello+World") == "Hello World"
-    assert remove_lucene_chars("Hello World\\") == "Hello World"
+    assert _remove_lucene_chars("Hello+World") == "Hello World"
+    assert _remove_lucene_chars("Hello World\\") == "Hello World"
     assert (
-        remove_lucene_chars("It is the end of the world. Take shelter!")
+        _remove_lucene_chars("It is the end of the world. Take shelter!")
         == "It is the end of the world. Take shelter"
     )
     assert (
-        remove_lucene_chars("It is the end of the world. Take shelter&&")
+        _remove_lucene_chars("It is the end of the world. Take shelter&&")
         == "It is the end of the world. Take shelter"
     )
     assert (
-        remove_lucene_chars("Bill&&Melinda Gates Foundation")
+        _remove_lucene_chars("Bill&&Melinda Gates Foundation")
         == "Bill  Melinda Gates Foundation"
     )
     assert (
-        remove_lucene_chars("It is the end of the world. Take shelter(&&)")
+        _remove_lucene_chars("It is the end of the world. Take shelter(&&)")
         == "It is the end of the world. Take shelter"
     )
     assert (
-        remove_lucene_chars("It is the end of the world. Take shelter??")
+        _remove_lucene_chars("It is the end of the world. Take shelter??")
         == "It is the end of the world. Take shelter"
     )
     assert (
-        remove_lucene_chars("It is the end of the world. Take shelter^")
+        _remove_lucene_chars("It is the end of the world. Take shelter^")
         == "It is the end of the world. Take shelter"
     )
     assert (
-        remove_lucene_chars("It is the end of the world. Take shelter+")
+        _remove_lucene_chars("It is the end of the world. Take shelter+")
         == "It is the end of the world. Take shelter"
     )
     assert (
-        remove_lucene_chars("It is the end of the world. Take shelter-")
+        _remove_lucene_chars("It is the end of the world. Take shelter-")
         == "It is the end of the world. Take shelter"
     )
     assert (
-        remove_lucene_chars("It is the end of the world. Take shelter~")
+        _remove_lucene_chars("It is the end of the world. Take shelter~")
         == "It is the end of the world. Take shelter"
     )
     assert (
-        remove_lucene_chars("It is the end of the world. Take shelter/")
+        _remove_lucene_chars("It is the end of the world. Take shelter/")
         == "It is the end of the world. Take shelter"
     )
