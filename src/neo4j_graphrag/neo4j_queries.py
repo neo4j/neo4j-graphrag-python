@@ -145,7 +145,7 @@ def _get_filtered_vector_query(
     node_label: str,
     embedding_node_property: str,
     embedding_dimension: int,
-    use_parallel_runtime: bool = False,
+    use_parallel_runtime: bool,
 ) -> tuple[str, dict[str, Any]]:
     """Build Cypher query for vector search with filters
     Uses exact KNN.
@@ -191,6 +191,7 @@ def get_search_query(
     embedding_dimension: Optional[int] = None,
     filters: Optional[dict[str, Any]] = None,
     neo4j_version_is_5_23_or_above: bool = False,
+    use_parallel_runtime: bool = False,
 ) -> tuple[str, dict[str, Any]]:
     """
     Constructs a search query for vector or hybrid search, including optional pre-filtering
@@ -237,6 +238,7 @@ def get_search_query(
                         node_label,
                         embedding_node_property,
                         embedding_dimension,
+                        use_parallel_runtime,
                     )
                 else:
                     raise Exception(
