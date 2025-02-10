@@ -248,3 +248,22 @@ Current Query:
 latest question
 """
     )
+
+
+def test_graphrag_search_function_call_happy_path(retriever_mock, llm: MagicMock):
+    retriever_mock.search.return_value = RetrieverResult(items=[])
+    llm.invoke.return_value = LLMResponse(
+        content="",
+        function_call={
+            "name": "get_streaming_availability",
+            "arguments": '{"movie_title":"Avatar"}',
+        },
+    )
+    rag = GraphRAG(
+        retriever_mock, llm, prompt_template=RagTemplate(system_instructions="Test SI")
+    )
+    res = rag.search("Find out streaming info", return_context=True)
+
+    assert res.answer == ""
+    assert res.function_call is not None
+    assert res.function_call["name"] == "get_streaming_availability"
