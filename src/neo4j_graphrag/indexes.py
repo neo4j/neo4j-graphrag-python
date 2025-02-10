@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 import neo4j
 from pydantic import ValidationError
@@ -24,6 +24,7 @@ from neo4j_graphrag.neo4j_queries import (
     UPSERT_VECTOR_ON_NODE_QUERY,
     UPSERT_VECTOR_ON_RELATIONSHIP_QUERY,
 )
+from neo4j_graphrag.schema import query_database
 
 from .exceptions import Neo4jIndexError, Neo4jInsertionError
 from .types import FulltextIndexModel, VectorIndexModel
@@ -498,3 +499,110 @@ def _remove_lucene_chars(text: str) -> str:
         if char in text:
             text = text.replace(char, " ")
     return text.strip()
+
+
+def _sort_by_index_name(
+    lst: List[Dict[str, Any]], index_name: str
+) -> List[Dict[str, Any]]:
+    """
+    Sorts the provided list of dictionaries containing index information so
+    that any item whose 'name' key matches the given 'index_name' appears at
+    the front of the list.
+
+    Args:
+        lst (List[Dict[str, Any]]): The list of dictionaries containing index
+            information to sort.
+        index_name (str): The index name to match against the 'name' key of
+            each dictionary.
+
+    Returns:
+        List[Dict[str, Any]]: A newly sorted list with items matching
+        'index_name' placed first.
+    """
+    return sorted(lst, key=lambda x: x.get("name") != index_name)
+
+
+def retrieve_vector_index_info(
+    driver: neo4j.Driver, index_name: str, label_or_type: str, embedding_property: str
+) -> Optional[Dict[str, Any]]:
+    """
+    Check if a vector index exists in a Neo4j database and return its
+    information. If no matching index is found, returns None.
+
+    Args:
+        driver (neo4j.Driver): Neo4j Python driver instance.
+        index_name (str): The name of the index to look up.
+        label_or_type (str): The label (for nodes) or type (for relationships)
+            of the index.
+        embedding_property (str): The name of the property containing the
+            embeddings.
+
+    Returns:
+        Optional[Dict[str, Any]]:
+            A dictionary containing the first matching index's information if found,
+            or None otherwise.
+    """
+    index_information = query_database(
+        driver=driver,
+        query=(
+            "SHOW INDEXES YIELD name, type, entityType, labelsOrTypes, "
+            "properties, options WHERE type = 'VECTOR' AND (name = $index_name "
+            "OR (labelsOrTypes[0] = $label_or_type AND "
+            "properties[0] = $embedding_property)) "
+            "RETURN name, type, entityType, labelsOrTypes, properties, options"
+        ),
+        params={
+            "index_name": index_name,
+            "label_or_type": label_or_type,
+            "embedding_property": embedding_property,
+        },
+    )
+    index_information = _sort_by_index_name(index_information, index_name)
+    if len(index_information) > 0:
+        return index_information[0]
+    else:
+        return None
+
+
+def retrieve_fulltext_index_info(
+    driver: neo4j.Driver,
+    index_name: str,
+    label_or_type: str,
+    text_properties: List[str] = [],
+) -> Optional[Dict[str, Any]]:
+    """
+    Check if a full text index exists in a Neo4j database and return its
+    information. If no matching index is found, returns None.
+
+    Args:
+        driver (neo4j.Driver): Neo4j Python driver instance.
+        index_name (str): The name of the index to look up.
+        label_or_type (str): The label (for nodes) or type (for relationships)
+            of the index.
+        text_properties (List[str]): The names of the text properties indexed.
+
+    Returns:
+        Optional[Dict[str, Any]]:
+            A dictionary containing the first matching index's information if found,
+            or None otherwise.
+    """
+    index_information = query_database(
+        driver=driver,
+        query=(
+            "SHOW INDEXES YIELD name, type, entityType, labelsOrTypes, properties, options "
+            "WHERE type = 'FULLTEXT' AND (name = $index_name "
+            "OR (labelsOrTypes = [$label_or_type] AND "
+            "properties = $text_properties)) "
+            "RETURN name, type, entityType, labelsOrTypes, properties, options"
+        ),
+        params={
+            "index_name": index_name,
+            "label_or_type": label_or_type,
+            "text_properties": text_properties,
+        },
+    )
+    index_information = _sort_by_index_name(index_information, index_name)
+    if len(index_information) > 0:
+        return index_information[0]
+    else:
+        return None
