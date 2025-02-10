@@ -124,6 +124,16 @@ UPSERT_VECTOR_ON_RELATIONSHIP_QUERY = (
 
 
 def _get_hybrid_query(neo4j_version_is_5_23_or_above: bool) -> str:
+    """
+    Construct a cypher query for hybrid search.
+
+    Args:
+        neo4j_version_is_5_23_or_above (bool): Whether or not the Neo4j version is 5.23 or above;
+            determines which call syntax is used.
+
+    Returns:
+        str: The constructed Cypher query string.
+    """
     call_prefix = "CALL () { " if neo4j_version_is_5_23_or_above else "CALL { "
     query_body = (
         f"{NODE_VECTOR_INDEX_QUERY} "
@@ -210,6 +220,8 @@ def get_search_query(
         embedding_dimension (Optional[int]): Dimension of the embeddings.
         filters (Optional[dict[str, Any]]): Filters to pre-filter nodes before vector search.
         neo4j_version_is_5_23_or_above (Optional[bool]): Whether the Neo4j version is 5.23 or above.
+        use_parallel_runtime (bool): Whether or not use the parallel runtime to run the query.
+            Defaults to False.
 
     Returns:
         tuple[str, dict[str, Any]]: A tuple containing the constructed query string and
