@@ -394,6 +394,8 @@ Database Interaction
 
 .. autofunction:: neo4j_graphrag.indexes.retrieve_fulltext_index_info
 
+.. autofunction:: neo4j_graphrag.indexes.upsert_texts_and_vectors
+
 .. autofunction:: neo4j_graphrag.schema.get_structured_schema
 
 .. autofunction:: neo4j_graphrag.schema.get_schema
