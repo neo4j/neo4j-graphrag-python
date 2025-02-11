@@ -15,9 +15,13 @@
 from __future__ import annotations
 
 import asyncio
+import enum
 import logging
 import uuid
 import warnings
+import datetime
+
+from pydantic import BaseModel, Field
 from typing import TYPE_CHECKING, Any, AsyncGenerator
 
 from neo4j_graphrag.experimental.pipeline.exceptions import (
@@ -33,6 +37,20 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+
+class ResultType(enum.Enum):
+    TASK_CHECKPOINT = "TASK_CHECKPOINT"
+    TASK_FINISHED = "TASK_FINISHED"
+    PIPELINE_FINISHED = "PIPELINE_FINISHED"
+
+
+class Result(BaseModel):
+    result_type: ResultType
+    data: Any
+    timestamp: datetime.datetime = Field(
+        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc)
+    )
 
 
 class Orchestrator:
@@ -53,7 +71,25 @@ class Orchestrator:
         self.event_notifier = EventNotifier(pipeline.callback)
         self.run_id = str(uuid.uuid4())
 
-    async def run_task(self, task: TaskPipelineNode, data: dict[str, Any]) -> None:
+    async def run_single_task(self, task: TaskPipelineNode, data: dict[str, Any]) -> Result:
+        param_mapping = self.get_input_config_for_task(task)
+        inputs = await self.get_component_inputs(task.name, param_mapping, data)
+        try:
+            await self.set_task_status(task.name, RunStatus.RUNNING)
+        except PipelineStatusUpdateError:
+            logger.debug(
+                f"ORCHESTRATOR: TASK ABORTED: {task.name} is already running or done, aborting"
+            )
+            raise StopAsyncIteration()
+        await self.event_notifier.notify_task_started(self.run_id, task.name, inputs)
+        res = await task.run(inputs)
+        await self.set_task_status(task.name, RunStatus.DONE)
+        await self.event_notifier.notify_task_finished(self.run_id, task.name, res)
+        if res:
+            await self.save_results(task=task, result=res)
+        return Result(result_type=ResultType.TASK_FINISHED, data=res.result)
+
+    async def run_task(self, task: TaskPipelineNode, data: dict[str, Any]) -> AsyncGenerator[Result, None]:
         """Get inputs and run a specific task. Once the task is done,
         calls the on_task_complete method.
 
@@ -64,21 +100,11 @@ class Orchestrator:
         Returns:
             None
         """
-        param_mapping = self.get_input_config_for_task(task)
-        inputs = await self.get_component_inputs(task.name, param_mapping, data)
-        try:
-            await self.set_task_status(task.name, RunStatus.RUNNING)
-        except PipelineStatusUpdateError:
-            logger.debug(
-                f"ORCHESTRATOR: TASK ABORTED: {task.name} is already running or done, aborting"
-            )
-            return None
-        await self.event_notifier.notify_task_started(self.run_id, task.name, inputs)
-        res = await task.run(inputs)
-        await self.set_task_status(task.name, RunStatus.DONE)
-        await self.event_notifier.notify_task_finished(self.run_id, task.name, res)
-        if res:
-            await self.on_task_complete(data=data, task=task, result=res)
+        yield await self.run_single_task(task, data)
+        # then get the next tasks to be executed and run them
+        async for n in self.next(task):
+            async for res in self.run_task(n, data):
+                yield res
 
     async def set_task_status(self, task_name: str, status: RunStatus) -> None:
         """Set a new status
@@ -102,8 +128,8 @@ class Orchestrator:
                 self.run_id, task_name, status.value
             )
 
-    async def on_task_complete(
-        self, data: dict[str, Any], task: TaskPipelineNode, result: RunResult
+    async def save_results(
+        self, task: TaskPipelineNode, result: RunResult
     ) -> None:
         """When a given task is complete, it will call this method
         to find the next tasks to run.
@@ -115,9 +141,6 @@ class Orchestrator:
         await self.add_result_for_component(
             task.name, res_to_save, is_final=task.is_leaf()
         )
-        # then get the next tasks to be executed
-        # and run them in //
-        await asyncio.gather(*[self.run_task(n, data) async for n in self.next(task)])
 
     async def check_dependencies_complete(self, task: TaskPipelineNode) -> None:
         """Check that all parent tasks are complete.
@@ -257,3 +280,14 @@ class Orchestrator:
         await self.event_notifier.notify_pipeline_finished(
             self.run_id, await self.pipeline.get_final_results(self.run_id)
         )
+
+    async def run_step_by_step(self, data: dict[str, Any]) -> AsyncGenerator[Result, None]:
+        """Run the pipline, starting from the root nodes
+        (node without any parent). Then the callback on_task_complete
+        will handle the task dependencies.
+        """
+        for root in self.pipeline.roots():
+            async for res in self.run_task(root, data):
+                yield res
+        # tasks = [self.run_task(root, data) for root in self.pipeline.roots()]
+        # await asyncio.gather(*tasks)
