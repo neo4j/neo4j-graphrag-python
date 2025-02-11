@@ -89,19 +89,9 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         message_history: Optional[list[LLMMessage]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
-        """Sends a text input to the OpenAI chat completion model
-        and returns the response's content.
-
-        Args:
-            input (str): Text sent to the LLM.
-            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
-            system_instruction (Optional[str]): An option to override the llm system message for this invokation.
-
-        Returns:
-            LLMResponse: The response from OpenAI.
-
-        Raises:
-            LLMGenerationError: If anything goes wrong.
+        """
+        Synchronously calls the new openai ChatCompletion endpoint using "tools"
+        (function calling), returning any tool calls in `tool_calls`.
         """
         try:
             response = self.client.chat.completions.create(
@@ -112,16 +102,22 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
             choice = response.choices[0]
             content = choice.message.content or ""
 
-            function_call = getattr(choice.message, "function_call", None)
-
-            if function_call is not None:
-                function_call_info = {
-                    "name": function_call.name,
-                    "arguments": function_call.arguments,
-                }
-                return LLMResponse(content=content, function_call=function_call_info)
+            raw_calls = getattr(choice.message, "tool_calls", None) or []
+            if raw_calls:
+                calls_list = []
+                for c in raw_calls:
+                    calls_list.append(
+                        {
+                            "id": c.id,
+                            "type": c.type,
+                            "name": c.function.name,
+                            "arguments": c.function.arguments,
+                        }
+                    )
+                return LLMResponse(content=content, tool_calls=calls_list)
             else:
                 return LLMResponse(content=content)
+
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
@@ -131,19 +127,9 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         message_history: Optional[list[LLMMessage]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
-        """Asynchronously sends a text input to the OpenAI chat
-        completion model and returns the response's content.
-
-        Args:
-            input (str): Text sent to the LLM.
-            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
-            system_instruction (Optional[str]): An option to override the llm system message for this invokation.
-
-        Returns:
-            LLMResponse: The response from OpenAI.
-
-        Raises:
-            LLMGenerationError: If anything goes wrong.
+        """
+        Asynchronously calls the new openai ChatCompletion endpoint using "tools"
+        (function calling), returning any tool calls in `tool_calls`.
         """
         try:
             response = await self.async_client.chat.completions.create(
@@ -154,16 +140,22 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
             choice = response.choices[0]
             content = choice.message.content or ""
 
-            function_call = getattr(choice.message, "function_call", None)
-
-            if function_call is not None:
-                function_call_info = {
-                    "name": function_call.name,
-                    "arguments": function_call.arguments,
-                }
-                return LLMResponse(content=content, function_calls=function_call_info)
+            raw_calls = getattr(choice.message, "tool_calls", None) or []
+            if raw_calls:
+                calls_list = []
+                for c in raw_calls:
+                    calls_list.append(
+                        {
+                            "id": c.id,
+                            "type": c.type,
+                            "name": c.function.name,
+                            "arguments": c.function.arguments,
+                        }
+                    )
+                return LLMResponse(content=content, tool_calls=calls_list)
             else:
                 return LLMResponse(content=content)
+
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 

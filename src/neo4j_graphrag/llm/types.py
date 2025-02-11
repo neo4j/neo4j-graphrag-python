@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 class LLMResponse(BaseModel):
     content: str
-    function_call: Optional[dict[str, Any]] = None
+    tool_calls: Optional[list[dict[str, Any]]] = None
 
 
 class LLMMessage(TypedDict):

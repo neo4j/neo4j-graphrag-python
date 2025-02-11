@@ -48,6 +48,6 @@ class RagSearchModel(BaseModel):
 class RagResultModel(BaseModel):
     answer: str
     retriever_result: Union[RetrieverResult, None] = None
-    function_call: Optional[dict[str, Any]] = None
+    tool_calls: Optional[list[dict[str, Any]]] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)

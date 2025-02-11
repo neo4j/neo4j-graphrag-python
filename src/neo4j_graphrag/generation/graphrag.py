@@ -145,7 +145,7 @@ class GraphRAG:
         result: dict[str, Any] = {"answer": answer.content}
         if return_context:
             result["retriever_result"] = retriever_result
-            result["function_call"] = answer.function_call
+            result["tool_calls"] = answer.tool_calls
         return RagResultModel(**result)
 
     def build_query(

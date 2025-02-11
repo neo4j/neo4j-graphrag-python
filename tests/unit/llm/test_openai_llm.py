@@ -213,22 +213,25 @@ def test_azure_openai_llm_with_message_history_validation_error(
 
 
 @patch("builtins.__import__")
-def test_openai_llm_function_call_happy_path(mock_import):
+def test_openai_llm_tool_call_happy_path(mock_import) -> None:
     mock_openai = MagicMock()
     mock_import.return_value = mock_openai
-    mock_function_call = MagicMock()
-    mock_function_call.name = "some_func"
-    mock_function_call.arguments = '{"foo": "bar"}'
-    mock_openai.OpenAI.return_value.chat.completions.create.return_value = MagicMock(
-        choices=[
-            MagicMock(message=MagicMock(content="", function_call=mock_function_call))
-        ]
-    )
-    llm = OpenAILLM(model_name="gpt-4")
 
+    mock_tool_call = MagicMock()
+    mock_tool_call.id = "call_xyz123"
+    mock_tool_call.type = "function"
+    mock_tool_call.function.name = "some_tool"
+    mock_tool_call.function.arguments = '{"foo": "bar"}'
+
+    mock_openai.OpenAI.return_value.chat.completions.create.return_value = MagicMock(
+        choices=[MagicMock(message=MagicMock(content="", tool_calls=[mock_tool_call]))]
+    )
+
+    llm = OpenAILLM(model_name="gpt-4")
     res = llm.invoke("test input")
+
     assert isinstance(res, LLMResponse)
     assert res.content == ""
-    print("---", res)
-    assert res.function_call["name"] == "some_func"
-    assert json.loads(res.function_call["arguments"]) == {"foo": "bar"}
+    assert len(res.tool_calls) == 1
+    assert res.tool_calls[0]["name"] == "some_tool"
+    assert json.loads(res.tool_calls[0]["arguments"]) == {"foo": "bar"}

@@ -51,33 +51,31 @@ retriever = VectorCypherRetriever(
     neo4j_database=DATABASE,
 )
 
-# Function calling
-function_defs = [
+tool_defs = [
     {
-        "name": "get_streaming_availability",
-        "description": "Checks which streaming platforms a movie is currently available on.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "movie_title": {
-                    "type": "string",
-                    "description": "The name of the movie to look up streaming availability for.",
-                }
+        "type": "function",
+        "function": {
+            "name": "get_streaming_availability",
+            "description": "Checks which streaming platforms a movie is currently available on.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "movie_title": {
+                        "type": "string",
+                        "description": "The name of the movie to look up streaming availability for.",
+                    }
+                },
+                "required": ["movie_title"],
+                "additionalProperties": False,
             },
-            "required": ["movie_title"],
+            "strict": True,
         },
     }
 ]
-function_call = "auto"
-
 
 llm = OpenAILLM(
     model_name="gpt-4o",
-    model_params={
-        "temperature": 0,
-        "functions": function_defs,
-        "function_call": function_call,
-    },
+    model_params={"temperature": 0, "tools": tool_defs},
 )
 
 query_text = """
@@ -86,7 +84,6 @@ out what streaming platform it is available on
 """
 
 rag = GraphRAG(retriever=retriever, llm=llm)
-
 result = rag.search(query_text, return_context=True)
 
 
@@ -95,23 +92,25 @@ def fetch_streaming_info(movie_title: str) -> str:
     return ", ".join(platforms)
 
 
-if result.function_call:
-    func_call = result.function_call
-    if func_call["name"] == "get_streaming_availability":
-        arguments_str = func_call["arguments"]
-        args = json.loads(arguments_str)
+if hasattr(result, "tool_calls") and result.tool_calls:
+    call_info = result.tool_calls[0]
+
+    if call_info["name"] == "get_streaming_availability":
+        args = json.loads(call_info["arguments"])
         movie_title = args["movie_title"]
         streaming_info = fetch_streaming_info(movie_title)
 
         second_query = f"""
-                {query_text}
-                Also, you found that '{movie_title}' is available on {streaming_info}.
-                Please provide more details from the knowledge graph but do NOT call any function.
-                """
+        {query_text}
+        Also, you found that '{movie_title}' is available on {streaming_info}.
+        Please provide more details from the knowledge graph but do NOT call any tool.
+        """
 
         result_second = rag.search(second_query, return_context=True)
         print("Second-pass answer:", result_second.answer)
+    else:
+        print("No recognized tool name, single pass answer:", result.answer)
 else:
-    print(result.answer)
+    print("Single-pass answer:", result.answer)
 
 driver.close()
