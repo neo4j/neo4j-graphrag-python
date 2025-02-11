@@ -122,6 +122,14 @@ UPSERT_VECTOR_ON_RELATIONSHIP_QUERY = (
     "RETURN r"
 )
 
+NODES_MISSING_EMBEDDINGS_QUERY = (
+    "MATCH (n:`{node_label}`) "
+    "WHERE n.{embedding_node_property} IS null "
+    "AND any(k in $props WHERE n[k] IS NOT null) "
+    "RETURN elementId(n) AS id, reduce(str='',"
+    "k IN $props | str + '\\n' + k + ':' + coalesce(n[k], '')) AS text "
+)
+
 
 def _get_upsert_texts_and_embeddings_query(
     node_label: str,
@@ -135,7 +143,7 @@ def _get_upsert_texts_and_embeddings_query(
     Args:
         node_label (str): The label for the node to be upserted.
         text_node_property (str): The property name where text data will be stored.
-        embedding_node_property (str): The property name where embedding data will be stored.
+        embedding_property (str): The property name where embedding data will be stored.
         neo4j_version_is_5_23_or_above (bool): Whether or not the version of Neo4j is
             5.23 or above. If true, uses the updated syntax for call statements.
 
@@ -315,14 +323,12 @@ def get_search_query(
             raise ValueError(f"Search type is not supported: {search_type}")
     else:
         raise ValueError(f"Index type is not supported: {index_type}")
-
     query_tail = get_query_tail(
         retrieval_query,
         return_properties,
         fallback_return=fallback_return,
         index_type=index_type,
     )
-
     return f"{query} {query_tail}", params
 
 
