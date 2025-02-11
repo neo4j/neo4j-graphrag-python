@@ -303,7 +303,7 @@ def upsert_vector(
         ) from e
 
 
-def upsert_texts_and_vectors(
+def upsert_texts_and_embeddings(
     driver: neo4j.Driver,
     node_label: str,
     text_property: str,

@@ -17,7 +17,7 @@ import pytest
 from neo4j_graphrag.indexes import (
     retrieve_fulltext_index_info,
     retrieve_vector_index_info,
-    upsert_texts_and_vectors,
+    upsert_texts_and_embeddings,
 )
 
 
@@ -192,9 +192,9 @@ def test_retrieve_fulltext_index_info_wrong_info(driver: neo4j.Driver) -> None:
     assert index_info is None
 
 
-def test_upsert_texts_and_vectors(driver: neo4j.Driver) -> None:
+def test_upsert_texts_and_embeddings(driver: neo4j.Driver) -> None:
     driver.execute_query("MATCH (n) DETACH DELETE n")
-    upsert_texts_and_vectors(
+    upsert_texts_and_embeddings(
         driver=driver,
         node_label="Character",
         text_property="name",
