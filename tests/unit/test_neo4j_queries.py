@@ -20,7 +20,7 @@ from neo4j_graphrag.neo4j_queries import (
     get_query_tail,
     get_search_query,
 )
-from neo4j_graphrag.types import IndexType, SearchType
+from neo4j_graphrag.types import EntityType, SearchType
 
 
 def test_vector_search_basic() -> None:
@@ -42,7 +42,7 @@ def test_rel_vector_search_basic() -> None:
         "WITH relationship, score LIMIT $top_k "
         "RETURN relationship { .*, `None`: null } AS relationship, elementId(relationship) AS elementId, score"
     )
-    result, params = get_search_query(SearchType.VECTOR, IndexType.RELATIONSHIP)
+    result, params = get_search_query(SearchType.VECTOR, EntityType.RELATIONSHIP)
     assert result.strip() == expected.strip()
     assert params == {}
 
@@ -50,14 +50,14 @@ def test_rel_vector_search_basic() -> None:
 def test_rel_vector_search_filters_err() -> None:
     with pytest.raises(Exception) as exc_info:
         get_search_query(
-            SearchType.VECTOR, IndexType.RELATIONSHIP, filters={"filter": None}
+            SearchType.VECTOR, EntityType.RELATIONSHIP, filters={"filter": None}
         )
     assert str(exc_info.value) == "Filters are not supported for relationship indexes"
 
 
 def test_rel_vector_search_hybrid_err() -> None:
     with pytest.raises(Exception) as exc_info:
-        get_search_query(SearchType.HYBRID, IndexType.RELATIONSHIP)
+        get_search_query(SearchType.HYBRID, EntityType.RELATIONSHIP)
     assert (
         str(exc_info.value) == "Hybrid search is not supported for relationship indexes"
     )

@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from neo4j_graphrag.filters import get_metadata_filter
-from neo4j_graphrag.types import IndexType, SearchType
+from neo4j_graphrag.types import EntityType, SearchType
 
 NODE_VECTOR_INDEX_QUERY = (
     "CALL db.index.vector.queryNodes"
@@ -193,7 +193,7 @@ def _get_filtered_vector_query(
 
 def get_search_query(
     search_type: SearchType,
-    index_type: IndexType = IndexType.NODE,
+    index_type: EntityType = EntityType.NODE,
     return_properties: Optional[list[str]] = None,
     retrieval_query: Optional[str] = None,
     node_label: Optional[str] = None,
@@ -209,7 +209,7 @@ def get_search_query(
 
     Args:
         search_type (SearchType): Specifies whether to perform a vector or hybrid search.
-        index_type (Optional[IndexType]): Specifies whether to search over node or
+        index_type (Optional[EntityType]): Specifies whether to search over node or
             relationship indexes. Defaults to 'node'.
         return_properties (Optional[list[str]]): List of property names to return.
             Cannot be provided alongside `retrieval_query`.
@@ -232,7 +232,7 @@ def get_search_query(
         Exception: If Vector Search with filters is missing required parameters.
         ValueError: If an unsupported search type is provided.
     """
-    if index_type == IndexType.NODE:
+    if index_type == EntityType.NODE:
         if search_type == SearchType.HYBRID:
             if filters:
                 raise Exception("Filters are not supported with hybrid search")
@@ -264,7 +264,7 @@ def get_search_query(
             f"RETURN node {{ .*, `{embedding_node_property}`: null }} AS node, "
             "labels(node) AS nodeLabels, elementId(node) AS elementId, score"
         )
-    elif index_type == IndexType.RELATIONSHIP:
+    elif index_type == EntityType.RELATIONSHIP:
         if filters:
             raise Exception("Filters are not supported for relationship indexes")
         if search_type == SearchType.HYBRID:
@@ -292,7 +292,7 @@ def get_query_tail(
     retrieval_query: Optional[str] = None,
     return_properties: Optional[list[str]] = None,
     fallback_return: Optional[str] = None,
-    index_type: IndexType = IndexType.NODE,
+    index_type: EntityType = EntityType.NODE,
 ) -> str:
     """Build the RETURN statement after the search is performed
 
@@ -310,9 +310,9 @@ def get_query_tail(
         return retrieval_query
     if return_properties:
         return_properties_cypher = ", ".join([f".{prop}" for prop in return_properties])
-        if index_type == IndexType.NODE:
+        if index_type == EntityType.NODE:
             return f"RETURN node {{{return_properties_cypher}}} AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, score"
-        elif index_type == IndexType.RELATIONSHIP:
+        elif index_type == EntityType.RELATIONSHIP:
             return f"RETURN relationship {{{return_properties_cypher}}} AS relationship, elementId(relationship) AS elementId, score"
         else:
             raise ValueError(f"Index type is not supported: {index_type}")

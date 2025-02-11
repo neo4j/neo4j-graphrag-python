@@ -159,8 +159,8 @@ class SearchType(str, Enum):
     HYBRID = "hybrid"
 
 
-class IndexType(str, Enum):
-    """Enumerator of the index types."""
+class EntityType(str, Enum):
+    """Enumerator of the entity types."""
 
     NODE = "NODE"
     RELATIONSHIP = "RELATIONSHIP"
