@@ -213,7 +213,7 @@ def test_azure_openai_llm_with_message_history_validation_error(
 
 
 @patch("builtins.__import__")
-def test_openai_llm_tool_call_happy_path(mock_import) -> None:
+def test_openai_llm_tool_call_happy_path(mock_import: Mock) -> None:
     mock_openai = MagicMock()
     mock_import.return_value = mock_openai
 
@@ -232,6 +232,7 @@ def test_openai_llm_tool_call_happy_path(mock_import) -> None:
 
     assert isinstance(res, LLMResponse)
     assert res.content == ""
+    assert res.tool_calls is not None
     assert len(res.tool_calls) == 1
     assert res.tool_calls[0]["name"] == "some_tool"
     assert json.loads(res.tool_calls[0]["arguments"]) == {"foo": "bar"}

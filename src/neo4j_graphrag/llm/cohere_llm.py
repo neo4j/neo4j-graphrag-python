@@ -115,11 +115,14 @@ class CohereLLM(LLMInterface):
                 messages=messages,
                 model=self.model_name,
             )
+            if res.message and res.message.content and res.message.content[0]:
+                return LLMResponse(
+                    content=res.message.content[0].text,
+                )
+            else:
+                raise LLMGenerationError("Empty result from Cohere client")
         except self.cohere_api_error as e:
             raise LLMGenerationError(e)
-        return LLMResponse(
-            content=res.message.content[0].text,
-        )
 
     async def ainvoke(
         self,
@@ -139,12 +142,15 @@ class CohereLLM(LLMInterface):
         """
         try:
             messages = self.get_messages(input, message_history, system_instruction)
-            res = self.async_client.chat(
+            res = await self.async_client.chat(
                 messages=messages,
                 model=self.model_name,
             )
+            if res.message and res.message.content and res.message.content[0]:
+                return LLMResponse(
+                    content=res.message.content[0].text,
+                )
+            else:
+                raise LLMGenerationError("Empty result from Cohere client")
         except self.cohere_api_error as e:
             raise LLMGenerationError(e)
-        return LLMResponse(
-            content=res.message.content[0].text,
-        )

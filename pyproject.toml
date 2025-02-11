@@ -43,7 +43,7 @@ pygraphviz = [
     {version = "^1.0.0", python = "<3.10", optional = true}
 ]
 weaviate-client = {version = "^4.6.1", optional = true }
-pinecone-client = {version = "^4.1.0", optional = true }
+pinecone-client = {version = "^5.0.1", optional = true }
 google-cloud-aiplatform = {version = "^1.66.0", optional = true }
 cohere = {version = "^5.9.0", optional = true}
 mistralai = {version = "^1.0.3", optional = true}
@@ -107,5 +107,6 @@ module = [
     "weaviate.*",
     "sentence_transformers.*",
     "conftest",
+    "pinecone.*"
 ]
 ignore_missing_imports = true

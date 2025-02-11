@@ -273,7 +273,7 @@ def test_graphrag_search_tool_call_happy_path(
     res = rag.search("Find out streaming info", return_context=True)
 
     assert res.answer == ""
-    assert hasattr(res, "tool_calls")
+    assert res.tool_calls is not None
     assert len(res.tool_calls) == 1
     call_info = res.tool_calls[0]
     assert call_info["name"] == "get_streaming_availability"

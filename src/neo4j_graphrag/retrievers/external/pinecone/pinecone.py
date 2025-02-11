@@ -41,7 +41,7 @@ from neo4j_graphrag.types import (
 )
 
 if TYPE_CHECKING:
-    from pinecone import Pinecone
+    from pinecone import Pinecone  # type: ignore[attr-defined]
 
 logger = logging.getLogger(__name__)
 

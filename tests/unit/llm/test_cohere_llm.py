@@ -66,7 +66,7 @@ def test_cohere_llm_invoke_with_message_history_happy_path(mock_cohere: Mock) ->
     messages = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
-    llm.client.chat.assert_called_once_with(
+    llm.client.chat.assert_called_once_with(  # type: ignore
         messages=messages,
         model="something",
     )
@@ -93,11 +93,11 @@ def test_cohere_llm_invoke_with_message_history_and_system_instruction(
     messages = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
-    llm.client.chat.assert_called_once_with(
+    llm.client.chat.assert_called_once_with(  # type: ignore
         messages=messages,
         model="gpt",
     )
-    assert llm.client.chat.call_count == 1
+    assert llm.client.chat.call_count == 1  # type: ignore
 
 
 def test_cohere_llm_invoke_with_message_history_validation_error(

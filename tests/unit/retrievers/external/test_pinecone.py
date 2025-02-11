@@ -21,7 +21,7 @@ from neo4j_graphrag.exceptions import RetrieverInitializationError
 from neo4j_graphrag.retrievers import PineconeNeo4jRetriever
 from neo4j_graphrag.retrievers.external.utils import get_match_query
 from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
-from pinecone import Pinecone
+from pinecone import Pinecone  # type: ignore[attr-defined]
 
 
 @pytest.fixture(scope="function")

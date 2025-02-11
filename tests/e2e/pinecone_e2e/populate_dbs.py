@@ -18,7 +18,7 @@ from typing import Any
 
 import neo4j
 from neo4j import GraphDatabase
-from pinecone import Pinecone, ServerlessSpec
+from pinecone import Pinecone, ServerlessSpec  # type: ignore[attr-defined]
 
 from ..utils import build_data_objects, populate_neo4j
 
