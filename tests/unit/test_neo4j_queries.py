@@ -17,7 +17,6 @@ from unittest.mock import patch
 
 import pytest
 from neo4j_graphrag.neo4j_queries import (
-    _get_upsert_texts_and_embeddings_query,
     get_query_tail,
     get_search_query,
 )
@@ -249,45 +248,3 @@ def test_get_query_tail_ordering_no_retrieval_query() -> None:
         fallback_return=fallback,
     )
     assert result.strip() == expected.strip()
-
-
-def test_get_upsert_texts_and_embeddings_query_is_above_5_23() -> None:
-    expected_query = (
-        "UNWIND $data AS row "
-        "CALL (row) { "
-        "MERGE (c:`Chunk` {id: row.id}) "
-        "WITH c, row "
-        "CALL db.create.setNodeVectorProperty(c, "
-        "'embedding', row.embedding) "
-        "SET c.`text` = row.text "
-        "SET c += row.metadata "
-        "} IN TRANSACTIONS OF 1000 ROWS "
-    )
-    actual_query = _get_upsert_texts_and_embeddings_query(
-        node_label="Chunk",
-        text_property="text",
-        embedding_property="embedding",
-        neo4j_version_is_5_23_or_above=True,
-    )
-    assert actual_query == expected_query
-
-
-def test_get_upsert_texts_and_embeddings_query_is_below_5_23() -> None:
-    expected_query = (
-        "UNWIND $data AS row "
-        "CALL { WITH row "
-        "MERGE (c:`Chunk` {id: row.id}) "
-        "WITH c, row "
-        "CALL db.create.setNodeVectorProperty(c, "
-        "'embedding', row.embedding) "
-        "SET c.`text` = row.text "
-        "SET c += row.metadata "
-        "} IN TRANSACTIONS OF 1000 ROWS "
-    )
-    actual_query = _get_upsert_texts_and_embeddings_query(
-        node_label="Chunk",
-        text_property="text",
-        embedding_property="embedding",
-        neo4j_version_is_5_23_or_above=False,
-    )
-    assert actual_query == expected_query

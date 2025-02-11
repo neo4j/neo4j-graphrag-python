@@ -17,7 +17,6 @@ import pytest
 from neo4j_graphrag.indexes import (
     retrieve_fulltext_index_info,
     retrieve_vector_index_info,
-    upsert_texts_and_embeddings,
 )
 
 
@@ -190,50 +189,3 @@ def test_retrieve_fulltext_index_info_wrong_info(driver: neo4j.Driver) -> None:
         text_properties=[""],
     )
     assert index_info is None
-
-
-def test_upsert_texts_and_embeddings(driver: neo4j.Driver) -> None:
-    driver.execute_query("MATCH (n) DETACH DELETE n")
-    upsert_texts_and_embeddings(
-        driver=driver,
-        node_label="Character",
-        text_property="name",
-        embedding_property="vectorProperty",
-        texts=["Paul Atreides", "Chani", "Vladimir Harkonnen"],
-        embeddings=[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]],
-        neo4j_version_is_5_23_or_above=True,
-        metadatas=[{"house": "Atreides"}, {"house": "Fremen"}, {"house": "Harkonnen"}],
-        ids=["1", "2", "3"],
-    )
-    result = driver.execute_query(
-        (
-            "MATCH (n:Character) "
-            "RETURN n.id as id, n.name as name, n.house as house, "
-            "n.vectorProperty as vectorProperty;"
-        )
-    )
-    records = [r.data() for r in result.records]
-    expected_records = [
-        {
-            "house": "Atreides",
-            "id": "1",
-            "name": "Paul Atreides",
-            "vectorProperty": [1.0, 2.0, 3.0],
-        },
-        {
-            "house": "Fremen",
-            "id": "2",
-            "name": "Chani",
-            "vectorProperty": [4.0, 5.0, 6.0],
-        },
-        {
-            "house": "Harkonnen",
-            "id": "3",
-            "name": "Vladimir Harkonnen",
-            "vectorProperty": [7.0, 8.0, 9.0],
-        },
-    ]
-    assert sorted(records, key=lambda x: x["id"]) == sorted(
-        expected_records,
-        key=lambda x: x["id"],  # type: ignore
-    )
