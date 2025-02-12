@@ -920,7 +920,7 @@ Populate a Vector Index
 
     from neo4j import GraphDatabase
     from random import random
-    from neo4j_graphrag.indexes import upsert_embeddings
+    from neo4j_graphrag.indexes import upsert_vectors
 
     URI = "neo4j://localhost:7687"
     AUTH = ("neo4j", "password")
@@ -930,16 +930,16 @@ Populate a Vector Index
 
     # Upsert the vector
     embedding = [random() for _ in range(DIMENSION)]
-        upsert_embeddings(
+        upsert_vectors(
         driver,
         ids=["1234"],
-        embedding_property="embeddingProperty",
+        embedding_property="vectorProperty",
         embeddings=[embedding],
         entity_type="NODE"
     )
-    upsert_embeddings(driver, node_id="1234", embedding_property="embedding", vector=vector)
+    upsert_vectors(driver, node_id="1234", embedding_property="embedding", vector=vector)
 
-This will update the node with `id(node)=1234` to add (or update) a `node.embeddingProperty` property.
+This will update the node with `id(node)=1234` to add (or update) a `node.vectorProperty` property.
 This property will also be added to the vector index.
 
 

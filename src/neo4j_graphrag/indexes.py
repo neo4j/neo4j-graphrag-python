@@ -248,7 +248,7 @@ def drop_index_if_exists(
         raise Neo4jIndexError(f"Dropping Neo4j index failed: {e.message}") from e
 
 
-def upsert_embeddings(
+def upsert_vectors(
     driver: neo4j.Driver,
     ids: List[str],
     embedding_property: str,
@@ -265,7 +265,7 @@ def upsert_embeddings(
     .. code-block:: python
 
         from neo4j import GraphDatabase
-        from neo4j_graphrag.indexes import upsert_embeddings
+        from neo4j_graphrag.indexes import upsert_vectors
 
         URI = "neo4j://localhost:7687"
         AUTH = ("neo4j", "password")
@@ -274,10 +274,10 @@ def upsert_embeddings(
         driver = GraphDatabase.driver(URI, auth=AUTH)
 
         # Upsert embeddings data for several nodes
-        upsert_embeddings(
+        upsert_vectors(
             driver,
             ids=['123', '456', '789'],
-            embedding_property="embeddingProperty",
+            embedding_property="vectorProperty",
             embeddings=[
                 [0.12, 0.34, 0.56],
                 [0.78, 0.90, 0.12],
@@ -336,7 +336,7 @@ def upsert_vector(
 ) -> None:
     """
     .. warning::
-        'upsert_vector' is deprecated and will be removed in a future version, please use 'upsert_embeddings' instead.
+        'upsert_vector' is deprecated and will be removed in a future version, please use 'upsert_vectors' instead.
 
     This method constructs a Cypher query and executes it to upsert (insert or update) a vector property on a specific node.
 
@@ -372,7 +372,7 @@ def upsert_vector(
         Neo4jInsertionError: If upserting of the vector fails.
     """
     warnings.warn(
-        "'upsert_vector' is deprecated and will be removed in a future version, please use 'upsert_embeddings' instead.",
+        "'upsert_vector' is deprecated and will be removed in a future version, please use 'upsert_vectors' instead.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -400,7 +400,7 @@ def upsert_vector_on_relationship(
 ) -> None:
     """
     .. warning::
-        'upsert_vector_on_relationship' is deprecated and will be removed in a future version, please use 'upsert_embeddings' instead.
+        'upsert_vector_on_relationship' is deprecated and will be removed in a future version, please use 'upsert_vectors' instead.
 
     This method constructs a Cypher query and executes it to upsert (insert or update) a vector property on a specific relationship.
 
@@ -436,7 +436,7 @@ def upsert_vector_on_relationship(
         Neo4jInsertionError: If upserting of the vector fails.
     """
     warnings.warn(
-        "'upsert_vector_on_relationship' is deprecated and will be removed in a future version, please use 'upsert_embeddings' instead.",
+        "'upsert_vector_on_relationship' is deprecated and will be removed in a future version, please use 'upsert_vectors' instead.",
         DeprecationWarning,
         stacklevel=2,
     )

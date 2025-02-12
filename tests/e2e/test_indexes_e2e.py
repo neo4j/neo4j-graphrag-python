@@ -17,7 +17,7 @@ import pytest
 from neo4j_graphrag.indexes import (
     retrieve_fulltext_index_info,
     retrieve_vector_index_info,
-    upsert_embeddings,
+    upsert_vectors,
 )
 from neo4j_graphrag.types import EntityType
 
@@ -193,7 +193,7 @@ def test_retrieve_fulltext_index_info_wrong_info(driver: neo4j.Driver) -> None:
     assert index_info is None
 
 
-def test_upsert_embeddings_on_nodes(driver: neo4j.Driver) -> None:
+def test_upsert_vectors_on_nodes(driver: neo4j.Driver) -> None:
     driver.execute_query("MATCH (n) DETACH DELETE n;")
     result = driver.execute_query(
         "CREATE (p:Character {name: 'Paul Atreides'}), "
@@ -202,7 +202,7 @@ def test_upsert_embeddings_on_nodes(driver: neo4j.Driver) -> None:
     )
     ids = result.records[0]["ids"]
     assert len(ids) == 2
-    upsert_embeddings(
+    upsert_vectors(
         driver=driver,
         ids=ids,
         embedding_property="embedding",
@@ -223,7 +223,7 @@ def test_upsert_embeddings_on_nodes(driver: neo4j.Driver) -> None:
     assert records_sorted == expected_records_sorted
 
 
-def test_upsert_embeddings_on_relationships(driver: neo4j.Driver) -> None:
+def test_upsert_vectors_on_relationships(driver: neo4j.Driver) -> None:
     driver.execute_query("MATCH (n) DETACH DELETE n;")
     result = driver.execute_query(
         "CREATE (:Character {name: 'Paul Atreides'})-[a:IS_MEMBER_OF]->(:House {name: 'Atreides'}), "
@@ -232,7 +232,7 @@ def test_upsert_embeddings_on_relationships(driver: neo4j.Driver) -> None:
     )
     ids = result.records[0]["ids"]
     assert len(ids) == 2
-    upsert_embeddings(
+    upsert_vectors(
         driver=driver,
         ids=ids,
         embedding_property="embedding",

@@ -194,7 +194,7 @@ Ensure that your vector index is created prior to executing this example.
 ```python
 from neo4j import GraphDatabase
 from neo4j_graphrag.embeddings import OpenAIEmbeddings
-from neo4j_graphrag.indexes import upsert_embeddings
+from neo4j_graphrag.indexes import upsert_vectors
 
 NEO4J_URI = "neo4j://localhost:7687"
 NEO4J_USERNAME = "neo4j"
@@ -214,10 +214,10 @@ text = (
 embedding = embedder.embed_query(text)
 
 # Upsert the vector
-upsert_embeddings(
+upsert_vectors(
     driver,
     ids=["1234"],
-    embedding_property="embeddingProperty",
+    embedding_property="vectorProperty",
     embeddings=[embedding],
     entity_type="NODE"
 )

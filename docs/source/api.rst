@@ -382,7 +382,7 @@ Database Interaction
 
 .. autofunction:: neo4j_graphrag.indexes.drop_index_if_exists
 
-.. autofunction:: neo4j_graphrag.indexes.upsert_embeddings
+.. autofunction:: neo4j_graphrag.indexes.upsert_vectors
 
 .. autofunction:: neo4j_graphrag.indexes.upsert_vector
 
