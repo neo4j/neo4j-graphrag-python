@@ -150,7 +150,7 @@ Note that the below example is not the only way you can upsert data into your Ne
 .. code:: python
 
     from neo4j import GraphDatabase
-    from neo4j_graphrag.indexes import upsert_vector
+    from neo4j_graphrag.indexes import upsert_embeddings
 
     URI = "neo4j://localhost:7687"
     AUTH = ("neo4j", "password")
@@ -159,12 +159,13 @@ Note that the below example is not the only way you can upsert data into your Ne
     driver = GraphDatabase.driver(URI, auth=AUTH)
 
     # Upsert the vector
-    vector = ...
-    upsert_vector(
+    embedding = ...
+    upsert_embeddings(
         driver,
-        node_id=1,
-        embedding_property="vectorProperty",
-        vector=vector,
+        ids=["1234"],
+        embedding_property="embeddingProperty",
+        embeddings=[embedding],
+        entity_type="NODE"
     )
 
 
