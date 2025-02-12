@@ -211,14 +211,14 @@ text = (
     "The son of Duke Leto Atreides and the Lady Jessica, Paul is the heir of House "
     "Atreides, an aristocratic family that rules the planet Caladan."
 )
-embedding = embedder.embed_query(text)
+vector = embedder.embed_query(text)
 
 # Upsert the vector
 upsert_vectors(
     driver,
     ids=["1234"],
     embedding_property="vectorProperty",
-    embeddings=[embedding],
+    embeddings=[vector],
     entity_type="NODE"
 )
 driver.close()

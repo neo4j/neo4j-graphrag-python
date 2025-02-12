@@ -159,12 +159,12 @@ Note that the below example is not the only way you can upsert data into your Ne
     driver = GraphDatabase.driver(URI, auth=AUTH)
 
     # Upsert the vector
-    embedding = ...
+    vector = ...
     upsert_vectors(
         driver,
         ids=["1234"],
         embedding_property="vectorProperty",
-        embeddings=[embedding],
+        embeddings=[vector],
         entity_type="NODE"
     )
 

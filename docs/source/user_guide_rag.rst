@@ -929,12 +929,12 @@ Populate a Vector Index
     driver = GraphDatabase.driver(URI, auth=AUTH)
 
     # Upsert the vector
-    embedding = [random() for _ in range(DIMENSION)]
+    vector = [random() for _ in range(DIMENSION)]
         upsert_vectors(
         driver,
         ids=["1234"],
         embedding_property="vectorProperty",
-        embeddings=[embedding],
+        embeddings=[vector],
         entity_type="NODE"
     )
     upsert_vectors(driver, node_id="1234", embedding_property="embedding", vector=vector)
