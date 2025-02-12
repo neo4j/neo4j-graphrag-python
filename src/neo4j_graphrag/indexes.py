@@ -277,7 +277,7 @@ def upsert_embeddings(
         upsert_embeddings(
             driver,
             ids=['123', '456', '789'],
-            embedding_property="vectorProperty",
+            embedding_property="embeddingProperty",
             embeddings=[
                 [0.12, 0.34, 0.56],
                 [0.78, 0.90, 0.12],
@@ -335,6 +335,9 @@ def upsert_vector(
     neo4j_database: Optional[str] = None,
 ) -> None:
     """
+    .. warning::
+        'upsert_vector' is deprecated and will be removed in a future version, please use 'upsert_embeddings' instead.
+
     This method constructs a Cypher query and executes it to upsert (insert or update) a vector property on a specific node.
 
     Example:
@@ -396,6 +399,9 @@ def upsert_vector_on_relationship(
     neo4j_database: Optional[str] = None,
 ) -> None:
     """
+    .. warning::
+        'upsert_vector_on_relationship' is deprecated and will be removed in a future version, please use 'upsert_embeddings' instead.
+
     This method constructs a Cypher query and executes it to upsert (insert or update) a vector property on a specific relationship.
 
     Example:
@@ -457,6 +463,9 @@ async def async_upsert_vector(
     neo4j_database: Optional[str] = None,
 ) -> None:
     """
+    .. warning::
+        'async_upsert_vector' is deprecated and will be removed in a future version.
+
     This method constructs a Cypher query and asynchronously executes it
     to upsert (insert or update) a vector property on a specific node.
 
@@ -519,6 +528,9 @@ async def async_upsert_vector_on_relationship(
     neo4j_database: Optional[str] = None,
 ) -> None:
     """
+    .. warning::
+        'async_upsert_vector_on_relationship' is deprecated and will be removed in a future version.
+
     This method constructs a Cypher query and asynchronously executes it
     to upsert (insert or update) a vector property on a specific relationship.
 
