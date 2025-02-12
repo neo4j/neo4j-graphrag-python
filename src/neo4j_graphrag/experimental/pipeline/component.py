@@ -21,6 +21,7 @@ from typing import Any, get_type_hints
 from pydantic import BaseModel
 
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
+from neo4j_graphrag.experimental.pipeline.observer import Event, EventType, Observable
 
 
 class DataModel(BaseModel):
@@ -66,7 +67,7 @@ class ComponentMeta(abc.ABCMeta):
         return type.__new__(meta, name, bases, attrs)
 
 
-class Component(abc.ABC, metaclass=ComponentMeta):
+class Component(abc.ABC, Observable, metaclass=ComponentMeta):
     """Interface that needs to be implemented
     by all components.
     """
@@ -76,6 +77,24 @@ class Component(abc.ABC, metaclass=ComponentMeta):
     # DO NOT CHANGE
     component_inputs: dict[str, dict[str, str | bool]]
     component_outputs: dict[str, dict[str, str | bool]]
+
+    async def execute(self, *args: Any, **kwargs: Any) -> DataModel:
+        await self.notify(
+            Event(
+                event_type=EventType.TASK_STARTED,
+                sender=self,
+                message="Component started",
+            )
+        )
+        res = await self.run(*args, **kwargs)
+        await self.notify(
+            Event(
+                event_type=EventType.TASK_FINISHED,
+                sender=self,
+                message="Component finished",
+            )
+        )
+        return res
 
     @abc.abstractmethod
     async def run(self, *args: Any, **kwargs: Any) -> DataModel:

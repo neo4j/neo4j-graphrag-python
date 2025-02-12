@@ -20,6 +20,7 @@ from collections import defaultdict
 from timeit import default_timer
 from typing import Any, Optional
 
+from neo4j_graphrag.experimental.pipeline.observer import ObserverInterface
 from neo4j_graphrag.utils.logging import prettify
 
 try:
@@ -75,7 +76,7 @@ class TaskPipelineNode(PipelineNode):
             if the task run successfully, None if the status update
             was unsuccessful.
         """
-        component_result = await self.component.run(**kwargs)
+        component_result = await self.component.execute(**kwargs)
         run_result = RunResult(
             result=component_result,
         )
@@ -106,10 +107,12 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         self,
         store: Optional[ResultStore] = None,
         callback: Optional[EventCallbackProtocol] = None,
+        observers: Optional[list[ObserverInterface]] = None,
     ) -> None:
         super().__init__()
         self.store = store or InMemoryStore()
         self.callback = callback
+        self.observers = observers or []
         self.final_results = InMemoryStore()
         self.is_validated = False
         self.param_mapping: dict[str, dict[str, dict[str, str]]] = defaultdict(dict)
@@ -240,6 +243,8 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         self.add_node(task)
         # invalidate the pipeline if it was already validated
         self.invalidate()
+        for observer in self.observers:
+            component.subscribe(observer)
 
     def set_component(self, name: str, component: Component) -> None:
         """Replace a component with another. If 'name' is not yet in the pipeline,
