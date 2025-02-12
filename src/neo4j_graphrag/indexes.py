@@ -318,7 +318,9 @@ def upsert_embeddings(
             ],
             "embedding_property": embedding_property,
         }
-        driver.execute_query(query, parameters, database_=neo4j_database)
+        driver.execute_query(
+            query_=query, parameters_=parameters, database_=neo4j_database
+        )
     except neo4j.exceptions.ClientError as e:
         raise Neo4jInsertionError(
             f"Upserting vectors to Neo4j failed: {e.message}"
