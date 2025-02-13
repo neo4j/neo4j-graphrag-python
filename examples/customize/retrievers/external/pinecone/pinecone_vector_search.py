@@ -12,7 +12,7 @@ from neo4j_graphrag.embeddings.sentence_transformers import (
     SentenceTransformerEmbeddings,
 )
 from neo4j_graphrag.retrievers import PineconeNeo4jRetriever
-from pinecone import Pinecone  # type: ignore[attr-defined]
+from pinecone import Pinecone
 
 NEO4J_AUTH = ("neo4j", "password")
 NEO4J_URL = "neo4j://localhost:7687"

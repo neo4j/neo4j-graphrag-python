@@ -24,7 +24,7 @@ from neo4j_graphrag.embeddings.sentence_transformers import (
 )
 from neo4j_graphrag.retrievers import PineconeNeo4jRetriever
 from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
-from pinecone import Pinecone  # type: ignore[attr-defined]
+from pinecone import Pinecone
 
 from ..utils import EMBEDDING_BIOLOGY, build_data_objects, populate_neo4j
 
