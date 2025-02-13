@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import warnings
 from typing import Any, Optional
 
 from neo4j_graphrag.filters import get_metadata_filter
@@ -232,6 +233,11 @@ def get_search_query(
         Exception: If Vector Search with filters is missing required parameters.
         ValueError: If an unsupported search type is provided.
     """
+    warnings.warn(
+        "The default returned 'id' field in the search results will be removed. Please switch to using 'elementId' instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     if entity_type == EntityType.NODE:
         if search_type == SearchType.HYBRID:
             if filters:
