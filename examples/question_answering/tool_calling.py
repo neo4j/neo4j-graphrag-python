@@ -97,8 +97,8 @@ llm_response = llm.invoke(query_text)
 if hasattr(llm_response, "tool_calls") and llm_response.tool_calls:
     call_info = llm_response.tool_calls[0]
 
-    if call_info["name"] == "get_streaming_availability":
-        args = json.loads(call_info["arguments"])
+    if call_info.name == "get_streaming_availability":
+        args = json.loads(call_info.arguments)
         movie_title = args["movie_title"]
         streaming_info = fetch_streaming_info(movie_title)
 

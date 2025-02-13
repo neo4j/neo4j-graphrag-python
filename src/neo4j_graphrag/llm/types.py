@@ -3,9 +3,16 @@ from typing import Literal, TypedDict, Optional, Any
 from pydantic import BaseModel
 
 
+class ToolCall(BaseModel):
+    id: str
+    type: Literal["function"]
+    name: str
+    arguments: str
+
+
 class LLMResponse(BaseModel):
     content: str
-    tool_calls: Optional[list[dict[str, Any]]] = None
+    tool_calls: Optional[list[ToolCall]] = None
 
 
 class LLMMessage(TypedDict):
