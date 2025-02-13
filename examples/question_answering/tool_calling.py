@@ -5,7 +5,7 @@ This example illustrates:
 - VectorCypherRetriever with a custom formatter function to extract relevant
     context from neo4j result
 - Logging configuration
-- Function calling
+- Tool calling using OpenAILLM
 """
 
 import logging
@@ -78,22 +78,24 @@ llm = OpenAILLM(
     model_params={"temperature": 0, "tools": tool_defs},
 )
 
-query_text = """
-Tell me more about Avatar movies and find
-out what streaming platform it is available on
-"""
-
-rag = GraphRAG(retriever=retriever, llm=llm)
-result = rag.search(query_text, return_context=True)
-
 
 def fetch_streaming_info(movie_title: str) -> str:
     platforms = ["Netflix", "Disney+", "AppleTV"]
     return ", ".join(platforms)
 
 
-if hasattr(result, "tool_calls") and result.tool_calls:
-    call_info = result.tool_calls[0]
+query_text = """
+Tell me more about Avatar movies and find
+out what streaming platform it is available on
+"""
+
+
+rag = GraphRAG(retriever=retriever, llm=llm)
+
+llm_response = llm.invoke(query_text)
+
+if hasattr(llm_response, "tool_calls") and llm_response.tool_calls:
+    call_info = llm_response.tool_calls[0]
 
     if call_info["name"] == "get_streaming_availability":
         args = json.loads(call_info["arguments"])
@@ -101,16 +103,13 @@ if hasattr(result, "tool_calls") and result.tool_calls:
         streaming_info = fetch_streaming_info(movie_title)
 
         second_query = f"""
-        {query_text}
-        Also, you found that '{movie_title}' is available on {streaming_info}.
-        Please provide more details from the knowledge graph but do NOT call any tool.
+            {query_text}
+            Streaming platforms {movie_title} is available on:
+            {streaming_info}
+            Please provide more details from the knowledge graph but do NOT call any tool.
         """
 
         result_second = rag.search(second_query, return_context=True)
         print("Second-pass answer:", result_second.answer)
-    else:
-        print("No recognized tool name, single pass answer:", result.answer)
-else:
-    print("Single-pass answer:", result.answer)
 
 driver.close()

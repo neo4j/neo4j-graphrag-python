@@ -122,9 +122,9 @@ def test_cohere_llm_invoke_with_message_history_validation_error(
 
 @pytest.mark.asyncio
 async def test_cohere_llm_happy_path_async(mock_cohere: Mock) -> None:
-    chat_response_mock = AsyncMock()
-    chat_response_mock.message.content = [AsyncMock(text="cohere response text")]
-    mock_cohere.AsyncClientV2.return_value.chat.return_value = chat_response_mock
+    chat_response = MagicMock()
+    chat_response.message.content = [MagicMock(text="cohere response text")]
+    mock_cohere.AsyncClientV2.return_value.chat = AsyncMock(return_value=chat_response)
 
     llm = CohereLLM(model_name="something")
     res = await llm.ainvoke("my text")

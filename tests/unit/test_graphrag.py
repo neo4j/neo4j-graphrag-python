@@ -12,7 +12,6 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-import json
 from unittest import mock
 from unittest.mock import MagicMock, call
 
@@ -249,32 +248,3 @@ Current Query:
 latest question
 """
     )
-
-
-def test_graphrag_search_tool_call_happy_path(
-    retriever_mock: MagicMock, llm: MagicMock
-) -> None:
-    retriever_mock.search.return_value = RetrieverResult(items=[])
-    llm.invoke.return_value = LLMResponse(
-        content="",
-        tool_calls=[
-            {
-                "id": "call_abc",
-                "type": "function",
-                "name": "get_streaming_availability",
-                "arguments": '{"movie_title":"Avatar"}',
-            }
-        ],
-    )
-
-    rag = GraphRAG(
-        retriever_mock, llm, prompt_template=RagTemplate(system_instructions="Test SI")
-    )
-    res = rag.search("Find out streaming info", return_context=True)
-
-    assert res.answer == ""
-    assert res.tool_calls is not None
-    assert len(res.tool_calls) == 1
-    call_info = res.tool_calls[0]
-    assert call_info["name"] == "get_streaming_availability"
-    assert json.loads(call_info["arguments"])["movie_title"] == "Avatar"

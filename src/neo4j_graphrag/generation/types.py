@@ -14,7 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Union, Optional
+from typing import Any, Union
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
@@ -48,6 +48,5 @@ class RagSearchModel(BaseModel):
 class RagResultModel(BaseModel):
     answer: str
     retriever_result: Union[RetrieverResult, None] = None
-    tool_calls: Optional[list[dict[str, Any]]] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
