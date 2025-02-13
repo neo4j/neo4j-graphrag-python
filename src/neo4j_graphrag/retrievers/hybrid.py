@@ -183,7 +183,6 @@ class HybridRetriever(Retriever):
         parameters = validated_data.model_dump(exclude_none=True)
         parameters["vector_index_name"] = self.vector_index_name
         parameters["fulltext_index_name"] = self.fulltext_index_name
-        parameters["query_text"] = query_text
 
         if query_text and not query_vector:
             if not self.embedder:
@@ -343,7 +342,6 @@ class HybridCypherRetriever(Retriever):
         parameters = validated_data.model_dump(exclude_none=True)
         parameters["vector_index_name"] = self.vector_index_name
         parameters["fulltext_index_name"] = self.fulltext_index_name
-        parameters["query_text"] = query_text
 
         if query_text and not query_vector:
             if not self.embedder:
