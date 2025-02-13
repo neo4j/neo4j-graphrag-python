@@ -23,9 +23,9 @@ from neo4j_graphrag.indexes import (
     create_fulltext_index,
     create_vector_index,
     drop_index_if_exists,
-    upsert_vectors,
     upsert_vector,
     upsert_vector_on_relationship,
+    upsert_vectors,
 )
 
 
@@ -325,4 +325,3 @@ def test_upsert_vectors_inconsistent_embedding_sizes(driver: MagicMock) -> None:
             neo4j_database="neo4j",
         )
     assert str(exc_info.value) == "All embeddings must be of the same size"
-
