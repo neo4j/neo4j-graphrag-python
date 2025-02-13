@@ -166,17 +166,6 @@ class EntityType(str, Enum):
     RELATIONSHIP = "RELATIONSHIP"
 
 
-class DistanceStrategy(str, Enum):
-    """Enumerator of the Distance strategies for calculating distances
-    between vectors."""
-
-    EUCLIDEAN_DISTANCE = "EUCLIDEAN_DISTANCE"
-    MAX_INNER_PRODUCT = "MAX_INNER_PRODUCT"
-    DOT_PRODUCT = "DOT_PRODUCT"
-    JACCARD = "JACCARD"
-    COSINE = "COSINE"
-
-
 class EmbedderModel(BaseModel):
     embedder: Optional[Any]
     model_config = ConfigDict(arbitrary_types_allowed=True)
