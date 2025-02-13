@@ -268,7 +268,10 @@ def get_search_query(
             raise ValueError(f"Search type is not supported: {search_type}")
         fallback_return = (
             f"RETURN node {{ .*, `{embedding_node_property}`: null }} AS node, "
-            "labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score"
+            "labels(node) AS nodeLabels, "
+            "elementId(node) AS elementId, "
+            "elementId(node) AS id, "
+            "score"
         )
     elif entity_type == EntityType.RELATIONSHIP:
         if filters:
@@ -279,7 +282,10 @@ def get_search_query(
             query, params = REL_VECTOR_INDEX_QUERY, {}
             fallback_return = (
                 f"RETURN relationship {{ .*, `{embedding_node_property}`: null }} AS relationship, "
-                "elementId(relationship) AS elementId, score"
+                "type(relationship) as relationshipType, "
+                "elementId(relationship) AS elementId, "
+                "elementId(relationship) AS id, "
+                "score"
             )
         else:
             raise ValueError(f"Search type is not supported: {search_type}")
@@ -317,9 +323,21 @@ def get_query_tail(
     if return_properties:
         return_properties_cypher = ", ".join([f".{prop}" for prop in return_properties])
         if entity_type == EntityType.NODE:
-            return f"RETURN node {{{return_properties_cypher}}} AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score"
+            return (
+                f"RETURN node {{{return_properties_cypher}}} AS node, "
+                "labels(node) AS nodeLabels, "
+                "elementId(node) AS elementId, "
+                "elementId(node) AS id, "
+                "score"
+            )
         elif entity_type == EntityType.RELATIONSHIP:
-            return f"RETURN relationship {{{return_properties_cypher}}} AS relationship, elementId(relationship) AS elementId, elementId(node) AS id, score"
+            return (
+                f"RETURN relationship {{{return_properties_cypher}}} AS relationship, "
+                "type(relationship) as relationshipType, "
+                "elementId(relationship) AS elementId, "
+                "elementId(relationship) AS id, "
+                "score"
+            )
         else:
             raise ValueError(f"Entity type is not supported: {entity_type}")
     return fallback_return if fallback_return else ""

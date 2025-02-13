@@ -40,7 +40,8 @@ def test_rel_vector_search_basic() -> None:
         "CALL db.index.vector.queryRelationships($vector_index_name, $top_k * $effective_search_ratio, $query_vector) "
         "YIELD relationship, score "
         "WITH relationship, score LIMIT $top_k "
-        "RETURN relationship { .*, `None`: null } AS relationship, elementId(relationship) AS elementId, score"
+        "RETURN relationship { .*, `None`: null } AS relationship, type(relationship) as relationshipType, "
+        "elementId(relationship) AS elementId, elementId(relationship) AS id, score"
     )
     result, params = get_search_query(SearchType.VECTOR, EntityType.RELATIONSHIP)
     assert result.strip() == expected.strip()
