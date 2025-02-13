@@ -90,8 +90,16 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """
-        Synchronously calls the new openai ChatCompletion endpoint using "tools"
-        (function calling), returning any tool calls in `tool_calls`.
+        Sends a text input to the OpenAI chat completion model
+        and returns the response's content.
+        Args:
+            input (str): Text sent to the LLM.
+            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invokation.
+        Returns:
+            LLMResponse: The response from OpenAI.
+        Raises:
+            LLMGenerationError: If anything goes wrong.
         """
         try:
             response = self.client.chat.completions.create(
