@@ -471,35 +471,6 @@ async def async_upsert_vector_on_relationship(
         ) from e
 
 
-def _remove_lucene_chars(text: str) -> str:
-    """Remove Lucene special characters"""
-    special_chars = [
-        "+",
-        "-",
-        "&",
-        "|",
-        "!",
-        "(",
-        ")",
-        "{",
-        "}",
-        "[",
-        "]",
-        "^",
-        '"',
-        "~",
-        "*",
-        "?",
-        ":",
-        "\\",
-        "/",
-    ]
-    for char in special_chars:
-        if char in text:
-            text = text.replace(char, " ")
-    return text.strip()
-
-
 def _sort_by_index_name(
     records: List[neo4j.Record], index_name: str
 ) -> List[neo4j.Record]:

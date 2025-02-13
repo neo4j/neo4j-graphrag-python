@@ -21,7 +21,6 @@ from neo4j_graphrag.exceptions import (
     EmbeddingRequiredError,
     RetrieverInitializationError,
 )
-from neo4j_graphrag.indexes import _remove_lucene_chars
 from neo4j_graphrag.neo4j_queries import get_search_query
 from neo4j_graphrag.retrievers import HybridCypherRetriever, HybridRetriever
 from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem, SearchType
@@ -269,7 +268,7 @@ def test_hybrid_search_sanitizes_text(
             "vector_index_name": vector_index_name,
             "top_k": top_k,
             "effective_search_ratio": effective_search_ratio,
-            "query_text": _remove_lucene_chars(query_text),
+            "query_text": query_text,
             "fulltext_index_name": fulltext_index_name,
             "query_vector": embed_query_vector,
         },
@@ -599,7 +598,7 @@ def test_hybrid_cypher_search_sanitizes_text(
             "vector_index_name": vector_index_name,
             "top_k": top_k,
             "effective_search_ratio": effective_search_ratio,
-            "query_text": _remove_lucene_chars(query_text),
+            "query_text": query_text,
             "fulltext_index_name": fulltext_index_name,
             "query_vector": embed_query_vector,
         },
