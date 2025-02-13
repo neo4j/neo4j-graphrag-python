@@ -38,6 +38,7 @@ from neo4j_graphrag.utils.version_utils import (
     get_version,
     is_version_5_23_or_above,
 )
+from neo4j_graphrag.utils import driver_config
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +118,7 @@ class Neo4jWriter(KGWriter):
         neo4j_database: Optional[str] = None,
         batch_size: int = 1000,
     ):
-        self.driver = driver
+        self.driver = driver_config.override_user_agent(driver)
         self.neo4j_database = neo4j_database
         self.batch_size = batch_size
         version_tuple, _, _ = get_version(self.driver, self.neo4j_database)

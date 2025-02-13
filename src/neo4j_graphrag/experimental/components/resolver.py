@@ -19,6 +19,7 @@ import neo4j
 
 from neo4j_graphrag.experimental.components.types import ResolutionStats
 from neo4j_graphrag.experimental.pipeline import Component
+from neo4j_graphrag.utils import driver_config
 
 
 class EntityResolver(Component, abc.ABC):
@@ -34,7 +35,7 @@ class EntityResolver(Component, abc.ABC):
         driver: neo4j.Driver,
         filter_query: Optional[str] = None,
     ) -> None:
-        self.driver = driver
+        self.driver = driver_config.override_user_agent(driver)
         self.filter_query = filter_query
 
     @abc.abstractmethod
