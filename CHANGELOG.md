@@ -10,7 +10,6 @@
 ### Changed
 
 - Refactored index-related functions for improved compatibility and functionality.
-- Deprecated the id property in retriever results.
 
 ## 1.4.3
 
