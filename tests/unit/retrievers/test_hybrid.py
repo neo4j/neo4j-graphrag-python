@@ -258,7 +258,7 @@ def test_hybrid_search_sanitizes_text(
         top_k=top_k,
         effective_search_ratio=effective_search_ratio,
     )
-    embedder.embed_query.assert_called_once_with(_remove_lucene_chars(query_text))
+    embedder.embed_query.assert_called_once_with(query_text)
     search_query, _ = get_search_query(
         SearchType.HYBRID,
         neo4j_version_is_5_23_or_above=retriever.neo4j_version_is_5_23_or_above,
@@ -587,7 +587,7 @@ def test_hybrid_cypher_search_sanitizes_text(
         top_k=top_k,
         effective_search_ratio=effective_search_ratio,
     )
-    embedder.embed_query.assert_called_once_with(_remove_lucene_chars(query_text))
+    embedder.embed_query.assert_called_once_with(query_text)
     search_query, _ = get_search_query(
         SearchType.HYBRID,
         retrieval_query=retrieval_query,

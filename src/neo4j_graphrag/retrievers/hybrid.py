@@ -184,15 +184,14 @@ class HybridRetriever(Retriever):
         parameters = validated_data.model_dump(exclude_none=True)
         parameters["vector_index_name"] = self.vector_index_name
         parameters["fulltext_index_name"] = self.fulltext_index_name
-        sanitized_query_text = _remove_lucene_chars(query_text)
-        parameters["query_text"] = sanitized_query_text
+        parameters["query_text"] = _remove_lucene_chars(query_text)
 
         if query_text and not query_vector:
             if not self.embedder:
                 raise EmbeddingRequiredError(
                     "Embedding method required for text query."
                 )
-            query_vector = self.embedder.embed_query(sanitized_query_text)
+            query_vector = self.embedder.embed_query(query_text)
             parameters["query_vector"] = query_vector
 
         search_query, _ = get_search_query(
@@ -345,15 +344,14 @@ class HybridCypherRetriever(Retriever):
         parameters = validated_data.model_dump(exclude_none=True)
         parameters["vector_index_name"] = self.vector_index_name
         parameters["fulltext_index_name"] = self.fulltext_index_name
-        sanitized_query_text = _remove_lucene_chars(query_text)
-        parameters["query_text"] = sanitized_query_text
+        parameters["query_text"] = _remove_lucene_chars(query_text)
 
         if query_text and not query_vector:
             if not self.embedder:
                 raise EmbeddingRequiredError(
                     "Embedding method required for text query."
                 )
-            query_vector = self.embedder.embed_query(sanitized_query_text)
+            query_vector = self.embedder.embed_query(query_text)
             parameters["query_vector"] = query_vector
 
         if query_params:
