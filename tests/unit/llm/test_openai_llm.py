@@ -234,5 +234,5 @@ def test_openai_llm_tool_call_happy_path(mock_import: Mock) -> None:
     assert res.content == ""
     assert res.tool_calls is not None
     assert len(res.tool_calls) == 1
-    assert res.tool_calls[0]["name"] == "some_tool"
-    assert json.loads(res.tool_calls[0]["arguments"]) == {"foo": "bar"}
+    assert res.tool_calls[0].name == "some_tool"
+    assert json.loads(res.tool_calls[0].arguments) == {"foo": "bar"}

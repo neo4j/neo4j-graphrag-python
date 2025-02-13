@@ -28,6 +28,7 @@ from .types import (
     MessageList,
     SystemMessage,
     UserMessage,
+    ToolCall
 )
 
 if TYPE_CHECKING:
@@ -112,16 +113,15 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
 
             raw_calls = getattr(choice.message, "tool_calls", None) or []
             if raw_calls:
-                calls_list = []
-                for c in raw_calls:
-                    calls_list.append(
-                        {
-                            "id": c.id,
-                            "type": c.type,
-                            "name": c.function.name,
-                            "arguments": c.function.arguments,
-                        }
+                calls_list = [
+                    ToolCall(
+                        id=c.id,
+                        type=c.type,
+                        name=c.function.name,
+                        arguments=c.function.arguments
                     )
+                    for c in raw_calls
+                ]
                 return LLMResponse(content=content, tool_calls=calls_list)
             else:
                 return LLMResponse(content=content)
@@ -150,16 +150,15 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
 
             raw_calls = getattr(choice.message, "tool_calls", None) or []
             if raw_calls:
-                calls_list = []
-                for c in raw_calls:
-                    calls_list.append(
-                        {
-                            "id": c.id,
-                            "type": c.type,
-                            "name": c.function.name,
-                            "arguments": c.function.arguments,
-                        }
+                calls_list = [
+                    ToolCall(
+                        id=c.id,
+                        type=c.type,
+                        name=c.function.name,
+                        arguments=c.function.arguments
                     )
+                    for c in raw_calls
+                ]
                 return LLMResponse(content=content, tool_calls=calls_list)
             else:
                 return LLMResponse(content=content)
