@@ -294,7 +294,8 @@ def upsert_vectors(
         embeddings (List[List[float]]): The list of vectors to store, one per ID.
         neo4j_database (Optional[str]): The name of the Neo4j database.
             If not provided, defaults to the server's default database. 'neo4j' by default.
-        entity_type (EntityType): Specifies whether to upsert to nodes or relationships.
+        entity_type (EntityType): Specifies whether to upsert to nodes ('NODE') or relationships ('RELATIONSHIP').
+            Defaults to 'NODE'.
 
     Raises:
         ValueError: If the lengths of IDs and embeddings do not match, or if embeddings are not of uniform dimension.
