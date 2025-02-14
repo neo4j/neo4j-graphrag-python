@@ -6,10 +6,13 @@
 
 - Utility functions to retrieve metadata for vector and full-text indexes.
 - Support for effective_search_ratio parameter in vector and hybrid searches.
+- Introduced upsert_vectors utility function for batch upserting embeddings to vector indexes.
 
 ### Changed
 
 - Refactored index-related functions for improved compatibility and functionality.
+- Added deprecation warnings to upsert_vector, upsert_vector_on_relationship functions in favor of upsert_vectors.
+- Added deprecation warnings to async_upsert_vector, async_upsert_vector_on_relationship functions notifying developers that they will be removed in a future release.
 
 ## 1.4.3
 
