@@ -178,6 +178,7 @@ def test_hybrid_search_text_happy_path(
     fulltext_index_name = "fulltext-index"
     query_text = "may thy knife chip and shatter"
     top_k = 5
+    effective_search_ratio = 2
 
     retriever = HybridRetriever(
         driver, vector_index_name, fulltext_index_name, embedder
@@ -197,13 +198,18 @@ def test_hybrid_search_text_happy_path(
         neo4j_version_is_5_23_or_above=retriever.neo4j_version_is_5_23_or_above,
     )
 
-    records = retriever.search(query_text=query_text, top_k=top_k)
+    records = retriever.search(
+        query_text=query_text,
+        top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
+    )
 
     retriever.driver.execute_query.assert_called_once_with(  # type: ignore
         search_query,
         {
             "vector_index_name": vector_index_name,
             "top_k": top_k,
+            "effective_search_ratio": effective_search_ratio,
             "query_text": query_text,
             "fulltext_index_name": fulltext_index_name,
             "query_vector": embed_query_vector,
@@ -217,6 +223,57 @@ def test_hybrid_search_text_happy_path(
             RetrieverResultItem(content="dummy-node", metadata={"score": 1.0}),
         ],
         metadata={"__retriever": "HybridRetriever"},
+    )
+
+
+@patch("neo4j_graphrag.retrievers.HybridRetriever._fetch_index_infos")
+@patch("neo4j_graphrag.retrievers.base.get_version")
+def test_hybrid_search_sanitizes_text(
+    mock_get_version: MagicMock,
+    _fetch_index_infos_mock: MagicMock,
+    driver: MagicMock,
+    embedder: MagicMock,
+    neo4j_record: MagicMock,
+) -> None:
+    mock_get_version.return_value = ((5, 23, 0), False, False)
+    embed_query_vector = [1.0 for _ in range(1536)]
+    embedder.embed_query.return_value = embed_query_vector
+    vector_index_name = "vector-index"
+    fulltext_index_name = "fulltext-index"
+    query_text = 'may thy knife chip and shatter+-&|!(){}[]^"~*?:\\/'
+    top_k = 5
+    effective_search_ratio = 2
+    retriever = HybridRetriever(
+        driver, vector_index_name, fulltext_index_name, embedder
+    )
+    retriever.neo4j_version_is_5_23_or_above = True
+    retriever.driver.execute_query.return_value = [  # type: ignore
+        [neo4j_record],
+        None,
+        None,
+    ]
+    retriever.search(
+        query_text=query_text,
+        top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
+    )
+    embedder.embed_query.assert_called_once_with(query_text)
+    search_query, _ = get_search_query(
+        SearchType.HYBRID,
+        neo4j_version_is_5_23_or_above=retriever.neo4j_version_is_5_23_or_above,
+    )
+    driver.execute_query.assert_called_once_with(
+        search_query,
+        {
+            "vector_index_name": vector_index_name,
+            "top_k": top_k,
+            "effective_search_ratio": effective_search_ratio,
+            "query_text": query_text,
+            "fulltext_index_name": fulltext_index_name,
+            "query_vector": embed_query_vector,
+        },
+        database_=None,
+        routing_=neo4j.RoutingControl.READ,
     )
 
 
@@ -238,6 +295,7 @@ def test_hybrid_search_favors_query_vector_over_embedding_vector(
     fulltext_index_name = "fulltext-index"
     query_text = "may thy knife chip and shatter"
     top_k = 5
+    effective_search_ratio = 2
     database = "neo4j"
     retriever = HybridRetriever(
         driver,
@@ -257,13 +315,19 @@ def test_hybrid_search_favors_query_vector_over_embedding_vector(
         neo4j_version_is_5_23_or_above=retriever.neo4j_version_is_5_23_or_above,
     )
 
-    retriever.search(query_text=query_text, query_vector=query_vector, top_k=top_k)
+    retriever.search(
+        query_text=query_text,
+        query_vector=query_vector,
+        top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
+    )
 
     retriever.driver.execute_query.assert_called_once_with(  # type: ignore
         search_query,
         {
             "vector_index_name": vector_index_name,
             "top_k": top_k,
+            "effective_search_ratio": effective_search_ratio,
             "query_text": query_text,
             "fulltext_index_name": fulltext_index_name,
             "query_vector": query_vector,
@@ -320,6 +384,7 @@ def test_hybrid_retriever_return_properties(
     fulltext_index_name = "fulltext-index"
     query_text = "may thy knife chip and shatter"
     top_k = 5
+    effective_search_ratio = 2
     return_properties = ["node-property-1", "node-property-2"]
     retriever = HybridRetriever(
         driver,
@@ -335,12 +400,16 @@ def test_hybrid_retriever_return_properties(
         None,
     ]
     search_query, _ = get_search_query(
-        SearchType.HYBRID,
-        return_properties,
+        search_type=SearchType.HYBRID,
+        return_properties=return_properties,
         neo4j_version_is_5_23_or_above=retriever.neo4j_version_is_5_23_or_above,
     )
 
-    records = retriever.search(query_text=query_text, top_k=top_k)
+    records = retriever.search(
+        query_text=query_text,
+        top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
+    )
 
     embedder.embed_query.assert_called_once_with(query_text)
     driver.execute_query.assert_called_once_with(
@@ -348,6 +417,7 @@ def test_hybrid_retriever_return_properties(
         {
             "vector_index_name": vector_index_name,
             "top_k": top_k,
+            "effective_search_ratio": effective_search_ratio,
             "query_text": query_text,
             "fulltext_index_name": fulltext_index_name,
             "query_vector": embed_query_vector,
@@ -377,6 +447,7 @@ def test_hybrid_cypher_retrieval_query_with_params(
     fulltext_index_name = "fulltext-index"
     query_text = "may thy knife chip and shatter"
     top_k = 5
+    effective_search_ratio = 2
     retrieval_query = """
         RETURN node.id AS node_id, node.text AS text, score, {test: $param} AS metadata
         """
@@ -397,7 +468,7 @@ def test_hybrid_cypher_retrieval_query_with_params(
         None,
     ]
     search_query, _ = get_search_query(
-        SearchType.HYBRID,
+        search_type=SearchType.HYBRID,
         retrieval_query=retrieval_query,
         neo4j_version_is_5_23_or_above=retriever.neo4j_version_is_5_23_or_above,
     )
@@ -405,6 +476,7 @@ def test_hybrid_cypher_retrieval_query_with_params(
     records = retriever.search(
         query_text=query_text,
         top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
         query_params=query_params,
     )
 
@@ -415,6 +487,7 @@ def test_hybrid_cypher_retrieval_query_with_params(
         {
             "vector_index_name": vector_index_name,
             "top_k": top_k,
+            "effective_search_ratio": effective_search_ratio,
             "query_text": query_text,
             "fulltext_index_name": fulltext_index_name,
             "query_vector": embed_query_vector,
@@ -475,4 +548,60 @@ def test_hybrid_cypher_retriever_with_result_format_function(
             ),
         ],
         metadata={"__retriever": "HybridCypherRetriever"},
+    )
+
+
+@patch("neo4j_graphrag.retrievers.base.get_version")
+def test_hybrid_cypher_search_sanitizes_text(
+    mock_get_version: MagicMock,
+    driver: MagicMock,
+    embedder: MagicMock,
+    neo4j_record: MagicMock,
+) -> None:
+    mock_get_version.return_value = ((5, 23, 0), False, False)
+    embed_query_vector = [1.0 for _ in range(1536)]
+    embedder.embed_query.return_value = embed_query_vector
+    vector_index_name = "vector-index"
+    fulltext_index_name = "fulltext-index"
+    query_text = 'may thy knife chip and shatter+-&|!(){}[]^"~*?:\\/'
+    top_k = 5
+    effective_search_ratio = 2
+    retrieval_query = """
+    RETURN node.id AS node_id, node.text AS text, score, {test: $param} AS metadata
+    """
+    retriever = HybridCypherRetriever(
+        driver,
+        vector_index_name,
+        fulltext_index_name,
+        retrieval_query,
+        embedder,
+    )
+    retriever.driver.execute_query.return_value = [  # type: ignore
+        [neo4j_record],
+        None,
+        None,
+    ]
+    retriever.search(
+        query_text=query_text,
+        top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
+    )
+    embedder.embed_query.assert_called_once_with(query_text)
+    search_query, _ = get_search_query(
+        SearchType.HYBRID,
+        retrieval_query=retrieval_query,
+        neo4j_version_is_5_23_or_above=retriever.neo4j_version_is_5_23_or_above,
+    )
+    driver.execute_query.assert_called_once_with(
+        search_query,
+        {
+            "vector_index_name": vector_index_name,
+            "top_k": top_k,
+            "effective_search_ratio": effective_search_ratio,
+            "query_text": query_text,
+            "fulltext_index_name": fulltext_index_name,
+            "query_vector": embed_query_vector,
+        },
+        database_=None,
+        routing_=neo4j.RoutingControl.READ,
     )

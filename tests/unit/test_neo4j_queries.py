@@ -15,14 +15,19 @@
 from typing import Any
 from unittest.mock import patch
 
-from neo4j_graphrag.neo4j_queries import get_query_tail, get_search_query
-from neo4j_graphrag.types import SearchType
+import pytest
+from neo4j_graphrag.neo4j_queries import (
+    get_query_tail,
+    get_search_query,
+)
+from neo4j_graphrag.types import EntityType, SearchType
 
 
 def test_vector_search_basic() -> None:
     expected = (
-        "CALL db.index.vector.queryNodes($vector_index_name, $top_k, $query_vector) "
+        "CALL db.index.vector.queryNodes($vector_index_name, $top_k * $effective_search_ratio, $query_vector) "
         "YIELD node, score "
+        "WITH node, score LIMIT $top_k "
         "RETURN node { .*, `None`: null } AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score"
     )
     result, params = get_search_query(SearchType.VECTOR)
@@ -30,11 +35,41 @@ def test_vector_search_basic() -> None:
     assert params == {}
 
 
+def test_rel_vector_search_basic() -> None:
+    expected = (
+        "CALL db.index.vector.queryRelationships($vector_index_name, $top_k * $effective_search_ratio, $query_vector) "
+        "YIELD relationship, score "
+        "WITH relationship, score LIMIT $top_k "
+        "RETURN relationship { .*, `None`: null } AS relationship, type(relationship) as relationshipType, "
+        "elementId(relationship) AS elementId, elementId(relationship) AS id, score"
+    )
+    result, params = get_search_query(SearchType.VECTOR, EntityType.RELATIONSHIP)
+    assert result.strip() == expected.strip()
+    assert params == {}
+
+
+def test_rel_vector_search_filters_err() -> None:
+    with pytest.raises(Exception) as exc_info:
+        get_search_query(
+            SearchType.VECTOR, EntityType.RELATIONSHIP, filters={"filter": None}
+        )
+    assert str(exc_info.value) == "Filters are not supported for relationship indexes"
+
+
+def test_rel_vector_search_hybrid_err() -> None:
+    with pytest.raises(Exception) as exc_info:
+        get_search_query(SearchType.HYBRID, EntityType.RELATIONSHIP)
+    assert (
+        str(exc_info.value) == "Hybrid search is not supported for relationship indexes"
+    )
+
+
 def test_hybrid_search_basic() -> None:
     expected = (
         "CALL { "
-        "CALL db.index.vector.queryNodes($vector_index_name, $top_k, $query_vector) "
+        "CALL db.index.vector.queryNodes($vector_index_name, $top_k * $effective_search_ratio, $query_vector) "
         "YIELD node, score "
+        "WITH node, score LIMIT $top_k "
         "WITH collect({node:node, score:score}) AS nodes, max(score) AS vector_index_max_score "
         "UNWIND nodes AS n "
         "RETURN n.node AS node, (n.score / vector_index_max_score) AS score UNION "
@@ -54,8 +89,9 @@ def test_hybrid_search_basic() -> None:
 def test_vector_search_with_properties() -> None:
     properties = ["name", "age"]
     expected = (
-        "CALL db.index.vector.queryNodes($vector_index_name, $top_k, $query_vector) "
+        "CALL db.index.vector.queryNodes($vector_index_name, $top_k * $effective_search_ratio, $query_vector) "
         "YIELD node, score "
+        "WITH node, score LIMIT $top_k "
         "RETURN node {.name, .age} AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score"
     )
     result, _ = get_search_query(SearchType.VECTOR, return_properties=properties)
@@ -65,8 +101,9 @@ def test_vector_search_with_properties() -> None:
 def test_vector_search_with_retrieval_query() -> None:
     retrieval_query = "MATCH (n) RETURN n LIMIT 10"
     expected = (
-        "CALL db.index.vector.queryNodes($vector_index_name, $top_k, $query_vector) "
-        "YIELD node, score " + retrieval_query
+        "CALL db.index.vector.queryNodes($vector_index_name, $top_k * $effective_search_ratio, $query_vector) "
+        "YIELD node, score "
+        "WITH node, score LIMIT $top_k " + retrieval_query
     )
     result, _ = get_search_query(SearchType.VECTOR, retrieval_query=retrieval_query)
     assert result.strip() == expected.strip()
@@ -125,8 +162,9 @@ def test_hybrid_search_with_retrieval_query() -> None:
     retrieval_query = "MATCH (n) RETURN n LIMIT 10"
     expected = (
         "CALL { "
-        "CALL db.index.vector.queryNodes($vector_index_name, $top_k, $query_vector) "
+        "CALL db.index.vector.queryNodes($vector_index_name, $top_k * $effective_search_ratio, $query_vector) "
         "YIELD node, score "
+        "WITH node, score LIMIT $top_k "
         "WITH collect({node:node, score:score}) AS nodes, max(score) AS vector_index_max_score "
         "UNWIND nodes AS n "
         "RETURN n.node AS node, (n.score / vector_index_max_score) AS score UNION "
@@ -147,8 +185,9 @@ def test_hybrid_search_with_properties() -> None:
     properties = ["name", "age"]
     expected = (
         "CALL { "
-        "CALL db.index.vector.queryNodes($vector_index_name, $top_k, $query_vector) "
+        "CALL db.index.vector.queryNodes($vector_index_name, $top_k * $effective_search_ratio, $query_vector) "
         "YIELD node, score "
+        "WITH node, score LIMIT $top_k "
         "WITH collect({node:node, score:score}) AS nodes, max(score) AS vector_index_max_score "
         "UNWIND nodes AS n "
         "RETURN n.node AS node, (n.score / vector_index_max_score) AS score UNION "

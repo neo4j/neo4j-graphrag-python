@@ -18,11 +18,20 @@ import warnings
 from typing import Any, Optional
 
 from neo4j_graphrag.filters import get_metadata_filter
-from neo4j_graphrag.types import SearchType
+from neo4j_graphrag.types import EntityType, SearchType
 
-VECTOR_INDEX_QUERY = (
-    "CALL db.index.vector.queryNodes($vector_index_name, $top_k, $query_vector) "
-    "YIELD node, score"
+NODE_VECTOR_INDEX_QUERY = (
+    "CALL db.index.vector.queryNodes"
+    "($vector_index_name, $top_k * $effective_search_ratio, $query_vector) "
+    "YIELD node, score "
+    "WITH node, score LIMIT $top_k"
+)
+
+REL_VECTOR_INDEX_QUERY = (
+    "CALL db.index.vector.queryRelationships"
+    "($vector_index_name, $top_k * $effective_search_ratio, $query_vector) "
+    "YIELD relationship, score "
+    "WITH relationship, score LIMIT $top_k"
 )
 
 VECTOR_EXACT_QUERY = (
@@ -84,7 +93,6 @@ UPSERT_RELATIONSHIP_QUERY = (
     "RETURN elementId(rel)"
 )
 
-
 UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE = (
     "UNWIND $rows as row "
     "MATCH (start:__KGBuilder__ {id: row.start_node_id}) "
@@ -117,32 +125,30 @@ UPSERT_VECTOR_ON_RELATIONSHIP_QUERY = (
 
 
 def _get_hybrid_query(neo4j_version_is_5_23_or_above: bool) -> str:
-    if neo4j_version_is_5_23_or_above:
-        return (
-            f"CALL () {{ {VECTOR_INDEX_QUERY} "
-            f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS vector_index_max_score "
-            f"UNWIND nodes AS n "
-            f"RETURN n.node AS node, (n.score / vector_index_max_score) AS score "
-            f"UNION "
-            f"{FULL_TEXT_SEARCH_QUERY} "
-            f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS ft_index_max_score "
-            f"UNWIND nodes AS n "
-            f"RETURN n.node AS node, (n.score / ft_index_max_score) AS score }} "
-            f"WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k"
-        )
-    else:
-        return (
-            f"CALL {{ {VECTOR_INDEX_QUERY} "
-            f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS vector_index_max_score "
-            f"UNWIND nodes AS n "
-            f"RETURN n.node AS node, (n.score / vector_index_max_score) AS score "
-            f"UNION "
-            f"{FULL_TEXT_SEARCH_QUERY} "
-            f"WITH collect({{node:node, score:score}}) AS nodes, max(score) AS ft_index_max_score "
-            f"UNWIND nodes AS n "
-            f"RETURN n.node AS node, (n.score / ft_index_max_score) AS score }} "
-            f"WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k"
-        )
+    """
+    Construct a cypher query for hybrid search.
+
+    Args:
+        neo4j_version_is_5_23_or_above (bool): Whether or not the Neo4j version is 5.23 or above;
+            determines which call syntax is used.
+
+    Returns:
+        str: The constructed Cypher query string.
+    """
+    call_prefix = "CALL () { " if neo4j_version_is_5_23_or_above else "CALL { "
+    query_body = (
+        f"{NODE_VECTOR_INDEX_QUERY} "
+        "WITH collect({node:node, score:score}) AS nodes, max(score) AS vector_index_max_score "
+        "UNWIND nodes AS n "
+        "RETURN n.node AS node, (n.score / vector_index_max_score) AS score "
+        "UNION "
+        f"{FULL_TEXT_SEARCH_QUERY} "
+        "WITH collect({node:node, score:score}) AS nodes, max(score) AS ft_index_max_score "
+        "UNWIND nodes AS n "
+        "RETURN n.node AS node, (n.score / ft_index_max_score) AS score } "
+        "WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k"
+    )
+    return call_prefix + query_body
 
 
 def _get_filtered_vector_query(
@@ -150,6 +156,7 @@ def _get_filtered_vector_query(
     node_label: str,
     embedding_node_property: str,
     embedding_dimension: int,
+    use_parallel_runtime: bool,
 ) -> tuple[str, dict[str, Any]]:
     """Build Cypher query for vector search with filters
     Uses exact KNN.
@@ -159,10 +166,17 @@ def _get_filtered_vector_query(
         node_label (str): node label we want to search for
         embedding_node_property (str): the name of the property holding the embeddings
         embedding_dimension (int): the dimension of the embeddings
+        use_parallel_runtime (bool): Whether or not use the parallel runtime to run the query.
+            Defaults to False.
 
     Returns:
         tuple[str, dict[str, Any]]: query and parameters
     """
+    parallel_query = (
+        "CYPHER runtime = parallel parallelRuntimeSupport=all "
+        if use_parallel_runtime
+        else ""
+    )
     where_filters, query_params = get_metadata_filter(filters, node_alias="node")
     base_query = BASE_VECTOR_EXACT_QUERY.format(
         node_label=node_label,
@@ -172,11 +186,15 @@ def _get_filtered_vector_query(
         embedding_node_property=embedding_node_property,
     )
     query_params["embedding_dimension"] = embedding_dimension
-    return f"{base_query} AND ({where_filters}) {vector_query}", query_params
+    return (
+        parallel_query + f"{base_query} AND ({where_filters}) {vector_query}",
+        query_params,
+    )
 
 
 def get_search_query(
     search_type: SearchType,
+    entity_type: EntityType = EntityType.NODE,
     return_properties: Optional[list[str]] = None,
     retrieval_query: Optional[str] = None,
     node_label: Optional[str] = None,
@@ -184,56 +202,100 @@ def get_search_query(
     embedding_dimension: Optional[int] = None,
     filters: Optional[dict[str, Any]] = None,
     neo4j_version_is_5_23_or_above: bool = False,
+    use_parallel_runtime: bool = False,
 ) -> tuple[str, dict[str, Any]]:
-    """Build the search query, including pre-filtering if needed, and return clause.
+    """
+    Constructs a search query for vector or hybrid search, including optional pre-filtering
+    and return clause.
 
-    Args
-        search_type: Search type we want to search for:
-        return_properties (list[str]): list of property names to return.
-            It can't be provided together with retrieval_query.
-        retrieval_query (str): the query to use to retrieve the search results
-            It can't be provided together with return_properties.
-        node_label (str): node label we want to search for
-        embedding_node_property (str): the name of the property holding the embeddings
-        embedding_dimension (int): the dimension of the embeddings
-        filters (dict[str, Any]): filters used to pre-filter the nodes before vector search
+    Args:
+        search_type (SearchType): Specifies whether to perform a vector or hybrid search.
+        entity_type (Optional[EntityType]): Specifies whether to search over node or
+            relationship indexes. Defaults to 'node'.
+        return_properties (Optional[list[str]]): List of property names to return.
+            Cannot be provided alongside `retrieval_query`.
+        retrieval_query (Optional[str]): Query used to retrieve search results.
+            Cannot be provided alongside `return_properties`.
+        node_label (Optional[str]): Label of the nodes to search.
+        embedding_node_property (Optional[str])): Name of the property containing the embeddings.
+        embedding_dimension (Optional[int]): Dimension of the embeddings.
+        filters (Optional[dict[str, Any]]): Filters to pre-filter nodes before vector search.
+        neo4j_version_is_5_23_or_above (Optional[bool]): Whether the Neo4j version is 5.23 or above.
+        use_parallel_runtime (bool): Whether or not use the parallel runtime to run the query.
+            Defaults to False.
 
     Returns:
-        tuple[str, dict[str, Any]]: query and parameters
+        tuple[str, dict[str, Any]]: A tuple containing the constructed query string and
+        a dictionary of query parameters.
 
+     Raises:
+        Exception: If filters are used with Hybrid Search.
+        Exception: If Vector Search with filters is missing required parameters.
+        ValueError: If an unsupported search type is provided.
     """
     warnings.warn(
         "The default returned 'id' field in the search results will be removed. Please switch to using 'elementId' instead.",
         DeprecationWarning,
         stacklevel=2,
     )
-    if search_type == SearchType.HYBRID:
-        if filters:
-            raise Exception("Filters are not supported with Hybrid Search")
-        query = _get_hybrid_query(neo4j_version_is_5_23_or_above)
-        params: dict[str, Any] = {}
-    elif search_type == SearchType.VECTOR:
-        if filters:
-            if (
-                node_label is not None
-                and embedding_node_property is not None
-                and embedding_dimension is not None
-            ):
-                query, params = _get_filtered_vector_query(
-                    filters, node_label, embedding_node_property, embedding_dimension
-                )
+    if entity_type == EntityType.NODE:
+        if search_type == SearchType.HYBRID:
+            if filters:
+                raise Exception("Filters are not supported with hybrid search")
+            query = _get_hybrid_query(neo4j_version_is_5_23_or_above)
+            params: dict[str, Any] = {}
+        elif search_type == SearchType.VECTOR:
+            if filters:
+                if (
+                    node_label is not None
+                    and embedding_node_property is not None
+                    and embedding_dimension is not None
+                ):
+                    query, params = _get_filtered_vector_query(
+                        filters,
+                        node_label,
+                        embedding_node_property,
+                        embedding_dimension,
+                        use_parallel_runtime,
+                    )
+                else:
+                    raise Exception(
+                        "Vector Search with filters requires: node_label, embedding_node_property, embedding_dimension"
+                    )
             else:
-                raise Exception(
-                    "Vector Search with filters requires: node_label, embedding_node_property, embedding_dimension"
-                )
+                query, params = NODE_VECTOR_INDEX_QUERY, {}
         else:
-            query, params = VECTOR_INDEX_QUERY, {}
+            raise ValueError(f"Search type is not supported: {search_type}")
+        fallback_return = (
+            f"RETURN node {{ .*, `{embedding_node_property}`: null }} AS node, "
+            "labels(node) AS nodeLabels, "
+            "elementId(node) AS elementId, "
+            "elementId(node) AS id, "
+            "score"
+        )
+    elif entity_type == EntityType.RELATIONSHIP:
+        if filters:
+            raise Exception("Filters are not supported for relationship indexes")
+        if search_type == SearchType.HYBRID:
+            raise Exception("Hybrid search is not supported for relationship indexes")
+        elif search_type == SearchType.VECTOR:
+            query, params = REL_VECTOR_INDEX_QUERY, {}
+            fallback_return = (
+                f"RETURN relationship {{ .*, `{embedding_node_property}`: null }} AS relationship, "
+                "type(relationship) as relationshipType, "
+                "elementId(relationship) AS elementId, "
+                "elementId(relationship) AS id, "
+                "score"
+            )
+        else:
+            raise ValueError(f"Search type is not supported: {search_type}")
     else:
-        raise ValueError(f"Search type is not supported: {search_type}")
+        raise ValueError(f"Entity type is not supported: {entity_type}")
     query_tail = get_query_tail(
         retrieval_query,
         return_properties,
-        fallback_return=f"RETURN node {{ .*, `{embedding_node_property}`: null }} AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score",
+        fallback_return=fallback_return,
+        entity_type=entity_type,
     )
     return f"{query} {query_tail}", params
 
@@ -242,6 +304,7 @@ def get_query_tail(
     retrieval_query: Optional[str] = None,
     return_properties: Optional[list[str]] = None,
     fallback_return: Optional[str] = None,
+    entity_type: EntityType = EntityType.NODE,
 ) -> str:
     """Build the RETURN statement after the search is performed
 
@@ -259,5 +322,22 @@ def get_query_tail(
         return retrieval_query
     if return_properties:
         return_properties_cypher = ", ".join([f".{prop}" for prop in return_properties])
-        return f"RETURN node {{{return_properties_cypher}}} AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score"
+        if entity_type == EntityType.NODE:
+            return (
+                f"RETURN node {{{return_properties_cypher}}} AS node, "
+                "labels(node) AS nodeLabels, "
+                "elementId(node) AS elementId, "
+                "elementId(node) AS id, "
+                "score"
+            )
+        elif entity_type == EntityType.RELATIONSHIP:
+            return (
+                f"RETURN relationship {{{return_properties_cypher}}} AS relationship, "
+                "type(relationship) as relationshipType, "
+                "elementId(relationship) AS elementId, "
+                "elementId(relationship) AS id, "
+                "score"
+            )
+        else:
+            raise ValueError(f"Entity type is not supported: {entity_type}")
     return fallback_return if fallback_return else ""

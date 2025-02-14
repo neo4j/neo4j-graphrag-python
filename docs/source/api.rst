@@ -390,6 +390,10 @@ Database Interaction
 
 .. autofunction:: neo4j_graphrag.indexes.async_upsert_vector_on_relationship
 
+.. autofunction:: neo4j_graphrag.indexes.retrieve_vector_index_info
+
+.. autofunction:: neo4j_graphrag.indexes.retrieve_fulltext_index_info
+
 .. autofunction:: neo4j_graphrag.schema.get_structured_schema
 
 .. autofunction:: neo4j_graphrag.schema.get_schema

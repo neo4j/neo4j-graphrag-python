@@ -146,6 +146,7 @@ class VectorRetriever(Retriever):
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
+        effective_search_ratio: int = 1,
         filters: Optional[dict[str, Any]] = None,
     ) -> RawSearchResult:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
@@ -160,6 +161,8 @@ class VectorRetriever(Retriever):
             query_vector (Optional[list[float]]): The vector embeddings to get the closest neighbors of. Defaults to None.
             query_text (Optional[str]): The text to get the closest neighbors of. Defaults to None.
             top_k (int): The number of neighbors to return. Defaults to 5.
+            effective_search_ratio (int): Controls the candidate pool size by multiplying top_k to balance query accuracy and performance.
+                Defaults to 1.
             filters (Optional[dict[str, Any]]): Filters for metadata pre-filtering. Defaults to None.
 
         Raises:
@@ -174,6 +177,7 @@ class VectorRetriever(Retriever):
                 query_vector=query_vector,
                 query_text=query_text,
                 top_k=top_k,
+                effective_search_ratio=effective_search_ratio,
                 filters=filters,
             )
         except ValidationError as e:
@@ -194,8 +198,8 @@ class VectorRetriever(Retriever):
             del parameters["query_text"]
 
         search_query, search_params = get_search_query(
-            SearchType.VECTOR,
-            self.return_properties,
+            search_type=SearchType.VECTOR,
+            return_properties=self.return_properties,
             node_label=self._node_label,
             embedding_node_property=self._embedding_node_property,
             embedding_dimension=self._embedding_dimension,
@@ -297,6 +301,7 @@ class VectorCypherRetriever(Retriever):
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
+        effective_search_ratio: int = 1,
         query_params: Optional[dict[str, Any]] = None,
         filters: Optional[dict[str, Any]] = None,
     ) -> RawSearchResult:
@@ -312,6 +317,8 @@ class VectorCypherRetriever(Retriever):
             query_vector (Optional[list[float]]): The vector embeddings to get the closest neighbors of. Defaults to None.
             query_text (Optional[str]): The text to get the closest neighbors of. Defaults to None.
             top_k (int): The number of neighbors to return. Defaults to 5.
+            effective_search_ratio (int): Controls the candidate pool size by multiplying top_k to balance query accuracy and performance.
+                Defaults to 1.
             query_params (Optional[dict[str, Any]]): Parameters for the Cypher query. Defaults to None.
             filters (Optional[dict[str, Any]]): Filters for metadata pre-filtering. Defaults to None.
 
@@ -327,6 +334,7 @@ class VectorCypherRetriever(Retriever):
                 query_vector=query_vector,
                 query_text=query_text,
                 top_k=top_k,
+                effective_search_ratio=effective_search_ratio,
                 query_params=query_params,
                 filters=filters,
             )
@@ -353,7 +361,7 @@ class VectorCypherRetriever(Retriever):
             del parameters["query_params"]
 
         search_query, search_params = get_search_query(
-            SearchType.VECTOR,
+            search_type=SearchType.VECTOR,
             retrieval_query=self.retrieval_query,
             node_label=self._node_label,
             embedding_node_property=self._node_embedding_property,

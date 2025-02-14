@@ -2,6 +2,15 @@
 
 ## Next
 
+### Added
+
+- Utility functions to retrieve metadata for vector and full-text indexes.
+- Support for effective_search_ratio parameter in vector and hybrid searches.
+
+### Changed
+
+- Refactored index-related functions for improved compatibility and functionality.
+
 ## 1.4.3
 
 ### Added
@@ -18,6 +27,7 @@
 - Refactored schema creation code to reduce duplication and improve maintainability.
 
 ### Fixed
+
 - Removed the `uuid` package from dependencies (not needed with Python 3).
 - Fixed a bug in the `AnthropicLLM` class preventing it from being used in `GraphRAG` pipeline.
 

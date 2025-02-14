@@ -120,6 +120,7 @@ def test_similarity_search_vector_happy_path(
     dimensions = 1536
     query_vector = [1.0 for _ in range(dimensions)]
     top_k = 5
+    effective_search_ratio = 2
     database = "neo4j"
     retriever = VectorRetriever(driver, index_name, neo4j_database=database)
     expected_records = [neo4j.Record({"node": {"text": "dummy-node"}, "score": 1.0})]
@@ -130,13 +131,18 @@ def test_similarity_search_vector_happy_path(
     ]
     search_query, _ = get_search_query(SearchType.VECTOR)
 
-    records = retriever.search(query_vector=query_vector, top_k=top_k)
+    records = retriever.search(
+        query_vector=query_vector,
+        top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
+    )
 
     retriever.driver.execute_query.assert_called_once_with(  # type: ignore
         search_query,
         {
             "vector_index_name": index_name,
             "top_k": top_k,
+            "effective_search_ratio": effective_search_ratio,
             "query_vector": query_vector,
         },
         database_=database,
@@ -168,6 +174,7 @@ def test_similarity_search_text_happy_path(
     index_name = "my-index"
     query_text = "may thy knife chip and shatter"
     top_k = 5
+    effective_search_ratio = 2
     retriever = VectorRetriever(driver, index_name, embedder)
     driver.execute_query.return_value = [
         [neo4j_record],
@@ -176,7 +183,11 @@ def test_similarity_search_text_happy_path(
     ]
     search_query, _ = get_search_query(SearchType.VECTOR)
 
-    records = retriever.search(query_text=query_text, top_k=top_k)
+    records = retriever.search(
+        query_text=query_text,
+        top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
+    )
 
     embedder.embed_query.assert_called_once_with(query_text)
     driver.execute_query.assert_called_once_with(
@@ -184,6 +195,7 @@ def test_similarity_search_text_happy_path(
         {
             "vector_index_name": index_name,
             "top_k": top_k,
+            "effective_search_ratio": effective_search_ratio,
             "query_vector": embed_query_vector,
         },
         database_=None,
@@ -215,6 +227,7 @@ def test_similarity_search_text_return_properties(
     index_name = "my-index"
     query_text = "may thy knife chip and shatter"
     top_k = 5
+    effective_search_ratio = 2
     return_properties = ["node-property-1", "node-property-2"]
 
     retriever = VectorRetriever(
@@ -228,9 +241,15 @@ def test_similarity_search_text_return_properties(
         None,
         None,
     ]
-    search_query, _ = get_search_query(SearchType.VECTOR, return_properties)
+    search_query, _ = get_search_query(
+        search_type=SearchType.VECTOR, return_properties=return_properties
+    )
 
-    records = retriever.search(query_text=query_text, top_k=top_k)
+    records = retriever.search(
+        query_text=query_text,
+        top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
+    )
 
     embedder.embed_query.assert_called_once_with(query_text)
     driver.execute_query.assert_called_once_with(
@@ -238,6 +257,7 @@ def test_similarity_search_text_return_properties(
         {
             "vector_index_name": index_name,
             "top_k": top_k,
+            "effective_search_ratio": effective_search_ratio,
             "query_vector": embed_query_vector,
         },
         database_=None,
@@ -383,6 +403,7 @@ def test_retrieval_query_happy_path(
     )
     query_text = "may thy knife chip and shatter"
     top_k = 5
+    effective_search_ratio = 2
     record = neo4j.Record({"node_id": 123, "text": "dummy-text", "score": 1.0})
     driver.execute_query.return_value = [
         [record],
@@ -396,6 +417,7 @@ def test_retrieval_query_happy_path(
     records = retriever.search(
         query_text=query_text,
         top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
     )
 
     embedder.embed_query.assert_called_once_with(query_text)
@@ -404,6 +426,7 @@ def test_retrieval_query_happy_path(
         {
             "vector_index_name": index_name,
             "top_k": top_k,
+            "effective_search_ratio": effective_search_ratio,
             "query_vector": embed_query_vector,
         },
         database_=database,
@@ -447,6 +470,7 @@ def test_retrieval_query_with_result_format_function(
     )
     query_text = "may thy knife chip and shatter"
     top_k = 5
+    effective_search_ratio = 2
     driver.execute_query.return_value = [
         [neo4j_record],
         None,
@@ -459,6 +483,7 @@ def test_retrieval_query_with_result_format_function(
     records = retriever.search(
         query_text=query_text,
         top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
     )
 
     embedder.embed_query.assert_called_once_with(query_text)
@@ -467,6 +492,7 @@ def test_retrieval_query_with_result_format_function(
         {
             "vector_index_name": index_name,
             "top_k": top_k,
+            "effective_search_ratio": effective_search_ratio,
             "query_vector": embed_query_vector,
         },
         database_=None,
@@ -508,6 +534,7 @@ def test_retrieval_query_with_params(
     )
     query_text = "may thy knife chip and shatter"
     top_k = 5
+    effective_search_ratio = 2
     driver.execute_query.return_value = [
         [neo4j.Record({"node_id": 123, "text": "dummy-text", "score": 1.0})],
         None,
@@ -520,6 +547,7 @@ def test_retrieval_query_with_params(
     records = retriever.search(
         query_text=query_text,
         top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
         query_params=query_params,
     )
 
@@ -530,6 +558,7 @@ def test_retrieval_query_with_params(
         {
             "vector_index_name": index_name,
             "top_k": top_k,
+            "effective_search_ratio": effective_search_ratio,
             "query_vector": embed_query_vector,
             "param": "dummy-param",
         },
