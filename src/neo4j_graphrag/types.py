@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Callable, Literal, Optional
+from typing import Any, Callable, Literal, Optional, Union
 
 import neo4j
 from pydantic import (
@@ -251,3 +251,10 @@ class Text2CypherRetrieverModel(BaseModel):
     result_formatter: Optional[Callable[[neo4j.Record], RetrieverResultItem]] = None
     custom_prompt: Optional[str] = None
     neo4j_database: Optional[str] = None
+
+
+class Neo4jMessageHistoryModel(BaseModel):
+    session_id: Union[str, int]
+    driver_model: Neo4jDriverModel
+    node_label: str = "Session"
+    window: Optional[PositiveInt] = None
