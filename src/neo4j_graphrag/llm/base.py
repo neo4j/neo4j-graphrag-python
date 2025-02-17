@@ -53,7 +53,7 @@ class LLMInterface(ABC):
         Args:
             input (str): Text sent to the LLM.
             message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
-            system_instruction (Optional[str]): An option to override the llm system message for this invokation.
+            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
 
         Returns:
             LLMResponse: The response from the LLM.
@@ -74,7 +74,7 @@ class LLMInterface(ABC):
         Args:
             input (str): Text sent to the LLM.
             message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
-            system_instruction (Optional[str]): An option to override the llm system message for this invokation.
+            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
 
         Returns:
             LLMResponse: The response from the LLM.
