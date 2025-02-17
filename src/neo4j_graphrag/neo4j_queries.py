@@ -107,6 +107,7 @@ UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE = (
     "RETURN elementId(rel)"
 )
 
+# Deprecated, remove along with upsert_vector
 UPSERT_VECTOR_ON_NODE_QUERY = (
     "MATCH (n) "
     "WHERE elementId(n) = $node_element_id "
@@ -115,11 +116,30 @@ UPSERT_VECTOR_ON_NODE_QUERY = (
     "RETURN n"
 )
 
+UPSERT_VECTORS_ON_NODE_QUERY = (
+    "UNWIND $rows AS row "
+    "MATCH (n) "
+    "WHERE elementId(n) = row.id "
+    "WITH n, row "
+    "CALL db.create.setNodeVectorProperty(n, $embedding_property, row.embedding) "
+    "RETURN n"
+)
+
+# Deprecated, remove along with upsert_vector_on_relationship
 UPSERT_VECTOR_ON_RELATIONSHIP_QUERY = (
     "MATCH ()-[r]->() "
     "WHERE elementId(r) = $rel_element_id "
     "WITH r "
     "CALL db.create.setRelationshipVectorProperty(r, $embedding_property, $vector) "
+    "RETURN r"
+)
+
+UPSERT_VECTORS_ON_RELATIONSHIP_QUERY = (
+    "UNWIND $rows AS row "
+    "MATCH ()-[r]->() "
+    "WHERE elementId(r) = row.id "
+    "WITH r, row "
+    "CALL db.create.setRelationshipVectorProperty(r, $embedding_property, row.embedding) "
     "RETURN r"
 )
 

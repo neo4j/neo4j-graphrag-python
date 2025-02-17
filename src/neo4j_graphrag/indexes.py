@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import logging
+import warnings
 from typing import List, Literal, Optional
 
 import neo4j
@@ -23,10 +24,12 @@ from pydantic import ValidationError
 from neo4j_graphrag.neo4j_queries import (
     UPSERT_VECTOR_ON_NODE_QUERY,
     UPSERT_VECTOR_ON_RELATIONSHIP_QUERY,
+    UPSERT_VECTORS_ON_NODE_QUERY,
+    UPSERT_VECTORS_ON_RELATIONSHIP_QUERY,
 )
 
 from .exceptions import Neo4jIndexError, Neo4jInsertionError
-from .types import FulltextIndexModel, VectorIndexModel
+from .types import EntityType, FulltextIndexModel, VectorIndexModel
 
 logger = logging.getLogger(__name__)
 
@@ -245,6 +248,86 @@ def drop_index_if_exists(
         raise Neo4jIndexError(f"Dropping Neo4j index failed: {e.message}") from e
 
 
+def upsert_vectors(
+    driver: neo4j.Driver,
+    ids: List[str],
+    embedding_property: str,
+    embeddings: List[List[float]],
+    neo4j_database: Optional[str] = None,
+    entity_type: EntityType = EntityType.NODE,
+) -> None:
+    """
+    This method constructs a Cypher query and executes it to upsert
+    (insert or update) embeddings on a set of nodes or relationships.
+
+    Example:
+
+    .. code-block:: python
+
+        from neo4j import GraphDatabase
+        from neo4j_graphrag.indexes import upsert_vectors
+
+        URI = "neo4j://localhost:7687"
+        AUTH = ("neo4j", "password")
+
+        # Connect to Neo4j database
+        driver = GraphDatabase.driver(URI, auth=AUTH)
+
+        # Upsert embeddings data for several nodes
+        upsert_vectors(
+            driver,
+            ids=['123', '456', '789'],
+            embedding_property="vectorProperty",
+            embeddings=[
+                [0.12, 0.34, 0.56],
+                [0.78, 0.90, 0.12],
+                [0.34, 0.56, 0.78],
+            ],
+            neo4j_database="neo4j",
+            entity_type='NODE',
+        )
+
+    Args:
+        driver (neo4j.Driver): Neo4j Python driver instance.
+        ids (List[int]): The element IDs of the nodes or relationships.
+        embedding_property (str): The name of the property to store the vectors in.
+        embeddings (List[List[float]]): The list of vectors to store, one per ID.
+        neo4j_database (Optional[str]): The name of the Neo4j database.
+            If not provided, defaults to the server's default database. 'neo4j' by default.
+        entity_type (EntityType): Specifies whether to upsert to nodes ('NODE') or relationships ('RELATIONSHIP').
+            Defaults to 'NODE'.
+
+    Raises:
+        ValueError: If the lengths of IDs and embeddings do not match, or if embeddings are not of uniform dimension.
+        Neo4jInsertionError: If an error occurs while attempting to upsert the vectors in Neo4j.
+    """
+    if entity_type == EntityType.NODE:
+        query = UPSERT_VECTORS_ON_NODE_QUERY
+    elif entity_type == EntityType.RELATIONSHIP:
+        query = UPSERT_VECTORS_ON_RELATIONSHIP_QUERY
+    else:
+        raise ValueError("entity_type must be either 'NODE' or 'RELATIONSHIP'")
+    if len(ids) != len(embeddings):
+        raise ValueError("ids and embeddings must be the same length")
+    if not all(len(embedding) == len(embeddings[0]) for embedding in embeddings):
+        raise ValueError("All embeddings must be of the same size")
+    try:
+        parameters = {
+            "rows": [
+                {"id": id, "embedding": embedding}
+                for id, embedding in zip(ids, embeddings)
+            ],
+            "embedding_property": embedding_property,
+        }
+        driver.execute_query(
+            query_=query, parameters_=parameters, database_=neo4j_database
+        )
+    except neo4j.exceptions.ClientError as e:
+        raise Neo4jInsertionError(
+            f"Upserting vectors to Neo4j failed: {e.message}"
+        ) from e
+
+
 def upsert_vector(
     driver: neo4j.Driver,
     node_id: int,
@@ -253,6 +336,9 @@ def upsert_vector(
     neo4j_database: Optional[str] = None,
 ) -> None:
     """
+    .. warning::
+        'upsert_vector' is deprecated and will be removed in a future version, please use 'upsert_vectors' instead.
+
     This method constructs a Cypher query and executes it to upsert (insert or update) a vector property on a specific node.
 
     Example:
@@ -286,6 +372,11 @@ def upsert_vector(
     Raises:
         Neo4jInsertionError: If upserting of the vector fails.
     """
+    warnings.warn(
+        "'upsert_vector' is deprecated and will be removed in a future version, please use 'upsert_vectors' instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     try:
         parameters = {
             "node_element_id": node_id,
@@ -309,6 +400,9 @@ def upsert_vector_on_relationship(
     neo4j_database: Optional[str] = None,
 ) -> None:
     """
+    .. warning::
+        'upsert_vector_on_relationship' is deprecated and will be removed in a future version, please use 'upsert_vectors' instead.
+
     This method constructs a Cypher query and executes it to upsert (insert or update) a vector property on a specific relationship.
 
     Example:
@@ -342,6 +436,11 @@ def upsert_vector_on_relationship(
     Raises:
         Neo4jInsertionError: If upserting of the vector fails.
     """
+    warnings.warn(
+        "'upsert_vector_on_relationship' is deprecated and will be removed in a future version, please use 'upsert_vectors' instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     try:
         parameters = {
             "rel_element_id": rel_id,
@@ -365,6 +464,9 @@ async def async_upsert_vector(
     neo4j_database: Optional[str] = None,
 ) -> None:
     """
+    .. warning::
+        'async_upsert_vector' is deprecated and will be removed in a future version.
+
     This method constructs a Cypher query and asynchronously executes it
     to upsert (insert or update) a vector property on a specific node.
 
@@ -399,6 +501,11 @@ async def async_upsert_vector(
     Raises:
         Neo4jInsertionError: If upserting of the vector fails.
     """
+    warnings.warn(
+        "'async_upsert_vector' is deprecated and will be removed in a future version.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     try:
         parameters = {
             "node_id": node_id,
@@ -422,6 +529,9 @@ async def async_upsert_vector_on_relationship(
     neo4j_database: Optional[str] = None,
 ) -> None:
     """
+    .. warning::
+        'async_upsert_vector_on_relationship' is deprecated and will be removed in a future version.
+
     This method constructs a Cypher query and asynchronously executes it
     to upsert (insert or update) a vector property on a specific relationship.
 
@@ -456,6 +566,11 @@ async def async_upsert_vector_on_relationship(
     Raises:
         Neo4jInsertionError: If upserting of the vector fails.
     """
+    warnings.warn(
+        "'async_upsert_vector_on_relationship' is deprecated and will be removed in a future version.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     try:
         parameters = {
             "rel_id": rel_id,

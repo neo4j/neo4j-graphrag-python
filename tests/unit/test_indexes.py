@@ -25,6 +25,7 @@ from neo4j_graphrag.indexes import (
     drop_index_if_exists,
     upsert_vector,
     upsert_vector_on_relationship,
+    upsert_vectors,
 )
 
 
@@ -287,3 +288,40 @@ def test_upsert_vector_raises_neo4j_insertion_error(
         upsert_vector(driver, id, embedding_property, vector)
 
     assert "Upserting vector to Neo4j failed" in str(excinfo)
+
+
+def test_upsert_vectors_wrong_entity_type(driver: MagicMock) -> None:
+    with pytest.raises(ValueError) as exc_info:
+        upsert_vectors(
+            driver=driver,
+            ids=["1"],
+            embedding_property="embedding",
+            embeddings=[[1.0, 2.0, 3.0]],
+            neo4j_database="neo4j",
+            entity_type="WRONG_ENTITY_TYPE",  # type: ignore[arg-type]
+        )
+    assert str(exc_info.value) == "entity_type must be either 'NODE' or 'RELATIONSHIP'"
+
+
+def test_upsert_vectors_mismatched_ids_and_embeddings(driver: MagicMock) -> None:
+    with pytest.raises(ValueError) as exc_info:
+        upsert_vectors(
+            driver=driver,
+            ids=["1"],
+            embedding_property="embedding",
+            embeddings=[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+            neo4j_database="neo4j",
+        )
+    assert str(exc_info.value) == "ids and embeddings must be the same length"
+
+
+def test_upsert_vectors_inconsistent_embedding_sizes(driver: MagicMock) -> None:
+    with pytest.raises(ValueError) as exc_info:
+        upsert_vectors(
+            driver=driver,
+            ids=["1", "2"],
+            embedding_property="embedding",
+            embeddings=[[1.0, 2.0, 3.0], [4.0, 5.0]],
+            neo4j_database="neo4j",
+        )
+    assert str(exc_info.value) == "All embeddings must be of the same size"

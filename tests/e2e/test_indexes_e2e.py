@@ -17,7 +17,9 @@ import pytest
 from neo4j_graphrag.indexes import (
     retrieve_fulltext_index_info,
     retrieve_vector_index_info,
+    upsert_vectors,
 )
+from neo4j_graphrag.types import EntityType
 
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
@@ -189,3 +191,76 @@ def test_retrieve_fulltext_index_info_wrong_info(driver: neo4j.Driver) -> None:
         text_properties=[""],
     )
     assert index_info is None
+
+
+def test_upsert_vectors_on_nodes(driver: neo4j.Driver) -> None:
+    driver.execute_query("MATCH (n) DETACH DELETE n;")
+    result = driver.execute_query(
+        "CREATE (p:Character {name: 'Paul Atreides'}), "
+        "(v:Character {name: 'Vladimir Harkonnen'}) "
+        "RETURN [elementId(p), elementId(v)] AS ids"
+    )
+    ids = result.records[0]["ids"]
+    assert len(ids) == 2
+    upsert_vectors(
+        driver=driver,
+        ids=ids,
+        embedding_property="embedding",
+        embeddings=[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+        entity_type=EntityType.NODE,
+    )
+    result = driver.execute_query(
+        "MATCH (c:Character) RETURN "
+        "elementId(c) as id, c.name as name, c.embedding as embedding"
+    )
+    records = [r.data() for r in result.records]
+    records_sorted = sorted(records, key=lambda x: x["id"])
+    expected_records = [
+        {"id": ids[0], "name": "Paul Atreides", "embedding": [1.0, 2.0, 3.0]},
+        {"id": ids[1], "name": "Vladimir Harkonnen", "embedding": [4.0, 5.0, 6.0]},
+    ]
+    expected_records_sorted = sorted(expected_records, key=lambda x: x["id"])
+    assert records_sorted == expected_records_sorted
+
+
+def test_upsert_vectors_on_relationships(driver: neo4j.Driver) -> None:
+    driver.execute_query("MATCH (n) DETACH DELETE n;")
+    result = driver.execute_query(
+        "CREATE (:Character {name: 'Paul Atreides'})-[a:IS_MEMBER_OF]->(:House {name: 'Atreides'}), "
+        "(:Character {name: 'Vladimir Harkonnen'})-[h:IS_MEMBER_OF]->(:House {name: 'Harkonnen'}) "
+        "RETURN [elementId(a), elementId(h)] AS ids"
+    )
+    ids = result.records[0]["ids"]
+    assert len(ids) == 2
+    upsert_vectors(
+        driver=driver,
+        ids=ids,
+        embedding_property="embedding",
+        embeddings=[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+        entity_type=EntityType.RELATIONSHIP,
+    )
+    result = driver.execute_query(
+        "MATCH (c:Character)-[r:IS_MEMBER_OF]->(h:House) RETURN "
+        "type(r) AS type, elementId(r) AS id, r.embedding AS embedding, "
+        "c.name as character, h.name AS house"
+    )
+    records = [r.data() for r in result.records]
+    records_sorted = sorted(records, key=lambda x: x["id"])
+    expected_records = [
+        {
+            "type": "IS_MEMBER_OF",
+            "id": ids[0],
+            "embedding": [1.0, 2.0, 3.0],
+            "character": "Paul Atreides",
+            "house": "Atreides",
+        },
+        {
+            "type": "IS_MEMBER_OF",
+            "id": ids[1],
+            "embedding": [4.0, 5.0, 6.0],
+            "character": "Vladimir Harkonnen",
+            "house": "Harkonnen",
+        },
+    ]
+    expected_records_sorted = sorted(expected_records, key=lambda x: x["id"])
+    assert records_sorted == expected_records_sorted
