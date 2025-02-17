@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 import warnings
-from typing import Any, Optional
+from typing import Any, List, Optional, Union
 
 from pydantic import ValidationError
 
@@ -28,6 +28,7 @@ from neo4j_graphrag.generation.prompts import RagTemplate
 from neo4j_graphrag.generation.types import RagInitModel, RagResultModel, RagSearchModel
 from neo4j_graphrag.llm import LLMInterface
 from neo4j_graphrag.llm.types import LLMMessage
+from neo4j_graphrag.message_history import InMemoryMessageHistory, MessageHistory
 from neo4j_graphrag.retrievers.base import Retriever
 from neo4j_graphrag.types import RetrieverResult
 
@@ -84,7 +85,7 @@ class GraphRAG:
     def search(
         self,
         query_text: str = "",
-        message_history: Optional[list[LLMMessage]] = None,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         examples: str = "",
         retriever_config: Optional[dict[str, Any]] = None,
         return_context: bool | None = None,
@@ -127,6 +128,8 @@ class GraphRAG:
             )
         except ValidationError as e:
             raise SearchValidationError(e.errors())
+        if isinstance(message_history, list):
+            message_history = InMemoryMessageHistory(messages=message_history)
         query = self.build_query(validated_data.query_text, message_history)
         retriever_result: RetrieverResult = self.retriever.search(
             query_text=query, **validated_data.retriever_config
@@ -139,7 +142,7 @@ class GraphRAG:
         logger.debug(f"RAG: prompt={prompt}")
         answer = self.llm.invoke(
             prompt,
-            message_history,
+            message_history.messages if message_history else None,
             system_instruction=self.prompt_template.system_instructions,
         )
         result: dict[str, Any] = {"answer": answer.content}
@@ -148,10 +151,14 @@ class GraphRAG:
         return RagResultModel(**result)
 
     def build_query(
-        self, query_text: str, message_history: Optional[list[LLMMessage]] = None
+        self,
+        query_text: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
     ) -> str:
         summary_system_message = "You are a summarization assistant. Summarize the given text in no more than 300 words."
         if message_history:
+            if isinstance(message_history, list):
+                message_history = InMemoryMessageHistory(messages=message_history)
             summarization_prompt = self.chat_summary_prompt(
                 message_history=message_history
             )
@@ -162,10 +169,14 @@ class GraphRAG:
             return self.conversation_prompt(summary=summary, current_query=query_text)
         return query_text
 
-    def chat_summary_prompt(self, message_history: list[LLMMessage]) -> str:
+    def chat_summary_prompt(
+        self, message_history: Union[List[LLMMessage], MessageHistory]
+    ) -> str:
+        if isinstance(message_history, list):
+            message_history = InMemoryMessageHistory(messages=message_history)
         message_list = [
             ": ".join([f"{value}" for _, value in message.items()])
-            for message in message_history
+            for message in message_history.messages
         ]
         history = "\n".join(message_list)
         return f"""

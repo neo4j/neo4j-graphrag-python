@@ -62,9 +62,7 @@ def test_neo4j_message_history_invalid_session_id(driver: MagicMock) -> None:
 def test_neo4j_message_history_invalid_driver() -> None:
     with pytest.raises(ValidationError) as exc_info:
         Neo4jMessageHistory(session_id="123", driver=1.5, node_label="123", window=1)  # type: ignore[arg-type]
-    assert "Input should be a valid dictionary or instance of Neo4jDriver" in str(
-        exc_info.value
-    )
+    assert "Input should be an instance of Driver" in str(exc_info.value)
 
 
 def test_neo4j_message_history_invalid_node_label(driver: MagicMock) -> None:
@@ -81,8 +79,8 @@ def test_neo4j_message_history_invalid_window(driver: MagicMock) -> None:
     assert "Input should be greater than 0" in str(exc_info.value)
 
 
-def test_neo4j_message_history_messages_setter(neo4j_driver: MagicMock) -> None:
-    message_history = Neo4jMessageHistory(session_id="123", driver=neo4j_driver)
+def test_neo4j_message_history_messages_setter(driver: MagicMock) -> None:
+    message_history = Neo4jMessageHistory(session_id="123", driver=driver)
     with pytest.raises(NotImplementedError) as exc_info:
         message_history.messages = [
             LLMMessage(role="user", content="may thy knife chip and shatter"),

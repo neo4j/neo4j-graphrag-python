@@ -57,8 +57,8 @@ class MessageHistory(ABC):
 
 
 class InMemoryMessageHistory(MessageHistory):
-    def __init__(self, messages: List[LLMMessage] = []) -> None:
-        self._messages = messages
+    def __init__(self, messages: Optional[List[LLMMessage]] = None) -> None:
+        self._messages = messages or []
 
     @property
     def messages(self) -> List[LLMMessage]:
