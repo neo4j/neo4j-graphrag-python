@@ -55,6 +55,8 @@ ADD_MESSAGE_QUERY = (
 
 
 class MessageHistory(ABC):
+    """Abstract base class for message history storage."""
+
     @property
     @abstractmethod
     def messages(self) -> List[LLMMessage]: ...
@@ -71,6 +73,24 @@ class MessageHistory(ABC):
 
 
 class InMemoryMessageHistory(MessageHistory):
+    """Message history stored in memory
+
+    Example:
+
+    .. code-block:: python
+
+        from neo4j_graphrag.llm.types import LLMMessage
+        from neo4j_graphrag.message_history import InMemoryMessageHistory
+
+        history = InMemoryMessageHistory()
+
+        message = LLMMessage(role="user", content="Hello!")
+        history.add_message(message)
+
+    Args:
+        messages (Optional[List[LLMMessage]]): List of messages to initialize the history with. Defaults to None.
+    """
+
     def __init__(self, messages: Optional[List[LLMMessage]] = None) -> None:
         self._messages = messages or []
 
@@ -89,6 +109,33 @@ class InMemoryMessageHistory(MessageHistory):
 
 
 class Neo4jMessageHistory(MessageHistory):
+    """Message history stored in a Neo4j database
+
+    Example:
+
+    .. code-block:: python
+
+        import neo4j
+        from neo4j_graphrag.llm.types import LLMMessage
+        from neo4j_graphrag.message_history import Neo4jMessageHistory
+
+        driver = neo4j.GraphDatabase.driver(URI, auth=AUTH)
+
+        history = Neo4jMessageHistory(
+            session_id="123", driver=driver, node_label="Message", window=10
+        )
+
+        message = LLMMessage(role="user", content="Hello!")
+        history.add_message(message)
+
+    Args:
+        session_id (Union[str, int]): Unique identifier for the chat session.
+        driver (neo4j.Driver): Neo4j driver instance.
+        node_label (str, optional): Label used for session nodes in Neo4j. Defaults to "Session".
+        window (Optional[PositiveInt], optional): Number of previous messages to return when retrieving messages.
+
+    """
+
     def __init__(
         self,
         session_id: Union[str, int],
@@ -139,6 +186,11 @@ class Neo4jMessageHistory(MessageHistory):
         )
 
     def add_message(self, message: LLMMessage) -> None:
+        """Add a message to the message history.
+
+        Args:
+            message (LLMMessage): The message to add.
+        """
         self._driver.execute_query(
             query_=ADD_MESSAGE_QUERY.format(node_label=self._node_label),
             parameters_={
@@ -149,6 +201,7 @@ class Neo4jMessageHistory(MessageHistory):
         )
 
     def clear(self) -> None:
+        """Clear the message history."""
         self._driver.execute_query(
             query_=CLEAR_SESSION_QUERY.format(node_label=self._node_label),
             parameters_={"session_id": self._session_id},
