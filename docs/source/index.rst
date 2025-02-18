@@ -148,6 +148,7 @@ Note that the below example is not the only way you can upsert data into your Ne
 
 
 .. code:: python
+
     from neo4j import GraphDatabase
     from neo4j_graphrag.indexes import upsert_vectors
     from neo4j_graphrag.types import EntityType

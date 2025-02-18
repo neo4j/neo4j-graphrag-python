@@ -403,6 +403,15 @@ Database Interaction
 .. autofunction:: neo4j_graphrag.schema.format_schema
 
 
+***************
+Message History
+***************
+
+.. autoclass:: neo4j_graphrag.message_history.InMemoryMessageHistory
+
+.. autoclass:: neo4j_graphrag.message_history.Neo4jMessageHistory
+
+
 ******
 Errors
 ******
