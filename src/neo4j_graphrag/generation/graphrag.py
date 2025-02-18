@@ -103,7 +103,8 @@ class GraphRAG:
 
         Args:
             query_text (str): The user question.
-            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
+                with each message having a specific role assigned.
             examples (str): Examples added to the LLM prompt.
             retriever_config (Optional[dict]): Parameters passed to the retriever.
                 search method; e.g.: top_k
@@ -175,7 +176,7 @@ class GraphRAG:
         if isinstance(message_history, list):
             message_history = InMemoryMessageHistory(messages=message_history)
         message_list = [
-            ": ".join([f"{value}" for _, value in message.items()])
+            f"{message['role']}: {message['content']}"
             for message in message_history.messages
         ]
         history = "\n".join(message_list)
