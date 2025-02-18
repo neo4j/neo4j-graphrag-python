@@ -28,7 +28,7 @@ from neo4j_graphrag.generation.prompts import RagTemplate
 from neo4j_graphrag.generation.types import RagInitModel, RagResultModel, RagSearchModel
 from neo4j_graphrag.llm import LLMInterface
 from neo4j_graphrag.llm.types import LLMMessage
-from neo4j_graphrag.message_history import InMemoryMessageHistory, MessageHistory
+from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.retrievers.base import Retriever
 from neo4j_graphrag.types import RetrieverResult
 
@@ -129,8 +129,8 @@ class GraphRAG:
             )
         except ValidationError as e:
             raise SearchValidationError(e.errors())
-        if isinstance(message_history, list):
-            message_history = InMemoryMessageHistory(messages=message_history)
+        if isinstance(message_history, MessageHistory):
+            message_history = message_history.messages
         query = self.build_query(validated_data.query_text, message_history)
         retriever_result: RetrieverResult = self.retriever.search(
             query_text=query, **validated_data.retriever_config
@@ -143,7 +143,7 @@ class GraphRAG:
         logger.debug(f"RAG: prompt={prompt}")
         answer = self.llm.invoke(
             prompt,
-            message_history.messages if message_history else None,
+            message_history,
             system_instruction=self.prompt_template.system_instructions,
         )
         result: dict[str, Any] = {"answer": answer.content}
@@ -158,8 +158,8 @@ class GraphRAG:
     ) -> str:
         summary_system_message = "You are a summarization assistant. Summarize the given text in no more than 300 words."
         if message_history:
-            if isinstance(message_history, list):
-                message_history = InMemoryMessageHistory(messages=message_history)
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
             summarization_prompt = self.chat_summary_prompt(
                 message_history=message_history
             )
@@ -173,11 +173,10 @@ class GraphRAG:
     def chat_summary_prompt(
         self, message_history: Union[List[LLMMessage], MessageHistory]
     ) -> str:
-        if isinstance(message_history, list):
-            message_history = InMemoryMessageHistory(messages=message_history)
+        if isinstance(message_history, MessageHistory):
+            message_history = message_history.messages
         message_list = [
-            f"{message['role']}: {message['content']}"
-            for message in message_history.messages
+            f"{message['role']}: {message['content']}" for message in message_history
         ]
         history = "\n".join(message_list)
         return f"""
