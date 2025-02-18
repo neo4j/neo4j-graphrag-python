@@ -8,6 +8,9 @@
 - Support for effective_search_ratio parameter in vector and hybrid searches.
 - Introduced upsert_vectors utility function for batch upserting embeddings to vector indexes.
 - Introduced `extract_cypher` function to enhance Cypher query extraction and formatting in `Text2CypherRetriever`.
+- Introduced Neo4jMessageHistory and InMemoryMessageHistory classes for managing LLM message histories.
+- Added examples and documentation for using message history with Neo4j and in-memory storage.
+- Updated LLM and GraphRAG classes to support new message history classes.
 
 ### Changed
 
