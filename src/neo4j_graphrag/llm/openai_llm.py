@@ -15,9 +15,11 @@
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING, Any, Iterable, Optional, cast
+from typing import TYPE_CHECKING, Any, Iterable, List, Optional, Union, cast
 
 from pydantic import ValidationError
+
+from neo4j_graphrag.message_history import MessageHistory
 
 from ..exceptions import LLMGenerationError
 from .base import LLMInterface
@@ -68,13 +70,15 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
     def get_messages(
         self,
         input: str,
-        message_history: Optional[list[LLMMessage]] = None,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> Iterable[ChatCompletionMessageParam]:
         messages = []
         if system_instruction:
             messages.append(SystemMessage(content=system_instruction).model_dump())
         if message_history:
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
             try:
                 MessageList(messages=cast(list[BaseMessage], message_history))
             except ValidationError as e:
@@ -86,7 +90,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
     def invoke(
         self,
         input: str,
-        message_history: Optional[list[LLMMessage]] = None,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Sends a text input to the OpenAI chat completion model
@@ -94,7 +98,8 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
 
         Args:
             input (str): Text sent to the LLM.
-            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
+                with each message having a specific role assigned.
             system_instruction (Optional[str]): An option to override the llm system message for this invocation.
 
         Returns:
@@ -104,6 +109,8 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
             LLMGenerationError: If anything goes wrong.
         """
         try:
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
             response = self.client.chat.completions.create(
                 messages=self.get_messages(input, message_history, system_instruction),
                 model=self.model_name,
@@ -117,7 +124,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
     async def ainvoke(
         self,
         input: str,
-        message_history: Optional[list[LLMMessage]] = None,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Asynchronously sends a text input to the OpenAI chat
@@ -125,7 +132,8 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
 
         Args:
             input (str): Text sent to the LLM.
-            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
+                with each message having a specific role assigned.
             system_instruction (Optional[str]): An option to override the llm system message for this invocation.
 
         Returns:
@@ -135,6 +143,8 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
             LLMGenerationError: If anything goes wrong.
         """
         try:
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
             response = await self.async_client.chat.completions.create(
                 messages=self.get_messages(input, message_history, system_instruction),
                 model=self.model_name,

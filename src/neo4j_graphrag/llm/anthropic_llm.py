@@ -13,7 +13,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Iterable, Optional, cast
+from typing import TYPE_CHECKING, Any, Iterable, List, Optional, Union, cast
 
 from pydantic import ValidationError
 
@@ -26,6 +26,7 @@ from neo4j_graphrag.llm.types import (
     MessageList,
     UserMessage,
 )
+from neo4j_graphrag.message_history import MessageHistory
 
 if TYPE_CHECKING:
     from anthropic.types.message_param import MessageParam
@@ -76,10 +77,14 @@ class AnthropicLLM(LLMInterface):
         self.async_client = anthropic.AsyncAnthropic(**kwargs)
 
     def get_messages(
-        self, input: str, message_history: Optional[list[LLMMessage]] = None
+        self,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
     ) -> Iterable[MessageParam]:
         messages: list[dict[str, str]] = []
         if message_history:
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
             try:
                 MessageList(messages=cast(list[BaseMessage], message_history))
             except ValidationError as e:
@@ -91,20 +96,23 @@ class AnthropicLLM(LLMInterface):
     def invoke(
         self,
         input: str,
-        message_history: Optional[list[LLMMessage]] = None,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Sends text to the LLM and returns a response.
 
         Args:
             input (str): The text to send to the LLM.
-            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
+                with each message having a specific role assigned.
             system_instruction (Optional[str]): An option to override the llm system message for this invocation.
 
         Returns:
             LLMResponse: The response from the LLM.
         """
         try:
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
             messages = self.get_messages(input, message_history)
             response = self.client.messages.create(
                 model=self.model_name,
@@ -124,20 +132,23 @@ class AnthropicLLM(LLMInterface):
     async def ainvoke(
         self,
         input: str,
-        message_history: Optional[list[LLMMessage]] = None,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Asynchronously sends text to the LLM and returns a response.
 
         Args:
             input (str): The text to send to the LLM.
-            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
+                with each message having a specific role assigned.
             system_instruction (Optional[str]): An option to override the llm system message for this invocation.
 
         Returns:
             LLMResponse: The response from the LLM.
         """
         try:
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
             messages = self.get_messages(input, message_history)
             response = await self.async_client.messages.create(
                 model=self.model_name,

@@ -14,11 +14,12 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Iterable, Optional, Sequence, cast
+from typing import TYPE_CHECKING, Any, Iterable, List, Optional, Sequence, Union, cast
 
 from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
+from neo4j_graphrag.message_history import MessageHistory
 
 from .base import LLMInterface
 from .types import (
@@ -60,13 +61,15 @@ class OllamaLLM(LLMInterface):
     def get_messages(
         self,
         input: str,
-        message_history: Optional[list[LLMMessage]] = None,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> Sequence[Message]:
         messages = []
         if system_instruction:
             messages.append(SystemMessage(content=system_instruction).model_dump())
         if message_history:
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
             try:
                 MessageList(messages=cast(list[BaseMessage], message_history))
             except ValidationError as e:
@@ -78,20 +81,23 @@ class OllamaLLM(LLMInterface):
     def invoke(
         self,
         input: str,
-        message_history: Optional[list[LLMMessage]] = None,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Sends text to the LLM and returns a response.
 
         Args:
             input (str): The text to send to the LLM.
-            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
+                with each message having a specific role assigned.
             system_instruction (Optional[str]): An option to override the llm system message for this invocation.
 
         Returns:
             LLMResponse: The response from the LLM.
         """
         try:
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
             response = self.client.chat(
                 model=self.model_name,
                 messages=self.get_messages(input, message_history, system_instruction),
@@ -105,7 +111,7 @@ class OllamaLLM(LLMInterface):
     async def ainvoke(
         self,
         input: str,
-        message_history: Optional[list[LLMMessage]] = None,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Asynchronously sends a text input to the OpenAI chat
@@ -113,7 +119,8 @@ class OllamaLLM(LLMInterface):
 
         Args:
             input (str): Text sent to the LLM.
-            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
+                with each message having a specific role assigned.
             system_instruction (Optional[str]): An option to override the llm system message for this invocation.
 
         Returns:
@@ -123,6 +130,8 @@ class OllamaLLM(LLMInterface):
             LLMGenerationError: If anything goes wrong.
         """
         try:
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
             response = await self.async_client.chat(
                 model=self.model_name,
                 messages=self.get_messages(input, message_history, system_instruction),

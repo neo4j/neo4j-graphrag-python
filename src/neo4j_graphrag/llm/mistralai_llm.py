@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Iterable, Optional, cast
+from typing import Any, Iterable, List, Optional, Union, cast
 
 from pydantic import ValidationError
 
@@ -29,6 +29,7 @@ from neo4j_graphrag.llm.types import (
     SystemMessage,
     UserMessage,
 )
+from neo4j_graphrag.message_history import MessageHistory
 
 try:
     from mistralai import Messages, Mistral
@@ -68,13 +69,15 @@ class MistralAILLM(LLMInterface):
     def get_messages(
         self,
         input: str,
-        message_history: Optional[list[LLMMessage]] = None,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> list[Messages]:
         messages = []
         if system_instruction:
             messages.append(SystemMessage(content=system_instruction).model_dump())
         if message_history:
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
             try:
                 MessageList(messages=cast(list[BaseMessage], message_history))
             except ValidationError as e:
@@ -86,7 +89,7 @@ class MistralAILLM(LLMInterface):
     def invoke(
         self,
         input: str,
-        message_history: Optional[list[LLMMessage]] = None,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Sends a text input to the Mistral chat completion model
@@ -94,7 +97,7 @@ class MistralAILLM(LLMInterface):
 
         Args:
             input (str): Text sent to the LLM.
-            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages, with each message having a specific role assigned.
             system_instruction (Optional[str]): An option to override the llm system message for this invocation.
 
         Returns:
@@ -104,6 +107,8 @@ class MistralAILLM(LLMInterface):
             LLMGenerationError: If anything goes wrong.
         """
         try:
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
             messages = self.get_messages(input, message_history, system_instruction)
             response = self.client.chat.complete(
                 model=self.model_name,
@@ -122,7 +127,7 @@ class MistralAILLM(LLMInterface):
     async def ainvoke(
         self,
         input: str,
-        message_history: Optional[list[LLMMessage]] = None,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Asynchronously sends a text input to the MistralAI chat
@@ -130,7 +135,8 @@ class MistralAILLM(LLMInterface):
 
         Args:
             input (str): Text sent to the LLM.
-            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
+                with each message having a specific role assigned.
             system_instruction (Optional[str]): An option to override the llm system message for this invocation.
 
         Returns:
@@ -140,6 +146,8 @@ class MistralAILLM(LLMInterface):
             LLMGenerationError: If anything goes wrong.
         """
         try:
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
             messages = self.get_messages(input, message_history, system_instruction)
             response = await self.client.chat.complete_async(
                 model=self.model_name,
