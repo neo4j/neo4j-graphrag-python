@@ -25,7 +25,7 @@ from neo4j_graphrag.exceptions import (
 )
 from neo4j_graphrag.generation.prompts import Text2CypherTemplate
 from neo4j_graphrag.llm import LLMResponse
-from neo4j_graphrag.retrievers import Text2CypherRetriever
+from neo4j_graphrag.retrievers.text2cypher import Text2CypherRetriever, extract_cypher
 from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
 
 
@@ -204,9 +204,11 @@ def test_t2c_retriever_with_result_format_function(
     )
 
 
+@patch("neo4j_graphrag.retrievers.text2cypher.extract_cypher")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_t2c_retriever_initialization_with_custom_prompt(
     mock_get_version: MagicMock,
+    mock_extract_cypher: MagicMock,
     driver: MagicMock,
     llm: MagicMock,
     neo4j_record: MagicMock,
@@ -224,9 +226,11 @@ def test_t2c_retriever_initialization_with_custom_prompt(
     llm.invoke.assert_called_once_with("This is a custom prompt. test")
 
 
+@patch("neo4j_graphrag.retrievers.text2cypher.extract_cypher")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_t2c_retriever_initialization_with_custom_prompt_and_schema_and_examples(
     mock_get_version: MagicMock,
+    mock_extract_cypher: MagicMock,
     driver: MagicMock,
     llm: MagicMock,
     neo4j_record: MagicMock,
@@ -254,9 +258,11 @@ def test_t2c_retriever_initialization_with_custom_prompt_and_schema_and_examples
     llm.invoke.assert_called_once_with("This is a custom prompt. test")
 
 
+@patch("neo4j_graphrag.retrievers.text2cypher.extract_cypher")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_t2c_retriever_initialization_with_custom_prompt_and_schema_and_examples_for_prompt_params(
     mock_get_version: MagicMock,
+    mock_extract_cypher: MagicMock,
     driver: MagicMock,
     llm: MagicMock,
     neo4j_record: MagicMock,
@@ -286,9 +292,11 @@ def test_t2c_retriever_initialization_with_custom_prompt_and_schema_and_examples
     )
 
 
+@patch("neo4j_graphrag.retrievers.text2cypher.extract_cypher")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_t2c_retriever_initialization_with_custom_prompt_and_unused_schema_and_examples(
     mock_get_version: MagicMock,
+    mock_extract_cypher: MagicMock,
     driver: MagicMock,
     llm: MagicMock,
     neo4j_record: MagicMock,
@@ -321,9 +329,13 @@ def test_t2c_retriever_initialization_with_custom_prompt_and_unused_schema_and_e
     )
 
 
+@patch("neo4j_graphrag.retrievers.text2cypher.extract_cypher")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_t2c_retriever_invalid_custom_prompt_type(
-    mock_get_version: MagicMock, driver: MagicMock, llm: MagicMock
+    mock_get_version: MagicMock,
+    mock_extract_cypher: MagicMock,
+    driver: MagicMock,
+    llm: MagicMock,
 ) -> None:
     mock_get_version.return_value = ((5, 23, 0), False, False)
     with pytest.raises(RetrieverInitializationError) as exc_info:
@@ -336,9 +348,11 @@ def test_t2c_retriever_invalid_custom_prompt_type(
     assert "Input should be a valid string" in str(exc_info.value)
 
 
+@patch("neo4j_graphrag.retrievers.text2cypher.extract_cypher")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_t2c_retriever_with_custom_prompt_prompt_params(
     mock_get_version: MagicMock,
+    mock_extract_cypher: MagicMock,
     driver: MagicMock,
     llm: MagicMock,
     neo4j_record: MagicMock,
@@ -361,9 +375,11 @@ def test_t2c_retriever_with_custom_prompt_prompt_params(
     )
 
 
+@patch("neo4j_graphrag.retrievers.text2cypher.extract_cypher")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_t2c_retriever_with_custom_prompt_bad_prompt_params(
     mock_get_version: MagicMock,
+    mock_extract_cypher: MagicMock,
     driver: MagicMock,
     llm: MagicMock,
     neo4j_record: MagicMock,
@@ -392,11 +408,13 @@ def test_t2c_retriever_with_custom_prompt_bad_prompt_params(
     )
 
 
+@patch("neo4j_graphrag.retrievers.text2cypher.extract_cypher")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 @patch("neo4j_graphrag.retrievers.text2cypher.get_schema")
 def test_t2c_retriever_with_custom_prompt_and_schema(
     get_schema_mock: MagicMock,
     mock_get_version: MagicMock,
+    mock_extract_cypher: MagicMock,
     driver: MagicMock,
     llm: MagicMock,
     neo4j_record: MagicMock,
@@ -419,3 +437,67 @@ def test_t2c_retriever_with_custom_prompt_and_schema(
 
     get_schema_mock.assert_not_called()
     llm.invoke.assert_called_once_with("""This is a custom prompt. test """)
+
+
+@pytest.mark.parametrize(
+    "description, cypher_query, expected_output",
+    [
+        ("No changes", "MATCH (n) RETURN n;", "MATCH (n) RETURN n;"),
+        (
+            "Surrounded by backticks",
+            "Cypher query: ```MATCH (n) RETURN n;```",
+            "MATCH (n) RETURN n;",
+        ),
+        (
+            "Spaces in label",
+            "Cypher query: ```MATCH (n: Label With Spaces ) RETURN n;```",
+            "MATCH (n:`Label With Spaces`) RETURN n;",
+        ),
+        (
+            "No spaces in label",
+            "Cypher query: ```MATCH (n: LabelWithNoSpaces ) RETURN n;```",
+            "MATCH (n: LabelWithNoSpaces ) RETURN n;",
+        ),
+        (
+            "Backticks in label",
+            "Cypher query: ```MATCH (n: `LabelWithBackticks` ) RETURN n;```",
+            "MATCH (n: `LabelWithBackticks` ) RETURN n;",
+        ),
+        (
+            "Spaces in property key",
+            "Cypher query: ```MATCH (n: { prop 1: 1, prop 2: 2 }) RETURN n;```",
+            "MATCH (n: { `prop 1`: 1, `prop 2`: 2 }) RETURN n;",
+        ),
+        (
+            "No spaces in property key",
+            "Cypher query: ```MATCH (n: { prop1: 1, prop2: 2 }) RETURN n;```",
+            "MATCH (n: { prop1: 1, prop2: 2 }) RETURN n;",
+        ),
+        (
+            "Backticks in property key",
+            "Cypher query: ```MATCH (n: { `prop 1`: 1, `prop 2`: 2 }) RETURN n;```",
+            "MATCH (n: { `prop 1`: 1, `prop 2`: 2 }) RETURN n;",
+        ),
+        (
+            "Spaces in relationship type",
+            "Cypher query: ```MATCH (n)-[: Relationship With Spaces ]->(m) RETURN n, m;```",
+            "MATCH (n)-[:`Relationship With Spaces`]->(m) RETURN n, m;",
+        ),
+        (
+            "No spaces in relationship type",
+            "Cypher query: ```MATCH (n)-[ : RelationshipWithNoSpaces ]->(m) RETURN n, m;```",
+            "MATCH (n)-[ : RelationshipWithNoSpaces ]->(m) RETURN n, m;",
+        ),
+        (
+            "Backticks in relationship type",
+            "Cypher query: ```MATCH (n)-[ : `RelationshipWithBackticks` ]->(m) RETURN n, m;```",
+            "MATCH (n)-[ : `RelationshipWithBackticks` ]->(m) RETURN n, m;",
+        ),
+    ],
+)
+def test_extract_cypher(
+    description: str, cypher_query: str, expected_output: str
+) -> None:
+    assert (
+        extract_cypher(cypher_query) == expected_output
+    ), f"Failed test case: {description}"
