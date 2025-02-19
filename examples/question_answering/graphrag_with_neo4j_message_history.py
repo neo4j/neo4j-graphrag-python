@@ -51,9 +51,7 @@ rag = GraphRAG(
     llm=llm,
 )
 
-history = Neo4jMessageHistory(
-    session_id="123", driver=driver, node_label="Message", window=10
-)
+history = Neo4jMessageHistory(session_id="123", driver=driver, window=10)
 
 questions = [
     "Who starred in the Apollo 13 movies?",

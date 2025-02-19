@@ -69,27 +69,19 @@ def test_in_memory_message_history_clear() -> None:
 
 def test_neo4j_message_history_invalid_session_id(driver: MagicMock) -> None:
     with pytest.raises(ValidationError) as exc_info:
-        Neo4jMessageHistory(session_id=1.5, driver=driver, node_label="123", window=1)  # type: ignore[arg-type]
+        Neo4jMessageHistory(session_id=1.5, driver=driver, window=1)  # type: ignore[arg-type]
     assert "Input should be a valid string" in str(exc_info.value)
 
 
 def test_neo4j_message_history_invalid_driver() -> None:
     with pytest.raises(ValidationError) as exc_info:
-        Neo4jMessageHistory(session_id="123", driver=1.5, node_label="123", window=1)  # type: ignore[arg-type]
+        Neo4jMessageHistory(session_id="123", driver=1.5, window=1)  # type: ignore[arg-type]
     assert "Input should be an instance of Driver" in str(exc_info.value)
-
-
-def test_neo4j_message_history_invalid_node_label(driver: MagicMock) -> None:
-    with pytest.raises(ValidationError) as exc_info:
-        Neo4jMessageHistory(session_id="123", driver=driver, node_label=1.5, window=1)  # type: ignore[arg-type]
-    assert "Input should be a valid string" in str(exc_info.value)
 
 
 def test_neo4j_message_history_invalid_window(driver: MagicMock) -> None:
     with pytest.raises(ValidationError) as exc_info:
-        Neo4jMessageHistory(
-            session_id="123", driver=driver, node_label="123", window=-1
-        )
+        Neo4jMessageHistory(session_id="123", driver=driver, window=-1)
     assert "Input should be greater than 0" in str(exc_info.value)
 
 

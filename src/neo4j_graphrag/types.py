@@ -256,17 +256,10 @@ class Text2CypherRetrieverModel(BaseModel):
 class Neo4jMessageHistoryModel(BaseModel):
     session_id: Union[str, int]
     driver_model: Neo4jDriverModel
-    node_label: str = "Session"
     window: Optional[PositiveInt] = None
 
     @field_validator("session_id")
     def validate_session_id(cls, v: Union[str, int]) -> Union[str, int]:
         if isinstance(v, str) and len(v) == 0:
             raise ValueError("session_id cannot be empty")
-        return v
-
-    @field_validator("node_label")
-    def validate_node_label(cls, v: str) -> str:
-        if len(v) == 0:
-            raise ValueError("node_label cannot be empty")
         return v

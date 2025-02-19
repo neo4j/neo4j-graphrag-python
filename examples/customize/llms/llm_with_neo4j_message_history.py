@@ -34,9 +34,7 @@ driver = neo4j.GraphDatabase.driver(
     database=DATABASE,
 )
 
-history = Neo4jMessageHistory(
-    session_id="123", driver=driver, node_label="Message", window=10
-)
+history = Neo4jMessageHistory(session_id="123", driver=driver, window=10)
 
 for question in questions:
     res: LLMResponse = llm.invoke(

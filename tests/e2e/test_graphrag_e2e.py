@@ -104,7 +104,6 @@ def test_graphrag_happy_path_with_neo4j_message_history(
     message_history = Neo4jMessageHistory(
         driver=driver,
         session_id="123",
-        node_label="Message",
     )
     message_history.clear()
     message_history.add_messages(

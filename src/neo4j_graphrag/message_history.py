@@ -129,7 +129,7 @@ class Neo4jMessageHistory(MessageHistory):
         driver = neo4j.GraphDatabase.driver(URI, auth=AUTH)
 
         history = Neo4jMessageHistory(
-            session_id="123", driver=driver, node_label="Message", window=10
+            session_id="123", driver=driver, window=10
         )
 
         message = LLMMessage(role="user", content="Hello!")
@@ -147,33 +147,28 @@ class Neo4jMessageHistory(MessageHistory):
         self,
         session_id: Union[str, int],
         driver: neo4j.Driver,
-        node_label: str = "Session",
         window: Optional[PositiveInt] = None,
     ) -> None:
         validated_data = Neo4jMessageHistoryModel(
             session_id=session_id,
             driver_model=Neo4jDriverModel(driver=driver),
-            node_label=node_label,
             window=window,
         )
         self._driver = validated_data.driver_model.driver
         self._session_id = validated_data.session_id
-        self._node_label = validated_data.node_label
         self._window = (
             "" if validated_data.window is None else validated_data.window - 1
         )
         # Create session node
         self._driver.execute_query(
-            query_=CREATE_SESSION_NODE_QUERY.format(node_label=self._node_label),
+            query_=CREATE_SESSION_NODE_QUERY.format(node_label="Session"),
             parameters_={"session_id": self._session_id},
         )
 
     @property
     def messages(self) -> List[LLMMessage]:
         result = self._driver.execute_query(
-            query_=GET_MESSAGES_QUERY.format(
-                node_label=self._node_label, window=self._window
-            ),
+            query_=GET_MESSAGES_QUERY.format(node_label="Session", window=self._window),
             parameters_={"session_id": self._session_id},
         )
         messages = [
@@ -199,7 +194,7 @@ class Neo4jMessageHistory(MessageHistory):
             message (LLMMessage): The message to add.
         """
         self._driver.execute_query(
-            query_=ADD_MESSAGE_QUERY.format(node_label=self._node_label),
+            query_=ADD_MESSAGE_QUERY.format(node_label="Session"),
             parameters_={
                 "role": message["role"],
                 "content": message["content"],
@@ -210,6 +205,6 @@ class Neo4jMessageHistory(MessageHistory):
     def clear(self) -> None:
         """Clear the message history."""
         self._driver.execute_query(
-            query_=CLEAR_SESSION_QUERY.format(node_label=self._node_label),
+            query_=CLEAR_SESSION_QUERY.format(node_label="Session"),
             parameters_={"session_id": self._session_id},
         )
