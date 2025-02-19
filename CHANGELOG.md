@@ -7,6 +7,7 @@
 - Utility functions to retrieve metadata for vector and full-text indexes.
 - Support for effective_search_ratio parameter in vector and hybrid searches.
 - Introduced upsert_vectors utility function for batch upserting embeddings to vector indexes.
+- Introduced `extract_cypher` function to enhance Cypher query extraction and formatting in `Text2CypherRetriever`.
 
 ### Changed
 
