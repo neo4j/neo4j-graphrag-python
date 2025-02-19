@@ -89,6 +89,7 @@ class InMemoryMessageHistory(MessageHistory):
 
     Args:
         messages (Optional[List[LLMMessage]]): List of messages to initialize the history with. Defaults to None.
+
     """
 
     def __init__(self, messages: Optional[List[LLMMessage]] = None) -> None:
@@ -206,7 +207,3 @@ class Neo4jMessageHistory(MessageHistory):
             query_=CLEAR_SESSION_QUERY.format(node_label=self._node_label),
             parameters_={"session_id": self._session_id},
         )
-
-    def __del__(self) -> None:
-        if self._driver:
-            self._driver.close()
