@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any, Callable, Dict, Optional
 
 import neo4j
@@ -42,6 +43,48 @@ from neo4j_graphrag.types import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def extract_cypher(text: str) -> str:
+    """Extract and format Cypher query from text, handling code blocks and special characters.
+
+    This function performs two main operations:
+    1. Extracts Cypher code from within triple backticks (```), if present
+    2. Automatically adds backtick quotes around multi-word identifiers:
+       - Node labels (e.g., ":Data Science" becomes ":`Data Science`")
+       - Property keys (e.g., "first name:" becomes "`first name`:")
+       - Relationship types (e.g., "[:WORKS WITH]" becomes "[:`WORKS WITH`]")
+
+    Args:
+        text (str): Raw text that may contain Cypher code, either within triple
+                   backticks or as plain text.
+
+    Returns:
+        str: Properly formatted Cypher query with correct backtick quoting.
+    """
+    # Extract Cypher code enclosed in triple backticks
+    pattern = r"```(.*?)```"
+    matches = re.findall(pattern, text, re.DOTALL)
+    cypher_query = matches[0] if matches else text
+    # Quote node labels in backticks if they contain spaces and are not already quoted
+    cypher_query = re.sub(
+        r":\s*(?!`\s*)(\s*)([a-zA-Z0-9_]+(?:\s+[a-zA-Z0-9_]+)+)(?!\s*`)(\s*)",
+        r":`\2`",
+        cypher_query,
+    )
+    # Quote property keys in backticks if they contain spaces and are not already quoted
+    cypher_query = re.sub(
+        r"([,{]\s*)(?!`)([a-zA-Z0-9_]+(?:\s+[a-zA-Z0-9_]+)+)(?!`)(\s*:)",
+        r"\1`\2`\3",
+        cypher_query,
+    )
+    # Quote relationship types in backticks if they contain spaces and are not already quoted
+    cypher_query = re.sub(
+        r"(\[\s*[a-zA-Z0-9_]*\s*:\s*)(?!`)([a-zA-Z0-9_]+(?:\s+[a-zA-Z0-9_]+)+)(?!`)(\s*(?:\]|-))",
+        r"\1`\2`\3",
+        cypher_query,
+    )
+    return cypher_query
 
 
 class Text2CypherRetriever(Retriever):
@@ -168,7 +211,7 @@ class Text2CypherRetriever(Retriever):
 
         try:
             llm_result = self.llm.invoke(prompt)
-            t2c_query = llm_result.content
+            t2c_query = extract_cypher(llm_result.content)
             logger.debug("Text2CypherRetriever Cypher query: %s", t2c_query)
             records, _, _ = self.driver.execute_query(
                 query_=t2c_query,
