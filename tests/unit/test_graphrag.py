@@ -294,7 +294,7 @@ def test_chat_summary_template(retriever_mock: MagicMock, llm: MagicMock) -> Non
         retriever=retriever_mock,
         llm=llm,
     )
-    prompt = rag.chat_summary_prompt(message_history=message_history)  # type: ignore
+    prompt = rag._chat_summary_prompt(message_history=message_history)  # type: ignore
     assert (
         prompt
         == """

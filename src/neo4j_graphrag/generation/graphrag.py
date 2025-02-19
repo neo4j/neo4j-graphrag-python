@@ -131,7 +131,7 @@ class GraphRAG:
             raise SearchValidationError(e.errors())
         if isinstance(message_history, MessageHistory):
             message_history = message_history.messages
-        query = self.build_query(validated_data.query_text, message_history)
+        query = self._build_query(validated_data.query_text, message_history)
         retriever_result: RetrieverResult = self.retriever.search(
             query_text=query, **validated_data.retriever_config
         )
@@ -151,16 +151,14 @@ class GraphRAG:
             result["retriever_result"] = retriever_result
         return RagResultModel(**result)
 
-    def build_query(
+    def _build_query(
         self,
         query_text: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        message_history: Optional[List[LLMMessage]] = None,
     ) -> str:
         summary_system_message = "You are a summarization assistant. Summarize the given text in no more than 300 words."
         if message_history:
-            if isinstance(message_history, MessageHistory):
-                message_history = message_history.messages
-            summarization_prompt = self.chat_summary_prompt(
+            summarization_prompt = self._chat_summary_prompt(
                 message_history=message_history
             )
             summary = self.llm.invoke(
@@ -170,11 +168,7 @@ class GraphRAG:
             return self.conversation_prompt(summary=summary, current_query=query_text)
         return query_text
 
-    def chat_summary_prompt(
-        self, message_history: Union[List[LLMMessage], MessageHistory]
-    ) -> str:
-        if isinstance(message_history, MessageHistory):
-            message_history = message_history.messages
+    def _chat_summary_prompt(self, message_history: List[LLMMessage]) -> str:
         message_list = [
             f"{message['role']}: {message['content']}" for message in message_history
         ]
