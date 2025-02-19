@@ -15,13 +15,18 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Sequence, Union
+from typing import List, Optional, Sequence, Union
 
 import neo4j
 from pydantic import ValidationError
 
 from neo4j_graphrag.embeddings import Embedder
+from neo4j_graphrag.experimental.components.entity_relation_extractor import OnError
+from neo4j_graphrag.experimental.components.kg_writer import KGWriter
+from neo4j_graphrag.experimental.components.pdf_loader import DataLoader
+from neo4j_graphrag.experimental.components.text_splitters.base import TextSplitter
 from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
+from neo4j_graphrag.experimental.pipeline.config.object_config import ComponentType
 from neo4j_graphrag.experimental.pipeline.config.runner import PipelineRunner
 from neo4j_graphrag.experimental.pipeline.config.template_pipeline import (
     SimpleKGPipelineConfig,
@@ -59,9 +64,9 @@ class SimpleKGPipeline:
         from_pdf (bool): Determines whether to include the PdfLoader in the pipeline.
                          If True, expects `file_path` input in `run` methods.
                          If False, expects `text` input in `run` methods.
-        text_splitter (Optional[Any]): A text splitter component. Defaults to FixedSizeSplitter().
-        pdf_loader (Optional[Any]): A PDF loader component. Defaults to PdfLoader().
-        kg_writer (Optional[Any]): A knowledge graph writer component. Defaults to Neo4jWriter().
+        text_splitter (Optional[TextSplitter]): A text splitter component. Defaults to FixedSizeSplitter().
+        pdf_loader (Optional[DataLoader]): A PDF loader component. Defaults to PdfLoader().
+        kg_writer (Optional[KGWriter]): A knowledge graph writer component. Defaults to Neo4jWriter().
         on_error (str): Error handling strategy for the Entity and relation extractor. Defaults to "IGNORE", where chunk will be ignored if extraction fails. Possible values: "RAISE" or "IGNORE".
         perform_entity_resolution (bool): Merge entities with same label and name. Default: True
         prompt_template (str): A custom prompt template to use for extraction.
@@ -77,9 +82,9 @@ class SimpleKGPipeline:
         relations: Optional[Sequence[RelationInputType]] = None,
         potential_schema: Optional[List[tuple[str, str, str]]] = None,
         from_pdf: bool = True,
-        text_splitter: Optional[Any] = None,
-        pdf_loader: Optional[Any] = None,
-        kg_writer: Optional[Any] = None,
+        text_splitter: Optional[TextSplitter] = None,
+        pdf_loader: Optional[DataLoader] = None,
+        kg_writer: Optional[KGWriter] = None,
         on_error: str = "IGNORE",
         prompt_template: Union[ERExtractionTemplate, str] = ERExtractionTemplate(),
         perform_entity_resolution: bool = True,
@@ -96,10 +101,10 @@ class SimpleKGPipeline:
                 relations=relations or [],
                 potential_schema=potential_schema,
                 from_pdf=from_pdf,
-                pdf_loader=pdf_loader,
-                kg_writer=kg_writer,
-                text_splitter=text_splitter,
-                on_error=on_error,  # type: ignore[arg-type]
+                pdf_loader=ComponentType(pdf_loader) if pdf_loader else None,
+                kg_writer=ComponentType(kg_writer) if kg_writer else None,
+                text_splitter=ComponentType(text_splitter) if text_splitter else None,
+                on_error=OnError(on_error),
                 prompt_template=prompt_template,
                 perform_entity_resolution=perform_entity_resolution,
                 lexical_graph_config=lexical_graph_config,
