@@ -110,7 +110,7 @@ class SimpleKGPipeline:
                 lexical_graph_config=lexical_graph_config,
                 neo4j_database=neo4j_database,
             )
-        except ValidationError as e:
+        except (ValidationError, ValueError) as e:
             raise PipelineDefinitionError() from e
 
         self.runner = PipelineRunner.from_config(config)
