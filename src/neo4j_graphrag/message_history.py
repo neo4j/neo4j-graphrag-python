@@ -12,6 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import threading
 from abc import ABC, abstractmethod
 from typing import List, Optional, Union
 
@@ -93,20 +94,25 @@ class InMemoryMessageHistory(MessageHistory):
     """
 
     def __init__(self, messages: Optional[List[LLMMessage]] = None) -> None:
+        self._lock = threading.Lock()
         self._messages = messages or []
 
     @property
     def messages(self) -> List[LLMMessage]:
-        return self._messages
+        with self._lock:
+            return self._messages.copy()
 
     def add_message(self, message: LLMMessage) -> None:
-        self._messages.append(message)
+        with self._lock:
+            self._messages.append(message)
 
     def add_messages(self, messages: List[LLMMessage]) -> None:
-        self._messages.extend(messages)
+        with self._lock:
+            self._messages.extend(messages)
 
     def clear(self) -> None:
-        self._messages = []
+        with self._lock:
+            self._messages = []
 
 
 class Neo4jMessageHistory(MessageHistory):
