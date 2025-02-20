@@ -76,6 +76,16 @@ def test_neo4j_message_history_clear(driver: neo4j.Driver) -> None:
     assert len(message_history.messages) == 0
 
 
+def test_neo4j_message_history_clear_no_messages(driver: neo4j.Driver) -> None:
+    driver.execute_query(query_="MATCH (n) DETACH DELETE n;")
+    message_history = Neo4jMessageHistory(session_id="123", driver=driver)
+    message_history.clear()
+    results = driver.execute_query(
+        query_="MATCH (s:`Session`) WHERE s.id = '123' RETURN s"
+    )
+    assert results.records == []
+
+
 def test_neo4j_message_window_size(driver: neo4j.Driver) -> None:
     driver.execute_query(query_="MATCH (n) DETACH DELETE n;")
     message_history = Neo4jMessageHistory(session_id="123", driver=driver, window=1)

@@ -30,10 +30,12 @@ from neo4j_graphrag.types import (
 CREATE_SESSION_NODE_QUERY = "MERGE (s:`{node_label}` {{id:$session_id}})"
 
 CLEAR_SESSION_QUERY = (
-    "MATCH (s:`{node_label}`)-[:LAST_MESSAGE]->(last_message) "
-    "WHERE s.id = $session_id MATCH p=(last_message)<-[:NEXT]-() "
-    "WITH p, length(p) AS length ORDER BY length DESC LIMIT 1 "
-    "UNWIND nodes(p) as node DETACH DELETE node;"
+    "MATCH (s:`{node_label}`) "
+    "WHERE s.id = $session_id "
+    "OPTIONAL MATCH p=(s)-[:LAST_MESSAGE]->(:Message)<-[:NEXT*0..]-(:Message) "
+    "WITH CASE WHEN p IS NULL THEN [s] ELSE nodes(p) + [s] END AS nodes "
+    "UNWIND nodes AS node "
+    "DETACH DELETE node;"
 )
 
 GET_MESSAGES_QUERY = (

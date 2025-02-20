@@ -105,7 +105,6 @@ def test_graphrag_happy_path_with_neo4j_message_history(
         driver=driver,
         session_id="123",
     )
-    message_history.clear()
     message_history.add_messages(
         messages=[
             LLMMessage(role="user", content="initial question"),
