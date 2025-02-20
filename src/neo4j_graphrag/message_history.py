@@ -33,7 +33,7 @@ CLEAR_SESSION_QUERY = (
     "MATCH (s:`{node_label}`) "
     "WHERE s.id = $session_id "
     "OPTIONAL MATCH p=(s)-[:LAST_MESSAGE]->(:Message)<-[:NEXT*0..]-(:Message) "
-    "WITH CASE WHEN p IS NULL THEN [s] ELSE nodes(p) + [s] END AS nodes "
+    "WITH CASE WHEN p IS NULL THEN [s] ELSE nodes(p) END AS nodes "
     "UNWIND nodes AS node "
     "DETACH DELETE node;"
 )
