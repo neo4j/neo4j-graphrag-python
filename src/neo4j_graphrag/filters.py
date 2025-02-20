@@ -289,7 +289,7 @@ def _handle_field_filter(
         low, high = filter_value
         param_name_low = param_store.add(low)
         param_name_high = param_store.add(high)
-        query_snippet = f"${param_name_low} <= {DEFAULT_NODE_ALIAS}.{Operator.safe_field_cypher(field)} <= ${param_name_high}"
+        query_snippet = f"${param_name_low} <= {node_alias}.{Operator.safe_field_cypher(field)} <= ${param_name_high}"
         return query_snippet
     # all the other operators are handled through their own classes:
     native_op_class = COMPARISONS_TO_NATIVE[operator]
