@@ -38,7 +38,7 @@ from neo4j_graphrag.schema import (
 
 
 def _query_return_value(*args: Any, **kwargs: Any) -> list[Any]:
-    query = args[1]
+    query = kwargs.get("query", args[1] if len(args) > 1 else None)
     if NODE_PROPERTIES_QUERY in query:
         return [
             {
