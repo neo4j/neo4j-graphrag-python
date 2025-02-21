@@ -19,10 +19,8 @@ from typing import List, Optional, Union
 import neo4j
 from pydantic import PositiveInt
 
-from neo4j_graphrag.llm.types import (
-    LLMMessage,
-)
 from neo4j_graphrag.types import (
+    LLMMessage,
     Neo4jDriverModel,
     Neo4jMessageHistoryModel,
 )
@@ -82,8 +80,8 @@ class InMemoryMessageHistory(MessageHistory):
 
     .. code-block:: python
 
-        from neo4j_graphrag.llm.types import LLMMessage
         from neo4j_graphrag.message_history import InMemoryMessageHistory
+        from neo4j_graphrag.types import LLMMessage
 
         history = InMemoryMessageHistory()
 
@@ -125,8 +123,8 @@ class Neo4jMessageHistory(MessageHistory):
     .. code-block:: python
 
         import neo4j
-        from neo4j_graphrag.llm.types import LLMMessage
         from neo4j_graphrag.message_history import Neo4jMessageHistory
+        from neo4j_graphrag.types import LLMMessage
 
         driver = neo4j.GraphDatabase.driver(URI, auth=AUTH)
 

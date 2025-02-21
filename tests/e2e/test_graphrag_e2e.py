@@ -21,10 +21,9 @@ from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.generation.graphrag import GraphRAG
 from neo4j_graphrag.generation.types import RagResultModel
 from neo4j_graphrag.llm import LLMResponse
-from neo4j_graphrag.llm.types import LLMMessage
 from neo4j_graphrag.message_history import Neo4jMessageHistory
 from neo4j_graphrag.retrievers import VectorCypherRetriever
-from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
+from neo4j_graphrag.types import LLMMessage, RetrieverResult, RetrieverResultItem
 
 from tests.e2e.conftest import BiologyEmbedder
 from tests.e2e.utils import build_data_objects, populate_neo4j

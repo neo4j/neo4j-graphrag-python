@@ -21,12 +21,12 @@ from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface
 from neo4j_graphrag.llm.types import (
     BaseMessage,
-    LLMMessage,
     LLMResponse,
     MessageList,
     UserMessage,
 )
 from neo4j_graphrag.message_history import MessageHistory
+from neo4j_graphrag.types import LLMMessage
 
 if TYPE_CHECKING:
     from anthropic.types.message_param import MessageParam

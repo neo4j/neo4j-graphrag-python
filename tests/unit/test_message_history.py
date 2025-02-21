@@ -15,8 +15,8 @@
 from unittest.mock import MagicMock
 
 import pytest
-from neo4j_graphrag.llm.types import LLMMessage
 from neo4j_graphrag.message_history import InMemoryMessageHistory, Neo4jMessageHistory
+from neo4j_graphrag.types import LLMMessage
 from pydantic import ValidationError
 
 

@@ -13,8 +13,8 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import neo4j
-from neo4j_graphrag.llm.types import LLMMessage
 from neo4j_graphrag.message_history import Neo4jMessageHistory
+from neo4j_graphrag.types import LLMMessage
 
 
 def test_neo4j_message_history_add_message(driver: neo4j.Driver) -> None:

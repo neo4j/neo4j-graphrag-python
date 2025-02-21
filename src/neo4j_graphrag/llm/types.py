@@ -1,14 +1,19 @@
-from typing import Literal, TypedDict
+import warnings
+from typing import Literal
 
 from pydantic import BaseModel
 
+from neo4j_graphrag.types import LLMMessage as _LLMMessage
+
+warnings.warn(
+    "LLMMessage has been moved to neo4j_graphrag.types. Please update your imports.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+LLMMessage = _LLMMessage
+
 
 class LLMResponse(BaseModel):
-    content: str
-
-
-class LLMMessage(TypedDict):
-    role: Literal["system", "user", "assistant"]
     content: str
 
 
