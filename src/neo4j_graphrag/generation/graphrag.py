@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 import warnings
-from typing import Any, Optional
+from typing import Any, List, Optional, Union
 
 from pydantic import ValidationError
 
@@ -28,6 +28,7 @@ from neo4j_graphrag.generation.prompts import RagTemplate
 from neo4j_graphrag.generation.types import RagInitModel, RagResultModel, RagSearchModel
 from neo4j_graphrag.llm import LLMInterface
 from neo4j_graphrag.llm.types import LLMMessage
+from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.retrievers.base import Retriever
 from neo4j_graphrag.types import RetrieverResult
 
@@ -84,7 +85,7 @@ class GraphRAG:
     def search(
         self,
         query_text: str = "",
-        message_history: Optional[list[LLMMessage]] = None,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         examples: str = "",
         retriever_config: Optional[dict[str, Any]] = None,
         return_context: bool | None = None,
@@ -102,7 +103,8 @@ class GraphRAG:
 
         Args:
             query_text (str): The user question.
-            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
+            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
+                with each message having a specific role assigned.
             examples (str): Examples added to the LLM prompt.
             retriever_config (Optional[dict]): Parameters passed to the retriever.
                 search method; e.g.: top_k
@@ -127,7 +129,9 @@ class GraphRAG:
             )
         except ValidationError as e:
             raise SearchValidationError(e.errors())
-        query = self.build_query(validated_data.query_text, message_history)
+        if isinstance(message_history, MessageHistory):
+            message_history = message_history.messages
+        query = self._build_query(validated_data.query_text, message_history)
         retriever_result: RetrieverResult = self.retriever.search(
             query_text=query, **validated_data.retriever_config
         )
@@ -147,12 +151,14 @@ class GraphRAG:
             result["retriever_result"] = retriever_result
         return RagResultModel(**result)
 
-    def build_query(
-        self, query_text: str, message_history: Optional[list[LLMMessage]] = None
+    def _build_query(
+        self,
+        query_text: str,
+        message_history: Optional[List[LLMMessage]] = None,
     ) -> str:
         summary_system_message = "You are a summarization assistant. Summarize the given text in no more than 300 words."
         if message_history:
-            summarization_prompt = self.chat_summary_prompt(
+            summarization_prompt = self._chat_summary_prompt(
                 message_history=message_history
             )
             summary = self.llm.invoke(
@@ -162,10 +168,9 @@ class GraphRAG:
             return self.conversation_prompt(summary=summary, current_query=query_text)
         return query_text
 
-    def chat_summary_prompt(self, message_history: list[LLMMessage]) -> str:
+    def _chat_summary_prompt(self, message_history: List[LLMMessage]) -> str:
         message_list = [
-            ": ".join([f"{value}" for _, value in message.items()])
-            for message in message_history
+            f"{message['role']}: {message['content']}" for message in message_history
         ]
         history = "\n".join(message_list)
         return f"""

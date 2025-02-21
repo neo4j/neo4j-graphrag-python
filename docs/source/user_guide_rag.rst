@@ -917,6 +917,7 @@ Populate a Vector Index
 ==========================
 
 .. code:: python
+
     from random import random
 
     from neo4j import GraphDatabase

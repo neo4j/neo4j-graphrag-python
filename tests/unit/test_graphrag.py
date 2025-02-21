@@ -21,6 +21,8 @@ from neo4j_graphrag.generation.graphrag import GraphRAG
 from neo4j_graphrag.generation.prompts import RagTemplate
 from neo4j_graphrag.generation.types import RagResultModel
 from neo4j_graphrag.llm import LLMResponse
+from neo4j_graphrag.llm.types import LLMMessage
+from neo4j_graphrag.message_history import InMemoryMessageHistory
 from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
 
 
@@ -114,14 +116,14 @@ Current Query:
 question
 """
 
-    first_invokation_input = """
+    first_invocation_input = """
 Summarize the message history:
 
 user: initial question
 assistant: answer to initial question
 """
-    first_invokation_system_instruction = "You are a summarization assistant. Summarize the given text in no more than 300 words."
-    second_invokation = """Context:
+    first_invocation_system_instruction = "You are a summarization assistant. Summarize the given text in no more than 300 words."
+    second_invocation = """Context:
 item content 1
 item content 2
 
@@ -141,12 +143,88 @@ Answer:
     llm.invoke.assert_has_calls(
         [
             call(
-                input=first_invokation_input,
-                system_instruction=first_invokation_system_instruction,
+                input=first_invocation_input,
+                system_instruction=first_invocation_system_instruction,
             ),
             call(
-                second_invokation,
+                second_invocation,
                 message_history,
+                system_instruction="Answer the user question using the provided context.",
+            ),
+        ]
+    )
+
+    assert isinstance(res, RagResultModel)
+    assert res.answer == "llm generated text"
+    assert res.retriever_result is None
+
+
+def test_graphrag_happy_path_with_in_memory_message_history(
+    retriever_mock: MagicMock, llm: MagicMock
+) -> None:
+    rag = GraphRAG(
+        retriever=retriever_mock,
+        llm=llm,
+    )
+    retriever_mock.search.return_value = RetrieverResult(
+        items=[
+            RetrieverResultItem(content="item content 1"),
+            RetrieverResultItem(content="item content 2"),
+        ]
+    )
+    llm.invoke.side_effect = [
+        LLMResponse(content="llm generated summary"),
+        LLMResponse(content="llm generated text"),
+    ]
+    message_history = InMemoryMessageHistory(
+        messages=[
+            LLMMessage(role="user", content="initial question"),
+            LLMMessage(role="assistant", content="answer to initial question"),
+        ]
+    )
+    res = rag.search("question", message_history)
+
+    expected_retriever_query_text = """
+Message Summary:
+llm generated summary
+
+Current Query:
+question
+"""
+
+    first_invocation_input = """
+Summarize the message history:
+
+user: initial question
+assistant: answer to initial question
+"""
+    first_invocation_system_instruction = "You are a summarization assistant. Summarize the given text in no more than 300 words."
+    second_invocation = """Context:
+item content 1
+item content 2
+
+Examples:
+
+
+Question:
+question
+
+Answer:
+"""
+
+    retriever_mock.search.assert_called_once_with(
+        query_text=expected_retriever_query_text
+    )
+    assert llm.invoke.call_count == 2
+    llm.invoke.assert_has_calls(
+        [
+            call(
+                input=first_invocation_input,
+                system_instruction=first_invocation_system_instruction,
+            ),
+            call(
+                second_invocation,
+                message_history.messages,
                 system_instruction="Answer the user question using the provided context.",
             ),
         ]
@@ -216,7 +294,7 @@ def test_chat_summary_template(retriever_mock: MagicMock, llm: MagicMock) -> Non
         retriever=retriever_mock,
         llm=llm,
     )
-    prompt = rag.chat_summary_prompt(message_history=message_history)  # type: ignore
+    prompt = rag._chat_summary_prompt(message_history=message_history)  # type: ignore
     assert (
         prompt
         == """

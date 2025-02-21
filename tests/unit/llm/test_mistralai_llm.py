@@ -96,7 +96,7 @@ def test_mistralai_llm_invoke_with_message_history_and_system_instruction(
     ]
     question = "What about next season?"
 
-    # first invokation - initial instructions
+    # first invocation - initial instructions
     res = llm.invoke(question, message_history, system_instruction=system_instruction)  # type: ignore
     assert isinstance(res, LLMResponse)
     assert res.content == "mistral response"

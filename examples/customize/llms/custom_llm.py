@@ -1,9 +1,10 @@
 import random
 import string
-from typing import Any, Optional
+from typing import Any, List, Optional, Union
 
 from neo4j_graphrag.llm import LLMInterface, LLMResponse
 from neo4j_graphrag.llm.types import LLMMessage
+from neo4j_graphrag.message_history import MessageHistory
 
 
 class CustomLLM(LLMInterface):
@@ -15,7 +16,7 @@ class CustomLLM(LLMInterface):
     def invoke(
         self,
         input: str,
-        message_history: Optional[list[LLMMessage]] = None,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         content: str = (
@@ -26,7 +27,7 @@ class CustomLLM(LLMInterface):
     async def ainvoke(
         self,
         input: str,
-        message_history: Optional[list[LLMMessage]] = None,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         raise NotImplementedError()

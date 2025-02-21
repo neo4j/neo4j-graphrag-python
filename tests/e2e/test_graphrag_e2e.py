@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import neo4j
 import pytest
@@ -21,8 +21,10 @@ from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.generation.graphrag import GraphRAG
 from neo4j_graphrag.generation.types import RagResultModel
 from neo4j_graphrag.llm import LLMResponse
+from neo4j_graphrag.llm.types import LLMMessage
+from neo4j_graphrag.message_history import Neo4jMessageHistory
 from neo4j_graphrag.retrievers import VectorCypherRetriever
-from neo4j_graphrag.types import RetrieverResult
+from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
 
 from tests.e2e.conftest import BiologyEmbedder
 from tests.e2e.utils import build_data_objects, populate_neo4j
@@ -80,6 +82,91 @@ Answer:
 
 
 @pytest.mark.usefixtures("populate_neo4j_db")
+def test_graphrag_happy_path_with_neo4j_message_history(
+    retriever_mock: MagicMock,
+    llm: MagicMock,
+    driver: neo4j.Driver,
+) -> None:
+    rag = GraphRAG(
+        retriever=retriever_mock,
+        llm=llm,
+    )
+    retriever_mock.search.return_value = RetrieverResult(
+        items=[
+            RetrieverResultItem(content="item content 1"),
+            RetrieverResultItem(content="item content 2"),
+        ]
+    )
+    llm.invoke.side_effect = [
+        LLMResponse(content="llm generated summary"),
+        LLMResponse(content="llm generated text"),
+    ]
+    message_history = Neo4jMessageHistory(
+        driver=driver,
+        session_id="123",
+    )
+    message_history.add_messages(
+        messages=[
+            LLMMessage(role="user", content="initial question"),
+            LLMMessage(role="assistant", content="answer to initial question"),
+        ]
+    )
+    res = rag.search(
+        query_text="question",
+        message_history=message_history,
+    )
+    expected_retriever_query_text = """
+Message Summary:
+llm generated summary
+
+Current Query:
+question
+"""
+
+    first_invocation_input = """
+Summarize the message history:
+
+user: initial question
+assistant: answer to initial question
+"""
+    first_invocation_system_instruction = "You are a summarization assistant. Summarize the given text in no more than 300 words."
+    second_invocation = """Context:
+item content 1
+item content 2
+
+Examples:
+
+
+Question:
+question
+
+Answer:
+"""
+    retriever_mock.search.assert_called_once_with(
+        query_text=expected_retriever_query_text
+    )
+    assert llm.invoke.call_count == 2
+    llm.invoke.assert_has_calls(
+        [
+            call(
+                input=first_invocation_input,
+                system_instruction=first_invocation_system_instruction,
+            ),
+            call(
+                second_invocation,
+                message_history.messages,
+                system_instruction="Answer the user question using the provided context.",
+            ),
+        ]
+    )
+
+    assert isinstance(res, RagResultModel)
+    assert res.answer == "llm generated text"
+    assert res.retriever_result is None
+    message_history.clear()
+
+
+@pytest.mark.usefixtures("populate_neo4j_db")
 def test_graphrag_happy_path_return_context(
     driver: MagicMock, llm: MagicMock, biology_embedder: BiologyEmbedder
 ) -> None:
@@ -127,7 +214,7 @@ Answer:
 
 @pytest.mark.usefixtures("populate_neo4j_db")
 def test_graphrag_happy_path_examples(
-    driver: MagicMock, llm: MagicMock, biology_embedder: BiologyEmbedder
+    driver: MagicMock, llm: MagicMock, biology_embedder: MagicMock
 ) -> None:
     retriever = VectorCypherRetriever(
         driver,

@@ -15,7 +15,9 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any, List, Optional, Union
+
+from neo4j_graphrag.message_history import MessageHistory
 
 from .types import (
     LLMMessage,
@@ -45,15 +47,16 @@ class LLMInterface(ABC):
     def invoke(
         self,
         input: str,
-        message_history: Optional[list[LLMMessage]] = None,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Sends a text input to the LLM and retrieves a response.
 
         Args:
             input (str): Text sent to the LLM.
-            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
-            system_instruction (Optional[str]): An option to override the llm system message for this invokation.
+            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
+                with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
 
         Returns:
             LLMResponse: The response from the LLM.
@@ -66,15 +69,16 @@ class LLMInterface(ABC):
     async def ainvoke(
         self,
         input: str,
-        message_history: Optional[list[LLMMessage]] = None,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Asynchronously sends a text input to the LLM and retrieves a response.
 
         Args:
             input (str): Text sent to the LLM.
-            message_history (Optional[list]): A collection previous messages, with each message having a specific role assigned.
-            system_instruction (Optional[str]): An option to override the llm system message for this invokation.
+            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
+                with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
 
         Returns:
             LLMResponse: The response from the LLM.
