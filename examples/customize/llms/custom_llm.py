@@ -3,8 +3,8 @@ import string
 from typing import Any, List, Optional, Union
 
 from neo4j_graphrag.llm import LLMInterface, LLMResponse
-from neo4j_graphrag.llm.types import LLMMessage
 from neo4j_graphrag.message_history import MessageHistory
+from neo4j_graphrag.types import LLMMessage
 
 
 class CustomLLM(LLMInterface):
