@@ -20,11 +20,11 @@ from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.message_history import MessageHistory
+from neo4j_graphrag.types import LLMMessage
 
 from .base import LLMInterface
 from .types import (
     BaseMessage,
-    LLMMessage,
     LLMResponse,
     MessageList,
     SystemMessage,

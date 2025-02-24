@@ -20,12 +20,12 @@ from typing import TYPE_CHECKING, Any, Iterable, List, Optional, Union, cast
 from pydantic import ValidationError
 
 from neo4j_graphrag.message_history import MessageHistory
+from neo4j_graphrag.types import LLMMessage
 
 from ..exceptions import LLMGenerationError
 from .base import LLMInterface
 from .types import (
     BaseMessage,
-    LLMMessage,
     LLMResponse,
     MessageList,
     SystemMessage,
