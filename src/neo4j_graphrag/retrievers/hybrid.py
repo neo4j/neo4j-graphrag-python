@@ -198,7 +198,6 @@ class HybridRetriever(Retriever):
                 )
             query_vector = self.embedder.embed_query(query_text)
             parameters["query_vector"] = query_vector
-
         search_query, _ = get_search_query(
             search_type=SearchType.HYBRID,
             return_properties=self.return_properties,

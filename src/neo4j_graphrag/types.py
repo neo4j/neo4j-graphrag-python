@@ -26,6 +26,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from typing_extensions import Self
 
 from neo4j_graphrag.utils.validation import validate_search_query_input
 
@@ -169,12 +170,12 @@ class HybridSearchModel(BaseModel):
             allowed = ", ".join([r.value for r in HybridSearchRanker])
             raise ValueError(f"Invalid ranker type. Allowed values are: {allowed}.")
 
-    @model_validator(mode="before")
-    def validate_alpha(cls, values: dict[str, Any]) -> dict[str, Any]:
-        ranker, alpha = values.get("ranker"), values.get("alpha")
+    @model_validator(mode="after")
+    def validate_alpha(self) -> Self:
+        ranker, alpha = self.ranker, self.alpha
         if ranker == HybridSearchRanker.LINEAR:
             if alpha is None:
-                values["alpha"] = 0.5
+                self.alpha = 0.5
             if isinstance(alpha, float) and not (0.0 <= alpha <= 1.0):
                 raise ValueError("alpha must be between 0 and 1")
         else:
@@ -183,8 +184,8 @@ class HybridSearchModel(BaseModel):
                     "alpha parameter is only used when ranker is 'linear'. Ignoring alpha.",
                     UserWarning,
                 )
-                values["alpha"] = None
-        return values
+                self.alpha = None
+        return self
 
 
 class HybridCypherSearchModel(HybridSearchModel):

@@ -13,7 +13,7 @@
 - Introduced Neo4jMessageHistory and InMemoryMessageHistory classes for managing LLM message histories.
 - Added examples and documentation for using message history with Neo4j and in-memory storage.
 - Updated LLM and GraphRAG classes to support new message history classes.
-
+- Introduced a linear hybrid search ranker for HybridRetriever and HybridCypherRetriever, allowing customizable ranking with an `alpha` parameter.
 ### Changed
 
 - Refactored index-related functions for improved compatibility and functionality.
