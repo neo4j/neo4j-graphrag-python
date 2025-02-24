@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import copy
 import logging
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Union
 
 import neo4j
 from pydantic import ValidationError
@@ -39,6 +39,7 @@ from neo4j_graphrag.types import (
     RawSearchResult,
     RetrieverResultItem,
     SearchType,
+    HybridSearchRanker,
 )
 
 logger = logging.getLogger(__name__)
@@ -142,6 +143,8 @@ class HybridRetriever(Retriever):
         query_vector: Optional[list[float]] = None,
         top_k: int = 5,
         effective_search_ratio: int = 1,
+        ranker: Union[str, HybridSearchRanker] = HybridSearchRanker.NAIVE,
+        alpha: Optional[float] = None,
     ) -> RawSearchResult:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         Both query_vector and query_text can be provided.
@@ -162,6 +165,8 @@ class HybridRetriever(Retriever):
             top_k (int, optional): The number of neighbors to return. Defaults to 5.
             effective_search_ratio (int): Controls the candidate pool size for the vector index by multiplying top_k to balance query
                 accuracy and performance. Defaults to 1.
+            ranker (str, HybridSearchRanker): Type of ranker to order the results from retrieval.
+            alpha (Optional[float]): Weight for the vector score when using the linear ranker. Only used when ranker is 'linear'. Defaults to 0.5 if not provided.
 
         Raises:
             SearchValidationError: If validation of the input arguments fail.
@@ -176,6 +181,8 @@ class HybridRetriever(Retriever):
                 query_text=query_text,
                 top_k=top_k,
                 effective_search_ratio=effective_search_ratio,
+                ranker=ranker,
+                alpha=alpha,
             )
         except ValidationError as e:
             raise SearchValidationError(e.errors()) from e
@@ -197,7 +204,15 @@ class HybridRetriever(Retriever):
             return_properties=self.return_properties,
             embedding_node_property=self._embedding_node_property,
             neo4j_version_is_5_23_or_above=self.neo4j_version_is_5_23_or_above,
+            ranker=validated_data.ranker,
+            alpha=validated_data.alpha,
         )
+
+        if "ranker" in parameters:
+            del parameters["ranker"]
+        if "alpha" in parameters:
+            del parameters["alpha"]
+
         sanitized_parameters = copy.deepcopy(parameters)
         if "query_vector" in sanitized_parameters:
             sanitized_parameters["query_vector"] = "..."
@@ -301,6 +316,8 @@ class HybridCypherRetriever(Retriever):
         top_k: int = 5,
         effective_search_ratio: int = 1,
         query_params: Optional[dict[str, Any]] = None,
+        ranker: Union[str, HybridSearchRanker] = HybridSearchRanker.NAIVE,
+        alpha: Optional[float] = None,
     ) -> RawSearchResult:
         """Get the top_k nearest neighbor embeddings for either provided query_vector or query_text.
         Both query_vector and query_text can be provided.
@@ -320,6 +337,8 @@ class HybridCypherRetriever(Retriever):
             effective_search_ratio (int): Controls the candidate pool size for the vector index by multiplying top_k to balance query
                 accuracy and performance. Defaults to 1.
             query_params (Optional[dict[str, Any]]): Parameters for the Cypher query. Defaults to None.
+            ranker (str, HybridSearchRanker): Type of ranker to order the results from retrieval.
+            alpha (Optional[float]): Weight for the vector score when using the linear ranker. Only used when ranker is 'linear'. Defaults to 0.5 if not provided.
 
         Raises:
             SearchValidationError: If validation of the input arguments fail.
@@ -334,6 +353,8 @@ class HybridCypherRetriever(Retriever):
                 query_text=query_text,
                 top_k=top_k,
                 effective_search_ratio=effective_search_ratio,
+                ranker=ranker,
+                alpha=alpha,
                 query_params=query_params,
             )
         except ValidationError as e:
@@ -361,7 +382,15 @@ class HybridCypherRetriever(Retriever):
             search_type=SearchType.HYBRID,
             retrieval_query=self.retrieval_query,
             neo4j_version_is_5_23_or_above=self.neo4j_version_is_5_23_or_above,
+            ranker=validated_data.ranker,
+            alpha=validated_data.alpha,
         )
+
+        if "ranker" in parameters:
+            del parameters["ranker"]
+        if "alpha" in parameters:
+            del parameters["alpha"]
+
         sanitized_parameters = copy.deepcopy(parameters)
         if "query_vector" in sanitized_parameters:
             sanitized_parameters["query_vector"] = "..."

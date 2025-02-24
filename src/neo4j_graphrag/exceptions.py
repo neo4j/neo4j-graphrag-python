@@ -124,3 +124,7 @@ class PdfLoaderError(Neo4jGraphRagError):
 
 class PromptMissingPlaceholderError(Neo4jGraphRagError):
     """Exception raised when a prompt is missing an expected placeholder."""
+
+
+class InvalidHybridSearchRankerError(Neo4jGraphRagError):
+    """Exception raised when an invalid ranker type for Hybrid Search is provided."""

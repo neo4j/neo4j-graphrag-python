@@ -15,10 +15,11 @@
 from __future__ import annotations
 
 import warnings
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
+from neo4j_graphrag.exceptions import InvalidHybridSearchRankerError
 from neo4j_graphrag.filters import get_metadata_filter
-from neo4j_graphrag.types import EntityType, SearchType
+from neo4j_graphrag.types import EntityType, SearchType, HybridSearchRanker
 
 NODE_VECTOR_INDEX_QUERY = (
     "CALL db.index.vector.queryNodes"
@@ -171,6 +172,50 @@ def _get_hybrid_query(neo4j_version_is_5_23_or_above: bool) -> str:
     return call_prefix + query_body
 
 
+def _get_hybrid_query_linear(neo4j_version_is_5_23_or_above: bool, alpha: float) -> str:
+    """
+    Construct a Cypher query for hybrid search using a linear combination approach with an alpha parameter.
+
+    This query retrieves normalized scores from both the vector index and full-text index. It then
+    computes the final score as a weighted sum:
+
+    ```
+    final_score = alpha * (vector normalized score) + (1 - alpha) * (fulltext normalized score)
+    ```
+
+    If a node appears in only one index, the missing score is treated as 0.
+
+    Args:
+        neo4j_version_is_5_23_or_above (bool): Whether the Neo4j version is 5.23 or above; determines the call syntax.
+        alpha (float): Weight for the vector index normalized score. The full-text score is weighted as (1 - alpha).
+
+    Returns:
+        str: The constructed Cypher query string.
+    """
+    call_prefix = "CALL () { " if neo4j_version_is_5_23_or_above else "CALL { "
+
+    query_body = (
+        f"{NODE_VECTOR_INDEX_QUERY} "
+        "WITH collect({node: node, score: score}) AS nodes, max(score) AS vector_index_max_score "
+        "UNWIND nodes AS n "
+        "RETURN n.node AS node, (n.score / vector_index_max_score) AS score, 'vector' AS source "
+        "UNION "
+        f"{FULL_TEXT_SEARCH_QUERY} "
+        "WITH collect({node: node, score: score}) AS nodes, max(score) AS ft_index_max_score "
+        "UNWIND nodes AS n "
+        "RETURN n.node AS node, (n.score / ft_index_max_score) AS score, 'ft' AS source } "
+        "WITH node, "
+        "sum(CASE WHEN source = 'vector' THEN score * "
+        + str(alpha)
+        + " ELSE 0 END) + "
+        + "sum(CASE WHEN source = 'ft' THEN score * "
+        + str(1 - alpha)
+        + " ELSE 0 END) AS score "
+        "ORDER BY score DESC LIMIT $top_k"
+    )
+    return call_prefix + query_body
+
+
 def _get_filtered_vector_query(
     filters: dict[str, Any],
     node_label: str,
@@ -223,6 +268,8 @@ def get_search_query(
     filters: Optional[dict[str, Any]] = None,
     neo4j_version_is_5_23_or_above: bool = False,
     use_parallel_runtime: bool = False,
+    ranker: Union[str, HybridSearchRanker] = HybridSearchRanker.NAIVE,
+    alpha: Optional[float] = None,
 ) -> tuple[str, dict[str, Any]]:
     """
     Constructs a search query for vector or hybrid search, including optional pre-filtering
@@ -243,6 +290,8 @@ def get_search_query(
         neo4j_version_is_5_23_or_above (Optional[bool]): Whether the Neo4j version is 5.23 or above.
         use_parallel_runtime (bool): Whether or not use the parallel runtime to run the query.
             Defaults to False.
+        ranker (HybridSearchRanker): Type of ranker to order the results from retrieval.
+        alpha (Optional[float]): Weight for the vector score when using the linear ranker. Only used when ranker is 'linear'. Defaults to 0.5 if not provided.
 
     Returns:
         tuple[str, dict[str, Any]]: A tuple containing the constructed query string and
@@ -262,7 +311,14 @@ def get_search_query(
         if search_type == SearchType.HYBRID:
             if filters:
                 raise Exception("Filters are not supported with hybrid search")
-            query = _get_hybrid_query(neo4j_version_is_5_23_or_above)
+            if ranker == HybridSearchRanker.NAIVE:
+                query = _get_hybrid_query(neo4j_version_is_5_23_or_above)
+            elif ranker == HybridSearchRanker.LINEAR and alpha:
+                query = _get_hybrid_query_linear(
+                    neo4j_version_is_5_23_or_above, alpha=alpha
+                )
+            else:
+                raise InvalidHybridSearchRankerError()
             params: dict[str, Any] = {}
         elif search_type == SearchType.VECTOR:
             if filters:

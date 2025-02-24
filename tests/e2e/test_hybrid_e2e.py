@@ -176,3 +176,25 @@ def test_hybrid_retriever_return_properties(driver: Driver) -> None:
     assert len(results.items) == 5
     for result in results.items:
         assert isinstance(result, RetrieverResultItem)
+
+
+@pytest.mark.usefixtures("setup_neo4j_for_retrieval")
+def test_hybrid_retriever_search_text_linear_ranker(
+    driver: Driver, random_embedder: Embedder
+) -> None:
+    retriever = HybridRetriever(
+        driver, "vector-index-name", "fulltext-index-name", random_embedder
+    )
+
+    top_k = 5
+    effective_search_ratio = 2
+    results = retriever.search(
+        query_text="Find me a book about Fremen",
+        top_k=top_k,
+        effective_search_ratio=effective_search_ratio,
+    )
+
+    assert isinstance(results, RetrieverResult)
+    assert len(results.items) == 5
+    for result in results.items:
+        assert isinstance(result, RetrieverResultItem)
