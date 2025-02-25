@@ -17,6 +17,11 @@
 - Refactored index-related functions for improved compatibility and functionality.
 - Added deprecation warnings to upsert_vector, upsert_vector_on_relationship functions in favor of upsert_vectors.
 - Added deprecation warnings to async_upsert_vector, async_upsert_vector_on_relationship functions notifying developers that they will be removed in a future release.
+- Added support for database, timeout, and sanitize arguments in schema functions.
+
+### Fixed
+
+- Resolved an issue with an incorrectly hard coded node alias in the `_handle_field_filter` function.
 
 ## 1.4.3
 

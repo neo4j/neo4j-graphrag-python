@@ -87,7 +87,7 @@ jobs:
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: poetry install --no-interaction --no-cache --with dev --all-extras
       - name: Clear Poetry cache
-        run: poetry cache clear --all .
+        run: poetry cache clear --all --no-interaction .
       - name: Show disk usage after Poetry installation
         run: |
           df -h
