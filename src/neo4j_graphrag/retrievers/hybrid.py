@@ -167,7 +167,8 @@ class HybridRetriever(Retriever):
                 accuracy and performance. Defaults to 1.
             ranker (str, HybridSearchRanker): Type of ranker to order the results from retrieval.
             alpha (Optional[float]): Weight for the vector score when using the linear ranker.
-            **Required** when using the linear ranker; must be between 0 and 1.
+                The fulltext index score is multiplied by (1 - alpha).
+                **Required** when using the linear ranker; must be between 0 and 1.
 
         Raises:
             SearchValidationError: If validation of the input arguments fail.
@@ -210,8 +211,6 @@ class HybridRetriever(Retriever):
 
         if "ranker" in parameters:
             del parameters["ranker"]
-        if "alpha" in parameters:
-            del parameters["alpha"]
 
         sanitized_parameters = copy.deepcopy(parameters)
         if "query_vector" in sanitized_parameters:
@@ -338,8 +337,9 @@ class HybridCypherRetriever(Retriever):
                 accuracy and performance. Defaults to 1.
             query_params (Optional[dict[str, Any]]): Parameters for the Cypher query. Defaults to None.
             ranker (str, HybridSearchRanker): Type of ranker to order the results from retrieval.
-            alpha (Optional[float]): Weight for the vector score when using the linear ranker. Only used when ranker is 'linear'. Defaults to 0.5 if not provided.
-
+            alpha (Optional[float]): Weight for the vector score when using the linear ranker.
+                The fulltext index score is multiplied by (1 - alpha).
+                **Required** when using the linear ranker; must be between 0 and 1.
         Raises:
             SearchValidationError: If validation of the input arguments fail.
             EmbeddingRequiredError: If no embedder is provided.

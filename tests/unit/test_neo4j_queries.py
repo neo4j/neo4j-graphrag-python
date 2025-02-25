@@ -256,8 +256,8 @@ def test_get_query_tail_ordering_no_retrieval_query() -> None:
 
 def test_get_hybrid_query_linear_with_alpha() -> None:
     query = _get_hybrid_query_linear(neo4j_version_is_5_23_or_above=True, alpha=0.7)
-    vector_substr = "CASE WHEN source = 'vector' THEN score * 0.7"
-    ft_substr = "CASE WHEN source = 'ft' THEN score * 0.3"
+    vector_substr = "CASE WHEN source = 'vector' THEN score * $alpha"
+    ft_substr = "CASE WHEN source = 'ft' THEN score * (1 - $alpha)"
     assert vector_substr in query
     assert ft_substr in query
 

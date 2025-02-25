@@ -206,10 +206,10 @@ def _get_hybrid_query_linear(neo4j_version_is_5_23_or_above: bool, alpha: float)
         "RETURN n.node AS node, (n.score / ft_index_max_score) AS score, 'ft' AS source } "
         "WITH node, "
         "sum(CASE WHEN source = 'vector' THEN score * "
-        + str(alpha)
+        + "$alpha "
         + " ELSE 0 END) + "
         + "sum(CASE WHEN source = 'ft' THEN score * "
-        + str(1 - alpha)
+        + "(1 - $alpha) "
         + " ELSE 0 END) AS score "
         "ORDER BY score DESC LIMIT $top_k"
     )
