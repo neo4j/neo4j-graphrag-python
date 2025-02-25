@@ -27,10 +27,9 @@ from neo4j_graphrag.exceptions import (
 from neo4j_graphrag.generation.prompts import RagTemplate
 from neo4j_graphrag.generation.types import RagInitModel, RagResultModel, RagSearchModel
 from neo4j_graphrag.llm import LLMInterface
-from neo4j_graphrag.llm.types import LLMMessage
 from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.retrievers.base import Retriever
-from neo4j_graphrag.types import RetrieverResult
+from neo4j_graphrag.types import LLMMessage, RetrieverResult
 
 logger = logging.getLogger(__name__)
 

@@ -13,8 +13,8 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import neo4j
-from neo4j_graphrag.llm.types import LLMMessage
 from neo4j_graphrag.message_history import Neo4jMessageHistory
+from neo4j_graphrag.types import LLMMessage
 
 
 def test_neo4j_message_history_add_message(driver: neo4j.Driver) -> None:
@@ -62,7 +62,7 @@ def test_neo4j_message_history_add_messages(driver: neo4j.Driver) -> None:
     )
 
 
-def test_neo4j_message_history_clear(driver: neo4j.Driver) -> None:
+def test_neo4j_message_history_clear_messages(driver: neo4j.Driver) -> None:
     driver.execute_query(query_="MATCH (n) DETACH DELETE n;")
     message_history = Neo4jMessageHistory(session_id="123", driver=driver)
     message_history.add_messages(
@@ -74,12 +74,38 @@ def test_neo4j_message_history_clear(driver: neo4j.Driver) -> None:
     assert len(message_history.messages) == 2
     message_history.clear()
     assert len(message_history.messages) == 0
+    # Test that the session node is not deleted
+    results = driver.execute_query(
+        query_="MATCH (s:`Session`) WHERE s.id = '123' RETURN s"
+    )
+    assert len(results.records) == 1
+    assert results.records[0]["s"]["id"] == "123"
+    assert list(results.records[0]["s"].labels) == ["Session"]
+
+
+def test_neo4j_message_history_clear_session_and_messages(driver: neo4j.Driver) -> None:
+    driver.execute_query(query_="MATCH (n) DETACH DELETE n;")
+    message_history = Neo4jMessageHistory(session_id="123", driver=driver)
+    message_history.add_messages(
+        [
+            LLMMessage(role="system", content="You are a helpful assistant."),
+            LLMMessage(role="user", content="Hello"),
+        ]
+    )
+    assert len(message_history.messages) == 2
+    message_history.clear(delete_session_node=True)
+    assert len(message_history.messages) == 0
+    # Test that the session node is deleted
+    results = driver.execute_query(
+        query_="MATCH (s:`Session`) WHERE s.id = '123' RETURN s"
+    )
+    assert results.records == []
 
 
 def test_neo4j_message_history_clear_no_messages(driver: neo4j.Driver) -> None:
     driver.execute_query(query_="MATCH (n) DETACH DELETE n;")
     message_history = Neo4jMessageHistory(session_id="123", driver=driver)
-    message_history.clear()
+    message_history.clear(delete_session_node=True)
     results = driver.execute_query(
         query_="MATCH (s:`Session`) WHERE s.id = '123' RETURN s"
     )

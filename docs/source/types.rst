@@ -31,7 +31,7 @@ LLMResponse
 LLMMessage
 ===========
 
-.. autoclass:: neo4j_graphrag.llm.types.LLMMessage
+.. autoclass:: neo4j_graphrag.types.LLMMessage
 
 
 RagResultModel

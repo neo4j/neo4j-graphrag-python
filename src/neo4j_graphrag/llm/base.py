@@ -18,11 +18,9 @@ from abc import ABC, abstractmethod
 from typing import Any, List, Optional, Union
 
 from neo4j_graphrag.message_history import MessageHistory
+from neo4j_graphrag.types import LLMMessage
 
-from .types import (
-    LLMMessage,
-    LLMResponse,
-)
+from .types import LLMResponse
 
 
 class LLMInterface(ABC):

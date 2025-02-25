@@ -19,22 +19,28 @@ from typing import List, Optional, Union
 import neo4j
 from pydantic import PositiveInt
 
-from neo4j_graphrag.llm.types import (
-    LLMMessage,
-)
 from neo4j_graphrag.types import (
+    LLMMessage,
     Neo4jDriverModel,
     Neo4jMessageHistoryModel,
 )
 
 CREATE_SESSION_NODE_QUERY = "MERGE (s:`{node_label}` {{id:$session_id}})"
 
-CLEAR_SESSION_QUERY = (
+DELETE_SESSION_AND_MESSAGES_QUERY = (
     "MATCH (s:`{node_label}`) "
     "WHERE s.id = $session_id "
     "OPTIONAL MATCH p=(s)-[:LAST_MESSAGE]->(:Message)<-[:NEXT*0..]-(:Message) "
     "WITH CASE WHEN p IS NULL THEN [s] ELSE nodes(p) END AS nodes "
     "UNWIND nodes AS node "
+    "DETACH DELETE node;"
+)
+
+DELETE_MESSAGES_QUERY = (
+    "MATCH (s:`{node_label}`)-[:LAST_MESSAGE]->(last_message:Message) "
+    "WHERE s.id = $session_id "
+    "MATCH p=(last_message)<-[:NEXT*0..]-(:Message) "
+    "UNWIND nodes(p) as node "
     "DETACH DELETE node;"
 )
 
@@ -82,8 +88,8 @@ class InMemoryMessageHistory(MessageHistory):
 
     .. code-block:: python
 
-        from neo4j_graphrag.llm.types import LLMMessage
         from neo4j_graphrag.message_history import InMemoryMessageHistory
+        from neo4j_graphrag.types import LLMMessage
 
         history = InMemoryMessageHistory()
 
@@ -125,8 +131,8 @@ class Neo4jMessageHistory(MessageHistory):
     .. code-block:: python
 
         import neo4j
-        from neo4j_graphrag.llm.types import LLMMessage
         from neo4j_graphrag.message_history import Neo4jMessageHistory
+        from neo4j_graphrag.types import LLMMessage
 
         driver = neo4j.GraphDatabase.driver(URI, auth=AUTH)
 
@@ -204,9 +210,19 @@ class Neo4jMessageHistory(MessageHistory):
             },
         )
 
-    def clear(self) -> None:
-        """Clear the message history."""
-        self._driver.execute_query(
-            query_=CLEAR_SESSION_QUERY.format(node_label="Session"),
-            parameters_={"session_id": self._session_id},
-        )
+    def clear(self, delete_session_node: bool = False) -> None:
+        """Clear the message history.
+
+        Args:
+            delete_session_node (bool): Whether to delete the session node. Defaults to False.
+        """
+        if delete_session_node:
+            self._driver.execute_query(
+                query_=DELETE_SESSION_AND_MESSAGES_QUERY.format(node_label="Session"),
+                parameters_={"session_id": self._session_id},
+            )
+        else:
+            self._driver.execute_query(
+                query_=DELETE_MESSAGES_QUERY.format(node_label="Session"),
+                parameters_={"session_id": self._session_id},
+            )

@@ -1,14 +1,23 @@
-from typing import Literal, TypedDict
+import warnings
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
+from neo4j_graphrag.types import LLMMessage as _LLMMessage
+
+
+def __getattr__(name: str) -> Any:
+    if name == "LLMMessage":
+        warnings.warn(
+            "LLMMessage has been moved to neo4j_graphrag.types. Please update your imports.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return _LLMMessage
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 class LLMResponse(BaseModel):
-    content: str
-
-
-class LLMMessage(TypedDict):
-    role: Literal["system", "user", "assistant"]
     content: str
 
 

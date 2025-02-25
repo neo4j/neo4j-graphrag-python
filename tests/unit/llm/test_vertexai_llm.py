@@ -19,8 +19,8 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.types import LLMMessage
 from neo4j_graphrag.llm.vertexai_llm import VertexAILLM
+from neo4j_graphrag.types import LLMMessage
 from vertexai.generative_models import Content, Part
 
 

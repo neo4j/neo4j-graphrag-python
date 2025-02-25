@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Callable, Literal, Optional, Union
+from typing import Any, Callable, Literal, Optional, TypedDict, Union
 
 import neo4j
 from pydantic import (
@@ -263,3 +263,8 @@ class Neo4jMessageHistoryModel(BaseModel):
         if isinstance(v, str) and len(v) == 0:
             raise ValueError("session_id cannot be empty")
         return v
+
+
+class LLMMessage(TypedDict):
+    role: Literal["system", "user", "assistant"]
+    content: str

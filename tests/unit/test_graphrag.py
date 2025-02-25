@@ -21,9 +21,8 @@ from neo4j_graphrag.generation.graphrag import GraphRAG
 from neo4j_graphrag.generation.prompts import RagTemplate
 from neo4j_graphrag.generation.types import RagResultModel
 from neo4j_graphrag.llm import LLMResponse
-from neo4j_graphrag.llm.types import LLMMessage
 from neo4j_graphrag.message_history import InMemoryMessageHistory
-from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
+from neo4j_graphrag.types import LLMMessage, RetrieverResult, RetrieverResultItem
 
 
 def test_graphrag_prompt_template() -> None:
