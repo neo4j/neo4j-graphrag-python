@@ -175,7 +175,7 @@ class HybridSearchModel(BaseModel):
         ranker, alpha = self.ranker, self.alpha
         if ranker == HybridSearchRanker.LINEAR:
             if alpha is None:
-                self.alpha = 0.5
+                raise ValueError("alpha must be provided when using the linear ranker")
             if isinstance(alpha, float) and not (0.0 <= alpha <= 1.0):
                 raise ValueError("alpha must be between 0 and 1")
         else:

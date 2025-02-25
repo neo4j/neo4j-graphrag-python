@@ -166,7 +166,8 @@ class HybridRetriever(Retriever):
             effective_search_ratio (int): Controls the candidate pool size for the vector index by multiplying top_k to balance query
                 accuracy and performance. Defaults to 1.
             ranker (str, HybridSearchRanker): Type of ranker to order the results from retrieval.
-            alpha (Optional[float]): Weight for the vector score when using the linear ranker. Only used when ranker is 'linear'. Defaults to 0.5 if not provided.
+            alpha (Optional[float]): Weight for the vector score when using the linear ranker.
+            **Required** when using the linear ranker; must be between 0 and 1.
 
         Raises:
             SearchValidationError: If validation of the input arguments fail.

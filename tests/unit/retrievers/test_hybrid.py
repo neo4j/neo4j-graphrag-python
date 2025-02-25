@@ -20,6 +20,7 @@ import pytest
 from neo4j_graphrag.exceptions import (
     EmbeddingRequiredError,
     RetrieverInitializationError,
+    SearchValidationError,
 )
 from neo4j_graphrag.neo4j_queries import get_search_query
 from neo4j_graphrag.retrievers import HybridCypherRetriever, HybridRetriever
@@ -605,3 +606,34 @@ def test_hybrid_cypher_search_sanitizes_text(
         database_=None,
         routing_=neo4j.RoutingControl.READ,
     )
+
+
+@patch("neo4j_graphrag.retrievers.base.get_version")
+def test_hybrid_retriever_linear_without_alpha(
+    mock_get_version: MagicMock, driver: MagicMock
+) -> None:
+    mock_get_version.return_value = ((5, 23, 0), False, False)
+    with pytest.raises(SearchValidationError) as exc_info:
+        HybridRetriever(
+            driver=driver,
+            vector_index_name="vector-index",
+            fulltext_index_name="fulltext-index",
+            neo4j_database="neo4j",
+        ).search(query_text="test query", ranker="linear")
+    assert "alpha must be provided" in str(exc_info.value)
+
+
+@patch("neo4j_graphrag.retrievers.base.get_version")
+def test_hybrid_cypher_retriever_linear_without_alpha(
+    mock_get_version: MagicMock, driver: MagicMock
+) -> None:
+    mock_get_version.return_value = ((5, 23, 0), False, False)
+    with pytest.raises(SearchValidationError) as exc_info:
+        HybridCypherRetriever(
+            driver=driver,
+            vector_index_name="vector-index",
+            fulltext_index_name="fulltext-index",
+            neo4j_database="neo4j",
+            retrieval_query="",
+        ).search(query_text="test query", ranker="linear")
+    assert "alpha must be provided" in str(exc_info.value)
