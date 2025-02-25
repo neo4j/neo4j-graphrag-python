@@ -192,6 +192,8 @@ def test_hybrid_retriever_search_text_linear_ranker(
         query_text="Find me a book about Fremen",
         top_k=top_k,
         effective_search_ratio=effective_search_ratio,
+        ranker="linear",
+        alpha=0.9,
     )
 
     assert isinstance(results, RetrieverResult)
