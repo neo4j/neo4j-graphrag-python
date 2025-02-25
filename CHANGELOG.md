@@ -2,8 +2,6 @@
 
 ## Next
 
-## 1.5.0
-
 ### Added
 
 - Utility functions to retrieve metadata for vector and full-text indexes.
