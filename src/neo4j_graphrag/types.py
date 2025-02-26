@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import warnings
 from enum import Enum
 from typing import Any, Callable, Literal, Optional, TypedDict, Union
 
@@ -25,6 +26,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from typing_extensions import Self
 
 from neo4j_graphrag.utils.validation import validate_search_query_input
 
@@ -137,11 +139,53 @@ class VectorCypherSearchModel(VectorSearchModel):
     query_params: Optional[dict[str, Any]] = None
 
 
+class HybridSearchRanker(Enum):
+    """Enumerator of Hybrid search rankers."""
+
+    NAIVE = "naive"
+    LINEAR = "linear"
+
+
 class HybridSearchModel(BaseModel):
     query_text: str
     query_vector: Optional[list[float]] = None
     top_k: PositiveInt = 5
     effective_search_ratio: PositiveInt = 1
+    ranker: Union[str, HybridSearchRanker] = HybridSearchRanker.NAIVE
+    alpha: Optional[float] = None
+
+    @field_validator("ranker", mode="before")
+    def validate_ranker(cls, v: Union[str, HybridSearchRanker]) -> HybridSearchRanker:
+        if isinstance(v, str):
+            try:
+                return HybridSearchRanker(v.lower())
+            except ValueError:
+                allowed = ", ".join([r.value for r in HybridSearchRanker])
+                raise ValueError(
+                    f"Invalid ranker value. Allowed values are: {allowed}."
+                )
+        elif isinstance(v, HybridSearchRanker):
+            return v
+        else:
+            allowed = ", ".join([r.value for r in HybridSearchRanker])
+            raise ValueError(f"Invalid ranker type. Allowed values are: {allowed}.")
+
+    @model_validator(mode="after")
+    def validate_alpha(self) -> Self:
+        ranker, alpha = self.ranker, self.alpha
+        if ranker == HybridSearchRanker.LINEAR:
+            if alpha is None:
+                raise ValueError("alpha must be provided when using the linear ranker")
+            if not (0.0 <= alpha <= 1.0):
+                raise ValueError("alpha must be between 0 and 1")
+        else:
+            if alpha is not None:
+                warnings.warn(
+                    "alpha parameter is only used when ranker is 'linear'. Ignoring alpha.",
+                    UserWarning,
+                )
+                self.alpha = None
+        return self
 
 
 class HybridCypherSearchModel(HybridSearchModel):
