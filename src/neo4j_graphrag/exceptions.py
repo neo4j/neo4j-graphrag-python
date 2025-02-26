@@ -128,3 +128,7 @@ class PromptMissingPlaceholderError(Neo4jGraphRagError):
 
 class InvalidHybridSearchRankerError(Neo4jGraphRagError):
     """Exception raised when an invalid ranker type for Hybrid Search is provided."""
+
+
+class SearchQueryParseError(Neo4jGraphRagError):
+    """Exception raised when there is a query parse error in the text search string."""
