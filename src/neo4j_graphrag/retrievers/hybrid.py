@@ -388,8 +388,6 @@ class HybridCypherRetriever(Retriever):
 
         if "ranker" in parameters:
             del parameters["ranker"]
-        if "alpha" in parameters:
-            del parameters["alpha"]
 
         sanitized_parameters = copy.deepcopy(parameters)
         if "query_vector" in sanitized_parameters:
