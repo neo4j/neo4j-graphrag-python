@@ -21,6 +21,7 @@ from typing import Any, get_type_hints
 from pydantic import BaseModel
 
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
+from neo4j_graphrag.utils.validation import issubclass_safe
 
 
 class DataModel(BaseModel):
@@ -52,7 +53,7 @@ class ComponentMeta(abc.ABCMeta):
                     f"The run method return type must be annotated in {name}"
                 )
             # the type hint must be a subclass of DataModel
-            if not issubclass(return_model, DataModel):
+            if not issubclass_safe(return_model, DataModel):
                 raise PipelineDefinitionError(
                     f"The run method must return a subclass of DataModel in {name}"
                 )
