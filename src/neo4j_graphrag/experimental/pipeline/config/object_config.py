@@ -56,6 +56,8 @@ from neo4j_graphrag.experimental.pipeline.config.param_resolver import (
     ParamConfig,
 )
 from neo4j_graphrag.llm import LLMInterface
+from neo4j_graphrag.utils.validation import issubclass_safe
+
 
 logger = logging.getLogger(__name__)
 
@@ -131,9 +133,9 @@ class ObjectConfig(AbstractConfig, Generic[T]):
         self._global_data = resolved_data or {}
         logger.debug(f"OBJECT_CONFIG: parsing {self} using {resolved_data}")
         if self.class_ is None:
-            raise ValueError(f"`class_` is not required to parse object {self}")
+            raise ValueError(f"`class_` is required to parse object {self}")
         klass = self._get_class(self.class_, self.get_module())
-        if not issubclass(klass, self.get_interface()):
+        if not issubclass_safe(klass, self.get_interface()):
             raise ValueError(
                 f"Invalid class '{klass}'. Expected a subclass of '{self.get_interface()}'"
             )

@@ -309,3 +309,4 @@
 
 -   Updated documentation to include new custom exceptions.
 -   Improved the use of Pydantic for input data validation for retriever objects.
+-   Fixed config loading after module reload (usage in jupyter notebooks)
