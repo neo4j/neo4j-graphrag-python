@@ -19,8 +19,11 @@ from neo4j_graphrag.experimental.pipeline import (
     Component,
     Pipeline,
 )
-from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError, \
-    PipelineMissingDependencyError, PipelineStatusUpdateError
+from neo4j_graphrag.experimental.pipeline.exceptions import (
+    PipelineDefinitionError,
+    PipelineMissingDependencyError,
+    PipelineStatusUpdateError,
+)
 from neo4j_graphrag.experimental.pipeline.orchestrator import Orchestrator
 from neo4j_graphrag.experimental.pipeline.types import RunStatus
 
@@ -229,7 +232,9 @@ def pipeline_aggregation() -> Pipeline:
 @patch(
     "neo4j_graphrag.experimental.pipeline.pipeline.Orchestrator.get_status_for_component"
 )
-async def test_orchestrator_check_dependency_complete(mock_status: Mock, pipeline_branch: Pipeline) -> None:
+async def test_orchestrator_check_dependency_complete(
+    mock_status: Mock, pipeline_branch: Pipeline
+) -> None:
     """a -> b, c"""
     orchestrator = Orchestrator(pipeline=pipeline_branch)
     node_a = pipeline_branch.get_node_by_name("a")
@@ -248,7 +253,9 @@ async def test_orchestrator_check_dependency_complete(mock_status: Mock, pipelin
 @patch(
     "neo4j_graphrag.experimental.pipeline.pipeline.Orchestrator.get_status_for_component"
 )
-async def test_orchestrator_check_dependency_complete(mock_status: Mock, pipeline_branch: Pipeline) -> None:
+async def test_orchestrator_check_dependency_complete(
+    mock_status: Mock, pipeline_branch: Pipeline
+) -> None:
     """a -> b, c"""
     orchestrator = Orchestrator(pipeline=pipeline_branch)
     node_a = pipeline_branch.get_node_by_name("a")
