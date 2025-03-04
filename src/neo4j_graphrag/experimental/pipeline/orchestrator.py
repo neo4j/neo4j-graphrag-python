@@ -95,9 +95,11 @@ class Orchestrator:
         async with asyncio.Lock():
             current_status = await self.get_status_for_component(task_name)
             if status == current_status:
-                raise PipelineStatusUpdateError(f"Status is already '{status}'")
-            if status == RunStatus.RUNNING and current_status == RunStatus.DONE:
-                raise PipelineStatusUpdateError("Can't go from DONE to RUNNING")
+                raise PipelineStatusUpdateError(f"Status is already {status}")
+            if status not in current_status.possible_next_status():
+                raise PipelineStatusUpdateError(
+                    f"Can't go from {current_status} to {status}"
+                )
             return await self.pipeline.store.add_status_for_component(
                 self.run_id, task_name, status.value
             )

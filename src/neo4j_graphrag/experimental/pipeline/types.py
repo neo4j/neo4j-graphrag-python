@@ -54,6 +54,17 @@ class RunStatus(enum.Enum):
     RUNNING = "RUNNING"
     DONE = "DONE"
 
+    def possible_next_status(self) -> list[RunStatus]:
+        match self:
+            case RunStatus.UNKNOWN:
+                return [RunStatus.RUNNING]
+            case RunStatus.RUNNING:
+                return [RunStatus.DONE]
+            case RunStatus.DONE:
+                return []
+            case _:
+                return []
+
 
 class RunResult(BaseModel):
     status: RunStatus = RunStatus.DONE

@@ -173,37 +173,50 @@ async def test_orchestrator_get_component_inputs_ignore_user_input_if_input_def_
 @patch(
     "neo4j_graphrag.experimental.pipeline.pipeline.Orchestrator.get_status_for_component"
 )
-async def test_orchestrator_set_component_status(mock_status: Mock) -> None:
+@pytest.mark.parametrize(
+    "old_status, new_status, result",
+    [
+        # Normal path: from UNKNOWN to RUNNING to DONE
+        (RunStatus.UNKNOWN, RunStatus.RUNNING, "ok"),
+        (RunStatus.RUNNING, RunStatus.DONE, "ok"),
+        # Error: status is already set to this value
+        (RunStatus.RUNNING, RunStatus.RUNNING, "Status is already RunStatus.RUNNING"),
+        (RunStatus.DONE, RunStatus.DONE, "Status is already RunStatus.DONE"),
+        # Error: can't go back in time
+        (
+            RunStatus.DONE,
+            RunStatus.RUNNING,
+            "Can't go from RunStatus.DONE to RunStatus.RUNNING",
+        ),
+        (
+            RunStatus.RUNNING,
+            RunStatus.UNKNOWN,
+            "Can't go from RunStatus.RUNNING to RunStatus.UNKNOWN",
+        ),
+        (
+            RunStatus.DONE,
+            RunStatus.UNKNOWN,
+            "Can't go from RunStatus.DONE to RunStatus.UNKNOWN",
+        ),
+    ],
+)
+async def test_orchestrator_set_component_status(
+    mock_status: Mock,
+    old_status: RunStatus,
+    new_status: RunStatus,
+    result: str,
+) -> None:
     pipe = Pipeline()
     orchestrator = Orchestrator(pipeline=pipe)
-    # Normal status update: UNKNOWN -> RUNNING -> DONE
-    # UNKNOWN -> RUNNING
     mock_status.side_effect = [
-        RunStatus.UNKNOWN,
+        old_status,
     ]
-    await orchestrator.set_task_status("task_name", RunStatus.RUNNING)
-    # RUNNING -> DONE
-    mock_status.side_effect = [
-        RunStatus.RUNNING,
-    ]
-    await orchestrator.set_task_status("task_name", RunStatus.DONE)
-    # Error path, raising PipelineStatusUpdateError
-    # Same status
-    # RUNNING -> RUNNING
-    mock_status.side_effect = [
-        RunStatus.RUNNING,
-    ]
-    with pytest.raises(PipelineStatusUpdateError) as exc:
-        await orchestrator.set_task_status("task_name", RunStatus.RUNNING)
-    assert "Status is already" in str(exc)
-    # Going back to RUNNING after the task is DONE
-    # DONE -> RUNNING
-    mock_status.side_effect = [
-        RunStatus.DONE,
-    ]
-    with pytest.raises(PipelineStatusUpdateError) as exc:
-        await orchestrator.set_task_status("task_name", RunStatus.RUNNING)
-    assert "Can't go from DONE to RUNNING" in str(exc)
+    if result == "ok":
+        await orchestrator.set_task_status("task_name", new_status)
+    else:
+        with pytest.raises(PipelineStatusUpdateError) as exc:
+            await orchestrator.set_task_status("task_name", new_status)
+        assert result in str(exc)
 
 
 @pytest.fixture(scope="function")
