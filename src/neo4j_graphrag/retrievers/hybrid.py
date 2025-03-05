@@ -26,6 +26,7 @@ from neo4j_graphrag.exceptions import (
     EmbeddingRequiredError,
     RetrieverInitializationError,
     SearchValidationError,
+    SearchQueryParseError,
 )
 from neo4j_graphrag.neo4j_queries import get_search_query
 from neo4j_graphrag.retrievers.base import Retriever
@@ -218,12 +219,19 @@ class HybridRetriever(Retriever):
         logger.debug("HybridRetriever Cypher parameters: %s", sanitized_parameters)
         logger.debug("HybridRetriever Cypher query: %s", search_query)
 
-        records, _, _ = self.driver.execute_query(
-            search_query,
-            parameters,
-            database_=self.neo4j_database,
-            routing_=neo4j.RoutingControl.READ,
-        )
+        try:
+            records, _, _ = self.driver.execute_query(
+                search_query,
+                parameters,
+                database_=self.neo4j_database,
+                routing_=neo4j.RoutingControl.READ,
+            )
+        except neo4j.exceptions.ClientError as e:
+            if "org.apache.lucene.queryparser.classic.ParseException" in str(e):
+                raise SearchQueryParseError(
+                    f"Invalid Lucene query generated from query_text: {query_text}"
+                ) from e
+            raise
         return RawSearchResult(
             records=records,
         )
@@ -395,12 +403,19 @@ class HybridCypherRetriever(Retriever):
         logger.debug("HybridRetriever Cypher parameters: %s", sanitized_parameters)
         logger.debug("HybridRetriever Cypher query: %s", search_query)
 
-        records, _, _ = self.driver.execute_query(
-            search_query,
-            parameters,
-            database_=self.neo4j_database,
-            routing_=neo4j.RoutingControl.READ,
-        )
+        try:
+            records, _, _ = self.driver.execute_query(
+                search_query,
+                parameters,
+                database_=self.neo4j_database,
+                routing_=neo4j.RoutingControl.READ,
+            )
+        except neo4j.exceptions.ClientError as e:
+            if "org.apache.lucene.queryparser.classic.ParseException" in str(e):
+                raise SearchQueryParseError(
+                    f"Invalid Lucene query generated from query_text: {query_text}"
+                ) from e
+            raise
         return RawSearchResult(
             records=records,
         )
