@@ -3,6 +3,8 @@
 ## Next
 
 ### Added
+
+- Added optional schema enforcement as a validation layer after entity and relation extraction.
 - Introduced SearchQueryParseError for handling invalid Lucene query strings in HybridRetriever and HybridCypherRetriever.
 
 ## 1.5.0
