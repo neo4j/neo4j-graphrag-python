@@ -18,7 +18,7 @@ import logging
 import warnings
 from collections import defaultdict
 from timeit import default_timer
-from typing import Any, Optional
+from typing import Any, Optional, AsyncGenerator
 
 from neo4j_graphrag.utils.logging import prettify
 
@@ -417,6 +417,24 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
             f"PIPELINE FINISHED {orchestrator.run_id} in {end_time - start_time}s"
         )
         return PipelineResult(
+            run_id=orchestrator.run_id,
+            result=await self.get_final_results(orchestrator.run_id),
+        )
+
+    async def run_step_by_step(self, data: dict[str, Any]) -> AsyncGenerator[PipelineResult, None]:
+        logger.debug("PIPELINE START")
+        start_time = default_timer()
+        self.invalidate()
+        self.validate_input_data(data)
+        orchestrator = Orchestrator(self)
+        logger.debug(f"PIPELINE ORCHESTRATOR: {orchestrator.run_id}")
+        async for res in orchestrator.run_step_by_step(data):
+            yield res
+        end_time = default_timer()
+        logger.debug(
+            f"PIPELINE FINISHED {orchestrator.run_id} in {end_time - start_time}s"
+        )
+        yield PipelineResult(
             run_id=orchestrator.run_id,
             result=await self.get_final_results(orchestrator.run_id),
         )
