@@ -2,6 +2,10 @@
 
 ## Next
 
+### Added
+
+- Added optional schema enforcement as a validation layer after entity and relation extraction. 
+
 ## 1.5.0
 
 ### Added
