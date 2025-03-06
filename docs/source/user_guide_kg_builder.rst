@@ -831,7 +831,7 @@ It can be used in this way:
 The LLM to use can be customized, the only constraint is that it obeys the :ref:`LLMInterface <llminterface>`.
 
 Schema Enforcement Behaviour
----------------
+----------------------------
 By default, even if a schema is provided to guide the LLM in the entity and relation extraction, the LLM response is not validated against that schema.
 This behaviour can be changed by using the `enforce_schema` flag in the `LLMEntityRelationExtractor` constructor:
 
@@ -844,23 +844,14 @@ This behaviour can be changed by using the `enforce_schema` flag in the `LLMEnti
         # ...
         enforce_schema=SchemaEnforcementMode.STRICT,
     )
-    schema = SchemaConfig(
-        entities={"Label": {"name": str}},
-        relations={"REL_TYPE": {}},
-        potential_schema=[("Label", "REL_TYPE", "Label")]
-    )
-
-   #....
-    result = await extractor.run(
-        #...
-        schema=schema
-    )
 
 In this scenario, any extracted node/relation/property that is not part of the provided schema will be pruned.
 Any relation whose start node or end node does not conform to the provided tuple in `potential_schema` will be pruned.
 If a node is left with no properties, it will be also pruned.
 
-Note that if the schema enforcement mode is on but the schema is not provided, no schema enforcement will be applied.
+.. warning::
+
+    Note that if the schema enforcement mode is on but the schema is not provided, no schema enforcement will be applied.
 
 Error Behaviour
 ---------------
