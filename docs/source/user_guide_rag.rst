@@ -223,7 +223,10 @@ it can be queried using the following:
 .. code:: python
 
     from neo4j_graphrag.llm import OllamaLLM
-    llm = OllamaLLM(model_name="orca-mini")
+    llm = OllamaLLM(
+        model_name="orca-mini",
+        # host="...",  # when using a remote server
+    )
     llm.invoke("say something")
 
 
