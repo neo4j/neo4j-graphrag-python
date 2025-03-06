@@ -354,12 +354,15 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
          Perform validation after entity and relation extraction:
          - Enforce schema if schema enforcement mode is on and schema is provided
         """
-        # if enforcing_schema is on and schema is provided, clean the graph
-        return (
-            self._clean_graph(chunk_graph, schema)
-            if self.enforce_schema != SchemaEnforcementMode.NONE and schema.entities
-            else chunk_graph
-        )
+        if self.enforce_schema != SchemaEnforcementMode.NONE:
+            if not schema or not schema.entities:  # schema is not provided
+                logger.warning(
+                    "Schema enforcement is ON but the guiding schema is not provided."
+                )
+            else:
+                # if enforcing_schema is on and schema is provided, clean the graph
+                return self._clean_graph(chunk_graph, schema)
+        return chunk_graph
 
     def _clean_graph(
             self,
