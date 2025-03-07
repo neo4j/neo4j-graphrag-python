@@ -12,6 +12,10 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import importlib
+import sys
+from abc import ABC
+from typing import ClassVar
 from unittest.mock import patch
 
 import neo4j
@@ -56,6 +60,30 @@ def test_get_class_wrong_path() -> None:
     c: ObjectConfig[object] = ObjectConfig()
     with pytest.raises(ValueError):
         c._get_class("MyClass")
+
+
+class _MyClass:
+    def __init__(self, param: str) -> None:
+        self.param = param
+
+
+class _MyInterface(ABC): ...
+
+
+def test_parse_after_module_reload() -> None:
+    class MyClassConfig(ObjectConfig[_MyClass]):
+        DEFAULT_MODULE: ClassVar[str] = __name__
+        INTERFACE: ClassVar[type] = _MyClass
+
+    param_value = "value"
+    config = MyClassConfig.model_validate(
+        {"class_": f"{__name__}.{_MyClass.__name__}", "params_": {"param": param_value}}
+    )
+    importlib.reload(sys.modules[__name__])
+
+    my_obj = config.parse()
+    assert isinstance(my_obj, _MyClass)
+    assert my_obj.param == param_value
 
 
 def test_neo4j_driver_config() -> None:
