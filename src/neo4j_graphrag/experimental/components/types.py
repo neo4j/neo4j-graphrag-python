@@ -176,5 +176,3 @@ class GraphResult(DataModel):
 class SchemaEnforcementMode(str, Enum):
     NONE = "none"
     STRICT = "strict"
-    # future possibility: OPEN = "open" -> ensure conformance of nodes/props/rels that
-    # were listed in the schema but leave room for extras
