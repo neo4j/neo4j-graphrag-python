@@ -13,6 +13,9 @@
 ### Changed
 
 - Improved log output readability in Retrievers and GraphRAG and added embedded vector to retriever result metadata for debugging.
+-   Switched from pygraphviz to neo4j-viz
+    -   Renders interactive graph now on HTML instead of PNG
+    -   Removed `get_pygraphviz_graph` method
 
 ### Fixed
 
