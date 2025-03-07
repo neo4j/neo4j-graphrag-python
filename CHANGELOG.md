@@ -2,6 +2,9 @@
 
 ## Next
 
+### Added
+- Introduced SearchQueryParseError for handling invalid Lucene query strings in HybridRetriever and HybridCypherRetriever.
+
 ## 1.5.0
 
 ### Added

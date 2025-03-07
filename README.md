@@ -371,6 +371,13 @@ When you're finished with your changes, create a pull request (PR) using the fol
 
 ## 🧪 Tests
 
+To be able to run all tests, all extra packages needs to be installed.  
+This is achieved by:
+
+```bash
+poetry install --all-extras
+```
+
 ### Unit Tests
 
 Install the project dependencies then run the following command to run the unit tests locally:

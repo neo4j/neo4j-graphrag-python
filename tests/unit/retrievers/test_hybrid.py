@@ -21,6 +21,7 @@ from neo4j_graphrag.exceptions import (
     EmbeddingRequiredError,
     RetrieverInitializationError,
     SearchValidationError,
+    SearchQueryParseError,
 )
 from neo4j_graphrag.neo4j_queries import get_search_query
 from neo4j_graphrag.retrievers import HybridCypherRetriever, HybridRetriever
@@ -793,3 +794,73 @@ def test_hybrid_cypher_linear_ranker(
         ],
         metadata={"__retriever": "HybridCypherRetriever"},
     )
+
+
+@patch("neo4j_graphrag.retrievers.HybridRetriever._fetch_index_infos")
+@patch("neo4j_graphrag.retrievers.base.get_version")
+def test_hybrid_retriever_invalid_lucene_query_error(
+    mock_get_version: MagicMock,
+    _fetch_index_infos_mock: MagicMock,
+    driver: MagicMock,
+    embedder: MagicMock,
+) -> None:
+    mock_get_version.return_value = ((5, 23, 0), False, False)
+
+    error_message = (
+        "Failed to invoke procedure `db.index.fulltext.queryNodes`: "
+        "Caused by: org.apache.lucene.queryparser.classic.ParseException: "
+        'Encountered " <FUZZY_SLOP> "~aliens " at line 1, column 0.'
+    )
+    client_error = neo4j.exceptions.ClientError(error_message)
+    driver.execute_query.side_effect = client_error
+
+    retriever = HybridRetriever(
+        driver=driver,
+        vector_index_name="vector-index",
+        fulltext_index_name="fulltext-index",
+        embedder=embedder,
+    )
+    retriever.neo4j_version_is_5_23_or_above = True
+    retriever._embedding_node_property = "embedding"
+
+    with pytest.raises(
+        SearchQueryParseError, match="Invalid Lucene query generated from query_text"
+    ):
+        retriever.search(query_text="~aliens", top_k=5)
+
+
+@patch("neo4j_graphrag.retrievers.HybridCypherRetriever._fetch_index_infos")
+@patch("neo4j_graphrag.retrievers.base.get_version")
+def test_hybrid_cypher_retriever_invalid_lucene_query_error(
+    mock_get_version: MagicMock,
+    _fetch_index_infos_mock: MagicMock,
+    driver: MagicMock,
+    embedder: MagicMock,
+) -> None:
+    mock_get_version.return_value = ((5, 23, 0), False, False)
+    retrieval_query = """
+        RETURN node.id AS node_id, node.text AS text, score, {test: $param} AS metadata
+        """
+
+    error_message = (
+        "Failed to invoke procedure `db.index.fulltext.queryNodes`: "
+        "Caused by: org.apache.lucene.queryparser.classic.ParseException: "
+        'Encountered " <FUZZY_SLOP> "~aliens " at line 1, column 0.'
+    )
+    client_error = neo4j.exceptions.ClientError(error_message)
+    driver.execute_query.side_effect = client_error
+
+    retriever = HybridCypherRetriever(
+        driver=driver,
+        vector_index_name="vector-index",
+        fulltext_index_name="fulltext-index",
+        embedder=embedder,
+        retrieval_query=retrieval_query,
+    )
+    retriever.neo4j_version_is_5_23_or_above = True
+    retriever._embedding_node_property = "embedding"
+
+    with pytest.raises(
+        SearchQueryParseError, match="Invalid Lucene query generated from query_text"
+    ):
+        retriever.search(query_text="~aliens", top_k=5)

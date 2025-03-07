@@ -445,6 +445,16 @@ Errors
 
   * :class:`neo4j_graphrag.exceptions.LLMGenerationError`
 
+  * :class:`neo4j_graphrag.exceptions.SchemaValidationError`
+
+  * :class:`neo4j_graphrag.exceptions.PdfLoaderError`
+
+  * :class:`neo4j_graphrag.exceptions.PromptMissingPlaceholderError`
+
+  * :class:`neo4j_graphrag.exceptions.InvalidHybridSearchRankerError`
+
+  * :class:`neo4j_graphrag.exceptions.SearchQueryParseError`
+
   * :class:`neo4j_graphrag.experimental.pipeline.exceptions.PipelineDefinitionError`
 
   * :class:`neo4j_graphrag.experimental.pipeline.exceptions.PipelineMissingDependencyError`
@@ -556,6 +566,41 @@ LLMGenerationError
 ==================
 
 .. autoclass:: neo4j_graphrag.exceptions.LLMGenerationError
+   :show-inheritance:
+
+
+SchemaValidationError
+=====================
+
+.. autoclass:: neo4j_graphrag.exceptions.SchemaValidationError
+   :show-inheritance:
+
+
+PdfLoaderError
+==============
+
+.. autoclass:: neo4j_graphrag.exceptions.PdfLoaderError
+   :show-inheritance:
+
+
+PromptMissingPlaceholderError
+=============================
+
+.. autoclass:: neo4j_graphrag.exceptions.PromptMissingPlaceholderError
+   :show-inheritance:
+
+
+InvalidHybridSearchRankerError
+==============================
+
+.. autoclass:: neo4j_graphrag.exceptions.InvalidHybridSearchRankerError
+   :show-inheritance:
+
+
+SearchQueryParseError
+=====================
+
+.. autoclass:: neo4j_graphrag.exceptions.SearchQueryParseError
    :show-inheritance:
 
 
