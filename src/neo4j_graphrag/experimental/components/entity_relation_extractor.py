@@ -405,8 +405,9 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             for node in extracted_nodes:
                 if node.label in schema.entities:
                     schema_entity = schema.entities[node.label]
-                    filtered_props = self._enforce_properties(node.properties,
-                                                              schema_entity)
+                    filtered_props = self._enforce_properties(
+                        node.properties,
+                        schema_entity["properties"])
                     if filtered_props:
                         # keep node only if it has at least one valid property
                         new_node = Neo4jNode(
@@ -416,8 +417,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                             embedding_properties=node.embedding_properties,
                         )
                         valid_nodes.append(new_node)
-        # elif self.enforce_schema == SchemaEnforcementMode.OPEN:
-            # future logic
+
         return valid_nodes
 
     def _enforce_relationships(
@@ -435,22 +435,21 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         """
         valid_rels = []
         if self.enforce_schema == SchemaEnforcementMode.STRICT:
-            valid_node_ids = {node.id for node in filtered_nodes}
+            valid_nodes = {node.id: node.label for node in filtered_nodes}
             for rel in extracted_relationships:
                 # keep relationship if it conforms with the schema
                 if rel.type in schema.relations:
-                    if (rel.start_node_id in valid_node_ids and
-                            rel.end_node_id in valid_node_ids):
-                        start_node_label = self._get_node_label(rel.start_node_id,
-                                                                filtered_nodes)
-                        end_node_label = self._get_node_label(rel.end_node_id,
-                                                              filtered_nodes)
+                    if (rel.start_node_id in valid_nodes and
+                            rel.end_node_id in valid_nodes):
+                        start_node_label = valid_nodes[rel.start_node_id]
+                        end_node_label = valid_nodes[rel.end_node_id]
                         if (not schema.potential_schema or
                                 (start_node_label, rel.type, end_node_label) in
                                 schema.potential_schema):
                             schema_relation = schema.relations[rel.type]
-                            filtered_props = self._enforce_properties(rel.properties,
-                                                                      schema_relation)
+                            filtered_props = self._enforce_properties(
+                                rel.properties,
+                                schema_relation["properties"])
                             new_rel = Neo4jRelationship(
                                 start_node_id=rel.start_node_id,
                                 end_node_id=rel.end_node_id,
@@ -459,35 +458,22 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                                 embedding_properties=rel.embedding_properties,
                             )
                             valid_rels.append(new_rel)
-        # elif self.enforce_schema == SchemaEnforcementMode.OPEN:
-        # future logic
+
         return valid_rels
 
     def _enforce_properties(
             self,
             properties: Dict[str, Any],
-            valid_properties: Dict[str, Any]
+            valid_properties: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """
         Filter properties.
         Keep only those that exist in schema (i.e., valid properties).
         """
+        valid_prop_names = {prop["name"] for prop in valid_properties}
         return {
             key: value
             for key, value in properties.items()
-            if key in valid_properties
+            if key in valid_prop_names
         }
 
-    def _get_node_label(
-            self,
-            node_id: str,
-            nodes: List[Neo4jNode]
-    ) -> str:
-        """
-        Given a list of nodes, get the label of the node whose id matches the provided
-        node id.
-        """
-        for node in nodes:
-            if node.id == node_id:
-                return node.label
-        return ""

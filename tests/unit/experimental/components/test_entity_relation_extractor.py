@@ -243,9 +243,11 @@ async def test_extractor_no_schema_enforcement() -> None:
                                            create_lexical_graph=False,
                                            enforce_schema=SchemaEnforcementMode.NONE)
 
-    schema = SchemaConfig(entities={"Person": {"name": "STRING"}},
-                          relations={},
-                          potential_schema=[])
+    schema = SchemaConfig(
+        entities={"Person": {"label": "Person",
+                             "properties": [{"name": "name", "type": "STRING"}]}},
+        relations={},
+        potential_schema=[])
 
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
 
@@ -290,9 +292,11 @@ async def test_extractor_schema_enforcement_invalid_nodes():
                                            create_lexical_graph=False,
                                            enforce_schema=SchemaEnforcementMode.STRICT)
 
-    schema = SchemaConfig(entities={"Person": {"name": "STRING"}},
-                          relations={},
-                          potential_schema=[])
+    schema = SchemaConfig(
+        entities={"Person": {"label": "Person",
+                             "properties": [{"name": "name", "type": "STRING"}]}},
+        relations={},
+        potential_schema=[])
 
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
 
@@ -316,9 +320,12 @@ async def test_extraction_schema_enforcement_invalid_node_properties():
                                            create_lexical_graph=False,
                                            enforce_schema=SchemaEnforcementMode.STRICT)
 
-    schema = SchemaConfig(entities={"Person": {"name": str, "age": int}},
-                          relations={},
-                          potential_schema=[])
+    schema = SchemaConfig(
+        entities={"Person": {"label": "Person",
+                             "properties": [{"name": "name", "type": "STRING"},
+                                            {"name": "age", "type": "INTEGER"}]}},
+        relations={},
+        potential_schema=[])
 
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
 
@@ -342,7 +349,7 @@ async def test_extractor_schema_enforcement_valid_nodes_with_empty_props():
                                            create_lexical_graph=False,
                                            enforce_schema=SchemaEnforcementMode.STRICT)
 
-    schema = SchemaConfig(entities={"Person": {}},
+    schema = SchemaConfig(entities={"Person": {"label": "Person", "properties": []}},
                           relations={},
                           potential_schema=[])
 
@@ -368,9 +375,11 @@ async def test_extractor_schema_enforcement_invalid_relations_wrong_types():
                                            create_lexical_graph=False,
                                            enforce_schema=SchemaEnforcementMode.STRICT)
 
-    schema = SchemaConfig(entities={"Person": {"name": str}},
-                          relations={"LIKES": {}},
-                          potential_schema=[])
+    schema = SchemaConfig(
+        entities={"Person": {"label": "Person",
+                             "properties": [{"name": "name", "type": "STRING"}]}},
+        relations={"LIKES": {"label": "LIKES", "properties": []}},
+        potential_schema=[])
 
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
 
@@ -395,9 +404,13 @@ async def test_extractor_schema_enforcement_invalid_relations_wrong_start_node()
                                            create_lexical_graph=False,
                                            enforce_schema=SchemaEnforcementMode.STRICT)
 
-    schema = SchemaConfig(entities={"Person": {"name": str}, "City": {"name": str}},
-                          relations={"LIVES_IN": {}},
-                          potential_schema=[("Person", "LIVES_IN", "City")])
+    schema = SchemaConfig(
+        entities={"Person": {"label": "Person",
+                             "properties": [{"name": "name", "type": "STRING"}]},
+                  "City": {"label": "City",
+                           "properties": [{"name": "name", "type": "STRING"}]}},
+        relations={"LIVES_IN": {"label": "LIVES_IN", "properties": []}},
+        potential_schema=[("Person", "LIVES_IN", "City")])
 
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
 
@@ -422,8 +435,10 @@ async def test_extractor_schema_enforcement_invalid_relation_properties():
                                            enforce_schema=SchemaEnforcementMode.STRICT)
 
     schema = SchemaConfig(
-        entities={"Person": {"name": str}},
-        relations={"LIKES": {"strength": str}},
+        entities={"Person": {"label": "Person",
+                             "properties": [{"name": "name", "type": "STRING"}]}},
+        relations={"LIKES": {"label": "LIKES",
+                             "properties": [{"name": "strength", "type": "STRING"}]}},
         potential_schema=[]
     )
 
@@ -452,9 +467,11 @@ async def test_extractor_schema_enforcement_removed_relation_start_end_nodes():
                                            create_lexical_graph=False,
                                            enforce_schema=SchemaEnforcementMode.STRICT)
 
-    schema = SchemaConfig(entities={"Person": {"name": str}},
-                          relations={"LIKES": {}},
-                          potential_schema=[("Person", "LIKES", "Person")])
+    schema = SchemaConfig(
+        entities={"Person": {"label": "Person",
+                             "properties": [{"name": "name", "type": "STRING"}]}},
+        relations={"LIKES": {"label": "LIKES", "properties": []}},
+        potential_schema=[("Person", "LIKES", "Person")])
 
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
 
