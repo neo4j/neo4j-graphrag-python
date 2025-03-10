@@ -349,7 +349,7 @@ async def test_extractor_schema_enforcement_valid_nodes_with_empty_props():
                                            create_lexical_graph=False,
                                            enforce_schema=SchemaEnforcementMode.STRICT)
 
-    schema = SchemaConfig(entities={"Person": {"label": "Person", "properties": []}},
+    schema = SchemaConfig(entities={"Person": {"label": "Person"}},
                           relations={},
                           potential_schema=[])
 
@@ -378,7 +378,7 @@ async def test_extractor_schema_enforcement_invalid_relations_wrong_types():
     schema = SchemaConfig(
         entities={"Person": {"label": "Person",
                              "properties": [{"name": "name", "type": "STRING"}]}},
-        relations={"LIKES": {"label": "LIKES", "properties": []}},
+        relations={"LIKES": {"label": "LIKES"}},
         potential_schema=[])
 
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
@@ -409,7 +409,7 @@ async def test_extractor_schema_enforcement_invalid_relations_wrong_start_node()
                              "properties": [{"name": "name", "type": "STRING"}]},
                   "City": {"label": "City",
                            "properties": [{"name": "name", "type": "STRING"}]}},
-        relations={"LIVES_IN": {"label": "LIVES_IN", "properties": []}},
+        relations={"LIVES_IN": {"label": "LIVES_IN"}},
         potential_schema=[("Person", "LIVES_IN", "City")])
 
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
@@ -470,7 +470,7 @@ async def test_extractor_schema_enforcement_removed_relation_start_end_nodes():
     schema = SchemaConfig(
         entities={"Person": {"label": "Person",
                              "properties": [{"name": "name", "type": "STRING"}]}},
-        relations={"LIKES": {"label": "LIKES", "properties": []}},
+        relations={"LIKES": {"label": "LIKES"}},
         potential_schema=[("Person", "LIKES", "Person")])
 
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])

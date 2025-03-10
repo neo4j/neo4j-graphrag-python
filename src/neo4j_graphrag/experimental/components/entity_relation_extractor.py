@@ -400,23 +400,26 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             For each valid node, filter out properties not present in the schema.
             Remove a node if it ends up with no valid properties.
             """
+        if self.enforce_schema != SchemaEnforcementMode.STRICT:
+            return extracted_nodes
+
         valid_nodes = []
-        if self.enforce_schema == SchemaEnforcementMode.STRICT:
-            for node in extracted_nodes:
-                if node.label in schema.entities:
-                    schema_entity = schema.entities[node.label]
-                    filtered_props = self._enforce_properties(
-                        node.properties,
-                        schema_entity["properties"])
-                    if filtered_props:
-                        # keep node only if it has at least one valid property
-                        new_node = Neo4jNode(
-                            id=node.id,
-                            label=node.label,
-                            properties=filtered_props,
-                            embedding_properties=node.embedding_properties,
-                        )
-                        valid_nodes.append(new_node)
+
+        for node in extracted_nodes:
+            schema_entity = schema.entities.get(node.label)
+            if not schema_entity:
+                continue
+            allowed_props = schema_entity.get("properties", {})
+            filtered_props = self._enforce_properties(node.properties, allowed_props)
+            if filtered_props:
+                valid_nodes.append(
+                    Neo4jNode(
+                        id=node.id,
+                        label=node.label,
+                        properties=filtered_props,
+                        embedding_properties=node.embedding_properties,
+                    )
+                )
 
         return valid_nodes
 
@@ -433,31 +436,43 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         and start/end nodes are in filtered nodes (i.e., kept after node enforcement).
         For each valid relationship, filter out properties not present in the schema.
         """
+        if self.enforce_schema != SchemaEnforcementMode.STRICT:
+            return extracted_relationships
+
         valid_rels = []
-        if self.enforce_schema == SchemaEnforcementMode.STRICT:
-            valid_nodes = {node.id: node.label for node in filtered_nodes}
-            for rel in extracted_relationships:
-                # keep relationship if it conforms with the schema
-                if rel.type in schema.relations:
-                    if (rel.start_node_id in valid_nodes and
-                            rel.end_node_id in valid_nodes):
-                        start_node_label = valid_nodes[rel.start_node_id]
-                        end_node_label = valid_nodes[rel.end_node_id]
-                        if (not schema.potential_schema or
-                                (start_node_label, rel.type, end_node_label) in
-                                schema.potential_schema):
-                            schema_relation = schema.relations[rel.type]
-                            filtered_props = self._enforce_properties(
-                                rel.properties,
-                                schema_relation["properties"])
-                            new_rel = Neo4jRelationship(
-                                start_node_id=rel.start_node_id,
-                                end_node_id=rel.end_node_id,
-                                type=rel.type,
-                                properties=filtered_props,
-                                embedding_properties=rel.embedding_properties,
-                            )
-                            valid_rels.append(new_rel)
+
+        valid_nodes = {node.id: node.label for node in filtered_nodes}
+
+        potential_schema = schema.potential_schema
+
+        for rel in extracted_relationships:
+            schema_relation = schema.relations.get(rel.type)
+            if not schema_relation:
+                continue
+
+            if (rel.start_node_id not in valid_nodes or
+                    rel.end_node_id not in valid_nodes):
+                continue
+
+            start_label = valid_nodes[rel.start_node_id]
+            end_label = valid_nodes[rel.end_node_id]
+
+            if (potential_schema and
+                    (start_label, rel.type, end_label) not in potential_schema):
+                continue
+
+            allowed_props = schema_relation.get("properties", {})
+            filtered_props = self._enforce_properties(rel.properties, allowed_props)
+
+            valid_rels.append(
+                Neo4jRelationship(
+                    start_node_id=rel.start_node_id,
+                    end_node_id=rel.end_node_id,
+                    type=rel.type,
+                    properties=filtered_props,
+                    embedding_properties=rel.embedding_properties,
+                )
+            )
 
         return valid_rels
 
