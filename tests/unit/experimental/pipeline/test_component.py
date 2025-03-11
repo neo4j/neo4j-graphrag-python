@@ -12,7 +12,12 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from .components import ComponentMultiply
+from unittest.mock import MagicMock, AsyncMock
+
+import pytest
+
+from neo4j_graphrag.experimental.pipeline.types.context import RunContext
+from .components import ComponentMultiply, ComponentMultiplyWithContext, IntResultModel
 
 
 def test_component_inputs() -> None:
@@ -26,3 +31,41 @@ def test_component_inputs() -> None:
 def test_component_outputs() -> None:
     outputs = ComponentMultiply.component_outputs
     assert "result" in outputs
+    assert outputs["result"]["has_default"] is True
+    assert outputs["result"]["annotation"] == int
+
+
+@pytest.mark.asyncio
+async def test_component_run() -> None:
+    c = ComponentMultiply()
+    result = await c.run(number1=1, number2=2)
+    assert isinstance(result, IntResultModel)
+    assert isinstance(
+        result.result, ComponentMultiply.component_outputs["result"]["annotation"]
+    )
+
+
+@pytest.mark.asyncio
+async def test_component_run_with_context_default_implementation() -> None:
+    c = ComponentMultiply()
+    result = await c.run_with_context(
+        # context can not be null in the function signature,
+        # but it's ignored in this case
+        None,  # type: ignore
+        number1=1,
+        number2=2,
+    )
+    assert result.result == 2
+
+
+@pytest.mark.asyncio
+async def test_component_run_with_context() -> None:
+    c = ComponentMultiplyWithContext()
+    notifier_mock = AsyncMock()
+    result = await c.run_with_context(
+        RunContext(run_id="run_id", task_name="task_name", notifier=notifier_mock),
+        number1=1,
+        number2=2,
+    )
+    assert result.result == 2
+    notifier_mock.assert_awaited_once()

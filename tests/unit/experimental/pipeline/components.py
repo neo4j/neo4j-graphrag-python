@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from neo4j_graphrag.experimental.pipeline import Component, DataModel
+from neo4j_graphrag.experimental.pipeline.types.context import RunContext
 
 
 class StringResultModel(DataModel):
@@ -40,4 +41,14 @@ class ComponentAdd(Component):
 
 class ComponentMultiply(Component):
     async def run(self, number1: int, number2: int = 2) -> IntResultModel:
+        return IntResultModel(result=number1 * number2)
+
+
+class ComponentMultiplyWithContext(Component):
+    async def run_with_context(
+        self, context_: RunContext, number1: int, number2: int = 2
+    ) -> IntResultModel:
+        await context_.notify(
+            message="my message", data={"number1": number1, "number2": number2}
+        )
         return IntResultModel(result=number1 * number2)

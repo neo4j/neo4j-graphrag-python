@@ -82,7 +82,7 @@ class Component(abc.ABC, metaclass=ComponentMeta):
     # added here for the type checker
     # DO NOT CHANGE
     component_inputs: dict[str, dict[str, str | bool]]
-    component_outputs: dict[str, dict[str, str | bool]]
+    component_outputs: dict[str, dict[str, str | bool | type]]
 
     @abc.abstractmethod
     async def run(self, *args: Any, **kwargs: Any) -> DataModel:
