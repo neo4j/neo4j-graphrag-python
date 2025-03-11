@@ -435,6 +435,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         Keep only those whose types are in schema, start/end node conform to schema,
         and start/end nodes are in filtered nodes (i.e., kept after node enforcement).
         For each valid relationship, filter out properties not present in the schema.
+        If a relationship direct is incorrect, invert it.
         """
         if self.enforce_schema != SchemaEnforcementMode.STRICT:
             return extracted_relationships
@@ -457,17 +458,22 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             start_label = valid_nodes[rel.start_node_id]
             end_label = valid_nodes[rel.end_node_id]
 
-            if (potential_schema and
-                    (start_label, rel.type, end_label) not in potential_schema):
-                continue
+            tuple_valid = True
+            if potential_schema:
+                tuple_valid = (start_label, rel.type, end_label) in potential_schema
+                reverse_tuple_valid = ((end_label, rel.type, start_label) in
+                                       potential_schema)
+
+                if not tuple_valid and not reverse_tuple_valid:
+                    continue
 
             allowed_props = schema_relation.get("properties", [])
             filtered_props = self._enforce_properties(rel.properties, allowed_props)
 
             valid_rels.append(
                 Neo4jRelationship(
-                    start_node_id=rel.start_node_id,
-                    end_node_id=rel.end_node_id,
+                    start_node_id=rel.start_node_id if tuple_valid else rel.end_node_id,
+                    end_node_id=rel.end_node_id if tuple_valid else rel.start_node_id,
                     type=rel.type,
                     properties=filtered_props,
                     embedding_properties=rel.embedding_properties,

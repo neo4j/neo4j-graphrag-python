@@ -847,6 +847,7 @@ This behaviour can be changed by using the `enforce_schema` flag in the `LLMEnti
 
 In this scenario, any extracted node/relation/property that is not part of the provided schema will be pruned.
 Any relation whose start node or end node does not conform to the provided tuple in `potential_schema` will be pruned.
+If a relation start/end nodes are valid but the direction is incorrect, the latter will be inverted.
 If a node is left with no properties, it will be also pruned.
 
 .. warning::
