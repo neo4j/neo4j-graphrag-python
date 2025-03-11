@@ -17,7 +17,7 @@ from unittest.mock import Mock, patch
 from neo4j_graphrag.experimental.pipeline import Pipeline
 from neo4j_graphrag.experimental.pipeline.config.pipeline_config import PipelineConfig
 from neo4j_graphrag.experimental.pipeline.config.runner import PipelineRunner
-from neo4j_graphrag.experimental.pipeline.types import PipelineDefinition
+from neo4j_graphrag.experimental.pipeline.types.definitions import PipelineDefinition
 
 
 @patch("neo4j_graphrag.experimental.pipeline.pipeline.Pipeline.from_definition")

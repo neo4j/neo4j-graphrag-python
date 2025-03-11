@@ -20,6 +20,7 @@ from typing import Any, get_type_hints
 
 from pydantic import BaseModel
 
+from neo4j_graphrag.experimental.pipeline.types.context import RunContext
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
 from neo4j_graphrag.utils.validation import issubclass_safe
 
@@ -36,34 +37,39 @@ class ComponentMeta(abc.ABCMeta):
     ) -> type:
         # extract required inputs and outputs from the run method signature
         run_method = attrs.get("run")
-        if run_method is not None:
-            sig = inspect.signature(run_method)
-            attrs["component_inputs"] = {
-                param.name: {
-                    "has_default": param.default != inspect.Parameter.empty,
-                    "annotation": param.annotation,
-                }
-                for param in sig.parameters.values()
-                if param.name not in ("self", "kwargs")
+        run_context_method = attrs.get("run_with_context")
+        run = run_context_method or run_method
+        if run is None:
+            raise RuntimeError(
+                f"Either 'run' or 'run_with_context' must be implemented in component: '{name}'"
+            )
+        sig = inspect.signature(run)
+        attrs["component_inputs"] = {
+            param.name: {
+                "has_default": param.default != inspect.Parameter.empty,
+                "annotation": param.annotation,
             }
-            # extract returned fields from the run method return type hint
-            return_model = get_type_hints(run_method).get("return")
-            if return_model is None:
-                raise PipelineDefinitionError(
-                    f"The run method return type must be annotated in {name}"
-                )
-            # the type hint must be a subclass of DataModel
-            if not issubclass_safe(return_model, DataModel):
-                raise PipelineDefinitionError(
-                    f"The run method must return a subclass of DataModel in {name}"
-                )
-            attrs["component_outputs"] = {
-                f: {
-                    "has_default": field.is_required(),
-                    "annotation": field.annotation,
-                }
-                for f, field in return_model.model_fields.items()
+            for param in sig.parameters.values()
+            if param.name not in ("self", "kwargs", "context_")
+        }
+        # extract returned fields from the run method return type hint
+        return_model = get_type_hints(run).get("return")
+        if return_model is None:
+            raise PipelineDefinitionError(
+                f"The run method return type must be annotated in {name}"
+            )
+        # the type hint must be a subclass of DataModel
+        if not issubclass_safe(return_model, DataModel):
+            raise PipelineDefinitionError(
+                f"The run method must return a subclass of DataModel in {name}"
+            )
+        attrs["component_outputs"] = {
+            f: {
+                "has_default": field.is_required(),
+                "annotation": field.annotation,
             }
+            for f, field in return_model.model_fields.items()
+        }
         return type.__new__(meta, name, bases, attrs)
 
 
@@ -81,3 +87,9 @@ class Component(abc.ABC, metaclass=ComponentMeta):
     @abc.abstractmethod
     async def run(self, *args: Any, **kwargs: Any) -> DataModel:
         pass
+
+    async def run_with_context(
+        self, context_: RunContext, *args: Any, **kwargs: Any
+    ) -> DataModel:
+        # default behavior to prevent a breaking change
+        return await self.run(*args, **kwargs)

@@ -24,14 +24,14 @@ from unittest.mock import AsyncMock, call, patch
 import pytest
 from neo4j_graphrag.experimental.pipeline import Component, Pipeline
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
-from neo4j_graphrag.experimental.pipeline.types import (
+from neo4j_graphrag.experimental.pipeline.notification import (
     EventCallbackProtocol,
     EventType,
     PipelineEvent,
-    RunResult,
     TaskEvent,
     Event,
 )
+from neo4j_graphrag.experimental.pipeline.types.orchestration import RunResult
 
 from .components import (
     ComponentAdd,
@@ -251,11 +251,11 @@ def test_pipeline_parameter_validation_full_missing_inputs() -> None:
 async def test_pipeline_branches() -> None:
     pipe = Pipeline()
     component_a = AsyncMock(spec=Component)
-    component_a.run = AsyncMock(return_value={})
+    component_a.run_with_context = AsyncMock(return_value={})
     component_b = AsyncMock(spec=Component)
-    component_b.run = AsyncMock(return_value={})
+    component_b.run_with_context = AsyncMock(return_value={})
     component_c = AsyncMock(spec=Component)
-    component_c.run = AsyncMock(return_value={})
+    component_c.run_with_context = AsyncMock(return_value={})
 
     pipe.add_component(component_a, "a")
     pipe.add_component(component_b, "b")
@@ -272,11 +272,11 @@ async def test_pipeline_branches() -> None:
 async def test_pipeline_aggregation() -> None:
     pipe = Pipeline()
     component_a = AsyncMock(spec=Component)
-    component_a.run = AsyncMock(return_value={})
+    component_a.run_with_context = AsyncMock(return_value={})
     component_b = AsyncMock(spec=Component)
-    component_b.run = AsyncMock(return_value={})
+    component_b.run_with_context = AsyncMock(return_value={})
     component_c = AsyncMock(spec=Component)
-    component_c.run = AsyncMock(return_value={})
+    component_c.run_with_context = AsyncMock(return_value={})
 
     pipe.add_component(
         component_a,

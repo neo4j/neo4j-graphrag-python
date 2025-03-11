@@ -40,13 +40,15 @@ from neo4j_graphrag.experimental.pipeline.pipeline_graph import (
     PipelineNode,
 )
 from neo4j_graphrag.experimental.pipeline.stores import InMemoryStore, ResultStore
-from neo4j_graphrag.experimental.pipeline.types import (
+from neo4j_graphrag.experimental.pipeline.types.definitions import (
     ComponentDefinition,
     ConnectionDefinition,
-    EventCallbackProtocol,
     PipelineDefinition,
-    RunResult,
 )
+from neo4j_graphrag.experimental.pipeline.types.orchestration import RunResult
+from neo4j_graphrag.experimental.pipeline.types.context import RunContext
+from neo4j_graphrag.experimental.pipeline.notification import EventCallbackProtocol
+
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +69,9 @@ class TaskPipelineNode(PipelineNode):
         super().__init__(name, {})
         self.component = component
 
-    async def execute(self, **kwargs: Any) -> RunResult | None:
+    async def execute(
+        self, context: RunContext, inputs: dict[str, Any]
+    ) -> RunResult | None:
         """Execute the task
 
         Returns:
@@ -75,17 +79,21 @@ class TaskPipelineNode(PipelineNode):
             if the task run successfully, None if the status update
             was unsuccessful.
         """
-        component_result = await self.component.run(**kwargs)
+        component_result = await self.component.run_with_context(
+            context_=context, **inputs
+        )
         run_result = RunResult(
             result=component_result,
         )
         return run_result
 
-    async def run(self, inputs: dict[str, Any]) -> RunResult | None:
+    async def run(
+        self, context: RunContext, inputs: dict[str, Any]
+    ) -> RunResult | None:
         """Main method to execute the task."""
         logger.debug(f"TASK START {self.name=} input={prettify(inputs)}")
         start_time = default_timer()
-        res = await self.execute(**inputs)
+        res = await self.execute(context, inputs)
         end_time = default_timer()
         logger.debug(
             f"TASK FINISHED {self.name} in {end_time - start_time} res={prettify(res)}"

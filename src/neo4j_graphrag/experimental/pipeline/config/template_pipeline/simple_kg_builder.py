@@ -47,8 +47,8 @@ from neo4j_graphrag.experimental.pipeline.config.template_pipeline.base import (
 )
 from neo4j_graphrag.experimental.pipeline.config.types import PipelineType
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
-from neo4j_graphrag.experimental.pipeline.types import (
-    ConnectionDefinition,
+from neo4j_graphrag.experimental.pipeline.types.definitions import ConnectionDefinition
+from neo4j_graphrag.experimental.pipeline.types.schema import (
     EntityInputType,
     RelationInputType,
 )
