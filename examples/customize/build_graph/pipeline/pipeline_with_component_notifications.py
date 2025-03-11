@@ -17,7 +17,7 @@ logging.basicConfig()
 logger.setLevel(logging.INFO)
 
 
-class BatchComponentResult(DataModel):
+class MultiplyComponentResult(DataModel):
     result: list[int]
 
 
@@ -25,11 +25,13 @@ class MultiplicationComponent(Component):
     def __init__(self, f: int) -> None:
         self.f = f
 
-    async def run(self, numbers: list[int]) -> BatchComponentResult:
-        return BatchComponentResult(result=[])
+    async def run(self, numbers: list[int]) -> MultiplyComponentResult:
+        return MultiplyComponentResult(result=[])
 
     async def multiply_number(
-        self, context_: RunContext, number: int,
+        self,
+        context_: RunContext,
+        number: int,
     ) -> int:
         await context_.notify(
             message=f"Processing number {number}",
@@ -42,7 +44,7 @@ class MultiplicationComponent(Component):
         context_: RunContext,
         numbers: list[int],
         **kwargs: Any,
-    ) -> BatchComponentResult:
+    ) -> MultiplyComponentResult:
         result = await asyncio.gather(
             *[
                 self.multiply_number(
@@ -52,7 +54,7 @@ class MultiplicationComponent(Component):
                 for number in numbers
             ]
         )
-        return BatchComponentResult(result=result)
+        return MultiplyComponentResult(result=result)
 
 
 async def event_handler(event: Event) -> None:
