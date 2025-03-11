@@ -41,7 +41,9 @@ async def test_component_run() -> None:
     result = await c.run(number1=1, number2=2)
     assert isinstance(result, IntResultModel)
     assert isinstance(
-        result.result, ComponentMultiply.component_outputs["result"]["annotation"]
+        result.result,
+        # we know this is a type and not a bool or str:
+        ComponentMultiply.component_outputs["result"]["annotation"],  # type: ignore
     )
 
 
@@ -55,7 +57,9 @@ async def test_component_run_with_context_default_implementation() -> None:
         number1=1,
         number2=2,
     )
-    assert result.result == 2
+    # the type checker doesn't know about the type
+    # because the method is not re-declared
+    assert result.result == 2  # type: ignore
 
 
 @pytest.mark.asyncio
