@@ -40,7 +40,7 @@ class ComponentMeta(type):
         run = run_context_method if run_context_method is not None else run_method
         if run is None:
             raise RuntimeError(
-                f"You must implement either `run` or `run_with_context` in Component '{name}'"
+                f"Either 'run' or 'run_with_context' must be implemented in component: '{name}'"
             )
         sig = inspect.signature(run)
         attrs["component_inputs"] = {
