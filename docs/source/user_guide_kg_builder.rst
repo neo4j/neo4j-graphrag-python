@@ -125,8 +125,8 @@ This schema information can be provided to the `SimpleKGBuilder` as demonstrated
         # ...
     )
 
-Prompt Template, Lexical Graph Config, Schema Enforcement, and Error Behavior
---------------------------------------------------------
+Extra configurations
+--------------------
 
 These parameters are part of the `EntityAndRelationExtractor` component.
 For detailed information, refer to the section on :ref:`Entity and Relation Extractor`.
@@ -138,7 +138,7 @@ They are also accessible via the `SimpleKGPipeline` interface.
         # ...
         prompt_template="",
         lexical_graph_config=my_config,
-        enforce_schema=SchemaEnforcementMode.Strict
+        enforce_schema="STRICT"
         on_error="RAISE",
         # ...
     )

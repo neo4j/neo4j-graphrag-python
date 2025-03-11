@@ -409,7 +409,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             schema_entity = schema.entities.get(node.label)
             if not schema_entity:
                 continue
-            allowed_props = schema_entity.get("properties", {})
+            allowed_props = schema_entity.get("properties", [])
             filtered_props = self._enforce_properties(node.properties, allowed_props)
             if filtered_props:
                 valid_nodes.append(
@@ -461,7 +461,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                     (start_label, rel.type, end_label) not in potential_schema):
                 continue
 
-            allowed_props = schema_relation.get("properties", {})
+            allowed_props = schema_relation.get("properties", [])
             filtered_props = self._enforce_properties(rel.properties, allowed_props)
 
             valid_rels.append(

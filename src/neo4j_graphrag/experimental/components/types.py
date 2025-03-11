@@ -174,5 +174,5 @@ class GraphResult(DataModel):
 
 
 class SchemaEnforcementMode(str, Enum):
-    NONE = "none"
-    STRICT = "strict"
+    NONE = "NONE"
+    STRICT = "STRICT"
