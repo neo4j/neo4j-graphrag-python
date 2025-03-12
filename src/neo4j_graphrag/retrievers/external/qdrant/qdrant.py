@@ -211,7 +211,7 @@ class QdrantNeo4jRetriever(ExternalRetriever):
         for point in points:
             assert point.payload is not None
             result_tuples.append(
-                [f"{point.payload[self.id_property_external]}", point.score]
+                [point.payload.get(self.id_property_external, point.id), point.score]
             )
 
         search_query = get_match_query(
