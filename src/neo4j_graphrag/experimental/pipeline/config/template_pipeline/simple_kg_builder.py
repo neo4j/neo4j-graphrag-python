@@ -39,7 +39,7 @@ from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter i
 )
 from neo4j_graphrag.experimental.components.types import (
     LexicalGraphConfig,
-    SchemaEnforcementMode
+    SchemaEnforcementMode,
 )
 from neo4j_graphrag.experimental.pipeline.config.object_config import ComponentType
 from neo4j_graphrag.experimental.pipeline.config.template_pipeline.base import (

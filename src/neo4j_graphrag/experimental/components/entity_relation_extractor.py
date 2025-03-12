@@ -346,13 +346,11 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         return graph
 
     def validate_chunk(
-            self,
-            chunk_graph: Neo4jGraph,
-            schema: SchemaConfig
+        self, chunk_graph: Neo4jGraph, schema: SchemaConfig
     ) -> Neo4jGraph:
         """
-         Perform validation after entity and relation extraction:
-         - Enforce schema if schema enforcement mode is on and schema is provided
+        Perform validation after entity and relation extraction:
+        - Enforce schema if schema enforcement mode is on and schema is provided
         """
         if self.enforce_schema != SchemaEnforcementMode.NONE:
             if not schema or not schema.entities:  # schema is not provided
@@ -365,9 +363,9 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         return chunk_graph
 
     def _clean_graph(
-            self,
-            graph: Neo4jGraph,
-            schema: SchemaConfig,
+        self,
+        graph: Neo4jGraph,
+        schema: SchemaConfig,
     ) -> Neo4jGraph:
         """
         Verify that the graph conforms to the provided schema.
@@ -389,17 +387,15 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         return Neo4jGraph(nodes=filtered_nodes, relationships=filtered_rels)
 
     def _enforce_nodes(
-            self,
-            extracted_nodes: List[Neo4jNode],
-            schema: SchemaConfig
+        self, extracted_nodes: List[Neo4jNode], schema: SchemaConfig
     ) -> List[Neo4jNode]:
         """
-            Filter extracted nodes to be conformant to the schema.
+        Filter extracted nodes to be conformant to the schema.
 
-            Keep only those whose label is in schema.
-            For each valid node, filter out properties not present in the schema.
-            Remove a node if it ends up with no valid properties.
-            """
+        Keep only those whose label is in schema.
+        For each valid node, filter out properties not present in the schema.
+        Remove a node if it ends up with no valid properties.
+        """
         if self.enforce_schema != SchemaEnforcementMode.STRICT:
             return extracted_nodes
 
@@ -424,10 +420,10 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         return valid_nodes
 
     def _enforce_relationships(
-            self,
-            extracted_relationships: List[Neo4jRelationship],
-            filtered_nodes: List[Neo4jNode],
-            schema: SchemaConfig
+        self,
+        extracted_relationships: List[Neo4jRelationship],
+        filtered_nodes: List[Neo4jNode],
+        schema: SchemaConfig,
     ) -> List[Neo4jRelationship]:
         """
         Filter extracted nodes to be conformant to the schema.
@@ -451,8 +447,10 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             if not schema_relation:
                 continue
 
-            if (rel.start_node_id not in valid_nodes or
-                    rel.end_node_id not in valid_nodes):
+            if (
+                rel.start_node_id not in valid_nodes
+                or rel.end_node_id not in valid_nodes
+            ):
                 continue
 
             start_label = valid_nodes[rel.start_node_id]
@@ -461,8 +459,11 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             tuple_valid = True
             if potential_schema:
                 tuple_valid = (start_label, rel.type, end_label) in potential_schema
-                reverse_tuple_valid = ((end_label, rel.type, start_label) in
-                                       potential_schema)
+                reverse_tuple_valid = (
+                    end_label,
+                    rel.type,
+                    start_label,
+                ) in potential_schema
 
                 if not tuple_valid and not reverse_tuple_valid:
                     continue
@@ -483,9 +484,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         return valid_rels
 
     def _enforce_properties(
-            self,
-            properties: Dict[str, Any],
-            valid_properties: List[Dict[str, Any]]
+        self, properties: Dict[str, Any], valid_properties: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """
         Filter properties.
@@ -493,8 +492,5 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         """
         valid_prop_names = {prop["name"] for prop in valid_properties}
         return {
-            key: value
-            for key, value in properties.items()
-            if key in valid_prop_names
+            key: value for key, value in properties.items() if key in valid_prop_names
         }
-
