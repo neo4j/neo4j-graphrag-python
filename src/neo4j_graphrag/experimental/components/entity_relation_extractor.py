@@ -443,7 +443,9 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         potential_schema = schema.potential_schema
 
         for rel in extracted_relationships:
-            schema_relation = schema.relations.get(rel.type)
+            schema_relation = (
+                schema.relations.get(rel.type) if schema.relations else None
+            )
             if not schema_relation:
                 continue
 

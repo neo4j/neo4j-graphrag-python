@@ -264,7 +264,7 @@ async def test_extractor_no_schema_enforcement() -> None:
 
 
 @pytest.mark.asyncio
-async def test_extractor_schema_enforcement_when_no_schema_provided():
+async def test_extractor_schema_enforcement_when_no_schema_provided() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(
         content='{"nodes":[{"id":"0","label":"Alien","properties":{"foo":"bar"}}],'
@@ -285,7 +285,7 @@ async def test_extractor_schema_enforcement_when_no_schema_provided():
 
 
 @pytest.mark.asyncio
-async def test_extractor_schema_enforcement_invalid_nodes():
+async def test_extractor_schema_enforcement_invalid_nodes() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(
         content='{"nodes":[{"id":"0","label":"Alien","properties":{"foo":"bar"}},'
@@ -318,7 +318,7 @@ async def test_extractor_schema_enforcement_invalid_nodes():
 
 
 @pytest.mark.asyncio
-async def test_extraction_schema_enforcement_invalid_node_properties():
+async def test_extraction_schema_enforcement_invalid_node_properties() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(
         content='{"nodes":[{"id":"1","label":"Person","properties":'
@@ -355,7 +355,7 @@ async def test_extraction_schema_enforcement_invalid_node_properties():
 
 
 @pytest.mark.asyncio
-async def test_extractor_schema_enforcement_valid_nodes_with_empty_props():
+async def test_extractor_schema_enforcement_valid_nodes_with_empty_props() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(
         content='{"nodes":[{"id":"1","label":"Person","properties":{"foo":"bar"}}],'
@@ -378,7 +378,7 @@ async def test_extractor_schema_enforcement_valid_nodes_with_empty_props():
 
 
 @pytest.mark.asyncio
-async def test_extractor_schema_enforcement_invalid_relations_wrong_types():
+async def test_extractor_schema_enforcement_invalid_relations_wrong_types() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(
         content='{"nodes":[{"id":"1","label":"Person","properties":'
@@ -412,7 +412,9 @@ async def test_extractor_schema_enforcement_invalid_relations_wrong_types():
 
 
 @pytest.mark.asyncio
-async def test_extractor_schema_enforcement_invalid_relations_wrong_start_node():
+async def test_extractor_schema_enforcement_invalid_relations_wrong_start_node() -> (
+    None
+):
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(
         content='{"nodes":[{"id":"1","label":"Person","properties":{"name":"Alice"}},'
@@ -450,7 +452,7 @@ async def test_extractor_schema_enforcement_invalid_relations_wrong_start_node()
 
 
 @pytest.mark.asyncio
-async def test_extractor_schema_enforcement_invalid_relation_properties():
+async def test_extractor_schema_enforcement_invalid_relation_properties() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(
         content='{"nodes":[{"id":"1","label":"Person","properties":{"name":"Alice"}},'
@@ -491,7 +493,7 @@ async def test_extractor_schema_enforcement_invalid_relation_properties():
 
 
 @pytest.mark.asyncio
-async def test_extractor_schema_enforcement_removed_relation_start_end_nodes():
+async def test_extractor_schema_enforcement_removed_relation_start_end_nodes() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(
         content='{"nodes":[{"id":"1","label":"Alien","properties":{}},'
@@ -524,7 +526,7 @@ async def test_extractor_schema_enforcement_removed_relation_start_end_nodes():
 
 
 @pytest.mark.asyncio
-async def test_extractor_schema_enforcement_inverted_relation_direction():
+async def test_extractor_schema_enforcement_inverted_relation_direction() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(
         content='{"nodes":[{"id":"1","label":"Person","properties":{"name":"Alice"}},'
