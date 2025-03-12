@@ -25,11 +25,13 @@ from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     balance_curly_braces,
     fix_invalid_json,
 )
+from neo4j_graphrag.experimental.components.schema import SchemaConfig
 from neo4j_graphrag.experimental.components.types import (
     DocumentInfo,
     Neo4jGraph,
     TextChunk,
     TextChunks,
+    SchemaEnforcementMode,
 )
 from neo4j_graphrag.experimental.pipeline.exceptions import InvalidJSONError
 from neo4j_graphrag.llm import LLMInterface, LLMResponse
@@ -227,6 +229,288 @@ async def test_extractor_custom_prompt() -> None:
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
     await extractor.run(chunks=chunks)
     llm.ainvoke.assert_called_once_with("this is my prompt")
+
+
+@pytest.mark.asyncio
+async def test_extractor_no_schema_enforcement() -> None:
+    llm = MagicMock(spec=LLMInterface)
+    llm.ainvoke.return_value = LLMResponse(
+        content='{"nodes":[{"id":"0","label":"Alien","properties":{"foo":"bar"}}],'
+                '"relationships":[]}'
+    )
+
+    extractor = LLMEntityRelationExtractor(llm=llm,
+                                           create_lexical_graph=False,
+                                           enforce_schema=SchemaEnforcementMode.NONE)
+
+    schema = SchemaConfig(
+        entities={"Person": {"label": "Person",
+                             "properties": [{"name": "name", "type": "STRING"}]}},
+        relations={},
+        potential_schema=[])
+
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
+
+    result: Neo4jGraph = await extractor.run(chunks=chunks, schema=schema)
+
+    assert len(result.nodes) == 1
+    assert result.nodes[0].label == "Alien"
+    assert result.nodes[0].properties == {"chunk_index": 0, "foo": "bar"}
+
+
+@pytest.mark.asyncio
+async def test_extractor_schema_enforcement_when_no_schema_provided():
+    llm = MagicMock(spec=LLMInterface)
+    llm.ainvoke.return_value = LLMResponse(
+        content='{"nodes":[{"id":"0","label":"Alien","properties":{"foo":"bar"}}],'
+                '"relationships":[]}'
+    )
+
+    extractor = LLMEntityRelationExtractor(llm=llm,
+                                           create_lexical_graph=False,
+                                           enforce_schema=SchemaEnforcementMode.STRICT)
+
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
+
+    result: Neo4jGraph = await extractor.run(chunks=chunks)
+
+    assert len(result.nodes) == 1
+    assert result.nodes[0].label == "Alien"
+    assert result.nodes[0].properties == {"chunk_index": 0, "foo": "bar"}
+
+
+@pytest.mark.asyncio
+async def test_extractor_schema_enforcement_invalid_nodes():
+    llm = MagicMock(spec=LLMInterface)
+    llm.ainvoke.return_value = LLMResponse(
+        content='{"nodes":[{"id":"0","label":"Alien","properties":{"foo":"bar"}},'
+                '{"id":"1","label":"Person","properties":{"name":"Alice"}}],'
+                '"relationships":[]}'
+    )
+
+    extractor = LLMEntityRelationExtractor(llm=llm,
+                                           create_lexical_graph=False,
+                                           enforce_schema=SchemaEnforcementMode.STRICT)
+
+    schema = SchemaConfig(
+        entities={"Person": {"label": "Person",
+                             "properties": [{"name": "name", "type": "STRING"}]}},
+        relations={},
+        potential_schema=[])
+
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
+
+    result: Neo4jGraph = await extractor.run(chunks=chunks, schema=schema)
+
+    assert len(result.nodes) == 1
+    assert result.nodes[0].label == "Person"
+    assert result.nodes[0].properties == {"chunk_index": 0, "name": "Alice"}
+
+
+@pytest.mark.asyncio
+async def test_extraction_schema_enforcement_invalid_node_properties():
+    llm = MagicMock(spec=LLMInterface)
+    llm.ainvoke.return_value = LLMResponse(
+        content='{"nodes":[{"id":"1","label":"Person","properties":'
+                '{"name":"Alice","age":30,"foo":"bar"}}],'
+                '"relationships":[]}'
+    )
+
+    extractor = LLMEntityRelationExtractor(llm=llm,
+                                           create_lexical_graph=False,
+                                           enforce_schema=SchemaEnforcementMode.STRICT)
+
+    schema = SchemaConfig(
+        entities={"Person": {"label": "Person",
+                             "properties": [{"name": "name", "type": "STRING"},
+                                            {"name": "age", "type": "INTEGER"}]}},
+        relations={},
+        potential_schema=[])
+
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
+
+    result: Neo4jGraph = await extractor.run(chunks, schema=schema)
+
+    # "foo" is removed
+    assert len(result.nodes) == 1
+    assert len(result.nodes[0].properties) == 3
+    assert "foo" not in result.nodes[0].properties
+
+
+@pytest.mark.asyncio
+async def test_extractor_schema_enforcement_valid_nodes_with_empty_props():
+    llm = MagicMock(spec=LLMInterface)
+    llm.ainvoke.return_value = LLMResponse(
+        content='{"nodes":[{"id":"1","label":"Person","properties":{"foo":"bar"}}],'
+                '"relationships":[]}'
+    )
+
+    extractor = LLMEntityRelationExtractor(llm=llm,
+                                           create_lexical_graph=False,
+                                           enforce_schema=SchemaEnforcementMode.STRICT)
+
+    schema = SchemaConfig(entities={"Person": {"label": "Person"}},
+                          relations={},
+                          potential_schema=[])
+
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
+
+    result: Neo4jGraph = await extractor.run(chunks, schema=schema)
+
+    assert len(result.nodes) == 0
+
+
+@pytest.mark.asyncio
+async def test_extractor_schema_enforcement_invalid_relations_wrong_types():
+    llm = MagicMock(spec=LLMInterface)
+    llm.ainvoke.return_value = LLMResponse(
+        content='{"nodes":[{"id":"1","label":"Person","properties":'
+                '{"name":"Alice"}},{"id":"2","label":"Person","properties":'
+                '{"name":"Bob"}}],'
+                '"relationships":[{"start_node_id":"1","end_node_id":"2",'
+                '"type":"FRIENDS_WITH","properties":{}}]}'
+    )
+
+    extractor = LLMEntityRelationExtractor(llm=llm,
+                                           create_lexical_graph=False,
+                                           enforce_schema=SchemaEnforcementMode.STRICT)
+
+    schema = SchemaConfig(
+        entities={"Person": {"label": "Person",
+                             "properties": [{"name": "name", "type": "STRING"}]}},
+        relations={"LIKES": {"label": "LIKES"}},
+        potential_schema=[])
+
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
+
+    result: Neo4jGraph = await extractor.run(chunks, schema=schema)
+
+    assert len(result.nodes) == 2
+    assert len(result.relationships) == 0
+
+
+@pytest.mark.asyncio
+async def test_extractor_schema_enforcement_invalid_relations_wrong_start_node():
+    llm = MagicMock(spec=LLMInterface)
+    llm.ainvoke.return_value = LLMResponse(
+        content='{"nodes":[{"id":"1","label":"Person","properties":{"name":"Alice"}},'
+                '{"id":"2","label":"Person","properties":{"name":"Bob"}}, '
+                '{"id":"3","label":"City","properties":{"name":"London"}}],'
+                '"relationships":[{"start_node_id":"1","end_node_id":"2",'
+                '"type":"LIVES_IN","properties":{}}]}'
+    )
+
+    extractor = LLMEntityRelationExtractor(llm=llm,
+                                           create_lexical_graph=False,
+                                           enforce_schema=SchemaEnforcementMode.STRICT)
+
+    schema = SchemaConfig(
+        entities={"Person": {"label": "Person",
+                             "properties": [{"name": "name", "type": "STRING"}]},
+                  "City": {"label": "City",
+                           "properties": [{"name": "name", "type": "STRING"}]}},
+        relations={"LIVES_IN": {"label": "LIVES_IN"}},
+        potential_schema=[("Person", "LIVES_IN", "City")])
+
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
+
+    result: Neo4jGraph = await extractor.run(chunks, schema=schema)
+
+    assert len(result.nodes) == 3
+    assert len(result.relationships) == 0
+
+
+@pytest.mark.asyncio
+async def test_extractor_schema_enforcement_invalid_relation_properties():
+    llm = MagicMock(spec=LLMInterface)
+    llm.ainvoke.return_value = LLMResponse(
+        content='{"nodes":[{"id":"1","label":"Person","properties":{"name":"Alice"}},'
+                '{"id":"2","label":"Person","properties":{"name":"Bob"}}],'
+                '"relationships":[{"start_node_id":"1","end_node_id":"2",'
+                '"type":"LIKES","properties":{"strength":"high","foo":"bar"}}]}'
+    )
+
+    extractor = LLMEntityRelationExtractor(llm=llm,
+                                           create_lexical_graph=False,
+                                           enforce_schema=SchemaEnforcementMode.STRICT)
+
+    schema = SchemaConfig(
+        entities={"Person": {"label": "Person",
+                             "properties": [{"name": "name", "type": "STRING"}]}},
+        relations={"LIKES": {"label": "LIKES",
+                             "properties": [{"name": "strength", "type": "STRING"}]}},
+        potential_schema=[]
+    )
+
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
+
+    result: Neo4jGraph = await extractor.run(chunks, schema=schema)
+
+    assert len(result.nodes) == 2
+    assert len(result.relationships) == 1
+    rel = result.relationships[0]
+    assert "foo" not in rel.properties
+    assert rel.properties["strength"] == "high"
+
+
+@pytest.mark.asyncio
+async def test_extractor_schema_enforcement_removed_relation_start_end_nodes():
+    llm = MagicMock(spec=LLMInterface)
+    llm.ainvoke.return_value = LLMResponse(
+        content='{"nodes":[{"id":"1","label":"Alien","properties":{}},'
+                '{"id":"2","label":"Robot","properties":{}}],'
+                '"relationships":[{"start_node_id":"1","end_node_id":"2",'
+                '"type":"LIKES","properties":{}}]}'
+    )
+
+    extractor = LLMEntityRelationExtractor(llm=llm,
+                                           create_lexical_graph=False,
+                                           enforce_schema=SchemaEnforcementMode.STRICT)
+
+    schema = SchemaConfig(
+        entities={"Person": {"label": "Person",
+                             "properties": [{"name": "name", "type": "STRING"}]}},
+        relations={"LIKES": {"label": "LIKES"}},
+        potential_schema=[("Person", "LIKES", "Person")])
+
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
+
+    result: Neo4jGraph = await extractor.run(chunks, schema=schema)
+
+    assert len(result.nodes) == 0
+    assert len(result.relationships) == 0
+
+
+@pytest.mark.asyncio
+async def test_extractor_schema_enforcement_inverted_relation_direction():
+    llm = MagicMock(spec=LLMInterface)
+    llm.ainvoke.return_value = LLMResponse(
+        content='{"nodes":[{"id":"1","label":"Person","properties":{"name":"Alice"}},'
+                '{"id":"2","label":"City","properties":{"name":"London"}}],'
+                '"relationships":[{"start_node_id":"2","end_node_id":"1",'
+                '"type":"LIVES_IN","properties":{}}]}'
+    )
+
+    extractor = LLMEntityRelationExtractor(llm=llm,
+                                           create_lexical_graph=False,
+                                           enforce_schema=SchemaEnforcementMode.STRICT)
+
+    schema = SchemaConfig(
+        entities={"Person": {"label": "Person",
+                             "properties": [{"name": "name", "type": "STRING"}]},
+                  "City": {"label": "City",
+                           "properties": [{"name": "name", "type": "STRING"}]}},
+        relations={"LIVES_IN": {"label": "LIVES_IN"}},
+        potential_schema=[("Person", "LIVES_IN", "City")])
+
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
+
+    result: Neo4jGraph = await extractor.run(chunks, schema=schema)
+
+    assert len(result.nodes) == 2
+    assert len(result.relationships) == 1
+    assert result.relationships[0].start_node_id.split(":")[1] == "1"
+    assert result.relationships[0].end_node_id.split(":")[1] == "2"
 
 
 def test_fix_invalid_json_empty_result() -> None:

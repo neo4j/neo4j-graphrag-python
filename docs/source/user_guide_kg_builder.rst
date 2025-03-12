@@ -125,8 +125,8 @@ This schema information can be provided to the `SimpleKGBuilder` as demonstrated
         # ...
     )
 
-Prompt Template, Lexical Graph Config and Error Behavior
---------------------------------------------------------
+Extra configurations
+--------------------
 
 These parameters are part of the `EntityAndRelationExtractor` component.
 For detailed information, refer to the section on :ref:`Entity and Relation Extractor`.
@@ -138,6 +138,7 @@ They are also accessible via the `SimpleKGPipeline` interface.
         # ...
         prompt_template="",
         lexical_graph_config=my_config,
+        enforce_schema="STRICT"
         on_error="RAISE",
         # ...
     )
@@ -828,6 +829,30 @@ It can be used in this way:
     The `LLMEntityRelationExtractor` works better if `"response_format": {"type": "json_object"}` is in the model parameters.
 
 The LLM to use can be customized, the only constraint is that it obeys the :ref:`LLMInterface <llminterface>`.
+
+Schema Enforcement Behaviour
+----------------------------
+By default, even if a schema is provided to guide the LLM in the entity and relation extraction, the LLM response is not validated against that schema.
+This behaviour can be changed by using the `enforce_schema` flag in the `LLMEntityRelationExtractor` constructor:
+
+.. code:: python
+
+    from neo4j_graphrag.experimental.components.entity_relation_extractor import LLMEntityRelationExtractor
+    from neo4j_graphrag.experimental.components.types import SchemaEnforcementMode
+
+    extractor = LLMEntityRelationExtractor(
+        # ...
+        enforce_schema=SchemaEnforcementMode.STRICT,
+    )
+
+In this scenario, any extracted node/relation/property that is not part of the provided schema will be pruned.
+Any relation whose start node or end node does not conform to the provided tuple in `potential_schema` will be pruned.
+If a relation start/end nodes are valid but the direction is incorrect, the latter will be inverted.
+If a node is left with no properties, it will be also pruned.
+
+.. warning::
+
+    Note that if the schema enforcement mode is on but the schema is not provided, no schema enforcement will be applied.
 
 Error Behaviour
 ---------------

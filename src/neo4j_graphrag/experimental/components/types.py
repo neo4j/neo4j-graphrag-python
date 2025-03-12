@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import uuid
+from enum import Enum
 from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field, field_validator
@@ -170,3 +171,8 @@ class LexicalGraphConfig(BaseModel):
 class GraphResult(DataModel):
     graph: Neo4jGraph
     config: LexicalGraphConfig
+
+
+class SchemaEnforcementMode(str, Enum):
+    NONE = "NONE"
+    STRICT = "STRICT"

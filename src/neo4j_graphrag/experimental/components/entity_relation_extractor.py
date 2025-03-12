@@ -19,7 +19,7 @@ import asyncio
 import enum
 import json
 import logging
-from typing import Any, List, Optional, Union, cast
+from typing import Any, List, Optional, Union, cast, Dict
 
 import json_repair
 from pydantic import ValidationError, validate_call
@@ -31,8 +31,11 @@ from neo4j_graphrag.experimental.components.types import (
     DocumentInfo,
     LexicalGraphConfig,
     Neo4jGraph,
+    Neo4jNode,
+    Neo4jRelationship,
     TextChunk,
     TextChunks,
+    SchemaEnforcementMode,
 )
 from neo4j_graphrag.experimental.pipeline.component import Component
 from neo4j_graphrag.experimental.pipeline.exceptions import InvalidJSONError
@@ -168,6 +171,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         llm (LLMInterface): The language model to use for extraction.
         prompt_template (ERExtractionTemplate | str): A custom prompt template to use for extraction.
         create_lexical_graph (bool): Whether to include the text chunks in the graph in addition to the extracted entities and relations. Defaults to True.
+        enforce_schema (SchemaEnforcementMode): Whether to validate or not the extracted entities/rels against the provided schema. Defaults to None.
         on_error (OnError): What to do when an error occurs during extraction. Defaults to raising an error.
         max_concurrency (int): The maximum number of concurrent tasks which can be used to make requests to the LLM.
 
@@ -192,11 +196,13 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         llm: LLMInterface,
         prompt_template: ERExtractionTemplate | str = ERExtractionTemplate(),
         create_lexical_graph: bool = True,
+        enforce_schema: SchemaEnforcementMode = SchemaEnforcementMode.NONE,
         on_error: OnError = OnError.RAISE,
         max_concurrency: int = 5,
     ) -> None:
         super().__init__(on_error=on_error, create_lexical_graph=create_lexical_graph)
         self.llm = llm  # with response_format={ "type": "json_object" },
+        self.enforce_schema = enforce_schema
         self.max_concurrency = max_concurrency
         if isinstance(prompt_template, str):
             template = PromptTemplate(prompt_template, expected_inputs=[])
@@ -275,15 +281,16 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         examples: str,
         lexical_graph_builder: Optional[LexicalGraphBuilder] = None,
     ) -> Neo4jGraph:
-        """Run extraction and post processing for a single chunk"""
+        """Run extraction, validation and post processing for a single chunk"""
         async with sem:
             chunk_graph = await self.extract_for_chunk(schema, examples, chunk)
+            final_chunk_graph = self.validate_chunk(chunk_graph, schema)
             await self.post_process_chunk(
-                chunk_graph,
+                final_chunk_graph,
                 chunk,
                 lexical_graph_builder,
             )
-            return chunk_graph
+            return final_chunk_graph
 
     @validate_call
     async def run(
@@ -306,7 +313,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             chunks (TextChunks): List of text chunks to extract entities and relations from.
             document_info (Optional[DocumentInfo], optional): Document the chunks are coming from. Used in the lexical graph creation step.
             lexical_graph_config (Optional[LexicalGraphConfig], optional): Lexical graph configuration to customize node labels and relationship types in the lexical graph.
-            schema (SchemaConfig | None): Definition of the schema to guide the LLM in its extraction. Caution: at the moment, there is no guarantee that the extracted entities and relations will strictly obey the schema.
+            schema (SchemaConfig | None): Definition of the schema to guide the LLM in its extraction.
             examples (str): Examples for few-shot learning in the prompt.
         """
         lexical_graph_builder = None
@@ -337,3 +344,157 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         graph = self.combine_chunk_graphs(lexical_graph, chunk_graphs)
         logger.debug(f"Extracted graph: {prettify(graph)}")
         return graph
+
+    def validate_chunk(
+            self,
+            chunk_graph: Neo4jGraph,
+            schema: SchemaConfig
+    ) -> Neo4jGraph:
+        """
+         Perform validation after entity and relation extraction:
+         - Enforce schema if schema enforcement mode is on and schema is provided
+        """
+        if self.enforce_schema != SchemaEnforcementMode.NONE:
+            if not schema or not schema.entities:  # schema is not provided
+                logger.warning(
+                    "Schema enforcement is ON but the guiding schema is not provided."
+                )
+            else:
+                # if enforcing_schema is on and schema is provided, clean the graph
+                return self._clean_graph(chunk_graph, schema)
+        return chunk_graph
+
+    def _clean_graph(
+            self,
+            graph: Neo4jGraph,
+            schema: SchemaConfig,
+    ) -> Neo4jGraph:
+        """
+        Verify that the graph conforms to the provided schema.
+
+        Remove invalid entities,relationships, and properties.
+        If an entity is removed, all of its relationships are also removed.
+        If no valid properties remain for an entity, remove that entity.
+        """
+        # enforce nodes (remove invalid labels, strip invalid properties)
+        filtered_nodes = self._enforce_nodes(graph.nodes, schema)
+
+        # enforce relationships (remove those referencing invalid nodes or with invalid
+        # types or with start/end nodes not conforming to the schema, and strip invalid
+        # properties)
+        filtered_rels = self._enforce_relationships(
+            graph.relationships, filtered_nodes, schema
+        )
+
+        return Neo4jGraph(nodes=filtered_nodes, relationships=filtered_rels)
+
+    def _enforce_nodes(
+            self,
+            extracted_nodes: List[Neo4jNode],
+            schema: SchemaConfig
+    ) -> List[Neo4jNode]:
+        """
+            Filter extracted nodes to be conformant to the schema.
+
+            Keep only those whose label is in schema.
+            For each valid node, filter out properties not present in the schema.
+            Remove a node if it ends up with no valid properties.
+            """
+        if self.enforce_schema != SchemaEnforcementMode.STRICT:
+            return extracted_nodes
+
+        valid_nodes = []
+
+        for node in extracted_nodes:
+            schema_entity = schema.entities.get(node.label)
+            if not schema_entity:
+                continue
+            allowed_props = schema_entity.get("properties", [])
+            filtered_props = self._enforce_properties(node.properties, allowed_props)
+            if filtered_props:
+                valid_nodes.append(
+                    Neo4jNode(
+                        id=node.id,
+                        label=node.label,
+                        properties=filtered_props,
+                        embedding_properties=node.embedding_properties,
+                    )
+                )
+
+        return valid_nodes
+
+    def _enforce_relationships(
+            self,
+            extracted_relationships: List[Neo4jRelationship],
+            filtered_nodes: List[Neo4jNode],
+            schema: SchemaConfig
+    ) -> List[Neo4jRelationship]:
+        """
+        Filter extracted nodes to be conformant to the schema.
+
+        Keep only those whose types are in schema, start/end node conform to schema,
+        and start/end nodes are in filtered nodes (i.e., kept after node enforcement).
+        For each valid relationship, filter out properties not present in the schema.
+        If a relationship direct is incorrect, invert it.
+        """
+        if self.enforce_schema != SchemaEnforcementMode.STRICT:
+            return extracted_relationships
+
+        valid_rels = []
+
+        valid_nodes = {node.id: node.label for node in filtered_nodes}
+
+        potential_schema = schema.potential_schema
+
+        for rel in extracted_relationships:
+            schema_relation = schema.relations.get(rel.type)
+            if not schema_relation:
+                continue
+
+            if (rel.start_node_id not in valid_nodes or
+                    rel.end_node_id not in valid_nodes):
+                continue
+
+            start_label = valid_nodes[rel.start_node_id]
+            end_label = valid_nodes[rel.end_node_id]
+
+            tuple_valid = True
+            if potential_schema:
+                tuple_valid = (start_label, rel.type, end_label) in potential_schema
+                reverse_tuple_valid = ((end_label, rel.type, start_label) in
+                                       potential_schema)
+
+                if not tuple_valid and not reverse_tuple_valid:
+                    continue
+
+            allowed_props = schema_relation.get("properties", [])
+            filtered_props = self._enforce_properties(rel.properties, allowed_props)
+
+            valid_rels.append(
+                Neo4jRelationship(
+                    start_node_id=rel.start_node_id if tuple_valid else rel.end_node_id,
+                    end_node_id=rel.end_node_id if tuple_valid else rel.start_node_id,
+                    type=rel.type,
+                    properties=filtered_props,
+                    embedding_properties=rel.embedding_properties,
+                )
+            )
+
+        return valid_rels
+
+    def _enforce_properties(
+            self,
+            properties: Dict[str, Any],
+            valid_properties: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        Filter properties.
+        Keep only those that exist in schema (i.e., valid properties).
+        """
+        valid_prop_names = {prop["name"] for prop in valid_properties}
+        return {
+            key: value
+            for key, value in properties.items()
+            if key in valid_prop_names
+        }
+
