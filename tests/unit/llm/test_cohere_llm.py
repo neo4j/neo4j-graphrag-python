@@ -50,7 +50,8 @@ def test_cohere_llm_happy_path(mock_cohere: Mock) -> None:
 def test_cohere_llm_invoke_with_message_history_happy_path(mock_cohere: Mock) -> None:
     chat_response_mock = MagicMock()
     chat_response_mock.message.content = [MagicMock(text="cohere response text")]
-    mock_cohere.ClientV2.return_value.chat.return_value = chat_response_mock
+    mock_cohere_client_chat = mock_cohere.ClientV2.return_value.chat
+    mock_cohere_client_chat.return_value = chat_response_mock
 
     system_instruction = "You are a helpful assistant."
     llm = CohereLLM(model_name="something")
@@ -66,7 +67,7 @@ def test_cohere_llm_invoke_with_message_history_happy_path(mock_cohere: Mock) ->
     messages = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
-    llm.client.chat.assert_called_once_with(
+    mock_cohere_client_chat.assert_called_once_with(
         messages=messages,
         model="something",
     )
@@ -77,7 +78,8 @@ def test_cohere_llm_invoke_with_message_history_and_system_instruction(
 ) -> None:
     chat_response_mock = MagicMock()
     chat_response_mock.message.content = [MagicMock(text="cohere response text")]
-    mock_cohere.ClientV2.return_value.chat.return_value = chat_response_mock
+    mock_cohere_client_chat = mock_cohere.ClientV2.return_value.chat
+    mock_cohere_client_chat.return_value = chat_response_mock
 
     system_instruction = "You are a helpful assistant."
     llm = CohereLLM(model_name="gpt")
@@ -93,11 +95,10 @@ def test_cohere_llm_invoke_with_message_history_and_system_instruction(
     messages = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
-    llm.client.chat.assert_called_once_with(
+    mock_cohere_client_chat.assert_called_once_with(
         messages=messages,
         model="gpt",
     )
-    assert llm.client.chat.call_count == 1
 
 
 def test_cohere_llm_invoke_with_message_history_validation_error(
@@ -122,9 +123,12 @@ def test_cohere_llm_invoke_with_message_history_validation_error(
 
 @pytest.mark.asyncio
 async def test_cohere_llm_happy_path_async(mock_cohere: Mock) -> None:
-    chat_response_mock = AsyncMock()
-    chat_response_mock.message.content = [AsyncMock(text="cohere response text")]
-    mock_cohere.AsyncClientV2.return_value.chat.return_value = chat_response_mock
+    chat_response_mock = MagicMock(
+        message=MagicMock(content=[MagicMock(text="cohere response text")])
+    )
+    mock_cohere.AsyncClientV2.return_value.chat = AsyncMock(
+        return_value=chat_response_mock
+    )
 
     llm = CohereLLM(model_name="something")
     res = await llm.ainvoke("my text")

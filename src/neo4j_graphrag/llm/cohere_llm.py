@@ -124,7 +124,7 @@ class CohereLLM(LLMInterface):
         except self.cohere_api_error as e:
             raise LLMGenerationError(e)
         return LLMResponse(
-            content=res.message.content[0].text,
+            content=res.message.content[0].text if res.message.content else "",
         )
 
     async def ainvoke(
@@ -148,12 +148,12 @@ class CohereLLM(LLMInterface):
             if isinstance(message_history, MessageHistory):
                 message_history = message_history.messages
             messages = self.get_messages(input, message_history, system_instruction)
-            res = self.async_client.chat(
+            res = await self.async_client.chat(
                 messages=messages,
                 model=self.model_name,
             )
         except self.cohere_api_error as e:
             raise LLMGenerationError(e)
         return LLMResponse(
-            content=res.message.content[0].text,
+            content=res.message.content[0].text if res.message.content else "",
         )

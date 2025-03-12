@@ -236,18 +236,23 @@ async def test_extractor_no_schema_enforcement() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(
         content='{"nodes":[{"id":"0","label":"Alien","properties":{"foo":"bar"}}],'
-                '"relationships":[]}'
+        '"relationships":[]}'
     )
 
-    extractor = LLMEntityRelationExtractor(llm=llm,
-                                           create_lexical_graph=False,
-                                           enforce_schema=SchemaEnforcementMode.NONE)
+    extractor = LLMEntityRelationExtractor(
+        llm=llm, create_lexical_graph=False, enforce_schema=SchemaEnforcementMode.NONE
+    )
 
     schema = SchemaConfig(
-        entities={"Person": {"label": "Person",
-                             "properties": [{"name": "name", "type": "STRING"}]}},
+        entities={
+            "Person": {
+                "label": "Person",
+                "properties": [{"name": "name", "type": "STRING"}],
+            }
+        },
         relations={},
-        potential_schema=[])
+        potential_schema=[],
+    )
 
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
 
@@ -259,16 +264,16 @@ async def test_extractor_no_schema_enforcement() -> None:
 
 
 @pytest.mark.asyncio
-async def test_extractor_schema_enforcement_when_no_schema_provided():
+async def test_extractor_schema_enforcement_when_no_schema_provided() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(
         content='{"nodes":[{"id":"0","label":"Alien","properties":{"foo":"bar"}}],'
-                '"relationships":[]}'
+        '"relationships":[]}'
     )
 
-    extractor = LLMEntityRelationExtractor(llm=llm,
-                                           create_lexical_graph=False,
-                                           enforce_schema=SchemaEnforcementMode.STRICT)
+    extractor = LLMEntityRelationExtractor(
+        llm=llm, create_lexical_graph=False, enforce_schema=SchemaEnforcementMode.STRICT
+    )
 
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
 
@@ -280,23 +285,28 @@ async def test_extractor_schema_enforcement_when_no_schema_provided():
 
 
 @pytest.mark.asyncio
-async def test_extractor_schema_enforcement_invalid_nodes():
+async def test_extractor_schema_enforcement_invalid_nodes() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(
         content='{"nodes":[{"id":"0","label":"Alien","properties":{"foo":"bar"}},'
-                '{"id":"1","label":"Person","properties":{"name":"Alice"}}],'
-                '"relationships":[]}'
+        '{"id":"1","label":"Person","properties":{"name":"Alice"}}],'
+        '"relationships":[]}'
     )
 
-    extractor = LLMEntityRelationExtractor(llm=llm,
-                                           create_lexical_graph=False,
-                                           enforce_schema=SchemaEnforcementMode.STRICT)
+    extractor = LLMEntityRelationExtractor(
+        llm=llm, create_lexical_graph=False, enforce_schema=SchemaEnforcementMode.STRICT
+    )
 
     schema = SchemaConfig(
-        entities={"Person": {"label": "Person",
-                             "properties": [{"name": "name", "type": "STRING"}]}},
+        entities={
+            "Person": {
+                "label": "Person",
+                "properties": [{"name": "name", "type": "STRING"}],
+            }
+        },
         relations={},
-        potential_schema=[])
+        potential_schema=[],
+    )
 
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
 
@@ -308,24 +318,31 @@ async def test_extractor_schema_enforcement_invalid_nodes():
 
 
 @pytest.mark.asyncio
-async def test_extraction_schema_enforcement_invalid_node_properties():
+async def test_extraction_schema_enforcement_invalid_node_properties() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(
         content='{"nodes":[{"id":"1","label":"Person","properties":'
-                '{"name":"Alice","age":30,"foo":"bar"}}],'
-                '"relationships":[]}'
+        '{"name":"Alice","age":30,"foo":"bar"}}],'
+        '"relationships":[]}'
     )
 
-    extractor = LLMEntityRelationExtractor(llm=llm,
-                                           create_lexical_graph=False,
-                                           enforce_schema=SchemaEnforcementMode.STRICT)
+    extractor = LLMEntityRelationExtractor(
+        llm=llm, create_lexical_graph=False, enforce_schema=SchemaEnforcementMode.STRICT
+    )
 
     schema = SchemaConfig(
-        entities={"Person": {"label": "Person",
-                             "properties": [{"name": "name", "type": "STRING"},
-                                            {"name": "age", "type": "INTEGER"}]}},
+        entities={
+            "Person": {
+                "label": "Person",
+                "properties": [
+                    {"name": "name", "type": "STRING"},
+                    {"name": "age", "type": "INTEGER"},
+                ],
+            }
+        },
         relations={},
-        potential_schema=[])
+        potential_schema=[],
+    )
 
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
 
@@ -338,20 +355,20 @@ async def test_extraction_schema_enforcement_invalid_node_properties():
 
 
 @pytest.mark.asyncio
-async def test_extractor_schema_enforcement_valid_nodes_with_empty_props():
+async def test_extractor_schema_enforcement_valid_nodes_with_empty_props() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(
         content='{"nodes":[{"id":"1","label":"Person","properties":{"foo":"bar"}}],'
-                '"relationships":[]}'
+        '"relationships":[]}'
     )
 
-    extractor = LLMEntityRelationExtractor(llm=llm,
-                                           create_lexical_graph=False,
-                                           enforce_schema=SchemaEnforcementMode.STRICT)
+    extractor = LLMEntityRelationExtractor(
+        llm=llm, create_lexical_graph=False, enforce_schema=SchemaEnforcementMode.STRICT
+    )
 
-    schema = SchemaConfig(entities={"Person": {"label": "Person"}},
-                          relations={},
-                          potential_schema=[])
+    schema = SchemaConfig(
+        entities={"Person": {"label": "Person"}}, relations={}, potential_schema=[]
+    )
 
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
 
@@ -361,25 +378,30 @@ async def test_extractor_schema_enforcement_valid_nodes_with_empty_props():
 
 
 @pytest.mark.asyncio
-async def test_extractor_schema_enforcement_invalid_relations_wrong_types():
+async def test_extractor_schema_enforcement_invalid_relations_wrong_types() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(
         content='{"nodes":[{"id":"1","label":"Person","properties":'
-                '{"name":"Alice"}},{"id":"2","label":"Person","properties":'
-                '{"name":"Bob"}}],'
-                '"relationships":[{"start_node_id":"1","end_node_id":"2",'
-                '"type":"FRIENDS_WITH","properties":{}}]}'
+        '{"name":"Alice"}},{"id":"2","label":"Person","properties":'
+        '{"name":"Bob"}}],'
+        '"relationships":[{"start_node_id":"1","end_node_id":"2",'
+        '"type":"FRIENDS_WITH","properties":{}}]}'
     )
 
-    extractor = LLMEntityRelationExtractor(llm=llm,
-                                           create_lexical_graph=False,
-                                           enforce_schema=SchemaEnforcementMode.STRICT)
+    extractor = LLMEntityRelationExtractor(
+        llm=llm, create_lexical_graph=False, enforce_schema=SchemaEnforcementMode.STRICT
+    )
 
     schema = SchemaConfig(
-        entities={"Person": {"label": "Person",
-                             "properties": [{"name": "name", "type": "STRING"}]}},
+        entities={
+            "Person": {
+                "label": "Person",
+                "properties": [{"name": "name", "type": "STRING"}],
+            }
+        },
         relations={"LIKES": {"label": "LIKES"}},
-        potential_schema=[])
+        potential_schema=[],
+    )
 
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
 
@@ -390,27 +412,36 @@ async def test_extractor_schema_enforcement_invalid_relations_wrong_types():
 
 
 @pytest.mark.asyncio
-async def test_extractor_schema_enforcement_invalid_relations_wrong_start_node():
+async def test_extractor_schema_enforcement_invalid_relations_wrong_start_node() -> (
+    None
+):
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(
         content='{"nodes":[{"id":"1","label":"Person","properties":{"name":"Alice"}},'
-                '{"id":"2","label":"Person","properties":{"name":"Bob"}}, '
-                '{"id":"3","label":"City","properties":{"name":"London"}}],'
-                '"relationships":[{"start_node_id":"1","end_node_id":"2",'
-                '"type":"LIVES_IN","properties":{}}]}'
+        '{"id":"2","label":"Person","properties":{"name":"Bob"}}, '
+        '{"id":"3","label":"City","properties":{"name":"London"}}],'
+        '"relationships":[{"start_node_id":"1","end_node_id":"2",'
+        '"type":"LIVES_IN","properties":{}}]}'
     )
 
-    extractor = LLMEntityRelationExtractor(llm=llm,
-                                           create_lexical_graph=False,
-                                           enforce_schema=SchemaEnforcementMode.STRICT)
+    extractor = LLMEntityRelationExtractor(
+        llm=llm, create_lexical_graph=False, enforce_schema=SchemaEnforcementMode.STRICT
+    )
 
     schema = SchemaConfig(
-        entities={"Person": {"label": "Person",
-                             "properties": [{"name": "name", "type": "STRING"}]},
-                  "City": {"label": "City",
-                           "properties": [{"name": "name", "type": "STRING"}]}},
+        entities={
+            "Person": {
+                "label": "Person",
+                "properties": [{"name": "name", "type": "STRING"}],
+            },
+            "City": {
+                "label": "City",
+                "properties": [{"name": "name", "type": "STRING"}],
+            },
+        },
         relations={"LIVES_IN": {"label": "LIVES_IN"}},
-        potential_schema=[("Person", "LIVES_IN", "City")])
+        potential_schema=[("Person", "LIVES_IN", "City")],
+    )
 
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
 
@@ -421,25 +452,33 @@ async def test_extractor_schema_enforcement_invalid_relations_wrong_start_node()
 
 
 @pytest.mark.asyncio
-async def test_extractor_schema_enforcement_invalid_relation_properties():
+async def test_extractor_schema_enforcement_invalid_relation_properties() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(
         content='{"nodes":[{"id":"1","label":"Person","properties":{"name":"Alice"}},'
-                '{"id":"2","label":"Person","properties":{"name":"Bob"}}],'
-                '"relationships":[{"start_node_id":"1","end_node_id":"2",'
-                '"type":"LIKES","properties":{"strength":"high","foo":"bar"}}]}'
+        '{"id":"2","label":"Person","properties":{"name":"Bob"}}],'
+        '"relationships":[{"start_node_id":"1","end_node_id":"2",'
+        '"type":"LIKES","properties":{"strength":"high","foo":"bar"}}]}'
     )
 
-    extractor = LLMEntityRelationExtractor(llm=llm,
-                                           create_lexical_graph=False,
-                                           enforce_schema=SchemaEnforcementMode.STRICT)
+    extractor = LLMEntityRelationExtractor(
+        llm=llm, create_lexical_graph=False, enforce_schema=SchemaEnforcementMode.STRICT
+    )
 
     schema = SchemaConfig(
-        entities={"Person": {"label": "Person",
-                             "properties": [{"name": "name", "type": "STRING"}]}},
-        relations={"LIKES": {"label": "LIKES",
-                             "properties": [{"name": "strength", "type": "STRING"}]}},
-        potential_schema=[]
+        entities={
+            "Person": {
+                "label": "Person",
+                "properties": [{"name": "name", "type": "STRING"}],
+            }
+        },
+        relations={
+            "LIKES": {
+                "label": "LIKES",
+                "properties": [{"name": "strength", "type": "STRING"}],
+            }
+        },
+        potential_schema=[],
     )
 
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
@@ -454,24 +493,29 @@ async def test_extractor_schema_enforcement_invalid_relation_properties():
 
 
 @pytest.mark.asyncio
-async def test_extractor_schema_enforcement_removed_relation_start_end_nodes():
+async def test_extractor_schema_enforcement_removed_relation_start_end_nodes() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(
         content='{"nodes":[{"id":"1","label":"Alien","properties":{}},'
-                '{"id":"2","label":"Robot","properties":{}}],'
-                '"relationships":[{"start_node_id":"1","end_node_id":"2",'
-                '"type":"LIKES","properties":{}}]}'
+        '{"id":"2","label":"Robot","properties":{}}],'
+        '"relationships":[{"start_node_id":"1","end_node_id":"2",'
+        '"type":"LIKES","properties":{}}]}'
     )
 
-    extractor = LLMEntityRelationExtractor(llm=llm,
-                                           create_lexical_graph=False,
-                                           enforce_schema=SchemaEnforcementMode.STRICT)
+    extractor = LLMEntityRelationExtractor(
+        llm=llm, create_lexical_graph=False, enforce_schema=SchemaEnforcementMode.STRICT
+    )
 
     schema = SchemaConfig(
-        entities={"Person": {"label": "Person",
-                             "properties": [{"name": "name", "type": "STRING"}]}},
+        entities={
+            "Person": {
+                "label": "Person",
+                "properties": [{"name": "name", "type": "STRING"}],
+            }
+        },
         relations={"LIKES": {"label": "LIKES"}},
-        potential_schema=[("Person", "LIKES", "Person")])
+        potential_schema=[("Person", "LIKES", "Person")],
+    )
 
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
 
@@ -482,26 +526,33 @@ async def test_extractor_schema_enforcement_removed_relation_start_end_nodes():
 
 
 @pytest.mark.asyncio
-async def test_extractor_schema_enforcement_inverted_relation_direction():
+async def test_extractor_schema_enforcement_inverted_relation_direction() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(
         content='{"nodes":[{"id":"1","label":"Person","properties":{"name":"Alice"}},'
-                '{"id":"2","label":"City","properties":{"name":"London"}}],'
-                '"relationships":[{"start_node_id":"2","end_node_id":"1",'
-                '"type":"LIVES_IN","properties":{}}]}'
+        '{"id":"2","label":"City","properties":{"name":"London"}}],'
+        '"relationships":[{"start_node_id":"2","end_node_id":"1",'
+        '"type":"LIVES_IN","properties":{}}]}'
     )
 
-    extractor = LLMEntityRelationExtractor(llm=llm,
-                                           create_lexical_graph=False,
-                                           enforce_schema=SchemaEnforcementMode.STRICT)
+    extractor = LLMEntityRelationExtractor(
+        llm=llm, create_lexical_graph=False, enforce_schema=SchemaEnforcementMode.STRICT
+    )
 
     schema = SchemaConfig(
-        entities={"Person": {"label": "Person",
-                             "properties": [{"name": "name", "type": "STRING"}]},
-                  "City": {"label": "City",
-                           "properties": [{"name": "name", "type": "STRING"}]}},
+        entities={
+            "Person": {
+                "label": "Person",
+                "properties": [{"name": "name", "type": "STRING"}],
+            },
+            "City": {
+                "label": "City",
+                "properties": [{"name": "name", "type": "STRING"}],
+            },
+        },
         relations={"LIVES_IN": {"label": "LIVES_IN"}},
-        potential_schema=[("Person", "LIVES_IN", "City")])
+        potential_schema=[("Person", "LIVES_IN", "City")],
+    )
 
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
 

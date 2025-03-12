@@ -5,7 +5,18 @@
 ### Added
 
 - Added optional schema enforcement as a validation layer after entity and relation extraction.
+- Introduced a linear hybrid search ranker for HybridRetriever and HybridCypherRetriever, allowing customizable ranking with an `alpha` parameter.
 - Introduced SearchQueryParseError for handling invalid Lucene query strings in HybridRetriever and HybridCypherRetriever.
+
+### Fixed
+
+- Fixed config loading after module reload (usage in jupyter notebooks)
+
+### Changed
+
+- Qdrant retriever now fallbacks on the point ID if the `external_id_property` is not found in the payload.
+- Updated a few dependencies, mainly `pypdf`, `anthropic` and `cohere`.
+
 
 ## 1.5.0
 
@@ -18,7 +29,7 @@
 - Introduced Neo4jMessageHistory and InMemoryMessageHistory classes for managing LLM message histories.
 - Added examples and documentation for using message history with Neo4j and in-memory storage.
 - Updated LLM and GraphRAG classes to support new message history classes.
-- Introduced a linear hybrid search ranker for HybridRetriever and HybridCypherRetriever, allowing customizable ranking with an `alpha` parameter.
+
 ### Changed
 
 - Refactored index-related functions for improved compatibility and functionality.
@@ -311,4 +322,3 @@
 
 -   Updated documentation to include new custom exceptions.
 -   Improved the use of Pydantic for input data validation for retriever objects.
--   Fixed config loading after module reload (usage in jupyter notebooks)
