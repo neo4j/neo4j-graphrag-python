@@ -2,6 +2,11 @@
 
 ## Next
 
+### Added
+
+- Added a `run_with_context` method to `Component`. This method has a `context_` parameter that contains information from the pipeline the component is being run from (e.g. the `run_id`)
+
+
 ## 1.6.0
 
 ### Added
@@ -9,6 +14,7 @@
 - Added optional schema enforcement as a validation layer after entity and relation extraction.
 - Introduced a linear hybrid search ranker for HybridRetriever and HybridCypherRetriever, allowing customizable ranking with an `alpha` parameter.
 - Introduced SearchQueryParseError for handling invalid Lucene query strings in HybridRetriever and HybridCypherRetriever.
+-  Components can now be called with the `run_with_context` method that gets an extra `context_` argument containing information about the pipeline it's run from: the `run_id`, `task_name` and a `notify` function that can be used to send `TASK_PROGRESS` events to the same callback as the pipeline events.
 
 ### Fixed
 

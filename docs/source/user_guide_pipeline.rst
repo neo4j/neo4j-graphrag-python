@@ -22,7 +22,7 @@ their own by following these steps:
 
 1. Create a subclass of the Pydantic `neo4j_graphrag.experimental.pipeline.DataModel` to represent the data being returned by the component
 2. Create a subclass of `neo4j_graphrag.experimental.pipeline.Component`
-3. Create a run method in this new class and specify the required inputs and output model using the just created `DataModel`
+3. Create a `run_with_context` method in this new class and specify the required inputs and output model using the just created `DataModel`
 4. Implement the run method: it's an `async` method, allowing tasks to be parallelized and awaited within this method.
 
 An example is given below, where a `ComponentAdd` is created to add two numbers together and return
@@ -31,12 +31,13 @@ the resulting sum:
 .. code:: python
 
     from neo4j_graphrag.experimental.pipeline import Component, DataModel
+    from neo4j_graphrag.experimental.pipeline.types.context import RunContext
 
     class IntResultModel(DataModel):
         result: int
 
     class ComponentAdd(Component):
-        async def run(self, number1: int, number2: int = 1) -> IntResultModel:
+        async def run_with_context(self, context_: RunContext, number1: int, number2: int = 1) -> IntResultModel:
             return IntResultModel(result = number1 + number2)
 
 Read more about :ref:`components-section` in the API Documentation.
@@ -141,6 +142,7 @@ It is possible to add a callback to receive notification about pipeline progress
 - `PIPELINE_STARTED`, when pipeline starts
 - `PIPELINE_FINISHED`, when pipeline ends
 - `TASK_STARTED`, when a task starts
+- `TASK_PROGRESS`, sent by each component (depends on component's implementation, see below)
 - `TASK_FINISHED`, when a task ends
 
 
@@ -172,3 +174,29 @@ See :ref:`pipelineevent` and :ref:`taskevent` to see what is sent in each event 
     # ... add components, connect them as usual
 
     await pipeline.run(...)
+
+
+Send Events from Components
+===========================
+
+Components can send notifications about their progress using the `notify` function from
+the `context_`:
+
+.. code:: python
+
+    from neo4j_graphrag.experimental.pipeline import Component, DataModel
+    from neo4j_graphrag.experimental.pipeline.types.context import RunContext
+
+    class IntResultModel(DataModel):
+        result: int
+
+    class ComponentAdd(Component):
+        async def run_with_context(self, context_: RunContext, number1: int, number2: int = 1) -> IntResultModel:
+            for fake_iteration in range(10):
+                await context_.notify(
+                    message=f"Starting iteration {fake_iteration} out of 10",
+                    data={"iteration": fake_iteration, "total": 10}
+                )
+            return IntResultModel(result = number1 + number2)
+
+This will send an `TASK_PROGRESS` event to the pipeline callback.

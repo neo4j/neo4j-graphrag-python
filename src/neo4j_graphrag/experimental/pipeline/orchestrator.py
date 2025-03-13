@@ -18,19 +18,23 @@ import asyncio
 import logging
 import uuid
 import warnings
+from functools import partial
 from typing import TYPE_CHECKING, Any, AsyncGenerator
 
+from neo4j_graphrag.experimental.pipeline.types.context import RunContext
 from neo4j_graphrag.experimental.pipeline.exceptions import (
     PipelineDefinitionError,
     PipelineMissingDependencyError,
     PipelineStatusUpdateError,
 )
 from neo4j_graphrag.experimental.pipeline.notification import EventNotifier
-from neo4j_graphrag.experimental.pipeline.types import RunResult, RunStatus
+from neo4j_graphrag.experimental.pipeline.types.orchestration import (
+    RunResult,
+    RunStatus,
+)
 
 if TYPE_CHECKING:
     from neo4j_graphrag.experimental.pipeline.pipeline import Pipeline, TaskPipelineNode
-
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +52,7 @@ class Orchestrator:
     (checking that all dependencies are met), and run them.
     """
 
-    def __init__(self, pipeline: "Pipeline"):
+    def __init__(self, pipeline: Pipeline):
         self.pipeline = pipeline
         self.event_notifier = EventNotifier(pipeline.callback)
         self.run_id = str(uuid.uuid4())
@@ -74,7 +78,15 @@ class Orchestrator:
             )
             return None
         await self.event_notifier.notify_task_started(self.run_id, task.name, inputs)
-        res = await task.run(inputs)
+        # create the notifier function for the component, with fixed
+        # run_id, task_name and event type:
+        notifier = partial(
+            self.event_notifier.notify_task_progress,
+            run_id=self.run_id,
+            task_name=task.name,
+        )
+        context = RunContext(run_id=self.run_id, task_name=task.name, notifier=notifier)
+        res = await task.run(context, inputs)
         await self.set_task_status(task.name, RunStatus.DONE)
         await self.event_notifier.notify_task_finished(self.run_id, task.name, res)
         if res:

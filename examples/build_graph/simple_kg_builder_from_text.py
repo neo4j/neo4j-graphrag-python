@@ -14,7 +14,7 @@ import neo4j
 from neo4j_graphrag.embeddings import OpenAIEmbeddings
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
-from neo4j_graphrag.experimental.pipeline.types import (
+from neo4j_graphrag.experimental.pipeline.types.schema import (
     EntityInputType,
     RelationInputType,
 )
