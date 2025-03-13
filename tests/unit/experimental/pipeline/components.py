@@ -45,9 +45,6 @@ class ComponentMultiply(Component):
 
 
 class ComponentMultiplyWithContext(Component):
-    async def run(self, number1: int, number2: int) -> IntResultModel:
-        return IntResultModel(result=number1 * number2)
-
     async def run_with_context(
         self, context_: RunContext, number1: int, number2: int = 2
     ) -> IntResultModel:
