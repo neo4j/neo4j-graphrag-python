@@ -158,22 +158,22 @@ ParamFromEnvConfig
 EventType
 =========
 
-.. autoenum:: neo4j_graphrag.experimental.pipeline.types.EventType
+.. autoenum:: neo4j_graphrag.experimental.pipeline.notification.EventType
 
 
 PipelineEvent
 ==============
 
-.. autoclass:: neo4j_graphrag.experimental.pipeline.types.PipelineEvent
+.. autoclass:: neo4j_graphrag.experimental.pipeline.notification.PipelineEvent
 
 TaskEvent
 ==============
 
-.. autoclass:: neo4j_graphrag.experimental.pipeline.types.TaskEvent
+.. autoclass:: neo4j_graphrag.experimental.pipeline.notification.TaskEvent
 
 
 EventCallbackProtocol
 =====================
 
-.. autoclass:: neo4j_graphrag.experimental.pipeline.types.EventCallbackProtocol
+.. autoclass:: neo4j_graphrag.experimental.pipeline.notification.EventCallbackProtocol
     :members: __call__
