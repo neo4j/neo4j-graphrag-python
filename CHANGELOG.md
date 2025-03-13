@@ -2,6 +2,11 @@
 
 ## Next
 
+### Added
+
+- Added a `run_with_context` method to `Component`. This method has a `context_` parameter that contains information from the pipeline the component is being run from (e.g. the `run_id`)
+
+
 ## 1.6.0
 
 ### Added
