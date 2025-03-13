@@ -14,7 +14,6 @@
 #  limitations under the License.
 from __future__ import annotations
 
-import abc
 import inspect
 from typing import Any, get_type_hints
 
@@ -31,7 +30,7 @@ class DataModel(BaseModel):
     pass
 
 
-class ComponentMeta(abc.ABCMeta):
+class ComponentMeta(type):
     def __new__(
         meta, name: str, bases: tuple[type, ...], attrs: dict[str, Any]
     ) -> type:
@@ -39,10 +38,6 @@ class ComponentMeta(abc.ABCMeta):
         run_method = attrs.get("run")
         run_context_method = attrs.get("run_with_context")
         run = run_context_method or run_method
-        if run is None:
-            raise RuntimeError(
-                f"Either 'run' or 'run_with_context' must be implemented in component: '{name}'"
-            )
         sig = inspect.signature(run)
         attrs["component_inputs"] = {
             param.name: {
@@ -73,7 +68,7 @@ class ComponentMeta(abc.ABCMeta):
         return type.__new__(meta, name, bases, attrs)
 
 
-class Component(abc.ABC, metaclass=ComponentMeta):
+class Component(metaclass=ComponentMeta):
     """Interface that needs to be implemented
     by all components.
     """
@@ -84,12 +79,27 @@ class Component(abc.ABC, metaclass=ComponentMeta):
     component_inputs: dict[str, dict[str, str | bool]]
     component_outputs: dict[str, dict[str, str | bool | type]]
 
-    @abc.abstractmethod
     async def run(self, *args: Any, **kwargs: Any) -> DataModel:
-        pass
+        """This function is planned for deprecation in a future release.
+
+        Note: if `run_with_context` is implemented, this method will not be used.
+        """
+        raise NotImplementedError(
+            "You must implement the `run` or `run_with_context` method. "
+            "`run` method will be marked for deprecation in a future release."
+        )
 
     async def run_with_context(
         self, context_: RunContext, *args: Any, **kwargs: Any
     ) -> DataModel:
+        """This method is called by the pipeline orchestrator.
+        The `context_` parameter contains information about
+        the pipeline run: the `run_id` and a `notify` function
+        that can be used to send events from the component to
+        the pipeline callback.
+
+        For now, it defaults to calling the `run` method, but it
+        is meant to replace the `run` method in a future release.
+        """
         # default behavior to prevent a breaking change
         return await self.run(*args, **kwargs)
