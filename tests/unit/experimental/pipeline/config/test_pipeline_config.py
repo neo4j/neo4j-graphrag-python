@@ -30,7 +30,7 @@ from neo4j_graphrag.experimental.pipeline.config.param_resolver import (
 from neo4j_graphrag.experimental.pipeline.config.pipeline_config import (
     AbstractPipelineConfig,
 )
-from neo4j_graphrag.experimental.pipeline.types import ComponentDefinition
+from neo4j_graphrag.experimental.pipeline.types.definitions import ComponentDefinition
 from neo4j_graphrag.llm import LLMInterface
 
 

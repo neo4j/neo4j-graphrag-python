@@ -15,7 +15,7 @@ from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter i
 )
 from neo4j_graphrag.experimental.pipeline import Pipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
-from neo4j_graphrag.experimental.pipeline.types import Event
+from neo4j_graphrag.experimental.pipeline.notification import Event
 
 logger = logging.getLogger(__name__)
 logging.basicConfig()

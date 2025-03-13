@@ -47,7 +47,7 @@ from neo4j_graphrag.experimental.pipeline.config.template_pipeline.simple_kg_bui
 )
 from neo4j_graphrag.experimental.pipeline.config.types import PipelineType
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
-from neo4j_graphrag.experimental.pipeline.types import PipelineDefinition
+from neo4j_graphrag.experimental.pipeline.types.definitions import PipelineDefinition
 from neo4j_graphrag.utils.logging import prettify
 
 logger = logging.getLogger(__name__)

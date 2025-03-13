@@ -14,16 +14,61 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Optional
+import datetime
+import enum
+from collections.abc import Awaitable
+from pydantic import BaseModel, Field
 
-from neo4j_graphrag.experimental.pipeline.types import (
-    Event,
-    EventCallbackProtocol,
-    EventType,
-    PipelineEvent,
-    RunResult,
-    TaskEvent,
-)
+from typing import Any, Optional, Protocol, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from neo4j_graphrag.experimental.pipeline.types.orchestration import RunResult
+
+
+class EventType(enum.Enum):
+    PIPELINE_STARTED = "PIPELINE_STARTED"
+    TASK_STARTED = "TASK_STARTED"
+    TASK_PROGRESS = "TASK_PROGRESS"
+    TASK_FINISHED = "TASK_FINISHED"
+    PIPELINE_FINISHED = "PIPELINE_FINISHED"
+
+    @property
+    def is_pipeline_event(self) -> bool:
+        return self in [EventType.PIPELINE_STARTED, EventType.PIPELINE_FINISHED]
+
+    @property
+    def is_task_event(self) -> bool:
+        return self in [
+            EventType.TASK_STARTED,
+            EventType.TASK_PROGRESS,
+            EventType.TASK_FINISHED,
+        ]
+
+
+class Event(BaseModel):
+    event_type: EventType
+    run_id: str
+    """Pipeline unique run_id, same as the one returned in PipelineResult after pipeline.run"""
+    timestamp: datetime.datetime = Field(
+        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc)
+    )
+    message: Optional[str] = None
+    """Optional information about the status"""
+    payload: Optional[dict[str, Any]] = None
+    """Input or output data depending on the type of event"""
+
+
+class PipelineEvent(Event):
+    pass
+
+
+class TaskEvent(Event):
+    task_name: str
+    """Name of the task as defined in pipeline.add_component"""
+
+
+class EventCallbackProtocol(Protocol):
+    def __call__(self, event: Event) -> Awaitable[None]: ...
 
 
 class EventNotifier:
@@ -85,5 +130,21 @@ class EventNotifier:
             payload=output_data.result.model_dump()
             if output_data and output_data.result
             else None,
+        )
+        await self.notify(event)
+
+    async def notify_task_progress(
+        self,
+        run_id: str,
+        task_name: str,
+        message: str,
+        data: dict[str, Any],
+    ) -> None:
+        event = TaskEvent(
+            event_type=EventType.TASK_PROGRESS,
+            run_id=run_id,
+            task_name=task_name,
+            message=message,
+            payload=data,
         )
         await self.notify(event)
