@@ -244,7 +244,10 @@ class EmbedderType(RootModel):  # type: ignore[type-arg]
         return self.root.parse(resolved_data)
 
 
-class ComponentConfig(ObjectConfig[Component]):
+ComponentT = TypeVar("ComponentT", bound=Component)
+
+
+class ComponentConfig(ObjectConfig[ComponentT]):
     """A config model for all components.
 
     In addition to the object config, components can have pre-defined parameters
@@ -261,14 +264,17 @@ class ComponentConfig(ObjectConfig[Component]):
         return self.resolve_params(self.run_params_)
 
 
-class ComponentType(RootModel):  # type: ignore[type-arg]
-    root: Union[Component, ComponentConfig]
+class ComponentType(
+    RootModel[Generic[ComponentT]],
+    # Generic[ComponentT]
+):
+    root: Union[ComponentT, ComponentConfig[ComponentT]]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def parse(self, resolved_data: dict[str, Any] | None = None) -> Component:
+    def parse(self, resolved_data: dict[str, Any] | None = None) -> ComponentT:
         if isinstance(self.root, Component):
-            return self.root
+            return self.root  # type: ignore
         return self.root.parse(resolved_data)
 
     def get_run_params(self, resolved_data: dict[str, Any]) -> dict[str, Any]:

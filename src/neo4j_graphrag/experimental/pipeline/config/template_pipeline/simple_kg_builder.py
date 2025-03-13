@@ -23,7 +23,7 @@ from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     OnError,
 )
 from neo4j_graphrag.experimental.components.kg_writer import KGWriter, Neo4jWriter
-from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
+from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader, DataLoader
 from neo4j_graphrag.experimental.components.resolver import (
     EntityResolver,
     SinglePropertyExactMatchResolver,
@@ -81,17 +81,21 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     lexical_graph_config: Optional[LexicalGraphConfig] = None
     neo4j_database: Optional[str] = None
 
-    pdf_loader: Optional[ComponentType] = None
-    kg_writer: Optional[ComponentType] = None
-    text_splitter: Optional[ComponentType] = None
+    pdf_loader: Optional[ComponentType[DataLoader]] = None
+    schema_builder: Optional[ComponentType[SchemaBuilder]] = None
+    text_splitter: Optional[ComponentType[TextSplitter]] = None
+    chunk_embedder: Optional[ComponentType[TextChunkEmbedder]] = None
+    extractor: Optional[ComponentType[EntityRelationExtractor]] = None
+    kg_writer: Optional[ComponentType[KGWriter]] = None
+    resolver: Optional[list[ComponentType[EntityResolver]]] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def _get_pdf_loader(self) -> Optional[PdfLoader]:
+    def _get_pdf_loader(self) -> Optional[DataLoader]:
         if not self.from_pdf:
             return None
         if self.pdf_loader:
-            return self.pdf_loader.parse(self._global_data)  # type: ignore
+            return self.pdf_loader.parse(self._global_data)
         return PdfLoader()
 
     def _get_run_params_for_pdf_loader(self) -> dict[str, Any]:
@@ -103,7 +107,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
 
     def _get_splitter(self) -> TextSplitter:
         if self.text_splitter:
-            return self.text_splitter.parse(self._global_data)  # type: ignore
+            return self.text_splitter.parse(self._global_data)
         return FixedSizeSplitter()
 
     def _get_run_params_for_splitter(self) -> dict[str, Any]:
@@ -112,9 +116,13 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         return {}
 
     def _get_chunk_embedder(self) -> TextChunkEmbedder:
+        if self.chunk_embedder:
+            return self.chunk_embedder.parse(self._global_data)
         return TextChunkEmbedder(embedder=self.get_default_embedder())
 
     def _get_schema(self) -> SchemaBuilder:
+        if self.schema_builder:
+            return self.schema_builder.parse(self._global_data)
         return SchemaBuilder()
 
     def _get_run_params_for_schema(self) -> dict[str, Any]:
@@ -125,6 +133,8 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         }
 
     def _get_extractor(self) -> EntityRelationExtractor:
+        if self.extractor:
+            return self.extractor.parse(self._global_data)
         return LLMEntityRelationExtractor(
             llm=self.get_default_llm(),
             prompt_template=self.prompt_template,
@@ -134,7 +144,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
 
     def _get_writer(self) -> KGWriter:
         if self.kg_writer:
-            return self.kg_writer.parse(self._global_data)  # type: ignore
+            return self.kg_writer.parse(self._global_data)
         return Neo4jWriter(
             driver=self.get_default_neo4j_driver(),
             neo4j_database=self.neo4j_database,

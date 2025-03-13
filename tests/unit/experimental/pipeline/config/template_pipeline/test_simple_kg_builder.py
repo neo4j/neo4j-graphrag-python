@@ -71,7 +71,7 @@ def test_simple_kg_pipeline_config_pdf_loader_class_overwrite_but_from_pdf_is_fa
 def test_simple_kg_pipeline_config_pdf_loader_from_pdf_is_true_class_overwrite_from_config(
     mock_component_parse: Mock,
 ) -> None:
-    my_pdf_loader_config = ComponentConfig(
+    my_pdf_loader_config: ComponentConfig[PdfLoader] = ComponentConfig(
         class_="",
     )
     my_pdf_loader = PdfLoader()
@@ -92,7 +92,7 @@ def test_simple_kg_pipeline_config_text_splitter() -> None:
 def test_simple_kg_pipeline_config_text_splitter_overwrite(
     mock_component_parse: Mock,
 ) -> None:
-    my_text_splitter_config = ComponentConfig(
+    my_text_splitter_config: ComponentConfig[FixedSizeSplitter] = ComponentConfig(
         class_="",
     )
     my_text_splitter = FixedSizeSplitter()
@@ -184,7 +184,7 @@ def test_simple_kg_pipeline_config_writer_overwrite(
     _: Mock,
     driver: neo4j.Driver,
 ) -> None:
-    my_writer_config = ComponentConfig(
+    my_writer_config: ComponentConfig[Neo4jWriter] = ComponentConfig(
         class_="",
     )
     my_writer = Neo4jWriter(driver, neo4j_database="my_db")

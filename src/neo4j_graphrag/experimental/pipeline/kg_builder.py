@@ -21,9 +21,15 @@ import neo4j
 from pydantic import ValidationError
 
 from neo4j_graphrag.embeddings import Embedder
-from neo4j_graphrag.experimental.components.entity_relation_extractor import OnError
+from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
+from neo4j_graphrag.experimental.components.entity_relation_extractor import (
+    OnError,
+    EntityRelationExtractor,
+)
 from neo4j_graphrag.experimental.components.kg_writer import KGWriter
 from neo4j_graphrag.experimental.components.pdf_loader import DataLoader
+from neo4j_graphrag.experimental.components.resolver import EntityResolver
+from neo4j_graphrag.experimental.components.schema import SchemaBuilder
 from neo4j_graphrag.experimental.components.text_splitters.base import TextSplitter
 from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
 from neo4j_graphrag.experimental.pipeline.config.object_config import ComponentType
@@ -82,9 +88,13 @@ class SimpleKGPipeline:
         relations: Optional[Sequence[RelationInputType]] = None,
         potential_schema: Optional[List[tuple[str, str, str]]] = None,
         from_pdf: bool = True,
-        text_splitter: Optional[TextSplitter] = None,
         pdf_loader: Optional[DataLoader] = None,
+        schema_builder: Optional[SchemaBuilder] = None,
+        text_splitter: Optional[TextSplitter] = None,
+        chunk_embedder: Optional[TextChunkEmbedder] = None,
+        extractor: Optional[EntityRelationExtractor] = None,
         kg_writer: Optional[KGWriter] = None,
+        resolver: Optional[list[EntityResolver]] = None,
         on_error: str = "IGNORE",
         prompt_template: Union[ERExtractionTemplate, str] = ERExtractionTemplate(),
         perform_entity_resolution: bool = True,
@@ -102,8 +112,12 @@ class SimpleKGPipeline:
                 potential_schema=potential_schema,
                 from_pdf=from_pdf,
                 pdf_loader=ComponentType(pdf_loader) if pdf_loader else None,
-                kg_writer=ComponentType(kg_writer) if kg_writer else None,
+                schema_builder=ComponentType(schema_builder) if schema_builder else None,
                 text_splitter=ComponentType(text_splitter) if text_splitter else None,
+                chunk_embedder=ComponentType(chunk_embedder) if chunk_embedder else None,
+                extractor=ComponentType(extractor) if extractor else None,
+                kg_writer=ComponentType(kg_writer) if kg_writer else None,
+                resolver=[ComponentType(r) for r in resolver] if resolver else None,
                 on_error=OnError(on_error),
                 prompt_template=prompt_template,
                 perform_entity_resolution=perform_entity_resolution,
