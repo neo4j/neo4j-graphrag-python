@@ -16,6 +16,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from neo4j_graphrag.experimental.pipeline import Component
 from neo4j_graphrag.experimental.pipeline.types.context import RunContext
 from .components import ComponentMultiply, ComponentMultiplyWithContext, IntResultModel
 
@@ -73,3 +74,16 @@ async def test_component_run_with_context() -> None:
     )
     assert result.result == 2
     notifier_mock.assert_awaited_once()
+
+
+def test_component_missing_method() -> None:
+    with pytest.raises(RuntimeError) as e:
+
+        class WrongComponent(Component):
+            # we must have either run or run_with_context
+            pass
+
+    assert (
+        "You must implement either `run` or `run_with_context` in Component 'WrongComponent'"
+        in str(e)
+    )

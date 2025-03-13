@@ -37,7 +37,11 @@ class ComponentMeta(type):
         # extract required inputs and outputs from the run method signature
         run_method = attrs.get("run")
         run_context_method = attrs.get("run_with_context")
-        run = run_context_method or run_method
+        run = run_context_method if run_context_method is not None else run_method
+        if run is None:
+            raise RuntimeError(
+                f"You must implement either `run` or `run_with_context` in Component '{name}'"
+            )
         sig = inspect.signature(run)
         attrs["component_inputs"] = {
             param.name: {
