@@ -6,6 +6,8 @@
 
 - Added support for multi-vector collection in Qdrant driver.
 - Added a `Pipeline.stream` method to stream pipeline progress.
+- Added a new semantic match resolver to the KG Builder for entity resolution based on spaCy embeddings and cosine similarities so that nodes with similar textual properties get merged.
+- Added a new fuzzy match resolver to the KG Builder for entity resolution based on RapiFuzz string fuzzy matching.
 
 ### Changed
 

@@ -1028,22 +1028,33 @@ without making assumptions about entity similarity. The Entity Resolver
 is responsible for refining the created knowledge graph by merging entity
 nodes that represent the same real-world object.
 
-In practice, this package implements a simple resolver that merges nodes
-with the same label and identical "name" property.
+In practice, this package implements three resolvers:
+
+- a simple resolver that merges nodes with the same label and identical "name" property;
+- two similarity-based resolvers that merge nodes with the same label and similar set of textual properties (by default they use the "name" property):
+
+    - a semantic match resolver, which is based on spaCy embeddings and cosine similarities of embedding vectors. This resolver is  ideal for higher quality KG resolution using static embeddings.
+    - a fuzzy match resolver, which is based on RapidFuzz for Rapid fuzzy string matching using the Levenshtein Distance. This resolver offers faster ingestion speeds by using string similarity measures, at the potential cost of resolution precision.
 
 .. warning::
 
-    The `SinglePropertyExactMatchResolver` **replaces** the nodes created by the KG writer.
+    - The `SinglePropertyExactMatchResolver`, `SpaCySemanticMatchResolver`, and `FuzzyMatchResolver` **replace** the nodes created by the KG writer.
+
+    - Check the :ref:`installation` section to make sure you have the required dependencies installed when using `SpaCySemanticMatchResolver`, and `FuzzyMatchResolver`.
 
 
-It can be used like this:
+The resolvers can be used like this:
 
 .. code:: python
 
     from neo4j_graphrag.experimental.components.resolver import (
         SinglePropertyExactMatchResolver,
+        # SpaCySemanticMatchResolver,
+        # FuzzyMatchResolver,
     )
-    resolver = SinglePropertyExactMatchResolver(driver)
+    resolver = SinglePropertyExactMatchResolver(driver)  # exact match resolver
+    # resolver = SpaCySemanticMatchResolver(driver)  # semantic match with spaCy
+    # resolver = FuzzyMatchResolver(driver)  # fuzzy match with RapidFuzz
     res = await resolver.run()
 
 .. warning::
