@@ -391,15 +391,15 @@ def test_pipeline_to_neo4j_viz() -> None:
     #   - 2 components 'a' and 'b'
     #   - 2 outputs 'a.result' and 'b.result' (neo4j-viz implementation includes both)
     assert len(g.nodes) == 4
-    
+
     # Count component nodes
     component_nodes = [node for node in g.nodes if node.size == 20]
     assert len(component_nodes) == 2
-    
+
     # Count output nodes
     output_nodes = [node for node in g.nodes if node.size == 10]
     assert len(output_nodes) == 2
-    
+
     g = pipe.get_neo4j_viz_graph(hide_unused_outputs=False)
     # 4 nodes:
     #   - 2 components 'a' and 'b'

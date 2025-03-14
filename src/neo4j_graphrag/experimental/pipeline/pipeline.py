@@ -24,6 +24,7 @@ from neo4j_graphrag.utils.logging import prettify
 
 try:
     from neo4j_viz import Node, Relationship, VisualizationGraph as NeoVizGraph
+
     HAS_NEO4J_VIZ = True
 except ImportError:
     HAS_NEO4J_VIZ = False
@@ -186,13 +187,13 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         self, path: str, layout: str = "force", hide_unused_outputs: bool = True
     ) -> Any:
         """Draw the pipeline graph using neo4j-viz.
-        
+
         Args:
             path (str): Path to save the visualization. If the path ends with .html, it will save an HTML file.
                 Otherwise, it will save a PNG image.
             layout (str): Layout algorithm to use. Default is "force".
             hide_unused_outputs (bool): Whether to hide unused outputs. Default is True.
-            
+
         Returns:
             Any: The visualization object.
         """
@@ -211,10 +212,10 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
 
     def get_neo4j_viz_graph(self, hide_unused_outputs: bool = True) -> NeoVizGraph:
         """Create a neo4j-viz visualization graph from the pipeline.
-        
+
         Args:
             hide_unused_outputs (bool): Whether to hide unused outputs. Default is True.
-            
+
         Returns:
             NeoVizGraph: The neo4j-viz visualization graph.
         """
@@ -224,12 +225,12 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                 "Install it with 'pip install neo4j-viz'."
             )
         self.validate_parameter_mapping()
-        
+
         nodes = []
         relationships = []
         node_ids = {}
         node_counter = 0
-        
+
         # Create nodes for each component
         for n, node in self._nodes.items():
             comp_inputs = ",".join(
@@ -242,11 +243,11 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                     id=node_counter,
                     caption=f"{node.component.__class__.__name__}: {n}({comp_inputs})",
                     size=20,  # Component nodes are larger
-                    color="#4C8BF5"  # Blue for component nodes
+                    color="#4C8BF5",  # Blue for component nodes
                 )
             )
             node_counter += 1
-            
+
             # Create nodes for each output field
             for o in node.component.component_outputs:
                 param_node_name = f"{n}.{o}"
@@ -256,19 +257,17 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                         id=node_counter,
                         caption=o,
                         size=10,  # Output nodes are smaller
-                        color="#34A853"  # Green for output nodes
+                        color="#34A853",  # Green for output nodes
                     )
                 )
                 # Connect component to its output
                 relationships.append(
                     Relationship(
-                        source=node_ids[n],
-                        target=node_ids[param_node_name],
-                        caption=""
+                        source=node_ids[n], target=node_ids[param_node_name], caption=""
                     )
                 )
                 node_counter += 1
-        
+
         # Create edges between components and their inputs
         for component_name, params in self.param_mapping.items():
             for param, mapping in params.items():
@@ -278,27 +277,27 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                     source_output_node = f"{source_component}.{source_param_name}"
                 else:
                     source_output_node = source_component
-                
+
                 if source_output_node in node_ids and component_name in node_ids:
                     relationships.append(
                         Relationship(
                             source=node_ids[source_output_node],
                             target=node_ids[component_name],
                             caption=param,
-                            color="#EA4335"  # Red for parameter connections
+                            color="#EA4335",  # Red for parameter connections
                         )
                     )
-        
+
         # Filter unused outputs if requested
         if hide_unused_outputs:
             used_nodes = set()
             for rel in relationships:
                 used_nodes.add(rel.source)
                 used_nodes.add(rel.target)
-            
+
             filtered_nodes = [node for node in nodes if node.id in used_nodes]
             return NeoVizGraph(nodes=filtered_nodes, relationships=relationships)
-        
+
         return NeoVizGraph(nodes=nodes, relationships=relationships)
 
     def add_component(self, component: Component, name: str) -> None:
