@@ -187,6 +187,13 @@ Text2CypherRetriever
     :members: search
 
 
+CypherRetriever
+===============
+
+.. autoclass:: neo4j_graphrag.retrievers.CypherRetriever
+    :members: search
+
+
 *******************
 External Retrievers
 *******************

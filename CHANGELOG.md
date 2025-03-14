@@ -2,6 +2,10 @@
 
 ## Next
 
+### Added
+
+- Added CypherRetriever for executing parameterized Cypher queries with strong type validation.
+
 ## 1.6.0
 
 ### Added
