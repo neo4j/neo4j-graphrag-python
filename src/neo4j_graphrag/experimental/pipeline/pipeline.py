@@ -23,7 +23,12 @@ from typing import Any, Optional
 from neo4j_graphrag.utils.logging import prettify
 
 try:
-    from neo4j_viz import Node, Relationship, VisualizationGraph as NeoVizGraph, CaptionAlignment
+    from neo4j_viz import (
+        Node,
+        Relationship,
+        VisualizationGraph as NeoVizGraph,
+        CaptionAlignment,
+    )
 
     HAS_NEO4J_VIZ = True
 except ImportError:
@@ -248,7 +253,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                     caption_size=12,
                     pinned=False,
                     x=0,
-                    y=0
+                    y=0,
                 )
             )
             node_counter += 1
@@ -267,16 +272,18 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                         caption_size=10,
                         pinned=False,
                         x=0,
-                        y=0
+                        y=0,
                     )
                 )
                 # Connect component to its output
                 relationships.append(
                     Relationship(
-                        source=node_ids[n], target=node_ids[param_node_name], caption="",
+                        source=node_ids[n],
+                        target=node_ids[param_node_name],
+                        caption="",
                         caption_align=CaptionAlignment.CENTER,
                         caption_size=10,
-                        color="#000000"
+                        color="#000000",
                     )
                 )
                 node_counter += 1
@@ -299,7 +306,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                             caption=param,
                             color="#EA4335",  # Red for parameter connections
                             caption_align=CaptionAlignment.CENTER,
-                            caption_size=10
+                            caption_size=10,
                         )
                     )
 
