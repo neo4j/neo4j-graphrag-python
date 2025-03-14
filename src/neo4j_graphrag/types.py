@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import warnings
 from enum import Enum
-from typing import Any, Callable, Literal, Optional, TypedDict, Union
+from typing import Any, Callable, Literal, Optional, TypedDict, Union, Dict
 
 import neo4j
 from pydantic import (
@@ -312,3 +312,33 @@ class Neo4jMessageHistoryModel(BaseModel):
 class LLMMessage(TypedDict):
     role: Literal["system", "user", "assistant"]
     content: str
+
+
+class CypherParameterType(str, Enum):
+    """Enumeration of parameter types."""
+    STRING = "string"
+    NUMBER = "number"
+    INTEGER = "integer"
+    BOOLEAN = "boolean"
+    ARRAY = "array"
+
+
+class CypherParameterDefinition(BaseModel):
+    """Definition of a Cypher query parameter."""
+    type: CypherParameterType
+    description: str
+    required: bool = True
+
+
+class CypherRetrieverModel(BaseModel):
+    """Model for validating CypherRetriever arguments."""
+    driver_model: Neo4jDriverModel
+    query: str
+    parameters: Dict[str, CypherParameterDefinition]
+    result_formatter: Optional[Callable[[neo4j.Record], RetrieverResultItem]] = None
+    neo4j_database: Optional[str] = None
+
+
+class CypherSearchModel(BaseModel):
+    """Model for validating search parameters."""
+    parameters: Dict[str, Any]

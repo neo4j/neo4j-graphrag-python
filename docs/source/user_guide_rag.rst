@@ -349,6 +349,8 @@ We provide implementations for the following retrievers:
      - Same as HybridRetriever with a retrieval query similar to VectorCypherRetriever.
    * - :ref:`Text2Cypher <text2cypher-retriever-user-guide>`
      - Translates the user question into a Cypher query to be run against a Neo4j database (or Knowledge Graph). The results of the query are then passed to the LLM to generate the final answer.
+   * - :ref:`CypherRetriever <cypher-retriever-user-guide>`
+     - Uses a predefined Cypher query template with parameterized inputs to retrieve data from the database.
    * - :ref:`WeaviateNeo4jRetriever <weaviate-neo4j-retriever-user-guide>`
      - Use this retriever when vectors are saved in a Weaviate vector database
    * - :ref:`PineconeNeo4jRetriever <pinecone-neo4j-retriever-user-guide>`
@@ -848,6 +850,176 @@ LLMs can be different.
 
 
 See :ref:`text2cypherretriever`.
+
+.. _cypher-retriever-user-guide:
+
+Cypher Retriever
+===============================
+
+The `CypherRetriever` allows you to define a templated Cypher query with parameterized inputs. This retriever is useful when you need direct database access with dynamic parameters, but without the complexity of LLM-generated queries or vector similarity search.
+
+Basic Usage
+----------
+
+The simplest usage involves defining a query with parameters:
+
+.. code:: python
+
+    from neo4j_graphrag.retrievers import CypherRetriever
+
+    # Create a retriever for finding movies by title
+    retriever = CypherRetriever(
+        driver=driver,
+        query="MATCH (m:Movie {title: $movie_title}) RETURN m",
+        parameters={
+            "movie_title": {
+                "type": "string", 
+                "description": "Title of a movie"
+            }
+        }
+    )
+
+    # Use the retriever with specific parameter values
+    results = retriever.search(parameters={"movie_title": "The Matrix"})
+
+Parameter Types
+---------------
+
+The CypherRetriever supports these parameter types:
+
+- `string`: For text values
+- `number`: For floating point values
+- `integer`: For whole number values  
+- `boolean`: For true/false values
+- `array`: For lists of values
+
+Optional Parameters
+------------------
+
+You can make parameters optional by setting `required: false` in the parameter definition:
+
+.. code:: python
+
+    retriever = CypherRetriever(
+        driver=driver,
+        query="""
+        MATCH (m:Movie)
+        WHERE ($title IS NULL OR m.title CONTAINS $title)
+        AND ($year IS NULL OR m.released = $year)
+        RETURN m
+        """,
+        parameters={
+            "title": {
+                "type": "string",
+                "description": "Movie title to search for",
+                "required": False
+            },
+            "year": {
+                "type": "integer", 
+                "description": "Release year",
+                "required": False
+            }
+        }
+    )
+
+    # Search with only one parameter
+    results = retriever.search(parameters={"title": "Matrix"})
+
+Complex Queries
+--------------
+
+You can build more complex queries with multiple parameters and conditions:
+
+.. code:: python
+
+    retriever = CypherRetriever(
+        driver=driver,
+        query="""
+        MATCH (m:Movie)
+        WHERE ($title IS NULL OR m.title CONTAINS $title)
+        AND ($min_year IS NULL OR m.released >= $min_year)
+        AND ($max_year IS NULL OR m.released <= $max_year)
+        AND ($min_rating IS NULL OR m.rating >= $min_rating)
+        RETURN m
+        ORDER BY m.rating DESC
+        LIMIT $limit
+        """,
+        parameters={
+            "title": {
+                "type": "string",
+                "description": "Partial movie title to search for",
+                "required": False
+            },
+            "min_year": {
+                "type": "integer",
+                "description": "Minimum release year",
+                "required": False
+            },
+            "max_year": {
+                "type": "integer",
+                "description": "Maximum release year",
+                "required": False
+            },
+            "min_rating": {
+                "type": "number",
+                "description": "Minimum movie rating",
+                "required": False
+            },
+            "limit": {
+                "type": "integer",
+                "description": "Maximum number of results to return",
+                "required": True
+            }
+        }
+    )
+
+Custom Result Formatting
+-----------------------
+
+You can customize how the results are formatted using a result formatter:
+
+.. code:: python
+
+    def movie_formatter(record):
+        movie = record["m"]
+        return RetrieverResultItem(
+            content=f"{movie['title']} ({movie['released']})",
+            metadata={
+                "rating": movie.get("rating"),
+                "tagline": movie.get("tagline"),
+            }
+        )
+    
+    retriever = CypherRetriever(
+        driver=driver,
+        query="MATCH (m:Movie) WHERE m.title CONTAINS $title RETURN m",
+        parameters={"title": {"type": "string", "description": "Movie title"}},
+        result_formatter=movie_formatter
+    )
+
+Graph Traversals
+---------------
+
+The CypherRetriever is particularly useful for complex graph traversals:
+
+.. code:: python
+
+    retriever = CypherRetriever(
+        driver=driver,
+        query="""
+        MATCH (m:Movie {title: $movie_title})<-[r:ACTED_IN]-(a:Person)
+        RETURN a.name as actor, r.roles as roles
+        ORDER BY a.name
+        """,
+        parameters={
+            "movie_title": {
+                "type": "string",
+                "description": "Title of a movie"
+            }
+        }
+    )
+
+See :ref:`cypherretriever`.
 
 .. _custom-retriever:
 
