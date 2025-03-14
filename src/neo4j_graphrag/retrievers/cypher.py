@@ -16,13 +16,16 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, Optional
 
 import neo4j
 from neo4j.exceptions import CypherSyntaxError
 from pydantic import ValidationError
 
-from neo4j_graphrag.exceptions import RetrieverInitializationError, SearchValidationError
+from neo4j_graphrag.exceptions import (
+    RetrieverInitializationError,
+    SearchValidationError,
+)
 from neo4j_graphrag.retrievers.base import Retriever
 from neo4j_graphrag.types import (
     CypherParameterDefinition,
@@ -40,12 +43,12 @@ logger = logging.getLogger(__name__)
 class CypherRetriever(Retriever):
     """
     Allows for the retrieval of records from a Neo4j database using a parameterized Cypher query.
-    
+
     This retriever enables direct execution of predefined Cypher queries with dynamic parameters.
     It ensures type safety through parameter validation and provides the standard retriever result format.
 
     Example:
-    
+
     .. code-block:: python
 
         import neo4j
@@ -59,7 +62,7 @@ class CypherRetriever(Retriever):
             query="MATCH (m:Movie {title: $movie_title}) RETURN m",
             parameters={
                 "movie_title": {
-                    "type": "string", 
+                    "type": "string",
                     "description": "Title of a movie"
                 }
             }
@@ -74,7 +77,7 @@ class CypherRetriever(Retriever):
         parameters (Dict[str, Dict]): Parameter definitions with types and descriptions.
             Each parameter should have a 'type' and 'description' field.
             Supported types: 'string', 'number', 'integer', 'boolean', 'array'.
-        result_formatter (Optional[Callable[[neo4j.Record], RetrieverResultItem]]): 
+        result_formatter (Optional[Callable[[neo4j.Record], RetrieverResultItem]]):
             Custom function to transform a neo4j.Record to a RetrieverResultItem.
         neo4j_database (Optional[str]): The name of the Neo4j database to use.
 
@@ -87,7 +90,9 @@ class CypherRetriever(Retriever):
         driver: neo4j.Driver,
         query: str,
         parameters: Dict[str, Dict],
-        result_formatter: Optional[Callable[[neo4j.Record], RetrieverResultItem]] = None,
+        result_formatter: Optional[
+            Callable[[neo4j.Record], RetrieverResultItem]
+        ] = None,
         neo4j_database: Optional[str] = None,
     ) -> None:
         # Convert parameter dictionaries to CypherParameterDefinition objects
@@ -96,12 +101,10 @@ class CypherRetriever(Retriever):
             param_type = param_def.get("type", "string")
             description = param_def.get("description", "")
             required = param_def.get("required", True)
-            
+
             try:
                 param_definitions[param_name] = CypherParameterDefinition(
-                    type=param_type,
-                    description=description,
-                    required=required
+                    type=param_type, description=description, required=required
                 )
             except ValidationError as e:
                 raise RetrieverInitializationError(
@@ -122,51 +125,58 @@ class CypherRetriever(Retriever):
 
         # Validate that the query is syntactically valid Cypher
         self._validate_cypher_query(query)
-        
+
         # Validate that all parameters in the query are defined
         self._validate_query_parameters(query, param_definitions)
 
-        super().__init__(validated_data.driver_model.driver, validated_data.neo4j_database)
+        super().__init__(
+            validated_data.driver_model.driver, validated_data.neo4j_database
+        )
         self.query = validated_data.query
         self.parameters = validated_data.parameters
         self.result_formatter = validated_data.result_formatter
-    
+
     def _validate_cypher_query(self, query: str) -> None:
         """
         Validates that the query is syntactically valid Cypher.
-        
+
         Args:
             query (str): The Cypher query to validate.
-            
+
         Raises:
             RetrieverInitializationError: If the query is not valid Cypher.
         """
         # We can't fully validate the query without executing it, but we can check for basic syntax
         if not query.strip():
             raise RetrieverInitializationError("Query cannot be empty")
-        
+
         # Check for presence of common Cypher keywords
-        if not any(keyword in query.upper() for keyword in ["MATCH", "RETURN", "CREATE", "MERGE", "WITH"]):
+        if not any(
+            keyword in query.upper()
+            for keyword in ["MATCH", "RETURN", "CREATE", "MERGE", "WITH"]
+        ):
             raise RetrieverInitializationError(
                 "Query does not appear to be valid Cypher. "
                 "It should contain at least one of: MATCH, RETURN, CREATE, MERGE, WITH"
             )
 
-    def _validate_query_parameters(self, query: str, parameters: Dict[str, CypherParameterDefinition]) -> None:
+    def _validate_query_parameters(
+        self, query: str, parameters: Dict[str, CypherParameterDefinition]
+    ) -> None:
         """
         Validates that all parameters in the query are defined in the parameters dictionary.
-        
+
         Args:
             query (str): The Cypher query to validate.
             parameters (Dict[str, CypherParameterDefinition]): The parameter definitions.
-            
+
         Raises:
             RetrieverInitializationError: If any parameters in the query are not defined.
         """
         # Find all parameters in the query (starting with $)
-        param_pattern = r'\$([a-zA-Z0-9_]+)'
+        param_pattern = r"\$([a-zA-Z0-9_]+)"
         query_params = set(re.findall(param_pattern, query))
-        
+
         # Check that all parameters in the query are defined
         undefined_params = query_params - set(parameters.keys())
         if undefined_params:
@@ -177,25 +187,27 @@ class CypherRetriever(Retriever):
     def _validate_parameter_values(self, parameters: Dict[str, Any]) -> None:
         """
         Validates that parameter values match their defined types.
-        
+
         Args:
             parameters (Dict[str, Any]): The parameter values to validate.
-            
+
         Raises:
             SearchValidationError: If any parameter values do not match their defined types.
         """
         # Check that all required parameters are provided
         for param_name, param_def in self.parameters.items():
             if param_def.required and param_name not in parameters:
-                raise SearchValidationError(f"Required parameter '{param_name}' is missing")
+                raise SearchValidationError(
+                    f"Required parameter '{param_name}' is missing"
+                )
 
         # Validate the type of each parameter
         for param_name, param_value in parameters.items():
             if param_name not in self.parameters:
                 raise SearchValidationError(f"Unexpected parameter: {param_name}")
-            
+
             param_def = self.parameters[param_name]
-            
+
             # Type validation
             if param_def.type == CypherParameterType.STRING:
                 if not isinstance(param_value, str):
@@ -226,14 +238,14 @@ class CypherRetriever(Retriever):
     def get_search_results(self, parameters: Dict[str, Any]) -> RawSearchResult:
         """
         Executes the Cypher query with the provided parameters and returns the results.
-        
+
         Args:
             parameters (Dict[str, Any]): Parameter values to use in the query.
                 Each parameter should match the type specified in the parameter definitions.
-        
+
         Raises:
             SearchValidationError: If validation of the parameters fails.
-        
+
         Returns:
             RawSearchResult: The results of the query as a list of neo4j.Record and an optional metadata dict.
         """
@@ -241,13 +253,13 @@ class CypherRetriever(Retriever):
             validated_data = CypherSearchModel(parameters=parameters)
         except ValidationError as e:
             raise SearchValidationError(e.errors()) from e
-        
+
         # Validate parameter values against their definitions
         self._validate_parameter_values(validated_data.parameters)
-        
+
         logger.debug("CypherRetriever query: %s", self.query)
         logger.debug("CypherRetriever parameters: %s", validated_data.parameters)
-        
+
         try:
             records, _, _ = self.driver.execute_query(
                 query_=self.query,
@@ -259,7 +271,7 @@ class CypherRetriever(Retriever):
             raise SearchValidationError(f"Cypher syntax error: {e.message}") from e
         except Exception as e:
             raise SearchValidationError(f"Failed to execute query: {str(e)}") from e
-        
+
         return RawSearchResult(
             records=records,
             metadata={

@@ -316,6 +316,7 @@ class LLMMessage(TypedDict):
 
 class CypherParameterType(str, Enum):
     """Enumeration of parameter types."""
+
     STRING = "string"
     NUMBER = "number"
     INTEGER = "integer"
@@ -325,6 +326,7 @@ class CypherParameterType(str, Enum):
 
 class CypherParameterDefinition(BaseModel):
     """Definition of a Cypher query parameter."""
+
     type: CypherParameterType
     description: str
     required: bool = True
@@ -332,6 +334,7 @@ class CypherParameterDefinition(BaseModel):
 
 class CypherRetrieverModel(BaseModel):
     """Model for validating CypherRetriever arguments."""
+
     driver_model: Neo4jDriverModel
     query: str
     parameters: Dict[str, CypherParameterDefinition]
@@ -341,4 +344,5 @@ class CypherRetrieverModel(BaseModel):
 
 class CypherSearchModel(BaseModel):
     """Model for validating search parameters."""
+
     parameters: Dict[str, Any]

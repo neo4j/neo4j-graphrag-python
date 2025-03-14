@@ -31,22 +31,20 @@ NEO4J_PASSWORD = "password"  # Change this in production
 
 driver = neo4j.GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
 
+
 # Simple example: Find a movie by title
 def find_movie_by_title():
     retriever = CypherRetriever(
         driver=driver,
         query="MATCH (m:Movie {title: $movie_title}) RETURN m",
         parameters={
-            "movie_title": {
-                "type": "string",
-                "description": "Title of a movie"
-            }
-        }
+            "movie_title": {"type": "string", "description": "Title of a movie"}
+        },
     )
-    
+
     # Use the retriever to search for a movie
     result = retriever.search(parameters={"movie_title": "The Matrix"})
-    
+
     print("=== Find Movie by Title ===")
     for item in result.items:
         print(f"Movie: {item.content}")
@@ -63,9 +61,9 @@ def find_movies_by_criteria():
             metadata={
                 "rating": movie.get("rating"),
                 "tagline": movie.get("tagline"),
-            }
+            },
         )
-    
+
     # Create a more complex retriever with multiple parameters
     retriever = CypherRetriever(
         driver=driver,
@@ -83,42 +81,37 @@ def find_movies_by_criteria():
             "title": {
                 "type": "string",
                 "description": "Partial movie title to search for",
-                "required": False
+                "required": False,
             },
             "min_year": {
                 "type": "integer",
                 "description": "Minimum release year",
-                "required": False
+                "required": False,
             },
             "max_year": {
                 "type": "integer",
                 "description": "Maximum release year",
-                "required": False
+                "required": False,
             },
             "min_rating": {
                 "type": "number",
                 "description": "Minimum movie rating",
-                "required": False
+                "required": False,
             },
             "limit": {
                 "type": "integer",
                 "description": "Maximum number of results to return",
-                "required": True
-            }
+                "required": True,
+            },
         },
-        result_formatter=movie_formatter
+        result_formatter=movie_formatter,
     )
-    
+
     # Search with optional parameters
     result = retriever.search(
-        parameters={
-            "title": "Matrix",
-            "min_year": 1990,
-            "min_rating": 7.5,
-            "limit": 5
-        }
+        parameters={"title": "Matrix", "min_year": 1990, "min_rating": 7.5, "limit": 5}
     )
-    
+
     print("=== Find Movies by Criteria ===")
     for item in result.items:
         print(f"Movie: {item.content}")
@@ -140,15 +133,12 @@ def find_actors_in_movie():
         ORDER BY a.name
         """,
         parameters={
-            "movie_title": {
-                "type": "string",
-                "description": "Title of a movie"
-            }
-        }
+            "movie_title": {"type": "string", "description": "Title of a movie"}
+        },
     )
-    
+
     result = retriever.search(parameters={"movie_title": "The Matrix"})
-    
+
     print("=== Find Actors in Movie ===")
     for item in result.items:
         record = eval(item.content)  # Simple way to parse the string representation
@@ -166,7 +156,7 @@ if __name__ == "__main__":
             # Check if data exists
             result = session.run("MATCH (m:Movie) RETURN count(m) as count")
             count = result.single()["count"]
-            
+
             if count == 0:
                 print("No movie data found. Creating sample data...")
                 # Create sample data if none exists
@@ -194,12 +184,12 @@ if __name__ == "__main__":
                 print("Sample data created.")
             else:
                 print(f"Found {count} movies in the database.")
-        
+
         # Run the examples
         find_movie_by_title()
         find_movies_by_criteria()
         find_actors_in_movie()
-        
+
     finally:
         # Close the driver
         driver.close()
