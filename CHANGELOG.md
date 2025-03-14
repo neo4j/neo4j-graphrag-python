@@ -2,6 +2,11 @@
 
 ## Next
 
+### Changed
+
+- Replaced PyGraphviz with neo4j-viz for pipeline visualization, eliminating the need for system-level dependencies.
+
+
 ## 1.6.0
 
 ### Added
