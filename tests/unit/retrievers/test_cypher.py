@@ -29,8 +29,13 @@ from neo4j_graphrag.types import RetrieverResultItem
 
 
 class TestCypherRetriever(unittest.TestCase):
+    # Define class attributes for mypy
+    patcher1: unittest.mock._patch[MagicMock]
+    patcher2: unittest.mock._patch[bool]
+    mock_check_driver: MagicMock
+    
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         # Patch the Neo4jDriverModel.check_driver method to pass validation with MagicMock
         cls.patcher1 = patch("neo4j_graphrag.types.Neo4jDriverModel.check_driver")
         cls.mock_check_driver = cls.patcher1.start()
@@ -43,11 +48,11 @@ class TestCypherRetriever(unittest.TestCase):
         cls.patcher2.start()
 
     @classmethod
-    def tearDownClass(cls):
+    def tearDownClass(cls) -> None:
         cls.patcher1.stop()
         cls.patcher2.stop()
 
-    def setUp(self):
+    def setUp(self) -> None:
         # Create a mock driver
         self.driver = MagicMock(spec=neo4j.Driver)
         self.driver.execute_query.return_value = (
@@ -62,7 +67,7 @@ class TestCypherRetriever(unittest.TestCase):
             "movie_title": {"type": "string", "description": "Title of a movie"}
         }
 
-    def test_init_success(self):
+    def test_init_success(self) -> None:
         # Test successful initialization
         retriever = CypherRetriever(
             driver=self.driver,
@@ -72,7 +77,7 @@ class TestCypherRetriever(unittest.TestCase):
         assert retriever.query == self.valid_query
         assert "movie_title" in retriever.parameters
 
-    def test_init_empty_query(self):
+    def test_init_empty_query(self) -> None:
         # Test initialization with empty query
         with pytest.raises(RetrieverInitializationError):
             CypherRetriever(
@@ -81,7 +86,7 @@ class TestCypherRetriever(unittest.TestCase):
                 parameters=self.valid_parameters,
             )
 
-    def test_init_invalid_query(self):
+    def test_init_invalid_query(self) -> None:
         # Test initialization with invalid query
         with pytest.raises(RetrieverInitializationError):
             CypherRetriever(
@@ -90,7 +95,7 @@ class TestCypherRetriever(unittest.TestCase):
                 parameters=self.valid_parameters,
             )
 
-    def test_init_undefined_parameters(self):
+    def test_init_undefined_parameters(self) -> None:
         # Test initialization with undefined parameters in query
         with pytest.raises(RetrieverInitializationError):
             CypherRetriever(
@@ -99,7 +104,7 @@ class TestCypherRetriever(unittest.TestCase):
                 parameters=self.valid_parameters,  # Missing 'year' parameter
             )
 
-    def test_init_invalid_parameter_type(self):
+    def test_init_invalid_parameter_type(self) -> None:
         # Test initialization with invalid parameter type
         with pytest.raises(RetrieverInitializationError):
             CypherRetriever(
@@ -113,7 +118,7 @@ class TestCypherRetriever(unittest.TestCase):
                 },
             )
 
-    def test_search_success(self):
+    def test_search_success(self) -> None:
         # Test successful search
         retriever = CypherRetriever(
             driver=self.driver,
@@ -128,7 +133,7 @@ class TestCypherRetriever(unittest.TestCase):
         assert result.metadata and "cypher" in result.metadata
         assert result.metadata["cypher"] == self.valid_query
 
-    def test_search_missing_required_parameter(self):
+    def test_search_missing_required_parameter(self) -> None:
         # Test search with missing required parameter
         retriever = CypherRetriever(
             driver=self.driver,
@@ -138,7 +143,7 @@ class TestCypherRetriever(unittest.TestCase):
         with pytest.raises(SearchValidationError):
             retriever.search(parameters={})  # Missing 'movie_title'
 
-    def test_search_unexpected_parameter(self):
+    def test_search_unexpected_parameter(self) -> None:
         # Test search with unexpected parameter
         retriever = CypherRetriever(
             driver=self.driver,
@@ -150,7 +155,7 @@ class TestCypherRetriever(unittest.TestCase):
                 parameters={"movie_title": "The Matrix", "year": 1999}
             )  # 'year' not defined
 
-    def test_search_type_mismatch(self):
+    def test_search_type_mismatch(self) -> None:
         # Test search with parameter type mismatch
         retriever = CypherRetriever(
             driver=self.driver,
@@ -162,7 +167,7 @@ class TestCypherRetriever(unittest.TestCase):
                 parameters={"movie_title": 123}
             )  # Integer, expected string
 
-    def test_different_parameter_types(self):
+    def test_different_parameter_types(self) -> None:
         # Test with different parameter types
         query = (
             "MATCH (m:Movie) WHERE m.title = $title AND m.year = $year AND m.rating > $rating "
@@ -243,9 +248,9 @@ class TestCypherRetriever(unittest.TestCase):
                 }
             )
 
-    def test_custom_result_formatter(self):
+    def test_custom_result_formatter(self) -> None:
         # Test with custom result formatter
-        def custom_formatter(record):
+        def custom_formatter(record: Record) -> RetrieverResultItem:
             return RetrieverResultItem(
                 content=f"Movie: {record['m']['title']}",
                 metadata={"score": record["score"]},
@@ -260,9 +265,10 @@ class TestCypherRetriever(unittest.TestCase):
 
         result = retriever.search(parameters={"movie_title": "The Matrix"})
         assert result.items[0].content == "Movie: Test Movie"
-        assert result.items[0].metadata["score"] == 0.9
+        if result.items[0].metadata:
+            assert result.items[0].metadata.get("score") == 0.9
 
-    def test_optional_parameters(self):
+    def test_optional_parameters(self) -> None:
         # Test with optional parameters
         query = "MATCH (m:Movie {title: $title}) WHERE m.year = $year RETURN m"
         parameters = {

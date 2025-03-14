@@ -20,6 +20,7 @@ a templated Cypher query that accepts parameters at runtime.
 """
 
 import neo4j
+from neo4j import Record
 from neo4j_graphrag.retrievers import CypherRetriever
 from neo4j_graphrag.types import RetrieverResultItem
 
@@ -33,7 +34,7 @@ driver = neo4j.GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD)
 
 
 # Simple example: Find a movie by title
-def find_movie_by_title():
+def find_movie_by_title() -> None:
     retriever = CypherRetriever(
         driver=driver,
         query="MATCH (m:Movie {title: $movie_title}) RETURN m",
@@ -52,9 +53,9 @@ def find_movie_by_title():
 
 
 # Advanced example: Find movies with multiple criteria
-def find_movies_by_criteria():
+def find_movies_by_criteria() -> None:
     # Custom formatter to extract specific information
-    def movie_formatter(record):
+    def movie_formatter(record: Record) -> RetrieverResultItem:
         movie = record["m"]
         return RetrieverResultItem(
             content=f"{movie['title']} ({movie['released']})",
@@ -124,7 +125,7 @@ def find_movies_by_criteria():
 
 
 # Example with relationship traversal
-def find_actors_in_movie():
+def find_actors_in_movie() -> None:
     retriever = CypherRetriever(
         driver=driver,
         query="""
@@ -155,7 +156,8 @@ if __name__ == "__main__":
         with driver.session() as session:
             # Check if data exists
             result = session.run("MATCH (m:Movie) RETURN count(m) as count")
-            count = result.single()["count"]
+            record = result.single()
+            count = record["count"] if record else 0
 
             if count == 0:
                 print("No movie data found. Creating sample data...")

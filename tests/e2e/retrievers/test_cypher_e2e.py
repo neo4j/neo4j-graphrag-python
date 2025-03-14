@@ -18,6 +18,7 @@ import string
 from typing import Generator
 
 import neo4j
+from neo4j import Record
 import pytest
 from neo4j.exceptions import Neo4jError
 
@@ -84,7 +85,7 @@ def test_cypher_retriever_basic_query(driver: neo4j.Driver, sample_data: str) ->
     assert (
         "Product1" in result.items[0].content or "Product2" in result.items[0].content
     )
-    assert "cypher" in result.metadata
+    assert result.metadata is not None and "cypher" in result.metadata
 
 
 def test_cypher_retriever_multiple_parameters(
@@ -180,7 +181,7 @@ def test_cypher_retriever_custom_formatter(
     """Test query with custom result formatter."""
 
     # Custom formatter that extracts product info in a structured format
-    def product_formatter(record):
+    def product_formatter(record: Record) -> RetrieverResultItem:
         product = record["p"]
         return RetrieverResultItem(
             content=f"{product['name']} - ${product['price']}",
@@ -207,6 +208,6 @@ def test_cypher_retriever_custom_formatter(
     # Check custom formatting
     for item in result.items:
         assert " - $" in item.content
-        assert "price" in item.metadata
-        assert "stock" in item.metadata
-        assert "featured" in item.metadata
+        assert item.metadata is not None and "price" in item.metadata
+        assert item.metadata is not None and "stock" in item.metadata
+        assert item.metadata is not None and "featured" in item.metadata
