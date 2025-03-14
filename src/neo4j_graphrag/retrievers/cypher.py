@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, Optional
 
 import neo4j
 from pydantic_core import ErrorDetails
@@ -109,12 +109,14 @@ class CypherRetriever(Retriever):
                 )
             except ValidationError as e:
                 raise RetrieverInitializationError(
-                    [ErrorDetails(
-                        loc=("parameters", param_name),
-                        msg=f"Invalid parameter definition: {e.errors()}",
-                        type="validation_error",
-                        input=param_def
-                    )]
+                    [
+                        ErrorDetails(
+                            loc=("parameters", param_name),
+                            msg=f"Invalid parameter definition: {e.errors()}",
+                            type="validation_error",
+                            input=param_def,
+                        )
+                    ]
                 ) from e
 
         try:
@@ -154,28 +156,32 @@ class CypherRetriever(Retriever):
         """
         # We can't fully validate the query without executing it, but we can check for basic syntax
         if not query.strip():
-            raise RetrieverInitializationError([
-                ErrorDetails(
-                    loc=("query",),
-                    msg="Query cannot be empty",
-                    type="value_error.empty",
-                    input=""
-                )
-            ])
+            raise RetrieverInitializationError(
+                [
+                    ErrorDetails(
+                        loc=("query",),
+                        msg="Query cannot be empty",
+                        type="value_error.empty",
+                        input="",
+                    )
+                ]
+            )
 
         # Check for presence of common Cypher keywords
         if not any(
             keyword in query.upper()
             for keyword in ["MATCH", "RETURN", "CREATE", "MERGE", "WITH"]
         ):
-            raise RetrieverInitializationError([
-                ErrorDetails(
-                    loc=("query",),
-                    msg="Query does not appear to be valid Cypher. It should contain at least one of: MATCH, RETURN, CREATE, MERGE, WITH",
-                    type="value_error.invalid_cypher",
-                    input=""
-                )
-            ])
+            raise RetrieverInitializationError(
+                [
+                    ErrorDetails(
+                        loc=("query",),
+                        msg="Query does not appear to be valid Cypher. It should contain at least one of: MATCH, RETURN, CREATE, MERGE, WITH",
+                        type="value_error.invalid_cypher",
+                        input="",
+                    )
+                ]
+            )
 
     def _validate_query_parameters(
         self, query: str, parameters: Dict[str, CypherParameterDefinition]
@@ -197,14 +203,16 @@ class CypherRetriever(Retriever):
         # Check that all parameters in the query are defined
         undefined_params = query_params - set(parameters.keys())
         if undefined_params:
-            raise RetrieverInitializationError([
-                ErrorDetails(
-                    loc=("parameters",),
-                    msg=f"The following parameters are used in the query but not defined: {', '.join(undefined_params)}",
-                    type="value_error.undefined_parameters",
-                    input=undefined_params
-                )
-            ])
+            raise RetrieverInitializationError(
+                [
+                    ErrorDetails(
+                        loc=("parameters",),
+                        msg=f"The following parameters are used in the query but not defined: {', '.join(undefined_params)}",
+                        type="value_error.undefined_parameters",
+                        input=undefined_params,
+                    )
+                ]
+            )
 
     def _validate_parameter_values(self, parameters: Dict[str, Any]) -> None:
         """
@@ -219,80 +227,94 @@ class CypherRetriever(Retriever):
         # Check that all required parameters are provided
         for param_name, param_def in self.parameters.items():
             if param_def.required and param_name not in parameters:
-                raise SearchValidationError([
-                    ErrorDetails(
-                        loc=("parameters", param_name),
-                        msg=f"Required parameter '{param_name}' is missing",
-                        type="value_error.missing",
-                        input=None
-                    )
-                ])
+                raise SearchValidationError(
+                    [
+                        ErrorDetails(
+                            loc=("parameters", param_name),
+                            msg=f"Required parameter '{param_name}' is missing",
+                            type="value_error.missing",
+                            input=None,
+                        )
+                    ]
+                )
 
         # Validate the type of each parameter
         for param_name, param_value in parameters.items():
             if param_name not in self.parameters:
-                raise SearchValidationError([
-                    ErrorDetails(
-                        loc=("parameters", param_name),
-                        msg=f"Unexpected parameter: {param_name}",
-                        type="value_error.unexpected",
-                        input=param_name
-                    )
-                ])
+                raise SearchValidationError(
+                    [
+                        ErrorDetails(
+                            loc=("parameters", param_name),
+                            msg=f"Unexpected parameter: {param_name}",
+                            type="value_error.unexpected",
+                            input=param_name,
+                        )
+                    ]
+                )
 
             param_def = self.parameters[param_name]
 
             # Type validation
             if param_def.type == CypherParameterType.STRING:
                 if not isinstance(param_value, str):
-                    raise SearchValidationError([
-                        ErrorDetails(
-                            loc=("parameters", param_name),
-                            msg=f"Parameter '{param_name}' should be of type string, got {type(param_value).__name__}",
-                            type="type_error.string",
-                            input=param_value
-                        )
-                    ])
+                    raise SearchValidationError(
+                        [
+                            ErrorDetails(
+                                loc=("parameters", param_name),
+                                msg=f"Parameter '{param_name}' should be of type string, got {type(param_value).__name__}",
+                                type="type_error.string",
+                                input=param_value,
+                            )
+                        ]
+                    )
             elif param_def.type == CypherParameterType.NUMBER:
                 if not isinstance(param_value, (int, float)):
-                    raise SearchValidationError([
-                        ErrorDetails(
-                            loc=("parameters", param_name),
-                            msg=f"Parameter '{param_name}' should be of type number, got {type(param_value).__name__}",
-                            type="type_error.number",
-                            input=param_value
-                        )
-                    ])
+                    raise SearchValidationError(
+                        [
+                            ErrorDetails(
+                                loc=("parameters", param_name),
+                                msg=f"Parameter '{param_name}' should be of type number, got {type(param_value).__name__}",
+                                type="type_error.number",
+                                input=param_value,
+                            )
+                        ]
+                    )
             elif param_def.type == CypherParameterType.INTEGER:
                 if not isinstance(param_value, int) or isinstance(param_value, bool):
-                    raise SearchValidationError([
-                        ErrorDetails(
-                            loc=("parameters", param_name),
-                            msg=f"Parameter '{param_name}' should be of type integer, got {type(param_value).__name__}",
-                            type="type_error.integer",
-                            input=param_value
-                        )
-                    ])
+                    raise SearchValidationError(
+                        [
+                            ErrorDetails(
+                                loc=("parameters", param_name),
+                                msg=f"Parameter '{param_name}' should be of type integer, got {type(param_value).__name__}",
+                                type="type_error.integer",
+                                input=param_value,
+                            )
+                        ]
+                    )
             elif param_def.type == CypherParameterType.BOOLEAN:
                 if not isinstance(param_value, bool):
-                    raise SearchValidationError([
-                        ErrorDetails(
-                            loc=("parameters", param_name),
-                            msg=f"Parameter '{param_name}' should be of type boolean, got {type(param_value).__name__}",
-                            type="type_error.boolean",
-                            input=param_value
-                        )
-                    ])
+                    raise SearchValidationError(
+                        [
+                            ErrorDetails(
+                                loc=("parameters", param_name),
+                                msg=f"Parameter '{param_name}' should be of type boolean, got {type(param_value).__name__}",
+                                type="type_error.boolean",
+                                input=param_value,
+                            )
+                        ]
+                    )
             elif param_def.type == CypherParameterType.ARRAY:
                 if not isinstance(param_value, (list, tuple)):
-                    raise SearchValidationError([
-                        ErrorDetails(
-                            loc=("parameters", param_name),
-                            msg=f"Parameter '{param_name}' should be of type array, got {type(param_value).__name__}",
-                            type="type_error.array",
-                            input=param_value
-                        )
-                    ])
+                    raise SearchValidationError(
+                        [
+                            ErrorDetails(
+                                loc=("parameters", param_name),
+                                msg=f"Parameter '{param_name}' should be of type array, got {type(param_value).__name__}",
+                                type="type_error.array",
+                                input=param_value,
+                            )
+                        ]
+                    )
 
     def get_search_results(self, parameters: Dict[str, Any]) -> RawSearchResult:
         """
@@ -327,23 +349,27 @@ class CypherRetriever(Retriever):
                 routing_=neo4j.RoutingControl.READ,
             )
         except CypherSyntaxError as e:
-            raise SearchValidationError([
-                ErrorDetails(
-                    loc=("query",),
-                    msg=f"Cypher syntax error: {e.message}",
-                    type="value_error.cypher_syntax",
-                    input=self.query
-                )
-            ]) from e
+            raise SearchValidationError(
+                [
+                    ErrorDetails(
+                        loc=("query",),
+                        msg=f"Cypher syntax error: {e.message}",
+                        type="value_error.cypher_syntax",
+                        input=self.query,
+                    )
+                ]
+            ) from e
         except Exception as e:
-            raise SearchValidationError([
-            ErrorDetails(
-                loc=("query",),
-                msg=f"Failed to execute query: {str(e)}",
-                type="execution_error",
-                input=self.query
-            )
-        ]) from e
+            raise SearchValidationError(
+                [
+                    ErrorDetails(
+                        loc=("query",),
+                        msg=f"Failed to execute query: {str(e)}",
+                        type="execution_error",
+                        input=self.query,
+                    )
+                ]
+            ) from e
 
         return RawSearchResult(
             records=records,

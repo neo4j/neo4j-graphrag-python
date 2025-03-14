@@ -33,7 +33,7 @@ class TestCypherRetriever(unittest.TestCase):
     patcher1: unittest.mock._patch[MagicMock]
     patcher2: unittest.mock._patch[bool]
     mock_check_driver: MagicMock
-    
+
     @classmethod
     def setUpClass(cls) -> None:
         # Patch the Neo4jDriverModel.check_driver method to pass validation with MagicMock
