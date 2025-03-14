@@ -13,13 +13,17 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import abc
-from typing import Any, Optional
+from itertools import combinations
+from typing import Any, Optional, List
 
 import neo4j
+import numpy as np
 
 from neo4j_graphrag.experimental.components.types import ResolutionStats
 from neo4j_graphrag.experimental.pipeline import Component
 from neo4j_graphrag.utils import driver_config
+
+import spacy
 
 
 class EntityResolver(Component, abc.ABC):
@@ -137,3 +141,157 @@ class SinglePropertyExactMatchResolver(EntityResolver):
             number_of_nodes_to_resolve=number_of_nodes_to_resolve,
             number_of_created_nodes=number_of_created_nodes,
         )
+
+
+class SpaCySemanticMatchResolver(EntityResolver):
+    """
+    Resolve entities with same label and similar set of textual properties (default is
+    ["name"]) based on spaCy's static embeddings and cosine similarities.
+
+    Args:
+        driver (neo4j.Driver): The Neo4j driver to connect to the database.
+        filter_query (Optional[str]): Optional Cypher WHERE clause to reduce the resolution scope.
+        resolve_properties (Optional[List[str]]): The list of properties to consider for embeddings Defaults to ["name"].
+        similarity_threshold (float): The similarity threshold above which nodes are merged. Defaults to 0.8.
+        spacy_model (str): The name of the spaCy model to load. Defaults to "en_core_web_lg".
+        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to the server's default database ("neo4j" by default) (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
+
+    Example:
+
+    .. code-block:: python
+
+        from neo4j import GraphDatabase
+        from neo4j_graphrag.experimental.components.resolver import SinglePropertyExactMatchResolver
+
+        URI = "neo4j://localhost:7687"
+        AUTH = ("neo4j", "password")
+        DATABASE = "neo4j"
+
+        driver = GraphDatabase.driver(URI, auth=AUTH)
+        resolver = SinglePropertyExactMatchResolver(driver=driver, neo4j_database=DATABASE)
+        await resolver.run()  # no expected parameters
+
+    """
+
+    def __init__(
+        self,
+        driver: neo4j.Driver,
+        filter_query: Optional[str] = None,
+        resolve_properties: Optional[List[str]] = None,
+        similarity_threshold: float = 0.8,
+        spacy_model: str = "en_core_web_lg",
+        neo4j_database: Optional[str] = None,
+    ) -> None:
+        super().__init__(driver, filter_query)
+        self.resolve_properties = resolve_properties or ["name"]
+        self.similarity_threshold = similarity_threshold
+        self.neo4j_database = neo4j_database
+        self.nlp = spacy.load(spacy_model)
+
+    async def run(self) -> ResolutionStats:
+        """Resolve entities based on the following rules:
+         For each entity label, entities with similar 'resolve_properties'
+        (cosine similarity on embedding vectors) are merged into a single node.
+
+        See apoc.refactor.mergeNodes documentation for more details.
+        """
+        match_query = "MATCH (entity:__Entity__)"
+        if self.filter_query:
+            match_query += f" {self.filter_query}"
+
+        # Generate a dynamic map of requested properties, e.g. "name: entity.name, description: entity.description, ..."
+        props_map_list = [f"{prop}: entity.{prop}" for prop in self.resolve_properties]
+        props_map = ", ".join(props_map_list)
+
+        # Single Cypher query:
+        # 1. Filters entities if filter_query is provided
+        # 2. Unwinds labels to skip reserved ones
+        # 3. Collects all properties needed for embeddings
+        query = f"""
+            {match_query}
+            UNWIND labels(entity) AS lab
+            WITH lab, entity
+            WHERE NOT lab IN ['__Entity__', '__KGBuilder__']
+            WITH lab, collect({{ id: id(entity), {props_map} }}) AS labelCluster
+            RETURN lab, groupEntities
+        """
+
+        records, _, _ = self.driver.execute_query(query, database_=self.neo4j_database)
+
+        total_entities_embedded = 0
+        total_merged_nodes = 0
+
+        # for each row, 'lab' is the label, 'labelCluster' is a list of dicts (id + textual properties)
+        for row in records:
+            entities = row["labelCluster"]
+
+            # build node embeddings
+            node_embeddings = {}
+            for ent in entities:
+                # concatenate all textual properties (if non-null) into a single string
+                texts = [str(ent[p]) for p in self.resolve_properties if
+                         p in ent and ent[p]]
+                combined_text = " ".join(texts).strip()
+                if combined_text:
+                    node_embeddings[ent["id"]] = self.nlp(combined_text).vector
+            total_entities_embedded += len(node_embeddings)
+
+            # identify pairs to merge
+            pairs_to_merge = []
+            for (id1, emb1), (id2, emb2) in combinations(node_embeddings.items(), 2):
+                sim = self._cosine_similarity(emb1, emb2)
+                if sim >= self.similarity_threshold:
+                    pairs_to_merge.append({id1, id2})
+
+            # consolidate overlapping sets of node IDs
+            resolved_sets = self._consolidate_sets(pairs_to_merge)
+
+            # perform merges in the db using APOC
+            merged_count = 0
+            for node_id_set in resolved_sets:
+                if len(node_id_set) > 1:
+                    merge_query = (
+                        "MATCH (n) WHERE id(n) IN $ids "
+                        "WITH collect(n) AS nodes "
+                        "CALL apoc.refactor.mergeNodes(nodes, {properties: 'discard', mergeRels: true}) "
+                        "YIELD node RETURN id(node)"
+                    )
+                    result, _, _ = self.driver.execute_query(
+                        merge_query, {"ids": list(node_id_set)},
+                        database_=self.neo4j_database
+                    )
+                    merged_count += len(result)
+
+            total_merged_nodes += merged_count
+
+        return ResolutionStats(
+            number_of_nodes_to_resolve=total_entities_embedded,
+            number_of_created_nodes=total_merged_nodes,
+        )
+
+    @staticmethod
+    def _consolidate_sets(pairs: List[set]) -> List[set]:
+        """Consolidate overlapping sets of node pairs into unique sets."""
+        consolidated = []
+        for pair in pairs:
+            merged = False
+            for cons in consolidated:
+                # if there is any intersection, unify them
+                if pair & cons:
+                    cons.update(pair)
+                    merged = True
+                    break
+            if not merged:
+                consolidated.append(set(pair))
+        return consolidated
+
+    @staticmethod
+    def _cosine_similarity(vec1: np.ndarray, vec2: np.ndarray) -> float:
+        """Calculate cosine similarity between two embedding vectors."""
+        dot_product = np.dot(vec1, vec2)
+        norm1 = np.linalg.norm(vec1)
+        norm2 = np.linalg.norm(vec2)
+        if not norm1 or not norm2:
+            return 0.0
+        return float(dot_product / (norm1 * norm2))
+
