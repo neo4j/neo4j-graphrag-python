@@ -35,9 +35,9 @@ class EntityResolver(Component, abc.ABC):
     """
 
     def __init__(
-        self,
-        driver: neo4j.Driver,
-        filter_query: Optional[str] = None,
+            self,
+            driver: neo4j.Driver,
+            filter_query: Optional[str] = None,
     ) -> None:
         self.driver = driver_config.override_user_agent(driver)
         self.filter_query = filter_query
@@ -74,11 +74,11 @@ class SinglePropertyExactMatchResolver(EntityResolver):
     """
 
     def __init__(
-        self,
-        driver: neo4j.Driver,
-        filter_query: Optional[str] = None,
-        resolve_property: str = "name",
-        neo4j_database: Optional[str] = None,
+            self,
+            driver: neo4j.Driver,
+            filter_query: Optional[str] = None,
+            resolve_property: str = "name",
+            neo4j_database: Optional[str] = None,
     ) -> None:
         super().__init__(driver, filter_query)
         self.resolve_property = resolve_property
@@ -174,19 +174,19 @@ class SpaCySemanticMatchResolver(EntityResolver):
     """
 
     def __init__(
-        self,
-        driver: neo4j.Driver,
-        filter_query: Optional[str] = None,
-        resolve_properties: Optional[List[str]] = None,
-        similarity_threshold: float = 0.8,
-        spacy_model: str = "en_core_web_lg",
-        neo4j_database: Optional[str] = None,
+            self,
+            driver: neo4j.Driver,
+            filter_query: Optional[str] = None,
+            resolve_properties: Optional[List[str]] = None,
+            similarity_threshold: float = 0.8,
+            spacy_model: str = "en_core_web_lg",
+            neo4j_database: Optional[str] = None,
     ) -> None:
         super().__init__(driver, filter_query)
         self.resolve_properties = resolve_properties or ["name"]
         self.similarity_threshold = similarity_threshold
         self.neo4j_database = neo4j_database
-        self.nlp = spacy.load(spacy_model)
+        self.nlp = self._load_or_download_spacy_model(spacy_model)
 
     async def run(self) -> ResolutionStats:
         """Resolve entities based on the following rules:
@@ -296,3 +296,20 @@ class SpaCySemanticMatchResolver(EntityResolver):
             return 0.0
         return float(dot_product / (norm1 * norm2))
 
+    @staticmethod
+    def _load_or_download_spacy_model(model_name: str):
+        """
+        Attempt to load the specified spaCy model by name.
+        If not installed, automatically download and then load it.
+        """
+        try:
+            return spacy.load(model_name)
+        except OSError as e:
+            # The exact error message can differ slightly depending on spaCy version,
+            # so you may want to be broader or narrower with handling logic:
+            if 'doesn\'t seem to be a Python package or a valid path' in str(e):
+                print(f"Model '{model_name}' not found. Downloading...")
+                spacy.cli.download(model_name)
+                return spacy.load(model_name)
+            else:
+                raise e
