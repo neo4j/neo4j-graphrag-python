@@ -251,9 +251,6 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                     color="#4C8BF5",  # Blue for component nodes
                     caption_align=CaptionAlignment.CENTER,
                     caption_size=12,
-                    pinned=False,
-                    x=0,
-                    y=0,
                 )
             )
             node_counter += 1
@@ -270,9 +267,6 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                         color="#34A853",  # Green for output nodes
                         caption_align=CaptionAlignment.CENTER,
                         caption_size=10,
-                        pinned=False,
-                        x=0,
-                        y=0,
                     )
                 )
                 # Connect component to its output

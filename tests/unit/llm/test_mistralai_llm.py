@@ -71,7 +71,7 @@ def test_mistralai_llm_invoke_with_message_history(mock_mistral: Mock) -> None:
     messages = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
-    llm.client.chat.complete.assert_called_once_with(  # type: ignore[attr-defined]
+    llm.client.chat.complete.assert_called_once_with(
         messages=messages,
         model=model,
     )
@@ -103,12 +103,12 @@ def test_mistralai_llm_invoke_with_message_history_and_system_instruction(
     messages = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
-    llm.client.chat.complete.assert_called_once_with(  # type: ignore[attr-defined]
+    llm.client.chat.complete.assert_called_once_with(
         messages=messages,
         model=model,
     )
 
-    assert llm.client.chat.complete.call_count == 1  # type: ignore
+    assert llm.client.chat.complete.call_count == 1
 
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
