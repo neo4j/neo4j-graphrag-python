@@ -199,14 +199,15 @@ class SpaCySemanticMatchResolver(EntityResolver):
         if self.filter_query:
             match_query += f" {self.filter_query}"
 
-        # Generate a dynamic map of requested properties, e.g. "name: entity.name, description: entity.description, ..."
+        # generate a dynamic map of requested properties, e.g. "name: entity.name, description: entity.description, ..."
         props_map_list = [f"{prop}: entity.{prop}" for prop in self.resolve_properties]
         props_map = ", ".join(props_map_list)
 
-        # Single Cypher query:
-        # 1. Filters entities if filter_query is provided
-        # 2. Unwinds labels to skip reserved ones
-        # 3. Collects all properties needed for embeddings
+        # Cypher query:
+        # matches extracted entities
+        # filters entities if filter_query is provided
+        # unwinds labels to skip reserved ones
+        # collects all properties needed for embeddings
         query = f"""
             {match_query}
             UNWIND labels(entity) AS lab
