@@ -214,7 +214,7 @@ class SpaCySemanticMatchResolver(EntityResolver):
             WITH lab, entity
             WHERE NOT lab IN ['__Entity__', '__KGBuilder__']
             WITH lab, collect({{ id: id(entity), {props_map} }}) AS labelCluster
-            RETURN lab, groupEntities
+            RETURN lab, labelCluster
         """
 
         records, _, _ = self.driver.execute_query(query, database_=self.neo4j_database)
