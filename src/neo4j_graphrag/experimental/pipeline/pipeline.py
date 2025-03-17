@@ -18,7 +18,7 @@ import logging
 import warnings
 from collections import defaultdict
 from timeit import default_timer
-from typing import Any, Optional, AsyncGenerator, Callable, List
+from typing import Any, Optional, AsyncGenerator
 import asyncio
 
 from neo4j_graphrag.utils.logging import prettify
@@ -48,7 +48,10 @@ from neo4j_graphrag.experimental.pipeline.types.definitions import (
 )
 from neo4j_graphrag.experimental.pipeline.types.orchestration import RunResult
 from neo4j_graphrag.experimental.pipeline.types.context import RunContext
-from neo4j_graphrag.experimental.pipeline.notification import EventCallbackProtocol, Event
+from neo4j_graphrag.experimental.pipeline.notification import (
+    EventCallbackProtocol,
+    Event,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -118,7 +121,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
     ) -> None:
         super().__init__()
         self.store = store or InMemoryStore()
-        self.callback = callback
+        self.callbacks = [callback] if callback else []
         self.final_results = InMemoryStore()
         self.is_validated = False
         self.param_mapping: dict[str, dict[str, dict[str, str]]] = defaultdict(dict)
@@ -415,61 +418,60 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
 
     async def stream(self, data: dict[str, Any]) -> AsyncGenerator[Event, None]:
         """Run the pipeline and stream events for task progress.
-        
+
         Args:
             data: Input data for the pipeline components
-            
+
         Yields:
             Event: Pipeline and task events including start, progress, and completion
         """
         # Create queue for events
         event_queue: asyncio.Queue[Event] = asyncio.Queue()
-        
-        # Store original callback
-        original_callback = self.callback
-        
-        async def callback_and_event_stream(event: Event) -> None:
+
+        async def event_stream(event: Event) -> None:
             # Put event in queue for streaming
             await event_queue.put(event)
-            # Call original callback if it exists
-            if original_callback:
-                await original_callback(event)
-        
-        # Set up event callback
-        self.callback = callback_and_event_stream
-        
+
+        # Add event streaming callback
+        self.callbacks.append(event_stream)
+
         try:
             # Start pipeline execution in background task
             run_task = asyncio.create_task(self.run(data))
-            
-            while True:
+
+            # loop until the run task is done, and we do not have
+            # any more pending tasks in queue
+            is_run_task_running = True
+            is_queue_empty = False
+            while is_run_task_running or not is_queue_empty:
                 # Wait for next event or pipeline completion
+                event_queue_getter_task = asyncio.create_task(event_queue.get())
                 done, pending = await asyncio.wait(
-                    [run_task, event_queue.get()],
-                    return_when=asyncio.FIRST_COMPLETED
+                    [run_task, event_queue_getter_task],
+                    return_when=asyncio.FIRST_COMPLETED,
                 )
-                
-                # Pipeline finished
-                if run_task in done:
-                    if run_task.exception():
-                        raise run_task.exception()
-                    # Drain any remaining events
-                    while not event_queue.empty():
-                        yield await event_queue.get()
-                    break
-                    
-                # Got an event from queue
-                event_future = next(f for f in done if f != run_task)
-                try:
-                    event = event_future.result()
-                    yield event
-                except Exception as e:
-                    logger.error(f"Error processing event: {e}")
-                    raise
-        
+
+                is_run_task_running = run_task not in done
+                is_queue_empty = event_queue.empty()
+
+                for event_future in done:
+                    if event_future == run_task:
+                        continue
+                    yield event_future.result()  # type: ignore
+
+                # cancel remaining task
+                event_queue_getter_task.cancel()
+
+            # # Drain any remaining events
+            # while not event_queue.empty():
+            #     yield await event_queue.get()
+            # Pipeline finished
+            if run_task.exception():
+                raise run_task.exception()  # type: ignore
+
         finally:
             # Restore original callback
-            self.callback = original_callback
+            self.callbacks.remove(event_stream)
 
     async def run(self, data: dict[str, Any]) -> PipelineResult:
         logger.debug("PIPELINE START")
