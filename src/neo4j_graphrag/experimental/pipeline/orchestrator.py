@@ -54,7 +54,7 @@ class Orchestrator:
 
     def __init__(self, pipeline: Pipeline):
         self.pipeline = pipeline
-        self.event_notifier = EventNotifier(pipeline.callback)
+        self.event_notifier = EventNotifier(pipeline.callbacks)
         self.run_id = str(uuid.uuid4())
 
     async def run_task(self, task: TaskPipelineNode, data: dict[str, Any]) -> None:
