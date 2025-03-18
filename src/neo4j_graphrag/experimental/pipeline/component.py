@@ -84,13 +84,12 @@ class Component(metaclass=ComponentMeta):
     component_outputs: dict[str, dict[str, str | bool | type]]
 
     async def run(self, *args: Any, **kwargs: Any) -> DataModel:
-        """This function is planned for deprecation in a future release.
+        """Run the component and return its result.
 
         Note: if `run_with_context` is implemented, this method will not be used.
         """
         raise NotImplementedError(
             "You must implement the `run` or `run_with_context` method. "
-            "`run` method will be marked for deprecation in a future release."
         )
 
     async def run_with_context(
@@ -102,8 +101,10 @@ class Component(metaclass=ComponentMeta):
         that can be used to send events from the component to
         the pipeline callback.
 
-        For now, it defaults to calling the `run` method, but it
-        is meant to replace the `run` method in a future release.
+        This feature will be moved to the `run` method in a future
+        release.
+
+        It defaults to calling the `run` method to prevent any breaking change.
         """
         # default behavior to prevent a breaking change
         return await self.run(*args, **kwargs)

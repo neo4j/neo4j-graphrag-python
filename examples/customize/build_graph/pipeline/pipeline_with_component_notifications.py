@@ -25,9 +25,6 @@ class MultiplicationComponent(Component):
     def __init__(self, f: int) -> None:
         self.f = f
 
-    async def run(self, numbers: list[int]) -> MultiplyComponentResult:
-        return MultiplyComponentResult(result=[])
-
     async def multiply_number(
         self,
         context_: RunContext,
@@ -39,6 +36,8 @@ class MultiplicationComponent(Component):
         )
         return self.f * number
 
+    # implementing `run_with_context` to get access to
+    # the pipeline's RunContext:
     async def run_with_context(
         self,
         context_: RunContext,

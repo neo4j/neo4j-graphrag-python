@@ -179,8 +179,8 @@ See :ref:`pipelineevent` and :ref:`taskevent` to see what is sent in each event 
 Send Events from Components
 ===========================
 
-Components can send notifications about their progress using the `notify` function from
-the `context_`:
+Components can send progress notifications using the `notify` function from
+`context_` by implementing the `run_from_context` method:
 
 .. code:: python
 
@@ -200,3 +200,7 @@ the `context_`:
             return IntResultModel(result = number1 + number2)
 
 This will send an `TASK_PROGRESS` event to the pipeline callback.
+
+.. note::
+
+    In a future release, the `context_` parameter will be added to the `run` method.
