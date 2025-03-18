@@ -28,10 +28,10 @@ class RunContext(BaseModel):
 
     run_id: str
     task_name: str
-    _notifier: Optional[TaskProgressCallbackProtocol] = None
+    notifier: Optional[TaskProgressCallbackProtocol] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     async def notify(self, message: str, data: dict[str, Any]) -> None:
-        if self._notifier:
-            await self._notifier(message=message, data=data)
+        if self.notifier:
+            await self.notifier(message=message, data=data)
