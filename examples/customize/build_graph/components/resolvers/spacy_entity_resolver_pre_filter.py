@@ -22,7 +22,7 @@ async def main(driver: neo4j.Driver) -> None:
         driver,
         # let's filter all entities that belong to a certain docId
         filter_query="WHERE (entity)-[:FROM_CHUNK]->(:Chunk)-[:FROM_DOCUMENT]->(doc:"
-                     "Document {id = 'docId'}",
+        "Document {id = 'docId'}",
         # optionally, change the properties used for resolution (default is "name")
         # resolve_properties=["name", "ssn"],
         # the similarity threshold (default is 0.8)

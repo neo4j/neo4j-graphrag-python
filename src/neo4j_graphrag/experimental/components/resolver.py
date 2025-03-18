@@ -35,9 +35,9 @@ class EntityResolver(Component, abc.ABC):
     """
 
     def __init__(
-            self,
-            driver: neo4j.Driver,
-            filter_query: Optional[str] = None,
+        self,
+        driver: neo4j.Driver,
+        filter_query: Optional[str] = None,
     ) -> None:
         self.driver = driver_config.override_user_agent(driver)
         self.filter_query = filter_query
@@ -74,11 +74,11 @@ class SinglePropertyExactMatchResolver(EntityResolver):
     """
 
     def __init__(
-            self,
-            driver: neo4j.Driver,
-            filter_query: Optional[str] = None,
-            resolve_property: str = "name",
-            neo4j_database: Optional[str] = None,
+        self,
+        driver: neo4j.Driver,
+        filter_query: Optional[str] = None,
+        resolve_property: str = "name",
+        neo4j_database: Optional[str] = None,
     ) -> None:
         super().__init__(driver, filter_query)
         self.resolve_property = resolve_property
@@ -174,13 +174,13 @@ class SpaCySemanticMatchResolver(EntityResolver):
     """
 
     def __init__(
-            self,
-            driver: neo4j.Driver,
-            filter_query: Optional[str] = None,
-            resolve_properties: Optional[List[str]] = None,
-            similarity_threshold: float = 0.8,
-            spacy_model: str = "en_core_web_lg",
-            neo4j_database: Optional[str] = None,
+        self,
+        driver: neo4j.Driver,
+        filter_query: Optional[str] = None,
+        resolve_properties: Optional[List[str]] = None,
+        similarity_threshold: float = 0.8,
+        spacy_model: str = "en_core_web_lg",
+        neo4j_database: Optional[str] = None,
     ) -> None:
         super().__init__(driver, filter_query)
         self.resolve_properties = resolve_properties or ["name"]
@@ -230,8 +230,9 @@ class SpaCySemanticMatchResolver(EntityResolver):
             node_embeddings = {}
             for ent in entities:
                 # concatenate all textual properties (if non-null) into a single string
-                texts = [str(ent[p]) for p in self.resolve_properties if
-                         p in ent and ent[p]]
+                texts = [
+                    str(ent[p]) for p in self.resolve_properties if p in ent and ent[p]
+                ]
                 combined_text = " ".join(texts).strip()
                 if combined_text:
                     node_embeddings[ent["id"]] = self.nlp(combined_text).vector
@@ -258,8 +259,9 @@ class SpaCySemanticMatchResolver(EntityResolver):
                         "YIELD node RETURN id(node)"
                     )
                     result, _, _ = self.driver.execute_query(
-                        merge_query, {"ids": list(node_id_set)},
-                        database_=self.neo4j_database
+                        merge_query,
+                        {"ids": list(node_id_set)},
+                        database_=self.neo4j_database,
                     )
                     merged_count += len(result)
 
@@ -307,7 +309,7 @@ class SpaCySemanticMatchResolver(EntityResolver):
         except OSError as e:
             # The exact error message can differ slightly depending on spaCy version,
             # so you may want to be broader or narrower with handling logic:
-            if 'doesn\'t seem to be a Python package or a valid path' in str(e):
+            if "doesn't seem to be a Python package or a valid path" in str(e):
                 print(f"Model '{model_name}' not found. Downloading...")
                 spacy.cli.download(model_name)
                 return spacy.load(model_name)

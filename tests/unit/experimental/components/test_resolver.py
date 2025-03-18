@@ -58,8 +58,8 @@ async def test_simple_resolver_custom_filter(driver: MagicMock) -> None:
             )
         ]
     )
-    
-    
+
+
 @pytest.mark.asyncio
 async def test_spacy_resolver_match_on_name_property(driver: MagicMock) -> None:
     driver.execute_query.side_effect = [
@@ -70,7 +70,7 @@ async def test_spacy_resolver_match_on_name_property(driver: MagicMock) -> None:
                         "lab": "Person",
                         "labelCluster": [
                             {"id": 1, "name": "Alice"},
-                            {"id": 2, "name": "Alice"}
+                            {"id": 2, "name": "Alice"},
                         ],
                     }
                 )
@@ -94,6 +94,7 @@ async def test_spacy_resolver_match_on_name_property(driver: MagicMock) -> None:
 
     assert driver.execute_query.call_count == 2
 
+
 @pytest.mark.asyncio
 async def test_spacy_resolver_no_merge(driver: MagicMock) -> None:
     driver.execute_query.side_effect = [
@@ -104,7 +105,7 @@ async def test_spacy_resolver_no_merge(driver: MagicMock) -> None:
                         "lab": "Person",
                         "labelCluster": [
                             {"id": 1, "name": "Alice"},
-                            {"id": 2, "name": "Bob"}
+                            {"id": 2, "name": "Bob"},
                         ],
                     }
                 )
@@ -122,9 +123,10 @@ async def test_spacy_resolver_no_merge(driver: MagicMock) -> None:
 
     assert driver.execute_query.call_count == 1
 
+
 @pytest.mark.asyncio
 async def test_spacy_resolver_match_on_multiple_text_properties(
-        driver: MagicMock
+    driver: MagicMock,
 ) -> None:
     driver.execute_query.side_effect = [
         (
@@ -133,16 +135,8 @@ async def test_spacy_resolver_match_on_multiple_text_properties(
                     {
                         "lab": "Person",
                         "labelCluster": [
-                            {
-                                "id": 10,
-                                "name": "John Smith",
-                                "ssn": "23-45-6789"
-                            },
-                            {
-                                "id": 11,
-                                "name": "Jonathan Smith",
-                                "ssn": "23-45-6789"
-                            }
+                            {"id": 10, "name": "John Smith", "ssn": "23-45-6789"},
+                            {"id": 11, "name": "Jonathan Smith", "ssn": "23-45-6789"},
                         ],
                     }
                 )
@@ -158,8 +152,7 @@ async def test_spacy_resolver_match_on_multiple_text_properties(
     ]
 
     resolver = SpaCySemanticMatchResolver(
-        driver=driver,
-        resolve_properties=["name", "ssn"]
+        driver=driver, resolve_properties=["name", "ssn"]
     )
     res = await resolver.run()
     assert isinstance(res, ResolutionStats)
