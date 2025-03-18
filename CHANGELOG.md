@@ -2,6 +2,9 @@
 
 ## Next
 
+### Added
+- Added a new semantic match resolver to the KG Builder for entity resolution based on spaCy embeddings and cosine similarities so that nodes with similar textual properties get merged.
+
 ## 1.6.0
 
 ### Added
