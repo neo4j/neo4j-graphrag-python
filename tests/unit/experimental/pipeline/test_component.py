@@ -68,7 +68,7 @@ async def test_component_run_with_context() -> None:
     c = ComponentMultiplyWithContext()
     notifier_mock = AsyncMock()
     result = await c.run_with_context(
-        RunContext(run_id="run_id", task_name="task_name", notifier=notifier_mock),
+        RunContext(run_id="run_id", task_name="task_name", _notifier=notifier_mock),
         number1=1,
         number2=2,
     )

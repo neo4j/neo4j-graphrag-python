@@ -85,7 +85,9 @@ class Orchestrator:
             run_id=self.run_id,
             task_name=task.name,
         )
-        context = RunContext(run_id=self.run_id, task_name=task.name, notifier=notifier)
+        context = RunContext(
+            run_id=self.run_id, task_name=task.name, _notifier=notifier
+        )
         res = await task.run(context, inputs)
         await self.set_task_status(task.name, RunStatus.DONE)
         await self.event_notifier.notify_task_finished(self.run_id, task.name, res)
