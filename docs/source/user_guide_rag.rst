@@ -704,6 +704,7 @@ Qdrant Retrievers
         driver=driver,
         client=client,
         collection_name="my-collection",
+        using="my-vector",
         id_property_external="neo4j_id",    # The payload field that contains identifier to a corresponding Neo4j node id property
         id_property_neo4j="id",
         embedder=embedder,
