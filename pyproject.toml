@@ -28,7 +28,7 @@ include = "neo4j_graphrag"
 from = "src"
 
 [tool.poetry.dependencies]
-python = "^3.9.0"
+python = ">=3.9.0,<3.13"
 neo4j = "^5.17.0"
 pydantic = "^2.6.3"
 fsspec = "^2024.9.0"
