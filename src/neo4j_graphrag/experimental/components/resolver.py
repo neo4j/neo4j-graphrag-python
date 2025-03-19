@@ -18,12 +18,14 @@ from typing import Any, Optional, List
 
 import neo4j
 import numpy as np
+from numpy.typing import NDArray
+import spacy
+from spacy.language import Language
+from spacy.cli.download import download as spacy_download
 
 from neo4j_graphrag.experimental.components.types import ResolutionStats
 from neo4j_graphrag.experimental.pipeline import Component
 from neo4j_graphrag.utils import driver_config
-
-import spacy
 
 
 class EntityResolver(Component, abc.ABC):
@@ -241,7 +243,9 @@ class SpaCySemanticMatchResolver(EntityResolver):
             # identify pairs to merge
             pairs_to_merge = []
             for (id1, emb1), (id2, emb2) in combinations(node_embeddings.items(), 2):
-                sim = self._cosine_similarity(emb1, emb2)
+                sim = self._cosine_similarity(
+                    np.asarray(emb1, dtype=np.float64),
+                    np.asarray(emb2, dtype=np.float64))
                 if sim >= self.similarity_threshold:
                     pairs_to_merge.append({id1, id2})
 
@@ -273,9 +277,9 @@ class SpaCySemanticMatchResolver(EntityResolver):
         )
 
     @staticmethod
-    def _consolidate_sets(pairs: List[set]) -> List[set]:
+    def _consolidate_sets(pairs: List[set[str]]) -> List[set[str]]:
         """Consolidate overlapping sets of node pairs into unique sets."""
-        consolidated = []
+        consolidated: List[set[str]] = []
         for pair in pairs:
             merged = False
             for cons in consolidated:
@@ -289,7 +293,10 @@ class SpaCySemanticMatchResolver(EntityResolver):
         return consolidated
 
     @staticmethod
-    def _cosine_similarity(vec1: np.ndarray, vec2: np.ndarray) -> float:
+    def _cosine_similarity(
+            vec1: NDArray[np.float64],
+            vec2: NDArray[np.float64]
+    ) -> float:
         """Calculate cosine similarity between two embedding vectors."""
         dot_product = np.dot(vec1, vec2)
         norm1 = np.linalg.norm(vec1)
@@ -299,7 +306,7 @@ class SpaCySemanticMatchResolver(EntityResolver):
         return float(dot_product / (norm1 * norm2))
 
     @staticmethod
-    def _load_or_download_spacy_model(model_name: str):
+    def _load_or_download_spacy_model(model_name: str) -> Language:
         """
         Attempt to load the specified spaCy model by name.
         If not installed, automatically download and then load it.
@@ -311,7 +318,7 @@ class SpaCySemanticMatchResolver(EntityResolver):
             # so you may want to be broader or narrower with handling logic:
             if "doesn't seem to be a Python package or a valid path" in str(e):
                 print(f"Model '{model_name}' not found. Downloading...")
-                spacy.cli.download(model_name)
+                spacy_download(model_name)
                 return spacy.load(model_name)
             else:
                 raise e
