@@ -245,7 +245,8 @@ class SpaCySemanticMatchResolver(EntityResolver):
             for (id1, emb1), (id2, emb2) in combinations(node_embeddings.items(), 2):
                 sim = self._cosine_similarity(
                     np.asarray(emb1, dtype=np.float64),
-                    np.asarray(emb2, dtype=np.float64))
+                    np.asarray(emb2, dtype=np.float64),
+                )
                 if sim >= self.similarity_threshold:
                     pairs_to_merge.append({id1, id2})
 
@@ -294,8 +295,7 @@ class SpaCySemanticMatchResolver(EntityResolver):
 
     @staticmethod
     def _cosine_similarity(
-            vec1: NDArray[np.float64],
-            vec2: NDArray[np.float64]
+        vec1: NDArray[np.float64], vec2: NDArray[np.float64]
     ) -> float:
         """Calculate cosine similarity between two embedding vectors."""
         dot_product = np.dot(vec1, vec2)
