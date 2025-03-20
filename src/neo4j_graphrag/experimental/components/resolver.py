@@ -12,7 +12,6 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-import abc
 from typing import Any, Optional
 
 import neo4j
@@ -22,7 +21,7 @@ from neo4j_graphrag.experimental.pipeline import Component
 from neo4j_graphrag.utils import driver_config
 
 
-class EntityResolver(Component, abc.ABC):
+class EntityResolver(Component):
     """Entity resolution base class
 
     Args:
@@ -38,9 +37,8 @@ class EntityResolver(Component, abc.ABC):
         self.driver = driver_config.override_user_agent(driver)
         self.filter_query = filter_query
 
-    @abc.abstractmethod
     async def run(self, *args: Any, **kwargs: Any) -> ResolutionStats:
-        pass
+        raise NotImplementedError()
 
 
 class SinglePropertyExactMatchResolver(EntityResolver):

@@ -31,7 +31,7 @@ from neo4j_graphrag.experimental.pipeline.config.param_resolver import (
     ParamConfig,
 )
 from neo4j_graphrag.experimental.pipeline.config.types import PipelineType
-from neo4j_graphrag.experimental.pipeline.types import (
+from neo4j_graphrag.experimental.pipeline.types.definitions import (
     ComponentDefinition,
     ConnectionDefinition,
     PipelineDefinition,

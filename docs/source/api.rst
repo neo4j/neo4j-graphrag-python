@@ -9,12 +9,17 @@ API Documentation
 Components
 **********
 
+Component
+=========
+
+.. autoclass:: neo4j_graphrag.experimental.pipeline.component.Component
+  :members: run, run_with_context
+
 DataLoader
 ==========
 
 .. autoclass:: neo4j_graphrag.experimental.components.pdf_loader.DataLoader
     :members: run, get_document_metadata
-
 
 PdfLoader
 =========
@@ -58,7 +63,6 @@ LexicalGraphBuilder
 .. autoclass:: neo4j_graphrag.experimental.components.lexical_graph.LexicalGraphBuilder
     :members:
     :exclude-members: component_inputs, component_outputs
-
 
 Neo4jChunkReader
 ================

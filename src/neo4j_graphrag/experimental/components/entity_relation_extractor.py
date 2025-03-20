@@ -14,7 +14,6 @@
 #  limitations under the License.
 from __future__ import annotations
 
-import abc
 import asyncio
 import enum
 import json
@@ -115,7 +114,7 @@ def fix_invalid_json(raw_json: str) -> str:
     return repaired_json
 
 
-class EntityRelationExtractor(Component, abc.ABC):
+class EntityRelationExtractor(Component):
     """Abstract class for entity relation extraction components.
 
     Args:
@@ -133,7 +132,6 @@ class EntityRelationExtractor(Component, abc.ABC):
         self.on_error = on_error
         self.create_lexical_graph = create_lexical_graph
 
-    @abc.abstractmethod
     async def run(
         self,
         chunks: TextChunks,
@@ -141,7 +139,7 @@ class EntityRelationExtractor(Component, abc.ABC):
         lexical_graph_config: Optional[LexicalGraphConfig] = None,
         **kwargs: Any,
     ) -> Neo4jGraph:
-        pass
+        raise NotImplementedError()
 
     def update_ids(
         self,
