@@ -104,6 +104,11 @@ SinglePropertyExactMatchResolver
 .. autoclass:: neo4j_graphrag.experimental.components.resolver.SinglePropertyExactMatchResolver
     :members: run
 
+SpaCySemanticMatchResolver
+================================
+
+.. autoclass:: neo4j_graphrag.experimental.components.resolver.SpaCySemanticMatchResolver
+    :members: run
 
 .. _pipeline-section:
 

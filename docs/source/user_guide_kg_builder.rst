@@ -1028,22 +1028,28 @@ without making assumptions about entity similarity. The Entity Resolver
 is responsible for refining the created knowledge graph by merging entity
 nodes that represent the same real-world object.
 
-In practice, this package implements a simple resolver that merges nodes
-with the same label and identical "name" property.
+In practice, this package implements two resolvers:
+
+- a simple resolver that merges nodes with the same label and identical "name" property;
+- a semantic match resolver that merges nodes with the same label and similar set of textual properties (by default it uses the "name" property).
+So far, the semantic matching is based on spaCy embeddings and cosine similarities of embedding vectors.
 
 .. warning::
 
-    The `SinglePropertyExactMatchResolver` **replaces** the nodes created by the KG writer.
+    - The `SinglePropertyExactMatchResolver` and `SpaCySemanticMatchResolver` **replace** the nodes created by the KG writer.
+
+    - Check the :ref:`installation` section to make sure you have the required dependencies installed when using `SpaCySemanticMatchResolver`.
 
 
-It can be used like this:
+The resolvers can be used like this:
 
 .. code:: python
 
     from neo4j_graphrag.experimental.components.resolver import (
         SinglePropertyExactMatchResolver,
     )
-    resolver = SinglePropertyExactMatchResolver(driver)
+    resolver = SinglePropertyExactMatchResolver(driver)  # exact match resolver
+    # resolver = SpaCySemanticMatchResolver(driver)  # semantic match with spaCy
     res = await resolver.run()
 
 .. warning::
