@@ -249,8 +249,8 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                     caption=f"{node.component.__class__.__name__}: {n}({comp_inputs})",
                     size=20,  # Component nodes are larger
                     color="#4C8BF5",  # Blue for component nodes
-                    caption_align=CaptionAlignment.CENTER,
-                    caption_size=12,
+                    caption_alignment=CaptionAlignment.CENTER,
+                    caption_size=3,
                 )
             )
             node_counter += 1
@@ -265,8 +265,8 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                         caption=o,
                         size=10,  # Output nodes are smaller
                         color="#34A853",  # Green for output nodes
-                        caption_align=CaptionAlignment.CENTER,
-                        caption_size=10,
+                        caption_alignment=CaptionAlignment.CENTER,
+                        caption_size=3,
                     )
                 )
                 # Connect component to its output
