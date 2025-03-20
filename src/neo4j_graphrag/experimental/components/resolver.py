@@ -30,6 +30,7 @@ from neo4j_graphrag.utils import driver_config
 
 logger = logging.getLogger(__name__)
 
+
 class EntityResolver(Component, abc.ABC):
     """Entity resolution base class
 
