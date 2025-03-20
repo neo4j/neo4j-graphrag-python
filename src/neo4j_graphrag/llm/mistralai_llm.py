@@ -36,12 +36,13 @@ try:
     from mistralai.models.sdkerror import SDKError
 except ImportError:
     # Define placeholder types for type checking
+    Messages = None  # type: ignore
+
     class Mistral:  # type: ignore
         pass
+
     class SDKError(Exception):  # type: ignore
         pass
-    Mistral = None  # type: ignore
-    SDKError = None  # type: ignore
 
 
 class MistralAILLM(LLMInterface):

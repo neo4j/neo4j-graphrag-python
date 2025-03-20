@@ -27,7 +27,6 @@ except ImportError:
     # Define placeholder type for type checking
     class Mistral:  # type: ignore
         pass
-    Mistral = None  # type: ignore
 
 
 class MistralAIEmbeddings(Embedder):
