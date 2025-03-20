@@ -435,6 +435,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         # Add event streaming callback
         self.callbacks.append(event_stream)
 
+        event_queue_getter_task = None
         try:
             # Start pipeline execution in background task
             run_task = asyncio.create_task(self.run(data))
@@ -459,19 +460,14 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                         continue
                     yield event_future.result()  # type: ignore
 
-                # cancel remaining task
-                event_queue_getter_task.cancel()
-
-            # # Drain any remaining events
-            # while not event_queue.empty():
-            #     yield await event_queue.get()
-            # Pipeline finished
             if run_task.exception():
                 raise run_task.exception()  # type: ignore
 
         finally:
             # Restore original callback
             self.callbacks.remove(event_stream)
+            if event_queue_getter_task and not event_queue_getter_task.done():
+                event_queue_getter_task.cancel()
 
     async def run(self, data: dict[str, Any]) -> PipelineResult:
         logger.debug("PIPELINE START")
