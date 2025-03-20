@@ -102,6 +102,14 @@ Neo4jWriter
 .. autoclass:: neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter
     :members: run
 
+
+EntityResolver
+==============
+
+.. autoclass:: neo4j_graphrag.experimental.components.resolver.EntityResolver
+    :members: run
+
+
 SinglePropertyExactMatchResolver
 ================================
 

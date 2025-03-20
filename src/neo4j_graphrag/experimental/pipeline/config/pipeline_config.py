@@ -20,6 +20,7 @@ import neo4j
 from pydantic import field_validator
 
 from neo4j_graphrag.embeddings import Embedder
+from neo4j_graphrag.experimental.pipeline import Component
 from neo4j_graphrag.experimental.pipeline.config.base import AbstractConfig
 from neo4j_graphrag.experimental.pipeline.config.object_config import (
     ComponentType,
@@ -83,7 +84,7 @@ class AbstractPipelineConfig(AbstractConfig):
         return embedders
 
     def _resolve_component_definition(
-        self, name: str, config: ComponentType
+        self, name: str, config: ComponentType[Component]
     ) -> ComponentDefinition:
         component = config.parse(self._global_data)
         if hasattr(config.root, "run_params_"):
@@ -188,7 +189,7 @@ class PipelineConfig(AbstractPipelineConfig):
     """Configuration class for raw pipelines.
     Config must contain all components and connections."""
 
-    component_config: dict[str, ComponentType]
+    component_config: dict[str, ComponentType[Component]]
     connection_config: list[ConnectionDefinition]
     template_: Literal[PipelineType.NONE] = PipelineType.NONE
 

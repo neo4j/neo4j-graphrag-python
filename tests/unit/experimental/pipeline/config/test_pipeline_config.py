@@ -345,7 +345,7 @@ def test_abstract_pipeline_config_resolve_component_definition_no_run_params(
 ) -> None:
     mock_component_parse.return_value = component
     config = AbstractPipelineConfig()
-    component_type = ComponentType(component)
+    component_type: ComponentType[Component] = ComponentType(component)
     component_definition = config._resolve_component_definition("name", component_type)
     assert isinstance(component_definition, ComponentDefinition)
     mock_component_parse.assert_called_once_with({})
@@ -366,7 +366,7 @@ def test_abstract_pipeline_config_resolve_component_definition_with_run_params(
     mock_component_parse.return_value = component
     mock_resolve_params.return_value = {"param": "resolver param result"}
     config = AbstractPipelineConfig()
-    component_type = ComponentType(
+    component_type: ComponentType[Component] = ComponentType(
         ComponentConfig(class_="", params_={}, run_params_={"param1": "value1"})
     )
     component_definition = config._resolve_component_definition("name", component_type)

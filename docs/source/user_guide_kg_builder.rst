@@ -178,9 +178,13 @@ For advanced customization or when using a custom implementation, you can pass
 instances of specific components to the `SimpleKGPipeline`. The components that can
 customized at the moment are:
 
-- `text_splitter`: must be an instance of :ref:`TextSplitter`
 - `pdf_loader`: must be an instance of :ref:`PdfLoader`
+- `schema_builder`: must be an instance of :ref:`SchemaBuilder`
+- `text_splitter`: must be an instance of :ref:`TextSplitter`
+- `chunk_embedder`: must be an instance of :ref:`TextChunkEmbedder`
+- `extractor`: must be an instance of :ref:`EntityRelationExtractor`
 - `kg_writer`: must be an instance of :ref:`KGWriter`
+- `resolver`: must be an instance of :ref:`EntityResolver`
 
 For instance, the following code can be used to customize the chunk size and
 chunk overlap in the text splitter component:
@@ -198,6 +202,24 @@ chunk overlap in the text splitter component:
         text_splitter=text_splitter,
         # ...
     )
+
+
+.. warning::
+
+    When providing a custom component, all other related parameters in the SimpleKGPipeline constructor are ignored. For instance, in the following example:
+
+    .. code:: python
+
+        kg_builder = SimpleKGPipeline(
+            # ...
+            writer=Neo4jKGWriter(neo4j_database="db_1"),
+            neo4j_database="db_2",
+            # ...
+        )
+
+
+    The graph will be saved to the **db_1** database.
+
 
 
 Using a Config file
