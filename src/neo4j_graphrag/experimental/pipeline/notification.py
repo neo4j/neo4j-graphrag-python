@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import asyncio
 import datetime
 import enum
 from collections.abc import Awaitable
@@ -72,12 +73,14 @@ class EventCallbackProtocol(Protocol):
 
 
 class EventNotifier:
-    def __init__(self, callback: EventCallbackProtocol | None) -> None:
-        self.callback = callback
+    def __init__(self, callbacks: list[EventCallbackProtocol]) -> None:
+        self.callbacks = callbacks
 
     async def notify(self, event: Event) -> None:
-        if self.callback:
-            await self.callback(event)
+        await asyncio.gather(
+            *[c(event) for c in self.callbacks],
+            return_exceptions=True,
+        )
 
     async def notify_pipeline_started(
         self, run_id: str, input_data: Optional[dict[str, Any]] = None
