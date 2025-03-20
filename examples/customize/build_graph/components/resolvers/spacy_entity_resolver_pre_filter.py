@@ -1,5 +1,6 @@
 """The SpaCySemanticMatchResolver merges nodes with same label
-and similar textual properties (by default using the "name" property).
+and similar textual properties (by default using the "name" property) based on spaCy
+embeddings and cosine similarities of embedding vectors.
 
 If the resolution is intended to be applied only on some nodes, for instance nodes that
 belong to a specific document, a "WHERE" query can be added. The only variable in the

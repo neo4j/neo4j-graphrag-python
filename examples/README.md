@@ -126,9 +126,7 @@ are listed in [the last section of this file](#customize).
   - [Neo4j writer](./customize/build_graph/components/writers/neo4j_writer.py)
   - [Custom](./customize/build_graph/components/writers/custom_writer.py)
 - Entity Resolver:
-  - [SinglePropertyExactMatchResolver](./customize/build_graph/components/resolvers/simple_entity_resolver.py)
   - [SinglePropertyExactMatchResolver with pre-filter](./customize/build_graph/components/resolvers/simple_entity_resolver_pre_filter.py)
-  - [SpaCySemanticMatchResolver](./customize/build_graph/components/resolvers/spacy_entity_resolver.py)
   - [SpaCySemanticMatchResolver with pre-filter](./customize/build_graph/components/resolvers/spacy_entity_resolver_pre_filter.py)
   - [Custom resolver](./customize/build_graph/components/resolvers/custom_resolver.py)
 - [Custom component](./customize/build_graph/components/custom_component.py)
