@@ -21,7 +21,7 @@ from neo4j_graphrag.embeddings.base import Embedder
 try:
     import cohere
 except ImportError:
-    cohere = None
+    cohere = None  # type: ignore[assignment]
 
 
 class CohereEmbeddings(Embedder):

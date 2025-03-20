@@ -49,7 +49,7 @@ def test_anthropic_invoke_happy_path(mock_anthropic: Mock) -> None:
     input_text = "may thy knife chip and shatter"
     response = llm.invoke(input_text)
     assert response.content == "generated text"
-    llm.client.messages.create.assert_called_once_with(
+    llm.client.messages.create.assert_called_once_with(  # type: ignore[attr-defined]
         messages=[{"role": "user", "content": input_text}],
         model="claude-3-opus-20240229",
         system=anthropic.NOT_GIVEN,
@@ -81,7 +81,7 @@ def test_anthropic_invoke_with_message_history_happy_path(mock_anthropic: Mock) 
     response = llm.invoke(question, message_history)
     assert response.content == "generated text"
     message_history.add_message(LLMMessage(role="user", content=question))
-    llm.client.messages.create.assert_called_once_with(
+    llm.client.messages.create.assert_called_once_with(  # type: ignore[attr-defined]
         messages=message_history,
         model="claude-3-opus-20240229",
         system=anthropic.NOT_GIVEN,
@@ -107,14 +107,14 @@ def test_anthropic_invoke_with_system_instruction(
     assert isinstance(response, LLMResponse)
     assert response.content == "generated text"
     messages = [{"role": "user", "content": question}]
-    llm.client.messages.create.assert_called_with(
+    llm.client.messages.create.assert_called_with(  # type: ignore[attr-defined]
         model="claude-3-opus-20240229",
         system=system_instruction,
         messages=messages,
         **model_params,
     )
 
-    assert llm.client.messages.create.call_count == 1
+    assert llm.client.messages.create.call_count == 1  # type: ignore[attr-defined]
 
 
 def test_anthropic_invoke_with_message_history_and_system_instruction(
@@ -145,14 +145,14 @@ def test_anthropic_invoke_with_message_history_and_system_instruction(
     assert isinstance(response, LLMResponse)
     assert response.content == "generated text"
     message_history.add_message(LLMMessage(role="user", content=question))
-    llm.client.messages.create.assert_called_with(
+    llm.client.messages.create.assert_called_with(  # type: ignore[attr-defined]
         model="claude-3-opus-20240229",
         system=system_instruction,
         messages=message_history,
         **model_params,
     )
 
-    assert llm.client.messages.create.call_count == 1
+    assert llm.client.messages.create.call_count == 1  # type: ignore[attr-defined]
 
 
 def test_anthropic_invoke_with_message_history_validation_error(
@@ -190,7 +190,7 @@ async def test_anthropic_ainvoke_happy_path(mock_anthropic: Mock) -> None:
     input_text = "may thy knife chip and shatter"
     response = await llm.ainvoke(input_text)
     assert response.content == "Return text"
-    llm.async_client.messages.create.assert_awaited_once_with(
+    llm.async_client.messages.create.assert_awaited_once_with(  # type: ignore[attr-defined]
         model="claude-3-opus-20240229",
         system=anthropic.NOT_GIVEN,
         messages=[{"role": "user", "content": input_text}],
