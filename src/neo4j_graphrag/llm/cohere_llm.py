@@ -94,7 +94,7 @@ class CohereLLM(LLMInterface):
                 raise LLMGenerationError(e.errors()) from e
             messages.extend(cast(Iterable[dict[str, Any]], message_history))
         messages.append(UserMessage(content=input).model_dump())
-        return messages  # type: ignore
+        return messages  # type: ignore[return-value]
 
     def invoke(
         self,

@@ -91,7 +91,7 @@ class AnthropicLLM(LLMInterface):
                 raise LLMGenerationError(e.errors()) from e
             messages.extend(cast(Iterable[dict[str, Any]], message_history))
         messages.append(UserMessage(content=input).model_dump())
-        return messages  # type: ignore
+        return messages  # type: ignore[return-value]
 
     def invoke(
         self,
@@ -112,8 +112,10 @@ class AnthropicLLM(LLMInterface):
         """
         try:
             if isinstance(message_history, MessageHistory):
-                message_history = message_history.messages
-            messages = self.get_messages(input, message_history)
+                message_history.add_message(LLMMessage(role="user", content=input))
+                messages = message_history
+            else:
+                messages = self.get_messages(input, message_history)
             response = self.client.messages.create(
                 model=self.model_name,
                 system=system_instruction or self.anthropic.NOT_GIVEN,
@@ -148,8 +150,10 @@ class AnthropicLLM(LLMInterface):
         """
         try:
             if isinstance(message_history, MessageHistory):
-                message_history = message_history.messages
-            messages = self.get_messages(input, message_history)
+                message_history.add_message(LLMMessage(role="user", content=input))
+                messages = message_history
+            else:
+                messages = self.get_messages(input, message_history)
             response = await self.async_client.messages.create(
                 model=self.model_name,
                 system=system_instruction or self.anthropic.NOT_GIVEN,

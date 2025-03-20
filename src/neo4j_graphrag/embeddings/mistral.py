@@ -24,7 +24,9 @@ from neo4j_graphrag.exceptions import EmbeddingsGenerationError
 try:
     from mistralai import Mistral
 except ImportError:
-    Mistral = None  # type: ignore
+    # Define placeholder type for type checking
+    class Mistral:  # type: ignore
+        pass
 
 
 class MistralAIEmbeddings(Embedder):

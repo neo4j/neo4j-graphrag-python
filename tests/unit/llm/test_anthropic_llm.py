@@ -49,7 +49,7 @@ def test_anthropic_invoke_happy_path(mock_anthropic: Mock) -> None:
     input_text = "may thy knife chip and shatter"
     response = llm.invoke(input_text)
     assert response.content == "generated text"
-    llm.client.messages.create.assert_called_once_with(  # type: ignore
+    llm.client.messages.create.assert_called_once_with(  # type: ignore[attr-defined]
         messages=[{"role": "user", "content": input_text}],
         model="claude-3-opus-20240229",
         system=anthropic.NOT_GIVEN,
@@ -66,15 +66,21 @@ def test_anthropic_invoke_with_message_history_happy_path(mock_anthropic: Mock) 
         "claude-3-opus-20240229",
         model_params=model_params,
     )
-    message_history = [
-        {"role": "user", "content": "When does the sun come up in the summer?"},
-        {"role": "assistant", "content": "Usually around 6am."},
-    ]
+    from neo4j_graphrag.message_history import InMemoryMessageHistory
+    from neo4j_graphrag.types import LLMMessage
+
+    message_history = InMemoryMessageHistory()
+    message_history.add_message(
+        LLMMessage(role="user", content="When does the sun come up in the summer?")
+    )
+    message_history.add_message(
+        LLMMessage(role="assistant", content="Usually around 6am.")
+    )
     question = "What about next season?"
 
-    response = llm.invoke(question, message_history)  # type: ignore
+    response = llm.invoke(question, message_history)
     assert response.content == "generated text"
-    message_history.append({"role": "user", "content": question})
+    message_history.add_message(LLMMessage(role="user", content=question))
     llm.client.messages.create.assert_called_once_with(  # type: ignore[attr-defined]
         messages=message_history,
         model="claude-3-opus-20240229",
@@ -108,7 +114,7 @@ def test_anthropic_invoke_with_system_instruction(
         **model_params,
     )
 
-    assert llm.client.messages.create.call_count == 1  # type: ignore
+    assert llm.client.messages.create.call_count == 1  # type: ignore[attr-defined]
 
 
 def test_anthropic_invoke_with_message_history_and_system_instruction(
@@ -123,16 +129,22 @@ def test_anthropic_invoke_with_message_history_and_system_instruction(
         "claude-3-opus-20240229",
         model_params=model_params,
     )
-    message_history = [
-        {"role": "user", "content": "When does the sun come up in the summer?"},
-        {"role": "assistant", "content": "Usually around 6am."},
-    ]
+    from neo4j_graphrag.message_history import InMemoryMessageHistory
+    from neo4j_graphrag.types import LLMMessage
+
+    message_history = InMemoryMessageHistory()
+    message_history.add_message(
+        LLMMessage(role="user", content="When does the sun come up in the summer?")
+    )
+    message_history.add_message(
+        LLMMessage(role="assistant", content="Usually around 6am.")
+    )
 
     question = "When does it come up in the winter?"
-    response = llm.invoke(question, message_history, system_instruction)  # type: ignore
+    response = llm.invoke(question, message_history, system_instruction)
     assert isinstance(response, LLMResponse)
     assert response.content == "generated text"
-    message_history.append({"role": "user", "content": question})
+    message_history.add_message(LLMMessage(role="user", content=question))
     llm.client.messages.create.assert_called_with(  # type: ignore[attr-defined]
         model="claude-3-opus-20240229",
         system=system_instruction,
@@ -140,7 +152,7 @@ def test_anthropic_invoke_with_message_history_and_system_instruction(
         **model_params,
     )
 
-    assert llm.client.messages.create.call_count == 1  # type: ignore
+    assert llm.client.messages.create.call_count == 1  # type: ignore[attr-defined]
 
 
 def test_anthropic_invoke_with_message_history_validation_error(
@@ -178,7 +190,7 @@ async def test_anthropic_ainvoke_happy_path(mock_anthropic: Mock) -> None:
     input_text = "may thy knife chip and shatter"
     response = await llm.ainvoke(input_text)
     assert response.content == "Return text"
-    llm.async_client.messages.create.assert_awaited_once_with(  # type: ignore
+    llm.async_client.messages.create.assert_awaited_once_with(  # type: ignore[attr-defined]
         model="claude-3-opus-20240229",
         system=anthropic.NOT_GIVEN,
         messages=[{"role": "user", "content": input_text}],

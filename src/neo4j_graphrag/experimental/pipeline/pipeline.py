@@ -23,9 +23,16 @@ from typing import Any, Optional
 from neo4j_graphrag.utils.logging import prettify
 
 try:
-    import pygraphviz as pgv
+    from neo4j_viz import (
+        Node,
+        Relationship,
+        VisualizationGraph as NeoVizGraph,
+        CaptionAlignment,
+    )
+
+    HAS_NEO4J_VIZ = True
 except ImportError:
-    pgv = None
+    HAS_NEO4J_VIZ = False
 
 from pydantic import BaseModel
 
@@ -182,40 +189,100 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         return pipeline_config.model_dump()
 
     def draw(
-        self, path: str, layout: str = "dot", hide_unused_outputs: bool = True
+        self, path: str, layout: str = "force", hide_unused_outputs: bool = True
     ) -> Any:
-        G = self.get_pygraphviz_graph(hide_unused_outputs)
-        G.layout(layout)
-        G.draw(path)
+        """Draw the pipeline graph using neo4j-viz.
 
-    def get_pygraphviz_graph(self, hide_unused_outputs: bool = True) -> pgv.AGraph:
-        if pgv is None:
+        Args:
+            path (str): Path to save the visualization. If the path ends with .html, it will save an HTML file.
+                Otherwise, it will save a PNG image.
+            layout (str): Layout algorithm to use. Default is "force".
+            hide_unused_outputs (bool): Whether to hide unused outputs. Default is True.
+
+        Returns:
+            Any: The visualization object.
+        """
+        G = self.get_neo4j_viz_graph(hide_unused_outputs)
+        if path.endswith(".html"):
+            # Save as HTML file
+            with open(path, "w") as f:
+                f.write(G.render()._repr_html_())
+        else:
+            # For other formats, we'll use the render method and save the image
+            G.render()
+            # Note: neo4j-viz doesn't support direct saving to image formats
+            # If image format is needed, consider using a screenshot or other methods
+            with open(path, "w") as f:
+                f.write(G.render()._repr_html_())
+
+    def get_neo4j_viz_graph(self, hide_unused_outputs: bool = True) -> NeoVizGraph:
+        """Create a neo4j-viz visualization graph from the pipeline.
+
+        Args:
+            hide_unused_outputs (bool): Whether to hide unused outputs. Default is True.
+
+        Returns:
+            NeoVizGraph: The neo4j-viz visualization graph.
+        """
+        if not HAS_NEO4J_VIZ:
             raise ImportError(
-                "Could not import pygraphviz. "
-                "Follow installation instruction in pygraphviz documentation "
-                "to get it up and running on your system."
+                "Could not import neo4j-viz. "
+                "Install it with 'pip install neo4j-viz'."
             )
         self.validate_parameter_mapping()
-        G = pgv.AGraph(strict=False, directed=True)
-        # create a node for each component
+
+        nodes = []
+        relationships = []
+        node_ids = {}
+        node_counter = 0
+
+        # Create nodes for each component
         for n, node in self._nodes.items():
             comp_inputs = ",".join(
                 f"{i}: {d['annotation']}"
                 for i, d in node.component.component_inputs.items()
             )
-            G.add_node(
-                n,
-                node_type="component",
-                shape="rectangle",
-                label=f"{node.component.__class__.__name__}: {n}({comp_inputs})",
+            node_ids[n] = node_counter
+            nodes.append(
+                Node(
+                    id=node_counter,
+                    caption=f"{node.component.__class__.__name__}: {n}({comp_inputs})",
+                    size=20,  # Component nodes are larger
+                    color="#4C8BF5",  # Blue for component nodes
+                    caption_alignment=CaptionAlignment.CENTER,
+                    caption_size=3,
+                )
             )
-            # create a node for each output field and connect them it to its component
+            node_counter += 1
+
+            # Create nodes for each output field
             for o in node.component.component_outputs:
                 param_node_name = f"{n}.{o}"
-                G.add_node(param_node_name, label=o, node_type="output")
-                G.add_edge(n, param_node_name)
-        # then we create the edges between a component output
-        # and the component it gets added to
+                node_ids[param_node_name] = node_counter
+                nodes.append(
+                    Node(
+                        id=node_counter,
+                        caption=o,
+                        size=10,  # Output nodes are smaller
+                        color="#34A853",  # Green for output nodes
+                        caption_alignment=CaptionAlignment.CENTER,
+                        caption_size=3,
+                    )
+                )
+                # Connect component to its output
+                relationships.append(
+                    Relationship(
+                        source=node_ids[n],
+                        target=node_ids[param_node_name],
+                        caption="",
+                        caption_align=CaptionAlignment.CENTER,
+                        caption_size=10,
+                        color="#000000",
+                    )
+                )
+                node_counter += 1
+
+        # Create edges between components and their inputs
         for component_name, params in self.param_mapping.items():
             for param, mapping in params.items():
                 source_component = mapping["component"]
@@ -224,13 +291,30 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                     source_output_node = f"{source_component}.{source_param_name}"
                 else:
                     source_output_node = source_component
-                G.add_edge(source_output_node, component_name, label=param)
-        # remove outputs that are not mapped
+
+                if source_output_node in node_ids and component_name in node_ids:
+                    relationships.append(
+                        Relationship(
+                            source=node_ids[source_output_node],
+                            target=node_ids[component_name],
+                            caption=param,
+                            color="#EA4335",  # Red for parameter connections
+                            caption_align=CaptionAlignment.CENTER,
+                            caption_size=10,
+                        )
+                    )
+
+        # Filter unused outputs if requested
         if hide_unused_outputs:
-            for n in G.nodes():
-                if n.attr["node_type"] == "output" and G.out_degree(n) == 0:  # type: ignore
-                    G.remove_node(n)
-        return G
+            used_nodes = set()
+            for rel in relationships:
+                used_nodes.add(rel.source)
+                used_nodes.add(rel.target)
+
+            filtered_nodes = [node for node in nodes if node.id in used_nodes]
+            return NeoVizGraph(nodes=filtered_nodes, relationships=relationships)
+
+        return NeoVizGraph(nodes=nodes, relationships=relationships)
 
     def add_component(self, component: Component, name: str) -> None:
         """Add a new component. Components are uniquely identified

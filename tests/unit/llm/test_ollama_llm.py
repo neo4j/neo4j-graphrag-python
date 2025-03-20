@@ -147,7 +147,7 @@ def test_ollama_invoke_with_message_history_and_system_instruction(
     llm.client.chat.assert_called_once_with(  # type: ignore[attr-defined]
         model=model, messages=messages, options=model_params
     )
-    assert llm.client.chat.call_count == 1  # type: ignore
+    assert llm.client.chat.call_count == 1  # type: ignore[attr-defined]
 
 
 @patch("builtins.__import__")
