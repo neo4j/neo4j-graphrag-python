@@ -87,7 +87,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     chunk_embedder: Optional[ComponentType[TextChunkEmbedder]] = None
     extractor: Optional[ComponentType[EntityRelationExtractor]] = None
     kg_writer: Optional[ComponentType[KGWriter]] = None
-    resolver: Optional[list[ComponentType[EntityResolver]]] = None
+    resolver: Optional[ComponentType[EntityResolver]] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -158,6 +158,8 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     def _get_resolver(self) -> Optional[EntityResolver]:
         if not self.perform_entity_resolution:
             return None
+        if self.resolver:
+            return self.resolver.parse(self._global_data)
         return SinglePropertyExactMatchResolver(
             driver=self.get_default_neo4j_driver(),
             neo4j_database=self.neo4j_database,

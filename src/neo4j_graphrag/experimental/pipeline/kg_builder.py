@@ -94,7 +94,7 @@ class SimpleKGPipeline:
         chunk_embedder: Optional[TextChunkEmbedder] = None,
         extractor: Optional[EntityRelationExtractor] = None,
         kg_writer: Optional[KGWriter] = None,
-        resolver: Optional[list[EntityResolver]] = None,
+        resolver: Optional[EntityResolver] = None,
         on_error: str = "IGNORE",
         prompt_template: Union[ERExtractionTemplate, str] = ERExtractionTemplate(),
         perform_entity_resolution: bool = True,
@@ -112,12 +112,16 @@ class SimpleKGPipeline:
                 potential_schema=potential_schema,
                 from_pdf=from_pdf,
                 pdf_loader=ComponentType(pdf_loader) if pdf_loader else None,
-                schema_builder=ComponentType(schema_builder) if schema_builder else None,
+                schema_builder=ComponentType(schema_builder)
+                if schema_builder
+                else None,
                 text_splitter=ComponentType(text_splitter) if text_splitter else None,
-                chunk_embedder=ComponentType(chunk_embedder) if chunk_embedder else None,
+                chunk_embedder=ComponentType(chunk_embedder)
+                if chunk_embedder
+                else None,
                 extractor=ComponentType(extractor) if extractor else None,
                 kg_writer=ComponentType(kg_writer) if kg_writer else None,
-                resolver=[ComponentType(r) for r in resolver] if resolver else None,
+                resolver=ComponentType(resolver) if resolver else None,
                 on_error=OnError(on_error),
                 prompt_template=prompt_template,
                 perform_entity_resolution=perform_entity_resolution,

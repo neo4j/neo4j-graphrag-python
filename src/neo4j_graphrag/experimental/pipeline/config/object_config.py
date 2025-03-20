@@ -244,10 +244,10 @@ class EmbedderType(RootModel):  # type: ignore[type-arg]
         return self.root.parse(resolved_data)
 
 
-ComponentT = TypeVar("ComponentT", bound=Component)
+ComponentGeneric = TypeVar("ComponentGeneric")
 
 
-class ComponentConfig(ObjectConfig[ComponentT]):
+class ComponentConfig(ObjectConfig[ComponentGeneric], Generic[ComponentGeneric]):
     """A config model for all components.
 
     In addition to the object config, components can have pre-defined parameters
@@ -259,25 +259,27 @@ class ComponentConfig(ObjectConfig[ComponentT]):
     DEFAULT_MODULE = "neo4j_graphrag.experimental.components"
     INTERFACE = Component
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     def get_run_params(self, resolved_data: dict[str, Any]) -> dict[str, Any]:
         self._global_data = resolved_data
         return self.resolve_params(self.run_params_)
 
 
 class ComponentType(
-    RootModel[Generic[ComponentT]],
-    # Generic[ComponentT]
+    RootModel[Union[ComponentGeneric, ComponentConfig[ComponentGeneric]]],
+    Generic[ComponentGeneric],
 ):
-    root: Union[ComponentT, ComponentConfig[ComponentT]]
+    root: Union[ComponentGeneric, ComponentConfig[ComponentGeneric]]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def parse(self, resolved_data: dict[str, Any] | None = None) -> ComponentT:
-        if isinstance(self.root, Component):
-            return self.root  # type: ignore
-        return self.root.parse(resolved_data)
+    def parse(self, resolved_data: dict[str, Any] | None = None) -> ComponentGeneric:
+        if isinstance(self.root, ComponentConfig):
+            return self.root.parse(resolved_data)
+        return self.root
 
     def get_run_params(self, resolved_data: dict[str, Any]) -> dict[str, Any]:
-        if isinstance(self.root, Component):
-            return {}
-        return self.root.get_run_params(resolved_data)
+        if isinstance(self.root, ComponentConfig):
+            return self.root.get_run_params(resolved_data)
+        return {}
