@@ -12,6 +12,11 @@
 
 - Added `enforce_schema` parameter to `SimpleKGPipeline` for optional schema enforcement.
 
+### Changed
+
+- Improved log output readability in Retrievers and GraphRAG and added embedded vector to retriever result metadata for debugging.
+
+
 ## 1.6.0
 
 ### Added
