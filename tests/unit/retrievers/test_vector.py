@@ -155,7 +155,7 @@ def test_similarity_search_vector_happy_path(
                 metadata={"score": 1.0, "nodeLabels": None, "id": None},
             ),
         ],
-        metadata={"__retriever": "VectorRetriever"},
+        metadata={"__retriever": "VectorRetriever", "query_vector": query_vector},
     )
 
 
@@ -208,7 +208,7 @@ def test_similarity_search_text_happy_path(
                 metadata={"score": 1.0, "nodeLabels": None, "id": None},
             ),
         ],
-        metadata={"__retriever": "VectorRetriever"},
+        metadata={"__retriever": "VectorRetriever", "query_vector": embed_query_vector},
     )
 
 
@@ -270,7 +270,7 @@ def test_similarity_search_text_return_properties(
                 metadata={"score": 1.0, "nodeLabels": None, "id": None},
             ),
         ],
-        metadata={"__retriever": "VectorRetriever"},
+        metadata={"__retriever": "VectorRetriever", "query_vector": embed_query_vector},
     )
 
 
@@ -344,7 +344,7 @@ def test_vector_retriever_with_result_format_function(
                 content="dummy-node", metadata={"score": 1.0, "node_id": 123}
             ),
         ],
-        metadata={"__retriever": "VectorRetriever"},
+        metadata={"__retriever": "VectorRetriever", "query_vector": embed_query_vector},
     )
 
 
@@ -439,7 +439,10 @@ def test_retrieval_query_happy_path(
                 metadata=None,
             ),
         ],
-        metadata={"__retriever": "VectorCypherRetriever"},
+        metadata={
+            "__retriever": "VectorCypherRetriever",
+            "query_vector": embed_query_vector,
+        },
     )
 
 
@@ -504,7 +507,10 @@ def test_retrieval_query_with_result_format_function(
                 content="dummy-node", metadata={"score": 1.0, "node_id": 123}
             ),
         ],
-        metadata={"__retriever": "VectorCypherRetriever"},
+        metadata={
+            "__retriever": "VectorCypherRetriever",
+            "query_vector": embed_query_vector,
+        },
     )
 
 
@@ -573,7 +579,10 @@ def test_retrieval_query_with_params(
                 metadata=None,
             ),
         ],
-        metadata={"__retriever": "VectorCypherRetriever"},
+        metadata={
+            "__retriever": "VectorCypherRetriever",
+            "query_vector": embed_query_vector,
+        },
     )
 
 
