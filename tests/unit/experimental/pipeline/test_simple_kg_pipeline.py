@@ -34,7 +34,7 @@ from neo4j_graphrag.llm.base import LLMInterface
     return_value=((5, 23, 0), False, False),
 )
 @pytest.mark.asyncio
-async def test_knowledge_graph_builder_document_info_with_file(_: Mock) -> None:
+async def test_simple_kg_pipeline_document_info_with_file(_: Mock) -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
     embedder = MagicMock(spec=Embedder)
@@ -66,7 +66,7 @@ async def test_knowledge_graph_builder_document_info_with_file(_: Mock) -> None:
     return_value=((5, 23, 0), False, False),
 )
 @pytest.mark.asyncio
-async def test_knowledge_graph_builder_document_info_with_text(_: Mock) -> None:
+async def test_simple_kg_pipeline_document_info_with_text(_: Mock) -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
     embedder = MagicMock(spec=Embedder)
@@ -97,7 +97,7 @@ async def test_knowledge_graph_builder_document_info_with_text(_: Mock) -> None:
     return_value=((5, 23, 0), False, False),
 )
 @pytest.mark.asyncio
-async def test_knowledge_graph_builder_with_entities_and_file(_: Mock) -> None:
+async def test_simple_kg_pipeline_with_entities_and_file(_: Mock) -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
     embedder = MagicMock(spec=Embedder)
@@ -156,7 +156,7 @@ def test_simple_kg_pipeline_on_error_invalid_value() -> None:
     return_value=((5, 23, 0), False, False),
 )
 @pytest.mark.asyncio
-async def test_knowledge_graph_builder_with_lexical_graph_config(_: Mock) -> None:
+async def test_simple_kg_pipeline_with_lexical_graph_config(_: Mock) -> None:
     llm = MagicMock(spec=LLMInterface)
     driver = MagicMock(spec=neo4j.Driver)
     embedder = MagicMock(spec=Embedder)

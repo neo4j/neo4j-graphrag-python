@@ -24,6 +24,9 @@ from neo4j_graphrag.experimental.components.entity_relation_extractor import (
 )
 from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
 from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
+from neo4j_graphrag.experimental.components.resolver import (
+    SinglePropertyExactMatchResolver,
+)
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
     SchemaEntity,
@@ -153,6 +156,28 @@ def test_simple_kg_pipeline_config_extractor(mock_llm: Mock, llm: LLMInterface) 
 
 
 @patch(
+    "neo4j_graphrag.experimental.pipeline.config.template_pipeline.simple_kg_builder.SimpleKGPipelineConfig.get_default_llm"
+)
+@patch("neo4j_graphrag.experimental.pipeline.config.object_config.ComponentType.parse")
+def test_simple_kg_pipeline_config_extractor_overwrite(
+    mock_component_parse: Mock, mock_llm: Mock
+) -> None:
+    my_extractor = LLMEntityRelationExtractor(llm=mock_llm)
+    mock_component_parse.return_value = my_extractor
+    config = SimpleKGPipelineConfig(
+        on_error="IGNORE",  # type: ignore
+        prompt_template=ERExtractionTemplate(template="my template {text}"),
+        extractor={},  # type: ignore
+    )
+    extractor = config._get_extractor()
+    assert isinstance(extractor, LLMEntityRelationExtractor)
+    assert extractor.llm == mock_llm
+    # default values are not overwritten by the parameters:
+    assert extractor.on_error == OnError.RAISE
+    assert extractor.prompt_template.template == ERExtractionTemplate.DEFAULT_TEMPLATE
+
+
+@patch(
     "neo4j_graphrag.experimental.components.kg_writer.get_version",
     return_value=((5, 23, 0), False, False),
 )
@@ -184,19 +209,52 @@ def test_simple_kg_pipeline_config_writer_overwrite(
     _: Mock,
     driver: neo4j.Driver,
 ) -> None:
-    my_writer_config: ComponentConfig[Neo4jWriter] = ComponentConfig(
-        class_="",
-    )
     my_writer = Neo4jWriter(driver, neo4j_database="my_db")
     mock_component_parse.return_value = my_writer
     config = SimpleKGPipelineConfig(
-        kg_writer=my_writer_config,  # type: ignore
+        kg_writer={},  # type: ignore
         neo4j_database="my_other_db",
     )
     writer: Neo4jWriter = config._get_writer()  # type: ignore
     assert writer == my_writer
     # database not changed:
     assert writer.neo4j_database == "my_db"
+
+
+@patch(
+    "neo4j_graphrag.experimental.pipeline.config.template_pipeline.simple_kg_builder.SimpleKGPipelineConfig.get_default_llm"
+)
+@patch("neo4j_graphrag.experimental.pipeline.config.object_config.ComponentType.parse")
+def test_simple_kg_pipeline_config_resolver_overwrite(
+    mock_component_parse: Mock, driver: neo4j.Driver
+) -> None:
+    my_resolver = SinglePropertyExactMatchResolver(driver, resolve_property="full_name")
+    mock_component_parse.return_value = my_resolver
+    config = SimpleKGPipelineConfig(
+        perform_entity_resolution=True,
+        resolver={},  # type: ignore
+    )
+    resolver = config._get_resolver()
+    assert isinstance(resolver, SinglePropertyExactMatchResolver)
+    assert resolver.driver == driver
+    assert resolver.resolve_property == "full_name"
+
+
+@patch(
+    "neo4j_graphrag.experimental.pipeline.config.template_pipeline.simple_kg_builder.SimpleKGPipelineConfig.get_default_llm"
+)
+@patch("neo4j_graphrag.experimental.pipeline.config.object_config.ComponentType.parse")
+def test_simple_kg_pipeline_config_resolver_overwrite_but_disabled(
+    mock_component_parse: Mock, driver: neo4j.Driver
+) -> None:
+    my_resolver = SinglePropertyExactMatchResolver(driver, resolve_property="full_name")
+    mock_component_parse.return_value = my_resolver
+    config = SimpleKGPipelineConfig(
+        perform_entity_resolution=False,
+        resolver={},  # type: ignore
+    )
+    resolver = config._get_resolver()
+    assert resolver is None
 
 
 def test_simple_kg_pipeline_config_connections_from_pdf() -> None:
@@ -234,7 +292,7 @@ def test_simple_kg_pipeline_config_connections_from_text() -> None:
         assert (actual.start, actual.end) == expected
 
 
-def test_simple_kg_pipeline_config_connections_with_er() -> None:
+def test_simple_kg_pipeline_config_connections_with_entity_resolution() -> None:
     config = SimpleKGPipelineConfig(
         from_pdf=True,
         perform_entity_resolution=True,
