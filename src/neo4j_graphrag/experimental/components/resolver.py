@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import abc
+import logging
 from itertools import combinations
 from typing import Any, Optional, List
 
@@ -27,6 +28,7 @@ from neo4j_graphrag.experimental.components.types import ResolutionStats
 from neo4j_graphrag.experimental.pipeline import Component
 from neo4j_graphrag.utils import driver_config
 
+logger = logging.getLogger(__name__)
 
 class EntityResolver(Component, abc.ABC):
     """Entity resolution base class
@@ -314,10 +316,9 @@ class SpaCySemanticMatchResolver(EntityResolver):
         try:
             return spacy.load(model_name)
         except OSError as e:
-            # The exact error message can differ slightly depending on spaCy version,
-            # so you may want to be broader or narrower with handling logic:
+            # handling cases where the spaCy model is not yet downloaded:
             if "doesn't seem to be a Python package or a valid path" in str(e):
-                print(f"Model '{model_name}' not found. Downloading...")
+                logger.info(f"Model '{model_name}' not found. Downloading...")
                 spacy_download(model_name)
                 return spacy.load(model_name)
             else:
