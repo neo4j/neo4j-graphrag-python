@@ -30,6 +30,7 @@ from neo4j_graphrag.llm import LLMInterface
 from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.retrievers.base import Retriever
 from neo4j_graphrag.types import LLMMessage, RetrieverResult
+from neo4j_graphrag.utils.logging import prettify
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +139,7 @@ class GraphRAG:
         prompt = self.prompt_template.format(
             query_text=query_text, context=context, examples=validated_data.examples
         )
-        logger.debug(f"RAG: retriever_result={retriever_result}")
+        logger.debug(f"RAG: retriever_result={prettify(retriever_result)}")
         logger.debug(f"RAG: prompt={prompt}")
         answer = self.llm.invoke(
             prompt,
