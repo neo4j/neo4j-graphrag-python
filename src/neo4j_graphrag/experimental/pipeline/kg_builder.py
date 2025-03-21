@@ -25,8 +25,10 @@ from neo4j_graphrag.experimental.components.entity_relation_extractor import OnE
 from neo4j_graphrag.experimental.components.kg_writer import KGWriter
 from neo4j_graphrag.experimental.components.pdf_loader import DataLoader
 from neo4j_graphrag.experimental.components.text_splitters.base import TextSplitter
-from neo4j_graphrag.experimental.components.types import LexicalGraphConfig, \
-    SchemaEnforcementMode
+from neo4j_graphrag.experimental.components.types import (
+    LexicalGraphConfig,
+    SchemaEnforcementMode,
+)
 from neo4j_graphrag.experimental.pipeline.config.object_config import ComponentType
 from neo4j_graphrag.experimental.pipeline.config.runner import PipelineRunner
 from neo4j_graphrag.experimental.pipeline.config.template_pipeline import (
