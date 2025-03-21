@@ -6,6 +6,9 @@
 
 - Added the `run_with_context` method to `Component`. This method includes a `context_` parameter, which provides information about the pipeline from which the component is executed (e.g., the `run_id`). It also enables the component to send events to the pipeline's callback function.
 
+### Fixed
+
+- Added `enforce_schema` parameter to `SimpleKGPipeline` for optional schema enforcement.
 
 ## 1.6.0
 

@@ -25,7 +25,10 @@ from neo4j_graphrag.experimental.components.entity_relation_extractor import OnE
 from neo4j_graphrag.experimental.components.kg_writer import KGWriter
 from neo4j_graphrag.experimental.components.pdf_loader import DataLoader
 from neo4j_graphrag.experimental.components.text_splitters.base import TextSplitter
-from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
+from neo4j_graphrag.experimental.components.types import (
+    LexicalGraphConfig,
+    SchemaEnforcementMode,
+)
 from neo4j_graphrag.experimental.pipeline.config.object_config import ComponentType
 from neo4j_graphrag.experimental.pipeline.config.runner import PipelineRunner
 from neo4j_graphrag.experimental.pipeline.config.template_pipeline import (
@@ -61,6 +64,7 @@ class SimpleKGPipeline:
             - dict: following the SchemaRelation schema, ie with label, description and properties keys
 
         potential_schema (Optional[List[tuple]]): A list of potential schema relationships.
+        enforce_schema (str): Validation of the extracted entities/rels against the provided schema. Defaults to "NONE", where schema enforcement will be ignored even if the schema is provided. Possible values "None" or "STRICT".
         from_pdf (bool): Determines whether to include the PdfLoader in the pipeline.
                          If True, expects `file_path` input in `run` methods.
                          If False, expects `text` input in `run` methods.
@@ -81,6 +85,7 @@ class SimpleKGPipeline:
         entities: Optional[Sequence[EntityInputType]] = None,
         relations: Optional[Sequence[RelationInputType]] = None,
         potential_schema: Optional[List[tuple[str, str, str]]] = None,
+        enforce_schema: str = "NONE",
         from_pdf: bool = True,
         text_splitter: Optional[TextSplitter] = None,
         pdf_loader: Optional[DataLoader] = None,
@@ -100,6 +105,7 @@ class SimpleKGPipeline:
                 entities=entities or [],
                 relations=relations or [],
                 potential_schema=potential_schema,
+                enforce_schema=SchemaEnforcementMode(enforce_schema),
                 from_pdf=from_pdf,
                 pdf_loader=ComponentType(pdf_loader) if pdf_loader else None,
                 kg_writer=ComponentType(kg_writer) if kg_writer else None,
