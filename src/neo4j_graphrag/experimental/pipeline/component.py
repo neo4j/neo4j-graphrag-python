@@ -14,12 +14,12 @@
 #  limitations under the License.
 from __future__ import annotations
 
-import abc
 import inspect
 from typing import Any, get_type_hints
 
 from pydantic import BaseModel
 
+from neo4j_graphrag.experimental.pipeline.types.context import RunContext
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
 from neo4j_graphrag.utils.validation import issubclass_safe
 
@@ -30,44 +30,49 @@ class DataModel(BaseModel):
     pass
 
 
-class ComponentMeta(abc.ABCMeta):
+class ComponentMeta(type):
     def __new__(
         meta, name: str, bases: tuple[type, ...], attrs: dict[str, Any]
     ) -> type:
         # extract required inputs and outputs from the run method signature
         run_method = attrs.get("run")
-        if run_method is not None:
-            sig = inspect.signature(run_method)
-            attrs["component_inputs"] = {
-                param.name: {
-                    "has_default": param.default != inspect.Parameter.empty,
-                    "annotation": param.annotation,
-                }
-                for param in sig.parameters.values()
-                if param.name not in ("self", "kwargs")
+        run_context_method = attrs.get("run_with_context")
+        run = run_context_method if run_context_method is not None else run_method
+        if run is None:
+            raise RuntimeError(
+                f"You must implement either `run` or `run_with_context` in Component '{name}'"
+            )
+        sig = inspect.signature(run)
+        attrs["component_inputs"] = {
+            param.name: {
+                "has_default": param.default != inspect.Parameter.empty,
+                "annotation": param.annotation,
             }
-            # extract returned fields from the run method return type hint
-            return_model = get_type_hints(run_method).get("return")
-            if return_model is None:
-                raise PipelineDefinitionError(
-                    f"The run method return type must be annotated in {name}"
-                )
-            # the type hint must be a subclass of DataModel
-            if not issubclass_safe(return_model, DataModel):
-                raise PipelineDefinitionError(
-                    f"The run method must return a subclass of DataModel in {name}"
-                )
-            attrs["component_outputs"] = {
-                f: {
-                    "has_default": field.is_required(),
-                    "annotation": field.annotation,
-                }
-                for f, field in return_model.model_fields.items()
+            for param in sig.parameters.values()
+            if param.name not in ("self", "kwargs", "context_")
+        }
+        # extract returned fields from the run method return type hint
+        return_model = get_type_hints(run).get("return")
+        if return_model is None:
+            raise PipelineDefinitionError(
+                f"The run method return type must be annotated in {name}"
+            )
+        # the type hint must be a subclass of DataModel
+        if not issubclass_safe(return_model, DataModel):
+            raise PipelineDefinitionError(
+                f"The run method must return a subclass of DataModel in {name}"
+            )
+        attrs["component_outputs"] = {
+            f: {
+                "has_default": field.is_required(),
+                "annotation": field.annotation,
             }
+            for f, field in return_model.model_fields.items()
+        }
         return type.__new__(meta, name, bases, attrs)
 
 
-class Component(abc.ABC, metaclass=ComponentMeta):
+class Component(metaclass=ComponentMeta):
     """Interface that needs to be implemented
     by all components.
     """
@@ -76,8 +81,30 @@ class Component(abc.ABC, metaclass=ComponentMeta):
     # added here for the type checker
     # DO NOT CHANGE
     component_inputs: dict[str, dict[str, str | bool]]
-    component_outputs: dict[str, dict[str, str | bool]]
+    component_outputs: dict[str, dict[str, str | bool | type]]
 
-    @abc.abstractmethod
     async def run(self, *args: Any, **kwargs: Any) -> DataModel:
-        pass
+        """Run the component and return its result.
+
+        Note: if `run_with_context` is implemented, this method will not be used.
+        """
+        raise NotImplementedError(
+            "You must implement the `run` or `run_with_context` method. "
+        )
+
+    async def run_with_context(
+        self, context_: RunContext, *args: Any, **kwargs: Any
+    ) -> DataModel:
+        """This method is called by the pipeline orchestrator.
+        The `context_` parameter contains information about
+        the pipeline run: the `run_id` and a `notify` function
+        that can be used to send events from the component to
+        the pipeline callback.
+
+        This feature will be moved to the `run` method in a future
+        release.
+
+        It defaults to calling the `run` method to prevent any breaking change.
+        """
+        # default behavior to prevent a breaking change
+        return await self.run(*args, **kwargs)

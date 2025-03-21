@@ -25,7 +25,7 @@ from neo4j_graphrag.experimental.pipeline.exceptions import (
     PipelineStatusUpdateError,
 )
 from neo4j_graphrag.experimental.pipeline.orchestrator import Orchestrator
-from neo4j_graphrag.experimental.pipeline.types import RunStatus
+from neo4j_graphrag.experimental.pipeline.types.orchestration import RunStatus
 
 from tests.unit.experimental.pipeline.components import (
     ComponentNoParam,

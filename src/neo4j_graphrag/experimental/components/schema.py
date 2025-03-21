@@ -21,7 +21,7 @@ from typing_extensions import Self
 
 from neo4j_graphrag.exceptions import SchemaValidationError
 from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
-from neo4j_graphrag.experimental.pipeline.types import (
+from neo4j_graphrag.experimental.pipeline.types.schema import (
     EntityInputType,
     RelationInputType,
 )
