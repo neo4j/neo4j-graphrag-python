@@ -48,8 +48,10 @@ class QdrantNeo4jRetrieverModel(BaseModel):
     collection_name: str
     id_property_external: str
     id_property_neo4j: str
+    using: Optional[str] = None
     embedder_model: Optional[EmbedderModel] = None
     return_properties: Optional[list[str]] = None
     retrieval_query: Optional[str] = None
     result_formatter: Optional[Callable[[neo4j.Record], RetrieverResultItem]] = None
     neo4j_database: Optional[str] = None
+
