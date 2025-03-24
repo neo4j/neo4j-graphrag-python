@@ -91,7 +91,7 @@ class QdrantNeo4jRetriever(ExternalRetriever):
         collection_name: str,
         id_property_neo4j: str,
         id_property_external: str = "id",
-        using:Optional[str] = None,
+        using: Optional[str] = None,
         embedder: Optional[Embedder] = None,
         return_properties: Optional[list[str]] = None,
         retrieval_query: Optional[str] = None,
@@ -206,7 +206,7 @@ class QdrantNeo4jRetriever(ExternalRetriever):
 
         points = self.client.query_points(
             collection_name=self.collection_name,
-            query= query_vector,
+            query=query_vector,
             using=self.using,
             limit=top_k,
             with_payload=[self.id_property_external],
@@ -241,4 +241,3 @@ class QdrantNeo4jRetriever(ExternalRetriever):
         )
 
         return RawSearchResult(records=records)
-
