@@ -62,6 +62,7 @@ class QdrantNeo4jRetriever(ExternalRetriever):
                   driver=neo4j_driver,
                   client=client,
                   collection_name="my_collection",
+                  using="my_vector",
                   id_property_external="neo4j_id"
               )
               embedding = ...
@@ -71,6 +72,7 @@ class QdrantNeo4jRetriever(ExternalRetriever):
         driver (neo4j.Driver): The Neo4j Python driver.
         client (QdrantClient): The Qdrant client object.
         collection_name (str): The name of the Qdrant collection to use.
+        using (str): The name of the Qdrant vector contained in your collection in case of multi-vector collection
         id_property_neo4j (str): The name of the Neo4j node property that's used as the identifier for relating matches from Qdrant to Neo4j nodes.
         id_property_external (str): The name of the Qdrant payload property with identifier that refers to a corresponding Neo4j node id property.
         embedder (Optional[Embedder]): Embedder object to embed query text.
@@ -89,6 +91,7 @@ class QdrantNeo4jRetriever(ExternalRetriever):
         collection_name: str,
         id_property_neo4j: str,
         id_property_external: str = "id",
+        using: Optional[str] = None,
         embedder: Optional[Embedder] = None,
         return_properties: Optional[list[str]] = None,
         retrieval_query: Optional[str] = None,
@@ -105,6 +108,7 @@ class QdrantNeo4jRetriever(ExternalRetriever):
                 driver_model=driver_model,
                 client_model=client_model,
                 collection_name=collection_name,
+                using=using,
                 id_property_neo4j=id_property_neo4j,
                 id_property_external=id_property_external,
                 embedder_model=embedder_model,
@@ -125,6 +129,7 @@ class QdrantNeo4jRetriever(ExternalRetriever):
         self.driver = validated_data.driver_model.driver
         self.client = validated_data.client_model.client
         self.collection_name = validated_data.collection_name
+        self.using = validated_data.using
         self.embedder = (
             validated_data.embedder_model.embedder
             if validated_data.embedder_model
@@ -202,6 +207,7 @@ class QdrantNeo4jRetriever(ExternalRetriever):
         points = self.client.query_points(
             collection_name=self.collection_name,
             query=query_vector,
+            using=self.using,
             limit=top_k,
             with_payload=[self.id_property_external],
             **kwargs,
