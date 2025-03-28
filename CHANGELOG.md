@@ -2,6 +2,10 @@
 
 ## Next
 
+### Added
+
+- Added a `Pipeline.stream` method to stream pipeline status.
+
 ## 1.6.1
 
 ### Added
