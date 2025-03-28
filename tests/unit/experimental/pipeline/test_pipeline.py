@@ -39,6 +39,7 @@ from .components import (
     ComponentNoParam,
     ComponentPassThrough,
     StringResultModel,
+    SlowComponentMultiply,
 )
 
 
@@ -491,3 +492,97 @@ def test_event_model_no_warning(recwarn: Sized) -> None:
     )
     assert event.timestamp is not None
     assert len(recwarn) == 0
+
+
+@pytest.mark.asyncio
+async def test_pipeline_streaming_no_user_callback_happy_path() -> None:
+    pipe = Pipeline()
+    events = []
+    async for e in pipe.stream({}):
+        events.append(e)
+    assert len(events) == 2
+    assert events[0].event_type == EventType.PIPELINE_STARTED
+    assert events[1].event_type == EventType.PIPELINE_FINISHED
+    assert len(pipe.callbacks) == 0
+
+
+@pytest.mark.asyncio
+async def test_pipeline_streaming_with_user_callback_happy_path() -> None:
+    callback = AsyncMock()
+    pipe = Pipeline(callback=callback)
+    events = []
+    async for e in pipe.stream({}):
+        events.append(e)
+    assert len(events) == 2
+    assert len(callback.call_args_list) == 2
+    assert len(pipe.callbacks) == 1
+
+
+@pytest.mark.asyncio
+async def test_pipeline_streaming_very_long_running_user_callback() -> None:
+    async def callback(event: Event) -> None:
+        await asyncio.sleep(2)
+
+    pipe = Pipeline(callback=callback)
+    events = []
+    async for e in pipe.stream({}):
+        events.append(e)
+    assert len(events) == 2
+    assert len(pipe.callbacks) == 1
+
+
+@pytest.mark.asyncio
+async def test_pipeline_streaming_very_long_running_pipeline() -> None:
+    slow_component = SlowComponentMultiply()
+    pipe = Pipeline()
+    pipe.add_component(slow_component, "slow_component")
+    events = []
+    async for e in pipe.stream({"slow_component": {"number1": 1, "number2": 2}}):
+        events.append(e)
+    assert len(events) == 4
+    last_event = events[-1]
+    assert last_event.event_type == EventType.PIPELINE_FINISHED
+    assert last_event.payload == {"slow_component": {"result": 2}}
+
+
+@pytest.mark.asyncio
+async def test_pipeline_streaming_error_in_pipeline_definition() -> None:
+    pipe = Pipeline()
+    component_a = ComponentAdd()
+    component_b = ComponentAdd()
+    pipe.add_component(component_a, "a")
+    pipe.add_component(component_b, "b")
+    pipe.connect("a", "b", {"number1": "a.result"})
+    events = []
+    with pytest.raises(PipelineDefinitionError):
+        async for e in pipe.stream({"a": {"number1": 1, "number2": 2}}):
+            events.append(e)
+    # validation happens before pipeline run actually starts
+    assert len(events) == 0
+
+
+@pytest.mark.asyncio
+async def test_pipeline_streaming_error_in_component() -> None:
+    component = ComponentMultiply()
+    pipe = Pipeline()
+    pipe.add_component(component, "component")
+    events = []
+    with pytest.raises(TypeError):
+        async for e in pipe.stream({"component": {"number1": None, "number2": 2}}):
+            events.append(e)
+    assert len(events) == 2
+    assert events[0].event_type == EventType.PIPELINE_STARTED
+    assert events[1].event_type == EventType.TASK_STARTED
+
+
+@pytest.mark.asyncio
+async def test_pipeline_streaming_error_in_user_callback() -> None:
+    async def callback(event: Event) -> None:
+        raise Exception("error in callback")
+
+    pipe = Pipeline(callback=callback)
+    events = []
+    async for e in pipe.stream({}):
+        events.append(e)
+    assert len(events) == 2
+    assert len(pipe.callbacks) == 1
