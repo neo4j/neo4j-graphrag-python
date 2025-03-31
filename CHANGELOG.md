@@ -2,6 +2,10 @@
 
 ## Next
 
+### Added
+
+- Added support for multi-vector collection in Qdrant driver.
+
 ### Changed
 
 - Improved log output readability in Retrievers and GraphRAG and added embedded vector to retriever result metadata for debugging.
