@@ -14,7 +14,6 @@
 #  limitations under the License.
 from __future__ import annotations
 
-import copy
 import logging
 from typing import Any, Callable, Optional, Union
 
@@ -42,6 +41,7 @@ from neo4j_graphrag.types import (
     SearchType,
     HybridSearchRanker,
 )
+from neo4j_graphrag.utils.logging import prettify
 
 logger = logging.getLogger(__name__)
 
@@ -213,10 +213,7 @@ class HybridRetriever(Retriever):
         if "ranker" in parameters:
             del parameters["ranker"]
 
-        sanitized_parameters = copy.deepcopy(parameters)
-        if "query_vector" in sanitized_parameters:
-            sanitized_parameters["query_vector"] = "..."
-        logger.debug("HybridRetriever Cypher parameters: %s", sanitized_parameters)
+        logger.debug("HybridRetriever Cypher parameters: %s", prettify(parameters))
         logger.debug("HybridRetriever Cypher query: %s", search_query)
 
         try:
@@ -234,6 +231,7 @@ class HybridRetriever(Retriever):
             raise
         return RawSearchResult(
             records=records,
+            metadata={"query_vector": query_vector},
         )
 
 
@@ -397,10 +395,7 @@ class HybridCypherRetriever(Retriever):
         if "ranker" in parameters:
             del parameters["ranker"]
 
-        sanitized_parameters = copy.deepcopy(parameters)
-        if "query_vector" in sanitized_parameters:
-            sanitized_parameters["query_vector"] = "..."
-        logger.debug("HybridRetriever Cypher parameters: %s", sanitized_parameters)
+        logger.debug("HybridRetriever Cypher parameters: %s", prettify(parameters))
         logger.debug("HybridRetriever Cypher query: %s", search_query)
 
         try:
@@ -418,4 +413,5 @@ class HybridCypherRetriever(Retriever):
             raise
         return RawSearchResult(
             records=records,
+            metadata={"query_vector": query_vector},
         )

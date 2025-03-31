@@ -110,7 +110,7 @@ def test_hybrid_retriever_with_result_format_function(
                 content="dummy-node", metadata={"score": 1.0, "node_id": 123}
             ),
         ],
-        metadata={"__retriever": "HybridRetriever"},
+        metadata={"__retriever": "HybridRetriever", "query_vector": embed_query_vector},
     )
 
 
@@ -229,7 +229,7 @@ def test_hybrid_search_text_happy_path(
         items=[
             RetrieverResultItem(content="dummy-node", metadata={"score": 1.0}),
         ],
-        metadata={"__retriever": "HybridRetriever"},
+        metadata={"__retriever": "HybridRetriever", "query_vector": embed_query_vector},
     )
 
 
@@ -436,7 +436,7 @@ def test_hybrid_retriever_return_properties(
         items=[
             RetrieverResultItem(content="dummy-node", metadata={"score": 1.0}),
         ],
-        metadata={"__retriever": "HybridRetriever"},
+        metadata={"__retriever": "HybridRetriever", "query_vector": embed_query_vector},
     )
 
 
@@ -511,7 +511,10 @@ def test_hybrid_cypher_retrieval_query_with_params(
                 metadata=None,
             ),
         ],
-        metadata={"__retriever": "HybridCypherRetriever"},
+        metadata={
+            "__retriever": "HybridCypherRetriever",
+            "query_vector": embed_query_vector,
+        },
     )
 
 
@@ -554,7 +557,10 @@ def test_hybrid_cypher_retriever_with_result_format_function(
                 content="dummy-node", metadata={"score": 1.0, "node_id": 123}
             ),
         ],
-        metadata={"__retriever": "HybridCypherRetriever"},
+        metadata={
+            "__retriever": "HybridCypherRetriever",
+            "query_vector": embed_query_vector,
+        },
     )
 
 
@@ -710,7 +716,7 @@ def test_hybrid_search_linear_ranker_happy_path(
         items=[
             RetrieverResultItem(content="dummy-node", metadata={"score": 1.0}),
         ],
-        metadata={"__retriever": "HybridRetriever"},
+        metadata={"__retriever": "HybridRetriever", "query_vector": embed_query_vector},
     )
 
 
@@ -792,7 +798,10 @@ def test_hybrid_cypher_linear_ranker(
                 metadata=None,
             ),
         ],
-        metadata={"__retriever": "HybridCypherRetriever"},
+        metadata={
+            "__retriever": "HybridCypherRetriever",
+            "query_vector": embed_query_vector,
+        },
     )
 
 

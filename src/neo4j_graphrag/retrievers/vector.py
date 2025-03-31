@@ -39,6 +39,7 @@ from neo4j_graphrag.types import (
     VectorRetrieverModel,
     VectorSearchModel,
 )
+from neo4j_graphrag.utils.logging import prettify
 
 logger = logging.getLogger(__name__)
 
@@ -207,7 +208,7 @@ class VectorRetriever(Retriever):
         )
         parameters.update(search_params)
 
-        logger.debug("VectorRetriever Cypher parameters: %s", parameters)
+        logger.debug("VectorRetriever Cypher parameters: %s", prettify(parameters))
         logger.debug("VectorRetriever Cypher query: %s", search_query)
 
         records, _, _ = self.driver.execute_query(
@@ -216,7 +217,10 @@ class VectorRetriever(Retriever):
             database_=self.neo4j_database,
             routing_=neo4j.RoutingControl.READ,
         )
-        return RawSearchResult(records=records)
+        return RawSearchResult(
+            records=records,
+            metadata={"query_vector": query_vector},
+        )
 
 
 class VectorCypherRetriever(Retriever):
@@ -351,7 +355,8 @@ class VectorCypherRetriever(Retriever):
                 raise EmbeddingRequiredError(
                     "Embedding method required for text query."
                 )
-            parameters["query_vector"] = self.embedder.embed_query(query_text)
+            query_vector = self.embedder.embed_query(query_text)
+            parameters["query_vector"] = query_vector
             del parameters["query_text"]
 
         if query_params:
@@ -370,7 +375,9 @@ class VectorCypherRetriever(Retriever):
         )
         parameters.update(search_params)
 
-        logger.debug("VectorCypherRetriever Cypher parameters: %s", parameters)
+        logger.debug(
+            "VectorCypherRetriever Cypher parameters: %s", prettify(parameters)
+        )
         logger.debug("VectorCypherRetriever Cypher query: %s", search_query)
 
         records, _, _ = self.driver.execute_query(
@@ -381,4 +388,5 @@ class VectorCypherRetriever(Retriever):
         )
         return RawSearchResult(
             records=records,
+            metadata={"query_vector": query_vector},
         )
