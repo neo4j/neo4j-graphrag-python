@@ -20,6 +20,10 @@ from typing import Any, Optional, Protocol, runtime_checkable
 
 @runtime_checkable
 class TaskProgressCallbackProtocol(Protocol):
+    """This protocol is used to send events from within the component.
+    The final event will be of type TaskEvent, but event type and task name
+    are predefined and can not be changed by the user calling this protocol.
+    """
     def __call__(self, message: str, data: dict[str, Any]) -> Awaitable[None]: ...
 
 

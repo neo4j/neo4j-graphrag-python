@@ -74,6 +74,10 @@ class TaskEvent(Event):
 
 
 class EventCallbackProtocol(Protocol):
+    """This protocol is used to send events about pipeline progress
+    from the pipeline itself. It will receive either PipelineEvent or
+    TaskEvent depending on the event type.
+    """
     def __call__(self, event: Event) -> Awaitable[None]: ...
 
 
