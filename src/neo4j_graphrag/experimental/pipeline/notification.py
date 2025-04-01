@@ -78,6 +78,7 @@ class EventCallbackProtocol(Protocol):
     from the pipeline itself. It will receive either PipelineEvent or
     TaskEvent depending on the event type.
     """
+
     def __call__(self, event: Event) -> Awaitable[None]: ...
 
 
