@@ -154,6 +154,7 @@ class CombinedMeta(ComponentMeta, abc.ABCMeta):
     """
     A metaclass that merges ComponentMeta (from Component) and ABCMeta (from abc.ABC).
     """
+
     pass
 
 
@@ -396,6 +397,7 @@ class FuzzyMatchResolver(BasePropertySimilarityResolver):
     RapidFuzz for fuzzy matching. Similarity scores are normalized to a value between 0
     and 1.
     """
+
     async def run(self) -> ResolutionStats:
         return await super().run()
 
