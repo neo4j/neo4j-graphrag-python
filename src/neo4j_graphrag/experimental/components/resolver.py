@@ -28,6 +28,7 @@ from spacy.language import Language
 import neo4j
 from neo4j_graphrag.experimental.components.types import ResolutionStats
 from neo4j_graphrag.experimental.pipeline import Component
+from neo4j_graphrag.experimental.pipeline.component import ComponentMeta
 from neo4j_graphrag.utils import driver_config
 
 logger = logging.getLogger(__name__)
@@ -149,7 +150,14 @@ class SinglePropertyExactMatchResolver(EntityResolver):
         )
 
 
-class BasePropertySimilarityResolver(EntityResolver, abc.ABC):
+class CombinedMeta(ComponentMeta, abc.ABCMeta):
+    """
+    A metaclass that merges ComponentMeta (from Component) and ABCMeta (from abc.ABC).
+    """
+    pass
+
+
+class BasePropertySimilarityResolver(EntityResolver, abc.ABC, metaclass=CombinedMeta):
     """
     Base class for similarity-based matching of properties for entity resolution.
     Resolve entities with same label and similar set of textual properties (default is
@@ -333,7 +341,10 @@ class SpaCySemanticMatchResolver(BasePropertySimilarityResolver):
             neo4j_database,
         )
         self.nlp = self._load_or_download_spacy_model(spacy_model)
-        self.embedding_cache: dict[str, np.ndarray] = {}
+        self.embedding_cache: dict[str, NDArray[np.float64]] = {}
+
+    async def run(self) -> ResolutionStats:
+        return await super().run()
 
     def compute_similarity(self, text_a: str, text_b: str) -> float:
         emb1 = self._get_embedding(text_a)
@@ -343,9 +354,10 @@ class SpaCySemanticMatchResolver(BasePropertySimilarityResolver):
         )
         return sim
 
-    def _get_embedding(self, text: str) -> np.ndarray:
+    def _get_embedding(self, text: str) -> NDArray[np.float64]:
         if text not in self.embedding_cache:
-            self.embedding_cache[text] = self.nlp(text).vector
+            embedding = np.asarray(self.nlp(text).vector, dtype=np.float64)
+            self.embedding_cache[text] = embedding
         return self.embedding_cache[text]
 
     @staticmethod
@@ -384,6 +396,8 @@ class FuzzyMatchResolver(BasePropertySimilarityResolver):
     RapidFuzz for fuzzy matching. Similarity scores are normalized to a value between 0
     and 1.
     """
+    async def run(self) -> ResolutionStats:
+        return await super().run()
 
     def compute_similarity(self, text_a: str, text_b: str) -> float:
         # RapidFuzz's fuzz.WRatio returns a score from 0 to 100
