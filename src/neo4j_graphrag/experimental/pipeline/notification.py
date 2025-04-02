@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import asyncio
 import datetime
 import enum
 from collections.abc import Awaitable
@@ -31,10 +32,15 @@ class EventType(enum.Enum):
     TASK_PROGRESS = "TASK_PROGRESS"
     TASK_FINISHED = "TASK_FINISHED"
     PIPELINE_FINISHED = "PIPELINE_FINISHED"
+    PIPELINE_FAILED = "PIPELINE_FAILED"
 
     @property
     def is_pipeline_event(self) -> bool:
-        return self in [EventType.PIPELINE_STARTED, EventType.PIPELINE_FINISHED]
+        return self in [
+            EventType.PIPELINE_STARTED,
+            EventType.PIPELINE_FINISHED,
+            EventType.PIPELINE_FAILED,
+        ]
 
     @property
     def is_task_event(self) -> bool:
@@ -72,12 +78,14 @@ class EventCallbackProtocol(Protocol):
 
 
 class EventNotifier:
-    def __init__(self, callback: EventCallbackProtocol | None) -> None:
-        self.callback = callback
+    def __init__(self, callbacks: list[EventCallbackProtocol]) -> None:
+        self.callbacks = callbacks
 
     async def notify(self, event: Event) -> None:
-        if self.callback:
-            await self.callback(event)
+        await asyncio.gather(
+            *[c(event) for c in self.callbacks],
+            return_exceptions=True,
+        )
 
     async def notify_pipeline_started(
         self, run_id: str, input_data: Optional[dict[str, Any]] = None

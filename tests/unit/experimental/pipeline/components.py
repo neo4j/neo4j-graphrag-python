@@ -12,6 +12,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import asyncio
+
 from neo4j_graphrag.experimental.pipeline import Component, DataModel
 from neo4j_graphrag.experimental.pipeline.types.context import RunContext
 
@@ -51,4 +53,13 @@ class ComponentMultiplyWithContext(Component):
         await context_.notify(
             message="my message", data={"number1": number1, "number2": number2}
         )
+        return IntResultModel(result=number1 * number2)
+
+
+class SlowComponentMultiply(Component):
+    def __init__(self, sleep: float = 1.0) -> None:
+        self.sleep = sleep
+
+    async def run(self, number1: int, number2: int = 2) -> IntResultModel:
+        await asyncio.sleep(self.sleep)
         return IntResultModel(result=number1 * number2)

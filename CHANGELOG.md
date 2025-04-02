@@ -5,6 +5,7 @@
 ### Added
 
 - Added support for multi-vector collection in Qdrant driver.
+- Added a `Pipeline.stream` method to stream pipeline progress.
 
 ### Changed
 

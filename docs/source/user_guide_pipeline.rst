@@ -22,7 +22,7 @@ their own by following these steps:
 
 1. Create a subclass of the Pydantic `neo4j_graphrag.experimental.pipeline.DataModel` to represent the data being returned by the component
 2. Create a subclass of `neo4j_graphrag.experimental.pipeline.Component`
-3. Create a `run_with_context` method in this new class and specify the required inputs and output model using the just created `DataModel`
+3. Create a `run` method in this new class and specify the required inputs and output model using the just created `DataModel`
 4. Implement the run method: it's an `async` method, allowing tasks to be parallelized and awaited within this method.
 
 An example is given below, where a `ComponentAdd` is created to add two numbers together and return
@@ -31,13 +31,12 @@ the resulting sum:
 .. code:: python
 
     from neo4j_graphrag.experimental.pipeline import Component, DataModel
-    from neo4j_graphrag.experimental.pipeline.types.context import RunContext
 
     class IntResultModel(DataModel):
         result: int
 
     class ComponentAdd(Component):
-        async def run_with_context(self, context_: RunContext, number1: int, number2: int = 1) -> IntResultModel:
+        async def run(self, number1: int, number2: int = 1) -> IntResultModel:
             return IntResultModel(result = number1 + number2)
 
 Read more about :ref:`components-section` in the API Documentation.
