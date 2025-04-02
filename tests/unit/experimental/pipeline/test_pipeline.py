@@ -558,7 +558,10 @@ async def test_pipeline_streaming_error_in_pipeline_definition() -> None:
         async for e in pipe.stream({"a": {"number1": 1, "number2": 2}}):
             events.append(e)
     # validation happens before pipeline run actually starts
-    assert len(events) == 0
+    # but we have the PIPELINE_FAILED event
+    assert len(events) == 1
+    assert events[0].event_type == EventType.PIPELINE_FAILED
+    assert events[0].run_id == ""
 
 
 @pytest.mark.asyncio
@@ -570,9 +573,10 @@ async def test_pipeline_streaming_error_in_component() -> None:
     with pytest.raises(TypeError):
         async for e in pipe.stream({"component": {"number1": None, "number2": 2}}):
             events.append(e)
-    assert len(events) == 2
+    assert len(events) == 3
     assert events[0].event_type == EventType.PIPELINE_STARTED
     assert events[1].event_type == EventType.TASK_STARTED
+    assert events[2].event_type == EventType.PIPELINE_FAILED
 
 
 @pytest.mark.asyncio

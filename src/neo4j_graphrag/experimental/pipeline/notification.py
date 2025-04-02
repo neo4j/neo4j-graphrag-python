@@ -32,10 +32,15 @@ class EventType(enum.Enum):
     TASK_PROGRESS = "TASK_PROGRESS"
     TASK_FINISHED = "TASK_FINISHED"
     PIPELINE_FINISHED = "PIPELINE_FINISHED"
+    PIPELINE_FAILED = "PIPELINE_FAILED"
 
     @property
     def is_pipeline_event(self) -> bool:
-        return self in [EventType.PIPELINE_STARTED, EventType.PIPELINE_FINISHED]
+        return self in [
+            EventType.PIPELINE_STARTED,
+            EventType.PIPELINE_FINISHED,
+            EventType.PIPELINE_FAILED,
+        ]
 
     @property
     def is_task_event(self) -> bool:

@@ -51,6 +51,8 @@ from neo4j_graphrag.experimental.pipeline.types.context import RunContext
 from neo4j_graphrag.experimental.pipeline.notification import (
     EventCallbackProtocol,
     Event,
+    PipelineEvent,
+    EventType,
 )
 
 
@@ -416,17 +418,22 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
     async def get_final_results(self, run_id: str) -> dict[str, Any]:
         return await self.final_results.get(run_id)  # type: ignore[no-any-return]
 
-    async def stream(self, data: dict[str, Any]) -> AsyncGenerator[Event, None]:
+    async def stream(
+        self, data: dict[str, Any], raise_exception: bool = True
+    ) -> AsyncGenerator[Event, None]:
         """Run the pipeline and stream events for task progress.
 
         Args:
-            data: Input data for the pipeline components
+            data (dict): Input data for the pipeline components
+            raise_exception (bool): set to False to prevent this task from propagating
+                Pipeline exceptions.
 
         Yields:
             Event: Pipeline and task events including start, progress, and completion
         """
         # Create queue for events
         event_queue: asyncio.Queue[Event] = asyncio.Queue()
+        run_id = None
 
         async def event_stream(event: Event) -> None:
             # Put event in queue for streaming
@@ -458,10 +465,20 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                 for event_future in done:
                     if event_future == run_task:
                         continue
-                    yield event_future.result()  # type: ignore
+                    event = event_future.result()
+                    run_id = event.run_id
+                    yield event  # type: ignore
 
-            if run_task.exception():
-                raise run_task.exception()  # type: ignore
+            if exc := run_task.exception():
+                yield PipelineEvent(
+                    event_type=EventType.PIPELINE_FAILED,
+                    # run_id is null if pipeline fails before even starting
+                    # ie during pipeline validation
+                    run_id=run_id or "",
+                    message=str(exc),
+                )
+                if raise_exception:
+                    raise exc  # type: ignore
 
         finally:
             # Restore original callback

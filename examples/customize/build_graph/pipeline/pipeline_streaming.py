@@ -60,11 +60,16 @@ async def main() -> None:
 
     print("\n=== Running pipeline with streaming ===")
     # Run pipeline with streaming - see events as they happen
-    async for event in pipeline.stream({"adder": {"value": 2}}):
+    async for event in pipeline.stream(
+        {"adder": {"value": 2}},
+        raise_exception=False,  # default is True
+    ):
         if event.event_type == EventType.PIPELINE_STARTED:
             print("Stream: Pipeline started!")
         elif event.event_type == EventType.PIPELINE_FINISHED:
             print(f"Stream: Pipeline finished! Final results: {event.payload}")
+        elif event.event_type == EventType.PIPELINE_FAILED:
+            print(f"Stream: Pipeline failed with message: {event.message}")
         elif event.event_type == EventType.TASK_STARTED:
             print(
                 f"Stream: Task {event.task_name} started with inputs: {event.payload}"  # type: ignore
