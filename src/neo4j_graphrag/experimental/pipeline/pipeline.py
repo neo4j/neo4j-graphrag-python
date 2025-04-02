@@ -465,8 +465,10 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                 for event_future in done:
                     if event_future == run_task:
                         continue
+                    # we are sure to get an Event here, since this is the only
+                    # thing we put in the queue, but mypy still complains
                     event = event_future.result()
-                    run_id = event.run_id
+                    run_id = getattr(event, "run_id", None)
                     yield event  # type: ignore
 
             if exc := run_task.exception():
@@ -478,7 +480,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                     message=str(exc),
                 )
                 if raise_exception:
-                    raise exc  # type: ignore
+                    raise exc
 
         finally:
             # Restore original callback
