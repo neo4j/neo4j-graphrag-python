@@ -1,5 +1,5 @@
 import warnings
-from typing import Any, Literal
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel
 
@@ -36,3 +36,17 @@ class SystemMessage(BaseMessage):
 
 class MessageList(BaseModel):
     messages: list[BaseMessage]
+
+
+class ToolCall(BaseModel):
+    """A tool call made by an LLM."""
+
+    name: str
+    arguments: Dict[str, Any]
+
+
+class ToolCallResponse(BaseModel):
+    """Response from an LLM containing tool calls."""
+
+    tool_calls: List[ToolCall]
+    content: Optional[str] = None
