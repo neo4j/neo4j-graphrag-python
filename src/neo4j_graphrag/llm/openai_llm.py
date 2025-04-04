@@ -15,7 +15,15 @@
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING, Any, Iterable, List, Optional, Union, cast
+import json
+from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Union, cast
+from openai.types.chat import (
+    ChatCompletionMessageParam,
+    ChatCompletionSystemMessageParam,
+    ChatCompletionUserMessageParam,
+    ChatCompletionAssistantMessageParam,
+    ChatCompletionToolParam,
+)
 
 from pydantic import ValidationError
 
@@ -28,15 +36,12 @@ from .types import (
     BaseMessage,
     LLMResponse,
     MessageList,
-    SystemMessage,
-    UserMessage,
+    ToolCall,
+    ToolCallResponse,
 )
 
 if TYPE_CHECKING:
     import openai
-    from openai.types.chat.chat_completion_message_param import (
-        ChatCompletionMessageParam,
-    )
 
 
 class BaseOpenAILLM(LLMInterface, abc.ABC):
@@ -72,10 +77,16 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
-    ) -> Iterable[ChatCompletionMessageParam]:
-        messages = []
+    ) -> Sequence[
+        ChatCompletionMessageParam
+    ]:  # Returns messages compatible with OpenAI's API
+        messages: List[ChatCompletionMessageParam] = []
         if system_instruction:
-            messages.append(SystemMessage(content=system_instruction).model_dump())
+            messages.append(
+                ChatCompletionSystemMessageParam(
+                    role="system", content=str(system_instruction)
+                )
+            )
         if message_history:
             if isinstance(message_history, MessageHistory):
                 message_history = message_history.messages
@@ -83,9 +94,34 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
                 MessageList(messages=cast(list[BaseMessage], message_history))
             except ValidationError as e:
                 raise LLMGenerationError(e.errors()) from e
-            messages.extend(cast(Iterable[dict[str, Any]], message_history))
-        messages.append(UserMessage(content=input).model_dump())
-        return messages  # type: ignore
+            for msg in message_history:
+                if isinstance(msg, dict):
+                    role = msg.get("role")
+                    content = msg.get("content")
+                else:
+                    msg_dict = msg.model_dump()
+                    role = msg_dict.get("role")
+                    content = msg_dict.get("content")
+                if role == "system":
+                    messages.append(
+                        ChatCompletionSystemMessageParam(
+                            role="system", content=str(content)
+                        )
+                    )
+                elif role == "user":
+                    messages.append(
+                        ChatCompletionUserMessageParam(
+                            role="user", content=str(content)
+                        )
+                    )
+                elif role == "assistant":
+                    messages.append(
+                        ChatCompletionAssistantMessageParam(
+                            role="assistant", content=str(content)
+                        )
+                    )
+        messages.append(ChatCompletionUserMessageParam(role="user", content=str(input)))
+        return messages
 
     def invoke(
         self,
@@ -111,13 +147,90 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         try:
             if isinstance(message_history, MessageHistory):
                 message_history = message_history.messages
+            # We know these are compatible with OpenAI's API at runtime
+            messages = self.get_messages(input, message_history, system_instruction)
             response = self.client.chat.completions.create(
-                messages=self.get_messages(input, message_history, system_instruction),
+                messages=messages,
                 model=self.model_name,
                 **self.model_params,
             )
             content = response.choices[0].message.content or ""
             return LLMResponse(content=content)
+        except self.openai.OpenAIError as e:
+            raise LLMGenerationError(e)
+
+    def invoke_with_tools(
+        self,
+        input: str,
+        tools: List[dict[str, Any]],  # Tools definition as a list of dictionaries
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> ToolCallResponse:
+        """Sends a text input to the OpenAI chat completion model with tool definitions
+        and retrieves a tool call response.
+
+        Args:
+            input (str): Text sent to the LLM.
+            tools (List[Dict[str, Any]]): List of tool definitions for the LLM to choose from.
+            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
+                with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
+
+        Returns:
+            ToolCallResponse: The response from the LLM containing a tool call.
+
+        Raises:
+            LLMGenerationError: If anything goes wrong.
+        """
+        try:
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
+
+            params = self.model_params.copy() if self.model_params else {}
+            if "temperature" not in params:
+                params["temperature"] = 0.0
+
+            # We know these are compatible with OpenAI's API at runtime
+            messages = self.get_messages(input, message_history, system_instruction)
+            # Convert tools to OpenAI's expected type
+            openai_tools: List[ChatCompletionToolParam] = []
+            for tool in tools:
+                openai_tools.append(cast(ChatCompletionToolParam, tool))
+
+            response = self.client.chat.completions.create(
+                messages=messages,
+                model=self.model_name,
+                tools=openai_tools,
+                tool_choice="auto",
+                **params,
+            )
+
+            message = response.choices[0].message
+
+            # If there's no tool call, return the content as a regular response
+            if not message.tool_calls or len(message.tool_calls) == 0:
+                return ToolCallResponse(
+                    tool_calls=[ToolCall(name="", arguments={})],
+                    content=message.content or "",
+                )
+
+            # Process all tool calls
+            tool_calls = []
+
+            for tool_call in message.tool_calls:
+                try:
+                    args = json.loads(tool_call.function.arguments)
+                except (json.JSONDecodeError, AttributeError) as e:
+                    raise LLMGenerationError(
+                        f"Failed to parse tool call arguments: {e}"
+                    )
+
+                tool_calls.append(
+                    ToolCall(name=tool_call.function.name, arguments=args)
+                )
+
+            return ToolCallResponse(tool_calls=tool_calls, content=message.content)
+
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
@@ -145,13 +258,91 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         try:
             if isinstance(message_history, MessageHistory):
                 message_history = message_history.messages
+            # We know these are compatible with OpenAI's API at runtime
+            messages = self.get_messages(input, message_history, system_instruction)
             response = await self.async_client.chat.completions.create(
-                messages=self.get_messages(input, message_history, system_instruction),
+                messages=messages,
                 model=self.model_name,
                 **self.model_params,
             )
             content = response.choices[0].message.content or ""
             return LLMResponse(content=content)
+        except self.openai.OpenAIError as e:
+            raise LLMGenerationError(e)
+
+    async def ainvoke_with_tools(
+        self,
+        input: str,
+        tools: List[dict[str, Any]],  # Tools definition as a list of dictionaries
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> ToolCallResponse:
+        """Asynchronously sends a text input to the OpenAI chat completion model with tool definitions
+        and retrieves a tool call response.
+
+        Args:
+            input (str): Text sent to the LLM.
+            tools (List[Dict[str, Any]]): List of tool definitions for the LLM to choose from.
+            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
+                with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
+
+        Returns:
+            ToolCallResponse: The response from the LLM containing a tool call.
+
+        Raises:
+            LLMGenerationError: If anything goes wrong.
+        """
+        try:
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
+
+            params = self.model_params.copy()
+            if "temperature" not in params:
+                params["temperature"] = 0.0
+
+            # We know these are compatible with OpenAI's API at runtime
+            messages = self.get_messages(input, message_history, system_instruction)
+            # Convert tools to OpenAI's expected type
+            openai_tools: List[ChatCompletionToolParam] = []
+            for tool in tools:
+                openai_tools.append(cast(ChatCompletionToolParam, tool))
+
+            response = await self.async_client.chat.completions.create(
+                messages=messages,
+                model=self.model_name,
+                tools=openai_tools,
+                tool_choice="auto",
+                **params,
+            )
+
+            message = response.choices[0].message
+
+            # If there's no tool call, return the content as a regular response
+            if not message.tool_calls or len(message.tool_calls) == 0:
+                return ToolCallResponse(
+                    tool_calls=[ToolCall(name="", arguments={})],
+                    content=message.content or "",
+                )
+
+            # Process all tool calls
+            tool_calls = []
+            import json
+
+            for tool_call in message.tool_calls:
+                try:
+                    args = json.loads(tool_call.function.arguments)
+                except (json.JSONDecodeError, AttributeError) as e:
+                    raise LLMGenerationError(
+                        f"Failed to parse tool call arguments: {e}"
+                    )
+
+                tool_calls.append(
+                    ToolCall(name=tool_call.function.name, arguments=args)
+                )
+
+            return ToolCallResponse(tool_calls=tool_calls, content=message.content)
+
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 

@@ -13,16 +13,18 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from unittest.mock import MagicMock, Mock, patch
+from typing import Any, cast
 
 import openai
 import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm import LLMResponse
 from neo4j_graphrag.llm.openai_llm import AzureOpenAILLM, OpenAILLM
+from neo4j_graphrag.llm.types import ToolCallResponse
 
 
-def get_mock_openai() -> MagicMock:
-    mock = MagicMock()
+def get_mock_openai() -> Any:
+    mock = cast(Any, MagicMock())
     mock.OpenAIError = openai.OpenAIError
     return mock
 
@@ -65,10 +67,14 @@ def test_openai_llm_with_message_history_happy_path(mock_import: Mock) -> None:
     assert isinstance(res, LLMResponse)
     assert res.content == "openai chat response"
     message_history.append({"role": "user", "content": question})
-    llm.client.chat.completions.create.assert_called_once_with(  # type: ignore
-        messages=message_history,
-        model="gpt",
-    )
+    # Use assert_called_once() instead of assert_called_once_with() to avoid issues with overloaded functions
+    cast(Any, llm.client.chat.completions.create).assert_called_once()
+    # Check call arguments individually
+    call_args = cast(Any, llm.client.chat.completions.create).call_args[
+        1
+    ]  # Get the keyword arguments
+    assert call_args["messages"] == message_history
+    assert call_args["model"] == "gpt"
 
 
 @patch("builtins.__import__")
@@ -97,10 +103,14 @@ def test_openai_llm_with_message_history_and_system_instruction(
     messages = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
-    llm.client.chat.completions.create.assert_called_once_with(  # type: ignore
-        messages=messages,
-        model="gpt",
-    )
+    # Use assert_called_once() instead of assert_called_once_with() to avoid issues with overloaded functions
+    cast(Any, llm.client.chat.completions.create).assert_called_once()
+    # Check call arguments individually
+    call_args = cast(Any, llm.client.chat.completions.create).call_args[
+        1
+    ]  # Get the keyword arguments
+    assert call_args["messages"] == messages
+    assert call_args["model"] == "gpt"
 
     assert llm.client.chat.completions.create.call_count == 1  # type: ignore
 
@@ -122,6 +132,223 @@ def test_openai_llm_with_message_history_validation_error(mock_import: Mock) -> 
     with pytest.raises(LLMGenerationError) as exc_info:
         llm.invoke(question, message_history)  # type: ignore
     assert "Input should be 'user', 'assistant' or 'system'" in str(exc_info.value)
+
+
+@patch("builtins.__import__")
+@patch("json.loads")
+def test_openai_llm_invoke_with_tools_happy_path(
+    mock_json_loads: Mock, mock_import: Mock
+) -> None:
+    # Set up json.loads to return a dictionary
+    mock_json_loads.return_value = {"param1": "value1"}
+
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    # Mock the tool call response
+    mock_function = MagicMock()
+    mock_function.name = "test_tool"
+    mock_function.arguments = '{"param1": "value1"}'
+
+    mock_tool_call = MagicMock()
+    mock_tool_call.function = mock_function
+
+    mock_openai.OpenAI.return_value.chat.completions.create.return_value = MagicMock(
+        choices=[
+            MagicMock(
+                message=MagicMock(
+                    content="openai tool response", tool_calls=[mock_tool_call]
+                )
+            )
+        ],
+    )
+
+    llm = OpenAILLM(api_key="my key", model_name="gpt")
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "test_tool",
+                "description": "A test tool",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"param1": {"type": "string"}},
+                },
+            },
+        }
+    ]
+
+    res = llm.invoke_with_tools("my text", tools)
+    assert isinstance(res, ToolCallResponse)
+    assert len(res.tool_calls) == 1
+    assert res.tool_calls[0].name == "test_tool"
+    assert res.tool_calls[0].arguments == {"param1": "value1"}
+    assert res.content == "openai tool response"
+
+
+@patch("builtins.__import__")
+@patch("json.loads")
+def test_openai_llm_invoke_with_tools_with_message_history(
+    mock_json_loads: Mock, mock_import: Mock
+) -> None:
+    # Set up json.loads to return a dictionary
+    mock_json_loads.return_value = {"param1": "value1"}
+
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    # Mock the tool call response
+    mock_function = MagicMock()
+    mock_function.name = "test_tool"
+    mock_function.arguments = '{"param1": "value1"}'
+
+    mock_tool_call = MagicMock()
+    mock_tool_call.function = mock_function
+
+    mock_openai.OpenAI.return_value.chat.completions.create.return_value = MagicMock(
+        choices=[
+            MagicMock(
+                message=MagicMock(
+                    content="openai tool response", tool_calls=[mock_tool_call]
+                )
+            )
+        ],
+    )
+
+    llm = OpenAILLM(api_key="my key", model_name="gpt")
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "test_tool",
+                "description": "A test tool",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"param1": {"type": "string"}},
+                },
+            },
+        }
+    ]
+
+    message_history = [
+        {"role": "user", "content": "When does the sun come up in the summer?"},
+        {"role": "assistant", "content": "Usually around 6am."},
+    ]
+    question = "What about next season?"
+
+    res = llm.invoke_with_tools(question, tools, message_history)  # type: ignore
+    assert isinstance(res, ToolCallResponse)
+    assert len(res.tool_calls) == 1
+    assert res.tool_calls[0].name == "test_tool"
+    assert res.tool_calls[0].arguments == {"param1": "value1"}
+
+    # Verify the correct messages were passed
+    message_history.append({"role": "user", "content": question})
+    # Use assert_called_once() instead of assert_called_once_with() to avoid issues with overloaded functions
+    cast(Any, llm.client.chat.completions.create).assert_called_once()
+    # Check call arguments individually
+    call_args = cast(Any, llm.client.chat.completions.create).call_args[
+        1
+    ]  # Get the keyword arguments
+    assert call_args["messages"] == message_history
+    assert call_args["model"] == "gpt"
+    assert call_args["tools"] == tools
+    assert call_args["tool_choice"] == "auto"
+    assert call_args["temperature"] == 0.0
+
+
+@patch("builtins.__import__")
+@patch("json.loads")
+def test_openai_llm_invoke_with_tools_with_system_instruction(
+    mock_json_loads: Mock, mock_import: Mock
+) -> None:
+    # Set up json.loads to return a dictionary
+    mock_json_loads.return_value = {"param1": "value1"}
+
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    # Mock the tool call response
+    mock_function = MagicMock()
+    mock_function.name = "test_tool"
+    mock_function.arguments = '{"param1": "value1"}'
+
+    mock_tool_call = MagicMock()
+    mock_tool_call.function = mock_function
+
+    mock_openai.OpenAI.return_value.chat.completions.create.return_value = MagicMock(
+        choices=[
+            MagicMock(
+                message=MagicMock(
+                    content="openai tool response", tool_calls=[mock_tool_call]
+                )
+            )
+        ],
+    )
+
+    llm = OpenAILLM(api_key="my key", model_name="gpt")
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "test_tool",
+                "description": "A test tool",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"param1": {"type": "string"}},
+                },
+            },
+        }
+    ]
+
+    system_instruction = "You are a helpful assistant."
+
+    res = llm.invoke_with_tools("my text", tools, system_instruction=system_instruction)
+    assert isinstance(res, ToolCallResponse)
+
+    # Verify system instruction was included
+    messages = [{"role": "system", "content": system_instruction}]
+    messages.append({"role": "user", "content": "my text"})
+    # Use assert_called_once() instead of assert_called_once_with() to avoid issues with overloaded functions
+    cast(Any, llm.client.chat.completions.create).assert_called_once()
+    # Check call arguments individually
+    call_args = cast(Any, llm.client.chat.completions.create).call_args[
+        1
+    ]  # Get the keyword arguments
+    assert call_args["messages"] == messages
+    assert call_args["model"] == "gpt"
+    assert call_args["tools"] == tools
+    assert call_args["tool_choice"] == "auto"
+    assert call_args["temperature"] == 0.0
+
+
+@patch("builtins.__import__")
+def test_openai_llm_invoke_with_tools_error(mock_import: Mock) -> None:
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    # Mock an OpenAI error
+    mock_openai.OpenAI.return_value.chat.completions.create.side_effect = (
+        openai.OpenAIError("Test error")
+    )
+
+    llm = OpenAILLM(api_key="my key", model_name="gpt")
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "test_tool",
+                "description": "A test tool",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"param1": {"type": "string"}},
+                },
+            },
+        }
+    ]
+
+    with pytest.raises(LLMGenerationError):
+        llm.invoke_with_tools("my text", tools)
 
 
 @patch("builtins.__import__", side_effect=ImportError)
@@ -177,10 +404,14 @@ def test_azure_openai_llm_with_message_history_happy_path(mock_import: Mock) -> 
     assert isinstance(res, LLMResponse)
     assert res.content == "openai chat response"
     message_history.append({"role": "user", "content": question})
-    llm.client.chat.completions.create.assert_called_once_with(  # type: ignore
-        messages=message_history,
-        model="gpt",
-    )
+    # Use assert_called_once() instead of assert_called_once_with() to avoid issues with overloaded functions
+    cast(Any, llm.client.chat.completions.create).assert_called_once()
+    # Check call arguments individually
+    call_args = cast(Any, llm.client.chat.completions.create).call_args[
+        1
+    ]  # Get the keyword arguments
+    assert call_args["messages"] == message_history
+    assert call_args["model"] == "gpt"
 
 
 @patch("builtins.__import__")
