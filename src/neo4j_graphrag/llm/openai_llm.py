@@ -16,12 +16,9 @@ from __future__ import annotations
 
 import abc
 import json
-from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Union, cast
+from typing import TYPE_CHECKING, Any, List, Optional, Iterable, Union, cast
 from openai.types.chat import (
     ChatCompletionMessageParam,
-    ChatCompletionSystemMessageParam,
-    ChatCompletionUserMessageParam,
-    ChatCompletionAssistantMessageParam,
     ChatCompletionToolParam,
 )
 
@@ -38,6 +35,8 @@ from .types import (
     MessageList,
     ToolCall,
     ToolCallResponse,
+    SystemMessage,
+    UserMessage,
 )
 
 if TYPE_CHECKING:
@@ -77,16 +76,10 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
-    ) -> Sequence[
-        ChatCompletionMessageParam
-    ]:  # Returns messages compatible with OpenAI's API
-        messages: List[ChatCompletionMessageParam] = []
+    ) -> Iterable[ChatCompletionMessageParam]:
+        messages = []
         if system_instruction:
-            messages.append(
-                ChatCompletionSystemMessageParam(
-                    role="system", content=str(system_instruction)
-                )
-            )
+            messages.append(SystemMessage(content=system_instruction).model_dump())
         if message_history:
             if isinstance(message_history, MessageHistory):
                 message_history = message_history.messages
@@ -94,34 +87,9 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
                 MessageList(messages=cast(list[BaseMessage], message_history))
             except ValidationError as e:
                 raise LLMGenerationError(e.errors()) from e
-            for msg in message_history:
-                if isinstance(msg, dict):
-                    role = msg.get("role")
-                    content = msg.get("content")
-                else:
-                    msg_dict = msg.model_dump()
-                    role = msg_dict.get("role")
-                    content = msg_dict.get("content")
-                if role == "system":
-                    messages.append(
-                        ChatCompletionSystemMessageParam(
-                            role="system", content=str(content)
-                        )
-                    )
-                elif role == "user":
-                    messages.append(
-                        ChatCompletionUserMessageParam(
-                            role="user", content=str(content)
-                        )
-                    )
-                elif role == "assistant":
-                    messages.append(
-                        ChatCompletionAssistantMessageParam(
-                            role="assistant", content=str(content)
-                        )
-                    )
-        messages.append(ChatCompletionUserMessageParam(role="user", content=str(input)))
-        return messages
+            messages.extend(cast(Iterable[dict[str, Any]], message_history))
+        messages.append(UserMessage(content=input).model_dump())
+        return messages  # type: ignore
 
     def invoke(
         self,
