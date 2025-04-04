@@ -221,7 +221,7 @@ class BasePropertySimilarityResolver(EntityResolver, abc.ABC, metaclass=Combined
             UNWIND labels(entity) AS lab
             WITH lab, entity
             WHERE NOT lab IN ['__Entity__', '__KGBuilder__']
-            WITH lab, collect({{ id: id(entity), {props_map} }}) AS labelCluster
+            WITH lab, collect({{ id: elementId(entity), {props_map} }}) AS labelCluster
             RETURN lab, labelCluster
         """
 
@@ -260,10 +260,10 @@ class BasePropertySimilarityResolver(EntityResolver, abc.ABC, metaclass=Combined
             for node_id_set in merged_sets:
                 if len(node_id_set) > 1:
                     merge_query = (
-                        "MATCH (n) WHERE id(n) IN $ids "
+                        "MATCH (n) WHERE elementId(n) IN $ids "
                         "WITH collect(n) AS nodes "
                         "CALL apoc.refactor.mergeNodes(nodes, {properties: 'discard', mergeRels: true}) "
-                        "YIELD node RETURN id(node)"
+                        "YIELD node RETURN elementId(node)"
                     )
                     result, _, _ = self.driver.execute_query(
                         merge_query,
