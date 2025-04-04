@@ -115,10 +115,8 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         try:
             if isinstance(message_history, MessageHistory):
                 message_history = message_history.messages
-            # We know these are compatible with OpenAI's API at runtime
-            messages = self.get_messages(input, message_history, system_instruction)
             response = self.client.chat.completions.create(
-                messages=messages,
+                messages=self.get_messages(input, message_history, system_instruction),
                 model=self.model_name,
                 **self.model_params,
             )
@@ -158,15 +156,13 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
             if "temperature" not in params:
                 params["temperature"] = 0.0
 
-            # We know these are compatible with OpenAI's API at runtime
-            messages = self.get_messages(input, message_history, system_instruction)
             # Convert tools to OpenAI's expected type
             openai_tools: List[ChatCompletionToolParam] = []
             for tool in tools:
                 openai_tools.append(cast(ChatCompletionToolParam, tool))
 
             response = self.client.chat.completions.create(
-                messages=messages,
+                messages=self.get_messages(input, message_history, system_instruction),
                 model=self.model_name,
                 tools=openai_tools,
                 tool_choice="auto",
@@ -226,10 +222,8 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         try:
             if isinstance(message_history, MessageHistory):
                 message_history = message_history.messages
-            # We know these are compatible with OpenAI's API at runtime
-            messages = self.get_messages(input, message_history, system_instruction)
             response = await self.async_client.chat.completions.create(
-                messages=messages,
+                messages=self.get_messages(input, message_history, system_instruction),
                 model=self.model_name,
                 **self.model_params,
             )
@@ -269,15 +263,13 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
             if "temperature" not in params:
                 params["temperature"] = 0.0
 
-            # We know these are compatible with OpenAI's API at runtime
-            messages = self.get_messages(input, message_history, system_instruction)
             # Convert tools to OpenAI's expected type
             openai_tools: List[ChatCompletionToolParam] = []
             for tool in tools:
                 openai_tools.append(cast(ChatCompletionToolParam, tool))
 
             response = await self.async_client.chat.completions.create(
-                messages=messages,
+                messages=self.get_messages(input, message_history, system_instruction),
                 model=self.model_name,
                 tools=openai_tools,
                 tool_choice="auto",
