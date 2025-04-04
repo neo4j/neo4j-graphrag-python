@@ -23,8 +23,8 @@ from neo4j_graphrag.llm.openai_llm import AzureOpenAILLM, OpenAILLM
 from neo4j_graphrag.llm.types import ToolCallResponse
 
 
-def get_mock_openai() -> Any:
-    mock = cast(Any, MagicMock())
+def get_mock_openai() -> MagicMock:
+    mock = MagicMock()
     mock.OpenAIError = openai.OpenAIError
     return mock
 
