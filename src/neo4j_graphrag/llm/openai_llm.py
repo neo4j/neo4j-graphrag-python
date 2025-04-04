@@ -174,8 +174,8 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
             # If there's no tool call, return the content as a regular response
             if not message.tool_calls or len(message.tool_calls) == 0:
                 return ToolCallResponse(
-                    tool_calls=[ToolCall(name="", arguments={})],
-                    content=message.content or "",
+                    tool_calls=[],
+                    content=message.content,
                 )
 
             # Process all tool calls
