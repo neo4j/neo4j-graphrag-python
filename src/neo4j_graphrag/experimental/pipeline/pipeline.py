@@ -215,7 +215,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         """Generate a neo4j-viz visualization of the pipeline graph"""
         if not neo4j_viz_available:
             raise ImportError(
-                "Could not import neo4j-viz. Install it with 'pip install neo4j-viz'"
+                "Could not import neo4j-viz. Install it with 'pip install \"neo4j-graphrag[experimental]\"'"
             )
 
         self.validate_parameter_mapping()
