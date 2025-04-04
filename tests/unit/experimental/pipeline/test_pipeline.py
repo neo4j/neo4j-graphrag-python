@@ -387,12 +387,12 @@ def test_pipeline_to_viz() -> None:
     pipe.add_component(component_a, "a")
     pipe.add_component(component_b, "b")
     pipe.connect("a", "b", {"number1": "a.result"})
-    g = pipe.get_neo4j_viz_graph()
+    g = pipe._get_neo4j_viz_graph()
     # 3 nodes:
     #   - 2 components 'a' and 'b'
     #   - 1 output 'a.result'
     assert len(g.nodes) == 3
-    g = pipe.get_neo4j_viz_graph(hide_unused_outputs=False)
+    g = pipe._get_neo4j_viz_graph(hide_unused_outputs=False)
     # 4 nodes:
     #   - 2 components 'a' and 'b'
     #   - 2 output 'a.result' and 'b.result'

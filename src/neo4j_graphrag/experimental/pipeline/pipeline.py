@@ -201,7 +201,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         self, path: str, layout: str = "dot", hide_unused_outputs: bool = True
     ) -> Any:
         """Render the pipeline graph to an HTML file at the specified path"""
-        G = self.get_neo4j_viz_graph(hide_unused_outputs)
+        G = self._get_neo4j_viz_graph(hide_unused_outputs)
 
         # Write the visualization to an HTML file
         with open(path, "w") as f:
@@ -209,7 +209,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
 
         return G
 
-    def get_neo4j_viz_graph(
+    def _get_neo4j_viz_graph(
         self, hide_unused_outputs: bool = True
     ) -> VisualizationGraph:
         """Generate a neo4j-viz visualization of the pipeline graph"""
@@ -321,11 +321,11 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         Uses neo4j-viz instead of pygraphviz.
         """
         warnings.warn(
-            "get_pygraphviz_graph is deprecated, use get_neo4j_viz_graph instead",
+            "get_pygraphviz_graph is deprecated, use draw instead",
             DeprecationWarning,
             stacklevel=2,
         )
-        return self.get_neo4j_viz_graph(hide_unused_outputs)
+        return self._get_neo4j_viz_graph(hide_unused_outputs)
 
     def add_component(self, component: Component, name: str) -> None:
         """Add a new component. Components are uniquely identified
