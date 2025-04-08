@@ -54,5 +54,5 @@ if __name__ == "__main__":
     pipe.connect("times_two", "addition", {"a": "times_two.value"})
     pipe.connect("times_ten", "addition", {"b": "times_ten.value"})
     pipe.connect("addition", "save", {"number": "addition"})
-    pipe.draw("graph.png")
-    pipe.draw("graph_full.png", hide_unused_outputs=False)
+    pipe.draw("graph.html")
+    pipe.draw("graph_full.html", hide_unused_outputs=False)
