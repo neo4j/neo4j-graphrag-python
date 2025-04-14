@@ -13,6 +13,11 @@
 
 - Improved log output readability in Retrievers and GraphRAG and added embedded vector to retriever result metadata for debugging.
 
+### Fixed
+
+- Fixed a bug where the `$nin` operator for metadata pre-filtering in retrievers would create an invalid Cypher query.
+
+
 ## 1.6.1
 
 ### Added
