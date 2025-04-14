@@ -15,12 +15,14 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, List, Optional, Sequence, Union
 
 from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
 
 from .types import LLMResponse, ToolCallResponse
+
+from neo4j_graphrag.tool import Tool
 
 
 class LLMInterface(ABC):
@@ -88,7 +90,7 @@ class LLMInterface(ABC):
     def invoke_with_tools(
         self,
         input: str,
-        tools: List[Dict[str, Any]],
+        tools: Sequence[Tool],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> ToolCallResponse:
@@ -98,7 +100,7 @@ class LLMInterface(ABC):
 
         Args:
             input (str): Text sent to the LLM.
-            tools (List[Dict[str, Any]]): List of tool definitions for the LLM to choose from.
+            tools (Sequence[Tool]): Sequence of Tools for the LLM to choose from. Each LLM implementation should handle the conversion to its specific format.
             message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
                 with each message having a specific role assigned.
             system_instruction (Optional[str]): An option to override the llm system message for this invocation.
@@ -115,7 +117,7 @@ class LLMInterface(ABC):
     async def ainvoke_with_tools(
         self,
         input: str,
-        tools: List[Dict[str, Any]],
+        tools: Sequence[Tool],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> ToolCallResponse:
@@ -125,7 +127,7 @@ class LLMInterface(ABC):
 
         Args:
             input (str): Text sent to the LLM.
-            tools (List[Dict[str, Any]]): List of tool definitions for the LLM to choose from.
+            tools (Sequence[Tool]): Sequence of Tools for the LLM to choose from. Each LLM implementation should handle the conversion to its specific format.
             message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
                 with each message having a specific role assigned.
             system_instruction (Optional[str]): An option to override the llm system message for this invocation.

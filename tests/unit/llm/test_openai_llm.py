@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from unittest.mock import MagicMock, Mock, patch
-from typing import Any, cast
+from typing import Any, Dict, cast
 
 import openai
 import pytest
@@ -21,12 +21,32 @@ from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm import LLMResponse
 from neo4j_graphrag.llm.openai_llm import AzureOpenAILLM, OpenAILLM
 from neo4j_graphrag.llm.types import ToolCallResponse
+from neo4j_graphrag.tool import Tool, ObjectParameter, StringParameter
 
 
 def get_mock_openai() -> MagicMock:
     mock = MagicMock()
     mock.OpenAIError = openai.OpenAIError
     return mock
+
+
+class TestTool(Tool):
+    """Test tool for unit tests."""
+
+    def __init__(self, name: str = "test_tool", description: str = "A test tool"):
+        parameters = ObjectParameter(
+            description="Test parameters",
+            properties={"param1": StringParameter(description="Test parameter")},
+            required_properties=["param1"],
+            additional_properties=False,
+        )
+
+        super().__init__(
+            name=name,
+            description=description,
+            parameters=parameters,
+            execute_func=lambda **kwargs: kwargs,
+        )
 
 
 @patch("builtins.__import__", side_effect=ImportError)
@@ -164,19 +184,7 @@ def test_openai_llm_invoke_with_tools_happy_path(
     )
 
     llm = OpenAILLM(api_key="my key", model_name="gpt")
-    tools = [
-        {
-            "type": "function",
-            "function": {
-                "name": "test_tool",
-                "description": "A test tool",
-                "parameters": {
-                    "type": "object",
-                    "properties": {"param1": {"type": "string"}},
-                },
-            },
-        }
-    ]
+    tools = [TestTool()]
 
     res = llm.invoke_with_tools("my text", tools)
     assert isinstance(res, ToolCallResponse)
@@ -216,19 +224,7 @@ def test_openai_llm_invoke_with_tools_with_message_history(
     )
 
     llm = OpenAILLM(api_key="my key", model_name="gpt")
-    tools = [
-        {
-            "type": "function",
-            "function": {
-                "name": "test_tool",
-                "description": "A test tool",
-                "parameters": {
-                    "type": "object",
-                    "properties": {"param1": {"type": "string"}},
-                },
-            },
-        }
-    ]
+    tools = [TestTool()]
 
     message_history = [
         {"role": "user", "content": "When does the sun come up in the summer?"},
@@ -252,7 +248,11 @@ def test_openai_llm_invoke_with_tools_with_message_history(
     ]  # Get the keyword arguments
     assert call_args["messages"] == message_history
     assert call_args["model"] == "gpt"
-    assert call_args["tools"] == tools
+    # Check tools content rather than direct equality
+    assert len(call_args["tools"]) == 1
+    assert call_args["tools"][0]["type"] == "function"
+    assert call_args["tools"][0]["function"]["name"] == "test_tool"
+    assert call_args["tools"][0]["function"]["description"] == "A test tool"
     assert call_args["tool_choice"] == "auto"
     assert call_args["temperature"] == 0.0
 
@@ -287,19 +287,7 @@ def test_openai_llm_invoke_with_tools_with_system_instruction(
     )
 
     llm = OpenAILLM(api_key="my key", model_name="gpt")
-    tools = [
-        {
-            "type": "function",
-            "function": {
-                "name": "test_tool",
-                "description": "A test tool",
-                "parameters": {
-                    "type": "object",
-                    "properties": {"param1": {"type": "string"}},
-                },
-            },
-        }
-    ]
+    tools = [TestTool()]
 
     system_instruction = "You are a helpful assistant."
 
@@ -317,7 +305,11 @@ def test_openai_llm_invoke_with_tools_with_system_instruction(
     ]  # Get the keyword arguments
     assert call_args["messages"] == messages
     assert call_args["model"] == "gpt"
-    assert call_args["tools"] == tools
+    # Check tools content rather than direct equality
+    assert len(call_args["tools"]) == 1
+    assert call_args["tools"][0]["type"] == "function"
+    assert call_args["tools"][0]["function"]["name"] == "test_tool"
+    assert call_args["tools"][0]["function"]["description"] == "A test tool"
     assert call_args["tool_choice"] == "auto"
     assert call_args["temperature"] == 0.0
 
@@ -333,19 +325,7 @@ def test_openai_llm_invoke_with_tools_error(mock_import: Mock) -> None:
     )
 
     llm = OpenAILLM(api_key="my key", model_name="gpt")
-    tools = [
-        {
-            "type": "function",
-            "function": {
-                "name": "test_tool",
-                "description": "A test tool",
-                "parameters": {
-                    "type": "object",
-                    "properties": {"param1": {"type": "string"}},
-                },
-            },
-        }
-    ]
+    tools = [TestTool()]
 
     with pytest.raises(LLMGenerationError):
         llm.invoke_with_tools("my text", tools)
