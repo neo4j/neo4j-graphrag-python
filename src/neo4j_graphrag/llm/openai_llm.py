@@ -16,7 +16,17 @@ from __future__ import annotations
 
 import abc
 import json
-from typing import TYPE_CHECKING, Any, List, Optional, Iterable, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    List,
+    Optional,
+    Iterable,
+    Sequence,
+    Union,
+    cast,
+)
 from openai.types.chat import (
     ChatCompletionMessageParam,
     ChatCompletionToolParam,
@@ -38,6 +48,8 @@ from .types import (
     SystemMessage,
     UserMessage,
 )
+
+from neo4j_graphrag.tool import Tool
 
 if TYPE_CHECKING:
     import openai
@@ -91,6 +103,27 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         messages.append(UserMessage(content=input).model_dump())
         return messages  # type: ignore
 
+    def _convert_tool_to_openai_format(self, tool: Tool) -> Dict[str, Any]:
+        """Convert a Tool object to OpenAI's expected format.
+
+        Args:
+            tool: A Tool object to convert to OpenAI's format.
+
+        Returns:
+            A dictionary in OpenAI's tool format.
+        """
+        try:
+            return {
+                "type": "function",
+                "function": {
+                    "name": tool.get_name(),
+                    "description": tool.get_description(),
+                    "parameters": tool.get_parameters(),
+                },
+            }
+        except AttributeError:
+            raise LLMGenerationError(f"Tool {tool} is not a valid Tool object")
+
     def invoke(
         self,
         input: str,
@@ -128,7 +161,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
     def invoke_with_tools(
         self,
         input: str,
-        tools: List[dict[str, Any]],  # Tools definition as a list of dictionaries
+        tools: Sequence[Tool],  # Tools definition as a sequence of Tool objects
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> ToolCallResponse:
@@ -137,7 +170,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
 
         Args:
             input (str): Text sent to the LLM.
-            tools (List[Dict[str, Any]]): List of tool definitions for the LLM to choose from.
+            tools (List[Tool]): List of Tools for the LLM to choose from.
             message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
                 with each message having a specific role assigned.
             system_instruction (Optional[str]): An option to override the llm system message for this invocation.
@@ -159,7 +192,8 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
             # Convert tools to OpenAI's expected type
             openai_tools: List[ChatCompletionToolParam] = []
             for tool in tools:
-                openai_tools.append(cast(ChatCompletionToolParam, tool))
+                openai_format_tool = self._convert_tool_to_openai_format(tool)
+                openai_tools.append(cast(ChatCompletionToolParam, openai_format_tool))
 
             response = self.client.chat.completions.create(
                 messages=self.get_messages(input, message_history, system_instruction),
@@ -235,7 +269,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
     async def ainvoke_with_tools(
         self,
         input: str,
-        tools: List[dict[str, Any]],  # Tools definition as a list of dictionaries
+        tools: Sequence[Tool],  # Tools definition as a sequence of Tool objects
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> ToolCallResponse:
@@ -244,7 +278,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
 
         Args:
             input (str): Text sent to the LLM.
-            tools (List[Dict[str, Any]]): List of tool definitions for the LLM to choose from.
+            tools (List[Tool]): List of Tools for the LLM to choose from.
             message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
                 with each message having a specific role assigned.
             system_instruction (Optional[str]): An option to override the llm system message for this invocation.
@@ -266,7 +300,8 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
             # Convert tools to OpenAI's expected type
             openai_tools: List[ChatCompletionToolParam] = []
             for tool in tools:
-                openai_tools.append(cast(ChatCompletionToolParam, tool))
+                openai_format_tool = self._convert_tool_to_openai_format(tool)
+                openai_tools.append(cast(ChatCompletionToolParam, openai_format_tool))
 
             response = await self.async_client.chat.completions.create(
                 messages=self.get_messages(input, message_history, system_instruction),
