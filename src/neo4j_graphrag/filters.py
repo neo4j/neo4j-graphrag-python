@@ -100,7 +100,6 @@ class InOperator(Operator):
 
 
 class NinOperator(InOperator):
-
     def lhs(self, field: str) -> str:
         lhs = super().lhs(field)
         return f"NOT {lhs}"
