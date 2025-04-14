@@ -100,7 +100,9 @@ class InOperator(Operator):
 
 
 class NinOperator(InOperator):
-    CYPHER_OPERATOR = "NOT IN"
+    def lhs(self, field: str) -> str:
+        lhs = super().lhs(field)
+        return f"NOT {lhs}"
 
 
 class LikeOperator(Operator):
@@ -114,8 +116,8 @@ class LikeOperator(Operator):
 
 class ILikeOperator(LikeOperator):
     def lhs(self, field: str) -> str:
-        safe_field_cypher = self.safe_field_cypher(field)
-        return f"toLower({self.node_alias}.{safe_field_cypher})"
+        lhs = super().lhs(field)
+        return f"toLower({lhs})"
 
     def cleaned_value(self, value: str) -> str:
         value = super().cleaned_value(value)
@@ -368,6 +370,5 @@ def get_metadata_filter(
         contains the query parameters
     """
     param_store = ParameterStore()
-    return _construct_metadata_filter(
-        filter, param_store, node_alias=node_alias
-    ), param_store.params
+    query = _construct_metadata_filter(filter, param_store, node_alias=node_alias)
+    return query, param_store.params

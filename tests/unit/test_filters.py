@@ -165,7 +165,7 @@ def test_single_condition_cypher_nin(param_store_empty: ParameterStore) -> None:
     generated = _single_condition_cypher(
         "field", NinOperator, ["a", "b", "c"], param_store=param_store_empty
     )
-    assert generated == "node.field NOT IN $param_0"
+    assert generated == "NOT node.field IN $param_0"
     assert param_store_empty.params == {"param_0": ["a", "b", "c"]}
 
 
@@ -552,7 +552,7 @@ def test_get_metadata_filter_in_operator() -> None:
 def test_get_metadata_filter_not_in_operator() -> None:
     filters = {"field": {"$nin": ["a", "b"]}}
     query, params = get_metadata_filter(filters)
-    assert query == "node.field NOT IN $param_0"
+    assert query == "NOT node.field IN $param_0"
     assert params == {"param_0": ["a", "b"]}
 
 
