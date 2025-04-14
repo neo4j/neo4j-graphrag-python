@@ -17,32 +17,32 @@ from dotenv import load_dotenv
 
 from neo4j_graphrag.llm import OpenAILLM
 from neo4j_graphrag.llm.types import ToolCallResponse
+from neo4j_graphrag.tool import Tool, ObjectParameter, StringParameter, IntegerParameter
 
 # Load environment variables from .env file
 load_dotenv()
 
-# Define a tool for extracting information from text
-TOOLS = [
-    {
-        "type": "function",
-        "function": {
-            "name": "extract_person_info",
-            "description": "Extract information about a person from text",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "name": {"type": "string", "description": "The person's full name"},
-                    "age": {"type": "integer", "description": "The person's age"},
-                    "occupation": {
-                        "type": "string",
-                        "description": "The person's occupation",
-                    },
-                },
-                "required": ["name"],
-            },
-        },
-    }
-]
+
+# Create a custom Tool implementation for person info extraction
+parameters = ObjectParameter(
+    description="Parameters for extracting person information",
+    properties={
+        "name": StringParameter(description="The person's full name"),
+        "age": IntegerParameter(description="The person's age"),
+        "occupation": StringParameter(description="The person's occupation"),
+    },
+    required_properties=["name"],
+    additional_properties=False,
+)
+person_info_tool = Tool(
+    name="extract_person_info",
+    description="Extract information about a person from text",
+    parameters=parameters,
+    execute_func=lambda **kwargs: kwargs,
+)
+
+# Create the tool instance
+TOOLS = [person_info_tool]
 
 
 def process_tool_call(response: ToolCallResponse) -> Dict[str, Any]:
