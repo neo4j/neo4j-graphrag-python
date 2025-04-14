@@ -4,26 +4,29 @@ import neo4j
 from neo4j_graphrag.embeddings import OpenAIEmbeddings
 from neo4j_graphrag.retrievers import VectorRetriever
 
-URI = "neo4j://localhost:7687"
-AUTH = ("neo4j", "password")
-
-INDEX_NAME = "embedding-name"
+URI = "neo4j+s://demo.neo4jlabs.com"
+AUTH = ("recommendations", "recommendations")
+DATABASE = "recommendations"
+INDEX_NAME = "moviePlotsEmbedding"
 DIMENSION = 1536
 
+
 # Connect to Neo4j database
-driver = neo4j.GraphDatabase.driver(URI, auth=AUTH)
+with neo4j.GraphDatabase.driver(URI, auth=AUTH) as driver:
+    # Initialize the retriever
+    retriever = VectorRetriever(driver, INDEX_NAME, embedder=OpenAIEmbeddings())
 
-
-# Initialize the retriever
-retriever = VectorRetriever(driver, INDEX_NAME, embedder=OpenAIEmbeddings())
-
-# Perform the search
-query_text = "Find me a book about Fremen"
-pre_filters = {"int_property": {"$gt": 100}}
-print(
-    retriever.search(
+    # Perform the search
+    query_text = "Find me a movie about love"
+    pre_filters = {"int_property": {"$gt": 100}}
+    # pre_filters = {
+    #     "year": {
+    #         "$nin": ["1999", "2000"]
+    #     }
+    # }
+    retriever_result = retriever.search(
         query_text=query_text,
         top_k=1,
         filters=pre_filters,
     )
-)
+    print(retriever_result)
