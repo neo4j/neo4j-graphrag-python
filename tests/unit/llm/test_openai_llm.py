@@ -87,9 +87,9 @@ def test_openai_llm_with_message_history_happy_path(mock_import: Mock) -> None:
     assert res.content == "openai chat response"
     message_history.append({"role": "user", "content": question})
     # Use assert_called_once() instead of assert_called_once_with() to avoid issues with overloaded functions
-    llm.client.chat.completions.create.assert_called_once()
+    llm.client.chat.completions.create.assert_called_once()  # type: ignore
     # Check call arguments individually
-    call_args = llm.client.chat.completions.create.call_args[
+    call_args = llm.client.chat.completions.create.call_args[  # type: ignore
         1
     ]  # Get the keyword arguments
     assert call_args["messages"] == message_history
@@ -123,9 +123,9 @@ def test_openai_llm_with_message_history_and_system_instruction(
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
     # Use assert_called_once() instead of assert_called_once_with() to avoid issues with overloaded functions
-    llm.client.chat.completions.create.assert_called_once()
+    llm.client.chat.completions.create.assert_called_once()  # type: ignore
     # Check call arguments individually
-    call_args = llm.client.chat.completions.create.call_args[
+    call_args = llm.client.chat.completions.create.call_args[  # type: ignore
         1
     ]  # Get the keyword arguments
     assert call_args["messages"] == messages
@@ -240,9 +240,9 @@ def test_openai_llm_invoke_with_tools_with_message_history(
     # Verify the correct messages were passed
     message_history.append({"role": "user", "content": question})
     # Use assert_called_once() instead of assert_called_once_with() to avoid issues with overloaded functions
-    llm.client.chat.completions.create.assert_called_once()
+    llm.client.chat.completions.create.assert_called_once()  # type: ignore
     # Check call arguments individually
-    call_args = llm.client.chat.completions.create.call_args[
+    call_args = llm.client.chat.completions.create.call_args[  # type: ignore
         1
     ]  # Get the keyword arguments
     assert call_args["messages"] == message_history
@@ -297,9 +297,9 @@ def test_openai_llm_invoke_with_tools_with_system_instruction(
     messages = [{"role": "system", "content": system_instruction}]
     messages.append({"role": "user", "content": "my text"})
     # Use assert_called_once() instead of assert_called_once_with() to avoid issues with overloaded functions
-    llm.client.chat.completions.create.assert_called_once()
+    llm.client.chat.completions.create.assert_called_once()  # type: ignore
     # Check call arguments individually
-    call_args = llm.client.chat.completions.create.call_args[
+    call_args = llm.client.chat.completions.create.call_args[  # type: ignore
         1
     ]  # Get the keyword arguments
     assert call_args["messages"] == messages
@@ -384,9 +384,9 @@ def test_azure_openai_llm_with_message_history_happy_path(mock_import: Mock) -> 
     assert res.content == "openai chat response"
     message_history.append({"role": "user", "content": question})
     # Use assert_called_once() instead of assert_called_once_with() to avoid issues with overloaded functions
-    llm.client.chat.completions.create.assert_called_once()
+    llm.client.chat.completions.create.assert_called_once()  # type: ignore
     # Check call arguments individually
-    call_args = llm.client.chat.completions.create.call_args[
+    call_args = llm.client.chat.completions.create.call_args[  # type: ignore
         1
     ]  # Get the keyword arguments
     assert call_args["messages"] == message_history

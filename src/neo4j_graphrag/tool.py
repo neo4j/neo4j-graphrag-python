@@ -48,7 +48,8 @@ class ToolParameter(BaseModel):
         if not param_class:
             raise ValueError(f"Unknown parameter type: {param_type}")
 
-        return param_class.model_validate(data)
+        # Use type ignore since mypy doesn't understand dynamic class instantiation
+        return param_class.model_validate(data)  # type: ignore
 
 
 class StringParameter(ToolParameter):
