@@ -113,7 +113,7 @@ class ArrayParameter(ToolParameter):
 
     @model_validator(mode="before")
     @classmethod
-    def _preprocess_items(cls, values):
+    def _preprocess_items(cls, values: dict[str, Any]) -> dict[str, Any]:
         # Convert items from dict to ToolParameter if needed
         items = values.get("items")
         if isinstance(items, dict):
@@ -154,7 +154,7 @@ class ObjectParameter(ToolParameter):
 
     @model_validator(mode="before")
     @classmethod
-    def _preprocess_properties(cls, values):
+    def _preprocess_properties(cls, values: dict[str, Any]) -> dict[str, Any]:
         # Convert properties from dicts to ToolParameter if needed
         props = values.get("properties")
         if isinstance(props, dict):

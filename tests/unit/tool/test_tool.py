@@ -1,4 +1,5 @@
 import pytest
+from typing import Any
 from neo4j_graphrag.tool import (
     StringParameter,
     IntegerParameter,
@@ -12,7 +13,7 @@ from neo4j_graphrag.tool import (
 )
 
 
-def test_string_parameter():
+def test_string_parameter() -> None:
     param = StringParameter(description="A string", required=True, enum=["a", "b"])
     assert param.description == "A string"
     assert param.required is True
@@ -22,7 +23,7 @@ def test_string_parameter():
     assert d["enum"] == ["a", "b"]
 
 
-def test_integer_parameter():
+def test_integer_parameter() -> None:
     param = IntegerParameter(description="An int", minimum=0, maximum=10)
     d = param.model_dump_tool()
     assert d["type"] == ParameterType.INTEGER
@@ -30,7 +31,7 @@ def test_integer_parameter():
     assert d["maximum"] == 10
 
 
-def test_number_parameter():
+def test_number_parameter() -> None:
     param = NumberParameter(description="A number", minimum=1.5, maximum=3.5)
     d = param.model_dump_tool()
     assert d["type"] == ParameterType.NUMBER
@@ -38,14 +39,14 @@ def test_number_parameter():
     assert d["maximum"] == 3.5
 
 
-def test_boolean_parameter():
+def test_boolean_parameter() -> None:
     param = BooleanParameter(description="A bool")
     d = param.model_dump_tool()
     assert d["type"] == ParameterType.BOOLEAN
     assert d["description"] == "A bool"
 
 
-def test_array_parameter_and_validation():
+def test_array_parameter_and_validation() -> None:
     arr_param = ArrayParameter(
         description="An array",
         items=StringParameter(description="str"),
@@ -61,17 +62,17 @@ def test_array_parameter_and_validation():
     # Test items as dict
     arr_param2 = ArrayParameter(
         description="Arr with dict",
-        items={"type": "string", "description": "str"},
+        items={"type": "string", "description": "str"},  # type: ignore
     )
-    arr_param2 = arr_param2.validate_items()
     assert isinstance(arr_param2.items, StringParameter)
 
     # Test error on invalid items
     with pytest.raises(ValueError):
-        ArrayParameter(description="bad", items=123).validate_items()
+        # Use type: ignore to bypass type checking for this intentional error case
+        ArrayParameter(description="bad", items=123).validate_items()  # type: ignore
 
 
-def test_object_parameter_and_validation():
+def test_object_parameter_and_validation() -> None:
     obj_param = ObjectParameter(
         description="Obj",
         properties={
@@ -91,20 +92,21 @@ def test_object_parameter_and_validation():
     obj_param2 = ObjectParameter(
         description="Obj2",
         properties={
-            "foo": {"type": "string", "description": "foo"},
+            "foo": {"type": "string", "description": "foo"},  # type: ignore
         },
     )
-    obj_param2 = obj_param2.validate_properties()
     assert isinstance(obj_param2.properties["foo"], StringParameter)
 
     # Test error on invalid property
     with pytest.raises(ValueError):
+        # Use type: ignore to bypass type checking for this intentional error case
         ObjectParameter(
-            description="bad", properties={"foo": 123}
+            description="bad",
+            properties={"foo": 123},  # type: ignore
         ).validate_properties()
 
 
-def test_from_dict():
+def test_from_dict() -> None:
     d = {"type": ParameterType.STRING, "description": "desc"}
     param = ToolParameter.from_dict(d)
     assert isinstance(param, StringParameter)
@@ -137,8 +139,8 @@ def test_from_dict():
         ToolParameter.from_dict({"description": "no type"})
 
 
-def test_tool_class():
-    def dummy_func(query, **kwargs):
+def test_tool_class() -> None:
+    def dummy_func(query: str, **kwargs: Any) -> dict[str, Any]:
         return kwargs
 
     params = ObjectParameter(
