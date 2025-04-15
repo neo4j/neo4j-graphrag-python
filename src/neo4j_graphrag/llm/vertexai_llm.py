@@ -251,14 +251,14 @@ class VertexAILLM(LLMInterface):
             arguments=function_call.args,
         )
 
-    def _parse_tool_response(self, response) -> ToolCallResponse:
+    def _parse_tool_response(self, response: GenerationResponse) -> ToolCallResponse:
         function_calls = response.candidates[0].function_calls
         return ToolCallResponse(
             tool_calls=[self._to_tool_call(f) for f in function_calls],
             content=None,
         )
 
-    def _parse_content_response(self, response) -> LLMResponse:
+    def _parse_content_response(self, response: GenerationResponse) -> LLMResponse:
         return LLMResponse(
             content=response.text,
         )
