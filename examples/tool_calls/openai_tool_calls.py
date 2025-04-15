@@ -45,16 +45,22 @@ person_info_tool = Tool(
 TOOLS = [person_info_tool]
 
 
-def process_tool_call(response: ToolCallResponse) -> Dict[str, Any]:
-    """Process the tool call response and return the extracted parameters."""
+def process_tool_calls(response: ToolCallResponse) -> Dict[str, Any]:
+    """Process all tool calls in the response and return the extracted parameters."""
     if not response.tool_calls:
         raise ValueError("No tool calls found in response")
 
-    tool_call = response.tool_calls[0]
-    print(f"\nTool called: {tool_call.name}")
-    print(f"Arguments: {tool_call.arguments}")
+    print(f"\nNumber of tool calls: {len(response.tool_calls)}")
     print(f"Additional content: {response.content or 'None'}")
-    return tool_call.arguments
+    
+    results = []
+    for i, tool_call in enumerate(response.tool_calls):
+        print(f"\nTool call #{i+1}: {tool_call.name}")
+        print(f"Arguments: {tool_call.arguments}")
+        results.append(tool_call.arguments)
+    
+    # For backward compatibility, return the first tool call's arguments
+    return results[0] if results else {}
 
 
 async def main() -> None:
@@ -74,7 +80,7 @@ async def main() -> None:
         input=f"Extract information about the person from this text: {text}",
         tools=TOOLS,
     )
-    sync_result = process_tool_call(sync_response)
+    sync_result = process_tool_calls(sync_response)
     print("\n=== Synchronous Tool Call Result ===")
     print(json.dumps(sync_result, indent=2))
 
@@ -85,7 +91,7 @@ async def main() -> None:
         input=f"Extract information about the person from this text: {text2}",
         tools=TOOLS,
     )
-    async_result = process_tool_call(async_response)
+    async_result = process_tool_calls(async_response)
     print("\n=== Asynchronous Tool Call Result ===")
     print(json.dumps(async_result, indent=2))
 
