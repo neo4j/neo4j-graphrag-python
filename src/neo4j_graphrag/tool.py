@@ -180,8 +180,8 @@ class ObjectParameter(ToolParameter):
         if self.required_properties:
             result["required"] = self.required_properties
 
-        if not self.additional_properties:
-            result["additionalProperties"] = False
+        # if not self.additional_properties:
+        #     result["additionalProperties"] = False
 
         return result
 
