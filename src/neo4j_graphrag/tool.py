@@ -1,6 +1,6 @@
 from abc import ABC
 from enum import Enum
-from typing import Any, Dict, List, Callable, Optional, Union, ClassVar, Type
+from typing import Any, Dict, List, Callable, Optional, Union, ClassVar
 from pydantic import BaseModel, Field, model_validator
 
 
@@ -17,22 +17,23 @@ class ParameterType(str, Enum):
 
 class ToolParameter(BaseModel):
     """Base class for all tool parameters using Pydantic."""
+
     description: str
     required: bool = False
     type: ClassVar[ParameterType]
-    
+
     def model_dump_tool(self) -> Dict[str, Any]:
         """Convert the parameter to a dictionary format for tool usage."""
         result = {"type": self.type, "description": self.description}
         return result
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ToolParameter":
         """Create a parameter from a dictionary."""
         param_type = data.get("type")
         if not param_type:
             raise ValueError("Parameter type is required")
-            
+
         # Find the appropriate class based on the type
         param_classes = {
             ParameterType.STRING: StringParameter,
@@ -42,19 +43,20 @@ class ToolParameter(BaseModel):
             ParameterType.OBJECT: ObjectParameter,
             ParameterType.ARRAY: ArrayParameter,
         }
-        
+
         param_class = param_classes.get(param_type)
         if not param_class:
             raise ValueError(f"Unknown parameter type: {param_type}")
-            
+
         return param_class.model_validate(data)
 
 
 class StringParameter(ToolParameter):
     """String parameter for tools."""
+
     type: ClassVar[ParameterType] = ParameterType.STRING
     enum: Optional[List[str]] = None
-    
+
     def model_dump_tool(self) -> Dict[str, Any]:
         result = super().model_dump_tool()
         if self.enum:
@@ -64,10 +66,11 @@ class StringParameter(ToolParameter):
 
 class IntegerParameter(ToolParameter):
     """Integer parameter for tools."""
+
     type: ClassVar[ParameterType] = ParameterType.INTEGER
     minimum: Optional[int] = None
     maximum: Optional[int] = None
-    
+
     def model_dump_tool(self) -> Dict[str, Any]:
         result = super().model_dump_tool()
         if self.minimum is not None:
@@ -79,10 +82,11 @@ class IntegerParameter(ToolParameter):
 
 class NumberParameter(ToolParameter):
     """Number parameter for tools."""
+
     type: ClassVar[ParameterType] = ParameterType.NUMBER
     minimum: Optional[float] = None
     maximum: Optional[float] = None
-    
+
     def model_dump_tool(self) -> Dict[str, Any]:
         result = super().model_dump_tool()
         if self.minimum is not None:
@@ -94,16 +98,18 @@ class NumberParameter(ToolParameter):
 
 class BooleanParameter(ToolParameter):
     """Boolean parameter for tools."""
+
     type: ClassVar[ParameterType] = ParameterType.BOOLEAN
 
 
 class ArrayParameter(ToolParameter):
     """Array parameter for tools."""
+
     type: ClassVar[ParameterType] = ParameterType.ARRAY
     items: "ToolParameter"
     min_items: Optional[int] = None
     max_items: Optional[int] = None
-    
+
     def model_dump_tool(self) -> Dict[str, Any]:
         result = super().model_dump_tool()
         result["items"] = self.items.model_dump_tool()
@@ -112,24 +118,27 @@ class ArrayParameter(ToolParameter):
         if self.max_items is not None:
             result["maxItems"] = self.max_items
         return result
-    
+
     @model_validator(mode="after")
     def validate_items(self) -> "ArrayParameter":
         if not isinstance(self.items, ToolParameter):
             if isinstance(self.items, dict):
                 self.items = ToolParameter.from_dict(self.items)
             else:
-                raise ValueError(f"Items must be a ToolParameter or dict, got {type(self.items)}")
+                raise ValueError(
+                    f"Items must be a ToolParameter or dict, got {type(self.items)}"
+                )
         return self
 
 
 class ObjectParameter(ToolParameter):
     """Object parameter for tools."""
+
     type: ClassVar[ParameterType] = ParameterType.OBJECT
     properties: Dict[str, ToolParameter]
     required_properties: List[str] = Field(default_factory=list)
     additional_properties: bool = True
-    
+
     def model_dump_tool(self) -> Dict[str, Any]:
         properties_dict: Dict[str, Any] = {}
         for name, param in self.properties.items():
@@ -137,15 +146,15 @@ class ObjectParameter(ToolParameter):
 
         result = super().model_dump_tool()
         result["properties"] = properties_dict
-        
+
         if self.required_properties:
             result["required"] = self.required_properties
-            
+
         if not self.additional_properties:
             result["additionalProperties"] = False
-            
+
         return result
-    
+
     @model_validator(mode="after")
     def validate_properties(self) -> "ObjectParameter":
         validated_properties = {}
@@ -154,7 +163,9 @@ class ObjectParameter(ToolParameter):
                 if isinstance(param, dict):
                     validated_properties[name] = ToolParameter.from_dict(param)
                 else:
-                    raise ValueError(f"Property {name} must be a ToolParameter or dict, got {type(param)}")
+                    raise ValueError(
+                        f"Property {name} must be a ToolParameter or dict, got {type(param)}"
+                    )
             else:
                 validated_properties[name] = param
         self.properties = validated_properties
@@ -173,13 +184,13 @@ class Tool(ABC):
     ):
         self._name = name
         self._description = description
-        
+
         # Allow parameters to be provided as a dictionary
         if isinstance(parameters, dict):
             self._parameters = ObjectParameter.model_validate(parameters)
         else:
             self._parameters = parameters
-            
+
         self._execute_func = execute_func
 
     def get_name(self) -> str:
