@@ -19,7 +19,7 @@ from neo4j_graphrag.llm import OpenAILLM
 from neo4j_graphrag.llm.types import ToolCallResponse
 from neo4j_graphrag.tool import Tool, ObjectParameter, StringParameter, IntegerParameter
 
-# Load environment variables from .env file
+# Load environment variables from .env file (OPENAI_API_KEY required for this example)
 load_dotenv()
 
 
@@ -52,13 +52,13 @@ def process_tool_calls(response: ToolCallResponse) -> Dict[str, Any]:
 
     print(f"\nNumber of tool calls: {len(response.tool_calls)}")
     print(f"Additional content: {response.content or 'None'}")
-    
+
     results = []
     for i, tool_call in enumerate(response.tool_calls):
-        print(f"\nTool call #{i+1}: {tool_call.name}")
+        print(f"\nTool call #{i + 1}: {tool_call.name}")
         print(f"Arguments: {tool_call.arguments}")
         results.append(tool_call.arguments)
-    
+
     # For backward compatibility, return the first tool call's arguments
     return results[0] if results else {}
 
