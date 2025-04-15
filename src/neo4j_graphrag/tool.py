@@ -111,6 +111,15 @@ class ArrayParameter(ToolParameter):
     min_items: Optional[int] = None
     max_items: Optional[int] = None
 
+    @model_validator(mode="before")
+    @classmethod
+    def _preprocess_items(cls, values):
+        # Convert items from dict to ToolParameter if needed
+        items = values.get("items")
+        if isinstance(items, dict):
+            values["items"] = ToolParameter.from_dict(items)
+        return values
+
     def model_dump_tool(self) -> Dict[str, Any]:
         result = super().model_dump_tool()
         result["items"] = self.items.model_dump_tool()
@@ -129,6 +138,9 @@ class ArrayParameter(ToolParameter):
                 raise ValueError(
                     f"Items must be a ToolParameter or dict, got {type(self.items)}"
                 )
+        elif type(self.items) is ToolParameter:
+            # Promote base ToolParameter to correct subclass if possible
+            self.items = ToolParameter.from_dict(self.items.model_dump())
         return self
 
 
@@ -139,6 +151,21 @@ class ObjectParameter(ToolParameter):
     properties: Dict[str, ToolParameter]
     required_properties: List[str] = Field(default_factory=list)
     additional_properties: bool = True
+
+    @model_validator(mode="before")
+    @classmethod
+    def _preprocess_properties(cls, values):
+        # Convert properties from dicts to ToolParameter if needed
+        props = values.get("properties")
+        if isinstance(props, dict):
+            new_props = {}
+            for k, v in props.items():
+                if isinstance(v, dict):
+                    new_props[k] = ToolParameter.from_dict(v)
+                else:
+                    new_props[k] = v
+            values["properties"] = new_props
+        return values
 
     def model_dump_tool(self) -> Dict[str, Any]:
         properties_dict: Dict[str, Any] = {}
@@ -167,6 +194,9 @@ class ObjectParameter(ToolParameter):
                     raise ValueError(
                         f"Property {name} must be a ToolParameter or dict, got {type(param)}"
                     )
+            elif type(param) is ToolParameter:
+                # Promote base ToolParameter to correct subclass if possible
+                validated_properties[name] = ToolParameter.from_dict(param.model_dump())
             else:
                 validated_properties[name] = param
         self.properties = validated_properties
