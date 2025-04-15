@@ -19,7 +19,13 @@ from typing import Any, Optional, Protocol, runtime_checkable
 
 
 @runtime_checkable
-class TaskProgressCallbackProtocol(Protocol):
+class TaskProgressNotifierProtocol(Protocol):
+    """This protocol is used to send events from the component to the
+    Pipeline callback protocol.
+    The event sent to the callback will be of type :ref:`TaskEvent`,
+    with `event_type=TASK_PROGRESS`.
+    """
+
     def __call__(self, message: str, data: dict[str, Any]) -> Awaitable[None]: ...
 
 
@@ -28,7 +34,7 @@ class RunContext(BaseModel):
 
     run_id: str
     task_name: str
-    notifier: Optional[TaskProgressCallbackProtocol] = None
+    notifier: Optional[TaskProgressNotifierProtocol] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 

@@ -177,3 +177,16 @@ EventCallbackProtocol
 
 .. autoclass:: neo4j_graphrag.experimental.pipeline.notification.EventCallbackProtocol
     :members: __call__
+
+
+TaskProgressCallbackProtocol
+============================
+
+.. autoclass:: neo4j_graphrag.experimental.pipeline.types.context.TaskProgressNotifierProtocol
+    :members: __call__
+
+
+RunContext
+==========
+
+.. autoclass:: neo4j_graphrag.experimental.pipeline.types.context.RunContext
