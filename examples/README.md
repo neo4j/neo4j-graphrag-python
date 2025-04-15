@@ -78,6 +78,8 @@ are listed in [the last section of this file](#customize).
 - [Message history with Neo4j](./customize/llms/llm_with_neo4j_message_history.py)
 - [System Instruction](./customize/llms/llm_with_system_instructions.py)
 
+- [Tool Calling with OpenAI](./customize/llms/openai_tool_calls.py)
+
 
 ### Prompts
 
