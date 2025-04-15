@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from unittest.mock import MagicMock, Mock, patch
-from typing import Any, Dict, cast
+from typing import Any, cast
 
 import openai
 import pytest
