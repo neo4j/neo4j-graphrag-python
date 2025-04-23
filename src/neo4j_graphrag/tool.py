@@ -24,7 +24,9 @@ class ToolParameter(BaseModel):
 
     def model_dump_tool(self) -> Dict[str, Any]:
         """Convert the parameter to a dictionary format for tool usage."""
-        result = {"type": self.type, "description": self.description}
+        result: Dict[str, Any] = {"type": self.type, "description": self.description}
+        if self.required:
+            result["required"] = True
         return result
 
     @classmethod

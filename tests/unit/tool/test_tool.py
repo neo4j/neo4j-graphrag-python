@@ -21,6 +21,7 @@ def test_string_parameter() -> None:
     d = param.model_dump_tool()
     assert d["type"] == ParameterType.STRING
     assert d["enum"] == ["a", "b"]
+    assert d["required"] is True
 
 
 def test_integer_parameter() -> None:
@@ -137,6 +138,39 @@ def test_from_dict() -> None:
     # Test missing type
     with pytest.raises(ValueError):
         ToolParameter.from_dict({"description": "no type"})
+
+
+def test_required_parameter() -> None:
+    # Test that required=True is included in model_dump_tool output for different parameter types
+    string_param = StringParameter(description="Required string", required=True)
+    assert string_param.model_dump_tool()["required"] is True
+
+    integer_param = IntegerParameter(description="Required integer", required=True)
+    assert integer_param.model_dump_tool()["required"] is True
+
+    number_param = NumberParameter(description="Required number", required=True)
+    assert number_param.model_dump_tool()["required"] is True
+
+    boolean_param = BooleanParameter(description="Required boolean", required=True)
+    assert boolean_param.model_dump_tool()["required"] is True
+
+    array_param = ArrayParameter(
+        description="Required array",
+        items=StringParameter(description="item"),
+        required=True,
+    )
+    assert array_param.model_dump_tool()["required"] is True
+
+    object_param = ObjectParameter(
+        description="Required object",
+        properties={"prop": StringParameter(description="property")},
+        required=True,
+    )
+    assert object_param.model_dump_tool()["required"] is True
+
+    # Test that required=False doesn't include the required field
+    optional_param = StringParameter(description="Optional string", required=False)
+    assert "required" not in optional_param.model_dump_tool()
 
 
 def test_tool_class() -> None:
