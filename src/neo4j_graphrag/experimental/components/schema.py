@@ -14,9 +14,11 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import json
 from typing import Any, Dict, List, Literal, Optional, Tuple
 
 from pydantic import BaseModel, ValidationError, model_validator, validate_call
+from requests.exceptions import InvalidJSONError
 from typing_extensions import Self
 
 from neo4j_graphrag.exceptions import SchemaValidationError
@@ -25,6 +27,8 @@ from neo4j_graphrag.experimental.pipeline.types.schema import (
     EntityInputType,
     RelationInputType,
 )
+from neo4j_graphrag.generation import SchemaExtractionTemplate, PromptTemplate
+from neo4j_graphrag.llm import LLMInterface
 
 
 class SchemaProperty(BaseModel):
@@ -236,3 +240,62 @@ class SchemaBuilder(Component):
             SchemaConfig: A configured schema object, constructed asynchronously.
         """
         return self.create_schema_model(entities, relations, potential_schema)
+
+
+class SchemaFromText(SchemaBuilder):
+    """
+    A builder class for constructing SchemaConfig objects from the output of an LLM after
+     automatic schema extraction from text.
+    """
+
+    def __init__(
+        self,
+        llm: LLMInterface,
+        prompt_template: Optional[PromptTemplate] = None,
+        llm_params: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        super().__init__()
+        self._llm: LLMInterface = llm
+        self._prompt_template: PromptTemplate = prompt_template or SchemaExtractionTemplate()
+        self._llm_params: dict[str, Any] = llm_params or {}
+
+    @validate_call
+    async def run(self, text: str, **kwargs: Any) -> SchemaConfig:
+        """
+        Asynchronously extracts the schema from text and returns a SchemaConfig object.
+
+        Args:
+            text (str): the text from which the schema will be inferred.
+
+        Returns:
+            SchemaConfig: A configured schema object, extracted automatically and
+            constructed asynchronously.
+        """
+        prompt: str = self._prompt_template.format(text=text)
+
+        response = await self._llm.invoke(prompt, **self._llm_params)
+        content: str = (
+            response if isinstance(response, str) else getattr(response, "content", str(response))
+        )
+
+        try:
+            extracted_schema: Dict[str, Any] = json.loads(content)
+        except json.JSONDecodeError as exc:
+            raise InvalidJSONError(
+                "LLM response is not valid JSON."
+            ) from exc
+
+        extracted_entities: List[dict] = extracted_schema.get("entities", [])
+        extracted_relations: Optional[List[dict]] = extracted_schema.get("relations")
+        potential_schema: Optional[List[Tuple[str, str, str]]] = extracted_schema.get("potential_schema")
+
+        entities: List[SchemaEntity] = [SchemaEntity(**e) for e in extracted_entities]
+        relations: Optional[List[SchemaRelation]] = (
+            [SchemaRelation(**r) for r in extracted_relations] if extracted_relations else None
+        )
+
+        return await super().run(
+            entities=entities,
+            relations=relations,
+            potential_schema=potential_schema,
+        )
