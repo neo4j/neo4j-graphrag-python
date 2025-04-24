@@ -15,7 +15,9 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List, Literal, Optional, Tuple
+import yaml
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+from pathlib import Path
 
 from pydantic import BaseModel, ValidationError, model_validator, validate_call
 from requests.exceptions import InvalidJSONError
@@ -126,6 +128,91 @@ class SchemaConfig(DataModel):
                     )
 
         return data
+
+    def store_as_json(self, file_path: str) -> None:
+        """
+        Save the schema configuration to a JSON file.
+
+        Args:
+            file_path (str): The path where the schema configuration will be saved.
+        """
+        with open(file_path, 'w') as f:
+            json.dump(self.model_dump(), f, indent=2)
+            
+    def store_as_yaml(self, file_path: str) -> None:
+        """
+        Save the schema configuration to a YAML file.
+
+        Args:
+            file_path (str): The path where the schema configuration will be saved.
+        """         
+        with open(file_path, 'w') as f:
+            yaml.dump(self.model_dump(), f, default_flow_style=False, sort_keys=False)
+            
+    @classmethod
+    def from_file(cls, file_path: Union[str, Path]) -> Self:
+        """
+        Load a schema configuration from a file (either JSON or YAML).
+        
+        The file format is automatically detected based on the file extension.
+        
+        Args:
+            file_path (Union[str, Path]): The path to the schema configuration file.
+            
+        Returns:
+            SchemaConfig: The loaded schema configuration.
+        """
+        file_path = Path(file_path)
+        
+        if not file_path.exists():
+            raise FileNotFoundError(f"Schema file not found: {file_path}")
+            
+        if file_path.suffix.lower() in ['.json']:
+            return cls.from_json(file_path)
+        elif file_path.suffix.lower() in ['.yaml', '.yml']:
+            return cls.from_yaml(file_path)
+        else:
+            raise ValueError(f"Unsupported file format: {file_path.suffix}. Use .json, .yaml, or .yml")
+            
+    @classmethod
+    def from_json(cls, file_path: Union[str, Path]) -> Self:
+        """
+        Load a schema configuration from a JSON file.
+        
+        Args:
+            file_path (Union[str, Path]): The path to the JSON schema configuration file.
+            
+        Returns:
+            SchemaConfig: The loaded schema configuration.
+        """
+        with open(file_path, 'r') as f:
+            try:
+                data = json.load(f)
+                return cls.model_validate(data)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"Invalid JSON file: {e}")
+            except ValidationError as e:
+                raise SchemaValidationError(f"Schema validation failed: {e}")
+                
+    @classmethod
+    def from_yaml(cls, file_path: Union[str, Path]) -> Self:
+        """
+        Load a schema configuration from a YAML file.
+        
+        Args:
+            file_path (Union[str, Path]): The path to the YAML schema configuration file.
+            
+        Returns:
+            SchemaConfig: The loaded schema configuration.
+        """
+        with open(file_path, 'r') as f:
+            try:
+                data = yaml.safe_load(f)
+                return cls.model_validate(data)
+            except yaml.YAMLError as e:
+                raise ValueError(f"Invalid YAML file: {e}")
+            except ValidationError as e:
+                raise SchemaValidationError(f"Schema validation failed: {e}")
 
 
 class SchemaBuilder(Component):
@@ -281,7 +368,7 @@ class SchemaFromText(SchemaBuilder):
         try:
             extracted_schema: Dict[str, Any] = json.loads(content)
         except json.JSONDecodeError as exc:
-            raise InvalidJSONError(
+            raise ValueError(
                 "LLM response is not valid JSON."
             ) from exc
 
