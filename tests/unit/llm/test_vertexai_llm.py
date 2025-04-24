@@ -197,7 +197,9 @@ def test_vertexai_get_llm_tools(test_tool: Tool) -> None:
 @patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM._parse_tool_response")
 @patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM._call_llm")
 def test_vertexai_invoke_with_tools(
-    mock_call_llm: Mock, mock_parse_tool: Mock, test_tool: Tool,
+    mock_call_llm: Mock,
+    mock_parse_tool: Mock,
+    test_tool: Tool,
 ) -> None:
     # Mock the model call response
     tool_call_mock = MagicMock()
@@ -245,7 +247,9 @@ def test_vertexai_call_llm_with_tools(mock_model: Mock, test_tool: Tool) -> None
 @patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM._parse_tool_response")
 @patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM._call_llm")
 def test_vertexai_ainvoke_with_tools(
-    mock_call_llm: Mock, mock_parse_tool: Mock, test_tool: Tool,
+    mock_call_llm: Mock,
+    mock_parse_tool: Mock,
+    test_tool: Tool,
 ) -> None:
     # Mock the model call response
     tool_call_mock = MagicMock()
