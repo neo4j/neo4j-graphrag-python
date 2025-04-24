@@ -4,7 +4,7 @@
 
 ### Added
 
-- Added tool calling functionality to the LLM base class with OpenAI implementation, enabling structured parameter extraction and function calling.
+- Added tool calling functionality to the LLM base class with OpenAI and VertexAI implementations, enabling structured parameter extraction and function calling.
 - Added support for multi-vector collection in Qdrant driver.
 - Added a `Pipeline.stream` method to stream pipeline progress.
 - Added a new semantic match resolver to the KG Builder for entity resolution based on spaCy embeddings and cosine similarities so that nodes with similar textual properties get merged.
@@ -13,7 +13,7 @@
 ### Changed
 
 - Improved log output readability in Retrievers and GraphRAG and added embedded vector to retriever result metadata for debugging.
--   Switched from pygraphviz to neo4j-viz
+- Switched from pygraphviz to neo4j-viz
     -   Renders interactive graph now on HTML instead of PNG
     -   Removed `get_pygraphviz_graph` method
 
