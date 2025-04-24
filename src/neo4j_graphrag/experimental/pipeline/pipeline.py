@@ -18,7 +18,7 @@ import logging
 import warnings
 from collections import defaultdict
 from timeit import default_timer
-from typing import Any, Optional, AsyncGenerator, cast
+from typing import Any, Optional, AsyncGenerator
 import asyncio
 
 from neo4j_graphrag.utils.logging import prettify
@@ -242,8 +242,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                 size=20,
                 properties={"node_type": "component"},
             )
-            # Cast the node to Any before adding it to the list
-            nodes.append(cast(Any, viz_node))
+            nodes.append(viz_node)
             next_id += 1
 
             # Create nodes for each output field
@@ -275,11 +274,10 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                     size=15,
                     properties={"node_type": "output"},
                 )
-                # Cast the node to Any before adding it to the list
-                nodes.append(cast(Any, output_node))
+                nodes.append(output_node)
 
                 # Connect component to its output
-                # Add type ignore comment to suppress mypy errors
+                # Connect component to its output
                 rel = Relationship(  # type: ignore
                     source=node_ids[n],
                     target=node_ids[param_node_name],
@@ -300,7 +298,6 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                     source_output_node = source_component
 
                 if source_output_node in node_ids and component_name in node_ids:
-                    # Add type ignore comment to suppress mypy errors
                     rel = Relationship(  # type: ignore
                         source=node_ids[source_output_node],
                         target=node_ids[component_name],
@@ -309,12 +306,9 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                     )
                     relationships.append(rel)
 
-        # Cast the constructor to Any, then cast the result back to VisualizationGraph
-        viz_graph = cast(Any, VisualizationGraph)(
-            nodes=nodes, relationships=relationships
-        )
-        # Cast the result back to the expected return type
-        return cast(VisualizationGraph, viz_graph)
+        # Create the visualization graph
+        viz_graph = VisualizationGraph(nodes=nodes, relationships=relationships)
+        return viz_graph
 
     def get_pygraphviz_graph(self, hide_unused_outputs: bool = True) -> Any:
         """Legacy method for backward compatibility.
