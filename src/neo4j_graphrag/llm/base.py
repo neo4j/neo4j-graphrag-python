@@ -15,12 +15,14 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Sequence, Union
 
 from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
 
-from .types import LLMResponse
+from .types import LLMResponse, ToolCallResponse
+
+from neo4j_graphrag.tool import Tool
 
 
 class LLMInterface(ABC):
@@ -84,3 +86,57 @@ class LLMInterface(ABC):
         Raises:
             LLMGenerationError: If anything goes wrong.
         """
+
+    def invoke_with_tools(
+        self,
+        input: str,
+        tools: Sequence[Tool],
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> ToolCallResponse:
+        """Sends a text input to the LLM with tool definitions and retrieves a tool call response.
+
+        This is a default implementation that should be overridden by LLM providers that support tool/function calling.
+
+        Args:
+            input (str): Text sent to the LLM.
+            tools (Sequence[Tool]): Sequence of Tools for the LLM to choose from. Each LLM implementation should handle the conversion to its specific format.
+            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
+                with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
+
+        Returns:
+            ToolCallResponse: The response from the LLM containing a tool call.
+
+        Raises:
+            LLMGenerationError: If anything goes wrong.
+            NotImplementedError: If the LLM provider does not support tool calling.
+        """
+        raise NotImplementedError("This LLM provider does not support tool calling.")
+
+    async def ainvoke_with_tools(
+        self,
+        input: str,
+        tools: Sequence[Tool],
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> ToolCallResponse:
+        """Asynchronously sends a text input to the LLM with tool definitions and retrieves a tool call response.
+
+        This is a default implementation that should be overridden by LLM providers that support tool/function calling.
+
+        Args:
+            input (str): Text sent to the LLM.
+            tools (Sequence[Tool]): Sequence of Tools for the LLM to choose from. Each LLM implementation should handle the conversion to its specific format.
+            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
+                with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
+
+        Returns:
+            ToolCallResponse: The response from the LLM containing a tool call.
+
+        Raises:
+            LLMGenerationError: If anything goes wrong.
+            NotImplementedError: If the LLM provider does not support tool calling.
+        """
+        raise NotImplementedError("This LLM provider does not support tool calling.")
