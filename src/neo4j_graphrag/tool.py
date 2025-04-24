@@ -169,18 +169,21 @@ class ObjectParameter(ToolParameter):
             values["properties"] = new_props
         return values
 
-    def model_dump_tool(self) -> Dict[str, Any]:
+    def model_dump_tool(self, exclude: Optional[list[str]] = None) -> Dict[str, Any]:
+        exclude = exclude or []
         properties_dict: Dict[str, Any] = {}
         for name, param in self.properties.items():
+            if name in exclude:
+                continue
             properties_dict[name] = param.model_dump_tool()
 
         result = super().model_dump_tool()
         result["properties"] = properties_dict
 
-        if self.required_properties:
+        if self.required_properties and "required" not in exclude:
             result["required"] = self.required_properties
 
-        if not self.additional_properties:
+        if not self.additional_properties and "additional_properties" not in exclude:
             result["additionalProperties"] = False
 
         return result
@@ -242,13 +245,13 @@ class Tool(ABC):
         """
         return self._description
 
-    def get_parameters(self) -> Dict[str, Any]:
+    def get_parameters(self, exclude: Optional[list[str]] = None) -> Dict[str, Any]:
         """Get the parameters the tool accepts in a dictionary format suitable for LLM providers.
 
         Returns:
             Dict[str, Any]: Dictionary containing parameter schema information.
         """
-        return self._parameters.model_dump_tool()
+        return self._parameters.model_dump_tool(exclude)
 
     def execute(self, query: str, **kwargs: Any) -> Any:
         """Execute the tool with the given query and additional parameters.

@@ -194,12 +194,12 @@ class VertexAILLM(LLMInterface):
                 FunctionDeclaration(
                     name=tool.get_name(),
                     description=tool.get_description(),
-                    parameters=tool.get_parameters(),
+                    parameters=tool.get_parameters(exclude=["additional_properties"]),
                 )
             ]
         )
 
-    def get_tools(
+    def _get_llm_tools(
         self, tools: Optional[Sequence[Tool]]
     ) -> Optional[list[VertexAITool]]:
         if not tools:
@@ -212,7 +212,7 @@ class VertexAILLM(LLMInterface):
         tools: Optional[Sequence[Tool]] = None,
     ) -> GenerativeModel:
         system_message = [system_instruction] if system_instruction is not None else []
-        vertex_ai_tools = self.get_tools(tools)
+        vertex_ai_tools = self._get_llm_tools(tools)
         model = GenerativeModel(
             model_name=self.model_name,
             system_instruction=system_message,
@@ -228,7 +228,7 @@ class VertexAILLM(LLMInterface):
         system_instruction: Optional[str] = None,
         tools: Optional[Sequence[Tool]] = None,
     ) -> GenerationResponse:
-        model = self._get_model(system_instruction, tools)
+        model = self._get_model(system_instruction=system_instruction, tools=tools)
         messages = self.get_messages(input, message_history)
         response = await model.generate_content_async(messages, **self.model_params)
         return response
@@ -240,7 +240,7 @@ class VertexAILLM(LLMInterface):
         system_instruction: Optional[str] = None,
         tools: Optional[Sequence[Tool]] = None,
     ) -> GenerationResponse:
-        model = self._get_model(system_instruction, tools)
+        model = self._get_model(system_instruction=system_instruction, tools=tools)
         messages = self.get_messages(input, message_history)
         response = model.generate_content(messages, **self.model_params)
         return response

@@ -20,32 +20,13 @@ from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm import LLMResponse
 from neo4j_graphrag.llm.openai_llm import AzureOpenAILLM, OpenAILLM
 from neo4j_graphrag.llm.types import ToolCallResponse
-from neo4j_graphrag.tool import Tool, ObjectParameter, StringParameter
+from neo4j_graphrag.tool import Tool
 
 
 def get_mock_openai() -> MagicMock:
     mock = MagicMock()
     mock.OpenAIError = openai.OpenAIError
     return mock
-
-
-class TestTool(Tool):
-    """Test tool for unit tests."""
-
-    def __init__(self, name: str = "test_tool", description: str = "A test tool"):
-        parameters = ObjectParameter(
-            description="Test parameters",
-            properties={"param1": StringParameter(description="Test parameter")},
-            required_properties=["param1"],
-            additional_properties=False,
-        )
-
-        super().__init__(
-            name=name,
-            description=description,
-            parameters=parameters,
-            execute_func=lambda **kwargs: kwargs,
-        )
 
 
 @patch("builtins.__import__", side_effect=ImportError)
@@ -156,7 +137,9 @@ def test_openai_llm_with_message_history_validation_error(mock_import: Mock) -> 
 @patch("builtins.__import__")
 @patch("json.loads")
 def test_openai_llm_invoke_with_tools_happy_path(
-    mock_json_loads: Mock, mock_import: Mock
+    mock_json_loads: Mock,
+    mock_import: Mock,
+    test_tool: Tool,
 ) -> None:
     # Set up json.loads to return a dictionary
     mock_json_loads.return_value = {"param1": "value1"}
@@ -183,7 +166,7 @@ def test_openai_llm_invoke_with_tools_happy_path(
     )
 
     llm = OpenAILLM(api_key="my key", model_name="gpt")
-    tools = [TestTool()]
+    tools = [test_tool]
 
     res = llm.invoke_with_tools("my text", tools)
     assert isinstance(res, ToolCallResponse)
@@ -196,7 +179,9 @@ def test_openai_llm_invoke_with_tools_happy_path(
 @patch("builtins.__import__")
 @patch("json.loads")
 def test_openai_llm_invoke_with_tools_with_message_history(
-    mock_json_loads: Mock, mock_import: Mock
+    mock_json_loads: Mock,
+    mock_import: Mock,
+    test_tool: Tool,
 ) -> None:
     # Set up json.loads to return a dictionary
     mock_json_loads.return_value = {"param1": "value1"}
@@ -223,7 +208,7 @@ def test_openai_llm_invoke_with_tools_with_message_history(
     )
 
     llm = OpenAILLM(api_key="my key", model_name="gpt")
-    tools = [TestTool()]
+    tools = [test_tool]
 
     message_history = [
         {"role": "user", "content": "When does the sun come up in the summer?"},
@@ -259,7 +244,9 @@ def test_openai_llm_invoke_with_tools_with_message_history(
 @patch("builtins.__import__")
 @patch("json.loads")
 def test_openai_llm_invoke_with_tools_with_system_instruction(
-    mock_json_loads: Mock, mock_import: Mock
+    mock_json_loads: Mock,
+    mock_import: Mock,
+    test_tool: Mock,
 ) -> None:
     # Set up json.loads to return a dictionary
     mock_json_loads.return_value = {"param1": "value1"}
@@ -286,7 +273,7 @@ def test_openai_llm_invoke_with_tools_with_system_instruction(
     )
 
     llm = OpenAILLM(api_key="my key", model_name="gpt")
-    tools = [TestTool()]
+    tools = [test_tool]
 
     system_instruction = "You are a helpful assistant."
 
@@ -314,7 +301,7 @@ def test_openai_llm_invoke_with_tools_with_system_instruction(
 
 
 @patch("builtins.__import__")
-def test_openai_llm_invoke_with_tools_error(mock_import: Mock) -> None:
+def test_openai_llm_invoke_with_tools_error(mock_import: Mock, test_tool: Tool) -> None:
     mock_openai = get_mock_openai()
     mock_import.return_value = mock_openai
 
@@ -324,7 +311,7 @@ def test_openai_llm_invoke_with_tools_error(mock_import: Mock) -> None:
     )
 
     llm = OpenAILLM(api_key="my key", model_name="gpt")
-    tools = [TestTool()]
+    tools = [test_tool]
 
     with pytest.raises(LLMGenerationError):
         llm.invoke_with_tools("my text", tools)
