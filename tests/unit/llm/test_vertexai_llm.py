@@ -276,7 +276,7 @@ def test_vertexai_ainvoke_with_tools(
 
 @pytest.mark.asyncio
 @patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM._get_model")
-async def test_vertexai_acall_llm_with_tools(mock_model, test_tool: Tool) -> None:
+async def test_vertexai_acall_llm_with_tools(mock_model: Mock, test_tool: Tool) -> None:
     # Mock the generation response
     mock_model.return_value = AsyncMock(
         generate_content_async=AsyncMock(
