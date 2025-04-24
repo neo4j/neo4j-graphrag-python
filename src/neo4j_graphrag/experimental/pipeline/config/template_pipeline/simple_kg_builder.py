@@ -32,6 +32,7 @@ from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
     SchemaEntity,
     SchemaRelation,
+    SchemaFromText,
 )
 from neo4j_graphrag.experimental.components.text_splitters.base import TextSplitter
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
@@ -80,12 +81,17 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     perform_entity_resolution: bool = True
     lexical_graph_config: Optional[LexicalGraphConfig] = None
     neo4j_database: Optional[str] = None
+    auto_schema_extraction: bool = False
 
     pdf_loader: Optional[ComponentType] = None
     kg_writer: Optional[ComponentType] = None
     text_splitter: Optional[ComponentType] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def has_user_provided_schema(self) -> bool:
+        """Check if the user has provided schema information"""
+        return bool(self.entities or self.relations or self.potential_schema)
 
     def _get_pdf_loader(self) -> Optional[PdfLoader]:
         if not self.from_pdf:
@@ -114,15 +120,26 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     def _get_chunk_embedder(self) -> TextChunkEmbedder:
         return TextChunkEmbedder(embedder=self.get_default_embedder())
 
-    def _get_schema(self) -> SchemaBuilder:
+    def _get_schema(self) -> Union[SchemaBuilder, SchemaFromText]:
+        """
+        Get the appropriate schema component based on configuration.
+        Return SchemaFromText for automatic extraction or SchemaBuilder for manual schema.
+        """
+        if self.auto_schema_extraction and not self.has_user_provided_schema():
+            return SchemaFromText(llm=self.get_default_llm())
         return SchemaBuilder()
 
     def _get_run_params_for_schema(self) -> dict[str, Any]:
-        return {
-            "entities": [SchemaEntity.from_text_or_dict(e) for e in self.entities],
-            "relations": [SchemaRelation.from_text_or_dict(r) for r in self.relations],
-            "potential_schema": self.potential_schema,
-        }
+        if self.auto_schema_extraction and not self.has_user_provided_schema():
+            # for automatic extraction, the text parameter is needed (will flow through the pipeline connections)
+            return {}
+        else:
+            # for manual schema, use the provided entities/relations/potential_schema
+            return {
+                "entities": [SchemaEntity.from_text_or_dict(e) for e in self.entities],
+                "relations": [SchemaRelation.from_text_or_dict(r) for r in self.relations],
+                "potential_schema": self.potential_schema,
+            }
 
     def _get_extractor(self) -> EntityRelationExtractor:
         return LLMEntityRelationExtractor(
@@ -163,6 +180,17 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
                     input_config={"text": "pdf_loader.text"},
                 )
             )
+            
+            # handle automatic schema extraction
+            if self.auto_schema_extraction and not self.has_user_provided_schema():
+                connections.append(
+                    ConnectionDefinition(
+                        start="pdf_loader",
+                        end="schema",
+                        input_config={"text": "pdf_loader.text"},
+                    )
+                )
+            
             connections.append(
                 ConnectionDefinition(
                     start="schema",
@@ -174,13 +202,21 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
                 )
             )
         else:
+            # handle automatic schema extraction for direct text input: ensure schema extraction uses the complete text
+            if self.auto_schema_extraction and not self.has_user_provided_schema():
+                connections.append(
+                    ConnectionDefinition(
+                        start="__input__",  # connection to pipeline input
+                        end="schema",
+                        input_config={"text": "text"},  # use the original text input
+                    )
+                )
+            
             connections.append(
                 ConnectionDefinition(
                     start="schema",
                     end="extractor",
-                    input_config={
-                        "schema": "schema",
-                    },
+                    input_config={"schema": "schema"},
                 )
             )
         connections.append(
