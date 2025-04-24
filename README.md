@@ -59,7 +59,6 @@ the extra dependencies described below:
     - **pinecone**: store vectors in Pinecone
     - **qdrant**: store vectors in Qdrant
 - **experimental**: experimental features mainly related to the Knowledge Graph creation pipelines.
-    - Warning: this dependency group requires `pygraphviz`. See below for installation instructions.
 
 
 Install package with optional dependencies with (for instance):
@@ -67,11 +66,6 @@ Install package with optional dependencies with (for instance):
 ```shell
 pip install "neo4j-graphrag[openai]"
 ```
-
-#### pygraphviz
-
-`pygraphviz` is used for visualizing pipelines.
-Installation instructions can be found [here](https://pygraphviz.github.io/documentation/stable/install.html).
 
 ## 💻 Example Usage
 

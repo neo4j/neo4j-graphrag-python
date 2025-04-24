@@ -111,25 +111,26 @@ Pipelines can be visualized using the `draw` method:
     pipe = Pipeline()
     # ... define components and connections
 
-    pipe.draw("pipeline.png")
+    pipe.draw("pipeline.html")
 
-Here is an example pipeline rendering:
-
-.. image:: images/pipeline_no_unused_outputs.png
-  :alt: Pipeline visualisation with hidden outputs if unused
-
-
-By default, output fields which are not mapped to any component are hidden. They
-can be added to the canvas by setting `hide_unused_outputs` to `False`:
+Here is an example pipeline rendering as an interactive HTML visualization:
 
 .. code:: python
 
-    pipe.draw("pipeline.png", hide_unused_outputs=False)
+    # To view the visualization in a browser
+    import webbrowser
+    webbrowser.open("pipeline.html")
 
-Here is an example of final result:
+By default, output fields which are not mapped to any component are hidden. They
+can be added to the visualization by setting `hide_unused_outputs` to `False`:
 
-.. image:: images/pipeline_full.png
-  :alt: Pipeline visualisation
+.. code:: python
+
+    pipe.draw("pipeline_full.html", hide_unused_outputs=False)
+    
+    # To view the full visualization in a browser
+    import webbrowser
+    webbrowser.open("pipeline_full.html")
 
 
 ************************

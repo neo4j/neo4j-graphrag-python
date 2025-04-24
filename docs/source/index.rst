@@ -98,7 +98,6 @@ List of extra dependencies:
     - **pinecone**: store vectors in Pinecone
     - **qdrant**: store vectors in Qdrant
 - **experimental**: experimental features mainly from the Knowledge Graph creation pipelines.
-    - Warning: this requires `pygraphviz`. Installation instructions can be found `here <https://pygraphviz.github.io/documentation/stable/install.html>`_.
 - nlp:
    - **spaCy**: load spaCy trained models for nlp pipelines, used by `SpaCySemanticMatchResolver` component from the Knowledge Graph creation pipelines.
 - fuzzy-matching:

@@ -24,9 +24,11 @@ import asyncio
 from neo4j_graphrag.utils.logging import prettify
 
 try:
-    import pygraphviz as pgv
+    from neo4j_viz import Node, Relationship, VisualizationGraph
+
+    neo4j_viz_available = True
 except ImportError:
-    pgv = None
+    neo4j_viz_available = False
 
 from pydantic import BaseModel
 
@@ -198,53 +200,126 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
     def draw(
         self, path: str, layout: str = "dot", hide_unused_outputs: bool = True
     ) -> Any:
-        G = self.get_pygraphviz_graph(hide_unused_outputs)
-        G.layout(layout)
-        G.draw(path)
+        """Render the pipeline graph to an HTML file at the specified path"""
+        G = self._get_neo4j_viz_graph(hide_unused_outputs)
 
-    def get_pygraphviz_graph(self, hide_unused_outputs: bool = True) -> pgv.AGraph:
-        if pgv is None:
+        # Write the visualization to an HTML file
+        with open(path, "w") as f:
+            f.write(G.render().data)
+
+        return G
+
+    def _get_neo4j_viz_graph(
+        self, hide_unused_outputs: bool = True
+    ) -> VisualizationGraph:
+        """Generate a neo4j-viz visualization of the pipeline graph"""
+        if not neo4j_viz_available:
             raise ImportError(
-                "Could not import pygraphviz. "
-                "Follow installation instruction in pygraphviz documentation "
-                "to get it up and running on your system."
+                "Could not import neo4j-viz. Install it with 'pip install \"neo4j-graphrag[experimental]\"'"
             )
+
         self.validate_parameter_mapping()
-        G = pgv.AGraph(strict=False, directed=True)
-        # create a node for each component
-        for n, node in self._nodes.items():
-            comp_inputs = ",".join(
+
+        nodes = []
+        relationships = []
+        node_ids = {}  # Map node names to their numeric IDs
+        next_id = 0
+
+        # Create nodes for each component
+        for n, pipeline_node in self._nodes.items():
+            comp_inputs = ", ".join(
                 f"{i}: {d['annotation']}"
-                for i, d in node.component.component_inputs.items()
+                for i, d in pipeline_node.component.component_inputs.items()
             )
-            G.add_node(
-                n,
-                node_type="component",
-                shape="rectangle",
-                label=f"{node.component.__class__.__name__}: {n}({comp_inputs})",
+
+            node_ids[n] = next_id
+            label = f"{pipeline_node.component.__class__.__name__}: {n}({comp_inputs})"
+
+            # Create Node with properties parameter
+            viz_node = Node(  # type: ignore
+                id=next_id,
+                caption=label,
+                size=20,
+                properties={"node_type": "component"},
             )
-            # create a node for each output field and connect them it to its component
-            for o in node.component.component_outputs:
+            nodes.append(viz_node)
+            next_id += 1
+
+            # Create nodes for each output field
+            for o in pipeline_node.component.component_outputs:
                 param_node_name = f"{n}.{o}"
-                G.add_node(param_node_name, label=o, node_type="output")
-                G.add_edge(n, param_node_name)
-        # then we create the edges between a component output
-        # and the component it gets added to
+
+                # Skip if we're hiding unused outputs and it's not used
+                if hide_unused_outputs:
+                    # Check if this output is used as a source in any parameter mapping
+                    is_used = False
+                    for params in self.param_mapping.values():
+                        for mapping in params.values():
+                            source_component = mapping["component"]
+                            source_param_name = mapping.get("param")
+                            if source_component == n and source_param_name == o:
+                                is_used = True
+                                break
+                        if is_used:
+                            break
+
+                    if not is_used:
+                        continue
+
+                node_ids[param_node_name] = next_id
+                # Create Node with properties parameter
+                output_node = Node(  # type: ignore
+                    id=next_id,
+                    caption=o,
+                    size=15,
+                    properties={"node_type": "output"},
+                )
+                nodes.append(output_node)
+
+                # Connect component to its output
+                # Connect component to its output
+                rel = Relationship(  # type: ignore
+                    source=node_ids[n],
+                    target=node_ids[param_node_name],
+                    properties={"type": "HAS_OUTPUT"},
+                )
+                relationships.append(rel)
+                next_id += 1
+
+        # Create edges between components based on parameter mapping
         for component_name, params in self.param_mapping.items():
             for param, mapping in params.items():
                 source_component = mapping["component"]
                 source_param_name = mapping.get("param")
+
                 if source_param_name:
                     source_output_node = f"{source_component}.{source_param_name}"
                 else:
                     source_output_node = source_component
-                G.add_edge(source_output_node, component_name, label=param)
-        # remove outputs that are not mapped
-        if hide_unused_outputs:
-            for n in G.nodes():
-                if n.attr["node_type"] == "output" and G.out_degree(n) == 0:  # type: ignore
-                    G.remove_node(n)
-        return G
+
+                if source_output_node in node_ids and component_name in node_ids:
+                    rel = Relationship(  # type: ignore
+                        source=node_ids[source_output_node],
+                        target=node_ids[component_name],
+                        caption=param,
+                        properties={"type": "CONNECTS_TO"},
+                    )
+                    relationships.append(rel)
+
+        # Create the visualization graph
+        viz_graph = VisualizationGraph(nodes=nodes, relationships=relationships)
+        return viz_graph
+
+    def get_pygraphviz_graph(self, hide_unused_outputs: bool = True) -> Any:
+        """Legacy method for backward compatibility.
+        Uses neo4j-viz instead of pygraphviz.
+        """
+        warnings.warn(
+            "get_pygraphviz_graph is deprecated, use draw instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._get_neo4j_viz_graph(hide_unused_outputs)
 
     def add_component(self, component: Component, name: str) -> None:
         """Add a new component. Components are uniquely identified

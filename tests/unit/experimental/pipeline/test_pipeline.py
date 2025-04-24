@@ -380,39 +380,39 @@ async def test_pipeline_async() -> None:
     assert pipeline_result[1].result == {"add": {"result": 12}}
 
 
-def test_pipeline_to_pgv() -> None:
+def test_pipeline_to_viz() -> None:
     pipe = Pipeline()
     component_a = ComponentAdd()
     component_b = ComponentMultiply()
     pipe.add_component(component_a, "a")
     pipe.add_component(component_b, "b")
     pipe.connect("a", "b", {"number1": "a.result"})
-    g = pipe.get_pygraphviz_graph()
+    g = pipe._get_neo4j_viz_graph()
     # 3 nodes:
     #   - 2 components 'a' and 'b'
     #   - 1 output 'a.result'
-    assert len(g.nodes()) == 3
-    g = pipe.get_pygraphviz_graph(hide_unused_outputs=False)
+    assert len(g.nodes) == 3
+    g = pipe._get_neo4j_viz_graph(hide_unused_outputs=False)
     # 4 nodes:
     #   - 2 components 'a' and 'b'
     #   - 2 output 'a.result' and 'b.result'
-    assert len(g.nodes()) == 4
+    assert len(g.nodes) == 4
 
 
 def test_pipeline_draw() -> None:
     pipe = Pipeline()
     pipe.add_component(ComponentAdd(), "add")
-    t = tempfile.NamedTemporaryFile()
+    t = tempfile.NamedTemporaryFile(suffix=".html")
     pipe.draw(t.name)
     content = t.file.read()
     assert len(content) > 0
 
 
-@patch("neo4j_graphrag.experimental.pipeline.pipeline.pgv", None)
-def test_pipeline_draw_missing_pygraphviz_dep() -> None:
+@patch("neo4j_graphrag.experimental.pipeline.pipeline.neo4j_viz_available", False)
+def test_pipeline_draw_missing_neo4j_viz_dep() -> None:
     pipe = Pipeline()
     pipe.add_component(ComponentAdd(), "add")
-    t = tempfile.NamedTemporaryFile()
+    t = tempfile.NamedTemporaryFile(suffix=".html")
     with pytest.raises(ImportError):
         pipe.draw(t.name)
 
