@@ -180,8 +180,8 @@ class ObjectParameter(ToolParameter):
         if self.required_properties:
             result["required"] = self.required_properties
 
-        # if not self.additional_properties:
-        #     result["additionalProperties"] = False
+        if not self.additional_properties:
+            result["additionalProperties"] = False
 
         return result
 
@@ -203,37 +203,6 @@ class ObjectParameter(ToolParameter):
                 validated_properties[name] = param
         self.properties = validated_properties
         return self
-
-class ArrayParameter(ToolParameter):
-    """Array parameter for tools."""
-
-    def __init__(
-        self,
-        description: str,
-        items: ToolParameter,
-        required: bool = False,
-        min_items: Optional[int] = None,
-        max_items: Optional[int] = None,
-    ):
-        super().__init__(description, required)
-        self.items = items
-        self.min_items = min_items
-        self.max_items = max_items
-
-    def to_dict(self) -> Dict[str, Any]:
-        result: Dict[str, Any] = {
-            "type": ParameterType.ARRAY,
-            "description": self.description,
-            "items": self.items.to_dict(),
-        }
-
-        if self.min_items is not None:
-            result["minItems"] = self.min_items
-
-        if self.max_items is not None:
-            result["maxItems"] = self.max_items
-
-        return result
 
 
 class Tool(ABC):
