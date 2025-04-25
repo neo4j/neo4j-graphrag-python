@@ -146,8 +146,13 @@ class SchemaConfig(DataModel):
         Args:
             file_path (str): The path where the schema configuration will be saved.
         """         
+        # create a copy of the data and convert tuples to lists for YAML compatibility
+        data = self.model_dump()
+        if data.get('potential_schema'):
+            data['potential_schema'] = [list(item) for item in data['potential_schema']]
+        
         with open(file_path, 'w') as f:
-            yaml.dump(self.model_dump(), f, default_flow_style=False, sort_keys=False)
+            yaml.dump(data, f, default_flow_style=False, sort_keys=False)
             
     @classmethod
     def from_file(cls, file_path: Union[str, Path]) -> Self:
@@ -347,18 +352,18 @@ class SchemaFromText(SchemaBuilder):
         self._llm_params: dict[str, Any] = llm_params or {}
 
     @validate_call
-    async def run(self, text: str, **kwargs: Any) -> SchemaConfig:
+    async def run(self, text: str, examples:str = "", **kwargs: Any) -> SchemaConfig:
         """
         Asynchronously extracts the schema from text and returns a SchemaConfig object.
 
         Args:
             text (str): the text from which the schema will be inferred.
-
+            examples (str): examples to guide schema extraction.
         Returns:
             SchemaConfig: A configured schema object, extracted automatically and
             constructed asynchronously.
         """
-        prompt: str = self._prompt_template.format(text=text)
+        prompt: str = self._prompt_template.format(text=text, examples=examples)
 
         response = await self._llm.invoke(prompt, **self._llm_params)
         content: str = (

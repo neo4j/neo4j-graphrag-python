@@ -219,10 +219,10 @@ back‑ticks, markdown, or comments.
  
 For example, if the text says "Alice lives in London", the output JSON object should 
 adhere to the following format: 
-{"entities": [{"label": "Person", "properties": [{"name": "name", "type": "STRING"}]}, 
-{"label": "City", "properties":[{"name": "name", "type": "STRING"}]}],
-"relations": [{"label": "LIVES_IN"}],
-"potential_schema":[[ "Person", "LIVES_IN", "City"]]}
+{{"entities": [{{"label": "Person", "properties": [{{"name": "name", "type": "STRING"}}]}}, 
+{{"label": "City", "properties":[{{"name": "name", "type": "STRING"}}]}}],
+"relations": [{{"label": "LIVES_IN"}}],
+"potential_schema":[[ "Person", "LIVES_IN", "City"]]}}
 
 More examples:
 {examples}
@@ -233,8 +233,8 @@ Input text:
     EXPECTED_INPUTS = ["text"]
 
     def format(
-            self,
-            examples: str,
-            text: str = "",
+        self,
+        text: str = "",
+        examples: str = "",
     ) -> str:
         return super().format(text=text, examples=examples)
