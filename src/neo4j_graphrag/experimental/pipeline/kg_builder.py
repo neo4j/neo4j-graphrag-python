@@ -17,7 +17,6 @@ from __future__ import annotations
 
 from typing import List, Optional, Sequence, Union
 import logging
-import warnings
 
 import neo4j
 from pydantic import ValidationError
@@ -44,7 +43,7 @@ from neo4j_graphrag.experimental.pipeline.types.schema import (
 )
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 from neo4j_graphrag.llm.base import LLMInterface
-from neo4j_graphrag.experimental.components.schema import SchemaConfig, SchemaBuilder
+from neo4j_graphrag.experimental.components.schema import SchemaConfig
 
 logger = logging.getLogger(__name__)
 
@@ -104,65 +103,16 @@ class SimpleKGPipeline:
         lexical_graph_config: Optional[LexicalGraphConfig] = None,
         neo4j_database: Optional[str] = None,
     ):
-        # deprecation warnings for old parameters
-        if any([entities, relations, potential_schema]) and schema is not None:
-            logger.warning(
-                "Both 'schema' and individual schema components (entities, relations, potential_schema) "
-                "were provided. The 'schema' parameter takes precedence. In the future, individual "
-                "components will be removed. Please use only the 'schema' parameter."
-            )
-            # emit a DeprecationWarning for tools that might be monitoring for it
-            warnings.warn(
-                "Both 'schema' and individual schema components are provided. Use only 'schema'.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-        elif any([entities, relations, potential_schema]):
-            logger.warning(
-                "The 'entities', 'relations', and 'potential_schema' parameters are deprecated "
-                "and will be removed in a future version. "
-                "Please use the 'schema' parameter instead."
-            )
-            warnings.warn(
-                "The 'entities', 'relations', and 'potential_schema' parameters are deprecated.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            
-        # handle schema precedence over individual schema components
-        schema_entities = []
-        schema_relations = []
-        schema_potential = None
-        
-        if schema is not None:
-            # schema takes precedence over individual components
-            if isinstance(schema, SchemaConfig):
-                # use the SchemaConfig directly
-                pass
-            else:
-                # convert dictionary to entity/relation lists
-                schema_entities = schema.get("entities", [])
-                schema_relations = schema.get("relations", [])
-                schema_potential = schema.get("potential_schema")
-        else:
-            # Use the individual components if provided
-            schema_entities = entities or []
-            schema_relations = relations or []
-            schema_potential = potential_schema
-        
-        # determine if automatic schema extraction should be performed
-        has_schema = bool(schema_entities or schema_relations or schema_potential or isinstance(schema, SchemaConfig))
-        auto_schema_extraction = not has_schema
-            
         try:
             config = SimpleKGPipelineConfig(
                 # argument type are fixed in the Config object
                 llm_config=llm,  # type: ignore[arg-type]
                 neo4j_config=driver,  # type: ignore[arg-type]
                 embedder_config=embedder,  # type: ignore[arg-type]
-                entities=schema_entities,
-                relations=schema_relations,
-                potential_schema=schema_potential,
+                entities=entities or [],
+                relations=relations or [],
+                potential_schema=potential_schema,
+                schema=schema,
                 enforce_schema=SchemaEnforcementMode(enforce_schema),
                 from_pdf=from_pdf,
                 pdf_loader=ComponentType(pdf_loader) if pdf_loader else None,
@@ -173,7 +123,7 @@ class SimpleKGPipeline:
                 perform_entity_resolution=perform_entity_resolution,
                 lexical_graph_config=lexical_graph_config,
                 neo4j_database=neo4j_database,
-                auto_schema_extraction=auto_schema_extraction,
+                auto_schema_extraction=not bool(schema or entities or relations or potential_schema),
             )
         except (ValidationError, ValueError) as e:
             raise PipelineDefinitionError() from e
