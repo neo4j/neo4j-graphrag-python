@@ -79,6 +79,7 @@ are listed in [the last section of this file](#customize).
 - [System Instruction](./customize/llms/llm_with_system_instructions.py)
 
 - [Tool Calling with OpenAI](./customize/llms/openai_tool_calls.py)
+- [Tool Calling with VertexAI](./customize/llms/vertexai_tool_calls.py)
 
 
 ### Prompts
