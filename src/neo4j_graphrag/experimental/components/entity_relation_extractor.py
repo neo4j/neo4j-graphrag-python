@@ -405,7 +405,9 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                 continue
             allowed_props = schema_entity.get("properties", [])
             if allowed_props:
-                filtered_props = self._enforce_properties(node.properties, allowed_props)
+                filtered_props = self._enforce_properties(
+                    node.properties, allowed_props
+                )
             else:
                 filtered_props = node.properties
             if filtered_props:
