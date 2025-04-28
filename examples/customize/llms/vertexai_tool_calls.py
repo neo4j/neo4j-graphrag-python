@@ -54,7 +54,7 @@ def process_tool_call(response: ToolCallResponse) -> str:
     print(f"\nTool called: {tool_call.name}")
     print(f"Arguments: {tool_call.arguments}")
     print(f"Additional content: {response.content or 'None'}")
-    return person_info_tool.execute(**tool_call.arguments)
+    return person_info_tool.execute(**tool_call.arguments)  # type: ignore[no-any-return]
 
 
 async def main() -> None:
