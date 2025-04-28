@@ -21,7 +21,7 @@ A Knowledge Graph (KG) construction pipeline requires a few components (some of 
 - **Data loader**: extract text from files (PDFs, ...).
 - **Text splitter**: split the text into smaller pieces of text (chunks), manageable by the LLM context window (token limit).
 - **Chunk embedder** (optional): compute the chunk embeddings.
-- **Schema builder**: provide a schema to ground the LLM extracted entities and relations and obtain an easily navigable KG.
+- **Schema builder**: provide a schema to ground the LLM extracted entities and relations and obtain an easily navigable KG. Schema can be provided manually or extracted automatically using LLMs.
 - **Lexical graph builder**: build the lexical graph (Document, Chunk and their relationships) (optional).
 - **Entity and relation extractor**: extract relevant entities and relations from the text.
 - **Knowledge Graph writer**: save the identified entities and relations.
@@ -75,10 +75,11 @@ Graph Schema
 
 It is possible to guide the LLM by supplying a list of entities, relationships,
 and instructions on how to connect them. However, note that the extracted graph
-may not fully adhere to these guidelines. Entities and relationships can be
-represented as either simple strings (for their labels) or dictionaries. If using
-a dictionary, it must include a label key and can optionally include description
-and properties keys, as shown below:
+may not fully adhere to these guidelines unless schema enforcement is enabled 
+(see :ref:`Schema Enforcement Behaviour`). Entities and relationships can be represented
+as either simple strings (for their labels) or dictionaries. If using a dictionary,
+it must include a label key and can optionally include description and properties keys,
+as shown below:
 
 .. code:: python
 
@@ -117,6 +118,18 @@ This schema information can be provided to the `SimpleKGBuilder` as demonstrated
 
 .. code:: python
 
+    # Using the schema parameter (recommended approach)
+    kg_builder = SimpleKGPipeline(
+        # ...
+        schema={
+            "entities": ENTITIES,
+            "relations": RELATIONS,
+            "potential_schema": POTENTIAL_SCHEMA
+        },
+        # ...
+    )
+    
+    # Using individual schema parameters (deprecated approach)
     kg_builder = SimpleKGPipeline(
         # ...
         entities=ENTITIES,
@@ -124,6 +137,9 @@ This schema information can be provided to the `SimpleKGBuilder` as demonstrated
         potential_schema=POTENTIAL_SCHEMA,
         # ...
     )
+
+.. note::
+   By default, if no schema is provided to the SimpleKGPipeline, automatic schema extraction will be performed using the LLM (See the :ref:`Automatic Schema Extraction with SchemaFromText` section.
 
 Extra configurations
 --------------------
@@ -412,41 +428,46 @@ within the configuration file.
         "neo4j_database": "myDb",
         "on_error": "IGNORE",
         "prompt_template": "...",
-        "entities": [
-            "Person",
-            {
-                "label": "House",
-                "description": "Family the person belongs to",
-                "properties": [
-                    {"name": "name", "type": "STRING"}
-                ]
-            },
-            {
-                "label": "Planet",
-                "properties": [
-                    {"name": "name", "type": "STRING"},
-                    {"name": "weather", "type": "STRING"}
-                ]
-            }
-        ],
-        "relations": [
-            "PARENT_OF",
-            {
-                "label": "HEIR_OF",
-                "description": "Used for inheritor relationship between father and sons"
-            },
-            {
-                "label": "RULES",
-                "properties": [
-                    {"name": "fromYear", "type": "INTEGER"}
-                ]
-            }
-        ],
-        "potential_schema": [
-            ["Person", "PARENT_OF", "Person"],
-            ["Person", "HEIR_OF", "House"],
-            ["House", "RULES", "Planet"]
-        ],
+        
+        "schema": {
+            "entities": [
+                "Person",
+                {
+                    "label": "House",
+                    "description": "Family the person belongs to",
+                    "properties": [
+                        {"name": "name", "type": "STRING"}
+                    ]
+                },
+                {
+                    "label": "Planet",
+                    "properties": [
+                        {"name": "name", "type": "STRING"},
+                        {"name": "weather", "type": "STRING"}
+                    ]
+                }
+            ],
+            "relations": [
+                "PARENT_OF",
+                {
+                    "label": "HEIR_OF",
+                    "description": "Used for inheritor relationship between father and sons"
+                },
+                {
+                    "label": "RULES",
+                    "properties": [
+                        {"name": "fromYear", "type": "INTEGER"}
+                    ]
+                }
+            ],
+            "potential_schema": [
+                ["Person", "PARENT_OF", "Person"],
+                ["Person", "HEIR_OF", "House"],
+                ["House", "RULES", "Planet"]
+            ]
+        },
+        /* Control automatic schema extraction */
+        "auto_schema_extraction": false,
         "lexical_graph_config": {
             "chunk_node_label": "TextPart"
         }
@@ -462,31 +483,36 @@ or in YAML:
     neo4j_database: myDb
     on_error: IGNORE
     prompt_template: ...
-    entities:
-      - label: Person
-      - label: House
-        description: Family the person belongs to
-        properties:
-          - name: name
-            type: STRING
-      - label: Planet
-        properties:
-          - name: name
-            type: STRING
-          - name: weather
-            type: STRING
-    relations:
-      - label: PARENT_OF
-      - label: HEIR_OF
-        description: Used for inheritor relationship between father and sons
-      - label: RULES
-        properties:
-          - name: fromYear
-            type: INTEGER
-    potential_schema:
-      - ["Person", "PARENT_OF", "Person"]
-      - ["Person", "HEIR_OF", "House"]
-      - ["House", "RULES", "Planet"]
+    
+    # Using the schema parameter (recommended approach)
+    schema:
+      entities:
+        - Person
+        - label: House
+          description: Family the person belongs to
+          properties:
+            - name: name
+              type: STRING
+        - label: Planet
+          properties:
+            - name: name
+              type: STRING
+            - name: weather
+              type: STRING
+      relations:
+        - PARENT_OF
+        - label: HEIR_OF
+          description: Used for inheritor relationship between father and sons
+        - label: RULES
+          properties:
+            - name: fromYear
+              type: INTEGER
+      potential_schema:
+        - ["Person", "PARENT_OF", "Person"]
+        - ["Person", "HEIR_OF", "House"]
+        - ["House", "RULES", "Planet"]
+    # Control automatic schema extraction 
+    auto_schema_extraction: false
     lexical_graph_config:
         chunk_node_label: TextPart
 
@@ -791,6 +817,49 @@ Here is a code block illustrating these concepts:
 After validation, this schema is saved in a `SchemaConfig` object, whose dict representation is passed
 to the LLM.
 
+Automatic Schema Extraction with SchemaFromText
+----------------------------------------------
+.. _automatic-schema-extraction:
+
+Instead of manually defining the schema, you can use the `SchemaFromText` component to automatically extract a schema from your text using an LLM:
+
+.. code:: python
+
+    from neo4j_graphrag.experimental.components.schema import SchemaFromText
+    from neo4j_graphrag.llm import OpenAILLM
+
+    # Create the automatic schema extractor
+    schema_extractor = SchemaFromText(
+        llm=OpenAILLM(
+            model_name="gpt-4o",
+            model_params={
+                "max_tokens": 2000,
+                "response_format": {"type": "json_object"},
+            },
+        )
+    )
+
+    # Extract schema from text
+    schema_config = await schema_extractor.run(text="Your document text here...")
+
+    # Use the extracted schema with other components
+    extractor = LLMEntityRelationExtractor(llm=llm)
+    result = await extractor.run(chunks=chunks, schema=schema_config)
+
+The `SchemaFromText` component analyzes the text and identifies entity types, relationship types, and their property types. It creates a complete `SchemaConfig` object that can be used in the same way as a manually defined schema.
+
+You can also save and reload the extracted schema:
+
+.. code:: python
+
+    # Save the schema to JSON or YAML files
+    schema_config.store_as_json("my_schema.json")
+    schema_config.store_as_yaml("my_schema.yaml")
+    
+    # Later, reload the schema from file
+    from neo4j_graphrag.experimental.components.schema import SchemaConfig
+    restored_schema = SchemaConfig.from_file("my_schema.json")  # or my_schema.yaml
+
 
 Entity and Relation Extractor
 =============================
@@ -832,6 +901,8 @@ The LLM to use can be customized, the only constraint is that it obeys the :ref:
 
 Schema Enforcement Behaviour
 ----------------------------
+.. _schema-enforcement-behaviour:
+
 By default, even if a schema is provided to guide the LLM in the entity and relation extraction, the LLM response is not validated against that schema.
 This behaviour can be changed by using the `enforce_schema` flag in the `LLMEntityRelationExtractor` constructor:
 
