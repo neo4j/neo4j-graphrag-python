@@ -404,7 +404,10 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             if not schema_entity:
                 continue
             allowed_props = schema_entity.get("properties", [])
-            filtered_props = self._enforce_properties(node.properties, allowed_props)
+            if allowed_props:
+                filtered_props = self._enforce_properties(node.properties, allowed_props)
+            else:
+                filtered_props = node.properties
             if filtered_props:
                 valid_nodes.append(
                     Neo4jNode(
@@ -469,7 +472,10 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                     continue
 
             allowed_props = schema_relation.get("properties", [])
-            filtered_props = self._enforce_properties(rel.properties, allowed_props)
+            if allowed_props:
+                filtered_props = self._enforce_properties(rel.properties, allowed_props)
+            else:
+                filtered_props = rel.properties
 
             valid_rels.append(
                 Neo4jRelationship(
