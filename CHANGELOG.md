@@ -2,6 +2,8 @@
 
 ## Next
 
+## 1.7.0
+
 ### Added
 
 - Added tool calling functionality to the LLM base class with OpenAI and VertexAI implementations, enabling structured parameter extraction and function calling.
