@@ -13,22 +13,33 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, List, Optional, Union, cast
+from typing import Any, List, Optional, Union, cast, Sequence
 
 from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface
-from neo4j_graphrag.llm.types import BaseMessage, LLMResponse, MessageList
+from neo4j_graphrag.llm.types import (
+    BaseMessage,
+    LLMResponse,
+    MessageList,
+    ToolCall,
+    ToolCallResponse,
+)
 from neo4j_graphrag.message_history import MessageHistory
+from neo4j_graphrag.tool import Tool
 from neo4j_graphrag.types import LLMMessage
 
 try:
     from vertexai.generative_models import (
         Content,
+        FunctionCall,
+        FunctionDeclaration,
+        GenerationResponse,
         GenerativeModel,
         Part,
         ResponseValidationError,
+        Tool as VertexAITool,
     )
 except ImportError:
     GenerativeModel = None
@@ -176,3 +187,108 @@ class VertexAILLM(LLMInterface):
             return LLMResponse(content=response.text)
         except ResponseValidationError as e:
             raise LLMGenerationError(e)
+
+    def _to_vertexai_tool(self, tool: Tool) -> VertexAITool:
+        return VertexAITool(
+            function_declarations=[
+                FunctionDeclaration(
+                    name=tool.get_name(),
+                    description=tool.get_description(),
+                    parameters=tool.get_parameters(exclude=["additional_properties"]),
+                )
+            ]
+        )
+
+    def _get_llm_tools(
+        self, tools: Optional[Sequence[Tool]]
+    ) -> Optional[list[VertexAITool]]:
+        if not tools:
+            return None
+        return [self._to_vertexai_tool(tool) for tool in tools]
+
+    def _get_model(
+        self,
+        system_instruction: Optional[str] = None,
+        tools: Optional[Sequence[Tool]] = None,
+    ) -> GenerativeModel:
+        system_message = [system_instruction] if system_instruction is not None else []
+        vertex_ai_tools = self._get_llm_tools(tools)
+        model = GenerativeModel(
+            model_name=self.model_name,
+            system_instruction=system_message,
+            tools=vertex_ai_tools,
+            **self.options,
+        )
+        return model
+
+    async def _acall_llm(
+        self,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+        tools: Optional[Sequence[Tool]] = None,
+    ) -> GenerationResponse:
+        model = self._get_model(system_instruction=system_instruction, tools=tools)
+        messages = self.get_messages(input, message_history)
+        response = await model.generate_content_async(messages, **self.model_params)
+        return response
+
+    def _call_llm(
+        self,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+        tools: Optional[Sequence[Tool]] = None,
+    ) -> GenerationResponse:
+        model = self._get_model(system_instruction=system_instruction, tools=tools)
+        messages = self.get_messages(input, message_history)
+        response = model.generate_content(messages, **self.model_params)
+        return response
+
+    def _to_tool_call(self, function_call: FunctionCall) -> ToolCall:
+        return ToolCall(
+            name=function_call.name,
+            arguments=function_call.args,
+        )
+
+    def _parse_tool_response(self, response: GenerationResponse) -> ToolCallResponse:
+        function_calls = response.candidates[0].function_calls
+        return ToolCallResponse(
+            tool_calls=[self._to_tool_call(f) for f in function_calls],
+            content=None,
+        )
+
+    def _parse_content_response(self, response: GenerationResponse) -> LLMResponse:
+        return LLMResponse(
+            content=response.text,
+        )
+
+    async def ainvoke_with_tools(
+        self,
+        input: str,
+        tools: Sequence[Tool],
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> ToolCallResponse:
+        response = await self._acall_llm(
+            input,
+            message_history=message_history,
+            system_instruction=system_instruction,
+            tools=tools,
+        )
+        return self._parse_tool_response(response)
+
+    def invoke_with_tools(
+        self,
+        input: str,
+        tools: Sequence[Tool],
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> ToolCallResponse:
+        response = self._call_llm(
+            input,
+            message_history=message_history,
+            system_instruction=system_instruction,
+            tools=tools,
+        )
+        return self._parse_tool_response(response)
