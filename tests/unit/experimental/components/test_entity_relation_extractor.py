@@ -374,7 +374,7 @@ async def test_extractor_schema_enforcement_valid_nodes_with_empty_props() -> No
 
     result: Neo4jGraph = await extractor.run(chunks, schema=schema)
 
-    assert len(result.nodes) == 0
+    assert len(result.nodes) == 1
 
 
 @pytest.mark.asyncio
