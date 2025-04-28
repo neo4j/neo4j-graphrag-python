@@ -77,6 +77,12 @@ SchemaBuilder
 .. autoclass:: neo4j_graphrag.experimental.components.schema.SchemaBuilder
     :members: run
 
+SchemaFromText
+=============
+
+.. autoclass:: neo4j_graphrag.experimental.components.schema.SchemaFromText
+    :members: run
+
 EntityRelationExtractor
 =======================
 
@@ -359,6 +365,13 @@ ERExtractionTemplate
 --------------------
 
 .. autoclass:: neo4j_graphrag.generation.prompts.ERExtractionTemplate
+    :members:
+    :exclude-members: format
+
+SchemaExtractionTemplate
+------------------------
+
+.. autoclass:: neo4j_graphrag.generation.prompts.SchemaExtractionTemplate
     :members:
     :exclude-members: format
 
