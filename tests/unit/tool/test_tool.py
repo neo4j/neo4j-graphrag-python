@@ -174,7 +174,7 @@ def test_required_parameter() -> None:
 
 
 def test_tool_class() -> None:
-    def dummy_func(query: str, **kwargs: Any) -> dict[str, Any]:
+    def dummy_func(**kwargs: Any) -> dict[str, Any]:
         return kwargs
 
     params = ObjectParameter(
@@ -190,7 +190,7 @@ def test_tool_class() -> None:
     assert tool.get_name() == "mytool"
     assert tool.get_description() == "desc"
     assert tool.get_parameters()["type"] == ParameterType.OBJECT
-    assert tool.execute("query", a="b") == {"a": "b"}
+    assert tool.execute(query="query", a="b") == {"query": "query", "a": "b"}
 
     # Test parameters as dict
     params_dict = {
@@ -205,4 +205,4 @@ def test_tool_class() -> None:
         execute_func=dummy_func,
     )
     assert tool2.get_parameters()["type"] == ParameterType.OBJECT
-    assert tool2.execute("query", a="b") == {"a": "b"}
+    assert tool2.execute(a="b") == {"a": "b"}

@@ -253,14 +253,13 @@ class Tool(ABC):
         """
         return self._parameters.model_dump_tool(exclude)
 
-    def execute(self, query: str, **kwargs: Any) -> Any:
+    def execute(self, **kwargs: Any) -> Any:
         """Execute the tool with the given query and additional parameters.
 
         Args:
-            query (str): The query or input for the tool to process.
             **kwargs (Any): Additional parameters for the tool.
 
         Returns:
             Any: The result of the tool execution.
         """
-        return self._execute_func(query, **kwargs)
+        return self._execute_func(**kwargs)
