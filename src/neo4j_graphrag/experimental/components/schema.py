@@ -20,7 +20,6 @@ from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 from pathlib import Path
 
 from pydantic import BaseModel, ValidationError, model_validator, validate_call
-from requests.exceptions import InvalidJSONError
 from typing_extensions import Self
 
 from neo4j_graphrag.exceptions import SchemaValidationError
@@ -336,10 +335,10 @@ class SchemaBuilder(Component):
         return self.create_schema_model(entities, relations, potential_schema)
 
 
-class SchemaFromText(SchemaBuilder):
+class SchemaFromText(Component):
     """
-    A builder class for constructing SchemaConfig objects from the output of an LLM after
-     automatic schema extraction from text.
+    A component for constructing SchemaConfig objects from the output of an LLM after
+    automatic schema extraction from text.
     """
 
     def __init__(
@@ -348,7 +347,6 @@ class SchemaFromText(SchemaBuilder):
         prompt_template: Optional[PromptTemplate] = None,
         llm_params: Optional[Dict[str, Any]] = None,
     ) -> None:
-        super().__init__()
         self._llm: LLMInterface = llm
         self._prompt_template: PromptTemplate = (
             prompt_template or SchemaExtractionTemplate()
@@ -369,7 +367,7 @@ class SchemaFromText(SchemaBuilder):
         """
         prompt: str = self._prompt_template.format(text=text, examples=examples)
 
-        response = await self._llm.invoke(prompt, **self._llm_params)
+        response = await self._llm.ainvoke(prompt, **self._llm_params)
         content: str = (
             response
             if isinstance(response, str)
@@ -381,8 +379,12 @@ class SchemaFromText(SchemaBuilder):
         except json.JSONDecodeError as exc:
             raise ValueError("LLM response is not valid JSON.") from exc
 
-        extracted_entities: List[dict] = extracted_schema.get("entities", [])
-        extracted_relations: Optional[List[dict]] = extracted_schema.get("relations")
+        extracted_entities: List[Dict[str, Any]] = (
+            extracted_schema.get("entities") or []
+        )
+        extracted_relations: Optional[List[Dict[str, Any]]] = extracted_schema.get(
+            "relations"
+        )
         potential_schema: Optional[List[Tuple[str, str, str]]] = extracted_schema.get(
             "potential_schema"
         )
@@ -394,7 +396,7 @@ class SchemaFromText(SchemaBuilder):
             else None
         )
 
-        return await super().run(
+        return SchemaBuilder.create_schema_model(
             entities=entities,
             relations=relations,
             potential_schema=potential_schema,

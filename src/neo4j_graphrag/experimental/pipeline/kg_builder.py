@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, Sequence, Union
+from typing import List, Optional, Sequence, Union, Any
 import logging
 
 import neo4j
@@ -92,7 +92,7 @@ class SimpleKGPipeline:
         entities: Optional[Sequence[EntityInputType]] = None,
         relations: Optional[Sequence[RelationInputType]] = None,
         potential_schema: Optional[List[tuple[str, str, str]]] = None,
-        schema: Optional[Union[SchemaConfig, dict[str, list]]] = None,
+        schema: Optional[Union[SchemaConfig, dict[str, list[Any]]]] = None,
         enforce_schema: str = "NONE",
         from_pdf: bool = True,
         text_splitter: Optional[TextSplitter] = None,

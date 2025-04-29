@@ -110,7 +110,7 @@ def schema_config(
     valid_entities: list[SchemaEntity],
     valid_relations: list[SchemaRelation],
     potential_schema: list[tuple[str, str, str]],
-):
+) -> SchemaConfig:
     return schema_builder.create_schema_model(
         valid_entities, valid_relations, potential_schema
     )
@@ -445,14 +445,14 @@ def test_create_schema_model_missing_relations(
 
 
 @pytest.fixture
-def mock_llm():
+def mock_llm() -> AsyncMock:
     mock = AsyncMock()
     mock.invoke = AsyncMock()
     return mock
 
 
 @pytest.fixture
-def valid_schema_json():
+def valid_schema_json() -> str:
     return """
     {
         "entities": [
@@ -485,7 +485,7 @@ def valid_schema_json():
 
 
 @pytest.fixture
-def invalid_schema_json():
+def invalid_schema_json() -> str:
     return """
     {
         "entities": [
@@ -499,14 +499,14 @@ def invalid_schema_json():
 
 
 @pytest.fixture
-def schema_from_text(mock_llm):
+def schema_from_text(mock_llm: AsyncMock) -> SchemaFromText:
     return SchemaFromText(llm=mock_llm)
 
 
 @pytest.mark.asyncio
 async def test_schema_from_text_run_valid_response(
-    schema_from_text, mock_llm, valid_schema_json
-):
+    schema_from_text: SchemaFromText, mock_llm: AsyncMock, valid_schema_json: str
+) -> None:
     # configure the mock LLM to return a valid schema JSON
     mock_llm.invoke.return_value = valid_schema_json
 
@@ -534,8 +534,8 @@ async def test_schema_from_text_run_valid_response(
 
 @pytest.mark.asyncio
 async def test_schema_from_text_run_invalid_json(
-    schema_from_text, mock_llm, invalid_schema_json
-):
+    schema_from_text: SchemaFromText, mock_llm: AsyncMock, invalid_schema_json: str
+) -> None:
     # configure the mock LLM to return invalid JSON
     mock_llm.invoke.return_value = invalid_schema_json
 
@@ -547,7 +547,9 @@ async def test_schema_from_text_run_invalid_json(
 
 
 @pytest.mark.asyncio
-async def test_schema_from_text_custom_template(mock_llm, valid_schema_json):
+async def test_schema_from_text_custom_template(
+    mock_llm: AsyncMock, valid_schema_json: str
+) -> None:
     # create a  custom template
     custom_prompt = "This is a custom prompt with text: {text}"
     custom_template = PromptTemplate(template=custom_prompt, expected_inputs=["text"])
@@ -567,7 +569,9 @@ async def test_schema_from_text_custom_template(mock_llm, valid_schema_json):
 
 
 @pytest.mark.asyncio
-async def test_schema_from_text_llm_params(mock_llm, valid_schema_json):
+async def test_schema_from_text_llm_params(
+    mock_llm: AsyncMock, valid_schema_json: str
+) -> None:
     # configure custom LLM parameters
     llm_params = {"temperature": 0.1, "max_tokens": 500}
 
@@ -588,7 +592,7 @@ async def test_schema_from_text_llm_params(mock_llm, valid_schema_json):
 
 
 @pytest.mark.asyncio
-async def test_schema_config_store_as_json(schema_config):
+async def test_schema_config_store_as_json(schema_config: SchemaConfig) -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         # create file path
         json_path = os.path.join(temp_dir, "schema.json")
@@ -614,7 +618,7 @@ async def test_schema_config_store_as_json(schema_config):
 
 
 @pytest.mark.asyncio
-async def test_schema_config_store_as_yaml(schema_config):
+async def test_schema_config_store_as_yaml(schema_config: SchemaConfig) -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create file path
         yaml_path = os.path.join(temp_dir, "schema.yaml")
@@ -640,7 +644,7 @@ async def test_schema_config_store_as_yaml(schema_config):
 
 
 @pytest.mark.asyncio
-async def test_schema_config_from_file(schema_config):
+async def test_schema_config_from_file(schema_config: SchemaConfig) -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         # create file paths with different extensions
         json_path = os.path.join(temp_dir, "schema.json")
