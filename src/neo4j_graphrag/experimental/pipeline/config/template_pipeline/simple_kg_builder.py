@@ -59,7 +59,8 @@ from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar('T', bound='SimpleKGPipelineConfig')
+T = TypeVar("T", bound="SimpleKGPipelineConfig")
+
 
 class SimpleKGPipelineConfig(TemplatePipelineConfig):
     COMPONENTS: ClassVar[list[str]] = [
@@ -94,40 +95,47 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     text_splitter: Optional[ComponentType] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    
-    @model_validator(mode='after')
+
+    @model_validator(mode="after")
     def handle_schema_precedence(self) -> T:
         """Handle schema precedence and warnings"""
         self._process_schema_parameters()
         return self
-    
+
     def _process_schema_parameters(self) -> None:
         """
         Process schema parameters and handle precedence between 'schema' parameter and individual components.
         Also logs warnings for deprecated usage.
         """
         # check if both schema and individual components are provided
-        has_individual_schema_components = any([self.entities, self.relations, self.potential_schema])
-        
+        has_individual_schema_components = any(
+            [self.entities, self.relations, self.potential_schema]
+        )
+
         if has_individual_schema_components and self.schema is not None:
             logger.warning(
                 "Both 'schema' and individual schema components (entities, relations, potential_schema) "
                 "were provided. The 'schema' parameter takes precedence. In the future, individual "
                 "components will be removed. Please use only the 'schema' parameter.",
-                stacklevel=2
+                stacklevel=2,
             )
-            
+
         elif has_individual_schema_components:
             logger.warning(
                 "The 'entities', 'relations', and 'potential_schema' parameters are deprecated "
                 "and will be removed in a future version. "
                 "Please use the 'schema' parameter instead.",
-                stacklevel=2
+                stacklevel=2,
             )
 
     def has_user_provided_schema(self) -> bool:
         """Check if the user has provided schema information"""
-        return bool(self.entities or self.relations or self.potential_schema or self.schema is not None)
+        return bool(
+            self.entities
+            or self.relations
+            or self.potential_schema
+            or self.schema is not None
+        )
 
     def _get_pdf_loader(self) -> Optional[PdfLoader]:
         if not self.from_pdf:
@@ -165,13 +173,17 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             return SchemaFromText(llm=self.get_default_llm())
         return SchemaBuilder()
 
-    def _process_schema_with_precedence(self) -> tuple[list[SchemaEntity], list[SchemaRelation], Optional[list[tuple[str, str, str]]]]:
+    def _process_schema_with_precedence(
+        self,
+    ) -> tuple[
+        list[SchemaEntity], list[SchemaRelation], Optional[list[tuple[str, str, str]]]
+    ]:
         """
         Process schema inputs according to precedence rules:
         1. If schema is provided as SchemaConfig object, use it
         2. If schema is provided as dictionary, extract from it
         3. Otherwise, use individual schema components
-        
+
         Returns:
             Tuple of (entities, relations, potential_schema)
         """
@@ -184,15 +196,29 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
                 potential_schema = self.schema.potential_schema
             else:
                 # extract from dictionary
-                entities = [SchemaEntity.from_text_or_dict(e) for e in self.schema.get("entities", [])]
-                relations = [SchemaRelation.from_text_or_dict(r) for r in self.schema.get("relations", [])]
+                entities = [
+                    SchemaEntity.from_text_or_dict(e)
+                    for e in self.schema.get("entities", [])
+                ]
+                relations = [
+                    SchemaRelation.from_text_or_dict(r)
+                    for r in self.schema.get("relations", [])
+                ]
                 potential_schema = self.schema.get("potential_schema")
         else:
             # use individual components
-            entities = [SchemaEntity.from_text_or_dict(e) for e in self.entities] if self.entities else []
-            relations = [SchemaRelation.from_text_or_dict(r) for r in self.relations] if self.relations else []
+            entities = (
+                [SchemaEntity.from_text_or_dict(e) for e in self.entities]
+                if self.entities
+                else []
+            )
+            relations = (
+                [SchemaRelation.from_text_or_dict(r) for r in self.relations]
+                if self.relations
+                else []
+            )
             potential_schema = self.potential_schema
-        
+
         return entities, relations, potential_schema
 
     def _get_run_params_for_schema(self) -> dict[str, Any]:
@@ -201,8 +227,10 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             return {}
         else:
             # process schema components according to precedence rules
-            entities, relations, potential_schema = self._process_schema_with_precedence()
-            
+            entities, relations, potential_schema = (
+                self._process_schema_with_precedence()
+            )
+
             return {
                 "entities": entities,
                 "relations": relations,
@@ -248,7 +276,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
                     input_config={"text": "pdf_loader.text"},
                 )
             )
-            
+
             # handle automatic schema extraction
             if self.auto_schema_extraction and not self.has_user_provided_schema():
                 connections.append(
@@ -258,7 +286,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
                         input_config={"text": "pdf_loader.text"},
                     )
                 )
-            
+
             connections.append(
                 ConnectionDefinition(
                     start="schema",
@@ -279,7 +307,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
                         input_config={"text": "text"},  # use the original text input
                     )
                 )
-            
+
             connections.append(
                 ConnectionDefinition(
                     start="schema",

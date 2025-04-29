@@ -47,6 +47,7 @@ from neo4j_graphrag.experimental.components.schema import SchemaConfig
 
 logger = logging.getLogger(__name__)
 
+
 class SimpleKGPipeline:
     """
     A class to simplify the process of building a knowledge graph from text documents.
@@ -123,7 +124,9 @@ class SimpleKGPipeline:
                 perform_entity_resolution=perform_entity_resolution,
                 lexical_graph_config=lexical_graph_config,
                 neo4j_database=neo4j_database,
-                auto_schema_extraction=not bool(schema or entities or relations or potential_schema),
+                auto_schema_extraction=not bool(
+                    schema or entities or relations or potential_schema
+                ),
             )
         except (ValidationError, ValueError) as e:
             raise PipelineDefinitionError() from e

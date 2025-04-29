@@ -136,61 +136,63 @@ class SchemaConfig(DataModel):
         Args:
             file_path (str): The path where the schema configuration will be saved.
         """
-        with open(file_path, 'w') as f:
+        with open(file_path, "w") as f:
             json.dump(self.model_dump(), f, indent=2)
-            
+
     def store_as_yaml(self, file_path: str) -> None:
         """
         Save the schema configuration to a YAML file.
 
         Args:
             file_path (str): The path where the schema configuration will be saved.
-        """         
+        """
         # create a copy of the data and convert tuples to lists for YAML compatibility
         data = self.model_dump()
-        if data.get('potential_schema'):
-            data['potential_schema'] = [list(item) for item in data['potential_schema']]
-        
-        with open(file_path, 'w') as f:
+        if data.get("potential_schema"):
+            data["potential_schema"] = [list(item) for item in data["potential_schema"]]
+
+        with open(file_path, "w") as f:
             yaml.dump(data, f, default_flow_style=False, sort_keys=False)
-            
+
     @classmethod
     def from_file(cls, file_path: Union[str, Path]) -> Self:
         """
         Load a schema configuration from a file (either JSON or YAML).
-        
+
         The file format is automatically detected based on the file extension.
-        
+
         Args:
             file_path (Union[str, Path]): The path to the schema configuration file.
-            
+
         Returns:
             SchemaConfig: The loaded schema configuration.
         """
         file_path = Path(file_path)
-        
+
         if not file_path.exists():
             raise FileNotFoundError(f"Schema file not found: {file_path}")
-            
-        if file_path.suffix.lower() in ['.json']:
+
+        if file_path.suffix.lower() in [".json"]:
             return cls.from_json(file_path)
-        elif file_path.suffix.lower() in ['.yaml', '.yml']:
+        elif file_path.suffix.lower() in [".yaml", ".yml"]:
             return cls.from_yaml(file_path)
         else:
-            raise ValueError(f"Unsupported file format: {file_path.suffix}. Use .json, .yaml, or .yml")
-            
+            raise ValueError(
+                f"Unsupported file format: {file_path.suffix}. Use .json, .yaml, or .yml"
+            )
+
     @classmethod
     def from_json(cls, file_path: Union[str, Path]) -> Self:
         """
         Load a schema configuration from a JSON file.
-        
+
         Args:
             file_path (Union[str, Path]): The path to the JSON schema configuration file.
-            
+
         Returns:
             SchemaConfig: The loaded schema configuration.
         """
-        with open(file_path, 'r') as f:
+        with open(file_path, "r") as f:
             try:
                 data = json.load(f)
                 return cls.model_validate(data)
@@ -198,19 +200,19 @@ class SchemaConfig(DataModel):
                 raise ValueError(f"Invalid JSON file: {e}")
             except ValidationError as e:
                 raise SchemaValidationError(f"Schema validation failed: {e}")
-                
+
     @classmethod
     def from_yaml(cls, file_path: Union[str, Path]) -> Self:
         """
         Load a schema configuration from a YAML file.
-        
+
         Args:
             file_path (Union[str, Path]): The path to the YAML schema configuration file.
-            
+
         Returns:
             SchemaConfig: The loaded schema configuration.
         """
-        with open(file_path, 'r') as f:
+        with open(file_path, "r") as f:
             try:
                 data = yaml.safe_load(f)
                 return cls.model_validate(data)
@@ -348,11 +350,13 @@ class SchemaFromText(SchemaBuilder):
     ) -> None:
         super().__init__()
         self._llm: LLMInterface = llm
-        self._prompt_template: PromptTemplate = prompt_template or SchemaExtractionTemplate()
+        self._prompt_template: PromptTemplate = (
+            prompt_template or SchemaExtractionTemplate()
+        )
         self._llm_params: dict[str, Any] = llm_params or {}
 
     @validate_call
-    async def run(self, text: str, examples:str = "", **kwargs: Any) -> SchemaConfig:
+    async def run(self, text: str, examples: str = "", **kwargs: Any) -> SchemaConfig:
         """
         Asynchronously extracts the schema from text and returns a SchemaConfig object.
 
@@ -367,23 +371,27 @@ class SchemaFromText(SchemaBuilder):
 
         response = await self._llm.invoke(prompt, **self._llm_params)
         content: str = (
-            response if isinstance(response, str) else getattr(response, "content", str(response))
+            response
+            if isinstance(response, str)
+            else getattr(response, "content", str(response))
         )
 
         try:
             extracted_schema: Dict[str, Any] = json.loads(content)
         except json.JSONDecodeError as exc:
-            raise ValueError(
-                "LLM response is not valid JSON."
-            ) from exc
+            raise ValueError("LLM response is not valid JSON.") from exc
 
         extracted_entities: List[dict] = extracted_schema.get("entities", [])
         extracted_relations: Optional[List[dict]] = extracted_schema.get("relations")
-        potential_schema: Optional[List[Tuple[str, str, str]]] = extracted_schema.get("potential_schema")
+        potential_schema: Optional[List[Tuple[str, str, str]]] = extracted_schema.get(
+            "potential_schema"
+        )
 
         entities: List[SchemaEntity] = [SchemaEntity(**e) for e in extracted_entities]
         relations: Optional[List[SchemaRelation]] = (
-            [SchemaRelation(**r) for r in extracted_relations] if extracted_relations else None
+            [SchemaRelation(**r) for r in extracted_relations]
+            if extracted_relations
+            else None
         )
 
         return await super().run(
