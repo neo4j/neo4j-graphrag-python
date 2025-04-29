@@ -298,16 +298,6 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
                 )
             )
         else:
-            # handle automatic schema extraction for direct text input: ensure schema extraction uses the complete text
-            if self.auto_schema_extraction and not self.has_user_provided_schema():
-                connections.append(
-                    ConnectionDefinition(
-                        start="__input__",  # connection to pipeline input
-                        end="schema",
-                        input_config={"text": "text"},  # use the original text input
-                    )
-                )
-
             connections.append(
                 ConnectionDefinition(
                     start="schema",
@@ -379,4 +369,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
                     "Expected 'text' argument when 'from_pdf' is False."
                 )
             run_params["splitter"] = {"text": text}
+            # Add full text to schema component for automatic schema extraction
+            if self.auto_schema_extraction and not self.has_user_provided_schema():
+                run_params["schema"] = {"text": text}
         return run_params
