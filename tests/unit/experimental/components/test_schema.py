@@ -446,7 +446,7 @@ def test_create_schema_model_missing_relations(
 @pytest.fixture
 def mock_llm() -> AsyncMock:
     mock = AsyncMock()
-    mock.invoke = AsyncMock()
+    mock.ainvoke = AsyncMock()
     return mock
 
 
@@ -507,14 +507,14 @@ async def test_schema_from_text_run_valid_response(
     schema_from_text: SchemaFromText, mock_llm: AsyncMock, valid_schema_json: str
 ) -> None:
     # configure the mock LLM to return a valid schema JSON
-    mock_llm.invoke.return_value = valid_schema_json
+    mock_llm.ainvoke.return_value = valid_schema_json
 
     # run the schema extraction
     schema_config = await schema_from_text.run(text="Sample text for extraction")
 
     # verify the LLM was called with a prompt
-    mock_llm.invoke.assert_called_once()
-    prompt_arg = mock_llm.invoke.call_args[0][0]
+    mock_llm.ainvoke.assert_called_once()
+    prompt_arg = mock_llm.ainvoke.call_args[0][0]
     assert isinstance(prompt_arg, str)
     assert "Sample text for extraction" in prompt_arg
 
@@ -536,7 +536,7 @@ async def test_schema_from_text_run_invalid_json(
     schema_from_text: SchemaFromText, mock_llm: AsyncMock, invalid_schema_json: str
 ) -> None:
     # configure the mock LLM to return invalid JSON
-    mock_llm.invoke.return_value = invalid_schema_json
+    mock_llm.ainvoke.return_value = invalid_schema_json
 
     # verify that running with invalid JSON raises a ValueError
     with pytest.raises(ValueError) as exc_info:
@@ -557,13 +557,13 @@ async def test_schema_from_text_custom_template(
     schema_from_text = SchemaFromText(llm=mock_llm, prompt_template=custom_template)
 
     # configure mock LLM to return valid JSON and capture the prompt that was sent to it
-    mock_llm.invoke.return_value = valid_schema_json
+    mock_llm.ainvoke.return_value = valid_schema_json
 
     # run the schema extraction
     await schema_from_text.run(text="Sample text")
 
     # verify the custom prompt was passed to the LLM
-    prompt_sent_to_llm = mock_llm.invoke.call_args[0][0]
+    prompt_sent_to_llm = mock_llm.ainvoke.call_args[0][0]
     assert "This is a custom prompt with text" in prompt_sent_to_llm
 
 
@@ -578,14 +578,14 @@ async def test_schema_from_text_llm_params(
     schema_from_text = SchemaFromText(llm=mock_llm, llm_params=llm_params)
 
     # configure the mock LLM to return a valid schema JSON
-    mock_llm.invoke.return_value = valid_schema_json
+    mock_llm.ainvoke.return_value = valid_schema_json
 
     # run the schema extraction
     await schema_from_text.run(text="Sample text")
 
     # verify the LLM was called with the custom parameters
-    mock_llm.invoke.assert_called_once()
-    call_kwargs = mock_llm.invoke.call_args[1]
+    mock_llm.ainvoke.assert_called_once()
+    call_kwargs = mock_llm.ainvoke.call_args[1]
     assert call_kwargs["temperature"] == 0.1
     assert call_kwargs["max_tokens"] == 500
 
