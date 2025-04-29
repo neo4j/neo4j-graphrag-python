@@ -31,7 +31,6 @@ from pydantic import ValidationError
 import os
 import tempfile
 import yaml
-from pathlib import Path
 
 from neo4j_graphrag.generation import PromptTemplate
 

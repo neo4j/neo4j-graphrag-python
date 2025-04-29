@@ -15,7 +15,7 @@
 from typing import Any, ClassVar, Literal, Optional, Sequence, Union, TypeVar
 import logging
 
-from pydantic import ConfigDict, model_validator, Field
+from pydantic import ConfigDict, model_validator
 
 from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
 from neo4j_graphrag.experimental.components.entity_relation_extractor import (
