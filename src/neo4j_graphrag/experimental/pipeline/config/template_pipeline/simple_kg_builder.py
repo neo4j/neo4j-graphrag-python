@@ -81,7 +81,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     entities: Sequence[EntityInputType] = []
     relations: Sequence[RelationInputType] = []
     potential_schema: Optional[list[tuple[str, str, str]]] = None
-    schema: Optional[Union[SchemaConfig, dict[str, list[Any]]]] = None
+    schema: Optional[Union[SchemaConfig, dict[str, list[Any]]]] = None  # type: ignore
     enforce_schema: SchemaEnforcementMode = SchemaEnforcementMode.NONE
     on_error: OnError = OnError.IGNORE
     prompt_template: Union[ERExtractionTemplate, str] = ERExtractionTemplate()
@@ -97,10 +97,10 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @model_validator(mode="after")
-    def handle_schema_precedence(self) -> T:
+    def handle_schema_precedence(self) -> T:  # type: ignore
         """Handle schema precedence and warnings"""
         self._process_schema_parameters()
-        return self
+        return self  # type: ignore
 
     def _process_schema_parameters(self) -> None:
         """
@@ -192,12 +192,12 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             if isinstance(self.schema, SchemaConfig):
                 # extract components from SchemaConfig
                 entities = list(self.schema.entities.values())
-                relations = list(self.schema.relations.values())
+                relations = list(self.schema.relations.values())  # type: ignore
                 potential_schema = self.schema.potential_schema
             else:
                 # extract from dictionary
                 entities = [
-                    SchemaEntity.from_text_or_dict(e)
+                    SchemaEntity.from_text_or_dict(e)  # type: ignore
                     for e in self.schema.get("entities", [])
                 ]
                 relations = [
@@ -208,7 +208,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         else:
             # use individual components
             entities = (
-                [SchemaEntity.from_text_or_dict(e) for e in self.entities]
+                [SchemaEntity.from_text_or_dict(e) for e in self.entities]  # type: ignore
                 if self.entities
                 else []
             )
@@ -219,7 +219,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             )
             potential_schema = self.potential_schema
 
-        return entities, relations, potential_schema
+        return entities, relations, potential_schema  # type: ignore
 
     def _get_run_params_for_schema(self) -> dict[str, Any]:
         if self.auto_schema_extraction and not self.has_user_provided_schema():
