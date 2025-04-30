@@ -335,7 +335,7 @@ class SchemaBuilder(Component):
         return self.create_schema_model(entities, relations, potential_schema)
 
 
-class SchemaFromText(Component):
+class SchemaFromTextExtractor(Component):
     """
     A component for constructing SchemaConfig objects from the output of an LLM after
     automatic schema extraction from text.

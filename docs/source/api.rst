@@ -77,10 +77,10 @@ SchemaBuilder
 .. autoclass:: neo4j_graphrag.experimental.components.schema.SchemaBuilder
     :members: run
 
-SchemaFromText
-=============
+SchemaFromTextExtractor
+-----------------------
 
-.. autoclass:: neo4j_graphrag.experimental.components.schema.SchemaFromText
+.. autoclass:: neo4j_graphrag.experimental.components.schema.SchemaFromTextExtractor
     :members: run
 
 EntityRelationExtractor

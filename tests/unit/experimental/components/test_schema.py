@@ -24,7 +24,7 @@ from neo4j_graphrag.experimental.components.schema import (
     SchemaEntity,
     SchemaProperty,
     SchemaRelation,
-    SchemaFromText,
+    SchemaFromTextExtractor,
     SchemaConfig,
 )
 from pydantic import ValidationError
@@ -498,13 +498,15 @@ def invalid_schema_json() -> str:
 
 
 @pytest.fixture
-def schema_from_text(mock_llm: AsyncMock) -> SchemaFromText:
-    return SchemaFromText(llm=mock_llm)
+def schema_from_text(mock_llm: AsyncMock) -> SchemaFromTextExtractor:
+    return SchemaFromTextExtractor(llm=mock_llm)
 
 
 @pytest.mark.asyncio
 async def test_schema_from_text_run_valid_response(
-    schema_from_text: SchemaFromText, mock_llm: AsyncMock, valid_schema_json: str
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+    valid_schema_json: str,
 ) -> None:
     # configure the mock LLM to return a valid schema JSON
     mock_llm.ainvoke.return_value = valid_schema_json
@@ -533,7 +535,9 @@ async def test_schema_from_text_run_valid_response(
 
 @pytest.mark.asyncio
 async def test_schema_from_text_run_invalid_json(
-    schema_from_text: SchemaFromText, mock_llm: AsyncMock, invalid_schema_json: str
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+    invalid_schema_json: str,
 ) -> None:
     # configure the mock LLM to return invalid JSON
     mock_llm.ainvoke.return_value = invalid_schema_json
@@ -553,8 +557,10 @@ async def test_schema_from_text_custom_template(
     custom_prompt = "This is a custom prompt with text: {text}"
     custom_template = PromptTemplate(template=custom_prompt, expected_inputs=["text"])
 
-    # create SchemaFromText with the custom template
-    schema_from_text = SchemaFromText(llm=mock_llm, prompt_template=custom_template)
+    # create SchemaFromTextExtractor with the custom template
+    schema_from_text = SchemaFromTextExtractor(
+        llm=mock_llm, prompt_template=custom_template
+    )
 
     # configure mock LLM to return valid JSON and capture the prompt that was sent to it
     mock_llm.ainvoke.return_value = valid_schema_json
@@ -574,8 +580,8 @@ async def test_schema_from_text_llm_params(
     # configure custom LLM parameters
     llm_params = {"temperature": 0.1, "max_tokens": 500}
 
-    # create SchemaFromText with custom LLM parameters
-    schema_from_text = SchemaFromText(llm=mock_llm, llm_params=llm_params)
+    # create SchemaFromTextExtractor with custom LLM parameters
+    schema_from_text = SchemaFromTextExtractor(llm=mock_llm, llm_params=llm_params)
 
     # configure the mock LLM to return a valid schema JSON
     mock_llm.ainvoke.return_value = valid_schema_json

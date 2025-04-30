@@ -31,10 +31,10 @@ from neo4j_graphrag.experimental.components.resolver import (
 )
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
+    SchemaConfig,
     SchemaEntity,
     SchemaRelation,
-    SchemaFromText,
-    SchemaConfig,
+    SchemaFromTextExtractor,
 )
 from neo4j_graphrag.experimental.components.text_splitters.base import TextSplitter
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
@@ -164,13 +164,13 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     def _get_chunk_embedder(self) -> TextChunkEmbedder:
         return TextChunkEmbedder(embedder=self.get_default_embedder())
 
-    def _get_schema(self) -> Union[SchemaBuilder, SchemaFromText]:
+    def _get_schema(self) -> Union[SchemaBuilder, SchemaFromTextExtractor]:
         """
         Get the appropriate schema component based on configuration.
-        Return SchemaFromText for automatic extraction or SchemaBuilder for manual schema.
+        Return SchemaFromTextExtractor for automatic extraction or SchemaBuilder for manual schema.
         """
         if self.auto_schema_extraction and not self.has_user_provided_schema():
-            return SchemaFromText(llm=self.get_default_llm())
+            return SchemaFromTextExtractor(llm=self.get_default_llm())
         return SchemaBuilder()
 
     def _process_schema_with_precedence(

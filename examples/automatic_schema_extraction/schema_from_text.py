@@ -1,7 +1,7 @@
-"""This example demonstrates how to use the SchemaFromText component 
+"""This example demonstrates how to use the SchemaFromTextExtractor component
 to automatically extract a schema from text and save it to JSON and YAML files.
 
-The SchemaFromText component uses an LLM to analyze the text and identify entities,
+The SchemaFromTextExtractor component uses an LLM to analyze the text and identify entities,
 relations, and their properties.
 
 Note: This example requires an OpenAI API key to be set in the .env file.
@@ -12,7 +12,10 @@ import logging
 import os
 from dotenv import load_dotenv
 
-from neo4j_graphrag.experimental.components.schema import SchemaFromText, SchemaConfig
+from neo4j_graphrag.experimental.components.schema import (
+    SchemaFromTextExtractor,
+    SchemaConfig,
+)
 from neo4j_graphrag.llm import OpenAILLM
 
 # Load environment variables from .env file
@@ -54,57 +57,61 @@ with an estimated valuation of $500 million.
 """
 
 # Define the file paths for saving the schema
-OUTPUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
+OUTPUT_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data"
+)
 JSON_FILE_PATH = os.path.join(OUTPUT_DIR, "extracted_schema.json")
 YAML_FILE_PATH = os.path.join(OUTPUT_DIR, "extracted_schema.yaml")
 
 
 async def extract_and_save_schema() -> SchemaConfig:
     """Extract schema from text and save it to JSON and YAML files."""
-    
+
     # Define LLM parameters
     llm_model_params = {
         "max_tokens": 2000,
         "response_format": {"type": "json_object"},
         "temperature": 0,  # Lower temperature for more consistent output
     }
-    
+
     # Create the LLM instance
     llm = OpenAILLM(
         model_name="gpt-4o",
         model_params=llm_model_params,
     )
-    
+
     try:
-        # Create a SchemaFromText component with the default template
-        schema_extractor = SchemaFromText(llm=llm)
-        
+        # Create a SchemaFromTextExtractor component with the default template
+        schema_extractor = SchemaFromTextExtractor(llm=llm)
+
         print("Extracting schema from text...")
         # Extract schema from text
         inferred_schema = await schema_extractor.run(text=TEXT)
-        
+
         # Ensure the output directory exists
         os.makedirs(OUTPUT_DIR, exist_ok=True)
-        
+
         print(f"Saving schema to JSON file: {JSON_FILE_PATH}")
         # Save the schema to JSON file
         inferred_schema.store_as_json(JSON_FILE_PATH)
-        
+
         print(f"Saving schema to YAML file: {YAML_FILE_PATH}")
         # Save the schema to YAML file
         inferred_schema.store_as_yaml(YAML_FILE_PATH)
-        
+
         print("\nExtracted Schema Summary:")
         print(f"Entities: {list(inferred_schema.entities.keys())}")
-        print(f"Relations: {list(inferred_schema.relations.keys() if inferred_schema.relations else [])}")
-        
+        print(
+            f"Relations: {list(inferred_schema.relations.keys() if inferred_schema.relations else [])}"
+        )
+
         if inferred_schema.potential_schema:
             print("\nPotential Schema:")
             for entity1, relation, entity2 in inferred_schema.potential_schema:
                 print(f"  {entity1} --[{relation}]--> {entity2}")
-        
+
         return inferred_schema
-    
+
     finally:
         # Close the LLM client
         await llm.async_client.close()
@@ -112,14 +119,14 @@ async def extract_and_save_schema() -> SchemaConfig:
 
 async def main() -> None:
     """Run the example."""
-    
+
     # Extract schema and save to files
     schema_config = await extract_and_save_schema()
-    
+
     print(f"\nSchema files have been saved to:")
     print(f"  - JSON: {JSON_FILE_PATH}")
     print(f"  - YAML: {YAML_FILE_PATH}")
-    
+
     print("\nExample of how to load the schema from files:")
     print("  from neo4j_graphrag.experimental.components.schema import SchemaConfig")
     print(f"  schema_from_json = SchemaConfig.from_file('{JSON_FILE_PATH}')")
@@ -127,4 +134,4 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    asyncio.run(main())

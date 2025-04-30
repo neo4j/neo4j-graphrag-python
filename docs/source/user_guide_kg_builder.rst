@@ -139,7 +139,7 @@ This schema information can be provided to the `SimpleKGBuilder` as demonstrated
     )
 
 .. note::
-   By default, if no schema is provided to the SimpleKGPipeline, automatic schema extraction will be performed using the LLM (See the :ref:`Automatic Schema Extraction with SchemaFromText` section.
+   By default, if no schema is provided to the SimpleKGPipeline, automatic schema extraction will be performed using the LLM (See the :ref:`Automatic Schema Extraction with SchemaFromTextExtractor`).
 
 Extra configurations
 --------------------
@@ -817,19 +817,18 @@ Here is a code block illustrating these concepts:
 After validation, this schema is saved in a `SchemaConfig` object, whose dict representation is passed
 to the LLM.
 
-Automatic Schema Extraction with SchemaFromText
-----------------------------------------------
-.. _automatic-schema-extraction:
+Automatic Schema Extraction 
+---------------------------
 
-Instead of manually defining the schema, you can use the `SchemaFromText` component to automatically extract a schema from your text using an LLM:
+Instead of manually defining the schema, you can use the `SchemaFromTextExtractor` component to automatically extract a schema from your text using an LLM:
 
 .. code:: python
 
-    from neo4j_graphrag.experimental.components.schema import SchemaFromText
+    from neo4j_graphrag.experimental.components.schema import SchemaFromTextExtractor
     from neo4j_graphrag.llm import OpenAILLM
 
     # Create the automatic schema extractor
-    schema_extractor = SchemaFromText(
+    schema_extractor = SchemaFromTextExtractor(
         llm=OpenAILLM(
             model_name="gpt-4o",
             model_params={
@@ -839,14 +838,7 @@ Instead of manually defining the schema, you can use the `SchemaFromText` compon
         )
     )
 
-    # Extract schema from text
-    schema_config = await schema_extractor.run(text="Your document text here...")
-
-    # Use the extracted schema with other components
-    extractor = LLMEntityRelationExtractor(llm=llm)
-    result = await extractor.run(chunks=chunks, schema=schema_config)
-
-The `SchemaFromText` component analyzes the text and identifies entity types, relationship types, and their property types. It creates a complete `SchemaConfig` object that can be used in the same way as a manually defined schema.
+The `SchemaFromTextExtractor` component analyzes the text and identifies entity types, relationship types, and their property types. It creates a complete `SchemaConfig` object that can be used in the same way as a manually defined schema.
 
 You can also save and reload the extracted schema:
 
