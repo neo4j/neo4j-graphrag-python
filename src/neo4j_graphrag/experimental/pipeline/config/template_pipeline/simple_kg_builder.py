@@ -80,7 +80,9 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     entities: Sequence[EntityInputType] = []
     relations: Sequence[RelationInputType] = []
     potential_schema: Optional[list[tuple[str, str, str]]] = None
-    schema_: Optional[Union[SchemaConfig, dict[str, list[Any]]]] = Field(default=None, alias="schema")
+    schema_: Optional[Union[SchemaConfig, dict[str, list[Any]]]] = Field(
+        default=None, alias="schema"
+    )
     enforce_schema: SchemaEnforcementMode = SchemaEnforcementMode.NONE
     on_error: OnError = OnError.IGNORE
     prompt_template: Union[ERExtractionTemplate, str] = ERExtractionTemplate()
@@ -193,14 +195,16 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
                 entity_dicts = list(self.schema_.entities.values())
                 # convert dict values to SchemaEntity objects
                 entities = [SchemaEntity.model_validate(e) for e in entity_dicts]
-                
+
                 # handle case where relations could be None
                 if self.schema_.relations is not None:
                     relation_dicts = list(self.schema_.relations.values())
-                    relations = [SchemaRelation.model_validate(r) for r in relation_dicts]
+                    relations = [
+                        SchemaRelation.model_validate(r) for r in relation_dicts
+                    ]
                 else:
                     relations = []
-                    
+
                 potential_schema = self.schema_.potential_schema
             else:
                 # extract from dictionary

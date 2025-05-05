@@ -129,7 +129,7 @@ async def main() -> None:
     print("\nLoading schemas from saved files:")
     schema_from_json = SchemaConfig.from_file(JSON_FILE_PATH)
     schema_from_yaml = SchemaConfig.from_file(YAML_FILE_PATH)
-    
+
     print(f"Entities in JSON schema: {list(schema_from_json.entities.keys())}")
     print(f"Entities in YAML schema: {list(schema_from_yaml.entities.keys())}")
 
