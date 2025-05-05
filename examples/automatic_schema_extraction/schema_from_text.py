@@ -64,7 +64,7 @@ JSON_FILE_PATH = os.path.join(OUTPUT_DIR, "extracted_schema.json")
 YAML_FILE_PATH = os.path.join(OUTPUT_DIR, "extracted_schema.yaml")
 
 
-async def extract_and_save_schema() -> SchemaConfig:
+async def extract_and_save_schema() -> None:
     """Extract schema from text and save it to JSON and YAML files."""
 
     # Define LLM parameters
@@ -110,8 +110,6 @@ async def extract_and_save_schema() -> SchemaConfig:
             for entity1, relation, entity2 in inferred_schema.potential_schema:
                 print(f"  {entity1} --[{relation}]--> {entity2}")
 
-        return inferred_schema
-
     finally:
         # Close the LLM client
         await llm.async_client.close()
@@ -120,17 +118,20 @@ async def extract_and_save_schema() -> SchemaConfig:
 async def main() -> None:
     """Run the example."""
 
-    # Extract schema and save to files
-    schema_config = await extract_and_save_schema()
+    # extract schema and save to files
+    await extract_and_save_schema()
 
-    print(f"\nSchema files have been saved to:")
+    print("\nSchema files have been saved to:")
     print(f"  - JSON: {JSON_FILE_PATH}")
     print(f"  - YAML: {YAML_FILE_PATH}")
 
-    print("\nExample of how to load the schema from files:")
-    print("  from neo4j_graphrag.experimental.components.schema import SchemaConfig")
-    print(f"  schema_from_json = SchemaConfig.from_file('{JSON_FILE_PATH}')")
-    print(f"  schema_from_yaml = SchemaConfig.from_file('{YAML_FILE_PATH}')")
+    # load schema from files
+    print("\nLoading schemas from saved files:")
+    schema_from_json = SchemaConfig.from_file(JSON_FILE_PATH)
+    schema_from_yaml = SchemaConfig.from_file(YAML_FILE_PATH)
+    
+    print(f"Entities in JSON schema: {list(schema_from_json.entities.keys())}")
+    print(f"Entities in YAML schema: {list(schema_from_yaml.entities.keys())}")
 
 
 if __name__ == "__main__":
