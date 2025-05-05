@@ -12,10 +12,11 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Any, ClassVar, Literal, Optional, Sequence, Union, TypeVar
+from typing import Any, ClassVar, Literal, Optional, Sequence, Union, List, Tuple
 import logging
 
-from pydantic import ConfigDict, model_validator
+from pydantic import ConfigDict, Field, model_validator
+from typing_extensions import Self
 
 from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
 from neo4j_graphrag.experimental.components.entity_relation_extractor import (
@@ -59,8 +60,6 @@ from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar("T", bound="SimpleKGPipelineConfig")
-
 
 class SimpleKGPipelineConfig(TemplatePipelineConfig):
     COMPONENTS: ClassVar[list[str]] = [
@@ -81,7 +80,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     entities: Sequence[EntityInputType] = []
     relations: Sequence[RelationInputType] = []
     potential_schema: Optional[list[tuple[str, str, str]]] = None
-    schema: Optional[Union[SchemaConfig, dict[str, list[Any]]]] = None  # type: ignore
+    schema_: Optional[Union[SchemaConfig, dict[str, list[Any]]]] = Field(default=None, alias="schema")
     enforce_schema: SchemaEnforcementMode = SchemaEnforcementMode.NONE
     on_error: OnError = OnError.IGNORE
     prompt_template: Union[ERExtractionTemplate, str] = ERExtractionTemplate()
@@ -97,10 +96,10 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @model_validator(mode="after")
-    def handle_schema_precedence(self) -> T:  # type: ignore
+    def handle_schema_precedence(self) -> Self:
         """Handle schema precedence and warnings"""
         self._process_schema_parameters()
-        return self  # type: ignore
+        return self
 
     def _process_schema_parameters(self) -> None:
         """
@@ -112,7 +111,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             [self.entities, self.relations, self.potential_schema]
         )
 
-        if has_individual_schema_components and self.schema is not None:
+        if has_individual_schema_components and self.schema_ is not None:
             logger.warning(
                 "Both 'schema' and individual schema components (entities, relations, potential_schema) "
                 "were provided. The 'schema' parameter takes precedence. In the future, individual "
@@ -134,7 +133,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             self.entities
             or self.relations
             or self.potential_schema
-            or self.schema is not None
+            or self.schema_ is not None
         )
 
     def _get_pdf_loader(self) -> Optional[PdfLoader]:
@@ -175,8 +174,8 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
 
     def _process_schema_with_precedence(
         self,
-    ) -> tuple[
-        list[SchemaEntity], list[SchemaRelation], Optional[list[tuple[str, str, str]]]
+    ) -> Tuple[
+        List[SchemaEntity], List[SchemaRelation], Optional[List[Tuple[str, str, str]]]
     ]:
         """
         Process schema inputs according to precedence rules:
@@ -187,28 +186,37 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         Returns:
             Tuple of (entities, relations, potential_schema)
         """
-        if self.schema is not None:
+        if self.schema_ is not None:
             # schema takes precedence over individual components
-            if isinstance(self.schema, SchemaConfig):
+            if isinstance(self.schema_, SchemaConfig):
                 # extract components from SchemaConfig
-                entities = list(self.schema.entities.values())
-                relations = list(self.schema.relations.values())  # type: ignore
-                potential_schema = self.schema.potential_schema
+                entity_dicts = list(self.schema_.entities.values())
+                # convert dict values to SchemaEntity objects
+                entities = [SchemaEntity.model_validate(e) for e in entity_dicts]
+                
+                # handle case where relations could be None
+                if self.schema_.relations is not None:
+                    relation_dicts = list(self.schema_.relations.values())
+                    relations = [SchemaRelation.model_validate(r) for r in relation_dicts]
+                else:
+                    relations = []
+                    
+                potential_schema = self.schema_.potential_schema
             else:
                 # extract from dictionary
                 entities = [
-                    SchemaEntity.from_text_or_dict(e)  # type: ignore
-                    for e in self.schema.get("entities", [])
+                    SchemaEntity.from_text_or_dict(e)
+                    for e in self.schema_.get("entities", [])
                 ]
                 relations = [
                     SchemaRelation.from_text_or_dict(r)
-                    for r in self.schema.get("relations", [])
+                    for r in self.schema_.get("relations", [])
                 ]
-                potential_schema = self.schema.get("potential_schema")
+                potential_schema = self.schema_.get("potential_schema")
         else:
             # use individual components
             entities = (
-                [SchemaEntity.from_text_or_dict(e) for e in self.entities]  # type: ignore
+                [SchemaEntity.from_text_or_dict(e) for e in self.entities]
                 if self.entities
                 else []
             )
@@ -219,7 +227,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             )
             potential_schema = self.potential_schema
 
-        return entities, relations, potential_schema  # type: ignore
+        return entities, relations, potential_schema
 
     def _get_run_params_for_schema(self) -> dict[str, Any]:
         if self.auto_schema_extraction and not self.has_user_provided_schema():
