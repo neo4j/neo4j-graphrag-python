@@ -89,7 +89,6 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     perform_entity_resolution: bool = True
     lexical_graph_config: Optional[LexicalGraphConfig] = None
     neo4j_database: Optional[str] = None
-    auto_schema_extraction: bool = False
 
     pdf_loader: Optional[ComponentType] = None
     kg_writer: Optional[ComponentType] = None
@@ -170,7 +169,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         Get the appropriate schema component based on configuration.
         Return SchemaFromTextExtractor for automatic extraction or SchemaBuilder for manual schema.
         """
-        if self.auto_schema_extraction and not self.has_user_provided_schema():
+        if not self.has_user_provided_schema():
             return SchemaFromTextExtractor(llm=self.get_default_llm())
         return SchemaBuilder()
 
@@ -234,7 +233,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         return entities, relations, potential_schema
 
     def _get_run_params_for_schema(self) -> dict[str, Any]:
-        if self.auto_schema_extraction and not self.has_user_provided_schema():
+        if not self.has_user_provided_schema():
             # for automatic extraction, the text parameter is needed (will flow through the pipeline connections)
             return {}
         else:
@@ -290,7 +289,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             )
 
             # handle automatic schema extraction
-            if self.auto_schema_extraction and not self.has_user_provided_schema():
+            if not self.has_user_provided_schema():
                 connections.append(
                     ConnectionDefinition(
                         start="pdf_loader",
@@ -382,6 +381,6 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
                 )
             run_params["splitter"] = {"text": text}
             # Add full text to schema component for automatic schema extraction
-            if self.auto_schema_extraction and not self.has_user_provided_schema():
+            if not self.has_user_provided_schema():
                 run_params["schema"] = {"text": text}
         return run_params

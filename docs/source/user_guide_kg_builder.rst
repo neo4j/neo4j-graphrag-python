@@ -466,8 +466,6 @@ within the configuration file.
                 ["House", "RULES", "Planet"]
             ]
         },
-        /* Control automatic schema extraction */
-        "auto_schema_extraction": false,
         "lexical_graph_config": {
             "chunk_node_label": "TextPart"
         }
@@ -511,8 +509,6 @@ or in YAML:
         - ["Person", "PARENT_OF", "Person"]
         - ["Person", "HEIR_OF", "House"]
         - ["House", "RULES", "Planet"]
-    # Control automatic schema extraction 
-    auto_schema_extraction: false
     lexical_graph_config:
         chunk_node_label: TextPart
 

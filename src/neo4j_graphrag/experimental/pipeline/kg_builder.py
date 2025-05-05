@@ -124,9 +124,6 @@ class SimpleKGPipeline:
                 perform_entity_resolution=perform_entity_resolution,
                 lexical_graph_config=lexical_graph_config,
                 neo4j_database=neo4j_database,
-                auto_schema_extraction=not bool(
-                    schema or entities or relations or potential_schema
-                ),
             )
         except (ValidationError, ValueError) as e:
             raise PipelineDefinitionError() from e
