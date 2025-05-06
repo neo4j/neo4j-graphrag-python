@@ -28,6 +28,7 @@ from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
     SchemaEntity,
     SchemaRelation,
+    SchemaFromTextExtractor,
 )
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
     FixedSizeSplitter,
@@ -116,8 +117,21 @@ def test_simple_kg_pipeline_config_chunk_embedder(
     assert chunk_embedder._embedder == embedder
 
 
-def test_simple_kg_pipeline_config_schema() -> None:
+@patch(
+    "neo4j_graphrag.experimental.pipeline.config.template_pipeline.simple_kg_builder.SimpleKGPipelineConfig.get_default_llm"
+)
+def test_simple_kg_pipeline_config_automatic_schema(
+    mock_llm: Mock, llm: LLMInterface
+) -> None:
+    mock_llm.return_value = llm
     config = SimpleKGPipelineConfig()
+    schema = config._get_schema()
+    assert isinstance(schema, SchemaFromTextExtractor)
+    assert schema._llm == llm
+
+
+def test_simple_kg_pipeline_config_manual_schema() -> None:
+    config = SimpleKGPipelineConfig(entities=["Person"])
     assert isinstance(config._get_schema(), SchemaBuilder)
 
 
@@ -205,9 +219,10 @@ def test_simple_kg_pipeline_config_connections_from_pdf() -> None:
         perform_entity_resolution=False,
     )
     connections = config._get_connections()
-    assert len(connections) == 5
+    assert len(connections) == 6
     expected_connections = [
         ("pdf_loader", "splitter"),
+        ("pdf_loader", "schema"),
         ("schema", "extractor"),
         ("splitter", "chunk_embedder"),
         ("chunk_embedder", "extractor"),
@@ -240,9 +255,10 @@ def test_simple_kg_pipeline_config_connections_with_er() -> None:
         perform_entity_resolution=True,
     )
     connections = config._get_connections()
-    assert len(connections) == 6
+    assert len(connections) == 7
     expected_connections = [
         ("pdf_loader", "splitter"),
+        ("pdf_loader", "schema"),
         ("schema", "extractor"),
         ("splitter", "chunk_embedder"),
         ("chunk_embedder", "extractor"),
@@ -263,7 +279,8 @@ def test_simple_kg_pipeline_config_run_params_from_pdf_file_path() -> None:
 def test_simple_kg_pipeline_config_run_params_from_text_text() -> None:
     config = SimpleKGPipelineConfig(from_pdf=False)
     assert config.get_run_params({"text": "my text"}) == {
-        "splitter": {"text": "my text"}
+        "splitter": {"text": "my text"},
+        "schema": {"text": "my text"},
     }
 
 
