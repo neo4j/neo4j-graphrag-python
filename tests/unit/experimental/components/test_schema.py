@@ -682,3 +682,63 @@ async def test_schema_config_from_file(schema_config: SchemaConfig) -> None:
 
         with pytest.raises(ValueError, match="Unsupported file format"):
             SchemaConfig.from_file(txt_path)
+
+
+@pytest.fixture
+def valid_schema_json_array() -> str:
+    return """
+    [
+        {
+            "entities": [
+                {
+                    "label": "Person",
+                    "properties": [
+                        {"name": "name", "type": "STRING"}
+                    ]
+                },
+                {
+                    "label": "Organization",
+                    "properties": [
+                        {"name": "name", "type": "STRING"}
+                    ]
+                }
+            ],
+            "relations": [
+                {
+                    "label": "WORKS_FOR",
+                    "properties": [
+                        {"name": "since", "type": "DATE"}
+                    ]
+                }
+            ],
+            "potential_schema": [
+                ["Person", "WORKS_FOR", "Organization"]
+            ]
+        }
+    ]
+    """
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_run_valid_json_array(
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+    valid_schema_json_array: str,
+) -> None:
+    # configure the mock LLM to return a valid JSON array
+    mock_llm.ainvoke.return_value = valid_schema_json_array
+
+    # run the schema extraction
+    schema_config = await schema_from_text.run(text="Sample text for extraction")
+
+    # verify the schema was correctly extracted from the array
+    assert len(schema_config.entities) == 2
+    assert "Person" in schema_config.entities
+    assert "Organization" in schema_config.entities
+
+    assert schema_config.relations is not None
+    assert "WORKS_FOR" in schema_config.relations
+
+    assert schema_config.potential_schema is not None
+    assert len(schema_config.potential_schema) == 1
+    assert schema_config.potential_schema[0] == ("Person", "WORKS_FOR", "Organization")
