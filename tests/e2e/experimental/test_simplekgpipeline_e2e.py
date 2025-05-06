@@ -181,6 +181,8 @@ async def test_pipeline_builder_two_documents(
         driver=driver,
         embedder=embedder,
         from_pdf=False,
+        # provide minimal schema to bypass automatic schema extraction
+        entities=["Person"],
         # in order to have 2 chunks:
         text_splitter=FixedSizeSplitter(chunk_size=400, chunk_overlap=5),
     )
@@ -261,6 +263,8 @@ async def test_pipeline_builder_same_document_two_runs(
         driver=driver,
         embedder=embedder,
         from_pdf=False,
+        # provide minimal schema to bypass automatic schema extraction
+        entities=["Person"],
         # in order to have 2 chunks:
         text_splitter=FixedSizeSplitter(chunk_size=400, chunk_overlap=5),
     )
@@ -280,3 +284,120 @@ async def test_pipeline_builder_same_document_two_runs(
         "MATCH (chunk:Chunk)<-[rel:FROM_CHUNK]-(entity:__Entity__) RETURN chunk, rel, entity"
     )
     assert len(records) == 2  # two entities according to mocked LLMResponse
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
+async def test_pipeline_builder_with_automatic_schema_extraction(
+    harry_potter_text_part1: str,
+    llm: MagicMock,
+    embedder: MagicMock,
+    driver: neo4j.Driver,
+) -> None:
+    """Test pipeline with automatic schema extraction (no schema provided).
+    This test verifies that the pipeline correctly handles automatic schema extraction.
+    """
+    driver.execute_query("MATCH (n) DETACH DELETE n")
+    embedder.embed_query.return_value = [1, 2, 3]
+
+    # set up mock LLM responses for both schema extraction and entity extraction
+    llm.ainvoke.side_effect = [
+        # first call - schema extraction response
+        LLMResponse(
+            content="""{
+                "entities": [
+                    {
+                        "label": "Person",
+                        "description": "A character in the story",
+                        "properties": [
+                            {"name": "name", "type": "STRING"},
+                            {"name": "age", "type": "INTEGER"}
+                        ]
+                    },
+                    {
+                        "label": "Location",
+                        "description": "A place in the story",
+                        "properties": [
+                            {"name": "name", "type": "STRING"}
+                        ]
+                    }
+                ],
+                "relations": [
+                    {
+                        "label": "LOCATED_AT",
+                        "description": "Indicates where a person is located",
+                        "properties": []
+                    }
+                ],
+                "potential_schema": [
+                    ["Person", "LOCATED_AT", "Location"]
+                ]
+            }"""
+        ),
+        # second call - entity extraction for first chunk
+        LLMResponse(
+            content="""{
+                "nodes": [
+                    {
+                        "id": "0",
+                        "label": "Person",
+                        "properties": {
+                            "name": "Harry Potter"
+                        }
+                    },
+                    {
+                        "id": "1",
+                        "label": "Location",
+                        "properties": {
+                            "name": "Hogwarts"
+                        }
+                    }
+                ],
+                "relationships": [
+                    {
+                        "type": "LOCATED_AT",
+                        "start_node_id": "0",
+                        "end_node_id": "1"
+                    }
+                ]
+            }"""
+        ),
+        # third call - entity extraction for second chunk (if text is split)
+        LLMResponse(content='{"nodes": [], "relationships": []}'),
+    ]
+
+    # create an instance of the SimpleKGPipeline with NO schema provided
+    kg_builder_text = SimpleKGPipeline(
+        llm=llm,
+        driver=driver,
+        embedder=embedder,
+        from_pdf=False,
+        # use smaller chunk size to ensure we have at least 2 chunks
+        text_splitter=FixedSizeSplitter(chunk_size=400, chunk_overlap=5),
+    )
+
+    # run the knowledge graph building process with text input
+    await kg_builder_text.run_async(text=harry_potter_text_part1)
+
+    # verify LLM was called for schema extraction
+    assert llm.ainvoke.call_count >= 2
+
+    # verify entities were created
+    records, _, _ = driver.execute_query("MATCH (n:Person) RETURN n")
+    assert len(records) == 1
+
+    # verify locations were created
+    records, _, _ = driver.execute_query("MATCH (n:Location) RETURN n")
+    assert len(records) == 1
+
+    # verify relationships were created
+    records, _, _ = driver.execute_query(
+        "MATCH (p:Person)-[r:LOCATED_AT]->(l:Location) RETURN p, r, l"
+    )
+    assert len(records) == 1
+
+    # verify chunks and relationships to entities
+    records, _, _ = driver.execute_query(
+        "MATCH (c:Chunk)<-[:FROM_CHUNK]-(e) RETURN c, e"
+    )
+    assert len(records) >= 1
