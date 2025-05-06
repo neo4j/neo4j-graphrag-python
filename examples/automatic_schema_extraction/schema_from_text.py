@@ -25,13 +25,6 @@ load_dotenv()
 logging.basicConfig()
 logging.getLogger("neo4j_graphrag").setLevel(logging.INFO)
 
-# Verify OpenAI API key is available
-if not os.getenv("OPENAI_API_KEY"):
-    raise ValueError(
-        "OPENAI_API_KEY environment variable not found. "
-        "Please set it in the .env file in the root directory."
-    )
-
 # Sample text to extract schema from - it's about a company and its employees
 TEXT = """
 Acme Corporation was founded in 1985 by John Smith in New York City. 

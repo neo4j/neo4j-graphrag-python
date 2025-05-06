@@ -376,11 +376,16 @@ class SchemaFromTextExtractor(Component):
 
         try:
             extracted_schema: Dict[str, Any] = json.loads(content)
-            # handle the case where the LLM outputs a valid JSON array
-            if isinstance(extracted_schema, list) and len(extracted_schema) > 0:
-                # if the first item is a dict with expected schema components, use it
-                if isinstance(extracted_schema[0], dict):
+            if not isinstance(extracted_schema, dict):
+                if (
+                    isinstance(extracted_schema, list)
+                    and len(extracted_schema) > 0
+                    and isinstance(extracted_schema[0], dict)
+                ):
                     extracted_schema = extracted_schema[0]
+                else:
+                    # fallback to empty dict for any other case (e.g., empty list)
+                    extracted_schema = {}
         except json.JSONDecodeError as exc:
             raise ValueError("LLM response is not valid JSON.") from exc
 

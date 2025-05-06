@@ -128,15 +128,6 @@ This schema information can be provided to the `SimpleKGBuilder` as demonstrated
         },
         # ...
     )
-    
-    # Using individual schema parameters (deprecated approach)
-    kg_builder = SimpleKGPipeline(
-        # ...
-        entities=ENTITIES,
-        relations=RELATIONS,
-        potential_schema=POTENTIAL_SCHEMA,
-        # ...
-    )
 
 .. note::
    By default, if no schema is provided to the SimpleKGPipeline, automatic schema extraction will be performed using the LLM (See the :ref:`Automatic Schema Extraction with SchemaFromTextExtractor`).
@@ -481,8 +472,6 @@ or in YAML:
     neo4j_database: myDb
     on_error: IGNORE
     prompt_template: ...
-    
-    # Using the schema parameter (recommended approach)
     schema:
       entities:
         - Person
@@ -823,7 +812,7 @@ Instead of manually defining the schema, you can use the `SchemaFromTextExtracto
     from neo4j_graphrag.experimental.components.schema import SchemaFromTextExtractor
     from neo4j_graphrag.llm import OpenAILLM
 
-    # Create the automatic schema extractor
+    # Instantiate the automatic schema extractor component
     schema_extractor = SchemaFromTextExtractor(
         llm=OpenAILLM(
             model_name="gpt-4o",
@@ -833,6 +822,9 @@ Instead of manually defining the schema, you can use the `SchemaFromTextExtracto
             },
         )
     )
+
+    # Extract the schema from the text
+    extracted_schema = await schema_extractor.run(text="Some text")
 
 The `SchemaFromTextExtractor` component analyzes the text and identifies entity types, relationship types, and their property types. It creates a complete `SchemaConfig` object that can be used in the same way as a manually defined schema.
 
