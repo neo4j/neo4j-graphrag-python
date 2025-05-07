@@ -1,6 +1,6 @@
 import pytest
 
-from neo4j_graphrag.tool import Tool, ObjectParameter, StringParameter
+from neo4j_graphrag.tools.tool import Tool, ObjectParameter, StringParameter
 
 
 class TestTool(Tool):
