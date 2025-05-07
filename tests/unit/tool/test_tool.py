@@ -1,6 +1,6 @@
 import pytest
 from typing import Any
-from neo4j_graphrag.tool import (
+from neo4j_graphrag.tools.tool import (
     StringParameter,
     IntegerParameter,
     NumberParameter,

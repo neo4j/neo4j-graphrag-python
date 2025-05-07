@@ -22,7 +22,7 @@ from neo4j_graphrag.types import LLMMessage
 
 from .types import LLMResponse, ToolCallResponse
 
-from neo4j_graphrag.tool import Tool
+from neo4j_graphrag.tools.tool import Tool
 
 
 class LLMInterface(ABC):

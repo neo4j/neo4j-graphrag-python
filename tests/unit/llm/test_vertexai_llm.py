@@ -20,7 +20,7 @@ import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.types import ToolCallResponse
 from neo4j_graphrag.llm.vertexai_llm import VertexAILLM
-from neo4j_graphrag.tool import Tool
+from neo4j_graphrag.tools.tool import Tool
 from neo4j_graphrag.types import LLMMessage
 from vertexai.generative_models import (
     Content,

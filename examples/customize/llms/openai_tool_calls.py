@@ -17,7 +17,12 @@ from dotenv import load_dotenv
 
 from neo4j_graphrag.llm import OpenAILLM
 from neo4j_graphrag.llm.types import ToolCallResponse
-from neo4j_graphrag.tool import Tool, ObjectParameter, StringParameter, IntegerParameter
+from neo4j_graphrag.tools.tool import (
+    Tool,
+    ObjectParameter,
+    StringParameter,
+    IntegerParameter,
+)
 
 # Load environment variables from .env file (OPENAI_API_KEY required for this example)
 load_dotenv()
