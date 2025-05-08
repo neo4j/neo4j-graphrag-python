@@ -2,6 +2,11 @@
 
 ## Next
 
+### Added
+
+- Added `ToolsRetriever` class to use LLM function calling to retrieve results from a Retriever.
+- Added `convert_retriever_to_tool()` function convert any Retriever to a Tool.
+
 ## 1.7.0
 
 ### Added
