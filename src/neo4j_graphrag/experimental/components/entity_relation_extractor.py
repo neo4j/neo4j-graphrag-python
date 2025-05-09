@@ -403,7 +403,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             schema_entity = schema.entities.get(node.label)
             if not schema_entity:
                 continue
-            allowed_props = schema_entity.get("properties", [])
+            allowed_props = schema_entity.get("properties")
             if allowed_props:
                 filtered_props = self._enforce_properties(
                     node.properties, allowed_props
@@ -439,6 +439,9 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         if self.enforce_schema != SchemaEnforcementMode.STRICT:
             return extracted_relationships
 
+        if schema.relations is None:
+            return extracted_relationships
+
         valid_rels = []
 
         valid_nodes = {node.id: node.label for node in filtered_nodes}
@@ -446,9 +449,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         potential_schema = schema.potential_schema
 
         for rel in extracted_relationships:
-            schema_relation = (
-                schema.relations.get(rel.type) if schema.relations else None
-            )
+            schema_relation = schema.relations.get(rel.type)
             if not schema_relation:
                 continue
 
@@ -473,7 +474,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                 if not tuple_valid and not reverse_tuple_valid:
                     continue
 
-            allowed_props = schema_relation.get("properties", [])
+            allowed_props = schema_relation.get("properties")
             if allowed_props:
                 filtered_props = self._enforce_properties(rel.properties, allowed_props)
             else:

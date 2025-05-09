@@ -109,7 +109,7 @@ class SchemaConfig(DataModel):
     @model_validator(mode="before")
     def check_schema(cls, data: Dict[str, Any]) -> Dict[str, Any]:
         entities = data.get("entities", {}).keys()
-        relations = data.get("relations", {}).keys()
+        relations = (data.get("relations") or {}).keys()
         potential_schema = data.get("potential_schema", [])
 
         if potential_schema:
