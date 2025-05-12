@@ -883,7 +883,7 @@ def test_format_schema(
         ),
     ],
 )
-def test_get_enhanced_schema(
+def test_get_enhanced_schema_cypher(
     driver: MagicMock,
     description: str,
     structured_schema: Dict[str, Any],
