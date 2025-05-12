@@ -33,6 +33,7 @@ import tempfile
 import yaml
 
 from neo4j_graphrag.generation import PromptTemplate
+from neo4j_graphrag.llm.types import LLMResponse
 
 
 @pytest.fixture
@@ -509,7 +510,7 @@ async def test_schema_from_text_run_valid_response(
     valid_schema_json: str,
 ) -> None:
     # configure the mock LLM to return a valid schema JSON
-    mock_llm.ainvoke.return_value = valid_schema_json
+    mock_llm.ainvoke.return_value = LLMResponse(content=valid_schema_json)
 
     # run the schema extraction
     schema_config = await schema_from_text.run(text="Sample text for extraction")
@@ -540,7 +541,7 @@ async def test_schema_from_text_run_invalid_json(
     invalid_schema_json: str,
 ) -> None:
     # configure the mock LLM to return invalid JSON
-    mock_llm.ainvoke.return_value = invalid_schema_json
+    mock_llm.ainvoke.return_value = LLMResponse(content=invalid_schema_json)
 
     # verify that running with invalid JSON raises a ValueError
     with pytest.raises(ValueError) as exc_info:
@@ -563,7 +564,7 @@ async def test_schema_from_text_custom_template(
     )
 
     # configure mock LLM to return valid JSON and capture the prompt that was sent to it
-    mock_llm.ainvoke.return_value = valid_schema_json
+    mock_llm.ainvoke.return_value = LLMResponse(content=valid_schema_json)
 
     # run the schema extraction
     await schema_from_text.run(text="Sample text")
@@ -584,7 +585,7 @@ async def test_schema_from_text_llm_params(
     schema_from_text = SchemaFromTextExtractor(llm=mock_llm, llm_params=llm_params)
 
     # configure the mock LLM to return a valid schema JSON
-    mock_llm.ainvoke.return_value = valid_schema_json
+    mock_llm.ainvoke.return_value = LLMResponse(content=valid_schema_json)
 
     # run the schema extraction
     await schema_from_text.run(text="Sample text")
@@ -726,7 +727,7 @@ async def test_schema_from_text_run_valid_json_array(
     valid_schema_json_array: str,
 ) -> None:
     # configure the mock LLM to return a valid JSON array
-    mock_llm.ainvoke.return_value = valid_schema_json_array
+    mock_llm.ainvoke.return_value = LLMResponse(content=valid_schema_json_array)
 
     # run the schema extraction
     schema_config = await schema_from_text.run(text="Sample text for extraction")
