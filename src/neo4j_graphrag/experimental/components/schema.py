@@ -22,7 +22,7 @@ from pathlib import Path
 from pydantic import BaseModel, ValidationError, model_validator, validate_call
 from typing_extensions import Self
 
-from neo4j_graphrag.exceptions import SchemaValidationError
+from neo4j_graphrag.exceptions import SchemaValidationError, LLMGenerationError
 from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
 from neo4j_graphrag.experimental.pipeline.types.schema import (
     EntityInputType,
@@ -367,12 +367,12 @@ class SchemaFromTextExtractor(Component):
         """
         prompt: str = self._prompt_template.format(text=text, examples=examples)
 
-        response = await self._llm.ainvoke(prompt, **self._llm_params)
-        content: str = (
-            response
-            if isinstance(response, str)
-            else getattr(response, "content", str(response))
-        )
+        try:
+            response = await self._llm.ainvoke(prompt, **self._llm_params)
+            content: str = response.content
+        except LLMGenerationError as e:
+            # Re-raise the LLMGenerationError
+            raise LLMGenerationError("Failed to generate schema from text") from e
 
         try:
             extracted_schema: Dict[str, Any] = json.loads(content)
