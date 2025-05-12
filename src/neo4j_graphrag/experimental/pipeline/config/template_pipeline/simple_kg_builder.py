@@ -14,6 +14,7 @@
 #  limitations under the License.
 from typing import Any, ClassVar, Literal, Optional, Sequence, Union, List, Tuple
 import logging
+import warnings
 
 from pydantic import ConfigDict, Field, model_validator
 from typing_extensions import Self
@@ -113,18 +114,20 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         )
 
         if has_individual_schema_components and self.schema_ is not None:
-            logger.warning(
+            warnings.warn(
                 "Both 'schema' and individual schema components (entities, relations, potential_schema) "
                 "were provided. The 'schema' parameter takes precedence. In the future, individual "
                 "components will be removed. Please use only the 'schema' parameter.",
+                DeprecationWarning,
                 stacklevel=2,
             )
 
         elif has_individual_schema_components:
-            logger.warning(
+            warnings.warn(
                 "The 'entities', 'relations', and 'potential_schema' parameters are deprecated "
                 "and will be removed in a future version. "
                 "Please use the 'schema' parameter instead.",
+                DeprecationWarning,
                 stacklevel=2,
             )
 
