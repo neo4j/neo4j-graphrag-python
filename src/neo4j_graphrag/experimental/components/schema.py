@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import yaml
+import logging
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 from pathlib import Path
 
@@ -376,16 +377,28 @@ class SchemaFromTextExtractor(Component):
 
         try:
             extracted_schema: Dict[str, Any] = json.loads(content)
-            if not isinstance(extracted_schema, dict):
-                if (
-                    isinstance(extracted_schema, list)
-                    and len(extracted_schema) > 0
-                    and isinstance(extracted_schema[0], dict)
-                ):
+
+            # handle dictionary
+            if isinstance(extracted_schema, dict):
+                pass  # Keep as is
+            # handle list
+            elif isinstance(extracted_schema, list):
+                if len(extracted_schema) > 0 and isinstance(extracted_schema[0], dict):
                     extracted_schema = extracted_schema[0]
-                else:
-                    # fallback to empty dict for any other case (e.g., empty list)
+                elif len(extracted_schema) == 0:
+                    logging.warning(
+                        "LLM returned an empty list for schema. Falling back to empty schema."
+                    )
                     extracted_schema = {}
+                else:
+                    raise ValueError(
+                        f"Expected a dictionary or list of dictionaries, but got list containing: {type(extracted_schema[0])}"
+                    )
+            # any other types
+            else:
+                raise ValueError(
+                    f"Unexpected schema format returned from LLM: {type(extracted_schema)}. Expected a dictionary or list of dictionaries."
+                )
         except json.JSONDecodeError as exc:
             raise ValueError("LLM response is not valid JSON.") from exc
 
