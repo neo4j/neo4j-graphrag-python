@@ -565,7 +565,7 @@ def _build_str_clauses(
         else:
             return_clauses.append(
                 (
-                    f"values:`{prop_name}_values`[..{DISTINCT_VALUE_LIMIT}],"
+                    f"values: `{prop_name}_values`[..{DISTINCT_VALUE_LIMIT}],"
                     f" distinct_count: size(`{prop_name}_values`)"
                 )
             )
