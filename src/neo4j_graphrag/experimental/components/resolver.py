@@ -12,18 +12,36 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from __future__ import annotations
+
 import abc
 import logging
 from itertools import combinations
-from typing import Any, List, Optional
+from typing import Any, List, Optional, TYPE_CHECKING
 
-import numpy as np
-import rapidfuzz.fuzz
-import spacy
-from numpy.typing import NDArray
-from rapidfuzz import utils
-from spacy.cli.download import download as spacy_download
-from spacy.language import Language
+
+try:
+    from rapidfuzz import fuzz
+    from rapidfuzz import utils
+
+    IS_RAPIDFUZZ_INSTALLED = True
+except ImportError:
+    IS_RAPIDFUZZ_INSTALLED = False
+
+try:
+    import spacy
+    from spacy.cli.download import download as spacy_download
+    from spacy.language import Language
+    import numpy as np
+
+    IS_SPACY_INSTALLED = True
+except ImportError:
+    IS_SPACY_INSTALLED = False
+
+
+if TYPE_CHECKING:
+    import numpy as np
+    from numpy.typing import NDArray
 
 import neo4j
 from neo4j_graphrag.experimental.components.types import ResolutionStats
@@ -334,6 +352,11 @@ class SpaCySemanticMatchResolver(BasePropertySimilarityResolver):
         spacy_model: str = "en_core_web_lg",
         neo4j_database: Optional[str] = None,
     ) -> None:
+        if not IS_SPACY_INSTALLED:
+            raise ImportError("""`spacy` python module needs to be installed to use
+            the SpaCySemanticMatchResolver. Install it with:
+            `pip install "neo4j-graphrag[nlp]"`
+            """)
         super().__init__(
             driver,
             filter_query,
@@ -398,6 +421,27 @@ class FuzzyMatchResolver(BasePropertySimilarityResolver):
     and 1.
     """
 
+    def __init__(
+        self,
+        driver: neo4j.Driver,
+        filter_query: Optional[str] = None,
+        resolve_properties: Optional[List[str]] = None,
+        similarity_threshold: float = 0.8,
+        neo4j_database: Optional[str] = None,
+    ) -> None:
+        if not IS_RAPIDFUZZ_INSTALLED:
+            raise ImportError("""`rapidfuzz` python module needs to be installed to use
+            the SpaCySemanticMatchResolver. Install it with:
+            `pip install "neo4j-graphrag[fuzzy-matching]"`
+            """)
+        super().__init__(
+            driver,
+            filter_query,
+            resolve_properties,
+            similarity_threshold,
+            neo4j_database,
+        )
+
     async def run(self) -> ResolutionStats:
         return await super().run()
 
@@ -406,7 +450,4 @@ class FuzzyMatchResolver(BasePropertySimilarityResolver):
         # normalize the input strings before the comparison is done (processor=utils.default_process)
         # e.g., lowercase the text, strip whitespace, and remove punctuation
         # normalize the score to the 0..1 range
-        return (
-            rapidfuzz.fuzz.WRatio(text_a, text_b, processor=utils.default_process)
-            / 100.0
-        )
+        return fuzz.WRatio(text_a, text_b, processor=utils.default_process) / 100.0
