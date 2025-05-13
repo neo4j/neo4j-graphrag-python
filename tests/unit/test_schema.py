@@ -14,7 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, List
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -576,73 +576,314 @@ def test_format_schema(
     assert result == expected_output, f"Failed test case: {description}"
 
 
-def test_enhanced_schema_cypher_integer_exhaustive_true(
+@pytest.mark.parametrize(
+    "description, structured_schema, label_or_type, properties, exhaustive, sample_size, is_relationship, expected_query",
+    [
+        (
+            "Exhaustive, string property",
+            {"metadata": {"index": []}},
+            "Person",
+            [{"property": "name", "type": "STRING"}],
+            True,
+            5,
+            False,
+            (
+                "MATCH (n:`Person`)\n"
+                "WITH collect(distinct substring(toString(n.`name`), 0, 50)) AS `name_values`\n"
+                "RETURN {`name`: {values: `name_values`[..10], distinct_count: size(`name_values`)}} AS output"
+            ),
+        ),
+        (
+            "Non-exhaustive, string property",
+            {"metadata": {"index": []}},
+            "Person",
+            [{"property": "name", "type": "STRING"}],
+            False,
+            5,
+            False,
+            (
+                "MATCH (n:`Person`) WITH n LIMIT 5\n"
+                "WITH collect(distinct substring(toString(n.`name`), 0, 50)) AS `name_values`\n"
+                "RETURN {`name`: {values: `name_values`}} AS output"
+            ),
+        ),
+        (
+            "Exhaustive, integer property",
+            {"metadata": {"index": []}},
+            "Person",
+            [{"property": "age", "type": "INTEGER"}],
+            True,
+            5,
+            False,
+            (
+                "MATCH (n:`Person`)\n"
+                "WITH min(n.`age`) AS `age_min`,\n"
+                "     max(n.`age`) AS `age_max`,\n"
+                "     count(distinct n.`age`) AS `age_distinct`\n"
+                "RETURN {`age`: {min: toString(`age_min`), max: toString(`age_max`), distinct_count: `age_distinct`}} AS output"
+            ),
+        ),
+        (
+            "Non-exhaustive, integer property",
+            {"metadata": {"index": []}},
+            "Person",
+            [{"property": "age", "type": "INTEGER"}],
+            False,
+            5,
+            False,
+            (
+                "MATCH (n:`Person`) WITH n LIMIT 5\n"
+                "WITH collect(distinct toString(n.`age`)) AS `age_values`\n"
+                "RETURN {`age`: {values: `age_values`}} AS output"
+            ),
+        ),
+        (
+            "Exhaustive, float property",
+            {"metadata": {"index": []}},
+            "Person",
+            [{"property": "salary", "type": "FLOAT"}],
+            True,
+            5,
+            False,
+            (
+                "MATCH (n:`Person`)\n"
+                "WITH min(n.`salary`) AS `salary_min`,\n"
+                "     max(n.`salary`) AS `salary_max`,\n"
+                "     count(distinct n.`salary`) AS `salary_distinct`\n"
+                "RETURN {`salary`: {min: toString(`salary_min`), max: toString(`salary_max`), distinct_count: `salary_distinct`}} AS output"
+            ),
+        ),
+        (
+            "Non-exhaustive, float property",
+            {"metadata": {"index": []}},
+            "Person",
+            [{"property": "salary", "type": "FLOAT"}],
+            False,
+            5,
+            False,
+            (
+                "MATCH (n:`Person`) WITH n LIMIT 5\n"
+                "WITH collect(distinct toString(n.`salary`)) AS `salary_values`\n"
+                "RETURN {`salary`: {values: `salary_values`}} AS output"
+            ),
+        ),
+        (
+            "Exhaustive, date property",
+            {"metadata": {"index": []}},
+            "Person",
+            [{"property": "birth_date", "type": "DATE"}],
+            True,
+            5,
+            False,
+            (
+                "MATCH (n:`Person`)\n"
+                "WITH min(n.`birth_date`) AS `birth_date_min`,\n"
+                "     max(n.`birth_date`) AS `birth_date_max`,\n"
+                "     count(distinct n.`birth_date`) AS `birth_date_distinct`\n"
+                "RETURN {`birth_date`: {min: toString(`birth_date_min`), max: toString(`birth_date_max`), distinct_count: `birth_date_distinct`}} AS output"
+            ),
+        ),
+        (
+            "Non-exhaustive, date property",
+            {"metadata": {"index": []}},
+            "Person",
+            [{"property": "birth_date", "type": "DATE"}],
+            False,
+            5,
+            False,
+            (
+                "MATCH (n:`Person`) WITH n LIMIT 5\n"
+                "WITH collect(distinct toString(n.`birth_date`)) AS `birth_date_values`\n"
+                "RETURN {`birth_date`: {values: `birth_date_values`}} AS output"
+            ),
+        ),
+        (
+            "Exhaustive, date time property",
+            {"metadata": {"index": []}},
+            "Person",
+            [{"property": "birth_date", "type": "DATE_TIME"}],
+            True,
+            5,
+            False,
+            (
+                "MATCH (n:`Person`)\n"
+                "WITH min(n.`birth_date`) AS `birth_date_min`,\n"
+                "     max(n.`birth_date`) AS `birth_date_max`,\n"
+                "     count(distinct n.`birth_date`) AS `birth_date_distinct`\n"
+                "RETURN {`birth_date`: {min: toString(`birth_date_min`), max: toString(`birth_date_max`), distinct_count: `birth_date_distinct`}} AS output"
+            ),
+        ),
+        (
+            "Non-exhaustive, date time property",
+            {"metadata": {"index": []}},
+            "Person",
+            [{"property": "birth_date", "type": "DATE_TIME"}],
+            False,
+            5,
+            False,
+            (
+                "MATCH (n:`Person`) WITH n LIMIT 5\n"
+                "WITH collect(distinct toString(n.`birth_date`)) AS `birth_date_values`\n"
+                "RETURN {`birth_date`: {values: `birth_date_values`}} AS output"
+            ),
+        ),
+        (
+            "Exhaustive, local date time property",
+            {"metadata": {"index": []}},
+            "Person",
+            [{"property": "birth_date", "type": "LOCAL_DATE_TIME"}],
+            True,
+            5,
+            False,
+            (
+                "MATCH (n:`Person`)\n"
+                "WITH min(n.`birth_date`) AS `birth_date_min`,\n"
+                "     max(n.`birth_date`) AS `birth_date_max`,\n"
+                "     count(distinct n.`birth_date`) AS `birth_date_distinct`\n"
+                "RETURN {`birth_date`: {min: toString(`birth_date_min`), max: toString(`birth_date_max`), distinct_count: `birth_date_distinct`}} AS output"
+            ),
+        ),
+        (
+            "Non-exhaustive, local date time property",
+            {"metadata": {"index": []}},
+            "Person",
+            [{"property": "birth_date", "type": "LOCAL_DATE_TIME"}],
+            False,
+            5,
+            False,
+            (
+                "MATCH (n:`Person`) WITH n LIMIT 5\n"
+                "WITH collect(distinct toString(n.`birth_date`)) AS `birth_date_values`\n"
+                "RETURN {`birth_date`: {values: `birth_date_values`}} AS output"
+            ),
+        ),
+        (
+            "Exhaustive, list property",
+            {"metadata": {"index": []}},
+            "Person",
+            [{"property": "tags", "type": "LIST"}],
+            True,
+            5,
+            False,
+            (
+                "MATCH (n:`Person`)\n"
+                "WITH min(size(n.`tags`)) AS `tags_size_min`, max(size(n.`tags`)) AS `tags_size_max`\n"
+                "RETURN {`tags`: {min_size: `tags_size_min`, max_size: `tags_size_max`}} AS output"
+            ),
+        ),
+        (
+            "Non-exhaustive, list property",
+            {"metadata": {"index": []}},
+            "Person",
+            [{"property": "tags", "type": "LIST"}],
+            False,
+            5,
+            False,
+            (
+                "MATCH (n:`Person`) WITH n LIMIT 5\n"
+                "WITH min(size(n.`tags`)) AS `tags_size_min`, max(size(n.`tags`)) AS `tags_size_max`\n"
+                "RETURN {`tags`: {min_size: `tags_size_min`, max_size: `tags_size_max`}} AS output"
+            ),
+        ),
+        (
+            "Exhaustive, boolean property",
+            {"metadata": {"index": []}},
+            "Person",
+            [{"property": "active", "type": "BOOLEAN"}],
+            True,
+            5,
+            False,
+            "MATCH (n:`Person`)\nRETURN {} AS output",
+        ),
+        (
+            "Non-exhaustive, boolean property",
+            {"metadata": {"index": []}},
+            "Person",
+            [{"property": "active", "type": "BOOLEAN"}],
+            False,
+            5,
+            False,
+            "MATCH (n:`Person`) WITH n LIMIT 5\nRETURN {} AS output",
+        ),
+        (
+            "Exhaustive, point property",
+            {"metadata": {"index": []}},
+            "Person",
+            [{"property": "location", "type": "POINT"}],
+            True,
+            5,
+            False,
+            "MATCH (n:`Person`)\nRETURN {} AS output",
+        ),
+        (
+            "Non-exhaustive, point property",
+            {"metadata": {"index": []}},
+            "Person",
+            [{"property": "location", "type": "POINT"}],
+            False,
+            5,
+            False,
+            "MATCH (n:`Person`) WITH n LIMIT 5\nRETURN {} AS output",
+        ),
+        (
+            "Exhaustive, duration property",
+            {"metadata": {"index": []}},
+            "Journey",
+            [{"property": "duration", "type": "DURATION"}],
+            True,
+            5,
+            False,
+            ("MATCH (n:`Journey`)\n" "RETURN {} AS output"),
+        ),
+        (
+            "Non-exhaustive, duration property",
+            {"metadata": {"index": []}},
+            "Journey",
+            [{"property": "duration", "type": "DURATION"}],
+            False,
+            5,
+            False,
+            "MATCH (n:`Journey`) WITH n LIMIT 5\nRETURN {} AS output",
+        ),
+        (
+            "Relationship property",
+            {"metadata": {"index": []}},
+            "FRIENDS_WITH",
+            [{"property": "since", "type": "INTEGER"}],
+            True,
+            5,
+            True,
+            (
+                "MATCH ()-[n:`FRIENDS_WITH`]->()\n"
+                "WITH min(n.`since`) AS `since_min`,\n"
+                "     max(n.`since`) AS `since_max`,\n"
+                "     count(distinct n.`since`) AS `since_distinct`\n"
+                "RETURN {`since`: {min: toString(`since_min`), max: toString(`since_max`), distinct_count: `since_distinct`}} AS output"
+            ),
+        ),
+    ],
+)
+def test_get_enhanced_schema_cypher(
     driver: MagicMock,
+    description: str,
+    structured_schema: Dict[str, Any],
+    label_or_type: str,
+    properties: List[Dict[str, Any]],
+    exhaustive: bool,
+    sample_size: int,
+    is_relationship: bool,
+    expected_query: str,
 ) -> None:
-    structured_schema: Dict[str, Any] = {"metadata": {"index": []}}
-    properties = [{"property": "age", "type": "INTEGER"}]
     query = get_enhanced_schema_cypher(
         driver=driver,
         structured_schema=structured_schema,
-        label_or_type="Person",
+        label_or_type=label_or_type,
         properties=properties,
-        exhaustive=True,
+        exhaustive=exhaustive,
+        sample_size=sample_size,
+        is_relationship=is_relationship,
     )
-    assert "min(n.`age`) AS `age_min`" in query
-    assert "max(n.`age`) AS `age_max`" in query
-    assert "count(distinct n.`age`) AS `age_distinct`" in query
-    assert (
-        "min: toString(`age_min`), max: toString(`age_max`), "
-        "distinct_count: `age_distinct`" in query
-    )
-
-
-def test_enhanced_schema_cypher_list_exhaustive_true(
-    driver: MagicMock,
-) -> None:
-    structured_schema: Dict[str, Any] = {"metadata": {"index": []}}
-    properties = [{"property": "tags", "type": "LIST"}]
-    query = get_enhanced_schema_cypher(
-        driver=driver,
-        structured_schema=structured_schema,
-        label_or_type="Article",
-        properties=properties,
-        exhaustive=True,
-    )
-    assert "min(size(n.`tags`)) AS `tags_size_min`" in query
-    assert "max(size(n.`tags`)) AS `tags_size_max`" in query
-    assert "min_size: `tags_size_min`, max_size: `tags_size_max`" in query
-
-
-def test_enhanced_schema_cypher_boolean_exhaustive_true(
-    driver: MagicMock,
-) -> None:
-    properties = [{"property": "active", "type": "BOOLEAN"}]
-    query = get_enhanced_schema_cypher(
-        driver=driver,
-        structured_schema={},
-        label_or_type="User",
-        properties=properties,
-        exhaustive=True,
-    )
-    # BOOLEAN types should be skipped, so their properties should not be in the query
-    assert "n.`active`" not in query
-
-
-def test_enhanced_schema_cypher_integer_exhaustive_false_no_index(
-    driver: MagicMock,
-) -> None:
-    structured_schema: Dict[str, Any] = {"metadata": {"index": []}}
-    properties = [{"property": "age", "type": "INTEGER"}]
-    query = get_enhanced_schema_cypher(
-        driver=driver,
-        structured_schema=structured_schema,
-        label_or_type="Person",
-        properties=properties,
-        exhaustive=False,
-    )
-    assert "collect(distinct toString(n.`age`)) AS `age_values`" in query
-    assert "values: `age_values`" in query
+    assert query == expected_query, f"Failed test case: {description}"
 
 
 def test_enhanced_schema_cypher_integer_exhaustive_false_with_index(
@@ -667,56 +908,13 @@ def test_enhanced_schema_cypher_integer_exhaustive_false_with_index(
         properties=properties,
         exhaustive=False,
     )
-    assert "min(n.`age`) AS `age_min`" in query
-    assert "max(n.`age`) AS `age_max`" in query
-    assert "count(distinct n.`age`) AS `age_distinct`" in query
-    assert (
-        "min: toString(`age_min`), max: toString(`age_max`), "
-        "distinct_count: `age_distinct`" in query
+    assert query == (
+        "MATCH (n:`Person`) WITH n LIMIT 5\n"
+        "WITH min(n.`age`) AS `age_min`,\n"
+        "     max(n.`age`) AS `age_max`,\n"
+        "     count(distinct n.`age`) AS `age_distinct`\n"
+        "RETURN {`age`: {min: toString(`age_min`), max: toString(`age_max`), distinct_count: `age_distinct`}} AS output"
     )
-
-
-def test_enhanced_schema_cypher_list_exhaustive_false(
-    driver: MagicMock,
-) -> None:
-    structured_schema = {
-        "metadata": {"constraint": [], "index": []},
-        "node_props": {},
-        "rel_props": {},
-        "relationships": [],
-    }
-    properties = [{"property": "tags", "type": "LIST"}]
-    query = get_enhanced_schema_cypher(
-        driver=driver,
-        structured_schema=structured_schema,
-        label_or_type="Article",
-        properties=properties,
-        exhaustive=False,
-    )
-    assert "min(size(n.`tags`)) AS `tags_size_min`" in query
-    assert "max(size(n.`tags`)) AS `tags_size_max`" in query
-    assert "min_size: `tags_size_min`, max_size: `tags_size_max`" in query
-
-
-def test_enhanced_schema_cypher_boolean_exhaustive_false(
-    driver: MagicMock,
-) -> None:
-    structured_schema = {
-        "metadata": {"constraint": [], "index": []},
-        "node_props": {},
-        "rel_props": {},
-        "relationships": [],
-    }
-    properties = [{"property": "active", "type": "BOOLEAN"}]
-    query = get_enhanced_schema_cypher(
-        driver=driver,
-        structured_schema=structured_schema,
-        label_or_type="User",
-        properties=properties,
-        exhaustive=False,
-    )
-    # BOOLEAN types should be skipped, so their properties should not be in the query
-    assert "n.`active`" not in query
 
 
 @patch("neo4j_graphrag.schema.query_database")
@@ -746,76 +944,7 @@ def test_enhanced_schema_cypher_string_exhaustive_false_with_index(
         properties=properties,
         exhaustive=False,
     )
-    assert "values: ['Single', 'Married', 'Divorced'], distinct_count: 3" in query
-
-
-def test_enhanced_schema_cypher_string_exhaustive_false_no_index(
-    driver: MagicMock,
-) -> None:
-    structured_schema: Dict[str, Any] = {"metadata": {"index": []}}
-    properties = [{"property": "status", "type": "STRING"}]
-    query = get_enhanced_schema_cypher(
-        driver=driver,
-        structured_schema=structured_schema,
-        label_or_type="Person",
-        properties=properties,
-        exhaustive=False,
+    assert query == (
+        "MATCH (n:`Person`) WITH n LIMIT 5\n\n"
+        "RETURN {`status`: {values: ['Single', 'Married', 'Divorced'], distinct_count: 3}} AS output"
     )
-    assert (
-        "collect(distinct substring(toString(n.`status`), 0, 50)) AS `status_values`"
-        in query
-    )
-    assert "values: `status_values`" in query
-
-
-def test_enhanced_schema_cypher_point_type(driver: MagicMock) -> None:
-    properties = [{"property": "location", "type": "POINT"}]
-    query = get_enhanced_schema_cypher(
-        driver=driver,
-        structured_schema={},
-        label_or_type="Place",
-        properties=properties,
-        exhaustive=True,
-    )
-    # POINT types should be skipped
-    assert "n.`location`" not in query
-
-
-def test_enhanced_schema_cypher_duration_type(driver: MagicMock) -> None:
-    structured_schema = {
-        "metadata": {"constraint": [], "index": []},
-        "node_props": {},
-        "rel_props": {},
-        "relationships": [],
-    }
-    properties = [{"property": "duration", "type": "DURATION"}]
-    query = get_enhanced_schema_cypher(
-        driver=driver,
-        structured_schema=structured_schema,
-        label_or_type="Event",
-        properties=properties,
-        exhaustive=False,
-    )
-    # DURATION types should be skipped
-    assert "n.`duration`" not in query
-
-
-def test_enhanced_schema_cypher_relationship(driver: MagicMock) -> None:
-    properties = [{"property": "since", "type": "INTEGER"}]
-    query = get_enhanced_schema_cypher(
-        driver=driver,
-        structured_schema={},
-        label_or_type="FRIENDS_WITH",
-        properties=properties,
-        exhaustive=True,
-        is_relationship=True,
-    )
-    assert query.startswith("MATCH ()-[n:`FRIENDS_WITH`]->()")
-    assert "min(n.`since`) AS `since_min`" in query
-    assert "max(n.`since`) AS `since_max`" in query
-    assert "count(distinct n.`since`) AS `since_distinct`" in query
-    expected_return_clause = (
-        "`since`: {min: toString(`since_min`), max: toString(`since_max`), "
-        "distinct_count: `since_distinct`}"
-    )
-    assert expected_return_clause in query

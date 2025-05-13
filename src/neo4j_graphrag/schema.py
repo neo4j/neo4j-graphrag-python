@@ -251,7 +251,7 @@ def get_structured_schema(
             ],
             'metadata': {
                 'constraint': [
-                    {'id': 7, 'name': 'person_id', 'type': 'UNIQUENESS', 'entityType': 'NODE', 'labelsOrTypes': ['Persno'], 'properties': ['id'], 'ownedIndex': 'person_id', 'propertyType': None},
+                    {'id': 7, 'name': 'person_id', 'type': 'UNIQUENESS', 'entityType': 'NODE', 'labelsOrTypes': ['Person'], 'properties': ['id'], 'ownedIndex': 'person_id', 'propertyType': None},
                 ],
                 'index': [
                     {'label': 'Person', 'properties': ['name'], 'size': 2, 'type': 'RANGE', 'valuesSelectivity': 1.0, 'distinctValues': 2.0},
@@ -565,7 +565,7 @@ def _build_str_clauses(
         else:
             return_clauses.append(
                 (
-                    f"values:`{prop_name}_values`[..{DISTINCT_VALUE_LIMIT}],"
+                    f"values: `{prop_name}_values`[..{DISTINCT_VALUE_LIMIT}],"
                     f" distinct_count: size(`{prop_name}_values`)"
                 )
             )
@@ -753,8 +753,10 @@ def get_enhanced_schema_cypher(
         elif prop_type in ["BOOLEAN", "POINT", "DURATION"]:
             continue
         output_dict[prop_name] = "{" + return_clauses.pop() + "}"
+    if not output_dict:
+        return f"{match_clause}\nRETURN {{}} AS output"
     # Combine with and return clauses
-    with_clause = "WITH " + ",\n     ".join(with_clauses)
+    with_clause = "WITH " + ",\n     ".join(with_clauses) if with_clauses else ""
     return_clause = (
         "RETURN {"
         + ", ".join(f"`{k}`: {v}" for k, v in output_dict.items())
