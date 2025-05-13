@@ -415,19 +415,33 @@ def test_create_schema_model_no_relations_or_potential_schema(
 ) -> None:
     schema_instance = schema_builder.create_schema_model(valid_entities)
 
+    assert len(schema_instance.entities) == 2
+    person = schema_instance.entity_from_label("PERSON")
+
     assert (
-        schema_instance.entities["PERSON"]["description"]
-        == "An individual human being."
+        person.description == "An individual human being."
     )
-    assert schema_instance.entities["PERSON"]["properties"] == [
-        {"description": "", "name": "birth date", "type": "ZONED_DATETIME"},
-        {"description": "", "name": "name", "type": "STRING"},
+    assert person.properties == [
+        SchemaProperty(
+            name="name",
+            type="STRING",
+            description="",
+        ),
+        SchemaProperty(
+            name="birth date",
+            type="ZONED_DATETIME",
+            description="",
+        )
     ]
+
+    org = schema_instance.entity_from_label("ORGANIZATION")
     assert (
-        schema_instance.entities["ORGANIZATION"]["description"]
+        org.description
         == "A structured group of people with a common purpose."
     )
-    assert schema_instance.entities["AGE"]["description"] == "Age of a person in years."
+
+    age = schema_instance.entity_from_label("AGE")
+    assert age.description == "Age of a person in years."
 
 
 def test_create_schema_model_missing_relations(

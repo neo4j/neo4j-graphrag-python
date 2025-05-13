@@ -20,6 +20,7 @@ import logging
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 from pathlib import Path
 
+import neo4j
 from pydantic import BaseModel, ValidationError, model_validator, validate_call
 from typing_extensions import Self
 
@@ -97,20 +98,22 @@ class SchemaRelation(BaseModel):
         return cls.model_validate(input)
 
 
-class SchemaConfig(DataModel):
-    """
-    Represents possible relationships between entities and relations in the graph.
-    """
+class GraphSchema(DataModel):
+    entities: list[SchemaEntity]
+    relations: Optional[list[SchemaRelation]] = None
+    potential_schema: Optional[List[Tuple[str, str, str]]] = None
+    # indexes: list[something] = None
 
-    entities: Dict[str, Dict[str, Any]]
-    relations: Optional[Dict[str, Dict[str, Any]]]
-    potential_schema: Optional[List[Tuple[str, str, str]]]
+    _entity_index: dict[str, SchemaEntity]
+    _relation_index: dict[str, SchemaRelation]
 
-    @model_validator(mode="before")
-    def check_schema(cls, data: Dict[str, Any]) -> Dict[str, Any]:
-        entities = data.get("entities", {}).keys()
-        relations = (data.get("relations") or {}).keys()
-        potential_schema = data.get("potential_schema", [])
+    @model_validator(mode="after")
+    def check_schema(self) -> Self:
+        self._entity_index = {e.label: e for e in self.entities}
+        self._relation_index = {r.label: r for r in self.relations} if self.relations else {}
+
+        relations = self.relations or []
+        potential_schema = self.potential_schema or []
 
         if potential_schema:
             if not relations:
@@ -118,20 +121,27 @@ class SchemaConfig(DataModel):
                     "Relations must also be provided when using a potential schema."
                 )
             for entity1, relation, entity2 in potential_schema:
-                if entity1 not in entities:
+                if entity1 not in self._entity_index:
                     raise SchemaValidationError(
                         f"Entity '{entity1}' is not defined in the provided entities."
                     )
-                if relation not in relations:
+                if relation not in self._relation_index:
                     raise SchemaValidationError(
                         f"Relation '{relation}' is not defined in the provided relations."
                     )
-                if entity2 not in entities:
+                if entity2 not in self._entity_index:
                     raise SchemaValidationError(
                         f"Entity '{entity2}' is not defined in the provided entities."
                     )
 
-        return data
+        return self
+
+    def entity_from_label(self, label: str) -> Optional[SchemaEntity]:
+        return self._entity_index.get(label)
+
+    def relation_from_label(self, label: str) -> Optional[SchemaRelation]:
+        return self._relation_index.get(label)
+
 
     def store_as_json(self, file_path: str) -> None:
         """
@@ -225,10 +235,14 @@ class SchemaConfig(DataModel):
             except ValidationError as e:
                 raise SchemaValidationError(f"Schema validation failed: {e}")
 
+class BaseSchemaBuilder(Component):
+    async def run(self, **kwargs: Any) -> GraphSchema:
+        raise NotImplementedError()
 
-class SchemaBuilder(Component):
+
+class SchemaBuilder(BaseSchemaBuilder):
     """
-    A builder class for constructing SchemaConfig objects from given entities,
+    A builder class for constructing GraphSchema objects from given entities,
     relations, and their interrelationships defined in a potential schema.
 
     Example:
@@ -290,7 +304,7 @@ class SchemaBuilder(Component):
         entities: List[SchemaEntity],
         relations: Optional[List[SchemaRelation]] = None,
         potential_schema: Optional[List[Tuple[str, str, str]]] = None,
-    ) -> SchemaConfig:
+    ) -> GraphSchema:
         """
         Creates a SchemaConfig object from Lists of Entity and Relation objects
         and a Dictionary defining potential relationships.
@@ -303,19 +317,12 @@ class SchemaBuilder(Component):
         Returns:
             SchemaConfig: A configured schema object.
         """
-        entity_dict = {entity.label: entity.model_dump() for entity in entities}
-        relation_dict = (
-            {relation.label: relation.model_dump() for relation in relations}
-            if relations
-            else {}
-        )
-
         try:
-            return SchemaConfig(
-                entities=entity_dict,
-                relations=relation_dict,
+            return GraphSchema.model_validate(dict(
+                entities=entities,
+                relations=relations,
                 potential_schema=potential_schema,
-            )
+            ))
         except (ValidationError, SchemaValidationError) as e:
             raise SchemaValidationError(e)
 
@@ -325,9 +332,9 @@ class SchemaBuilder(Component):
         entities: List[SchemaEntity],
         relations: Optional[List[SchemaRelation]] = None,
         potential_schema: Optional[List[Tuple[str, str, str]]] = None,
-    ) -> SchemaConfig:
+    ) -> GraphSchema:
         """
-        Asynchronously constructs and returns a SchemaConfig object.
+        Asynchronously constructs and returns a GraphSchema object.
 
         Args:
             entities (List[SchemaEntity]): List of Entity objects.
@@ -335,7 +342,7 @@ class SchemaBuilder(Component):
             potential_schema (Dict[str, List[str]]): Dictionary mapping entity names to Lists of relation names.
 
         Returns:
-            SchemaConfig: A configured schema object, constructed asynchronously.
+            GraphSchema: A configured schema object, constructed asynchronously.
         """
         return self.create_schema_model(entities, relations, potential_schema)
 
@@ -359,7 +366,7 @@ class SchemaFromTextExtractor(Component):
         self._llm_params: dict[str, Any] = llm_params or {}
 
     @validate_call
-    async def run(self, text: str, examples: str = "", **kwargs: Any) -> SchemaConfig:
+    async def run(self, text: str, examples: str = "", **kwargs: Any) -> GraphSchema:
         """
         Asynchronously extracts the schema from text and returns a SchemaConfig object.
 
@@ -430,36 +437,16 @@ class SchemaFromTextExtractor(Component):
                 f"Invalid schema format return from LLM: {exc}"
             ) from exc
 
-        return SchemaBuilder.create_schema_model(
+        return GraphSchema(
             entities=entities,
             relations=relations,
             potential_schema=potential_schema,
         )
 
 
-def normalize_schema_dict(schema_dict: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Normalize a user-provided schema dictionary to the canonical format expected by the pipeline.
+class SchemaFromGraphBuilder(BaseSchemaBuilder):
+    def __init__(self, driver: neo4j.Driver) -> None:
+        self.driver = driver
 
-    - Converts 'entities' and 'relations' from lists (of strings, dicts, or model objects) to dicts keyed by label.
-    - Ensures required keys ('entities', 'relations', 'potential_schema') are present.
-    - Does not mutate the input; returns a new dict.
-
-    Args:
-        schema_dict (dict): The user-provided schema dictionary, possibly with lists or missing keys.
-
-    Returns:
-        dict: A normalized schema dictionary with the correct structure for pipeline and Pydantic validation.
-    """
-    norm_schema_dict = dict(schema_dict)
-    for key, cls in [("entities", SchemaEntity), ("relations", SchemaRelation)]:
-        if key in norm_schema_dict and isinstance(norm_schema_dict[key], list):
-            norm_schema_dict[key] = {
-                cls.from_text_or_dict(e).label: cls.from_text_or_dict(e).model_dump()  # type: ignore[attr-defined]
-                for e in norm_schema_dict[key]
-            }
-    if "relations" not in norm_schema_dict:
-        norm_schema_dict["relations"] = {}
-    if "potential_schema" not in norm_schema_dict:
-        norm_schema_dict["potential_schema"] = None
-    return norm_schema_dict
+    async def run(self, **kwargs: Any) -> GraphSchema:
+        pass

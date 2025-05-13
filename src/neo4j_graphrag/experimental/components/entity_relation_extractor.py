@@ -25,7 +25,7 @@ from pydantic import ValidationError, validate_call
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.experimental.components.lexical_graph import LexicalGraphBuilder
-from neo4j_graphrag.experimental.components.schema import SchemaConfig
+from neo4j_graphrag.experimental.components.schema import GraphSchema, SchemaProperty
 from neo4j_graphrag.experimental.components.types import (
     DocumentInfo,
     LexicalGraphConfig,
@@ -209,7 +209,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         self.prompt_template = template
 
     async def extract_for_chunk(
-        self, schema: SchemaConfig, examples: str, chunk: TextChunk
+        self, schema: GraphSchema, examples: str, chunk: TextChunk
     ) -> Neo4jGraph:
         """Run entity extraction for a given text chunk."""
         prompt = self.prompt_template.format(
@@ -275,7 +275,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         self,
         sem: asyncio.Semaphore,
         chunk: TextChunk,
-        schema: SchemaConfig,
+        schema: GraphSchema,
         examples: str,
         lexical_graph_builder: Optional[LexicalGraphBuilder] = None,
     ) -> Neo4jGraph:
@@ -296,7 +296,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         chunks: TextChunks,
         document_info: Optional[DocumentInfo] = None,
         lexical_graph_config: Optional[LexicalGraphConfig] = None,
-        schema: Union[SchemaConfig, None] = None,
+        schema: Union[GraphSchema, None] = None,
         examples: str = "",
         **kwargs: Any,
     ) -> Neo4jGraph:
@@ -311,7 +311,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             chunks (TextChunks): List of text chunks to extract entities and relations from.
             document_info (Optional[DocumentInfo], optional): Document the chunks are coming from. Used in the lexical graph creation step.
             lexical_graph_config (Optional[LexicalGraphConfig], optional): Lexical graph configuration to customize node labels and relationship types in the lexical graph.
-            schema (SchemaConfig | None): Definition of the schema to guide the LLM in its extraction.
+            schema (GraphSchema | None): Definition of the schema to guide the LLM in its extraction.
             examples (str): Examples for few-shot learning in the prompt.
         """
         lexical_graph_builder = None
@@ -325,7 +325,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             lexical_graph = lexical_graph_result.graph
         elif lexical_graph_config:
             lexical_graph_builder = LexicalGraphBuilder(config=lexical_graph_config)
-        schema = schema or SchemaConfig(entities={}, relations={}, potential_schema=[])
+        schema = schema or GraphSchema(entities=[], relations=[], potential_schema=[])
         examples = examples or ""
         sem = asyncio.Semaphore(self.max_concurrency)
         tasks = [
@@ -344,7 +344,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         return graph
 
     def validate_chunk(
-        self, chunk_graph: Neo4jGraph, schema: SchemaConfig
+        self, chunk_graph: Neo4jGraph, schema: GraphSchema
     ) -> Neo4jGraph:
         """
         Perform validation after entity and relation extraction:
@@ -363,7 +363,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
     def _clean_graph(
         self,
         graph: Neo4jGraph,
-        schema: SchemaConfig,
+        schema: GraphSchema,
     ) -> Neo4jGraph:
         """
         Verify that the graph conforms to the provided schema.
@@ -385,7 +385,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         return Neo4jGraph(nodes=filtered_nodes, relationships=filtered_rels)
 
     def _enforce_nodes(
-        self, extracted_nodes: List[Neo4jNode], schema: SchemaConfig
+        self, extracted_nodes: List[Neo4jNode], schema: GraphSchema
     ) -> List[Neo4jNode]:
         """
         Filter extracted nodes to be conformant to the schema.
@@ -400,10 +400,10 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         valid_nodes = []
 
         for node in extracted_nodes:
-            schema_entity = schema.entities.get(node.label)
+            schema_entity = schema.entity_from_label(node.label)
             if not schema_entity:
                 continue
-            allowed_props = schema_entity.get("properties")
+            allowed_props = schema_entity.properties or []
             if allowed_props:
                 filtered_props = self._enforce_properties(
                     node.properties, allowed_props
@@ -426,7 +426,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         self,
         extracted_relationships: List[Neo4jRelationship],
         filtered_nodes: List[Neo4jNode],
-        schema: SchemaConfig,
+        schema: GraphSchema,
     ) -> List[Neo4jRelationship]:
         """
         Filter extracted nodes to be conformant to the schema.
@@ -451,12 +451,14 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         for rel in extracted_relationships:
             schema_relation = schema.relations.get(rel.type)
             if not schema_relation:
+                logger.debug(f"PRUNING:: {rel} as {rel.type} is not in the schema")
                 continue
 
             if (
                 rel.start_node_id not in valid_nodes
                 or rel.end_node_id not in valid_nodes
             ):
+                logger.debug(f"PRUNING:: {rel} as one of {rel.start_node_id} and {rel.end_node_id} is not in the graph")
                 continue
 
             start_label = valid_nodes[rel.start_node_id]
@@ -472,9 +474,10 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                 ) in potential_schema
 
                 if not tuple_valid and not reverse_tuple_valid:
+                    logger.debug(f"PRUNING:: {rel} not in the potential schema")
                     continue
 
-            allowed_props = schema_relation.get("properties")
+            allowed_props = schema_relation.properties or []
             if allowed_props:
                 filtered_props = self._enforce_properties(rel.properties, allowed_props)
             else:
@@ -493,13 +496,13 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         return valid_rels
 
     def _enforce_properties(
-        self, properties: Dict[str, Any], valid_properties: List[Dict[str, Any]]
+        self, properties: Dict[str, Any], valid_properties: List[SchemaProperty]
     ) -> Dict[str, Any]:
         """
         Filter properties.
         Keep only those that exist in schema (i.e., valid properties).
         """
-        valid_prop_names = {prop["name"] for prop in valid_properties}
+        valid_prop_names = {prop.name for prop in valid_properties}
         return {
             key: value for key, value in properties.items() if key in valid_prop_names
         }
