@@ -416,12 +416,19 @@ class SchemaFromTextExtractor(Component):
             "potential_schema"
         )
 
-        entities: List[SchemaEntity] = [SchemaEntity(**e) for e in extracted_entities]
-        relations: Optional[List[SchemaRelation]] = (
-            [SchemaRelation(**r) for r in extracted_relations]
-            if extracted_relations
-            else None
-        )
+        try:
+            entities: List[SchemaEntity] = [
+                SchemaEntity(**e) for e in extracted_entities
+            ]
+            relations: Optional[List[SchemaRelation]] = (
+                [SchemaRelation(**r) for r in extracted_relations]
+                if extracted_relations
+                else None
+            )
+        except ValidationError as exc:
+            raise SchemaValidationError(
+                f"Invalid schema format return from LLM: {exc}"
+            ) from exc
 
         return SchemaBuilder.create_schema_model(
             entities=entities,
