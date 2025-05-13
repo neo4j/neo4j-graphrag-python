@@ -2,6 +2,10 @@
 
 ## Next
 
+### Fixed
+
+- Fixed a bug where `spacy` and `rapidfuzz` needed to be installed even if not using the relevant entity resolvers.
+
 ## 1.7.0
 
 ### Added
