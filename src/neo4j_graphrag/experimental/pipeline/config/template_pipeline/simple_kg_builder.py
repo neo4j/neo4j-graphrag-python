@@ -12,7 +12,18 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Any, ClassVar, Literal, Optional, Sequence, Union, List, Tuple
+from typing import (
+    Any,
+    ClassVar,
+    Literal,
+    Optional,
+    Sequence,
+    Union,
+    List,
+    Tuple,
+    Dict,
+    cast,
+)
 import logging
 import warnings
 
@@ -37,6 +48,7 @@ from neo4j_graphrag.experimental.components.schema import (
     SchemaEntity,
     SchemaRelation,
     SchemaFromTextExtractor,
+    normalize_schema_dict,
 )
 from neo4j_graphrag.experimental.components.text_splitters.base import TextSplitter
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
@@ -96,6 +108,14 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     text_splitter: Optional[ComponentType] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @model_validator(mode="before")
+    def normalize_schema_field(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+        # Normalize the 'schema' field if it is a dict
+        schema = data.get("schema")
+        if isinstance(schema, dict):
+            data["schema"] = normalize_schema_dict(schema)
+        return data
 
     @model_validator(mode="after")
     def handle_schema_precedence(self) -> Self:
@@ -209,14 +229,17 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
 
                 potential_schema = self.schema_.potential_schema
             else:
-                # extract from dictionary
                 entities = [
                     SchemaEntity.from_text_or_dict(e)
-                    for e in self.schema_.get("entities", [])
+                    for e in cast(
+                        Dict[str, Any], self.schema_.get("entities", {})
+                    ).values()
                 ]
                 relations = [
                     SchemaRelation.from_text_or_dict(r)
-                    for r in self.schema_.get("relations", [])
+                    for r in cast(
+                        Dict[str, Any], self.schema_.get("relations", {})
+                    ).values()
                 ]
                 potential_schema = self.schema_.get("potential_schema")
         else:

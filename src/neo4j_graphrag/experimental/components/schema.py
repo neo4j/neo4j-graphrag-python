@@ -424,3 +424,31 @@ class SchemaFromTextExtractor(Component):
             relations=relations,
             potential_schema=potential_schema,
         )
+
+
+def normalize_schema_dict(schema_dict: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Normalize a user-provided schema dictionary to the canonical format expected by the pipeline.
+
+    - Converts 'entities' and 'relations' from lists (of strings, dicts, or model objects) to dicts keyed by label.
+    - Ensures required keys ('entities', 'relations', 'potential_schema') are present.
+    - Does not mutate the input; returns a new dict.
+
+    Args:
+        schema_dict (dict): The user-provided schema dictionary, possibly with lists or missing keys.
+
+    Returns:
+        dict: A normalized schema dictionary with the correct structure for pipeline and Pydantic validation.
+    """
+    norm_schema_dict = dict(schema_dict)
+    for key, cls in [("entities", SchemaEntity), ("relations", SchemaRelation)]:
+        if key in norm_schema_dict and isinstance(norm_schema_dict[key], list):
+            norm_schema_dict[key] = {
+                cls.from_text_or_dict(e).label: cls.from_text_or_dict(e).model_dump()  # type: ignore[attr-defined]
+                for e in norm_schema_dict[key]
+            }
+    if "relations" not in norm_schema_dict:
+        norm_schema_dict["relations"] = {}
+    if "potential_schema" not in norm_schema_dict:
+        norm_schema_dict["potential_schema"] = None
+    return norm_schema_dict
