@@ -6,6 +6,11 @@
 
 - Fixed a bug where `spacy` and `rapidfuzz` needed to be installed even if not using the relevant entity resolvers.
 
+### Changed
+
+- Strict mode in `SimpleKGPipeline`: now properties and relationships are pruned only if they are defined in the input schema.
+
+
 ## 1.7.0
 
 ### Added
