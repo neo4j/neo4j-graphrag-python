@@ -9,7 +9,7 @@ Note: This example requires an OpenAI API key to be set in the .env file.
 
 import asyncio
 import logging
-import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 from neo4j_graphrag.experimental.components.schema import (
@@ -50,11 +50,10 @@ with an estimated valuation of $500 million.
 """
 
 # Define the file paths for saving the schema
-OUTPUT_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data"
-)
-JSON_FILE_PATH = os.path.join(OUTPUT_DIR, "extracted_schema.json")
-YAML_FILE_PATH = os.path.join(OUTPUT_DIR, "extracted_schema.yaml")
+root_dir = Path(__file__).parents[4]
+OUTPUT_DIR = str(root_dir / "data")
+JSON_FILE_PATH = str(root_dir / "data" / "extracted_schema.json")
+YAML_FILE_PATH = str(root_dir / "data" / "extracted_schema.yaml")
 
 
 async def extract_and_save_schema() -> None:
@@ -82,7 +81,7 @@ async def extract_and_save_schema() -> None:
         inferred_schema = await schema_extractor.run(text=TEXT)
 
         # Ensure the output directory exists
-        os.makedirs(OUTPUT_DIR, exist_ok=True)
+        Path(OUTPUT_DIR).mkdir(exist_ok=True)
 
         print(f"Saving schema to JSON file: {JSON_FILE_PATH}")
         # Save the schema to JSON file

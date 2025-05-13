@@ -8,6 +8,7 @@ Note: This example requires an OpenAI API key to be set in the .env file.
 import asyncio
 import logging
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 import neo4j
 
@@ -22,11 +23,11 @@ load_dotenv()
 logging.basicConfig()
 logging.getLogger("neo4j_graphrag").setLevel(logging.INFO)
 
-# PDF file path - replace with your own PDF file
-DATA_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data"
+# PDF file path
+root_dir = Path(__file__).parents[2]
+PDF_FILE = str(
+    root_dir / "data" / "Harry Potter and the Chamber of Secrets Summary.pdf"
 )
-PDF_FILE = os.path.join(DATA_DIR, "Harry Potter and the Death Hallows Summary.pdf")
 
 
 async def run_kg_pipeline_with_auto_schema() -> None:
@@ -78,10 +79,12 @@ async def run_kg_pipeline_with_auto_schema() -> None:
 
 async def main() -> None:
     """Run the example."""
-    os.makedirs(DATA_DIR, exist_ok=True)
+    # Create data directory if it doesn't exist
+    data_dir = root_dir / "data"
+    data_dir.mkdir(exist_ok=True)
 
     # Check if the PDF file exists
-    if not os.path.exists(PDF_FILE):
+    if not Path(PDF_FILE).exists():
         print(f"Warning: PDF file not found at {PDF_FILE}")
         print("Please replace with a valid PDF file path.")
         return
