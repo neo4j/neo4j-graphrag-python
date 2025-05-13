@@ -4,11 +4,15 @@
 
 ### Added
 
-- Added support for automatic schema extraction from text using LLMs. In the `SimpleKGPipeline`, when the user provides no schema, the automatic schema extraction is enabled by default. 
+- Added support for automatic schema extraction from text using LLMs. In the `SimpleKGPipeline`, when the user provides no schema, the automatic schema extraction is enabled by default.
 
 ### Fixed
 
 - Fixed a bug where `spacy` and `rapidfuzz` needed to be installed even if not using the relevant entity resolvers.
+
+### Changed
+
+- Strict mode in `SimpleKGPipeline`: now properties and relationships are pruned only if they are defined in the input schema.
 
 
 ## 1.7.0

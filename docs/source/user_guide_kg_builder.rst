@@ -901,6 +901,13 @@ Any relation whose start node or end node does not conform to the provided tuple
 If a relation start/end nodes are valid but the direction is incorrect, the latter will be inverted.
 If a node is left with no properties, it will be also pruned.
 
+.. note::
+
+    If the input schema lacks a certain type of information, pruning is skipped.
+    For example, if an entity is defined only by a label and has no properties,
+    property pruning is not performed and all properties returned by the LLM are kept.
+
+
 .. warning::
 
     Note that if the schema enforcement mode is on but the schema is not provided, no schema enforcement will be applied.
