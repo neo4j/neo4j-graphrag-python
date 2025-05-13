@@ -98,10 +98,8 @@ List of extra dependencies:
     - **pinecone**: store vectors in Pinecone
     - **qdrant**: store vectors in Qdrant
 - **experimental**: experimental features mainly from the Knowledge Graph creation pipelines.
-- nlp:
-   - **spaCy**: load spaCy trained models for nlp pipelines, used by `SpaCySemanticMatchResolver` component from the Knowledge Graph creation pipelines.
-- fuzzy-matching:
-   - **rapidfuzz**: apply fuzzy matching using string similarity, used by `FuzzyMatchResolver` component from the Knowledge Graph creation pipelines.
+- **nlp**: installs spaCy for nlp pipelines, used by `SpaCySemanticMatchResolver` component from the Knowledge Graph creation pipelines.
+- **fuzzy-matching**: installs **rapidfuzz** to fuzzy matching using string similarity, used by `FuzzyMatchResolver` component from the Knowledge Graph creation pipelines.
 
 ********
 Examples
