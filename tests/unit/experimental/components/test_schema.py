@@ -18,7 +18,7 @@ import json
 from unittest.mock import AsyncMock
 
 import pytest
-from neo4j_graphrag.exceptions import SchemaValidationError
+from neo4j_graphrag.exceptions import SchemaValidationError, SchemaExtractionError
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
     SchemaEntity,
@@ -544,7 +544,7 @@ async def test_schema_from_text_run_invalid_json(
     mock_llm.ainvoke.return_value = LLMResponse(content=invalid_schema_json)
 
     # verify that running with invalid JSON raises a ValueError
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(SchemaExtractionError) as exc_info:
         await schema_from_text.run(text="Sample text for extraction")
 
     assert "not valid JSON" in str(exc_info.value)

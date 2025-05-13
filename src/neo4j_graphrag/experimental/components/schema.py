@@ -23,7 +23,11 @@ from pathlib import Path
 from pydantic import BaseModel, ValidationError, model_validator, validate_call
 from typing_extensions import Self
 
-from neo4j_graphrag.exceptions import SchemaValidationError, LLMGenerationError
+from neo4j_graphrag.exceptions import (
+    SchemaValidationError,
+    LLMGenerationError,
+    SchemaExtractionError,
+)
 from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
 from neo4j_graphrag.experimental.pipeline.types.schema import (
     EntityInputType,
@@ -391,16 +395,16 @@ class SchemaFromTextExtractor(Component):
                     )
                     extracted_schema = {}
                 else:
-                    raise ValueError(
+                    raise SchemaExtractionError(
                         f"Expected a dictionary or list of dictionaries, but got list containing: {type(extracted_schema[0])}"
                     )
             # any other types
             else:
-                raise ValueError(
+                raise SchemaExtractionError(
                     f"Unexpected schema format returned from LLM: {type(extracted_schema)}. Expected a dictionary or list of dictionaries."
                 )
         except json.JSONDecodeError as exc:
-            raise ValueError("LLM response is not valid JSON.") from exc
+            raise SchemaExtractionError("LLM response is not valid JSON.") from exc
 
         extracted_entities: List[Dict[str, Any]] = (
             extracted_schema.get("entities") or []

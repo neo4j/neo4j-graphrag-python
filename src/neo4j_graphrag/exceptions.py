@@ -116,6 +116,12 @@ class SchemaValidationError(Neo4jGraphRagError):
     pass
 
 
+class SchemaExtractionError(Neo4jGraphRagError):
+    """Exception raised for errors in automatic schema extraction."""
+
+    pass
+
+
 class PdfLoaderError(Neo4jGraphRagError):
     """Custom exception for errors in PDF loader."""
 
