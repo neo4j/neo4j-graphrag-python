@@ -200,3 +200,65 @@ Input text:
         text: str = "",
     ) -> str:
         return super().format(text=text, schema=schema, examples=examples)
+
+
+class SchemaExtractionTemplate(PromptTemplate):
+    DEFAULT_TEMPLATE = """
+You are a top-tier algorithm designed for extracting a labeled property graph schema in 
+structured formats.
+
+Generate a generalized graph schema based on the input text. Identify key entity types,
+their relationship types, and property types.
+
+IMPORTANT RULES:
+1. Return only abstract schema information, not concrete instances.
+2. Use singular PascalCase labels for entity types (e.g., Person, Company, Product).
+3. Use UPPER_SNAKE_CASE for relationship types (e.g., WORKS_FOR, MANAGES).
+4. Include property definitions only when the type can be confidently inferred, otherwise omit them.
+5. When defining potential_schema, ensure that every entity and relation mentioned exists in your entities and relations lists.
+6. Do not create entity types that aren't clearly mentioned in the text.
+7. Keep your schema minimal and focused on clearly identifiable patterns in the text.
+
+Accepted property types are: BOOLEAN, DATE, DURATION, FLOAT, INTEGER, LIST, 
+LOCAL_DATETIME, LOCAL_TIME, POINT, STRING, ZONED_DATETIME, ZONED_TIME.
+
+Return a valid JSON object that follows this precise structure:
+{{
+  "entities": [
+    {{
+      "label": "Person",
+      "properties": [
+        {{
+          "name": "name",
+          "type": "STRING"
+        }}
+      ]
+    }},
+    ...
+  ],
+  "relations": [
+    {{
+      "label": "WORKS_FOR"
+    }},
+    ...
+  ],
+  "potential_schema": [
+    ["Person", "WORKS_FOR", "Company"],
+    ...
+  ]
+}}
+
+Examples:
+{examples}
+
+Input text:
+{text}
+"""
+    EXPECTED_INPUTS = ["text"]
+
+    def format(
+        self,
+        text: str = "",
+        examples: str = "",
+    ) -> str:
+        return super().format(text=text, examples=examples)

@@ -14,15 +14,26 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import json
+from unittest.mock import AsyncMock
+
 import pytest
-from neo4j_graphrag.exceptions import SchemaValidationError
+from neo4j_graphrag.exceptions import SchemaValidationError, SchemaExtractionError
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
     SchemaEntity,
     SchemaProperty,
     SchemaRelation,
+    SchemaFromTextExtractor,
+    SchemaConfig,
 )
 from pydantic import ValidationError
+import os
+import tempfile
+import yaml
+
+from neo4j_graphrag.generation import PromptTemplate
+from neo4j_graphrag.llm.types import LLMResponse
 
 
 @pytest.fixture
@@ -91,6 +102,18 @@ def potential_schema_with_invalid_relation() -> list[tuple[str, str, str]]:
 @pytest.fixture
 def schema_builder() -> SchemaBuilder:
     return SchemaBuilder()
+
+
+@pytest.fixture
+def schema_config(
+    schema_builder: SchemaBuilder,
+    valid_entities: list[SchemaEntity],
+    valid_relations: list[SchemaRelation],
+    potential_schema: list[tuple[str, str, str]],
+) -> SchemaConfig:
+    return schema_builder.create_schema_model(
+        valid_entities, valid_relations, potential_schema
+    )
 
 
 def test_create_schema_model_valid_data(
@@ -419,3 +442,304 @@ def test_create_schema_model_missing_relations(
     assert "Relations must also be provided when using a potential schema." in str(
         exc_info.value
     ), "Should fail due to missing relations"
+
+
+@pytest.fixture
+def mock_llm() -> AsyncMock:
+    mock = AsyncMock()
+    mock.ainvoke = AsyncMock()
+    return mock
+
+
+@pytest.fixture
+def valid_schema_json() -> str:
+    return """
+    {
+        "entities": [
+            {
+                "label": "Person",
+                "properties": [
+                    {"name": "name", "type": "STRING"}
+                ]
+            },
+            {
+                "label": "Organization",
+                "properties": [
+                    {"name": "name", "type": "STRING"}
+                ]
+            }
+        ],
+        "relations": [
+            {
+                "label": "WORKS_FOR",
+                "properties": [
+                    {"name": "since", "type": "DATE"}
+                ]
+            }
+        ],
+        "potential_schema": [
+            ["Person", "WORKS_FOR", "Organization"]
+        ]
+    }
+    """
+
+
+@pytest.fixture
+def invalid_schema_json() -> str:
+    return """
+    {
+        "entities": [
+            {
+                "label": "Person",
+            },
+        ],
+        invalid json content
+    }
+    """
+
+
+@pytest.fixture
+def schema_from_text(mock_llm: AsyncMock) -> SchemaFromTextExtractor:
+    return SchemaFromTextExtractor(llm=mock_llm)
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_run_valid_response(
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+    valid_schema_json: str,
+) -> None:
+    # configure the mock LLM to return a valid schema JSON
+    mock_llm.ainvoke.return_value = LLMResponse(content=valid_schema_json)
+
+    # run the schema extraction
+    schema_config = await schema_from_text.run(text="Sample text for extraction")
+
+    # verify the LLM was called with a prompt
+    mock_llm.ainvoke.assert_called_once()
+    prompt_arg = mock_llm.ainvoke.call_args[0][0]
+    assert isinstance(prompt_arg, str)
+    assert "Sample text for extraction" in prompt_arg
+
+    # verify the schema was correctly extracted
+    assert len(schema_config.entities) == 2
+    assert "Person" in schema_config.entities
+    assert "Organization" in schema_config.entities
+
+    assert schema_config.relations is not None
+    assert "WORKS_FOR" in schema_config.relations
+
+    assert schema_config.potential_schema is not None
+    assert len(schema_config.potential_schema) == 1
+    assert schema_config.potential_schema[0] == ("Person", "WORKS_FOR", "Organization")
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_run_invalid_json(
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+    invalid_schema_json: str,
+) -> None:
+    # configure the mock LLM to return invalid JSON
+    mock_llm.ainvoke.return_value = LLMResponse(content=invalid_schema_json)
+
+    # verify that running with invalid JSON raises a ValueError
+    with pytest.raises(SchemaExtractionError) as exc_info:
+        await schema_from_text.run(text="Sample text for extraction")
+
+    assert "not valid JSON" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_custom_template(
+    mock_llm: AsyncMock, valid_schema_json: str
+) -> None:
+    # create a  custom template
+    custom_prompt = "This is a custom prompt with text: {text}"
+    custom_template = PromptTemplate(template=custom_prompt, expected_inputs=["text"])
+
+    # create SchemaFromTextExtractor with the custom template
+    schema_from_text = SchemaFromTextExtractor(
+        llm=mock_llm, prompt_template=custom_template
+    )
+
+    # configure mock LLM to return valid JSON and capture the prompt that was sent to it
+    mock_llm.ainvoke.return_value = LLMResponse(content=valid_schema_json)
+
+    # run the schema extraction
+    await schema_from_text.run(text="Sample text")
+
+    # verify the custom prompt was passed to the LLM
+    prompt_sent_to_llm = mock_llm.ainvoke.call_args[0][0]
+    assert "This is a custom prompt with text" in prompt_sent_to_llm
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_llm_params(
+    mock_llm: AsyncMock, valid_schema_json: str
+) -> None:
+    # configure custom LLM parameters
+    llm_params = {"temperature": 0.1, "max_tokens": 500}
+
+    # create SchemaFromTextExtractor with custom LLM parameters
+    schema_from_text = SchemaFromTextExtractor(llm=mock_llm, llm_params=llm_params)
+
+    # configure the mock LLM to return a valid schema JSON
+    mock_llm.ainvoke.return_value = LLMResponse(content=valid_schema_json)
+
+    # run the schema extraction
+    await schema_from_text.run(text="Sample text")
+
+    # verify the LLM was called with the custom parameters
+    mock_llm.ainvoke.assert_called_once()
+    call_kwargs = mock_llm.ainvoke.call_args[1]
+    assert call_kwargs["temperature"] == 0.1
+    assert call_kwargs["max_tokens"] == 500
+
+
+@pytest.mark.asyncio
+async def test_schema_config_store_as_json(schema_config: SchemaConfig) -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # create file path
+        json_path = os.path.join(temp_dir, "schema.json")
+
+        # store the schema config
+        schema_config.store_as_json(json_path)
+
+        # verify the file exists and has content
+        assert os.path.exists(json_path)
+        assert os.path.getsize(json_path) > 0
+
+        # verify the content is valid JSON and contains expected data
+        with open(json_path, "r") as f:
+            data = json.load(f)
+            assert "entities" in data
+            assert "PERSON" in data["entities"]
+            assert "properties" in data["entities"]["PERSON"]
+            assert "description" in data["entities"]["PERSON"]
+            assert (
+                data["entities"]["PERSON"]["description"]
+                == "An individual human being."
+            )
+
+
+@pytest.mark.asyncio
+async def test_schema_config_store_as_yaml(schema_config: SchemaConfig) -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Create file path
+        yaml_path = os.path.join(temp_dir, "schema.yaml")
+
+        # Store the schema config
+        schema_config.store_as_yaml(yaml_path)
+
+        # Verify the file exists and has content
+        assert os.path.exists(yaml_path)
+        assert os.path.getsize(yaml_path) > 0
+
+        # Verify the content is valid YAML and contains expected data
+        with open(yaml_path, "r") as f:
+            data = yaml.safe_load(f)
+            assert "entities" in data
+            assert "PERSON" in data["entities"]
+            assert "properties" in data["entities"]["PERSON"]
+            assert "description" in data["entities"]["PERSON"]
+            assert (
+                data["entities"]["PERSON"]["description"]
+                == "An individual human being."
+            )
+
+
+@pytest.mark.asyncio
+async def test_schema_config_from_file(schema_config: SchemaConfig) -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # create file paths with different extensions
+        json_path = os.path.join(temp_dir, "schema.json")
+        yaml_path = os.path.join(temp_dir, "schema.yaml")
+        yml_path = os.path.join(temp_dir, "schema.yml")
+
+        # store the schema config in the different formats
+        schema_config.store_as_json(json_path)
+        schema_config.store_as_yaml(yaml_path)
+        schema_config.store_as_yaml(yml_path)
+
+        # load using from_file which should detect the format based on extension
+        json_schema = SchemaConfig.from_file(json_path)
+        yaml_schema = SchemaConfig.from_file(yaml_path)
+        yml_schema = SchemaConfig.from_file(yml_path)
+
+        # simple verification that the objects were loaded correctly
+        assert isinstance(json_schema, SchemaConfig)
+        assert isinstance(yaml_schema, SchemaConfig)
+        assert isinstance(yml_schema, SchemaConfig)
+
+        # verify basic structure is intact
+        assert "entities" in json_schema.model_dump()
+        assert "entities" in yaml_schema.model_dump()
+        assert "entities" in yml_schema.model_dump()
+
+        # verify an unsupported extension raises the correct error
+        txt_path = os.path.join(temp_dir, "schema.txt")
+        schema_config.store_as_json(txt_path)  # Store as JSON but with .txt extension
+
+        with pytest.raises(ValueError, match="Unsupported file format"):
+            SchemaConfig.from_file(txt_path)
+
+
+@pytest.fixture
+def valid_schema_json_array() -> str:
+    return """
+    [
+        {
+            "entities": [
+                {
+                    "label": "Person",
+                    "properties": [
+                        {"name": "name", "type": "STRING"}
+                    ]
+                },
+                {
+                    "label": "Organization",
+                    "properties": [
+                        {"name": "name", "type": "STRING"}
+                    ]
+                }
+            ],
+            "relations": [
+                {
+                    "label": "WORKS_FOR",
+                    "properties": [
+                        {"name": "since", "type": "DATE"}
+                    ]
+                }
+            ],
+            "potential_schema": [
+                ["Person", "WORKS_FOR", "Organization"]
+            ]
+        }
+    ]
+    """
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_run_valid_json_array(
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+    valid_schema_json_array: str,
+) -> None:
+    # configure the mock LLM to return a valid JSON array
+    mock_llm.ainvoke.return_value = LLMResponse(content=valid_schema_json_array)
+
+    # run the schema extraction
+    schema_config = await schema_from_text.run(text="Sample text for extraction")
+
+    # verify the schema was correctly extracted from the array
+    assert len(schema_config.entities) == 2
+    assert "Person" in schema_config.entities
+    assert "Organization" in schema_config.entities
+
+    assert schema_config.relations is not None
+    assert "WORKS_FOR" in schema_config.relations
+
+    assert schema_config.potential_schema is not None
+    assert len(schema_config.potential_schema) == 1
+    assert schema_config.potential_schema[0] == ("Person", "WORKS_FOR", "Organization")

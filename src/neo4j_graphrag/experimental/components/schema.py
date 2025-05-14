@@ -14,17 +14,27 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, Optional, Tuple
+import json
+import yaml
+import logging
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+from pathlib import Path
 
 from pydantic import BaseModel, ValidationError, model_validator, validate_call
 from typing_extensions import Self
 
-from neo4j_graphrag.exceptions import SchemaValidationError
+from neo4j_graphrag.exceptions import (
+    SchemaValidationError,
+    LLMGenerationError,
+    SchemaExtractionError,
+)
 from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
 from neo4j_graphrag.experimental.pipeline.types.schema import (
     EntityInputType,
     RelationInputType,
 )
+from neo4j_graphrag.generation import SchemaExtractionTemplate, PromptTemplate
+from neo4j_graphrag.llm import LLMInterface
 
 
 class SchemaProperty(BaseModel):
@@ -122,6 +132,98 @@ class SchemaConfig(DataModel):
                     )
 
         return data
+
+    def store_as_json(self, file_path: str) -> None:
+        """
+        Save the schema configuration to a JSON file.
+
+        Args:
+            file_path (str): The path where the schema configuration will be saved.
+        """
+        with open(file_path, "w") as f:
+            json.dump(self.model_dump(), f, indent=2)
+
+    def store_as_yaml(self, file_path: str) -> None:
+        """
+        Save the schema configuration to a YAML file.
+
+        Args:
+            file_path (str): The path where the schema configuration will be saved.
+        """
+        # create a copy of the data and convert tuples to lists for YAML compatibility
+        data = self.model_dump()
+        if data.get("potential_schema"):
+            data["potential_schema"] = [list(item) for item in data["potential_schema"]]
+
+        with open(file_path, "w") as f:
+            yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+
+    @classmethod
+    def from_file(cls, file_path: Union[str, Path]) -> Self:
+        """
+        Load a schema configuration from a file (either JSON or YAML).
+
+        The file format is automatically detected based on the file extension.
+
+        Args:
+            file_path (Union[str, Path]): The path to the schema configuration file.
+
+        Returns:
+            SchemaConfig: The loaded schema configuration.
+        """
+        file_path = Path(file_path)
+
+        if not file_path.exists():
+            raise FileNotFoundError(f"Schema file not found: {file_path}")
+
+        if file_path.suffix.lower() in [".json"]:
+            return cls.from_json(file_path)
+        elif file_path.suffix.lower() in [".yaml", ".yml"]:
+            return cls.from_yaml(file_path)
+        else:
+            raise ValueError(
+                f"Unsupported file format: {file_path.suffix}. Use .json, .yaml, or .yml"
+            )
+
+    @classmethod
+    def from_json(cls, file_path: Union[str, Path]) -> Self:
+        """
+        Load a schema configuration from a JSON file.
+
+        Args:
+            file_path (Union[str, Path]): The path to the JSON schema configuration file.
+
+        Returns:
+            SchemaConfig: The loaded schema configuration.
+        """
+        with open(file_path, "r") as f:
+            try:
+                data = json.load(f)
+                return cls.model_validate(data)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"Invalid JSON file: {e}")
+            except ValidationError as e:
+                raise SchemaValidationError(f"Schema validation failed: {e}")
+
+    @classmethod
+    def from_yaml(cls, file_path: Union[str, Path]) -> Self:
+        """
+        Load a schema configuration from a YAML file.
+
+        Args:
+            file_path (Union[str, Path]): The path to the YAML schema configuration file.
+
+        Returns:
+            SchemaConfig: The loaded schema configuration.
+        """
+        with open(file_path, "r") as f:
+            try:
+                data = yaml.safe_load(f)
+                return cls.model_validate(data)
+            except yaml.YAMLError as e:
+                raise ValueError(f"Invalid YAML file: {e}")
+            except ValidationError as e:
+                raise SchemaValidationError(f"Schema validation failed: {e}")
 
 
 class SchemaBuilder(Component):
@@ -236,3 +338,128 @@ class SchemaBuilder(Component):
             SchemaConfig: A configured schema object, constructed asynchronously.
         """
         return self.create_schema_model(entities, relations, potential_schema)
+
+
+class SchemaFromTextExtractor(Component):
+    """
+    A component for constructing SchemaConfig objects from the output of an LLM after
+    automatic schema extraction from text.
+    """
+
+    def __init__(
+        self,
+        llm: LLMInterface,
+        prompt_template: Optional[PromptTemplate] = None,
+        llm_params: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        self._llm: LLMInterface = llm
+        self._prompt_template: PromptTemplate = (
+            prompt_template or SchemaExtractionTemplate()
+        )
+        self._llm_params: dict[str, Any] = llm_params or {}
+
+    @validate_call
+    async def run(self, text: str, examples: str = "", **kwargs: Any) -> SchemaConfig:
+        """
+        Asynchronously extracts the schema from text and returns a SchemaConfig object.
+
+        Args:
+            text (str): the text from which the schema will be inferred.
+            examples (str): examples to guide schema extraction.
+        Returns:
+            SchemaConfig: A configured schema object, extracted automatically and
+            constructed asynchronously.
+        """
+        prompt: str = self._prompt_template.format(text=text, examples=examples)
+
+        try:
+            response = await self._llm.ainvoke(prompt, **self._llm_params)
+            content: str = response.content
+        except LLMGenerationError as e:
+            # Re-raise the LLMGenerationError
+            raise LLMGenerationError("Failed to generate schema from text") from e
+
+        try:
+            extracted_schema: Dict[str, Any] = json.loads(content)
+
+            # handle dictionary
+            if isinstance(extracted_schema, dict):
+                pass  # Keep as is
+            # handle list
+            elif isinstance(extracted_schema, list):
+                if len(extracted_schema) > 0 and isinstance(extracted_schema[0], dict):
+                    extracted_schema = extracted_schema[0]
+                elif len(extracted_schema) == 0:
+                    logging.warning(
+                        "LLM returned an empty list for schema. Falling back to empty schema."
+                    )
+                    extracted_schema = {}
+                else:
+                    raise SchemaExtractionError(
+                        f"Expected a dictionary or list of dictionaries, but got list containing: {type(extracted_schema[0])}"
+                    )
+            # any other types
+            else:
+                raise SchemaExtractionError(
+                    f"Unexpected schema format returned from LLM: {type(extracted_schema)}. Expected a dictionary or list of dictionaries."
+                )
+        except json.JSONDecodeError as exc:
+            raise SchemaExtractionError("LLM response is not valid JSON.") from exc
+
+        extracted_entities: List[Dict[str, Any]] = (
+            extracted_schema.get("entities") or []
+        )
+        extracted_relations: Optional[List[Dict[str, Any]]] = extracted_schema.get(
+            "relations"
+        )
+        potential_schema: Optional[List[Tuple[str, str, str]]] = extracted_schema.get(
+            "potential_schema"
+        )
+
+        try:
+            entities: List[SchemaEntity] = [
+                SchemaEntity(**e) for e in extracted_entities
+            ]
+            relations: Optional[List[SchemaRelation]] = (
+                [SchemaRelation(**r) for r in extracted_relations]
+                if extracted_relations
+                else None
+            )
+        except ValidationError as exc:
+            raise SchemaValidationError(
+                f"Invalid schema format return from LLM: {exc}"
+            ) from exc
+
+        return SchemaBuilder.create_schema_model(
+            entities=entities,
+            relations=relations,
+            potential_schema=potential_schema,
+        )
+
+
+def normalize_schema_dict(schema_dict: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Normalize a user-provided schema dictionary to the canonical format expected by the pipeline.
+
+    - Converts 'entities' and 'relations' from lists (of strings, dicts, or model objects) to dicts keyed by label.
+    - Ensures required keys ('entities', 'relations', 'potential_schema') are present.
+    - Does not mutate the input; returns a new dict.
+
+    Args:
+        schema_dict (dict): The user-provided schema dictionary, possibly with lists or missing keys.
+
+    Returns:
+        dict: A normalized schema dictionary with the correct structure for pipeline and Pydantic validation.
+    """
+    norm_schema_dict = dict(schema_dict)
+    for key, cls in [("entities", SchemaEntity), ("relations", SchemaRelation)]:
+        if key in norm_schema_dict and isinstance(norm_schema_dict[key], list):
+            norm_schema_dict[key] = {
+                cls.from_text_or_dict(e).label: cls.from_text_or_dict(e).model_dump()  # type: ignore[attr-defined]
+                for e in norm_schema_dict[key]
+            }
+    if "relations" not in norm_schema_dict:
+        norm_schema_dict["relations"] = {}
+    if "potential_schema" not in norm_schema_dict:
+        norm_schema_dict["potential_schema"] = None
+    return norm_schema_dict

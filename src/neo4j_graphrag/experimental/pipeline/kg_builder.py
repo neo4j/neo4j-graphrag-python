@@ -15,7 +15,8 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, Sequence, Union
+from typing import List, Optional, Sequence, Union, Any
+import logging
 
 import neo4j
 from pydantic import ValidationError
@@ -42,6 +43,9 @@ from neo4j_graphrag.experimental.pipeline.types.schema import (
 )
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 from neo4j_graphrag.llm.base import LLMInterface
+from neo4j_graphrag.experimental.components.schema import SchemaConfig
+
+logger = logging.getLogger(__name__)
 
 
 class SimpleKGPipeline:
@@ -53,17 +57,20 @@ class SimpleKGPipeline:
         llm (LLMInterface): An instance of an LLM to use for entity and relation extraction.
         driver (neo4j.Driver): A Neo4j driver instance for database connection.
         embedder (Embedder): An instance of an embedder used to generate chunk embeddings from text chunks.
-        entities (Optional[List[Union[str, dict[str, str], SchemaEntity]]]): A list of either:
+        schema (Optional[Union[SchemaConfig, dict[str, list]]]): A schema configuration defining entities,
+                                                   relations, and potential schema relationships.
+                                                   This is the recommended way to provide schema information.
+        entities (Optional[List[Union[str, dict[str, str], SchemaEntity]]]): DEPRECATED. A list of either:
 
             - str: entity labels
             - dict: following the SchemaEntity schema, ie with label, description and properties keys
 
-        relations (Optional[List[Union[str, dict[str, str], SchemaRelation]]]): A list of either:
+        relations (Optional[List[Union[str, dict[str, str], SchemaRelation]]]): DEPRECATED. A list of either:
 
             - str: relation label
             - dict: following the SchemaRelation schema, ie with label, description and properties keys
 
-        potential_schema (Optional[List[tuple]]): A list of potential schema relationships.
+        potential_schema (Optional[List[tuple]]): DEPRECATED. A list of potential schema relationships.
         enforce_schema (str): Validation of the extracted entities/rels against the provided schema. Defaults to "NONE", where schema enforcement will be ignored even if the schema is provided. Possible values "None" or "STRICT".
         from_pdf (bool): Determines whether to include the PdfLoader in the pipeline.
                          If True, expects `file_path` input in `run` methods.
@@ -85,6 +92,7 @@ class SimpleKGPipeline:
         entities: Optional[Sequence[EntityInputType]] = None,
         relations: Optional[Sequence[RelationInputType]] = None,
         potential_schema: Optional[List[tuple[str, str, str]]] = None,
+        schema: Optional[Union[SchemaConfig, dict[str, list[Any]]]] = None,
         enforce_schema: str = "NONE",
         from_pdf: bool = True,
         text_splitter: Optional[TextSplitter] = None,
@@ -105,6 +113,7 @@ class SimpleKGPipeline:
                 entities=entities or [],
                 relations=relations or [],
                 potential_schema=potential_schema,
+                schema=schema,
                 enforce_schema=SchemaEnforcementMode(enforce_schema),
                 from_pdf=from_pdf,
                 pdf_loader=ComponentType(pdf_loader) if pdf_loader else None,

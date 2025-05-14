@@ -3,6 +3,7 @@
 This folder contains examples usage for the different features
 supported by the `neo4j-graphrag` package:
 
+- [Automatic Schema Extraction](#schema-extraction) from PDF or text
 - [Build Knowledge Graph](#build-knowledge-graph) from PDF or text
 - [Retrieve](#retrieve) information from the graph
 - [Question Answering](#answer-graphrag) (Q&A)
@@ -122,6 +123,7 @@ are listed in [the last section of this file](#customize).
 - [Chunk embedder]()
 - Schema Builder:
   - [User-defined](./customize/build_graph/components/schema_builders/schema.py)
+  - [Automatic schema extraction](./automatic_schema_extraction/schema_from_text.py)
 - Entity Relation Extractor:
   - [LLM-based](./customize/build_graph/components/extractors/llm_entity_relation_extractor.py)
   - [LLM-based with custom prompt](./customize/build_graph/components/extractors/llm_entity_relation_extractor_with_custom_prompt.py)
