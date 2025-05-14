@@ -16,7 +16,8 @@ from __future__ import annotations
 
 import warnings
 from enum import Enum
-from typing import Any, Callable, Literal, Optional, TypedDict, Union
+from typing import Any, Callable, Literal, Optional, Union
+from typing_extensions import TypedDict
 
 import neo4j
 from pydantic import (
