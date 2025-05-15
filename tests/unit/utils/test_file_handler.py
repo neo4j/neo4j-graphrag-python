@@ -7,7 +7,9 @@ from neo4j_graphrag.utils.file_handler import FileHandler
 
 
 @patch("neo4j_graphrag.utils.file_handler.FileHandler.read_json")
-def test_file_handler_read_json_from_read_method_happy_path(mock_read_json: Mock) -> None:
+def test_file_handler_read_json_from_read_method_happy_path(
+    mock_read_json: Mock,
+) -> None:
     handler = FileHandler()
 
     mock_read_json.return_value = {}
@@ -22,7 +24,9 @@ def test_file_handler_read_json_from_read_method_happy_path(mock_read_json: Mock
 
 
 @patch("neo4j_graphrag.utils.file_handler.FileHandler.read_yaml")
-def test_file_handler_read_yaml_from_read_method_happy_path(mock_read_yaml: Mock) -> None:
+def test_file_handler_read_yaml_from_read_method_happy_path(
+    mock_read_yaml: Mock,
+) -> None:
     handler = FileHandler()
     mock_read_yaml.return_value = {}
     data = handler.read("file.yaml")
@@ -42,7 +46,9 @@ def test_file_handler_read_yaml_from_read_method_happy_path(mock_read_yaml: Mock
 
 @patch("neo4j_graphrag.utils.file_handler.FileHandler._check_file_exists")
 @patch("neo4j_graphrag.utils.file_handler.LocalFileSystem")
-def test_file_handler_read_json_method_happy_path(mock_fs: Mock, mock_file_exists: Mock) -> None:
+def test_file_handler_read_json_method_happy_path(
+    mock_fs: Mock, mock_file_exists: Mock
+) -> None:
     mock_file_exists.return_value = Path("file.json")
     mock_fs_open = mock_open(read_data="{}")
     mock_fs.return_value.open = mock_fs_open
@@ -55,11 +61,15 @@ def test_file_handler_read_json_method_happy_path(mock_fs: Mock, mock_file_exist
 
 @patch("neo4j_graphrag.utils.file_handler.FileHandler._check_file_exists")
 @patch("neo4j_graphrag.utils.file_handler.LocalFileSystem")
-def test_file_handler_read_yaml_method_happy_path(mock_fs: Mock, mock_file_exists: Mock) -> None:
+def test_file_handler_read_yaml_method_happy_path(
+    mock_fs: Mock, mock_file_exists: Mock
+) -> None:
     mock_file_exists.return_value = Path("file.yaml")
-    mock_fs_open = mock_open(read_data="""
+    mock_fs_open = mock_open(
+        read_data="""
     data: 1
-    """)
+    """
+    )
     mock_fs.return_value.open = mock_fs_open
 
     handler = FileHandler()
@@ -79,7 +89,9 @@ def test_file_handler_read_json_file_does_not_exist(mock_file_exists: Mock) -> N
 
 @patch("neo4j_graphrag.utils.file_handler.FileHandler._check_file_exists")
 @patch("neo4j_graphrag.utils.file_handler.LocalFileSystem")
-def test_file_handler_read_json_invalid_json(mock_fs: Mock, mock_file_exists: Mock) -> None:
+def test_file_handler_read_json_invalid_json(
+    mock_fs: Mock, mock_file_exists: Mock
+) -> None:
     mock_file_exists.return_value = True
     mock_fs_open = mock_open(read_data="{")
     mock_fs.return_value.open = mock_fs_open
@@ -100,11 +112,15 @@ def test_file_handler_read_yaml_file_does_not_exist(mock_file_exists: Mock) -> N
 
 @patch("neo4j_graphrag.utils.file_handler.FileHandler._check_file_exists")
 @patch("neo4j_graphrag.utils.file_handler.LocalFileSystem")
-def test_file_handler_read_yaml_invalid_yaml(mock_fs: Mock, mock_file_exists: Mock) -> None:
+def test_file_handler_read_yaml_invalid_yaml(
+    mock_fs: Mock, mock_file_exists: Mock
+) -> None:
     mock_file_exists.return_value = True
-    mock_fs_open = mock_open(read_data="""
+    mock_fs_open = mock_open(
+        read_data="""
     data: [
-    """)
+    """
+    )
     mock_fs.return_value.open = mock_fs_open
 
     handler = FileHandler()
