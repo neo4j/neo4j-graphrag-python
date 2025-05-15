@@ -37,7 +37,7 @@ from pydantic.v1.utils import deep_update
 from typing_extensions import Self
 
 from neo4j_graphrag.experimental.pipeline import Pipeline
-from neo4j_graphrag.utils.file_reader import FileReader
+from neo4j_graphrag.utils.file_handler import FileHandler
 from neo4j_graphrag.experimental.pipeline.config.pipeline_config import (
     AbstractPipelineConfig,
     PipelineConfig,
@@ -113,7 +113,7 @@ class PipelineRunner:
         logger.info(f"PIPELINE_RUNNER: reading config file from {file_path}")
         if not isinstance(file_path, str):
             file_path = str(file_path)
-        data = FileReader().read(file_path)
+        data = FileHandler().read(file_path)
         return cls.from_config(data, do_cleaning=True)
 
     async def run(self, user_input: dict[str, Any]) -> PipelineResult:

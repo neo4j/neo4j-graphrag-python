@@ -42,7 +42,7 @@ from neo4j_graphrag.experimental.pipeline.types.schema import (
 )
 from neo4j_graphrag.generation import SchemaExtractionTemplate, PromptTemplate
 from neo4j_graphrag.llm import LLMInterface
-from neo4j_graphrag.utils.file_reader import FileReader
+from neo4j_graphrag.utils.file_handler import FileHandler
 
 
 class PropertyType(BaseModel):
@@ -193,7 +193,7 @@ class GraphSchema(DataModel):
             GraphSchema: The loaded schema configuration.
         """
         file_path = Path(file_path)
-        reader = FileReader()
+        reader = FileHandler()
         try:
             data = reader.read(file_path)
         except ValueError:
