@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class FileHandler:
-    """Utility class to read JSON or YAML files.
+    """Utility class to read/write JSON or YAML files.
 
     File format is guessed from the extension. Supported extensions are
     (lower or upper case):
@@ -37,17 +37,16 @@ class FileHandler:
 
     .. code-block:: python
 
-        from pathlib import Path
         from neo4j_graphrag.utils.file_handler import FileHandler
         handler = FileHandler()
-        handler.read(Path("my_file.json"))
+        handler.read("my_file.json")
 
     If reading a file with a different extension but still in JSON or YAML format,
     it is possible to call directly the `read_json` or `read_yaml` methods:
 
     .. code-block:: python
 
-        handler.read_yaml(Path("my_file.txt"))
+        handler.read_yaml("my_file.txt")
 
     """
 
@@ -69,6 +68,17 @@ class FileHandler:
         return file_path
 
     def read_json(self, file_path: Union[str, Path]) -> Any:
+        """Reads a JSON file. If file does not exist, raises FileNotFoundError.
+
+        Args:
+            file_path (Union[str, Path]): The path of the JSON file.
+
+        Raises:
+             FileNotFoundError: If file does not exist.
+
+        Returns:
+            The parsed content of the JSON file.
+        """
         logger.debug(f"FILE_HANDLER: read from json {file_path}")
         path = self._check_file_exists(file_path)
         with self.fs.open(str(path), "r") as f:
@@ -78,6 +88,17 @@ class FileHandler:
                 raise ValueError("Invalid JSON file") from e
 
     def read_yaml(self, file_path: Union[str, Path]) -> Any:
+        """Reads a YAML file. If file does not exist, raises FileNotFoundError.
+
+        Args:
+            file_path (Union[str, Path]): The path of the YAML file.
+
+        Raises:
+             FileNotFoundError: If file does not exist.
+
+        Returns:
+            The parsed content of the YAML file.
+        """
         logger.debug(f"FILE_HANDLER: read from yaml {file_path}")
         path = self._check_file_exists(file_path)
         with self.fs.open(str(path), "r") as f:
@@ -86,7 +107,20 @@ class FileHandler:
             except yaml.YAMLError as e:
                 raise ValueError("Invalid YAML file") from e
 
-    def _guess_format_and_read(self, file_path: Union[str, Path]) -> Any:
+    def read(self, file_path: Union[Path, str]) -> Any:
+        """Try to infer file type from its extension and returns its
+        parsed content.
+
+        Args:
+            file_path (Union[str, Path]): The path of the JSON file.:
+
+        Raises:
+            FileNotFoundError: If file does not exist.
+            ValueError: If file extension is invalid or the file can not be parsed
+                (e.g. invalid JSON or YAML)
+
+        Returns: the parsed content of the file.
+        """
         extension = self._get_file_extension(file_path)
         # Note: .suffix returns an empty string if Path has no extension
         if extension in self.JSON_VALID_EXTENSIONS:
@@ -95,13 +129,21 @@ class FileHandler:
             return self.read_yaml(file_path)
         raise ValueError(f"Unsupported extension: {extension}")
 
-    def read(self, file_path: Union[Path, str]) -> Any:
-        data = self._guess_format_and_read(file_path)
-        return data
-
     def _check_file_can_be_written(
         self, path: Union[str, Path], overwrite: bool = False
     ) -> None:
+        """Check whether the file can be written to path with the following conditions:
+
+        - If overwrite is set to True, file can always be written, any existing file will be overwritten.
+        - If overwrite is set to False, and file already exists, file will not be overwritten.
+
+        Args:
+            path (Union[str, Path]): The path of the target file.
+            overwrite (bool): If set to True, existing file will be overwritten. Default to False.
+
+        Raises:
+            ValueError: If file can not be written according to the above rules.
+        """
         if overwrite:
             # we can overwrite, so no matter if file already exists or not
             return
@@ -120,6 +162,17 @@ class FileHandler:
         overwrite: bool = False,
         **extra_kwargs: Any,
     ) -> None:
+        """Writes data to a JSON file
+
+        Args:
+            data (Any): The data to write.
+            file_path (Union[str, Path]): The path of the JSON file.
+            overwrite (bool): If set to True, existing file will be overwritten. Default to False.
+            extra_kwargs (Any): Additional arguments passed to json.dump (e.g.: indent...). Note: a default indent=4 is applied.
+
+        Raises:
+            ValueError: If file can not be written according to the above rules.
+        """
         self._check_file_can_be_written(file_path, overwrite)
         fp = str(file_path)
         kwargs: dict[str, Any] = {
@@ -136,6 +189,16 @@ class FileHandler:
         overwrite: bool = False,
         **extra_kwargs: Any,
     ) -> None:
+        """Writes data to a YAML file
+
+        Args:
+            data (Any): The data to write.
+            file_path (Union[str, Path]): The path of the YAML file.
+            overwrite (bool): If set to True, existing file will be overwritten. Default to False.
+            extra_kwargs (Any): Additional arguments passed to yaml.safe_dump. Note that we apply the following defaults:
+                - "default_flow_style": False
+                - "sort_keys": True
+        """
         self._check_file_can_be_written(file_path, overwrite)
         fp = str(file_path)
         kwargs: dict[str, Any] = {
@@ -153,6 +216,7 @@ class FileHandler:
         overwrite: bool = False,
         **extra_kwargs: Any,
     ) -> None:
+        """Guess file type and write it."""
         extension = self._get_file_extension(file_path)
         if extension in self.JSON_VALID_EXTENSIONS:
             return self.write_json(data, file_path, overwrite=overwrite, **extra_kwargs)
