@@ -45,7 +45,7 @@ def test_pipeline_runner_from_config() -> None:
 
 
 @patch("neo4j_graphrag.experimental.pipeline.config.runner.PipelineRunner.from_config")
-@patch("neo4j_graphrag.experimental.pipeline.config.config_reader.ConfigReader.read")
+@patch("neo4j_graphrag.utils.file_reader.FileReader.read")
 def test_pipeline_runner_from_config_file(
     mock_read: Mock, mock_from_config: Mock
 ) -> None:

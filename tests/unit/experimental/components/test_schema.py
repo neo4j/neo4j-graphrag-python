@@ -454,7 +454,7 @@ async def test_schema_config_from_file(graph_schema: GraphSchema) -> None:
         txt_path = os.path.join(temp_dir, "schema.txt")
         graph_schema.store_as_json(txt_path)  # Store as JSON but with .txt extension
 
-        with pytest.raises(ValueError, match="Unsupported file format"):
+        with pytest.raises(ValueError, match="Unsupported extension: .txt"):
             GraphSchema.from_file(txt_path)
 
 

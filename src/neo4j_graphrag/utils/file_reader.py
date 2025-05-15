@@ -19,7 +19,7 @@ No data validation performed at this stage.
 import json
 import logging
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import fsspec
 import yaml
@@ -28,7 +28,7 @@ from fsspec.implementations.local import LocalFileSystem
 logger = logging.getLogger(__name__)
 
 
-class ConfigReader:
+class FileReader:
     """Reads config from a file (JSON or YAML format)
     and returns a dict.
 
@@ -43,8 +43,8 @@ class ConfigReader:
     .. code-block:: python
 
         from pathlib import Path
-        from neo4j_graphrag.experimental.pipeline.config.reader import ConfigReader
-        reader = ConfigReader()
+        from neo4j_graphrag.utils.file_reader import FileReader
+        reader = FileReader()
         reader.read(Path("my_file.json"))
 
     If reading a file with a different extension but still in JSON or YAML format,
@@ -60,26 +60,35 @@ class ConfigReader:
         self.fs = fs or LocalFileSystem()
 
     def read_json(self, file_path: str) -> Any:
-        logger.debug(f"CONFIG_READER: read from json {file_path}")
+        logger.debug(f"FILE_READER: read from json {file_path}")
         with self.fs.open(file_path, "r") as f:
-            return json.load(f)
+            try:
+                return json.load(f)
+            except json.JSONDecodeError as e:
+                raise ValueError("Invalid JSON file") from e
 
     def read_yaml(self, file_path: str) -> Any:
-        logger.debug(f"CONFIG_READER: read from yaml {file_path}")
+        logger.debug(f"FILE_READER: read from yaml {file_path}")
         with self.fs.open(file_path, "r") as f:
-            return yaml.safe_load(f)
+            try:
+                return yaml.safe_load(f)
+            except yaml.YAMLError as e:
+                raise ValueError("Invalid YAML file") from e
 
-    def _guess_format_and_read(self, file_path: str) -> dict[str, Any]:
-        p = Path(file_path)
-        extension = p.suffix.lower()
+    def _guess_format_and_read(self, file_path: Union[Path, str]) -> dict[str, Any]:
+        path = Path(file_path)
+        if not path.exists():
+            raise FileNotFoundError(f"File not found: {file_path}")
+        extension = path.suffix.lower()
         # Note: .suffix returns an empty string if Path has no extension
         # if not returning a dict, parsing will fail later on
+        path_as_string = str(file_path)
         if extension in [".json"]:
-            return self.read_json(file_path)  # type: ignore[no-any-return]
+            return self.read_json(path_as_string)  # type: ignore[no-any-return]
         if extension in [".yaml", ".yml"]:
-            return self.read_yaml(file_path)  # type: ignore[no-any-return]
+            return self.read_yaml(path_as_string)  # type: ignore[no-any-return]
         raise ValueError(f"Unsupported extension: {extension}")
 
-    def read(self, file_path: str) -> dict[str, Any]:
+    def read(self, file_path: Union[Path, str]) -> dict[str, Any]:
         data = self._guess_format_and_read(file_path)
         return data

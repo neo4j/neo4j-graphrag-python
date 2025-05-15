@@ -42,6 +42,7 @@ from neo4j_graphrag.experimental.pipeline.types.schema import (
 )
 from neo4j_graphrag.generation import SchemaExtractionTemplate, PromptTemplate
 from neo4j_graphrag.llm import LLMInterface
+from neo4j_graphrag.utils.file_reader import FileReader
 
 
 class PropertyType(BaseModel):
@@ -174,15 +175,7 @@ class GraphSchema(DataModel):
         Args:
             file_path (str): The path where the schema configuration will be saved.
         """
-        # create a copy of the data and convert tuples to lists for YAML compatibility
-        data = self.model_dump()
-        if data.get("node_types"):
-            data["node_types"] = list(data["node_types"])
-        if data.get("relationship_types"):
-            data["relationship_types"] = list(data["relationship_types"])
-        if data.get("patterns"):
-            data["patterns"] = [list(item) for item in data["patterns"]]
-
+        data = self.model_dump(mode="json")
         with open(file_path, "w") as f:
             yaml.dump(data, f, default_flow_style=False, sort_keys=False)
 
@@ -200,58 +193,16 @@ class GraphSchema(DataModel):
             GraphSchema: The loaded schema configuration.
         """
         file_path = Path(file_path)
+        reader = FileReader()
+        try:
+            data = reader.read(file_path)
+        except ValueError:
+            raise
 
-        if not file_path.exists():
-            raise FileNotFoundError(f"Schema file not found: {file_path}")
-
-        if file_path.suffix.lower() in [".json"]:
-            return cls.from_json(file_path)
-        elif file_path.suffix.lower() in [".yaml", ".yml"]:
-            return cls.from_yaml(file_path)
-        else:
-            raise ValueError(
-                f"Unsupported file format: {file_path.suffix}. Use .json, .yaml, or .yml"
-            )
-
-    @classmethod
-    def from_json(cls, file_path: Union[str, Path]) -> Self:
-        """
-        Load a schema configuration from a JSON file.
-
-        Args:
-            file_path (Union[str, Path]): The path to the JSON schema configuration file.
-
-        Returns:
-            GraphSchema: The loaded schema configuration.
-        """
-        with open(file_path, "r") as f:
-            try:
-                data = json.load(f)
-                return cls.model_validate(data)
-            except json.JSONDecodeError as e:
-                raise ValueError(f"Invalid JSON file: {e}")
-            except ValidationError as e:
-                raise SchemaValidationError(f"Schema validation failed: {e}")
-
-    @classmethod
-    def from_yaml(cls, file_path: Union[str, Path]) -> Self:
-        """
-        Load a schema configuration from a YAML file.
-
-        Args:
-            file_path (Union[str, Path]): The path to the YAML schema configuration file.
-
-        Returns:
-            GraphSchema: The loaded schema configuration.
-        """
-        with open(file_path, "r") as f:
-            try:
-                data = yaml.safe_load(f)
-                return cls.model_validate(data)
-            except yaml.YAMLError as e:
-                raise ValueError(f"Invalid YAML file: {e}")
-            except ValidationError as e:
-                raise SchemaValidationError(f"Schema validation failed: {e}")
+        try:
+            return cls.model_validate(data)
+        except ValidationError as e:
+            raise SchemaValidationError(str(e)) from e
 
 
 class SchemaBuilder(Component):
