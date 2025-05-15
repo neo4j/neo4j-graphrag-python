@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import json
-import yaml
 import logging
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 from pathlib import Path
@@ -141,8 +140,9 @@ class SchemaConfig(DataModel):
         Args:
             file_path (str): The path where the schema configuration will be saved.
         """
-        with open(file_path, "w") as f:
-            json.dump(self.model_dump(), f, indent=2)
+        data = self.model_dump(mode="json")
+        file_handler = FileHandler()
+        file_handler.write_json(data, file_path)
 
     def store_as_yaml(self, file_path: str) -> None:
         """
@@ -152,8 +152,8 @@ class SchemaConfig(DataModel):
             file_path (str): The path where the schema configuration will be saved.
         """
         data = self.model_dump(mode="json")
-        with open(file_path, "w") as f:
-            yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+        file_handler = FileHandler()
+        file_handler.write_yaml(data, file_path)
 
     @classmethod
     def from_file(cls, file_path: Union[str, Path]) -> Self:
@@ -169,9 +169,9 @@ class SchemaConfig(DataModel):
             SchemaConfig: The loaded schema configuration.
         """
         file_path = Path(file_path)
-        reader = FileHandler()
+        file_handler = FileHandler()
         try:
-            data = reader.read(file_path)
+            data = file_handler.read(file_path)
         except ValueError:
             raise
 

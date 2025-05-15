@@ -51,8 +51,22 @@ class FileHandler:
 
     """
 
+    JSON_VALID_EXTENSIONS = (".json",)
+    YALM_VALID_EXTENSIONS = (".yaml", ".yml")
+
     def __init__(self, fs: Optional[fsspec.AbstractFileSystem] = None) -> None:
         self.fs = fs or LocalFileSystem()
+
+    def _get_file_extension(self, path: Union[str, Path]) -> str:
+        p = Path(path)
+        extension = p.suffix.lower()
+        return extension
+
+    def _check_file_exists(self, path: Union[str, Path]) -> Path:
+        file_path = Path(path)
+        if not file_path.exists():
+            raise FileNotFoundError(f"File not found: {path}")
+        return file_path
 
     def read_json(self, file_path: Union[str, Path]) -> Any:
         logger.debug(f"FILE_HANDLER: read from json {file_path}")
@@ -72,23 +86,76 @@ class FileHandler:
             except yaml.YAMLError as e:
                 raise ValueError("Invalid YAML file") from e
 
-    def _check_file_exists(self, path: Union[str, Path]) -> Path:
-        file_path = Path(path)
-        if not file_path.exists():
-            raise FileNotFoundError(f"File not found: {path}")
-        return file_path
-
-    def _guess_format_and_read(self, file_path: Path) -> Any:
-        extension = file_path.suffix.lower()
+    def _guess_format_and_read(self, file_path: Union[str, Path]) -> Any:
+        extension = self._get_file_extension(file_path)
         # Note: .suffix returns an empty string if Path has no extension
-        path_as_string = str(file_path)
-        if extension in [".json"]:
-            return self.read_json(path_as_string)
-        if extension in [".yaml", ".yml"]:
-            return self.read_yaml(path_as_string)
+        if extension in self.JSON_VALID_EXTENSIONS:
+            return self.read_json(file_path)
+        if extension in self.YALM_VALID_EXTENSIONS:
+            return self.read_yaml(file_path)
         raise ValueError(f"Unsupported extension: {extension}")
 
     def read(self, file_path: Union[Path, str]) -> Any:
-        path = Path(file_path)
-        data = self._guess_format_and_read(path)
+        data = self._guess_format_and_read(file_path)
         return data
+
+    def _check_file_can_be_written(
+        self, path: Union[str, Path], overwrite: bool = False
+    ) -> None:
+        if overwrite:
+            # we can overwrite, so no matter if file already exists or not
+            return
+        try:
+            self._check_file_exists(path)
+            # did not raise, meaning the file exists
+            raise ValueError("File already exists. Use overwrite=True to overwrite.")
+        except FileNotFoundError:
+            # file not found all godo
+            pass
+
+    def write_json(
+        self,
+        data: Any,
+        file_path: Union[Path, str],
+        overwrite: bool = False,
+        **extra_kwargs: Any,
+    ) -> None:
+        self._check_file_can_be_written(file_path, overwrite)
+        fp = str(file_path)
+        kwargs: dict[str, Any] = {
+            "indent": 2,
+        }
+        kwargs.update(extra_kwargs)
+        with self.fs.open(fp, "w") as f:
+            json.dump(data, f, **kwargs)
+
+    def write_yaml(
+        self,
+        data: Any,
+        file_path: Union[Path, str],
+        overwrite: bool = False,
+        **extra_kwargs: Any,
+    ) -> None:
+        self._check_file_can_be_written(file_path, overwrite)
+        fp = str(file_path)
+        kwargs: dict[str, Any] = {
+            "default_flow_style": False,
+            "sort_keys": True,
+        }
+        kwargs.update(extra_kwargs)
+        with self.fs.open(fp, "w") as f:
+            yaml.safe_dump(data, f, **kwargs)
+
+    def write(
+        self,
+        data: Any,
+        file_path: Union[Path, str],
+        overwrite: bool = False,
+        **extra_kwargs: Any,
+    ) -> None:
+        extension = self._get_file_extension(file_path)
+        if extension in self.JSON_VALID_EXTENSIONS:
+            return self.write_json(data, file_path, overwrite=overwrite, **extra_kwargs)
+        if extension in self.YALM_VALID_EXTENSIONS:
+            return self.write_yaml(data, file_path, overwrite=overwrite, **extra_kwargs)
+        raise ValueError(f"Unsupported extension: {extension}")
