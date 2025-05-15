@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import json
-import yaml
 import logging
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 from pathlib import Path
@@ -35,6 +34,7 @@ from neo4j_graphrag.experimental.pipeline.types.schema import (
 )
 from neo4j_graphrag.generation import SchemaExtractionTemplate, PromptTemplate
 from neo4j_graphrag.llm import LLMInterface
+from neo4j_graphrag.utils.file_handler import FileHandler
 
 
 class SchemaProperty(BaseModel):
@@ -133,30 +133,30 @@ class SchemaConfig(DataModel):
 
         return data
 
-    def store_as_json(self, file_path: str) -> None:
+    def store_as_json(self, file_path: str, overwrite: bool = False) -> None:
         """
         Save the schema configuration to a JSON file.
 
         Args:
             file_path (str): The path where the schema configuration will be saved.
+            overwrite (bool): If set to True, existing file will be overwritten. Default to False.
         """
-        with open(file_path, "w") as f:
-            json.dump(self.model_dump(), f, indent=2)
+        data = self.model_dump(mode="json")
+        file_handler = FileHandler()
+        file_handler.write_json(data, file_path, overwrite=overwrite)
 
-    def store_as_yaml(self, file_path: str) -> None:
+    def store_as_yaml(self, file_path: str, overwrite: bool = False) -> None:
         """
         Save the schema configuration to a YAML file.
 
         Args:
             file_path (str): The path where the schema configuration will be saved.
-        """
-        # create a copy of the data and convert tuples to lists for YAML compatibility
-        data = self.model_dump()
-        if data.get("potential_schema"):
-            data["potential_schema"] = [list(item) for item in data["potential_schema"]]
+            overwrite (bool): If set to True, existing file will be overwritten. Default to False.
 
-        with open(file_path, "w") as f:
-            yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+        """
+        data = self.model_dump(mode="json")
+        file_handler = FileHandler()
+        file_handler.write_yaml(data, file_path, overwrite=overwrite)
 
     @classmethod
     def from_file(cls, file_path: Union[str, Path]) -> Self:
@@ -172,58 +172,16 @@ class SchemaConfig(DataModel):
             SchemaConfig: The loaded schema configuration.
         """
         file_path = Path(file_path)
+        file_handler = FileHandler()
+        try:
+            data = file_handler.read(file_path)
+        except ValueError:
+            raise
 
-        if not file_path.exists():
-            raise FileNotFoundError(f"Schema file not found: {file_path}")
-
-        if file_path.suffix.lower() in [".json"]:
-            return cls.from_json(file_path)
-        elif file_path.suffix.lower() in [".yaml", ".yml"]:
-            return cls.from_yaml(file_path)
-        else:
-            raise ValueError(
-                f"Unsupported file format: {file_path.suffix}. Use .json, .yaml, or .yml"
-            )
-
-    @classmethod
-    def from_json(cls, file_path: Union[str, Path]) -> Self:
-        """
-        Load a schema configuration from a JSON file.
-
-        Args:
-            file_path (Union[str, Path]): The path to the JSON schema configuration file.
-
-        Returns:
-            SchemaConfig: The loaded schema configuration.
-        """
-        with open(file_path, "r") as f:
-            try:
-                data = json.load(f)
-                return cls.model_validate(data)
-            except json.JSONDecodeError as e:
-                raise ValueError(f"Invalid JSON file: {e}")
-            except ValidationError as e:
-                raise SchemaValidationError(f"Schema validation failed: {e}")
-
-    @classmethod
-    def from_yaml(cls, file_path: Union[str, Path]) -> Self:
-        """
-        Load a schema configuration from a YAML file.
-
-        Args:
-            file_path (Union[str, Path]): The path to the YAML schema configuration file.
-
-        Returns:
-            SchemaConfig: The loaded schema configuration.
-        """
-        with open(file_path, "r") as f:
-            try:
-                data = yaml.safe_load(f)
-                return cls.model_validate(data)
-            except yaml.YAMLError as e:
-                raise ValueError(f"Invalid YAML file: {e}")
-            except ValidationError as e:
-                raise SchemaValidationError(f"Schema validation failed: {e}")
+        try:
+            return cls.model_validate(data)
+        except ValidationError as e:
+            raise SchemaValidationError(str(e)) from e
 
 
 class SchemaBuilder(Component):
