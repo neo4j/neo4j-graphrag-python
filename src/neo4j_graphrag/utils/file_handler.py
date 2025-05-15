@@ -54,36 +54,41 @@ class FileHandler:
     def __init__(self, fs: Optional[fsspec.AbstractFileSystem] = None) -> None:
         self.fs = fs or LocalFileSystem()
 
-    def read_json(self, file_path: str) -> Any:
+    def read_json(self, file_path: Union[str, Path]) -> Any:
         logger.debug(f"FILE_HANDLER: read from json {file_path}")
-        with self.fs.open(file_path, "r") as f:
+        path = self._check_file_exists(file_path)
+        with self.fs.open(str(path), "r") as f:
             try:
                 return json.load(f)
             except json.JSONDecodeError as e:
                 raise ValueError("Invalid JSON file") from e
 
-    def read_yaml(self, file_path: str) -> Any:
+    def read_yaml(self, file_path: Union[str, Path]) -> Any:
         logger.debug(f"FILE_HANDLER: read from yaml {file_path}")
-        with self.fs.open(file_path, "r") as f:
+        path = self._check_file_exists(file_path)
+        with self.fs.open(str(path), "r") as f:
             try:
                 return yaml.safe_load(f)
             except yaml.YAMLError as e:
                 raise ValueError("Invalid YAML file") from e
 
-    def _guess_format_and_read(self, file_path: Union[Path, str]) -> dict[str, Any]:
-        path = Path(file_path)
-        if not path.exists():
-            raise FileNotFoundError(f"File not found: {file_path}")
-        extension = path.suffix.lower()
+    def _check_file_exists(self, path: Union[str, Path]) -> Path:
+        file_path = Path(path)
+        if not file_path.exists():
+            raise FileNotFoundError(f"File not found: {path}")
+        return file_path
+
+    def _guess_format_and_read(self, file_path: Path) -> Any:
+        extension = file_path.suffix.lower()
         # Note: .suffix returns an empty string if Path has no extension
-        # if not returning a dict, parsing will fail later on
         path_as_string = str(file_path)
         if extension in [".json"]:
-            return self.read_json(path_as_string)  # type: ignore[no-any-return]
+            return self.read_json(path_as_string)
         if extension in [".yaml", ".yml"]:
-            return self.read_yaml(path_as_string)  # type: ignore[no-any-return]
+            return self.read_yaml(path_as_string)
         raise ValueError(f"Unsupported extension: {extension}")
 
-    def read(self, file_path: Union[Path, str]) -> dict[str, Any]:
-        data = self._guess_format_and_read(file_path)
+    def read(self, file_path: Union[Path, str]) -> Any:
+        path = Path(file_path)
+        data = self._guess_format_and_read(path)
         return data
