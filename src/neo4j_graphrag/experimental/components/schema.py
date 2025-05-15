@@ -157,27 +157,30 @@ class GraphSchema(DataModel):
     def relationship_type_from_label(self, label: str) -> Optional[RelationshipType]:
         return self._relationship_type_index.get(label)
 
-    def store_as_json(self, file_path: str) -> None:
+    def store_as_json(self, file_path: str, overwrite: bool = False) -> None:
         """
         Save the schema configuration to a JSON file.
 
         Args:
             file_path (str): The path where the schema configuration will be saved.
+            overwrite (bool): If set to True, existing file will be overwritten. Default to False.
         """
         data = self.model_dump(mode="json")
         file_handler = FileHandler()
-        file_handler.write_json(data, file_path)
+        file_handler.write_json(data, file_path, overwrite=overwrite)
 
-    def store_as_yaml(self, file_path: str) -> None:
+    def store_as_yaml(self, file_path: str, overwrite: bool = False) -> None:
         """
         Save the schema configuration to a YAML file.
 
         Args:
             file_path (str): The path where the schema configuration will be saved.
+            overwrite (bool): If set to True, existing file will be overwritten. Default to False.
+
         """
         data = self.model_dump(mode="json")
         file_handler = FileHandler()
-        file_handler.write_yaml(data, file_path)
+        file_handler.write_yaml(data, file_path, overwrite=overwrite)
 
     @classmethod
     def from_file(cls, file_path: Union[str, Path]) -> Self:
