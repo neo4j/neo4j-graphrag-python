@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import abc
 import asyncio
-from typing import Any
+from typing import Any, Dict
 
 
 class Store(abc.ABC):
@@ -90,6 +90,22 @@ class ResultStore(Store, abc.ABC):
     async def get_result_for_component(self, run_id: str, task_name: str) -> Any:
         return await self.get(self.get_key(run_id, task_name))
 
+    def dump(self) -> Dict[str, Any]:
+        """Dump the store data to a serializable dictionary.
+
+        Returns:
+            dict[str, Any]: A serializable representation of the store data
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    def load(self, data: Dict[str, Any]) -> None:
+        """Load store data from a serialized dictionary.
+
+        Args:
+            data (dict[str, Any]): Previously serialized store data
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
 
 class InMemoryStore(ResultStore):
     """Simple in-memory store.
@@ -115,3 +131,20 @@ class InMemoryStore(ResultStore):
 
     def empty(self) -> None:
         self._data = {}
+
+    def dump(self) -> Dict[str, Any]:
+        """Dump the in-memory store data to a serializable dictionary.
+
+        Returns:
+            dict[str, Any]: A serializable representation of the store data
+        """
+        return {"data": self._data.copy()}
+
+    def load(self, data: Dict[str, Any]) -> None:
+        """Load in-memory store data from a serialized dictionary.
+
+        Args:
+            data (dict[str, Any]): Previously serialized store data
+        """
+        if "data" in data:
+            self._data = data["data"].copy()

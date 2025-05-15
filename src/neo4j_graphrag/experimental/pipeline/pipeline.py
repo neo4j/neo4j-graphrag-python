@@ -18,7 +18,7 @@ import logging
 import warnings
 from collections import defaultdict
 from timeit import default_timer
-from typing import Any, Optional, AsyncGenerator
+from typing import Any, Optional, AsyncGenerator, Dict
 import asyncio
 
 from neo4j_graphrag.utils.logging import prettify
@@ -574,6 +574,97 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         end_time = default_timer()
         logger.debug(
             f"PIPELINE FINISHED {orchestrator.run_id} in {end_time - start_time}s"
+        )
+        return PipelineResult(
+            run_id=orchestrator.run_id,
+            result=await self.get_final_results(orchestrator.run_id),
+        )
+
+    def dump_state(self) -> Dict[str, Any]:
+        """Dump the current state of the pipeline and its components
+        to a serializable dictionary.
+
+        Returns:
+            dict[str, Any]: A serializable dictionary containing the pipeline state
+        """
+        pipeline_state = {
+            "components": {},
+            "store": self.store.dump() if hasattr(self.store, "dump") else {},
+            "final_results": self.final_results.dump()
+            if hasattr(self.final_results, "dump")
+            else {},
+            "is_validated": self.is_validated,
+            "param_mapping": self.param_mapping,
+            "missing_inputs": self.missing_inputs,
+        }
+
+        components_dict: Dict[str, Any] = {}
+        pipeline_state["components"] = components_dict
+
+        # serialize each component's state
+        for name, node in self._nodes.items():
+            components_dict[name] = node.component.serialize_state()
+
+        return pipeline_state
+
+    def load_state(self, state: Dict[str, Any]) -> None:
+        """Load pipeline state from a serialized dictionary.
+
+        Args:
+            state (dict[str, Any]): Previously serialized pipeline state
+        """
+        # load component states
+        for name, component_state in state.get("components", {}).items():
+            if name in self._nodes:
+                self._nodes[name].component.load_state(component_state)
+
+        # load other pipeline state attributes
+        if "is_validated" in state:
+            self.is_validated = state["is_validated"]
+
+        if "param_mapping" in state:
+            self.param_mapping = state["param_mapping"]
+
+        if "missing_inputs" in state:
+            self.missing_inputs = state["missing_inputs"]
+
+        # load store data if store has load method
+        if "store" in state and hasattr(self.store, "load"):
+            self.store.load(state["store"])
+
+        # load final results if it has load method
+        if "final_results" in state and hasattr(self.final_results, "load"):
+            self.final_results.load(state["final_results"])
+
+    async def run_until(self, data: Dict[str, Any], stop_after: str) -> Dict[str, Any]:
+        """Run the pipeline until a specific component and return the state."""
+        logger.debug("PIPELINE START (RUN UNTIL)")
+        start_time = default_timer()
+        self.invalidate()
+        self.validate_input_data(data)
+        orchestrator = Orchestrator(self, stop_after=stop_after)
+        logger.debug(f"PIPELINE ORCHESTRATOR: {orchestrator.run_id}")
+        await orchestrator.run(data)
+        end_time = default_timer()
+        logger.debug(
+            f"PIPELINE FINISHED (RUN UNTIL) {orchestrator.run_id} in {end_time - start_time}s"
+        )
+        return self.dump_state()
+
+    async def resume_from(
+        self, state: Dict[str, Any], data: Dict[str, Any], start_from: str
+    ) -> "PipelineResult":
+        """Resume pipeline execution from a specific component using a saved state."""
+        self.load_state(state)
+        logger.debug("PIPELINE START (RESUME FROM)")
+        start_time = default_timer()
+        self.validate_input_data(data)
+        orchestrator = Orchestrator(self, start_from=start_from)
+        logger.debug(f"PIPELINE ORCHESTRATOR: {orchestrator.run_id}")
+        await orchestrator.run(data)
+        end_time = default_timer()
+        logger.debug(
+            f"PIPELINE FINISHED (RESUME FROM) {orchestrator.run_id} in {end_time - start_time}s"
         )
         return PipelineResult(
             run_id=orchestrator.run_id,
