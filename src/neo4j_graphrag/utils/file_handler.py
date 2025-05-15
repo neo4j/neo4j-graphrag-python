@@ -12,10 +12,6 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-"""Read JSON or YAML files and returns a dict.
-No data validation performed at this stage.
-"""
-
 import json
 import logging
 from pathlib import Path
@@ -28,9 +24,8 @@ from fsspec.implementations.local import LocalFileSystem
 logger = logging.getLogger(__name__)
 
 
-class FileReader:
-    """Reads config from a file (JSON or YAML format)
-    and returns a dict.
+class FileHandler:
+    """Utility class to read JSON or YAML files.
 
     File format is guessed from the extension. Supported extensions are
     (lower or upper case):
@@ -43,16 +38,16 @@ class FileReader:
     .. code-block:: python
 
         from pathlib import Path
-        from neo4j_graphrag.utils.file_reader import FileReader
-        reader = FileReader()
-        reader.read(Path("my_file.json"))
+        from neo4j_graphrag.utils.file_handler import FileHandler
+        handler = FileHandler()
+        handler.read(Path("my_file.json"))
 
     If reading a file with a different extension but still in JSON or YAML format,
     it is possible to call directly the `read_json` or `read_yaml` methods:
 
     .. code-block:: python
 
-        reader.read_yaml(Path("my_file.txt"))
+        handler.read_yaml(Path("my_file.txt"))
 
     """
 
@@ -60,7 +55,7 @@ class FileReader:
         self.fs = fs or LocalFileSystem()
 
     def read_json(self, file_path: str) -> Any:
-        logger.debug(f"FILE_READER: read from json {file_path}")
+        logger.debug(f"FILE_HANDLER: read from json {file_path}")
         with self.fs.open(file_path, "r") as f:
             try:
                 return json.load(f)
@@ -68,7 +63,7 @@ class FileReader:
                 raise ValueError("Invalid JSON file") from e
 
     def read_yaml(self, file_path: str) -> Any:
-        logger.debug(f"FILE_READER: read from yaml {file_path}")
+        logger.debug(f"FILE_HANDLER: read from yaml {file_path}")
         with self.fs.open(file_path, "r") as f:
             try:
                 return yaml.safe_load(f)
