@@ -647,6 +647,10 @@ async def test_schema_config_store_as_yaml(schema_config: SchemaConfig) -> None:
                 data["entities"]["PERSON"]["description"]
                 == "An individual human being."
             )
+            assert data["potential_schema"] == [
+                ["PERSON", "EMPLOYED_BY", "ORGANIZATION"],
+                ["ORGANIZATION", "ATTENDED_BY", "PERSON"],
+            ]
 
 
 @pytest.mark.asyncio
@@ -681,7 +685,7 @@ async def test_schema_config_from_file(schema_config: SchemaConfig) -> None:
         txt_path = os.path.join(temp_dir, "schema.txt")
         schema_config.store_as_json(txt_path)  # Store as JSON but with .txt extension
 
-        with pytest.raises(ValueError, match="Unsupported file format"):
+        with pytest.raises(ValueError, match="Unsupported extension: .txt"):
             SchemaConfig.from_file(txt_path)
 
 
