@@ -325,7 +325,9 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             lexical_graph = lexical_graph_result.graph
         elif lexical_graph_config:
             lexical_graph_builder = LexicalGraphBuilder(config=lexical_graph_config)
-        schema = schema or GraphSchema(entities=[], relations=[], potential_schema=[])
+        schema = schema or GraphSchema(
+            entities=frozenset(), relations=frozenset(), potential_schema=frozenset()
+        )
         examples = examples or ""
         sem = asyncio.Semaphore(self.max_concurrency)
         tasks = [
@@ -458,7 +460,9 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                 rel.start_node_id not in valid_nodes
                 or rel.end_node_id not in valid_nodes
             ):
-                logger.debug(f"PRUNING:: {rel} as one of {rel.start_node_id} and {rel.end_node_id} is not in the graph")
+                logger.debug(
+                    f"PRUNING:: {rel} as one of {rel.start_node_id} or {rel.end_node_id} is not in the graph"
+                )
                 continue
 
             start_label = valid_nodes[rel.start_node_id]

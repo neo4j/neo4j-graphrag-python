@@ -17,11 +17,17 @@ from __future__ import annotations
 import json
 import yaml
 import logging
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union, FrozenSet
 from pathlib import Path
 
-import neo4j
-from pydantic import BaseModel, ValidationError, model_validator, validate_call
+from pydantic import (
+    BaseModel,
+    PrivateAttr,
+    ValidationError,
+    model_validator,
+    validate_call,
+    ConfigDict,
+)
 from typing_extensions import Self
 
 from neo4j_graphrag.exceptions import (
@@ -99,21 +105,26 @@ class SchemaRelation(BaseModel):
 
 
 class GraphSchema(DataModel):
-    entities: list[SchemaEntity]
-    relations: Optional[list[SchemaRelation]] = None
-    potential_schema: Optional[List[Tuple[str, str, str]]] = None
-    # indexes: list[something] = None
+    entities: FrozenSet[SchemaEntity]
+    relations: Optional[FrozenSet[SchemaRelation]] = None
+    potential_schema: Optional[FrozenSet[Tuple[str, str, str]]] = None
 
-    _entity_index: dict[str, SchemaEntity]
-    _relation_index: dict[str, SchemaRelation]
+    _entity_index: dict[str, SchemaEntity] = PrivateAttr()
+    _relation_index: dict[str, SchemaRelation] = PrivateAttr()
+
+    model_config = ConfigDict(
+        frozen=True,
+    )
 
     @model_validator(mode="after")
     def check_schema(self) -> Self:
         self._entity_index = {e.label: e for e in self.entities}
-        self._relation_index = {r.label: r for r in self.relations} if self.relations else {}
+        self._relation_index = (
+            {r.label: r for r in self.relations} if self.relations else {}
+        )
 
-        relations = self.relations or []
-        potential_schema = self.potential_schema or []
+        relations = self.relations or frozenset()
+        potential_schema = self.potential_schema or frozenset()
 
         if potential_schema:
             if not relations:
@@ -141,7 +152,6 @@ class GraphSchema(DataModel):
 
     def relation_from_label(self, label: str) -> Optional[SchemaRelation]:
         return self._relation_index.get(label)
-
 
     def store_as_json(self, file_path: str) -> None:
         """
@@ -179,7 +189,7 @@ class GraphSchema(DataModel):
             file_path (Union[str, Path]): The path to the schema configuration file.
 
         Returns:
-            SchemaConfig: The loaded schema configuration.
+            GraphSchema: The loaded schema configuration.
         """
         file_path = Path(file_path)
 
@@ -204,7 +214,7 @@ class GraphSchema(DataModel):
             file_path (Union[str, Path]): The path to the JSON schema configuration file.
 
         Returns:
-            SchemaConfig: The loaded schema configuration.
+            GraphSchema: The loaded schema configuration.
         """
         with open(file_path, "r") as f:
             try:
@@ -224,7 +234,7 @@ class GraphSchema(DataModel):
             file_path (Union[str, Path]): The path to the YAML schema configuration file.
 
         Returns:
-            SchemaConfig: The loaded schema configuration.
+            GraphSchema: The loaded schema configuration.
         """
         with open(file_path, "r") as f:
             try:
@@ -235,12 +245,8 @@ class GraphSchema(DataModel):
             except ValidationError as e:
                 raise SchemaValidationError(f"Schema validation failed: {e}")
 
-class BaseSchemaBuilder(Component):
-    async def run(self, **kwargs: Any) -> GraphSchema:
-        raise NotImplementedError()
 
-
-class SchemaBuilder(BaseSchemaBuilder):
+class SchemaBuilder(Component):
     """
     A builder class for constructing GraphSchema objects from given entities,
     relations, and their interrelationships defined in a potential schema.
@@ -306,23 +312,25 @@ class SchemaBuilder(BaseSchemaBuilder):
         potential_schema: Optional[List[Tuple[str, str, str]]] = None,
     ) -> GraphSchema:
         """
-        Creates a SchemaConfig object from Lists of Entity and Relation objects
+        Creates a GraphSchema object from Lists of Entity and Relation objects
         and a Dictionary defining potential relationships.
 
         Args:
             entities (List[SchemaEntity]): List of Entity objects.
-            relations (List[SchemaRelation]): List of Relation objects.
-            potential_schema (Dict[str, List[str]]): Dictionary mapping entity names to Lists of relation names.
+            relations (Optional[List[SchemaRelation]]): List of Relation objects.
+            potential_schema (Optional[List[Tuple[str, str, str]]]): Dictionary mapping entity names to Lists of relation names.
 
         Returns:
-            SchemaConfig: A configured schema object.
+            GraphSchema: A configured schema object.
         """
         try:
-            return GraphSchema.model_validate(dict(
-                entities=entities,
-                relations=relations,
-                potential_schema=potential_schema,
-            ))
+            return GraphSchema.model_validate(
+                dict(
+                    entities=entities,
+                    relations=relations,
+                    potential_schema=potential_schema,
+                )
+            )
         except (ValidationError, SchemaValidationError) as e:
             raise SchemaValidationError(e)
 
@@ -368,13 +376,13 @@ class SchemaFromTextExtractor(Component):
     @validate_call
     async def run(self, text: str, examples: str = "", **kwargs: Any) -> GraphSchema:
         """
-        Asynchronously extracts the schema from text and returns a SchemaConfig object.
+        Asynchronously extracts the schema from text and returns a GraphSchema object.
 
         Args:
             text (str): the text from which the schema will be inferred.
             examples (str): examples to guide schema extraction.
         Returns:
-            SchemaConfig: A configured schema object, extracted automatically and
+            GraphSchema: A configured schema object, extracted automatically and
             constructed asynchronously.
         """
         prompt: str = self._prompt_template.format(text=text, examples=examples)
@@ -437,16 +445,10 @@ class SchemaFromTextExtractor(Component):
                 f"Invalid schema format return from LLM: {exc}"
             ) from exc
 
-        return GraphSchema(
-            entities=entities,
-            relations=relations,
-            potential_schema=potential_schema,
+        return GraphSchema.model_validate(
+            {
+                "entities": entities,
+                "relations": relations,
+                "potential_schema": potential_schema,
+            }
         )
-
-
-class SchemaFromGraphBuilder(BaseSchemaBuilder):
-    def __init__(self, driver: neo4j.Driver) -> None:
-        self.driver = driver
-
-    async def run(self, **kwargs: Any) -> GraphSchema:
-        pass

@@ -243,13 +243,16 @@ async def test_extractor_no_schema_enforcement() -> None:
         llm=llm, create_lexical_graph=False, enforce_schema=SchemaEnforcementMode.NONE
     )
 
-    schema = GraphSchema.model_validate({
-        "entities": [{
-            "label": "Person",
-            "properties": [{"name": "name", "type": "STRING"}],
-        }],
-        "relations": [],
-        "potential_schema": []
+    schema = GraphSchema.model_validate(
+        {
+            "entities": [
+                {
+                    "label": "Person",
+                    "properties": [{"name": "name", "type": "STRING"}],
+                }
+            ],
+            "relations": [],
+            "potential_schema": [],
         },
     )
 
@@ -296,13 +299,16 @@ async def test_extractor_schema_enforcement_invalid_nodes() -> None:
         llm=llm, create_lexical_graph=False, enforce_schema=SchemaEnforcementMode.STRICT
     )
 
-    schema = GraphSchema.model_validate({
-        "entities": [{
-            "label": "Person",
-            "properties": [{"name": "name", "type": "STRING"}],
-        }],
-        "relations": [],
-        "potential_schema": []
+    schema = GraphSchema.model_validate(
+        {
+            "entities": [
+                {
+                    "label": "Person",
+                    "properties": [{"name": "name", "type": "STRING"}],
+                }
+            ],
+            "relations": [],
+            "potential_schema": [],
         },
     )
 
@@ -328,16 +334,19 @@ async def test_extraction_schema_enforcement_invalid_node_properties() -> None:
         llm=llm, create_lexical_graph=False, enforce_schema=SchemaEnforcementMode.STRICT
     )
 
-    schema = GraphSchema.model_validate({
-        "entities": [{
-            "label": "Person",
-            "properties": [
-                {"name": "name", "type": "STRING"},
-                {"name": "age", "type": "STRING"}
+    schema = GraphSchema.model_validate(
+        {
+            "entities": [
+                {
+                    "label": "Person",
+                    "properties": [
+                        {"name": "name", "type": "STRING"},
+                        {"name": "age", "type": "STRING"},
+                    ],
+                }
             ],
-        }],
-        "relations": [],
-        "potential_schema": []
+            "relations": [],
+            "potential_schema": [],
         },
     )
 
@@ -363,11 +372,15 @@ async def test_extractor_schema_enforcement_valid_nodes_with_empty_props() -> No
         llm=llm, create_lexical_graph=False, enforce_schema=SchemaEnforcementMode.STRICT
     )
 
-    schema = GraphSchema.model_validate({
-        "entities": [{
-            "label": "Person",
-        }],
-    })
+    schema = GraphSchema.model_validate(
+        {
+            "entities": [
+                {
+                    "label": "Person",
+                }
+            ],
+        }
+    )
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
 
     result: Neo4jGraph = await extractor.run(chunks, schema=schema)
@@ -390,17 +403,21 @@ async def test_extractor_schema_enforcement_invalid_relations_wrong_types() -> N
         llm=llm, create_lexical_graph=False, enforce_schema=SchemaEnforcementMode.STRICT
     )
 
-    schema = GraphSchema.model_validate({
-        "entities": [{
-            "label": "Person",
-            "properties": [
-                {"name": "name", "type": "STRING"},
-                {"name": "age", "type": "STRING"}
+    schema = GraphSchema.model_validate(
+        {
+            "entities": [
+                {
+                    "label": "Person",
+                    "properties": [
+                        {"name": "name", "type": "STRING"},
+                        {"name": "age", "type": "STRING"},
+                    ],
+                }
             ],
-        }],
-        "relations": [{"label": "LIKES"}],
-        "potential_schema": []
-    })
+            "relations": [{"label": "LIKES"}],
+            "potential_schema": [],
+        }
+    )
 
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
 
@@ -427,20 +444,22 @@ async def test_extractor_schema_enforcement_invalid_relations_wrong_start_node()
         llm=llm, create_lexical_graph=False, enforce_schema=SchemaEnforcementMode.STRICT
     )
 
-    schema = GraphSchema.model_validate({
-        "entities":[
-            {
-                "label": "Person",
-                "properties": [{"name": "name", "type": "STRING"}],
-            },
-            {
-                "label": "City",
-                "properties": [{"name": "name", "type": "STRING"}],
-            },
-        ],
-        "relations":[{"label": "LIVES_IN"}],
-        "potential_schema":[("Person", "LIVES_IN", "City")],
-    })
+    schema = GraphSchema.model_validate(
+        {
+            "entities": [
+                {
+                    "label": "Person",
+                    "properties": [{"name": "name", "type": "STRING"}],
+                },
+                {
+                    "label": "City",
+                    "properties": [{"name": "name", "type": "STRING"}],
+                },
+            ],
+            "relations": [{"label": "LIVES_IN"}],
+            "potential_schema": [("Person", "LIVES_IN", "City")],
+        }
+    )
 
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
 
@@ -464,21 +483,23 @@ async def test_extractor_schema_enforcement_invalid_relation_properties() -> Non
         llm=llm, create_lexical_graph=False, enforce_schema=SchemaEnforcementMode.STRICT
     )
 
-    schema = GraphSchema.model_validate({
-        "entities": [
-            {
-                "label": "Person",
-                "properties": [{"name": "name", "type": "STRING"}],
-            }
-        ],
-        "relations":[
-            {
-                "label": "LIKES",
-                "properties": [{"name": "strength", "type": "STRING"}],
-            }
-        ],
-        "potential_schema":[],
-    })
+    schema = GraphSchema.model_validate(
+        {
+            "entities": [
+                {
+                    "label": "Person",
+                    "properties": [{"name": "name", "type": "STRING"}],
+                }
+            ],
+            "relations": [
+                {
+                    "label": "LIKES",
+                    "properties": [{"name": "strength", "type": "STRING"}],
+                }
+            ],
+            "potential_schema": [],
+        }
+    )
 
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
 
@@ -505,16 +526,18 @@ async def test_extractor_schema_enforcement_removed_relation_start_end_nodes() -
         llm=llm, create_lexical_graph=False, enforce_schema=SchemaEnforcementMode.STRICT
     )
 
-    schema = GraphSchema.model_validate({
-        "entities": [
-            {
-                "label": "Person",
-                "properties": [{"name": "name", "type": "STRING"}],
-            }
-        ],
-        "relations": [{"label": "LIKES"}],
-        "potential_schema": [("Person", "LIKES", "Person")],
-    })
+    schema = GraphSchema.model_validate(
+        {
+            "entities": [
+                {
+                    "label": "Person",
+                    "properties": [{"name": "name", "type": "STRING"}],
+                }
+            ],
+            "relations": [{"label": "LIKES"}],
+            "potential_schema": [("Person", "LIKES", "Person")],
+        }
+    )
 
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
 
@@ -538,20 +561,22 @@ async def test_extractor_schema_enforcement_inverted_relation_direction() -> Non
         llm=llm, create_lexical_graph=False, enforce_schema=SchemaEnforcementMode.STRICT
     )
 
-    schema = GraphSchema.model_validate({
-        "entities": [
-            {
-                "label": "Person",
-                "properties": [{"name": "name", "type": "STRING"}],
-            },
-            {
-                "label": "City",
-                "properties": [{"name": "name", "type": "STRING"}],
-            },
-        ],
-        "relations": [{"label": "LIVES_IN"}],
-        "potential_schema": [("Person", "LIVES_IN", "City")],
-    })
+    schema = GraphSchema.model_validate(
+        {
+            "entities": [
+                {
+                    "label": "Person",
+                    "properties": [{"name": "name", "type": "STRING"}],
+                },
+                {
+                    "label": "City",
+                    "properties": [{"name": "name", "type": "STRING"}],
+                },
+            ],
+            "relations": [{"label": "LIVES_IN"}],
+            "potential_schema": [("Person", "LIVES_IN", "City")],
+        }
+    )
 
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
 

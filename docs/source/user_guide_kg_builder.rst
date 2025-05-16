@@ -75,7 +75,7 @@ Graph Schema
 
 It is possible to guide the LLM by supplying a list of entities, relationships,
 and instructions on how to connect them. However, note that the extracted graph
-may not fully adhere to these guidelines unless schema enforcement is enabled 
+may not fully adhere to these guidelines unless schema enforcement is enabled
 (see :ref:`Schema Enforcement Behaviour`). Entities and relationships can be represented
 as either simple strings (for their labels) or dictionaries. If using a dictionary,
 it must include a label key and can optionally include description and properties keys,
@@ -419,7 +419,7 @@ within the configuration file.
         "neo4j_database": "myDb",
         "on_error": "IGNORE",
         "prompt_template": "...",
-        
+
         "schema": {
             "entities": [
                 "Person",
@@ -799,10 +799,10 @@ Here is a code block illustrating these concepts:
         ],
     )
 
-After validation, this schema is saved in a `SchemaConfig` object, whose dict representation is passed
+After validation, this schema is saved in a `GraphSchema` object, whose dict representation is passed
 to the LLM.
 
-Automatic Schema Extraction 
+Automatic Schema Extraction
 ---------------------------
 
 Instead of manually defining the schema, you can use the `SchemaFromTextExtractor` component to automatically extract a schema from your text using an LLM:
@@ -826,19 +826,19 @@ Instead of manually defining the schema, you can use the `SchemaFromTextExtracto
     # Extract the schema from the text
     extracted_schema = await schema_extractor.run(text="Some text")
 
-The `SchemaFromTextExtractor` component analyzes the text and identifies entity types, relationship types, and their property types. It creates a complete `SchemaConfig` object that can be used in the same way as a manually defined schema.
+The `SchemaFromTextExtractor` component analyzes the text and identifies entity types, relationship types, and their property types. It creates a complete `GraphSchema` object that can be used in the same way as a manually defined schema.
 
 You can also save and reload the extracted schema:
 
 .. code:: python
 
     # Save the schema to JSON or YAML files
-    schema_config.store_as_json("my_schema.json")
-    schema_config.store_as_yaml("my_schema.yaml")
-    
+    extracted_schema.store_as_json("my_schema.json")
+    extracted_schema.store_as_yaml("my_schema.yaml")
+
     # Later, reload the schema from file
-    from neo4j_graphrag.experimental.components.schema import SchemaConfig
-    restored_schema = SchemaConfig.from_file("my_schema.json")  # or my_schema.yaml
+    from neo4j_graphrag.experimental.components.schema import GraphSchema
+    restored_schema = GraphSchema.from_file("my_schema.json")  # or my_schema.yaml
 
 
 Entity and Relation Extractor
@@ -993,7 +993,6 @@ If more customization is needed, it is possible to subclass the `EntityRelationE
 
     from pydantic import validate_call
     from neo4j_graphrag.experimental.components.entity_relation_extractor import EntityRelationExtractor
-    from neo4j_graphrag.experimental.components.schema import SchemaConfig
     from neo4j_graphrag.experimental.components.types import (
         Neo4jGraph,
         Neo4jNode,
