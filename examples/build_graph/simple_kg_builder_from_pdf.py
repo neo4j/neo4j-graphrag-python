@@ -47,9 +47,11 @@ async def define_and_run_pipeline(
         llm=llm,
         driver=neo4j_driver,
         embedder=OpenAIEmbeddings(),
-        entities=ENTITIES,
-        relations=RELATIONS,
-        potential_schema=POTENTIAL_SCHEMA,
+        schema={
+            "entities": ENTITIES,
+            "relations": RELATIONS,
+            "potential_schema": POTENTIAL_SCHEMA,
+        },
         neo4j_database=DATABASE,
     )
     return await kg_builder.run_async(file_path=str(file_path))

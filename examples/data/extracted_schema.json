@@ -1,6 +1,6 @@
 {
-  "entities": {
-    "Company": {
+  "entities": [
+    {
       "label": "Company",
       "description": "",
       "properties": [
@@ -26,7 +26,7 @@
         }
       ]
     },
-    "Person": {
+    {
       "label": "Person",
       "description": "",
       "properties": [
@@ -41,13 +41,13 @@
           "description": ""
         },
         {
-          "name": "yearJoined",
+          "name": "startYear",
           "type": "INTEGER",
           "description": ""
         }
       ]
     },
-    "Product": {
+    {
       "label": "Product",
       "description": "",
       "properties": [
@@ -67,46 +67,30 @@
           "description": ""
         }
       ]
-    },
-    "Office": {
-      "label": "Office",
-      "description": "",
-      "properties": [
-        {
-          "name": "location",
-          "type": "STRING",
-          "description": ""
-        }
-      ]
     }
-  },
-  "relations": {
-    "FOUNDED_BY": {
+  ],
+  "relations": [
+    {
       "label": "FOUNDED_BY",
       "description": "",
       "properties": []
     },
-    "WORKS_FOR": {
+    {
       "label": "WORKS_FOR",
       "description": "",
       "properties": []
     },
-    "MANAGES": {
+    {
       "label": "MANAGES",
       "description": "",
       "properties": []
     },
-    "DEVELOPED_BY": {
+    {
       "label": "DEVELOPED_BY",
       "description": "",
       "properties": []
-    },
-    "LOCATED_IN": {
-      "label": "LOCATED_IN",
-      "description": "",
-      "properties": []
     }
-  },
+  ],
   "potential_schema": [
     [
       "Company",
@@ -121,17 +105,12 @@
     [
       "Person",
       "MANAGES",
-      "Office"
+      "Company"
     ],
     [
       "Product",
       "DEVELOPED_BY",
       "Person"
-    ],
-    [
-      "Company",
-      "LOCATED_IN",
-      "Office"
     ]
   ]
 }
