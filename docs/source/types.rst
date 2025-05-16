@@ -90,10 +90,10 @@ SchemaRelation
 
 .. autoclass:: neo4j_graphrag.experimental.components.schema.SchemaRelation
 
-SchemaConfig
-============
+GraphSchema
+===========
 
-.. autoclass:: neo4j_graphrag.experimental.components.schema.SchemaConfig
+.. autoclass:: neo4j_graphrag.experimental.components.schema.GraphSchema
 
 LexicalGraphConfig
 ===================

@@ -44,11 +44,10 @@ from neo4j_graphrag.experimental.components.resolver import (
 )
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
-    SchemaConfig,
+    GraphSchema,
     SchemaEntity,
     SchemaRelation,
     SchemaFromTextExtractor,
-    normalize_schema_dict,
 )
 from neo4j_graphrag.experimental.components.text_splitters.base import TextSplitter
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
@@ -93,7 +92,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     entities: Sequence[EntityInputType] = []
     relations: Sequence[RelationInputType] = []
     potential_schema: Optional[list[tuple[str, str, str]]] = None
-    schema_: Optional[Union[SchemaConfig, dict[str, list[Any]]]] = Field(
+    schema_: Optional[Union[GraphSchema, dict[str, list[Any]]]] = Field(
         default=None, alias="schema"
     )
     enforce_schema: SchemaEnforcementMode = SchemaEnforcementMode.NONE
@@ -203,7 +202,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     ]:
         """
         Process schema inputs according to precedence rules:
-        1. If schema is provided as SchemaConfig object, use it
+        1. If schema is provided as GraphSchema object, use it
         2. If schema is provided as dictionary, extract from it
         3. Otherwise, use individual schema components
 
@@ -212,22 +211,17 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         """
         if self.schema_ is not None:
             # schema takes precedence over individual components
-            if isinstance(self.schema_, SchemaConfig):
-                # extract components from SchemaConfig
-                entity_dicts = list(self.schema_.entities.values())
-                # convert dict values to SchemaEntity objects
-                entities = [SchemaEntity.model_validate(e) for e in entity_dicts]
+            if isinstance(self.schema_, GraphSchema):
+                # extract components from GraphSchema
+                entities = list(self.schema_.entities)
 
                 # handle case where relations could be None
                 if self.schema_.relations is not None:
-                    relation_dicts = list(self.schema_.relations.values())
-                    relations = [
-                        SchemaRelation.model_validate(r) for r in relation_dicts
-                    ]
+                    relations = list(self.schema_.relations)
                 else:
                     relations = []
 
-                potential_schema = self.schema_.potential_schema
+                potential_schema = list(self.schema_.potential_schema)
             else:
                 entities = [
                     SchemaEntity.from_text_or_dict(e)

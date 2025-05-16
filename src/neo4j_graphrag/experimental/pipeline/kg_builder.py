@@ -43,7 +43,7 @@ from neo4j_graphrag.experimental.pipeline.types.schema import (
 )
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 from neo4j_graphrag.llm.base import LLMInterface
-from neo4j_graphrag.experimental.components.schema import SchemaConfig
+from neo4j_graphrag.experimental.components.schema import GraphSchema
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ class SimpleKGPipeline:
         llm (LLMInterface): An instance of an LLM to use for entity and relation extraction.
         driver (neo4j.Driver): A Neo4j driver instance for database connection.
         embedder (Embedder): An instance of an embedder used to generate chunk embeddings from text chunks.
-        schema (Optional[Union[SchemaConfig, dict[str, list]]]): A schema configuration defining entities,
+        schema (Optional[Union[GraphSchema, dict[str, list]]]): A schema configuration defining entities,
                                                    relations, and potential schema relationships.
                                                    This is the recommended way to provide schema information.
         entities (Optional[List[Union[str, dict[str, str], SchemaEntity]]]): DEPRECATED. A list of either:
@@ -92,7 +92,7 @@ class SimpleKGPipeline:
         entities: Optional[Sequence[EntityInputType]] = None,
         relations: Optional[Sequence[RelationInputType]] = None,
         potential_schema: Optional[List[tuple[str, str, str]]] = None,
-        schema: Optional[Union[SchemaConfig, dict[str, list[Any]]]] = None,
+        schema: Optional[Union[GraphSchema, dict[str, list[Any]]]] = None,
         enforce_schema: str = "NONE",
         from_pdf: bool = True,
         text_splitter: Optional[TextSplitter] = None,

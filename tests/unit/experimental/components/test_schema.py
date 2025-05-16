@@ -418,9 +418,7 @@ def test_create_schema_model_no_relations_or_potential_schema(
     assert len(schema_instance.entities) == 2
     person = schema_instance.entity_from_label("PERSON")
 
-    assert (
-        person.description == "An individual human being."
-    )
+    assert person.description == "An individual human being."
     assert person.properties == [
         SchemaProperty(
             name="name",
@@ -431,14 +429,11 @@ def test_create_schema_model_no_relations_or_potential_schema(
             name="birth date",
             type="ZONED_DATETIME",
             description="",
-        )
+        ),
     ]
 
     org = schema_instance.entity_from_label("ORGANIZATION")
-    assert (
-        org.description
-        == "A structured group of people with a common purpose."
-    )
+    assert org.description == "A structured group of people with a common purpose."
 
     age = schema_instance.entity_from_label("AGE")
     assert age.description == "Age of a person in years."
