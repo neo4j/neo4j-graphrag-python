@@ -324,9 +324,9 @@ class SchemaBuilder(Component):
         and a Dictionary defining potential relationships.
 
         Args:
-            entities (List[SchemaEntity]): List of Entity objects.
-            relations (Optional[List[SchemaRelation]]): List of Relation objects.
-            potential_schema (Optional[List[Tuple[str, str, str]]]): Dictionary mapping entity names to Lists of relation names.
+            entities (Sequence[SchemaEntity]): List or tuple of SchemaEntity objects.
+            relations (Optional[Sequence[SchemaRelation]]): List or tuple of SchemaRelation objects.
+            potential_schema (Optional[Sequence[Tuple[str, str, str]]]): List or tuples of triplets: (source_entity_label, relation_label, target_entity_label).
 
         Returns:
             GraphSchema: A configured schema object.
@@ -353,9 +353,9 @@ class SchemaBuilder(Component):
         Asynchronously constructs and returns a GraphSchema object.
 
         Args:
-            entities (List[SchemaEntity]): List of Entity objects.
-            relations (List[SchemaRelation]): List of Relation objects.
-            potential_schema (Dict[str, List[str]]): Dictionary mapping entity names to Lists of relation names.
+            entities (Sequence[SchemaEntity]): List or tuple of SchemaEntity objects.
+            relations (Sequence[SchemaRelation]): List or tuple of SchemaRelation objects.
+            potential_schema (Optional[Sequence[Tuple[str, str, str]]]): List or tuples of triplets: (source_entity_label, relation_label, target_entity_label).
 
         Returns:
             GraphSchema: A configured schema object, constructed asynchronously.

@@ -12,6 +12,7 @@
 
 ### Changed
 
+- `SchemaConfig` has been deprecated in favor of `GraphSchema` (used in the `SchemaBuilder` and `EntityRelationExtractor` classes).
 - Strict mode in `SimpleKGPipeline`: now properties and relationships are pruned only if they are defined in the input schema.
 
 
