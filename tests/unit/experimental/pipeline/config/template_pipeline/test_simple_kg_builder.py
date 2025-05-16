@@ -142,11 +142,9 @@ def test_simple_kg_pipeline_config_schema_run_params() -> None:
         potential_schema=[("Person", "KNOWS", "Person")],
     )
     assert config._get_run_params_for_schema() == {
-        "entities": [SchemaEntity(label="Person")],
-        "relations": [SchemaRelation(label="KNOWS")],
-        "potential_schema": [
-            ("Person", "KNOWS", "Person"),
-        ],
+        "entities": (SchemaEntity(label="Person"),),
+        "relations": (SchemaRelation(label="KNOWS"),),
+        "potential_schema": (("Person", "KNOWS", "Person"),),
     }
 
 

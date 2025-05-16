@@ -116,10 +116,6 @@ async def test_knowledge_graph_builder_with_entities_and_file(_: Mock) -> None:
         from_pdf=True,
     )
 
-    # assert kg_builder.entities == entities
-    # assert kg_builder.relations == relations
-    # assert kg_builder.potential_schema == potential_schema
-
     file_path = "path/to/test.pdf"
 
     internal_entities = [SchemaEntity(label=label) for label in entities]
@@ -132,9 +128,9 @@ async def test_knowledge_graph_builder_with_entities_and_file(_: Mock) -> None:
     ) as mock_run:
         await kg_builder.run_async(file_path=file_path)
         pipe_inputs = mock_run.call_args[1]["data"]
-        assert pipe_inputs["schema"]["entities"] == internal_entities
-        assert pipe_inputs["schema"]["relations"] == internal_relations
-        assert pipe_inputs["schema"]["potential_schema"] == potential_schema
+        assert pipe_inputs["schema"]["entities"] == tuple(internal_entities)
+        assert pipe_inputs["schema"]["relations"] == tuple(internal_relations)
+        assert pipe_inputs["schema"]["potential_schema"] == tuple(potential_schema)
 
 
 def test_simple_kg_pipeline_on_error_invalid_value() -> None:

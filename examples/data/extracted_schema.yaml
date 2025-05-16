@@ -1,74 +1,56 @@
 entities:
-  Company:
-    label: Company
+- label: Company
+  description: ''
+  properties:
+  - name: name
+    type: STRING
     description: ''
-    properties:
-    - name: name
-      type: STRING
-      description: ''
-    - name: foundedYear
-      type: INTEGER
-      description: ''
-    - name: revenue
-      type: FLOAT
-      description: ''
-    - name: valuation
-      type: FLOAT
-      description: ''
-  Person:
-    label: Person
+  - name: foundedYear
+    type: INTEGER
     description: ''
-    properties:
-    - name: name
-      type: STRING
-      description: ''
-    - name: position
-      type: STRING
-      description: ''
-    - name: yearJoined
-      type: INTEGER
-      description: ''
-  Product:
-    label: Product
+  - name: revenue
+    type: FLOAT
     description: ''
-    properties:
-    - name: name
-      type: STRING
-      description: ''
-    - name: launchYear
-      type: INTEGER
-      description: ''
-    - name: unitsSold
-      type: INTEGER
-      description: ''
-  Office:
-    label: Office
+  - name: valuation
+    type: FLOAT
     description: ''
-    properties:
-    - name: location
-      type: STRING
-      description: ''
+- label: Person
+  description: ''
+  properties:
+  - name: name
+    type: STRING
+    description: ''
+  - name: position
+    type: STRING
+    description: ''
+  - name: startYear
+    type: INTEGER
+    description: ''
+- label: Product
+  description: ''
+  properties:
+  - name: name
+    type: STRING
+    description: ''
+  - name: launchYear
+    type: INTEGER
+    description: ''
+  - name: unitsSold
+    type: INTEGER
+    description: ''
 relations:
-  FOUNDED_BY:
-    label: FOUNDED_BY
-    description: ''
-    properties: []
-  WORKS_FOR:
-    label: WORKS_FOR
-    description: ''
-    properties: []
-  MANAGES:
-    label: MANAGES
-    description: ''
-    properties: []
-  DEVELOPED_BY:
-    label: DEVELOPED_BY
-    description: ''
-    properties: []
-  LOCATED_IN:
-    label: LOCATED_IN
-    description: ''
-    properties: []
+- label: FOUNDED_BY
+  description: ''
+  properties: []
+- label: WORKS_FOR
+  description: ''
+  properties: []
+- label: MANAGES
+  description: ''
+  properties: []
+- label: DEVELOPED_BY
+  description: ''
+  properties: []
 potential_schema:
 - - Company
   - FOUNDED_BY
@@ -78,10 +60,7 @@ potential_schema:
   - Company
 - - Person
   - MANAGES
-  - Office
+  - Company
 - - Product
   - DEVELOPED_BY
   - Person
-- - Company
-  - LOCATED_IN
-  - Office
