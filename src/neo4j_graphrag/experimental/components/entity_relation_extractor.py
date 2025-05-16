@@ -325,9 +325,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             lexical_graph = lexical_graph_result.graph
         elif lexical_graph_config:
             lexical_graph_builder = LexicalGraphBuilder(config=lexical_graph_config)
-        schema = schema or GraphSchema(
-            entities=(), relations=(), potential_schema=()
-        )
+        schema = schema or GraphSchema(entities=(), relations=(), potential_schema=())
         examples = examples or ""
         sem = asyncio.Semaphore(self.max_concurrency)
         tasks = [
