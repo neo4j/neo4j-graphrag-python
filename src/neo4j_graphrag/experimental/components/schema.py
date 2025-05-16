@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import yaml
 import logging
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union, Sequence
 from pathlib import Path
 
 from pydantic import (
@@ -109,12 +109,16 @@ class SchemaRelation(BaseModel):
 
 
 class GraphSchema(DataModel):
-    entities: list[SchemaEntity]
-    relations: Optional[list[SchemaRelation]] = None
-    potential_schema: Optional[list[Tuple[str, str, str]]] = None
+    entities: Tuple[SchemaEntity, ...]
+    relations: Optional[Tuple[SchemaRelation, ...]] = None
+    potential_schema: Optional[Tuple[Tuple[str, str, str], ...]] = None
 
     _entity_index: dict[str, SchemaEntity] = PrivateAttr()
     _relation_index: dict[str, SchemaRelation] = PrivateAttr()
+
+    model_config = ConfigDict(
+        frozen=True,
+    )
 
     @model_validator(mode="after")
     def check_schema(self) -> Self:
@@ -123,8 +127,8 @@ class GraphSchema(DataModel):
             {r.label: r for r in self.relations} if self.relations else {}
         )
 
-        relations = self.relations or []
-        potential_schema = self.potential_schema or []
+        relations = self.relations or tuple()
+        potential_schema = self.potential_schema or tuple()
 
         if potential_schema:
             if not relations:
@@ -172,6 +176,10 @@ class GraphSchema(DataModel):
         """
         # create a copy of the data and convert tuples to lists for YAML compatibility
         data = self.model_dump()
+        if data.get("entities"):
+            data["entities"] = list(data["entities"])
+        if data.get("relations"):
+            data["relations"] = list(data["relations"])
         if data.get("potential_schema"):
             data["potential_schema"] = [list(item) for item in data["potential_schema"]]
 
@@ -307,9 +315,9 @@ class SchemaBuilder(Component):
 
     @staticmethod
     def create_schema_model(
-        entities: List[SchemaEntity],
-        relations: Optional[List[SchemaRelation]] = None,
-        potential_schema: Optional[List[Tuple[str, str, str]]] = None,
+        entities: Sequence[SchemaEntity],
+        relations: Optional[Sequence[SchemaRelation]] = None,
+        potential_schema: Optional[Sequence[Tuple[str, str, str]]] = None,
     ) -> GraphSchema:
         """
         Creates a GraphSchema object from Lists of Entity and Relation objects
@@ -337,9 +345,9 @@ class SchemaBuilder(Component):
     @validate_call
     async def run(
         self,
-        entities: List[SchemaEntity],
-        relations: Optional[List[SchemaRelation]] = None,
-        potential_schema: Optional[List[Tuple[str, str, str]]] = None,
+        entities: Sequence[SchemaEntity],
+        relations: Optional[Sequence[SchemaRelation]] = None,
+        potential_schema: Optional[Sequence[Tuple[str, str, str]]] = None,
     ) -> GraphSchema:
         """
         Asynchronously constructs and returns a GraphSchema object.
