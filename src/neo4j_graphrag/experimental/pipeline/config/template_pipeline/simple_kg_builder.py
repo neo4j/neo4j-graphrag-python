@@ -19,7 +19,6 @@ from typing import (
     Optional,
     Sequence,
     Union,
-    List,
     Tuple,
     Dict,
     cast,
@@ -190,7 +189,9 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     def _process_schema_with_precedence(
         self,
     ) -> Tuple[
-        List[SchemaEntity], List[SchemaRelation], Optional[List[Tuple[str, str, str]]]
+        Tuple[SchemaEntity, ...],
+        Tuple[SchemaRelation, ...],
+        Optional[Tuple[Tuple[str, str, str], ...]],
     ]:
         """
         Process schema inputs according to precedence rules:
@@ -205,42 +206,45 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             # schema takes precedence over individual components
             if isinstance(self.schema_, GraphSchema):
                 # extract components from GraphSchema
-                entities = list(self.schema_.entities)
+                entities = self.schema_.entities
 
                 # handle case where relations could be None
                 if self.schema_.relations is not None:
-                    relations = list(self.schema_.relations)
+                    relations = self.schema_.relations
                 else:
-                    relations = []
+                    relations = ()
 
-                potential_schema = list(self.schema_.potential_schema)
+                potential_schema = self.schema_.potential_schema
             else:
-                entities = [
+                entities = tuple(
                     SchemaEntity.from_text_or_dict(e)
                     for e in cast(
                         Dict[str, Any], self.schema_.get("entities", {})
                     ).values()
-                ]
-                relations = [
+                )
+                relations = tuple(
                     SchemaRelation.from_text_or_dict(r)
                     for r in cast(
                         Dict[str, Any], self.schema_.get("relations", {})
                     ).values()
-                ]
-                potential_schema = self.schema_.get("potential_schema")
+                )
+                ps = self.schema_.get("potential_schema")
+                potential_schema = tuple(ps) if ps else None
         else:
             # use individual components
-            entities = (
+            entities = tuple(
                 [SchemaEntity.from_text_or_dict(e) for e in self.entities]
                 if self.entities
                 else []
             )
-            relations = (
+            relations = tuple(
                 [SchemaRelation.from_text_or_dict(r) for r in self.relations]
                 if self.relations
                 else []
             )
-            potential_schema = self.potential_schema
+            potential_schema = (
+                tuple(self.potential_schema) if self.potential_schema else None
+            )
 
         return entities, relations, potential_schema
 
