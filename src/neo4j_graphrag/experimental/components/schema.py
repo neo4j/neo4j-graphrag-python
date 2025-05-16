@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import yaml
 import logging
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union, FrozenSet
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 from pathlib import Path
 
 from pydantic import (
@@ -67,6 +67,10 @@ class SchemaProperty(BaseModel):
     ]
     description: str = ""
 
+    model_config = ConfigDict(
+        frozen=True,
+    )
+
 
 class SchemaEntity(BaseModel):
     """
@@ -75,7 +79,7 @@ class SchemaEntity(BaseModel):
 
     label: str
     description: str = ""
-    properties: List[SchemaProperty] = []
+    properties: list[SchemaProperty] = []
 
     @classmethod
     def from_text_or_dict(cls, input: EntityInputType) -> Self:
@@ -93,7 +97,7 @@ class SchemaRelation(BaseModel):
 
     label: str
     description: str = ""
-    properties: List[SchemaProperty] = []
+    properties: list[SchemaProperty] = []
 
     @classmethod
     def from_text_or_dict(cls, input: RelationInputType) -> Self:
@@ -105,16 +109,12 @@ class SchemaRelation(BaseModel):
 
 
 class GraphSchema(DataModel):
-    entities: FrozenSet[SchemaEntity]
-    relations: Optional[FrozenSet[SchemaRelation]] = None
-    potential_schema: Optional[FrozenSet[Tuple[str, str, str]]] = None
+    entities: list[SchemaEntity]
+    relations: Optional[list[SchemaRelation]] = None
+    potential_schema: Optional[list[Tuple[str, str, str]]] = None
 
     _entity_index: dict[str, SchemaEntity] = PrivateAttr()
     _relation_index: dict[str, SchemaRelation] = PrivateAttr()
-
-    model_config = ConfigDict(
-        frozen=True,
-    )
 
     @model_validator(mode="after")
     def check_schema(self) -> Self:
@@ -123,8 +123,8 @@ class GraphSchema(DataModel):
             {r.label: r for r in self.relations} if self.relations else {}
         )
 
-        relations = self.relations or frozenset()
-        potential_schema = self.potential_schema or frozenset()
+        relations = self.relations or []
+        potential_schema = self.potential_schema or []
 
         if potential_schema:
             if not relations:
@@ -431,24 +431,10 @@ class SchemaFromTextExtractor(Component):
             "potential_schema"
         )
 
-        try:
-            entities: List[SchemaEntity] = [
-                SchemaEntity(**e) for e in extracted_entities
-            ]
-            relations: Optional[List[SchemaRelation]] = (
-                [SchemaRelation(**r) for r in extracted_relations]
-                if extracted_relations
-                else None
-            )
-        except ValidationError as exc:
-            raise SchemaValidationError(
-                f"Invalid schema format return from LLM: {exc}"
-            ) from exc
-
         return GraphSchema.model_validate(
             {
-                "entities": entities,
-                "relations": relations,
+                "entities": extracted_entities,
+                "relations": extracted_relations,
                 "potential_schema": potential_schema,
             }
         )
