@@ -18,7 +18,6 @@ import json
 from unittest.mock import AsyncMock
 
 import pytest
-from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import SchemaValidationError, SchemaExtractionError
 from neo4j_graphrag.experimental.components.schema import (
@@ -95,9 +94,7 @@ def potential_schema_with_invalid_entity() -> tuple[tuple[str, str, str], ...]:
 
 @pytest.fixture
 def potential_schema_with_invalid_relation() -> tuple[tuple[str, str, str], ...]:
-    return (
-        ("PERSON", "NON_EXISTENT_RELATION", "ORGANIZATION"),
-    )
+    return (("PERSON", "NON_EXISTENT_RELATION", "ORGANIZATION"),)
 
 
 @pytest.fixture
@@ -140,9 +137,7 @@ async def test_run_method(
     potential_schema: tuple[tuple[str, str, str], ...],
 ) -> None:
     schema = await schema_builder.run(
-        list(valid_entities),
-        list(valid_relations),
-        list(potential_schema)
+        list(valid_entities), list(valid_relations), list(potential_schema)
     )
 
     assert schema.entities == valid_entities
@@ -175,7 +170,9 @@ def test_create_schema_model_invalid_relation(
 ) -> None:
     with pytest.raises(SchemaValidationError) as exc_info:
         schema_builder.create_schema_model(
-            list(valid_entities), list(valid_relations), list(potential_schema_with_invalid_relation)
+            list(valid_entities),
+            list(valid_relations),
+            list(potential_schema_with_invalid_relation),
         )
     assert "Relation 'NON_EXISTENT_RELATION' is not defined" in str(
         exc_info.value
