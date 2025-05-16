@@ -108,14 +108,6 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    @model_validator(mode="before")
-    def normalize_schema_field(cls, data: Dict[str, Any]) -> Dict[str, Any]:
-        # Normalize the 'schema' field if it is a dict
-        schema = data.get("schema")
-        if isinstance(schema, dict):
-            data["schema"] = normalize_schema_dict(schema)
-        return data
-
     @model_validator(mode="after")
     def handle_schema_precedence(self) -> Self:
         """Handle schema precedence and warnings"""

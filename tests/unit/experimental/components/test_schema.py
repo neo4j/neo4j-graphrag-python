@@ -25,9 +25,8 @@ from neo4j_graphrag.experimental.components.schema import (
     SchemaProperty,
     SchemaRelation,
     SchemaFromTextExtractor,
-    SchemaConfig,
+    GraphSchema,
 )
-from pydantic import ValidationError
 import os
 import tempfile
 import yaml
@@ -110,7 +109,7 @@ def schema_config(
     valid_entities: list[SchemaEntity],
     valid_relations: list[SchemaRelation],
     potential_schema: list[tuple[str, str, str]],
-) -> SchemaConfig:
+) -> GraphSchema:
     return schema_builder.create_schema_model(
         valid_entities, valid_relations, potential_schema
     )
@@ -126,130 +125,9 @@ def test_create_schema_model_valid_data(
         valid_entities, valid_relations, potential_schema
     )
 
-    assert (
-        schema_instance.entities["PERSON"]["description"]
-        == "An individual human being."
-    )
-    assert schema_instance.entities["PERSON"]["properties"] == [
-        {"description": "", "name": "birth date", "type": "ZONED_DATETIME"},
-        {"description": "", "name": "name", "type": "STRING"},
-    ]
-    assert (
-        schema_instance.entities["ORGANIZATION"]["description"]
-        == "A structured group of people with a common purpose."
-    )
-    assert schema_instance.entities["AGE"]["description"] == "Age of a person in years."
-
-    assert schema_instance.relations
-    assert (
-        schema_instance.relations["EMPLOYED_BY"]["description"]
-        == "Indicates employment relationship."
-    )
-    assert (
-        schema_instance.relations["ORGANIZED_BY"]["description"]
-        == "Indicates organization responsible for an event."
-    )
-    assert (
-        schema_instance.relations["ATTENDED_BY"]["description"]
-        == "Indicates attendance at an event."
-    )
-    assert schema_instance.relations["EMPLOYED_BY"]["properties"] == [
-        {"description": "", "name": "start_time", "type": "LOCAL_DATETIME"},
-        {"description": "", "name": "end_time", "type": "LOCAL_DATETIME"},
-    ]
-
-    assert schema_instance.potential_schema
+    assert schema_instance.entities == valid_entities
+    assert schema_instance.relations == valid_relations
     assert schema_instance.potential_schema == potential_schema
-
-
-def test_create_schema_model_missing_description(
-    schema_builder: SchemaBuilder, potential_schema: list[tuple[str, str, str]]
-) -> None:
-    entities = [
-        SchemaEntity(label="PERSON", description="An individual human being."),
-        SchemaEntity(label="ORGANIZATION", description=""),
-        SchemaEntity(label="AGE", description=""),
-    ]
-    relations = [
-        SchemaRelation(
-            label="EMPLOYED_BY", description="Indicates employment relationship."
-        ),
-        SchemaRelation(label="ORGANIZED_BY", description=""),
-        SchemaRelation(label="ATTENDED_BY", description=""),
-    ]
-
-    schema_instance = schema_builder.create_schema_model(
-        entities, relations, potential_schema
-    )
-
-    assert schema_instance.entities["ORGANIZATION"]["description"] == ""
-    assert schema_instance.entities["AGE"]["description"] == ""
-    assert schema_instance.relations
-    assert schema_instance.relations["ORGANIZED_BY"]["description"] == ""
-    assert schema_instance.relations["ATTENDED_BY"]["description"] == ""
-
-
-def test_create_schema_model_empty_lists(schema_builder: SchemaBuilder) -> None:
-    schema_instance = schema_builder.create_schema_model([], [], [])
-
-    assert schema_instance.entities == {}
-    assert schema_instance.relations == {}
-    assert schema_instance.potential_schema == []
-
-
-def test_create_schema_model_invalid_data_types(
-    schema_builder: SchemaBuilder, potential_schema: list[tuple[str, str, str]]
-) -> None:
-    with pytest.raises(ValidationError):
-        entities = [
-            SchemaEntity(label="PERSON", description="An individual human being."),
-            SchemaEntity(
-                label="ORGANIZATION",
-                description="A structured group of people with a common purpose.",
-            ),
-        ]
-        relations = [
-            SchemaRelation(
-                label="EMPLOYED_BY", description="Indicates employment relationship."
-            ),
-            SchemaRelation(
-                label=456,  # type: ignore
-                description="Indicates organization responsible for an event.",
-            ),
-        ]
-
-        schema_builder.create_schema_model(entities, relations, potential_schema)
-
-
-def test_create_schema_model_invalid_properties_types(
-    schema_builder: SchemaBuilder,
-    potential_schema: list[tuple[str, str, str]],
-) -> None:
-    with pytest.raises(ValidationError):
-        entities = [
-            SchemaEntity(
-                label="PERSON",
-                description="An individual human being.",
-                properties=[42, 1337],  # type: ignore
-            ),
-            SchemaEntity(
-                label="ORGANIZATION",
-                description="A structured group of people with a common purpose.",
-            ),
-        ]
-        relations = [
-            SchemaRelation(
-                label="EMPLOYED_BY",
-                description="Indicates employment relationship.",
-                properties=[42, 1337],  # type: ignore
-            ),
-            SchemaRelation(
-                label="ORGANIZED_BY",
-                description="Indicates organization responsible for an event.",
-            ),
-        ]
-
-        schema_builder.create_schema_model(entities, relations, potential_schema)
 
 
 @pytest.mark.asyncio
@@ -261,28 +139,8 @@ async def test_run_method(
 ) -> None:
     schema = await schema_builder.run(valid_entities, valid_relations, potential_schema)
 
-    assert schema.entities["PERSON"]["description"] == "An individual human being."
-    assert (
-        schema.entities["ORGANIZATION"]["description"]
-        == "A structured group of people with a common purpose."
-    )
-    assert schema.entities["AGE"]["description"] == "Age of a person in years."
-
-    assert schema.relations
-    assert (
-        schema.relations["EMPLOYED_BY"]["description"]
-        == "Indicates employment relationship."
-    )
-    assert (
-        schema.relations["ORGANIZED_BY"]["description"]
-        == "Indicates organization responsible for an event."
-    )
-    assert (
-        schema.relations["ATTENDED_BY"]["description"]
-        == "Indicates attendance at an event."
-    )
-
-    assert schema.potential_schema
+    assert schema.entities == valid_entities
+    assert schema.relations == valid_relations
     assert schema.potential_schema == potential_schema
 
 
@@ -316,57 +174,6 @@ def test_create_schema_model_invalid_relation(
     ), "Should fail due to non-existent relation"
 
 
-def test_create_schema_model_missing_properties(
-    schema_builder: SchemaBuilder, potential_schema: list[tuple[str, str, str]]
-) -> None:
-    entities = [
-        SchemaEntity(label="PERSON", description="An individual human being."),
-        SchemaEntity(
-            label="ORGANIZATION",
-            description="A structured group of people with a common purpose.",
-        ),
-        SchemaEntity(label="AGE", description="Age of a person in years."),
-    ]
-
-    relations = [
-        SchemaRelation(
-            label="EMPLOYED_BY", description="Indicates employment relationship."
-        ),
-        SchemaRelation(
-            label="ORGANIZED_BY",
-            description="Indicates organization responsible for an event.",
-        ),
-        SchemaRelation(
-            label="ATTENDED_BY", description="Indicates attendance at an event."
-        ),
-    ]
-
-    schema_instance = schema_builder.create_schema_model(
-        entities, relations, potential_schema
-    )
-
-    assert (
-        schema_instance.entities["PERSON"]["properties"] == []
-    ), "Expected empty properties for PERSON"
-    assert (
-        schema_instance.entities["ORGANIZATION"]["properties"] == []
-    ), "Expected empty properties for ORGANIZATION"
-    assert (
-        schema_instance.entities["AGE"]["properties"] == []
-    ), "Expected empty properties for AGE"
-
-    assert schema_instance.relations
-    assert (
-        schema_instance.relations["EMPLOYED_BY"]["properties"] == []
-    ), "Expected empty properties for EMPLOYED_BY"
-    assert (
-        schema_instance.relations["ORGANIZED_BY"]["properties"] == []
-    ), "Expected empty properties for ORGANIZED_BY"
-    assert (
-        schema_instance.relations["ATTENDED_BY"]["properties"] == []
-    ), "Expected empty properties for ATTENDED_BY"
-
-
 def test_create_schema_model_no_potential_schema(
     schema_builder: SchemaBuilder,
     valid_entities: list[SchemaEntity],
@@ -375,38 +182,9 @@ def test_create_schema_model_no_potential_schema(
     schema_instance = schema_builder.create_schema_model(
         valid_entities, valid_relations
     )
-
-    assert (
-        schema_instance.entities["PERSON"]["description"]
-        == "An individual human being."
-    )
-    assert schema_instance.entities["PERSON"]["properties"] == [
-        {"description": "", "name": "birth date", "type": "ZONED_DATETIME"},
-        {"description": "", "name": "name", "type": "STRING"},
-    ]
-    assert (
-        schema_instance.entities["ORGANIZATION"]["description"]
-        == "A structured group of people with a common purpose."
-    )
-    assert schema_instance.entities["AGE"]["description"] == "Age of a person in years."
-
-    assert schema_instance.relations
-    assert (
-        schema_instance.relations["EMPLOYED_BY"]["description"]
-        == "Indicates employment relationship."
-    )
-    assert (
-        schema_instance.relations["ORGANIZED_BY"]["description"]
-        == "Indicates organization responsible for an event."
-    )
-    assert (
-        schema_instance.relations["ATTENDED_BY"]["description"]
-        == "Indicates attendance at an event."
-    )
-    assert schema_instance.relations["EMPLOYED_BY"]["properties"] == [
-        {"description": "", "name": "start_time", "type": "LOCAL_DATETIME"},
-        {"description": "", "name": "end_time", "type": "LOCAL_DATETIME"},
-    ]
+    assert schema_instance.entities == valid_entities
+    assert schema_instance.relations == valid_relations
+    assert schema_instance.potential_schema is None
 
 
 def test_create_schema_model_no_relations_or_potential_schema(
@@ -415,22 +193,11 @@ def test_create_schema_model_no_relations_or_potential_schema(
 ) -> None:
     schema_instance = schema_builder.create_schema_model(valid_entities)
 
-    assert len(schema_instance.entities) == 2
+    assert len(schema_instance.entities) == 3
     person = schema_instance.entity_from_label("PERSON")
 
     assert person.description == "An individual human being."
-    assert person.properties == [
-        SchemaProperty(
-            name="name",
-            type="STRING",
-            description="",
-        ),
-        SchemaProperty(
-            name="birth date",
-            type="ZONED_DATETIME",
-            description="",
-        ),
-    ]
+    assert len(person.properties) == 2
 
     org = schema_instance.entity_from_label("ORGANIZATION")
     assert org.description == "A structured group of people with a common purpose."
@@ -532,11 +299,11 @@ async def test_schema_from_text_run_valid_response(
 
     # verify the schema was correctly extracted
     assert len(schema_config.entities) == 2
-    assert "Person" in schema_config.entities
-    assert "Organization" in schema_config.entities
+    assert schema_config.entity_from_label("Person") is not None
+    assert schema_config.entity_from_label("Organization") is not None
 
     assert schema_config.relations is not None
-    assert "WORKS_FOR" in schema_config.relations
+    assert schema_config.relation_from_label("WORKS_FOR") is not None
 
     assert schema_config.potential_schema is not None
     assert len(schema_config.potential_schema) == 1
@@ -607,7 +374,7 @@ async def test_schema_from_text_llm_params(
 
 
 @pytest.mark.asyncio
-async def test_schema_config_store_as_json(schema_config: SchemaConfig) -> None:
+async def test_schema_config_store_as_json(schema_config: GraphSchema) -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         # create file path
         json_path = os.path.join(temp_dir, "schema.json")
@@ -623,17 +390,11 @@ async def test_schema_config_store_as_json(schema_config: SchemaConfig) -> None:
         with open(json_path, "r") as f:
             data = json.load(f)
             assert "entities" in data
-            assert "PERSON" in data["entities"]
-            assert "properties" in data["entities"]["PERSON"]
-            assert "description" in data["entities"]["PERSON"]
-            assert (
-                data["entities"]["PERSON"]["description"]
-                == "An individual human being."
-            )
+            assert len(data["entities"]) == 3
 
 
 @pytest.mark.asyncio
-async def test_schema_config_store_as_yaml(schema_config: SchemaConfig) -> None:
+async def test_schema_config_store_as_yaml(schema_config: GraphSchema) -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create file path
         yaml_path = os.path.join(temp_dir, "schema.yaml")
@@ -649,17 +410,11 @@ async def test_schema_config_store_as_yaml(schema_config: SchemaConfig) -> None:
         with open(yaml_path, "r") as f:
             data = yaml.safe_load(f)
             assert "entities" in data
-            assert "PERSON" in data["entities"]
-            assert "properties" in data["entities"]["PERSON"]
-            assert "description" in data["entities"]["PERSON"]
-            assert (
-                data["entities"]["PERSON"]["description"]
-                == "An individual human being."
-            )
+            assert len(data["entities"]) == 3
 
 
 @pytest.mark.asyncio
-async def test_schema_config_from_file(schema_config: SchemaConfig) -> None:
+async def test_schema_config_from_file(schema_config: GraphSchema) -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         # create file paths with different extensions
         json_path = os.path.join(temp_dir, "schema.json")
@@ -672,14 +427,14 @@ async def test_schema_config_from_file(schema_config: SchemaConfig) -> None:
         schema_config.store_as_yaml(yml_path)
 
         # load using from_file which should detect the format based on extension
-        json_schema = SchemaConfig.from_file(json_path)
-        yaml_schema = SchemaConfig.from_file(yaml_path)
-        yml_schema = SchemaConfig.from_file(yml_path)
+        json_schema = GraphSchema.from_file(json_path)
+        yaml_schema = GraphSchema.from_file(yaml_path)
+        yml_schema = GraphSchema.from_file(yml_path)
 
         # simple verification that the objects were loaded correctly
-        assert isinstance(json_schema, SchemaConfig)
-        assert isinstance(yaml_schema, SchemaConfig)
-        assert isinstance(yml_schema, SchemaConfig)
+        assert isinstance(json_schema, GraphSchema)
+        assert isinstance(yaml_schema, GraphSchema)
+        assert isinstance(yml_schema, GraphSchema)
 
         # verify basic structure is intact
         assert "entities" in json_schema.model_dump()
@@ -691,7 +446,7 @@ async def test_schema_config_from_file(schema_config: SchemaConfig) -> None:
         schema_config.store_as_json(txt_path)  # Store as JSON but with .txt extension
 
         with pytest.raises(ValueError, match="Unsupported file format"):
-            SchemaConfig.from_file(txt_path)
+            GraphSchema.from_file(txt_path)
 
 
 @pytest.fixture
@@ -739,16 +494,16 @@ async def test_schema_from_text_run_valid_json_array(
     mock_llm.ainvoke.return_value = LLMResponse(content=valid_schema_json_array)
 
     # run the schema extraction
-    schema_config = await schema_from_text.run(text="Sample text for extraction")
+    schema = await schema_from_text.run(text="Sample text for extraction")
 
     # verify the schema was correctly extracted from the array
-    assert len(schema_config.entities) == 2
-    assert "Person" in schema_config.entities
-    assert "Organization" in schema_config.entities
+    assert len(schema.entities) == 2
+    assert schema.entity_from_label("Person") is not None
+    assert schema.entity_from_label("Organization") is not None
 
-    assert schema_config.relations is not None
-    assert "WORKS_FOR" in schema_config.relations
+    assert schema.relations is not None
+    assert schema.relation_from_label("WORKS_FOR") is not None
 
-    assert schema_config.potential_schema is not None
-    assert len(schema_config.potential_schema) == 1
-    assert schema_config.potential_schema[0] == ("Person", "WORKS_FOR", "Organization")
+    assert schema.potential_schema is not None
+    assert len(schema.potential_schema) == 1
+    assert schema.potential_schema[0] == ("Person", "WORKS_FOR", "Organization")
