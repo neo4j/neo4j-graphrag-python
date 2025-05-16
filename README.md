@@ -128,8 +128,10 @@ kg_builder = SimpleKGPipeline(
     llm=llm,
     driver=driver,
     embedder=embedder,
-    entities=entities,
-    relations=relations,
+    schema={
+        "entities": entities,
+        "relations": relations,
+    },
     on_error="IGNORE",
     from_pdf=False,
 )
@@ -365,7 +367,7 @@ When you're finished with your changes, create a pull request (PR) using the fol
 
 ## 🧪 Tests
 
-To be able to run all tests, all extra packages needs to be installed.  
+To be able to run all tests, all extra packages needs to be installed.
 This is achieved by:
 
 ```bash

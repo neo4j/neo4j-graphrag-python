@@ -218,15 +218,11 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             else:
                 entities = tuple(
                     SchemaEntity.from_text_or_dict(e)
-                    for e in cast(
-                        Dict[str, Any], self.schema_.get("entities", {})
-                    ).values()
+                    for e in self.schema_.get("entities", [])
                 )
                 relations = tuple(
                     SchemaRelation.from_text_or_dict(r)
-                    for r in cast(
-                        Dict[str, Any], self.schema_.get("relations", {})
-                    ).values()
+                    for r in self.schema_.get("relations", [])
                 )
                 ps = self.schema_.get("potential_schema")
                 potential_schema = tuple(ps) if ps else None
