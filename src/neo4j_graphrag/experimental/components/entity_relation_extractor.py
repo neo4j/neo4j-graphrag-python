@@ -326,7 +326,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         elif lexical_graph_config:
             lexical_graph_builder = LexicalGraphBuilder(config=lexical_graph_config)
         schema = schema or GraphSchema(
-            entities=frozenset(), relations=frozenset(), potential_schema=frozenset()
+            entities=(), relations=(), potential_schema=()
         )
         examples = examples or ""
         sem = asyncio.Semaphore(self.max_concurrency)

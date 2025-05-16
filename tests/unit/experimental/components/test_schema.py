@@ -18,6 +18,8 @@ import json
 from unittest.mock import AsyncMock
 
 import pytest
+from pydantic import ValidationError
+
 from neo4j_graphrag.exceptions import SchemaValidationError, SchemaExtractionError
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
@@ -36,8 +38,8 @@ from neo4j_graphrag.llm.types import LLMResponse
 
 
 @pytest.fixture
-def valid_entities() -> list[SchemaEntity]:
-    return [
+def valid_entities() -> tuple[SchemaEntity, ...]:
+    return (
         SchemaEntity(
             label="PERSON",
             description="An individual human being.",
@@ -51,12 +53,12 @@ def valid_entities() -> list[SchemaEntity]:
             description="A structured group of people with a common purpose.",
         ),
         SchemaEntity(label="AGE", description="Age of a person in years."),
-    ]
+    )
 
 
 @pytest.fixture
-def valid_relations() -> list[SchemaRelation]:
-    return [
+def valid_relations() -> tuple[SchemaRelation, ...]:
+    return (
         SchemaRelation(
             label="EMPLOYED_BY",
             description="Indicates employment relationship.",
@@ -72,30 +74,30 @@ def valid_relations() -> list[SchemaRelation]:
         SchemaRelation(
             label="ATTENDED_BY", description="Indicates attendance at an event."
         ),
-    ]
+    )
 
 
 @pytest.fixture
-def potential_schema() -> list[tuple[str, str, str]]:
-    return [
+def potential_schema() -> tuple[tuple[str, str, str], ...]:
+    return (
         ("PERSON", "EMPLOYED_BY", "ORGANIZATION"),
         ("ORGANIZATION", "ATTENDED_BY", "PERSON"),
-    ]
+    )
 
 
 @pytest.fixture
-def potential_schema_with_invalid_entity() -> list[tuple[str, str, str]]:
-    return [
+def potential_schema_with_invalid_entity() -> tuple[tuple[str, str, str], ...]:
+    return (
         ("PERSON", "EMPLOYED_BY", "ORGANIZATION"),
         ("NON_EXISTENT_ENTITY", "ATTENDED_BY", "PERSON"),
-    ]
+    )
 
 
 @pytest.fixture
-def potential_schema_with_invalid_relation() -> list[tuple[str, str, str]]:
-    return [
+def potential_schema_with_invalid_relation() -> tuple[tuple[str, str, str], ...]:
+    return (
         ("PERSON", "NON_EXISTENT_RELATION", "ORGANIZATION"),
-    ]
+    )
 
 
 @pytest.fixture
@@ -104,25 +106,25 @@ def schema_builder() -> SchemaBuilder:
 
 
 @pytest.fixture
-def schema_config(
+def graph_schema(
     schema_builder: SchemaBuilder,
-    valid_entities: list[SchemaEntity],
-    valid_relations: list[SchemaRelation],
-    potential_schema: list[tuple[str, str, str]],
+    valid_entities: tuple[SchemaEntity],
+    valid_relations: tuple[SchemaRelation],
+    potential_schema: tuple[tuple[str, str, str]],
 ) -> GraphSchema:
     return schema_builder.create_schema_model(
-        valid_entities, valid_relations, potential_schema
+        list(valid_entities), list(valid_relations), list(potential_schema)
     )
 
 
 def test_create_schema_model_valid_data(
     schema_builder: SchemaBuilder,
-    valid_entities: list[SchemaEntity],
-    valid_relations: list[SchemaRelation],
-    potential_schema: list[tuple[str, str, str]],
+    valid_entities: tuple[SchemaEntity],
+    valid_relations: tuple[SchemaRelation],
+    potential_schema: tuple[tuple[str, str, str]],
 ) -> None:
     schema_instance = schema_builder.create_schema_model(
-        valid_entities, valid_relations, potential_schema
+        list(valid_entities), list(valid_relations), list(potential_schema)
     )
 
     assert schema_instance.entities == valid_entities
@@ -133,11 +135,15 @@ def test_create_schema_model_valid_data(
 @pytest.mark.asyncio
 async def test_run_method(
     schema_builder: SchemaBuilder,
-    valid_entities: list[SchemaEntity],
-    valid_relations: list[SchemaRelation],
-    potential_schema: list[tuple[str, str, str]],
+    valid_entities: tuple[SchemaEntity, ...],
+    valid_relations: tuple[SchemaRelation, ...],
+    potential_schema: tuple[tuple[str, str, str], ...],
 ) -> None:
-    schema = await schema_builder.run(valid_entities, valid_relations, potential_schema)
+    schema = await schema_builder.run(
+        list(valid_entities),
+        list(valid_relations),
+        list(potential_schema)
+    )
 
     assert schema.entities == valid_entities
     assert schema.relations == valid_relations
@@ -146,13 +152,15 @@ async def test_run_method(
 
 def test_create_schema_model_invalid_entity(
     schema_builder: SchemaBuilder,
-    valid_entities: list[SchemaEntity],
-    valid_relations: list[SchemaRelation],
-    potential_schema_with_invalid_entity: list[tuple[str, str, str]],
+    valid_entities: tuple[SchemaEntity, ...],
+    valid_relations: tuple[SchemaRelation, ...],
+    potential_schema_with_invalid_entity: tuple[tuple[str, str, str], ...],
 ) -> None:
     with pytest.raises(SchemaValidationError) as exc_info:
         schema_builder.create_schema_model(
-            valid_entities, valid_relations, potential_schema_with_invalid_entity
+            list(valid_entities),
+            list(valid_relations),
+            list(potential_schema_with_invalid_entity),
         )
     assert "Entity 'NON_EXISTENT_ENTITY' is not defined" in str(
         exc_info.value
@@ -161,13 +169,13 @@ def test_create_schema_model_invalid_entity(
 
 def test_create_schema_model_invalid_relation(
     schema_builder: SchemaBuilder,
-    valid_entities: list[SchemaEntity],
-    valid_relations: list[SchemaRelation],
-    potential_schema_with_invalid_relation: list[tuple[str, str, str]],
+    valid_entities: tuple[SchemaEntity, ...],
+    valid_relations: tuple[SchemaRelation, ...],
+    potential_schema_with_invalid_relation: tuple[tuple[str, str, str], ...],
 ) -> None:
     with pytest.raises(SchemaValidationError) as exc_info:
         schema_builder.create_schema_model(
-            valid_entities, valid_relations, potential_schema_with_invalid_relation
+            list(valid_entities), list(valid_relations), list(potential_schema_with_invalid_relation)
         )
     assert "Relation 'NON_EXISTENT_RELATION' is not defined" in str(
         exc_info.value
@@ -176,11 +184,11 @@ def test_create_schema_model_invalid_relation(
 
 def test_create_schema_model_no_potential_schema(
     schema_builder: SchemaBuilder,
-    valid_entities: list[SchemaEntity],
-    valid_relations: list[SchemaRelation],
+    valid_entities: tuple[SchemaEntity, ...],
+    valid_relations: tuple[SchemaRelation, ...],
 ) -> None:
     schema_instance = schema_builder.create_schema_model(
-        valid_entities, valid_relations
+        list(valid_entities), list(valid_relations)
     )
     assert schema_instance.entities == valid_entities
     assert schema_instance.relations == valid_relations
@@ -189,27 +197,30 @@ def test_create_schema_model_no_potential_schema(
 
 def test_create_schema_model_no_relations_or_potential_schema(
     schema_builder: SchemaBuilder,
-    valid_entities: list[SchemaEntity],
+    valid_entities: tuple[SchemaEntity, ...],
 ) -> None:
-    schema_instance = schema_builder.create_schema_model(valid_entities)
+    schema_instance = schema_builder.create_schema_model(list(valid_entities))
 
     assert len(schema_instance.entities) == 3
     person = schema_instance.entity_from_label("PERSON")
 
+    assert person is not None
     assert person.description == "An individual human being."
     assert len(person.properties) == 2
 
     org = schema_instance.entity_from_label("ORGANIZATION")
+    assert org is not None
     assert org.description == "A structured group of people with a common purpose."
 
     age = schema_instance.entity_from_label("AGE")
+    assert age is not None
     assert age.description == "Age of a person in years."
 
 
 def test_create_schema_model_missing_relations(
     schema_builder: SchemaBuilder,
-    valid_entities: list[SchemaEntity],
-    potential_schema: list[tuple[str, str, str]],
+    valid_entities: tuple[SchemaEntity, ...],
+    potential_schema: tuple[tuple[str, str, str], ...],
 ) -> None:
     with pytest.raises(SchemaValidationError) as exc_info:
         schema_builder.create_schema_model(
@@ -374,13 +385,13 @@ async def test_schema_from_text_llm_params(
 
 
 @pytest.mark.asyncio
-async def test_schema_config_store_as_json(schema_config: GraphSchema) -> None:
+async def test_schema_config_store_as_json(graph_schema: GraphSchema) -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         # create file path
         json_path = os.path.join(temp_dir, "schema.json")
 
         # store the schema config
-        schema_config.store_as_json(json_path)
+        graph_schema.store_as_json(json_path)
 
         # verify the file exists and has content
         assert os.path.exists(json_path)
@@ -394,13 +405,13 @@ async def test_schema_config_store_as_json(schema_config: GraphSchema) -> None:
 
 
 @pytest.mark.asyncio
-async def test_schema_config_store_as_yaml(schema_config: GraphSchema) -> None:
+async def test_schema_config_store_as_yaml(graph_schema: GraphSchema) -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create file path
         yaml_path = os.path.join(temp_dir, "schema.yaml")
 
         # Store the schema config
-        schema_config.store_as_yaml(yaml_path)
+        graph_schema.store_as_yaml(yaml_path)
 
         # Verify the file exists and has content
         assert os.path.exists(yaml_path)
@@ -414,7 +425,7 @@ async def test_schema_config_store_as_yaml(schema_config: GraphSchema) -> None:
 
 
 @pytest.mark.asyncio
-async def test_schema_config_from_file(schema_config: GraphSchema) -> None:
+async def test_schema_config_from_file(graph_schema: GraphSchema) -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         # create file paths with different extensions
         json_path = os.path.join(temp_dir, "schema.json")
@@ -422,9 +433,9 @@ async def test_schema_config_from_file(schema_config: GraphSchema) -> None:
         yml_path = os.path.join(temp_dir, "schema.yml")
 
         # store the schema config in the different formats
-        schema_config.store_as_json(json_path)
-        schema_config.store_as_yaml(yaml_path)
-        schema_config.store_as_yaml(yml_path)
+        graph_schema.store_as_json(json_path)
+        graph_schema.store_as_yaml(yaml_path)
+        graph_schema.store_as_yaml(yml_path)
 
         # load using from_file which should detect the format based on extension
         json_schema = GraphSchema.from_file(json_path)
@@ -443,7 +454,7 @@ async def test_schema_config_from_file(schema_config: GraphSchema) -> None:
 
         # verify an unsupported extension raises the correct error
         txt_path = os.path.join(temp_dir, "schema.txt")
-        schema_config.store_as_json(txt_path)  # Store as JSON but with .txt extension
+        graph_schema.store_as_json(txt_path)  # Store as JSON but with .txt extension
 
         with pytest.raises(ValueError, match="Unsupported file format"):
             GraphSchema.from_file(txt_path)
