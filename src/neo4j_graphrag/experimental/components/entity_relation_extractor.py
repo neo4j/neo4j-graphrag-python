@@ -441,7 +441,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         if self.enforce_schema != SchemaEnforcementMode.STRICT:
             return extracted_relationships
 
-        if schema.relations is None:
+        if schema.relationship_types is None:
             return extracted_relationships
 
         valid_rels = []
