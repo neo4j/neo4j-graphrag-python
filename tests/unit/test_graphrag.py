@@ -59,9 +59,9 @@ def test_graphrag_happy_path(retriever_mock: MagicMock, llm: MagicMock) -> None:
     )
     llm.invoke.return_value = LLMResponse(content="llm generated text")
 
-    res = rag.search("question")
+    res = rag.search("question", retriever_config={"top_k": 111})
 
-    retriever_mock.search.assert_called_once_with(query_text="question")
+    retriever_mock.search.assert_called_once_with(query_text="question", top_k=111)
     llm.invoke.assert_called_once_with(
         """Context:
 item content 1
@@ -261,6 +261,23 @@ def test_graphrag_happy_path_custom_system_instruction(
     )
 
     assert res.answer == "llm generated text"
+
+
+def test_graphrag_happy_path_return_message_if_context_empty(
+    retriever_mock: MagicMock, llm: MagicMock
+) -> None:
+    rag = GraphRAG(
+        retriever=retriever_mock,
+        llm=llm,
+    )
+    retriever_mock.search.return_value = RetrieverResult(items=[])
+    res = rag.search(
+        "question",
+        return_message_if_no_context="I can't answer this question without context",
+    )
+
+    assert llm.invoke.call_count == 0
+    assert res.answer == "I can't answer this question without context"
 
 
 def test_graphrag_initialization_error(llm: MagicMock) -> None:

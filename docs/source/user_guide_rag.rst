@@ -1,15 +1,15 @@
 .. _user-guide-rag:
 
 User Guide: RAG
-#################
+###############
 
 This guide provides a starting point for using the Neo4j GraphRAG package
 and configuring it according to specific requirements.
 
 
-************
+**********
 Quickstart
-************
+**********
 
 To perform a GraphRAG query using the `neo4j-graphrag` package, a few components are needed:
 
@@ -63,9 +63,9 @@ In practice, it's done with only a few lines of code:
 
 The following sections provide more details about how to customize this code.
 
-******************************
+**********************
 GraphRAG Configuration
-******************************
+**********************
 
 Each component can be configured individually: the LLM and the prompt.
 
@@ -775,7 +775,7 @@ See :ref:`hybridcypherretriever`.
 .. _text2cypher-retriever-user-guide:
 
 Text2Cypher Retriever
-------------------------------------
+---------------------
 
 This retriever first asks an LLM to generate a Cypher query to fetch the exact
 information required to answer the question from the database. Then this query is
@@ -853,7 +853,7 @@ See :ref:`text2cypherretriever`.
 .. _custom-retriever:
 
 Custom Retriever
-===================
+================
 
 If the application requires very specific retrieval strategy, it is possible to implement
 a custom retriever using the `Retriever` interface:
@@ -883,14 +883,60 @@ a custom retriever using the `Retriever` interface:
 See :ref:`rawsearchresult` for a description of the returned type.
 
 
-******************************
+***********************
+GraphRAG search options
+***********************
+
+Return context
+==============
+
+By default, the search method only returns the final answer. It is possible to see
+what was retrieved as part of the context by setting `return_context=True`:
+
+.. code:: python
+
+    rag.search("my question", return_context=True)
+
+
+Return a custom message if context is empty
+===========================================
+
+If the retriever is not able to find any context, the LLM will return an answer anyway.
+It is possible to skip the LLM call if the context is empty and return a user-defined message
+instead:
+
+.. code:: python
+
+    rag.search(
+        "my question",
+        return_message_if_no_context="I can not answer this question because I have no relevant context."
+    )
+
+
+Pass configuration to the retriever search method
+=================================================
+
+The retrievers search method have a bunch of configuration options (see above),
+which can also be configured through the GraphRAG search method using the `retriever_config`
+argument. For instance, the following code snippet illustrates how to define the `top_k`
+parameter for the retriever:
+
+.. code:: python
+
+    rag.search(
+        "my question",
+        retriever_config={"top_k": 2}
+    )
+
+
+**************
 DB Operations
-******************************
+**************
 
 See :ref:`database-interaction-section`.
 
 Create a Vector Index
-========================
+=====================
 
 .. code:: python
 
@@ -918,7 +964,7 @@ Create a Vector Index
 
 
 Populate a Vector Index
-==========================
+=======================
 
 .. code:: python
 
@@ -950,7 +996,7 @@ This property will also be added to the vector index.
 
 
 Drop a Vector Index
-========================
+===================
 
 .. warning::
 
