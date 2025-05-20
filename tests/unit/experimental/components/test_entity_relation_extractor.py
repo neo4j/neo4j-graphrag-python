@@ -648,7 +648,7 @@ async def test_extractor_schema_enforcement_empty_relationships_in_schema() -> N
                     "properties": [{"name": "name", "type": "STRING"}],
                 }
             ],
-            relationship_types=None,
+            relationship_types=[],
             patterns=None,
         )
     )
