@@ -603,15 +603,17 @@ async def test_extractor_schema_enforcement_none_relationships_in_schema() -> No
         llm=llm, create_lexical_graph=False, enforce_schema=SchemaEnforcementMode.STRICT
     )
 
-    schema = SchemaConfig(
-        entities={
-            "Person": {
-                "label": "Person",
-                "properties": [{"name": "name", "type": "STRING"}],
-            }
-        },
-        relations=None,
-        potential_schema=None,
+    schema = GraphSchema.model_validate(
+        dict(
+            node_types=[
+                {
+                    "label": "Person",
+                    "properties": [{"name": "name", "type": "STRING"}],
+                }
+            ],
+            relationship_types=None,
+            patterns=None,
+        )
     )
 
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
@@ -638,15 +640,17 @@ async def test_extractor_schema_enforcement_empty_relationships_in_schema() -> N
         llm=llm, create_lexical_graph=False, enforce_schema=SchemaEnforcementMode.STRICT
     )
 
-    schema = SchemaConfig(
-        entities={
-            "Person": {
-                "label": "Person",
-                "properties": [{"name": "name", "type": "STRING"}],
-            }
-        },
-        relations={},
-        potential_schema=None,
+    schema = GraphSchema.model_validate(
+        dict(
+            node_types=[
+                {
+                    "label": "Person",
+                    "properties": [{"name": "name", "type": "STRING"}],
+                }
+            ],
+            relationship_types=None,
+            patterns=None,
+        )
     )
 
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])

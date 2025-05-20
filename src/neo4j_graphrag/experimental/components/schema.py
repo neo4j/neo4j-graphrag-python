@@ -367,7 +367,7 @@ class SchemaBuilder(Component):
 
 class SchemaFromTextExtractor(Component):
     """
-    A component for constructing SchemaConfig objects from the output of an LLM after
+    A component for constructing GraphSchema objects from the output of an LLM after
     automatic schema extraction from text.
     """
 
