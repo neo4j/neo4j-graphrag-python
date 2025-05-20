@@ -60,15 +60,15 @@ class SimpleKGPipeline:
         schema (Optional[Union[GraphSchema, dict[str, list]]]): A schema configuration defining entities,
                                                    relations, and potential schema relationships.
                                                    This is the recommended way to provide schema information.
-        entities (Optional[List[Union[str, dict[str, str], SchemaEntity]]]): DEPRECATED. A list of either:
+        entities (Optional[List[Union[str, dict[str, str], NodeType]]]): DEPRECATED. A list of either:
 
             - str: entity labels
-            - dict: following the SchemaEntity schema, ie with label, description and properties keys
+            - dict: following the NodeType schema, ie with label, description and properties keys
 
-        relations (Optional[List[Union[str, dict[str, str], SchemaRelation]]]): DEPRECATED. A list of either:
+        relations (Optional[List[Union[str, dict[str, str], RelationshipType]]]): DEPRECATED. A list of either:
 
             - str: relation label
-            - dict: following the SchemaRelation schema, ie with label, description and properties keys
+            - dict: following the RelationshipType schema, ie with label, description and properties keys
 
         potential_schema (Optional[List[tuple]]): DEPRECATED. A list of potential schema relationships.
         enforce_schema (str): Validation of the extracted entities/rels against the provided schema. Defaults to "NONE", where schema enforcement will be ignored even if the schema is provided. Possible values "None" or "STRICT".

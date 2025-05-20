@@ -25,8 +25,8 @@ from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
 from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
-    SchemaEntity,
-    SchemaRelation,
+    NodeType,
+    RelationshipType,
 )
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
     FixedSizeSplitter,
@@ -45,35 +45,35 @@ async def define_and_run_pipeline(
     from neo4j_graphrag.experimental.pipeline import Pipeline
 
     # Instantiate Entity and Relation objects
-    entities = [
-        SchemaEntity(label="PERSON", description="An individual human being."),
-        SchemaEntity(
+    node_types = [
+        NodeType(label="PERSON", description="An individual human being."),
+        NodeType(
             label="ORGANIZATION",
             description="A structured group of people with a common purpose.",
         ),
-        SchemaEntity(label="LOCATION", description="A location or place."),
-        SchemaEntity(
+        NodeType(label="LOCATION", description="A location or place."),
+        NodeType(
             label="HORCRUX",
             description="A magical item in the Harry Potter universe.",
         ),
     ]
-    relations = [
-        SchemaRelation(
+    relationship_types = [
+        RelationshipType(
             label="SITUATED_AT", description="Indicates the location of a person."
         ),
-        SchemaRelation(
+        RelationshipType(
             label="LED_BY",
             description="Indicates the leader of an organization.",
         ),
-        SchemaRelation(
+        RelationshipType(
             label="OWNS",
             description="Indicates the ownership of an item such as a Horcrux.",
         ),
-        SchemaRelation(
+        RelationshipType(
             label="INTERACTS", description="The interaction between two people."
         ),
     ]
-    potential_schema = [
+    patterns = [
         ("PERSON", "SITUATED_AT", "LOCATION"),
         ("PERSON", "INTERACTS", "PERSON"),
         ("PERSON", "OWNS", "HORCRUX"),
@@ -114,12 +114,12 @@ async def define_and_run_pipeline(
 
     pipe_inputs = {
         "pdf_loader": {
-            "filepath": "examples/pipeline/Harry Potter and the Death Hallows Summary.pdf"
+            "filepath": "examples/data/Harry Potter and the Death Hallows Summary.pdf"
         },
         "schema": {
-            "entities": entities,
-            "relations": relations,
-            "potential_schema": potential_schema,
+            "node_types": node_types,
+            "relationship_types": relationship_types,
+            "patterns": patterns,
         },
     }
     return await pipe.run(pipe_inputs)

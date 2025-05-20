@@ -27,11 +27,11 @@ root_dir = Path(__file__).parents[1]
 file_path = root_dir / "data" / "Harry Potter and the Chamber of Secrets Summary.pdf"
 
 
-# Instantiate Entity and Relation objects. This defines the
+# Instantiate NodeType and RelationshipType objects. This defines the
 # entities and relations the LLM will be looking for in the text.
-ENTITIES = ["Person", "Organization", "Location"]
-RELATIONS = ["SITUATED_AT", "INTERACTS", "LED_BY"]
-POTENTIAL_SCHEMA = [
+NODE_TYPES = ["Person", "Organization", "Location"]
+RELATIONSHIP_TYPES = ["SITUATED_AT", "INTERACTS", "LED_BY"]
+PATTERNS = [
     ("Person", "SITUATED_AT", "Location"),
     ("Person", "INTERACTS", "Person"),
     ("Organization", "LED_BY", "Person"),
@@ -48,9 +48,9 @@ async def define_and_run_pipeline(
         driver=neo4j_driver,
         embedder=OpenAIEmbeddings(),
         schema={
-            "entities": ENTITIES,
-            "relations": RELATIONS,
-            "potential_schema": POTENTIAL_SCHEMA,
+            "node_types": NODE_TYPES,
+            "relationship_types": RELATIONSHIP_TYPES,
+            "patterns": PATTERNS,
         },
         neo4j_database=DATABASE,
     )

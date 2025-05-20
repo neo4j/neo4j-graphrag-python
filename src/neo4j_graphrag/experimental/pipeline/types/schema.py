@@ -19,7 +19,7 @@ from typing import Union
 
 EntityInputType = Union[str, dict[str, Union[str, list[dict[str, str]]]]]
 RelationInputType = Union[str, dict[str, Union[str, list[dict[str, str]]]]]
-"""Types derived from the SchemaEntity and SchemaRelation types,
+"""Types derived from the NodeType and RelationshipType types,
  so the possible types for dict values are:
 - str (for label and description)
 - list[dict[str, str]] (for properties)

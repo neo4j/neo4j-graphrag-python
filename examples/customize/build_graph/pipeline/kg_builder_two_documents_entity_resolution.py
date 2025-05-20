@@ -28,9 +28,9 @@ from neo4j_graphrag.experimental.components.resolver import (
 )
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
-    SchemaEntity,
-    SchemaProperty,
-    SchemaRelation,
+    NodeType,
+    PropertyType,
+    RelationshipType,
 )
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
     FixedSizeSplitter,
@@ -92,35 +92,35 @@ async def define_and_run_pipeline(
     pipe_inputs = {
         "loader": {},
         "schema": {
-            "entities": [
-                SchemaEntity(
+            "node_types": [
+                NodeType(
                     label="Person",
                     properties=[
-                        SchemaProperty(name="name", type="STRING"),
-                        SchemaProperty(name="place_of_birth", type="STRING"),
-                        SchemaProperty(name="date_of_birth", type="DATE"),
+                        PropertyType(name="name", type="STRING"),
+                        PropertyType(name="place_of_birth", type="STRING"),
+                        PropertyType(name="date_of_birth", type="DATE"),
                     ],
                 ),
-                SchemaEntity(
+                NodeType(
                     label="Organization",
                     properties=[
-                        SchemaProperty(name="name", type="STRING"),
-                        SchemaProperty(name="country", type="STRING"),
+                        PropertyType(name="name", type="STRING"),
+                        PropertyType(name="country", type="STRING"),
                     ],
                 ),
             ],
-            "relations": [
-                SchemaRelation(
+            "relationship_types": [
+                RelationshipType(
                     label="WORKED_FOR",
                 ),
-                SchemaRelation(
+                RelationshipType(
                     label="FRIEND",
                 ),
-                SchemaRelation(
+                RelationshipType(
                     label="ENEMY",
                 ),
             ],
-            "potential_schema": [
+            "patterns": [
                 ("Person", "WORKED_FOR", "Organization"),
                 ("Person", "FRIEND", "Person"),
                 ("Person", "ENEMY", "Person"),
@@ -129,8 +129,8 @@ async def define_and_run_pipeline(
     }
     # run the pipeline for each documents
     for document in [
-        "examples/pipeline/Harry Potter and the Chamber of Secrets Summary.pdf",
-        "examples/pipeline/Harry Potter and the Death Hallows Summary.pdf",
+        "examples/data/Harry Potter and the Chamber of Secrets Summary.pdf",
+        "examples/data/Harry Potter and the Death Hallows Summary.pdf",
     ]:
         pipe_inputs["loader"]["filepath"] = document
         await pipe.run(pipe_inputs)

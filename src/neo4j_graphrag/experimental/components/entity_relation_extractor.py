@@ -25,7 +25,7 @@ from pydantic import ValidationError, validate_call
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.experimental.components.lexical_graph import LexicalGraphBuilder
-from neo4j_graphrag.experimental.components.schema import GraphSchema, SchemaProperty
+from neo4j_graphrag.experimental.components.schema import GraphSchema, PropertyType
 from neo4j_graphrag.experimental.components.types import (
     DocumentInfo,
     LexicalGraphConfig,
@@ -325,7 +325,9 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             lexical_graph = lexical_graph_result.graph
         elif lexical_graph_config:
             lexical_graph_builder = LexicalGraphBuilder(config=lexical_graph_config)
-        schema = schema or GraphSchema(entities=(), relations=(), potential_schema=())
+        schema = schema or GraphSchema(
+            node_types=(), relationship_types=(), patterns=()
+        )
         examples = examples or ""
         sem = asyncio.Semaphore(self.max_concurrency)
         tasks = [
@@ -351,7 +353,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         - Enforce schema if schema enforcement mode is on and schema is provided
         """
         if self.enforce_schema != SchemaEnforcementMode.NONE:
-            if not schema or not schema.entities:  # schema is not provided
+            if not schema or not schema.node_types:  # schema is not provided
                 logger.warning(
                     "Schema enforcement is ON but the guiding schema is not provided."
                 )
@@ -400,7 +402,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         valid_nodes = []
 
         for node in extracted_nodes:
-            schema_entity = schema.entity_from_label(node.label)
+            schema_entity = schema.node_type_from_label(node.label)
             if not schema_entity:
                 continue
             allowed_props = schema_entity.properties or []
@@ -446,10 +448,10 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
 
         valid_nodes = {node.id: node.label for node in filtered_nodes}
 
-        potential_schema = schema.potential_schema
+        patterns = schema.patterns
 
         for rel in extracted_relationships:
-            schema_relation = schema.relations.get(rel.type)
+            schema_relation = schema.relationship_type_from_label(rel.type)
             if not schema_relation:
                 logger.debug(f"PRUNING:: {rel} as {rel.type} is not in the schema")
                 continue
@@ -467,13 +469,13 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             end_label = valid_nodes[rel.end_node_id]
 
             tuple_valid = True
-            if potential_schema:
-                tuple_valid = (start_label, rel.type, end_label) in potential_schema
+            if patterns:
+                tuple_valid = (start_label, rel.type, end_label) in patterns
                 reverse_tuple_valid = (
                     end_label,
                     rel.type,
                     start_label,
-                ) in potential_schema
+                ) in patterns
 
                 if not tuple_valid and not reverse_tuple_valid:
                     logger.debug(f"PRUNING:: {rel} not in the potential schema")
@@ -498,7 +500,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         return valid_rels
 
     def _enforce_properties(
-        self, properties: Dict[str, Any], valid_properties: List[SchemaProperty]
+        self, properties: Dict[str, Any], valid_properties: List[PropertyType]
     ) -> Dict[str, Any]:
         """
         Filter properties.

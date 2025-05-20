@@ -75,20 +75,20 @@ KGWriterModel
 
 .. autoclass:: neo4j_graphrag.experimental.components.kg_writer.KGWriterModel
 
-SchemaProperty
-==============
-
-.. autoclass:: neo4j_graphrag.experimental.components.schema.SchemaProperty
-
-SchemaEntity
+PropertyType
 ============
 
-.. autoclass:: neo4j_graphrag.experimental.components.schema.SchemaEntity
+.. autoclass:: neo4j_graphrag.experimental.components.schema.PropertyType
 
-SchemaRelation
-==============
+NodeType
+========
 
-.. autoclass:: neo4j_graphrag.experimental.components.schema.SchemaRelation
+.. autoclass:: neo4j_graphrag.experimental.components.schema.NodeType
+
+RelationshipType
+================
+
+.. autoclass:: neo4j_graphrag.experimental.components.schema.RelationshipType
 
 GraphSchema
 ===========

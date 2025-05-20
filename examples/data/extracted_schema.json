@@ -1,5 +1,26 @@
 {
-  "entities": [
+  "node_types": [
+    {
+      "label": "Person",
+      "description": "",
+      "properties": [
+        {
+          "name": "name",
+          "type": "STRING",
+          "description": ""
+        },
+        {
+          "name": "position",
+          "type": "STRING",
+          "description": ""
+        },
+        {
+          "name": "startYear",
+          "type": "INTEGER",
+          "description": ""
+        }
+      ]
+    },
     {
       "label": "Company",
       "description": "",
@@ -27,27 +48,6 @@
       ]
     },
     {
-      "label": "Person",
-      "description": "",
-      "properties": [
-        {
-          "name": "name",
-          "type": "STRING",
-          "description": ""
-        },
-        {
-          "name": "position",
-          "type": "STRING",
-          "description": ""
-        },
-        {
-          "name": "startYear",
-          "type": "INTEGER",
-          "description": ""
-        }
-      ]
-    },
-    {
       "label": "Product",
       "description": "",
       "properties": [
@@ -67,14 +67,20 @@
           "description": ""
         }
       ]
+    },
+    {
+      "label": "Office",
+      "description": "",
+      "properties": [
+        {
+          "name": "location",
+          "type": "STRING",
+          "description": ""
+        }
+      ]
     }
   ],
-  "relations": [
-    {
-      "label": "FOUNDED_BY",
-      "description": "",
-      "properties": []
-    },
+  "relationship_types": [
     {
       "label": "WORKS_FOR",
       "description": "",
@@ -89,14 +95,14 @@
       "label": "DEVELOPED_BY",
       "description": "",
       "properties": []
+    },
+    {
+      "label": "LOCATED_IN",
+      "description": "",
+      "properties": []
     }
   ],
-  "potential_schema": [
-    [
-      "Company",
-      "FOUNDED_BY",
-      "Person"
-    ],
+  "patterns": [
     [
       "Person",
       "WORKS_FOR",
@@ -105,12 +111,17 @@
     [
       "Person",
       "MANAGES",
-      "Company"
+      "Office"
     ],
     [
       "Product",
       "DEVELOPED_BY",
       "Person"
+    ],
+    [
+      "Company",
+      "LOCATED_IN",
+      "Office"
     ]
   ]
 }

@@ -37,7 +37,7 @@ an aristocratic family that rules the planet Caladan, the rainy planet, since 10
 
 # Instantiate Entity and Relation objects. This defines the
 # entities and relations the LLM will be looking for in the text.
-ENTITIES: list[EntityInputType] = [
+NODE_TYPES: list[EntityInputType] = [
     # entities can be defined with a simple label...
     "Person",
     # ... or with a dict if more details are needed,
@@ -47,7 +47,7 @@ ENTITIES: list[EntityInputType] = [
     {"label": "Planet", "properties": [{"name": "weather", "type": "STRING"}]},
 ]
 # same thing for relationships:
-RELATIONS: list[RelationInputType] = [
+RELATIONSHIP_TYPES: list[RelationInputType] = [
     "PARENT_OF",
     {
         "label": "HEIR_OF",
@@ -55,7 +55,7 @@ RELATIONS: list[RelationInputType] = [
     },
     {"label": "RULES", "properties": [{"name": "fromYear", "type": "INTEGER"}]},
 ]
-POTENTIAL_SCHEMA = [
+PATTERNS = [
     ("Person", "PARENT_OF", "Person"),
     ("Person", "HEIR_OF", "House"),
     ("House", "RULES", "Planet"),
@@ -72,9 +72,9 @@ async def define_and_run_pipeline(
         driver=neo4j_driver,
         embedder=OpenAIEmbeddings(),
         schema={
-            "entities": ENTITIES,
-            "relations": RELATIONS,
-            "potential_schema": POTENTIAL_SCHEMA,
+            "node_types": NODE_TYPES,
+            "relationship_types": RELATIONSHIP_TYPES,
+            "patterns": PATTERNS,
         },
         from_pdf=False,
         neo4j_database=DATABASE,

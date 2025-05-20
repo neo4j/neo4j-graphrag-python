@@ -245,14 +245,14 @@ async def test_extractor_no_schema_enforcement() -> None:
 
     schema = GraphSchema.model_validate(
         {
-            "entities": [
+            "node_types": [
                 {
                     "label": "Person",
                     "properties": [{"name": "name", "type": "STRING"}],
                 }
             ],
-            "relations": [],
-            "potential_schema": [],
+            "relationship_types": [],
+            "patterns": [],
         },
     )
 
@@ -301,14 +301,14 @@ async def test_extractor_schema_enforcement_invalid_nodes() -> None:
 
     schema = GraphSchema.model_validate(
         {
-            "entities": [
+            "node_types": [
                 {
                     "label": "Person",
                     "properties": [{"name": "name", "type": "STRING"}],
                 }
             ],
-            "relations": [],
-            "potential_schema": [],
+            "relationship_types": [],
+            "patterns": [],
         },
     )
 
@@ -336,7 +336,7 @@ async def test_extraction_schema_enforcement_invalid_node_properties() -> None:
 
     schema = GraphSchema.model_validate(
         {
-            "entities": [
+            "node_types": [
                 {
                     "label": "Person",
                     "properties": [
@@ -345,8 +345,8 @@ async def test_extraction_schema_enforcement_invalid_node_properties() -> None:
                     ],
                 }
             ],
-            "relations": [],
-            "potential_schema": [],
+            "relationship_types": [],
+            "patterns": [],
         },
     )
 
@@ -374,7 +374,7 @@ async def test_extractor_schema_enforcement_valid_nodes_with_empty_props() -> No
 
     schema = GraphSchema.model_validate(
         {
-            "entities": [
+            "node_types": [
                 {
                     "label": "Person",
                 }
@@ -405,7 +405,7 @@ async def test_extractor_schema_enforcement_invalid_relations_wrong_types() -> N
 
     schema = GraphSchema.model_validate(
         {
-            "entities": [
+            "node_types": [
                 {
                     "label": "Person",
                     "properties": [
@@ -414,8 +414,8 @@ async def test_extractor_schema_enforcement_invalid_relations_wrong_types() -> N
                     ],
                 }
             ],
-            "relations": [{"label": "LIKES"}],
-            "potential_schema": [],
+            "relationship_types": [{"label": "LIKES"}],
+            "patterns": [],
         }
     )
 
@@ -446,7 +446,7 @@ async def test_extractor_schema_enforcement_invalid_relations_wrong_start_node()
 
     schema = GraphSchema.model_validate(
         {
-            "entities": [
+            "node_types": [
                 {
                     "label": "Person",
                     "properties": [{"name": "name", "type": "STRING"}],
@@ -456,8 +456,8 @@ async def test_extractor_schema_enforcement_invalid_relations_wrong_start_node()
                     "properties": [{"name": "name", "type": "STRING"}],
                 },
             ],
-            "relations": [{"label": "LIVES_IN"}],
-            "potential_schema": [("Person", "LIVES_IN", "City")],
+            "relationship_types": [{"label": "LIVES_IN"}],
+            "patterns": [("Person", "LIVES_IN", "City")],
         }
     )
 
@@ -485,19 +485,19 @@ async def test_extractor_schema_enforcement_invalid_relation_properties() -> Non
 
     schema = GraphSchema.model_validate(
         {
-            "entities": [
+            "node_types": [
                 {
                     "label": "Person",
                     "properties": [{"name": "name", "type": "STRING"}],
                 }
             ],
-            "relations": [
+            "relationship_types": [
                 {
                     "label": "LIKES",
                     "properties": [{"name": "strength", "type": "STRING"}],
                 }
             ],
-            "potential_schema": [],
+            "patterns": [],
         }
     )
 
@@ -528,14 +528,14 @@ async def test_extractor_schema_enforcement_removed_relation_start_end_nodes() -
 
     schema = GraphSchema.model_validate(
         {
-            "entities": [
+            "node_types": [
                 {
                     "label": "Person",
                     "properties": [{"name": "name", "type": "STRING"}],
                 }
             ],
-            "relations": [{"label": "LIKES"}],
-            "potential_schema": [("Person", "LIKES", "Person")],
+            "relationship_types": [{"label": "LIKES"}],
+            "patterns": [("Person", "LIKES", "Person")],
         }
     )
 
@@ -563,7 +563,7 @@ async def test_extractor_schema_enforcement_inverted_relation_direction() -> Non
 
     schema = GraphSchema.model_validate(
         {
-            "entities": [
+            "node_types": [
                 {
                     "label": "Person",
                     "properties": [{"name": "name", "type": "STRING"}],
@@ -573,8 +573,8 @@ async def test_extractor_schema_enforcement_inverted_relation_direction() -> Non
                     "properties": [{"name": "name", "type": "STRING"}],
                 },
             ],
-            "relations": [{"label": "LIVES_IN"}],
-            "potential_schema": [("Person", "LIVES_IN", "City")],
+            "relationship_types": [{"label": "LIVES_IN"}],
+            "patterns": [("Person", "LIVES_IN", "City")],
         }
     )
 

@@ -21,7 +21,7 @@ A Knowledge Graph (KG) construction pipeline requires a few components (some of 
 - **Data loader**: extract text from files (PDFs, ...).
 - **Text splitter**: split the text into smaller pieces of text (chunks), manageable by the LLM context window (token limit).
 - **Chunk embedder** (optional): compute the chunk embeddings.
-- **Schema builder**: provide a schema to ground the LLM extracted entities and relations and obtain an easily navigable KG. Schema can be provided manually or extracted automatically using LLMs.
+- **Schema builder**: provide a schema to ground the LLM extracted node and relationship types and obtain an easily navigable KG. Schema can be provided manually or extracted automatically using LLMs.
 - **Lexical graph builder**: build the lexical graph (Document, Chunk and their relationships) (optional).
 - **Entity and relation extractor**: extract relevant entities and relations from the text.
 - **Knowledge Graph writer**: save the identified entities and relations.
@@ -73,18 +73,18 @@ Customizing the SimpleKGPipeline
 Graph Schema
 ------------
 
-It is possible to guide the LLM by supplying a list of entities, relationships,
-and instructions on how to connect them. However, note that the extracted graph
+It is possible to guide the LLM by supplying a list of node and relationship types,
+and instructions on how to connect them (patterns). However, note that the extracted graph
 may not fully adhere to these guidelines unless schema enforcement is enabled
-(see :ref:`Schema Enforcement Behaviour`). Entities and relationships can be represented
+(see :ref:`Schema Enforcement Behaviour`). Node and relationship types can be represented
 as either simple strings (for their labels) or dictionaries. If using a dictionary,
 it must include a label key and can optionally include description and properties keys,
 as shown below:
 
 .. code:: python
 
-    ENTITIES = [
-        # entities can be defined with a simple label...
+    NODE_TYPES = [
+        # node types can be defined with a simple label...
         "Person",
         # ... or with a dict if more details are needed,
         # such as a description:
@@ -93,7 +93,7 @@ as shown below:
         {"label": "Planet", "properties": [{"name": "weather", "type": "STRING"}]},
     ]
     # same thing for relationships:
-    RELATIONS = [
+    RELATIONSHIP_TYPES = [
         "PARENT_OF",
         {
             "label": "HEIR_OF",
@@ -102,13 +102,13 @@ as shown below:
         {"label": "RULES", "properties": [{"name": "fromYear", "type": "INTEGER"}]},
     ]
 
-The `potential_schema` is defined by a list of triplet in the format:
+The `patterns` is defined by a list of triplet in the format:
 `(source_node_label, relationship_label, target_node_label)`. For instance:
 
 
 .. code:: python
 
-    POTENTIAL_SCHEMA = [
+    PATTERNS = [
         ("Person", "PARENT_OF", "Person"),
         ("Person", "HEIR_OF", "House"),
         ("House", "RULES", "Planet"),
@@ -122,15 +122,15 @@ This schema information can be provided to the `SimpleKGBuilder` as demonstrated
     kg_builder = SimpleKGPipeline(
         # ...
         schema={
-            "entities": ENTITIES,
-            "relations": RELATIONS,
-            "potential_schema": POTENTIAL_SCHEMA
+            "node_types": NODE_TYPES,
+            "relationship_types": RELATIONSHIP_TYPES,
+            "patterns": PATTERNS
         },
         # ...
     )
 
 .. note::
-   By default, if no schema is provided to the SimpleKGPipeline, automatic schema extraction will be performed using the LLM (See the :ref:`Automatic Schema Extraction with SchemaFromTextExtractor`).
+   By default, if no schema is provided to the SimpleKGPipeline, automatic schema extraction will be performed using the LLM (See the :ref:`Automatic Schema Extraction`).
 
 Extra configurations
 --------------------
@@ -419,9 +419,8 @@ within the configuration file.
         "neo4j_database": "myDb",
         "on_error": "IGNORE",
         "prompt_template": "...",
-
         "schema": {
-            "entities": [
+            "node_types": [
                 "Person",
                 {
                     "label": "House",
@@ -438,7 +437,7 @@ within the configuration file.
                     ]
                 }
             ],
-            "relations": [
+            "relationship_types": [
                 "PARENT_OF",
                 {
                     "label": "HEIR_OF",
@@ -451,7 +450,7 @@ within the configuration file.
                     ]
                 }
             ],
-            "potential_schema": [
+            "patterns": [
                 ["Person", "PARENT_OF", "Person"],
                 ["Person", "HEIR_OF", "House"],
                 ["House", "RULES", "Planet"]
@@ -473,7 +472,7 @@ or in YAML:
     on_error: IGNORE
     prompt_template: ...
     schema:
-      entities:
+      node_types:
         - Person
         - label: House
           description: Family the person belongs to
@@ -486,7 +485,7 @@ or in YAML:
               type: STRING
             - name: weather
               type: STRING
-      relations:
+      relationship_types:
         - PARENT_OF
         - label: HEIR_OF
           description: Used for inheritor relationship between father and sons
@@ -494,7 +493,7 @@ or in YAML:
           properties:
             - name: fromYear
               type: INTEGER
-      potential_schema:
+      patterns:
         - ["Person", "PARENT_OF", "Person"]
         - ["Person", "HEIR_OF", "House"]
         - ["House", "RULES", "Planet"]
@@ -747,12 +746,12 @@ Optionally, the document and chunk node labels can be configured using a `Lexica
 Schema Builder
 ==============
 
-The schema is used to try and ground the LLM to a list of possible entities and relations of interest.
+The schema is used to try and ground the LLM to a list of possible node and relationship types of interest.
 So far, schema must be manually created by specifying:
 
-- **Entities** the LLM should look for in the text, including their properties (name and type).
-- **Relations** of interest between these entities, including the relation properties (name and type).
-- **Triplets** to define the start (source) and end (target) entity types for each relation.
+- **Node types** the LLM should look for in the text, including their properties (name and type).
+- **Relationship types** of interest between these node types, including the relationship properties (name and type).
+- **Patterns** (triplets) to define the start (source) and end (target) entity types for each relationship.
 
 Here is a code block illustrating these concepts:
 
@@ -760,16 +759,16 @@ Here is a code block illustrating these concepts:
 
     from neo4j_graphrag.experimental.components.schema import (
         SchemaBuilder,
-        SchemaEntity,
-        SchemaProperty,
-        SchemaRelation,
+        NodeType,
+        PropertyType,
+        RelationshipType,
     )
 
     schema_builder = SchemaBuilder()
 
     await schema_builder.run(
-        entities=[
-            SchemaEntity(
+        node_types=[
+            NodeType(
                 label="Person",
                 properties=[
                     SchemaProperty(name="name", type="STRING"),
@@ -777,7 +776,7 @@ Here is a code block illustrating these concepts:
                     SchemaProperty(name="date_of_birth", type="DATE"),
                 ],
             ),
-            SchemaEntity(
+            NodeType(
                 label="Organization",
                 properties=[
                     SchemaProperty(name="name", type="STRING"),
@@ -785,15 +784,15 @@ Here is a code block illustrating these concepts:
                 ],
             ),
         ],
-        relations=[
-            SchemaRelation(
+        relationship_types=[
+            RelationshipType(
                 label="WORKED_ON",
             ),
-            SchemaRelation(
+            RelationshipType(
                 label="WORKED_FOR",
             ),
         ],
-        possible_schema=[
+        patterns=[
             ("Person", "WORKED_ON", "Field"),
             ("Person", "WORKED_FOR", "Organization"),
         ],

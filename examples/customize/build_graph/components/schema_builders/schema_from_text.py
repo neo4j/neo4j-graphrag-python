@@ -92,14 +92,14 @@ async def extract_and_save_schema() -> None:
         inferred_schema.store_as_yaml(YAML_FILE_PATH)
 
         print("\nExtracted Schema Summary:")
-        print(f"Entities: {list(inferred_schema.entities)}")
+        print(f"Node types: {list(inferred_schema.node_types)}")
         print(
-            f"Relations: {list(inferred_schema.relations if inferred_schema.relations else [])}"
+            f"Relationship types: {list(inferred_schema.relationship_types if inferred_schema.relationship_types else [])}"
         )
 
-        if inferred_schema.potential_schema:
-            print("\nPotential Schema:")
-            for entity1, relation, entity2 in inferred_schema.potential_schema:
+        if inferred_schema.patterns:
+            print("\nPatterns:")
+            for entity1, relation, entity2 in inferred_schema.patterns:
                 print(f"  {entity1} --[{relation}]--> {entity2}")
 
     finally:
@@ -122,8 +122,8 @@ async def main() -> None:
     schema_from_json = GraphSchema.from_file(JSON_FILE_PATH)
     schema_from_yaml = GraphSchema.from_file(YAML_FILE_PATH)
 
-    print(f"Entities in JSON schema: {list(schema_from_json.entities)}")
-    print(f"Entities in YAML schema: {list(schema_from_yaml.entities)}")
+    print(f"Node types in JSON schema: {list(schema_from_json.node_types)}")
+    print(f"Node types in YAML schema: {list(schema_from_yaml.node_types)}")
 
 
 if __name__ == "__main__":

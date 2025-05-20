@@ -26,8 +26,8 @@ from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
 from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
-    SchemaEntity,
-    SchemaRelation,
+    NodeType,
+    RelationshipType,
     SchemaFromTextExtractor,
 )
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
@@ -142,9 +142,9 @@ def test_simple_kg_pipeline_config_schema_run_params() -> None:
         potential_schema=[("Person", "KNOWS", "Person")],
     )
     assert config._get_run_params_for_schema() == {
-        "entities": (SchemaEntity(label="Person"),),
-        "relations": (SchemaRelation(label="KNOWS"),),
-        "potential_schema": (("Person", "KNOWS", "Person"),),
+        "node_types": (NodeType(label="Person"),),
+        "relationship_types": (RelationshipType(label="KNOWS"),),
+        "patterns": (("Person", "KNOWS", "Person"),),
     }
 
 

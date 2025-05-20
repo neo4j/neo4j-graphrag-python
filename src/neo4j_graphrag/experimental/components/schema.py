@@ -44,7 +44,7 @@ from neo4j_graphrag.generation import SchemaExtractionTemplate, PromptTemplate
 from neo4j_graphrag.llm import LLMInterface
 
 
-class SchemaProperty(BaseModel):
+class PropertyType(BaseModel):
     """
     Represents a property on a node or relationship in the graph.
     """
@@ -72,36 +72,36 @@ class SchemaProperty(BaseModel):
     )
 
 
-class SchemaEntity(BaseModel):
+class NodeType(BaseModel):
     """
     Represents a possible node in the graph.
     """
 
     label: str
     description: str = ""
-    properties: list[SchemaProperty] = []
+    properties: list[PropertyType] = []
 
     @classmethod
     def from_text_or_dict(cls, input: EntityInputType) -> Self:
-        if isinstance(input, SchemaEntity):
+        if isinstance(input, NodeType):
             return input
         if isinstance(input, str):
             return cls(label=input)
         return cls.model_validate(input)
 
 
-class SchemaRelation(BaseModel):
+class RelationshipType(BaseModel):
     """
     Represents a possible relationship between nodes in the graph.
     """
 
     label: str
     description: str = ""
-    properties: list[SchemaProperty] = []
+    properties: list[PropertyType] = []
 
     @classmethod
     def from_text_or_dict(cls, input: RelationInputType) -> Self:
-        if isinstance(input, SchemaRelation):
+        if isinstance(input, RelationshipType):
             return input
         if isinstance(input, str):
             return cls(label=input)
@@ -109,12 +109,12 @@ class SchemaRelation(BaseModel):
 
 
 class GraphSchema(DataModel):
-    entities: Tuple[SchemaEntity, ...]
-    relations: Optional[Tuple[SchemaRelation, ...]] = None
-    potential_schema: Optional[Tuple[Tuple[str, str, str], ...]] = None
+    node_types: Tuple[NodeType, ...]
+    relationship_types: Optional[Tuple[RelationshipType, ...]] = None
+    patterns: Optional[Tuple[Tuple[str, str, str], ...]] = None
 
-    _entity_index: dict[str, SchemaEntity] = PrivateAttr()
-    _relation_index: dict[str, SchemaRelation] = PrivateAttr()
+    _node_type_index: dict[str, NodeType] = PrivateAttr()
+    _relationship_type_index: dict[str, RelationshipType] = PrivateAttr()
 
     model_config = ConfigDict(
         frozen=True,
@@ -122,40 +122,42 @@ class GraphSchema(DataModel):
 
     @model_validator(mode="after")
     def check_schema(self) -> Self:
-        self._entity_index = {e.label: e for e in self.entities}
-        self._relation_index = (
-            {r.label: r for r in self.relations} if self.relations else {}
+        self._node_type_index = {node.label: node for node in self.node_types}
+        self._relationship_type_index = (
+            {r.label: r for r in self.relationship_types}
+            if self.relationship_types
+            else {}
         )
 
-        relations = self.relations or tuple()
-        potential_schema = self.potential_schema or tuple()
+        relationship_types = self.relationship_types or tuple()
+        patterns = self.patterns or tuple()
 
-        if potential_schema:
-            if not relations:
+        if patterns:
+            if not relationship_types:
                 raise SchemaValidationError(
                     "Relations must also be provided when using a potential schema."
                 )
-            for entity1, relation, entity2 in potential_schema:
-                if entity1 not in self._entity_index:
+            for entity1, relation, entity2 in patterns:
+                if entity1 not in self._node_type_index:
                     raise SchemaValidationError(
                         f"Entity '{entity1}' is not defined in the provided entities."
                     )
-                if relation not in self._relation_index:
+                if relation not in self._relationship_type_index:
                     raise SchemaValidationError(
                         f"Relation '{relation}' is not defined in the provided relations."
                     )
-                if entity2 not in self._entity_index:
+                if entity2 not in self._node_type_index:
                     raise SchemaValidationError(
                         f"Entity '{entity2}' is not defined in the provided entities."
                     )
 
         return self
 
-    def entity_from_label(self, label: str) -> Optional[SchemaEntity]:
-        return self._entity_index.get(label)
+    def node_type_from_label(self, label: str) -> Optional[NodeType]:
+        return self._node_type_index.get(label)
 
-    def relation_from_label(self, label: str) -> Optional[SchemaRelation]:
-        return self._relation_index.get(label)
+    def relationship_type_from_label(self, label: str) -> Optional[RelationshipType]:
+        return self._relationship_type_index.get(label)
 
     def store_as_json(self, file_path: str) -> None:
         """
@@ -176,12 +178,12 @@ class GraphSchema(DataModel):
         """
         # create a copy of the data and convert tuples to lists for YAML compatibility
         data = self.model_dump()
-        if data.get("entities"):
-            data["entities"] = list(data["entities"])
-        if data.get("relations"):
-            data["relations"] = list(data["relations"])
-        if data.get("potential_schema"):
-            data["potential_schema"] = [list(item) for item in data["potential_schema"]]
+        if data.get("node_types"):
+            data["node_types"] = list(data["node_types"])
+        if data.get("relationship_types"):
+            data["relationship_types"] = list(data["relationship_types"])
+        if data.get("patterns"):
+            data["patterns"] = [list(item) for item in data["patterns"]]
 
         with open(file_path, "w") as f:
             yaml.dump(data, f, default_flow_style=False, sort_keys=False)
@@ -265,38 +267,38 @@ class SchemaBuilder(Component):
 
         from neo4j_graphrag.experimental.components.schema import (
             SchemaBuilder,
-            SchemaEntity,
-            SchemaProperty,
-            SchemaRelation,
+            NodeType,
+            PropertyType,
+            RelationshipType,
         )
         from neo4j_graphrag.experimental.pipeline import Pipeline
 
-        entities = [
-            SchemaEntity(
+        node_types = [
+            NodeType(
                 label="PERSON",
                 description="An individual human being.",
                 properties=[
-                    SchemaProperty(
+                    PropertyType(
                         name="name", type="STRING", description="The name of the person"
                     )
                 ],
             ),
-            SchemaEntity(
+            NodeType(
                 label="ORGANIZATION",
                 description="A structured group of people with a common purpose.",
                 properties=[
-                    SchemaProperty(
+                    PropertyType(
                         name="name", type="STRING", description="The name of the organization"
                     )
                 ],
             ),
         ]
-        relations = [
-            SchemaRelation(
+        relationship_types = [
+            RelationshipType(
                 label="EMPLOYED_BY", description="Indicates employment relationship."
             ),
         ]
-        potential_schema = [
+        patterns = [
             ("PERSON", "EMPLOYED_BY", "ORGANIZATION"),
         ]
         pipe = Pipeline()
@@ -304,9 +306,9 @@ class SchemaBuilder(Component):
         pipe.add_component(schema_builder, "schema_builder")
         pipe_inputs = {
             "schema": {
-                "entities": entities,
-                "relations": relations,
-                "potential_schema": potential_schema,
+                "node_types": node_types,
+                "relationship_types": relationship_types,
+                "patterns": patterns,
             },
             ...
         }
@@ -315,18 +317,18 @@ class SchemaBuilder(Component):
 
     @staticmethod
     def create_schema_model(
-        entities: Sequence[SchemaEntity],
-        relations: Optional[Sequence[SchemaRelation]] = None,
-        potential_schema: Optional[Sequence[Tuple[str, str, str]]] = None,
+        node_types: Sequence[NodeType],
+        relationship_types: Optional[Sequence[RelationshipType]] = None,
+        patterns: Optional[Sequence[Tuple[str, str, str]]] = None,
     ) -> GraphSchema:
         """
         Creates a GraphSchema object from Lists of Entity and Relation objects
         and a Dictionary defining potential relationships.
 
         Args:
-            entities (Sequence[SchemaEntity]): List or tuple of SchemaEntity objects.
-            relations (Optional[Sequence[SchemaRelation]]): List or tuple of SchemaRelation objects.
-            potential_schema (Optional[Sequence[Tuple[str, str, str]]]): List or tuples of triplets: (source_entity_label, relation_label, target_entity_label).
+            node_types (Sequence[NodeType]): List or tuple of NodeType objects.
+            relationship_types (Optional[Sequence[RelationshipType]]): List or tuple of RelationshipType objects.
+            patterns (Optional[Sequence[Tuple[str, str, str]]]): List or tuples of triplets: (source_entity_label, relation_label, target_entity_label).
 
         Returns:
             GraphSchema: A configured schema object.
@@ -334,9 +336,9 @@ class SchemaBuilder(Component):
         try:
             return GraphSchema.model_validate(
                 dict(
-                    entities=entities,
-                    relations=relations,
-                    potential_schema=potential_schema,
+                    node_types=node_types,
+                    relationship_types=relationship_types,
+                    patterns=patterns,
                 )
             )
         except (ValidationError, SchemaValidationError) as e:
@@ -345,22 +347,22 @@ class SchemaBuilder(Component):
     @validate_call
     async def run(
         self,
-        entities: Sequence[SchemaEntity],
-        relations: Optional[Sequence[SchemaRelation]] = None,
-        potential_schema: Optional[Sequence[Tuple[str, str, str]]] = None,
+        node_types: Sequence[NodeType],
+        relationship_types: Optional[Sequence[RelationshipType]] = None,
+        patterns: Optional[Sequence[Tuple[str, str, str]]] = None,
     ) -> GraphSchema:
         """
         Asynchronously constructs and returns a GraphSchema object.
 
         Args:
-            entities (Sequence[SchemaEntity]): List or tuple of SchemaEntity objects.
-            relations (Sequence[SchemaRelation]): List or tuple of SchemaRelation objects.
-            potential_schema (Optional[Sequence[Tuple[str, str, str]]]): List or tuples of triplets: (source_entity_label, relation_label, target_entity_label).
+            node_types (Sequence[NodeType]): Sequence of NodeType objects.
+            relationship_types (Sequence[RelationshipType]): Sequence of RelationshipType objects.
+            patterns (Optional[Sequence[Tuple[str, str, str]]]): Sequence of triplets: (source_entity_label, relation_label, target_entity_label).
 
         Returns:
             GraphSchema: A configured schema object, constructed asynchronously.
         """
-        return self.create_schema_model(entities, relations, potential_schema)
+        return self.create_schema_model(node_types, relationship_types, patterns)
 
 
 class SchemaFromTextExtractor(Component):
@@ -429,20 +431,20 @@ class SchemaFromTextExtractor(Component):
         except json.JSONDecodeError as exc:
             raise SchemaExtractionError("LLM response is not valid JSON.") from exc
 
-        extracted_entities: List[Dict[str, Any]] = (
-            extracted_schema.get("entities") or []
+        extracted_node_types: List[Dict[str, Any]] = (
+            extracted_schema.get("node_types") or []
         )
-        extracted_relations: Optional[List[Dict[str, Any]]] = extracted_schema.get(
-            "relations"
+        extracted_relationship_types: Optional[List[Dict[str, Any]]] = (
+            extracted_schema.get("relationship_types")
         )
-        potential_schema: Optional[List[Tuple[str, str, str]]] = extracted_schema.get(
-            "potential_schema"
+        extracted_patterns: Optional[List[Tuple[str, str, str]]] = extracted_schema.get(
+            "patterns"
         )
 
         return GraphSchema.model_validate(
             {
-                "entities": extracted_entities,
-                "relations": extracted_relations,
-                "potential_schema": potential_schema,
+                "node_types": extracted_node_types,
+                "relationship_types": extracted_relationship_types,
+                "patterns": extracted_patterns,
             }
         )

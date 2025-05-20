@@ -1,4 +1,16 @@
-entities:
+node_types:
+- label: Person
+  description: ''
+  properties:
+  - name: name
+    type: STRING
+    description: ''
+  - name: position
+    type: STRING
+    description: ''
+  - name: startYear
+    type: INTEGER
+    description: ''
 - label: Company
   description: ''
   properties:
@@ -14,18 +26,6 @@ entities:
   - name: valuation
     type: FLOAT
     description: ''
-- label: Person
-  description: ''
-  properties:
-  - name: name
-    type: STRING
-    description: ''
-  - name: position
-    type: STRING
-    description: ''
-  - name: startYear
-    type: INTEGER
-    description: ''
 - label: Product
   description: ''
   properties:
@@ -38,10 +38,13 @@ entities:
   - name: unitsSold
     type: INTEGER
     description: ''
-relations:
-- label: FOUNDED_BY
+- label: Office
   description: ''
-  properties: []
+  properties:
+  - name: location
+    type: STRING
+    description: ''
+relationship_types:
 - label: WORKS_FOR
   description: ''
   properties: []
@@ -51,16 +54,19 @@ relations:
 - label: DEVELOPED_BY
   description: ''
   properties: []
-potential_schema:
-- - Company
-  - FOUNDED_BY
-  - Person
+- label: LOCATED_IN
+  description: ''
+  properties: []
+patterns:
 - - Person
   - WORKS_FOR
   - Company
 - - Person
   - MANAGES
-  - Company
+  - Office
 - - Product
   - DEVELOPED_BY
   - Person
+- - Company
+  - LOCATED_IN
+  - Office
