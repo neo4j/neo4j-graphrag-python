@@ -35,6 +35,7 @@ try:
         Content,
         FunctionCall,
         FunctionDeclaration,
+        GenerationConfig,
         GenerationResponse,
         GenerativeModel,
         Part,
@@ -137,20 +138,18 @@ class VertexAILLM(LLMInterface):
         Returns:
             LLMResponse: The response from the LLM.
         """
-        system_message = [system_instruction] if system_instruction is not None else []
-        self.model = GenerativeModel(
-            model_name=self.model_name,
-            system_instruction=system_message,
-            **self.options,
+        model = self._get_model(
+            system_instruction=system_instruction,
+            tools=None,
         )
         try:
             if isinstance(message_history, MessageHistory):
                 message_history = message_history.messages
             messages = self.get_messages(input, message_history)
-            response = self.model.generate_content(messages, **self.model_params)
-            return LLMResponse(content=response.text)
+            response = model.generate_content(messages)
+            return self._parse_content_response(response)
         except ResponseValidationError as e:
-            raise LLMGenerationError(e)
+            raise LLMGenerationError("Error calling LLM") from e
 
     async def ainvoke(
         self,
@@ -172,31 +171,21 @@ class VertexAILLM(LLMInterface):
         try:
             if isinstance(message_history, MessageHistory):
                 message_history = message_history.messages
-            system_message = (
-                [system_instruction] if system_instruction is not None else []
-            )
-            self.model = GenerativeModel(
-                model_name=self.model_name,
-                system_instruction=system_message,
-                **self.options,
+            model = self._get_model(
+                system_instruction=system_instruction,
+                tools=None,
             )
             messages = self.get_messages(input, message_history)
-            response = await self.model.generate_content_async(
-                messages, **self.model_params
-            )
-            return LLMResponse(content=response.text)
+            response = await model.generate_content_async(messages)
+            return self._parse_content_response(response)
         except ResponseValidationError as e:
             raise LLMGenerationError(e)
 
-    def _to_vertexai_tool(self, tool: Tool) -> VertexAITool:
-        return VertexAITool(
-            function_declarations=[
-                FunctionDeclaration(
-                    name=tool.get_name(),
-                    description=tool.get_description(),
-                    parameters=tool.get_parameters(exclude=["additional_properties"]),
-                )
-            ]
+    def _to_vertexai_function_declaration(self, tool: Tool) -> FunctionDeclaration:
+        return FunctionDeclaration(
+            name=tool.get_name(),
+            description=tool.get_description(),
+            parameters=tool.get_parameters(exclude=["additional_properties"]),
         )
 
     def _get_llm_tools(
@@ -204,7 +193,28 @@ class VertexAILLM(LLMInterface):
     ) -> Optional[list[VertexAITool]]:
         if not tools:
             return None
-        return [self._to_vertexai_tool(tool) for tool in tools]
+        return [
+            VertexAITool(
+                function_declarations=[
+                    self._to_vertexai_function_declaration(tool) for tool in tools
+                ]
+            )
+        ]
+
+    def _get_options(self, tool_mode: bool = False) -> dict[str, Any]:
+        options = dict(self.options)
+        if tool_mode:
+            # remove response_mime_type from GenerationConfig
+            config = options.get("generation_config")
+            if config:
+                config_dict = config.to_dict()
+                if config_dict.get("response_mime_type"):
+                    config_dict["response_mime_type"] = None
+                    options["generation_config"] = GenerationConfig.from_dict(config_dict)
+        else:
+            # no tools, drop tool_config if defined
+            options.pop("tool_config", None)
+        return options
 
     def _get_model(
         self,
@@ -213,11 +223,12 @@ class VertexAILLM(LLMInterface):
     ) -> GenerativeModel:
         system_message = [system_instruction] if system_instruction is not None else []
         vertex_ai_tools = self._get_llm_tools(tools)
+        options = self._get_options(tool_mode=tools is not None)
         model = GenerativeModel(
             model_name=self.model_name,
             system_instruction=system_message,
             tools=vertex_ai_tools,
-            **self.options,
+            **options,
         )
         return model
 
