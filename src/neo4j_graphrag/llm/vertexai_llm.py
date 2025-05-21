@@ -41,6 +41,7 @@ try:
         Part,
         ResponseValidationError,
         Tool as VertexAITool,
+        ToolConfig,
     )
 except ImportError:
     GenerativeModel = None
@@ -204,17 +205,10 @@ class VertexAILLM(LLMInterface):
     def _get_options(self, tool_mode: bool = False) -> dict[str, Any]:
         options = dict(self.options)
         if tool_mode:
-            # remove response_mime_type from GenerationConfig
-            config = options.get("generation_config")
-            if config:
-                config_dict = config.to_dict()
-                if config_dict.get("response_mime_type"):
-                    config_dict["response_mime_type"] = None
-                    options["generation_config"] = GenerationConfig.from_dict(
-                        config_dict
-                    )
+            # we want a tool back, remove generation_config if defined
+            options.pop("generation_config", None)
         else:
-            # no tools, drop tool_config if defined
+            # no tools, remove tool_config if defined
             options.pop("tool_config", None)
         return options
 
