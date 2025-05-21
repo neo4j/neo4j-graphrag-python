@@ -56,6 +56,8 @@ rag = GraphRAG(retriever=retriever, llm=llm)
 result = rag.search(
     "Tell me more about Avatar movies",
     return_context=True,
+    # optional
+    response_fallback="I can't answer this question without context",
 )
 print(result.answer)
 # print(result.retriever_result)

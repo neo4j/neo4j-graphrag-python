@@ -89,6 +89,7 @@ class GraphRAG:
         examples: str = "",
         retriever_config: Optional[dict[str, Any]] = None,
         return_context: bool | None = None,
+        response_fallback: str | None = None,
     ) -> RagResultModel:
         """
         .. warning::
@@ -109,6 +110,7 @@ class GraphRAG:
             retriever_config (Optional[dict]): Parameters passed to the retriever.
                 search method; e.g.: top_k
             return_context (bool): Whether to append the retriever result to the final result (default: False).
+            response_fallback (Optional[str]): If not null, will return this message instead of calling the LLM if context comes back empty.
 
         Returns:
             RagResultModel: The LLM-generated answer.
@@ -126,6 +128,7 @@ class GraphRAG:
                 examples=examples,
                 retriever_config=retriever_config or {},
                 return_context=return_context,
+                response_fallback=response_fallback,
             )
         except ValidationError as e:
             raise SearchValidationError(e.errors())
@@ -135,18 +138,22 @@ class GraphRAG:
         retriever_result: RetrieverResult = self.retriever.search(
             query_text=query, **validated_data.retriever_config
         )
-        context = "\n".join(item.content for item in retriever_result.items)
-        prompt = self.prompt_template.format(
-            query_text=query_text, context=context, examples=validated_data.examples
-        )
-        logger.debug(f"RAG: retriever_result={prettify(retriever_result)}")
-        logger.debug(f"RAG: prompt={prompt}")
-        answer = self.llm.invoke(
-            prompt,
-            message_history,
-            system_instruction=self.prompt_template.system_instructions,
-        )
-        result: dict[str, Any] = {"answer": answer.content}
+        if len(retriever_result.items) == 0 and response_fallback is not None:
+            answer = response_fallback
+        else:
+            context = "\n".join(item.content for item in retriever_result.items)
+            prompt = self.prompt_template.format(
+                query_text=query_text, context=context, examples=validated_data.examples
+            )
+            logger.debug(f"RAG: retriever_result={prettify(retriever_result)}")
+            logger.debug(f"RAG: prompt={prompt}")
+            llm_response = self.llm.invoke(
+                prompt,
+                message_history,
+                system_instruction=self.prompt_template.system_instructions,
+            )
+            answer = llm_response.content
+        result: dict[str, Any] = {"answer": answer}
         if return_context:
             result["retriever_result"] = retriever_result
         return RagResultModel(**result)
