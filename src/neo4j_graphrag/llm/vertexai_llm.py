@@ -35,13 +35,11 @@ try:
         Content,
         FunctionCall,
         FunctionDeclaration,
-        GenerationConfig,
         GenerationResponse,
         GenerativeModel,
         Part,
         ResponseValidationError,
         Tool as VertexAITool,
-        ToolConfig,
     )
 except ImportError:
     GenerativeModel = None
