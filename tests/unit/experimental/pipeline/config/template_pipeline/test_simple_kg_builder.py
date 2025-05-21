@@ -39,6 +39,8 @@ from neo4j_graphrag.experimental.pipeline.config.template_pipeline import (
     SimpleKGPipelineConfig,
 )
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
+from neo4j_graphrag.experimental.pipeline.types.schema import EntityInputType, \
+    RelationInputType
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 from neo4j_graphrag.llm import LLMInterface
 
@@ -318,7 +320,7 @@ def test_simple_kg_pipeline_config_run_params_both_file_and_text() -> None:
 
 
 def test_simple_kg_pipeline_config_process_schema_with_precedence_legacy() -> None:
-    entities = [
+    entities: list[EntityInputType] = [
         "Person",
         {
             "label": "Organization",
@@ -331,7 +333,7 @@ def test_simple_kg_pipeline_config_process_schema_with_precedence_legacy() -> No
             ],
         },
     ]
-    relations = [
+    relations: list[RelationInputType] = [
         "WORKS_FOR",
         {
             "label": "CREATED",
@@ -366,6 +368,7 @@ def test_simple_kg_pipeline_config_process_schema_with_precedence_legacy() -> No
     assert len(relationship_types[0].properties) == 0
     assert relationship_types[1].label == "CREATED"
     assert len(relationship_types[1].properties) == 2
+    assert patterns is not None
     assert len(patterns) == 2
 
 
@@ -420,6 +423,7 @@ def test_simple_kg_pipeline_config_process_schema_with_precedence_schema_dict() 
     assert len(relationship_types[0].properties) == 0
     assert relationship_types[1].label == "CREATED"
     assert len(relationship_types[1].properties) == 2
+    assert patterns is not None
     assert len(patterns) == 2
 
 
@@ -478,4 +482,5 @@ def test_simple_kg_pipeline_config_process_schema_with_precedence_schema_object(
     assert len(relationship_types[0].properties) == 0
     assert relationship_types[1].label == "CREATED"
     assert len(relationship_types[1].properties) == 2
+    assert patterns is not None
     assert len(patterns) == 2
