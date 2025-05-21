@@ -12,7 +12,16 @@
 
 ### Changed
 
+#### Strict mode
+
 - Strict mode in `SimpleKGPipeline`: now properties and relationships are pruned only if they are defined in the input schema.
+
+#### Schema definition
+
+- The `SchemaEntity` model has been renamed `NodeType`.
+- The `SchemaRelation` model has been renamed `RelationshipType`.
+- The `SchemaProperty` model has been renamed `PropertyType`.
+- `SchemaConfig` has been removed in favor of `GraphSchema` (used in the `SchemaBuilder` and `EntityRelationExtractor` classes). `entities`, `relations` and `potential_schema` fields have also been renamed `node_types`, `relationship_types` and `patterns` respectively.
 
 
 ## 1.7.0

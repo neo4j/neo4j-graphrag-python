@@ -18,9 +18,9 @@ from neo4j_graphrag.experimental.components.lexical_graph import LexicalGraphBui
 from neo4j_graphrag.experimental.components.neo4j_reader import Neo4jChunkReader
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
-    SchemaEntity,
-    SchemaProperty,
-    SchemaRelation,
+    NodeType,
+    PropertyType,
+    RelationshipType,
 )
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
     FixedSizeSplitter,
@@ -138,38 +138,38 @@ async def read_chunk_and_perform_entity_extraction(
             "lexical_graph_config": lexical_graph_config,
         },
         "schema": {
-            "entities": [
-                SchemaEntity(
+            "node_types": [
+                NodeType(
                     label="Person",
                     properties=[
-                        SchemaProperty(name="name", type="STRING"),
-                        SchemaProperty(name="place_of_birth", type="STRING"),
-                        SchemaProperty(name="date_of_birth", type="DATE"),
+                        PropertyType(name="name", type="STRING"),
+                        PropertyType(name="place_of_birth", type="STRING"),
+                        PropertyType(name="date_of_birth", type="DATE"),
                     ],
                 ),
-                SchemaEntity(
+                NodeType(
                     label="Organization",
                     properties=[
-                        SchemaProperty(name="name", type="STRING"),
-                        SchemaProperty(name="country", type="STRING"),
+                        PropertyType(name="name", type="STRING"),
+                        PropertyType(name="country", type="STRING"),
                     ],
                 ),
-                SchemaEntity(
+                NodeType(
                     label="Field",
                     properties=[
-                        SchemaProperty(name="name", type="STRING"),
+                        PropertyType(name="name", type="STRING"),
                     ],
                 ),
             ],
-            "relations": [
-                SchemaRelation(
+            "relationship_types": [
+                RelationshipType(
                     label="WORKED_ON",
                 ),
-                SchemaRelation(
+                RelationshipType(
                     label="WORKED_FOR",
                 ),
             ],
-            "potential_schema": [
+            "patterns": [
                 ("Person", "WORKED_ON", "Field"),
                 ("Person", "WORKED_FOR", "Organization"),
             ],

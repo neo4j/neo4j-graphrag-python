@@ -1,6 +1,27 @@
 {
-  "entities": {
-    "Company": {
+  "node_types": [
+    {
+      "label": "Person",
+      "description": "",
+      "properties": [
+        {
+          "name": "name",
+          "type": "STRING",
+          "description": ""
+        },
+        {
+          "name": "position",
+          "type": "STRING",
+          "description": ""
+        },
+        {
+          "name": "startYear",
+          "type": "INTEGER",
+          "description": ""
+        }
+      ]
+    },
+    {
       "label": "Company",
       "description": "",
       "properties": [
@@ -26,28 +47,7 @@
         }
       ]
     },
-    "Person": {
-      "label": "Person",
-      "description": "",
-      "properties": [
-        {
-          "name": "name",
-          "type": "STRING",
-          "description": ""
-        },
-        {
-          "name": "position",
-          "type": "STRING",
-          "description": ""
-        },
-        {
-          "name": "yearJoined",
-          "type": "INTEGER",
-          "description": ""
-        }
-      ]
-    },
-    "Product": {
+    {
       "label": "Product",
       "description": "",
       "properties": [
@@ -68,7 +68,7 @@
         }
       ]
     },
-    "Office": {
+    {
       "label": "Office",
       "description": "",
       "properties": [
@@ -79,40 +79,30 @@
         }
       ]
     }
-  },
-  "relations": {
-    "FOUNDED_BY": {
-      "label": "FOUNDED_BY",
-      "description": "",
-      "properties": []
-    },
-    "WORKS_FOR": {
+  ],
+  "relationship_types": [
+    {
       "label": "WORKS_FOR",
       "description": "",
       "properties": []
     },
-    "MANAGES": {
+    {
       "label": "MANAGES",
       "description": "",
       "properties": []
     },
-    "DEVELOPED_BY": {
+    {
       "label": "DEVELOPED_BY",
       "description": "",
       "properties": []
     },
-    "LOCATED_IN": {
+    {
       "label": "LOCATED_IN",
       "description": "",
       "properties": []
     }
-  },
-  "potential_schema": [
-    [
-      "Company",
-      "FOUNDED_BY",
-      "Person"
-    ],
+  ],
+  "patterns": [
     [
       "Person",
       "WORKS_FOR",

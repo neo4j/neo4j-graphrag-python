@@ -19,8 +19,8 @@ import neo4j
 import pytest
 from neo4j_graphrag.embeddings import Embedder
 from neo4j_graphrag.experimental.components.schema import (
-    SchemaEntity,
-    SchemaRelation,
+    NodeType,
+    RelationshipType,
 )
 from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
@@ -116,14 +116,10 @@ async def test_knowledge_graph_builder_with_entities_and_file(_: Mock) -> None:
         from_pdf=True,
     )
 
-    # assert kg_builder.entities == entities
-    # assert kg_builder.relations == relations
-    # assert kg_builder.potential_schema == potential_schema
-
     file_path = "path/to/test.pdf"
 
-    internal_entities = [SchemaEntity(label=label) for label in entities]
-    internal_relations = [SchemaRelation(label=label) for label in relations]
+    internal_node_types = [NodeType(label=label) for label in entities]
+    internal_relationship_types = [RelationshipType(label=label) for label in relations]
 
     with patch.object(
         kg_builder.runner.pipeline,
@@ -132,9 +128,11 @@ async def test_knowledge_graph_builder_with_entities_and_file(_: Mock) -> None:
     ) as mock_run:
         await kg_builder.run_async(file_path=file_path)
         pipe_inputs = mock_run.call_args[1]["data"]
-        assert pipe_inputs["schema"]["entities"] == internal_entities
-        assert pipe_inputs["schema"]["relations"] == internal_relations
-        assert pipe_inputs["schema"]["potential_schema"] == potential_schema
+        assert pipe_inputs["schema"]["node_types"] == tuple(internal_node_types)
+        assert pipe_inputs["schema"]["relationship_types"] == tuple(
+            internal_relationship_types
+        )
+        assert pipe_inputs["schema"]["patterns"] == tuple(potential_schema)
 
 
 def test_simple_kg_pipeline_on_error_invalid_value() -> None:

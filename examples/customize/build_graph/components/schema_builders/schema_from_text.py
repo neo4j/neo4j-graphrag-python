@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 
 from neo4j_graphrag.experimental.components.schema import (
     SchemaFromTextExtractor,
-    SchemaConfig,
+    GraphSchema,
 )
 from neo4j_graphrag.llm import OpenAILLM
 
@@ -27,25 +27,25 @@ logging.getLogger("neo4j_graphrag").setLevel(logging.INFO)
 
 # Sample text to extract schema from - it's about a company and its employees
 TEXT = """
-Acme Corporation was founded in 1985 by John Smith in New York City. 
-The company specializes in manufacturing high-quality widgets and gadgets 
+Acme Corporation was founded in 1985 by John Smith in New York City.
+The company specializes in manufacturing high-quality widgets and gadgets
 for the consumer electronics industry.
 
-Sarah Johnson joined Acme in 2010 as a Senior Engineer and was promoted to 
-Engineering Director in 2015. She oversees a team of 12 engineers working on 
-next-generation products. Sarah holds a PhD in Electrical Engineering from MIT 
+Sarah Johnson joined Acme in 2010 as a Senior Engineer and was promoted to
+Engineering Director in 2015. She oversees a team of 12 engineers working on
+next-generation products. Sarah holds a PhD in Electrical Engineering from MIT
 and has filed 5 patents during her time at Acme.
 
-The company expanded to international markets in 2012, opening offices in London, 
-Tokyo, and Berlin. Each office is managed by a regional director who reports 
+The company expanded to international markets in 2012, opening offices in London,
+Tokyo, and Berlin. Each office is managed by a regional director who reports
 directly to the CEO, Michael Brown, who took over leadership in 2008.
 
-Acme's most successful product, the SuperWidget X1, was launched in 2018 and 
-has sold over 2 million units worldwide. The product was developed by a team led 
+Acme's most successful product, the SuperWidget X1, was launched in 2018 and
+has sold over 2 million units worldwide. The product was developed by a team led
 by Robert Chen, who joined the company in 2016 after working at TechGiant for 8 years.
 
-The company currently employs 250 people across its 4 locations and had a revenue 
-of $75 million in the last fiscal year. Acme is planning to go public in 2024 
+The company currently employs 250 people across its 4 locations and had a revenue
+of $75 million in the last fiscal year. Acme is planning to go public in 2024
 with an estimated valuation of $500 million.
 """
 
@@ -92,14 +92,14 @@ async def extract_and_save_schema() -> None:
         inferred_schema.store_as_yaml(YAML_FILE_PATH)
 
         print("\nExtracted Schema Summary:")
-        print(f"Entities: {list(inferred_schema.entities.keys())}")
+        print(f"Node types: {list(inferred_schema.node_types)}")
         print(
-            f"Relations: {list(inferred_schema.relations.keys() if inferred_schema.relations else [])}"
+            f"Relationship types: {list(inferred_schema.relationship_types if inferred_schema.relationship_types else [])}"
         )
 
-        if inferred_schema.potential_schema:
-            print("\nPotential Schema:")
-            for entity1, relation, entity2 in inferred_schema.potential_schema:
+        if inferred_schema.patterns:
+            print("\nPatterns:")
+            for entity1, relation, entity2 in inferred_schema.patterns:
                 print(f"  {entity1} --[{relation}]--> {entity2}")
 
     finally:
@@ -119,11 +119,11 @@ async def main() -> None:
 
     # load schema from files
     print("\nLoading schemas from saved files:")
-    schema_from_json = SchemaConfig.from_file(JSON_FILE_PATH)
-    schema_from_yaml = SchemaConfig.from_file(YAML_FILE_PATH)
+    schema_from_json = GraphSchema.from_file(JSON_FILE_PATH)
+    schema_from_yaml = GraphSchema.from_file(YAML_FILE_PATH)
 
-    print(f"Entities in JSON schema: {list(schema_from_json.entities.keys())}")
-    print(f"Entities in YAML schema: {list(schema_from_yaml.entities.keys())}")
+    print(f"Node types in JSON schema: {list(schema_from_json.node_types)}")
+    print(f"Node types in YAML schema: {list(schema_from_yaml.node_types)}")
 
 
 if __name__ == "__main__":

@@ -19,10 +19,7 @@ from typing import (
     Optional,
     Sequence,
     Union,
-    List,
     Tuple,
-    Dict,
-    cast,
 )
 import logging
 import warnings
@@ -44,11 +41,10 @@ from neo4j_graphrag.experimental.components.resolver import (
 )
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
-    SchemaConfig,
-    SchemaEntity,
-    SchemaRelation,
+    GraphSchema,
+    NodeType,
+    RelationshipType,
     SchemaFromTextExtractor,
-    normalize_schema_dict,
 )
 from neo4j_graphrag.experimental.components.text_splitters.base import TextSplitter
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
@@ -93,7 +89,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     entities: Sequence[EntityInputType] = []
     relations: Sequence[RelationInputType] = []
     potential_schema: Optional[list[tuple[str, str, str]]] = None
-    schema_: Optional[Union[SchemaConfig, dict[str, list[Any]]]] = Field(
+    schema_: Optional[Union[GraphSchema, dict[str, list[Any]]]] = Field(
         default=None, alias="schema"
     )
     enforce_schema: SchemaEnforcementMode = SchemaEnforcementMode.NONE
@@ -108,14 +104,6 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     text_splitter: Optional[ComponentType] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    @model_validator(mode="before")
-    def normalize_schema_field(cls, data: Dict[str, Any]) -> Dict[str, Any]:
-        # Normalize the 'schema' field if it is a dict
-        schema = data.get("schema")
-        if isinstance(schema, dict):
-            data["schema"] = normalize_schema_dict(schema)
-        return data
 
     @model_validator(mode="after")
     def handle_schema_precedence(self) -> Self:
@@ -199,64 +187,58 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     def _process_schema_with_precedence(
         self,
     ) -> Tuple[
-        List[SchemaEntity], List[SchemaRelation], Optional[List[Tuple[str, str, str]]]
+        Tuple[NodeType, ...],
+        Tuple[RelationshipType, ...],
+        Optional[Tuple[Tuple[str, str, str], ...]],
     ]:
         """
         Process schema inputs according to precedence rules:
-        1. If schema is provided as SchemaConfig object, use it
+        1. If schema is provided as GraphSchema object, use it
         2. If schema is provided as dictionary, extract from it
         3. Otherwise, use individual schema components
 
         Returns:
-            Tuple of (entities, relations, potential_schema)
+            Tuple of (node_types, relationship_types, patterns)
         """
         if self.schema_ is not None:
             # schema takes precedence over individual components
-            if isinstance(self.schema_, SchemaConfig):
-                # extract components from SchemaConfig
-                entity_dicts = list(self.schema_.entities.values())
-                # convert dict values to SchemaEntity objects
-                entities = [SchemaEntity.model_validate(e) for e in entity_dicts]
+            if isinstance(self.schema_, GraphSchema):
+                # extract components from GraphSchema
+                node_types = self.schema_.node_types
 
                 # handle case where relations could be None
-                if self.schema_.relations is not None:
-                    relation_dicts = list(self.schema_.relations.values())
-                    relations = [
-                        SchemaRelation.model_validate(r) for r in relation_dicts
-                    ]
+                if self.schema_.relationship_types is not None:
+                    relationship_types = self.schema_.relationship_types
                 else:
-                    relations = []
+                    relationship_types = ()
 
-                potential_schema = self.schema_.potential_schema
+                patterns = self.schema_.patterns
             else:
-                entities = [
-                    SchemaEntity.from_text_or_dict(e)
-                    for e in cast(
-                        Dict[str, Any], self.schema_.get("entities", {})
-                    ).values()
-                ]
-                relations = [
-                    SchemaRelation.from_text_or_dict(r)
-                    for r in cast(
-                        Dict[str, Any], self.schema_.get("relations", {})
-                    ).values()
-                ]
-                potential_schema = self.schema_.get("potential_schema")
+                node_types = tuple(
+                    NodeType.from_text_or_dict(e)
+                    for e in self.schema_.get("node_types", ())
+                )
+                relationship_types = tuple(
+                    RelationshipType.from_text_or_dict(r)
+                    for r in self.schema_.get("relationship_types", ())
+                )
+                ps = self.schema_.get("patterns")
+                patterns = tuple(ps) if ps else None
         else:
             # use individual components
-            entities = (
-                [SchemaEntity.from_text_or_dict(e) for e in self.entities]
+            node_types = tuple(
+                [NodeType.from_text_or_dict(e) for e in self.entities]
                 if self.entities
                 else []
             )
-            relations = (
-                [SchemaRelation.from_text_or_dict(r) for r in self.relations]
+            relationship_types = tuple(
+                [RelationshipType.from_text_or_dict(r) for r in self.relations]
                 if self.relations
                 else []
             )
-            potential_schema = self.potential_schema
+            patterns = tuple(self.potential_schema) if self.potential_schema else None
 
-        return entities, relations, potential_schema
+        return node_types, relationship_types, patterns
 
     def _get_run_params_for_schema(self) -> dict[str, Any]:
         if not self.has_user_provided_schema():
@@ -264,14 +246,14 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             return {}
         else:
             # process schema components according to precedence rules
-            entities, relations, potential_schema = (
+            node_types, relationship_types, patterns = (
                 self._process_schema_with_precedence()
             )
 
             return {
-                "entities": entities,
-                "relations": relations,
-                "potential_schema": potential_schema,
+                "node_types": node_types,
+                "relationship_types": relationship_types,
+                "patterns": patterns,
             }
 
     def _get_extractor(self) -> EntityRelationExtractor:

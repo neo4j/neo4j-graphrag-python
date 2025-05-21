@@ -33,9 +33,9 @@ from neo4j_graphrag.experimental.components.resolver import (
 )
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
-    SchemaEntity,
-    SchemaProperty,
-    SchemaRelation,
+    NodeType,
+    PropertyType,
+    RelationshipType,
 )
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
     FixedSizeSplitter,
@@ -187,49 +187,49 @@ async def test_pipeline_builder_happy_path(
     pipe_inputs = {
         "splitter": {"text": harry_potter_text},
         "schema": {
-            "entities": [
-                SchemaEntity(
+            "node_types": [
+                NodeType(
                     label="Person",
                     properties=[
-                        SchemaProperty(name="name", type="STRING"),
-                        SchemaProperty(name="place_of_birth", type="STRING"),
-                        SchemaProperty(name="date_of_birth", type="DATE"),
+                        PropertyType(name="name", type="STRING"),
+                        PropertyType(name="place_of_birth", type="STRING"),
+                        PropertyType(name="date_of_birth", type="DATE"),
                     ],
                 ),
-                SchemaEntity(
+                NodeType(
                     label="Organization",
                     properties=[
-                        SchemaProperty(name="name", type="STRING"),
+                        PropertyType(name="name", type="STRING"),
                     ],
                 ),
-                SchemaEntity(
+                NodeType(
                     label="Potion",
                     properties=[
-                        SchemaProperty(name="name", type="STRING"),
+                        PropertyType(name="name", type="STRING"),
                     ],
                 ),
-                SchemaEntity(
+                NodeType(
                     label="Location",
                     properties=[
-                        SchemaProperty(name="address", type="STRING"),
+                        PropertyType(name="address", type="STRING"),
                     ],
                 ),
             ],
-            "relations": [
-                SchemaRelation(
+            "relationship_types": [
+                RelationshipType(
                     label="KNOWS",
                 ),
-                SchemaRelation(
+                RelationshipType(
                     label="PART_OF",
                 ),
-                SchemaRelation(
+                RelationshipType(
                     label="LED_BY",
                 ),
-                SchemaRelation(
+                RelationshipType(
                     label="DRINKS",
                 ),
             ],
-            "potential_schema": [
+            "patterns": [
                 ("Person", "KNOWS", "Person"),
                 ("Person", "DRINKS", "Potion"),
                 ("Person", "PART_OF", "Organization"),
@@ -356,9 +356,9 @@ async def test_pipeline_builder_failing_chunk_raise(
         # note: schema not used in this test because
         # we are mocking the LLM
         "schema": {
-            "entities": [],
-            "relations": [],
-            "potential_schema": [],
+            "node_types": (),
+            "relationship_types": (),
+            "patterns": (),
         },
     }
     with pytest.raises(LLMGenerationError):
@@ -434,9 +434,9 @@ async def test_pipeline_builder_failing_chunk_do_not_raise(
         # note: schema not used in this test because
         # we are mocking the LLM
         "schema": {
-            "entities": [],
-            "relations": [],
-            "potential_schema": [],
+            "node_types": (),
+            "relationship_types": (),
+            "patterns": (),
         },
     }
     kg_builder_pipeline.get_node_by_name(
@@ -575,9 +575,9 @@ async def test_pipeline_builder_two_documents(
         # note: schema not used in this test because
         # we are mocking the LLM
         "schema": {
-            "entities": [],
-            "relations": [],
-            "potential_schema": [],
+            "node_types": (),
+            "relationship_types": (),
+            "patterns": (),
         },
     }
     pipe_inputs_2 = {
@@ -585,9 +585,9 @@ async def test_pipeline_builder_two_documents(
         # note: schema not used in this test because
         # we are mocking the LLM
         "schema": {
-            "entities": [],
-            "relations": [],
-            "potential_schema": [],
+            "node_types": (),
+            "relationship_types": (),
+            "patterns": (),
         },
     }
     await kg_builder_pipeline.run(pipe_inputs_1)

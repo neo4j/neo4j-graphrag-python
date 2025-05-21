@@ -305,7 +305,7 @@ async def test_pipeline_builder_with_automatic_schema_extraction(
         # first call - schema extraction response
         LLMResponse(
             content="""{
-                "entities": [
+                "node_types": [
                     {
                         "label": "Person",
                         "description": "A character in the story",
@@ -322,14 +322,14 @@ async def test_pipeline_builder_with_automatic_schema_extraction(
                         ]
                     }
                 ],
-                "relations": [
+                "relationship_types": [
                     {
                         "label": "LOCATED_AT",
                         "description": "Indicates where a person is located",
                         "properties": []
                     }
                 ],
-                "potential_schema": [
+                "patterns": [
                     ["Person", "LOCATED_AT", "Location"]
                 ]
             }"""

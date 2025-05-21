@@ -102,9 +102,9 @@ NEO4J_PASSWORD = "password"
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
 
 # List the entities and relations the LLM should look for in the text
-entities = ["Person", "House", "Planet"]
-relations = ["PARENT_OF", "HEIR_OF", "RULES"]
-potential_schema = [
+node_types = ["Person", "House", "Planet"]
+relationship_types = ["PARENT_OF", "HEIR_OF", "RULES"]
+patterns = [
     ("Person", "PARENT_OF", "Person"),
     ("Person", "HEIR_OF", "House"),
     ("House", "RULES", "Planet"),
@@ -128,8 +128,11 @@ kg_builder = SimpleKGPipeline(
     llm=llm,
     driver=driver,
     embedder=embedder,
-    entities=entities,
-    relations=relations,
+    schema={
+        "node_types": node_types,
+        "relationship_types": relationship_types,
+        "patterns": patterns,
+    },
     on_error="IGNORE",
     from_pdf=False,
 )
@@ -365,7 +368,7 @@ When you're finished with your changes, create a pull request (PR) using the fol
 
 ## 🧪 Tests
 
-To be able to run all tests, all extra packages needs to be installed.  
+To be able to run all tests, all extra packages needs to be installed.
 This is achieved by:
 
 ```bash

@@ -26,9 +26,10 @@ from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
 from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
-    SchemaEntity,
-    SchemaRelation,
+    NodeType,
+    RelationshipType,
     SchemaFromTextExtractor,
+    GraphSchema,
 )
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
     FixedSizeSplitter,
@@ -38,6 +39,10 @@ from neo4j_graphrag.experimental.pipeline.config.template_pipeline import (
     SimpleKGPipelineConfig,
 )
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
+from neo4j_graphrag.experimental.pipeline.types.schema import (
+    EntityInputType,
+    RelationInputType,
+)
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 from neo4j_graphrag.llm import LLMInterface
 
@@ -142,11 +147,9 @@ def test_simple_kg_pipeline_config_schema_run_params() -> None:
         potential_schema=[("Person", "KNOWS", "Person")],
     )
     assert config._get_run_params_for_schema() == {
-        "entities": [SchemaEntity(label="Person")],
-        "relations": [SchemaRelation(label="KNOWS")],
-        "potential_schema": [
-            ("Person", "KNOWS", "Person"),
-        ],
+        "node_types": (NodeType(label="Person"),),
+        "relationship_types": (RelationshipType(label="KNOWS"),),
+        "patterns": (("Person", "KNOWS", "Person"),),
     }
 
 
@@ -316,3 +319,170 @@ def test_simple_kg_pipeline_config_run_params_both_file_and_text() -> None:
         "Use either 'text' (when from_pdf=False) or 'file_path' (when from_pdf=True) argument."
         in str(excinfo)
     )
+
+
+def test_simple_kg_pipeline_config_process_schema_with_precedence_legacy() -> None:
+    entities: list[EntityInputType] = [
+        "Person",
+        {
+            "label": "Organization",
+            "description": "A group of persons",
+            "properties": [
+                {
+                    "name": "name",
+                    "type": "STRING",
+                }
+            ],
+        },
+    ]
+    relations: list[RelationInputType] = [
+        "WORKS_FOR",
+        {
+            "label": "CREATED",
+            "description": "A person created an organization",
+            "properties": [
+                {
+                    "name": "date",
+                    "description": "The date the organization was created",
+                    "type": "DATE",
+                },
+                {"name": "isActive", "type": "BOOLEAN"},
+            ],
+        },
+    ]
+    potential_schema = [
+        ("Person", "WORKS_FOR", "Organization"),
+        ("Person", "CREATED", "Organization"),
+    ]
+    config = SimpleKGPipelineConfig(
+        entities=entities,
+        relations=relations,
+        potential_schema=potential_schema,
+    )
+    node_types, relationship_types, patterns = config._process_schema_with_precedence()
+    assert len(node_types) == 2
+    assert node_types[0].label == "Person"
+    assert len(node_types[0].properties) == 0
+    assert node_types[1].label == "Organization"
+    assert len(node_types[1].properties) == 1
+    assert len(relationship_types) == 2
+    assert relationship_types[0].label == "WORKS_FOR"
+    assert len(relationship_types[0].properties) == 0
+    assert relationship_types[1].label == "CREATED"
+    assert len(relationship_types[1].properties) == 2
+    assert patterns is not None
+    assert len(patterns) == 2
+
+
+def test_simple_kg_pipeline_config_process_schema_with_precedence_schema_dict() -> None:
+    entities = [
+        "Person",
+        {
+            "label": "Organization",
+            "description": "A group of persons",
+            "properties": [
+                {
+                    "name": "name",
+                    "type": "STRING",
+                }
+            ],
+        },
+    ]
+    relations = [
+        "WORKS_FOR",
+        {
+            "label": "CREATED",
+            "description": "A person created an organization",
+            "properties": [
+                {
+                    "name": "date",
+                    "description": "The date the organization was created",
+                    "type": "DATE",
+                },
+                {"name": "isActive", "type": "BOOLEAN"},
+            ],
+        },
+    ]
+    potential_schema = [
+        ("Person", "WORKS_FOR", "Organization"),
+        ("Person", "CREATED", "Organization"),
+    ]
+    config = SimpleKGPipelineConfig(
+        schema={
+            "node_types": entities,
+            "relationship_types": relations,
+            "patterns": potential_schema,
+        }
+    )
+    node_types, relationship_types, patterns = config._process_schema_with_precedence()
+    assert len(node_types) == 2
+    assert node_types[0].label == "Person"
+    assert len(node_types[0].properties) == 0
+    assert node_types[1].label == "Organization"
+    assert len(node_types[1].properties) == 1
+    assert len(relationship_types) == 2
+    assert relationship_types[0].label == "WORKS_FOR"
+    assert len(relationship_types[0].properties) == 0
+    assert relationship_types[1].label == "CREATED"
+    assert len(relationship_types[1].properties) == 2
+    assert patterns is not None
+    assert len(patterns) == 2
+
+
+def test_simple_kg_pipeline_config_process_schema_with_precedence_schema_object() -> (
+    None
+):
+    entities = [
+        {"label": "Person"},
+        {
+            "label": "Organization",
+            "description": "A group of persons",
+            "properties": [
+                {
+                    "name": "name",
+                    "type": "STRING",
+                }
+            ],
+        },
+    ]
+    relations = [
+        {"label": "WORKS_FOR"},
+        {
+            "label": "CREATED",
+            "description": "A person created an organization",
+            "properties": [
+                {
+                    "name": "date",
+                    "description": "The date the organization was created",
+                    "type": "DATE",
+                },
+                {"name": "isActive", "type": "BOOLEAN"},
+            ],
+        },
+    ]
+    potential_schema = [
+        ("Person", "WORKS_FOR", "Organization"),
+        ("Person", "CREATED", "Organization"),
+    ]
+    config = SimpleKGPipelineConfig(
+        schema=GraphSchema.model_validate(
+            {
+                "node_types": entities,
+                "relationship_types": relations,
+                "patterns": potential_schema,
+            }
+        )
+    )
+    node_types, relationship_types, patterns = config._process_schema_with_precedence()
+    assert len(node_types) == 2
+    assert node_types[0].label == "Person"
+    assert len(node_types[0].properties) == 0
+    assert node_types[1].label == "Organization"
+    assert len(node_types[1].properties) == 1
+    assert len(relationship_types) == 2
+    assert relationship_types[0].label == "WORKS_FOR"
+    assert len(relationship_types[0].properties) == 0
+    assert relationship_types[1].label == "CREATED"
+    assert len(relationship_types[1].properties) == 2
+    assert patterns is not None
+    assert len(patterns) == 2

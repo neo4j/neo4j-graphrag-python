@@ -204,7 +204,7 @@ Input text:
 
 class SchemaExtractionTemplate(PromptTemplate):
     DEFAULT_TEMPLATE = """
-You are a top-tier algorithm designed for extracting a labeled property graph schema in 
+You are a top-tier algorithm designed for extracting a labeled property graph schema in
 structured formats.
 
 Generate a generalized graph schema based on the input text. Identify key entity types,
@@ -219,12 +219,12 @@ IMPORTANT RULES:
 6. Do not create entity types that aren't clearly mentioned in the text.
 7. Keep your schema minimal and focused on clearly identifiable patterns in the text.
 
-Accepted property types are: BOOLEAN, DATE, DURATION, FLOAT, INTEGER, LIST, 
+Accepted property types are: BOOLEAN, DATE, DURATION, FLOAT, INTEGER, LIST,
 LOCAL_DATETIME, LOCAL_TIME, POINT, STRING, ZONED_DATETIME, ZONED_TIME.
 
 Return a valid JSON object that follows this precise structure:
 {{
-  "entities": [
+  "node_types": [
     {{
       "label": "Person",
       "properties": [
@@ -236,13 +236,13 @@ Return a valid JSON object that follows this precise structure:
     }},
     ...
   ],
-  "relations": [
+  "relationship_types": [
     {{
       "label": "WORKS_FOR"
     }},
     ...
   ],
-  "potential_schema": [
+  "patterns": [
     ["Person", "WORKS_FOR", "Company"],
     ...
   ]
