@@ -101,8 +101,7 @@ async def main() -> None:
         generation_config=generation_config,
     )
 
-    # Example text containing information about a person
-    # text = "Stella Hane is a 35-year-old software engineer who loves coding."
+    # Example text containing information about a company
     text1 = "Neo4j is a software company created in 2017"
 
     print("\n=== Synchronous Tool Call ===")
@@ -116,7 +115,7 @@ async def main() -> None:
     print(sync_result)
 
     print("\n=== Asynchronous Tool Call ===")
-    # Make an asynchronous tool call with a different text
+    # Make an asynchronous tool call with a different text about a person
     text2 = "Molly Hane, 32, works as a data scientist and enjoys machine learning."
     async_response = await llm.ainvoke_with_tools(
         input=f"Extract information about the person from this text: {text2}",
