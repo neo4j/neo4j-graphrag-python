@@ -12,6 +12,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from __future__ import annotations
+
 from typing import (
     Any,
     ClassVar,
@@ -89,9 +91,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     entities: Sequence[EntityInputType] = []
     relations: Sequence[RelationInputType] = []
     potential_schema: Optional[list[tuple[str, str, str]]] = None
-    schema_: Optional[Union[GraphSchema, dict[str, list[Any]]]] = Field(
-        default=None, alias="schema"
-    )
+    schema_: Optional[GraphSchema] = Field(default=None, alias="schema")
     enforce_schema: SchemaEnforcementMode = SchemaEnforcementMode.NONE
     on_error: OnError = OnError.IGNORE
     prompt_template: Union[ERExtractionTemplate, str] = ERExtractionTemplate()
@@ -188,8 +188,8 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         self,
     ) -> Tuple[
         Tuple[NodeType, ...],
-        Tuple[RelationshipType, ...],
-        Optional[Tuple[Tuple[str, str, str], ...]],
+        Tuple[RelationshipType, ...] | None,
+        Optional[Tuple[Tuple[str, str, str], ...]] | None,
     ]:
         """
         Process schema inputs according to precedence rules:
@@ -202,39 +202,26 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         """
         if self.schema_ is not None:
             # schema takes precedence over individual components
-            if isinstance(self.schema_, GraphSchema):
-                # extract components from GraphSchema
-                node_types = self.schema_.node_types
+            node_types = self.schema_.node_types
 
-                # handle case where relations could be None
-                if self.schema_.relationship_types is not None:
-                    relationship_types = self.schema_.relationship_types
-                else:
-                    relationship_types = ()
-
-                patterns = self.schema_.patterns
+            # handle case where relations could be None
+            if self.schema_.relationship_types is not None:
+                relationship_types = self.schema_.relationship_types
             else:
-                node_types = tuple(
-                    NodeType.from_text_or_dict(e)
-                    for e in self.schema_.get("node_types", ())
-                )
-                relationship_types = tuple(
-                    RelationshipType.from_text_or_dict(r)
-                    for r in self.schema_.get("relationship_types", ())
-                )
-                ps = self.schema_.get("patterns")
-                patterns = tuple(ps) if ps else None
+                relationship_types = None
+
+            patterns = self.schema_.patterns
         else:
             # use individual components
             node_types = tuple(
-                [NodeType.from_text_or_dict(e) for e in self.entities]
+                [NodeType.model_validate(e) for e in self.entities]
                 if self.entities
                 else []
             )
-            relationship_types = tuple(
-                [RelationshipType.from_text_or_dict(r) for r in self.relations]
-                if self.relations
-                else []
+            relationship_types = (
+                tuple([RelationshipType.model_validate(r) for r in self.relations])
+                if self.relations is not None
+                else None
             )
             patterns = tuple(self.potential_schema) if self.potential_schema else None
 

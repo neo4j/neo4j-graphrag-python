@@ -213,7 +213,9 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
     ) -> Neo4jGraph:
         """Run entity extraction for a given text chunk."""
         prompt = self.prompt_template.format(
-            text=chunk.text, schema=schema.model_dump(), examples=examples
+            text=chunk.text,
+            schema=schema.model_dump(exclude_none=True),
+            examples=examples,
         )
         llm_result = await self.llm.ainvoke(prompt)
         try:
@@ -326,7 +328,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         elif lexical_graph_config:
             lexical_graph_builder = LexicalGraphBuilder(config=lexical_graph_config)
         schema = schema or GraphSchema(
-            node_types=(), relationship_types=(), patterns=()
+            node_types=(), relationship_types=None, patterns=None
         )
         examples = examples or ""
         sem = asyncio.Semaphore(self.max_concurrency)
