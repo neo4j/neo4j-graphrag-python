@@ -15,6 +15,8 @@
 from __future__ import annotations
 
 import json
+
+import neo4j
 import logging
 import warnings
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union, Sequence, Callable
@@ -44,6 +46,7 @@ from neo4j_graphrag.experimental.pipeline.types.schema import (
 from neo4j_graphrag.generation import SchemaExtractionTemplate, PromptTemplate
 from neo4j_graphrag.llm import LLMInterface
 from neo4j_graphrag.utils.file_handler import FileHandler, FileFormat
+from neo4j_graphrag.schema import get_structured_schema
 
 
 class PropertyType(BaseModel):
@@ -306,7 +309,12 @@ class GraphSchema(DataModel):
             raise SchemaValidationError(str(e)) from e
 
 
-class SchemaBuilder(Component):
+class BaseSchemaBuilder(Component):
+    async def run(self, *args: Any, **kwargs: Any) -> GraphSchema:
+        raise NotImplementedError()
+
+
+class SchemaBuilder(BaseSchemaBuilder):
     """
     A builder class for constructing GraphSchema objects from given entities,
     relations, and their interrelationships defined in a potential schema.
@@ -424,7 +432,7 @@ class SchemaBuilder(Component):
         )
 
 
-class SchemaFromTextExtractor(Component):
+class SchemaFromTextExtractor(BaseSchemaBuilder):
     """
     A component for constructing GraphSchema objects from the output of an LLM after
     automatic schema extraction from text.
@@ -619,5 +627,77 @@ class SchemaFromTextExtractor(Component):
                 "node_types": extracted_node_types,
                 "relationship_types": extracted_relationship_types,
                 "patterns": extracted_patterns,
+            }
+        )
+
+
+class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
+    """A class to build a GraphSchema object from an existing graph."""
+
+    def __init__(self, driver: neo4j.Driver) -> None:
+        self.driver = driver
+
+    async def run(self, **kwargs: Any) -> GraphSchema:
+        structured_schema = get_structured_schema(self.driver)
+        node_labels = set(structured_schema["node_props"].keys())
+        node_types = [
+            {
+                "label": key,
+                "properties": [
+                    {
+                        "name": p["property"],
+                        "type": p["type"],
+                    }
+                    for p in properties
+                ],
+            }
+            for key, properties in structured_schema["node_props"].items()
+        ]
+        rel_labels = set(structured_schema["rel_props"].keys())
+        relationship_types = [
+            {
+                "label": key,
+                "properties": [
+                    {
+                        "name": p["property"],
+                        "type": p["type"],
+                    }
+                    for p in properties
+                ],
+            }
+            for key, properties in structured_schema["rel_props"].items()
+        ]
+        patterns = [
+            (s["start"], s["type"], s["end"])
+            for s in structured_schema["relationships"]
+        ]
+        # deal with nodes and relationships without properties
+        for source, rel, target in patterns:
+            if source not in node_labels:
+                node_labels.add(source)
+                node_types.append(
+                    {
+                        "label": source,
+                    }
+                )
+            if target not in node_labels:
+                node_labels.add(target)
+                node_types.append(
+                    {
+                        "label": target,
+                    }
+                )
+            if rel not in rel_labels:
+                rel_labels.add(rel)
+                relationship_types.append(
+                    {
+                        "label": rel,
+                    }
+                )
+        return GraphSchema.model_validate(
+            {
+                "node_types": node_types,
+                "relationship_types": relationship_types,
+                "patterns": patterns,
             }
         )
