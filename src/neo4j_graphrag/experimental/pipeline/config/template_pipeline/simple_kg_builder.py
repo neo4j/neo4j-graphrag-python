@@ -220,9 +220,9 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
                 )
                 relationship_types = tuple(
                     RelationshipType.from_text_or_dict(r)
-                    for r in self.schema_.get("node_types", ())
+                    for r in self.schema_.get("relationship_types", ())
                 )
-                ps = self.schema_.get("potential_schema")
+                ps = self.schema_.get("patterns")
                 patterns = tuple(ps) if ps else None
         else:
             # use individual components

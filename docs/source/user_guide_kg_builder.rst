@@ -102,7 +102,7 @@ as shown below:
         {"label": "RULES", "properties": [{"name": "fromYear", "type": "INTEGER"}]},
     ]
 
-The `patterns` is defined by a list of triplet in the format:
+The `patterns` are defined by a list of triplet in the format:
 `(source_node_label, relationship_label, target_node_label)`. For instance:
 
 

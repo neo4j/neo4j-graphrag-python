@@ -131,6 +131,7 @@ kg_builder = SimpleKGPipeline(
     schema={
         "node_types": node_types,
         "relationship_types": relationship_types,
+        "patterns": patterns,
     },
     on_error="IGNORE",
     from_pdf=False,
