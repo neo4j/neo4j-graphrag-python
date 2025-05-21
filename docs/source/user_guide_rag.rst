@@ -909,7 +909,7 @@ instead:
 
     rag.search(
         "my question",
-        return_message_if_no_context="I can not answer this question because I have no relevant context."
+        response_fallback="I can not answer this question because I have no relevant context."
     )
 
 

@@ -263,7 +263,7 @@ def test_graphrag_happy_path_custom_system_instruction(
     assert res.answer == "llm generated text"
 
 
-def test_graphrag_happy_path_return_message_if_context_empty(
+def test_graphrag_happy_path_response_fallback(
     retriever_mock: MagicMock, llm: MagicMock
 ) -> None:
     rag = GraphRAG(
@@ -273,7 +273,7 @@ def test_graphrag_happy_path_return_message_if_context_empty(
     retriever_mock.search.return_value = RetrieverResult(items=[])
     res = rag.search(
         "question",
-        return_message_if_no_context="I can't answer this question without context",
+        response_fallback="I can't answer this question without context",
     )
 
     assert llm.invoke.call_count == 0
