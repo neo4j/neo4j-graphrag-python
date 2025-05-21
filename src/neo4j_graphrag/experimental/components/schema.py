@@ -83,7 +83,7 @@ class NodeType(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def validate(cls, data: EntityInputType) -> Self:
+    def validate_input_if_string(cls, data: EntityInputType) -> EntityInputType:
         if isinstance(data, str):
             return {"label": data}
         return data
@@ -100,7 +100,7 @@ class RelationshipType(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def validate(cls, data: RelationInputType) -> Self:
+    def validate_input_if_string(cls, data: RelationInputType) -> RelationInputType:
         if isinstance(data, str):
             return {"label": data}
         return data

@@ -186,8 +186,8 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         self,
     ) -> Tuple[
         Tuple[NodeType, ...],
-        Tuple[RelationshipType, ...],
-        Optional[Tuple[Tuple[str, str, str], ...]],
+        Tuple[RelationshipType, ...] | None,
+        Optional[Tuple[Tuple[str, str, str], ...]] | None,
     ]:
         """
         Process schema inputs according to precedence rules:

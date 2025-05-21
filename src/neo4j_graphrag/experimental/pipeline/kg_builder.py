@@ -105,25 +105,28 @@ class SimpleKGPipeline:
         neo4j_database: Optional[str] = None,
     ):
         try:
-            config = SimpleKGPipelineConfig(
-                # argument type are fixed in the Config object
-                llm_config=llm,  # type: ignore[arg-type]
-                neo4j_config=driver,  # type: ignore[arg-type]
-                embedder_config=embedder,  # type: ignore[arg-type]
-                entities=entities or [],
-                relations=relations or [],
-                potential_schema=potential_schema,
-                schema=schema,
-                enforce_schema=SchemaEnforcementMode(enforce_schema),
-                from_pdf=from_pdf,
-                pdf_loader=ComponentType(pdf_loader) if pdf_loader else None,
-                kg_writer=ComponentType(kg_writer) if kg_writer else None,
-                text_splitter=ComponentType(text_splitter) if text_splitter else None,
-                on_error=OnError(on_error),
-                prompt_template=prompt_template,
-                perform_entity_resolution=perform_entity_resolution,
-                lexical_graph_config=lexical_graph_config,
-                neo4j_database=neo4j_database,
+            config = SimpleKGPipelineConfig.model_validate(
+                dict(
+                    llm_config=llm,
+                    neo4j_config=driver,
+                    embedder_config=embedder,
+                    entities=entities or [],
+                    relations=relations or [],
+                    potential_schema=potential_schema,
+                    schema=schema,
+                    enforce_schema=SchemaEnforcementMode(enforce_schema),
+                    from_pdf=from_pdf,
+                    pdf_loader=ComponentType(pdf_loader) if pdf_loader else None,
+                    kg_writer=ComponentType(kg_writer) if kg_writer else None,
+                    text_splitter=ComponentType(text_splitter)
+                    if text_splitter
+                    else None,
+                    on_error=OnError(on_error),
+                    prompt_template=prompt_template,
+                    perform_entity_resolution=perform_entity_resolution,
+                    lexical_graph_config=lexical_graph_config,
+                    neo4j_database=neo4j_database,
+                )
             )
         except (ValidationError, ValueError) as e:
             raise PipelineDefinitionError() from e
