@@ -81,13 +81,12 @@ class NodeType(BaseModel):
     description: str = ""
     properties: list[PropertyType] = []
 
+    @model_validator(mode="before")
     @classmethod
-    def from_text_or_dict(cls, input: EntityInputType) -> Self:
-        if isinstance(input, NodeType):
-            return input
-        if isinstance(input, str):
-            return cls(label=input)
-        return cls.model_validate(input)
+    def validate(cls, data: EntityInputType) -> Self:
+        if isinstance(data, str):
+            return {"label": data}
+        return data
 
 
 class RelationshipType(BaseModel):
@@ -99,13 +98,12 @@ class RelationshipType(BaseModel):
     description: str = ""
     properties: list[PropertyType] = []
 
+    @model_validator(mode="before")
     @classmethod
-    def from_text_or_dict(cls, input: RelationInputType) -> Self:
-        if isinstance(input, RelationshipType):
-            return input
-        if isinstance(input, str):
-            return cls(label=input)
-        return cls.model_validate(input)
+    def validate(cls, data: EntityInputType) -> Self:
+        if isinstance(data, str):
+            return {"label": data}
+        return data
 
 
 class GraphSchema(DataModel):

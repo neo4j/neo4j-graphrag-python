@@ -408,7 +408,7 @@ def test_simple_kg_pipeline_config_process_schema_with_precedence_schema_dict() 
         ("Person", "CREATED", "Organization"),
     ]
     config = SimpleKGPipelineConfig(
-        schema={
+        schema={  # type: ignore
             "node_types": entities,
             "relationship_types": relations,
             "patterns": potential_schema,
@@ -433,7 +433,7 @@ def test_simple_kg_pipeline_config_process_schema_with_precedence_schema_object(
     None
 ):
     entities = [
-        {"label": "Person"},
+        "Person",
         {
             "label": "Organization",
             "description": "A group of persons",
@@ -446,7 +446,7 @@ def test_simple_kg_pipeline_config_process_schema_with_precedence_schema_object(
         },
     ]
     relations = [
-        {"label": "WORKS_FOR"},
+        "WORKS_FOR",
         {
             "label": "CREATED",
             "description": "A person created an organization",
