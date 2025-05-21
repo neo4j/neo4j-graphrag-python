@@ -11,6 +11,7 @@
 ### Fixed
 
 - Fixed a bug where `spacy` and `rapidfuzz` needed to be installed even if not using the relevant entity resolvers.
+- Fixed a bug where `VertexAILLM.(a)invoke_with_tools` called with multiple tools would raise an error.
 
 ### Changed
 
