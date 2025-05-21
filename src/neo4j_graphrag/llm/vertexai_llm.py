@@ -210,7 +210,9 @@ class VertexAILLM(LLMInterface):
                 config_dict = config.to_dict()
                 if config_dict.get("response_mime_type"):
                     config_dict["response_mime_type"] = None
-                    options["generation_config"] = GenerationConfig.from_dict(config_dict)
+                    options["generation_config"] = GenerationConfig.from_dict(
+                        config_dict
+                    )
         else:
             # no tools, drop tool_config if defined
             options.pop("tool_config", None)

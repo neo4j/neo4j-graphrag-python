@@ -14,7 +14,6 @@
 from __future__ import annotations
 
 from typing import cast
-from unittest import mock
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
@@ -168,7 +167,9 @@ def test_vertexai_get_messages_validation_error(GenerativeModelMock: MagicMock) 
 @pytest.mark.asyncio
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
 @patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM.get_messages")
-async def test_vertexai_ainvoke_happy_path(mock_get_messages: Mock, GenerativeModelMock: MagicMock) -> None:
+async def test_vertexai_ainvoke_happy_path(
+    mock_get_messages: Mock, GenerativeModelMock: MagicMock
+) -> None:
     mock_response = AsyncMock()
     mock_response.text = "Return text"
     mock_model = GenerativeModelMock.return_value
@@ -179,7 +180,9 @@ async def test_vertexai_ainvoke_happy_path(mock_get_messages: Mock, GenerativeMo
     input_text = "may thy knife chip and shatter"
     response = await llm.ainvoke(input_text)
     assert response.content == "Return text"
-    mock_model.generate_content_async.assert_awaited_once_with([{"text": "Return text"}])
+    mock_model.generate_content_async.assert_awaited_once_with(
+        [{"text": "Return text"}]
+    )
 
 
 def test_vertexai_get_llm_tools(test_tool: Tool) -> None:
