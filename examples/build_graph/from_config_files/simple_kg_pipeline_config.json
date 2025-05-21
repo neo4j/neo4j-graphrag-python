@@ -42,65 +42,67 @@
         }
     },
     "from_pdf": false,
-    "entities": [
-        "Person",
-        {
-            "label": "House",
-            "description": "Family the person belongs to",
-            "properties": [
-                {
-                    "name": "name",
-                    "type": "STRING"
-                }
-            ]
-        },
-        {
-            "label": "Planet",
-            "properties": [
-                {
-                    "name": "name",
-                    "type": "STRING"
-                },
-                {
-                    "name": "weather",
-                    "type": "STRING"
-                }
-            ]
-        }
-    ],
-    "relations": [
-        "PARENT_OF",
-        {
-            "label": "HEIR_OF",
-            "description": "Used for inheritor relationship between father and sons"
-        },
-        {
-            "label": "RULES",
-            "properties": [
-                {
-                    "name": "fromYear",
-                    "type": "INTEGER"
-                }
-            ]
-        }
-    ],
-    "potential_schema": [
-        [
+    "schema": {
+        "node_types": [
             "Person",
+            {
+                "label": "House",
+                "description": "Family the person belongs to",
+                "properties": [
+                    {
+                        "name": "name",
+                        "type": "STRING"
+                    }
+                ]
+            },
+            {
+                "label": "Planet",
+                "properties": [
+                    {
+                        "name": "name",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "weather",
+                        "type": "STRING"
+                    }
+                ]
+            }
+        ],
+        "relationship_types": [
             "PARENT_OF",
-            "Person"
+            {
+                "label": "HEIR_OF",
+                "description": "Used for inheritor relationship between father and sons"
+            },
+            {
+                "label": "RULES",
+                "properties": [
+                    {
+                        "name": "fromYear",
+                        "type": "INTEGER"
+                    }
+                ]
+            }
         ],
-        [
-            "Person",
-            "HEIR_OF",
-            "House"
-        ],
-        [
-            "House",
-            "RULES",
-            "Planet"
+        "patterns": [
+            [
+                "Person",
+                "PARENT_OF",
+                "Person"
+            ],
+            [
+                "Person",
+                "HEIR_OF",
+                "House"
+            ],
+            [
+                "House",
+                "RULES",
+                "Planet"
+            ]
         ]
-    ],
+    },
     "text_splitter": {
         "class_": "text_splitters.fixed_size_splitter.FixedSizeSplitter",
         "params_": {
