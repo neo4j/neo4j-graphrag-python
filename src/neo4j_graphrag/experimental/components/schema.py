@@ -37,8 +37,7 @@ from neo4j_graphrag.exceptions import (
 )
 from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
 from neo4j_graphrag.experimental.pipeline.types.schema import (
-    EntityInputType,
-    RelationInputType,
+    EntityInputType, RelationInputType,
 )
 from neo4j_graphrag.generation import SchemaExtractionTemplate, PromptTemplate
 from neo4j_graphrag.llm import LLMInterface
@@ -100,7 +99,7 @@ class RelationshipType(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def validate(cls, data: EntityInputType) -> Self:
+    def validate(cls, data: RelationInputType) -> Self:
         if isinstance(data, str):
             return {"label": data}
         return data
