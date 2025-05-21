@@ -39,8 +39,10 @@ from neo4j_graphrag.experimental.pipeline.config.template_pipeline import (
     SimpleKGPipelineConfig,
 )
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
-from neo4j_graphrag.experimental.pipeline.types.schema import EntityInputType, \
-    RelationInputType
+from neo4j_graphrag.experimental.pipeline.types.schema import (
+    EntityInputType,
+    RelationInputType,
+)
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 from neo4j_graphrag.llm import LLMInterface
 
