@@ -365,6 +365,7 @@ def test_simple_kg_pipeline_config_process_schema_with_precedence_legacy() -> No
     assert len(node_types[0].properties) == 0
     assert node_types[1].label == "Organization"
     assert len(node_types[1].properties) == 1
+    assert relationship_types is not None
     assert len(relationship_types) == 2
     assert relationship_types[0].label == "WORKS_FOR"
     assert len(relationship_types[0].properties) == 0
@@ -420,6 +421,7 @@ def test_simple_kg_pipeline_config_process_schema_with_precedence_schema_dict() 
     assert len(node_types[0].properties) == 0
     assert node_types[1].label == "Organization"
     assert len(node_types[1].properties) == 1
+    assert relationship_types is not None
     assert len(relationship_types) == 2
     assert relationship_types[0].label == "WORKS_FOR"
     assert len(relationship_types[0].properties) == 0
@@ -479,6 +481,7 @@ def test_simple_kg_pipeline_config_process_schema_with_precedence_schema_object(
     assert len(node_types[0].properties) == 0
     assert node_types[1].label == "Organization"
     assert len(node_types[1].properties) == 1
+    assert relationship_types is not None
     assert len(relationship_types) == 2
     assert relationship_types[0].label == "WORKS_FOR"
     assert len(relationship_types[0].properties) == 0
