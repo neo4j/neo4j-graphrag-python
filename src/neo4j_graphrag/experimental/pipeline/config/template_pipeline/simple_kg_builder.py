@@ -54,7 +54,6 @@ from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter i
 )
 from neo4j_graphrag.experimental.components.types import (
     LexicalGraphConfig,
-    SchemaEnforcementMode,
 )
 from neo4j_graphrag.experimental.pipeline.config.object_config import ComponentType
 from neo4j_graphrag.experimental.pipeline.config.template_pipeline.base import (
@@ -92,7 +91,6 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     relations: Sequence[RelationInputType] = []
     potential_schema: Optional[list[tuple[str, str, str]]] = None
     schema_: Optional[GraphSchema] = Field(default=None, alias="schema")
-    enforce_schema: SchemaEnforcementMode = SchemaEnforcementMode.NONE
     on_error: OnError = OnError.IGNORE
     prompt_template: Union[ERExtractionTemplate, str] = ERExtractionTemplate()
     perform_entity_resolution: bool = True
@@ -247,7 +245,6 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         return LLMEntityRelationExtractor(
             llm=self.get_default_llm(),
             prompt_template=self.prompt_template,
-            enforce_schema=self.enforce_schema,
             on_error=self.on_error,
         )
 

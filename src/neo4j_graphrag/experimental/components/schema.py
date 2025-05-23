@@ -27,7 +27,8 @@ from pydantic import (
     PrivateAttr,
     model_validator,
     validate_call,
-    ConfigDict, ValidationError,
+    ConfigDict,
+    ValidationError,
 )
 from typing_extensions import Self
 
