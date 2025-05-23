@@ -35,6 +35,7 @@ from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
     OnError,
 )
+from neo4j_graphrag.experimental.components.graph_pruning import GraphPruning
 from neo4j_graphrag.experimental.components.kg_writer import KGWriter, Neo4jWriter
 from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
 from neo4j_graphrag.experimental.components.resolver import (
@@ -78,6 +79,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         "chunk_embedder",
         "schema",
         "extractor",
+        "pruner",
         "writer",
         "resolver",
     ]
@@ -248,6 +250,9 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             on_error=self.on_error,
         )
 
+    def _get_pruner(self) -> GraphPruning:
+        return GraphPruning()
+
     def _get_writer(self) -> KGWriter:
         if self.kg_writer:
             return self.kg_writer.parse(self._global_data)  # type: ignore
@@ -329,9 +334,19 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         connections.append(
             ConnectionDefinition(
                 start="extractor",
-                end="writer",
+                end="pruner",
                 input_config={
                     "graph": "extractor",
+                    "schema": "schema",
+                },
+            )
+        )
+        connections.append(
+            ConnectionDefinition(
+                start="pruner",
+                end="writer",
+                input_config={
+                    "graph": "pruner",
                 },
             )
         )

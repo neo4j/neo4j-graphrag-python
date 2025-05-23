@@ -15,6 +15,8 @@
 import logging
 from typing import Optional, Any
 
+from pydantic import validate_call
+
 from neo4j_graphrag.experimental.components.schema import (
     GraphSchema,
     PropertyType,
@@ -31,6 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 class GraphPruning(Component):
+    @validate_call
     async def run(
         self,
         graph: Neo4jGraph,
