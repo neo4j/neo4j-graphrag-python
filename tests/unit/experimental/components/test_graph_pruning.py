@@ -17,8 +17,12 @@ from typing import Any
 import pytest
 
 from neo4j_graphrag.experimental.components.graph_pruning import GraphPruning
-from neo4j_graphrag.experimental.components.schema import NodeType, PropertyType
-from neo4j_graphrag.experimental.components.types import Neo4jNode
+from neo4j_graphrag.experimental.components.schema import (
+    NodeType,
+    PropertyType,
+    RelationshipType,
+)
+from neo4j_graphrag.experimental.components.types import Neo4jNode, Neo4jRelationship
 
 
 @pytest.mark.parametrize(
@@ -153,3 +157,145 @@ def test_graph_pruning_validate_node(
         assert result == expected_node
     else:
         assert result is None
+
+
+@pytest.fixture
+def neo4j_relationship() -> Neo4jRelationship:
+    return Neo4jRelationship(
+        start_node_id="1",
+        end_node_id="2",
+        type="REL",
+        properties={},
+    )
+
+
+@pytest.fixture
+def neo4j_reversed_relationship(neo4j_relationship: Neo4jRelationship) -> Neo4jRelationship:
+    return Neo4jRelationship(
+        start_node_id=neo4j_relationship.end_node_id,
+        end_node_id=neo4j_relationship.start_node_id,
+        type=neo4j_relationship.type,
+        properties=neo4j_relationship.properties,
+    )
+
+
+@pytest.mark.parametrize(
+    "relationship, valid_nodes, relationship_type, additional_relationship_types, patterns, additional_patterns, expected_relationship",
+    [
+        # all good
+        (
+            "neo4j_relationship",
+            {
+                "1": "Person",
+                "2": "Location",
+            },
+            RelationshipType(
+                label="REL",
+            ),
+            True,
+            (("Person", "REL", "Location"),),
+            True,
+            "neo4j_relationship",
+        ),
+        # reverse relationship
+        (
+            "neo4j_reversed_relationship",
+            {
+                "1": "Person",
+                "2": "Location",
+            },
+            RelationshipType(
+                label="REL",
+            ),
+            True,
+            (("Person", "REL", "Location"),),
+            True,
+            "neo4j_relationship",
+        ),
+        # invalid type addition allowed
+        (
+            "neo4j_relationship",
+            {
+                "1": "Person",
+                "2": "Location",
+            },
+            None,
+            True,
+            (("Person", "REL", "Location"),),
+            True,
+            "neo4j_relationship",
+        ),
+        # invalid_type_addition_not_allowed
+        (
+            "neo4j_relationship",
+            {
+                "1": "Person",
+                "2": "Location",
+            },
+            None,
+            False,
+            (("Person", "REL", "Location"),),
+            True,
+            None,
+        ),
+        # invalid pattern, addition allowed
+        (
+            "neo4j_relationship",
+            {
+                "1": "Person",
+                "2": "Location",
+            },
+            RelationshipType(
+                label="REL",
+            ),
+            True,
+            (("Person", "REL", "Person"),),
+            True,
+            "neo4j_relationship",
+        ),
+        # invalid pattern, addition not allowed
+        (
+            "neo4j_relationship",
+            {
+                "1": "Person",
+                "2": "Location",
+            },
+            RelationshipType(
+                label="REL",
+            ),
+            True,
+            (("Person", "REL", "Person"),),
+            False,
+            None,
+        ),
+    ],
+)
+def test_graph_pruning_validate_relationship(
+    relationship: str,
+    valid_nodes: dict[str, str],
+    relationship_type: RelationshipType,
+    additional_relationship_types: bool,
+    patterns: tuple[tuple[str, str, str], ...],
+    additional_patterns: bool,
+    expected_relationship: str | None,
+    request: pytest.FixtureRequest,
+) -> None:
+    relationship_obj = request.getfixturevalue(relationship)
+    expected_relationship_obj = (
+        request.getfixturevalue(expected_relationship)
+        if expected_relationship
+        else None
+    )
+
+    pruner = GraphPruning()
+    assert (
+        pruner._validate_relationship(
+            relationship_obj,
+            valid_nodes,
+            relationship_type,
+            additional_relationship_types,
+            patterns,
+            additional_patterns,
+        )
+        == expected_relationship_obj
+    )

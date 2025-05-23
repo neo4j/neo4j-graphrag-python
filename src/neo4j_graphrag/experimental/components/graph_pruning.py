@@ -21,6 +21,7 @@ from neo4j_graphrag.experimental.components.schema import (
     GraphSchema,
     PropertyType,
     NodeType,
+    RelationshipType,
 )
 from neo4j_graphrag.experimental.components.types import (
     Neo4jGraph,
@@ -121,6 +122,56 @@ class GraphPruning(Component):
                 valid_nodes.append(new_node)
         return valid_nodes
 
+    def _validate_relationship(
+        self,
+        rel: Neo4jRelationship,
+        valid_nodes: dict[str, str],
+        relationship_type: Optional[RelationshipType],
+        additional_relationship_types: bool,
+        patterns: tuple[tuple[str, str, str], ...],
+        additional_patterns: bool,
+    ) -> Optional[Neo4jRelationship]:
+        if relationship_type is None:
+            if additional_relationship_types:
+                return rel
+            else:
+                logger.debug(f"PRUNING:: {rel} as {rel.type} is not in the schema")
+            return None
+
+        if rel.start_node_id not in valid_nodes or rel.end_node_id not in valid_nodes:
+            logger.debug(
+                f"PRUNING:: {rel} as one of {rel.start_node_id} or {rel.end_node_id} is not in the graph"
+            )
+            return None
+
+        start_label = valid_nodes[rel.start_node_id]
+        end_label = valid_nodes[rel.end_node_id]
+        tuple_valid = True
+        reverse_tuple_valid = False
+        if patterns:
+            tuple_valid = (start_label, rel.type, end_label) in patterns
+            reverse_tuple_valid = (
+                end_label,
+                rel.type,
+                start_label,
+            ) in patterns
+
+        if not tuple_valid and not reverse_tuple_valid and not additional_patterns:
+            logger.debug(f"PRUNING:: {rel} not in the allowed patterns")
+            return None
+
+        allowed_props = relationship_type.properties
+        filtered_props = self._enforce_properties(
+            rel.properties, allowed_props, relationship_type.additional_properties
+        )
+        return Neo4jRelationship(
+            start_node_id=rel.end_node_id if reverse_tuple_valid else rel.start_node_id,
+            end_node_id=rel.start_node_id if reverse_tuple_valid else rel.end_node_id,
+            type=rel.type,
+            properties=filtered_props,
+            embedding_properties=rel.embedding_properties,
+        )
+
     def _enforce_relationships(
         self,
         extracted_relationships: list[Neo4jRelationship],
@@ -138,62 +189,18 @@ class GraphPruning(Component):
 
         valid_rels = []
         valid_nodes = {node.id: node.label for node in filtered_nodes}
-
-        patterns = schema.patterns
-
         for rel in extracted_relationships:
             schema_relation = schema.relationship_type_from_label(rel.type)
-            if schema_relation is None:
-                if schema.additional_relationship_types:
-                    valid_rels.append(rel)
-                else:
-                    logger.debug(f"PRUNING:: {rel} as {rel.type} is not in the schema")
-                continue
-
-            if (
-                rel.start_node_id not in valid_nodes
-                or rel.end_node_id not in valid_nodes
-            ):
-                logger.debug(
-                    f"PRUNING:: {rel} as one of {rel.start_node_id} or {rel.end_node_id} is not in the graph"
-                )
-                continue
-
-            start_label = valid_nodes[rel.start_node_id]
-            end_label = valid_nodes[rel.end_node_id]
-
-            tuple_valid = True
-            if patterns:
-                tuple_valid = (start_label, rel.type, end_label) in patterns
-                reverse_tuple_valid = (
-                    end_label,
-                    rel.type,
-                    start_label,
-                ) in patterns
-
-                if (
-                    not tuple_valid
-                    and not reverse_tuple_valid
-                    and not schema.additional_patterns
-                ):
-                    logger.debug(f"PRUNING:: {rel} not in the allowed patterns")
-                    continue
-
-            allowed_props = schema_relation.properties
-            filtered_props = self._enforce_properties(
-                rel.properties, allowed_props, schema_relation.additional_properties
+            new_rel = self._validate_relationship(
+                rel,
+                valid_nodes,
+                schema_relation,
+                schema.additional_relationship_types,
+                schema.patterns,
+                schema.additional_patterns,
             )
-
-            valid_rels.append(
-                Neo4jRelationship(
-                    start_node_id=rel.start_node_id if tuple_valid else rel.end_node_id,
-                    end_node_id=rel.end_node_id if tuple_valid else rel.start_node_id,
-                    type=rel.type,
-                    properties=filtered_props,
-                    embedding_properties=rel.embedding_properties,
-                )
-            )
-
+            if new_rel:
+                valid_rels.append(new_rel)
         return valid_rels
 
     def _enforce_properties(
