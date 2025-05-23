@@ -222,14 +222,15 @@ def test_simple_kg_pipeline_config_connections_from_pdf() -> None:
         perform_entity_resolution=False,
     )
     connections = config._get_connections()
-    assert len(connections) == 6
+    assert len(connections) == 7
     expected_connections = [
         ("pdf_loader", "splitter"),
         ("pdf_loader", "schema"),
         ("schema", "extractor"),
         ("splitter", "chunk_embedder"),
         ("chunk_embedder", "extractor"),
-        ("extractor", "writer"),
+        ("extractor", "pruner"),
+        ("pruner", "writer"),
     ]
     for actual, expected in zip(connections, expected_connections):
         assert (actual.start, actual.end) == expected
@@ -241,12 +242,13 @@ def test_simple_kg_pipeline_config_connections_from_text() -> None:
         perform_entity_resolution=False,
     )
     connections = config._get_connections()
-    assert len(connections) == 4
+    assert len(connections) == 5
     expected_connections = [
         ("schema", "extractor"),
         ("splitter", "chunk_embedder"),
         ("chunk_embedder", "extractor"),
-        ("extractor", "writer"),
+        ("extractor", "pruner"),
+        ("pruner", "writer"),
     ]
     for actual, expected in zip(connections, expected_connections):
         assert (actual.start, actual.end) == expected
@@ -258,14 +260,15 @@ def test_simple_kg_pipeline_config_connections_with_er() -> None:
         perform_entity_resolution=True,
     )
     connections = config._get_connections()
-    assert len(connections) == 7
+    assert len(connections) == 8
     expected_connections = [
         ("pdf_loader", "splitter"),
         ("pdf_loader", "schema"),
         ("schema", "extractor"),
         ("splitter", "chunk_embedder"),
         ("chunk_embedder", "extractor"),
-        ("extractor", "writer"),
+        ("extractor", "pruner"),
+        ("pruner", "writer"),
         ("writer", "resolver"),
     ]
     for actual, expected in zip(connections, expected_connections):
