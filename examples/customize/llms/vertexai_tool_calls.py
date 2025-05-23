@@ -102,7 +102,7 @@ async def main() -> None:
     )
 
     # Example text containing information about a company
-    text1 = "Neo4j is a software company created in 2017"
+    text1 = "Neo4j is a software company created in 2007"
 
     print("\n=== Synchronous Tool Call ===")
     # Make a synchronous tool call
