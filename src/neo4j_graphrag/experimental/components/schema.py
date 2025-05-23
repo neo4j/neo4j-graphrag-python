@@ -23,10 +23,10 @@ from pathlib import Path
 from pydantic import (
     BaseModel,
     PrivateAttr,
-    ValidationError,
     model_validator,
     validate_call,
     ConfigDict,
+    ValidationError,
 )
 from typing_extensions import Self
 
@@ -67,6 +67,7 @@ class PropertyType(BaseModel):
         "ZONED_TIME",
     ]
     description: str = ""
+    required: bool = False
 
     model_config = ConfigDict(
         frozen=True,
@@ -81,6 +82,7 @@ class NodeType(BaseModel):
     label: str
     description: str = ""
     properties: list[PropertyType] = []
+    additional_properties: bool = True
 
     @model_validator(mode="before")
     @classmethod
@@ -88,6 +90,16 @@ class NodeType(BaseModel):
         if isinstance(data, str):
             return {"label": data}
         return data
+
+    @model_validator(mode="after")
+    def validate_additional_properties(self) -> Self:
+        if len(self.properties) == 0 and not self.additional_properties:
+            warnings.warn(
+                "Using `additional_properties=False` with no defined "
+                "properties will cause the model to be pruned during graph cleaning.",
+                UserWarning,
+            )
+        return self
 
 
 class RelationshipType(BaseModel):
@@ -98,6 +110,7 @@ class RelationshipType(BaseModel):
     label: str
     description: str = ""
     properties: list[PropertyType] = []
+    additional_properties: bool = True
 
     @model_validator(mode="before")
     @classmethod
@@ -106,11 +119,25 @@ class RelationshipType(BaseModel):
             return {"label": data}
         return data
 
+    @model_validator(mode="after")
+    def validate_additional_properties(self) -> Self:
+        if len(self.properties) == 0 and not self.additional_properties:
+            warnings.warn(
+                "Using `additional_properties=False` with no defined "
+                "properties will cause the model to be pruned during graph cleaning.",
+                UserWarning,
+            )
+        return self
+
 
 class GraphSchema(DataModel):
     node_types: Tuple[NodeType, ...]
-    relationship_types: Optional[Tuple[RelationshipType, ...]] = None
-    patterns: Optional[Tuple[Tuple[str, str, str], ...]] = None
+    relationship_types: Tuple[RelationshipType, ...] = tuple()
+    patterns: Tuple[Tuple[str, str, str], ...] = tuple()
+
+    additional_node_types: bool = True
+    additional_relationship_types: bool = True
+    additional_patterns: bool = True
 
     _node_type_index: dict[str, NodeType] = PrivateAttr()
     _relationship_type_index: dict[str, RelationshipType] = PrivateAttr()
@@ -128,26 +155,26 @@ class GraphSchema(DataModel):
             else {}
         )
 
-        relationship_types = self.relationship_types or tuple()
-        patterns = self.patterns or tuple()
+        relationship_types = self.relationship_types
+        patterns = self.patterns
 
         if patterns:
             if not relationship_types:
                 raise SchemaValidationError(
-                    "Relations must also be provided when using a potential schema."
+                    "Relationship types must also be provided when using patterns."
                 )
             for entity1, relation, entity2 in patterns:
                 if entity1 not in self._node_type_index:
                     raise SchemaValidationError(
-                        f"Entity '{entity1}' is not defined in the provided entities."
+                        f"Node type '{entity1}' is not defined in the provided node_types."
                     )
                 if relation not in self._relationship_type_index:
                     raise SchemaValidationError(
-                        f"Relation '{relation}' is not defined in the provided relations."
+                        f"Relationship type '{relation}' is not defined in the provided relationship_types."
                     )
                 if entity2 not in self._node_type_index:
-                    raise SchemaValidationError(
-                        f"Entity '{entity2}' is not defined in the provided entities."
+                    raise ValidationError(
+                        f"Node type '{entity2}' is not defined in the provided node_types."
                     )
 
         return self
@@ -303,12 +330,12 @@ class SchemaBuilder(Component):
             return GraphSchema.model_validate(
                 dict(
                     node_types=node_types,
-                    relationship_types=relationship_types,
-                    patterns=patterns,
+                    relationship_types=relationship_types or (),
+                    patterns=patterns or (),
                 )
             )
         except (ValidationError, SchemaValidationError) as e:
-            raise SchemaValidationError(e)
+            raise SchemaValidationError(e) from e
 
     @validate_call
     async def run(
