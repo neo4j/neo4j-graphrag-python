@@ -164,7 +164,11 @@ async def test_run_method(
     with patch.object(
         schema_builder,
         "create_schema_model",
-        return_value=GraphSchema(node_types=valid_node_types, relationship_types=valid_relationship_types, patterns=valid_patterns),
+        return_value=GraphSchema(
+            node_types=valid_node_types,
+            relationship_types=valid_relationship_types,
+            patterns=valid_patterns,
+        ),
     ):
         schema = await schema_builder.run(
             list(valid_node_types), list(valid_relationship_types), list(valid_patterns)
