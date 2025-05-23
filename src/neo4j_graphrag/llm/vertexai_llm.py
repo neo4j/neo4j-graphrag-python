@@ -200,16 +200,6 @@ class VertexAILLM(LLMInterface):
             )
         ]
 
-    def _get_options(self, tool_mode: bool = False) -> dict[str, Any]:
-        options = dict(self.options)
-        if tool_mode:
-            # we want a tool back, remove generation_config if defined
-            options.pop("generation_config", None)
-        else:
-            # no tools, remove tool_config if defined
-            options.pop("tool_config", None)
-        return options
-
     def _get_model(
         self,
         system_instruction: Optional[str] = None,
@@ -217,7 +207,13 @@ class VertexAILLM(LLMInterface):
     ) -> GenerativeModel:
         system_message = [system_instruction] if system_instruction is not None else []
         vertex_ai_tools = self._get_llm_tools(tools)
-        options = self._get_options(tool_mode=tools is not None)
+        options = dict(self.options)
+        if tools:
+            # we want a tool back, remove generation_config if defined
+            options.pop("generation_config", None)
+        else:
+            # no tools, remove tool_config if defined
+            options.pop("tool_config", None)
         model = GenerativeModel(
             model_name=self.model_name,
             system_instruction=system_message,
