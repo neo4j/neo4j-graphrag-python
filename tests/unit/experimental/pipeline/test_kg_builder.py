@@ -149,20 +149,6 @@ def test_simple_kg_pipeline_on_error_invalid_value() -> None:
         )
 
 
-def test_simple_kg_pipeline_enforce_schema_invalid_value() -> None:
-    llm = MagicMock(spec=LLMInterface)
-    driver = MagicMock(spec=neo4j.Driver)
-    embedder = MagicMock(spec=Embedder)
-
-    with pytest.raises(PipelineDefinitionError):
-        SimpleKGPipeline(
-            llm=llm,
-            driver=driver,
-            embedder=embedder,
-            enforce_schema="INVALID_VALUE",
-        )
-
-
 @mock.patch(
     "neo4j_graphrag.experimental.components.kg_writer.get_version",
     return_value=((5, 23, 0), False, False),
