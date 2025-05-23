@@ -18,7 +18,7 @@ import datetime
 import enum
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SerializeAsAny
 
 from neo4j_graphrag.experimental.pipeline.component import DataModel
 
@@ -40,7 +40,7 @@ class RunStatus(enum.Enum):
 
 class RunResult(BaseModel):
     status: RunStatus = RunStatus.DONE
-    result: Optional[DataModel] = None
+    result: Optional[SerializeAsAny[DataModel]] = None
     timestamp: datetime.datetime = Field(
         default_factory=lambda: datetime.datetime.now(datetime.timezone.utc)
     )
