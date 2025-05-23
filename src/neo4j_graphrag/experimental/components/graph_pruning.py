@@ -28,9 +28,14 @@ from neo4j_graphrag.experimental.components.types import (
     Neo4jNode,
     Neo4jRelationship,
 )
-from neo4j_graphrag.experimental.pipeline import Component
+from neo4j_graphrag.experimental.pipeline import Component, DataModel
 
 logger = logging.getLogger(__name__)
+
+
+class GraphPruningResult(DataModel):
+    graph: Neo4jGraph
+    metadata: dict[str, Any] = {}
 
 
 class GraphPruning(Component):
@@ -39,10 +44,21 @@ class GraphPruning(Component):
         self,
         graph: Neo4jGraph,
         schema: Optional[GraphSchema] = None,
-    ) -> Neo4jGraph:
-        if schema is None:
-            return graph
-        return self._clean_graph(graph, schema)
+    ) -> GraphPruningResult:
+        if schema is not None:
+            new_graph = self._clean_graph(graph, schema)
+        else:
+            new_graph = graph
+        return GraphPruningResult(
+            graph=new_graph,
+            metadata={
+                "stats": {
+                    "pruned_node_count": len(graph.nodes) - len(new_graph.nodes),
+                    "pruned_relationship_count": len(graph.relationships)
+                    - len(new_graph.relationships),
+                }
+            },
+        )
 
     def _clean_graph(
         self,
