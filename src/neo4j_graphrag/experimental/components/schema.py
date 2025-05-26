@@ -173,7 +173,7 @@ class GraphSchema(DataModel):
                         f"Relationship type '{relation}' is not defined in the provided relationship_types."
                     )
                 if entity2 not in self._node_type_index:
-                    raise ValidationError(
+                    raise ValueError(
                         f"Node type '{entity2}' is not defined in the provided node_types."
                     )
 
