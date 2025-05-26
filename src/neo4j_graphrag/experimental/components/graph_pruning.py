@@ -163,11 +163,11 @@ class GraphPruning(Component):
                 return None
 
         # validate pattern
-        start_label = valid_nodes[rel.start_node_id]
-        end_label = valid_nodes[rel.end_node_id]
         tuple_valid = True
         reverse_tuple_valid = False
-        if patterns:
+        if patterns and relationship_type:
+            start_label = valid_nodes[rel.start_node_id]
+            end_label = valid_nodes[rel.end_node_id]
             tuple_valid = (start_label, rel.type, end_label) in patterns
             # try to reverse relationship only if initial order is not valid
             reverse_tuple_valid = (
