@@ -85,11 +85,11 @@ async def extract_and_save_schema() -> None:
 
         print(f"Saving schema to JSON file: {JSON_FILE_PATH}")
         # Save the schema to JSON file
-        inferred_schema.store_as_json(JSON_FILE_PATH)
+        inferred_schema.save(JSON_FILE_PATH)
 
         print(f"Saving schema to YAML file: {YAML_FILE_PATH}")
         # Save the schema to YAML file
-        inferred_schema.store_as_yaml(YAML_FILE_PATH)
+        inferred_schema.save(YAML_FILE_PATH)
 
         print("\nExtracted Schema Summary:")
         print(f"Node types: {list(inferred_schema.node_types)}")

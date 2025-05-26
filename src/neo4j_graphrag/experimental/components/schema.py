@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import logging
+import warnings
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union, Sequence
 from pathlib import Path
 
@@ -41,7 +42,7 @@ from neo4j_graphrag.experimental.pipeline.types.schema import (
 )
 from neo4j_graphrag.generation import SchemaExtractionTemplate, PromptTemplate
 from neo4j_graphrag.llm import LLMInterface
-from neo4j_graphrag.utils.file_handler import FileHandler
+from neo4j_graphrag.utils.file_handler import FileHandler, FileFormat
 
 
 class PropertyType(BaseModel):
@@ -157,40 +158,53 @@ class GraphSchema(DataModel):
     def relationship_type_from_label(self, label: str) -> Optional[RelationshipType]:
         return self._relationship_type_index.get(label)
 
-    def store_as_json(self, file_path: str, overwrite: bool = False) -> None:
+    def save(
+        self,
+        file_path: Union[str, Path],
+        overwrite: bool = False,
+        format: Optional[FileFormat] = None,
+    ) -> None:
         """
-        Save the schema configuration to a JSON file.
+        Save the schema configuration to file.
 
         Args:
             file_path (str): The path where the schema configuration will be saved.
             overwrite (bool): If set to True, existing file will be overwritten. Default to False.
+            format (Optional[FileFormat]): The file format to save the schema configuration into. By default, it is inferred from file_path extension.
         """
         data = self.model_dump(mode="json")
         file_handler = FileHandler()
-        file_handler.write_json(data, file_path, overwrite=overwrite)
+        file_handler.write(data, file_path, overwrite=overwrite, format=format)
 
-    def store_as_yaml(self, file_path: str, overwrite: bool = False) -> None:
-        """
-        Save the schema configuration to a YAML file.
+    def store_as_json(
+        self, file_path: Union[str, Path], overwrite: bool = False
+    ) -> None:
+        warnings.warn(
+            "Use .save(..., format=FileFormat.JSON) instead.", DeprecationWarning
+        )
+        return self.save(file_path, overwrite=overwrite, format=FileFormat.JSON)
 
-        Args:
-            file_path (str): The path where the schema configuration will be saved.
-            overwrite (bool): If set to True, existing file will be overwritten. Default to False.
-
-        """
-        data = self.model_dump(mode="json")
-        file_handler = FileHandler()
-        file_handler.write_yaml(data, file_path, overwrite=overwrite)
+    def store_as_yaml(
+        self, file_path: Union[str, Path], overwrite: bool = False
+    ) -> None:
+        warnings.warn(
+            "Use .save(..., format=FileFormat.YAML) instead.", DeprecationWarning
+        )
+        return self.save(file_path, overwrite=overwrite, format=FileFormat.YAML)
 
     @classmethod
-    def from_file(cls, file_path: Union[str, Path]) -> Self:
+    def from_file(
+        cls, file_path: Union[str, Path], format: Optional[FileFormat] = None
+    ) -> Self:
         """
         Load a schema configuration from a file (either JSON or YAML).
 
-        The file format is automatically detected based on the file extension.
+        The file format is automatically detected based on the file extension,
+        unless the format parameter is set.
 
         Args:
             file_path (Union[str, Path]): The path to the schema configuration file.
+            format (Optional[FileFormat]): The format of the schema configuration file (json or yaml).
 
         Returns:
             GraphSchema: The loaded schema configuration.
@@ -198,7 +212,7 @@ class GraphSchema(DataModel):
         file_path = Path(file_path)
         file_handler = FileHandler()
         try:
-            data = file_handler.read(file_path)
+            data = file_handler.read(file_path, format=format)
         except ValueError:
             raise
 
