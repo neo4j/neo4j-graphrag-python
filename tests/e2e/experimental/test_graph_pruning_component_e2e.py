@@ -335,7 +335,9 @@ async def test_graph_pruning_strict_properties_and_node_types(
 
 
 @pytest.mark.asyncio
-async def test_graph_pruning_strict_relationship_types(extracted_graph: Neo4jGraph):
+async def test_graph_pruning_strict_relationship_types(
+    extracted_graph: Neo4jGraph,
+) -> None:
     """Additional relationship types not allowed
 
     => we prune all MANAGES and WORKS_FOR extracted relationships
@@ -426,7 +428,7 @@ async def test_graph_pruning_strict_relationship_types(extracted_graph: Neo4jGra
 
 
 @pytest.mark.asyncio
-async def test_graph_pruning_strict_patterns(extracted_graph: Neo4jGraph):
+async def test_graph_pruning_strict_patterns(extracted_graph: Neo4jGraph) -> None:
     """Additional patterns not allowed:
 
     - MANAGES: it's a known relationship type but without any pattern, it's pruned
