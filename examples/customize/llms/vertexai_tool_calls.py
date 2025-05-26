@@ -88,7 +88,7 @@ def process_tool_call(response: ToolCallResponse) -> str:
     if tool_call.name == "extract_person_info":
         return person_info_tool.execute(**tool_call.arguments)  # type: ignore[no-any-return]
     elif tool_call.name == "extract_company_info":
-        return company_info_tool.execute(**tool_call.arguments)
+        return str(company_info_tool.execute(**tool_call.arguments))
     else:
         raise ValueError("Unknown tool call")
 
