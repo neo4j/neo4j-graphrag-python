@@ -1021,7 +1021,7 @@ Configuration Options
 
 .. note::
 
-   If ``additional_patterns`` is set to ``False`` but ``additional_relationships`` is ``True``, extra relationships are still retained as long as they are part of patterns included in the schema.
+   If ``additional_patterns`` is set to ``False`` but ``additional_relationships`` is ``True``, extra relationships are still retained even if not part of a pattern listed in the schema.
 
 
 .. _kg-writer-section:
