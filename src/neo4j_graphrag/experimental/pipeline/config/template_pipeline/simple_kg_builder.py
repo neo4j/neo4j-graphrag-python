@@ -223,7 +223,9 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
                 if self.relations is not None
                 else None
             )
-            patterns = tuple(self.potential_schema) if self.potential_schema else None
+            patterns = (
+                tuple(self.potential_schema) if self.potential_schema else tuple()
+            )
 
         return node_types, relationship_types, patterns
 

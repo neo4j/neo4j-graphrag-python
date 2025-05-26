@@ -342,7 +342,8 @@ def test_graph_pruning_validate_relationship(
 @patch("neo4j_graphrag.experimental.components.graph_pruning.GraphPruning._clean_graph")
 @pytest.mark.asyncio
 async def test_graph_pruning_run_happy_path(
-    mock_clean_graph: Mock, node_type_required_name
+    mock_clean_graph: Mock,
+    node_type_required_name: NodeType,
 ) -> None:
     initial_graph = Neo4jGraph(
         nodes=[Neo4jNode(id="1", label="Person"), Neo4jNode(id="2", label="Location")],
