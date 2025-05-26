@@ -147,39 +147,52 @@ class GraphPruning(Component):
         patterns: tuple[tuple[str, str, str], ...],
         additional_patterns: bool,
     ) -> Optional[Neo4jRelationship]:
-        if relationship_type is None:
-            if additional_relationship_types:
-                return rel
-            else:
-                logger.debug(f"PRUNING:: {rel} as {rel.type} is not in the schema")
-            return None
-
+        # validate start/end node IDs are valid nodes
         if rel.start_node_id not in valid_nodes or rel.end_node_id not in valid_nodes:
             logger.debug(
-                f"PRUNING:: {rel} as one of {rel.start_node_id} or {rel.end_node_id} is not in the graph"
+                f"PRUNING:: {rel} as one of {rel.start_node_id} or {rel.end_node_id} is not a valid node"
             )
             return None
 
+        # validate relationship type
+        if relationship_type is None:
+            if not additional_relationship_types:
+                logger.debug(
+                    f"PRUNING:: {rel} as {rel.type} is not in the schema and `additional_relationship_types` is False"
+                )
+                return None
+
+        # validate pattern
         start_label = valid_nodes[rel.start_node_id]
         end_label = valid_nodes[rel.end_node_id]
         tuple_valid = True
         reverse_tuple_valid = False
         if patterns:
             tuple_valid = (start_label, rel.type, end_label) in patterns
+            # try to reverse relationship only if initial order is not valid
             reverse_tuple_valid = (
-                end_label,
-                rel.type,
-                start_label,
-            ) in patterns
+                not tuple_valid
+                and (
+                    end_label,
+                    rel.type,
+                    start_label,
+                )
+                in patterns
+            )
 
         if not tuple_valid and not reverse_tuple_valid and not additional_patterns:
             logger.debug(f"PRUNING:: {rel} not in the allowed patterns")
             return None
 
-        allowed_props = relationship_type.properties
-        filtered_props = self._enforce_properties(
-            rel.properties, allowed_props, relationship_type.additional_properties
-        )
+        # filter properties if we can
+        if relationship_type is not None:
+            allowed_props = relationship_type.properties
+            filtered_props = self._enforce_properties(
+                rel.properties, allowed_props, relationship_type.additional_properties
+            )
+        else:
+            filtered_props = rel.properties
+
         return Neo4jRelationship(
             start_node_id=rel.end_node_id if reverse_tuple_valid else rel.start_node_id,
             end_node_id=rel.start_node_id if reverse_tuple_valid else rel.end_node_id,

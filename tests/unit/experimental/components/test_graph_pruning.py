@@ -13,16 +13,25 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from typing import Any
+from unittest.mock import patch, Mock
 
 import pytest
 
-from neo4j_graphrag.experimental.components.graph_pruning import GraphPruning
+from neo4j_graphrag.experimental.components.graph_pruning import (
+    GraphPruning,
+    GraphPruningResult,
+)
 from neo4j_graphrag.experimental.components.schema import (
     NodeType,
     PropertyType,
     RelationshipType,
+    GraphSchema,
 )
-from neo4j_graphrag.experimental.components.types import Neo4jNode, Neo4jRelationship
+from neo4j_graphrag.experimental.components.types import (
+    Neo4jNode,
+    Neo4jRelationship,
+    Neo4jGraph,
+)
 
 
 @pytest.mark.parametrize(
@@ -170,7 +179,9 @@ def neo4j_relationship() -> Neo4jRelationship:
 
 
 @pytest.fixture
-def neo4j_reversed_relationship(neo4j_relationship: Neo4jRelationship) -> Neo4jRelationship:
+def neo4j_reversed_relationship(
+    neo4j_relationship: Neo4jRelationship,
+) -> Neo4jRelationship:
     return Neo4jRelationship(
         start_node_id=neo4j_relationship.end_node_id,
         end_node_id=neo4j_relationship.start_node_id,
@@ -184,18 +195,18 @@ def neo4j_reversed_relationship(neo4j_relationship: Neo4jRelationship) -> Neo4jR
     [
         # all good
         (
-            "neo4j_relationship",
-            {
+            "neo4j_relationship",  # relationship,
+            {  # valid_nodes
                 "1": "Person",
                 "2": "Location",
             },
-            RelationshipType(
+            RelationshipType(  # relationship_type
                 label="REL",
             ),
-            True,
-            (("Person", "REL", "Location"),),
-            True,
-            "neo4j_relationship",
+            True,  # additional_relationship_types
+            (("Person", "REL", "Location"),),  # patterns
+            True,  # additional_patterns
+            "neo4j_relationship",  # expected_relationship
         ),
         # reverse relationship
         (
@@ -207,10 +218,25 @@ def neo4j_reversed_relationship(neo4j_relationship: Neo4jRelationship) -> Neo4jR
             RelationshipType(
                 label="REL",
             ),
-            True,
+            True,  # additional_relationship_types
             (("Person", "REL", "Location"),),
-            True,
+            True,  # additional_patterns
             "neo4j_relationship",
+        ),
+        # invalid start node ID
+        (
+            "neo4j_reversed_relationship",
+            {
+                "10": "Person",
+                "2": "Location",
+            },
+            RelationshipType(
+                label="REL",
+            ),
+            True,  # additional_relationship_types
+            (("Person", "REL", "Location"),),
+            True,  # additional_patterns
+            None,
         ),
         # invalid type addition allowed
         (
@@ -219,11 +245,23 @@ def neo4j_reversed_relationship(neo4j_relationship: Neo4jRelationship) -> Neo4jR
                 "1": "Person",
                 "2": "Location",
             },
-            None,
-            True,
+            None,  # relationship_type
+            True,  # additional_relationship_types
             (("Person", "REL", "Location"),),
-            True,
+            True,  # additional_patterns
             "neo4j_relationship",
+        ),
+        # invalid type addition allowed but invalid node ID
+        (
+            "neo4j_relationship",
+            {
+                "1": "Person",
+            },
+            None,  # relationship_type
+            True,  # additional_relationship_types
+            (("Person", "REL", "Location"),),
+            True,  # additional_patterns
+            None,
         ),
         # invalid_type_addition_not_allowed
         (
@@ -232,10 +270,10 @@ def neo4j_reversed_relationship(neo4j_relationship: Neo4jRelationship) -> Neo4jR
                 "1": "Person",
                 "2": "Location",
             },
-            None,
-            False,
+            None,  # relationship_type
+            False,  # additional_relationship_types
             (("Person", "REL", "Location"),),
-            True,
+            True,  # additional_patterns
             None,
         ),
         # invalid pattern, addition allowed
@@ -248,9 +286,9 @@ def neo4j_reversed_relationship(neo4j_relationship: Neo4jRelationship) -> Neo4jR
             RelationshipType(
                 label="REL",
             ),
-            True,
+            True,  # additional_relationship_types
             (("Person", "REL", "Person"),),
-            True,
+            True,  # additional_patterns
             "neo4j_relationship",
         ),
         # invalid pattern, addition not allowed
@@ -263,9 +301,9 @@ def neo4j_reversed_relationship(neo4j_relationship: Neo4jRelationship) -> Neo4jR
             RelationshipType(
                 label="REL",
             ),
-            True,
+            True,  # additional_relationship_types
             (("Person", "REL", "Person"),),
-            False,
+            False,  # additional_patterns
             None,
         ),
     ],
@@ -298,4 +336,55 @@ def test_graph_pruning_validate_relationship(
             additional_patterns,
         )
         == expected_relationship_obj
+    )
+
+
+@patch("neo4j_graphrag.experimental.components.graph_pruning.GraphPruning._clean_graph")
+@pytest.mark.asyncio
+async def test_graph_pruning_run_happy_path(
+    mock_clean_graph: Mock, node_type_required_name
+) -> None:
+    initial_graph = Neo4jGraph(
+        nodes=[Neo4jNode(id="1", label="Person"), Neo4jNode(id="2", label="Location")],
+    )
+    schema = GraphSchema(node_types=(node_type_required_name,))
+    cleaned_graph = Neo4jGraph(nodes=[Neo4jNode(id="1", label="Person")])
+    mock_clean_graph.return_value = cleaned_graph
+    pruner = GraphPruning()
+    pruner_result = await pruner.run(
+        graph=initial_graph,
+        schema=schema,
+    )
+    assert isinstance(pruner_result, GraphPruningResult)
+    assert pruner_result.graph == cleaned_graph
+    mock_clean_graph.assert_called_once_with(initial_graph, schema)
+
+
+@pytest.mark.asyncio
+async def test_graph_pruning_run_no_schema() -> None:
+    initial_graph = Neo4jGraph(nodes=[Neo4jNode(id="1", label="Person")])
+    pruner = GraphPruning()
+    pruner_result = await pruner.run(
+        graph=initial_graph,
+        schema=None,
+    )
+    assert isinstance(pruner_result, GraphPruningResult)
+    assert pruner_result.graph == initial_graph
+
+
+@patch(
+    "neo4j_graphrag.experimental.components.graph_pruning.GraphPruning._enforce_nodes"
+)
+def test_graph_pruning_clean_graph(
+    mock_enforce_nodes: Mock,
+) -> None:
+    mock_enforce_nodes.return_value = []
+    initial_graph = Neo4jGraph(nodes=[Neo4jNode(id="1", label="Person")])
+    schema = GraphSchema(node_types=())
+    pruner = GraphPruning()
+    cleaned_graph = pruner._clean_graph(initial_graph, schema)
+    assert cleaned_graph == Neo4jGraph()
+    mock_enforce_nodes.assert_called_once_with(
+        [Neo4jNode(id="1", label="Person")],
+        schema,
     )
