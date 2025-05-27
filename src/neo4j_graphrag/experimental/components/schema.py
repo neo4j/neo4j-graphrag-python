@@ -94,10 +94,9 @@ class NodeType(BaseModel):
     @model_validator(mode="after")
     def validate_additional_properties(self) -> Self:
         if len(self.properties) == 0 and not self.additional_properties:
-            warnings.warn(
+            raise ValueError(
                 "Using `additional_properties=False` with no defined "
                 "properties will cause the model to be pruned during graph cleaning.",
-                UserWarning,
             )
         return self
 
@@ -122,15 +121,26 @@ class RelationshipType(BaseModel):
     @model_validator(mode="after")
     def validate_additional_properties(self) -> Self:
         if len(self.properties) == 0 and not self.additional_properties:
-            warnings.warn(
+            raise ValueError(
                 "Using `additional_properties=False` with no defined "
                 "properties will cause the model to be pruned during graph cleaning.",
-                UserWarning,
             )
         return self
 
 
 class GraphSchema(DataModel):
+    """This model represents the expected
+    node and relationship types in the graph.
+
+    It is used both for guiding the LLM in the entity and relation
+    extraction component, and for cleaning the extracted graph in a
+    post-processing step.
+
+    .. warning::
+
+        This model is immutable.
+    """
+
     node_types: Tuple[NodeType, ...]
     relationship_types: Tuple[RelationshipType, ...] = tuple()
     patterns: Tuple[Tuple[str, str, str], ...] = tuple()
@@ -147,7 +157,7 @@ class GraphSchema(DataModel):
     )
 
     @model_validator(mode="after")
-    def check_schema(self) -> Self:
+    def validate_patterns_against_node_and_rel_types(self) -> Self:
         self._node_type_index = {node.label: node for node in self.node_types}
         self._relationship_type_index = (
             {r.label: r for r in self.relationship_types}
@@ -177,6 +187,14 @@ class GraphSchema(DataModel):
                         f"Node type '{entity2}' is not defined in the provided node_types."
                     )
 
+        return self
+
+    @model_validator(mode="after")
+    def validate_additional_parameters(self) -> Self:
+        if self.additional_patterns and not self.additional_relationship_types:
+            raise ValueError(
+                "`additional_relationship_types` must be set to True when using `additional_patterns=True`"
+            )
         return self
 
     def node_type_from_label(self, label: str) -> Optional[NodeType]:

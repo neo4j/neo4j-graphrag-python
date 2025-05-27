@@ -74,9 +74,8 @@ Graph Schema
 ------------
 
 It is possible to guide the LLM by supplying a list of node and relationship types,
-and instructions on how to connect them (patterns). However, note that the extracted graph
-may not fully adhere to these guidelines unless schema enforcement is enabled
-(see :ref:`Schema Enforcement Behaviour`). Node and relationship types can be represented
+and instructions on how to connect them (patterns).
+Node and relationship types can be represented
 as either simple strings (for their labels) or dictionaries. If using a dictionary,
 it must include a label key and can optionally include description and properties keys,
 as shown below:
@@ -90,7 +89,7 @@ as shown below:
         # such as a description:
         {"label": "House", "description": "Family the person belongs to"},
         # or a list of properties the LLM will try to attach to the entity:
-        {"label": "Planet", "properties": [{"name": "weather", "type": "STRING"}]},
+        {"label": "Planet", "properties": [{"name": "name", "type": "STRING", "required": True}, {"name": "weather", "type": "STRING"}]},
     ]
     # same thing for relationships:
     RELATIONSHIP_TYPES = [
@@ -124,7 +123,8 @@ This schema information can be provided to the `SimpleKGBuilder` as demonstrated
         schema={
             "node_types": NODE_TYPES,
             "relationship_types": RELATIONSHIP_TYPES,
-            "patterns": PATTERNS
+            "patterns": PATTERNS,
+            "additional_node_types": False,
         },
         # ...
     )
@@ -1001,27 +1001,27 @@ Configuration Options
 
 - **Additional Properties** *(default: False)*
   This node- or relationship-level option determines whether extra properties not listed in the schema should be retained.
-  - If set to ``False`` (default), all extracted properties are retained.
-  - If set to ``True``, only the properties defined in the schema are preserved; all others are removed.
+
+   - If set to ``False`` (default), all extracted properties are retained.
+   - If set to ``True``, only the properties defined in the schema are preserved; all others are removed.
 
 - **Additional Node Types** *(default: True)*
   This schema-level option specifies whether node types not defined in the schema are included in the graph.
-  - If set to ``True`` (default), such node types are retained.
-  - If set to ``False``, nodes with undefined types are removed.
+
+   - If set to ``True`` (default), such node types are retained.
+   - If set to ``False``, nodes with undefined types are removed.
 
 - **Additional Relationship Types** *(default: True)*
   This schema-level option specifies whether relationship types not defined in the schema are included in the graph.
-  - If set to ``True`` (default), such relationships are retained.
-  - If set to ``False``, relationships with undefined types are removed.
+
+   - If set to ``True`` (default), such relationships are retained.
+   - If set to ``False``, relationships with undefined types are removed.
 
 - **Additional Patterns** *(default: True)*
   This schema-level option determines whether relationship patterns not explicitly listed in the schema are allowed.
-  - If set to ``True`` (default), all patterns are retained.
-  - If set to ``False``, only patterns defined in the schema are kept.
 
-.. note::
-
-   If ``additional_patterns`` is set to ``False`` but ``additional_relationships`` is ``True``, extra relationships are still retained even if not part of a pattern listed in the schema.
+   - If set to ``True`` (default), all patterns are retained.
+   - If set to ``False``, only patterns defined in the schema are kept. **Note** `additional_relationship_types` must also be `False`.
 
 
 .. _kg-writer-section:
