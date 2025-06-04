@@ -18,7 +18,7 @@ import logging
 import warnings
 from collections import defaultdict
 from timeit import default_timer
-from typing import Any, Optional, AsyncGenerator, Dict, Union
+from typing import Any, Optional, AsyncGenerator, Dict
 import asyncio
 import json
 
