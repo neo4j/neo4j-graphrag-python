@@ -18,8 +18,9 @@ import logging
 import warnings
 from collections import defaultdict
 from timeit import default_timer
-from typing import Any, Optional, AsyncGenerator, Dict
+from typing import Any, Optional, AsyncGenerator, Dict, Union
 import asyncio
+import json
 
 from neo4j_graphrag.utils.logging import prettify
 
@@ -580,14 +581,17 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
             result=await self.get_final_results(orchestrator.run_id),
         )
 
-    def dump_state(self) -> Dict[str, Any]:
-        """Dump the current state of the pipeline and its components
-        to a serializable dictionary.
+    def dump_state(self, run_id: str) -> Dict[str, Any]:
+        """Dump the current state of the pipeline and its components to a serializable dictionary.
+
+        Args:
+            run_id: The run_id that was used when the pipeline was executed
 
         Returns:
             dict[str, Any]: A serializable dictionary containing the pipeline state
         """
-        pipeline_state = {
+        pipeline_state: Dict[str, Any] = {
+            "run_id": run_id,
             "components": {},
             "store": self.store.dump() if hasattr(self.store, "dump") else {},
             "final_results": self.final_results.dump()
@@ -636,8 +640,20 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         if "final_results" in state and hasattr(self.final_results, "load"):
             self.final_results.load(state["final_results"])
 
-    async def run_until(self, data: Dict[str, Any], stop_after: str) -> Dict[str, Any]:
-        """Run the pipeline until a specific component and return the state."""
+    async def run_until(
+        self, data: Dict[str, Any], stop_after: str, state_file: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Run the pipeline until a specific component and return the state.
+
+        Args:
+            data (Dict[str, Any]): The input data for the pipeline.
+            stop_after (str): The name of the component to stop after.
+            state_file (Optional[str]): If provided, save the state to this file as JSON.
+
+        Returns:
+            Dict[str, Any]: The serialized state of the pipeline after execution.
+        """
         logger.debug("PIPELINE START (RUN UNTIL)")
         start_time = default_timer()
         self.invalidate()
@@ -649,17 +665,50 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         logger.debug(
             f"PIPELINE FINISHED (RUN UNTIL) {orchestrator.run_id} in {end_time - start_time}s"
         )
-        return self.dump_state()
+        state = self.dump_state(orchestrator.run_id)
+        if state_file:
+            with open(state_file, "w", encoding="utf-8") as f:
+                json.dump(state, f, ensure_ascii=False, indent=2)
+        return state
 
     async def resume_from(
-        self, state: Dict[str, Any], data: Dict[str, Any], start_from: str
-    ) -> "PipelineResult":
-        """Resume pipeline execution from a specific component using a saved state."""
+        self,
+        state: Optional[
+            Dict[str, Any]
+        ],  # Required but can be None if state_file is provided
+        data: Dict[str, Any],
+        start_from: str,
+        state_file: Optional[str] = None,
+    ) -> PipelineResult:
+        """
+        Resume pipeline execution from a specific component using a saved state.
+
+        Args:
+            state (Optional[Dict[str, Any]]): The serialized pipeline state. Required, but can be None if state_file is provided.
+            data (Dict[str, Any]): Additional input data for the pipeline.
+            start_from (str): The name of the component to start execution from.
+            state_file (Optional[str]): If provided, load the state from this file as JSON. Required if state is None.
+
+        Returns:
+            PipelineResult: The result of the pipeline execution.
+
+        Raises:
+            ValueError: If neither state nor state_file is provided.
+        """
+        if state_file:
+            with open(state_file, "r", encoding="utf-8") as f:
+                state = json.load(f)
+        if state is None:
+            raise ValueError("No state provided for resume_from.")
         self.load_state(state)
+        run_id = state.get("run_id")
+        if not run_id:
+            raise ValueError("No run_id found in state. Cannot resume execution.")
         logger.debug("PIPELINE START (RESUME FROM)")
         start_time = default_timer()
         self.validate_input_data(data)
         orchestrator = Orchestrator(self, start_from=start_from)
+        orchestrator.run_id = run_id  # Use the original run_id
         logger.debug(f"PIPELINE ORCHESTRATOR: {orchestrator.run_id}")
         await orchestrator.run(data)
         end_time = default_timer()
