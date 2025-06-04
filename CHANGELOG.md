@@ -6,6 +6,7 @@
 
 - Added support for automatic schema extraction from text using LLMs. In the `SimpleKGPipeline`, when the user provides no schema, the automatic schema extraction is enabled by default.
 - Added ability to return a user-defined message if context is empty in GraphRAG (which skips the LLM call).
+- Added pipeline state management with `run_until`, `resume_from`, `dump_state`, and `load_state` methods, enabling pipeline execution checkpointing and resumption.
 
 ### Fixed
 

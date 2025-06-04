@@ -133,6 +133,36 @@ can be added to the visualization by setting `hide_unused_outputs` to `False`:
     webbrowser.open("pipeline_full.html")
 
 
+*************************
+Pipeline State Management
+*************************
+
+Pipelines support checkpointing and resumption through state management features:
+
+.. code:: python
+
+    # Run pipeline until a specific component
+    state = await pipeline.run_until(data, stop_after="component_name", state_file="state.json")
+
+    # Resume pipeline from a specific component
+    result = await pipeline.resume_from(state, data, start_from="component_name")
+
+    # Alternatively, load state from file
+    result = await pipeline.resume_from(None, data, start_from="component_name", state_file="state.json")
+
+The state contains:
+- Pipeline configuration (parameter mappings between components and validation state)
+- Execution results (outputs from completed components stored in the ResultStore)
+- Final pipeline results from previous runs
+- Component-specific state (interface available but not yet implemented by components)
+
+This enables:
+- Checkpointing long-running pipelines
+- Debugging pipeline execution
+- Resuming failed pipelines from the last successful component
+- Comparing different component implementations with deterministic inputs by saving the state before the component and reusing it, avoiding non-deterministic results from preceding components
+
+
 ************************
 Adding an Event Callback
 ************************
