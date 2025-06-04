@@ -18,7 +18,12 @@ import pytest
 
 from neo4j_graphrag.experimental.pipeline import Component
 from neo4j_graphrag.experimental.pipeline.types.context import RunContext
-from .components import ComponentMultiply, ComponentMultiplyWithContext, IntResultModel
+from .components import (
+    ComponentMultiply,
+    ComponentMultiplyWithContext,
+    IntResultModel,
+    StatefulComponent,
+)
 
 
 def test_component_inputs() -> None:
@@ -87,3 +92,13 @@ def test_component_missing_method() -> None:
         "You must implement either `run` or `run_with_context` in Component 'WrongComponent'"
         in str(e)
     )
+
+
+def test_stateful_component_serialize_and_load_state() -> None:
+    c = StatefulComponent()
+    c.counter = 42
+    state = c.serialize_state()
+    assert state == {"counter": 42}
+    c.counter = 0
+    c.load_state({"counter": 99})
+    assert c.counter == 99

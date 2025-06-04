@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 import tempfile
-from typing import Sized
+from typing import Sized, Any, Dict
 from unittest import mock
 from unittest.mock import AsyncMock, call, patch
 
@@ -38,6 +38,7 @@ from .components import (
     ComponentMultiply,
     ComponentNoParam,
     ComponentPassThrough,
+    StatefulComponent,
     StringResultModel,
     SlowComponentMultiply,
 )
@@ -590,3 +591,133 @@ async def test_pipeline_streaming_error_in_user_callback() -> None:
         events.append(e)
     assert len(events) == 2
     assert len(pipe.callbacks) == 1
+
+
+@pytest.mark.asyncio
+async def test_pipeline_state_dump_and_load() -> None:
+    pipe = Pipeline()
+    c1 = StatefulComponent()
+    c2 = StatefulComponent()
+    pipe.add_component(c1, "a")
+    pipe.add_component(c2, "b")
+    pipe.connect("a", "b", {"value": "a.result"})
+    result = await pipe.run({"a": {"value": 5}})
+    c1.counter = 123  # simulate state change
+    state = pipe.dump_state(result.run_id)
+    c1.counter = 0
+    pipe.load_state(state)
+    assert c1.counter == 123
+
+
+@pytest.fixture
+def stateful_pipeline() -> tuple[Pipeline, StatefulComponent, StatefulComponent]:
+    """Fixture that creates a pipeline with two stateful components connected in sequence."""
+    pipe = Pipeline()
+    c1 = StatefulComponent()
+    c2 = StatefulComponent()
+    pipe.add_component(c1, "a")
+    pipe.add_component(c2, "b")
+    pipe.connect("a", "b", {"value": "a.result"})
+    return pipe, c1, c2
+
+
+@pytest.mark.asyncio
+async def test_pipeline_run_until_and_resume_from(
+    stateful_pipeline: tuple[Pipeline, StatefulComponent, StatefulComponent],
+) -> None:
+    pipe, _, c2 = stateful_pipeline
+
+    # run until first component
+    state = await pipe.run_until({"a": {"value": 7}}, stop_after="a")
+
+    # verify that the state contains the run_id
+    assert "run_id" in state
+    run_id = state["run_id"]
+    assert isinstance(run_id, str)
+    assert len(run_id) > 0
+
+    # change c2 to a new instance to test resume
+    c2_new = StatefulComponent()
+    pipe.set_component("b", c2_new)
+
+    # resume from b
+    result = await pipe.resume_from(state, {"a": {"value": 5}}, start_from="b")
+
+    # verify we're using the same run_id and correct value propagation
+    assert result.run_id == run_id
+    # c2_new should have received value=7 (from a.result)
+    assert result.result["b"]["result"] == 7
+
+
+@pytest.mark.asyncio
+async def test_pipeline_run_until_with_state_file(
+    stateful_pipeline: tuple[Pipeline, StatefulComponent, StatefulComponent],
+) -> None:
+    pipe, _, c2 = stateful_pipeline
+
+    # Create a temporary file for state
+    with tempfile.NamedTemporaryFile(suffix=".json") as state_file:
+        # run until first component and save state to file
+        state = await pipe.run_until(
+            {"a": {"value": 7}}, stop_after="a", state_file=state_file.name
+        )
+
+        # verify that the state contains the run_id
+        assert "run_id" in state
+        run_id = state["run_id"]
+        assert isinstance(run_id, str)
+        assert len(run_id) > 0
+
+        # change c2 to a new instance to test resume
+        c2_new = StatefulComponent()
+        pipe.set_component("b", c2_new)
+
+        # resume from b using state file
+        result = await pipe.resume_from(
+            None, {"a": {"value": 5}}, start_from="b", state_file=state_file.name
+        )
+
+        # verify we're using the same run_id and correct value propagation
+        assert result.run_id == run_id
+        # c2_new should have received value=7 (from a.result)
+        assert result.result["b"]["result"] == 7
+
+
+@pytest.mark.asyncio
+async def test_pipeline_resume_from_missing_state() -> None:
+    pipe = Pipeline()
+    c1 = StatefulComponent()
+    pipe.add_component(c1, "a")
+
+    with pytest.raises(ValueError, match="No state provided for resume_from."):
+        await pipe.resume_from(None, {"a": {"value": 5}}, start_from="a")
+
+
+@pytest.mark.asyncio
+async def test_pipeline_resume_from_invalid_state() -> None:
+    pipe = Pipeline()
+    c1 = StatefulComponent()
+    pipe.add_component(c1, "a")
+
+    invalid_state: Dict[str, Dict[str, Any]] = {
+        "components": {},
+        "store": {},
+        "final_results": {},
+    }  # missing run_id
+
+    with pytest.raises(
+        ValueError, match="No run_id found in state. Cannot resume execution."
+    ):
+        await pipe.resume_from(invalid_state, {"a": {"value": 5}}, start_from="a")
+
+
+@pytest.mark.asyncio
+async def test_pipeline_resume_from_nonexistent_state_file() -> None:
+    pipe = Pipeline()
+    c1 = StatefulComponent()
+    pipe.add_component(c1, "a")
+
+    with pytest.raises(FileNotFoundError):
+        await pipe.resume_from(
+            None, {"a": {"value": 5}}, start_from="a", state_file="nonexistent.json"
+        )

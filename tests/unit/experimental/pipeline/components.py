@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import asyncio
+from typing import Dict, Any
 
 from neo4j_graphrag.experimental.pipeline import Component, DataModel
 from neo4j_graphrag.experimental.pipeline.types.context import RunContext
@@ -63,3 +64,18 @@ class SlowComponentMultiply(Component):
     async def run(self, number1: int, number2: int = 2) -> IntResultModel:
         await asyncio.sleep(self.sleep)
         return IntResultModel(result=number1 * number2)
+
+
+class StatefulComponent(Component):
+    def __init__(self) -> None:
+        self.counter = 0
+
+    async def run(self, value: int) -> IntResultModel:
+        self.counter += value
+        return IntResultModel(result=self.counter)
+
+    def serialize_state(self) -> Dict[str, Any]:
+        return {"counter": self.counter}
+
+    def load_state(self, state: Dict[str, Any]) -> None:
+        self.counter = state.get("counter", 0)
