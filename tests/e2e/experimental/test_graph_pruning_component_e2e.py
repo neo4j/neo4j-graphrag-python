@@ -371,6 +371,7 @@ async def test_graph_pruning_strict_patterns(extracted_graph: Neo4jGraph) -> Non
             ("Person", "KNOWS", "Person"),
             ("Person", "KNOWS", "Organization"),
         ),
+        "additional_relationship_types": False,
         "additional_patterns": False,
     }
     filtered_graph = Neo4jGraph(
@@ -424,13 +425,12 @@ async def test_graph_pruning_strict_patterns(extracted_graph: Neo4jGraph) -> Non
             #     end_node_id="2",
             #     type="MANAGES",
             # ),
-            # not a valid pattern but WORKS_FOR
-            # not in relationship types, so we keep it
-            Neo4jRelationship(
-                start_node_id="1",
-                end_node_id="10",
-                type="WORKS_FOR",
-            ),
+            # invalid pattern (person, works for, person)
+            # Neo4jRelationship(
+            #     start_node_id="1",
+            #     end_node_id="10",
+            #     type="WORKS_FOR",
+            # ),
         ],
     )
     await _test(extracted_graph, schema_dict, filtered_graph)

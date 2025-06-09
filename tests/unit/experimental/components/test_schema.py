@@ -83,11 +83,11 @@ def test_schema_additional_parameter_validation() -> None:
         "patterns": [
             ("Person", "KNOWS", "Person"),
         ],
-        "additional_relationship_types": False,
+        "additional_patterns": False,
     }
     with pytest.raises(
         ValidationError,
-        match="`additional_relationship_types` must be set to True when using `additional_patterns=True`",
+        match="`additional_relationship_types` must be set to False when using `additional_patterns=False`",
     ):
         GraphSchema.model_validate(schema_dict)
 

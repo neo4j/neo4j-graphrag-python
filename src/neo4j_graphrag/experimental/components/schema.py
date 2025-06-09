@@ -191,9 +191,12 @@ class GraphSchema(DataModel):
 
     @model_validator(mode="after")
     def validate_additional_parameters(self) -> Self:
-        if self.additional_patterns and not self.additional_relationship_types:
+        if (
+            self.additional_patterns is False
+            and self.additional_relationship_types is True
+        ):
             raise ValueError(
-                "`additional_relationship_types` must be set to True when using `additional_patterns=True`"
+                "`additional_relationship_types` must be set to False when using `additional_patterns=False`"
             )
         return self
 
