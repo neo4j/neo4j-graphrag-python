@@ -498,6 +498,6 @@ def test_t2c_retriever_with_custom_prompt_and_schema(
 def test_extract_cypher(
     description: str, cypher_query: str, expected_output: str
 ) -> None:
-    assert extract_cypher(cypher_query) == expected_output, (
-        f"Failed test case: {description}"
-    )
+    assert (
+        extract_cypher(cypher_query) == expected_output
+    ), f"Failed test case: {description}"

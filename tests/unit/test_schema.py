@@ -205,9 +205,9 @@ def test__value_sanitize(
     description: str, input_value: Dict[str, Any], expected_output: Any
 ) -> None:
     """Test the _value_sanitize function."""
-    assert _value_sanitize(input_value) == expected_output, (
-        f"Failed test case: {description}"
-    )
+    assert (
+        _value_sanitize(input_value) == expected_output
+    ), f"Failed test case: {description}"
 
 
 @pytest.mark.parametrize(

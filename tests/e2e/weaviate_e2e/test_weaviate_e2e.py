@@ -32,9 +32,9 @@ from .populate_dbs import populate_dbs
 
 
 @pytest.fixture(scope="module")
-def sentence_transformer_embedder() -> Generator[
-    SentenceTransformerEmbeddings, Any, Any
-]:
+def sentence_transformer_embedder() -> (
+    Generator[SentenceTransformerEmbeddings, Any, Any]
+):
     embedder = SentenceTransformerEmbeddings(model="all-MiniLM-L6-v2")
     yield embedder
 
