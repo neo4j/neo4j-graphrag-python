@@ -72,7 +72,6 @@ class GraphPruning(Component):
         If an entity is removed, all of its relationships are also removed.
         If no valid properties remain for an entity, remove that entity.
         """
-        # enforce nodes (remove invalid labels, strip invalid properties)
         filtered_nodes = self._enforce_nodes(graph.nodes, schema)
         if not filtered_nodes:
             logger.warning(
@@ -80,9 +79,6 @@ class GraphPruning(Component):
             )
             return Neo4jGraph()
 
-        # enforce relationships (remove those referencing invalid nodes or with invalid
-        # types or with start/end nodes not conforming to the schema, and strip invalid
-        # properties)
         filtered_rels = self._enforce_relationships(
             graph.relationships, filtered_nodes, schema
         )
@@ -213,7 +209,8 @@ class GraphPruning(Component):
         Keep only those whose types are in schema, start/end node conform to schema,
         and start/end nodes are in filtered nodes (i.e., kept after node enforcement).
         For each valid relationship, filter out properties not present in the schema.
-        If a relationship direct is incorrect, invert it.
+
+        If a relationship direction is incorrect, invert it.
         """
 
         valid_rels = []
