@@ -25,7 +25,9 @@ from neo4j_graphrag.types import (
     Neo4jMessageHistoryModel,
 )
 
-CREATE_SESSION_NODE_QUERY = "MERGE (s:`{node_label}` {{id:$session_id}})"
+CREATE_SESSION_NODE_QUERY = (
+    "MERGE (s:`{node_label}` {{id:$session_id, createdAt: datetime()}})"
+)
 
 DELETE_SESSION_AND_MESSAGES_QUERY = (
     "MATCH (s:`{node_label}`) "
@@ -56,7 +58,7 @@ ADD_MESSAGE_QUERY = (
     "MATCH (s:`{node_label}`) WHERE s.id = $session_id "
     "OPTIONAL MATCH (s)-[lm:LAST_MESSAGE]->(last_message) "
     "CREATE (s)-[:LAST_MESSAGE]->(new:Message) "
-    "SET new += {{role:$role, content:$content}} "
+    "SET new += {{role:$role, content:$content, createdAt: datetime()}} "
     "WITH new, lm, last_message WHERE last_message IS NOT NULL "
     "CREATE (last_message)-[:NEXT]->(new) "
     "DELETE lm"

@@ -833,7 +833,7 @@ def test_format_schema(
             True,
             5,
             False,
-            ("MATCH (n:`Journey`)\n" "RETURN {} AS output"),
+            ("MATCH (n:`Journey`)\nRETURN {} AS output"),
         ),
         (
             "Non-exhaustive, duration property",

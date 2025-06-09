@@ -30,7 +30,7 @@ logger.setLevel(logging.DEBUG)
 
 
 def formatter(record: neo4j.Record) -> RetrieverResultItem:
-    return RetrieverResultItem(content=f'{record.get("title")}: {record.get("plot")}')
+    return RetrieverResultItem(content=f"{record.get('title')}: {record.get('plot')}")
 
 
 driver = neo4j.GraphDatabase.driver(

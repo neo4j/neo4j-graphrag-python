@@ -74,7 +74,7 @@ class Neo4jChunkReader(Component):
             return_properties.append(f"{embedding_property}: null")
         query = (
             f"MATCH (c:`{chunk_label}`) "
-            f"RETURN c {{ { ', '.join(return_properties) } }} as chunk "
+            f"RETURN c {{ {', '.join(return_properties)} }} as chunk "
         )
         if index_property:
             query += f"ORDER BY c.{index_property}"

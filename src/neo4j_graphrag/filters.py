@@ -255,8 +255,7 @@ def _handle_field_filter(
 
     if field.startswith(OPERATOR_PREFIX):
         raise FilterValidationError(
-            f"Invalid filter condition. Expected a field but got an operator: "
-            f"{field}"
+            f"Invalid filter condition. Expected a field but got an operator: {field}"
         )
 
     if isinstance(value, dict):
@@ -273,8 +272,7 @@ def _handle_field_filter(
         # Verify that that operator is an operator
         if operator not in SUPPORTED_OPERATORS:
             raise FilterValidationError(
-                f"Invalid operator: {operator}. "
-                f"Expected one of {SUPPORTED_OPERATORS}"
+                f"Invalid operator: {operator}. Expected one of {SUPPORTED_OPERATORS}"
             )
     else:  # if value is not dict, then we assume an equality operator
         operator = OPERATOR_EQ
@@ -344,10 +342,7 @@ def _construct_metadata_filter(
     else:
         raise FilterValidationError(f"Unsupported operator: {key}")
     query = cypher_operator.join(
-        [
-            f"({ _construct_metadata_filter(el, param_store, node_alias)})"
-            for el in value
-        ]
+        [f"({_construct_metadata_filter(el, param_store, node_alias)})" for el in value]
     )
     return query
 

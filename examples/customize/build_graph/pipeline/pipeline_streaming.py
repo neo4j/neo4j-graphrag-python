@@ -22,7 +22,8 @@ class SlowAdder(Component):
         for i in range(value):
             await asyncio.sleep(0.5)  # Simulate work
             await context_.notify(
-                message=f"Added {i+1}/{value}", data={"current": i + 1, "total": value}
+                message=f"Added {i + 1}/{value}",
+                data={"current": i + 1, "total": value},
             )
         return OutputModel(result=value + self.number)
 
@@ -38,7 +39,8 @@ class SlowMultiplier(Component):
         for i in range(3):  # Always do 3 steps
             await asyncio.sleep(0.7)  # Simulate work
             await context_.notify(
-                message=f"Multiplication step {i+1}/3", data={"step": i + 1, "total": 3}
+                message=f"Multiplication step {i + 1}/3",
+                data={"step": i + 1, "total": 3},
             )
         return OutputModel(result=value * self.multiplier)
 

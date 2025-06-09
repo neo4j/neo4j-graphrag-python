@@ -40,7 +40,7 @@ create_fulltext_index(
 )
 
 # Initialize the retriever
-retrieval_query = "MATCH (node)-[:AUTHORED_BY]->(author:Author)" "RETURN author.name"
+retrieval_query = "MATCH (node)-[:AUTHORED_BY]->(author:Author)RETURN author.name"
 retriever = HybridCypherRetriever(
     driver, INDEX_NAME, FULLTEXT_INDEX_NAME, retrieval_query, embedder
 )
