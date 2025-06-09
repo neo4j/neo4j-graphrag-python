@@ -175,7 +175,6 @@ class FileHandler:
         self,
         data: Any,
         file_path: Path,
-        overwrite: bool = False,
         **extra_kwargs: Any,
     ) -> None:
         """Writes data to a JSON file
@@ -183,7 +182,6 @@ class FileHandler:
         Args:
             data (Any): The data to write.
             file_path (Path): The path of the JSON file.
-            overwrite (bool): If set to True, existing file will be overwritten. Default to False.
             extra_kwargs (Any): Additional arguments passed to json.dump (e.g.: indent...). Note: a default indent=4 is applied.
 
         Raises:
@@ -201,7 +199,6 @@ class FileHandler:
         self,
         data: Any,
         file_path: Path,
-        overwrite: bool = False,
         **extra_kwargs: Any,
     ) -> None:
         """Writes data to a YAML file
@@ -209,7 +206,6 @@ class FileHandler:
         Args:
             data (Any): The data to write.
             file_path (Path): The path of the YAML file.
-            overwrite (bool): If set to True, existing file will be overwritten. Default to False.
             extra_kwargs (Any): Additional arguments passed to yaml.safe_dump. Note that we apply the following defaults:
                 - "default_flow_style": False
                 - "sort_keys": True
