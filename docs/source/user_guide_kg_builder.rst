@@ -999,11 +999,11 @@ Configuration Options
 - **Required Properties**
   Required properties may be specified at the node or relationship type level. Any extracted node or relationship missing one or more of its required properties will be pruned from the graph.
 
-- **Additional Properties** *(default: False)*
+- **Additional Properties** *(default: True)*
   This node- or relationship-level option determines whether extra properties not listed in the schema should be retained.
 
-   - If set to ``False`` (default), all extracted properties are retained.
-   - If set to ``True``, only the properties defined in the schema are preserved; all others are removed.
+   - If set to ``True`` (default), all extracted properties are retained.
+   - If set to ``False``, only the properties defined in the schema are preserved; all others are removed.
 
 - **Additional Node Types** *(default: True)*
   This schema-level option specifies whether node types not defined in the schema are included in the graph.
