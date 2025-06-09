@@ -73,7 +73,8 @@ Customizing the SimpleKGPipeline
 Graph Schema
 ------------
 
-It is possible to guide the LLM by supplying a list of node and relationship types,
+It is possible to guide the LLM by supplying a list of node and relationship types (
+with, optionally, a list of their expected properties)
 and instructions on how to connect them (patterns).
 Node and relationship types can be represented
 as either simple strings (for their labels) or dictionaries. If using a dictionary,
@@ -1004,6 +1005,12 @@ Configuration Options
 
    - If set to ``True`` (default), all extracted properties are retained.
    - If set to ``False``, only the properties defined in the schema are preserved; all others are removed.
+
+
+.. note:: Node pruning
+
+   If, after property pruning using the above rule, a node is left without any property, it is removed from the graph.
+
 
 - **Additional Node Types** *(default: True)*
   This schema-level option specifies whether node types not defined in the schema are included in the graph.
