@@ -233,7 +233,7 @@ class FileHandler:
         if not format:
             format = self._guess_file_format(path)
         if format == FileFormat.JSON:
-            return self._write_json(data, path, overwrite=overwrite, **extra_kwargs)
+            return self._write_json(data, path, **extra_kwargs)
         if format == FileFormat.YAML:
-            return self._write_yaml(data, path, overwrite=overwrite, **extra_kwargs)
+            return self._write_yaml(data, path, **extra_kwargs)
         raise ValueError(f"Unsupported file format: {format}")
