@@ -158,9 +158,9 @@ def test_create_schema_model_invalid_entity(
             list(valid_relationship_types),
             list(patterns_with_invalid_entity),
         )
-    assert "Entity 'NON_EXISTENT_ENTITY' is not defined" in str(
-        exc_info.value
-    ), "Should fail due to non-existent entity"
+    assert "Entity 'NON_EXISTENT_ENTITY' is not defined" in str(exc_info.value), (
+        "Should fail due to non-existent entity"
+    )
 
 
 def test_create_schema_model_invalid_relation(
@@ -175,9 +175,9 @@ def test_create_schema_model_invalid_relation(
             list(valid_relationship_types),
             list(patterns_with_invalid_relation),
         )
-    assert "Relation 'NON_EXISTENT_RELATION' is not defined" in str(
-        exc_info.value
-    ), "Should fail due to non-existent relation"
+    assert "Relation 'NON_EXISTENT_RELATION' is not defined" in str(exc_info.value), (
+        "Should fail due to non-existent relation"
+    )
 
 
 def test_create_schema_model_no_potential_schema(

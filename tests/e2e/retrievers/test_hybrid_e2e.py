@@ -76,9 +76,7 @@ def test_hybrid_retriever_no_neo4j_deprecation_warning(
 def test_hybrid_cypher_retriever_search_text(
     driver: Driver, random_embedder: Embedder
 ) -> None:
-    retrieval_query = (
-        "MATCH (node)-[:AUTHORED_BY]->(author:Author) " "RETURN author.name"
-    )
+    retrieval_query = "MATCH (node)-[:AUTHORED_BY]->(author:Author) RETURN author.name"
     retriever = HybridCypherRetriever(
         driver,
         "vector-index-name",
@@ -127,9 +125,7 @@ def test_hybrid_retriever_search_vector(driver: Driver) -> None:
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
 def test_hybrid_cypher_retriever_search_vector(driver: Driver) -> None:
-    retrieval_query = (
-        "MATCH (node)-[:AUTHORED_BY]->(author:Author) " "RETURN author.name"
-    )
+    retrieval_query = "MATCH (node)-[:AUTHORED_BY]->(author:Author) RETURN author.name"
     retriever = HybridCypherRetriever(
         driver,
         "vector-index-name",

@@ -385,7 +385,7 @@ def _format_property(prop: Dict[str, Any]) -> Optional[str]:
         else:
             return (
                 "Available options: "
-                + f'{[_clean_string_values(el) for el in prop["values"]]}'
+                + f"{[_clean_string_values(el) for el in prop['values']]}"
             )
     elif prop["type"] in [
         "INTEGER",
@@ -395,14 +395,14 @@ def _format_property(prop: Dict[str, Any]) -> Optional[str]:
         "LOCAL_DATE_TIME",
     ]:
         if prop.get("min") and prop.get("max"):
-            return f'Min: {prop["min"]}, Max: {prop["max"]}'
+            return f"Min: {prop['min']}, Max: {prop['max']}"
         else:
             return f'Example: "{prop["values"][0]}"' if prop.get("values") else ""
     elif prop["type"] == "LIST":
         if not prop.get("min_size") or prop["min_size"] > LIST_LIMIT:
             return None
         else:
-            return f'Min Size: {prop["min_size"]}, Max Size: {prop["max_size"]}'
+            return f"Min Size: {prop['min_size']}, Max Size: {prop['max_size']}"
     return ""
 
 
@@ -551,7 +551,7 @@ def _build_str_clauses(
             sanitize=sanitize,
         )[0]["value"]
         return_clauses.append(
-            (f"values: {distinct_values}," f" distinct_count: {len(distinct_values)}")
+            (f"values: {distinct_values}, distinct_count: {len(distinct_values)}")
         )
     else:
         with_clauses.append(
@@ -595,7 +595,7 @@ def _build_list_clauses(prop_name: str) -> Tuple[str, str]:
     )
 
     return_clause = (
-        f"min_size: `{prop_name}_size_min`, " f"max_size: `{prop_name}_size_max`"
+        f"min_size: `{prop_name}_size_min`, max_size: `{prop_name}_size_max`"
     )
     return with_clause, return_clause
 
@@ -630,7 +630,7 @@ def _build_num_date_clauses(
     return_clauses = []
     if not prop_index and not exhaustive:
         with_clauses.append(
-            f"collect(distinct toString(n.`{prop_name}`)) " f"AS `{prop_name}_values`"
+            f"collect(distinct toString(n.`{prop_name}`)) AS `{prop_name}_values`"
         )
         return_clauses.append(f"values: `{prop_name}_values`")
     else:

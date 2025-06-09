@@ -67,9 +67,9 @@ def test_is_version_5_23_or_above(
     Ensures that the is_version_5_23_or_above function accurately determines if
     a given version is 5.23 or higher.
     """
-    assert (
-        is_version_5_23_or_above(version_tuple) == expected_result
-    ), f"Failed test case: {version_tuple}"
+    assert is_version_5_23_or_above(version_tuple) == expected_result, (
+        f"Failed test case: {version_tuple}"
+    )
 
 
 @pytest.mark.parametrize(
@@ -87,9 +87,9 @@ def test_has_vector_index_support(
     Tests the has_vector_index_support function to confirm it correctly
     identifies if the given version and platform support vector indexing.
     """
-    assert (
-        has_vector_index_support(version_tuple) == expected_result
-    ), f"Failed test case: {version_tuple}"
+    assert has_vector_index_support(version_tuple) == expected_result, (
+        f"Failed test case: {version_tuple}"
+    )
 
 
 @pytest.mark.parametrize(
@@ -110,6 +110,6 @@ def test_has_metadata_filtering_support(
     Tests the has_metadata_filtering_support function to confirm it correctly
     identifies if the given version and platform support vector index metadata filtering.
     """
-    assert (
-        has_metadata_filtering_support(version_tuple, is_aura) == expected_result
-    ), f"Failed test case: {version_tuple}, is_aura: {is_aura}"
+    assert has_metadata_filtering_support(version_tuple, is_aura) == expected_result, (
+        f"Failed test case: {version_tuple}, is_aura: {is_aura}"
+    )

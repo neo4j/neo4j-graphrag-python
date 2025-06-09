@@ -45,9 +45,7 @@ def test_vector_retriever_search_text(
 def test_vector_cypher_retriever_search_text(
     driver: Driver, random_embedder: Embedder
 ) -> None:
-    retrieval_query = (
-        "MATCH (node)-[:AUTHORED_BY]->(author:Author) " "RETURN author.name"
-    )
+    retrieval_query = "MATCH (node)-[:AUTHORED_BY]->(author:Author) RETURN author.name"
     retriever = VectorCypherRetriever(
         driver, "vector-index-name", retrieval_query, random_embedder
     )
@@ -88,9 +86,7 @@ def test_vector_retriever_search_vector(driver: Driver) -> None:
 
 @pytest.mark.usefixtures("setup_neo4j_for_retrieval")
 def test_vector_cypher_retriever_search_vector(driver: Driver) -> None:
-    retrieval_query = (
-        "MATCH (node)-[:AUTHORED_BY]->(author:Author) " "RETURN author.name"
-    )
+    retrieval_query = "MATCH (node)-[:AUTHORED_BY]->(author:Author) RETURN author.name"
     retriever = VectorCypherRetriever(driver, "vector-index-name", retrieval_query)
 
     top_k = 5

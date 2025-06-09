@@ -370,6 +370,6 @@ def test_get_version(
     )
     driver.execute_query = execute_query_mock
     neo4j_writer = Neo4jWriter(driver=driver)
-    assert (
-        neo4j_writer.is_version_5_23_or_above is is_5_23_or_above
-    ), f"Failed is_version_5_23_or_above test case: {description}"
+    assert neo4j_writer.is_version_5_23_or_above is is_5_23_or_above, (
+        f"Failed is_version_5_23_or_above test case: {description}"
+    )

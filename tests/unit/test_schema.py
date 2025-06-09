@@ -205,9 +205,9 @@ def test__value_sanitize(
     description: str, input_value: Dict[str, Any], expected_output: Any
 ) -> None:
     """Test the _value_sanitize function."""
-    assert (
-        _value_sanitize(input_value) == expected_output
-    ), f"Failed test case: {description}"
+    assert _value_sanitize(input_value) == expected_output, (
+        f"Failed test case: {description}"
+    )
 
 
 @pytest.mark.parametrize(
@@ -833,7 +833,7 @@ def test_format_schema(
             True,
             5,
             False,
-            ("MATCH (n:`Journey`)\n" "RETURN {} AS output"),
+            ("MATCH (n:`Journey`)\nRETURN {} AS output"),
         ),
         (
             "Non-exhaustive, duration property",
