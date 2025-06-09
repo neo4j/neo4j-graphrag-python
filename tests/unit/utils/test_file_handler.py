@@ -257,7 +257,7 @@ def test_file_handler_write_json_from_write_method_happy_path(
 ) -> None:
     handler = FileHandler()
     handler.write("data", "file.json")
-    mock_write_json.assert_called_with("data", Path("file.json"), overwrite=False)
+    mock_write_json.assert_called_with("data", Path("file.json"))
 
 
 @patch("neo4j_graphrag.utils.file_handler.FileHandler._write_yaml")
@@ -268,7 +268,7 @@ def test_file_handler_write_yaml_from_write_method_happy_path(
 ) -> None:
     handler = FileHandler()
     handler.write("data", "file.yaml")
-    mock_write_yaml.assert_called_with("data", Path("file.yaml"), overwrite=False)
+    mock_write_yaml.assert_called_with("data", Path("file.yaml"))
 
 
 @patch("neo4j_graphrag.utils.file_handler.FileHandler._write_yaml")
@@ -279,7 +279,7 @@ def test_file_handler_write_yaml_from_write_method_overwrite_format_happy_path(
 ) -> None:
     handler = FileHandler()
     handler.write("data", "file.txt", format=FileFormat.YAML)
-    mock_write_yaml.assert_called_with("data", Path("file.txt"), overwrite=False)
+    mock_write_yaml.assert_called_with("data", Path("file.txt"))
 
 
 @patch("neo4j_graphrag.utils.file_handler.FileHandler._write_json")
@@ -290,4 +290,4 @@ def test_file_handler_write_json_from_write_method_overwrite_format_happy_path(
 ) -> None:
     handler = FileHandler()
     handler.write("data", "file.txt", format=FileFormat.JSON)
-    mock_write_json.assert_called_with("data", Path("file.txt"), overwrite=False)
+    mock_write_json.assert_called_with("data", Path("file.txt"))
