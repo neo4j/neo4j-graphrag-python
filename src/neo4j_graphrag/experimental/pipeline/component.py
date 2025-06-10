@@ -108,25 +108,3 @@ class Component(metaclass=ComponentMeta):
         """
         # default behavior to prevent a breaking change
         return await self.run(*args, **kwargs)
-
-    def serialize_state(self) -> Dict[str, Any]:
-        """Serialize component state to a dictionary.
-
-        This method can be overridden by components to customize
-        their serialization behavior. By default, it returns an empty dict.
-
-        Returns:
-            Dict[str, Any]: Serialized state of the component
-        """
-        return {}
-
-    def load_state(self, state: Dict[str, Any]) -> None:
-        """Load component state from a serialized dictionary.
-
-        This method can be overridden by components to customize
-        their deserialization behavior. By default, it does nothing.
-
-        Args:
-            state (Dict[str, Any]): Previously serialized component state
-        """
-        pass
