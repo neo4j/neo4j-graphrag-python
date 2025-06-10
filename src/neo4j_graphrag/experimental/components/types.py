@@ -99,6 +99,10 @@ class Neo4jNode(BaseModel):
             raise TypeError("'id' as a property name is not allowed")
         return v
 
+    @property
+    def token(self) -> str:
+        return self.label
+
 
 class Neo4jRelationship(BaseModel):
     """Represents a Neo4j relationship.
@@ -116,6 +120,10 @@ class Neo4jRelationship(BaseModel):
     type: str
     properties: dict[str, Any] = {}
     embedding_properties: Optional[dict[str, list[float]]] = None
+
+    @property
+    def token(self) -> str:
+        return self.type
 
 
 class Neo4jGraph(DataModel):

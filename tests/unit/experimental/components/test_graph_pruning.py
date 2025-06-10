@@ -14,13 +14,14 @@
 #  limitations under the License.
 from __future__ import annotations
 from typing import Any
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, ANY
 
 import pytest
 
 from neo4j_graphrag.experimental.components.graph_pruning import (
     GraphPruning,
     GraphPruningResult,
+    PruningStats,
 )
 from neo4j_graphrag.experimental.components.schema import (
     NodeType,
@@ -73,32 +74,21 @@ from neo4j_graphrag.experimental.components.types import (
                 "name": "John Does",
             },
         ),
-        (
-            # required missing
-            {
-                "age": 25,
-            },
-            [
-                PropertyType(
-                    name="name",
-                    type="STRING",
-                    required=True,
-                )
-            ],
-            True,
-            {},
-        ),
     ],
 )
-def test_graph_pruning_enforce_properties(
+def test_graph_pruning_filter_properties(
     properties: dict[str, Any],
     valid_properties: list[PropertyType],
     additional_properties: bool,
     expected_filtered_properties: dict[str, Any],
 ) -> None:
     prunner = GraphPruning()
-    filtered_properties = prunner._enforce_properties(
-        properties, valid_properties, additional_properties=additional_properties
+    filtered_properties = prunner._filter_properties(
+        properties,
+        valid_properties,
+        additional_properties=additional_properties,
+        node_label="Label",
+        pruning_stats=PruningStats(),
     )
     assert filtered_properties == expected_filtered_properties
 
@@ -162,7 +152,7 @@ def test_graph_pruning_validate_node(
     e = request.getfixturevalue(entity) if entity else None
 
     prunner = GraphPruning()
-    result = prunner._validate_node(node, e, additional_node_types)
+    result = prunner._validate_node(node, PruningStats(), e, additional_node_types)
     if expected_node is not None:
         assert result == expected_node
     else:
@@ -331,6 +321,7 @@ def test_graph_pruning_validate_relationship(
         pruner._validate_relationship(
             relationship_obj,
             valid_nodes,
+            PruningStats(),
             relationship_type,
             additional_relationship_types,
             patterns,
@@ -351,7 +342,7 @@ async def test_graph_pruning_run_happy_path(
     )
     schema = GraphSchema(node_types=(node_type_required_name,))
     cleaned_graph = Neo4jGraph(nodes=[Neo4jNode(id="1", label="Person")])
-    mock_clean_graph.return_value = cleaned_graph
+    mock_clean_graph.return_value = (cleaned_graph, PruningStats())
     pruner = GraphPruning()
     pruner_result = await pruner.run(
         graph=initial_graph,
@@ -384,9 +375,11 @@ def test_graph_pruning_clean_graph(
     initial_graph = Neo4jGraph(nodes=[Neo4jNode(id="1", label="Person")])
     schema = GraphSchema(node_types=())
     pruner = GraphPruning()
-    cleaned_graph = pruner._clean_graph(initial_graph, schema)
+    cleaned_graph, pruning_stats = pruner._clean_graph(initial_graph, schema)
     assert cleaned_graph == Neo4jGraph()
+    assert isinstance(pruning_stats, PruningStats)
     mock_enforce_nodes.assert_called_once_with(
         [Neo4jNode(id="1", label="Person")],
         schema,
+        ANY,
     )

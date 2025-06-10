@@ -12,10 +12,11 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import enum
 import logging
-from typing import Optional, Any
+from typing import Optional, Any, TypeVar, Generic, Union
 
-from pydantic import validate_call
+from pydantic import validate_call, BaseModel
 
 from neo4j_graphrag.experimental.components.schema import (
     GraphSchema,
@@ -33,9 +34,99 @@ from neo4j_graphrag.experimental.pipeline import Component, DataModel
 logger = logging.getLogger(__name__)
 
 
+class PruningReason(str, enum.Enum):
+    NOT_IN_SCHEMA = "NOT_IN_SCHEMA"
+    MISSING_REQUIRED_PROPERTY = "MISSING_REQUIRED_PROPERTY"
+    NO_PROPERTY_LEFT = "NO_PROPERTY_LEFT"
+    INVALID_START_OR_END_NODE = "INVALID_START_OR_END_NODE"
+    INVALID_PATTERN = "INVALID_PATTERN"
+
+
+ItemType = TypeVar("ItemType")
+
+
+class PrunedItem(BaseModel, Generic[ItemType]):
+    label: str
+    item: ItemType
+    pruned_reason: PruningReason
+    metadata: dict[str, Any] = {}
+
+
+class PruningStats(BaseModel):
+    pruned_nodes: list[PrunedItem[Neo4jNode]] = []
+    pruned_relationships: list[PrunedItem[Neo4jRelationship]] = []
+    pruned_properties: list[PrunedItem[str]] = []
+
+    @property
+    def number_of_pruned_nodes(self) -> int:
+        return len(self.pruned_nodes)
+
+    @property
+    def number_of_pruned_relationships(self) -> int:
+        return len(self.pruned_relationships)
+
+    @property
+    def number_of_pruned_properties(self) -> int:
+        return len(self.pruned_properties)
+
+    def __str__(self):
+        return (
+            f"PruningStats: nodes: {self.number_of_pruned_nodes}, "
+            f"relationships: {self.number_of_pruned_relationships}, "
+            f"properties: {self.number_of_pruned_properties}"
+        )
+
+    def add_pruned_node(
+        self, node: Neo4jNode, reason: PruningReason, **kwargs: Any
+    ) -> None:
+        self.pruned_nodes.append(
+            PrunedItem(
+                label=node.label, item=node, pruned_reason=reason, metadata=kwargs
+            )
+        )
+
+    def add_pruned_relationship(
+        self, relationship: Neo4jRelationship, reason: PruningReason, **kwargs: Any
+    ) -> None:
+        self.pruned_relationships.append(
+            PrunedItem(
+                label=relationship.type,
+                item=relationship,
+                pruned_reason=reason,
+                metadata=kwargs,
+            )
+        )
+
+    def add_pruned_property(
+        self, prop: str, label: str, reason: PruningReason, **kwargs: Any
+    ) -> None:
+        self.pruned_properties.append(
+            PrunedItem(label=label, item=prop, pruned_reason=reason, metadata=kwargs)
+        )
+
+    def add_pruned_item(
+        self,
+        item: Union[Neo4jNode, Neo4jRelationship],
+        reason: PruningReason,
+        **kwargs: Any,
+    ) -> None:
+        if isinstance(item, Neo4jNode):
+            self.add_pruned_node(
+                item,
+                reason=reason,
+                **kwargs,
+            )
+        else:
+            self.add_pruned_relationship(
+                item,
+                reason=reason,
+                **kwargs,
+            )
+
+
 class GraphPruningResult(DataModel):
     graph: Neo4jGraph
-    metadata: dict[str, Any] = {}
+    pruning_stats: PruningStats
 
 
 class GraphPruning(Component):
@@ -46,25 +137,20 @@ class GraphPruning(Component):
         schema: Optional[GraphSchema] = None,
     ) -> GraphPruningResult:
         if schema is not None:
-            new_graph = self._clean_graph(graph, schema)
+            new_graph, pruning_stats = self._clean_graph(graph, schema)
         else:
             new_graph = graph
+            pruning_stats = PruningStats()
         return GraphPruningResult(
             graph=new_graph,
-            metadata={
-                "stats": {
-                    "pruned_node_count": len(graph.nodes) - len(new_graph.nodes),
-                    "pruned_relationship_count": len(graph.relationships)
-                    - len(new_graph.relationships),
-                }
-            },
+            pruning_stats=pruning_stats,
         )
 
     def _clean_graph(
         self,
         graph: Neo4jGraph,
         schema: GraphSchema,
-    ) -> Neo4jGraph:
+    ) -> tuple[Neo4jGraph, PruningStats]:
         """
         Verify that the graph conforms to the provided schema.
 
@@ -72,22 +158,34 @@ class GraphPruning(Component):
         If an entity is removed, all of its relationships are also removed.
         If no valid properties remain for an entity, remove that entity.
         """
-        filtered_nodes = self._enforce_nodes(graph.nodes, schema)
+        pruning_stats = PruningStats()
+        filtered_nodes = self._enforce_nodes(
+            graph.nodes,
+            schema,
+            pruning_stats,
+        )
         if not filtered_nodes:
             logger.warning(
                 "PRUNING: all nodes were pruned, resulting graph will be empty. Check logs for details."
             )
-            return Neo4jGraph()
+            return Neo4jGraph(), pruning_stats
 
         filtered_rels = self._enforce_relationships(
-            graph.relationships, filtered_nodes, schema
+            graph.relationships,
+            filtered_nodes,
+            schema,
+            pruning_stats,
         )
 
-        return Neo4jGraph(nodes=filtered_nodes, relationships=filtered_rels)
+        return (
+            Neo4jGraph(nodes=filtered_nodes, relationships=filtered_rels),
+            pruning_stats,
+        )
 
     def _validate_node(
         self,
         node: Neo4jNode,
+        pruning_stats: PruningStats,
         schema_entity: Optional[NodeType] = None,
         additional_node_types: bool = True,
     ) -> Optional[Neo4jNode]:
@@ -97,10 +195,13 @@ class GraphPruning(Component):
                 # keep node as it is as we do not have any additional info
                 return node
             # it's not in schema
+            pruning_stats.add_pruned_node(node, reason=PruningReason.NOT_IN_SCHEMA)
             return None
-        allowed_props = schema_entity.properties
         filtered_props = self._enforce_properties(
-            node.properties, allowed_props, schema_entity.additional_properties
+            node,
+            schema_entity,
+            pruning_stats,
+            prune_empty=True,
         )
         if not filtered_props:
             return None
@@ -112,7 +213,10 @@ class GraphPruning(Component):
         )
 
     def _enforce_nodes(
-        self, extracted_nodes: list[Neo4jNode], schema: GraphSchema
+        self,
+        extracted_nodes: list[Neo4jNode],
+        schema: GraphSchema,
+        pruning_stats: PruningStats,
     ) -> list[Neo4jNode]:
         """
         Filter extracted nodes to be conformant to the schema.
@@ -127,6 +231,7 @@ class GraphPruning(Component):
             schema_entity = schema.node_type_from_label(node.label)
             new_node = self._validate_node(
                 node,
+                pruning_stats,
                 schema_entity,
                 additional_node_types=schema.additional_node_types,
             )
@@ -138,6 +243,7 @@ class GraphPruning(Component):
         self,
         rel: Neo4jRelationship,
         valid_nodes: dict[str, str],
+        pruning_stats: PruningStats,
         relationship_type: Optional[RelationshipType],
         additional_relationship_types: bool,
         patterns: tuple[tuple[str, str, str], ...],
@@ -148,6 +254,9 @@ class GraphPruning(Component):
             logger.debug(
                 f"PRUNING:: {rel} as one of {rel.start_node_id} or {rel.end_node_id} is not a valid node"
             )
+            pruning_stats.add_pruned_relationship(
+                rel, reason=PruningReason.INVALID_START_OR_END_NODE
+            )
             return None
 
         # validate relationship type
@@ -155,6 +264,9 @@ class GraphPruning(Component):
             if not additional_relationship_types:
                 logger.debug(
                     f"PRUNING:: {rel} as {rel.type} is not in the schema and `additional_relationship_types` is False"
+                )
+                pruning_stats.add_pruned_relationship(
+                    rel, reason=PruningReason.NOT_IN_SCHEMA
                 )
                 return None
 
@@ -178,13 +290,18 @@ class GraphPruning(Component):
 
         if not tuple_valid and not reverse_tuple_valid and not additional_patterns:
             logger.debug(f"PRUNING:: {rel} not in the allowed patterns")
+            pruning_stats.add_pruned_relationship(
+                rel, reason=PruningReason.INVALID_PATTERN
+            )
             return None
 
         # filter properties if we can
         if relationship_type is not None:
-            allowed_props = relationship_type.properties
             filtered_props = self._enforce_properties(
-                rel.properties, allowed_props, relationship_type.additional_properties
+                rel,
+                relationship_type,
+                pruning_stats,
+                prune_empty=False,
             )
         else:
             filtered_props = rel.properties
@@ -202,6 +319,7 @@ class GraphPruning(Component):
         extracted_relationships: list[Neo4jRelationship],
         filtered_nodes: list[Neo4jNode],
         schema: GraphSchema,
+        pruning_stats: PruningStats,
     ) -> list[Neo4jRelationship]:
         """
         Filter extracted nodes to be conformant to the schema.
@@ -220,6 +338,7 @@ class GraphPruning(Component):
             new_rel = self._validate_relationship(
                 rel,
                 valid_nodes,
+                pruning_stats,
                 schema_relation,
                 schema.additional_relationship_types,
                 schema.patterns,
@@ -231,26 +350,72 @@ class GraphPruning(Component):
 
     def _enforce_properties(
         self,
+        item: Union[Neo4jNode, Neo4jRelationship],
+        schema_item: Union[NodeType, RelationshipType],
+        pruning_stats: PruningStats,
+        prune_empty: bool = False,
+    ) -> dict[str, Any]:
+        """
+        Enforce properties:
+        - Filter out those that are not in schema (i.e., valid properties) if allowed properties is False.
+        - Check that all required properties are present and not null.
+        """
+        filtered_properties = self._filter_properties(
+            item.properties,
+            schema_item.properties,
+            schema_item.additional_properties,
+            item.token,  # label or type
+            pruning_stats,
+        )
+        if not filtered_properties and prune_empty:
+            pruning_stats.add_pruned_item(item, reason=PruningReason.NO_PROPERTY_LEFT)
+            return filtered_properties
+        missing_required_properties = self._check_required_properties(
+            filtered_properties,
+            valid_properties=schema_item.properties,
+        )
+        if missing_required_properties:
+            pruning_stats.add_pruned_item(
+                item,
+                reason=PruningReason.MISSING_REQUIRED_PROPERTY,
+                missing_required_properties=missing_required_properties,
+            )
+            return {}
+        return filtered_properties
+
+    def _filter_properties(
+        self,
         properties: dict[str, Any],
         valid_properties: list[PropertyType],
         additional_properties: bool,
+        node_label: str,
+        pruning_stats: PruningStats,
     ) -> dict[str, Any]:
-        """
-        Filter properties.
-        - Keep only those that exist in schema (i.e., valid properties).
-        - Check that all required properties are present
-        """
+        """Filters out properties not in schema if additional_properties is False"""
+        if additional_properties:
+            # we do not need to filter any property, just return the initial properties
+            return properties
         valid_prop_names = {prop.name for prop in valid_properties}
-        filtered_properties = {
-            key: value
-            for key, value in properties.items()
-            if key in valid_prop_names or additional_properties
-        }
+        filtered_properties = {}
+        for prop_name, prop_value in properties.items():
+            if prop_name not in valid_prop_names:
+                pruning_stats.add_pruned_property(
+                    prop_name,
+                    node_label,
+                    reason=PruningReason.NOT_IN_SCHEMA,
+                    value=prop_value,
+                )
+                continue
+            filtered_properties[prop_name] = prop_value
+        return filtered_properties
+
+    def _check_required_properties(
+        self, filtered_properties: dict[str, Any], valid_properties: list[PropertyType]
+    ) -> list[str]:
+        """Returns the list of missing required properties, if any."""
         required_prop_names = {prop.name for prop in valid_properties if prop.required}
+        missing_required_properties = []
         for req_prop in required_prop_names:
             if filtered_properties.get(req_prop) is None:
-                logger.info(
-                    f"PRUNING:: {req_prop} is required but missing in {properties} - skipping node"
-                )
-                return {}  # node will be pruned
-        return filtered_properties
+                missing_required_properties.append(req_prop)
+        return missing_required_properties
