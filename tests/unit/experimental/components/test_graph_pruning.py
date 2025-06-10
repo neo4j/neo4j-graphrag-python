@@ -82,8 +82,8 @@ def test_graph_pruning_filter_properties(
     additional_properties: bool,
     expected_filtered_properties: dict[str, Any],
 ) -> None:
-    prunner = GraphPruning()
-    filtered_properties = prunner._filter_properties(
+    pruner = GraphPruning()
+    filtered_properties = pruner._filter_properties(
         properties,
         valid_properties,
         additional_properties=additional_properties,
@@ -151,8 +151,8 @@ def test_graph_pruning_validate_node(
 ) -> None:
     e = request.getfixturevalue(entity) if entity else None
 
-    prunner = GraphPruning()
-    result = prunner._validate_node(node, PruningStats(), e, additional_node_types)
+    pruner = GraphPruning()
+    result = pruner._validate_node(node, PruningStats(), e, additional_node_types)
     if expected_node is not None:
         assert result == expected_node
     else:
