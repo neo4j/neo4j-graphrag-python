@@ -632,13 +632,78 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
 
 
 class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
-    """A class to build a GraphSchema object from an existing graph."""
+    """A class to build a GraphSchema object from an existing graph.
 
-    def __init__(self, driver: neo4j.Driver) -> None:
+    Uses the get_structured_schema function to extract existing node labels,
+    relationship types, properties and existence constraints.
+
+    By default, the built schema does not allow any additional item (property,
+    node label, relationship type or pattern).
+
+       Args:
+            driver (neo4j.Driver): connection to the neo4j database.
+            additional_properties (bool, default False): see GraphSchema
+            additional_node_types (bool, default False): see GraphSchema
+            additional_relationship_types (bool, default False): see GraphSchema:
+            additional_patterns (bool, default False): see GraphSchema:
+            neo4j_database (Optional | str): name of the neo4j database to use
+    """
+
+    def __init__(
+        self,
+        driver: neo4j.Driver,
+        additional_properties: bool = False,
+        additional_node_types: bool = False,
+        additional_relationship_types: bool = False,
+        additional_patterns: bool = False,
+        neo4j_database: Optional[str] = None,
+    ) -> None:
         self.driver = driver
+        self.database = neo4j_database
 
-    async def run(self, **kwargs: Any) -> GraphSchema:
-        structured_schema = get_structured_schema(self.driver)
+        self.additional_properties = additional_properties
+        self.additional_node_types = additional_node_types
+        self.additional_relationship_types = additional_relationship_types
+        self.additional_patterns = additional_patterns
+
+    @staticmethod
+    def _extract_required_properties(
+        structured_schema: dict[str, Any],
+    ) -> list[tuple[str, str]]:
+        """Extract a list of (node label (or rel type), property name) for which
+         an "EXISTENCE" or "KEY" constraint is defined in the DB.
+
+         Args:
+
+             structured_schema (dict[str, Any]): the result of the `get_structured_schema()` function.
+
+        Returns:
+
+            list of tuples of (node label (or rel type), property name)
+
+        """
+        schema_metadata = structured_schema.get("metadata", {})
+        existence_constraint = []  # list of (node label, property name)
+        for constraint in schema_metadata.get("constraints", []):
+            if constraint["type"] in (
+                "NODE_PROPERTY_EXISTENCE",
+                "NODE_KEY",
+                "RELATIONSHIP_PROPERTY_EXISTENCE",
+                "RELATIONSHIP_KEY",
+            ):
+                properties = constraint["properties"]
+                labels = constraint["labelsOrTypes"]
+                # note: existence constraint only apply to a single property
+                # and a single label
+                prop = properties[0]
+                lab = labels[0]
+                existence_constraint.append((lab, prop))
+        return existence_constraint
+
+    async def run(self) -> GraphSchema:
+        structured_schema = get_structured_schema(self.driver, database=self.database)
+        existence_constraint = self._extract_required_properties(structured_schema)
+
         node_labels = set(structured_schema["node_props"].keys())
         node_types = [
             {
@@ -647,9 +712,11 @@ class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
                     {
                         "name": p["property"],
                         "type": p["type"],
+                        "required": (key, p["property"]) in existence_constraint,
                     }
                     for p in properties
                 ],
+                "additional_properties": self.additional_properties,
             }
             for key, properties in structured_schema["node_props"].items()
         ]
@@ -661,6 +728,7 @@ class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
                     {
                         "name": p["property"],
                         "type": p["type"],
+                        "required": (key, p["property"]) in existence_constraint,
                     }
                     for p in properties
                 ],
@@ -699,5 +767,8 @@ class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
                 "node_types": node_types,
                 "relationship_types": relationship_types,
                 "patterns": patterns,
+                "additional_node_types": self.additional_node_types,
+                "additional_relationship_types": self.additional_relationship_types,
+                "additional_patterns": self.additional_patterns,
             }
         )
