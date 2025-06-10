@@ -35,6 +35,7 @@ import yaml
 
 from neo4j_graphrag.generation import PromptTemplate
 from neo4j_graphrag.llm.types import LLMResponse
+from neo4j_graphrag.utils.file_handler import FileFormat
 
 
 @pytest.fixture
@@ -383,13 +384,13 @@ async def test_schema_from_text_llm_params(
 
 
 @pytest.mark.asyncio
-async def test_schema_config_store_as_json(graph_schema: GraphSchema) -> None:
+async def test_schema_config_save_json(graph_schema: GraphSchema) -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         # create file path
         json_path = os.path.join(temp_dir, "schema.json")
 
         # store the schema config
-        graph_schema.store_as_json(json_path)
+        graph_schema.save(json_path)
 
         # verify the file exists and has content
         assert os.path.exists(json_path)
@@ -403,13 +404,13 @@ async def test_schema_config_store_as_json(graph_schema: GraphSchema) -> None:
 
 
 @pytest.mark.asyncio
-async def test_schema_config_store_as_yaml(graph_schema: GraphSchema) -> None:
+async def test_schema_config_save_yaml(graph_schema: GraphSchema) -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create file path
         yaml_path = os.path.join(temp_dir, "schema.yaml")
 
         # Store the schema config
-        graph_schema.store_as_yaml(yaml_path)
+        graph_schema.save(yaml_path)
 
         # Verify the file exists and has content
         assert os.path.exists(yaml_path)
@@ -431,9 +432,9 @@ async def test_schema_config_from_file(graph_schema: GraphSchema) -> None:
         yml_path = os.path.join(temp_dir, "schema.yml")
 
         # store the schema config in the different formats
-        graph_schema.store_as_json(json_path)
-        graph_schema.store_as_yaml(yaml_path)
-        graph_schema.store_as_yaml(yml_path)
+        graph_schema.save(json_path)
+        graph_schema.save(yaml_path)
+        graph_schema.save(yml_path)
 
         # load using from_file which should detect the format based on extension
         json_schema = GraphSchema.from_file(json_path)
@@ -452,9 +453,11 @@ async def test_schema_config_from_file(graph_schema: GraphSchema) -> None:
 
         # verify an unsupported extension raises the correct error
         txt_path = os.path.join(temp_dir, "schema.txt")
-        graph_schema.store_as_json(txt_path)  # Store as JSON but with .txt extension
+        graph_schema.save(
+            txt_path, format=FileFormat.JSON
+        )  # Store as JSON but with .txt extension
 
-        with pytest.raises(ValueError, match="Unsupported file format"):
+        with pytest.raises(ValueError, match="Unsupported file format: None"):
             GraphSchema.from_file(txt_path)
 
 

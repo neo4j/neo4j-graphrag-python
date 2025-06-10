@@ -832,8 +832,8 @@ You can also save and reload the extracted schema:
 .. code:: python
 
     # Save the schema to JSON or YAML files
-    extracted_schema.store_as_json("my_schema.json")
-    extracted_schema.store_as_yaml("my_schema.yaml")
+    extracted_schema.save("my_schema.json")
+    extracted_schema.save("my_schema.yaml")
 
     # Later, reload the schema from file
     from neo4j_graphrag.experimental.components.schema import GraphSchema

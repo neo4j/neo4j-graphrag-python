@@ -15,8 +15,8 @@
 from __future__ import annotations
 
 import json
-import yaml
 import logging
+import warnings
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union, Sequence
 from pathlib import Path
 
@@ -42,6 +42,7 @@ from neo4j_graphrag.experimental.pipeline.types.schema import (
 )
 from neo4j_graphrag.generation import SchemaExtractionTemplate, PromptTemplate
 from neo4j_graphrag.llm import LLMInterface
+from neo4j_graphrag.utils.file_handler import FileHandler, FileFormat
 
 
 class PropertyType(BaseModel):
@@ -157,101 +158,68 @@ class GraphSchema(DataModel):
     def relationship_type_from_label(self, label: str) -> Optional[RelationshipType]:
         return self._relationship_type_index.get(label)
 
-    def store_as_json(self, file_path: str) -> None:
+    def save(
+        self,
+        file_path: Union[str, Path],
+        overwrite: bool = False,
+        format: Optional[FileFormat] = None,
+    ) -> None:
         """
-        Save the schema configuration to a JSON file.
+        Save the schema configuration to file.
 
         Args:
             file_path (str): The path where the schema configuration will be saved.
+            overwrite (bool): If set to True, existing file will be overwritten. Default to False.
+            format (Optional[FileFormat]): The file format to save the schema configuration into. By default, it is inferred from file_path extension.
         """
-        with open(file_path, "w") as f:
-            json.dump(self.model_dump(), f, indent=2)
+        data = self.model_dump(mode="json")
+        file_handler = FileHandler()
+        file_handler.write(data, file_path, overwrite=overwrite, format=format)
 
-    def store_as_yaml(self, file_path: str) -> None:
-        """
-        Save the schema configuration to a YAML file.
+    def store_as_json(
+        self, file_path: Union[str, Path], overwrite: bool = False
+    ) -> None:
+        warnings.warn(
+            "Use .save(..., format=FileFormat.JSON) instead.", DeprecationWarning
+        )
+        return self.save(file_path, overwrite=overwrite, format=FileFormat.JSON)
 
-        Args:
-            file_path (str): The path where the schema configuration will be saved.
-        """
-        # create a copy of the data and convert tuples to lists for YAML compatibility
-        data = self.model_dump()
-        if data.get("node_types"):
-            data["node_types"] = list(data["node_types"])
-        if data.get("relationship_types"):
-            data["relationship_types"] = list(data["relationship_types"])
-        if data.get("patterns"):
-            data["patterns"] = [list(item) for item in data["patterns"]]
-
-        with open(file_path, "w") as f:
-            yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+    def store_as_yaml(
+        self, file_path: Union[str, Path], overwrite: bool = False
+    ) -> None:
+        warnings.warn(
+            "Use .save(..., format=FileFormat.YAML) instead.", DeprecationWarning
+        )
+        return self.save(file_path, overwrite=overwrite, format=FileFormat.YAML)
 
     @classmethod
-    def from_file(cls, file_path: Union[str, Path]) -> Self:
+    def from_file(
+        cls, file_path: Union[str, Path], format: Optional[FileFormat] = None
+    ) -> Self:
         """
         Load a schema configuration from a file (either JSON or YAML).
 
-        The file format is automatically detected based on the file extension.
+        The file format is automatically detected based on the file extension,
+        unless the format parameter is set.
 
         Args:
             file_path (Union[str, Path]): The path to the schema configuration file.
+            format (Optional[FileFormat]): The format of the schema configuration file (json or yaml).
 
         Returns:
             GraphSchema: The loaded schema configuration.
         """
         file_path = Path(file_path)
+        file_handler = FileHandler()
+        try:
+            data = file_handler.read(file_path, format=format)
+        except ValueError:
+            raise
 
-        if not file_path.exists():
-            raise FileNotFoundError(f"Schema file not found: {file_path}")
-
-        if file_path.suffix.lower() in [".json"]:
-            return cls.from_json(file_path)
-        elif file_path.suffix.lower() in [".yaml", ".yml"]:
-            return cls.from_yaml(file_path)
-        else:
-            raise ValueError(
-                f"Unsupported file format: {file_path.suffix}. Use .json, .yaml, or .yml"
-            )
-
-    @classmethod
-    def from_json(cls, file_path: Union[str, Path]) -> Self:
-        """
-        Load a schema configuration from a JSON file.
-
-        Args:
-            file_path (Union[str, Path]): The path to the JSON schema configuration file.
-
-        Returns:
-            GraphSchema: The loaded schema configuration.
-        """
-        with open(file_path, "r") as f:
-            try:
-                data = json.load(f)
-                return cls.model_validate(data)
-            except json.JSONDecodeError as e:
-                raise ValueError(f"Invalid JSON file: {e}")
-            except ValidationError as e:
-                raise SchemaValidationError(f"Schema validation failed: {e}")
-
-    @classmethod
-    def from_yaml(cls, file_path: Union[str, Path]) -> Self:
-        """
-        Load a schema configuration from a YAML file.
-
-        Args:
-            file_path (Union[str, Path]): The path to the YAML schema configuration file.
-
-        Returns:
-            GraphSchema: The loaded schema configuration.
-        """
-        with open(file_path, "r") as f:
-            try:
-                data = yaml.safe_load(f)
-                return cls.model_validate(data)
-            except yaml.YAMLError as e:
-                raise ValueError(f"Invalid YAML file: {e}")
-            except ValidationError as e:
-                raise SchemaValidationError(f"Schema validation failed: {e}")
+        try:
+            return cls.model_validate(data)
+        except ValidationError as e:
+            raise SchemaValidationError(str(e)) from e
 
 
 class SchemaBuilder(Component):
