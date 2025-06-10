@@ -1031,6 +1031,18 @@ Configuration Options
    - If set to ``False``, only patterns defined in the schema are kept. **Note** `additional_relationship_types` must also be `False`.
 
 
+
+Enforcement rules
+_________________
+
+In addition to the user-defined configuration options described above,
+the `GraphPruning` component performs the following cleanup operations:
+
+- Nodes with missing required properties are pruned.
+- Nodes with no remaining properties are pruned.
+- Relationships with invalid source or target nodes (i.e., nodes no longer present in the graph) are pruned.
+- Relationships with incorrect direction have their direction corrected.
+
 .. _kg-writer-section:
 
 Knowledge Graph Writer
