@@ -90,6 +90,24 @@ class ResultStore(Store, abc.ABC):
     async def get_result_for_component(self, run_id: str, task_name: str) -> Any:
         return await self.get(self.get_key(run_id, task_name))
 
+    @abc.abstractmethod
+    def dump(self) -> dict[str, Any]:
+        """Dump the store state to a serializable dictionary.
+
+        Returns:
+            dict[str, Any]: A serializable dictionary containing the store state
+        """
+        pass
+
+    @abc.abstractmethod
+    def load(self, state: dict[str, Any]) -> None:
+        """Load the store state from a serializable dictionary.
+
+        Args:
+            state (dict[str, Any]): A serializable dictionary containing the store state
+        """
+        pass
+
 
 class InMemoryStore(ResultStore):
     """Simple in-memory store.
@@ -115,3 +133,19 @@ class InMemoryStore(ResultStore):
 
     def empty(self) -> None:
         self._data = {}
+
+    def dump(self) -> dict[str, Any]:
+        """Dump the store state to a serializable dictionary.
+
+        Returns:
+            dict[str, Any]: A serializable dictionary containing the store state
+        """
+        return self._data.copy()
+
+    def load(self, state: dict[str, Any]) -> None:
+        """Load the store state from a serializable dictionary.
+
+        Args:
+            state (dict[str, Any]): A serializable dictionary containing the store state
+        """
+        self._data = state.copy()
