@@ -186,8 +186,8 @@ class GraphPruning(Component):
         self,
         node: Neo4jNode,
         pruning_stats: PruningStats,
-        schema_entity: Optional[NodeType] = None,
-        additional_node_types: bool = True,
+        schema_entity: Optional[NodeType],
+        additional_node_types: bool,
     ) -> Optional[Neo4jNode]:
         if not schema_entity:
             # node type not declared in the schema
