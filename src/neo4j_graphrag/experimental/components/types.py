@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import uuid
-from enum import Enum
 from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field, field_validator
@@ -100,6 +99,10 @@ class Neo4jNode(BaseModel):
             raise TypeError("'id' as a property name is not allowed")
         return v
 
+    @property
+    def token(self) -> str:
+        return self.label
+
 
 class Neo4jRelationship(BaseModel):
     """Represents a Neo4j relationship.
@@ -117,6 +120,10 @@ class Neo4jRelationship(BaseModel):
     type: str
     properties: dict[str, Any] = {}
     embedding_properties: Optional[dict[str, list[float]]] = None
+
+    @property
+    def token(self) -> str:
+        return self.type
 
 
 class Neo4jGraph(DataModel):
@@ -171,8 +178,3 @@ class LexicalGraphConfig(BaseModel):
 class GraphResult(DataModel):
     graph: Neo4jGraph
     config: LexicalGraphConfig
-
-
-class SchemaEnforcementMode(str, Enum):
-    NONE = "NONE"
-    STRICT = "STRICT"

@@ -35,6 +35,7 @@ from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
     OnError,
 )
+from neo4j_graphrag.experimental.components.graph_pruning import GraphPruning
 from neo4j_graphrag.experimental.components.kg_writer import KGWriter, Neo4jWriter
 from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
 from neo4j_graphrag.experimental.components.resolver import (
@@ -54,7 +55,6 @@ from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter i
 )
 from neo4j_graphrag.experimental.components.types import (
     LexicalGraphConfig,
-    SchemaEnforcementMode,
 )
 from neo4j_graphrag.experimental.pipeline.config.object_config import ComponentType
 from neo4j_graphrag.experimental.pipeline.config.template_pipeline.base import (
@@ -79,6 +79,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         "chunk_embedder",
         "schema",
         "extractor",
+        "pruner",
         "writer",
         "resolver",
     ]
@@ -92,7 +93,6 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     relations: Sequence[RelationInputType] = []
     potential_schema: Optional[list[tuple[str, str, str]]] = None
     schema_: Optional[GraphSchema] = Field(default=None, alias="schema")
-    enforce_schema: SchemaEnforcementMode = SchemaEnforcementMode.NONE
     on_error: OnError = OnError.IGNORE
     prompt_template: Union[ERExtractionTemplate, str] = ERExtractionTemplate()
     perform_entity_resolution: bool = True
@@ -223,7 +223,9 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
                 if self.relations is not None
                 else None
             )
-            patterns = tuple(self.potential_schema) if self.potential_schema else None
+            patterns = (
+                tuple(self.potential_schema) if self.potential_schema else tuple()
+            )
 
         return node_types, relationship_types, patterns
 
@@ -247,9 +249,11 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         return LLMEntityRelationExtractor(
             llm=self.get_default_llm(),
             prompt_template=self.prompt_template,
-            enforce_schema=self.enforce_schema,
             on_error=self.on_error,
         )
+
+    def _get_pruner(self) -> GraphPruning:
+        return GraphPruning()
 
     def _get_writer(self) -> KGWriter:
         if self.kg_writer:
@@ -332,9 +336,19 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         connections.append(
             ConnectionDefinition(
                 start="extractor",
-                end="writer",
+                end="pruner",
                 input_config={
                     "graph": "extractor",
+                    "schema": "schema",
+                },
+            )
+        )
+        connections.append(
+            ConnectionDefinition(
+                start="pruner",
+                end="writer",
+                input_config={
+                    "graph": "pruner.graph",
                 },
             )
         )

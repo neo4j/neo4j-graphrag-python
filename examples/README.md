@@ -128,6 +128,7 @@ are listed in [the last section of this file](#customize).
   - [LLM-based](./customize/build_graph/components/extractors/llm_entity_relation_extractor.py)
   - [LLM-based with custom prompt](./customize/build_graph/components/extractors/llm_entity_relation_extractor_with_custom_prompt.py)
   - [Custom](./customize/build_graph/components/extractors/custom_extractor.py)
+- [Graph Pruner](./customize/build_graph/components/pruners/graph_pruner.py)
 - Knowledge Graph Writer:
   - [Neo4j writer](./customize/build_graph/components/writers/neo4j_writer.py)
   - [Custom](./customize/build_graph/components/writers/custom_writer.py)

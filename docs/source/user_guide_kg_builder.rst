@@ -73,10 +73,10 @@ Customizing the SimpleKGPipeline
 Graph Schema
 ------------
 
-It is possible to guide the LLM by supplying a list of node and relationship types,
-and instructions on how to connect them (patterns). However, note that the extracted graph
-may not fully adhere to these guidelines unless schema enforcement is enabled
-(see :ref:`Schema Enforcement Behaviour`). Node and relationship types can be represented
+It is possible to guide the LLM by supplying a list of node and relationship types (
+with, optionally, a list of their expected properties)
+and instructions on how to connect them (patterns).
+Node and relationship types can be represented
 as either simple strings (for their labels) or dictionaries. If using a dictionary,
 it must include a label key and can optionally include description and properties keys,
 as shown below:
@@ -90,7 +90,7 @@ as shown below:
         # such as a description:
         {"label": "House", "description": "Family the person belongs to"},
         # or a list of properties the LLM will try to attach to the entity:
-        {"label": "Planet", "properties": [{"name": "weather", "type": "STRING"}]},
+        {"label": "Planet", "properties": [{"name": "name", "type": "STRING", "required": True}, {"name": "weather", "type": "STRING"}]},
     ]
     # same thing for relationships:
     RELATIONSHIP_TYPES = [
@@ -124,7 +124,8 @@ This schema information can be provided to the `SimpleKGBuilder` as demonstrated
         schema={
             "node_types": NODE_TYPES,
             "relationship_types": RELATIONSHIP_TYPES,
-            "patterns": PATTERNS
+            "patterns": PATTERNS,
+            "additional_node_types": False,
         },
         # ...
     )
@@ -145,7 +146,6 @@ They are also accessible via the `SimpleKGPipeline` interface.
         # ...
         prompt_template="",
         lexical_graph_config=my_config,
-        enforce_schema="STRICT"
         on_error="RAISE",
         # ...
     )
@@ -878,38 +878,6 @@ It can be used in this way:
 
 The LLM to use can be customized, the only constraint is that it obeys the :ref:`LLMInterface <llminterface>`.
 
-Schema Enforcement Behaviour
-----------------------------
-.. _schema-enforcement-behaviour:
-
-By default, even if a schema is provided to guide the LLM in the entity and relation extraction, the LLM response is not validated against that schema.
-This behaviour can be changed by using the `enforce_schema` flag in the `LLMEntityRelationExtractor` constructor:
-
-.. code:: python
-
-    from neo4j_graphrag.experimental.components.entity_relation_extractor import LLMEntityRelationExtractor
-    from neo4j_graphrag.experimental.components.types import SchemaEnforcementMode
-
-    extractor = LLMEntityRelationExtractor(
-        # ...
-        enforce_schema=SchemaEnforcementMode.STRICT,
-    )
-
-In this scenario, any extracted node/relation/property that is not part of the provided schema will be pruned.
-Any relation whose start node or end node does not conform to the provided tuple in `potential_schema` will be pruned.
-If a relation start/end nodes are valid but the direction is incorrect, the latter will be inverted.
-If a node is left with no properties, it will be also pruned.
-
-.. note::
-
-    If the input schema lacks a certain type of information, pruning is skipped.
-    For example, if an entity is defined only by a label and has no properties,
-    property pruning is not performed and all properties returned by the LLM are kept.
-
-
-.. warning::
-
-    Note that if the schema enforcement mode is on but the schema is not provided, no schema enforcement will be applied.
 
 Error Behaviour
 ---------------
@@ -1016,6 +984,64 @@ If more customization is needed, it is possible to subclass the `EntityRelationE
 
 See :ref:`entityrelationextractor`.
 
+
+Schema Guidance and Graph Filtering
+===================================
+
+The provided schema serves as a guiding structure for the language model during graph construction. However, it does not impose strict constraints on the model's output. As a result, the model may generate additional node labels, relationship types, or properties that are not explicitly defined in the schema.
+
+By default, all extracted elements — including nodes, relationships, and properties — are retained in the constructed graph. This behavior can be configured using the following schema options:
+(see :ref:`graphschema`)
+
+
+Configuration Options
+---------------------
+
+- **Required Properties**
+  Required properties may be specified at the node or relationship type level. Any extracted node or relationship missing one or more of its required properties will be pruned from the graph.
+
+- **Additional Properties** *(default: True)*
+  This node- or relationship-level option determines whether extra properties not listed in the schema should be retained.
+
+   - If set to ``True`` (default), all extracted properties are retained.
+   - If set to ``False``, only the properties defined in the schema are preserved; all others are removed.
+
+
+.. note:: Node pruning
+
+   If, after property pruning using the above rule, a node is left without any property, it is removed from the graph.
+
+
+- **Additional Node Types** *(default: True)*
+  This schema-level option specifies whether node types not defined in the schema are included in the graph.
+
+   - If set to ``True`` (default), such node types are retained.
+   - If set to ``False``, nodes with undefined types are removed.
+
+- **Additional Relationship Types** *(default: True)*
+  This schema-level option specifies whether relationship types not defined in the schema are included in the graph.
+
+   - If set to ``True`` (default), such relationships are retained.
+   - If set to ``False``, relationships with undefined types are removed.
+
+- **Additional Patterns** *(default: True)*
+  This schema-level option determines whether relationship patterns not explicitly listed in the schema are allowed.
+
+   - If set to ``True`` (default), all patterns are retained.
+   - If set to ``False``, only patterns defined in the schema are kept. **Note** `additional_relationship_types` must also be `False`.
+
+
+
+Enforcement rules
+_________________
+
+In addition to the user-defined configuration options described above,
+the `GraphPruning` component performs the following cleanup operations:
+
+- Nodes with missing required properties are pruned.
+- Nodes with no remaining properties are pruned.
+- Relationships with invalid source or target nodes (i.e., nodes no longer present in the graph) are pruned.
+- Relationships with incorrect direction have their direction corrected.
 
 .. _kg-writer-section:
 

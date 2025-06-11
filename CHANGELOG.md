@@ -15,7 +15,7 @@
 
 #### Strict mode
 
-- Strict mode in `SimpleKGPipeline`: now properties and relationships are pruned only if they are defined in the input schema.
+- Strict mode in `SimpleKGPipeline`: the `enforce_schema` option is removed and replaced by a schema-driven pruning.
 
 #### Schema definition
 

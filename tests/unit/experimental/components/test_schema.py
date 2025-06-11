@@ -16,9 +16,10 @@ from __future__ import annotations
 
 import json
 from typing import Tuple
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
+from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import SchemaValidationError, SchemaExtractionError
 from neo4j_graphrag.experimental.components.schema import (
@@ -38,6 +39,59 @@ from neo4j_graphrag.llm.types import LLMResponse
 from neo4j_graphrag.utils.file_handler import FileFormat
 
 
+def test_node_type_raise_error_if_misconfigured() -> None:
+    with pytest.raises(ValidationError):
+        NodeType(
+            label="test",
+            properties=[],
+            additional_properties=False,
+        )
+
+
+def test_relationship_type_raise_error_if_misconfigured() -> None:
+    with pytest.raises(ValidationError):
+        RelationshipType(
+            label="test",
+            properties=[],
+            additional_properties=False,
+        )
+
+
+def test_schema_additional_parameter_validation() -> None:
+    """Additional relationship types not allowed, but additional patterns allowed
+
+    => raise Exception
+    """
+    schema_dict = {
+        "node_types": [
+            {
+                "label": "Person",
+                "properties": [
+                    {
+                        "name": "name",
+                        "type": "STRING",
+                    },
+                    {"name": "height", "type": "INTEGER"},
+                ],
+            }
+        ],
+        "relationship_types": [
+            {
+                "label": "KNOWS",
+            }
+        ],
+        "patterns": [
+            ("Person", "KNOWS", "Person"),
+        ],
+        "additional_patterns": False,
+    }
+    with pytest.raises(
+        ValidationError,
+        match="`additional_relationship_types` must be set to False when using `additional_patterns=False`",
+    ):
+        GraphSchema.model_validate(schema_dict)
+
+
 @pytest.fixture
 def valid_node_types() -> tuple[NodeType, ...]:
     return (
@@ -46,8 +100,9 @@ def valid_node_types() -> tuple[NodeType, ...]:
             description="An individual human being.",
             properties=[
                 PropertyType(name="birth date", type="ZONED_DATETIME"),
-                PropertyType(name="name", type="STRING"),
+                PropertyType(name="name", type="STRING", required=True),
             ],
+            additional_properties=False,
         ),
         NodeType(
             label="ORGANIZATION",
@@ -64,9 +119,10 @@ def valid_relationship_types() -> tuple[RelationshipType, ...]:
             label="EMPLOYED_BY",
             description="Indicates employment relationship.",
             properties=[
-                PropertyType(name="start_time", type="LOCAL_DATETIME"),
+                PropertyType(name="start_time", type="LOCAL_DATETIME", required=True),
                 PropertyType(name="end_time", type="LOCAL_DATETIME"),
             ],
+            additional_properties=False,
         ),
         RelationshipType(
             label="ORGANIZED_BY",
@@ -122,13 +178,16 @@ def test_create_schema_model_valid_data(
     valid_relationship_types: Tuple[RelationshipType, ...],
     valid_patterns: Tuple[Tuple[str, str, str], ...],
 ) -> None:
-    schema_instance = schema_builder.create_schema_model(
+    schema = schema_builder.create_schema_model(
         list(valid_node_types), list(valid_relationship_types), list(valid_patterns)
     )
 
-    assert schema_instance.node_types == valid_node_types
-    assert schema_instance.relationship_types == valid_relationship_types
-    assert schema_instance.patterns == valid_patterns
+    assert schema.node_types == valid_node_types
+    assert schema.relationship_types == valid_relationship_types
+    assert schema.patterns == valid_patterns
+    assert schema.additional_node_types is True
+    assert schema.additional_relationship_types is True
+    assert schema.additional_patterns is True
 
 
 @pytest.mark.asyncio
@@ -138,13 +197,25 @@ async def test_run_method(
     valid_relationship_types: Tuple[RelationshipType, ...],
     valid_patterns: Tuple[Tuple[str, str, str], ...],
 ) -> None:
-    schema = await schema_builder.run(
-        list(valid_node_types), list(valid_relationship_types), list(valid_patterns)
-    )
+    with patch.object(
+        schema_builder,
+        "create_schema_model",
+        return_value=GraphSchema(
+            node_types=valid_node_types,
+            relationship_types=valid_relationship_types,
+            patterns=valid_patterns,
+        ),
+    ):
+        schema = await schema_builder.run(
+            list(valid_node_types), list(valid_relationship_types), list(valid_patterns)
+        )
 
     assert schema.node_types == valid_node_types
     assert schema.relationship_types == valid_relationship_types
     assert schema.patterns == valid_patterns
+    assert schema.additional_node_types is True
+    assert schema.additional_relationship_types is True
+    assert schema.additional_patterns is True
 
 
 def test_create_schema_model_invalid_entity(
@@ -159,7 +230,7 @@ def test_create_schema_model_invalid_entity(
             list(valid_relationship_types),
             list(patterns_with_invalid_entity),
         )
-    assert "Entity 'NON_EXISTENT_ENTITY' is not defined" in str(
+    assert "Node type 'NON_EXISTENT_ENTITY' is not defined" in str(
         exc_info.value
     ), "Should fail due to non-existent entity"
 
@@ -176,7 +247,7 @@ def test_create_schema_model_invalid_relation(
             list(valid_relationship_types),
             list(patterns_with_invalid_relation),
         )
-    assert "Relation 'NON_EXISTENT_RELATION' is not defined" in str(
+    assert "Relationship type 'NON_EXISTENT_RELATION' is not defined" in str(
         exc_info.value
     ), "Should fail due to non-existent relation"
 
@@ -191,7 +262,7 @@ def test_create_schema_model_no_potential_schema(
     )
     assert schema_instance.node_types == valid_node_types
     assert schema_instance.relationship_types == valid_relationship_types
-    assert schema_instance.patterns is None
+    assert schema_instance.patterns == ()
 
 
 def test_create_schema_model_no_relations_or_potential_schema(
@@ -206,14 +277,17 @@ def test_create_schema_model_no_relations_or_potential_schema(
     assert person is not None
     assert person.description == "An individual human being."
     assert len(person.properties) == 2
+    assert person.additional_properties is False
 
     org = schema_instance.node_type_from_label("ORGANIZATION")
     assert org is not None
     assert org.description == "A structured group of people with a common purpose."
+    assert org.additional_properties is True
 
     age = schema_instance.node_type_from_label("AGE")
     assert age is not None
     assert age.description == "Age of a person in years."
+    assert age.additional_properties is True
 
 
 def test_create_schema_model_missing_relations(
@@ -225,7 +299,7 @@ def test_create_schema_model_missing_relations(
         schema_builder.create_schema_model(
             node_types=valid_node_types, patterns=valid_patterns
         )
-    assert "Relations must also be provided when using a potential schema." in str(
+    assert "Relationship types must also be provided when using patterns." in str(
         exc_info.value
     ), "Should fail due to missing relations"
 
