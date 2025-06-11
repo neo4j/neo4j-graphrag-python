@@ -69,7 +69,7 @@ class PruningStats(BaseModel):
     def number_of_pruned_properties(self) -> int:
         return len(self.pruned_properties)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"PruningStats: nodes: {self.number_of_pruned_nodes}, "
             f"relationships: {self.number_of_pruned_relationships}, "
