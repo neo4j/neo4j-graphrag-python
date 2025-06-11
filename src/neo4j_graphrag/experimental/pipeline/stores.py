@@ -91,19 +91,23 @@ class ResultStore(Store, abc.ABC):
         return await self.get(self.get_key(run_id, task_name))
 
     @abc.abstractmethod
-    def dump(self) -> dict[str, Any]:
-        """Dump the store state to a serializable dictionary.
+    def dump(self, run_id: str) -> dict[str, Any]:
+        """Dump the store state for a specific run_id to a serializable dictionary.
+
+        Args:
+            run_id (str): The run_id to dump data for
 
         Returns:
-            dict[str, Any]: A serializable dictionary containing the store state
+            dict[str, Any]: A serializable dictionary containing the store state for the run_id
         """
         pass
 
     @abc.abstractmethod
-    def load(self, state: dict[str, Any]) -> None:
-        """Load the store state from a serializable dictionary.
+    def load(self, run_id: str, state: dict[str, Any]) -> None:
+        """Load the store state for a specific run_id from a serializable dictionary.
 
         Args:
+            run_id (str): The run_id to load data for
             state (dict[str, Any]): A serializable dictionary containing the store state
         """
         pass
@@ -134,18 +138,38 @@ class InMemoryStore(ResultStore):
     def empty(self) -> None:
         self._data = {}
 
-    def dump(self) -> dict[str, Any]:
-        """Dump the store state to a serializable dictionary.
-
-        Returns:
-            dict[str, Any]: A serializable dictionary containing the store state
-        """
-        return self._data.copy()
-
-    def load(self, state: dict[str, Any]) -> None:
-        """Load the store state from a serializable dictionary.
+    def dump(self, run_id: str) -> dict[str, Any]:
+        """Dump the store state for a specific run_id to a serializable dictionary.
 
         Args:
+            run_id (str): The run_id to dump data for
+
+        Returns:
+            dict[str, Any]: A serializable dictionary containing the store state for the run_id
+        """
+        # filter data by run_id prefix
+        run_id_prefix = f"{run_id}:"
+        filtered_data = {
+            key: value
+            for key, value in self._data.items()
+            if key.startswith(run_id_prefix)
+        }
+        return filtered_data
+
+    def load(self, run_id: str, state: dict[str, Any]) -> None:
+        """Load the store state for a specific run_id from a serializable dictionary.
+
+        Args:
+            run_id (str): The run_id to load data for
             state (dict[str, Any]): A serializable dictionary containing the store state
         """
-        self._data = state.copy()
+        # clear existing data for this run_id first
+        run_id_prefix = f"{run_id}:"
+        keys_to_remove = [
+            key for key in self._data.keys() if key.startswith(run_id_prefix)
+        ]
+        for key in keys_to_remove:
+            del self._data[key]
+
+        # load the new state data
+        self._data.update(state)
