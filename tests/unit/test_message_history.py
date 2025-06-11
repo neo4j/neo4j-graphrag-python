@@ -95,3 +95,20 @@ def test_neo4j_message_history_messages_setter(driver: MagicMock) -> None:
         str(exc_info.value)
         == "Direct assignment to 'messages' is not allowed. Use the 'add_messages' instead."
     )
+
+
+def test_neo4j_message_history_messages_getter_custom_db(driver: MagicMock) -> None:
+    driver.execute_query.side_effect = [
+        MagicMock(records=[]),
+        MagicMock(
+            records=[{"result": {"data": {"content": "my message"}, "role": "user"}}]
+        ),
+    ]
+    message_history = Neo4jMessageHistory(
+        session_id="123", driver=driver, database="my_db"
+    )
+    messages = message_history.messages
+    assert len(messages) == 1
+    assert messages[0] == LLMMessage(content="my message", role="user")
+    for c in driver.execute_query.call_args_list:
+        assert c.kwargs["database_"] == "my_db"

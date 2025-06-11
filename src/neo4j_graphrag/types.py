@@ -302,6 +302,7 @@ class Neo4jMessageHistoryModel(BaseModel):
     session_id: Union[str, int]
     driver_model: Neo4jDriverModel
     window: Optional[PositiveInt] = None
+    database: Optional[str] = None
 
     @field_validator("session_id")
     def validate_session_id(cls, v: Union[str, int]) -> Union[str, int]:
