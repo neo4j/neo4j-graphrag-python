@@ -184,13 +184,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             return SchemaFromTextExtractor(llm=self.get_default_llm())
         return SchemaBuilder()
 
-    def _process_schema_with_precedence(
-        self,
-    ) -> Tuple[
-        Tuple[NodeType, ...],
-        Tuple[RelationshipType, ...] | None,
-        Optional[Tuple[Tuple[str, str, str], ...]] | None,
-    ]:
+    def _process_schema_with_precedence(self) -> GraphSchema:
         """
         Process schema inputs according to precedence rules:
         1. If schema is provided as GraphSchema object, use it
@@ -198,36 +192,16 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         3. Otherwise, use individual schema components
 
         Returns:
-            Tuple of (node_types, relationship_types, patterns)
+            A GraphSchema object
         """
         if self.schema_ is not None:
-            # schema takes precedence over individual components
-            node_types = self.schema_.node_types
+            return self.schema_
 
-            # handle case where relations could be None
-            if self.schema_.relationship_types is not None:
-                relationship_types = self.schema_.relationship_types
-            else:
-                relationship_types = None
-
-            patterns = self.schema_.patterns
-        else:
-            # use individual components
-            node_types = tuple(
-                [NodeType.model_validate(e) for e in self.entities]
-                if self.entities
-                else []
-            )
-            relationship_types = (
-                tuple([RelationshipType.model_validate(r) for r in self.relations])
-                if self.relations is not None
-                else None
-            )
-            patterns = (
-                tuple(self.potential_schema) if self.potential_schema else tuple()
-            )
-
-        return node_types, relationship_types, patterns
+        return GraphSchema(
+            node_types=tuple(self.entities) if self.entities else tuple(),
+            relationship_types=tuple(self.relations) if self.relations else tuple(),
+            patterns=tuple(self.potential_schema) if self.potential_schema else tuple(),
+        )
 
     def _get_run_params_for_schema(self) -> dict[str, Any]:
         if not self.has_user_provided_schema():
@@ -235,15 +209,8 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             return {}
         else:
             # process schema components according to precedence rules
-            node_types, relationship_types, patterns = (
-                self._process_schema_with_precedence()
-            )
-
-            return {
-                "node_types": node_types,
-                "relationship_types": relationship_types,
-                "patterns": patterns,
-            }
+            schema = self._process_schema_with_precedence()
+            return schema.model_dump()
 
     def _get_extractor(self) -> EntityRelationExtractor:
         return LLMEntityRelationExtractor(
@@ -368,7 +335,13 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         run_params = {}
         if self.lexical_graph_config:
             run_params["extractor"] = {
-                "lexical_graph_config": self.lexical_graph_config
+                "lexical_graph_config": self.lexical_graph_config,
+            }
+            run_params["writer"] = {
+                "lexical_graph_config": self.lexical_graph_config,
+            }
+            run_params["pruner"] = {
+                "lexical_graph_config": self.lexical_graph_config,
             }
         text = user_input.get("text")
         file_path = user_input.get("file_path")
