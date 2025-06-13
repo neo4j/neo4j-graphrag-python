@@ -140,7 +140,6 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         }
         """
         self.missing_inputs: dict[str, list[str]] = defaultdict()
-        self._current_run_id: Optional[str] = None
 
     @classmethod
     def from_template(
@@ -440,7 +439,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
             set[str]: Set of component names that need validation
         """
         if from_ is None:
-            # no from_ specified, validate all components 
+            # no from_ specified, validate all components
             return set(self._nodes.keys())
 
         # when from_ is specified, only validate components that will actually execute
@@ -629,13 +628,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         self.validate_input_data(data, from_)
 
         # create orchestrator with appropriate start_from and stop_after params
-        # if current run_id exists (from loaded state), use it to continue the same run
-        orchestrator = Orchestrator(
-            self, stop_after=until, start_from=from_, run_id=self._current_run_id
-        )
-
-        # Track the current run_id
-        self._current_run_id = orchestrator.run_id
+        orchestrator = Orchestrator(self, stop_after=until, start_from=from_)
 
         logger.debug(f"PIPELINE ORCHESTRATOR: {orchestrator.run_id}")
         await orchestrator.run(data)
@@ -650,23 +643,24 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
             result=await self.get_final_results(orchestrator.run_id),
         )
 
-    def dump_state(self) -> Dict[str, Any]:
+    def dump_state(self, run_id: str) -> Dict[str, Any]:
         """Dump the current state of the pipeline to a serializable dictionary.
+
+        Args:
+            run_id (str): The run_id to dump state for
 
         Returns:
             Dict[str, Any]: A serializable dictionary containing the pipeline state
 
         Raises:
-            ValueError: If no pipeline run has been executed yet
+            ValueError: If run_id is None or empty
         """
-        if self._current_run_id is None:
-            raise ValueError(
-                "No pipeline run has been executed yet. Cannot dump state without a run_id."
-            )
+        if not run_id:
+            raise ValueError("run_id cannot be None or empty")
 
         pipeline_state: Dict[str, Any] = {
-            "run_id": self._current_run_id,
-            "store": self.store.dump(self._current_run_id),
+            "run_id": run_id,
+            "store": self.store.dump(run_id),
         }
         return pipeline_state
 
@@ -686,13 +680,6 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
 
         # validate pipeline compatibility
         self._validate_state_compatibility(state)
-
-        # set the current run_id
-        self._current_run_id = run_id
-
-        # load pipeline state attributes
-        if "is_validated" in state:
-            self.is_validated = state["is_validated"]
 
         # load store data
         if "store" in state:
