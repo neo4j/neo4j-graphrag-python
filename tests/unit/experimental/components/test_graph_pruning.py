@@ -39,7 +39,9 @@ from neo4j_graphrag.experimental.components.types import (
 
 @pytest.fixture(scope="module")
 def lexical_graph_config() -> LexicalGraphConfig:
-    return LexicalGraphConfig()
+    return LexicalGraphConfig(
+        chunk_node_label="Paragraph",
+    )
 
 
 @pytest.mark.parametrize(
@@ -163,6 +165,20 @@ def test_graph_pruning_validate_node(
         assert result == expected_node
     else:
         assert result is None
+
+
+def test_graph_pruning_enforce_nodes_lexical_graph(lexical_graph_config: LexicalGraphConfig) -> None:
+    pruner = GraphPruning()
+    result = pruner._enforce_nodes(
+        extracted_nodes=[
+            Neo4jNode(id="1", label="Paragraph"),
+        ],
+        schema=GraphSchema(additional_node_types=False),
+        lexical_graph_config=lexical_graph_config,
+        pruning_stats=PruningStats(),
+    )
+    assert len(result) == 1
+    assert result[0].label == "Paragraph"
 
 
 @pytest.fixture
