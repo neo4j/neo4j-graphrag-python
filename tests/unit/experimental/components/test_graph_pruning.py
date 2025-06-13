@@ -33,7 +33,13 @@ from neo4j_graphrag.experimental.components.types import (
     Neo4jNode,
     Neo4jRelationship,
     Neo4jGraph,
+    LexicalGraphConfig,
 )
+
+
+@pytest.fixture(scope="module")
+def lexical_graph_config() -> LexicalGraphConfig:
+    return LexicalGraphConfig()
 
 
 @pytest.mark.parametrize(
@@ -336,6 +342,7 @@ def test_graph_pruning_validate_relationship(
 async def test_graph_pruning_run_happy_path(
     mock_clean_graph: Mock,
     node_type_required_name: NodeType,
+    lexical_graph_config: LexicalGraphConfig,
 ) -> None:
     initial_graph = Neo4jGraph(
         nodes=[Neo4jNode(id="1", label="Person"), Neo4jNode(id="2", label="Location")],
@@ -347,10 +354,13 @@ async def test_graph_pruning_run_happy_path(
     pruner_result = await pruner.run(
         graph=initial_graph,
         schema=schema,
+        lexical_graph_config=lexical_graph_config,
     )
     assert isinstance(pruner_result, GraphPruningResult)
     assert pruner_result.graph == cleaned_graph
-    mock_clean_graph.assert_called_once_with(initial_graph, schema)
+    mock_clean_graph.assert_called_once_with(
+        initial_graph, schema, lexical_graph_config
+    )
 
 
 @pytest.mark.asyncio
@@ -370,16 +380,20 @@ async def test_graph_pruning_run_no_schema() -> None:
 )
 def test_graph_pruning_clean_graph(
     mock_enforce_nodes: Mock,
+    lexical_graph_config: LexicalGraphConfig,
 ) -> None:
     mock_enforce_nodes.return_value = []
     initial_graph = Neo4jGraph(nodes=[Neo4jNode(id="1", label="Person")])
     schema = GraphSchema(node_types=())
     pruner = GraphPruning()
-    cleaned_graph, pruning_stats = pruner._clean_graph(initial_graph, schema)
+    cleaned_graph, pruning_stats = pruner._clean_graph(
+        initial_graph, schema, lexical_graph_config
+    )
     assert cleaned_graph == Neo4jGraph()
     assert isinstance(pruning_stats, PruningStats)
     mock_enforce_nodes.assert_called_once_with(
         [Neo4jNode(id="1", label="Person")],
         schema,
+        lexical_graph_config,
         ANY,
     )

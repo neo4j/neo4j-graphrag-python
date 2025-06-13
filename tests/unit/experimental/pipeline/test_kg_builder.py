@@ -118,9 +118,6 @@ async def test_knowledge_graph_builder_with_entities_and_file(_: Mock) -> None:
 
     file_path = "path/to/test.pdf"
 
-    internal_node_types = [NodeType(label=label) for label in entities]
-    internal_relationship_types = [RelationshipType(label=label) for label in relations]
-
     with patch.object(
         kg_builder.runner.pipeline,
         "run",
@@ -128,11 +125,9 @@ async def test_knowledge_graph_builder_with_entities_and_file(_: Mock) -> None:
     ) as mock_run:
         await kg_builder.run_async(file_path=file_path)
         pipe_inputs = mock_run.call_args[1]["data"]
-        assert pipe_inputs["schema"]["node_types"] == tuple(internal_node_types)
-        assert pipe_inputs["schema"]["relationship_types"] == tuple(
-            internal_relationship_types
-        )
-        assert pipe_inputs["schema"]["patterns"] == tuple(potential_schema)
+        assert pipe_inputs["schema"]["node_types"] == entities
+        assert pipe_inputs["schema"]["relationship_types"] == relations
+        assert pipe_inputs["schema"]["patterns"] == potential_schema
 
 
 def test_simple_kg_pipeline_on_error_invalid_value() -> None:
