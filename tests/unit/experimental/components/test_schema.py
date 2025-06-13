@@ -39,6 +39,13 @@ from neo4j_graphrag.llm.types import LLMResponse
 from neo4j_graphrag.utils.file_handler import FileFormat
 
 
+def test_node_type_initialization_from_string() -> None:
+    node_type = NodeType.model_validate("Label")
+    assert isinstance(node_type, NodeType)
+    assert node_type.label == "Label"
+    assert node_type.properties == []
+
+
 def test_node_type_raise_error_if_misconfigured() -> None:
     with pytest.raises(ValidationError):
         NodeType(
@@ -46,6 +53,13 @@ def test_node_type_raise_error_if_misconfigured() -> None:
             properties=[],
             additional_properties=False,
         )
+
+
+def test_relationship_type_initialization_from_string() -> None:
+    relationship_type = RelationshipType.model_validate("REL")
+    assert isinstance(relationship_type, RelationshipType)
+    assert relationship_type.label == "REL"
+    assert relationship_type.properties == []
 
 
 def test_relationship_type_raise_error_if_misconfigured() -> None:

@@ -56,20 +56,29 @@ class SimpleKGPipeline:
         llm (LLMInterface): An instance of an LLM to use for entity and relation extraction.
         driver (neo4j.Driver): A Neo4j driver instance for database connection.
         embedder (Embedder): An instance of an embedder used to generate chunk embeddings from text chunks.
-        schema (Optional[Union[GraphSchema, dict[str, list]]]): A schema configuration defining entities,
-                                                   relations, and potential schema relationships.
-                                                   This is the recommended way to provide schema information.
+        schema (Optional[Union[GraphSchema, dict[str, list]]]): A schema configuration defining node types,
+                                                                relationship types, and graph patterns.
         entities (Optional[List[Union[str, dict[str, str], NodeType]]]): DEPRECATED. A list of either:
 
             - str: entity labels
             - dict: following the NodeType schema, ie with label, description and properties keys
+
+            .. deprecated:: 1.7.1
+                Use schema instead
 
         relations (Optional[List[Union[str, dict[str, str], RelationshipType]]]): DEPRECATED. A list of either:
 
             - str: relation label
             - dict: following the RelationshipType schema, ie with label, description and properties keys
 
+            .. deprecated:: 1.7.1
+                Use schema instead
+
         potential_schema (Optional[List[tuple]]): DEPRECATED. A list of potential schema relationships.
+
+            .. deprecated:: 1.7.1
+                Use schema instead
+
         from_pdf (bool): Determines whether to include the PdfLoader in the pipeline.
                          If True, expects `file_path` input in `run` methods.
                          If False, expects `text` input in `run` methods.
