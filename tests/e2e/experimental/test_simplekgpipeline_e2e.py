@@ -128,9 +128,7 @@ async def test_pipeline_builder_happy_path_legacy_schema(
 
     # check the content of the graph:
     # check lexical graph content
-    records, _, _ = driver.execute_query(
-        "MATCH (start:chunkNodeLabel) RETURN start"
-    )
+    records, _, _ = driver.execute_query("MATCH (start:chunkNodeLabel) RETURN start")
     assert len(records) == 1
 
     # check entity -> chunk relationships
@@ -162,8 +160,8 @@ async def test_pipeline_builder_happy_path(
 
     # Instantiate schema
     entities = ["Person"]
-    relations = []
-    potential_schema = []
+    relations: list[str] = []
+    potential_schema: list[tuple[str, str, str]] = []
     schema = {
         "node_types": entities,
         "relationship_types": relations,
@@ -181,7 +179,7 @@ async def test_pipeline_builder_happy_path(
         llm=llm,
         driver=driver,
         embedder=embedder,
-        schema=schema,
+        schema=schema,  # type: ignore[arg-type]
         from_pdf=from_pdf,
         on_error=on_error,
         lexical_graph_config=lexical_graph_config,
@@ -192,9 +190,7 @@ async def test_pipeline_builder_happy_path(
 
     # check the content of the graph:
     # check lexical graph content
-    records, _, _ = driver.execute_query(
-        "MATCH (start:chunkNodeLabel) RETURN start"
-    )
+    records, _, _ = driver.execute_query("MATCH (start:chunkNodeLabel) RETURN start")
     assert len(records) == 1
 
     # check entity -> chunk relationships
