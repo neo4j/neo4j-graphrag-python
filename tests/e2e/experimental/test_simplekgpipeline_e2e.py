@@ -34,22 +34,9 @@ def clear_db(driver: Driver) -> Any:
     yield
 
 
-@pytest.mark.asyncio
-@pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
-async def test_pipeline_builder_happy_path(
-    harry_potter_text: str,
-    llm: MagicMock,
-    embedder: MagicMock,
-    driver: neo4j.Driver,
-) -> None:
-    """When everything works as expected, extracted entities, relations and text
-    chunks must be in the DB
-    """
-    driver.execute_query("MATCH (n) DETACH DELETE n")
-    embedder.embed_query.return_value = [1, 2, 3]
-    llm.ainvoke.side_effect = [
-        LLMResponse(
-            content="""{
+@pytest.fixture(scope="module")
+def llm_json_response_3_nodes_2_relationships() -> str:
+    return """{
                         "nodes": [
                             {
                                 "id": "0",
@@ -86,8 +73,26 @@ async def test_pipeline_builder_happy_path(
                             }
                         ]
                     }"""
-        ),
-        LLMResponse(content='{"nodes": [], "relationships": []}'),
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
+async def test_pipeline_builder_happy_path_legacy_schema(
+    harry_potter_text: str,
+    llm: MagicMock,
+    embedder: MagicMock,
+    driver: neo4j.Driver,
+    llm_json_response_3_nodes_2_relationships: str,
+) -> None:
+    """When everything works as expected, extracted entities, relations and text
+    chunks must be in the DB
+    """
+    driver.execute_query("MATCH (n) DETACH DELETE n")
+    embedder.embed_query.return_value = [1, 2, 3]
+    llm.ainvoke.side_effect = [
+        LLMResponse(
+            content=llm_json_response_3_nodes_2_relationships,
+        )
     ]
 
     # Instantiate Entity and Relation objects
@@ -120,6 +125,83 @@ async def test_pipeline_builder_happy_path(
 
     # Run the knowledge graph building process with text input
     await kg_builder_text.run_async(text=harry_potter_text)
+
+    # check the content of the graph:
+    # check lexical graph content
+    records, _, _ = driver.execute_query(
+        "MATCH (start:chunkNodeLabel) RETURN start"
+    )
+    assert len(records) == 1
+
+    # check entity -> chunk relationships
+    records, _, _ = driver.execute_query(
+        "MATCH (chunk:chunkNodeLabel)<-[rel:FROM_CHUNK]-(entity:__Entity__) RETURN chunk, rel, entity"
+    )
+    assert len(records) == 3  # three entities according to mocked LLMResponse
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
+async def test_pipeline_builder_happy_path(
+    harry_potter_text: str,
+    llm: MagicMock,
+    embedder: MagicMock,
+    driver: neo4j.Driver,
+    llm_json_response_3_nodes_2_relationships: str,
+) -> None:
+    """When everything works as expected, extracted entities, relations and text
+    chunks must be in the DB
+    """
+    driver.execute_query("MATCH (n) DETACH DELETE n")
+    embedder.embed_query.return_value = [1, 2, 3]
+    llm.ainvoke.side_effect = [
+        LLMResponse(
+            content=llm_json_response_3_nodes_2_relationships,
+        )
+    ]
+
+    # Instantiate schema
+    entities = ["Person"]
+    relations = []
+    potential_schema = []
+    schema = {
+        "node_types": entities,
+        "relationship_types": relations,
+        "patterns": potential_schema,
+        "additional_node_types": False,
+    }
+
+    # Additional arguments
+    lexical_graph_config = LexicalGraphConfig(chunk_node_label="chunkNodeLabel")
+    from_pdf = False
+    on_error = "RAISE"
+
+    # Create an instance of the SimpleKGPipeline
+    kg_builder_text = SimpleKGPipeline(
+        llm=llm,
+        driver=driver,
+        embedder=embedder,
+        schema=schema,
+        from_pdf=from_pdf,
+        on_error=on_error,
+        lexical_graph_config=lexical_graph_config,
+    )
+
+    # Run the knowledge graph building process with text input
+    await kg_builder_text.run_async(text=harry_potter_text)
+
+    # check the content of the graph:
+    # check lexical graph content
+    records, _, _ = driver.execute_query(
+        "MATCH (start:chunkNodeLabel) RETURN start"
+    )
+    assert len(records) == 1
+
+    # check entity -> chunk relationships
+    records, _, _ = driver.execute_query(
+        "MATCH (chunk:chunkNodeLabel)<-[rel:FROM_CHUNK]-(entity:__Entity__) RETURN chunk, rel, entity"
+    )
+    assert len(records) == 2  # only two persons
 
 
 @pytest.mark.asyncio
