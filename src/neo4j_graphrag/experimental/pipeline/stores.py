@@ -163,13 +163,6 @@ class InMemoryStore(ResultStore):
             run_id (str): The run_id to load data for
             state (dict[str, Any]): A serializable dictionary containing the store state
         """
-        # clear existing data for this run_id first
-        run_id_prefix = f"{run_id}:"
-        keys_to_remove = [
-            key for key in self._data.keys() if key.startswith(run_id_prefix)
-        ]
-        for key in keys_to_remove:
-            del self._data[key]
-
-        # load the new state data
+        # add/update data without clearing - safer for concurrent access
+        # multiple pipelines can load the same state without interfering with each other
         self._data.update(state)
