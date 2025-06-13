@@ -4,6 +4,7 @@
 
 ### Added
 
+- Support for Python 3.13
 - Added support for automatic schema extraction from text using LLMs. In the `SimpleKGPipeline`, when the user provides no schema, the automatic schema extraction is enabled by default.
 - Added ability to return a user-defined message if context is empty in GraphRAG (which skips the LLM call).
 
