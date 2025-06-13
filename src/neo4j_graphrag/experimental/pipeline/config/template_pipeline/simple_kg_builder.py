@@ -21,7 +21,6 @@ from typing import (
     Optional,
     Sequence,
     Union,
-    Tuple,
 )
 import logging
 import warnings
@@ -45,8 +44,6 @@ from neo4j_graphrag.experimental.components.resolver import (
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
     GraphSchema,
-    NodeType,
-    RelationshipType,
     SchemaFromTextExtractor,
 )
 from neo4j_graphrag.experimental.components.text_splitters.base import TextSplitter
@@ -184,7 +181,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             return SchemaFromTextExtractor(llm=self.get_default_llm())
         return SchemaBuilder()
 
-    def _process_schema_with_precedence(self) -> GraphSchema:
+    def _process_schema_with_precedence(self) -> dict[str, Any]:
         """
         Process schema inputs according to precedence rules:
         1. If schema is provided as GraphSchema object, use it
@@ -192,15 +189,15 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         3. Otherwise, use individual schema components
 
         Returns:
-            A GraphSchema object
+            A dict representing the schema
         """
         if self.schema_ is not None:
-            return self.schema_
+            return self.schema_.model_dump()
 
-        return GraphSchema(
-            node_types=tuple(self.entities) if self.entities else tuple(),
-            relationship_types=tuple(self.relations) if self.relations else tuple(),
-            patterns=tuple(self.potential_schema) if self.potential_schema else tuple(),
+        return dict(
+            node_types=self.entities,
+            relationship_types=self.relations,
+            patterns=self.potential_schema,
         )
 
     def _get_run_params_for_schema(self) -> dict[str, Any]:
@@ -209,8 +206,8 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             return {}
         else:
             # process schema components according to precedence rules
-            schema = self._process_schema_with_precedence()
-            return schema.model_dump()
+            schema_dict = self._process_schema_with_precedence()
+            return schema_dict
 
     def _get_extractor(self) -> EntityRelationExtractor:
         return LLMEntityRelationExtractor(
