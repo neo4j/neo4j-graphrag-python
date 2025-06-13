@@ -63,11 +63,10 @@ class Orchestrator:
         pipeline: Pipeline,
         stop_after: Optional[str] = None,
         start_from: Optional[str] = None,
-        run_id: Optional[str] = None,
     ):
         self.pipeline = pipeline
         self.event_notifier = EventNotifier(pipeline.callbacks)
-        self.run_id = run_id or str(uuid.uuid4())
+        self.run_id = str(uuid.uuid4())
         self.stop_after = stop_after
         self.start_from = start_from
 
@@ -288,6 +287,7 @@ class Orchestrator:
             start_nodes = [self.pipeline.get_node_by_name(self.start_from)]
         else:
             start_nodes = self.pipeline.roots()
+
         tasks = [self.run_task(root, data) for root in start_nodes]
         await asyncio.gather(*tasks)
         await self.event_notifier.notify_pipeline_finished(
