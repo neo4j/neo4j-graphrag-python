@@ -167,13 +167,15 @@ def test_graph_pruning_validate_node(
         assert result is None
 
 
-def test_graph_pruning_enforce_nodes_lexical_graph(lexical_graph_config: LexicalGraphConfig) -> None:
+def test_graph_pruning_enforce_nodes_lexical_graph(
+    lexical_graph_config: LexicalGraphConfig,
+) -> None:
     pruner = GraphPruning()
     result = pruner._enforce_nodes(
         extracted_nodes=[
             Neo4jNode(id="1", label="Paragraph"),
         ],
-        schema=GraphSchema(additional_node_types=False),
+        schema=GraphSchema(node_types=tuple(), additional_node_types=False),
         lexical_graph_config=lexical_graph_config,
         pruning_stats=PruningStats(),
     )

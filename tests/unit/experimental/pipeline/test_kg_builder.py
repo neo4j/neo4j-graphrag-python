@@ -18,10 +18,6 @@ from unittest.mock import MagicMock, Mock, patch
 import neo4j
 import pytest
 from neo4j_graphrag.embeddings import Embedder
-from neo4j_graphrag.experimental.components.schema import (
-    NodeType,
-    RelationshipType,
-)
 from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
