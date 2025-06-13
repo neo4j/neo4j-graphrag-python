@@ -18,7 +18,7 @@ import logging
 import warnings
 from collections import defaultdict
 from timeit import default_timer
-from typing import Any, Optional, AsyncGenerator
+from typing import Any, Optional, AsyncGenerator, Dict
 import asyncio
 
 from neo4j_graphrag.utils.logging import prettify
@@ -390,7 +390,9 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
             self.validate_parameter_mapping_for_task(task)
         self.is_validated = True
 
-    def validate_input_data(self, data: dict[str, Any]) -> bool:
+    def validate_input_data(
+        self, data: dict[str, Any], from_: Optional[str] = None
+    ) -> bool:
         """Performs parameter and data validation before running the pipeline:
         - Check parameters defined in the connect method
         - Make sure the missing parameters are present in the input `data` dict.
@@ -398,6 +400,8 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         Args:
             data (dict[str, Any]): input data to use for validation
                 (usually from Pipeline.run)
+            from_ (Optional[str]): If provided, only validate components that will actually execute
+                starting from this component
 
         Raises:
             PipelineDefinitionError if any parameter mapping is invalid or if a
@@ -405,7 +409,15 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         """
         if not self.is_validated:
             self.validate_parameter_mapping()
+
+        # determine which components need validation
+        components_to_validate = self._get_components_to_validate(from_)
+
         for task in self._nodes.values():
+            # skip validation for components that won't execute
+            if task.name not in components_to_validate:
+                continue
+
             if task.name not in self.param_mapping:
                 self.validate_parameter_mapping_for_task(task)
             missing_params = self.missing_inputs[task.name]
@@ -416,6 +428,37 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                         f"Parameter '{param}' not provided for component '{task.name}'"
                     )
         return True
+
+    def _get_components_to_validate(self, from_: Optional[str] = None) -> set[str]:
+        """Determine which components need validation based on execution context.
+
+        Args:
+            from_ (Optional[str]): Starting component for execution
+
+        Returns:
+            set[str]: Set of component names that need validation
+        """
+        if from_ is None:
+            # no from_ specified, validate all components
+            return set(self._nodes.keys())
+
+        # when from_ is specified, only validate components that will actually execute
+        # this includes the from_ component and all its downstream dependencies
+        components_to_validate = set()
+
+        def add_downstream_components(component_name: str) -> None:
+            """Recursively add a component and all its downstream dependencies"""
+            if component_name in components_to_validate:
+                return  # Already processed
+            components_to_validate.add(component_name)
+
+            # add all components that depend on this one
+            for edge in self.next_edges(component_name):
+                add_downstream_components(edge.end)
+
+        # start from the specified component and add all downstream
+        add_downstream_components(from_)
+        return components_to_validate
 
     def validate_parameter_mapping_for_task(self, task: TaskPipelineNode) -> bool:
         """Make sure that all the parameter mapping for a given task are valid.
@@ -563,19 +606,122 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
             if event_queue_getter_task and not event_queue_getter_task.done():
                 event_queue_getter_task.cancel()
 
-    async def run(self, data: dict[str, Any]) -> PipelineResult:
+    async def run(
+        self,
+        data: dict[str, Any],
+        from_: Optional[str] = None,
+        until: Optional[str] = None,
+    ) -> PipelineResult:
+        """Run the pipeline, optionally from a specific component or until a specific component.
+
+        Args:
+            data (dict[str, Any]): The input data for the pipeline
+            from_ (str | None, optional): If provided, start execution from this component. Defaults to None.
+            until (str | None, optional): If provided, stop execution after this component. Defaults to None.
+
+        Returns:
+            PipelineResult: The result of the pipeline execution
+        """
         logger.debug("PIPELINE START")
         start_time = default_timer()
         self.invalidate()
-        self.validate_input_data(data)
-        orchestrator = Orchestrator(self)
+        self.validate_input_data(data, from_)
+
+        # create orchestrator with appropriate start_from and stop_after params
+        orchestrator = Orchestrator(self, stop_after=until, start_from=from_)
+
         logger.debug(f"PIPELINE ORCHESTRATOR: {orchestrator.run_id}")
         await orchestrator.run(data)
+
         end_time = default_timer()
         logger.debug(
             f"PIPELINE FINISHED {orchestrator.run_id} in {end_time - start_time}s"
         )
+
         return PipelineResult(
             run_id=orchestrator.run_id,
             result=await self.get_final_results(orchestrator.run_id),
         )
+
+    def dump_state(self, run_id: str) -> Dict[str, Any]:
+        """Dump the current state of the pipeline to a serializable dictionary.
+
+        Args:
+            run_id (str): The run_id to dump state for
+
+        Returns:
+            Dict[str, Any]: A serializable dictionary containing the pipeline state
+
+        Raises:
+            ValueError: If run_id is None or empty
+        """
+        if not run_id:
+            raise ValueError("run_id cannot be None or empty")
+
+        pipeline_state: Dict[str, Any] = {
+            "run_id": run_id,
+            "store": self.store.dump(run_id),
+        }
+        return pipeline_state
+
+    def load_state(self, state: Dict[str, Any]) -> None:
+        """Load pipeline state from a serialized dictionary.
+
+        Args:
+            state (dict[str, Any]): Previously serialized pipeline state
+
+        Raises:
+            ValueError: If the state is invalid or incompatible with current pipeline
+        """
+        if "run_id" not in state:
+            raise ValueError("Invalid state: missing run_id")
+
+        run_id = state["run_id"]
+
+        # validate pipeline compatibility
+        self._validate_state_compatibility(state)
+
+        # load store data
+        if "store" in state:
+            self.store.load(run_id, state["store"])
+
+    def _validate_state_compatibility(self, state: Dict[str, Any]) -> None:
+        """Validate that the loaded state is compatible with the current pipeline.
+
+        This checks that the components defined in the pipeline match those
+        that were present when the state was saved.
+
+        Args:
+            state (dict[str, Any]): The state to validate
+
+        Raises:
+            ValueError: If the state is incompatible with the current pipeline
+        """
+        if "store" not in state:
+            return  # no store data to validate
+
+        store_data = state["store"]
+        if not store_data:
+            return  # empty store, nothing to validate
+
+        # extract component names from the store keys
+        # keys are in format: "run_id:component_name" or "run_id:component_name:suffix"
+        stored_components = set()
+        for key in store_data.keys():
+            parts = key.split(":")
+            if len(parts) >= 2:
+                component_name = parts[1]
+                stored_components.add(component_name)
+
+        # get current pipeline component names
+        current_components = set(self._nodes.keys())
+
+        # check if stored components are a subset of current components
+        # this allows for the pipeline to have additional components, but not missing ones
+        missing_components = stored_components - current_components
+        if missing_components:
+            raise ValueError(
+                f"State is incompatible with current pipeline. "
+                f"Missing components: {sorted(missing_components)}. "
+                f"Current pipeline components: {sorted(current_components)}"
+            )

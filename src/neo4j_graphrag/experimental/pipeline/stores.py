@@ -90,6 +90,28 @@ class ResultStore(Store, abc.ABC):
     async def get_result_for_component(self, run_id: str, task_name: str) -> Any:
         return await self.get(self.get_key(run_id, task_name))
 
+    @abc.abstractmethod
+    def dump(self, run_id: str) -> dict[str, Any]:
+        """Dump the store state for a specific run_id to a serializable dictionary.
+
+        Args:
+            run_id (str): The run_id to dump data for
+
+        Returns:
+            dict[str, Any]: A serializable dictionary containing the store state for the run_id
+        """
+        pass
+
+    @abc.abstractmethod
+    def load(self, run_id: str, state: dict[str, Any]) -> None:
+        """Load the store state for a specific run_id from a serializable dictionary.
+
+        Args:
+            run_id (str): The run_id to load data for
+            state (dict[str, Any]): A serializable dictionary containing the store state
+        """
+        pass
+
 
 class InMemoryStore(ResultStore):
     """Simple in-memory store.
@@ -115,3 +137,32 @@ class InMemoryStore(ResultStore):
 
     def empty(self) -> None:
         self._data = {}
+
+    def dump(self, run_id: str) -> dict[str, Any]:
+        """Dump the store state for a specific run_id to a serializable dictionary.
+
+        Args:
+            run_id (str): The run_id to dump data for
+
+        Returns:
+            dict[str, Any]: A serializable dictionary containing the store state for the run_id
+        """
+        # filter data by run_id prefix
+        run_id_prefix = f"{run_id}:"
+        filtered_data = {
+            key: value
+            for key, value in self._data.items()
+            if key.startswith(run_id_prefix)
+        }
+        return filtered_data
+
+    def load(self, run_id: str, state: dict[str, Any]) -> None:
+        """Load the store state for a specific run_id from a serializable dictionary.
+
+        Args:
+            run_id (str): The run_id to load data for
+            state (dict[str, Any]): A serializable dictionary containing the store state
+        """
+        # add/update data without clearing - safer for concurrent access
+        # multiple pipelines can load the same state without interfering with each other
+        self._data.update(state)
