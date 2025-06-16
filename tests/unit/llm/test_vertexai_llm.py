@@ -14,7 +14,7 @@
 from __future__ import annotations
 
 from typing import cast
-from unittest.mock import AsyncMock, MagicMock, Mock, patch, ANY
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
@@ -26,7 +26,6 @@ from vertexai.generative_models import (
     Content,
     GenerationResponse,
     Part,
-    ToolConfig,
 )
 
 
