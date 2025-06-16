@@ -611,6 +611,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         data: dict[str, Any],
         from_: Optional[str] = None,
         until: Optional[str] = None,
+        previous_run_id: Optional[str] = None,
     ) -> PipelineResult:
         """Run the pipeline, optionally from a specific component or until a specific component.
 
@@ -618,6 +619,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
             data (dict[str, Any]): The input data for the pipeline
             from_ (str | None, optional): If provided, start execution from this component. Defaults to None.
             until (str | None, optional): If provided, stop execution after this component. Defaults to None.
+            previous_run_id (str | None, optional): If provided, resume from this previous run_id. Defaults to None.
 
         Returns:
             PipelineResult: The result of the pipeline execution
@@ -628,7 +630,9 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         self.validate_input_data(data, from_)
 
         # create orchestrator with appropriate start_from and stop_after params
-        orchestrator = Orchestrator(self, stop_after=until, start_from=from_)
+        orchestrator = Orchestrator(
+            self, stop_after=until, start_from=from_, previous_run_id=previous_run_id
+        )
 
         logger.debug(f"PIPELINE ORCHESTRATOR: {orchestrator.run_id}")
         await orchestrator.run(data)
@@ -664,11 +668,14 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         }
         return pipeline_state
 
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def load_state(self, state: Dict[str, Any]) -> str:
         """Load pipeline state from a serialized dictionary.
 
         Args:
             state (dict[str, Any]): Previously serialized pipeline state
+
+        Returns:
+            str: The run_id from the loaded state
 
         Raises:
             ValueError: If the state is invalid or incompatible with current pipeline
@@ -676,14 +683,16 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         if "run_id" not in state:
             raise ValueError("Invalid state: missing run_id")
 
-        run_id = state["run_id"]
+        run_id: str = state["run_id"]
 
         # validate pipeline compatibility
         self._validate_state_compatibility(state)
 
         # load store data
         if "store" in state:
-            self.store.load(run_id, state["store"])
+            self.store.load(state["store"])
+
+        return run_id
 
     def _validate_state_compatibility(self, state: Dict[str, Any]) -> None:
         """Validate that the loaded state is compatible with the current pipeline.

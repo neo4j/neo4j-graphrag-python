@@ -63,10 +63,12 @@ class Orchestrator:
         pipeline: Pipeline,
         stop_after: Optional[str] = None,
         start_from: Optional[str] = None,
+        previous_run_id: Optional[str] = None,
     ):
         self.pipeline = pipeline
         self.event_notifier = EventNotifier(pipeline.callbacks)
         self.run_id = str(uuid.uuid4())
+        self.previous_run_id = previous_run_id  # useful for pipeline resumption
         self.stop_after = stop_after
         self.start_from = start_from
 
@@ -268,10 +270,24 @@ class Orchestrator:
             )
 
     async def get_results_for_component(self, name: str) -> Any:
+        # when resuming, check previous run_id, otherwise check current run_id
+        if self.previous_run_id:
+            return await self.pipeline.store.get_result_for_component(
+                self.previous_run_id, name
+            )
         return await self.pipeline.store.get_result_for_component(self.run_id, name)
 
     async def get_status_for_component(self, name: str) -> RunStatus:
-        status = await self.pipeline.store.get_status_for_component(self.run_id, name)
+        # when resuming, check previous run_id, otherwise check current run_id
+        if self.previous_run_id:
+            status = await self.pipeline.store.get_status_for_component(
+                self.previous_run_id, name
+            )
+        else:
+            status = await self.pipeline.store.get_status_for_component(
+                self.run_id, name
+            )
+
         if status is None:
             return RunStatus.UNKNOWN
         return RunStatus(status)
