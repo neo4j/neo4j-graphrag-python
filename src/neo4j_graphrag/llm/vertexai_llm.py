@@ -256,7 +256,6 @@ class VertexAILLM(LLMInterface):
     ) -> GenerationResponse:
         model = self._get_model(system_instruction=system_instruction)
         options = self._get_call_params(input, message_history, tools)
-        print(options)
         response = model.generate_content(**options)
         return response
 
