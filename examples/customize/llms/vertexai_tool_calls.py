@@ -97,8 +97,13 @@ async def main() -> None:
     # Initialize the VertexAI LLM
     generation_config = GenerationConfig(temperature=0.0)
     llm = VertexAILLM(
-        model_name="gemini-1.5-flash-001",
+        model_name="gemini-2.0-flash-001",
         generation_config=generation_config,
+        # tool_config=ToolConfig(
+        #     function_calling_config=ToolConfig.FunctionCallingConfig(
+        #         mode=ToolConfig.FunctionCallingConfig.Mode.ANY,
+        #         # allowed_function_names=["extract_person_info"],
+        #     ))
     )
 
     # Example text containing information about a company

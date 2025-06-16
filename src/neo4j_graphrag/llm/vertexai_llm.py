@@ -40,6 +40,7 @@ try:
         Part,
         ResponseValidationError,
         Tool as VertexAITool,
+        ToolConfig,
     )
 except ImportError:
     GenerativeModel = None
@@ -139,16 +140,15 @@ class VertexAILLM(LLMInterface):
         """
         model = self._get_model(
             system_instruction=system_instruction,
-            tools=None,
         )
         try:
             if isinstance(message_history, MessageHistory):
                 message_history = message_history.messages
-            messages = self.get_messages(input, message_history)
-            response = model.generate_content(messages)
+            options = self._get_call_params(input, message_history, tools=None)
+            response = model.generate_content(**options)
             return self._parse_content_response(response)
         except ResponseValidationError as e:
-            raise LLMGenerationError("Error calling LLM") from e
+            raise LLMGenerationError("Error calling VertexAILLM") from e
 
     async def ainvoke(
         self,
@@ -172,13 +172,12 @@ class VertexAILLM(LLMInterface):
                 message_history = message_history.messages
             model = self._get_model(
                 system_instruction=system_instruction,
-                tools=None,
             )
-            messages = self.get_messages(input, message_history)
-            response = await model.generate_content_async(messages)
+            options = self._get_call_params(input, message_history, tools=None)
+            response = await model.generate_content_async(**options)
             return self._parse_content_response(response)
         except ResponseValidationError as e:
-            raise LLMGenerationError(e)
+            raise LLMGenerationError("Error calling VertexAILLM") from e
 
     def _to_vertexai_function_declaration(self, tool: Tool) -> FunctionDeclaration:
         return FunctionDeclaration(
@@ -203,24 +202,38 @@ class VertexAILLM(LLMInterface):
     def _get_model(
         self,
         system_instruction: Optional[str] = None,
-        tools: Optional[Sequence[Tool]] = None,
     ) -> GenerativeModel:
         system_message = [system_instruction] if system_instruction is not None else []
-        vertex_ai_tools = self._get_llm_tools(tools)
+        model = GenerativeModel(
+            model_name=self.model_name,
+            system_instruction=system_message,
+        )
+        return model
+
+    def _get_call_params(
+        self,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]],
+        tools: Optional[Sequence[Tool]],
+    ):
         options = dict(self.options)
         if tools:
             # we want a tool back, remove generation_config if defined
             options.pop("generation_config", None)
+            options["tools"] = self._get_llm_tools(tools)
+            if "tool_config" not in options:
+                options["tool_config"] = ToolConfig(
+                    function_calling_config=ToolConfig.FunctionCallingConfig(
+                        mode=ToolConfig.FunctionCallingConfig.Mode.ANY,
+                    )
+                )
         else:
             # no tools, remove tool_config if defined
             options.pop("tool_config", None)
-        model = GenerativeModel(
-            model_name=self.model_name,
-            system_instruction=system_message,
-            tools=vertex_ai_tools,
-            **options,
-        )
-        return model
+
+        messages = self.get_messages(input, message_history)
+        options["contents"] = messages
+        return options
 
     async def _acall_llm(
         self,
@@ -229,9 +242,9 @@ class VertexAILLM(LLMInterface):
         system_instruction: Optional[str] = None,
         tools: Optional[Sequence[Tool]] = None,
     ) -> GenerationResponse:
-        model = self._get_model(system_instruction=system_instruction, tools=tools)
-        messages = self.get_messages(input, message_history)
-        response = await model.generate_content_async(messages, **self.model_params)
+        model = self._get_model(system_instruction=system_instruction)
+        options = self._get_call_params(input, message_history, tools)
+        response = await model.generate_content_async(**options)
         return response
 
     def _call_llm(
@@ -241,9 +254,10 @@ class VertexAILLM(LLMInterface):
         system_instruction: Optional[str] = None,
         tools: Optional[Sequence[Tool]] = None,
     ) -> GenerationResponse:
-        model = self._get_model(system_instruction=system_instruction, tools=tools)
-        messages = self.get_messages(input, message_history)
-        response = model.generate_content(messages, **self.model_params)
+        model = self._get_model(system_instruction=system_instruction)
+        options = self._get_call_params(input, message_history, tools)
+        print(options)
+        response = model.generate_content(**options)
         return response
 
     def _to_tool_call(self, function_call: FunctionCall) -> ToolCall:
