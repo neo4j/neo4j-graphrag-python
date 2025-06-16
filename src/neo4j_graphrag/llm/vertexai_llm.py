@@ -40,6 +40,7 @@ try:
         Part,
         ResponseValidationError,
         Tool as VertexAITool,
+        ToolConfig,
     )
 except ImportError:
     GenerativeModel = None
@@ -137,20 +138,17 @@ class VertexAILLM(LLMInterface):
         Returns:
             LLMResponse: The response from the LLM.
         """
-        system_message = [system_instruction] if system_instruction is not None else []
-        self.model = GenerativeModel(
-            model_name=self.model_name,
-            system_instruction=system_message,
-            **self.options,
+        model = self._get_model(
+            system_instruction=system_instruction,
         )
         try:
             if isinstance(message_history, MessageHistory):
                 message_history = message_history.messages
-            messages = self.get_messages(input, message_history)
-            response = self.model.generate_content(messages, **self.model_params)
-            return LLMResponse(content=response.text)
+            options = self._get_call_params(input, message_history, tools=None)
+            response = model.generate_content(**options)
+            return self._parse_content_response(response)
         except ResponseValidationError as e:
-            raise LLMGenerationError(e)
+            raise LLMGenerationError("Error calling VertexAILLM") from e
 
     async def ainvoke(
         self,
@@ -172,31 +170,20 @@ class VertexAILLM(LLMInterface):
         try:
             if isinstance(message_history, MessageHistory):
                 message_history = message_history.messages
-            system_message = (
-                [system_instruction] if system_instruction is not None else []
+            model = self._get_model(
+                system_instruction=system_instruction,
             )
-            self.model = GenerativeModel(
-                model_name=self.model_name,
-                system_instruction=system_message,
-                **self.options,
-            )
-            messages = self.get_messages(input, message_history)
-            response = await self.model.generate_content_async(
-                messages, **self.model_params
-            )
-            return LLMResponse(content=response.text)
+            options = self._get_call_params(input, message_history, tools=None)
+            response = await model.generate_content_async(**options)
+            return self._parse_content_response(response)
         except ResponseValidationError as e:
-            raise LLMGenerationError(e)
+            raise LLMGenerationError("Error calling VertexAILLM") from e
 
-    def _to_vertexai_tool(self, tool: Tool) -> VertexAITool:
-        return VertexAITool(
-            function_declarations=[
-                FunctionDeclaration(
-                    name=tool.get_name(),
-                    description=tool.get_description(),
-                    parameters=tool.get_parameters(exclude=["additional_properties"]),
-                )
-            ]
+    def _to_vertexai_function_declaration(self, tool: Tool) -> FunctionDeclaration:
+        return FunctionDeclaration(
+            name=tool.get_name(),
+            description=tool.get_description(),
+            parameters=tool.get_parameters(exclude=["additional_properties"]),
         )
 
     def _get_llm_tools(
@@ -204,22 +191,49 @@ class VertexAILLM(LLMInterface):
     ) -> Optional[list[VertexAITool]]:
         if not tools:
             return None
-        return [self._to_vertexai_tool(tool) for tool in tools]
+        return [
+            VertexAITool(
+                function_declarations=[
+                    self._to_vertexai_function_declaration(tool) for tool in tools
+                ]
+            )
+        ]
 
     def _get_model(
         self,
         system_instruction: Optional[str] = None,
-        tools: Optional[Sequence[Tool]] = None,
     ) -> GenerativeModel:
         system_message = [system_instruction] if system_instruction is not None else []
-        vertex_ai_tools = self._get_llm_tools(tools)
         model = GenerativeModel(
             model_name=self.model_name,
             system_instruction=system_message,
-            tools=vertex_ai_tools,
-            **self.options,
         )
         return model
+
+    def _get_call_params(
+        self,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]],
+        tools: Optional[Sequence[Tool]],
+    ) -> dict[str, Any]:
+        options = dict(self.options)
+        if tools:
+            # we want a tool back, remove generation_config if defined
+            options.pop("generation_config", None)
+            options["tools"] = self._get_llm_tools(tools)
+            if "tool_config" not in options:
+                options["tool_config"] = ToolConfig(
+                    function_calling_config=ToolConfig.FunctionCallingConfig(
+                        mode=ToolConfig.FunctionCallingConfig.Mode.ANY,
+                    )
+                )
+        else:
+            # no tools, remove tool_config if defined
+            options.pop("tool_config", None)
+
+        messages = self.get_messages(input, message_history)
+        options["contents"] = messages
+        return options
 
     async def _acall_llm(
         self,
@@ -228,9 +242,9 @@ class VertexAILLM(LLMInterface):
         system_instruction: Optional[str] = None,
         tools: Optional[Sequence[Tool]] = None,
     ) -> GenerationResponse:
-        model = self._get_model(system_instruction=system_instruction, tools=tools)
-        messages = self.get_messages(input, message_history)
-        response = await model.generate_content_async(messages, **self.model_params)
+        model = self._get_model(system_instruction=system_instruction)
+        options = self._get_call_params(input, message_history, tools)
+        response = await model.generate_content_async(**options)
         return response
 
     def _call_llm(
@@ -240,9 +254,9 @@ class VertexAILLM(LLMInterface):
         system_instruction: Optional[str] = None,
         tools: Optional[Sequence[Tool]] = None,
     ) -> GenerationResponse:
-        model = self._get_model(system_instruction=system_instruction, tools=tools)
-        messages = self.get_messages(input, message_history)
-        response = model.generate_content(messages, **self.model_params)
+        model = self._get_model(system_instruction=system_instruction)
+        options = self._get_call_params(input, message_history, tools)
+        response = model.generate_content(**options)
         return response
 
     def _to_tool_call(self, function_call: FunctionCall) -> ToolCall:

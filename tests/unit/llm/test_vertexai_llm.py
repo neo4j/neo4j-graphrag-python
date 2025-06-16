@@ -14,7 +14,6 @@
 from __future__ import annotations
 
 from typing import cast
-from unittest import mock
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
@@ -50,19 +49,20 @@ def test_vertexai_invoke_happy_path(GenerativeModelMock: MagicMock) -> None:
     response = llm.invoke(input_text)
     assert response.content == "Return text"
     GenerativeModelMock.assert_called_once_with(
-        model_name=model_name, system_instruction=[]
+        model_name=model_name,
+        system_instruction=[],
     )
-    user_message = mock.ANY
-    llm.model.generate_content.assert_called_once_with(user_message, **model_params)
-    last_call = llm.model.generate_content.call_args_list[0]
-    content = last_call.args[0]
+    last_call = mock_model.generate_content.call_args_list[0]
+    content = last_call.kwargs["contents"]
     assert len(content) == 1
     assert content[0].role == "user"
     assert content[0].parts[0].text == input_text
 
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+@patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM.get_messages")
 def test_vertexai_invoke_with_system_instruction(
+    mock_get_messages: MagicMock,
     GenerativeModelMock: MagicMock,
 ) -> None:
     system_instruction = "You are a helpful assistant."
@@ -72,16 +72,21 @@ def test_vertexai_invoke_with_system_instruction(
     mock_response.text = "Return text"
     mock_model = GenerativeModelMock.return_value
     mock_model.generate_content.return_value = mock_response
+
+    mock_get_messages.return_value = [{"text": "some text"}]
+
     model_params = {"temperature": 0.5}
     llm = VertexAILLM(model_name, model_params)
 
     response = llm.invoke(input_text, system_instruction=system_instruction)
     assert response.content == "Return text"
     GenerativeModelMock.assert_called_once_with(
-        model_name=model_name, system_instruction=[system_instruction]
+        model_name=model_name,
+        system_instruction=[system_instruction],
     )
-    user_message = mock.ANY
-    llm.model.generate_content.assert_called_once_with(user_message, **model_params)
+    mock_model.generate_content.assert_called_once_with(
+        contents=[{"text": "some text"}]
+    )
 
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
@@ -110,12 +115,11 @@ def test_vertexai_invoke_with_message_history_and_system_instruction(
     )
     assert response.content == "Return text"
     GenerativeModelMock.assert_called_once_with(
-        model_name=model_name, system_instruction=[system_instruction]
+        model_name=model_name,
+        system_instruction=[system_instruction],
     )
-    user_message = mock.ANY
-    llm.model.generate_content.assert_called_once_with(user_message, **model_params)
-    last_call = llm.model.generate_content.call_args_list[0]
-    content = last_call.args[0]
+    last_call = mock_model.generate_content.call_args_list[0]
+    content = last_call.kwargs["contents"]
     assert len(content) == 3  # question + 2 messages in history
 
 
@@ -167,18 +171,22 @@ def test_vertexai_get_messages_validation_error(GenerativeModelMock: MagicMock) 
 
 @pytest.mark.asyncio
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
-async def test_vertexai_ainvoke_happy_path(GenerativeModelMock: MagicMock) -> None:
+@patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM.get_messages")
+async def test_vertexai_ainvoke_happy_path(
+    mock_get_messages: Mock, GenerativeModelMock: MagicMock
+) -> None:
     mock_response = AsyncMock()
     mock_response.text = "Return text"
     mock_model = GenerativeModelMock.return_value
     mock_model.generate_content_async = AsyncMock(return_value=mock_response)
+    mock_get_messages.return_value = [{"text": "Return text"}]
     model_params = {"temperature": 0.5}
     llm = VertexAILLM("gemini-1.5-flash-001", model_params)
     input_text = "may thy knife chip and shatter"
     response = await llm.ainvoke(input_text)
     assert response.content == "Return text"
-    llm.model.generate_content_async.assert_awaited_once_with(
-        [mock.ANY], **model_params
+    mock_model.generate_content_async.assert_awaited_once_with(
+        contents=[{"text": "Return text"}]
     )
 
 
@@ -235,13 +243,17 @@ def test_vertexai_call_llm_with_tools(mock_model: Mock, test_tool: Tool) -> None
     llm = VertexAILLM(model_name="gemini")
     tools = [test_tool]
 
-    res = llm._call_llm("my text", tools=tools)
-    assert isinstance(res, GenerationResponse)
+    with patch.object(llm, "_get_llm_tools", return_value=["my tools"]):
+        res = llm._call_llm("my text", tools=tools)
+        assert isinstance(res, GenerationResponse)
 
-    mock_model.assert_called_once_with(
-        system_instruction=None,
-        tools=tools,
-    )
+        mock_model.assert_called_once_with(
+            system_instruction=None,
+        )
+        calls = mock_generate_content.call_args_list
+        assert len(calls) == 1
+        assert calls[0][1]["tools"] == ["my tools"]
+        assert calls[0][1]["tool_config"] is not None
 
 
 @patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM._parse_tool_response")
@@ -292,6 +304,5 @@ async def test_vertexai_acall_llm_with_tools(mock_model: Mock, test_tool: Tool) 
     res = await llm._acall_llm("my text", tools=tools)
     mock_model.assert_called_once_with(
         system_instruction=None,
-        tools=tools,
     )
     assert isinstance(res, GenerationResponse)
