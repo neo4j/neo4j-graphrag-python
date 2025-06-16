@@ -215,7 +215,7 @@ class VertexAILLM(LLMInterface):
         input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]],
         tools: Optional[Sequence[Tool]],
-    ):
+    ) -> dict[str, Any]:
         options = dict(self.options)
         if tools:
             # we want a tool back, remove generation_config if defined
