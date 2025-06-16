@@ -133,36 +133,6 @@ can be added to the visualization by setting `hide_unused_outputs` to `False`:
     webbrowser.open("pipeline_full.html")
 
 
-*************************
-Pipeline State Management
-*************************
-
-Pipelines support checkpointing and resumption through state management features:
-
-.. code:: python
-
-    # Run pipeline until a specific component
-    state = await pipeline.run_until(data, stop_after="component_name", state_file="state.json")
-
-    # Resume pipeline from a specific component
-    result = await pipeline.resume_from(state, data, start_from="component_name")
-
-    # Alternatively, load state from file
-    result = await pipeline.resume_from(None, data, start_from="component_name", state_file="state.json")
-
-The state contains:
-- Pipeline configuration (parameter mappings between components and validation state)
-- Execution results (outputs from completed components stored in the ResultStore)
-- Final pipeline results from previous runs
-- Component-specific state (interface available but not yet implemented by components)
-
-This enables:
-- Checkpointing long-running pipelines
-- Debugging pipeline execution
-- Resuming failed pipelines from the last successful component
-- Comparing different component implementations with deterministic inputs by saving the state before the component and reusing it, avoiding non-deterministic results from preceding components
-
-
 ************************
 Adding an Event Callback
 ************************
@@ -234,3 +204,33 @@ This will send an `TASK_PROGRESS` event to the pipeline callback.
 .. note::
 
     In a future release, the `context_` parameter will be added to the `run` method.
+
+
+*************************
+Pipeline State Management
+*************************
+
+Pipelines support state management to enable saving and restoring execution state, which is useful for debugging, resuming long-running pipelines, or incremental processing workflows.
+
+Saving and Loading State
+========================
+
+You can save the current state of a pipeline execution using the `dump_state()` method and restore it with `load_state()`. The pipeline also supports partial execution using the `until` and `from_` parameters:
+
+- **`until`**: Stop execution after a specific component completes
+- **`from_`**: Start execution from a specific component instead of from the beginning
+
+.. code:: python
+
+    # Run pipeline and save state
+    result = await pipeline.run(..., until="a")
+    state = pipeline.dump_state(result.run_id)
+    # The user could save the state to a JSON file
+
+    # Resuming pipeline, could be from another run
+    loaded_run_id = pipeline.load_state(state)
+    new_result = await pipeline.run(..., from_="b", previous_run_id=loaded_run_id)
+
+.. warning:: State Compatibility
+
+    When loading state, the current pipeline must have at least all the components that were present when the state was saved. Additional components are allowed, but missing components will cause a validation error.
