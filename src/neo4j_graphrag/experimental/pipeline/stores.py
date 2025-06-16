@@ -103,11 +103,10 @@ class ResultStore(Store, abc.ABC):
         pass
 
     @abc.abstractmethod
-    def load(self, run_id: str, state: dict[str, Any]) -> None:
-        """Load the store state for a specific run_id from a serializable dictionary.
+    def load(self, state: dict[str, Any]) -> None:
+        """Load the store state from a serializable dictionary.
 
         Args:
-            run_id (str): The run_id to load data for
             state (dict[str, Any]): A serializable dictionary containing the store state
         """
         pass
@@ -156,11 +155,10 @@ class InMemoryStore(ResultStore):
         }
         return filtered_data
 
-    def load(self, run_id: str, state: dict[str, Any]) -> None:
-        """Load the store state for a specific run_id from a serializable dictionary.
+    def load(self, state: dict[str, Any]) -> None:
+        """Load the store state from a serializable dictionary.
 
         Args:
-            run_id (str): The run_id to load data for
             state (dict[str, Any]): A serializable dictionary containing the store state
         """
         # add/update data without clearing - safer for concurrent access
