@@ -44,6 +44,7 @@ from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
     GraphSchema,
     SchemaFromTextExtractor,
+    BaseSchemaBuilder,
 )
 from neo4j_graphrag.experimental.components.text_splitters.base import TextSplitter
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
@@ -178,7 +179,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     def _get_chunk_embedder(self) -> TextChunkEmbedder:
         return TextChunkEmbedder(embedder=self.get_default_embedder())
 
-    def _get_schema(self) -> Union[SchemaBuilder, SchemaFromTextExtractor]:
+    def _get_schema(self) -> BaseSchemaBuilder:
         """
         Get the appropriate schema component based on configuration.
         Return SchemaFromTextExtractor for automatic extraction or SchemaBuilder for manual schema.
