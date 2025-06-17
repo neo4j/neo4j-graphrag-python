@@ -103,9 +103,9 @@ NEO4J_PASSWORD = "password"
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
 
 # List the entities and relations the LLM should look for in the text
-node_types = ["Person", "House", "Planet"]
-relationship_types = ["PARENT_OF", "HEIR_OF", "RULES"]
-patterns = [
+entities = ["Person", "House", "Planet"]
+relations = ["PARENT_OF", "HEIR_OF", "RULES"]
+potential_schema = [
     ("Person", "PARENT_OF", "Person"),
     ("Person", "HEIR_OF", "House"),
     ("House", "RULES", "Planet"),
@@ -129,11 +129,9 @@ kg_builder = SimpleKGPipeline(
     llm=llm,
     driver=driver,
     embedder=embedder,
-    schema={
-        "node_types": node_types,
-        "relationship_types": relationship_types,
-        "patterns": patterns,
-    },
+    entities=entities,
+    relations=relations,
+    potential_schema=potential_schema,
     on_error="IGNORE",
     from_pdf=False,
 )
