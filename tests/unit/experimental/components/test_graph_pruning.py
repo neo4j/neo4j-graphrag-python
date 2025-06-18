@@ -172,7 +172,7 @@ def test_graph_pruning_enforce_nodes_lexical_graph(
 ) -> None:
     pruner = GraphPruning()
     result = pruner._enforce_nodes(
-        extracted_nodes=[
+        nodes=[
             Neo4jNode(id="1", label="Paragraph"),
         ],
         schema=GraphSchema(node_types=tuple(), additional_node_types=False),

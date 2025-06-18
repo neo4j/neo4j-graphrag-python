@@ -223,13 +223,13 @@ class GraphPruning(Component):
 
     def _enforce_nodes(
         self,
-        extracted_nodes: list[Neo4jNode],
+        nodes: list[Neo4jNode],
         schema: GraphSchema,
         lexical_graph_config: LexicalGraphConfig,
         pruning_stats: PruningStats,
     ) -> list[Neo4jNode]:
         """
-        Filter extracted nodes to be conformant to the schema.
+        Filter nodes to be conformant to the schema.
 
         Keep only those whose label is in schema
         (unless schema has additional_node_types=True, default value)
@@ -237,7 +237,7 @@ class GraphPruning(Component):
         properties, prune it.
         """
         valid_nodes = []
-        for node in extracted_nodes:
+        for node in nodes:
             if node.label in lexical_graph_config.lexical_graph_node_labels:
                 valid_nodes.append(node)
                 continue
@@ -329,14 +329,14 @@ class GraphPruning(Component):
 
     def _enforce_relationships(
         self,
-        extracted_relationships: list[Neo4jRelationship],
+        relationships: list[Neo4jRelationship],
         filtered_nodes: list[Neo4jNode],
         schema: GraphSchema,
         lexical_graph_config: LexicalGraphConfig,
         pruning_stats: PruningStats,
     ) -> list[Neo4jRelationship]:
         """
-        Filter extracted nodes to be conformant to the schema.
+        Filter relationships to be conformant to the schema.
 
         Keep only those whose types are in schema, start/end node conform to schema,
         and start/end nodes are in filtered nodes (i.e., kept after node enforcement).
@@ -347,7 +347,7 @@ class GraphPruning(Component):
 
         valid_rels = []
         valid_nodes = {node.id: node.label for node in filtered_nodes}
-        for rel in extracted_relationships:
+        for rel in relationships:
             if rel.type in lexical_graph_config.lexical_graph_relationship_types:
                 valid_rels.append(rel)
                 continue
