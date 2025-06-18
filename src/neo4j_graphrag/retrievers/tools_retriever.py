@@ -127,9 +127,6 @@ class ToolsRetriever(Retriever):
                     # Extract arguments from the tool call
                     tool_args = tool_call.arguments or {}
 
-                    # Always include the query_text in the arguments for tools that might need it
-                    tool_args.setdefault("query", query_text)
-
                     # Execute the tool with the provided arguments
                     tool_result = selected_tool.execute(**tool_args)
                     # If the tool result is a RawSearchResult, extract its records

@@ -17,8 +17,8 @@
 Example demonstrating how to convert a retriever to a tool.
 
 This example shows:
-1. How to convert a custom StaticRetriever to a Tool
-2. How to define parameters for the tool
+1. How to convert a custom StaticRetriever to a Tool using the convert_to_tool method
+2. How to define parameters for the tool in the retriever class
 3. How to execute the tool
 """
 
@@ -28,11 +28,6 @@ from unittest.mock import MagicMock
 
 from neo4j_graphrag.retrievers.base import Retriever
 from neo4j_graphrag.types import RawSearchResult
-from neo4j_graphrag.tools.tool import (
-    StringParameter,
-    ObjectParameter,
-)
-from neo4j_graphrag.tools.utils import convert_retriever_to_tool
 
 
 # Create a Retriever that returns static results about Neo4j
@@ -50,7 +45,15 @@ class StaticRetriever(Retriever):
     def get_search_results(
         self, query_text: Optional[str] = None, **kwargs: Any
     ) -> RawSearchResult:
-        """Return static information about Neo4j regardless of the query."""
+        """Return static information about Neo4j regardless of the query.
+
+        Args:
+            query_text (Optional[str]): The query about Neo4j (any query will return general Neo4j information)
+            **kwargs (Any): Additional keyword arguments (not used)
+
+        Returns:
+            RawSearchResult: Static Neo4j information with metadata
+        """
         # Create formatted Neo4j information
         neo4j_info = (
             "# Neo4j Graph Database\n\n"
@@ -73,26 +76,16 @@ class StaticRetriever(Retriever):
 
 
 def main() -> None:
-    # Convert a StaticRetriever to a tool with specific parameters
+    # Convert a StaticRetriever to a tool using the new convert_to_tool method
     static_retriever = StaticRetriever(driver=cast(Any, MagicMock()))
 
-    # Define parameters for the static retriever tool
-    static_parameters = ObjectParameter(
-        description="Parameters for the Neo4j information retriever",
-        properties={
-            "query_text": StringParameter(
-                description="The query about Neo4j (any query will return general Neo4j information)",
-                required=True,
-            ),
-        },
-    )
-
-    # Convert the retriever to a tool with specific parameters
-    static_tool = convert_retriever_to_tool(
-        retriever=static_retriever,
-        description="Get general information about Neo4j graph database",
-        parameters=static_parameters,
+    # Convert the retriever to a tool with custom parameter descriptions
+    static_tool = static_retriever.convert_to_tool(
         name="Neo4jInfoTool",
+        description="Get general information about Neo4j graph database",
+        parameter_descriptions={
+            "query_text": "Any query about Neo4j (the tool returns general information regardless)"
+        },
     )
 
     # Print tool information
@@ -107,7 +100,7 @@ def main() -> None:
         # Execute the static retriever tool
         print("\nExecuting the static retriever tool...")
         static_result = static_tool.execute(
-            query="What is Neo4j?",
+            query_text="What is Neo4j?",
         )
         print("Static Search Results:")
         for i, item in enumerate(static_result):
