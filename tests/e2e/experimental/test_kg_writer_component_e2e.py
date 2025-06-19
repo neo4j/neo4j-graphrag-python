@@ -61,7 +61,7 @@ async def test_kg_writer(driver: neo4j.Driver) -> None:
     assert res.status == "SUCCESS"
 
     query = """
-    MATCH (a:MyLabel {id: '1'})-[r:MY_RELATIONSHIP]->(b:MyLabel {id: '2'})
+    MATCH (a:MyLabel {__kg_builder_id: '1'})-[r:MY_RELATIONSHIP]->(b:MyLabel {__kg_builder_id: '2'})
     RETURN a, r, b
     """
     record = driver.execute_query(query).records[0]
@@ -69,7 +69,7 @@ async def test_kg_writer(driver: neo4j.Driver) -> None:
 
     node_a = record["a"]
     assert start_node.label in list(node_a.labels)
-    assert start_node.id == str(node_a.get("id"))
+    assert start_node.id == str(node_a.get("__kg_builder_id"))
     for key, val in start_node.properties.items():
         assert key in node_a.keys()
         assert val == node_a.get(key)
@@ -80,18 +80,18 @@ async def test_kg_writer(driver: neo4j.Driver) -> None:
 
     node_b = record["b"]
     assert end_node.label in list(node_b.labels)
-    assert end_node.id == str(node_b.get("id"))
+    assert end_node.id == str(node_b.get("__kg_builder_id"))
     for key, val in end_node.properties.items():
         assert key in node_b.keys()
         assert val == node_b.get(key)
 
     rel = record["r"]
     assert rel.type == relationship.type
-    assert relationship.start_node_id == rel.start_node.get("id")
-    assert relationship.end_node_id == rel.end_node.get("id")
+    assert relationship.start_node_id == rel.start_node.get("__kg_builder_id")
+    assert relationship.end_node_id == rel.end_node.get("__kg_builder_id")
 
     query = """
-    MATCH (c:MyLabel {id: '3'})
+    MATCH (c:MyLabel {__kg_builder_id: '3'})
     RETURN c
     """
     records = driver.execute_query(query).records

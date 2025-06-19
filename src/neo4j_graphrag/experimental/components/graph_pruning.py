@@ -41,6 +41,7 @@ class PruningReason(str, enum.Enum):
     NO_PROPERTY_LEFT = "NO_PROPERTY_LEFT"
     INVALID_START_OR_END_NODE = "INVALID_START_OR_END_NODE"
     INVALID_PATTERN = "INVALID_PATTERN"
+    MISSING_LABEL = "MISSING_LABEL"
 
 
 ItemType = TypeVar("ItemType")
@@ -198,6 +199,17 @@ class GraphPruning(Component):
         schema_entity: Optional[NodeType],
         additional_node_types: bool,
     ) -> Optional[Neo4jNode]:
+        if not node.label:
+            pruning_stats.add_pruned_node(node, reason=PruningReason.MISSING_LABEL)
+            return None
+        if not node.id:
+            pruning_stats.add_pruned_node(
+                node,
+                reason=PruningReason.MISSING_REQUIRED_PROPERTY,
+                missing_required_properties=["id"],
+                details="The node was extracted without a valid ID.",
+            )
+            return None
         if not schema_entity:
             # node type not declared in the schema
             if additional_node_types:
@@ -262,6 +274,11 @@ class GraphPruning(Component):
         patterns: tuple[tuple[str, str, str], ...],
         additional_patterns: bool,
     ) -> Optional[Neo4jRelationship]:
+        if not rel.type:
+            pruning_stats.add_pruned_relationship(
+                rel, reason=PruningReason.MISSING_LABEL
+            )
+            return None
         # validate start/end node IDs are valid nodes
         if rel.start_node_id not in valid_nodes or rel.end_node_id not in valid_nodes:
             logger.debug(
