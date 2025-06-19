@@ -18,7 +18,7 @@ from typing import Optional, Any, TypeVar, Generic, Union
 
 from pydantic import validate_call, BaseModel
 
-from neo4j_graphrag.experimental.components.schema import (
+from neo4j_graphrag.experimental.components.types import (
     GraphSchema,
     PropertyType,
     NodeType,

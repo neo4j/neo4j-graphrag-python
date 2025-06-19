@@ -24,10 +24,12 @@ from pydantic import ValidationError
 from neo4j_graphrag.exceptions import SchemaValidationError, SchemaExtractionError
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
+    SchemaFromTextExtractor,
+)
+from neo4j_graphrag.experimental.components.types import (
     NodeType,
     PropertyType,
     RelationshipType,
-    SchemaFromTextExtractor,
     GraphSchema,
 )
 import os

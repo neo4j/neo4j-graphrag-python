@@ -23,13 +23,11 @@ from neo4j_graphrag.experimental.components.graph_pruning import (
     GraphPruningResult,
     PruningStats,
 )
-from neo4j_graphrag.experimental.components.schema import (
+from neo4j_graphrag.experimental.components.types import (
     NodeType,
     PropertyType,
     RelationshipType,
     GraphSchema,
-)
-from neo4j_graphrag.experimental.components.types import (
     Neo4jNode,
     Neo4jRelationship,
     Neo4jGraph,

@@ -14,6 +14,8 @@
 #  limitations under the License.
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
+)
+from neo4j_graphrag.experimental.components.types import (
     NodeType,
     PropertyType,
     RelationshipType,
