@@ -19,7 +19,7 @@ import logging
 import uuid
 import warnings
 from functools import partial
-from typing import TYPE_CHECKING, Any, AsyncGenerator
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Optional
 
 from neo4j_graphrag.experimental.pipeline.types.context import RunContext
 from neo4j_graphrag.experimental.pipeline.exceptions import (
@@ -46,16 +46,31 @@ class Orchestrator:
     - finding the next tasks to execute
     - building the inputs for each task
     - calling the run method on each task
+    - optionally stopping after a specified component
+    - optionally starting from a specified component
 
     Once a TaskNode is done, it calls the `on_task_complete` callback
     that will save the results, find the next tasks to be executed
     (checking that all dependencies are met), and run them.
+
+    Partial execution is supported through:
+    - stop_after: Stop execution after this component completes
+    - start_from: Start execution from this component instead of roots
     """
 
-    def __init__(self, pipeline: Pipeline):
+    def __init__(
+        self,
+        pipeline: Pipeline,
+        stop_after: Optional[str] = None,
+        start_from: Optional[str] = None,
+        previous_run_id: Optional[str] = None,
+    ):
         self.pipeline = pipeline
         self.event_notifier = EventNotifier(pipeline.callbacks)
         self.run_id = str(uuid.uuid4())
+        self.previous_run_id = previous_run_id  # useful for pipeline resumption
+        self.stop_after = stop_after
+        self.start_from = start_from
 
     async def run_task(self, task: TaskPipelineNode, data: dict[str, Any]) -> None:
         """Get inputs and run a specific task. Once the task is done,
@@ -129,7 +144,10 @@ class Orchestrator:
         await self.add_result_for_component(
             task.name, res_to_save, is_final=task.is_leaf()
         )
-        # then get the next tasks to be executed
+        # stop if this is the stop_after node
+        if self.stop_after and task.name == self.stop_after:
+            return
+        # otherwise, get the next tasks to be executed
         # and run them in //
         await asyncio.gather(*[self.run_task(n, data) async for n in self.next(task)])
 
@@ -252,10 +270,24 @@ class Orchestrator:
             )
 
     async def get_results_for_component(self, name: str) -> Any:
+        # when resuming, check previous run_id, otherwise check current run_id
+        if self.previous_run_id:
+            return await self.pipeline.store.get_result_for_component(
+                self.previous_run_id, name
+            )
         return await self.pipeline.store.get_result_for_component(self.run_id, name)
 
     async def get_status_for_component(self, name: str) -> RunStatus:
-        status = await self.pipeline.store.get_status_for_component(self.run_id, name)
+        # when resuming, check previous run_id, otherwise check current run_id
+        if self.previous_run_id:
+            status = await self.pipeline.store.get_status_for_component(
+                self.previous_run_id, name
+            )
+        else:
+            status = await self.pipeline.store.get_status_for_component(
+                self.run_id, name
+            )
+
         if status is None:
             return RunStatus.UNKNOWN
         return RunStatus(status)
@@ -266,7 +298,13 @@ class Orchestrator:
         will handle the task dependencies.
         """
         await self.event_notifier.notify_pipeline_started(self.run_id, data)
-        tasks = [self.run_task(root, data) for root in self.pipeline.roots()]
+        # start from a specific node if requested, otherwise from roots
+        if self.start_from:
+            start_nodes = [self.pipeline.get_node_by_name(self.start_from)]
+        else:
+            start_nodes = self.pipeline.roots()
+
+        tasks = [self.run_task(root, data) for root in start_nodes]
         await asyncio.gather(*tasks)
         await self.event_notifier.notify_pipeline_finished(
             self.run_id, await self.pipeline.get_final_results(self.run_id)
