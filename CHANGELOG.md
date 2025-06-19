@@ -26,6 +26,10 @@
 - The `SchemaProperty` model has been renamed `PropertyType`.
 - `SchemaConfig` has been removed in favor of `GraphSchema` (used in the `SchemaBuilder` and `EntityRelationExtractor` classes). `entities`, `relations` and `potential_schema` fields have also been renamed `node_types`, `relationship_types` and `patterns` respectively.
 
+#### Other
+
+- The node internal `id` property that's used to create relationships between nodes has been renamed to `__kg_builder_id`. This releases the `id` name for domain-specific meaningful `id` property.
+
 
 ## 1.7.0
 
