@@ -148,6 +148,20 @@ def node_type_required_name() -> NodeType:
             True,
             Neo4jNode(id="1", label="Location", properties={"name": "New York"}),
         ),
+        # node label not valid
+        (
+            Neo4jNode(id="1", label="", properties={"name": "New York"}),
+            "node_type_required_name",
+            True,
+            None,
+        ),
+        # node ID not valid
+        (
+            Neo4jNode(id="", label="Location", properties={"name": "New York"}),
+            "node_type_required_name",
+            True,
+            None,
+        ),
     ],
 )
 def test_graph_pruning_validate_node(
@@ -189,6 +203,16 @@ def neo4j_relationship() -> Neo4jRelationship:
         start_node_id="1",
         end_node_id="2",
         type="REL",
+        properties={},
+    )
+
+
+@pytest.fixture
+def neo4j_relationship_invalid_type() -> Neo4jRelationship:
+    return Neo4jRelationship(
+        start_node_id="1",
+        end_node_id="2",
+        type="",
         properties={},
     )
 
@@ -253,7 +277,7 @@ def neo4j_reversed_relationship(
             True,  # additional_patterns
             None,
         ),
-        # invalid type addition allowed
+        # invalid type, addition allowed
         (
             "neo4j_relationship",
             {
@@ -266,7 +290,7 @@ def neo4j_reversed_relationship(
             True,  # additional_patterns
             "neo4j_relationship",
         ),
-        # invalid type addition allowed but invalid node ID
+        # invalid type, addition allowed but invalid node ID
         (
             "neo4j_relationship",
             {
@@ -278,7 +302,7 @@ def neo4j_reversed_relationship(
             True,  # additional_patterns
             None,
         ),
-        # invalid_type_addition_not_allowed
+        # invalid type, addition not allowed
         (
             "neo4j_relationship",
             {
@@ -320,6 +344,21 @@ def neo4j_reversed_relationship(
             (("Person", "REL", "Person"),),
             False,  # additional_patterns
             None,
+        ),
+        # invalid extracted type
+        (
+            "neo4j_relationship_invalid_type",  # relationship,
+            {  # valid_nodes
+                "1": "Person",
+                "2": "Location",
+            },
+            RelationshipType(  # relationship_type
+                label="REL",
+            ),
+            True,  # additional_relationship_types
+            (("Person", "REL", "Location"),),  # patterns
+            True,  # additional_patterns
+            None,  # expected_relationship
         ),
     ],
 )
