@@ -334,6 +334,7 @@ class SchemaBuilder(Component):
         node_types: Sequence[NodeType],
         relationship_types: Optional[Sequence[RelationshipType]] = None,
         patterns: Optional[Sequence[Tuple[str, str, str]]] = None,
+        **kwargs: Any,
     ) -> GraphSchema:
         """
         Creates a GraphSchema object from Lists of Entity and Relation objects
@@ -343,6 +344,7 @@ class SchemaBuilder(Component):
             node_types (Sequence[NodeType]): List or tuple of NodeType objects.
             relationship_types (Optional[Sequence[RelationshipType]]): List or tuple of RelationshipType objects.
             patterns (Optional[Sequence[Tuple[str, str, str]]]): List or tuples of triplets: (source_entity_label, relation_label, target_entity_label).
+            kwargs: other arguments passed to GraphSchema validator.
 
         Returns:
             GraphSchema: A configured schema object.
@@ -353,10 +355,11 @@ class SchemaBuilder(Component):
                     node_types=node_types,
                     relationship_types=relationship_types or (),
                     patterns=patterns or (),
+                    **kwargs,
                 )
             )
-        except (ValidationError, SchemaValidationError) as e:
-            raise SchemaValidationError(e) from e
+        except ValidationError as e:
+            raise SchemaValidationError() from e
 
     @validate_call
     async def run(
@@ -364,6 +367,7 @@ class SchemaBuilder(Component):
         node_types: Sequence[NodeType],
         relationship_types: Optional[Sequence[RelationshipType]] = None,
         patterns: Optional[Sequence[Tuple[str, str, str]]] = None,
+        **kwargs: Any,
     ) -> GraphSchema:
         """
         Asynchronously constructs and returns a GraphSchema object.
@@ -376,7 +380,12 @@ class SchemaBuilder(Component):
         Returns:
             GraphSchema: A configured schema object, constructed asynchronously.
         """
-        return self.create_schema_model(node_types, relationship_types, patterns)
+        return self.create_schema_model(
+            node_types,
+            relationship_types,
+            patterns,
+            **kwargs,
+        )
 
 
 class SchemaFromTextExtractor(Component):

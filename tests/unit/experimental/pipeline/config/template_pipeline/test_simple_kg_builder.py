@@ -26,8 +26,6 @@ from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
 from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
-    NodeType,
-    RelationshipType,
     SchemaFromTextExtractor,
     GraphSchema,
 )
@@ -147,9 +145,11 @@ def test_simple_kg_pipeline_config_schema_run_params() -> None:
         potential_schema=[("Person", "KNOWS", "Person")],
     )
     assert config._get_run_params_for_schema() == {
-        "node_types": (NodeType(label="Person"),),
-        "relationship_types": (RelationshipType(label="KNOWS"),),
-        "patterns": (("Person", "KNOWS", "Person"),),
+        "node_types": ["Person"],
+        "relationship_types": ["KNOWS"],
+        "patterns": [
+            ("Person", "KNOWS", "Person"),
+        ],
     }
 
 
@@ -362,20 +362,22 @@ def test_simple_kg_pipeline_config_process_schema_with_precedence_legacy() -> No
         relations=relations,
         potential_schema=potential_schema,
     )
-    node_types, relationship_types, patterns = config._process_schema_with_precedence()
+    schema_dict = config._process_schema_with_precedence()
+    node_types = schema_dict["node_types"]
+    relationship_types = schema_dict["relationship_types"]
+    patterns = schema_dict["patterns"]
     assert len(node_types) == 2
-    assert node_types[0].label == "Person"
-    assert len(node_types[0].properties) == 0
-    assert node_types[1].label == "Organization"
-    assert len(node_types[1].properties) == 1
+    assert node_types[0] == "Person"
+    assert node_types[1]["label"] == "Organization"
+    assert len(node_types[1]["properties"]) == 1
     assert relationship_types is not None
     assert len(relationship_types) == 2
-    assert relationship_types[0].label == "WORKS_FOR"
-    assert len(relationship_types[0].properties) == 0
-    assert relationship_types[1].label == "CREATED"
-    assert len(relationship_types[1].properties) == 2
+    assert relationship_types[0] == "WORKS_FOR"
+    assert relationship_types[1]["label"] == "CREATED"
+    assert len(relationship_types[1]["properties"]) == 2
     assert patterns is not None
     assert len(patterns) == 2
+    assert "additional_node_types" not in schema_dict
 
 
 def test_simple_kg_pipeline_config_process_schema_with_precedence_schema_dict() -> None:
@@ -416,22 +418,27 @@ def test_simple_kg_pipeline_config_process_schema_with_precedence_schema_dict() 
             "node_types": entities,
             "relationship_types": relations,
             "patterns": potential_schema,
+            "additional_node_types": False,
         }
     )
-    node_types, relationship_types, patterns = config._process_schema_with_precedence()
+    schema_dict = config._process_schema_with_precedence()
+    node_types = schema_dict["node_types"]
+    relationship_types = schema_dict["relationship_types"]
+    patterns = schema_dict["patterns"]
     assert len(node_types) == 2
-    assert node_types[0].label == "Person"
-    assert len(node_types[0].properties) == 0
-    assert node_types[1].label == "Organization"
-    assert len(node_types[1].properties) == 1
+    assert node_types[0]["label"] == "Person"
+    assert len(node_types[0]["properties"]) == 0
+    assert node_types[1]["label"] == "Organization"
+    assert len(node_types[1]["properties"]) == 1
     assert relationship_types is not None
     assert len(relationship_types) == 2
-    assert relationship_types[0].label == "WORKS_FOR"
-    assert len(relationship_types[0].properties) == 0
-    assert relationship_types[1].label == "CREATED"
-    assert len(relationship_types[1].properties) == 2
+    assert relationship_types[0]["label"] == "WORKS_FOR"
+    assert len(relationship_types[0]["properties"]) == 0
+    assert relationship_types[1]["label"] == "CREATED"
+    assert len(relationship_types[1]["properties"]) == 2
     assert patterns is not None
     assert len(patterns) == 2
+    assert schema_dict["additional_node_types"] is False
 
 
 def test_simple_kg_pipeline_config_process_schema_with_precedence_schema_object() -> (
@@ -475,20 +482,25 @@ def test_simple_kg_pipeline_config_process_schema_with_precedence_schema_object(
                 "node_types": entities,
                 "relationship_types": relations,
                 "patterns": potential_schema,
+                "additional_node_types": False,
             }
         )
     )
-    node_types, relationship_types, patterns = config._process_schema_with_precedence()
+    schema_dict = config._process_schema_with_precedence()
+    node_types = schema_dict["node_types"]
+    relationship_types = schema_dict["relationship_types"]
+    patterns = schema_dict["patterns"]
     assert len(node_types) == 2
-    assert node_types[0].label == "Person"
-    assert len(node_types[0].properties) == 0
-    assert node_types[1].label == "Organization"
-    assert len(node_types[1].properties) == 1
+    assert node_types[0]["label"] == "Person"
+    assert len(node_types[0]["properties"]) == 0
+    assert node_types[1]["label"] == "Organization"
+    assert len(node_types[1]["properties"]) == 1
     assert relationship_types is not None
     assert len(relationship_types) == 2
-    assert relationship_types[0].label == "WORKS_FOR"
-    assert len(relationship_types[0].properties) == 0
-    assert relationship_types[1].label == "CREATED"
-    assert len(relationship_types[1].properties) == 2
+    assert relationship_types[0]["label"] == "WORKS_FOR"
+    assert len(relationship_types[0]["properties"]) == 0
+    assert relationship_types[1]["label"] == "CREATED"
+    assert len(relationship_types[1]["properties"]) == 2
     assert patterns is not None
     assert len(patterns) == 2
+    assert schema_dict["additional_node_types"] is False

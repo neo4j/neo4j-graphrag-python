@@ -174,6 +174,14 @@ class LexicalGraphConfig(BaseModel):
     def lexical_graph_node_labels(self) -> tuple[str, ...]:
         return self.document_node_label, self.chunk_node_label
 
+    @property
+    def lexical_graph_relationship_types(self) -> tuple[str, ...]:
+        return (
+            self.chunk_to_document_relationship_type,
+            self.next_chunk_relationship_type,
+            self.node_to_chunk_relationship_type,
+        )
+
 
 class GraphResult(DataModel):
     graph: Neo4jGraph

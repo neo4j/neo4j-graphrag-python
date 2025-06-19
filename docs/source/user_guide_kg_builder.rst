@@ -24,6 +24,7 @@ A Knowledge Graph (KG) construction pipeline requires a few components (some of 
 - **Schema builder**: provide a schema to ground the LLM extracted node and relationship types and obtain an easily navigable KG. Schema can be provided manually or extracted automatically using LLMs.
 - **Lexical graph builder**: build the lexical graph (Document, Chunk and their relationships) (optional).
 - **Entity and relation extractor**: extract relevant entities and relations from the text.
+- **Graph pruner**: clean the graph based on schema, if provided.
 - **Knowledge Graph writer**: save the identified entities and relations.
 - **Entity resolver**: merge similar entities into a single node.
 
