@@ -1048,8 +1048,10 @@ _________________
 In addition to the user-defined configuration options described above,
 the `GraphPruning` component performs the following cleanup operations:
 
+- Nodes with invalid label or ID are pruned.
 - Nodes with missing required properties are pruned.
 - Nodes with no remaining properties are pruned.
+- Relationships with invalid type are pruned.
 - Relationships with invalid source or target nodes (i.e., nodes no longer present in the graph) are pruned.
 - Relationships with incorrect direction have their direction corrected.
 

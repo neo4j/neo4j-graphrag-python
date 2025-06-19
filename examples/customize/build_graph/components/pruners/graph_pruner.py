@@ -1,4 +1,4 @@
-"""This example demonstrates how to use the GraphPruner component."""
+"""This example demonstrates how to use the GraphPruning component."""
 
 import asyncio
 
