@@ -17,8 +17,8 @@ from typing import Any
 import pytest
 
 from neo4j_graphrag.experimental.components.graph_pruning import GraphPruning
-from neo4j_graphrag.experimental.components.schema import GraphSchema
 from neo4j_graphrag.experimental.components.types import (
+    GraphSchema,
     Neo4jGraph,
     Neo4jNode,
     Neo4jRelationship,

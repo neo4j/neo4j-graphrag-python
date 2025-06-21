@@ -12,48 +12,59 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import asyncio
+
+import neo4j
+
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
-)
-from neo4j_graphrag.experimental.components.types import (
-    NodeType,
-    PropertyType,
-    RelationshipType,
 )
 
 
 async def main() -> None:
-    schema_builder = SchemaBuilder()
+    with neo4j.GraphDatabase.driver(
+        "bolt://localhost:7687",
+        auth=("neo4j", "password"),
+    ) as driver:
+        schema_builder = SchemaBuilder(driver)
 
-    result = await schema_builder.run(
-        node_types=[
-            NodeType(
-                label="Person",
-                properties=[
-                    PropertyType(name="name", type="STRING"),
-                    PropertyType(name="place_of_birth", type="STRING"),
-                    PropertyType(name="date_of_birth", type="DATE"),
-                ],
-            ),
-            NodeType(
-                label="Organization",
-                properties=[
-                    PropertyType(name="name", type="STRING"),
-                    PropertyType(name="country", type="STRING"),
-                ],
-            ),
-        ],
-        relationship_types=[
-            RelationshipType(
-                label="WORKED_ON",
-            ),
-            RelationshipType(
-                label="WORKED_FOR",
-            ),
-        ],
-        patterns=[
-            ("Person", "WORKED_ON", "Field"),
-            ("Person", "WORKED_FOR", "Organization"),
-        ],
-    )
-    print(result)
+        schema = await schema_builder.run(
+            node_types=[
+                {
+                    "label": "Person",
+                    "properties": [
+                        {"name": "name", "type": "STRING"},
+                        {"name": "place_of_birth", "type": "STRING"},
+                        {"name": "date_of_birth", "type": "DATE"},
+                    ],
+                },
+                {
+                    "label": "Organization",
+                    "properties": [
+                        {"name": "name", "type": "STRING"},
+                        {"name": "country", "type": "STRING"},
+                    ],
+                },
+                {
+                    "label": "Field",
+                    "properties": [
+                        {"name": "name", "type": "STRING"},
+                    ],
+                },
+            ],
+            relationship_types=[
+                "WORKED_ON",
+                {
+                    "label": "WORKED_FOR",
+                },
+            ],
+            patterns=[
+                ("Person", "WORKED_ON", "Field"),
+                ("Person", "WORKED_FOR", "Organization"),
+            ],
+        )
+        print(schema)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

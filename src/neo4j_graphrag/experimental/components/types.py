@@ -232,10 +232,6 @@ class PropertyType(BaseModel):
     description: str = ""
     required: bool = False
 
-    model_config = ConfigDict(
-        frozen=True,
-    )
-
 
 class ConstraintTypeEnum(str, enum.Enum):
     # see: https://neo4j.com/docs/cypher-manual/current/constraints/
@@ -243,6 +239,44 @@ class ConstraintTypeEnum(str, enum.Enum):
     PROPERTY_EXISTENCE = "PROPERTY_EXISTENCE"
     PROPERTY_UNIQUENESS = "PROPERTY_UNIQUENESS"
     PROPERTY_TYPE = "PROPERTY_TYPE"
+
+
+class Neo4jConstraintTypeEnum(str, enum.Enum):
+    NODE_KEY = "NODE_KEY"
+    UNIQUENESS = "UNIQUENESS"
+    NODE_PROPERTY_EXISTENCE = "NODE_PROPERTY_EXISTENCE"
+    NODE_PROPERTY_UNIQUENESS = "NODE_PROPERTY_UNIQUENESS"
+    NODE_PROPERTY_TYPE = "NODE_PROPERTY_TYPE"
+    RELATIONSHIP_KEY = "RELATIONSHIP_KEY"
+    RELATIONSHIP_UNIQUENESS = "RELATIONSHIP_UNIQUENESS"
+    RELATIONSHIP_PROPERTY_EXISTENCE = "RELATIONSHIP_PROPERTY_EXISTENCE"
+    RELATIONSHIP_PROPERTY_UNIQUENESS = "RELATIONSHIP_PROPERTY_UNIQUENESS"
+    RELATIONSHIP_PROPERTY_TYPE = "RELATIONSHIP_PROPERTY_TYPE"
+
+    def to_constraint_type(self) -> ConstraintTypeEnum:
+        if self in (
+            Neo4jConstraintTypeEnum.NODE_KEY,
+            Neo4jConstraintTypeEnum.RELATIONSHIP_KEY,
+        ):
+            return ConstraintTypeEnum.KEY
+        if self in (
+            Neo4jConstraintTypeEnum.UNIQUENESS,
+            Neo4jConstraintTypeEnum.NODE_PROPERTY_UNIQUENESS,
+            Neo4jConstraintTypeEnum.RELATIONSHIP_UNIQUENESS,
+            Neo4jConstraintTypeEnum.RELATIONSHIP_PROPERTY_UNIQUENESS,
+        ):
+            return ConstraintTypeEnum.PROPERTY_UNIQUENESS
+        if self in (
+            Neo4jConstraintTypeEnum.NODE_PROPERTY_EXISTENCE,
+            Neo4jConstraintTypeEnum.RELATIONSHIP_PROPERTY_EXISTENCE,
+        ):
+            return ConstraintTypeEnum.PROPERTY_EXISTENCE
+        if self in (
+            Neo4jConstraintTypeEnum.NODE_PROPERTY_TYPE,
+            Neo4jConstraintTypeEnum.RELATIONSHIP_PROPERTY_TYPE,
+        ):
+            return ConstraintTypeEnum.PROPERTY_TYPE
+        raise ValueError(f"Can't convert {self} to ConstraintTypeEnum")
 
 
 class SchemaConstraint(BaseModel):
@@ -289,6 +323,21 @@ class GraphEntityType(BaseModel):
                         f"Property '{prop_name}' has a constraint '{c.type}' but is not in the property list."
                     )
         return self
+
+    def get_property_by_name(self, name: str) -> PropertyType | None:
+        for prop in self.properties:
+            if prop.name == name:
+                return prop
+        return None
+
+    def get_constraints_on_properties(
+        self, prop_names: list[str]
+    ) -> list[SchemaConstraint]:
+        constraints = []
+        for constraint in self.constraints:
+            if set(prop_names) == set(constraint.properties):
+                constraints.append(constraint)
+        return constraints
 
     def get_unique_properties(self) -> list[str]:
         for c in self.constraints:

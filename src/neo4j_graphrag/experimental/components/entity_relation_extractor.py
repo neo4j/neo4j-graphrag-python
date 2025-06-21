@@ -25,10 +25,10 @@ from pydantic import ValidationError, validate_call
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.experimental.components.lexical_graph import LexicalGraphBuilder
-from neo4j_graphrag.experimental.components.schema import GraphSchema
 from neo4j_graphrag.experimental.components.types import (
     DocumentInfo,
     LexicalGraphConfig,
+    GraphSchema,
     Neo4jGraph,
     TextChunk,
     TextChunks,

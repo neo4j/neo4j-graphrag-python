@@ -241,7 +241,7 @@ def test_create_schema_model_invalid_entity(
     patterns_with_invalid_entity: Tuple[Tuple[str, str, str], ...],
 ) -> None:
     with pytest.raises(SchemaValidationError) as exc_info:
-        schema_builder.create_schema_model(
+        schema_builder._create_schema_model(
             list(valid_node_types),
             list(valid_relationship_types),
             list(patterns_with_invalid_entity),
@@ -258,7 +258,7 @@ def test_create_schema_model_invalid_relation(
     patterns_with_invalid_relation: Tuple[Tuple[str, str, str], ...],
 ) -> None:
     with pytest.raises(SchemaValidationError) as exc_info:
-        schema_builder.create_schema_model(
+        schema_builder._create_schema_model(
             list(valid_node_types),
             list(valid_relationship_types),
             list(patterns_with_invalid_relation),
@@ -273,7 +273,7 @@ def test_create_schema_model_no_potential_schema(
     valid_node_types: Tuple[NodeType, ...],
     valid_relationship_types: Tuple[RelationshipType, ...],
 ) -> None:
-    schema_instance = schema_builder.create_schema_model(
+    schema_instance = schema_builder._create_schema_model(
         list(valid_node_types), list(valid_relationship_types)
     )
     assert schema_instance.node_types == valid_node_types
@@ -285,7 +285,7 @@ def test_create_schema_model_no_relations_or_potential_schema(
     schema_builder: SchemaBuilder,
     valid_node_types: Tuple[NodeType, ...],
 ) -> None:
-    schema_instance = schema_builder.create_schema_model(list(valid_node_types))
+    schema_instance = schema_builder._create_schema_model(list(valid_node_types))
 
     assert len(schema_instance.node_types) == 3
     person = schema_instance.node_type_from_label("PERSON")
@@ -312,7 +312,7 @@ def test_create_schema_model_missing_relations(
     valid_patterns: Tuple[Tuple[str, str, str], ...],
 ) -> None:
     with pytest.raises(SchemaValidationError) as exc_info:
-        schema_builder.create_schema_model(
+        schema_builder._create_schema_model(
             node_types=valid_node_types, patterns=valid_patterns
         )
     assert "Relationship types must also be provided when using patterns." in str(

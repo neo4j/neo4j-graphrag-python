@@ -34,7 +34,7 @@ from neo4j_graphrag.experimental.components.resolver import (
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
     NodeType,
-    PropertyType,
+    Neo4jPropertyType as PropertyType,
     RelationshipType,
 )
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (

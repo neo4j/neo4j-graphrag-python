@@ -180,6 +180,21 @@ def query_database(
         return json_data
 
 
+def get_constraints(
+    driver: neo4j.Driver,
+    database: Optional[str] = None,
+    timeout: Optional[float] = None,
+    sanitize: bool = False,
+) -> list[dict[str, Any]]:
+    return query_database(
+        driver=driver,
+        query="SHOW CONSTRAINTS",
+        database=database,
+        timeout=timeout,
+        sanitize=sanitize,
+    )
+
+
 def get_schema(
     driver: neo4j.Driver,
     is_enhanced: bool = False,
@@ -328,12 +343,8 @@ def get_structured_schema(
 
     # Get constraints and indexes
     try:
-        constraint = query_database(
-            driver=driver,
-            query="SHOW CONSTRAINTS",
-            database=database,
-            timeout=timeout,
-            sanitize=sanitize,
+        constraint = get_constraints(
+            driver=driver, database=database, timeout=timeout, sanitize=sanitize
         )
         index = query_database(
             driver=driver,
