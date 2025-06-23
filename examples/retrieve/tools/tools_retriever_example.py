@@ -105,9 +105,8 @@ class CalendarTool(Tool):
             "2025-04-16": [],
         }
 
-        # Define a wrapper function that handles the query parameter correctly
-        def execute_func(query: str, **kwargs: Any) -> str:
-            # Ignore the query parameter and call our execute method
+        # Define a wrapper function that handles parameters correctly
+        def execute_func(**kwargs: Any) -> str:
             return self.execute_calendar(**kwargs)
 
         super().__init__(
@@ -166,9 +165,7 @@ class WeatherTool(Tool):
             execute_func=self.execute_weather_retrieval,
         )
 
-    def execute_weather_retrieval(
-        self, query: Optional[str] = None, **kwargs: Any
-    ) -> str:
+    def execute_weather_retrieval(self, **kwargs: Any) -> str:
         """Fetch historical weather data for a given date in Malmö, Sweden."""
         date_str = kwargs.get("date")
         if not date_str:
@@ -226,10 +223,6 @@ class WeatherTool(Tool):
             KeyError,
         ) as e:
             return f"Error parsing weather data for Malmö on {date_str}: {e}"
-
-        return (
-            f"Sorry, I couldn't fetch the weather for Malmö on {date_str} at this time."
-        )
 
 
 def main() -> None:
