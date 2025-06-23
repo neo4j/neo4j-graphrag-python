@@ -14,12 +14,30 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import enum
 import uuid
-from typing import Any, Dict, Optional
+import warnings
+from pathlib import Path
+from typing import Any, Dict, Optional, Union, Tuple, Literal
+from typing_extensions import Self
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    field_validator,
+    ValidationError,
+    model_validator,
+    ConfigDict,
+    PrivateAttr,
+)
 
+from neo4j_graphrag.exceptions import SchemaValidationError
 from neo4j_graphrag.experimental.pipeline.component import DataModel
+from neo4j_graphrag.experimental.pipeline.types.schema import (
+    RelationInputType,
+    EntityInputType,
+)
+from neo4j_graphrag.utils.file_handler import FileHandler, FileFormat
 
 
 class DocumentInfo(DataModel):
@@ -186,3 +204,305 @@ class LexicalGraphConfig(BaseModel):
 class GraphResult(DataModel):
     graph: Neo4jGraph
     config: LexicalGraphConfig
+
+
+class Neo4jPropertyType(str, enum.Enum):
+    # See https://neo4j.com/docs/cypher-manual/current/values-and-types/property-structural-constructed/#property-types
+    BOOLEAN = "BOOLEAN"
+    DATE = "DATE"
+    DURATION = "DURATION"
+    FLOAT = "FLOAT"
+    INTEGER = "INTEGER"
+    LIST = "LIST"
+    LOCAL_DATETIME = "LOCAL_DATETIME"
+    LOCAL_TIME = "LOCAL_TIME"
+    POINT = "POINT"
+    STRING = "STRING"
+    ZONED_DATETIME = "ZONED_DATETIME"
+    ZONED_DATE = "ZONED_DATE"
+
+
+class PropertyType(BaseModel):
+    """
+    Represents a property on a node or relationship in the graph.
+    """
+
+    name: str
+    type: Neo4jPropertyType
+    description: str = ""
+    required: bool = False
+
+
+class Neo4jConstraintTypeEnum(str, enum.Enum):
+    # see: https://neo4j.com/docs/cypher-manual/current/constraints/
+    NODE_KEY = "NODE_KEY"
+    UNIQUENESS = "UNIQUENESS"
+    NODE_PROPERTY_EXISTENCE = "NODE_PROPERTY_EXISTENCE"
+    NODE_PROPERTY_UNIQUENESS = "NODE_PROPERTY_UNIQUENESS"
+    NODE_PROPERTY_TYPE = "NODE_PROPERTY_TYPE"
+    RELATIONSHIP_KEY = "RELATIONSHIP_KEY"
+    RELATIONSHIP_UNIQUENESS = "RELATIONSHIP_UNIQUENESS"
+    RELATIONSHIP_PROPERTY_EXISTENCE = "RELATIONSHIP_PROPERTY_EXISTENCE"
+    RELATIONSHIP_PROPERTY_UNIQUENESS = "RELATIONSHIP_PROPERTY_UNIQUENESS"
+    RELATIONSHIP_PROPERTY_TYPE = "RELATIONSHIP_PROPERTY_TYPE"
+
+
+class SchemaConstraint(BaseModel):
+    """Constraints that can be applied either on a node or relationship property."""
+
+    entity_type: Literal["NODE", "RELATIONSHIP"]
+    label_or_type: str
+    type: Neo4jConstraintTypeEnum
+    properties: list[str]
+    property_type: Optional[Neo4jPropertyType] = None
+    name: Optional[str] = None  # do not force users to set a name manually
+
+
+class GraphEntityType(BaseModel):
+    """Represents a possible entity in the graph (node or relationship).
+
+    They have a label and a list of properties.
+
+    For LLM-based applications, it is also useful to add a description.
+
+    The additional_properties flag is used in schema-driven data validation.
+    """
+
+    label: str
+    description: str = ""
+    properties: list[PropertyType] = []
+    additional_properties: bool = True
+
+    _name: Literal["NODE", "RELATIONSHIP"] = PrivateAttr()
+
+    @model_validator(mode="after")
+    def validate_additional_properties(self) -> Self:
+        if len(self.properties) == 0 and not self.additional_properties:
+            raise ValueError(
+                "Using `additional_properties=False` with no defined "
+                "properties will cause the model to be pruned during graph cleaning.",
+            )
+        return self
+
+    def get_property_by_name(self, name: str) -> PropertyType | None:
+        for prop in self.properties:
+            if prop.name == name:
+                return prop
+        return None
+
+    @staticmethod
+    def unique_constraint_name() -> tuple[Neo4jConstraintTypeEnum, ...]:
+        raise NotImplementedError()
+
+
+class NodeType(GraphEntityType):
+    """Represents a possible node in the graph."""
+
+    _name: Literal["NODE", "RELATIONSHIP"] = PrivateAttr(default="NODE")
+
+    @model_validator(mode="before")
+    @classmethod
+    def validate_input_if_string(cls, data: EntityInputType) -> EntityInputType:
+        if isinstance(data, str):
+            return {"label": data}
+        return data
+
+    @staticmethod
+    def unique_constraint_name() -> tuple[Neo4jConstraintTypeEnum, ...]:
+        return (
+            Neo4jConstraintTypeEnum.NODE_KEY,
+            Neo4jConstraintTypeEnum.UNIQUENESS,
+        )
+
+
+class RelationshipType(GraphEntityType):
+    """Represents a possible relationship between two nodes in the graph."""
+
+    _name: Literal["NODE", "RELATIONSHIP"] = PrivateAttr(default="RELATIONSHIP")
+
+    @model_validator(mode="before")
+    @classmethod
+    def validate_input_if_string(cls, data: RelationInputType) -> RelationInputType:
+        if isinstance(data, str):
+            return {"label": data}
+        return data
+
+    @staticmethod
+    def unique_constraint_name() -> tuple[Neo4jConstraintTypeEnum, ...]:
+        return (
+            Neo4jConstraintTypeEnum.RELATIONSHIP_KEY,
+            Neo4jConstraintTypeEnum.RELATIONSHIP_UNIQUENESS,
+        )
+
+
+class GraphSchema(DataModel):
+    """This model represents the expected
+    node and relationship types in the graph.
+
+    It is used both for guiding the LLM in the entity and relation
+    extraction component, and for cleaning the extracted graph in a
+    post-processing step.
+
+    .. warning::
+
+        This model is immutable.
+    """
+
+    node_types: Tuple[NodeType, ...]
+    relationship_types: Tuple[RelationshipType, ...] = tuple()
+    patterns: Tuple[Tuple[str, str, str], ...] = tuple()
+    constraints: Tuple[SchemaConstraint, ...] = tuple()
+
+    additional_node_types: bool = True
+    additional_relationship_types: bool = True
+    additional_patterns: bool = True
+
+    _node_type_index: dict[str, NodeType] = PrivateAttr()
+    _relationship_type_index: dict[str, RelationshipType] = PrivateAttr()
+
+    model_config = ConfigDict(
+        frozen=True,
+    )
+
+    @model_validator(mode="after")
+    def validate_patterns_against_node_and_rel_types(self) -> Self:
+        self._node_type_index = {node.label: node for node in self.node_types}
+        self._relationship_type_index = (
+            {r.label: r for r in self.relationship_types}
+            if self.relationship_types
+            else {}
+        )
+
+        relationship_types = self.relationship_types
+        patterns = self.patterns
+
+        if patterns:
+            if not relationship_types:
+                raise SchemaValidationError(
+                    "Relationship types must also be provided when using patterns."
+                )
+            for entity1, relation, entity2 in patterns:
+                if entity1 not in self._node_type_index:
+                    raise SchemaValidationError(
+                        f"Node type '{entity1}' is not defined in the provided node_types."
+                    )
+                if relation not in self._relationship_type_index:
+                    raise SchemaValidationError(
+                        f"Relationship type '{relation}' is not defined in the provided relationship_types."
+                    )
+                if entity2 not in self._node_type_index:
+                    raise ValueError(
+                        f"Node type '{entity2}' is not defined in the provided node_types."
+                    )
+
+        return self
+
+    @model_validator(mode="after")
+    def validate_additional_parameters(self) -> Self:
+        if (
+            self.additional_patterns is False
+            and self.additional_relationship_types is True
+        ):
+            raise ValueError(
+                "`additional_relationship_types` must be set to False when using `additional_patterns=False`"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_constraint_on_properties(self) -> Self:
+        """Check that properties in constraints are listed in the property list."""
+        for c in self.constraints:
+            entity: GraphEntityType | None = None
+            if c.entity_type == "NODE":
+                entity = self.node_type_from_label(c.label_or_type)
+            else:
+                entity = self.relationship_type_from_label(c.label_or_type)
+            if not entity:
+                raise ValueError(f"Entity type {c.label_or_type} is not defined.")
+            allowed_prop_names = [p.name for p in entity.properties]
+            for prop_name in c.properties:
+                if prop_name not in allowed_prop_names:
+                    raise ValueError(
+                        f"Property '{prop_name}' has a constraint '{c}' but is not in the property list for entity {entity}."
+                    )
+        return self
+
+    def node_type_from_label(self, label: str) -> Optional[NodeType]:
+        return self._node_type_index.get(label)
+
+    def relationship_type_from_label(self, label: str) -> Optional[RelationshipType]:
+        return self._relationship_type_index.get(label)
+
+    def unique_properties_for_entity(self, entity: GraphEntityType) -> list[list[str]]:
+        result = []
+        for c in self.constraints:
+            if c.entity_type != entity._name:  # noqa
+                continue
+            if c.label_or_type != entity.label:
+                continue
+            if c.type in entity.unique_constraint_name():
+                result.append(c.properties)
+        return result
+
+    def save(
+        self,
+        file_path: Union[str, Path],
+        overwrite: bool = False,
+        format: Optional[FileFormat] = None,
+    ) -> None:
+        """
+        Save the schema configuration to file.
+
+        Args:
+            file_path (str): The path where the schema configuration will be saved.
+            overwrite (bool): If set to True, existing file will be overwritten. Default to False.
+            format (Optional[FileFormat]): The file format to save the schema configuration into. By default, it is inferred from file_path extension.
+        """
+        data = self.model_dump(mode="json")
+        file_handler = FileHandler()
+        file_handler.write(data, file_path, overwrite=overwrite, format=format)
+
+    def store_as_json(
+        self, file_path: Union[str, Path], overwrite: bool = False
+    ) -> None:
+        warnings.warn(
+            "Use .save(..., format=FileFormat.JSON) instead.", DeprecationWarning
+        )
+        return self.save(file_path, overwrite=overwrite, format=FileFormat.JSON)
+
+    def store_as_yaml(
+        self, file_path: Union[str, Path], overwrite: bool = False
+    ) -> None:
+        warnings.warn(
+            "Use .save(..., format=FileFormat.YAML) instead.", DeprecationWarning
+        )
+        return self.save(file_path, overwrite=overwrite, format=FileFormat.YAML)
+
+    @classmethod
+    def from_file(
+        cls, file_path: Union[str, Path], format: Optional[FileFormat] = None
+    ) -> Self:
+        """
+        Load a schema configuration from a file (either JSON or YAML).
+
+        The file format is automatically detected based on the file extension,
+        unless the format parameter is set.
+
+        Args:
+            file_path (Union[str, Path]): The path to the schema configuration file.
+            format (Optional[FileFormat]): The format of the schema configuration file (json or yaml).
+
+        Returns:
+            GraphSchema: The loaded schema configuration.
+        """
+        file_path = Path(file_path)
+        file_handler = FileHandler()
+        try:
+            data = file_handler.read(file_path, format=format)
+        except ValueError:
+            raise
+
+        try:
+            return cls.model_validate(data)
+        except ValidationError as e:
+            raise SchemaValidationError(str(e)) from e

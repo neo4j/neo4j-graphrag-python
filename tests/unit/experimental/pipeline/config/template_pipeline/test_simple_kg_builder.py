@@ -27,6 +27,8 @@ from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
     SchemaFromTextExtractor,
+)
+from neo4j_graphrag.experimental.components.types import (
     GraphSchema,
 )
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (

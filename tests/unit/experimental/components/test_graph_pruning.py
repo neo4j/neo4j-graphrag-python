@@ -23,17 +23,16 @@ from neo4j_graphrag.experimental.components.graph_pruning import (
     GraphPruningResult,
     PruningStats,
 )
-from neo4j_graphrag.experimental.components.schema import (
+from neo4j_graphrag.experimental.components.types import (
     NodeType,
     PropertyType,
     RelationshipType,
     GraphSchema,
-)
-from neo4j_graphrag.experimental.components.types import (
     Neo4jNode,
     Neo4jRelationship,
     Neo4jGraph,
     LexicalGraphConfig,
+    Neo4jPropertyType,
 )
 
 
@@ -111,8 +110,8 @@ def node_type_required_name() -> NodeType:
     return NodeType(
         label="Person",
         properties=[
-            PropertyType(name="name", type="STRING", required=True),
-            PropertyType(name="age", type="INTEGER"),
+            PropertyType(name="name", type=Neo4jPropertyType.STRING, required=True),
+            PropertyType(name="age", type=Neo4jPropertyType.INTEGER),
         ],
     )
 

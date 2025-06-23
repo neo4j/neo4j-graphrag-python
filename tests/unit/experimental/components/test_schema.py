@@ -18,17 +18,21 @@ import json
 from typing import Tuple
 from unittest.mock import AsyncMock, patch
 
+import neo4j
 import pytest
 from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import SchemaValidationError, SchemaExtractionError
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
+    SchemaFromTextExtractor,
+)
+from neo4j_graphrag.experimental.components.types import (
     NodeType,
     PropertyType,
     RelationshipType,
-    SchemaFromTextExtractor,
     GraphSchema,
+    Neo4jPropertyType,
 )
 import os
 import tempfile
@@ -113,8 +117,8 @@ def valid_node_types() -> tuple[NodeType, ...]:
             label="PERSON",
             description="An individual human being.",
             properties=[
-                PropertyType(name="birth date", type="ZONED_DATETIME"),
-                PropertyType(name="name", type="STRING", required=True),
+                PropertyType(name="birth date", type=Neo4jPropertyType.ZONED_DATE),
+                PropertyType(name="name", type=Neo4jPropertyType.STRING, required=True),
             ],
             additional_properties=False,
         ),
@@ -133,8 +137,12 @@ def valid_relationship_types() -> tuple[RelationshipType, ...]:
             label="EMPLOYED_BY",
             description="Indicates employment relationship.",
             properties=[
-                PropertyType(name="start_time", type="LOCAL_DATETIME", required=True),
-                PropertyType(name="end_time", type="LOCAL_DATETIME"),
+                PropertyType(
+                    name="start_time",
+                    type=Neo4jPropertyType.LOCAL_DATETIME,
+                    required=True,
+                ),
+                PropertyType(name="end_time", type=Neo4jPropertyType.LOCAL_DATETIME),
             ],
             additional_properties=False,
         ),
@@ -170,8 +178,8 @@ def patterns_with_invalid_relation() -> tuple[tuple[str, str, str], ...]:
 
 
 @pytest.fixture
-def schema_builder() -> SchemaBuilder:
-    return SchemaBuilder()
+def schema_builder(driver: neo4j.Driver) -> SchemaBuilder:
+    return SchemaBuilder(driver)
 
 
 @pytest.fixture
@@ -181,7 +189,7 @@ def graph_schema(
     valid_relationship_types: Tuple[RelationshipType, ...],
     valid_patterns: Tuple[Tuple[str, str, str], ...],
 ) -> GraphSchema:
-    return schema_builder.create_schema_model(
+    return schema_builder._create_schema_model(
         list(valid_node_types), list(valid_relationship_types), list(valid_patterns)
     )
 
@@ -192,7 +200,7 @@ def test_create_schema_model_valid_data(
     valid_relationship_types: Tuple[RelationshipType, ...],
     valid_patterns: Tuple[Tuple[str, str, str], ...],
 ) -> None:
-    schema = schema_builder.create_schema_model(
+    schema = schema_builder._create_schema_model(
         list(valid_node_types), list(valid_relationship_types), list(valid_patterns)
     )
 
@@ -239,7 +247,7 @@ def test_create_schema_model_invalid_entity(
     patterns_with_invalid_entity: Tuple[Tuple[str, str, str], ...],
 ) -> None:
     with pytest.raises(SchemaValidationError) as exc_info:
-        schema_builder.create_schema_model(
+        schema_builder._create_schema_model(
             list(valid_node_types),
             list(valid_relationship_types),
             list(patterns_with_invalid_entity),
@@ -256,7 +264,7 @@ def test_create_schema_model_invalid_relation(
     patterns_with_invalid_relation: Tuple[Tuple[str, str, str], ...],
 ) -> None:
     with pytest.raises(SchemaValidationError) as exc_info:
-        schema_builder.create_schema_model(
+        schema_builder._create_schema_model(
             list(valid_node_types),
             list(valid_relationship_types),
             list(patterns_with_invalid_relation),
@@ -271,7 +279,7 @@ def test_create_schema_model_no_potential_schema(
     valid_node_types: Tuple[NodeType, ...],
     valid_relationship_types: Tuple[RelationshipType, ...],
 ) -> None:
-    schema_instance = schema_builder.create_schema_model(
+    schema_instance = schema_builder._create_schema_model(
         list(valid_node_types), list(valid_relationship_types)
     )
     assert schema_instance.node_types == valid_node_types
@@ -283,7 +291,7 @@ def test_create_schema_model_no_relations_or_potential_schema(
     schema_builder: SchemaBuilder,
     valid_node_types: Tuple[NodeType, ...],
 ) -> None:
-    schema_instance = schema_builder.create_schema_model(list(valid_node_types))
+    schema_instance = schema_builder._create_schema_model(list(valid_node_types))
 
     assert len(schema_instance.node_types) == 3
     person = schema_instance.node_type_from_label("PERSON")
@@ -310,7 +318,7 @@ def test_create_schema_model_missing_relations(
     valid_patterns: Tuple[Tuple[str, str, str], ...],
 ) -> None:
     with pytest.raises(SchemaValidationError) as exc_info:
-        schema_builder.create_schema_model(
+        schema_builder._create_schema_model(
             node_types=valid_node_types, patterns=valid_patterns
         )
     assert "Relationship types must also be provided when using patterns." in str(
@@ -373,8 +381,10 @@ def invalid_schema_json() -> str:
 
 
 @pytest.fixture
-def schema_from_text(mock_llm: AsyncMock) -> SchemaFromTextExtractor:
-    return SchemaFromTextExtractor(llm=mock_llm)
+def schema_from_text(
+    driver: neo4j.Driver, mock_llm: AsyncMock
+) -> SchemaFromTextExtractor:
+    return SchemaFromTextExtractor(driver, llm=mock_llm)
 
 
 @pytest.mark.asyncio
@@ -434,7 +444,7 @@ async def test_schema_from_text_custom_template(
 
     # create SchemaFromTextExtractor with the custom template
     schema_from_text = SchemaFromTextExtractor(
-        llm=mock_llm, prompt_template=custom_template
+        driver=None, llm=mock_llm, prompt_template=custom_template
     )
 
     # configure mock LLM to return valid JSON and capture the prompt that was sent to it
@@ -456,7 +466,7 @@ async def test_schema_from_text_llm_params(
     llm_params = {"temperature": 0.1, "max_tokens": 500}
 
     # create SchemaFromTextExtractor with custom LLM parameters
-    schema_from_text = SchemaFromTextExtractor(llm=mock_llm, llm_params=llm_params)
+    schema_from_text = SchemaFromTextExtractor(driver=None, llm=mock_llm, llm_params=llm_params)
 
     # configure the mock LLM to return a valid schema JSON
     mock_llm.ainvoke.return_value = LLMResponse(content=valid_schema_json)

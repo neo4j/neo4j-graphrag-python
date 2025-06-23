@@ -14,6 +14,8 @@ from dotenv import load_dotenv
 
 from neo4j_graphrag.experimental.components.schema import (
     SchemaFromTextExtractor,
+)
+from neo4j_graphrag.experimental.components.types import (
     GraphSchema,
 )
 from neo4j_graphrag.llm import OpenAILLM
@@ -74,7 +76,7 @@ async def extract_and_save_schema() -> None:
 
     try:
         # Create a SchemaFromTextExtractor component with the default template
-        schema_extractor = SchemaFromTextExtractor(llm=llm)
+        schema_extractor = SchemaFromTextExtractor(driver=None, llm=llm)
 
         print("Extracting schema from text...")
         # Extract schema from text

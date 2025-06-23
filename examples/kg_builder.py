@@ -32,6 +32,8 @@ from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
 from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
+)
+from neo4j_graphrag.experimental.components.types import (
     NodeType,
     RelationshipType,
 )
@@ -91,7 +93,7 @@ async def define_and_run_pipeline(
     pipe.add_component(
         FixedSizeSplitter(chunk_size=4000, chunk_overlap=200), "splitter"
     )
-    pipe.add_component(SchemaBuilder(), "schema")
+    pipe.add_component(SchemaBuilder(driver=neo4j_driver), "schema")
     pipe.add_component(
         LLMEntityRelationExtractor(
             llm=llm,
