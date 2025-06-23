@@ -49,7 +49,7 @@ from .types import (
     UserMessage,
 )
 
-from neo4j_graphrag.tool import Tool
+from neo4j_graphrag.tools.tool import Tool
 
 if TYPE_CHECKING:
     import openai
