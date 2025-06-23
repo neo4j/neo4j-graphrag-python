@@ -263,3 +263,9 @@ class Tool(ABC):
             Any: The result of the tool execution.
         """
         return self._execute_func(**kwargs)
+
+    def __str__(self) -> str:
+        return f"Tool(name={self._name}, description={self._description}, parameters={self._parameters})"
+
+    def __repr__(self) -> str:
+        return self.__str__()
