@@ -430,7 +430,7 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
 
         # Define a function that matches the Callable[[str, ...], Any] signature
         def execute_func(**kwargs: Any) -> Any:
-            return self.get_search_results(**kwargs)
+            return self.search(**kwargs)
 
         # Create a Tool object from the retriever
         return Tool(
