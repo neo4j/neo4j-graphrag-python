@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import json
-from typing import Tuple
+from typing import Tuple, Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -46,13 +46,35 @@ def test_node_type_initialization_from_string() -> None:
     assert node_type.properties == []
 
 
-def test_node_type_raise_error_if_misconfigured() -> None:
+def test_node_type_additional_properties_default() -> None:
+    # default behavior:
+    node_type = NodeType.model_validate({"label": "Label"})
+    assert node_type.additional_properties is True
+    node_type = NodeType.model_validate({"label": "Label", "properties": []})
+    assert node_type.additional_properties is True
+    node_type = NodeType.model_validate(
+        {"label": "Label", "properties": [{"name": "name", "type": "STRING"}]}
+    )
+    assert node_type.additional_properties is False
+
+    # manually changing the default value
+    # impossible cases: no properties and no additional
     with pytest.raises(ValidationError):
-        NodeType(
-            label="test",
-            properties=[],
-            additional_properties=False,
+        NodeType.model_validate({"label": "Label", "additional_properties": False})
+    with pytest.raises(ValidationError):
+        NodeType.model_validate(
+            {"label": "Label", "properties": [], "additional_properties": False}
         )
+
+    # working case: properties and additional allowed
+    node_type = NodeType.model_validate(
+        {
+            "label": "Label",
+            "properties": [{"name": "name", "type": "STRING"}],
+            "additional_properties": True,
+        }
+    )
+    assert node_type.additional_properties is True
 
 
 def test_relationship_type_initialization_from_string() -> None:
@@ -62,13 +84,83 @@ def test_relationship_type_initialization_from_string() -> None:
     assert relationship_type.properties == []
 
 
-def test_relationship_type_raise_error_if_misconfigured() -> None:
+def test_relationship_type_additional_properties_default() -> None:
+    relationship_type = RelationshipType.model_validate({"label": "REL"})
+    assert relationship_type.additional_properties is True
+    relationship_type = RelationshipType.model_validate(
+        {"label": "REL", "properties": []}
+    )
+    assert relationship_type.additional_properties is True
+    relationship_type = RelationshipType.model_validate(
+        {"label": "REL", "properties": [{"name": "name", "type": "STRING"}]}
+    )
+    assert relationship_type.additional_properties is False
+
+    # manually changing the default value
+    # impossible cases: no properties and no additional
     with pytest.raises(ValidationError):
-        RelationshipType(
-            label="test",
-            properties=[],
-            additional_properties=False,
+        RelationshipType.model_validate(
+            {"label": "REL", "additional_properties": False}
         )
+    with pytest.raises(ValidationError):
+        RelationshipType.model_validate(
+            {"label": "REL", "properties": [], "additional_properties": False}
+        )
+
+    # working case: properties and additional allowed
+    relationship_type = RelationshipType.model_validate(
+        {
+            "label": "REL",
+            "properties": [{"name": "name", "type": "STRING"}],
+            "additional_properties": True,
+        }
+    )
+    assert relationship_type.additional_properties is True
+
+
+def test_schema_additional_node_types_default() -> None:
+    schema_dict: dict[str, Any] = {
+        "node_types": [],
+    }
+    schema = GraphSchema.model_validate(schema_dict)
+    assert schema.additional_node_types is True
+
+    schema_dict = {
+        "node_types": ["Person"],
+    }
+    schema = GraphSchema.model_validate(schema_dict)
+    assert schema.additional_node_types is False
+
+
+def test_schema_additional_relationship_types_default() -> None:
+    schema_dict: dict[str, Any] = {
+        "node_types": [],
+    }
+    schema = GraphSchema.model_validate(schema_dict)
+    assert schema.additional_relationship_types is True
+
+    schema_dict = {
+        "node_types": [],
+        "relationship_types": ["REL"],
+    }
+    schema = GraphSchema.model_validate(schema_dict)
+    assert schema.additional_relationship_types is False
+
+
+def test_schema_additional_patterns_default() -> None:
+    schema_dict: dict[str, Any] = {
+        "node_types": [],
+    }
+    schema = GraphSchema.model_validate(schema_dict)
+    assert schema.additional_patterns is True
+
+    schema_dict = {
+        "node_types": ["Person"],
+        "relationship_types": ["REL"],
+        "patterns": [("Person", "REL", "Person")],
+    }
+    schema = GraphSchema.model_validate(schema_dict)
+    assert schema.additional_patterns is False
 
 
 def test_schema_additional_parameter_validation() -> None:
@@ -97,6 +189,7 @@ def test_schema_additional_parameter_validation() -> None:
         "patterns": [
             ("Person", "KNOWS", "Person"),
         ],
+        "additional_relationship_types": True,
         "additional_patterns": False,
     }
     with pytest.raises(
@@ -199,9 +292,9 @@ def test_create_schema_model_valid_data(
     assert schema.node_types == valid_node_types
     assert schema.relationship_types == valid_relationship_types
     assert schema.patterns == valid_patterns
-    assert schema.additional_node_types is True
-    assert schema.additional_relationship_types is True
-    assert schema.additional_patterns is True
+    assert schema.additional_node_types is False
+    assert schema.additional_relationship_types is False
+    assert schema.additional_patterns is False
 
 
 @pytest.mark.asyncio
@@ -227,9 +320,9 @@ async def test_run_method(
     assert schema.node_types == valid_node_types
     assert schema.relationship_types == valid_relationship_types
     assert schema.patterns == valid_patterns
-    assert schema.additional_node_types is True
-    assert schema.additional_relationship_types is True
-    assert schema.additional_patterns is True
+    assert schema.additional_node_types is False
+    assert schema.additional_relationship_types is False
+    assert schema.additional_patterns is False
 
 
 def test_create_schema_model_invalid_entity(

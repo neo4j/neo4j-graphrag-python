@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import logging
 import warnings
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union, Sequence
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union, Sequence, Callable
 from pathlib import Path
 
 from pydantic import (
@@ -27,6 +27,7 @@ from pydantic import (
     validate_call,
     ConfigDict,
     ValidationError,
+    Field,
 )
 from typing_extensions import Self
 
@@ -74,6 +75,13 @@ class PropertyType(BaseModel):
     )
 
 
+def default_additional_item(key: str) -> Callable[[dict[str, Any]], bool]:
+    def wrapper(validated_data: dict[str, Any]) -> bool:
+        return len(validated_data.get(key, [])) == 0
+
+    return wrapper
+
+
 class NodeType(BaseModel):
     """
     Represents a possible node in the graph.
@@ -82,7 +90,9 @@ class NodeType(BaseModel):
     label: str
     description: str = ""
     properties: list[PropertyType] = []
-    additional_properties: bool = True
+    additional_properties: bool = Field(
+        default_factory=default_additional_item("properties")
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -96,7 +106,8 @@ class NodeType(BaseModel):
         if len(self.properties) == 0 and not self.additional_properties:
             raise ValueError(
                 "Using `additional_properties=False` with no defined "
-                "properties will cause the model to be pruned during graph cleaning.",
+                "properties will cause the model to be pruned during graph cleaning. "
+                f"Define some properties or remove this NodeType: {self}"
             )
         return self
 
@@ -109,7 +120,9 @@ class RelationshipType(BaseModel):
     label: str
     description: str = ""
     properties: list[PropertyType] = []
-    additional_properties: bool = True
+    additional_properties: bool = Field(
+        default_factory=default_additional_item("properties")
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -123,7 +136,8 @@ class RelationshipType(BaseModel):
         if len(self.properties) == 0 and not self.additional_properties:
             raise ValueError(
                 "Using `additional_properties=False` with no defined "
-                "properties will cause the model to be pruned during graph cleaning.",
+                "properties will cause the model to be pruned during graph cleaning. "
+                f"Define some properties or remove this RelationshipType: {self}"
             )
         return self
 
@@ -145,9 +159,15 @@ class GraphSchema(DataModel):
     relationship_types: Tuple[RelationshipType, ...] = tuple()
     patterns: Tuple[Tuple[str, str, str], ...] = tuple()
 
-    additional_node_types: bool = True
-    additional_relationship_types: bool = True
-    additional_patterns: bool = True
+    additional_node_types: bool = Field(
+        default_factory=default_additional_item("node_types")
+    )
+    additional_relationship_types: bool = Field(
+        default_factory=default_additional_item("relationship_types")
+    )
+    additional_patterns: bool = Field(
+        default_factory=default_additional_item("patterns")
+    )
 
     _node_type_index: dict[str, NodeType] = PrivateAttr()
     _relationship_type_index: dict[str, RelationshipType] = PrivateAttr()
