@@ -54,7 +54,7 @@ FULL_TEXT_SEARCH_QUERY = (
 
 UPSERT_NODE_QUERY = (
     "UNWIND $rows AS row "
-    "CREATE (n:__KGBuilder__ {__kg_builder_id: row.id}) "
+    "CREATE (n:__KGBuilder__) "
     "SET n += row.properties "
     "WITH n, row CALL apoc.create.addLabels(n, row.labels) YIELD node "
     "WITH node as n, row CALL { "
@@ -63,12 +63,12 @@ UPSERT_NODE_QUERY = (
     "CALL db.create.setNodeVectorProperty(n, emb, row.embedding_properties[emb]) "
     "RETURN count(*) as nbEmb "
     "} "
-    "RETURN elementId(n)"
+    "RETURN row.id as _internal_id, elementId(n) as element_id"
 )
 
 UPSERT_NODE_QUERY_VARIABLE_SCOPE_CLAUSE = (
     "UNWIND $rows AS row "
-    "CREATE (n:__KGBuilder__ {__kg_builder_id: row.id}) "
+    "CREATE (n:__KGBuilder__) "
     "SET n += row.properties "
     "WITH n, row CALL apoc.create.addLabels(n, row.labels) YIELD node "
     "WITH node as n, row CALL (n, row) { "
@@ -77,13 +77,13 @@ UPSERT_NODE_QUERY_VARIABLE_SCOPE_CLAUSE = (
     "CALL db.create.setNodeVectorProperty(n, emb, row.embedding_properties[emb]) "
     "RETURN count(*) as nbEmb "
     "} "
-    "RETURN elementId(n)"
+    "RETURN row.id as _internal_id, elementId(n) as element_id"
 )
 
 UPSERT_RELATIONSHIP_QUERY = (
     "UNWIND $rows as row "
-    "MATCH (start:__KGBuilder__ {__kg_builder_id: row.start_node_id}) "
-    "MATCH (end:__KGBuilder__ {__kg_builder_id: row.end_node_id}) "
+    "MATCH (start:__KGBuilder__), (end:__KGBuilder__) "
+    "WHERE elementId(start) = row.start_node_element_id AND elementId(end) = row.end_node_element_id "
     "WITH start, end, row "
     "CALL apoc.merge.relationship(start, row.type, {}, row.properties, end, row.properties) YIELD rel  "
     "WITH rel, row CALL { "
@@ -96,8 +96,8 @@ UPSERT_RELATIONSHIP_QUERY = (
 
 UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE = (
     "UNWIND $rows as row "
-    "MATCH (start:__KGBuilder__ {__kg_builder_id: row.start_node_id}) "
-    "MATCH (end:__KGBuilder__ {__kg_builder_id: row.end_node_id}) "
+    "MATCH (start:__KGBuilder__), (end:__KGBuilder__) "
+    "WHERE elementId(start) = row.start_node_element_id AND elementId(end) = row.end_node_element_id "
     "WITH start, end, row "
     "CALL apoc.merge.relationship(start, row.type, {}, row.properties, end, row.properties) YIELD rel  "
     "WITH rel, row CALL (rel, row) { "

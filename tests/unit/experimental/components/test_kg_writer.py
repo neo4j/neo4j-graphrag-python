@@ -56,9 +56,17 @@ def test_batched() -> None:
     return_value=None,
 )
 def test_upsert_nodes(_: Mock, driver: MagicMock) -> None:
+    driver.execute_query.return_value = (
+        [{"_internal_id": "1", "element_id": "#1"}],
+        None,
+        None,
+    )
     neo4j_writer = Neo4jWriter(driver=driver)
     node = Neo4jNode(id="1", label="Label", properties={"key": "value"})
-    neo4j_writer._upsert_nodes(nodes=[node], lexical_graph_config=LexicalGraphConfig())
+    result = neo4j_writer._upsert_nodes(
+        nodes=[node], lexical_graph_config=LexicalGraphConfig()
+    )
+    assert result == {"1": "#1"}
     driver.execute_query.assert_called_once_with(
         UPSERT_NODE_QUERY,
         parameters_={
@@ -88,6 +96,11 @@ def test_upsert_nodes_with_embedding(
     _: Mock,
     driver: MagicMock,
 ) -> None:
+    driver.execute_query.return_value = (
+        [{"_internal_id": "1", "element_id": "#1"}],
+        None,
+        None,
+    )
     neo4j_writer = Neo4jWriter(driver=driver)
     node = Neo4jNode(
         id="1",
@@ -95,7 +108,6 @@ def test_upsert_nodes_with_embedding(
         properties={"key": "value"},
         embedding_properties={"embeddingProp": [1.0, 2.0, 3.0]},
     )
-    driver.execute_query.return_value.records = [{"elementId(n)": 1}]
     neo4j_writer._upsert_nodes(nodes=[node], lexical_graph_config=LexicalGraphConfig())
     driver.execute_query.assert_any_call(
         UPSERT_NODE_QUERY,
@@ -130,7 +142,9 @@ def test_upsert_relationship(_: Mock, driver: MagicMock) -> None:
         type="RELATIONSHIP",
         properties={"key": "value"},
     )
-    neo4j_writer._upsert_relationships(rels=[rel])
+    neo4j_writer._upsert_relationships(
+        rels=[rel], node_id_mapping={"1": "#1", "2": "#2"}
+    )
     parameters = {
         "rows": [
             {
@@ -139,6 +153,8 @@ def test_upsert_relationship(_: Mock, driver: MagicMock) -> None:
                 "end_node_id": "2",
                 "properties": {"key": "value"},
                 "embedding_properties": None,
+                "start_node_element_id": "#1",
+                "end_node_element_id": "#2",
             }
         ]
     }
@@ -167,7 +183,9 @@ def test_upsert_relationship_with_embedding(_: Mock, driver: MagicMock) -> None:
         embedding_properties={"embeddingProp": [1.0, 2.0, 3.0]},
     )
     driver.execute_query.return_value.records = [{"elementId(r)": "rel_elem_id"}]
-    neo4j_writer._upsert_relationships(rels=[rel])
+    neo4j_writer._upsert_relationships(
+        rels=[rel], node_id_mapping={"1": "#1", "2": "#2"}
+    )
     parameters = {
         "rows": [
             {
@@ -176,6 +194,8 @@ def test_upsert_relationship_with_embedding(_: Mock, driver: MagicMock) -> None:
                 "end_node_id": "2",
                 "properties": {"key": "value"},
                 "embedding_properties": {"embeddingProp": [1.0, 2.0, 3.0]},
+                "start_node_element_id": "#1",
+                "end_node_element_id": "#2",
             }
         ]
     }
@@ -196,6 +216,14 @@ def test_upsert_relationship_with_embedding(_: Mock, driver: MagicMock) -> None:
     return_value=None,
 )
 async def test_run(_: Mock, driver: MagicMock) -> None:
+    driver.execute_query.return_value = (
+        [
+            {"_internal_id": "1", "element_id": "#1"},
+            {"_internal_id": "2", "element_id": "#2"},
+        ],
+        None,
+        None,
+    )
     neo4j_writer = Neo4jWriter(driver=driver)
     node = Neo4jNode(id="1", label="Label")
     rel = Neo4jRelationship(start_node_id="1", end_node_id="2", type="RELATIONSHIP")
@@ -224,6 +252,8 @@ async def test_run(_: Mock, driver: MagicMock) -> None:
                 "end_node_id": "2",
                 "properties": {},
                 "embedding_properties": None,
+                "start_node_element_id": "#1",
+                "end_node_element_id": "#2",
             }
         ]
     }
@@ -242,7 +272,14 @@ async def test_run(_: Mock, driver: MagicMock) -> None:
 async def test_run_is_version_below_5_23(_: Mock) -> None:
     driver = MagicMock()
     driver.execute_query = Mock(
-        return_value=([{"versions": ["5.22.0"], "edition": "enterprise"}], None, None)
+        side_effect=(
+            # get_version
+            ([{"versions": ["5.22.0"], "edition": "enterpise"}], None, None),
+            # upsert nodes
+            ([{"_internal_id": "1", "element_id": "#1"}], None, None),
+            # upsert relationships
+            (None, None, None),
+        )
     )
 
     neo4j_writer = Neo4jWriter(driver=driver)
@@ -251,6 +288,8 @@ async def test_run_is_version_below_5_23(_: Mock) -> None:
     rel = Neo4jRelationship(start_node_id="1", end_node_id="2", type="RELATIONSHIP")
     graph = Neo4jGraph(nodes=[node], relationships=[rel])
     await neo4j_writer.run(graph=graph)
+
+    print(driver.execute_query.call_args_list)
 
     driver.execute_query.assert_any_call(
         UPSERT_NODE_QUERY,
@@ -275,6 +314,8 @@ async def test_run_is_version_below_5_23(_: Mock) -> None:
                 "end_node_id": "2",
                 "properties": {},
                 "embedding_properties": None,
+                "start_node_element_id": "#1",
+                "end_node_element_id": "",
             }
         ]
     }
@@ -293,7 +334,14 @@ async def test_run_is_version_below_5_23(_: Mock) -> None:
 async def test_run_is_version_5_23_or_above(_: Mock) -> None:
     driver = MagicMock()
     driver.execute_query = Mock(
-        return_value=([{"versions": ["5.23.0"], "edition": "enterpise"}], None, None)
+        side_effect=(
+            # get_version
+            ([{"versions": ["5.23.0"], "edition": "enterpise"}], None, None),
+            # upsert nodes
+            ([{"_internal_id": "1", "element_id": "#1"}], None, None),
+            # upsert relationships
+            (None, None, None),
+        )
     )
 
     neo4j_writer = Neo4jWriter(driver=driver)
@@ -327,6 +375,8 @@ async def test_run_is_version_5_23_or_above(_: Mock) -> None:
                 "end_node_id": "2",
                 "properties": {},
                 "embedding_properties": None,
+                "start_node_element_id": "#1",
+                "end_node_element_id": "",
             }
         ]
     }

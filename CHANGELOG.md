@@ -28,8 +28,8 @@
 
 #### Other
 
-- The node internal `id` property that's used to create relationships between nodes has been renamed to `__kg_builder_id`. This releases the `id` name for domain-specific meaningful `id` property.
-
+- The `id` property on `__KG_Builder__` nodes is removed.
+- The `chunk_index` property on `__Entity__` nodes is removed. Use the `FROM_CHUNK` relationship instead.
 
 ## 1.7.0
 

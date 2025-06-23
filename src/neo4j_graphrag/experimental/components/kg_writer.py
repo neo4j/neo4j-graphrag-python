@@ -125,12 +125,8 @@ class Neo4jWriter(KGWriter):
         self.is_version_5_23_or_above = is_version_5_23_or_above(version_tuple)
 
     def _db_setup(self) -> None:
-        # create index on __KGBuilder__.id
-        # used when creating the relationships
-        self.driver.execute_query(
-            "CREATE INDEX __entity__id IF NOT EXISTS  FOR (n:__KGBuilder__) ON (n.id)",
-            database_=self.neo4j_database,
-        )
+        # not used for now
+        pass
 
     @staticmethod
     def _nodes_to_rows(
@@ -148,45 +144,62 @@ class Neo4jWriter(KGWriter):
 
     def _upsert_nodes(
         self, nodes: list[Neo4jNode], lexical_graph_config: LexicalGraphConfig
-    ) -> None:
+    ) -> dict[str, str]:
         """Upserts a single node into the Neo4j database."
 
         Args:
             nodes (list[Neo4jNode]): The nodes batch to upsert into the database.
         """
         parameters = {"rows": self._nodes_to_rows(nodes, lexical_graph_config)}
-        if self.is_version_5_23_or_above:
-            self.driver.execute_query(
-                UPSERT_NODE_QUERY_VARIABLE_SCOPE_CLAUSE,
-                parameters_=parameters,
-                database_=self.neo4j_database,
-            )
-        else:
-            self.driver.execute_query(
-                UPSERT_NODE_QUERY,
-                parameters_=parameters,
-                database_=self.neo4j_database,
-            )
+        query = (
+            UPSERT_NODE_QUERY_VARIABLE_SCOPE_CLAUSE
+            if self.is_version_5_23_or_above
+            else UPSERT_NODE_QUERY
+        )
+        records, _, _ = self.driver.execute_query(
+            query,
+            parameters_=parameters,
+            database_=self.neo4j_database,
+        )
+        print("RECORDS", records)
+        return {r["_internal_id"]: r["element_id"] for r in records}
 
-    def _upsert_relationships(self, rels: list[Neo4jRelationship]) -> None:
+    @staticmethod
+    def _relationships_to_rows(
+        relationships: list[Neo4jRelationship], node_id_mapping: dict[str, str]
+    ) -> list[dict[str, Any]]:
+        return [
+            {
+                **relationship.model_dump(),
+                "start_node_element_id": node_id_mapping.get(
+                    relationship.start_node_id, ""
+                ),
+                "end_node_element_id": node_id_mapping.get(
+                    relationship.end_node_id, ""
+                ),
+            }
+            for relationship in relationships
+        ]
+
+    def _upsert_relationships(
+        self, rels: list[Neo4jRelationship], node_id_mapping: dict[str, str]
+    ) -> None:
         """Upserts a single relationship into the Neo4j database.
 
         Args:
             rels (list[Neo4jRelationship]): The relationships batch to upsert into the database.
         """
-        parameters = {"rows": [rel.model_dump() for rel in rels]}
-        if self.is_version_5_23_or_above:
-            self.driver.execute_query(
-                UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE,
-                parameters_=parameters,
-                database_=self.neo4j_database,
-            )
-        else:
-            self.driver.execute_query(
-                UPSERT_RELATIONSHIP_QUERY,
-                parameters_=parameters,
-                database_=self.neo4j_database,
-            )
+        parameters = {"rows": self._relationships_to_rows(rels, node_id_mapping)}
+        query = (
+            UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE
+            if self.is_version_5_23_or_above
+            else UPSERT_RELATIONSHIP_QUERY
+        )
+        self.driver.execute_query(
+            query,
+            parameters_=parameters,
+            database_=self.neo4j_database,
+        )
 
     @validate_call
     async def run(
@@ -203,11 +216,14 @@ class Neo4jWriter(KGWriter):
         try:
             self._db_setup()
 
+            node_id_mapping = {}
+
             for batch in batched(graph.nodes, self.batch_size):
-                self._upsert_nodes(batch, lexical_graph_config)
+                batch_mapping = self._upsert_nodes(batch, lexical_graph_config)
+                node_id_mapping.update(batch_mapping)
 
             for batch in batched(graph.relationships, self.batch_size):
-                self._upsert_relationships(batch)
+                self._upsert_relationships(batch, node_id_mapping)
 
             return KGWriterModel(
                 status="SUCCESS",
