@@ -17,7 +17,7 @@ from __future__ import annotations
 import copy
 import json
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Sequence, Literal
+from typing import Any, Dict, List, Optional, Tuple, Sequence
 
 import neo4j
 from pydantic import (
@@ -38,10 +38,8 @@ from neo4j_graphrag.experimental.pipeline.types.schema import (
 from neo4j_graphrag.generation import SchemaExtractionTemplate, PromptTemplate
 from neo4j_graphrag.llm import LLMInterface
 from neo4j_graphrag.experimental.components.types import (
-    RelationshipType,
     GraphSchema,
     SchemaConstraint,
-    ConstraintTypeEnum,
     Neo4jConstraintTypeEnum,
     GraphEntityType,
     Neo4jPropertyType,
@@ -122,7 +120,6 @@ class SchemaBuilder(Component):
 
     def _apply_all_constraints_from_db(
         self,
-        node_or_relationship_type: Literal["NODE", "RELATIONSHIP"],
         constraints: list[dict[str, Any]],
         entities: tuple[GraphEntityType, ...],
     ) -> list[GraphEntityType]:
@@ -131,7 +128,7 @@ class SchemaBuilder(Component):
             new_entity_type = copy.deepcopy(entity_type)
             # find constraints related to this node type
             for constraint in constraints:
-                if constraint["entityType"] != node_or_relationship_type:
+                if constraint["entityType"] != entity_type._name:
                     continue
                 if constraint["labelsOrTypes"][0] != entity_type.label:
                     continue
@@ -157,26 +154,27 @@ class SchemaBuilder(Component):
         self, entity_type: GraphEntityType, constraint: dict[str, Any]
     ) -> None:
         neo4j_constraint_type = Neo4jConstraintTypeEnum(constraint["type"])
-        # TODO: detect potential conflict and raise ValueError if any
-        # existing_schema_constraints_on_property = node_type.get_constraints_on_properties(constraint["properties"])
         constraint_properties = constraint["properties"]
         for p in constraint_properties:
             if entity_type.get_property_by_name(p) is None:
                 raise ValueError(
                     f"Can not add constraint {constraint} on non existing property"
                 )
-        constraint_type = neo4j_constraint_type.to_constraint_type()
-        entity_type.constraints.append(
-            SchemaConstraint(
-                type=constraint_type,
-                properties=constraint["properties"],
-                property_type=self._parse_property_type(constraint["propertyType"]),
-                name=constraint["name"],
-            )
+        schema_constraint = SchemaConstraint(
+            entity_type=entity_type._name,
+            label_or_type=entity_type.label,
+            type=neo4j_constraint_type,
+            properties=constraint["properties"],
+            property_type=self._parse_property_type(constraint["propertyType"]),
+            name=constraint["name"],
         )
+
         # if property required constraint, make sure the flag is set properly on
         # the PropertyType
-        if constraint_type == ConstraintTypeEnum.PROPERTY_EXISTENCE:
+        if schema_constraint.type in (
+            Neo4jConstraintTypeEnum.NODE_PROPERTY_EXISTENCE,
+            Neo4jConstraintTypeEnum.RELATIONSHIP_PROPERTY_EXISTENCE,
+        ):
             prop = entity_type.get_property_by_name(constraint["properties"][0])
             if prop:
                 prop.required = True
@@ -185,7 +183,7 @@ class SchemaBuilder(Component):
     def _create_schema_model(
         self,
         node_types: Sequence[EntityInputType],
-        relationship_types: Optional[Sequence[RelationshipType]] = None,
+        relationship_types: Optional[Sequence[RelationInputType]] = None,
         patterns: Optional[Sequence[Tuple[str, str, str]]] = None,
         **kwargs: Any,
     ) -> GraphSchema:
@@ -217,12 +215,10 @@ class SchemaBuilder(Component):
         constraints = self._get_constraints_from_db()
         # apply constraints
         constrained_node_types = self._apply_all_constraints_from_db(
-            "NODE",
             constraints,
             schema.node_types,
         )
         constrained_relationship_types = self._apply_all_constraints_from_db(
-            "RELATIONSHIP",
             constraints,
             schema.relationship_types,
         )

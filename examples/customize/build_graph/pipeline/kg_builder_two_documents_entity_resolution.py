@@ -28,9 +28,12 @@ from neo4j_graphrag.experimental.components.resolver import (
 )
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
+)
+from neo4j_graphrag.experimental.components.types import (
     NodeType,
     PropertyType,
     RelationshipType,
+    Neo4jPropertyType,
 )
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
     FixedSizeSplitter,
@@ -61,7 +64,7 @@ async def define_and_run_pipeline(
         FixedSizeSplitter(),
         "splitter",
     )
-    pipe.add_component(SchemaBuilder(), "schema")
+    pipe.add_component(SchemaBuilder(driver=neo4j_driver), "schema")
     pipe.add_component(
         LLMEntityRelationExtractor(
             llm=llm,
@@ -96,16 +99,18 @@ async def define_and_run_pipeline(
                 NodeType(
                     label="Person",
                     properties=[
-                        PropertyType(name="name", type="STRING"),
-                        PropertyType(name="place_of_birth", type="STRING"),
-                        PropertyType(name="date_of_birth", type="DATE"),
+                        PropertyType(name="name", type=Neo4jPropertyType.STRING),
+                        PropertyType(
+                            name="place_of_birth", type=Neo4jPropertyType.STRING
+                        ),
+                        PropertyType(name="date_of_birth", type=Neo4jPropertyType.DATE),
                     ],
                 ),
                 NodeType(
                     label="Organization",
                     properties=[
-                        PropertyType(name="name", type="STRING"),
-                        PropertyType(name="country", type="STRING"),
+                        PropertyType(name="name", type=Neo4jPropertyType.STRING),
+                        PropertyType(name="country", type=Neo4jPropertyType.STRING),
                     ],
                 ),
             ],

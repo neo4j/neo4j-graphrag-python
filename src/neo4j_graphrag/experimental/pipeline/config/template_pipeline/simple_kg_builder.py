@@ -43,9 +43,9 @@ from neo4j_graphrag.experimental.components.resolver import (
 )
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
-    GraphSchema,
     SchemaFromTextExtractor,
 )
+from neo4j_graphrag.experimental.components.types import GraphSchema
 from neo4j_graphrag.experimental.components.text_splitters.base import TextSplitter
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
     FixedSizeSplitter,
@@ -177,9 +177,10 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         Get the appropriate schema component based on configuration.
         Return SchemaFromTextExtractor for automatic extraction or SchemaBuilder for manual schema.
         """
+        driver = self.get_default_neo4j_driver()
         if not self.has_user_provided_schema():
-            return SchemaFromTextExtractor(llm=self.get_default_llm())
-        return SchemaBuilder()
+            return SchemaFromTextExtractor(driver=driver, llm=self.get_default_llm())
+        return SchemaBuilder(driver=driver)
 
     def _process_schema_with_precedence(self) -> dict[str, Any]:
         """

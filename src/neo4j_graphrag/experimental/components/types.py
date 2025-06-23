@@ -18,7 +18,7 @@ import enum
 import uuid
 import warnings
 from pathlib import Path
-from typing import Any, Dict, Optional, Union, Tuple
+from typing import Any, Dict, Optional, Union, Tuple, Literal
 from typing_extensions import Self
 
 from pydantic import (
@@ -233,15 +233,8 @@ class PropertyType(BaseModel):
     required: bool = False
 
 
-class ConstraintTypeEnum(str, enum.Enum):
-    # see: https://neo4j.com/docs/cypher-manual/current/constraints/
-    KEY = "KEY"
-    PROPERTY_EXISTENCE = "PROPERTY_EXISTENCE"
-    PROPERTY_UNIQUENESS = "PROPERTY_UNIQUENESS"
-    PROPERTY_TYPE = "PROPERTY_TYPE"
-
-
 class Neo4jConstraintTypeEnum(str, enum.Enum):
+    # see: https://neo4j.com/docs/cypher-manual/current/constraints/
     NODE_KEY = "NODE_KEY"
     UNIQUENESS = "UNIQUENESS"
     NODE_PROPERTY_EXISTENCE = "NODE_PROPERTY_EXISTENCE"
@@ -253,47 +246,25 @@ class Neo4jConstraintTypeEnum(str, enum.Enum):
     RELATIONSHIP_PROPERTY_UNIQUENESS = "RELATIONSHIP_PROPERTY_UNIQUENESS"
     RELATIONSHIP_PROPERTY_TYPE = "RELATIONSHIP_PROPERTY_TYPE"
 
-    def to_constraint_type(self) -> ConstraintTypeEnum:
-        if self in (
-            Neo4jConstraintTypeEnum.NODE_KEY,
-            Neo4jConstraintTypeEnum.RELATIONSHIP_KEY,
-        ):
-            return ConstraintTypeEnum.KEY
-        if self in (
-            Neo4jConstraintTypeEnum.UNIQUENESS,
-            Neo4jConstraintTypeEnum.NODE_PROPERTY_UNIQUENESS,
-            Neo4jConstraintTypeEnum.RELATIONSHIP_UNIQUENESS,
-            Neo4jConstraintTypeEnum.RELATIONSHIP_PROPERTY_UNIQUENESS,
-        ):
-            return ConstraintTypeEnum.PROPERTY_UNIQUENESS
-        if self in (
-            Neo4jConstraintTypeEnum.NODE_PROPERTY_EXISTENCE,
-            Neo4jConstraintTypeEnum.RELATIONSHIP_PROPERTY_EXISTENCE,
-        ):
-            return ConstraintTypeEnum.PROPERTY_EXISTENCE
-        if self in (
-            Neo4jConstraintTypeEnum.NODE_PROPERTY_TYPE,
-            Neo4jConstraintTypeEnum.RELATIONSHIP_PROPERTY_TYPE,
-        ):
-            return ConstraintTypeEnum.PROPERTY_TYPE
-        raise ValueError(f"Can't convert {self} to ConstraintTypeEnum")
-
 
 class SchemaConstraint(BaseModel):
     """Constraints that can be applied either on a node or relationship property."""
 
-    type: ConstraintTypeEnum
+    entity_type: Literal["NODE", "RELATIONSHIP"]
+    label_or_type: str
+    type: Neo4jConstraintTypeEnum
     properties: list[str]
     property_type: Optional[Neo4jPropertyType] = None
     name: Optional[str] = None  # do not force users to set a name manually
 
 
 class GraphEntityType(BaseModel):
-    """Represents a possible entity in the graph.
+    """Represents a possible entity in the graph (node or relationship).
 
-    Nodes have a label, a list of properties and optionally some constraints.
+    They have a label and a list of properties.
 
     For LLM-based applications, it is also useful to add a description.
+
     The additional_properties flag is used in schema-driven data validation.
     """
 
@@ -301,7 +272,8 @@ class GraphEntityType(BaseModel):
     description: str = ""
     properties: list[PropertyType] = []
     additional_properties: bool = True
-    constraints: list[SchemaConstraint] = []
+
+    _name: Literal["NODE", "RELATIONSHIP"] = PrivateAttr()
 
     @model_validator(mode="after")
     def validate_additional_properties(self) -> Self:
@@ -312,45 +284,21 @@ class GraphEntityType(BaseModel):
             )
         return self
 
-    @model_validator(mode="after")
-    def validate_constraint_on_properties(self) -> Self:
-        """Check that properties in constraints are listed in the property list."""
-        allowed_prop_names = [p.name for p in self.properties]
-        for c in self.constraints:
-            for prop_name in c.properties:
-                if prop_name not in allowed_prop_names:
-                    raise ValueError(
-                        f"Property '{prop_name}' has a constraint '{c.type}' but is not in the property list."
-                    )
-        return self
-
     def get_property_by_name(self, name: str) -> PropertyType | None:
         for prop in self.properties:
             if prop.name == name:
                 return prop
         return None
 
-    def get_constraints_on_properties(
-        self, prop_names: list[str]
-    ) -> list[SchemaConstraint]:
-        constraints = []
-        for constraint in self.constraints:
-            if set(prop_names) == set(constraint.properties):
-                constraints.append(constraint)
-        return constraints
-
-    def get_unique_properties(self) -> list[str]:
-        for c in self.constraints:
-            if c.type in (
-                ConstraintTypeEnum.KEY,
-                ConstraintTypeEnum.PROPERTY_UNIQUENESS,
-            ):
-                return c.properties
-        return []
+    @staticmethod
+    def unique_constraint_name() -> tuple[Neo4jConstraintTypeEnum, ...]:
+        raise NotImplementedError()
 
 
 class NodeType(GraphEntityType):
     """Represents a possible node in the graph."""
+
+    _name: Literal["NODE", "RELATIONSHIP"] = PrivateAttr(default="NODE")
 
     @model_validator(mode="before")
     @classmethod
@@ -359,9 +307,18 @@ class NodeType(GraphEntityType):
             return {"label": data}
         return data
 
+    @staticmethod
+    def unique_constraint_name() -> tuple[Neo4jConstraintTypeEnum, ...]:
+        return (
+            Neo4jConstraintTypeEnum.NODE_KEY,
+            Neo4jConstraintTypeEnum.UNIQUENESS,
+        )
+
 
 class RelationshipType(GraphEntityType):
     """Represents a possible relationship between two nodes in the graph."""
+
+    _name: Literal["NODE", "RELATIONSHIP"] = PrivateAttr(default="RELATIONSHIP")
 
     @model_validator(mode="before")
     @classmethod
@@ -369,6 +326,13 @@ class RelationshipType(GraphEntityType):
         if isinstance(data, str):
             return {"label": data}
         return data
+
+    @staticmethod
+    def unique_constraint_name() -> tuple[Neo4jConstraintTypeEnum, ...]:
+        return (
+            Neo4jConstraintTypeEnum.RELATIONSHIP_KEY,
+            Neo4jConstraintTypeEnum.RELATIONSHIP_UNIQUENESS,
+        )
 
 
 class GraphSchema(DataModel):
@@ -387,6 +351,7 @@ class GraphSchema(DataModel):
     node_types: Tuple[NodeType, ...]
     relationship_types: Tuple[RelationshipType, ...] = tuple()
     patterns: Tuple[Tuple[str, str, str], ...] = tuple()
+    constraints: Tuple[SchemaConstraint, ...] = tuple()
 
     additional_node_types: bool = True
     additional_relationship_types: bool = True
@@ -443,11 +408,41 @@ class GraphSchema(DataModel):
             )
         return self
 
+    @model_validator(mode="after")
+    def validate_constraint_on_properties(self) -> Self:
+        """Check that properties in constraints are listed in the property list."""
+        for c in self.constraints:
+            entity: GraphEntityType | None = None
+            if c.entity_type == "NODE":
+                entity = self.node_type_from_label(c.label_or_type)
+            else:
+                entity = self.relationship_type_from_label(c.label_or_type)
+            if not entity:
+                raise ValueError(f"Entity type {c.label_or_type} is not defined.")
+            allowed_prop_names = [p.name for p in entity.properties]
+            for prop_name in c.properties:
+                if prop_name not in allowed_prop_names:
+                    raise ValueError(
+                        f"Property '{prop_name}' has a constraint '{c}' but is not in the property list for entity {entity}."
+                    )
+        return self
+
     def node_type_from_label(self, label: str) -> Optional[NodeType]:
         return self._node_type_index.get(label)
 
     def relationship_type_from_label(self, label: str) -> Optional[RelationshipType]:
         return self._relationship_type_index.get(label)
+
+    def unique_properties_for_entity(self, entity: GraphEntityType) -> list[list[str]]:
+        result = []
+        for c in self.constraints:
+            if c.entity_type != entity._name:  # noqa
+                continue
+            if c.label_or_type != entity.label:
+                continue
+            if c.type in entity.unique_constraint_name():
+                result.append(c.properties)
+        return result
 
     def save(
         self,

@@ -11,6 +11,7 @@ from neo4j_graphrag.experimental.components.types import (
     Neo4jGraph,
     Neo4jNode,
     Neo4jRelationship,
+    Neo4jPropertyType,
 )
 
 graph = Neo4jGraph(
@@ -66,24 +67,30 @@ schema = GraphSchema(
         NodeType(
             label="Person",
             properties=[
-                PropertyType(name="firstName", type="STRING", required=True),
-                PropertyType(name="lastName", type="STRING", required=True),
-                PropertyType(name="age", type="INTEGER"),
+                PropertyType(
+                    name="firstName", type=Neo4jPropertyType.STRING, required=True
+                ),
+                PropertyType(
+                    name="lastName", type=Neo4jPropertyType.STRING, required=True
+                ),
+                PropertyType(name="age", type=Neo4jPropertyType.INTEGER),
             ],
             additional_properties=False,
         ),
         NodeType(
             label="Organization",
             properties=[
-                PropertyType(name="name", type="STRING", required=True),
-                PropertyType(name="address", type="STRING"),
+                PropertyType(name="name", type=Neo4jPropertyType.STRING, required=True),
+                PropertyType(name="address", type=Neo4jPropertyType.STRING),
             ],
         ),
     ),
     relationship_types=(
         RelationshipType(
             label="WORKS_FOR",
-            properties=[PropertyType(name="since", type="LOCAL_DATETIME")],
+            properties=[
+                PropertyType(name="since", type=Neo4jPropertyType.LOCAL_DATETIME)
+            ],
         ),
         RelationshipType(
             label="KNOWS",

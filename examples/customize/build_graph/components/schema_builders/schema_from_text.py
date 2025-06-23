@@ -76,7 +76,7 @@ async def extract_and_save_schema() -> None:
 
     try:
         # Create a SchemaFromTextExtractor component with the default template
-        schema_extractor = SchemaFromTextExtractor(llm=llm)
+        schema_extractor = SchemaFromTextExtractor(driver=None, llm=llm)
 
         print("Extracting schema from text...")
         # Extract schema from text

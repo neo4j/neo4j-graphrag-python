@@ -18,9 +18,11 @@ from neo4j_graphrag.experimental.components.lexical_graph import LexicalGraphBui
 from neo4j_graphrag.experimental.components.neo4j_reader import Neo4jChunkReader
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
+)
+from neo4j_graphrag.experimental.components.types import (
     NodeType,
     PropertyType,
-    RelationshipType,
+    RelationshipType, Neo4jPropertyType,
 )
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
     FixedSizeSplitter,
@@ -112,7 +114,7 @@ async def read_chunk_and_perform_entity_extraction(
     pipe = Pipeline()
     # define the components
     pipe.add_component(Neo4jChunkReader(neo4j_driver), "reader")
-    pipe.add_component(SchemaBuilder(), "schema")
+    pipe.add_component(SchemaBuilder(driver=neo4j_driver), "schema")
     pipe.add_component(
         LLMEntityRelationExtractor(
             llm=llm,
@@ -142,22 +144,22 @@ async def read_chunk_and_perform_entity_extraction(
                 NodeType(
                     label="Person",
                     properties=[
-                        PropertyType(name="name", type="STRING"),
-                        PropertyType(name="place_of_birth", type="STRING"),
-                        PropertyType(name="date_of_birth", type="DATE"),
+                        PropertyType(name="name", type=Neo4jPropertyType.STRING),
+                        PropertyType(name="place_of_birth", type=Neo4jPropertyType.STRING),
+                        PropertyType(name="date_of_birth", type=Neo4jPropertyType.DATE),
                     ],
                 ),
                 NodeType(
                     label="Organization",
                     properties=[
-                        PropertyType(name="name", type="STRING"),
-                        PropertyType(name="country", type="STRING"),
+                        PropertyType(name="name", type=Neo4jPropertyType.STRING),
+                        PropertyType(name="country", type=Neo4jPropertyType.STRING),
                     ],
                 ),
                 NodeType(
                     label="Field",
                     properties=[
-                        PropertyType(name="name", type="STRING"),
+                        PropertyType(name="name", type=Neo4jPropertyType.STRING),
                     ],
                 ),
             ],

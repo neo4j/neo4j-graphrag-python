@@ -42,7 +42,7 @@ from neo4j_graphrag.experimental.pipeline.types.schema import (
 )
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 from neo4j_graphrag.llm.base import LLMInterface
-from neo4j_graphrag.experimental.components.schema import GraphSchema
+from neo4j_graphrag.experimental.components.types import GraphSchema
 
 logger = logging.getLogger(__name__)
 
