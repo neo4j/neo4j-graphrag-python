@@ -402,7 +402,7 @@ class TestToolExecution:
 
         # Check that we get a result (even if empty due to mocking)
         assert result is not None
-        assert hasattr(result, "records")
+        assert hasattr(result, "items")  # Should return RetrieverResult now
         assert hasattr(result, "metadata")
 
     def test_tool_execution_with_validation(self):

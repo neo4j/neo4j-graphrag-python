@@ -231,8 +231,13 @@ class Tool(ABC):
             self._parameters = ObjectParameter.model_validate(parameters)
         elif isinstance(parameters, ObjectParameter):
             self._parameters = parameters
-        else:
+        elif parameters is None:
             self._parameters = None
+        else:
+            raise TypeError(
+                f"Parameters must be None, dict, or ObjectParameter, "
+                f"got {type(parameters).__name__}: {parameters}"
+            )
 
     def get_name(self) -> str:
         """Get the name of the tool.

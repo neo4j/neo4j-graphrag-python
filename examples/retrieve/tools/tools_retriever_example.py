@@ -38,7 +38,6 @@ from neo4j_graphrag.tools.tool import (
     StringParameter,
     Tool,
 )
-from neo4j_graphrag.tools.utils import convert_retriever_to_tool
 from neo4j_graphrag.llm.openai_llm import OpenAILLM
 
 # Load environment variables from .env file (OPENAI_API_KEY required for this example)
@@ -241,23 +240,13 @@ def main() -> None:
     # Create retrievers
     neo4j_retriever = Neo4jInfoRetriever(driver=driver)
 
-    # Define parameters for the tools
-    neo4j_parameters = ObjectParameter(
-        description="Parameters for Neo4j information retrieval",
-        properties={
-            "query": StringParameter(
-                description="The query about Neo4j",
-            ),
-        },
-        required_properties=["query"],
-    )
-
     # Convert retrievers to tools
-    neo4j_tool = convert_retriever_to_tool(
-        retriever=neo4j_retriever,
+    neo4j_tool = neo4j_retriever.convert_to_tool(
         name="neo4j_info_tool",
         description="Get information about Neo4j graph database",
-        parameters=neo4j_parameters,
+        parameter_descriptions={
+            "query_text": "The query about Neo4j",
+        },
     )
 
     # Create a calendar tool
@@ -325,7 +314,10 @@ def main() -> None:
             print("\nRESULTS:")
             for i, record in enumerate(result.records):
                 print(f"\n--- Result {i + 1} ---")
-                print(record)
+                print(f"Content: {record.get('content', 'N/A')}")
+                print(f"Tool: {record.get('tool_name', 'Unknown')}")
+                if record.get("metadata"):
+                    print(f"Metadata: {record.get('metadata')}")
         except Exception as e:
             print(f"Error: {str(e)}")
         print(f"{'=' * 80}")

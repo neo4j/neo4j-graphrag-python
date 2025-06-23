@@ -55,9 +55,23 @@ class ToolsRetriever(Retriever):
         super().__init__(driver, neo4j_database)
         self.llm = llm
         self._tools = list(tools)  # Make a copy to allow modification
+        self._validate_tool_names()
         self.system_instruction = (
             system_instruction or self._get_default_system_instruction()
         )
+
+    def _validate_tool_names(self) -> None:
+        """Validate that all tool names are unique."""
+        tool_names = [tool.get_name() for tool in self._tools]
+        duplicate_names = [
+            name for name in set(tool_names) if tool_names.count(name) > 1
+        ]
+
+        if duplicate_names:
+            raise ValueError(
+                f"Duplicate tool names found: {duplicate_names}. "
+                "All tools must have unique names for proper LLM tool selection."
+            )
 
     def _get_default_system_instruction(self) -> str:
         """Get the default system instruction for the LLM."""
@@ -129,12 +143,48 @@ class ToolsRetriever(Retriever):
 
                     # Execute the tool with the provided arguments
                     tool_result = selected_tool.execute(**tool_args)
-                    # If the tool result is a RawSearchResult, extract its records
-                    if hasattr(tool_result, "records"):
-                        all_records.extend(tool_result.records)
+
+                    # Handle different tool result types
+                    if hasattr(tool_result, "items") and not callable(
+                        getattr(tool_result, "items")
+                    ):
+                        # RetrieverResult from formatted retriever tools
+                        for item in tool_result.items:
+                            record = neo4j.Record(
+                                {
+                                    "content": item.content,
+                                    "tool_name": tool_name,
+                                    "metadata": {
+                                        **(item.metadata or {}),
+                                        "tool": tool_name,
+                                    },
+                                }
+                            )
+                            all_records.append(record)
+                    elif hasattr(tool_result, "records"):
+                        # RawSearchResult from raw retriever tools (legacy)
+                        for record in tool_result.records:
+                            # Wrap raw records with tool attribution
+                            attributed_record = neo4j.Record(
+                                {
+                                    "content": str(record),
+                                    "tool_name": tool_name,
+                                    "metadata": {
+                                        "original_record": dict(record),
+                                        "tool": tool_name,
+                                    },
+                                }
+                            )
+                            all_records.append(attributed_record)
                     else:
-                        # Create a record from the tool result
-                        record = neo4j.Record({"result": tool_result})
+                        # Handle non-retriever tools or simple return values
+                        record = neo4j.Record(
+                            {
+                                "content": str(tool_result),
+                                "tool_name": tool_name,
+                                "metadata": {"tool": tool_name},
+                            }
+                        )
                         all_records.append(record)
 
             # Combine metadata from all tool calls

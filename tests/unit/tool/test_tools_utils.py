@@ -25,13 +25,7 @@ from neo4j_graphrag.retrievers import (
     VectorCypherRetriever,
     VectorRetriever,
 )
-from neo4j_graphrag.tools.tool import (
-    Tool,
-    ObjectParameter,
-    StringParameter,
-    IntegerParameter,
-)
-from neo4j_graphrag.tools.utils import convert_retriever_to_tool
+from neo4j_graphrag.tools.tool import Tool
 
 
 # Mock dependencies for retriever instances
@@ -69,31 +63,26 @@ def test_convert_vector_retriever_to_tool(mock_get_version: MagicMock) -> None:
         embedder=embedder,
         return_properties=["name", "description"],
     )
-    parameters = ObjectParameter(
-        description="Parameters for vector search",
-        properties={
-            "query_text": StringParameter(
-                description="The query text for vector search.",
-                required=True,
-            ),
-            "top_k": IntegerParameter(
-                description="Number of results to return.",
-                required=False,
-            ),
+    tool = retriever.convert_to_tool(
+        name="VectorRetriever",
+        description="A tool for vector-based retrieval from Neo4j.",
+        parameter_descriptions={
+            "query_text": "The query text for vector search.",
+            "top_k": "Number of results to return.",
         },
     )
-    tool = convert_retriever_to_tool(
-        retriever,
-        description="A tool for vector-based retrieval from Neo4j.",
-        parameters=parameters,
-    )
     assert isinstance(tool, Tool)
-    assert tool.get_name() in ["VectorRetriever", "UnnamedRetrieverTool"]
+    assert tool.get_name() == "VectorRetriever"
     assert tool.get_description() == "A tool for vector-based retrieval from Neo4j."
     # Check that the parameters object has the expected properties
     params = tool.get_parameters()
     assert "properties" in params
-    assert len(params["properties"]) == 2
+    assert len(params["properties"]) == 5  # VectorRetriever has 5 parameters
+    assert "query_text" in params["properties"]
+    assert "top_k" in params["properties"]
+    assert "query_vector" in params["properties"]
+    assert "effective_search_ratio" in params["properties"]
+    assert "filters" in params["properties"]
 
 
 # Test conversion with VectorCypherRetriever
@@ -109,31 +98,27 @@ def test_convert_vector_cypher_retriever_to_tool(mock_get_version: MagicMock) ->
         embedder=embedder,
         retrieval_query="RETURN n",
     )
-    parameters = ObjectParameter(
-        description="Parameters for vector-cypher search",
-        properties={
-            "query_text": StringParameter(
-                description="The query text for vector-cypher search.",
-                required=True,
-            ),
-            "top_k": IntegerParameter(
-                description="Number of results to return.",
-                required=False,
-            ),
+    tool = retriever.convert_to_tool(
+        name="VectorCypherRetriever",
+        description="A tool for vector-cypher retrieval from Neo4j.",
+        parameter_descriptions={
+            "query_text": "The query text for vector-cypher search.",
+            "top_k": "Number of results to return.",
         },
     )
-    tool = convert_retriever_to_tool(
-        retriever,
-        description="A tool for vector-cypher retrieval from Neo4j.",
-        parameters=parameters,
-    )
     assert isinstance(tool, Tool)
-    assert tool.get_name() in ["VectorCypherRetriever", "UnnamedRetrieverTool"]
+    assert tool.get_name() == "VectorCypherRetriever"
     assert tool.get_description() == "A tool for vector-cypher retrieval from Neo4j."
     # Check that the parameters object has the expected properties
     params = tool.get_parameters()
     assert "properties" in params
-    assert len(params["properties"]) == 2
+    assert len(params["properties"]) == 6  # VectorCypherRetriever has 6 parameters
+    assert "query_text" in params["properties"]
+    assert "top_k" in params["properties"]
+    assert "query_vector" in params["properties"]
+    assert "effective_search_ratio" in params["properties"]
+    assert "query_params" in params["properties"]
+    assert "filters" in params["properties"]
 
 
 # Test conversion with HybridRetriever
@@ -150,31 +135,27 @@ def test_convert_hybrid_retriever_to_tool(mock_get_version: MagicMock) -> None:
         embedder=embedder,
         return_properties=["name", "description"],
     )
-    parameters = ObjectParameter(
-        description="Parameters for hybrid search",
-        properties={
-            "query_text": StringParameter(
-                description="The query text for hybrid search.",
-                required=True,
-            ),
-            "top_k": IntegerParameter(
-                description="Number of results to return.",
-                required=False,
-            ),
+    tool = retriever.convert_to_tool(
+        name="HybridRetriever",
+        description="A tool for hybrid retrieval from Neo4j.",
+        parameter_descriptions={
+            "query_text": "The query text for hybrid search.",
+            "top_k": "Number of results to return.",
         },
     )
-    tool = convert_retriever_to_tool(
-        retriever,
-        description="A tool for hybrid retrieval from Neo4j.",
-        parameters=parameters,
-    )
     assert isinstance(tool, Tool)
-    assert tool.get_name() in ["HybridRetriever", "UnnamedRetrieverTool"]
+    assert tool.get_name() == "HybridRetriever"
     assert tool.get_description() == "A tool for hybrid retrieval from Neo4j."
     # Check that the parameters object has the expected properties
     params = tool.get_parameters()
     assert "properties" in params
-    assert len(params["properties"]) == 2
+    assert len(params["properties"]) == 6  # HybridRetriever has 6 parameters
+    assert "query_text" in params["properties"]
+    assert "top_k" in params["properties"]
+    assert "query_vector" in params["properties"]
+    assert "effective_search_ratio" in params["properties"]
+    assert "ranker" in params["properties"]
+    assert "alpha" in params["properties"]
 
 
 # Test conversion with HybridCypherRetriever
@@ -191,31 +172,28 @@ def test_convert_hybrid_cypher_retriever_to_tool(mock_get_version: MagicMock) ->
         embedder=embedder,
         retrieval_query="RETURN n",
     )
-    parameters = ObjectParameter(
-        description="Parameters for hybrid-cypher search",
-        properties={
-            "query_text": StringParameter(
-                description="The query text for hybrid-cypher search.",
-                required=True,
-            ),
-            "top_k": IntegerParameter(
-                description="Number of results to return.",
-                required=False,
-            ),
+    tool = retriever.convert_to_tool(
+        name="HybridCypherRetriever",
+        description="A tool for hybrid-cypher retrieval from Neo4j.",
+        parameter_descriptions={
+            "query_text": "The query text for hybrid-cypher search.",
+            "top_k": "Number of results to return.",
         },
     )
-    tool = convert_retriever_to_tool(
-        retriever,
-        description="A tool for hybrid-cypher retrieval from Neo4j.",
-        parameters=parameters,
-    )
     assert isinstance(tool, Tool)
-    assert tool.get_name() in ["HybridCypherRetriever", "UnnamedRetrieverTool"]
+    assert tool.get_name() == "HybridCypherRetriever"
     assert tool.get_description() == "A tool for hybrid-cypher retrieval from Neo4j."
     # Check that the parameters object has the expected properties
     params = tool.get_parameters()
     assert "properties" in params
-    assert len(params["properties"]) == 2
+    assert len(params["properties"]) == 7  # HybridCypherRetriever has 7 parameters
+    assert "query_text" in params["properties"]
+    assert "query_vector" in params["properties"]
+    assert "top_k" in params["properties"]
+    assert "effective_search_ratio" in params["properties"]
+    assert "query_params" in params["properties"]
+    assert "ranker" in params["properties"]
+    assert "alpha" in params["properties"]
 
 
 # Test conversion with Text2CypherRetriever
@@ -226,27 +204,22 @@ def test_convert_text2cypher_retriever_to_tool(mock_get_version: MagicMock) -> N
     driver = create_mock_driver()
     llm = create_mock_llm()
     retriever = Text2CypherRetriever(driver=driver, llm=llm)
-    parameters = ObjectParameter(
-        description="Parameters for text to Cypher conversion",
-        properties={
-            "query_text": StringParameter(
-                description="The query text for text to Cypher conversion.",
-                required=True,
-            ),
+    tool = retriever.convert_to_tool(
+        name="Text2CypherRetriever",
+        description="A tool for text to Cypher retrieval from Neo4j.",
+        parameter_descriptions={
+            "query_text": "The query text for text to Cypher conversion.",
         },
     )
-    tool = convert_retriever_to_tool(
-        retriever,
-        description="A tool for text to Cypher retrieval from Neo4j.",
-        parameters=parameters,
-    )
     assert isinstance(tool, Tool)
-    assert tool.get_name() in ["Text2CypherRetriever", "UnnamedRetrieverTool"]
+    assert tool.get_name() == "Text2CypherRetriever"
     assert tool.get_description() == "A tool for text to Cypher retrieval from Neo4j."
     # Check that the parameters object has the expected properties
     params = tool.get_parameters()
     assert "properties" in params
-    assert len(params["properties"]) == 1
+    assert len(params["properties"]) == 2  # Text2CypherRetriever has 2 parameters
+    assert "query_text" in params["properties"]
+    assert "prompt_params" in params["properties"]
 
 
 # Test conversion with custom name provided
@@ -266,27 +239,17 @@ def test_convert_retriever_with_custom_name(
     )
 
     custom_name = "CustomNamedTool"
-    parameters = ObjectParameter(
-        description="Parameters for vector search",
-        properties={
-            "query_text": StringParameter(
-                description="The query text for vector search.",
-                required=True,
-            ),
-        },
-    )
 
-    tool = convert_retriever_to_tool(
-        retriever,
-        description="A tool with a custom name",
-        parameters=parameters,
+    tool = retriever.convert_to_tool(
         name=custom_name,
+        description="A tool with a custom name",
+        parameter_descriptions={
+            "query_text": "The query text for vector search.",
+        },
     )
 
     # Verify that the custom name is used instead of the retriever class name
     assert tool.get_name() == custom_name
-    assert tool.get_name() != "VectorRetriever"
-    assert tool.get_name() != "UnnamedRetrieverTool"
 
 
 # Test conversion with no parameters provided
@@ -304,14 +267,18 @@ def test_convert_vector_retriever_to_tool_no_parameters(
         embedder=embedder,
         return_properties=["name", "description"],
     )
-    tool = convert_retriever_to_tool(
-        retriever, description="A tool for vector-based retrieval from Neo4j."
+    tool = retriever.convert_to_tool(
+        name="VectorRetriever",
+        description="A tool for vector-based retrieval from Neo4j.",
     )
     assert isinstance(tool, Tool)
-    assert tool.get_name() in ["VectorRetriever", "UnnamedRetrieverTool"]
+    assert tool.get_name() == "VectorRetriever"
     assert tool.get_description() == "A tool for vector-based retrieval from Neo4j."
-    # Since we don't provide parameters, it should be None
-    assert tool._parameters is None
+    # With the new API, parameters are always auto-inferred from method signature
+    params = tool.get_parameters()
+    assert params is not None
+    assert "properties" in params
+    assert len(params["properties"]) == 5  # VectorRetriever has 5 parameters
 
 
 # Test tool execution for VectorRetriever
@@ -327,28 +294,25 @@ def test_vector_retriever_tool_execution(mock_get_version: MagicMock) -> None:
         embedder=embedder,
         return_properties=["name", "description"],
     )
-    parameters = ObjectParameter(
-        description="Parameters for vector search",
-        properties={
-            "query_text": StringParameter(
-                description="The query text for vector search.",
-                required=True,
-            ),
-            "top_k": IntegerParameter(
-                description="Number of results to return.",
-                required=False,
-            ),
-        },
+    # Create the tool first, before mocking
+    with patch.object(VectorRetriever, "_fetch_index_infos"):
+        tool = retriever.convert_to_tool(
+            name="VectorRetriever",
+            description="A tool for vector-based retrieval from Neo4j.",
+            parameter_descriptions={
+                "query_text": "The query text for vector search.",
+                "top_k": "Number of results to return.",
+            },
+        )
+
+    # Now mock the get_search_results method to track calls
+    from neo4j_graphrag.types import RawSearchResult
+
+    get_search_results_mock = MagicMock(
+        return_value=RawSearchResult(records=[], metadata={})
     )
-    # Mock the get_search_results method to track calls
-    get_search_results_mock = MagicMock(return_value=([], None))
     # Use patch to mock the method
     with patch.object(retriever, "get_search_results", get_search_results_mock):
-        tool = convert_retriever_to_tool(
-            retriever,
-            description="A tool for vector-based retrieval from Neo4j.",
-            parameters=parameters,
-        )
         tools = {tool.get_name(): tool}
         # Simulate indirect invocation as would happen in real usage
         tool_call_arguments = {"query_text": "test query", "top_k": 5}
@@ -357,7 +321,10 @@ def test_vector_retriever_tool_execution(mock_get_version: MagicMock) -> None:
 
     # Since we're using a context manager for patching, we need to verify the call inside the context
     # We can only check the result, not the method call itself
-    assert result == ([], None)
+    assert result is not None
+    assert hasattr(result, "items")  # Should return RetrieverResult now
+    assert isinstance(result.items, list)
+    assert hasattr(result, "metadata")
 
 
 # Test tool execution for HybridRetriever
@@ -374,28 +341,25 @@ def test_hybrid_retriever_tool_execution(mock_get_version: MagicMock) -> None:
         embedder=embedder,
         return_properties=["name", "description"],
     )
-    parameters = ObjectParameter(
-        description="Parameters for hybrid search",
-        properties={
-            "query_text": StringParameter(
-                description="The query text for hybrid search.",
-                required=True,
-            ),
-            "top_k": IntegerParameter(
-                description="Number of results to return.",
-                required=False,
-            ),
-        },
+    # Create the tool first, before mocking
+    with patch.object(HybridRetriever, "_fetch_index_infos"):
+        tool = retriever.convert_to_tool(
+            name="HybridRetriever",
+            description="A tool for hybrid retrieval from Neo4j.",
+            parameter_descriptions={
+                "query_text": "The query text for hybrid search.",
+                "top_k": "Number of results to return.",
+            },
+        )
+
+    # Now mock the get_search_results method to track calls
+    from neo4j_graphrag.types import RawSearchResult
+
+    get_search_results_mock = MagicMock(
+        return_value=RawSearchResult(records=[], metadata={})
     )
-    # Mock the get_search_results method to track calls
-    get_search_results_mock = MagicMock(return_value=([], None))
     # Use patch to mock the method
     with patch.object(retriever, "get_search_results", get_search_results_mock):
-        tool = convert_retriever_to_tool(
-            retriever,
-            description="A tool for hybrid retrieval from Neo4j.",
-            parameters=parameters,
-        )
         tools = {tool.get_name(): tool}
         # Simulate indirect invocation as would happen in real usage
         tool_call_arguments = {"query_text": "test query", "top_k": 5}
@@ -404,7 +368,10 @@ def test_hybrid_retriever_tool_execution(mock_get_version: MagicMock) -> None:
 
     # Since we're using a context manager for patching, we need to verify the call inside the context
     # We can only check the result, not the method call itself
-    assert result == ([], None)
+    assert result is not None
+    assert hasattr(result, "items")  # Should return RetrieverResult now
+    assert isinstance(result.items, list)
+    assert hasattr(result, "metadata")
 
 
 # Test tool execution for Text2CypherRetriever
@@ -415,24 +382,23 @@ def test_text2cypher_retriever_tool_execution(mock_get_version: MagicMock) -> No
     driver = create_mock_driver()
     llm = create_mock_llm()
     retriever = Text2CypherRetriever(driver=driver, llm=llm)
-    parameters = ObjectParameter(
-        description="Parameters for text to Cypher conversion",
-        properties={
-            "query_text": StringParameter(
-                description="The query text for text to Cypher conversion.",
-                required=True,
-            ),
+    # Create the tool first, before mocking
+    tool = retriever.convert_to_tool(
+        name="Text2CypherRetriever",
+        description="A tool for text to Cypher retrieval from Neo4j.",
+        parameter_descriptions={
+            "query_text": "The query text for text to Cypher conversion.",
         },
     )
-    # Mock the get_search_results method to track calls
-    get_search_results_mock = MagicMock(return_value=([], None))
+
+    # Now mock the get_search_results method to track calls
+    from neo4j_graphrag.types import RawSearchResult
+
+    get_search_results_mock = MagicMock(
+        return_value=RawSearchResult(records=[], metadata={})
+    )
     # Use patch to mock the method
     with patch.object(retriever, "get_search_results", get_search_results_mock):
-        tool = convert_retriever_to_tool(
-            retriever,
-            description="A tool for text to Cypher retrieval from Neo4j.",
-            parameters=parameters,
-        )
         tools = {tool.get_name(): tool}
         # Simulate indirect invocation as would happen in real usage
         tool_call_arguments = {"query_text": "test query"}
@@ -441,7 +407,10 @@ def test_text2cypher_retriever_tool_execution(mock_get_version: MagicMock) -> No
 
     # Since we're using a context manager for patching, we need to verify the call inside the context
     # We can only check the result, not the method call itself
-    assert result == ([], None)
+    assert result is not None
+    assert hasattr(result, "items")  # Should return RetrieverResult now
+    assert isinstance(result.items, list)
+    assert hasattr(result, "metadata")
 
 
 # Test tool serialization to JSON format
@@ -457,24 +426,13 @@ def test_tool_serialization(mock_get_version: MagicMock) -> None:
         embedder=embedder,
         return_properties=["name", "description"],
     )
-    # Define parameters for the tool
-    parameters = ObjectParameter(
-        description="Parameters for vector search",
-        properties={
-            "query_text": StringParameter(
-                description="The query text for vector search.",
-                required=True,
-            ),
-            "top_k": IntegerParameter(
-                description="Number of results to return.",
-                required=False,
-            ),
-        },
-    )
-    tool = convert_retriever_to_tool(
-        retriever,
+    tool = retriever.convert_to_tool(
+        name="VectorRetriever",
         description="A tool for vector-based retrieval from Neo4j.",
-        parameters=parameters,
+        parameter_descriptions={
+            "query_text": "The query text for vector search.",
+            "top_k": "Number of results to return.",
+        },
     )
     # Create a dictionary representation of the tool
     tool_dict = {
@@ -491,13 +449,11 @@ def test_tool_serialization(mock_get_version: MagicMock) -> None:
 
     # Get parameters and convert to dictionary
     parameters_any = tool_dict["parameters"]
-    # Use type casting to handle various parameter types
-    if isinstance(parameters_any, ObjectParameter):
-        parameters_dict = parameters_any.model_dump_tool()
-    elif isinstance(parameters_any, dict):
+    # With the new API, parameters should be a dictionary
+    if isinstance(parameters_any, dict):
         parameters_dict = parameters_any
     else:
-        # Handle the case where parameters is a Collection[str] or other type
+        # Handle unexpected parameter format
         parameters_dict = {
             str(k): v for k, v in enumerate(parameters_any) if v is not None
         }
@@ -506,21 +462,19 @@ def test_tool_serialization(mock_get_version: MagicMock) -> None:
     assert parameters_dict.get("type") == "object"
     assert "properties" in parameters_dict
 
-    # Check that at least one parameter is marked as required
-    required_found = False
-    properties = parameters_dict.get("properties", {})
-    if isinstance(properties, dict):
-        for param_name, param_data in properties.items():
-            if isinstance(param_data, dict) and param_data.get("required", False):
-                required_found = True
-                break
-
-    if not required_found and "required" in parameters_dict:
-        # Check if there's a required array at the parameters level
-        required_params = parameters_dict.get("required", [])
-        required_found = len(list(required_params)) > 0
-
-    assert required_found, "No required parameters found"
+    # Check that we have the expected parameter properties
+    # VectorRetriever has all optional parameters (query_vector and query_text are both optional)
+    expected_properties = {
+        "query_vector",
+        "query_text",
+        "top_k",
+        "effective_search_ratio",
+        "filters",
+    }
+    actual_properties = set(parameters_dict.get("properties", {}).keys())
+    assert (
+        expected_properties == actual_properties
+    ), f"Expected {expected_properties}, got {actual_properties}"
 
     # Check additionalProperties if it exists
     if "additionalProperties" in parameters_dict and not parameters_dict.get(
