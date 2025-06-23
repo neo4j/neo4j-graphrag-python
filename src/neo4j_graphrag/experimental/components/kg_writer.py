@@ -161,7 +161,6 @@ class Neo4jWriter(KGWriter):
             parameters_=parameters,
             database_=self.neo4j_database,
         )
-        print("RECORDS", records)
         return {r["_internal_id"]: r["element_id"] for r in records}
 
     @staticmethod
