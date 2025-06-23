@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import logging
 import warnings
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union, Sequence
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union, Sequence, Callable
 from pathlib import Path
 
 from pydantic import (
@@ -27,6 +27,7 @@ from pydantic import (
     validate_call,
     ConfigDict,
     ValidationError,
+    Field,
 )
 from typing_extensions import Self
 
@@ -74,6 +75,13 @@ class PropertyType(BaseModel):
     )
 
 
+def default_additional_item(key: str) -> Callable[[dict[str, Any]], bool]:
+    def wrapper(validated_data: dict[str, Any]) -> bool:
+        return len(validated_data.get(key, [])) == 0
+
+    return wrapper
+
+
 class NodeType(BaseModel):
     """
     Represents a possible node in the graph.
@@ -82,7 +90,9 @@ class NodeType(BaseModel):
     label: str
     description: str = ""
     properties: list[PropertyType] = []
-    additional_properties: bool = True
+    additional_properties: bool = Field(
+        default_factory=default_additional_item("properties")
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -109,7 +119,9 @@ class RelationshipType(BaseModel):
     label: str
     description: str = ""
     properties: list[PropertyType] = []
-    additional_properties: bool = True
+    additional_properties: bool = Field(
+        default_factory=default_additional_item("properties")
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -145,9 +157,15 @@ class GraphSchema(DataModel):
     relationship_types: Tuple[RelationshipType, ...] = tuple()
     patterns: Tuple[Tuple[str, str, str], ...] = tuple()
 
-    additional_node_types: bool = True
-    additional_relationship_types: bool = True
-    additional_patterns: bool = True
+    additional_node_types: bool = Field(
+        default_factory=default_additional_item("node_types")
+    )
+    additional_relationship_types: bool = Field(
+        default_factory=default_additional_item("relationship_types")
+    )
+    additional_patterns: bool = Field(
+        default_factory=default_additional_item("patterns")
+    )
 
     _node_type_index: dict[str, NodeType] = PrivateAttr()
     _relationship_type_index: dict[str, RelationshipType] = PrivateAttr()
@@ -199,6 +217,20 @@ class GraphSchema(DataModel):
                 "`additional_relationship_types` must be set to False when using `additional_patterns=False`"
             )
         return self
+
+    @classmethod
+    def default_additional_node_types(cls, validated_data: dict[str, Any]) -> bool:
+        return len(validated_data["node_types"]) == 0
+
+    @classmethod
+    def default_additional_relationship_types(
+        cls, validated_data: dict[str, Any]
+    ) -> bool:
+        return len(validated_data["relationship_types"]) == 0
+
+    @classmethod
+    def default_additional_patterns(cls, validated_data: dict[str, Any]) -> bool:
+        return len(validated_data["patterns"]) == 0
 
     def node_type_from_label(self, label: str) -> Optional[NodeType]:
         return self._node_type_index.get(label)

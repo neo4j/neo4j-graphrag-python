@@ -119,6 +119,7 @@ async def test_graph_pruning_loose(extracted_graph: Neo4jGraph) -> None:
                     {"name": "name", "type": "STRING"},
                     {"name": "height", "type": "INTEGER"},
                 ],
+                "additional_properties": True,
             }
         ],
         "relationship_types": [
@@ -129,6 +130,9 @@ async def test_graph_pruning_loose(extracted_graph: Neo4jGraph) -> None:
         "patterns": [
             ("Person", "KNOWS", "Person"),
         ],
+        "additional_node_types": True,
+        "additional_relationship_types": True,
+        "additional_patterns": True,
     }
     await _test(extracted_graph, schema_dict, extracted_graph)
 
@@ -153,6 +157,7 @@ async def test_graph_pruning_missing_required_property(
                     },
                     {"name": "height", "type": "INTEGER"},
                 ],
+                "additional_properties": True,
             }
         ],
         "relationship_types": [
@@ -163,6 +168,9 @@ async def test_graph_pruning_missing_required_property(
         "patterns": [
             ("Person", "KNOWS", "Person"),
         ],
+        "additional_node_types": True,
+        "additional_relationship_types": True,
+        "additional_patterns": True,
     }
     filtered_graph = Neo4jGraph(
         nodes=[
@@ -253,7 +261,7 @@ async def test_graph_pruning_strict_properties_and_node_types(
                     },
                     {"name": "height", "type": "INTEGER"},
                 ],
-                "additional_properties": False,
+                # "additional_properties": False,  # default value
             }
         ],
         "relationship_types": [
@@ -264,7 +272,9 @@ async def test_graph_pruning_strict_properties_and_node_types(
         "patterns": [
             ("Person", "KNOWS", "Person"),
         ],
-        "additional_node_types": False,
+        # "additional_node_types": False,  # default value
+        "additional_relationship_types": True,
+        "additional_patterns": True,
     }
     filtered_graph = Neo4jGraph(
         nodes=[
@@ -354,6 +364,7 @@ async def test_graph_pruning_strict_patterns(extracted_graph: Neo4jGraph) -> Non
                     },
                     {"name": "height", "type": "INTEGER"},
                 ],
+                "additional_properties": True,
             },
             {
                 "label": "Organization",
@@ -371,6 +382,7 @@ async def test_graph_pruning_strict_patterns(extracted_graph: Neo4jGraph) -> Non
             ("Person", "KNOWS", "Person"),
             ("Person", "KNOWS", "Organization"),
         ),
+        "additional_node_types": True,
         "additional_relationship_types": False,
         "additional_patterns": False,
     }

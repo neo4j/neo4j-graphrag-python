@@ -998,31 +998,40 @@ By default, all extracted elements — including nodes, relationships, and prope
 Configuration Options
 ---------------------
 
-- **Required Properties**
+- **Required Properties** (default: ``False``)
   Required properties may be specified at the node or relationship type level. Any extracted node or relationship missing one or more of its required properties will be pruned from the graph.
 
-- **Additional Properties** *(default: True)*
+- **Additional Properties**
   This node- or relationship-level option determines whether extra properties not listed in the schema should be retained.
 
-   - If set to ``True`` (default), all extracted properties are retained.
+   - If set to ``True``, all extracted properties are retained.
    - If set to ``False``, only the properties defined in the schema are preserved; all others are removed.
 
+.. note:: Default behavior
+
+    By default, this flag is set to ``False`` if at least one property is defined, ``True`` otherwise.
+
+    The same rule applies for `additional_node_types`, `additional_relationship_types` and `additional_patterns` described below.
+
+.. warning::
+
+    Defining a node or relationship types with no properties and `additional_properties_allowed=False` will raise a ValidationError.
 
 .. note:: Node pruning
 
    If, after property pruning using the above rule, a node is left without any property, it is removed from the graph.
 
 
-- **Additional Node Types** *(default: True)*
+- **Additional Node Types**
   This schema-level option specifies whether node types not defined in the schema are included in the graph.
 
-   - If set to ``True`` (default), such node types are retained.
+   - If set to ``True``, such node types are retained.
    - If set to ``False``, nodes with undefined types are removed.
 
-- **Additional Relationship Types** *(default: True)*
+- **Additional Relationship Types**
   This schema-level option specifies whether relationship types not defined in the schema are included in the graph.
 
-   - If set to ``True`` (default), such relationships are retained.
+   - If set to ``True``, such relationships are retained.
    - If set to ``False``, relationships with undefined types are removed.
 
 - **Additional Patterns** *(default: True)*

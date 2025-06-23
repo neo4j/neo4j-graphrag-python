@@ -96,13 +96,13 @@ async def test_pipeline_builder_happy_path_legacy_schema(
     ]
 
     # Instantiate Entity and Relation objects
-    entities = ["PERSON", "ORGANIZATION", "HORCRUX", "LOCATION"]
+    entities = ["Person", "Organization", "Horcrux", "Location"]
     relations = ["SITUATED_AT", "INTERACTS", "OWNS", "LED_BY"]
     potential_schema = [
-        ("PERSON", "SITUATED_AT", "LOCATION"),
-        ("PERSON", "INTERACTS", "PERSON"),
-        ("PERSON", "OWNS", "HORCRUX"),
-        ("ORGANIZATION", "LED_BY", "PERSON"),
+        ("Person", "SITUATED_AT", "Location"),
+        ("Person", "INTERACTS", "Person"),
+        ("Person", "OWNS", "Horcrux"),
+        ("Organization", "LED_BY", "Person"),
     ]
 
     # Additional arguments
