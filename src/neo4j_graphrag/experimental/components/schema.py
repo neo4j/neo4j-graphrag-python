@@ -106,7 +106,8 @@ class NodeType(BaseModel):
         if len(self.properties) == 0 and not self.additional_properties:
             raise ValueError(
                 "Using `additional_properties=False` with no defined "
-                "properties will cause the model to be pruned during graph cleaning.",
+                "properties will cause the model to be pruned during graph cleaning. "
+                f"Define some properties or remove this NodeType: {self}"
             )
         return self
 
@@ -135,7 +136,8 @@ class RelationshipType(BaseModel):
         if len(self.properties) == 0 and not self.additional_properties:
             raise ValueError(
                 "Using `additional_properties=False` with no defined "
-                "properties will cause the model to be pruned during graph cleaning.",
+                "properties will cause the model to be pruned during graph cleaning. "
+                f"Define some properties or remove this RelationshipType: {self}"
             )
         return self
 
@@ -217,20 +219,6 @@ class GraphSchema(DataModel):
                 "`additional_relationship_types` must be set to False when using `additional_patterns=False`"
             )
         return self
-
-    @classmethod
-    def default_additional_node_types(cls, validated_data: dict[str, Any]) -> bool:
-        return len(validated_data["node_types"]) == 0
-
-    @classmethod
-    def default_additional_relationship_types(
-        cls, validated_data: dict[str, Any]
-    ) -> bool:
-        return len(validated_data["relationship_types"]) == 0
-
-    @classmethod
-    def default_additional_patterns(cls, validated_data: dict[str, Any]) -> bool:
-        return len(validated_data["patterns"]) == 0
 
     def node_type_from_label(self, label: str) -> Optional[NodeType]:
         return self._node_type_index.get(label)

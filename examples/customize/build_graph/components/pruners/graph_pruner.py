@@ -41,7 +41,7 @@ graph = Neo4jGraph(
         Neo4jNode(
             id="Organization/Corp1",
             label="Organization",
-            properties={"name": "CorpA"},
+            properties={"name": "Corp1"},
         ),
     ],
     relationships=[
@@ -51,7 +51,7 @@ graph = Neo4jGraph(
             type="KNOWS",
         ),
         Neo4jRelationship(
-            start_node_id="Organization/CorpA",
+            start_node_id="Organization/Corp2",
             end_node_id="Person/Jack",
             type="WORKS_FOR",
         ),
@@ -80,12 +80,14 @@ schema = GraphSchema(
                 PropertyType(name="name", type="STRING", required=True),
                 PropertyType(name="address", type="STRING"),
             ],
+            additional_properties=True,
         ),
     ),
     relationship_types=(
         RelationshipType(
             label="WORKS_FOR",
             properties=[PropertyType(name="since", type="LOCAL_DATETIME")],
+            additional_properties=True,
         ),
         RelationshipType(
             label="KNOWS",
