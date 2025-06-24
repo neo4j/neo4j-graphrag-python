@@ -30,6 +30,8 @@
 
 - The reserved `id` property on `__KGBuilder__` nodes is removed.
 - The `chunk_index` property on `__Entity__` nodes is removed. Use the `FROM_CHUNK` relationship instead.
+- The `__entity__id` index is not used anymore and can be dropped from the database (it has been replaced by `__entity__tmp_internal_id`).
+
 
 ## 1.7.0
 

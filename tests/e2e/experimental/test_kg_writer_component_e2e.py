@@ -87,6 +87,8 @@ async def test_kg_writer(driver: neo4j.Driver) -> None:
 
     rel = record["r"]
     assert rel.type == relationship.type
+    assert relationship.start_node_id == rel.start_node.get("id")
+    assert relationship.end_node_id == rel.end_node.get("id")
     assert rel.start_node.get("id") == start_node.properties.get("id")
     assert rel.end_node.get("id") == end_node.properties.get("id")
 

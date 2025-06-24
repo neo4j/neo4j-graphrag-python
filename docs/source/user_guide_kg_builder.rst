@@ -1080,6 +1080,11 @@ to a Neo4j database:
 Adjust the batch_size parameter of `Neo4jWriter` to optimize insert performance.
 This parameter controls the number of nodes or relationships inserted per batch, with a default value of 1000.
 
+.. note:: Index
+
+    In order to improve the ingestion performances, a index called `__entity__tmp_internal_id` is automatically added to the database.
+
+
 See :ref:`neo4jgraph`.
 
 

@@ -61,9 +61,7 @@ def test_upsert_nodes(_: Mock, driver: MagicMock) -> None:
     )
     neo4j_writer = Neo4jWriter(driver=driver)
     node = Neo4jNode(id="1", label="Label", properties={"key": "value"})
-    neo4j_writer._upsert_nodes(
-        nodes=[node], lexical_graph_config=LexicalGraphConfig()
-    )
+    neo4j_writer._upsert_nodes(nodes=[node], lexical_graph_config=LexicalGraphConfig())
     driver.execute_query.assert_called_once_with(
         upsert_node_query(False),
         parameters_={

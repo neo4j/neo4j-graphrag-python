@@ -83,7 +83,7 @@ class Neo4jNode(BaseModel):
     """Represents a Neo4j node.
 
     Attributes:
-        id (str): The element ID of the node. This ID is used to refer to the node for relationship creation.
+        id (str): The ID of the node. This ID is used to refer to the node for relationship creation.
         label (str): The label of the node.
         properties (dict[str, Any]): A dictionary of properties attached to the node.
         embedding_properties (Optional[dict[str, list[float]]]): A list of embedding properties attached to the node.

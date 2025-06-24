@@ -132,7 +132,8 @@ def db_cleaning_query(support_variable_scope_clause: bool, batch_size: int) -> s
         f"{call_prefix} "
         "    SET n.__tmp_internal_id = NULL "
         "} "
-        f"IN TRANSACTIONS OF {batch_size} ROWS"
+        f"IN TRANSACTIONS OF {batch_size} ROWS "
+        "ON ERROR CONTINUE"
     )
 
 
