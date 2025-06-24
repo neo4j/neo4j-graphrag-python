@@ -23,6 +23,7 @@ from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
 
 from .base import LLMInterface
+from .rate_limit import RateLimitHandler
 from .types import (
     BaseMessage,
     LLMResponse,
@@ -40,6 +41,7 @@ class OllamaLLM(LLMInterface):
         self,
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
+        rate_limit_handler: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ):
         try:
@@ -49,7 +51,7 @@ class OllamaLLM(LLMInterface):
                 "Could not import ollama Python client. "
                 "Please install it with `pip install ollama`."
             )
-        super().__init__(model_name, model_params, **kwargs)
+        super().__init__(model_name, model_params, rate_limit_handler)
         self.ollama = ollama
         self.client = ollama.Client(
             **kwargs,

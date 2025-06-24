@@ -21,6 +21,7 @@ from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface
+from neo4j_graphrag.llm.rate_limit import RateLimitHandler
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
@@ -44,6 +45,7 @@ class MistralAILLM(LLMInterface):
         self,
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
+        rate_limit_handler: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ):
         """
@@ -52,6 +54,7 @@ class MistralAILLM(LLMInterface):
             model_name (str):
             model_params (str): Parameters like temperature and such that will be
              passed to the chat completions endpoint
+            rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting. Defaults to retry with exponential backoff.
             kwargs: All other parameters will be passed to the Mistral client.
 
         """
@@ -60,7 +63,7 @@ class MistralAILLM(LLMInterface):
                 """Could not import Mistral Python client.
                 Please install it with `pip install "neo4j-graphrag[mistralai]"`."""
             )
-        super().__init__(model_name, model_params)
+        super().__init__(model_name, model_params, rate_limit_handler)
         api_key = kwargs.pop("api_key", None)
         if api_key is None:
             api_key = os.getenv("MISTRAL_API_KEY", "")
