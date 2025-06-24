@@ -18,6 +18,13 @@ from .cohere_llm import CohereLLM
 from .mistralai_llm import MistralAILLM
 from .ollama_llm import OllamaLLM
 from .openai_llm import AzureOpenAILLM, OpenAILLM
+from .rate_limit import (
+    RateLimitHandler,
+    NoOpRateLimitHandler,
+    RetryRateLimitHandler,
+    rate_limit_handler,
+    async_rate_limit_handler,
+)
 from .types import LLMResponse
 from .vertexai_llm import VertexAILLM
 
@@ -31,4 +38,10 @@ __all__ = [
     "VertexAILLM",
     "AzureOpenAILLM",
     "MistralAILLM",
+    # Rate limiting components
+    "RateLimitHandler",
+    "NoOpRateLimitHandler",
+    "RetryRateLimitHandler",
+    "rate_limit_handler",
+    "async_rate_limit_handler",
 ]

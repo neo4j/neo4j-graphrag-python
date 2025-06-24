@@ -21,8 +21,15 @@ from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
 
 from .types import LLMResponse, ToolCallResponse
+from .rate_limit import (
+    rate_limit_handler,
+    async_rate_limit_handler,
+    DEFAULT_RATE_LIMIT_HANDLER,
+)
 
 from neo4j_graphrag.tool import Tool
+
+from .rate_limit import RateLimitHandler
 
 
 class LLMInterface(ABC):
@@ -31,6 +38,7 @@ class LLMInterface(ABC):
     Args:
         model_name (str): The name of the language model.
         model_params (Optional[dict]): Additional parameters passed to the model when text is sent to it. Defaults to None.
+        rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting. Defaults to retry with exponential backoff.
         **kwargs (Any): Arguments passed to the model when for the class is initialised. Defaults to None.
     """
 
@@ -38,11 +46,18 @@ class LLMInterface(ABC):
         self,
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
+        rate_limit_handler: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ):
         self.model_name = model_name
         self.model_params = model_params or {}
 
+        if rate_limit_handler is not None:
+            self._rate_limit_handler = rate_limit_handler
+        else:
+            self._rate_limit_handler = DEFAULT_RATE_LIMIT_HANDLER
+
+    @rate_limit_handler()
     @abstractmethod
     def invoke(
         self,
@@ -65,6 +80,7 @@ class LLMInterface(ABC):
             LLMGenerationError: If anything goes wrong.
         """
 
+    @async_rate_limit_handler()
     @abstractmethod
     async def ainvoke(
         self,
@@ -87,6 +103,7 @@ class LLMInterface(ABC):
             LLMGenerationError: If anything goes wrong.
         """
 
+    @rate_limit_handler()
     def invoke_with_tools(
         self,
         input: str,
@@ -114,6 +131,7 @@ class LLMInterface(ABC):
         """
         raise NotImplementedError("This LLM provider does not support tool calling.")
 
+    @async_rate_limit_handler()
     async def ainvoke_with_tools(
         self,
         input: str,

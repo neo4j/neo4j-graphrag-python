@@ -20,6 +20,7 @@ from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface
+from neo4j_graphrag.llm.rate_limit import RateLimitHandler
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
@@ -60,6 +61,7 @@ class CohereLLM(LLMInterface):
         self,
         model_name: str = "",
         model_params: Optional[dict[str, Any]] = None,
+        rate_limit_handler: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ) -> None:
         try:
@@ -69,7 +71,7 @@ class CohereLLM(LLMInterface):
                 """Could not import cohere python client.
                 Please install it with `pip install "neo4j-graphrag[cohere]"`."""
             )
-        super().__init__(model_name, model_params)
+        super().__init__(model_name, model_params, rate_limit_handler)
         self.cohere = cohere
         self.cohere_api_error = cohere.core.api_error.ApiError
 

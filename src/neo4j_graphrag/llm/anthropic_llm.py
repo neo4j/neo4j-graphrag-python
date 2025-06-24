@@ -19,6 +19,7 @@ from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface
+from neo4j_graphrag.llm.rate_limit import RateLimitHandler
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
@@ -62,6 +63,7 @@ class AnthropicLLM(LLMInterface):
         self,
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
+        rate_limit_handler: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ):
         try:
@@ -71,7 +73,7 @@ class AnthropicLLM(LLMInterface):
                 """Could not import Anthropic Python client.
                 Please install it with `pip install "neo4j-graphrag[anthropic]"`."""
             )
-        super().__init__(model_name, model_params)
+        super().__init__(model_name, model_params, rate_limit_handler)
         self.anthropic = anthropic
         self.client = anthropic.Anthropic(**kwargs)
         self.async_client = anthropic.AsyncAnthropic(**kwargs)
