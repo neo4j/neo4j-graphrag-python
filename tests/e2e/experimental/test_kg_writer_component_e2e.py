@@ -69,7 +69,7 @@ async def test_kg_writer(driver: neo4j.Driver) -> None:
 
     node_a = record["a"]
     assert start_node.label in list(node_a.labels)
-    assert start_node.id == str(node_a.get("id"))
+    assert start_node.properties.get("id") == str(node_a.get("id"))
     for key, val in start_node.properties.items():
         assert key in node_a.keys()
         assert val == node_a.get(key)
@@ -80,7 +80,7 @@ async def test_kg_writer(driver: neo4j.Driver) -> None:
 
     node_b = record["b"]
     assert end_node.label in list(node_b.labels)
-    assert end_node.id == str(node_b.get("id"))
+    assert end_node.properties.get("id") == str(node_b.get("id"))
     for key, val in end_node.properties.items():
         assert key in node_b.keys()
         assert val == node_b.get(key)
