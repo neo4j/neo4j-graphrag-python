@@ -52,61 +52,89 @@ FULL_TEXT_SEARCH_QUERY = (
     "YIELD node, score"
 )
 
-UPSERT_NODE_QUERY = (
-    "UNWIND $rows AS row "
-    "CREATE (n:__KGBuilder__) "
-    "SET n += row.properties "
-    "WITH n, row CALL apoc.create.addLabels(n, row.labels) YIELD node "
-    "WITH node as n, row CALL { "
-    "WITH n, row WITH n, row WHERE row.embedding_properties IS NOT NULL "
-    "UNWIND keys(row.embedding_properties) as emb "
-    "CALL db.create.setNodeVectorProperty(n, emb, row.embedding_properties[emb]) "
-    "RETURN count(*) as nbEmb "
-    "} "
-    "RETURN row.id as _internal_id, elementId(n) as element_id"
-)
 
-UPSERT_NODE_QUERY_VARIABLE_SCOPE_CLAUSE = (
-    "UNWIND $rows AS row "
-    "CREATE (n:__KGBuilder__) "
-    "SET n += row.properties "
-    "WITH n, row CALL apoc.create.addLabels(n, row.labels) YIELD node "
-    "WITH node as n, row CALL (n, row) { "
-    "WITH n, row WITH n, row WHERE row.embedding_properties IS NOT NULL "
-    "UNWIND keys(row.embedding_properties) as emb "
-    "CALL db.create.setNodeVectorProperty(n, emb, row.embedding_properties[emb]) "
-    "RETURN count(*) as nbEmb "
-    "} "
-    "RETURN row.id as _internal_id, elementId(n) as element_id"
-)
+def _call_subquery_syntax(
+    support_variable_scope_clause: bool, variable_list: list[str]
+) -> str:
+    """A helper function to return the CALL subquery syntax:
+    - Either CALL { WITH <variables>
+    - or CALL (variables) {
+    """
+    variables = ",".join(variable_list)
+    if support_variable_scope_clause:
+        return f"CALL ({variables}) {{ "
+    if variables:
+        return f"CALL {{ WITH {variables} "
+    return "CALL { "
 
-UPSERT_RELATIONSHIP_QUERY = (
-    "UNWIND $rows as row "
-    "MATCH (start:__KGBuilder__), (end:__KGBuilder__) "
-    "WHERE elementId(start) = row.start_node_element_id AND elementId(end) = row.end_node_element_id "
-    "WITH start, end, row "
-    "CALL apoc.merge.relationship(start, row.type, {}, row.properties, end, row.properties) YIELD rel  "
-    "WITH rel, row CALL { "
-    "WITH rel, row WITH rel, row WHERE row.embedding_properties IS NOT NULL "
-    "UNWIND keys(row.embedding_properties) as emb "
-    "CALL db.create.setRelationshipVectorProperty(rel, emb, row.embedding_properties[emb]) "
-    "} "
-    "RETURN elementId(rel)"
-)
 
-UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE = (
-    "UNWIND $rows as row "
-    "MATCH (start:__KGBuilder__), (end:__KGBuilder__) "
-    "WHERE elementId(start) = row.start_node_element_id AND elementId(end) = row.end_node_element_id "
-    "WITH start, end, row "
-    "CALL apoc.merge.relationship(start, row.type, {}, row.properties, end, row.properties) YIELD rel  "
-    "WITH rel, row CALL (rel, row) { "
-    "WITH rel, row WITH rel, row WHERE row.embedding_properties IS NOT NULL "
-    "UNWIND keys(row.embedding_properties) as emb "
-    "CALL db.create.setRelationshipVectorProperty(rel, emb, row.embedding_properties[emb]) "
-    "} "
-    "RETURN elementId(rel)"
-)
+def upsert_node_query(support_variable_scope_clause: bool) -> str:
+    """Build the Cypher query to upsert a batch of nodes:
+    - Create the new node
+    - Set its label(s) and properties
+    - Set its embedding properties if any
+    - Return the node elementId
+    """
+    call_prefix = _call_subquery_syntax(
+        support_variable_scope_clause, variable_list=["n", "row"]
+    )
+    return (
+        "UNWIND $rows AS row "
+        "CREATE (n:__KGBuilder__ {__tmp_internal_id: row.id}) "
+        "SET n += row.properties "
+        "WITH n, row CALL apoc.create.addLabels(n, row.labels) YIELD node "
+        "WITH node as n, row "
+        f"{call_prefix} "
+        "WITH n, row WHERE row.embedding_properties IS NOT NULL "
+        "UNWIND keys(row.embedding_properties) as emb "
+        "CALL db.create.setNodeVectorProperty(n, emb, row.embedding_properties[emb]) "
+        "RETURN count(*) as nbEmb "
+        "} "
+        "RETURN elementId(n) as element_id"
+    )
+
+
+def upsert_relationship_query(support_variable_scope_clause: bool) -> str:
+    """Build the Cypher query to upsert a batch of relationships:
+    - Create the new relationship:
+        only one relationship of a specific type is allowed between the same two nodes
+    - Set its properties
+    - Set its embedding properties if any
+    - Return the node elementId
+    """
+    call_prefix = _call_subquery_syntax(
+        support_variable_scope_clause, variable_list=["rel", "row"]
+    )
+    return (
+        "UNWIND $rows as row "
+        "MATCH (start:__KGBuilder__ {__tmp_internal_id: row.start_node_id}), "
+        "      (end:__KGBuilder__ {__tmp_internal_id: row.end_node_id}) "
+        "WITH start, end, row "
+        "CALL apoc.merge.relationship(start, row.type, {}, row.properties, end, row.properties) YIELD rel  "
+        "WITH rel, row "
+        f"{call_prefix} "
+        "WITH rel, row WHERE row.embedding_properties IS NOT NULL "
+        "UNWIND keys(row.embedding_properties) as emb "
+        "CALL db.create.setRelationshipVectorProperty(rel, emb, row.embedding_properties[emb]) "
+        "} "
+        "RETURN elementId(rel)"
+    )
+
+
+def db_cleaning_query(support_variable_scope_clause: bool, batch_size: int) -> str:
+    """Removes the temporary __tmp_internal_id property from all nodes."""
+    call_prefix = _call_subquery_syntax(
+        support_variable_scope_clause, variable_list=["n"]
+    )
+    return (
+        "MATCH (n:__KGBuilder__) "
+        "WHERE n.__tmp_internal_id IS NOT NULL "
+        f"{call_prefix} "
+        "    SET n.__tmp_internal_id = NULL "
+        "} "
+        f"IN TRANSACTIONS OF {batch_size} ROWS"
+    )
+
 
 # Deprecated, remove along with upsert_vector
 UPSERT_VECTOR_ON_NODE_QUERY = (
@@ -150,13 +178,15 @@ def _get_hybrid_query(neo4j_version_is_5_23_or_above: bool) -> str:
     Construct a cypher query for hybrid search.
 
     Args:
-        neo4j_version_is_5_23_or_above (bool): Whether or not the Neo4j version is 5.23 or above;
+        neo4j_version_is_5_23_or_above (bool): Whether the Neo4j version is 5.23 or above;
             determines which call syntax is used.
 
     Returns:
         str: The constructed Cypher query string.
     """
-    call_prefix = "CALL () { " if neo4j_version_is_5_23_or_above else "CALL { "
+    call_prefix = _call_subquery_syntax(
+        neo4j_version_is_5_23_or_above, variable_list=[]
+    )
     query_body = (
         f"{NODE_VECTOR_INDEX_QUERY} "
         "WITH collect({node:node, score:score}) AS nodes, max(score) AS vector_index_max_score "

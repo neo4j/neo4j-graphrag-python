@@ -28,7 +28,7 @@
 
 #### Other
 
-- The `id` property on `__KG_Builder__` nodes is removed.
+- The reserved `id` property on `__KGBuilder__` nodes is removed.
 - The `chunk_index` property on `__Entity__` nodes is removed. Use the `FROM_CHUNK` relationship instead.
 
 ## 1.7.0

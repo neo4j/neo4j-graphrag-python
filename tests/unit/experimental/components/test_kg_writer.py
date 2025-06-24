@@ -26,10 +26,8 @@ from neo4j_graphrag.experimental.components.types import (
     Neo4jRelationship,
 )
 from neo4j_graphrag.neo4j_queries import (
-    UPSERT_NODE_QUERY,
-    UPSERT_NODE_QUERY_VARIABLE_SCOPE_CLAUSE,
-    UPSERT_RELATIONSHIP_QUERY,
-    UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE,
+    upsert_node_query,
+    upsert_relationship_query,
 )
 
 
@@ -57,18 +55,17 @@ def test_batched() -> None:
 )
 def test_upsert_nodes(_: Mock, driver: MagicMock) -> None:
     driver.execute_query.return_value = (
-        [{"_internal_id": "1", "element_id": "#1"}],
+        [{"element_id": "#1"}],
         None,
         None,
     )
     neo4j_writer = Neo4jWriter(driver=driver)
     node = Neo4jNode(id="1", label="Label", properties={"key": "value"})
-    result = neo4j_writer._upsert_nodes(
+    neo4j_writer._upsert_nodes(
         nodes=[node], lexical_graph_config=LexicalGraphConfig()
     )
-    assert result == {"1": "#1"}
     driver.execute_query.assert_called_once_with(
-        UPSERT_NODE_QUERY,
+        upsert_node_query(False),
         parameters_={
             "rows": [
                 {
@@ -97,7 +94,7 @@ def test_upsert_nodes_with_embedding(
     driver: MagicMock,
 ) -> None:
     driver.execute_query.return_value = (
-        [{"_internal_id": "1", "element_id": "#1"}],
+        [{"element_id": "#1"}],
         None,
         None,
     )
@@ -110,7 +107,7 @@ def test_upsert_nodes_with_embedding(
     )
     neo4j_writer._upsert_nodes(nodes=[node], lexical_graph_config=LexicalGraphConfig())
     driver.execute_query.assert_any_call(
-        UPSERT_NODE_QUERY,
+        upsert_node_query(False),
         parameters_={
             "rows": [
                 {
@@ -143,7 +140,7 @@ def test_upsert_relationship(_: Mock, driver: MagicMock) -> None:
         properties={"key": "value"},
     )
     neo4j_writer._upsert_relationships(
-        rels=[rel], node_id_mapping={"1": "#1", "2": "#2"}
+        rels=[rel],
     )
     parameters = {
         "rows": [
@@ -153,13 +150,11 @@ def test_upsert_relationship(_: Mock, driver: MagicMock) -> None:
                 "end_node_id": "2",
                 "properties": {"key": "value"},
                 "embedding_properties": None,
-                "start_node_element_id": "#1",
-                "end_node_element_id": "#2",
             }
         ]
     }
     driver.execute_query.assert_called_once_with(
-        UPSERT_RELATIONSHIP_QUERY,
+        upsert_relationship_query(False),
         parameters_=parameters,
         database_=None,
     )
@@ -184,7 +179,7 @@ def test_upsert_relationship_with_embedding(_: Mock, driver: MagicMock) -> None:
     )
     driver.execute_query.return_value.records = [{"elementId(r)": "rel_elem_id"}]
     neo4j_writer._upsert_relationships(
-        rels=[rel], node_id_mapping={"1": "#1", "2": "#2"}
+        rels=[rel],
     )
     parameters = {
         "rows": [
@@ -194,13 +189,11 @@ def test_upsert_relationship_with_embedding(_: Mock, driver: MagicMock) -> None:
                 "end_node_id": "2",
                 "properties": {"key": "value"},
                 "embedding_properties": {"embeddingProp": [1.0, 2.0, 3.0]},
-                "start_node_element_id": "#1",
-                "end_node_element_id": "#2",
             }
         ]
     }
     driver.execute_query.assert_any_call(
-        UPSERT_RELATIONSHIP_QUERY,
+        upsert_relationship_query(False),
         parameters_=parameters,
         database_=None,
     )
@@ -218,8 +211,8 @@ def test_upsert_relationship_with_embedding(_: Mock, driver: MagicMock) -> None:
 async def test_run(_: Mock, driver: MagicMock) -> None:
     driver.execute_query.return_value = (
         [
-            {"_internal_id": "1", "element_id": "#1"},
-            {"_internal_id": "2", "element_id": "#2"},
+            {"element_id": "#1"},
+            {"element_id": "#2"},
         ],
         None,
         None,
@@ -230,7 +223,7 @@ async def test_run(_: Mock, driver: MagicMock) -> None:
     graph = Neo4jGraph(nodes=[node], relationships=[rel])
     await neo4j_writer.run(graph=graph)
     driver.execute_query.assert_any_call(
-        UPSERT_NODE_QUERY,
+        upsert_node_query(False),
         parameters_={
             "rows": [
                 {
@@ -252,13 +245,11 @@ async def test_run(_: Mock, driver: MagicMock) -> None:
                 "end_node_id": "2",
                 "properties": {},
                 "embedding_properties": None,
-                "start_node_element_id": "#1",
-                "end_node_element_id": "#2",
             }
         ]
     }
     driver.execute_query.assert_any_call(
-        UPSERT_RELATIONSHIP_QUERY,
+        upsert_relationship_query(False),
         parameters_=parameters_,
         database_=None,
     )
@@ -289,10 +280,8 @@ async def test_run_is_version_below_5_23(_: Mock) -> None:
     graph = Neo4jGraph(nodes=[node], relationships=[rel])
     await neo4j_writer.run(graph=graph)
 
-    print(driver.execute_query.call_args_list)
-
     driver.execute_query.assert_any_call(
-        UPSERT_NODE_QUERY,
+        upsert_node_query(False),
         parameters_={
             "rows": [
                 {
@@ -314,13 +303,11 @@ async def test_run_is_version_below_5_23(_: Mock) -> None:
                 "end_node_id": "2",
                 "properties": {},
                 "embedding_properties": None,
-                "start_node_element_id": "#1",
-                "end_node_element_id": "",
             }
         ]
     }
     driver.execute_query.assert_any_call(
-        UPSERT_RELATIONSHIP_QUERY,
+        upsert_relationship_query(False),
         parameters_=parameters_,
         database_=None,
     )
@@ -338,7 +325,7 @@ async def test_run_is_version_5_23_or_above(_: Mock) -> None:
             # get_version
             ([{"versions": ["5.23.0"], "edition": "enterpise"}], None, None),
             # upsert nodes
-            ([{"_internal_id": "1", "element_id": "#1"}], None, None),
+            ([{"element_id": "#1"}], None, None),
             # upsert relationships
             (None, None, None),
         )
@@ -353,7 +340,7 @@ async def test_run_is_version_5_23_or_above(_: Mock) -> None:
     await neo4j_writer.run(graph=graph)
 
     driver.execute_query.assert_any_call(
-        UPSERT_NODE_QUERY_VARIABLE_SCOPE_CLAUSE,
+        upsert_node_query(True),
         parameters_={
             "rows": [
                 {
@@ -375,13 +362,11 @@ async def test_run_is_version_5_23_or_above(_: Mock) -> None:
                 "end_node_id": "2",
                 "properties": {},
                 "embedding_properties": None,
-                "start_node_element_id": "#1",
-                "end_node_element_id": "",
             }
         ]
     }
     driver.execute_query.assert_any_call(
-        UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE,
+        upsert_relationship_query(True),
         parameters_=parameters_,
         database_=None,
     )
