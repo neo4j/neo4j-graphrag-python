@@ -30,13 +30,13 @@ async def test_kg_writer(driver: neo4j.Driver) -> None:
     start_node = Neo4jNode(
         id="1",
         label="MyLabel",
-        properties={"id": "1"},
+        properties={"id": "abc"},
         embedding_properties={"vectorProperty": [1.0, 2.0, 3.0]},
     )
     end_node = Neo4jNode(
         id="2",
         label="MyLabel",
-        properties={"id": "2"},
+        properties={"id": "def"},
         embedding_properties=None,
     )
     relationship = Neo4jRelationship(
@@ -45,7 +45,7 @@ async def test_kg_writer(driver: neo4j.Driver) -> None:
     node_with_two_embeddings = Neo4jNode(
         id="3",
         label="MyLabel",
-        properties={"id": "3"},
+        properties={"id": "ghi"},
         embedding_properties={
             "vectorProperty": [1.0, 2.0, 3.0],
             "otherVectorProperty": [10.0, 20.0, 30.0],
@@ -61,7 +61,7 @@ async def test_kg_writer(driver: neo4j.Driver) -> None:
     assert res.status == "SUCCESS"
 
     query = """
-    MATCH (a:MyLabel {id: '1'})-[r:MY_RELATIONSHIP]->(b:MyLabel {id: '2'})
+    MATCH (a:MyLabel {id: 'abc'})-[r:MY_RELATIONSHIP]->(b:MyLabel {id: 'def'})
     RETURN a, r, b
     """
     record = driver.execute_query(query).records[0]
@@ -87,9 +87,11 @@ async def test_kg_writer(driver: neo4j.Driver) -> None:
 
     rel = record["r"]
     assert rel.type == relationship.type
+    assert rel.start_node.get("id") == start_node.properties.get("id")
+    assert rel.end_node.get("id") == end_node.properties.get("id")
 
     query = """
-    MATCH (c:MyLabel {id: '3'})
+    MATCH (c:MyLabel {id: 'ghi'})
     RETURN c
     """
     records = driver.execute_query(query).records
