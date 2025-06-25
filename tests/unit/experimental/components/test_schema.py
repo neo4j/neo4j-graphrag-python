@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import json
-from typing import Tuple
+from typing import Tuple, Any
 from unittest.mock import AsyncMock, patch
 
 import neo4j
@@ -455,12 +455,14 @@ async def test_schema_from_text_custom_template(
     # configure mock LLM to return valid JSON and capture the prompt that was sent to it
     mock_llm.ainvoke.return_value = LLMResponse(content=valid_schema_json)
 
-    # run the schema extraction
-    await schema_from_text.run(text="Sample text")
+    # Mock constraint retrieval to avoid database access
+    with patch.object(schema_from_text, '_get_constraints_from_db', return_value=[]):
+        # run the schema extraction
+        await schema_from_text.run(text="Sample text")
 
-    # verify the custom prompt was passed to the LLM
-    prompt_sent_to_llm = mock_llm.ainvoke.call_args[0][0]
-    assert "This is a custom prompt with text" in prompt_sent_to_llm
+        # verify the custom prompt was passed to the LLM
+        prompt_sent_to_llm = mock_llm.ainvoke.call_args[0][0]
+        assert "This is a custom prompt with text" in prompt_sent_to_llm
 
 
 @pytest.mark.asyncio
@@ -476,14 +478,16 @@ async def test_schema_from_text_llm_params(
     # configure the mock LLM to return a valid schema JSON
     mock_llm.ainvoke.return_value = LLMResponse(content=valid_schema_json)
 
-    # run the schema extraction
-    await schema_from_text.run(text="Sample text")
+    # Mock constraint retrieval to avoid database access
+    with patch.object(schema_from_text, '_get_constraints_from_db', return_value=[]):
+        # run the schema extraction
+        await schema_from_text.run(text="Sample text")
 
-    # verify the LLM was called with the custom parameters
-    mock_llm.ainvoke.assert_called_once()
-    call_kwargs = mock_llm.ainvoke.call_args[1]
-    assert call_kwargs["temperature"] == 0.1
-    assert call_kwargs["max_tokens"] == 500
+        # verify the LLM was called with the custom parameters
+        mock_llm.ainvoke.assert_called_once()
+        call_kwargs = mock_llm.ainvoke.call_args[1]
+        assert call_kwargs["temperature"] == 0.1
+        assert call_kwargs["max_tokens"] == 500
 
 
 @pytest.mark.asyncio
@@ -893,3 +897,372 @@ def test_relationship_constraint_conflicts(
                     PropertyType(name="since", type=Neo4jPropertyType.DATE)
                 ])]
             )
+
+
+# ==================== SCHEMA FROM TEXT EXTRACTOR ENHANCEMENT TESTS ====================
+
+@pytest.fixture
+def schema_from_text_extractor(driver: neo4j.Driver) -> SchemaFromTextExtractor:
+    """Fixture providing a SchemaFromTextExtractor instance."""
+    from neo4j_graphrag.llm.base import LLMInterface
+    from neo4j_graphrag.llm.types import LLMResponse
+    
+    class MockLLM(LLMInterface):
+        def __init__(self, response_content: str):
+            super().__init__(model_name="mock-model")
+            self.response_content = response_content
+            
+        async def ainvoke(self, input_: str, **kwargs: Any) -> LLMResponse:
+            return LLMResponse(content=self.response_content)
+            
+        def invoke(self, input_: str, **kwargs: Any) -> LLMResponse:
+            return LLMResponse(content=self.response_content)
+    
+    # Mock LLM that returns a basic schema
+    mock_llm = MockLLM('{"node_types": [{"label": "Person", "properties": [{"name": "name", "type": "STRING"}]}], "relationship_types": [], "patterns": []}')
+    
+    return SchemaFromTextExtractor(
+        driver=driver,
+        llm=mock_llm
+    )
+
+
+def test_schema_enhancement_adds_missing_properties(
+    schema_from_text_extractor: SchemaFromTextExtractor,
+    mock_constraints_missing_property: list[SchemaConstraint]
+) -> None:
+    """Test that enhancement adds missing properties required by constraints."""
+    # Create a basic schema missing the required property
+    initial_schema = GraphSchema(
+        node_types=[
+            NodeType(label="PERSON", properties=[
+                PropertyType(name="name", type="STRING")
+            ])
+        ],
+        relationship_types=[],
+        patterns=[]
+    )
+    
+    with patch.object(schema_from_text_extractor, '_get_constraints_from_db', return_value=mock_constraints_missing_property):
+        enhanced_schema = schema_from_text_extractor._process_constraints_against_schema(initial_schema, mode="enhance")
+        
+        # Check that the missing property was added
+        person_node = enhanced_schema.node_type_from_label("PERSON")
+        missing_prop = person_node.get_property_by_name("missing_property")
+        
+        assert missing_prop is not None
+        assert missing_prop.required == True
+        assert "constraint" in missing_prop.description.lower()
+
+
+def test_schema_enhancement_adds_missing_entity_types(
+    schema_from_text_extractor: SchemaFromTextExtractor
+) -> None:
+    """Test that enhancement adds missing entity types required by constraints."""
+    # Mock constraints requiring an entity type not in the schema
+    mock_constraints = [
+        SchemaConstraint(
+            entity_type="NODE",
+            label_or_type=["ORGANIZATION"],
+            type=Neo4jConstraintTypeEnum.NODE_PROPERTY_EXISTENCE,
+            properties=["name"],
+        )
+    ]
+    
+    # Schema without ORGANIZATION
+    initial_schema = GraphSchema(
+        node_types=[
+            NodeType(label="PERSON", properties=[
+                PropertyType(name="name", type="STRING")
+            ])
+        ],
+        relationship_types=[],
+        patterns=[]
+    )
+    
+    with patch.object(schema_from_text_extractor, '_get_constraints_from_db', return_value=mock_constraints):
+        enhanced_schema = schema_from_text_extractor._process_constraints_against_schema(initial_schema, mode="enhance")
+        
+        # Check that ORGANIZATION was added
+        org_node = enhanced_schema.node_type_from_label("ORGANIZATION")
+        assert org_node is not None
+        assert "constraint" in org_node.description.lower()
+        
+        # Check that required property was added
+        name_prop = org_node.get_property_by_name("name")
+        assert name_prop is not None
+        assert name_prop.required == True
+
+
+def test_schema_enhancement_updates_property_types(
+    schema_from_text_extractor: SchemaFromTextExtractor
+) -> None:
+    """Test that enhancement updates property types to match constraints."""
+    # Mock type constraint
+    mock_constraints = [
+        SchemaConstraint(
+            entity_type="NODE",
+            label_or_type=["PERSON"],
+            type=Neo4jConstraintTypeEnum.NODE_PROPERTY_TYPE,
+            properties=["age"],
+            property_type=[Neo4jPropertyType.INTEGER]
+        )
+    ]
+    
+    # Schema with wrong type
+    initial_schema = GraphSchema(
+        node_types=[
+            NodeType(label="PERSON", properties=[
+                PropertyType(name="age", type="STRING")  # Wrong type
+            ])
+        ],
+        relationship_types=[],
+        patterns=[]
+    )
+    
+    with patch.object(schema_from_text_extractor, '_get_constraints_from_db', return_value=mock_constraints):
+        enhanced_schema = schema_from_text_extractor._process_constraints_against_schema(initial_schema, mode="enhance")
+        
+        # Check that property type was updated
+        person_node = enhanced_schema.node_type_from_label("PERSON")
+        age_prop = person_node.get_property_by_name("age")
+        assert age_prop.type == Neo4jPropertyType.INTEGER
+
+
+def test_schema_enhancement_sets_required_properties(
+    schema_from_text_extractor: SchemaFromTextExtractor
+) -> None:
+    """Test that enhancement sets required=True for existence constraints."""
+    mock_constraints = [
+        SchemaConstraint(
+            entity_type="NODE",
+            label_or_type=["PERSON"],
+            type=Neo4jConstraintTypeEnum.NODE_PROPERTY_EXISTENCE,
+            properties=["email"],
+        )
+    ]
+    
+    # Schema with optional property
+    initial_schema = GraphSchema(
+        node_types=[
+            NodeType(label="PERSON", properties=[
+                PropertyType(name="email", type="STRING", required=False)
+            ])
+        ],
+        relationship_types=[],
+        patterns=[]
+    )
+    
+    with patch.object(schema_from_text_extractor, '_get_constraints_from_db', return_value=mock_constraints):
+        enhanced_schema = schema_from_text_extractor._process_constraints_against_schema(initial_schema, mode="enhance")
+        
+        # Check that property was made required
+        person_node = enhanced_schema.node_type_from_label("PERSON")
+        email_prop = person_node.get_property_by_name("email")
+        assert email_prop.required == True
+
+
+def test_schema_enhancement_handles_relationship_constraints(
+    schema_from_text_extractor: SchemaFromTextExtractor
+) -> None:
+    """Test that enhancement works for relationship constraints."""
+    mock_constraints = [
+        SchemaConstraint(
+            entity_type="RELATIONSHIP",
+            label_or_type=["KNOWS"],
+            type=Neo4jConstraintTypeEnum.RELATIONSHIP_PROPERTY_EXISTENCE,
+            properties=["since"],
+        )
+    ]
+    
+    # Schema without the relationship property
+    initial_schema = GraphSchema(
+        node_types=[],
+        relationship_types=[
+            RelationshipType(label="KNOWS", properties=[])
+        ],
+        patterns=[]
+    )
+    
+    with patch.object(schema_from_text_extractor, '_get_constraints_from_db', return_value=mock_constraints):
+        enhanced_schema = schema_from_text_extractor._process_constraints_against_schema(initial_schema, mode="enhance")
+        
+        # Check that property was added to relationship
+        knows_rel = enhanced_schema.relationship_type_from_label("KNOWS")
+        since_prop = knows_rel.get_property_by_name("since")
+        assert since_prop is not None
+        assert since_prop.required == True
+
+
+def test_schema_enhancement_respects_additional_properties_false(
+    schema_from_text_extractor: SchemaFromTextExtractor
+) -> None:
+    """Test that enhancement respects additional_properties=False."""
+    mock_constraints = [
+        SchemaConstraint(
+            entity_type="NODE",
+            label_or_type=["PERSON"],
+            type=Neo4jConstraintTypeEnum.NODE_PROPERTY_EXISTENCE,
+            properties=["missing_prop"],
+        )
+    ]
+    
+    # Schema with additional_properties=False
+    initial_schema = GraphSchema(
+        node_types=[
+            NodeType(
+                label="PERSON", 
+                properties=[PropertyType(name="name", type="STRING")],
+                additional_properties=False
+            )
+        ],
+        relationship_types=[],
+        patterns=[]
+    )
+    
+    with patch.object(schema_from_text_extractor, '_get_constraints_from_db', return_value=mock_constraints):
+        enhanced_schema = schema_from_text_extractor._process_constraints_against_schema(initial_schema, mode="enhance")
+        
+        # Check that property was NOT added due to additional_properties=False
+        person_node = enhanced_schema.node_type_from_label("PERSON")
+        missing_prop = person_node.get_property_by_name("missing_prop")
+        assert missing_prop is None
+
+
+def test_schema_enhancement_handles_no_constraints(
+    schema_from_text_extractor: SchemaFromTextExtractor
+) -> None:
+    """Test that enhancement returns original schema when no constraints exist."""
+    initial_schema = GraphSchema(
+        node_types=[
+            NodeType(label="PERSON", properties=[
+                PropertyType(name="name", type="STRING")
+            ])
+        ],
+        relationship_types=[],
+        patterns=[]
+    )
+    
+    with patch.object(schema_from_text_extractor, '_get_constraints_from_db', return_value=[]):
+        enhanced_schema = schema_from_text_extractor._process_constraints_against_schema(initial_schema, mode="enhance")
+        
+        # Should return the same schema
+        assert enhanced_schema.model_dump() == initial_schema.model_dump()
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_extractor_run_with_enhancement(
+    driver: neo4j.Driver
+) -> None:
+    """Test that the run method applies enhancement to LLM-generated schema."""
+    from neo4j_graphrag.llm.base import LLMInterface
+    from neo4j_graphrag.llm.types import LLMResponse
+    
+    class MockLLM(LLMInterface):
+        def __init__(self):
+            super().__init__(model_name="mock-model")
+            
+        async def ainvoke(self, input_: str, **kwargs: Any) -> LLMResponse:
+            # Return a schema missing properties that will be required by constraints
+            return LLMResponse(content='{"node_types": [{"label": "PERSON", "properties": [{"name": "name", "type": "STRING"}]}], "relationship_types": [], "patterns": []}')
+            
+        def invoke(self, input_: str, **kwargs: Any) -> LLMResponse:
+            return LLMResponse(content='{"node_types": [{"label": "PERSON", "properties": [{"name": "name", "type": "STRING"}]}], "relationship_types": [], "patterns": []}')
+    
+    # Mock constraints that require additional properties
+    mock_constraints = [
+        SchemaConstraint(
+            entity_type="NODE",
+            label_or_type=["PERSON"],
+            type=Neo4jConstraintTypeEnum.NODE_PROPERTY_EXISTENCE,
+            properties=["email"],
+        )
+    ]
+    
+    extractor = SchemaFromTextExtractor(
+        driver=driver,
+        llm=MockLLM()
+    )
+    
+    with patch.object(extractor, '_get_constraints_from_db', return_value=mock_constraints):
+        enhanced_schema = await extractor.run("Some text about persons")
+        
+        # Check that the schema was enhanced with the missing property
+        person_node = enhanced_schema.node_type_from_label("PERSON")
+        email_prop = person_node.get_property_by_name("email")
+        assert email_prop is not None
+        assert email_prop.required == True
+        assert "constraint" in email_prop.description.lower()
+
+
+def test_schema_enhancement_graceful_failure(
+    schema_from_text_extractor: SchemaFromTextExtractor
+) -> None:
+    """Test that enhancement fails gracefully and returns original schema."""
+    initial_schema = GraphSchema(
+        node_types=[
+            NodeType(label="PERSON", properties=[
+                PropertyType(name="name", type="STRING")
+            ])
+        ],
+        relationship_types=[],
+        patterns=[]
+    )
+    
+    # Mock constraints that will cause validation error
+    mock_constraints = [
+        SchemaConstraint(
+            entity_type="NODE",
+            label_or_type=["PERSON"],
+            type=Neo4jConstraintTypeEnum.NODE_PROPERTY_EXISTENCE,
+            properties=["problematic_prop"],
+        )
+    ]
+    
+    with patch.object(schema_from_text_extractor, '_get_constraints_from_db', return_value=mock_constraints):
+        with patch('neo4j_graphrag.experimental.components.schema.GraphSchema.model_validate', side_effect=ValidationError.from_exception_data("GraphSchema", [])):
+            # Should return original schema on validation failure
+            result = schema_from_text_extractor._process_constraints_against_schema(initial_schema, mode="enhance")
+            assert result.model_dump() == initial_schema.model_dump()
+
+
+def test_schema_builder_enhancement_mode_flag(driver: neo4j.Driver) -> None:
+    """Test that SchemaBuilder enhancement_mode flag switches between validation and enhancement."""
+    # Test validation mode (default)
+    validation_builder = SchemaBuilder(driver, enhancement_mode=False)
+    
+    mock_constraints = [
+        SchemaConstraint(
+            entity_type="NODE",
+            label_or_type=["PERSON"],
+            type=Neo4jConstraintTypeEnum.NODE_PROPERTY_EXISTENCE,
+            properties=["missing_property"],
+        )
+    ]
+    
+    with patch.object(validation_builder, '_get_constraints_from_db', return_value=mock_constraints):
+        # Should raise error in validation mode
+        with pytest.raises(SchemaDatabaseConflictError, match="requires properties \\['missing_property'\\]"):
+            validation_builder._create_schema_model([
+                NodeType(label="PERSON", properties=[
+                    PropertyType(name="name", type="STRING")
+                ])
+            ])
+    
+    # Test enhancement mode
+    enhancement_builder = SchemaBuilder(driver, enhancement_mode=True)
+    
+    with patch.object(enhancement_builder, '_get_constraints_from_db', return_value=mock_constraints):
+        # Should enhance schema instead of raising error
+        result = enhancement_builder._create_schema_model([
+            NodeType(label="PERSON", properties=[
+                PropertyType(name="name", type="STRING")
+            ])
+        ])
+        
+        # Check that missing property was added
+        person_node = result.node_type_from_label("PERSON")
+        missing_prop = person_node.get_property_by_name("missing_property")
+        assert missing_prop is not None
+        assert missing_prop.required == True
+        assert "constraint" in missing_prop.description.lower()

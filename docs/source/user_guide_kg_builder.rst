@@ -747,6 +747,46 @@ Optionally, the document and chunk node labels can be configured using a `Lexica
 Schema Builder
 ==============
 
+Schema Components Overview
+--------------------------
+
+The Neo4j GraphRAG library provides two main components for working with graph schemas:
+
+- **SchemaBuilder**: For building schemas from manually defined node and relationship types
+- **SchemaFromTextExtractor**: For automatically extracting schemas from text using LLMs
+
+Both components now share a unified constraint processing architecture that ensures 
+consistent behavior when working with Neo4j database constraints.
+
+**Unified Architecture Benefits:**
+
+- **Consistency**: Same validation and enhancement logic across all schema components
+- **Flexibility**: Choose between strict validation or automatic enhancement
+- **Maintainability**: Single source of truth for constraint processing
+- **Reliability**: Comprehensive testing ensures robust constraint handling
+
+**Processing Modes:**
+
+.. list-table:: Schema Processing Modes
+   :header-rows: 1
+   :widths: 30 35 35
+
+   * - Mode
+     - Behavior
+     - Best For
+   * - **Validation** (SchemaBuilder default)
+     - Raises errors for constraint conflicts
+     - Production schemas, explicit control
+   * - **Enhancement** (SchemaBuilder optional)
+     - Automatically resolves constraint conflicts  
+     - Development, flexible user schemas
+   * - **Enhancement** (SchemaFromTextExtractor always)
+     - Automatically resolves constraint conflicts
+     - LLM-generated schemas
+
+Schema Definition
+-----------------
+
 The schema is used to try and ground the LLM to a list of possible node and relationship types of interest.
 So far, schema must be manually created by specifying:
 
@@ -772,16 +812,16 @@ Here is a code block illustrating these concepts:
             NodeType(
                 label="Person",
                 properties=[
-                    SchemaProperty(name="name", type="STRING"),
-                    SchemaProperty(name="place_of_birth", type="STRING"),
-                    SchemaProperty(name="date_of_birth", type="DATE"),
+                    PropertyType(name="name", type="STRING"),
+                    PropertyType(name="place_of_birth", type="STRING"),
+                    PropertyType(name="date_of_birth", type="DATE"),
                 ],
             ),
             NodeType(
                 label="Organization",
                 properties=[
-                    SchemaProperty(name="name", type="STRING"),
-                    SchemaProperty(name="country", type="STRING"),
+                    PropertyType(name="name", type="STRING"),
+                    PropertyType(name="country", type="STRING"),
                 ],
             ),
         ],
@@ -814,6 +854,7 @@ Instead of manually defining the schema, you can use the `SchemaFromTextExtracto
 
     # Instantiate the automatic schema extractor component
     schema_extractor = SchemaFromTextExtractor(
+        driver=neo4j_driver,  # Add driver for constraint processing
         llm=OpenAILLM(
             model_name="gpt-4o",
             model_params={
@@ -845,33 +886,74 @@ Schema-Database Constraint Validation
 =====================================
 
 When using `SchemaBuilder` with an existing Neo4j database that contains constraints, 
-the component automatically validates that your user-defined schema is compatible with 
-the database constraints. This validation helps ensure data consistency and prevents 
-runtime errors when writing to the database.
+the component automatically processes your schema against database constraints. The 
+component supports two modes of operation:
 
-.. warning::
+- **Validation Mode** (default): Validates schema compatibility and raises errors for conflicts
+- **Enhancement Mode**: Automatically modifies schema to resolve conflicts
 
-    This validation is performed during schema building and will raise explicit errors 
-    if conflicts are detected. No silent modifications are made to your schema.
+.. note::
+
+    Both `SchemaBuilder` and `SchemaFromTextExtractor` now share the same underlying 
+    constraint processing logic, ensuring consistent behavior across components.
+
+SchemaBuilder Modes
+-------------------
+
+**Validation Mode (enhancement_mode=False)**
+
+This is the default mode that validates your user-defined schema against database 
+constraints and raises explicit errors if conflicts are detected:
+
+.. code:: python
+
+    from neo4j_graphrag.experimental.components.schema import SchemaBuilder
+    
+    # Default validation mode
+    schema_builder = SchemaBuilder(driver=neo4j_driver, enhancement_mode=False)
+    
+    # Will raise SchemaDatabaseConflictError if conflicts are found
+    schema = await schema_builder.run(node_types=[...])
+
+**Enhancement Mode (enhancement_mode=True)**
+
+This mode automatically modifies your schema to resolve conflicts with database constraints:
+
+.. code:: python
+
+    from neo4j_graphrag.experimental.components.schema import SchemaBuilder
+    
+    # Enhancement mode - automatically fixes conflicts
+    schema_builder = SchemaBuilder(driver=neo4j_driver, enhancement_mode=True)
+    
+    # Will automatically add missing properties and adjust types
+    schema = await schema_builder.run(node_types=[...])
+
+**When to Use Each Mode:**
+
+- **Validation Mode**: Use when you want explicit control over your schema and prefer 
+  to manually resolve conflicts. Ideal for production schemas where changes should be deliberate.
+- **Enhancement Mode**: Use during development or when you want automatic compatibility 
+  with database constraints. Similar to `SchemaFromTextExtractor` behavior.
 
 Validation Rules
 ----------------
 
-The `SchemaBuilder` validates your schema against the following types of database constraints:
+Both modes validate your schema against the following types of database constraints:
 
 **1. Missing Property Conflicts**
 
 If your schema defines an entity type (node or relationship) but omits properties that 
-are required by database existence constraints, an error will be raised:
+are required by database existence constraints:
 
 .. code:: python
 
     # Database has constraint: CREATE CONSTRAINT FOR (p:Person) REQUIRE p.email IS NOT NULL
     # But your schema doesn't include the 'email' property
     
-    schema_builder = SchemaBuilder(driver=neo4j_driver)
+    schema_builder = SchemaBuilder(driver=neo4j_driver, enhancement_mode=False)
     
-    # This will raise SchemaDatabaseConflictError
+    # Validation mode: This will raise SchemaDatabaseConflictError
     await schema_builder.run(
         node_types=[
             NodeType(
@@ -883,8 +965,17 @@ are required by database existence constraints, an error will be raised:
             )
         ]
     )
+    
+    # Enhancement mode: This will automatically add the 'email' property
+    enhancement_builder = SchemaBuilder(driver=neo4j_driver, enhancement_mode=True)
+    enhanced_schema = await enhancement_builder.run(node_types=[...])
+    
+    # The 'email' property will be automatically added as required
+    person_node = enhanced_schema.node_type_from_label("Person")
+    email_prop = person_node.get_property_by_name("email")
+    assert email_prop.required == True
 
-**Error Resolution:** Add the missing properties to your schema or remove the database constraint.
+**Error Resolution (Validation Mode):** Add the missing properties to your schema or remove the database constraint.
 
 **2. Property Type Conflicts**
 
@@ -895,7 +986,7 @@ If your schema defines property types that conflict with database type constrain
     # Database has constraint: CREATE CONSTRAINT FOR (p:Person) REQUIRE p.age IS :: INTEGER
     # But your schema defines 'age' as STRING
     
-    # This will raise SchemaDatabaseConflictError
+    # Validation mode: This will raise SchemaDatabaseConflictError
     await schema_builder.run(
         node_types=[
             NodeType(
@@ -906,8 +997,14 @@ If your schema defines property types that conflict with database type constrain
             )
         ]
     )
+    
+    # Enhancement mode: This will automatically update the type to INTEGER
+    enhanced_schema = await enhancement_builder.run(node_types=[...])
+    person_node = enhanced_schema.node_type_from_label("Person")
+    age_prop = person_node.get_property_by_name("age")
+    assert age_prop.type == "INTEGER"  # Automatically corrected
 
-**Error Resolution:** Update property types to match database constraints or remove the database constraint.
+**Error Resolution (Validation Mode):** Update property types to match database constraints or remove the database constraint.
 
 **3. Missing Entity Type Conflicts**
 
@@ -919,13 +1016,21 @@ disabled additional types:
     # Database has constraints on 'Company' nodes
     # But your schema doesn't include Company and additional_node_types=False
     
-    # This will raise SchemaDatabaseConflictError
+    # Validation mode: This will raise SchemaDatabaseConflictError
     await schema_builder.run(
         node_types=[NodeType(label="Person")],
         additional_node_types=False  # Strict mode
     )
+    
+    # Enhancement mode: This will automatically add the Company node type
+    enhanced_schema = await enhancement_builder.run(
+        node_types=[NodeType(label="Person")],
+        additional_node_types=True  # Allow automatic additions
+    )
+    company_node = enhanced_schema.node_type_from_label("Company")
+    assert company_node is not None  # Automatically added
 
-**Error Resolution:** Add the missing entity types to your schema or set ``additional_node_types=True``.
+**Error Resolution (Validation Mode):** Add the missing entity types to your schema or set ``additional_node_types=True``.
 
 **4. Additional Properties Conflicts**
 
@@ -937,7 +1042,7 @@ properties not in your schema:
     # Database requires 'email' property via existence constraint
     # But your schema has additional_properties=False and doesn't include 'email'
     
-    # This will raise SchemaDatabaseConflictError
+    # Validation mode: This will raise SchemaDatabaseConflictError
     await schema_builder.run(
         node_types=[
             NodeType(
@@ -947,41 +1052,29 @@ properties not in your schema:
             )
         ]
     )
-
-**Error Resolution:** Add missing properties to your schema or set ``additional_properties=True``.
-
-Schema Enhancement
-------------------
-
-When your schema is compatible with database constraints, the `SchemaBuilder` can 
-enhance your schema by setting ``required=True`` on properties that have database 
-existence constraints:
-
-.. code:: python
-
-    # Database has: CREATE CONSTRAINT FOR (p:Person) REQUIRE p.email IS NOT NULL
     
-    schema = await schema_builder.run(
-        node_types=[
-            NodeType(
-                label="Person", 
-                properties=[
-                    PropertyType(name="name", type="STRING"),
-                    PropertyType(name="email", type="STRING", required=False)  # Initially optional
-                ]
-            )
-        ]
-    )
-    
-    # After validation, the 'email' property will be enhanced to required=True
-    person_type = schema.node_type_from_label("Person")
-    email_prop = person_type.get_property_by_name("email")
-    assert email_prop.required == True  # Enhanced by database constraint
+    # Enhancement mode: Respects additional_properties=False, won't add properties
+    # Use additional_properties=True to allow automatic property additions
+
+**Error Resolution (Validation Mode):** Add missing properties to your schema or set ``additional_properties=True``.
+
+Schema Enhancement Behavior
+---------------------------
+
+In enhancement mode, the `SchemaBuilder` performs the following automatic modifications:
+
+1. **Adds Missing Properties**: Creates properties required by database constraints
+2. **Updates Property Types**: Adjusts types to match database type constraints  
+3. **Sets Required Properties**: Marks properties as required for existence constraints
+4. **Adds Missing Entity Types**: Creates missing node/relationship types (if allowed)
+5. **Respects User Constraints**: Won't add properties if ``additional_properties=False``
+
+All enhanced properties include descriptive text indicating they were added due to database constraints.
 
 Error Handling
 --------------
 
-All constraint conflicts raise ``SchemaDatabaseConflictError`` with detailed error 
+In validation mode, all constraint conflicts raise ``SchemaDatabaseConflictError`` with detailed error 
 messages explaining the conflict and suggesting resolutions:
 
 .. code:: python
@@ -998,23 +1091,27 @@ messages explaining the conflict and suggesting resolutions:
 Best Practices
 --------------
 
-1. **Review Database Constraints:** Before defining your schema, review existing 
+1. **Choose the Right Mode:** 
+   - Use validation mode for production schemas where explicit control is important
+   - Use enhancement mode for development or when you want automatic compatibility
+
+2. **Review Database Constraints:** Before defining your schema, review existing 
    database constraints using:
 
    .. code:: cypher
 
        SHOW CONSTRAINTS
 
-2. **Start Permissive:** Begin with ``additional_node_types=True`` and 
+3. **Start Permissive:** Begin with ``additional_node_types=True`` and 
    ``additional_properties=True`` to allow flexibility during development.
 
-3. **Iterative Refinement:** Use the error messages to iteratively refine your 
-   schema until it's compatible with database constraints.
+4. **Iterative Refinement:** In validation mode, use the error messages to iteratively 
+   refine your schema until it's compatible with database constraints.
 
-4. **Constraint Alignment:** Ensure your schema property types match database 
+5. **Constraint Alignment:** Ensure your schema property types match database 
    type constraints to avoid conflicts.
 
-5. **Required Properties:** Include all properties referenced by database existence 
+6. **Required Properties:** Include all properties referenced by database existence 
    constraints in your schema definitions.
 
 
@@ -1346,3 +1443,119 @@ previously created document node:
 .. code:: python
 
     filter_query = "WHERE NOT EXISTS((entity)-[:FROM_DOCUMENT]->(:OldDocument))"
+
+.. note::
+
+    The `SchemaBuilder` validates user schemas against database constraints and raises 
+    explicit errors for conflicts. For automatic schema generation from text, see 
+    `SchemaFromTextExtractor Enhancement`_ below.
+
+**Error Examples:**
+
+.. code:: python
+
+    # This will raise SchemaDatabaseConflictError with detailed message:
+    # "Database constraint NODE_PROPERTY_EXISTENCE on Person requires properties 
+    # ['email'] that are not defined in user schema. Please add these properties 
+    # to your Person definition or remove the constraint from the database."
+
+
+SchemaFromTextExtractor Enhancement
+===================================
+
+The `SchemaFromTextExtractor` component automatically **enhances** LLM-generated schemas 
+to match database constraints. It uses the same underlying constraint processing logic 
+as `SchemaBuilder` in enhancement mode, but is specifically designed for schemas extracted 
+from text by Large Language Models.
+
+.. note::
+
+    `SchemaFromTextExtractor` always operates in enhancement mode - it never raises 
+    errors for constraint conflicts. Instead, it automatically modifies the schema 
+    to ensure database compatibility.
+
+**Shared Enhancement Logic:**
+
+Both `SchemaFromTextExtractor` and `SchemaBuilder` (in enhancement mode) now use the 
+same constraint processing engine, ensuring consistent behavior:
+
+1. **Adds Missing Properties**: If database constraints require properties not generated by the LLM
+2. **Updates Property Types**: Adjusts property types to match database type constraints  
+3. **Sets Required Properties**: Marks properties as required when database has existence constraints
+4. **Adds Missing Entity Types**: Creates entity types required by constraints (if `additional_*_types=True`)
+5. **Respects User Constraints**: Won't add properties if `additional_properties=False`
+6. **Graceful Failure**: Returns original schema if enhancement fails
+
+**Example:**
+
+.. code:: python
+
+    from neo4j_graphrag.experimental.components.schema import SchemaFromTextExtractor
+    from your_llm_provider import YourLLM
+    
+    # Database has constraint: CREATE CONSTRAINT FOR (p:Person) REQUIRE p.email IS NOT NULL
+    
+    extractor = SchemaFromTextExtractor(
+        driver=neo4j_driver,
+        llm=YourLLM()
+    )
+    
+    # LLM generates basic schema from text
+    text = "John works at Acme Corp. His email is john@acme.com"
+    
+    # Enhancement automatically adds missing 'email' property as required
+    enhanced_schema = await extractor.run(text)
+    
+    person_node = enhanced_schema.node_type_from_label("Person")
+    email_prop = person_node.get_property_by_name("email")
+    
+    assert email_prop.required == True  # Enhanced due to database constraint
+    assert "constraint" in email_prop.description.lower()
+
+**Component Comparison:**
+
+.. list-table:: Schema Processing Approaches
+   :header-rows: 1
+   :widths: 25 35 40
+
+   * - Component
+     - Default Behavior
+     - Use Case
+   * - ``SchemaBuilder`` (validation mode)
+     - Validates user schemas → Raises errors for conflicts
+     - Production schemas requiring explicit control
+   * - ``SchemaBuilder`` (enhancement mode)
+     - Enhances user schemas → Modifies automatically  
+     - Development or flexible user schemas
+   * - ``SchemaFromTextExtractor``
+     - Enhances LLM schemas → Always modifies automatically
+     - LLM-generated schemas needing database compatibility
+
+**Configuration Options:**
+
+The `SchemaFromTextExtractor` respects the same configuration options as `SchemaBuilder`:
+
+.. code:: python
+
+    # Control what types of enhancements are allowed
+    enhanced_schema = await extractor.run(
+        text="Your text here",
+        additional_node_types=True,      # Allow adding missing node types
+        additional_relationship_types=True,  # Allow adding missing relationship types
+    )
+    
+    # For entities with additional_properties=False, no properties will be added
+    # Use additional_properties=True (default) to allow property additions
+
+**Architecture Benefits:**
+
+The shared constraint processing architecture provides:
+
+- **Consistency**: Same validation logic across all schema components
+- **Maintainability**: Single source of truth for constraint handling  
+- **Flexibility**: Easy to switch between validation and enhancement modes
+- **Reliability**: Comprehensive testing covers all constraint scenarios
+
+This unified approach ensures that whether you're using manually defined schemas with 
+`SchemaBuilder` or automatically extracted schemas with `SchemaFromTextExtractor`, 
+you get consistent and reliable constraint processing behavior.

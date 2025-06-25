@@ -77,6 +77,12 @@ SchemaBuilder
 .. autoclass:: neo4j_graphrag.experimental.components.schema.SchemaBuilder
     :members: run
 
+ConstraintProcessor
+-------------------
+
+.. autoclass:: neo4j_graphrag.experimental.components.schema.ConstraintProcessor
+    :members: _process_constraints_against_schema
+
 SchemaFromTextExtractor
 -----------------------
 
