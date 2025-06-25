@@ -22,7 +22,7 @@ import neo4j
 import pytest
 from pydantic import ValidationError
 
-from neo4j_graphrag.exceptions import SchemaValidationError, SchemaExtractionError
+from neo4j_graphrag.exceptions import SchemaValidationError, SchemaExtractionError, SchemaDatabaseConflictError
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
     SchemaFromTextExtractor,
@@ -33,6 +33,8 @@ from neo4j_graphrag.experimental.components.types import (
     RelationshipType,
     GraphSchema,
     Neo4jPropertyType,
+    SchemaConstraint,
+    Neo4jConstraintTypeEnum,
 )
 import os
 import tempfile
@@ -221,15 +223,18 @@ async def test_run_method(
 ) -> None:
     with patch.object(
         schema_builder,
-        "create_schema_model",
+        "_create_schema_model",
         return_value=GraphSchema(
             node_types=valid_node_types,
             relationship_types=valid_relationship_types,
             patterns=valid_patterns,
         ),
     ):
+        # Call with strings instead of NodeType objects
         schema = await schema_builder.run(
-            list(valid_node_types), list(valid_relationship_types), list(valid_patterns)
+            node_types=["PERSON", "ORGANIZATION", "AGE"],
+            relationship_types=["EMPLOYED_BY", "ORGANIZED_BY", "ATTENDED_BY"],
+            patterns=valid_patterns
         )
 
     assert schema.node_types == valid_node_types
@@ -617,3 +622,274 @@ async def test_schema_from_text_run_valid_json_array(
     assert schema.patterns is not None
     assert len(schema.patterns) == 1
     assert schema.patterns[0] == ("Person", "WORKS_FOR", "Organization")
+
+
+# ==================== CONFLICT DETECTION TESTS ====================
+
+@pytest.fixture
+def mock_constraints_missing_property() -> list[SchemaConstraint]:
+    """Mock constraints that reference properties not in user schema."""
+    return [
+        SchemaConstraint(
+            entity_type="NODE",
+            label_or_type=["PERSON"],
+            type=Neo4jConstraintTypeEnum.NODE_PROPERTY_EXISTENCE,
+            properties=["missing_property"],
+        )
+    ]
+
+
+@pytest.fixture
+def mock_constraints_type_conflict() -> list[SchemaConstraint]:
+    """Mock constraints with type conflicts."""
+    return [
+        SchemaConstraint(
+            entity_type="NODE",
+            label_or_type=["PERSON"],
+            type=Neo4jConstraintTypeEnum.NODE_PROPERTY_TYPE,
+            properties=["name"],
+            property_type=[Neo4jPropertyType.INTEGER],  # Conflicts with STRING
+        )
+    ]
+
+
+@pytest.fixture
+def mock_constraints_required_conflict() -> list[SchemaConstraint]:
+    """Mock constraints requiring properties marked as optional by user."""
+    return [
+        SchemaConstraint(
+            entity_type="NODE",
+            label_or_type=["PERSON"],
+            type=Neo4jConstraintTypeEnum.NODE_PROPERTY_EXISTENCE,
+            properties=["optional_prop"],
+        )
+    ]
+
+
+@pytest.fixture
+def mock_constraints_missing_entity() -> list[SchemaConstraint]:
+    """Mock constraints on entity types not in user schema."""
+    return [
+        SchemaConstraint(
+            entity_type="NODE",
+            label_or_type=["UNKNOWN_LABEL"],
+            type=Neo4jConstraintTypeEnum.NODE_PROPERTY_EXISTENCE,
+            properties=["some_property"],
+        )
+    ]
+
+
+@pytest.fixture
+def person_node_with_optional_prop() -> NodeType:
+    """Person node with an optional property that conflicts with DB requirements."""
+    return NodeType(
+        label="PERSON",
+        properties=[
+            PropertyType(name="name", type=Neo4jPropertyType.STRING, required=True),
+            PropertyType(name="optional_prop", type=Neo4jPropertyType.STRING, required=False),
+        ],
+    )
+
+
+@pytest.fixture
+def person_node_additional_props_false() -> NodeType:
+    """Person node with additional_properties=False."""
+    return NodeType(
+        label="PERSON",
+        properties=[
+            PropertyType(name="name", type=Neo4jPropertyType.STRING, required=True),
+        ],
+        additional_properties=False,
+    )
+
+
+def test_missing_property_conflict(
+    schema_builder: SchemaBuilder, mock_constraints_missing_property: list[SchemaConstraint]
+) -> None:
+    """Test that missing properties in user schema raise appropriate error."""
+    with patch.object(schema_builder, '_get_constraints_from_db', return_value=mock_constraints_missing_property):
+        with pytest.raises(SchemaDatabaseConflictError, match="requires properties \\['missing_property'\\]"):
+            schema_builder._create_schema_model([
+                NodeType(label="PERSON", properties=[
+                    PropertyType(name="name", type=Neo4jPropertyType.STRING)
+                ])
+            ])
+
+
+def test_property_type_conflict(
+    schema_builder: SchemaBuilder, mock_constraints_type_conflict: list[SchemaConstraint]
+) -> None:
+    """Test that property type conflicts raise appropriate error."""
+    with patch.object(schema_builder, '_get_constraints_from_db', return_value=mock_constraints_type_conflict):
+        with pytest.raises(SchemaDatabaseConflictError, match="has type .* but database constraint allows only"):
+            schema_builder._create_schema_model([
+                NodeType(label="PERSON", properties=[
+                    PropertyType(name="name", type=Neo4jPropertyType.STRING)  # Conflicts with INTEGER
+                ])
+            ])
+
+
+def test_required_property_conflict(
+    schema_builder: SchemaBuilder, 
+    mock_constraints_required_conflict: list[SchemaConstraint],
+    person_node_with_optional_prop: NodeType
+) -> None:
+    """Test that optional properties conflicting with DB existence constraints are enhanced, not errors."""
+    with patch.object(schema_builder, '_get_constraints_from_db', return_value=mock_constraints_required_conflict):
+        # This should not raise an exception - we enhance instead of error
+        result = schema_builder._create_schema_model([person_node_with_optional_prop])
+        
+        # Property should be enhanced to required=True
+        optional_prop = None
+        for prop in result.node_types[0].properties:
+            if prop.name == "optional_prop":
+                optional_prop = prop
+                break
+        
+        assert optional_prop is not None
+        assert optional_prop.required is True  # Should be enhanced
+
+
+def test_missing_entity_type_conflict(
+    schema_builder: SchemaBuilder, mock_constraints_missing_entity: list[SchemaConstraint]
+) -> None:
+    """Test that missing entity types raise error when additional types are disabled."""
+    with patch.object(schema_builder, '_get_constraints_from_db', return_value=mock_constraints_missing_entity):
+        with pytest.raises(SchemaDatabaseConflictError, match="Database has constraints on node labels"):
+            schema_builder._create_schema_model(
+                [NodeType(label="PERSON")],
+                additional_node_types=False
+            )
+
+
+def test_additional_properties_conflict(
+    schema_builder: SchemaBuilder, 
+    person_node_additional_props_false: NodeType
+) -> None:
+    """Test that additional_properties=False conflicts with DB-required properties."""
+    mock_constraints = [
+        SchemaConstraint(
+            entity_type="NODE",
+            label_or_type=["PERSON"],
+            type=Neo4jConstraintTypeEnum.NODE_PROPERTY_EXISTENCE,
+            properties=["db_required_prop"],
+        )
+    ]
+    
+    with patch.object(schema_builder, '_get_constraints_from_db', return_value=mock_constraints):
+        with pytest.raises(SchemaDatabaseConflictError, match="has additional_properties=False but database.*require"):
+            schema_builder._create_schema_model([person_node_additional_props_false])
+
+
+def test_no_conflict_with_compatible_schema(
+    schema_builder: SchemaBuilder
+) -> None:
+    """Test that compatible schema and constraints work without errors."""
+    mock_constraints = [
+        SchemaConstraint(
+            entity_type="NODE",
+            label_or_type=["PERSON"],
+            type=Neo4jConstraintTypeEnum.NODE_PROPERTY_EXISTENCE,
+            properties=["name"],
+        )
+    ]
+    
+    with patch.object(schema_builder, '_get_constraints_from_db', return_value=mock_constraints):
+        # This should not raise any exceptions
+        result = schema_builder._create_schema_model([
+            NodeType(label="PERSON", properties=[
+                PropertyType(name="name", type=Neo4jPropertyType.STRING, required=True)
+            ])
+        ])
+        
+        assert len(result.node_types) == 1
+        assert result.node_types[0].label == "PERSON"
+        # Property should remain required=True
+        assert result.node_types[0].properties[0].required is True
+
+
+def test_enhancement_sets_required_property(
+    schema_builder: SchemaBuilder
+) -> None:
+    """Test that existence constraints properly set required=True on properties."""
+    mock_constraints = [
+        SchemaConstraint(
+            entity_type="NODE",
+            label_or_type=["PERSON"],
+            type=Neo4jConstraintTypeEnum.NODE_PROPERTY_EXISTENCE,
+            properties=["name"],
+        )
+    ]
+    
+    with patch.object(schema_builder, '_get_constraints_from_db', return_value=mock_constraints):
+        result = schema_builder._create_schema_model([
+            NodeType(label="PERSON", properties=[
+                PropertyType(name="name", type=Neo4jPropertyType.STRING, required=False)
+            ])
+        ])
+        
+        # Property should be enhanced to required=True
+        assert result.node_types[0].properties[0].required is True
+
+
+def test_compatible_property_types(
+    schema_builder: SchemaBuilder
+) -> None:
+    """Test that compatible property types don't raise conflicts."""
+    mock_constraints = [
+        SchemaConstraint(
+            entity_type="NODE",
+            label_or_type=["PERSON"],
+            type=Neo4jConstraintTypeEnum.NODE_PROPERTY_TYPE,
+            properties=["name"],
+            property_type=[Neo4jPropertyType.STRING, Neo4jPropertyType.INTEGER],  # Union type
+        )
+    ]
+    
+    with patch.object(schema_builder, '_get_constraints_from_db', return_value=mock_constraints):
+        # User specifies STRING, DB allows STRING|INTEGER - should be compatible
+        result = schema_builder._create_schema_model([
+            NodeType(label="PERSON", properties=[
+                PropertyType(name="name", type=Neo4jPropertyType.STRING)
+            ])
+        ])
+        
+        assert len(result.node_types) == 1
+        assert result.node_types[0].properties[0].type == Neo4jPropertyType.STRING
+
+
+def test_missing_entity_allowed_with_additional_types(
+    schema_builder: SchemaBuilder, mock_constraints_missing_entity: list[SchemaConstraint]
+) -> None:
+    """Test that missing entity types are allowed when additional_*_types=True."""
+    with patch.object(schema_builder, '_get_constraints_from_db', return_value=mock_constraints_missing_entity):
+        # This should not raise an exception because additional_node_types=True by default
+        result = schema_builder._create_schema_model([
+            NodeType(label="PERSON")
+        ])
+        
+        assert len(result.node_types) == 1
+        assert result.node_types[0].label == "PERSON"
+
+
+def test_relationship_constraint_conflicts(
+    schema_builder: SchemaBuilder
+) -> None:
+    """Test conflict detection for relationship constraints."""
+    mock_constraints = [
+        SchemaConstraint(
+            entity_type="RELATIONSHIP",
+            label_or_type=["KNOWS"],
+            type=Neo4jConstraintTypeEnum.RELATIONSHIP_PROPERTY_EXISTENCE,
+            properties=["missing_rel_prop"],
+        )
+    ]
+    
+    with patch.object(schema_builder, '_get_constraints_from_db', return_value=mock_constraints):
+        with pytest.raises(SchemaDatabaseConflictError, match="requires properties \\['missing_rel_prop'\\]"):
+            schema_builder._create_schema_model(
+                [NodeType(label="PERSON")],
+                [RelationshipType(label="KNOWS", properties=[
+                    PropertyType(name="since", type=Neo4jPropertyType.DATE)
+                ])]
+            )

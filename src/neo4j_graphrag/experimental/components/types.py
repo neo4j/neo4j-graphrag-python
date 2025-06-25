@@ -18,7 +18,7 @@ import enum
 import uuid
 import warnings
 from pathlib import Path
-from typing import Any, Dict, Optional, Union, Tuple, Literal
+from typing import Any, Dict, Optional, Union, Tuple, Literal, Iterable
 from typing_extensions import Self
 
 from pydantic import (
@@ -228,7 +228,7 @@ class PropertyType(BaseModel):
     """
 
     name: str
-    type: Neo4jPropertyType
+    type: Neo4jPropertyType | list[Neo4jPropertyType]
     description: str = ""
     required: bool = False
 
@@ -251,11 +251,25 @@ class SchemaConstraint(BaseModel):
     """Constraints that can be applied either on a node or relationship property."""
 
     entity_type: Literal["NODE", "RELATIONSHIP"]
-    label_or_type: str
+    label_or_type: list[str]
     type: Neo4jConstraintTypeEnum
     properties: list[str]
-    property_type: Optional[Neo4jPropertyType] = None
+    property_type: Optional[list[Neo4jPropertyType]] = None
     name: Optional[str] = None  # do not force users to set a name manually
+
+    @field_validator("label_or_type", mode="before")
+    @classmethod
+    def _validate_label_or_type(cls, v: Any) -> Iterable[Any]:
+        if isinstance(v, str) or not isinstance(v, Iterable):
+            return [v]
+        return v
+
+    @field_validator("properties", mode="before")
+    @classmethod
+    def _validate_properties(cls, v: Any) -> Iterable[Any]:
+        if isinstance(v, str) or not isinstance(v, Iterable):
+            return [v]
+        return v
 
 
 class GraphEntityType(BaseModel):
@@ -273,7 +287,7 @@ class GraphEntityType(BaseModel):
     properties: list[PropertyType] = []
     additional_properties: bool = True
 
-    _name: Literal["NODE", "RELATIONSHIP"] = PrivateAttr()
+    _entity_type_name: Literal["NODE", "RELATIONSHIP"] = PrivateAttr()
 
     @model_validator(mode="after")
     def validate_additional_properties(self) -> Self:
@@ -290,6 +304,11 @@ class GraphEntityType(BaseModel):
                 return prop
         return None
 
+    @property
+    def entity_type_name(self) -> Literal["NODE", "RELATIONSHIP"]:
+        """Get the entity type name."""
+        return self._entity_type_name
+
     @staticmethod
     def unique_constraint_name() -> tuple[Neo4jConstraintTypeEnum, ...]:
         raise NotImplementedError()
@@ -298,7 +317,7 @@ class GraphEntityType(BaseModel):
 class NodeType(GraphEntityType):
     """Represents a possible node in the graph."""
 
-    _name: Literal["NODE", "RELATIONSHIP"] = PrivateAttr(default="NODE")
+    _entity_type_name: Literal["NODE", "RELATIONSHIP"] = PrivateAttr(default="NODE")
 
     @model_validator(mode="before")
     @classmethod
@@ -318,7 +337,7 @@ class NodeType(GraphEntityType):
 class RelationshipType(GraphEntityType):
     """Represents a possible relationship between two nodes in the graph."""
 
-    _name: Literal["NODE", "RELATIONSHIP"] = PrivateAttr(default="RELATIONSHIP")
+    _entity_type_name: Literal["NODE", "RELATIONSHIP"] = PrivateAttr(default="RELATIONSHIP")
 
     @model_validator(mode="before")
     @classmethod
@@ -436,7 +455,7 @@ class GraphSchema(DataModel):
     def unique_properties_for_entity(self, entity: GraphEntityType) -> list[list[str]]:
         result = []
         for c in self.constraints:
-            if c.entity_type != entity._name:  # noqa
+            if c.entity_type != entity.entity_type_name:
                 continue
             if c.label_or_type != entity.label:
                 continue

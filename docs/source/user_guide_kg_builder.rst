@@ -841,6 +841,183 @@ You can also save and reload the extracted schema:
     restored_schema = GraphSchema.from_file("my_schema.json")  # or my_schema.yaml
 
 
+Schema-Database Constraint Validation
+=====================================
+
+When using `SchemaBuilder` with an existing Neo4j database that contains constraints, 
+the component automatically validates that your user-defined schema is compatible with 
+the database constraints. This validation helps ensure data consistency and prevents 
+runtime errors when writing to the database.
+
+.. warning::
+
+    This validation is performed during schema building and will raise explicit errors 
+    if conflicts are detected. No silent modifications are made to your schema.
+
+Validation Rules
+----------------
+
+The `SchemaBuilder` validates your schema against the following types of database constraints:
+
+**1. Missing Property Conflicts**
+
+If your schema defines an entity type (node or relationship) but omits properties that 
+are required by database existence constraints, an error will be raised:
+
+.. code:: python
+
+    # Database has constraint: CREATE CONSTRAINT FOR (p:Person) REQUIRE p.email IS NOT NULL
+    # But your schema doesn't include the 'email' property
+    
+    schema_builder = SchemaBuilder(driver=neo4j_driver)
+    
+    # This will raise SchemaDatabaseConflictError
+    await schema_builder.run(
+        node_types=[
+            NodeType(
+                label="Person", 
+                properties=[
+                    PropertyType(name="name", type="STRING")
+                    # Missing required 'email' property!
+                ]
+            )
+        ]
+    )
+
+**Error Resolution:** Add the missing properties to your schema or remove the database constraint.
+
+**2. Property Type Conflicts**
+
+If your schema defines property types that conflict with database type constraints:
+
+.. code:: python
+
+    # Database has constraint: CREATE CONSTRAINT FOR (p:Person) REQUIRE p.age IS :: INTEGER
+    # But your schema defines 'age' as STRING
+    
+    # This will raise SchemaDatabaseConflictError
+    await schema_builder.run(
+        node_types=[
+            NodeType(
+                label="Person", 
+                properties=[
+                    PropertyType(name="age", type="STRING")  # Conflicts with INTEGER constraint
+                ]
+            )
+        ]
+    )
+
+**Error Resolution:** Update property types to match database constraints or remove the database constraint.
+
+**3. Missing Entity Type Conflicts**
+
+If database constraints reference entity types not defined in your schema and you've 
+disabled additional types:
+
+.. code:: python
+
+    # Database has constraints on 'Company' nodes
+    # But your schema doesn't include Company and additional_node_types=False
+    
+    # This will raise SchemaDatabaseConflictError
+    await schema_builder.run(
+        node_types=[NodeType(label="Person")],
+        additional_node_types=False  # Strict mode
+    )
+
+**Error Resolution:** Add the missing entity types to your schema or set ``additional_node_types=True``.
+
+**4. Additional Properties Conflicts**
+
+If your entity has ``additional_properties=False`` but database constraints require 
+properties not in your schema:
+
+.. code:: python
+
+    # Database requires 'email' property via existence constraint
+    # But your schema has additional_properties=False and doesn't include 'email'
+    
+    # This will raise SchemaDatabaseConflictError
+    await schema_builder.run(
+        node_types=[
+            NodeType(
+                label="Person",
+                properties=[PropertyType(name="name", type="STRING")],
+                additional_properties=False  # Strict mode, but missing required 'email'
+            )
+        ]
+    )
+
+**Error Resolution:** Add missing properties to your schema or set ``additional_properties=True``.
+
+Schema Enhancement
+------------------
+
+When your schema is compatible with database constraints, the `SchemaBuilder` can 
+enhance your schema by setting ``required=True`` on properties that have database 
+existence constraints:
+
+.. code:: python
+
+    # Database has: CREATE CONSTRAINT FOR (p:Person) REQUIRE p.email IS NOT NULL
+    
+    schema = await schema_builder.run(
+        node_types=[
+            NodeType(
+                label="Person", 
+                properties=[
+                    PropertyType(name="name", type="STRING"),
+                    PropertyType(name="email", type="STRING", required=False)  # Initially optional
+                ]
+            )
+        ]
+    )
+    
+    # After validation, the 'email' property will be enhanced to required=True
+    person_type = schema.node_type_from_label("Person")
+    email_prop = person_type.get_property_by_name("email")
+    assert email_prop.required == True  # Enhanced by database constraint
+
+Error Handling
+--------------
+
+All constraint conflicts raise ``SchemaDatabaseConflictError`` with detailed error 
+messages explaining the conflict and suggesting resolutions:
+
+.. code:: python
+
+    from neo4j_graphrag.exceptions import SchemaDatabaseConflictError
+    
+    try:
+        schema = await schema_builder.run(node_types=[...])
+    except SchemaDatabaseConflictError as e:
+        print(f"Schema conflict detected: {e}")
+        # Error message will indicate exactly which properties or types are missing
+        # and provide suggestions for resolution
+
+Best Practices
+--------------
+
+1. **Review Database Constraints:** Before defining your schema, review existing 
+   database constraints using:
+
+   .. code:: cypher
+
+       SHOW CONSTRAINTS
+
+2. **Start Permissive:** Begin with ``additional_node_types=True`` and 
+   ``additional_properties=True`` to allow flexibility during development.
+
+3. **Iterative Refinement:** Use the error messages to iteratively refine your 
+   schema until it's compatible with database constraints.
+
+4. **Constraint Alignment:** Ensure your schema property types match database 
+   type constraints to avoid conflicts.
+
+5. **Required Properties:** Include all properties referenced by database existence 
+   constraints in your schema definitions.
+
+
 Entity and Relation Extractor
 =============================
 

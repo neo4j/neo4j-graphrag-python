@@ -475,6 +475,8 @@ Errors
 
   * :class:`neo4j_graphrag.exceptions.SchemaValidationError`
 
+  * :class:`neo4j_graphrag.exceptions.SchemaDatabaseConflictError`
+
   * :class:`neo4j_graphrag.exceptions.PdfLoaderError`
 
   * :class:`neo4j_graphrag.exceptions.PromptMissingPlaceholderError`
@@ -601,6 +603,13 @@ SchemaValidationError
 =====================
 
 .. autoclass:: neo4j_graphrag.exceptions.SchemaValidationError
+   :show-inheritance:
+
+
+SchemaDatabaseConflictError
+=========================
+
+.. autoclass:: neo4j_graphrag.exceptions.SchemaDatabaseConflictError
    :show-inheritance:
 
 

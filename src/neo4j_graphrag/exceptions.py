@@ -116,6 +116,12 @@ class SchemaValidationError(Neo4jGraphRagError):
     pass
 
 
+class SchemaDatabaseConflictError(SchemaValidationError):
+    """Exception raised when user schema conflicts with database constraints."""
+
+    pass
+
+
 class SchemaExtractionError(Neo4jGraphRagError):
     """Exception raised for errors in automatic schema extraction."""
 
