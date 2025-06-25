@@ -294,6 +294,71 @@ Here's an example using the Python Ollama client:
 See :ref:`llminterface`.
 
 
+Rate Limit Handling
+===================
+
+All LLM implementations include automatic rate limiting that uses retry logic with exponential backoff by default. This feature helps handle API rate limits from LLM providers gracefully by automatically retrying failed requests with increasing wait times between attempts.
+
+Default Rate Limit Handler
+--------------------------
+
+Rate limiting is enabled by default for all LLM instances with the following configuration:
+
+- **Max attempts**: 3
+- **Min wait**: 1.0 seconds  
+- **Max wait**: 60.0 seconds
+- **Multiplier**: 2.0 (exponential backoff)
+
+.. code:: python
+
+    from neo4j_graphrag.llm import OpenAILLM
+    
+    # Rate limiting is automatically enabled
+    llm = OpenAILLM(model_name="gpt-4o")
+    
+    # The LLM will automatically retry on rate limit errors
+    response = llm.invoke("Hello, world!")
+
+Custom Rate Limiting
+--------------------
+
+You can customize the rate limiting behavior by creating your own rate limit handler:
+
+.. code:: python
+
+    from neo4j_graphrag.llm import AnthropicLLM
+    from neo4j_graphrag.llm.rate_limit import RateLimitHandler
+    
+    class CustomRateLimitHandler(RateLimitHandler):
+        """Implement your custom rate limiting strategy."""
+        # Implement required methods: handle_sync, handle_async
+        pass
+    
+    # Create custom rate limit handler and pass it to the LLM interface
+    custom_handler = CustomRateLimitHandler()
+    
+    llm = AnthropicLLM(
+        model_name="claude-3-sonnet-20240229",
+        rate_limit_handler=custom_handler,
+    )
+
+Disabling Rate Limiting
+-----------------------
+
+For high-throughput applications or when you handle rate limiting externally, you can disable it:
+
+.. code:: python
+
+    from neo4j_graphrag.llm import CohereLLM, NoOpRateLimitHandler
+    
+    # Disable rate limiting completely
+    llm = CohereLLM(
+        model_name="command-r-plus",
+        rate_limit_handler=NoOpRateLimitHandler(),
+    )
+    llm.invoke("Hello, world!")
+
+
 Configuring the Prompt
 ========================
 
