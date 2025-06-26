@@ -21,18 +21,13 @@ from typing import Any, Awaitable, Callable, Optional, TypeVar
 
 from neo4j_graphrag.exceptions import RateLimitError
 
-try:
-    from tenacity import (
-        retry,
-        stop_after_attempt,
-        wait_exponential,
-        retry_if_exception_type,
-        before_sleep_log,
-    )
-
-    TENACITY_AVAILABLE = True
-except ImportError:
-    TENACITY_AVAILABLE = False
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+    before_sleep_log,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -100,24 +95,13 @@ class RetryRateLimitHandler(RateLimitHandler):
         max_wait: float = 60.0,
         multiplier: float = 2.0,
     ):
-        if not TENACITY_AVAILABLE:
-            logger.warning(
-                "tenacity is not installed. Rate limit handling will be disabled. "
-                "Install it with: pip install tenacity"
-            )
-            self._fallback_handler = NoOpRateLimitHandler()
-            self._use_fallback = True
-        else:
-            self._use_fallback = False
-            self.max_attempts = max_attempts
-            self.min_wait = min_wait
-            self.max_wait = max_wait
-            self.multiplier = multiplier
+        self.max_attempts = max_attempts
+        self.min_wait = min_wait
+        self.max_wait = max_wait
+        self.multiplier = multiplier
 
     def handle_sync(self, func: F) -> F:
         """Apply retry logic to a synchronous function."""
-        if self._use_fallback:
-            return self._fallback_handler.handle_sync(func)
 
         @retry(
             retry=retry_if_exception_type(RateLimitError),
@@ -137,8 +121,6 @@ class RetryRateLimitHandler(RateLimitHandler):
 
     def handle_async(self, func: AF) -> AF:
         """Apply retry logic to an asynchronous function."""
-        if self._use_fallback:
-            return self._fallback_handler.handle_async(func)
 
         @retry(
             retry=retry_if_exception_type(RateLimitError),
@@ -213,86 +195,68 @@ def convert_to_rate_limit_error(exception: Exception) -> RateLimitError:
     return RateLimitError(f"Rate limit exceeded: {exception}")
 
 
-def rate_limit_handler(
-    handler: Optional[RateLimitHandler] = None,
-) -> Callable[[F], F]:
+def rate_limit_handler(func: F) -> F:
     """Decorator to apply rate limit handling to synchronous methods.
 
-    This decorator works with instance methods and uses the instance's rate limit handler
-    if available, falling back to the provided handler or default.
+    This decorator works with instance methods and uses the instance's rate limit handler.
 
     Args:
-        handler: The rate limit handler to use. If None, uses the instance's handler or default.
+        func: The function to wrap with rate limit handling.
 
     Returns:
-        A decorator function.
+        The wrapped function.
     """
 
-    def decorator(func: F) -> F:
-        @functools.wraps(func)
-        def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
-            # Use instance handler if available, otherwise use provided handler or default
-            instance_handler = (
-                getattr(self, "_rate_limit_handler", None)
-                if hasattr(self, "_rate_limit_handler")
-                else None
-            )
-            active_handler = handler or instance_handler or DEFAULT_RATE_LIMIT_HANDLER
+    @functools.wraps(func)
+    def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
+        # Use instance handler or default
+        active_handler = getattr(
+            self, "_rate_limit_handler", DEFAULT_RATE_LIMIT_HANDLER
+        )
 
-            def inner_func() -> Any:
-                try:
-                    return func(self, *args, **kwargs)
-                except Exception as e:
-                    if is_rate_limit_error(e):
-                        raise convert_to_rate_limit_error(e)
-                    raise
+        def inner_func() -> Any:
+            try:
+                return func(self, *args, **kwargs)
+            except Exception as e:
+                if is_rate_limit_error(e):
+                    raise convert_to_rate_limit_error(e)
+                raise
 
-            return active_handler.handle_sync(inner_func)()
+        return active_handler.handle_sync(inner_func)()
 
-        return wrapper  # type: ignore
-
-    return decorator
+    return wrapper  # type: ignore
 
 
-def async_rate_limit_handler(
-    handler: Optional[RateLimitHandler] = None,
-) -> Callable[[AF], AF]:
+def async_rate_limit_handler(func: AF) -> AF:
     """Decorator to apply rate limit handling to asynchronous methods.
 
-    This decorator works with instance methods and uses the instance's rate limit handler
-    if available, falling back to the provided handler or default.
+    This decorator works with instance methods and uses the instance's rate limit handler.
 
     Args:
-        handler: The rate limit handler to use. If None, uses the instance's handler or default.
+        func: The async function to wrap with rate limit handling.
 
     Returns:
-        A decorator function.
+        The wrapped async function.
     """
 
-    def decorator(func: AF) -> AF:
-        @functools.wraps(func)
-        async def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
-            # Use instance handler if available, otherwise use provided handler or default
-            instance_handler = (
-                getattr(self, "_rate_limit_handler", None)
-                if hasattr(self, "_rate_limit_handler")
-                else None
-            )
-            active_handler = handler or instance_handler or DEFAULT_RATE_LIMIT_HANDLER
+    @functools.wraps(func)
+    async def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
+        # Use instance handler or default
+        active_handler = getattr(
+            self, "_rate_limit_handler", DEFAULT_RATE_LIMIT_HANDLER
+        )
 
-            async def inner_func() -> Any:
-                try:
-                    return await func(self, *args, **kwargs)
-                except Exception as e:
-                    if is_rate_limit_error(e):
-                        raise convert_to_rate_limit_error(e)
-                    raise
+        async def inner_func() -> Any:
+            try:
+                return await func(self, *args, **kwargs)
+            except Exception as e:
+                if is_rate_limit_error(e):
+                    raise convert_to_rate_limit_error(e)
+                raise
 
-            return await active_handler.handle_async(inner_func)()
+        return await active_handler.handle_async(inner_func)()
 
-        return wrapper  # type: ignore
-
-    return decorator
+    return wrapper  # type: ignore
 
 
 # Default rate limit handler instance
