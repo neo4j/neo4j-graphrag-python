@@ -146,12 +146,11 @@ class EntityRelationExtractor(Component):
         """Make node IDs unique across chunks, document and pipeline runs
         by prefixing them with a unique prefix.
         """
-        prefix = f"{chunk.chunk_id}"
+        prefix = chunk.chunk_id
         for node in graph.nodes:
             node.id = f"{prefix}:{node.id}"
             if node.properties is None:
                 node.properties = {}
-            node.properties.update({"chunk_index": chunk.index})
         for rel in graph.relationships:
             rel.start_node_id = f"{prefix}:{rel.start_node_id}"
             rel.end_node_id = f"{prefix}:{rel.end_node_id}"

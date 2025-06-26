@@ -109,7 +109,6 @@ async def test_extractor_happy_path_non_empty_result() -> None:
     entity = result.nodes[2]
     assert entity.id == f"{chunk_entity.id}:0"
     assert entity.label == "Person"
-    assert entity.properties == {"chunk_index": 0}
     assert len(result.relationships) == 2
     assert result.relationships[0].type == "FROM_DOCUMENT"
     assert result.relationships[0].start_node_id == f"{chunk_entity.id}"
@@ -213,7 +212,6 @@ async def test_extractor_llm_badly_formatted_json_gets_fixed() -> None:
 
     assert len(res.nodes) == 1
     assert res.nodes[0].label == "Person"
-    assert res.nodes[0].properties == {"chunk_index": 0}
     assert res.nodes[0].embedding_properties is None
     assert res.relationships == []
 

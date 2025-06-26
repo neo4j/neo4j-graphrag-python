@@ -29,10 +29,9 @@ from neo4j_graphrag.experimental.components.types import (
 )
 from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
 from neo4j_graphrag.neo4j_queries import (
-    UPSERT_NODE_QUERY,
-    UPSERT_NODE_QUERY_VARIABLE_SCOPE_CLAUSE,
-    UPSERT_RELATIONSHIP_QUERY,
-    UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE,
+    upsert_node_query,
+    upsert_relationship_query,
+    db_cleaning_query,
 )
 from neo4j_graphrag.utils.version_utils import (
     get_version,
@@ -117,20 +116,19 @@ class Neo4jWriter(KGWriter):
         driver: neo4j.Driver,
         neo4j_database: Optional[str] = None,
         batch_size: int = 1000,
+        clean_db: bool = True,
     ):
         self.driver = driver_config.override_user_agent(driver)
         self.neo4j_database = neo4j_database
         self.batch_size = batch_size
+        self._clean_db = clean_db
         version_tuple, _, _ = get_version(self.driver, self.neo4j_database)
         self.is_version_5_23_or_above = is_version_5_23_or_above(version_tuple)
 
     def _db_setup(self) -> None:
-        # create index on __KGBuilder__.id
-        # used when creating the relationships
-        self.driver.execute_query(
-            "CREATE INDEX __entity__id IF NOT EXISTS  FOR (n:__KGBuilder__) ON (n.id)",
-            database_=self.neo4j_database,
-        )
+        self.driver.execute_query("""
+        CREATE INDEX __entity__tmp_internal_id IF NOT EXISTS FOR (n:__KGBuilder__) ON (n.__tmp_internal_id)
+        """)
 
     @staticmethod
     def _nodes_to_rows(
@@ -149,44 +147,51 @@ class Neo4jWriter(KGWriter):
     def _upsert_nodes(
         self, nodes: list[Neo4jNode], lexical_graph_config: LexicalGraphConfig
     ) -> None:
-        """Upserts a single node into the Neo4j database."
+        """Upserts a batch of nodes into the Neo4j database.
 
         Args:
             nodes (list[Neo4jNode]): The nodes batch to upsert into the database.
         """
         parameters = {"rows": self._nodes_to_rows(nodes, lexical_graph_config)}
-        if self.is_version_5_23_or_above:
-            self.driver.execute_query(
-                UPSERT_NODE_QUERY_VARIABLE_SCOPE_CLAUSE,
-                parameters_=parameters,
-                database_=self.neo4j_database,
-            )
-        else:
-            self.driver.execute_query(
-                UPSERT_NODE_QUERY,
-                parameters_=parameters,
-                database_=self.neo4j_database,
-            )
+        query = upsert_node_query(
+            support_variable_scope_clause=self.is_version_5_23_or_above
+        )
+        self.driver.execute_query(
+            query,
+            parameters_=parameters,
+            database_=self.neo4j_database,
+        )
+        return None
+
+    @staticmethod
+    def _relationships_to_rows(
+        relationships: list[Neo4jRelationship],
+    ) -> list[dict[str, Any]]:
+        return [relationship.model_dump() for relationship in relationships]
 
     def _upsert_relationships(self, rels: list[Neo4jRelationship]) -> None:
-        """Upserts a single relationship into the Neo4j database.
+        """Upserts a batch of relationships into the Neo4j database.
 
         Args:
             rels (list[Neo4jRelationship]): The relationships batch to upsert into the database.
         """
-        parameters = {"rows": [rel.model_dump() for rel in rels]}
-        if self.is_version_5_23_or_above:
-            self.driver.execute_query(
-                UPSERT_RELATIONSHIP_QUERY_VARIABLE_SCOPE_CLAUSE,
-                parameters_=parameters,
-                database_=self.neo4j_database,
-            )
-        else:
-            self.driver.execute_query(
-                UPSERT_RELATIONSHIP_QUERY,
-                parameters_=parameters,
-                database_=self.neo4j_database,
-            )
+        parameters = {"rows": self._relationships_to_rows(rels)}
+        query = upsert_relationship_query(
+            support_variable_scope_clause=self.is_version_5_23_or_above
+        )
+        self.driver.execute_query(
+            query,
+            parameters_=parameters,
+            database_=self.neo4j_database,
+        )
+
+    def _db_cleaning(self) -> None:
+        query = db_cleaning_query(
+            support_variable_scope_clause=self.is_version_5_23_or_above,
+            batch_size=self.batch_size,
+        )
+        with self.driver.session() as session:
+            session.run(query)
 
     @validate_call
     async def run(
@@ -208,6 +213,9 @@ class Neo4jWriter(KGWriter):
 
             for batch in batched(graph.relationships, self.batch_size):
                 self._upsert_relationships(batch)
+
+            if self._clean_db:
+                self._db_cleaning()
 
             return KGWriterModel(
                 status="SUCCESS",

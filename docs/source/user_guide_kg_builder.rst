@@ -1048,8 +1048,10 @@ _________________
 In addition to the user-defined configuration options described above,
 the `GraphPruning` component performs the following cleanup operations:
 
+- Nodes with empty label or ID are pruned.
 - Nodes with missing required properties are pruned.
 - Nodes with no remaining properties are pruned.
+- Relationships with empty type are pruned.
 - Relationships with invalid source or target nodes (i.e., nodes no longer present in the graph) are pruned.
 - Relationships with incorrect direction have their direction corrected.
 
@@ -1077,6 +1079,11 @@ to a Neo4j database:
 
 Adjust the batch_size parameter of `Neo4jWriter` to optimize insert performance.
 This parameter controls the number of nodes or relationships inserted per batch, with a default value of 1000.
+
+.. note:: Index
+
+    In order to improve the ingestion performances, an index called `__entity__tmp_internal_id` is automatically added to the database.
+
 
 See :ref:`neo4jgraph`.
 
