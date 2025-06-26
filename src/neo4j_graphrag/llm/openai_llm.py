@@ -39,7 +39,7 @@ from neo4j_graphrag.types import LLMMessage
 
 from ..exceptions import LLMGenerationError
 from .base import LLMInterface
-from .rate_limit import RateLimitHandler
+from .rate_limit import RateLimitHandler, rate_limit_handler, async_rate_limit_handler
 from .types import (
     BaseMessage,
     LLMResponse,
@@ -127,6 +127,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         except AttributeError:
             raise LLMGenerationError(f"Tool {tool} is not a valid Tool object")
 
+    @rate_limit_handler
     def invoke(
         self,
         input: str,
@@ -161,6 +162,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
+    @rate_limit_handler
     def invoke_with_tools(
         self,
         input: str,
@@ -235,6 +237,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
+    @async_rate_limit_handler
     async def ainvoke(
         self,
         input: str,
@@ -269,6 +272,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
+    @async_rate_limit_handler
     async def ainvoke_with_tools(
         self,
         input: str,

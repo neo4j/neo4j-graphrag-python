@@ -22,8 +22,6 @@ from neo4j_graphrag.types import LLMMessage
 
 from .types import LLMResponse, ToolCallResponse
 from .rate_limit import (
-    rate_limit_handler,
-    async_rate_limit_handler,
     DEFAULT_RATE_LIMIT_HANDLER,
 )
 
@@ -57,7 +55,6 @@ class LLMInterface(ABC):
         else:
             self._rate_limit_handler = DEFAULT_RATE_LIMIT_HANDLER
 
-    @rate_limit_handler()
     @abstractmethod
     def invoke(
         self,
@@ -80,7 +77,6 @@ class LLMInterface(ABC):
             LLMGenerationError: If anything goes wrong.
         """
 
-    @async_rate_limit_handler()
     @abstractmethod
     async def ainvoke(
         self,
@@ -103,7 +99,6 @@ class LLMInterface(ABC):
             LLMGenerationError: If anything goes wrong.
         """
 
-    @rate_limit_handler()
     def invoke_with_tools(
         self,
         input: str,
@@ -131,7 +126,6 @@ class LLMInterface(ABC):
         """
         raise NotImplementedError("This LLM provider does not support tool calling.")
 
-    @async_rate_limit_handler()
     async def ainvoke_with_tools(
         self,
         input: str,
