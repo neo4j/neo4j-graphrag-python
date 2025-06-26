@@ -319,6 +319,26 @@ Rate limiting is enabled by default for all LLM instances with the following con
     # The LLM will automatically retry on rate limit errors
     response = llm.invoke("Hello, world!")
 
+.. note::
+
+   To change the default configuration of `RetryRateLimitHandler`:
+
+    .. code:: python
+
+        from neo4j_graphrag.llm import OpenAILLM
+        from neo4j_graphrag.llm.rate_limit import RetryRateLimitHandler
+        
+        # Customize rate limiting parameters
+        llm = OpenAILLM(
+            model_name="gpt-4o",
+            rate_limit_handler=RetryRateLimitHandler(
+                max_attempts=10,    # Increase max retry attempts
+                min_wait=2.0,       # Increase minimum wait time
+                max_wait=120.0,     # Increase maximum wait time
+                multiplier=3.0      # More aggressive backoff
+            )
+        )
+
 Custom Rate Limiting
 --------------------
 
