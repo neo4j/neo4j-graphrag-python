@@ -17,7 +17,7 @@ from __future__ import annotations
 import functools
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Awaitable, Callable, Optional, TypeVar
+from typing import Any, Awaitable, Callable, TypeVar
 
 from neo4j_graphrag.exceptions import RateLimitError
 
@@ -25,9 +25,11 @@ from tenacity import (
     retry,
     stop_after_attempt,
     wait_exponential,
+    wait_random_exponential,
     retry_if_exception_type,
     before_sleep_log,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -79,13 +81,13 @@ class RetryRateLimitHandler(RateLimitHandler):
     """Rate limit handler using exponential backoff retry strategy.
 
     This handler uses tenacity for retry logic with exponential backoff.
-    Falls back to NoOpRateLimitHandler if tenacity is not available.
 
     Args:
         max_attempts: Maximum number of retry attempts. Defaults to 3.
         min_wait: Minimum wait time between retries in seconds. Defaults to 1.
         max_wait: Maximum wait time between retries in seconds. Defaults to 60.
         multiplier: Exponential backoff multiplier. Defaults to 2.
+        jitter: Whether to add random jitter to retry delays to prevent thundering herd. Defaults to True.
     """
 
     def __init__(
@@ -94,49 +96,54 @@ class RetryRateLimitHandler(RateLimitHandler):
         min_wait: float = 1.0,
         max_wait: float = 60.0,
         multiplier: float = 2.0,
+        jitter: bool = True,
     ):
         self.max_attempts = max_attempts
         self.min_wait = min_wait
         self.max_wait = max_wait
         self.multiplier = multiplier
+        self.jitter = jitter
+
+    def _get_wait_strategy(self) -> Any:
+        """Get the appropriate wait strategy based on jitter setting.
+
+        Returns:
+            The configured wait strategy for tenacity retry.
+        """
+        if self.jitter:
+            # Use built-in random exponential backoff with jitter
+            return wait_random_exponential(
+                multiplier=self.multiplier,
+                min=self.min_wait,
+                max=self.max_wait,
+            )
+        else:
+            # Use standard exponential backoff without jitter
+            return wait_exponential(
+                multiplier=self.multiplier,
+                min=self.min_wait,
+                max=self.max_wait,
+            )
 
     def handle_sync(self, func: F) -> F:
         """Apply retry logic to a synchronous function."""
-
-        @retry(
+        decorator = retry(
             retry=retry_if_exception_type(RateLimitError),
             stop=stop_after_attempt(self.max_attempts),
-            wait=wait_exponential(
-                multiplier=self.multiplier,
-                min=self.min_wait,
-                max=self.max_wait,
-            ),
+            wait=self._get_wait_strategy(),
             before_sleep=before_sleep_log(logger, logging.WARNING),
         )
-        @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            return func(*args, **kwargs)
-
-        return wrapper  # type: ignore
+        return decorator(func)
 
     def handle_async(self, func: AF) -> AF:
         """Apply retry logic to an asynchronous function."""
-
-        @retry(
+        decorator = retry(
             retry=retry_if_exception_type(RateLimitError),
             stop=stop_after_attempt(self.max_attempts),
-            wait=wait_exponential(
-                multiplier=self.multiplier,
-                min=self.min_wait,
-                max=self.max_wait,
-            ),
+            wait=self._get_wait_strategy(),
             before_sleep=before_sleep_log(logger, logging.WARNING),
         )
-        @functools.wraps(func)
-        async def wrapper(*args: Any, **kwargs: Any) -> Any:
-            return await func(*args, **kwargs)
-
-        return wrapper  # type: ignore
+        return decorator(func)
 
 
 def is_rate_limit_error(exception: Exception) -> bool:
