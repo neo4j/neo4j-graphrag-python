@@ -430,6 +430,79 @@ class SchemaFromTextExtractor(Component):
         )
         self._llm_params: dict[str, Any] = llm_params or {}
 
+    def _filter_invalid_patterns(
+        self,
+        patterns: List[Tuple[str, str, str]],
+        node_types: List[Dict[str, Any]],
+        relationship_types: Optional[List[Dict[str, Any]]] = None,
+    ) -> List[Tuple[str, str, str]]:
+        """
+        Filter out patterns that reference undefined node types or relationship types.
+
+        Args:
+            patterns: List of patterns to filter.
+            node_types: List of node type definitions.
+            relationship_types: Optional list of relationship type definitions.
+
+        Returns:
+            Filtered list of patterns containing only valid references.
+        """
+        # Early returns for missing required types
+        if not node_types:
+            logging.warning(
+                "Filtering out all patterns because no node types are defined. "
+                "Patterns reference node types that must be defined."
+            )
+            return []
+
+        if not relationship_types:
+            logging.warning(
+                "Filtering out all patterns because no relationship types are defined. "
+                "GraphSchema validation requires relationship_types when patterns are provided."
+            )
+            return []
+
+        # Create sets of valid labels
+        valid_node_labels = {
+            node_type["label"] for node_type in node_types if node_type.get("label")
+        }
+
+        valid_relationship_labels = {
+            rel_type["label"]
+            for rel_type in relationship_types
+            if rel_type.get("label")
+        }
+
+        # Filter patterns
+        filtered_patterns = []
+        for pattern in patterns:
+            if not (isinstance(pattern, (list, tuple)) and len(pattern) == 3):
+                continue
+
+            entity1, relation, entity2 = pattern
+
+            # Check if all components are valid
+            if (
+                entity1 in valid_node_labels
+                and entity2 in valid_node_labels
+                and relation in valid_relationship_labels
+            ):
+                filtered_patterns.append(pattern)
+            else:
+                # Log invalid pattern with validation details
+                entity1_valid = entity1 in valid_node_labels
+                entity2_valid = entity2 in valid_node_labels
+                relation_valid = relation in valid_relationship_labels
+
+                logging.warning(
+                    f"Filtering out invalid pattern: {pattern}. "
+                    f"Entity1 '{entity1}' valid: {entity1_valid}, "
+                    f"Entity2 '{entity2}' valid: {entity2_valid}, "
+                    f"Relation '{relation}' valid: {relation_valid}"
+                )
+
+        return filtered_patterns
+
     @validate_call
     async def run(self, text: str, examples: str = "", **kwargs: Any) -> GraphSchema:
         """
@@ -459,13 +532,13 @@ class SchemaFromTextExtractor(Component):
                 pass  # Keep as is
             # handle list
             elif isinstance(extracted_schema, list):
-                if len(extracted_schema) > 0 and isinstance(extracted_schema[0], dict):
-                    extracted_schema = extracted_schema[0]
-                elif len(extracted_schema) == 0:
+                if len(extracted_schema) == 0:
                     logging.warning(
                         "LLM returned an empty list for schema. Falling back to empty schema."
                     )
                     extracted_schema = {}
+                elif isinstance(extracted_schema[0], dict):
+                    extracted_schema = extracted_schema[0]
                 else:
                     raise SchemaExtractionError(
                         f"Expected a dictionary or list of dictionaries, but got list containing: {type(extracted_schema[0])}"
@@ -487,6 +560,12 @@ class SchemaFromTextExtractor(Component):
         extracted_patterns: Optional[List[Tuple[str, str, str]]] = extracted_schema.get(
             "patterns"
         )
+
+        # Filter out invalid patterns before validation
+        if extracted_patterns:
+            extracted_patterns = self._filter_invalid_patterns(
+                extracted_patterns, extracted_node_types, extracted_relationship_types
+            )
 
         return GraphSchema.model_validate(
             {
