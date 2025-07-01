@@ -103,7 +103,7 @@ class SimpleKGPipeline:
             Union[
                 GraphSchema,
                 dict[str, list[Any]],
-                Literal["NO_EXTRACTION", "AUTO_EXTRACTION"],
+                Literal["FREE", "EXTRACTED"],
             ],
         ] = None,
         from_pdf: bool = True,

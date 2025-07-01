@@ -102,9 +102,9 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     @field_validator("schema_", mode="before")
     @classmethod
     def validate_schema_literal(cls, v: Any) -> Any:
-        if v == "NO_EXTRACTION":  # same as "empty" schema
+        if v == "FREE":  # same as "empty" schema, no guiding schema
             return GraphSchema.create_empty()
-        if v == "AUTO_EXTRACTION":  # same as no schema
+        if v == "EXTRACTED":  # same as no schema, schema will be extracted by LLM
             return None
         return v
 

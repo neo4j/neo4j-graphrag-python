@@ -139,10 +139,10 @@ def test_simple_kg_pipeline_config_manual_schema() -> None:
 
 
 def test_simple_kg_pipeline_config_literal_schema_validation() -> None:
-    config = SimpleKGPipelineConfig(schema="NO_EXTRACTION")  # type: ignore
+    config = SimpleKGPipelineConfig(schema="FREE")  # type: ignore
     assert config.schema_ == GraphSchema.create_empty()
 
-    config = SimpleKGPipelineConfig(schema="AUTO_EXTRACTION")  # type: ignore
+    config = SimpleKGPipelineConfig(schema="EXTRACTED")  # type: ignore
     assert config.schema_ is None
 
 

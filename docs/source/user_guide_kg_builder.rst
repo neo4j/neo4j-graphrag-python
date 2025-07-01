@@ -137,12 +137,12 @@ Schema Parameter Behavior
 
 The `schema` parameter controls how entity and relation extraction is performed:
 
-* **AUTO_EXTRACTION**: ``schema="AUTO_EXTRACTION"`` or (``schema=None``)
-  The schema is automatically extracted from the input text once. This guiding schema is then used to structure entity and relation extraction for all chunks. This guarantees all chunks have the same guiding schema.
+* **EXTRACTED**: ``schema="EXTRACTED"`` or (``schema=None``, default value)
+  The schema is automatically extracted from the input text once using LLM. This guiding schema is then used to structure entity and relation extraction for all chunks. This guarantees all chunks have the same guiding schema.
   (See :ref:`Automatic Schema Extraction`)
 
-* **NO_EXTRACTION**: ``schema="NO_EXTRACTION"`` or empty schema (``{"node_types": ()}``)
-  No schema extraction is performed. Entity and relation extraction proceed without a predefined or derived schema, resulting in unguided extraction.
+* **FREE**: ``schema="FREE"`` or empty schema (``{"node_types": ()}``)
+  No schema extraction is performed. Entity and relation extraction proceed without a predefined or derived schema, resulting in unguided entity and relation extraction. Use this to bypass automatic schema extraction.
 
 
 Extra configurations
