@@ -131,8 +131,19 @@ This schema information can be provided to the `SimpleKGBuilder` as demonstrated
         # ...
     )
 
-.. note::
-   By default, if no schema is provided to the SimpleKGPipeline, automatic schema extraction will be performed using the LLM (See the :ref:`Automatic Schema Extraction`).
+
+Schema Parameter Behavior
+-------------------------
+
+The `schema` parameter controls how entity and relation extraction is performed:
+
+* **EXTRACTED**: ``schema="EXTRACTED"`` or (``schema=None``, default value)
+  The schema is automatically extracted from the input text once using LLM. This guiding schema is then used to structure entity and relation extraction for all chunks. This guarantees all chunks have the same guiding schema.
+  (See :ref:`Automatic Schema Extraction`)
+
+* **FREE**: ``schema="FREE"`` or empty schema (``{"node_types": ()}``)
+  No schema extraction is performed. Entity and relation extraction proceed without a predefined or derived schema, resulting in unguided entity and relation extraction. Use this to bypass automatic schema extraction.
+
 
 Extra configurations
 --------------------

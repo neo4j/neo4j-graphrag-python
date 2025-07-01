@@ -22,10 +22,9 @@ from typing import (
     Sequence,
     Union,
 )
-import logging
 import warnings
 
-from pydantic import ConfigDict, Field, model_validator
+from pydantic import ConfigDict, Field, model_validator, field_validator
 from typing_extensions import Self
 
 from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
@@ -66,8 +65,6 @@ from neo4j_graphrag.experimental.pipeline.types.schema import (
 )
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 
-logger = logging.getLogger(__name__)
-
 
 class SimpleKGPipelineConfig(TemplatePipelineConfig):
     COMPONENTS: ClassVar[list[str]] = [
@@ -101,6 +98,15 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     text_splitter: Optional[ComponentType] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_validator("schema_", mode="before")
+    @classmethod
+    def validate_schema_literal(cls, v: Any) -> Any:
+        if v == "FREE":  # same as "empty" schema, no guiding schema
+            return GraphSchema.create_empty()
+        if v == "EXTRACTED":  # same as no schema, schema will be extracted by LLM
+            return None
+        return v
 
     @model_validator(mode="after")
     def handle_schema_precedence(self) -> Self:

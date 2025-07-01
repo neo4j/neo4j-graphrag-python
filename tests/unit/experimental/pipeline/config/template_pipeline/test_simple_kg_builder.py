@@ -138,6 +138,14 @@ def test_simple_kg_pipeline_config_manual_schema() -> None:
     assert isinstance(config._get_schema(), SchemaBuilder)
 
 
+def test_simple_kg_pipeline_config_literal_schema_validation() -> None:
+    config = SimpleKGPipelineConfig(schema="FREE")  # type: ignore
+    assert config.schema_ == GraphSchema.create_empty()
+
+    config = SimpleKGPipelineConfig(schema="EXTRACTED")  # type: ignore
+    assert config.schema_ is None
+
+
 def test_simple_kg_pipeline_config_schema_run_params() -> None:
     config = SimpleKGPipelineConfig(
         entities=["Person"],

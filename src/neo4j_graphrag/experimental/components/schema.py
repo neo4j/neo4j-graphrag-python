@@ -226,6 +226,10 @@ class GraphSchema(DataModel):
     def relationship_type_from_label(self, label: str) -> Optional[RelationshipType]:
         return self._relationship_type_index.get(label)
 
+    @classmethod
+    def create_empty(cls) -> Self:
+        return cls(node_types=tuple())
+
     def save(
         self,
         file_path: Union[str, Path],
