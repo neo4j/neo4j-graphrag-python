@@ -463,14 +463,9 @@ class SchemaFromTextExtractor(Component):
             return []
 
         # Create sets of valid labels
-        valid_node_labels = {
-            node_type["label"] for node_type in node_types if node_type.get("label")
-        }
-
+        valid_node_labels = {node_type["label"] for node_type in node_types}
         valid_relationship_labels = {
-            rel_type["label"]
-            for rel_type in relationship_types
-            if rel_type.get("label")
+            rel_type["label"] for rel_type in relationship_types
         }
 
         # Filter patterns
@@ -502,6 +497,50 @@ class SchemaFromTextExtractor(Component):
                 )
 
         return filtered_patterns
+
+    def _filter_nodes_without_labels(
+        self, node_types: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        Filter out node types that have no labels.
+
+        Args:
+            node_types: List of node type definitions.
+
+        Returns:
+            Filtered list of node types containing only those with valid labels.
+        """
+        filtered_nodes = []
+        for node_type in node_types:
+            if node_type.get("label"):
+                filtered_nodes.append(node_type)
+            else:
+                logging.info(f"Filtering out node type with missing label: {node_type}")
+
+        return filtered_nodes
+
+    def _filter_relationships_without_labels(
+        self, relationship_types: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        Filter out relationship types that have no labels.
+
+        Args:
+            relationship_types: List of relationship type definitions.
+
+        Returns:
+            Filtered list of relationship types containing only those with valid labels.
+        """
+        filtered_relationships = []
+        for rel_type in relationship_types:
+            if rel_type.get("label"):
+                filtered_relationships.append(rel_type)
+            else:
+                logging.info(
+                    f"Filtering out relationship type with missing label: {rel_type}"
+                )
+
+        return filtered_relationships
 
     @validate_call
     async def run(self, text: str, examples: str = "", **kwargs: Any) -> GraphSchema:
@@ -560,6 +599,13 @@ class SchemaFromTextExtractor(Component):
         extracted_patterns: Optional[List[Tuple[str, str, str]]] = extracted_schema.get(
             "patterns"
         )
+
+        # Filter out nodes and relationships without labels
+        extracted_node_types = self._filter_nodes_without_labels(extracted_node_types)
+        if extracted_relationship_types:
+            extracted_relationship_types = self._filter_relationships_without_labels(
+                extracted_relationship_types
+            )
 
         # Filter out invalid patterns before validation
         if extracted_patterns:
