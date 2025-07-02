@@ -494,7 +494,7 @@ class SchemaFromTextExtractor(Component):
                 entity2_valid = entity2 in valid_node_labels
                 relation_valid = relation in valid_relationship_labels
 
-                logging.warning(
+                logging.info(
                     f"Filtering out invalid pattern: {pattern}. "
                     f"Entity1 '{entity1}' valid: {entity1_valid}, "
                     f"Entity2 '{entity2}' valid: {entity2_valid}, "
