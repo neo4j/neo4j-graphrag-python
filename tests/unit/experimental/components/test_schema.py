@@ -700,3 +700,260 @@ async def test_schema_from_text_run_valid_json_array(
     assert schema.patterns is not None
     assert len(schema.patterns) == 1
     assert schema.patterns[0] == ("Person", "WORKS_FOR", "Organization")
+
+
+@pytest.fixture
+def schema_json_with_invalid_node_patterns() -> str:
+    return """
+    {
+        "node_types": [
+            {
+                "label": "Person",
+                "properties": [
+                    {"name": "name", "type": "STRING"}
+                ]
+            },
+            {
+                "label": "Organization",
+                "properties": [
+                    {"name": "name", "type": "STRING"}
+                ]
+            }
+        ],
+        "relationship_types": [
+            {
+                "label": "WORKS_FOR",
+                "properties": [
+                    {"name": "since", "type": "DATE"}
+                ]
+            }
+        ],
+        "patterns": [
+            ["Person", "WORKS_FOR", "Organization"],
+            ["Person", "WORKS_FOR", "UndefinedNode"],
+            ["UndefinedNode", "WORKS_FOR", "Organization"]
+        ]
+    }
+    """
+
+
+@pytest.fixture
+def schema_json_with_invalid_relationship_patterns() -> str:
+    return """
+    {
+        "node_types": [
+            {
+                "label": "Person",
+                "properties": [
+                    {"name": "name", "type": "STRING"}
+                ]
+            },
+            {
+                "label": "Organization",
+                "properties": [
+                    {"name": "name", "type": "STRING"}
+                ]
+            }
+        ],
+        "relationship_types": [
+            {
+                "label": "WORKS_FOR",
+                "properties": [
+                    {"name": "since", "type": "DATE"}
+                ]
+            }
+        ],
+        "patterns": [
+            ["Person", "WORKS_FOR", "Organization"],
+            ["Person", "UNDEFINED_RELATION", "Organization"],
+            ["Organization", "ANOTHER_UNDEFINED_RELATION", "Person"]
+        ]
+    }
+    """
+
+
+@pytest.fixture
+def schema_json_with_nodes_without_labels() -> str:
+    return """
+    {
+        "node_types": [
+            {
+                "label": "Person",
+                "properties": [
+                    {"name": "name", "type": "STRING"}
+                ]
+            },
+            {
+                "properties": [
+                    {"name": "name", "type": "STRING"}
+                ]
+            },
+            {
+                "label": "",
+                "properties": [
+                    {"name": "name", "type": "STRING"}
+                ]
+            },
+            {
+                "label": "Organization",
+                "properties": [
+                    {"name": "name", "type": "STRING"}
+                ]
+            }
+        ],
+        "relationship_types": [
+            {
+                "label": "WORKS_FOR",
+                "properties": [
+                    {"name": "since", "type": "DATE"}
+                ]
+            }
+        ],
+        "patterns": [
+            ["Person", "WORKS_FOR", "Organization"]
+        ]
+    }
+    """
+
+
+@pytest.fixture
+def schema_json_with_relationships_without_labels() -> str:
+    return """
+    {
+        "node_types": [
+            {
+                "label": "Person",
+                "properties": [
+                    {"name": "name", "type": "STRING"}
+                ]
+            },
+            {
+                "label": "Organization",
+                "properties": [
+                    {"name": "name", "type": "STRING"}
+                ]
+            }
+        ],
+        "relationship_types": [
+            {
+                "label": "WORKS_FOR",
+                "properties": [
+                    {"name": "since", "type": "DATE"}
+                ]
+            },
+            {
+                "properties": [
+                    {"name": "since", "type": "DATE"}
+                ]
+            },
+            {
+                "label": "",
+                "properties": [
+                    {"name": "since", "type": "DATE"}
+                ]
+            },
+            {
+                "label": "MANAGES",
+                "properties": [
+                    {"name": "since", "type": "DATE"}
+                ]
+            }
+        ],
+        "patterns": [
+            ["Person", "WORKS_FOR", "Organization"],
+            ["Person", "MANAGES", "Organization"]
+        ]
+    }
+    """
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_filters_invalid_node_patterns(
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+    schema_json_with_invalid_node_patterns: str,
+) -> None:
+    # configure the mock LLM to return schema with invalid node patterns
+    mock_llm.ainvoke.return_value = LLMResponse(
+        content=schema_json_with_invalid_node_patterns
+    )
+
+    # run the schema extraction
+    schema = await schema_from_text.run(text="Sample text for extraction")
+
+    # verify that invalid node patterns were filtered out (2 out of 3 patterns should be removed)
+    assert schema.patterns is not None
+    assert len(schema.patterns) == 1
+    assert schema.patterns[0] == ("Person", "WORKS_FOR", "Organization")
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_filters_invalid_relationship_patterns(
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+    schema_json_with_invalid_relationship_patterns: str,
+) -> None:
+    # configure the mock LLM to return schema with invalid relationship patterns
+    mock_llm.ainvoke.return_value = LLMResponse(
+        content=schema_json_with_invalid_relationship_patterns
+    )
+
+    # run the schema extraction
+    schema = await schema_from_text.run(text="Sample text for extraction")
+
+    # verify that invalid relationship patterns were filtered out (2 out of 3 patterns should be removed)
+    assert schema.patterns is not None
+    assert len(schema.patterns) == 1
+    assert schema.patterns[0] == ("Person", "WORKS_FOR", "Organization")
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_filters_nodes_without_labels(
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+    schema_json_with_nodes_without_labels: str,
+) -> None:
+    # configure the mock LLM to return schema with nodes without labels
+    mock_llm.ainvoke.return_value = LLMResponse(
+        content=schema_json_with_nodes_without_labels
+    )
+
+    # run the schema extraction
+    schema = await schema_from_text.run(text="Sample text for extraction")
+
+    # verify that nodes without labels were filtered out (2 out of 4 nodes should be removed)
+    assert len(schema.node_types) == 2
+    assert schema.node_type_from_label("Person") is not None
+    assert schema.node_type_from_label("Organization") is not None
+
+    # verify that the pattern is still valid with the remaining nodes
+    assert schema.patterns is not None
+    assert len(schema.patterns) == 1
+    assert schema.patterns[0] == ("Person", "WORKS_FOR", "Organization")
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_filters_relationships_without_labels(
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+    schema_json_with_relationships_without_labels: str,
+) -> None:
+    # configure the mock LLM to return schema with relationships without labels
+    mock_llm.ainvoke.return_value = LLMResponse(
+        content=schema_json_with_relationships_without_labels
+    )
+
+    # run the schema extraction
+    schema = await schema_from_text.run(text="Sample text for extraction")
+
+    # verify that relationships without labels were filtered out (2 out of 4 relationships should be removed)
+    assert schema.relationship_types is not None
+    assert len(schema.relationship_types) == 2
+    assert schema.relationship_type_from_label("WORKS_FOR") is not None
+    assert schema.relationship_type_from_label("MANAGES") is not None
+
+    # verify that the patterns are still valid with the remaining relationships
+    assert schema.patterns is not None
+    assert len(schema.patterns) == 2
+    assert ("Person", "WORKS_FOR", "Organization") in schema.patterns
+    assert ("Person", "MANAGES", "Organization") in schema.patterns

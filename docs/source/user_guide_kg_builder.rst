@@ -837,7 +837,7 @@ Instead of manually defining the schema, you can use the `SchemaFromTextExtracto
     # Extract the schema from the text
     extracted_schema = await schema_extractor.run(text="Some text")
 
-The `SchemaFromTextExtractor` component analyzes the text and identifies entity types, relationship types, and their property types. It creates a complete `GraphSchema` object that can be used in the same way as a manually defined schema.
+The `SchemaFromTextExtractor` component analyzes the text and identifies node types, relationship types, their property types, and the patterns connecting them. It creates a complete `GraphSchema` object that can be used in the same way as a manually defined schema.
 
 You can also save and reload the extracted schema:
 
