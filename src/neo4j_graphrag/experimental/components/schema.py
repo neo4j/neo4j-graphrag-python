@@ -449,14 +449,14 @@ class SchemaFromTextExtractor(Component):
         """
         # Early returns for missing required types
         if not node_types:
-            logging.warning(
+            logging.info(
                 "Filtering out all patterns because no node types are defined. "
                 "Patterns reference node types that must be defined."
             )
             return []
 
         if not relationship_types:
-            logging.warning(
+            logging.info(
                 "Filtering out all patterns because no relationship types are defined. "
                 "GraphSchema validation requires relationship_types when patterns are provided."
             )
@@ -533,7 +533,7 @@ class SchemaFromTextExtractor(Component):
             # handle list
             elif isinstance(extracted_schema, list):
                 if len(extracted_schema) == 0:
-                    logging.warning(
+                    logging.info(
                         "LLM returned an empty list for schema. Falling back to empty schema."
                     )
                     extracted_schema = {}
