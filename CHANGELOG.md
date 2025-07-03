@@ -2,6 +2,8 @@
 
 ## Next
 
+## 1.8.0
+
 ### Added
 
 - Support for Python 3.13
