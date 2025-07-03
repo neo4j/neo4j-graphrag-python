@@ -156,7 +156,9 @@ async def test_custom_handler_async_retry_override() -> None:
         return "success after custom retry"
 
     # Custom handler with single retry
-    def custom_handle_async(func: Callable[[], Awaitable[Any]]) -> Callable[[], Awaitable[Any]]:
+    def custom_handle_async(
+        func: Callable[[], Awaitable[Any]],
+    ) -> Callable[[], Awaitable[Any]]:
         async def wrapper() -> Any:
             try:
                 return await func()
