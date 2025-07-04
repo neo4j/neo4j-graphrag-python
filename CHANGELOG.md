@@ -2,6 +2,12 @@
 
 ## Next
 
+### Added
+
+- Added a `ToolsRetriever` retriever that uses an LLM to decide on what tools to use to find the relevant data.
+- Added `convert_to_tool` method to the `Retriever` interface to convert a Retriever to a Tool so it can be used within the ToolsRetriever. This is useful when you might want to have both a VectorRetriever and a Text2CypherRetreiver as a fallback.
+
+
 ## 1.8.0
 
 ### Added
