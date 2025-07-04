@@ -39,6 +39,7 @@ from neo4j_graphrag.types import LLMMessage
 
 from ..exceptions import LLMGenerationError
 from .base import LLMInterface
+from .rate_limit import RateLimitHandler, rate_limit_handler, async_rate_limit_handler
 from .types import (
     BaseMessage,
     LLMResponse,
@@ -63,6 +64,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         self,
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
+        rate_limit_handler: Optional[RateLimitHandler] = None,
     ):
         """
         Base class for OpenAI LLM.
@@ -72,6 +74,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         Args:
             model_name (str):
             model_params (str): Parameters like temperature that will be passed to the model when text is sent to it. Defaults to None.
+            rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting. Defaults to retry with exponential backoff.
         """
         try:
             import openai
@@ -81,7 +84,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
                 Please install it with `pip install "neo4j-graphrag[openai]"`."""
             )
         self.openai = openai
-        super().__init__(model_name, model_params)
+        super().__init__(model_name, model_params, rate_limit_handler)
 
     def get_messages(
         self,
@@ -124,6 +127,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         except AttributeError:
             raise LLMGenerationError(f"Tool {tool} is not a valid Tool object")
 
+    @rate_limit_handler
     def invoke(
         self,
         input: str,
@@ -158,6 +162,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
+    @rate_limit_handler
     def invoke_with_tools(
         self,
         input: str,
@@ -232,6 +237,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
+    @async_rate_limit_handler
     async def ainvoke(
         self,
         input: str,
@@ -266,6 +272,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
+    @async_rate_limit_handler
     async def ainvoke_with_tools(
         self,
         input: str,
@@ -347,6 +354,7 @@ class OpenAILLM(BaseOpenAILLM):
         self,
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
+        rate_limit_handler: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ):
         """OpenAI LLM
@@ -356,9 +364,10 @@ class OpenAILLM(BaseOpenAILLM):
         Args:
             model_name (str):
             model_params (str): Parameters like temperature that will be passed to the model when text is sent to it. Defaults to None.
+            rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting. Defaults to retry with exponential backoff.
             kwargs: All other parameters will be passed to the openai.OpenAI init.
         """
-        super().__init__(model_name, model_params)
+        super().__init__(model_name, model_params, rate_limit_handler)
         self.client = self.openai.OpenAI(**kwargs)
         self.async_client = self.openai.AsyncOpenAI(**kwargs)
 
@@ -369,6 +378,7 @@ class AzureOpenAILLM(BaseOpenAILLM):
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
         system_instruction: Optional[str] = None,
+        rate_limit_handler: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ):
         """Azure OpenAI LLM. Use this class when using an OpenAI model
@@ -377,8 +387,9 @@ class AzureOpenAILLM(BaseOpenAILLM):
         Args:
             model_name (str):
             model_params (str): Parameters like temperature that will be passed to the model when text is sent to it. Defaults to None.
+            rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting. Defaults to retry with exponential backoff.
             kwargs: All other parameters will be passed to the openai.OpenAI init.
         """
-        super().__init__(model_name, model_params)
+        super().__init__(model_name, model_params, rate_limit_handler)
         self.client = self.openai.AzureOpenAI(**kwargs)
         self.async_client = self.openai.AsyncAzureOpenAI(**kwargs)
