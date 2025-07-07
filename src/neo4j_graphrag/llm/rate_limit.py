@@ -155,37 +155,21 @@ def is_rate_limit_error(exception: Exception) -> bool:
     Returns:
         True if the exception indicates a rate limit error, False otherwise.
     """
-    # Already converted to RateLimitError
-    if isinstance(exception, RateLimitError):
-        return True
-
     error_type = type(exception).__name__.lower()
     exception_str = str(exception).lower()
 
-    # OpenAI - specific error type
-    if error_type == "ratelimiterror":
-        return True
+    # For LLMGenerationError (which wraps all provider errors), check provider-specific patterns
+    if error_type == "llmgenerationerror":
+        # Check for various rate limit patterns from different providers
+        rate_limit_patterns = [
+            "error code: 429",  # Azure OpenAI
+            "too many requests",  # Anthropic, Cohere, MistralAI
+            "resource exhausted",  # VertexAI
+            "rate limit",  # Generic rate limit messages
+            "429",  # Generic rate limit messages
+        ]
 
-    # Check for HTTP 429 status code (various providers)
-    if hasattr(exception, "status_code") and getattr(exception, "status_code") == 429:
-        return True
-
-    if hasattr(exception, "response"):
-        response = getattr(exception, "response")
-        if hasattr(response, "status_code") and response.status_code == 429:
-            return True
-
-    # Provider-specific error types with message checks
-    rate_limit_error_types = {
-        "apierror": "too many requests",  # Anthropic, Cohere
-        "sdkerror": "too many requests",  # MistralAI
-        "responseerror": "too many requests",  # Ollama
-        "responsevalidationerror": "resource exhausted",  # VertexAI (special case)
-    }
-
-    if error_type in rate_limit_error_types:
-        required_message = rate_limit_error_types[error_type]
-        return required_message in exception_str
+        return any(pattern in exception_str for pattern in rate_limit_patterns)
 
     return False
 
