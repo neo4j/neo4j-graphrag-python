@@ -26,7 +26,9 @@ from neo4j_graphrag.types import (
 )
 
 CREATE_SESSION_NODE_QUERY = (
-    "MERGE (s:`{node_label}` {{id:$session_id, createdAt: datetime()}})"
+    "MERGE (s:`{node_label}` {{id:$session_id}}) "
+    "ON CREATE SET s.createdAt=datetime() "
+    "ON MATCH SET s.updatedAt=datetime() "
 )
 
 DELETE_SESSION_AND_MESSAGES_QUERY = (
