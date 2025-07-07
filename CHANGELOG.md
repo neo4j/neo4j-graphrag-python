@@ -2,6 +2,10 @@
 
 ## Next
 
+### Fixed
+
+- Fixed a bug where Session nodes were duplicated.
+
 ## 1.8.0
 
 ### Added
