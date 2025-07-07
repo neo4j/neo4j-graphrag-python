@@ -125,7 +125,7 @@ To use VertexAI, instantiate the `VertexAILLM` class:
 
     generation_config = GenerationConfig(temperature=0.0)
     llm = VertexAILLM(
-        model_name="gemini-1.5-flash-001", generation_config=generation_config
+        model_name="gemini-2.5-flash", generation_config=generation_config
     )
     llm.invoke("say something")
 
@@ -133,7 +133,7 @@ To use VertexAI, instantiate the `VertexAILLM` class:
 .. note::
 
     In order to run this code, the `google-cloud-aiplatform` Python package needs to be installed:
-    `pip install "neo4j_grpahrag[vertexai]"`
+    `pip install "neo4j_graphrag[google]"`
 
 
 See :ref:`vertexaillm`.
