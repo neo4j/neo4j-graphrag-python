@@ -5,8 +5,8 @@ from typing import Any, Awaitable, Callable, List, Optional, TypeVar, Union
 from neo4j_graphrag.llm import LLMInterface, LLMResponse
 from neo4j_graphrag.llm.rate_limit import (
     RateLimitHandler,
-    rate_limit_handler,
-    async_rate_limit_handler,
+    # rate_limit_handler,
+    # async_rate_limit_handler,
 )
 from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
