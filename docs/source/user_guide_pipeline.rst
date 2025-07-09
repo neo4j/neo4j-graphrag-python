@@ -204,3 +204,33 @@ This will send an `TASK_PROGRESS` event to the pipeline callback.
 .. note::
 
     In a future release, the `context_` parameter will be added to the `run` method.
+
+
+*************************
+Pipeline State Management
+*************************
+
+Pipelines support state management to enable saving and restoring execution state, which is useful for debugging, resuming long-running pipelines, or incremental processing workflows.
+
+Saving and Loading State
+========================
+
+You can save the current state of a pipeline execution using the `dump_state()` method and restore it with `load_state()`. The pipeline also supports partial execution using the `until` and `from_` parameters:
+
+- **`until`**: Stop execution after a specific component completes
+- **`from_`**: Start execution from a specific component instead of from the beginning
+
+.. code:: python
+
+    # Run pipeline and save state
+    result = await pipeline.run(..., until="a")
+    state = pipeline.dump_state(result.run_id)
+    # The user could save the state to a JSON file
+
+    # Resuming pipeline, could be from another run
+    loaded_run_id = pipeline.load_state(state)
+    new_result = await pipeline.run(..., from_="b", previous_run_id=loaded_run_id)
+
+.. warning:: State Compatibility
+
+    When loading state, the current pipeline must have at least all the components that were present when the state was saved. Additional components are allowed, but missing components will cause a validation error.
