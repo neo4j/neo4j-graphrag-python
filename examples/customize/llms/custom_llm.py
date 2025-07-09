@@ -50,23 +50,25 @@ print(res.content)
 
 # If rate_limit_handler and async_rate_limit_handler decorators are used and you want to use a custom rate limit handler
 # Type variables for function signatures used in rate limit handlers
-# F = TypeVar("F", bound=Callable[..., Any])
-# AF = TypeVar("AF", bound=Callable[..., Awaitable[Any]])
+F = TypeVar("F", bound=Callable[..., Any])
+AF = TypeVar("AF", bound=Callable[..., Awaitable[Any]])
 
 
-# class CustomRateLimitHandler(RateLimitHandler):
-#     def __init__(self):
-#         super().__init__()
+class CustomRateLimitHandler(RateLimitHandler):
+    def __init__(self) -> None:
+        super().__init__()
 
-#     def handle_sync(self, func: F) -> F:
-#         # error handling here
-#         return func
+    def handle_sync(self, func: F) -> F:
+        # error handling here
+        return func
 
-#     def handle_async(self, func: AF) -> AF:
-#         # error handling here
-#         return func
+    def handle_async(self, func: AF) -> AF:
+        # error handling here
+        return func
 
 
-# llm = CustomLLM("", rate_limit_handler=CustomRateLimitHandler())
-# res: LLMResponse = llm.invoke("text")
-# print(res.content)
+llm_with_custom_rate_limit_handler = CustomLLM(
+    "", rate_limit_handler=CustomRateLimitHandler()
+)
+result: LLMResponse = llm_with_custom_rate_limit_handler.invoke("text")
+print(result.content)
