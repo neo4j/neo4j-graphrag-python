@@ -138,3 +138,7 @@ class InvalidHybridSearchRankerError(Neo4jGraphRagError):
 
 class SearchQueryParseError(Neo4jGraphRagError):
     """Exception raised when there is a query parse error in the text search string."""
+
+
+class RateLimitError(LLMGenerationError):
+    """Exception raised when API rate limit is exceeded."""
