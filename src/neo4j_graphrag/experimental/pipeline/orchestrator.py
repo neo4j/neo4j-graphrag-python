@@ -120,7 +120,10 @@ class Orchestrator:
         """
         # prevent the method from being called by two concurrent async calls
         async with asyncio.Lock():
-            current_status = await self.get_status_for_component(task_name)
+            # Always check current run's status for status transitions
+            current_status = await self.get_status_for_component(
+                task_name, use_current_run=True
+            )
             if status == current_status:
                 raise PipelineStatusUpdateError(f"Status is already {status}")
             if status not in current_status.possible_next_status():
@@ -141,11 +144,13 @@ class Orchestrator:
         res_to_save = None
         if result.result:
             res_to_save = result.result.model_dump()
-        await self.add_result_for_component(
-            task.name, res_to_save, is_final=task.is_leaf()
+        # Consider a component as final if it's a leaf node OR if it's the stop_after node
+        is_final = task.is_leaf() or (
+            self.stop_after is not None and task.name == self.stop_after
         )
+        await self.add_result_for_component(task.name, res_to_save, is_final=is_final)
         # stop if this is the stop_after node
-        if self.stop_after and task.name == self.stop_after:
+        if self.stop_after is not None and task.name == self.stop_after:
             return
         # otherwise, get the next tasks to be executed
         # and run them in //
@@ -182,8 +187,10 @@ class Orchestrator:
         possible_next = self.pipeline.next_edges(task.name)
         for next_edge in possible_next:
             next_node = self.pipeline.get_node_by_name(next_edge.end)
-            # check status
-            next_node_status = await self.get_status_for_component(next_node.name)
+            # check status - use current run for status checks
+            next_node_status = await self.get_status_for_component(
+                next_node.name, use_current_run=True
+            )
             if next_node_status in [RunStatus.RUNNING, RunStatus.DONE]:
                 # already running
                 continue
@@ -277,15 +284,18 @@ class Orchestrator:
             )
         return await self.pipeline.store.get_result_for_component(self.run_id, name)
 
-    async def get_status_for_component(self, name: str) -> RunStatus:
-        # when resuming, check previous run_id, otherwise check current run_id
-        if self.previous_run_id:
+    async def get_status_for_component(
+        self, name: str, use_current_run: bool = False
+    ) -> RunStatus:
+        # For status updates, always use current run_id
+        # For dependency checks, use previous_run_id when resuming
+        if use_current_run or not self.previous_run_id:
             status = await self.pipeline.store.get_status_for_component(
-                self.previous_run_id, name
+                self.run_id, name
             )
         else:
             status = await self.pipeline.store.get_status_for_component(
-                self.run_id, name
+                self.previous_run_id, name
             )
 
         if status is None:
