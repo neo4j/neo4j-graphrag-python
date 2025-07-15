@@ -18,7 +18,7 @@ import asyncio
 import enum
 import json
 import logging
-from typing import Any, List, Optional, Union, cast
+from typing import Any, List, Optional, Union
 
 import json_repair
 from pydantic import ValidationError, validate_call
