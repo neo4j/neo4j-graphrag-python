@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+from typing import Any
 from unittest import mock
 from unittest.mock import MagicMock, Mock
 
@@ -235,7 +236,7 @@ async def test_run(_: Mock, driver: MagicMock) -> None:
         },
         database_=None,
     )
-    parameters_ = {
+    parameters_: dict[str, Any] = {
         "rows": [
             {
                 "type": "RELATIONSHIP",
@@ -293,7 +294,7 @@ async def test_run_is_version_below_5_23(_: Mock) -> None:
         },
         database_=None,
     )
-    parameters_ = {
+    parameters_: dict[str, Any] = {
         "rows": [
             {
                 "type": "RELATIONSHIP",
@@ -352,7 +353,7 @@ async def test_run_is_version_5_23_or_above(_: Mock) -> None:
         },
         database_=None,
     )
-    parameters_ = {
+    parameters_: dict[str, Any] = {
         "rows": [
             {
                 "type": "RELATIONSHIP",
