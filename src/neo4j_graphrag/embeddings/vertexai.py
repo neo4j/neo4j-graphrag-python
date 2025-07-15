@@ -21,7 +21,7 @@ from neo4j_graphrag.embeddings.base import Embedder
 try:
     import vertexai
 except ImportError:
-    vertexai = None
+    vertexai = None  # type: ignore[assignment]
 
 
 class VertexAIEmbeddings(Embedder):

@@ -33,7 +33,7 @@ neo4j = "^5.17.0"
 pydantic = "^2.6.3"
 fsspec = "^2024.9.0"
 pypdf = "^5.1.0"
-json-repair = "^0.39.1"
+json-repair = "^0.44.1"
 pyyaml = "^6.0.2"
 types-pyyaml = "^6.0.12.20240917"
 # optional deps

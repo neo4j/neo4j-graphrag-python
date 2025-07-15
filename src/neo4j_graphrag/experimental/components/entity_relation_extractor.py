@@ -18,7 +18,7 @@ import asyncio
 import enum
 import json
 import logging
-from typing import Any, List, Optional, Union, cast
+from typing import Any, List, Optional, Union
 
 import json_repair
 from pydantic import ValidationError, validate_call
@@ -102,7 +102,7 @@ def balance_curly_braces(json_string: str) -> str:
 
 def fix_invalid_json(raw_json: str) -> str:
     repaired_json = json_repair.repair_json(raw_json)
-    repaired_json = cast(str, repaired_json).strip()
+    repaired_json = repaired_json.strip()
 
     if repaired_json == '""':
         raise InvalidJSONError("JSON repair resulted in an empty or invalid JSON.")

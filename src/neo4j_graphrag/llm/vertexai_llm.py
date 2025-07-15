@@ -48,8 +48,8 @@ try:
         ToolConfig,
     )
 except ImportError:
-    GenerativeModel = None
-    ResponseValidationError = None
+    GenerativeModel = None  # type: ignore[misc, assignment]
+    ResponseValidationError = None  # type: ignore[misc, assignment]
 
 
 class VertexAILLM(LLMInterface):
@@ -114,13 +114,15 @@ class VertexAILLM(LLMInterface):
                 if message.get("role") == "user":
                     messages.append(
                         Content(
-                            role="user", parts=[Part.from_text(message.get("content"))]
+                            role="user",
+                            parts=[Part.from_text(message.get("content", ""))],
                         )
                     )
                 elif message.get("role") == "assistant":
                     messages.append(
                         Content(
-                            role="model", parts=[Part.from_text(message.get("content"))]
+                            role="model",
+                            parts=[Part.from_text(message.get("content", ""))],
                         )
                     )
 
@@ -211,10 +213,10 @@ class VertexAILLM(LLMInterface):
         self,
         system_instruction: Optional[str] = None,
     ) -> GenerativeModel:
-        system_message = [system_instruction] if system_instruction is not None else []
+        # system_message = [system_instruction] if system_instruction is not None else []
         model = GenerativeModel(
             model_name=self.model_name,
-            system_instruction=system_message,
+            system_instruction=system_instruction,
         )
         return model
 
@@ -253,7 +255,7 @@ class VertexAILLM(LLMInterface):
         model = self._get_model(system_instruction=system_instruction)
         options = self._get_call_params(input, message_history, tools)
         response = await model.generate_content_async(**options)
-        return response
+        return response  # type: ignore[no-any-return]
 
     def _call_llm(
         self,
@@ -265,7 +267,7 @@ class VertexAILLM(LLMInterface):
         model = self._get_model(system_instruction=system_instruction)
         options = self._get_call_params(input, message_history, tools)
         response = model.generate_content(**options)
-        return response
+        return response  # type: ignore[no-any-return]
 
     def _to_tool_call(self, function_call: FunctionCall) -> ToolCall:
         return ToolCall(
