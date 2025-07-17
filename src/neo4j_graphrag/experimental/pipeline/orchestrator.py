@@ -19,15 +19,15 @@ import logging
 import uuid
 import warnings
 from functools import partial
-from typing import TYPE_CHECKING, Any, AsyncGenerator
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Union
 
-from neo4j_graphrag.experimental.pipeline.types.context import RunContext
 from neo4j_graphrag.experimental.pipeline.exceptions import (
     PipelineDefinitionError,
     PipelineMissingDependencyError,
     PipelineStatusUpdateError,
 )
 from neo4j_graphrag.experimental.pipeline.notification import EventNotifier
+from neo4j_graphrag.experimental.pipeline.types.context import RunContext
 from neo4j_graphrag.experimental.pipeline.types.orchestration import (
     RunResult,
     RunStatus,
@@ -235,7 +235,7 @@ class Orchestrator:
         return component_inputs
 
     async def add_result_for_component(
-        self, name: str, result: dict[str, Any] | None, is_final: bool = False
+        self, name: str, result: Union[dict[str, Any], None], is_final: bool = False
     ) -> None:
         """This is where we save the results in the result store and, optionally,
         in the final result store.

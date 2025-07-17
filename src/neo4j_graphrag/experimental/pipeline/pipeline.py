@@ -14,12 +14,12 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import asyncio
 import logging
 import warnings
 from collections import defaultdict
 from timeit import default_timer
-from typing import Any, Optional, AsyncGenerator
-import asyncio
+from typing import Any, AsyncGenerator, Optional, Union
 
 from neo4j_graphrag.utils.logging import prettify
 
@@ -36,6 +36,12 @@ from neo4j_graphrag.experimental.pipeline.component import Component
 from neo4j_graphrag.experimental.pipeline.exceptions import (
     PipelineDefinitionError,
 )
+from neo4j_graphrag.experimental.pipeline.notification import (
+    Event,
+    EventCallbackProtocol,
+    EventType,
+    PipelineEvent,
+)
 from neo4j_graphrag.experimental.pipeline.orchestrator import Orchestrator
 from neo4j_graphrag.experimental.pipeline.pipeline_graph import (
     PipelineEdge,
@@ -43,20 +49,13 @@ from neo4j_graphrag.experimental.pipeline.pipeline_graph import (
     PipelineNode,
 )
 from neo4j_graphrag.experimental.pipeline.stores import InMemoryStore, ResultStore
+from neo4j_graphrag.experimental.pipeline.types.context import RunContext
 from neo4j_graphrag.experimental.pipeline.types.definitions import (
     ComponentDefinition,
     ConnectionDefinition,
     PipelineDefinition,
 )
 from neo4j_graphrag.experimental.pipeline.types.orchestration import RunResult
-from neo4j_graphrag.experimental.pipeline.types.context import RunContext
-from neo4j_graphrag.experimental.pipeline.notification import (
-    EventCallbackProtocol,
-    Event,
-    PipelineEvent,
-    EventType,
-)
-
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +78,7 @@ class TaskPipelineNode(PipelineNode):
 
     async def execute(
         self, context: RunContext, inputs: dict[str, Any]
-    ) -> RunResult | None:
+    ) -> Union[RunResult, None]:
         """Execute the task
 
         Returns:

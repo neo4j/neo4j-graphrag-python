@@ -187,7 +187,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
     def __init__(
         self,
         llm: LLMInterface,
-        prompt_template: ERExtractionTemplate | str = ERExtractionTemplate(),
+        prompt_template: Union[ERExtractionTemplate, str] = ERExtractionTemplate(),
         create_lexical_graph: bool = True,
         on_error: OnError = OnError.RAISE,
         max_concurrency: int = 5,

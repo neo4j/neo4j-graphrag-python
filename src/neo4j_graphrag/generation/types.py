@@ -43,7 +43,7 @@ class RagSearchModel(BaseModel):
     examples: str = ""
     retriever_config: dict[str, Any] = {}
     return_context: bool = False
-    response_fallback: str | None = None
+    response_fallback: Union[str, None] = None
 
 
 class RagResultModel(BaseModel):

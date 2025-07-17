@@ -37,7 +37,6 @@ from pydantic.v1.utils import deep_update
 from typing_extensions import Self
 
 from neo4j_graphrag.experimental.pipeline import Pipeline
-from neo4j_graphrag.utils.file_handler import FileHandler
 from neo4j_graphrag.experimental.pipeline.config.pipeline_config import (
     AbstractPipelineConfig,
     PipelineConfig,
@@ -48,6 +47,7 @@ from neo4j_graphrag.experimental.pipeline.config.template_pipeline.simple_kg_bui
 from neo4j_graphrag.experimental.pipeline.config.types import PipelineType
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.experimental.pipeline.types.definitions import PipelineDefinition
+from neo4j_graphrag.utils.file_handler import FileHandler
 from neo4j_graphrag.utils.logging import prettify
 
 logger = logging.getLogger(__name__)
@@ -70,7 +70,9 @@ class PipelineConfigWrapper(BaseModel):
         Annotated[SimpleKGPipelineConfig, Tag(PipelineType.SIMPLE_KG_PIPELINE)],
     ] = Field(discriminator=Discriminator(_get_discriminator_value))
 
-    def parse(self, resolved_data: dict[str, Any] | None = None) -> PipelineDefinition:
+    def parse(
+        self, resolved_data: Union[dict[str, Any], None] = None
+    ) -> PipelineDefinition:
         logger.debug("PIPELINE_CONFIG: start parsing config...")
         return self.config.parse(resolved_data)
 
@@ -90,7 +92,7 @@ class PipelineRunner:
     def __init__(
         self,
         pipeline_definition: PipelineDefinition,
-        config: AbstractPipelineConfig | None = None,
+        config: Union[AbstractPipelineConfig, None] = None,
         do_cleaning: bool = False,
     ) -> None:
         self.config = config
@@ -100,7 +102,9 @@ class PipelineRunner:
 
     @classmethod
     def from_config(
-        cls, config: AbstractPipelineConfig | dict[str, Any], do_cleaning: bool = False
+        cls,
+        config: Union[AbstractPipelineConfig, dict[str, Any]],
+        do_cleaning: bool = False,
     ) -> Self:
         wrapper = PipelineConfigWrapper.model_validate({"config": config})
         logger.debug(

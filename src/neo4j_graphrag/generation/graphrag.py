@@ -88,8 +88,8 @@ class GraphRAG:
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         examples: str = "",
         retriever_config: Optional[dict[str, Any]] = None,
-        return_context: bool | None = None,
-        response_fallback: str | None = None,
+        return_context: Union[bool, None] = None,
+        response_fallback: Union[str, None] = None,
     ) -> RagResultModel:
         """
         .. warning::
