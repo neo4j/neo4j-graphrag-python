@@ -27,10 +27,6 @@ from typing import (
     Union,
     cast,
 )
-from openai.types.chat import (
-    ChatCompletionMessageParam,
-    ChatCompletionToolParam,
-)
 
 from pydantic import ValidationError
 
@@ -53,12 +49,21 @@ from .types import (
 from neo4j_graphrag.tool import Tool
 
 if TYPE_CHECKING:
-    import openai
+    from openai.types.chat import (
+        ChatCompletionMessageParam,
+        ChatCompletionToolParam,
+    )
+    from openai import OpenAI, AsyncOpenAI
+else:
+    ChatCompletionMessageParam = Any
+    ChatCompletionToolParam = Any
+    OpenAI = Any
+    AsyncOpenAI = Any
 
 
 class BaseOpenAILLM(LLMInterface, abc.ABC):
-    client: openai.OpenAI
-    async_client: openai.AsyncOpenAI
+    client: OpenAI
+    async_client: AsyncOpenAI
 
     def __init__(
         self,
