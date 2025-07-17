@@ -93,7 +93,7 @@ class PipelineRunner:
     def __init__(
         self,
         pipeline_definition: PipelineDefinition,
-        config: Union[AbstractPipelineConfig, None] = None,
+        config: Optional[AbstractPipelineConfig] = None,
         do_cleaning: bool = False,
     ) -> None:
         self.config = config
