@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import (
     Annotated,
     Any,
+    Optional,
     Union,
 )
 
@@ -71,7 +72,7 @@ class PipelineConfigWrapper(BaseModel):
     ] = Field(discriminator=Discriminator(_get_discriminator_value))
 
     def parse(
-        self, resolved_data: Union[dict[str, Any], None] = None
+        self, resolved_data: Optional[dict[str, Any]] = None
     ) -> PipelineDefinition:
         logger.debug("PIPELINE_CONFIG: start parsing config...")
         return self.config.parse(resolved_data)

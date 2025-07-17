@@ -19,7 +19,7 @@ import logging
 import warnings
 from collections import defaultdict
 from timeit import default_timer
-from typing import Any, AsyncGenerator, Optional, Union
+from typing import Any, AsyncGenerator, Optional
 
 from neo4j_graphrag.utils.logging import prettify
 
@@ -78,7 +78,7 @@ class TaskPipelineNode(PipelineNode):
 
     async def execute(
         self, context: RunContext, inputs: dict[str, Any]
-    ) -> Union[RunResult, None]:
+    ) -> Optional[RunResult]:
         """Execute the task
 
         Returns:

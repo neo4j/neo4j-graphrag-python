@@ -291,7 +291,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         chunks: TextChunks,
         document_info: Optional[DocumentInfo] = None,
         lexical_graph_config: Optional[LexicalGraphConfig] = None,
-        schema: Union[GraphSchema, None] = None,
+        schema: Optional[GraphSchema] = None,
         examples: str = "",
         **kwargs: Any,
     ) -> Neo4jGraph:

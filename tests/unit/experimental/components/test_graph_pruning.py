@@ -14,7 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Union
+from typing import Any, Optional
 from unittest.mock import ANY, Mock, patch
 
 import pytest
@@ -369,7 +369,7 @@ def test_graph_pruning_validate_relationship(
     additional_relationship_types: bool,
     patterns: tuple[tuple[str, str, str], ...],
     additional_patterns: bool,
-    expected_relationship: Union[str, None],
+    expected_relationship: Optional[str],
     request: pytest.FixtureRequest,
 ) -> None:
     relationship_obj = request.getfixturevalue(relationship)
