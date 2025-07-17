@@ -18,7 +18,7 @@ Basic graph structure for Pipeline.
 
 from __future__ import annotations
 
-from typing import Any, Generic, Optional, TypeVar
+from typing import Any, Generic, Optional, TypeVar, Union
 
 
 class PipelineNode:
@@ -124,7 +124,7 @@ class PipelineGraph(Generic[GenericNodeType, GenericEdgeType]):
                 res.append(edge)
         return res
 
-    def __contains__(self, node: GenericNodeType | str) -> bool:
+    def __contains__(self, node: Union[GenericNodeType, str]) -> bool:
         if isinstance(node, str):
             return node in self._nodes
         return node.name in self._nodes

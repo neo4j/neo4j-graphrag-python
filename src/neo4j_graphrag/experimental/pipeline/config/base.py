@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel, PrivateAttr
 
@@ -58,5 +58,5 @@ class AbstractConfig(BaseModel):
             for param_name, param in params.items()
         }
 
-    def parse(self, resolved_data: dict[str, Any] | None = None) -> Any:
+    def parse(self, resolved_data: Optional[dict[str, Any]] = None) -> Any:
         raise NotImplementedError()

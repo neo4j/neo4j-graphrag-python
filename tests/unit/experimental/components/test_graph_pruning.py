@@ -13,27 +13,27 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
-from typing import Any
-from unittest.mock import patch, Mock, ANY
+
+from typing import Any, Optional
+from unittest.mock import ANY, Mock, patch
 
 import pytest
-
 from neo4j_graphrag.experimental.components.graph_pruning import (
     GraphPruning,
     GraphPruningResult,
     PruningStats,
 )
 from neo4j_graphrag.experimental.components.schema import (
+    GraphSchema,
     NodeType,
     PropertyType,
     RelationshipType,
-    GraphSchema,
 )
 from neo4j_graphrag.experimental.components.types import (
+    LexicalGraphConfig,
+    Neo4jGraph,
     Neo4jNode,
     Neo4jRelationship,
-    Neo4jGraph,
-    LexicalGraphConfig,
 )
 
 
@@ -369,7 +369,7 @@ def test_graph_pruning_validate_relationship(
     additional_relationship_types: bool,
     patterns: tuple[tuple[str, str, str], ...],
     additional_patterns: bool,
-    expected_relationship: str | None,
+    expected_relationship: Optional[str],
     request: pytest.FixtureRequest,
 ) -> None:
     relationship_obj = request.getfixturevalue(relationship)
