@@ -19,6 +19,7 @@ from .ollama import OllamaEmbeddings
 from .openai import AzureOpenAIEmbeddings, OpenAIEmbeddings
 from .sentence_transformers import SentenceTransformerEmbeddings
 from .vertexai import VertexAIEmbeddings
+from .bedrock_embeddings import BedrockEmbeddings
 
 __all__ = [
     "Embedder",
@@ -29,4 +30,5 @@ __all__ = [
     "VertexAIEmbeddings",
     "MistralAIEmbeddings",
     "CohereEmbeddings",
+    "BedrockEmbeddings"
 ]
