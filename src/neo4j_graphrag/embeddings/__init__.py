@@ -19,7 +19,7 @@ from .ollama import OllamaEmbeddings
 from .openai import AzureOpenAIEmbeddings, OpenAIEmbeddings
 from .sentence_transformers import SentenceTransformerEmbeddings
 from .vertexai import VertexAIEmbeddings
-from .bedrock_embeddings import BedrockEmbeddings
+from .bedrockembeddings import BedrockEmbeddings
 
 __all__ = [
     "Embedder",
