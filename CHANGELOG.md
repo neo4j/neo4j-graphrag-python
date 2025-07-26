@@ -2,6 +2,11 @@
 
 ## Next
 
+### Added
+- Added support for Amazon Bedrock embeddings via `BedrockEmbedding` class.
+- Users can now leverage Bedrock-hosted Embedding models for vector generation.
+- Added unit test and conducted Unit test
+
 ## 1.9.0
 
 ### Fixed
