@@ -703,7 +703,7 @@ class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
                 existence_constraint.append((lab, prop))
         return existence_constraint
 
-    async def run(self, *args, **kwargs) -> GraphSchema:
+    async def run(self, *args: Any, **kwargs: Any) -> GraphSchema:
         structured_schema = get_structured_schema(self.driver, database=self.database)
         existence_constraint = self._extract_required_properties(structured_schema)
 
