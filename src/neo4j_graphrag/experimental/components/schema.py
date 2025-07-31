@@ -49,6 +49,9 @@ from neo4j_graphrag.utils.file_handler import FileHandler, FileFormat
 from neo4j_graphrag.schema import get_structured_schema
 
 
+logger = logging.getLogger(__name__)
+
+
 class PropertyType(BaseModel):
     """
     Represents a property on a node or relationship in the graph.
@@ -634,19 +637,19 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
 class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
     """A class to build a GraphSchema object from an existing graph.
 
-    Uses the get_structured_schema function to extract existing node labels,
-    relationship types, properties and existence constraints.
+     Uses the get_structured_schema function to extract existing node labels,
+     relationship types, properties and existence constraints.
 
-    By default, the built schema does not allow any additional item (property,
-    node label, relationship type or pattern).
+     By default, the built schema does not allow any additional item (property,
+     node label, relationship type or pattern).
 
-       Args:
-            driver (neo4j.Driver): connection to the neo4j database.
-            additional_properties (bool, default False): see GraphSchema
-            additional_node_types (bool, default False): see GraphSchema
-            additional_relationship_types (bool, default False): see GraphSchema:
-            additional_patterns (bool, default False): see GraphSchema:
-            neo4j_database (Optional | str): name of the neo4j database to use
+    Args:
+         driver (neo4j.Driver): connection to the neo4j database.
+         additional_properties (bool, default False): see GraphSchema
+         additional_node_types (bool, default False): see GraphSchema
+         additional_relationship_types (bool, default False): see GraphSchema:
+         additional_patterns (bool, default False): see GraphSchema:
+         neo4j_database (Optional | str): name of the neo4j database to use
     """
 
     def __init__(
@@ -684,7 +687,7 @@ class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
         """
         schema_metadata = structured_schema.get("metadata", {})
         existence_constraint = []  # list of (node label, property name)
-        for constraint in schema_metadata.get("constraints", []):
+        for constraint in schema_metadata.get("constraint", []):
             if constraint["type"] in (
                 "NODE_PROPERTY_EXISTENCE",
                 "NODE_KEY",
@@ -700,10 +703,11 @@ class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
                 existence_constraint.append((lab, prop))
         return existence_constraint
 
-    async def run(self) -> GraphSchema:
+    async def run(self, *args, **kwargs) -> GraphSchema:
         structured_schema = get_structured_schema(self.driver, database=self.database)
         existence_constraint = self._extract_required_properties(structured_schema)
 
+        # node label with properties
         node_labels = set(structured_schema["node_props"].keys())
         node_types = [
             {
@@ -720,6 +724,8 @@ class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
             }
             for key, properties in structured_schema["node_props"].items()
         ]
+
+        # relationships with properties
         rel_labels = set(structured_schema["rel_props"].keys())
         relationship_types = [
             {
@@ -735,13 +741,19 @@ class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
             }
             for key, properties in structured_schema["rel_props"].items()
         ]
+
         patterns = [
             (s["start"], s["type"], s["end"])
             for s in structured_schema["relationships"]
         ]
+
         # deal with nodes and relationships without properties
         for source, rel, target in patterns:
             if source not in node_labels:
+                if not self.additional_properties:
+                    logger.warning(
+                        f"SCHEMA: found node label {source} without property and additional_properties=False: this node label will always be pruned!"
+                    )
                 node_labels.add(source)
                 node_types.append(
                     {
@@ -749,6 +761,10 @@ class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
                     }
                 )
             if target not in node_labels:
+                if not self.additional_properties:
+                    logger.warning(
+                        f"SCHEMA: found node label {target} without property and additional_properties=False: this node label will always be pruned!"
+                    )
                 node_labels.add(target)
                 node_types.append(
                     {
@@ -756,6 +772,10 @@ class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
                     }
                 )
             if rel not in rel_labels:
+                if not self.additional_properties:
+                    logger.warning(
+                        f"SCHEMA: found relationship type {rel} without property and additional_properties=False: this relationship type will always be pruned!"
+                    )
                 rel_labels.add(rel)
                 relationship_types.append(
                     {
