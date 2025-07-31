@@ -962,7 +962,7 @@ async def test_schema_from_text_filters_relationships_without_labels(
 
 @pytest.mark.asyncio
 @patch("neo4j_graphrag.experimental.components.schema.get_structured_schema")
-async def test_schema_from_existing_graph(mock_get_structured_schema: Mock):
+async def test_schema_from_existing_graph(mock_get_structured_schema: Mock) -> None:
     mock_get_structured_schema.return_value = {
         "node_props": {
             "Person": [
