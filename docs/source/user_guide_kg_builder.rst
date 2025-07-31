@@ -583,7 +583,7 @@ This package currently supports text extraction from PDFs:
     from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
 
     loader = PdfLoader()
-    await loader.run(path=Path("my_file.pdf"))
+    await loader.run(filepath=Path("my_file.pdf"))
 
 To implement your own loader, use the `DataLoader` interface:
 
