@@ -49,6 +49,7 @@ def test_ollama_llm_happy_path_deprecated_options(mock_import: Mock) -> None:
             model_params=model_params,
         )
     assert len(record) == 1
+    assert isinstance(record[0].message, Warning)
     assert (
         'you must use model_params={"options": {"temperature": 0}}'
         in record[0].message.args[0]
