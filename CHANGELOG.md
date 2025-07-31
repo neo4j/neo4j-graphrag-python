@@ -2,11 +2,19 @@
 
 ## Next
 
+### Fixed
+
+- Fixed documentation for PdfLoader
+
 ## 1.9.0
 
 ### Fixed
 
 - Fixed a bug where Session nodes were duplicated.
+
+## Added
+
+- Added automatic rate limiting with retry logic and exponential backoff for all LLM providers using tenacity. The `RateLimitHandler` interface allows for custom rate limiting strategies, including the ability to disable rate limiting entirely.
 
 ## 1.8.0
 
@@ -15,7 +23,6 @@
 - Support for Python 3.13
 - Added support for automatic schema extraction from text using LLMs. In the `SimpleKGPipeline`, when the user provides no schema, the automatic schema extraction is enabled by default.
 - Added ability to return a user-defined message if context is empty in GraphRAG (which skips the LLM call).
-- Added automatic rate limiting with retry logic and exponential backoff for all LLM providers using tenacity. The `RateLimitHandler` interface allows for custom rate limiting strategies, including the ability to disable rate limiting entirely.
 
 ### Fixed
 
