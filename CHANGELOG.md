@@ -5,6 +5,8 @@
 ### Fixed
 
 - Fixed documentation for PdfLoader
+- Fixed a bug where the `format` argument for `OllamaLLM` was not propagated to the client.
+
 
 ## 1.9.0
 
