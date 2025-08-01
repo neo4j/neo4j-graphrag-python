@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING, Any, Iterable, List, Optional, Sequence, Union, cast
 
 from pydantic import ValidationError
@@ -59,6 +60,19 @@ class OllamaLLM(LLMInterface):
         self.async_client = ollama.AsyncClient(
             **kwargs,
         )
+        if "stream" in self.model_params:
+            raise ValueError("Streaming is not supported by the OllamaLLM wrapper")
+        # bug-fix with backward compatibility:
+        # we mistakenly passed all "model_params" under the options argument
+        # next two lines to be removed in 2.0
+        if not any(
+            key in self.model_params for key in ("options", "format", "keep_alive")
+        ):
+            warnings.warn(
+                """Passing options directly without including them in an 'options' key is deprecated. Ie you must use model_params={"options": {"temperature": 0}}""",
+                DeprecationWarning,
+            )
+            self.model_params = {"options": self.model_params}
 
     def get_messages(
         self,
@@ -104,7 +118,7 @@ class OllamaLLM(LLMInterface):
             response = self.client.chat(
                 model=self.model_name,
                 messages=self.get_messages(input, message_history, system_instruction),
-                options=self.model_params,
+                **self.model_params,
             )
             content = response.message.content or ""
             return LLMResponse(content=content)

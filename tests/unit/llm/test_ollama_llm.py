@@ -35,7 +35,7 @@ def test_ollama_llm_missing_dependency(mock_import: Mock) -> None:
 
 
 @patch("builtins.__import__")
-def test_ollama_llm_happy_path(mock_import: Mock) -> None:
+def test_ollama_llm_happy_path_deprecated_options(mock_import: Mock) -> None:
     mock_ollama = get_mock_ollama()
     mock_import.return_value = mock_ollama
     mock_ollama.Client.return_value.chat.return_value = MagicMock(
@@ -43,12 +43,19 @@ def test_ollama_llm_happy_path(mock_import: Mock) -> None:
     )
     model = "gpt"
     model_params = {"temperature": 0.3}
-    question = "What is graph RAG?"
-    llm = OllamaLLM(
-        model,
-        model_params=model_params,
+    with pytest.warns(DeprecationWarning) as record:
+        llm = OllamaLLM(
+            model,
+            model_params=model_params,
+        )
+    assert len(record) == 1
+    assert isinstance(record[0].message, Warning)
+    assert (
+        'you must use model_params={"options": {"temperature": 0}}'
+        in record[0].message.args[0]
     )
 
+    question = "What is graph RAG?"
     res = llm.invoke(question)
     assert isinstance(res, LLMResponse)
     assert res.content == "ollama chat response"
@@ -56,7 +63,52 @@ def test_ollama_llm_happy_path(mock_import: Mock) -> None:
         {"role": "user", "content": question},
     ]
     llm.client.chat.assert_called_once_with(  # type: ignore[attr-defined]
-        model=model, messages=messages, options=model_params
+        model=model, messages=messages, options={"temperature": 0.3}
+    )
+
+
+@patch("builtins.__import__")
+def test_ollama_llm_unsupported_streaming(mock_import: Mock) -> None:
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+    mock_ollama.Client.return_value.chat.return_value = MagicMock(
+        message=MagicMock(content="ollama chat response"),
+    )
+    model = "gpt"
+    model_params = {"stream": True}
+    with pytest.raises(ValueError):
+        OllamaLLM(
+            model,
+            model_params=model_params,
+        )
+
+
+@patch("builtins.__import__")
+def test_ollama_llm_happy_path(mock_import: Mock) -> None:
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+    mock_ollama.Client.return_value.chat.return_value = MagicMock(
+        message=MagicMock(content="ollama chat response"),
+    )
+    model = "gpt"
+    options = {"temperature": 0.3}
+    model_params = {"options": options, "format": "json"}
+    question = "What is graph RAG?"
+    llm = OllamaLLM(
+        model_name=model,
+        model_params=model_params,
+    )
+    res = llm.invoke(question)
+    assert isinstance(res, LLMResponse)
+    assert res.content == "ollama chat response"
+    messages = [
+        {"role": "user", "content": question},
+    ]
+    llm.client.chat.assert_called_once_with(  # type: ignore[attr-defined]
+        model=model,
+        messages=messages,
+        options=options,
+        format="json",
     )
 
 
@@ -68,7 +120,8 @@ def test_ollama_invoke_with_system_instruction_happy_path(mock_import: Mock) -> 
         message=MagicMock(content="ollama chat response"),
     )
     model = "gpt"
-    model_params = {"temperature": 0.3}
+    options = {"temperature": 0.3}
+    model_params = {"options": options, "format": "json"}
     llm = OllamaLLM(
         model,
         model_params=model_params,
@@ -81,7 +134,10 @@ def test_ollama_invoke_with_system_instruction_happy_path(mock_import: Mock) -> 
     messages = [{"role": "system", "content": system_instruction}]
     messages.append({"role": "user", "content": question})
     llm.client.chat.assert_called_once_with(  # type: ignore[attr-defined]
-        model=model, messages=messages, options=model_params
+        model=model,
+        messages=messages,
+        options=options,
+        format="json",
     )
 
 
@@ -93,7 +149,8 @@ def test_ollama_invoke_with_message_history_happy_path(mock_import: Mock) -> Non
         message=MagicMock(content="ollama chat response"),
     )
     model = "gpt"
-    model_params = {"temperature": 0.3}
+    options = {"temperature": 0.3}
+    model_params = {"options": options}
     llm = OllamaLLM(
         model,
         model_params=model_params,
@@ -109,7 +166,7 @@ def test_ollama_invoke_with_message_history_happy_path(mock_import: Mock) -> Non
     messages = [m for m in message_history]
     messages.append({"role": "user", "content": question})
     llm.client.chat.assert_called_once_with(  # type: ignore[attr-defined]
-        model=model, messages=messages, options=model_params
+        model=model, messages=messages, options=options
     )
 
 
@@ -123,7 +180,8 @@ def test_ollama_invoke_with_message_history_and_system_instruction(
         message=MagicMock(content="ollama chat response"),
     )
     model = "gpt"
-    model_params = {"temperature": 0.3}
+    options = {"temperature": 0.3}
+    model_params = {"options": options}
     system_instruction = "You are a helpful assistant."
     llm = OllamaLLM(
         model,
@@ -145,7 +203,7 @@ def test_ollama_invoke_with_message_history_and_system_instruction(
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
     llm.client.chat.assert_called_once_with(  # type: ignore[attr-defined]
-        model=model, messages=messages, options=model_params
+        model=model, messages=messages, options=options
     )
     assert llm.client.chat.call_count == 1  # type: ignore
 
@@ -156,7 +214,8 @@ def test_ollama_invoke_with_message_history_validation_error(mock_import: Mock) 
     mock_import.return_value = mock_ollama
     mock_ollama.ResponseError = ollama.ResponseError
     model = "gpt"
-    model_params = {"temperature": 0.3}
+    options = {"temperature": 0.3}
+    model_params = {"options": options}
     system_instruction = "You are a helpful assistant."
     llm = OllamaLLM(
         model,
@@ -187,7 +246,8 @@ async def test_ollama_ainvoke_happy_path(mock_import: Mock) -> None:
 
     mock_ollama.AsyncClient.return_value.chat = mock_chat_async
     model = "gpt"
-    model_params = {"temperature": 0.3}
+    options = {"temperature": 0.3}
+    model_params = {"options": options}
     question = "What is graph RAG?"
     llm = OllamaLLM(
         model,
