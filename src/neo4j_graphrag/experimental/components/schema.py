@@ -512,7 +512,10 @@ class SchemaFromTextExtractor(Component):
         """
         filtered_nodes = []
         for node_type in node_types:
-            if node_type.get("label"):
+            if isinstance(node_type, str):
+                if node_type:
+                    filtered_nodes.append({"label": node_type})
+            elif isinstance(node_type, dict) and node_type.get("label"):
                 filtered_nodes.append(node_type)
             else:
                 logging.info(f"Filtering out node type with missing label: {node_type}")
@@ -533,7 +536,10 @@ class SchemaFromTextExtractor(Component):
         """
         filtered_relationships = []
         for rel_type in relationship_types:
-            if rel_type.get("label"):
+            if isinstance(rel_type, str):
+                if rel_type:
+                    filtered_relationships.append({"label": rel_type})
+            elif isinstance(rel_type, dict) and rel_type.get("label"):
                 filtered_relationships.append(rel_type)
             else:
                 logging.info(
