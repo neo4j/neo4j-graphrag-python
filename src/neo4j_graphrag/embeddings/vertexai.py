@@ -14,14 +14,18 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from neo4j_graphrag.embeddings.base import Embedder
 
 try:
-    import vertexai
-except ImportError:
-    vertexai = None  # type: ignore[assignment]
+    from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
+except (ImportError, AttributeError):
+    TextEmbeddingModel = TextEmbeddingInput = None  # type: ignore[misc, assignment]
+
+
+if TYPE_CHECKING:
+    from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
 
 
 class VertexAIEmbeddings(Embedder):
@@ -34,14 +38,12 @@ class VertexAIEmbeddings(Embedder):
     """
 
     def __init__(self, model: str = "text-embedding-004") -> None:
-        if vertexai is None:
+        if TextEmbeddingModel is None:
             raise ImportError(
                 """Could not import Vertex AI Python client.
                 Please install it with `pip install "neo4j-graphrag[google]"`."""
             )
-        self.vertexai_model = (
-            vertexai.language_models.TextEmbeddingModel.from_pretrained(model)
-        )
+        self.model = TextEmbeddingModel.from_pretrained(model)
 
     def embed_query(
         self, text: str, task_type: str = "RETRIEVAL_QUERY", **kwargs: Any
@@ -54,6 +56,12 @@ class VertexAIEmbeddings(Embedder):
             task_type (str): The type of the text embedding task. Defaults to "RETRIEVAL_QUERY". See https://cloud.google.com/vertex-ai/generative-ai/docs/model-reference/text-embeddings-api#tasktype for a full list.
             **kwargs (Any): Additional keyword arguments to pass to the Vertex AI client's get_embeddings method.
         """
-        inputs = [vertexai.language_models.TextEmbeddingInput(text, task_type)]
-        embeddings = self.vertexai_model.get_embeddings(inputs, **kwargs)
-        return embeddings[0].values  # type: ignore
+        # type annotation needed for mypy
+        inputs: list[str | TextEmbeddingInput] = [
+            TextEmbeddingInput(text, task_type)
+        ]
+        embeddings = self.model.get_embeddings(
+            inputs,
+            **kwargs
+        )
+        return embeddings[0].values
