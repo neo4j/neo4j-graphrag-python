@@ -90,7 +90,9 @@ def test_schema_visualization_invalid_schema_dict(
         schema_visualization(invalid_schema_dict)
 
 
-def test_schema_visualization_valid_schema_dict(valid_schema_dict: dict[str, Any]) -> None:
+def test_schema_visualization_valid_schema_dict(
+    valid_schema_dict: dict[str, Any],
+) -> None:
     g = schema_visualization(valid_schema_dict)
     assert isinstance(g, VisualizationGraph)
     assert len(g.nodes) == 2
