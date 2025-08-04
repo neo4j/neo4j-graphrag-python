@@ -14,6 +14,7 @@
 #  limitations under the License.
 from unittest.mock import MagicMock, Mock, patch
 
+import httpx
 import openai
 import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
@@ -33,6 +34,24 @@ def get_mock_openai() -> MagicMock:
 def test_openai_llm_missing_dependency(mock_import: Mock) -> None:
     with pytest.raises(ImportError):
         OpenAILLM(model_name="gpt-4o")
+
+
+def test_openai_llm_with_custom_httpx_client() -> None:
+    http_client = httpx.Client()
+    llm = OpenAILLM(
+        model_name="gpt",
+        api_key="my key",
+        http_client=http_client,
+    )
+    assert isinstance(llm, OpenAILLM)
+
+    http_client = httpx.AsyncClient()
+    llm = OpenAILLM(
+        model_name="gpt",
+        api_key="my key",
+        http_client=http_client,
+    )
+    assert isinstance(llm, OpenAILLM)
 
 
 @patch("builtins.__import__")
@@ -321,6 +340,28 @@ def test_openai_llm_invoke_with_tools_error(mock_import: Mock, test_tool: Tool) 
 def test_azure_openai_llm_missing_dependency(mock_import: Mock) -> None:
     with pytest.raises(ImportError):
         AzureOpenAILLM(model_name="gpt-4o")
+
+
+def test_oazure_penai_llm_with_custom_httpx_client() -> None:
+    http_client = httpx.Client()
+    llm = AzureOpenAILLM(
+        model_name="gpt-4o",
+        azure_endpoint="https://test.openai.azure.com/",
+        api_key="my key",
+        api_version="version",
+        http_client=http_client,
+    )
+    assert isinstance(llm, AzureOpenAILLM)
+
+    http_client = httpx.AsyncClient()
+    llm = AzureOpenAILLM(
+        model_name="gpt-4o",
+        azure_endpoint="https://test.openai.azure.com/",
+        api_key="my key",
+        api_version="version",
+        http_client=http_client,
+    )
+    assert isinstance(llm, AzureOpenAILLM)
 
 
 @patch("builtins.__import__")

@@ -88,7 +88,17 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
                 """Could not import openai Python client.
                 Please install it with `pip install "neo4j-graphrag[openai]"`."""
             )
+        try:
+            import httpx
+            # this is openai package dependency for now
+            # adding this test just in case it gets removed in the future
+        except ImportError:
+            raise ImportError(
+                """Could not import httpx.
+                Please install it with `pip install httpx."""
+            )
         self.openai = openai
+        self.httpx = httpx
         super().__init__(model_name, model_params, rate_limit_handler)
 
     def get_messages(
@@ -373,8 +383,16 @@ class OpenAILLM(BaseOpenAILLM):
             kwargs: All other parameters will be passed to the openai.OpenAI init.
         """
         super().__init__(model_name, model_params, rate_limit_handler)
-        self.client = self.openai.OpenAI(**kwargs)
-        self.async_client = self.openai.AsyncOpenAI(**kwargs)
+        clients = (None, None)
+        if http_client := kwargs.pop("http_client", None):
+            clients = (
+                (http_client, None)
+                if isinstance(http_client, self.httpx.Client)
+                else (None, http_client)
+            )
+        sync_client, async_client = clients
+        self.client = self.openai.OpenAI(http_client=sync_client, **kwargs)
+        self.async_client = self.openai.AsyncOpenAI(http_client=async_client, **kwargs)
 
 
 class AzureOpenAILLM(BaseOpenAILLM):
@@ -396,5 +414,18 @@ class AzureOpenAILLM(BaseOpenAILLM):
             kwargs: All other parameters will be passed to the openai.OpenAI init.
         """
         super().__init__(model_name, model_params, rate_limit_handler)
-        self.client = self.openai.AzureOpenAI(**kwargs)
-        self.async_client = self.openai.AsyncAzureOpenAI(**kwargs)
+        clients = (None, None)
+        if http_client := kwargs.pop("http_client", None):
+            clients = (
+                (http_client, None)
+                if isinstance(http_client, self.httpx.Client)
+                else (None, http_client)
+            )
+        sync_client, async_client = clients
+        self.client = self.openai.AzureOpenAI(
+            http_client=sync_client,
+            **kwargs
+        )
+        self.async_client = self.openai.AsyncAzureOpenAI(
+            http_client=async_client, **kwargs
+        )
