@@ -7,6 +7,10 @@
 - Fixed documentation for PdfLoader
 - Fixed a bug where the `format` argument for `OllamaLLM` was not propagated to the client.
 
+### Added
+
+- Added `schema_visualization` function to visualize a graph schema using neo4j-viz.
+
 
 ## 1.9.0
 
