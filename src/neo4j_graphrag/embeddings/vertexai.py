@@ -57,11 +57,6 @@ class VertexAIEmbeddings(Embedder):
             **kwargs (Any): Additional keyword arguments to pass to the Vertex AI client's get_embeddings method.
         """
         # type annotation needed for mypy
-        inputs: list[str | TextEmbeddingInput] = [
-            TextEmbeddingInput(text, task_type)
-        ]
-        embeddings = self.model.get_embeddings(
-            inputs,
-            **kwargs
-        )
+        inputs: list[str | TextEmbeddingInput] = [TextEmbeddingInput(text, task_type)]
+        embeddings = self.model.get_embeddings(inputs, **kwargs)
         return embeddings[0].values
