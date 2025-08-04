@@ -44,16 +44,23 @@ class VertexAIEmbeddings(Embedder):
         )
 
     def embed_query(
-        self, text: str, task_type: str = "RETRIEVAL_QUERY", **kwargs: Any
+        self,
+        text: str,
+        task_type: str = "RETRIEVAL_QUERY",
+        dimensions: int | None = None,
+        **kwargs: Any,
     ) -> list[float]:
         """
         Generate embeddings for a given query using a Vertex AI text embedding model.
 
         Args:
             text (str): The text to generate an embedding for.
+            dimensions (Optional[int]): The number of dimensions the resulting output embeddings should have. Only for models supporting it.
             task_type (str): The type of the text embedding task. Defaults to "RETRIEVAL_QUERY". See https://cloud.google.com/vertex-ai/generative-ai/docs/model-reference/text-embeddings-api#tasktype for a full list.
             **kwargs (Any): Additional keyword arguments to pass to the Vertex AI client's get_embeddings method.
         """
         inputs = [vertexai.language_models.TextEmbeddingInput(text, task_type)]
-        embeddings = self.vertexai_model.get_embeddings(inputs, **kwargs)
+        embeddings = self.vertexai_model.get_embeddings(
+            inputs, output_dimensionality=dimensions, **kwargs
+        )
         return embeddings[0].values  # type: ignore

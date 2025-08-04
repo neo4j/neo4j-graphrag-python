@@ -51,15 +51,21 @@ class BaseOpenAIEmbeddings(Embedder, abc.ABC):
         """
         pass
 
-    def embed_query(self, text: str, **kwargs: Any) -> list[float]:
+    def embed_query(
+        self, text: str, dimensions: int | None = None, **kwargs: Any
+    ) -> list[float]:
         """
         Generate embeddings for a given query using an OpenAI text embedding model.
 
         Args:
             text (str): The text to generate an embedding for.
+            dimensions (Optional[int]): The number of dimensions the resulting output embeddings should have. Only for models supporting it.
+
             **kwargs (Any): Additional arguments to pass to the OpenAI embedding generation function.
         """
-        response = self.client.embeddings.create(input=text, model=self.model, **kwargs)
+        response = self.client.embeddings.create(
+            input=text, model=self.model, dimensions=dimensions, **kwargs
+        )
         embedding: list[float] = response.data[0].embedding
         return embedding
 

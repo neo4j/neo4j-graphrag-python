@@ -32,12 +32,23 @@ class CohereEmbeddings(Embedder):
                 Please install it with `pip install "neo4j-graphrag[cohere]"`."""
             )
         self.model = model
-        self.client = cohere.Client(**kwargs)
+        self.client = cohere.ClientV2(**kwargs)
 
-    def embed_query(self, text: str, **kwargs: Any) -> list[float]:
+    def embed_query(
+        self, text: str, dimensions: int | None = None, **kwargs: Any
+    ) -> list[float]:
+        """
+        Generate embeddings for a given query using a Cohere text embedding model.
+
+        Args:
+            text (str): The text to generate an embedding for.
+            dimensions (Optional[int]): The number of dimensions the resulting output embeddings should have. Only for models supporting it.
+            **kwargs (Any): Additional keyword arguments to pass to the Cohere ClientV2.embed method.
+        """
         response = self.client.embed(
             texts=[text],
             model=self.model,
+            output_dimension=dimensions,
             **kwargs,
         )
-        return response.embeddings[0]  # type: ignore
+        return response.embeddings.float[0]  # type: ignore
