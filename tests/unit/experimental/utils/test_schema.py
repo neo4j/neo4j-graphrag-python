@@ -90,14 +90,14 @@ def test_schema_visualization_invalid_schema_dict(
         schema_visualization(invalid_schema_dict)
 
 
-def test_schema_visualization_valid_schema_dict(valid_schema_dict) -> None:
+def test_schema_visualization_valid_schema_dict(valid_schema_dict: dict[str, Any]) -> None:
     g = schema_visualization(valid_schema_dict)
     assert isinstance(g, VisualizationGraph)
     assert len(g.nodes) == 2
     assert len(g.relationships) == 2
 
 
-def test_schema_visualization_schema_object(valid_schema_dict) -> None:
+def test_schema_visualization_schema_object(valid_schema_dict: dict[str, Any]) -> None:
     schema = GraphSchema.model_validate(valid_schema_dict)
     g = schema_visualization(schema)
     assert isinstance(g, VisualizationGraph)
