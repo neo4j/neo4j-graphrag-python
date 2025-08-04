@@ -4,8 +4,14 @@ from neo4j_graphrag.embeddings import CohereEmbeddings
 api_key = None
 
 embeder = CohereEmbeddings(
-    model="embed-english-v3.0",
+    model="embed-v4.0",
     api_key=api_key,
 )
-res = embeder.embed_query("my question")
+res = embeder.embed_query(
+    "my question",
+    # optionally, set output dimensions if it's supported by the model
+    dimensions=256,
+    input_type="search_query",
+)
+print("Embedding dimensions", len(res))
 print(res[:10])

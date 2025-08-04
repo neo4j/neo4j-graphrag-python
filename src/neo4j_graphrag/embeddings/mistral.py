@@ -48,16 +48,19 @@ class MistralAIEmbeddings(Embedder):
         self.model = model
         self.mistral_client = Mistral(api_key=api_key, **kwargs)
 
-    def embed_query(self, text: str, **kwargs: Any) -> list[float]:
+    def embed_query(
+        self, text: str, dimensions: int | None = None, **kwargs: Any
+    ) -> list[float]:
         """
         Generate embeddings for a given query using a Mistral AI text embedding model.
 
         Args:
             text (str): The text to generate an embedding for.
-            **kwargs (Any): Additional keyword arguments to pass to the Mistral AI client.
+            dimensions (Optional[int]): The number of dimensions the resulting output embeddings should have. Only for models supporting it.
+            **kwargs (Any): Additional keyword arguments to pass to the embeddings.create method.
         """
         embeddings_batch_response = self.mistral_client.embeddings.create(
-            model=self.model, inputs=[text], **kwargs
+            model=self.model, inputs=[text], output_dimension=dimensions, **kwargs
         )
         if embeddings_batch_response is None or not embeddings_batch_response.data:
             raise EmbeddingsGenerationError("Failed to retrieve embeddings.")

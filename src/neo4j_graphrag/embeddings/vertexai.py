@@ -14,18 +14,15 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, TYPE_CHECKING
+from typing import Any
 
 from neo4j_graphrag.embeddings.base import Embedder
+
 
 try:
     from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
 except (ImportError, AttributeError):
     TextEmbeddingModel = TextEmbeddingInput = None  # type: ignore[misc, assignment]
-
-
-if TYPE_CHECKING:
-    from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
 
 
 class VertexAIEmbeddings(Embedder):
@@ -46,17 +43,23 @@ class VertexAIEmbeddings(Embedder):
         self.model = TextEmbeddingModel.from_pretrained(model)
 
     def embed_query(
-        self, text: str, task_type: str = "RETRIEVAL_QUERY", **kwargs: Any
+        self,
+        text: str,
+        task_type: str = "RETRIEVAL_QUERY",
+        dimensions: int | None = None,
+        **kwargs: Any,
     ) -> list[float]:
         """
         Generate embeddings for a given query using a Vertex AI text embedding model.
 
         Args:
             text (str): The text to generate an embedding for.
+            dimensions (Optional[int]): The number of dimensions the resulting output embeddings should have. Only for models supporting it.
             task_type (str): The type of the text embedding task. Defaults to "RETRIEVAL_QUERY". See https://cloud.google.com/vertex-ai/generative-ai/docs/model-reference/text-embeddings-api#tasktype for a full list.
             **kwargs (Any): Additional keyword arguments to pass to the Vertex AI client's get_embeddings method.
         """
-        # type annotation needed for mypy
         inputs: list[str | TextEmbeddingInput] = [TextEmbeddingInput(text, task_type)]
-        embeddings = self.model.get_embeddings(inputs, **kwargs)
-        return embeddings[0].values
+        embeddings = self.model.get_embeddings(
+            inputs, output_dimensionality=dimensions, **kwargs
+        )
+        return embeddings[0].values  # type: ignore
