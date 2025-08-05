@@ -95,7 +95,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         except ImportError:
             raise ImportError(
                 """Could not import httpx.
-                Please install it with `pip install httpx."""
+                Please install it with `pip install httpx`."""
             )
         self.openai = openai
         self.httpx = httpx
