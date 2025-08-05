@@ -796,7 +796,9 @@ def schema_json_with_nodes_without_labels() -> str:
             },
             "Organization",
             "",
-            "Company"
+            "Company",
+            "Invalid description with spaces",
+            "{\\"invalid\\": \\"json object\\"}"
         ],
         "relationship_types": [
             {
@@ -851,7 +853,9 @@ def schema_json_with_relationships_without_labels() -> str:
             },
             "MANAGES",
             "",
-            "SUPERVISES"
+            "SUPERVISES",
+            "invalid relationship description",
+            "{\\"invalid\\": \\"json\\"}"
         ],
         "patterns": [
             ["Person", "WORKS_FOR", "Organization"],
@@ -915,7 +919,7 @@ async def test_schema_from_text_filters_nodes_without_labels(
     # run the schema extraction
     schema = await schema_from_text.run(text="Sample text for extraction")
 
-    # verify that nodes without labels were filtered out (3 out of 6 nodes should be removed)
+    # verify that nodes without labels were filtered out (5 out of 8 nodes should be removed)
     assert len(schema.node_types) == 3
     assert schema.node_type_from_label("Person") is not None
     assert schema.node_type_from_label("Organization") is not None
@@ -941,7 +945,7 @@ async def test_schema_from_text_filters_relationships_without_labels(
     # run the schema extraction
     schema = await schema_from_text.run(text="Sample text for extraction")
 
-    # verify that relationships without labels were filtered out (3 out of 6 relationships should be removed)
+    # verify that relationships without labels were filtered out (5 out of 8 relationships should be removed)
     assert schema.relationship_types is not None
     assert len(schema.relationship_types) == 3
     assert schema.relationship_type_from_label("WORKS_FOR") is not None
