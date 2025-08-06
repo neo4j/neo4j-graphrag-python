@@ -6,6 +6,7 @@
 
 - Fixed documentation for PdfLoader
 - Fixed a bug where the `format` argument for `OllamaLLM` was not propagated to the client.
+- Fixed `AttributeError` in `SchemaFromTextExtractor` when filtering out node/relationship types with no labels.
 - Fixed an import error in `VertexAIEmbeddings`.
 
 ## 1.9.0
