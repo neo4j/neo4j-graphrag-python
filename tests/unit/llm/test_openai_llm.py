@@ -19,7 +19,7 @@ import openai
 import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm import LLMResponse
-from neo4j_graphrag.llm.openai_llm import AzureOpenAILLM, OpenAILLM
+from neo4j_graphrag.llm.openai_llm import AzureOpenAILLM, OpenAILLM, BaseOpenAILLM
 from neo4j_graphrag.llm.types import ToolCallResponse
 from neo4j_graphrag.tool import Tool
 
@@ -36,22 +36,47 @@ def test_openai_llm_missing_dependency(mock_import: Mock) -> None:
         OpenAILLM(model_name="gpt-4o")
 
 
-def test_openai_llm_with_custom_httpx_client() -> None:
-    http_client = httpx.Client()
-    llm = OpenAILLM(
-        model_name="gpt",
-        api_key="my key",
-        http_client=http_client,
-    )
-    assert isinstance(llm, OpenAILLM)
+@patch(
+    "neo4j_graphrag.llm.openai_llm.BaseOpenAILLM._extract_sync_and_async_httpx_clients"
+)
+@patch("builtins.__import__")
+def test_openai_llm_with_custom_httpx_client_sync(
+    mock_import: Mock, mock_client_extract: Mock
+) -> None:
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
 
-    http_client = httpx.AsyncClient()
-    llm = OpenAILLM(
+    http_client = httpx.Client(base_url="https://my-custom-url")
+    mock_client_extract.return_value = [http_client, None]
+    OpenAILLM(
         model_name="gpt",
-        api_key="my key",
         http_client=http_client,
     )
-    assert isinstance(llm, OpenAILLM)
+    mock_openai.OpenAI.assert_called_once()
+    assert mock_openai.OpenAI.call_args_list[0][1]["http_client"] == http_client
+    mock_openai.AsyncOpenAI.assert_called_once()
+    assert mock_openai.AsyncOpenAI.call_args_list[0][1]["http_client"] is None
+
+
+@patch(
+    "neo4j_graphrag.llm.openai_llm.BaseOpenAILLM._extract_sync_and_async_httpx_clients"
+)
+@patch("builtins.__import__")
+def test_openai_llm_with_custom_httpx_client_async(
+    mock_import: Mock, mock_client_extract: Mock
+) -> None:
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+    http_client = httpx.AsyncClient(base_url="https://my-custom-url")
+    mock_client_extract.return_value = [http_client, None]
+    OpenAILLM(
+        model_name="gpt",
+        http_client=http_client,
+    )
+    mock_openai.OpenAI.assert_called_once()
+    assert mock_openai.OpenAI.call_args_list[0][1]["http_client"] is None
+    mock_openai.AsyncOpenAI.assert_called_once()
+    assert mock_openai.AsyncOpenAI.call_args_list[0][1]["http_client"] == http_client
 
 
 @patch("builtins.__import__")
@@ -342,26 +367,88 @@ def test_azure_openai_llm_missing_dependency(mock_import: Mock) -> None:
         AzureOpenAILLM(model_name="gpt-4o")
 
 
-def test_oazure_penai_llm_with_custom_httpx_client() -> None:
-    http_client = httpx.Client()
-    llm = AzureOpenAILLM(
-        model_name="gpt-4o",
-        azure_endpoint="https://test.openai.azure.com/",
-        api_key="my key",
-        api_version="version",
-        http_client=http_client,
+def test_base_openai_llm_extract_httpx_clients_sync() -> None:
+    http_client = httpx.Client(base_url="https://my-custom-url")
+    llm = BaseOpenAILLM(
+        model_name="gpt",
     )
-    assert isinstance(llm, AzureOpenAILLM)
+    sync_client, async_client = llm._extract_sync_and_async_httpx_clients(
+        http_client=http_client
+    )
+    assert sync_client == http_client
+    assert async_client is None
 
-    http_client = httpx.AsyncClient()
-    llm = AzureOpenAILLM(
-        model_name="gpt-4o",
+
+def test_base_openai_llm_extract_httpx_clients_async() -> None:
+    http_client = httpx.AsyncClient(base_url="https://my-custom-url")
+    llm = BaseOpenAILLM(
+        model_name="gpt",
+    )
+    sync_client, async_client = llm._extract_sync_and_async_httpx_clients(
+        http_client=http_client
+    )
+    assert sync_client is None
+    assert async_client == http_client
+
+
+def test_base_openai_llm_extract_httpx_clients_none() -> None:
+    llm = BaseOpenAILLM(
+        model_name="gpt",
+    )
+    sync_client, async_client = llm._extract_sync_and_async_httpx_clients(None)
+    assert sync_client is None
+    assert async_client is None
+
+
+@patch(
+    "neo4j_graphrag.llm.openai_llm.BaseOpenAILLM._extract_sync_and_async_httpx_clients"
+)
+@patch("builtins.__import__")
+def test_azure_openai_llm_with_custom_httpx_client_sync(
+    mock_import: Mock, mock_client_extract: Mock
+) -> None:
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    http_client = httpx.Client(base_url="https://my-custom-url")
+    mock_client_extract.return_value = [http_client, None]
+    AzureOpenAILLM(
+        model_name="gpt",
         azure_endpoint="https://test.openai.azure.com/",
         api_key="my key",
         api_version="version",
         http_client=http_client,
     )
-    assert isinstance(llm, AzureOpenAILLM)
+    mock_openai.AzureOpenAI.assert_called_once()
+    assert mock_openai.AzureOpenAI.call_args_list[0][1]["http_client"] == http_client
+    mock_openai.AsyncAzureOpenAI.assert_called_once()
+    assert mock_openai.AsyncAzureOpenAI.call_args_list[0][1]["http_client"] is None
+
+
+@patch(
+    "neo4j_graphrag.llm.openai_llm.BaseOpenAILLM._extract_sync_and_async_httpx_clients"
+)
+@patch("builtins.__import__")
+def test_azure_openai_llm_with_custom_httpx_client_async(
+    mock_import: Mock, mock_client_extract: Mock
+) -> None:
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+    http_client = httpx.AsyncClient(base_url="https://my-custom-url")
+    mock_client_extract.return_value = [None, http_client]
+    AzureOpenAILLM(
+        model_name="gpt",
+        azure_endpoint="https://test.openai.azure.com/",
+        api_key="my key",
+        api_version="version",
+        http_client=http_client,
+    )
+    mock_openai.AzureOpenAI.assert_called_once()
+    assert mock_openai.AzureOpenAI.call_args_list[0][1]["http_client"] is None
+    mock_openai.AsyncAzureOpenAI.assert_called_once()
+    assert (
+        mock_openai.AsyncAzureOpenAI.call_args_list[0][1]["http_client"] == http_client
+    )
 
 
 @patch("builtins.__import__")
