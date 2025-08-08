@@ -2,6 +2,8 @@
 
 ## Next
 
+## 1.9.1
+
 ### Fixed
 
 - Fixed documentation for PdfLoader
