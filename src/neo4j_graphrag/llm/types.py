@@ -17,8 +17,16 @@ def __getattr__(name: str) -> Any:
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
+class LLMUsage(BaseModel):
+    prompt_token_count: int
+    candidates_token_count: int
+    thoughts_token_count: int
+    total_token_count: int
+
+
 class LLMResponse(BaseModel):
     content: str
+    usage: Optional[LLMUsage] = None
 
 
 class BaseMessage(BaseModel):

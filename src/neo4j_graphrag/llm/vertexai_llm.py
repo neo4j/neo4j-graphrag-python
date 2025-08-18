@@ -30,6 +30,7 @@ from neo4j_graphrag.llm.types import (
     MessageList,
     ToolCall,
     ToolCallResponse,
+    LLMUsage,
 )
 from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.tool import Tool
@@ -285,6 +286,12 @@ class VertexAILLM(LLMInterface):
     def _parse_content_response(self, response: GenerationResponse) -> LLMResponse:
         return LLMResponse(
             content=response.text,
+            usage=LLMUsage(
+                prompt_token_count=response.usage_metadata.prompt_token_count,
+                candidates_token_count=response.usage_metadata.candidates_token_count,
+                total_token_count=response.usage_metadata.total_token_count,
+                thoughts_token_count=response.usage_metadata.thoughts_token_count,
+            ),
         )
 
     async def ainvoke_with_tools(
