@@ -464,7 +464,7 @@ class GraphPruning(Component):
         filtered_properties: dict[str, Any],
         schema_item: Union[NodeType, RelationshipType],
         pruning_stats: PruningStats,
-    ):
+    ) -> dict[str, Any]:
         type_safe_properties = {}
         for prop_name, prop_value in filtered_properties.items():
             if isinstance(prop_value, dict):
