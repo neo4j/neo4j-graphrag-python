@@ -286,16 +286,16 @@ def test_simple_kg_pipeline_config_connections_with_er() -> None:
 def test_simple_kg_pipeline_config_run_params_from_pdf_file_path() -> None:
     config = SimpleKGPipelineConfig(from_pdf=True)
     assert config.get_run_params({"file_path": "my_file"}) == {
-        "pdf_loader": {"filepath": "my_file"}
+        "pdf_loader": {"filepath": "my_file", "metadata": None}
     }
 
 
 def test_simple_kg_pipeline_config_run_params_from_text_text() -> None:
     config = SimpleKGPipelineConfig(from_pdf=False)
-    assert config.get_run_params({"text": "my text"}) == {
-        "splitter": {"text": "my text"},
-        "schema": {"text": "my text"},
-    }
+    run_params = config.get_run_params({"text": "my text"})
+    assert run_params["splitter"] == {"text": "my text"}
+    assert run_params["schema"] == {"text": "my text"}
+    assert run_params["extractor"]["document_info"]["path"] == "document.txt"
 
 
 def test_simple_kg_pipeline_config_run_params_from_pdf_text() -> None:

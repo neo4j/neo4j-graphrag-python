@@ -145,7 +145,11 @@ class SimpleKGPipeline:
         self.runner = PipelineRunner.from_config(config)
 
     async def run_async(
-        self, file_path: Optional[str] = None, text: Optional[str] = None
+        self,
+        file_path: Optional[str] = None,
+        text: Optional[str] = None,
+        document_path: Optional[str] = None,
+        document_metadata: Optional[dict[str, Any]] = None,
     ) -> PipelineResult:
         """
         Asynchronously runs the knowledge graph building process.
@@ -153,8 +157,17 @@ class SimpleKGPipeline:
         Args:
             file_path (Optional[str]): The path to the PDF file to process. Required if `from_pdf` is True.
             text (Optional[str]): The text content to process. Required if `from_pdf` is False.
+            document_path (Optional[str]): The path to the document to process. Required if `from_pdf` is True.
+            document_metadata (Optional[dict[str, Any]]): The metadata to attach to the document.
 
         Returns:
             PipelineResult: The result of the pipeline execution.
         """
-        return await self.runner.run({"file_path": file_path, "text": text})
+        return await self.runner.run(
+            {
+                "file_path": file_path,
+                "text": text,
+                "document_path": document_path,
+                "document_metadata": document_metadata,
+            }
+        )
