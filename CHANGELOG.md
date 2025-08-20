@@ -2,6 +2,12 @@
 
 ## Next
 
+### Added
+
+- Document node is now always created when running SimpleKGPipeline, even if `from_pdf=False`.
+- Document metadata is exposed in SimpleKGPipeline run method.
+
+
 ## 1.9.1
 
 ### Fixed
