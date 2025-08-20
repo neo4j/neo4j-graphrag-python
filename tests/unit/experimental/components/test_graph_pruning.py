@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import datetime
 from typing import Any, Optional
 from unittest.mock import ANY, Mock, patch
 
@@ -99,6 +100,57 @@ def test_graph_pruning_filter_properties(
         pruning_stats=PruningStats(),
     )
     assert filtered_properties == expected_filtered_properties
+
+
+@pytest.mark.parametrize(
+    "properties, valid_properties, expected_filtered_properties",
+    [
+        (
+            # all good, no bad types
+            {
+                "name": "John Does",
+                "age": 25,
+                "is_active": True,
+            },
+            [
+                # not used for now
+            ],
+            {
+                "name": "John Does",
+                "age": 25,
+                "is_active": True,
+            },
+        ),
+        (
+            # map must be serialized
+            {
+                "age": {"dob": datetime.date(2000, 1, 1), "age_in_2025": 25},
+            },
+            [
+                # not used for now
+            ],
+            {
+                "age": '{"dob": "2000-01-01", "age_in_2025": 25}',
+            },
+        ),
+    ],
+)
+def test_graph_pruning_ensure_property_type(
+    properties: dict[str, Any],
+    valid_properties: list[PropertyType],
+    expected_filtered_properties: dict[str, Any],
+) -> None:
+    pruner = GraphPruning()
+    node_type = NodeType(
+        label="Label",
+        properties=valid_properties,
+    )
+    type_safe_properties = pruner._ensure_property_types(
+        properties,
+        node_type,
+        pruning_stats=PruningStats(),
+    )
+    assert type_safe_properties == expected_filtered_properties
 
 
 @pytest.fixture(scope="module")
