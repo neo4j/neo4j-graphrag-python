@@ -18,7 +18,7 @@ import logging
 import uuid
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 from neo4j_graphrag.experimental.pipeline.component import DataModel
 

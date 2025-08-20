@@ -469,9 +469,7 @@ class GraphPruning(Component):
         for prop_name, prop_value in filtered_properties.items():
             if isinstance(prop_value, dict):
                 # just ensure the type will not raise error on insert, while preserving data
-                type_safe_properties[prop_name] = json.dumps(
-                    prop_value, default=str
-                )
+                type_safe_properties[prop_name] = json.dumps(prop_value, default=str)
                 continue
 
             # this is where we could check types of other properties
