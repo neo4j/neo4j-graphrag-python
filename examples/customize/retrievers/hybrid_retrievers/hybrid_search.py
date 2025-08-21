@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import Any
 from random import random
 
 from neo4j import GraphDatabase
@@ -35,7 +36,7 @@ create_vector_index(
     INDEX_NAME,
     label="Document",
     embedding_property="vectorProperty",
-    dimensions=DIMENSION,
+    dimensions=EMBEDDING_DIMENSIONS,
     similarity_fn="euclidean",
 )
 create_fulltext_index(
@@ -46,7 +47,7 @@ create_fulltext_index(
 retriever = HybridRetriever(driver, INDEX_NAME, FULLTEXT_INDEX_NAME, embedder)
 
 # Upsert the query
-vector = [random() for _ in range(DIMENSION)]
+vector = [random() for _ in range(EMBEDDING_DIMENSIONS)]
 insert_query = (
     "MERGE (n:Document {id: $id})"
     "WITH n "
