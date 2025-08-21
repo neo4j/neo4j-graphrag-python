@@ -58,7 +58,7 @@ async def define_and_run_pipeline(
         file_path=str(file_path),
         # optional, add document metadata, each item will
         # be saved as a property of the Document node
-        document_metadata={"author": "J. K. Rowling"},
+        # document_metadata={"author": "J. K. Rowling"},
     )
 
 
