@@ -12,7 +12,7 @@ AUTH = ("neo4j", "password")
 
 INDEX_NAME = "embedding-name"
 FULLTEXT_INDEX_NAME = "fulltext-index-name"
-DIMENSION = 1536
+EMBEDDING_DIMENSIONS = 1536
 
 # Connect to Neo4j database
 driver = GraphDatabase.driver(URI, auth=AUTH)
@@ -20,8 +20,11 @@ driver = GraphDatabase.driver(URI, auth=AUTH)
 
 # Create Embedder object
 class CustomEmbedder(Embedder):
-    def embed_query(self, text: str) -> list[float]:
-        return [random() for _ in range(DIMENSION)]
+    def embed_query(
+        self, text: str, dimensions: int | None = None, **kwargs: Any
+    ) -> list[float]:
+        dimensions = dimensions or EMBEDDING_DIMENSIONS
+        return [random() for _ in range(dimensions)]
 
 
 embedder = CustomEmbedder()
