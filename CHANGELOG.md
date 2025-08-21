@@ -2,6 +2,10 @@
 
 ## Next
 
+### Added
+
+- Added `schema_visualization` function to visualize a graph schema using neo4j-viz.
+
 ## 1.9.1
 
 ### Fixed
