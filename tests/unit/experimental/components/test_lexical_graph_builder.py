@@ -78,7 +78,11 @@ async def test_lexical_graph_builder_run_with_document() -> None:
                 TextChunk(text="text chunk 1", index=1),
             ]
         ),
-        document_info=DocumentInfo(path="test_lexical_graph", uid=doc_uid),
+        document_info=DocumentInfo(
+            path="test_lexical_graph",
+            uid=doc_uid,
+            document_type="my_type",
+        ),
     )
     assert isinstance(result, GraphResult)
     graph = result.graph
@@ -89,6 +93,7 @@ async def test_lexical_graph_builder_run_with_document() -> None:
     assert document.label == DEFAULT_DOCUMENT_NODE_LABEL
     assert document.properties["path"] == "test_lexical_graph"
     assert document.properties["createdAt"] is not None
+    assert document.properties["document_type"] == "my_type"
     chunk1 = nodes[1]
     assert chunk1.label == DEFAULT_CHUNK_NODE_LABEL
     chunk2 = nodes[2]
