@@ -35,7 +35,7 @@ class SentenceTransformerEmbeddings(Embedder):
         self.np = np
         self.model = sentence_transformers.SentenceTransformer(model, *args, **kwargs)
 
-    def embed_query(self, text: str, **kwargs) -> Any:
+    def embed_query(self, text: str, **kwargs: Any) -> Any:  # type: ignore[override]
         result = self.model.encode([text])
         if isinstance(result, self.torch.Tensor) or isinstance(result, self.np.ndarray):
             return result.flatten().tolist()

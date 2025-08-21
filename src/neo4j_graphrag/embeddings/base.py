@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
+from typing import Any
 
 from abc import ABC, abstractmethod
 
@@ -25,7 +26,7 @@ class Embedder(ABC):
 
     @abstractmethod
     def embed_query(
-        self, text: str, dimensions: int | None = None, **kwargs
+        self, text: str, dimensions: int | None = None, **kwargs: Any
     ) -> list[float]:
         """Embed query text.
 

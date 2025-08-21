@@ -42,7 +42,7 @@ class VertexAIEmbeddings(Embedder):
             )
         self.model = TextEmbeddingModel.from_pretrained(model)
 
-    def embed_query(
+    def embed_query(  # type: ignore[override]
         self,
         text: str,
         task_type: str = "RETRIEVAL_QUERY",
@@ -62,4 +62,4 @@ class VertexAIEmbeddings(Embedder):
         embeddings = self.model.get_embeddings(
             inputs, output_dimensionality=dimensions, **kwargs
         )
-        return embeddings[0].values  # type: ignore
+        return embeddings[0].values

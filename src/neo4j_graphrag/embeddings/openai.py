@@ -18,6 +18,8 @@ from __future__ import annotations
 import abc
 from typing import TYPE_CHECKING, Any
 
+from openai import NotGiven
+
 from neo4j_graphrag.embeddings.base import Embedder
 
 if TYPE_CHECKING:
@@ -63,8 +65,9 @@ class BaseOpenAIEmbeddings(Embedder, abc.ABC):
 
             **kwargs (Any): Additional arguments to pass to the OpenAI embedding generation function.
         """
+        d = dimensions or NotGiven()
         response = self.client.embeddings.create(
-            input=text, model=self.model, dimensions=dimensions, **kwargs
+            input=text, model=self.model, dimensions=d, **kwargs
         )
         embedding: list[float] = response.data[0].embedding
         return embedding
