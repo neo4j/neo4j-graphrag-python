@@ -41,7 +41,7 @@ class OllamaEmbeddings(Embedder):
         self.model = model
         self.client = ollama.Client(**kwargs)
 
-    def embed_query(self, text: str, **kwargs: Any) -> list[float]:
+    def embed_query(self, text: str, **kwargs: Any) -> list[float]:  # type: ignore[override]
         """
         Generate embeddings for a given query using an Ollama text embedding model.
 

@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
+from typing import Any
 
 from abc import ABC, abstractmethod
 
@@ -24,11 +25,14 @@ class Embedder(ABC):
     """
 
     @abstractmethod
-    def embed_query(self, text: str) -> list[float]:
+    def embed_query(
+        self, text: str, dimensions: int | None = None, **kwargs: Any
+    ) -> list[float]:
         """Embed query text.
 
         Args:
             text (str): Text to convert to vector embedding
+            dimensions (Optional[int]): The number of dimensions the resulting output embeddings should have. Only for models supporting it.
 
         Returns:
             list[float]: A vector embedding.
