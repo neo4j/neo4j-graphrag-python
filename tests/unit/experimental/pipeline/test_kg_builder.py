@@ -52,13 +52,15 @@ async def test_knowledge_graph_builder_document_info_with_file(_: Mock) -> None:
         return_value=PipelineResult(run_id="test_run", result=None),
     ) as mock_run:
         await kg_builder.run_async(
-            file_path=file_path,
-            document_metadata={"source": "google drive"}
+            file_path=file_path, document_metadata={"source": "google drive"}
         )
 
         pipe_inputs = mock_run.call_args[1]["data"]
         assert "pdf_loader" in pipe_inputs
-        assert pipe_inputs["pdf_loader"] == {"filepath": file_path, "metadata": {"source": "google drive"}}
+        assert pipe_inputs["pdf_loader"] == {
+            "filepath": file_path,
+            "metadata": {"source": "google drive"},
+        }
         assert "extractor" not in pipe_inputs
 
 
