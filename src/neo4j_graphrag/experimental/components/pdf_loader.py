@@ -89,5 +89,6 @@ class PdfLoader(DataLoader):
             document_info=DocumentInfo(
                 path=filepath,
                 metadata=self.get_document_metadata(text, metadata),
+                document_type="pdf",
             ),
         )
