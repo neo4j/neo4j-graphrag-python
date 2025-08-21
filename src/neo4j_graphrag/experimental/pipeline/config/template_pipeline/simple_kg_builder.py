@@ -371,5 +371,6 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
                 )
                 or "document.txt",
                 metadata=user_input.get("document_metadata"),
+                document_type="inline_text",
             )
         return run_params
