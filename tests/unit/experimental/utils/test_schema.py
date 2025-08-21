@@ -77,7 +77,7 @@ def invalid_schema_dict() -> dict[str, Any]:
     }
 
 
-@patch("neo4j_graphrag.experimental.utils.schema.neo4j_viz", None)
+@patch("neo4j_graphrag.experimental.utils.schema.VisualizationGraph", None)
 def test_schema_visualization_import_error() -> None:
     with pytest.raises(ImportError):
         schema_visualization({})
