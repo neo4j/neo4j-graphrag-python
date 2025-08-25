@@ -74,6 +74,9 @@ class MessageHistory(ABC):
     @abstractmethod
     def messages(self) -> List[LLMMessage]: ...
 
+    def is_empty(self) -> bool:
+        return len(self.messages) == 0
+
     @abstractmethod
     def add_message(self, message: LLMMessage) -> None: ...
 
