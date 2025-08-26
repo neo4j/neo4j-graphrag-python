@@ -69,7 +69,7 @@ are listed in [the last section of this file](#customize).
 - [OpenAI (GPT)](./customize/llms/openai_llm.py)
 - [Azure OpenAI]()
 - [VertexAI (Gemini)](./customize/llms/vertexai_llm.py)
-- [MistralAI](./customize/llms/mistalai_llm.py)
+- [MistralAI](customize/llms/mistralai_llm.py)
 - [Cohere](./customize/llms/cohere_llm.py)
 - [Anthropic (Claude)](./customize/llms/anthropic_llm.py)
 - [Ollama](./customize/llms/ollama_llm.py)
