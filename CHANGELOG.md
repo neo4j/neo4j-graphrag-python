@@ -7,6 +7,10 @@
 - Fixed an edge case where the LLM can output a property with type 'map', which was causing errors during import as it is not a valid property type in Neo4j.
 
 
+### Added
+
+- Added `schema_visualization` function to visualize a graph schema using neo4j-viz.
+
 ## 1.9.1
 
 ### Fixed
