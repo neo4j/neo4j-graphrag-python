@@ -113,6 +113,7 @@ class LexicalGraphBuilder(Component):
             properties={
                 "path": document_info.path,
                 "createdAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                "document_type": document_info.document_type,
                 **document_metadata,
             },
         )
