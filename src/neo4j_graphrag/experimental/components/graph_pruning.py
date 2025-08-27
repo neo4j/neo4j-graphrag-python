@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import enum
+import json
 import logging
 from typing import Optional, Any, TypeVar, Generic, Union
 
@@ -391,11 +392,15 @@ class GraphPruning(Component):
     ) -> dict[str, Any]:
         """
         Enforce properties:
+        - Ensure property type: for now, just prevent having invalid property types (e.g. map)
         - Filter out those that are not in schema (i.e., valid properties) if allowed properties is False.
         - Check that all required properties are present and not null.
         """
-        filtered_properties = self._filter_properties(
+        type_safe_properties = self._ensure_property_types(
             item.properties,
+        )
+        filtered_properties = self._filter_properties(
+            type_safe_properties,
             schema_item.properties,
             schema_item.additional_properties,
             item.token,  # label or type
@@ -453,3 +458,19 @@ class GraphPruning(Component):
             if filtered_properties.get(req_prop) is None:
                 missing_required_properties.append(req_prop)
         return missing_required_properties
+
+    def _ensure_property_types(
+        self,
+        filtered_properties: dict[str, Any],
+    ) -> dict[str, Any]:
+        type_safe_properties = {}
+        for prop_name, prop_value in filtered_properties.items():
+            if isinstance(prop_value, dict):
+                # just ensure the type will not raise error on insert, while preserving data
+                type_safe_properties[prop_name] = json.dumps(prop_value, default=str)
+                continue
+
+            # this is where we could check types of other properties
+            # but keep it simple for now
+            type_safe_properties[prop_name] = prop_value
+        return type_safe_properties

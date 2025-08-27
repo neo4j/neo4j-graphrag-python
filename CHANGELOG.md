@@ -2,6 +2,11 @@
 
 ## Next
 
+### Fixed
+
+- Fixed an edge case where the LLM can output a property with type 'map', which was causing errors during import as it is not a valid property type in Neo4j.
+
+
 ## 1.9.1
 
 ### Fixed
