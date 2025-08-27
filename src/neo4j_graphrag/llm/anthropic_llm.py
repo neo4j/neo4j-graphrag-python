@@ -13,8 +13,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Iterable, Optional
-
+from typing import TYPE_CHECKING, Any, Iterable, Optional, Union
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface
@@ -28,6 +27,7 @@ from neo4j_graphrag.types import LLMMessage
 
 if TYPE_CHECKING:
     from anthropic.types.message_param import MessageParam
+    from anthropic import NotGiven
 
 
 class AnthropicLLM(LLMInterface):
@@ -78,16 +78,16 @@ class AnthropicLLM(LLMInterface):
     def get_messages(
         self,
         input: list[LLMMessage],
-    ) -> tuple[str, Iterable[MessageParam]]:
+    ) -> tuple[Union[str, NotGiven], Iterable[MessageParam]]:
         messages: list[MessageParam] = []
-        system_instruction = self.anthropic.NOT_GIVEN
+        system_instruction: Union[str, NotGiven] = self.anthropic.NOT_GIVEN
         for i in input:
             if i["role"] == "system":
                 system_instruction = i["content"]
             else:
                 messages.append(
                     self.anthropic.types.MessageParam(
-                        role=i["role"],  # type: ignore
+                        role=i["role"],
                         content=i["content"],
                     )
                 )

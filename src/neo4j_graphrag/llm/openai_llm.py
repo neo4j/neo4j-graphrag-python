@@ -25,7 +25,7 @@ from typing import (
     Iterable,
     Sequence,
     Union,
-    cast,
+    cast, Type,
 )
 
 from neo4j_graphrag.message_history import MessageHistory
@@ -44,9 +44,11 @@ from neo4j_graphrag.tool import Tool
 if TYPE_CHECKING:
     from openai.types.chat import (
         ChatCompletionMessageParam,
-        ChatCompletionToolParam, ChatCompletionUserMessageParam,
-        ChatCompletionSystemMessageParam, ChatCompletionAssistantMessageParam,
-)
+        ChatCompletionToolParam,
+        ChatCompletionUserMessageParam,
+        ChatCompletionSystemMessageParam,
+        ChatCompletionAssistantMessageParam,
+    )
     from openai import OpenAI, AsyncOpenAI
     from neo4j_graphrag.utiles.rate_limit import RateLimitHandler
 else:
@@ -93,7 +95,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
     ) -> Iterable[ChatCompletionMessageParam]:
         chat_messages = []
         for m in messages:
-            message_type: ChatCompletionMessageParam
+            message_type: Type[ChatCompletionMessageParam]
             if m["role"] == "system":
                 message_type = ChatCompletionSystemMessageParam
             elif m["role"] == "user":
@@ -104,7 +106,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
                 raise ValueError(f"Unknown message type: {m['role']}")
             chat_messages.append(
                 message_type(
-                    role=m["role"],
+                    role=m["role"],  # type: ignore
                     content=m["content"],
                 )
             )

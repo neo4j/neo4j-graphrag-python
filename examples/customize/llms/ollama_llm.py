@@ -17,7 +17,6 @@ messages: list[LLMMessage] = [
 ]
 
 
-
 llm = OllamaLLM(
     model_name="orca-mini:latest",
     # model_params={"options": {"temperature": 0}, "format": "json"},
