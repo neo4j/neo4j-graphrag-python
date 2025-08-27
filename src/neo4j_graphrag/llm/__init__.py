@@ -22,8 +22,6 @@ from .rate_limit import (
     RateLimitHandler,
     NoOpRateLimitHandler,
     RetryRateLimitHandler,
-    rate_limit_handler,
-    async_rate_limit_handler,
 )
 from .types import LLMResponse
 from .vertexai_llm import VertexAILLM
@@ -42,6 +40,4 @@ __all__ = [
     "RateLimitHandler",
     "NoOpRateLimitHandler",
     "RetryRateLimitHandler",
-    "rate_limit_handler",
-    "async_rate_limit_handler",
 ]
