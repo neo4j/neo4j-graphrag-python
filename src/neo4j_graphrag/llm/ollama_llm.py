@@ -71,10 +71,7 @@ class OllamaLLM(LLMInterface):
         self,
         input: list[LLMMessage],
     ) -> Sequence[Message]:
-        return [
-            self.ollama.Message(**i)
-            for i in input
-        ]
+        return [self.ollama.Message(**i) for i in input]
 
     def _invoke(
         self,

@@ -39,7 +39,7 @@ try:
 except ImportError:
     Mistral = None  # type: ignore
     SDKError = None  # type: ignore
-    Messages = Any
+    Messages = None  # type: ignore
 
 
 class MistralAILLM(LLMInterface):
