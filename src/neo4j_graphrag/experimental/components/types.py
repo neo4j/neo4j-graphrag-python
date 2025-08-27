@@ -38,7 +38,7 @@ class DocumentInfo(DataModel):
     path: str
     metadata: Optional[Dict[str, str]] = None
     uid: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    document_type: Optional[document_type] = None
+    document_type: Optional[str] = None
 
     @property
     def document_id(self) -> str:
