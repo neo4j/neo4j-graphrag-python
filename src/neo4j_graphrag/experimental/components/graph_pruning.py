@@ -397,7 +397,7 @@ class GraphPruning(Component):
         - Check that all required properties are present and not null.
         """
         type_safe_properties = self._ensure_property_types(
-            item.properties, schema_item, pruning_stats
+            item.properties,
         )
         filtered_properties = self._filter_properties(
             type_safe_properties,
@@ -462,8 +462,6 @@ class GraphPruning(Component):
     def _ensure_property_types(
         self,
         filtered_properties: dict[str, Any],
-        schema_item: Union[NodeType, RelationshipType],
-        pruning_stats: PruningStats,
     ) -> dict[str, Any]:
         type_safe_properties = {}
         for prop_name, prop_value in filtered_properties.items():

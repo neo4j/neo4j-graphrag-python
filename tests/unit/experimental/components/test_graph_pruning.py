@@ -103,7 +103,7 @@ def test_graph_pruning_filter_properties(
 
 
 @pytest.mark.parametrize(
-    "properties, valid_properties, expected_filtered_properties",
+    "properties, expected_filtered_properties",
     [
         (
             # all good, no bad types
@@ -112,9 +112,6 @@ def test_graph_pruning_filter_properties(
                 "age": 25,
                 "is_active": True,
             },
-            [
-                # not used for now
-            ],
             {
                 "name": "John Does",
                 "age": 25,
@@ -126,9 +123,6 @@ def test_graph_pruning_filter_properties(
             {
                 "age": {"dob": datetime.date(2000, 1, 1), "age_in_2025": 25},
             },
-            [
-                # not used for now
-            ],
             {
                 "age": '{"dob": "2000-01-01", "age_in_2025": 25}',
             },
@@ -137,18 +131,11 @@ def test_graph_pruning_filter_properties(
 )
 def test_graph_pruning_ensure_property_type(
     properties: dict[str, Any],
-    valid_properties: list[PropertyType],
     expected_filtered_properties: dict[str, Any],
 ) -> None:
     pruner = GraphPruning()
-    node_type = NodeType(
-        label="Label",
-        properties=valid_properties,
-    )
     type_safe_properties = pruner._ensure_property_types(
         properties,
-        node_type,
-        pruning_stats=PruningStats(),
     )
     assert type_safe_properties == expected_filtered_properties
 
