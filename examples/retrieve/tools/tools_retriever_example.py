@@ -33,7 +33,7 @@ from neo4j_graphrag.generation import GraphRAG
 from neo4j_graphrag.retrievers.base import Retriever
 from neo4j_graphrag.retrievers.tools_retriever import ToolsRetriever
 from neo4j_graphrag.types import RawSearchResult
-from neo4j_graphrag.tools.tool import (
+from neo4j_graphrag.tool import (
     ObjectParameter,
     StringParameter,
     Tool,

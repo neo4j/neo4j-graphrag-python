@@ -25,7 +25,7 @@ from neo4j_graphrag.retrievers import (
     VectorCypherRetriever,
     VectorRetriever,
 )
-from neo4j_graphrag.tools.tool import Tool
+from neo4j_graphrag.tool import Tool
 
 
 # Mock dependencies for retriever instances

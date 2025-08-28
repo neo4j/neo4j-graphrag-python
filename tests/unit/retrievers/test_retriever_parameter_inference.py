@@ -31,7 +31,7 @@ from neo4j_graphrag.retrievers import (
     Text2CypherRetriever,
 )
 from neo4j_graphrag.retrievers.tools_retriever import ToolsRetriever
-from neo4j_graphrag.tools.tool import Tool, ParameterType
+from neo4j_graphrag.tool import Tool, ParameterType
 from neo4j_graphrag.types import RawSearchResult
 from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.llm.base import LLMInterface

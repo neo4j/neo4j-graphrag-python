@@ -11,7 +11,7 @@ from vertexai.generative_models import GenerationConfig
 
 from neo4j_graphrag.llm import VertexAILLM
 from neo4j_graphrag.llm.types import ToolCallResponse
-from neo4j_graphrag.tools.tool import (
+from neo4j_graphrag.tool import (
     Tool,
     ObjectParameter,
     StringParameter,

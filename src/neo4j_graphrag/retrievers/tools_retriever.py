@@ -21,7 +21,7 @@ import neo4j
 from neo4j_graphrag.llm.base import LLMInterface
 from neo4j_graphrag.retrievers.base import Retriever
 from neo4j_graphrag.types import RawSearchResult
-from neo4j_graphrag.tools.tool import Tool
+from neo4j_graphrag.tool import Tool
 from neo4j_graphrag.types import LLMMessage
 
 

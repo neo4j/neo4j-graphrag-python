@@ -23,7 +23,7 @@ import neo4j
 from neo4j_graphrag.llm.base import LLMInterface
 from neo4j_graphrag.llm.types import ToolCall, ToolCallResponse
 from neo4j_graphrag.retrievers.tools_retriever import ToolsRetriever
-from neo4j_graphrag.tools.tool import Tool
+from neo4j_graphrag.tool import Tool
 
 
 # Mock dependencies

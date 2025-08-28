@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 
 from neo4j_graphrag.llm import OpenAILLM
 from neo4j_graphrag.llm.types import ToolCallResponse
-from neo4j_graphrag.tools.tool import (
+from neo4j_graphrag.tool import (
     Tool,
     ObjectParameter,
     StringParameter,

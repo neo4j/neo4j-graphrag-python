@@ -44,7 +44,7 @@ from neo4j_graphrag.utils.version_utils import (
 from neo4j_graphrag.utils import driver_config
 
 if TYPE_CHECKING:
-    from neo4j_graphrag.tools.tool import (
+    from neo4j_graphrag.tool import (
         ObjectParameter,
         Tool,
         ToolParameter,
@@ -214,7 +214,7 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
     ) -> "ObjectParameter":
         """Infer parameters from the get_search_results method signature."""
         # Import here to avoid circular imports
-        from neo4j_graphrag.tools.tool import (
+        from neo4j_graphrag.tool import (
             ObjectParameter,
         )
 
@@ -270,7 +270,7 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
     ) -> Optional["ToolParameter"]:
         """Create a tool parameter from a type annotation."""
         # Import here to avoid circular imports
-        from neo4j_graphrag.tools.tool import (
+        from neo4j_graphrag.tool import (
             StringParameter,
             IntegerParameter,
             NumberParameter,
@@ -423,7 +423,7 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
             Tool: A Tool object configured to use this retriever's search functionality.
         """
         # Import here to avoid circular imports
-        from neo4j_graphrag.tools.tool import Tool
+        from neo4j_graphrag.tool import Tool
 
         # Get parameters from the retriever with custom descriptions
         parameters = self.get_parameters(parameter_descriptions or {})

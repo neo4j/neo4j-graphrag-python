@@ -32,7 +32,7 @@ from neo4j_graphrag.llm.types import (
     ToolCallResponse,
 )
 from neo4j_graphrag.message_history import MessageHistory
-from neo4j_graphrag.tools.tool import Tool
+from neo4j_graphrag.tool import Tool
 from neo4j_graphrag.types import LLMMessage
 
 try:
