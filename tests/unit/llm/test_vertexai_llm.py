@@ -50,7 +50,7 @@ def test_vertexai_invoke_happy_path(GenerativeModelMock: MagicMock) -> None:
     assert response.content == "Return text"
     GenerativeModelMock.assert_called_once_with(
         model_name=model_name,
-        system_instruction=[],
+        system_instruction=None,
     )
     last_call = mock_model.generate_content.call_args_list[0]
     content = last_call.kwargs["contents"]
@@ -82,7 +82,7 @@ def test_vertexai_invoke_with_system_instruction(
     assert response.content == "Return text"
     GenerativeModelMock.assert_called_once_with(
         model_name=model_name,
-        system_instruction=[system_instruction],
+        system_instruction=system_instruction,
     )
     mock_model.generate_content.assert_called_once_with(
         contents=[{"text": "some text"}]
@@ -116,7 +116,7 @@ def test_vertexai_invoke_with_message_history_and_system_instruction(
     assert response.content == "Return text"
     GenerativeModelMock.assert_called_once_with(
         model_name=model_name,
-        system_instruction=[system_instruction],
+        system_instruction=system_instruction,
     )
     last_call = mock_model.generate_content.call_args_list[0]
     content = last_call.kwargs["contents"]

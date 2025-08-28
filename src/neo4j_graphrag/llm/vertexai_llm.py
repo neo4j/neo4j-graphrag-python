@@ -19,6 +19,11 @@ from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface
+from neo4j_graphrag.llm.rate_limit import (
+    RateLimitHandler,
+    rate_limit_handler,
+    async_rate_limit_handler,
+)
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
@@ -43,8 +48,8 @@ try:
         ToolConfig,
     )
 except ImportError:
-    GenerativeModel = None
-    ResponseValidationError = None
+    GenerativeModel = None  # type: ignore[misc, assignment]
+    ResponseValidationError = None  # type: ignore[misc, assignment]
 
 
 class VertexAILLM(LLMInterface):
@@ -78,6 +83,7 @@ class VertexAILLM(LLMInterface):
         model_name: str = "gemini-1.5-flash-001",
         model_params: Optional[dict[str, Any]] = None,
         system_instruction: Optional[str] = None,
+        rate_limit_handler: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ):
         if GenerativeModel is None or ResponseValidationError is None:
@@ -85,7 +91,7 @@ class VertexAILLM(LLMInterface):
                 """Could not import Vertex AI Python client.
                 Please install it with `pip install "neo4j-graphrag[google]"`."""
             )
-        super().__init__(model_name, model_params)
+        super().__init__(model_name, model_params, rate_limit_handler)
         self.model_name = model_name
         self.system_instruction = system_instruction
         self.options = kwargs
@@ -108,19 +114,22 @@ class VertexAILLM(LLMInterface):
                 if message.get("role") == "user":
                     messages.append(
                         Content(
-                            role="user", parts=[Part.from_text(message.get("content"))]
+                            role="user",
+                            parts=[Part.from_text(message.get("content", ""))],
                         )
                     )
                 elif message.get("role") == "assistant":
                     messages.append(
                         Content(
-                            role="model", parts=[Part.from_text(message.get("content"))]
+                            role="model",
+                            parts=[Part.from_text(message.get("content", ""))],
                         )
                     )
 
         messages.append(Content(role="user", parts=[Part.from_text(input)]))
         return messages
 
+    @rate_limit_handler
     def invoke(
         self,
         input: str,
@@ -150,6 +159,7 @@ class VertexAILLM(LLMInterface):
         except ResponseValidationError as e:
             raise LLMGenerationError("Error calling VertexAILLM") from e
 
+    @async_rate_limit_handler
     async def ainvoke(
         self,
         input: str,
@@ -203,10 +213,10 @@ class VertexAILLM(LLMInterface):
         self,
         system_instruction: Optional[str] = None,
     ) -> GenerativeModel:
-        system_message = [system_instruction] if system_instruction is not None else []
+        # system_message = [system_instruction] if system_instruction is not None else []
         model = GenerativeModel(
             model_name=self.model_name,
-            system_instruction=system_message,
+            system_instruction=system_instruction,
         )
         return model
 
@@ -245,7 +255,7 @@ class VertexAILLM(LLMInterface):
         model = self._get_model(system_instruction=system_instruction)
         options = self._get_call_params(input, message_history, tools)
         response = await model.generate_content_async(**options)
-        return response
+        return response  # type: ignore[no-any-return]
 
     def _call_llm(
         self,
@@ -257,7 +267,7 @@ class VertexAILLM(LLMInterface):
         model = self._get_model(system_instruction=system_instruction)
         options = self._get_call_params(input, message_history, tools)
         response = model.generate_content(**options)
-        return response
+        return response  # type: ignore[no-any-return]
 
     def _to_tool_call(self, function_call: FunctionCall) -> ToolCall:
         return ToolCall(

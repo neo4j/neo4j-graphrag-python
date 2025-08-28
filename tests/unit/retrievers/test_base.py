@@ -15,7 +15,7 @@
 from __future__ import annotations  # Reminder: May be removed after Python 3.9 is EOL.
 
 import inspect
-from typing import Any, Union
+from typing import Any, Optional
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -41,7 +41,7 @@ def test_retriever_version_support(
     mock_get_version: MagicMock,
     driver: MagicMock,
     db_version: tuple[tuple[int, ...], bool],
-    expected_exception: Union[type[ValueError], None],
+    expected_exception: Optional[type[ValueError]],
 ) -> None:
     mock_get_version.return_value = db_version
 

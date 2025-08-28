@@ -154,7 +154,7 @@ See :ref:`pipelineevent` and :ref:`taskevent` to see what is sent in each event 
     import logging
 
     from neo4j_graphrag.experimental.pipeline import Pipeline
-    from neo4j_graphrag.experimental.pipeline.types import Event
+    from neo4j_graphrag.experimental.pipeline.notification import Event
 
     logger = logging.getLogger(__name__)
     logging.basicConfig()

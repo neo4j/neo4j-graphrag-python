@@ -347,6 +347,28 @@ MistralAILLM
     :members:
 
 
+Rate Limiting
+=============
+
+RateLimitHandler
+----------------
+
+.. autoclass:: neo4j_graphrag.llm.rate_limit.RateLimitHandler
+    :members:
+
+RetryRateLimitHandler
+---------------------
+
+.. autoclass:: neo4j_graphrag.llm.rate_limit.RetryRateLimitHandler
+    :members:
+
+NoOpRateLimitHandler
+--------------------
+
+.. autoclass:: neo4j_graphrag.llm.rate_limit.NoOpRateLimitHandler
+    :members:
+
+
 PromptTemplate
 ==============
 
@@ -473,6 +495,8 @@ Errors
 
   * :class:`neo4j_graphrag.exceptions.LLMGenerationError`
 
+    * :class:`neo4j_graphrag.exceptions.RateLimitError`
+
   * :class:`neo4j_graphrag.exceptions.SchemaValidationError`
 
   * :class:`neo4j_graphrag.exceptions.PdfLoaderError`
@@ -594,6 +618,13 @@ LLMGenerationError
 ==================
 
 .. autoclass:: neo4j_graphrag.exceptions.LLMGenerationError
+   :show-inheritance:
+
+
+RateLimitError
+==============
+
+.. autoclass:: neo4j_graphrag.exceptions.RateLimitError
    :show-inheritance:
 
 

@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING, Any, Iterable, List, Optional, Sequence, Union, cast
 
 from pydantic import ValidationError
@@ -23,6 +24,7 @@ from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
 
 from .base import LLMInterface
+from .rate_limit import RateLimitHandler, rate_limit_handler, async_rate_limit_handler
 from .types import (
     BaseMessage,
     LLMResponse,
@@ -40,6 +42,7 @@ class OllamaLLM(LLMInterface):
         self,
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
+        rate_limit_handler: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ):
         try:
@@ -49,7 +52,7 @@ class OllamaLLM(LLMInterface):
                 "Could not import ollama Python client. "
                 "Please install it with `pip install ollama`."
             )
-        super().__init__(model_name, model_params, **kwargs)
+        super().__init__(model_name, model_params, rate_limit_handler)
         self.ollama = ollama
         self.client = ollama.Client(
             **kwargs,
@@ -57,6 +60,19 @@ class OllamaLLM(LLMInterface):
         self.async_client = ollama.AsyncClient(
             **kwargs,
         )
+        if "stream" in self.model_params:
+            raise ValueError("Streaming is not supported by the OllamaLLM wrapper")
+        # bug-fix with backward compatibility:
+        # we mistakenly passed all "model_params" under the options argument
+        # next two lines to be removed in 2.0
+        if not any(
+            key in self.model_params for key in ("options", "format", "keep_alive")
+        ):
+            warnings.warn(
+                """Passing options directly without including them in an 'options' key is deprecated. Ie you must use model_params={"options": {"temperature": 0}}""",
+                DeprecationWarning,
+            )
+            self.model_params = {"options": self.model_params}
 
     def get_messages(
         self,
@@ -78,6 +94,7 @@ class OllamaLLM(LLMInterface):
         messages.append(UserMessage(content=input).model_dump())
         return messages  # type: ignore
 
+    @rate_limit_handler
     def invoke(
         self,
         input: str,
@@ -101,13 +118,14 @@ class OllamaLLM(LLMInterface):
             response = self.client.chat(
                 model=self.model_name,
                 messages=self.get_messages(input, message_history, system_instruction),
-                options=self.model_params,
+                **self.model_params,
             )
             content = response.message.content or ""
             return LLMResponse(content=content)
         except self.ollama.ResponseError as e:
             raise LLMGenerationError(e)
 
+    @async_rate_limit_handler
     async def ainvoke(
         self,
         input: str,

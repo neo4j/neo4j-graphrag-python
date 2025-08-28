@@ -15,12 +15,12 @@
 from __future__ import annotations
 
 import inspect
-from typing import Any, get_type_hints
+from typing import Any, Union, get_type_hints
 
 from pydantic import BaseModel
 
-from neo4j_graphrag.experimental.pipeline.types.context import RunContext
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
+from neo4j_graphrag.experimental.pipeline.types.context import RunContext
 from neo4j_graphrag.utils.validation import issubclass_safe
 
 
@@ -80,8 +80,8 @@ class Component(metaclass=ComponentMeta):
     # these variables are filled by the metaclass
     # added here for the type checker
     # DO NOT CHANGE
-    component_inputs: dict[str, dict[str, str | bool]]
-    component_outputs: dict[str, dict[str, str | bool | type]]
+    component_inputs: dict[str, dict[str, Union[str, bool]]]
+    component_outputs: dict[str, dict[str, Union[str, bool, type]]]
 
     async def run(self, *args: Any, **kwargs: Any) -> DataModel:
         """Run the component and return its result.

@@ -31,15 +31,7 @@ from __future__ import annotations
 
 import importlib
 import logging
-from typing import (
-    Any,
-    ClassVar,
-    Generic,
-    Optional,
-    TypeVar,
-    Union,
-    cast,
-)
+from typing import Any, ClassVar, Generic, Optional, TypeVar, Union, cast
 
 import neo4j
 from pydantic import (
@@ -58,7 +50,6 @@ from neo4j_graphrag.experimental.pipeline.config.param_resolver import (
 from neo4j_graphrag.llm import LLMInterface
 from neo4j_graphrag.utils.validation import issubclass_safe
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -73,7 +64,7 @@ class ObjectConfig(AbstractConfig, Generic[T]):
     and its constructor parameters.
     """
 
-    class_: str | None = Field(default=None, validate_default=True)
+    class_: Optional[str] = Field(default=None, validate_default=True)
     """Path to class to be instantiated."""
     params_: dict[str, ParamConfig] = {}
     """Initialization parameters."""
@@ -128,7 +119,7 @@ class ObjectConfig(AbstractConfig, Generic[T]):
             raise ValueError(f"Could not find {class_name} in {module_name}")
         return cast(type, klass)
 
-    def parse(self, resolved_data: dict[str, Any] | None = None) -> T:
+    def parse(self, resolved_data: Optional[dict[str, Any]] = None) -> T:
         """Import `class_`, resolve `params_` and instantiate object."""
         self._global_data = resolved_data or {}
         logger.debug(f"OBJECT_CONFIG: parsing {self} using {resolved_data}")
@@ -162,7 +153,7 @@ class Neo4jDriverConfig(ObjectConfig[neo4j.Driver]):
         # not used
         return "not used"
 
-    def parse(self, resolved_data: dict[str, Any] | None = None) -> neo4j.Driver:
+    def parse(self, resolved_data: Optional[dict[str, Any]] = None) -> neo4j.Driver:
         params = self.resolve_params(self.params_)
         # we know these params are there because of the required params validator
         uri = params.pop("uri")
@@ -185,7 +176,7 @@ class Neo4jDriverType(RootModel):  # type: ignore[type-arg]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def parse(self, resolved_data: dict[str, Any] | None = None) -> neo4j.Driver:
+    def parse(self, resolved_data: Optional[dict[str, Any]] = None) -> neo4j.Driver:
         if isinstance(self.root, neo4j.Driver):
             return self.root
         # self.root is a Neo4jDriverConfig object
@@ -212,7 +203,7 @@ class LLMType(RootModel):  # type: ignore[type-arg]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def parse(self, resolved_data: dict[str, Any] | None = None) -> LLMInterface:
+    def parse(self, resolved_data: Optional[dict[str, Any]] = None) -> LLMInterface:
         if isinstance(self.root, LLMInterface):
             return self.root
         return self.root.parse(resolved_data)
@@ -238,7 +229,7 @@ class EmbedderType(RootModel):  # type: ignore[type-arg]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def parse(self, resolved_data: dict[str, Any] | None = None) -> Embedder:
+    def parse(self, resolved_data: Optional[dict[str, Any]] = None) -> Embedder:
         if isinstance(self.root, Embedder):
             return self.root
         return self.root.parse(resolved_data)
@@ -266,7 +257,7 @@ class ComponentType(RootModel):  # type: ignore[type-arg]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def parse(self, resolved_data: dict[str, Any] | None = None) -> Component:
+    def parse(self, resolved_data: Optional[dict[str, Any]] = None) -> Component:
         if isinstance(self.root, Component):
             return self.root
         return self.root.parse(resolved_data)

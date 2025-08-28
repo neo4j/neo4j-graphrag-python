@@ -136,3 +136,18 @@ def test_neo4j_message_window_size(driver: neo4j.Driver) -> None:
         == "I'd be happy to help you find the perfect car."
     )
     assert message_history.messages[0]["role"] == "assistant"
+
+
+def test_neo4j_message_history_session_id_unique(driver: neo4j.Driver) -> None:
+    driver.execute_query(query_="MATCH (n) DETACH DELETE n;")
+    Neo4jMessageHistory(session_id="123", driver=driver)
+    Neo4jMessageHistory(session_id="123", driver=driver)
+
+    results = driver.execute_query(
+        query_="MATCH (s:`Session`) WHERE s.id = '123' RETURN s"
+    )
+    records = results.records
+    assert len(records) == 1
+    session = records[0]["s"]
+    assert session.get("createdAt") is not None
+    assert session.get("updatedAt") is not None

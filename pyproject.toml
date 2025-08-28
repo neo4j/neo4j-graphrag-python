@@ -15,7 +15,7 @@
 
 [tool.poetry]
 name = "neo4j-graphrag"
-version = "1.8.0"
+version = "1.9.1"
 description = "Python package to allow easy integration to Neo4j's GraphRAG features"
 authors = ["Neo4j, Inc <team-gen-ai@neo4j.com>"]
 license = "Apache License, Version 2.0"
@@ -32,8 +32,8 @@ python = ">=3.9.0,<3.14"
 neo4j = "^5.17.0"
 pydantic = "^2.6.3"
 fsspec = "^2024.9.0"
-pypdf = "^5.1.0"
-json-repair = "^0.39.1"
+pypdf = "^6.0.0"
+json-repair = "^0.44.1"
 pyyaml = "^6.0.2"
 types-pyyaml = "^6.0.12.20240917"
 # optional deps
@@ -45,7 +45,7 @@ google-cloud-aiplatform = {version = "^1.66.0", optional = true }
 cohere = {version = "^5.9.0", optional = true}
 mistralai = {version = "^1.0.3", optional = true}
 qdrant-client = {version = "^1.11.3", optional = true}
-llama-index = {version = "^0.12.0", optional = true }
+llama-index = {version = "^0.13.0", optional = true }
 openai = {version = "^1.51.1", optional = true }
 anthropic = {version = "^0.49.0", optional = true}
 sentence-transformers = {version = "^3.0.0", optional = true }
@@ -60,6 +60,7 @@ scipy = [
   { version = "^1.13.0", python = ">=3.9,<3.13" },
   { version = "^1.15.0", python = ">=3.13,<3.14" }
 ]
+tenacity = "^9.1.2"
 
 [tool.poetry.group.dev.dependencies]
 urllib3 = "<2"

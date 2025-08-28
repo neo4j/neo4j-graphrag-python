@@ -18,7 +18,7 @@ import asyncio
 import enum
 import json
 import logging
-from typing import Any, List, Optional, Union, cast
+from typing import Any, List, Optional, Union
 
 import json_repair
 from pydantic import ValidationError, validate_call
@@ -102,7 +102,7 @@ def balance_curly_braces(json_string: str) -> str:
 
 def fix_invalid_json(raw_json: str) -> str:
     repaired_json = json_repair.repair_json(raw_json)
-    repaired_json = cast(str, repaired_json).strip()
+    repaired_json = repaired_json.strip()
 
     if repaired_json == '""':
         raise InvalidJSONError("JSON repair resulted in an empty or invalid JSON.")
@@ -187,7 +187,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
     def __init__(
         self,
         llm: LLMInterface,
-        prompt_template: ERExtractionTemplate | str = ERExtractionTemplate(),
+        prompt_template: Union[ERExtractionTemplate, str] = ERExtractionTemplate(),
         create_lexical_graph: bool = True,
         on_error: OnError = OnError.RAISE,
         max_concurrency: int = 5,
@@ -291,7 +291,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         chunks: TextChunks,
         document_info: Optional[DocumentInfo] = None,
         lexical_graph_config: Optional[LexicalGraphConfig] = None,
-        schema: Union[GraphSchema, None] = None,
+        schema: Optional[GraphSchema] = None,
         examples: str = "",
         **kwargs: Any,
     ) -> Neo4jGraph:
