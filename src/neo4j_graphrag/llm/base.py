@@ -23,12 +23,13 @@ from neo4j_graphrag.types import LLMMessage
 from .types import LLMResponse, ToolCallResponse
 from neo4j_graphrag.utils.rate_limit import (
     DEFAULT_RATE_LIMIT_HANDLER,
+    rate_limit_handler,
+    async_rate_limit_handler,
 )
 
 from neo4j_graphrag.tool import Tool
 
-from neo4j_graphrag.utils.rate_limit import RateLimitHandler, rate_limit_handler, async_rate_limit_handler
-from .utils import legacy_inputs_to_message_history
+from .utils import legacy_inputs_to_messages
 
 
 class LLMInterface(ABC):
@@ -63,10 +64,8 @@ class LLMInterface(ABC):
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
-        message_history = legacy_inputs_to_message_history(
-            input, message_history, system_instruction
-        )
-        return self._invoke(message_history.messages)
+        messages = legacy_inputs_to_messages(input, message_history, system_instruction)
+        return self._invoke(messages)
 
     @abstractmethod
     def _invoke(
@@ -92,10 +91,8 @@ class LLMInterface(ABC):
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
-        message_history = legacy_inputs_to_message_history(
-            input, message_history, system_instruction
-        )
-        return await self._ainvoke(message_history.messages)
+        messages = legacy_inputs_to_messages(input, message_history, system_instruction)
+        return await self._ainvoke(messages)
 
     @abstractmethod
     async def _ainvoke(
@@ -140,10 +137,8 @@ class LLMInterface(ABC):
             LLMGenerationError: If anything goes wrong.
             NotImplementedError: If the LLM provider does not support tool calling.
         """
-        history = legacy_inputs_to_message_history(
-            input, message_history, system_instruction
-        )
-        return self._invoke_with_tools(history.messages, tools)
+        messages = legacy_inputs_to_messages(input, message_history, system_instruction)
+        return self._invoke_with_tools(messages, tools)
 
     def _invoke_with_tools(
         self, inputs: list[LLMMessage], tools: Sequence[Tool]
@@ -175,10 +170,8 @@ class LLMInterface(ABC):
             LLMGenerationError: If anything goes wrong.
             NotImplementedError: If the LLM provider does not support tool calling.
         """
-        history = legacy_inputs_to_message_history(
-            input, message_history, system_instruction
-        )
-        return await self._ainvoke_with_tools(history.messages, tools)
+        messages = legacy_inputs_to_messages(input, message_history, system_instruction)
+        return await self._ainvoke_with_tools(messages, tools)
 
     async def _ainvoke_with_tools(
         self, inputs: list[LLMMessage], tools: Sequence[Tool]
