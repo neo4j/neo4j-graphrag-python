@@ -116,6 +116,7 @@ class LLMInterface(ABC):
             LLMGenerationError: If anything goes wrong.
         """
 
+    @rate_limit_handler
     def invoke_with_tools(
         self,
         input: str,
@@ -141,6 +142,14 @@ class LLMInterface(ABC):
             LLMGenerationError: If anything goes wrong.
             NotImplementedError: If the LLM provider does not support tool calling.
         """
+        history = legacy_inputs_to_message_history(
+            input, message_history, system_instruction
+        )
+        return self._invoke_with_tools(history.messages, tools)
+
+    def _invoke_with_tools(
+        self, inputs: list[LLMMessage], tools: Sequence[Tool]
+    ) -> ToolCallResponse:
         raise NotImplementedError("This LLM provider does not support tool calling.")
 
     async def ainvoke_with_tools(
@@ -168,4 +177,12 @@ class LLMInterface(ABC):
             LLMGenerationError: If anything goes wrong.
             NotImplementedError: If the LLM provider does not support tool calling.
         """
+        history = legacy_inputs_to_message_history(
+            input, message_history, system_instruction
+        )
+        return await self._ainvoke_with_tools(history.messages, tools)
+
+    async def _ainvoke_with_tools(
+        self, inputs: list[LLMMessage], tools: Sequence[Tool]
+    ) -> ToolCallResponse:
         raise NotImplementedError("This LLM provider does not support tool calling.")
