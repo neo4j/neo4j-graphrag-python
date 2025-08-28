@@ -2,10 +2,14 @@
 
 ## Next
 
+### Added
+
+- Added a `ToolsRetriever` retriever that uses an LLM to decide on what tools to use to find the relevant data.
+- Added `convert_to_tool` method to the `Retriever` interface to convert a Retriever to a Tool so it can be used within the ToolsRetriever. This is useful when you might want to have both a VectorRetriever and a Text2CypherRetreiver as a fallback.
+
 ### Fixed
 
 - Fixed an edge case where the LLM can output a property with type 'map', which was causing errors during import as it is not a valid property type in Neo4j.
-
 
 ## 1.9.1
 
@@ -25,6 +29,7 @@
 ## Added
 
 - Added automatic rate limiting with retry logic and exponential backoff for all LLM providers using tenacity. The `RateLimitHandler` interface allows for custom rate limiting strategies, including the ability to disable rate limiting entirely.
+
 
 ## 1.8.0
 

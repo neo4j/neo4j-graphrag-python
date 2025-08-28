@@ -211,23 +211,33 @@ class ObjectParameter(ToolParameter):
 class Tool(ABC):
     """Abstract base class defining the interface for all tools in the neo4j-graphrag library."""
 
+    _name: str
+    _description: str
+    _parameters: Optional[ObjectParameter]
+    _execute_func: Callable[..., Any]
+
     def __init__(
         self,
         name: str,
         description: str,
-        parameters: Union[ObjectParameter, Dict[str, Any]],
         execute_func: Callable[..., Any],
+        parameters: Optional[Union[ObjectParameter, Dict[str, Any]]] = None,
     ):
         self._name = name
         self._description = description
+        self._execute_func = execute_func
 
-        # Allow parameters to be provided as a dictionary
         if isinstance(parameters, dict):
             self._parameters = ObjectParameter.model_validate(parameters)
-        else:
+        elif isinstance(parameters, ObjectParameter):
             self._parameters = parameters
-
-        self._execute_func = execute_func
+        elif parameters is None:
+            self._parameters = None
+        else:
+            raise TypeError(
+                f"Parameters must be None, dict, or ObjectParameter, "
+                f"got {type(parameters).__name__}: {parameters}"
+            )
 
     def get_name(self) -> str:
         """Get the name of the tool.
@@ -251,7 +261,9 @@ class Tool(ABC):
         Returns:
             Dict[str, Any]: Dictionary containing parameter schema information.
         """
-        return self._parameters.model_dump_tool(exclude)
+        if self._parameters:
+            return self._parameters.model_dump_tool(exclude)
+        return {}
 
     def execute(self, **kwargs: Any) -> Any:
         """Execute the tool with the given query and additional parameters.

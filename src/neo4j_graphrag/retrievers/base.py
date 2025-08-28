@@ -17,7 +17,18 @@ from __future__ import annotations
 import inspect
 import types
 from abc import ABC, ABCMeta, abstractmethod
-from typing import Any, Callable, Optional, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Optional,
+    TypeVar,
+    get_args,
+    get_origin,
+    Union,
+    Dict,
+    get_type_hints,
+)
 
 import neo4j
 from typing_extensions import ParamSpec
@@ -31,6 +42,13 @@ from neo4j_graphrag.utils.version_utils import (
     is_version_5_23_or_above,
 )
 from neo4j_graphrag.utils import driver_config
+
+if TYPE_CHECKING:
+    from neo4j_graphrag.tool import (
+        ObjectParameter,
+        Tool,
+        ToolParameter,
+    )
 
 T = ParamSpec("T")
 P = TypeVar("P")
@@ -174,6 +192,253 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
         can override this method to implement custom text formatting.
         """
         return RetrieverResultItem(content=str(record), metadata=record.get("metadata"))
+
+    def get_parameters(
+        self, parameter_descriptions: Optional[Dict[str, str]] = None
+    ) -> "ObjectParameter":
+        """Return the parameters that this retriever expects for tool conversion.
+
+        This method automatically infers parameters from the get_search_results method signature.
+
+        Args:
+            parameter_descriptions (Optional[Dict[str, str]]): Custom descriptions for parameters.
+                Keys should match parameter names from get_search_results method.
+
+        Returns:
+            ObjectParameter: The parameter definition for this retriever
+        """
+        return self._infer_parameters_from_signature(parameter_descriptions or {})
+
+    def _infer_parameters_from_signature(
+        self, parameter_descriptions: Dict[str, str]
+    ) -> "ObjectParameter":
+        """Infer parameters from the get_search_results method signature."""
+        # Import here to avoid circular imports
+        from neo4j_graphrag.tool import (
+            ObjectParameter,
+        )
+
+        # Get the method signature and resolved type hints
+        sig = inspect.signature(self.get_search_results)
+        try:
+            type_hints = get_type_hints(self.get_search_results)
+        except (NameError, AttributeError):
+            # If type hints can't be resolved, fall back to annotation strings
+            type_hints = {}
+
+        properties: Dict[str, "ToolParameter"] = {}
+        required_properties = []
+
+        for param_name, param in sig.parameters.items():
+            # Skip 'self' parameter
+            if param_name == "self":
+                continue
+
+            # Skip **kwargs
+            if param.kind == inspect.Parameter.VAR_KEYWORD:
+                continue
+
+            # Determine if parameter is required (no default value)
+            is_required = param.default is inspect.Parameter.empty
+
+            # Use resolved type hint if available, otherwise fall back to annotation
+            type_annotation = type_hints.get(param_name, param.annotation)
+
+            # Get the parameter type and create appropriate tool parameter
+            tool_param = self._create_tool_parameter_from_type(
+                param_name, type_annotation, is_required, parameter_descriptions
+            )
+
+            if tool_param:
+                properties[param_name] = tool_param
+                if is_required:
+                    required_properties.append(param_name)
+
+        return ObjectParameter(
+            description=f"Parameters for {self.__class__.__name__}",
+            properties=properties,
+            required_properties=required_properties,
+            additional_properties=False,
+        )
+
+    def _create_tool_parameter_from_type(
+        self,
+        param_name: str,
+        type_annotation: Any,
+        is_required: bool,
+        parameter_descriptions: Dict[str, str],
+    ) -> Optional["ToolParameter"]:
+        """Create a tool parameter from a type annotation."""
+        # Import here to avoid circular imports
+        from neo4j_graphrag.tool import (
+            StringParameter,
+            IntegerParameter,
+            NumberParameter,
+            ArrayParameter,
+            ObjectParameter,
+        )
+
+        # Handle None/missing annotation
+        if type_annotation is inspect.Parameter.empty or type_annotation is None:
+            return StringParameter(
+                description=parameter_descriptions.get(
+                    param_name, f"Parameter {param_name}"
+                ),
+                required=is_required,
+            )
+
+        # Get the origin and args for generic types
+        origin = get_origin(type_annotation)
+        args = get_args(type_annotation)
+
+        # Handle Optional[T] and Union[T, None]
+        if origin is Union:
+            # Remove None from union args to get the actual type
+            non_none_args = [arg for arg in args if arg is not type(None)]
+            if len(non_none_args) == 1:
+                # This is Optional[T], use T
+                type_annotation = non_none_args[0]
+                # Re-calculate origin and args for the unwrapped type
+                origin = get_origin(type_annotation)
+                args = get_args(type_annotation)
+            elif len(non_none_args) > 1:
+                # This is Union[T, U, ...], treat as string for now
+                return StringParameter(
+                    description=parameter_descriptions.get(
+                        param_name, f"Parameter {param_name}"
+                    ),
+                    required=is_required,
+                )
+
+        # Handle specific types
+        if type_annotation is str:
+            return StringParameter(
+                description=parameter_descriptions.get(
+                    param_name, f"Parameter {param_name}"
+                ),
+                required=is_required,
+            )
+        elif type_annotation is int:
+            return IntegerParameter(
+                description=parameter_descriptions.get(
+                    param_name, f"Parameter {param_name}"
+                ),
+                minimum=1
+                if param_name in ["top_k", "effective_search_ratio"]
+                else None,
+                required=is_required,
+            )
+        elif type_annotation is float:
+            constraints: Dict[str, Any] = {}
+            if param_name == "alpha":
+                constraints.update(minimum=0.0, maximum=1.0)
+            return NumberParameter(
+                description=parameter_descriptions.get(
+                    param_name, f"Parameter {param_name}"
+                ),
+                required=is_required,
+                **constraints,
+            )
+        elif (
+            origin is list
+            or type_annotation is list
+            or (
+                hasattr(type_annotation, "__origin__")
+                and type_annotation.__origin__ is list
+            )
+            or str(type_annotation).startswith("list[")
+        ):
+            # Handle list[float] for vectors
+            if args and args[0] is float:
+                return ArrayParameter(
+                    items=NumberParameter(
+                        description="A single vector component",
+                        required=False,
+                    ),
+                    description=parameter_descriptions.get(
+                        param_name, f"Parameter {param_name}"
+                    ),
+                    required=is_required,
+                )
+            else:
+                # For complex list types like List[LLMMessage], treat as object
+                return ObjectParameter(
+                    description=parameter_descriptions.get(
+                        param_name, f"Parameter {param_name}"
+                    ),
+                    properties={},
+                    additional_properties=True,
+                    required=is_required,
+                )
+        elif origin is dict or (
+            hasattr(type_annotation, "__origin__")
+            and type_annotation.__origin__ is dict
+        ):
+            return ObjectParameter(
+                description=parameter_descriptions.get(
+                    param_name, f"Parameter {param_name}"
+                ),
+                properties={},
+                additional_properties=True,
+                required=is_required,
+            )
+        else:
+            # Check if it's a complex type that should be an object
+            type_name = str(type_annotation)
+            if any(
+                keyword in type_name.lower()
+                for keyword in ["dict", "list", "optional[dict", "optional[list"]
+            ):
+                return ObjectParameter(
+                    description=parameter_descriptions.get(
+                        param_name, f"Parameter {param_name}"
+                    ),
+                    properties={},
+                    additional_properties=True,
+                    required=is_required,
+                )
+            # For other complex types or enums, default to string
+            return StringParameter(
+                description=parameter_descriptions.get(
+                    param_name, f"Parameter {param_name}"
+                ),
+                required=is_required,
+            )
+
+    def convert_to_tool(
+        self,
+        name: str,
+        description: str,
+        parameter_descriptions: Optional[Dict[str, str]] = None,
+    ) -> "Tool":
+        """Convert this retriever to a Tool object.
+
+        Args:
+            name (str): Name for the tool.
+            description (str): Description of what the tool does.
+            parameter_descriptions (Optional[Dict[str, str]]): Optional descriptions for each parameter.
+                Keys should match parameter names from get_search_results method.
+
+        Returns:
+            Tool: A Tool object configured to use this retriever's search functionality.
+        """
+        # Import here to avoid circular imports
+        from neo4j_graphrag.tool import Tool
+
+        # Get parameters from the retriever with custom descriptions
+        parameters = self.get_parameters(parameter_descriptions or {})
+
+        # Define a function that matches the Callable[[str, ...], Any] signature
+        def execute_func(**kwargs: Any) -> Any:
+            return self.search(**kwargs)
+
+        # Create a Tool object from the retriever
+        return Tool(
+            name=name,
+            description=description,
+            execute_func=execute_func,
+            parameters=parameters,
+        )
 
 
 class ExternalRetriever(Retriever, ABC):
