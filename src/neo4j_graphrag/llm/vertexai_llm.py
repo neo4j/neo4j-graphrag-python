@@ -13,7 +13,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, List, Optional, Union, Sequence
+from typing import Any, Optional, Sequence
 
 
 from neo4j_graphrag.exceptions import LLMGenerationError
@@ -26,7 +26,6 @@ from neo4j_graphrag.llm.types import (
     ToolCall,
     ToolCallResponse,
 )
-from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.tool import Tool
 from neo4j_graphrag.types import LLMMessage
 
@@ -189,7 +188,6 @@ class VertexAILLM(LLMInterface):
         self,
         system_instruction: Optional[str] = None,
     ) -> GenerativeModel:
-        # system_message = [system_instruction] if system_instruction is not None else []
         model = GenerativeModel(
             model_name=self.model_name,
             system_instruction=system_instruction,
@@ -198,7 +196,7 @@ class VertexAILLM(LLMInterface):
 
     def _get_call_params(
         self,
-        messages: list[Content],
+        contents: list[Content],
         tools: Optional[Sequence[Tool]],
     ) -> dict[str, Any]:
         options = dict(self.options)
@@ -215,31 +213,28 @@ class VertexAILLM(LLMInterface):
         else:
             # no tools, remove tool_config if defined
             options.pop("tool_config", None)
-
-        options["contents"] = messages
+        options["contents"] = contents
         return options
 
     async def _acall_llm(
         self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
+        input: list[LLMMessage],
         tools: Optional[Sequence[Tool]] = None,
     ) -> GenerationResponse:
-        model = self._get_model(system_instruction=system_instruction)
-        options = self._get_call_params(input, message_history, tools)
+        system_instruction, contents = self.get_messages(input)
+        model = self._get_model(system_instruction)
+        options = self._get_call_params(contents, tools)
         response = await model.generate_content_async(**options)
         return response  # type: ignore[no-any-return]
 
     def _call_llm(
         self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
+        input: list[LLMMessage],
         tools: Optional[Sequence[Tool]] = None,
     ) -> GenerationResponse:
-        model = self._get_model(system_instruction=system_instruction)
-        options = self._get_call_params(input, message_history, tools)
+        system_instruction, contents = self.get_messages(input)
+        model = self._get_model(system_instruction)
+        options = self._get_call_params(contents, tools)
         response = model.generate_content(**options)
         return response  # type: ignore[no-any-return]
 
@@ -261,32 +256,24 @@ class VertexAILLM(LLMInterface):
             content=response.text,
         )
 
-    async def ainvoke_with_tools(
+    async def _ainvoke_with_tools(
         self,
-        input: str,
+        input: list[LLMMessage],
         tools: Sequence[Tool],
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
     ) -> ToolCallResponse:
         response = await self._acall_llm(
             input,
-            message_history=message_history,
-            system_instruction=system_instruction,
             tools=tools,
         )
         return self._parse_tool_response(response)
 
-    def invoke_with_tools(
+    def _invoke_with_tools(
         self,
-        input: str,
+        input: list[LLMMessage],
         tools: Sequence[Tool],
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
     ) -> ToolCallResponse:
         response = self._call_llm(
             input,
-            message_history=message_history,
-            system_instruction=system_instruction,
             tools=tools,
         )
         return self._parse_tool_response(response)
