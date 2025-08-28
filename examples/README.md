@@ -142,7 +142,7 @@ are listed in [the last section of this file](#customize).
 
 ### Answer: GraphRAG
 
-- [LangChain compatibility](./customize/answer/langchain_compatiblity.py)
+- [LangChain compatibility](customize/answer/langchain_compatibility.py)
 - [Use a custom prompt](./customize/answer/custom_prompt.py)
 
 
