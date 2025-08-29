@@ -8,5 +8,10 @@ from neo4j_graphrag.embeddings import MistralAIEmbeddings
 api_key = None
 
 embeder = MistralAIEmbeddings(model="mistral-embed", api_key=api_key)
-res = embeder.embed_query("my question")
+res = embeder.embed_query(
+    "my question",
+    # optionally, set output dimensions
+    dimensions=256,
+)
+print("Embedding dimensions", len(res))
 print(res[:10])

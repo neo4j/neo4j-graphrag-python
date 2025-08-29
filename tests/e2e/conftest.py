@@ -58,8 +58,11 @@ def embedder() -> Embedder:
 
 
 class RandomEmbedder(Embedder):
-    def embed_query(self, text: str) -> list[float]:
-        return [random.random() for _ in range(1536)]
+    def embed_query(
+        self, text: str, dimensions: int | None = None, **kwargs: Any
+    ) -> list[float]:
+        d = dimensions or 1536
+        return [random.random() for _ in range(d)]
 
 
 class BiologyEmbedder(Embedder):
