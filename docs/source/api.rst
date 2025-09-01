@@ -83,6 +83,12 @@ SchemaFromTextExtractor
 .. autoclass:: neo4j_graphrag.experimental.components.schema.SchemaFromTextExtractor
     :members: run
 
+schema_visualization
+--------------------
+
+.. autofunction:: neo4j_graphrag.experimental.utils.schema.schema_visualization
+
+
 EntityRelationExtractor
 =======================
 

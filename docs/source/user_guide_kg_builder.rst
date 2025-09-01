@@ -852,6 +852,28 @@ You can also save and reload the extracted schema:
     restored_schema = GraphSchema.from_file("my_schema.json")  # or my_schema.yaml
 
 
+Schema Visualization
+--------------------
+
+It is possible to visualize a validated schema or a schema dict using the `schema_visualization` function. This function
+returns a VisualizationGraph object (from the neo4j-viz package) that can visualized like this:
+
+.. code:: python
+
+        from neo4j_graphrag.experimental.utils.schema import schema_visualization
+
+        VG = schema_visualization(schema)
+        html = VG.render()
+
+        # in Jupyter:
+        display(html)
+
+        # to save the generated HTML
+        with open("my_schema.html", "w") as f:
+            f.write(html.data)
+
+
+
 Entity and Relation Extractor
 =============================
 
