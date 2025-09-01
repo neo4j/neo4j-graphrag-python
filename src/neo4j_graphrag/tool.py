@@ -25,8 +25,6 @@ class ToolParameter(BaseModel):
     def model_dump_tool(self) -> Dict[str, Any]:
         """Convert the parameter to a dictionary format for tool usage."""
         result: Dict[str, Any] = {"type": self.type, "description": self.description}
-        if self.required:
-            result["required"] = True
         return result
 
     @classmethod
@@ -183,8 +181,8 @@ class ObjectParameter(ToolParameter):
         if self.required_properties and "required" not in exclude:
             result["required"] = self.required_properties
 
-        if not self.additional_properties and "additional_properties" not in exclude:
-            result["additionalProperties"] = False
+        if "additional_properties" not in exclude:
+            result["additionalProperties"] = self.additional_properties
 
         return result
 

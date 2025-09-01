@@ -18,6 +18,7 @@
 Tests for retriever parameter inference and convert_to_tool functionality.
 """
 
+import pytest
 from unittest.mock import MagicMock, patch
 from typing import Optional, Any, Dict
 
@@ -468,3 +469,105 @@ class TestParameterDescriptions:
 
         # Should use fallback description
         assert properties["test_param"].description == "Parameter test_param"
+
+
+class TestOpenAICompatibilityFix:
+    """Test the specific fixes for OpenAI API compatibility."""
+
+    @patch("neo4j_graphrag.retrievers.base.get_version")
+    def test_text2cypher_retriever_openai_schema_compatibility(self, mock_get_version):
+        """Test that Text2CypherRetriever generates OpenAI-compatible schema.
+
+        This test specifically covers the bug that was causing:
+        'Invalid schema for function 't2c_retriever': True is not of type 'array''
+        """
+        mock_get_version.return_value = ((5, 20, 0), False, False)
+
+        driver = create_mock_driver()
+        llm = create_mock_llm()
+        retriever = Text2CypherRetriever(
+            driver=driver, llm=llm, neo4j_schema="(Person)-[:KNOWS]->(Person)"
+        )
+
+        # Convert to tool (this is where the original bug occurred)
+        tool = retriever.convert_to_tool(
+            name="t2c_retriever",
+            description="Use this tool when no other tool can help. It will directly try to build a Cypher query to query the graph.",
+        )
+
+        # Get the tool parameters schema
+        schema = tool.get_parameters()
+
+        # Verify JSON Schema structure is correct for OpenAI
+        assert schema["type"] == "object"
+        assert "properties" in schema
+        assert "required" in schema
+        assert "additionalProperties" in schema
+
+        # Check that required is an array, not a boolean
+        assert isinstance(schema["required"], list)
+        assert "query_text" in schema["required"]
+
+        # Check individual properties don't have 'required' field
+        for prop_name, prop_schema in schema["properties"].items():
+            assert (
+                "required" not in prop_schema
+            ), f"Property {prop_name} should not have 'required' field"
+
+        # Check the specific property that was causing issues
+        prompt_params_schema = schema["properties"]["prompt_params"]
+        assert prompt_params_schema["type"] == "object"
+        assert "additionalProperties" in prompt_params_schema
+        assert prompt_params_schema["additionalProperties"] is True
+
+        # Ensure the schema is valid JSON Schema format
+        import json
+
+        try:
+            # This should not raise any exceptions
+            json_str = json.dumps(schema)
+            parsed = json.loads(json_str)
+            assert parsed == schema
+        except (TypeError, ValueError) as e:
+            pytest.fail(f"Schema is not JSON serializable: {e}")
+
+    @patch("neo4j_graphrag.retrievers.base.get_version")
+    def test_tools_retriever_with_t2c_tool_integration(self, mock_get_version):
+        """Integration test showing the full ToolsRetriever + Text2CypherRetriever workflow."""
+        mock_get_version.return_value = ((5, 20, 0), False, False)
+
+        driver = create_mock_driver()
+        llm = create_mock_llm()
+
+        # Create a Text2CypherRetriever
+        t2c_retriever = Text2CypherRetriever(
+            driver=driver, llm=llm, neo4j_schema="(Movie)-[:ACTED_IN]-(Person)"
+        )
+
+        # Convert it to a tool (this was failing before the fix)
+        t2c_tool = t2c_retriever.convert_to_tool(
+            name="t2c_retriever",
+            description="Generate Cypher queries from natural language",
+        )
+
+        # Create ToolsRetriever with the t2c_tool
+        tools_retriever = ToolsRetriever(driver=driver, llm=llm, tools=[t2c_tool])
+
+        # Verify that the tools_retriever was created successfully
+        assert len(tools_retriever._tools) == 1
+        assert tools_retriever._tools[0].get_name() == "t2c_retriever"
+
+        # Get the tool's parameters to verify schema structure
+        tool_params = t2c_tool.get_parameters()
+
+        # This should have the correct structure that OpenAI expects
+        assert tool_params["type"] == "object"
+        assert isinstance(tool_params["required"], list)
+        assert "additionalProperties" in tool_params
+
+        # All nested objects should also have additionalProperties
+        for prop_name, prop_schema in tool_params["properties"].items():
+            if prop_schema.get("type") == "object":
+                assert (
+                    "additionalProperties" in prop_schema
+                ), f"Nested object {prop_name} missing additionalProperties"
