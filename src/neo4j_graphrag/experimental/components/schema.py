@@ -15,6 +15,8 @@
 from __future__ import annotations
 
 import json
+
+import neo4j
 import logging
 import warnings
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union, Sequence, Callable
@@ -44,6 +46,10 @@ from neo4j_graphrag.experimental.pipeline.types.schema import (
 from neo4j_graphrag.generation import SchemaExtractionTemplate, PromptTemplate
 from neo4j_graphrag.llm import LLMInterface
 from neo4j_graphrag.utils.file_handler import FileHandler, FileFormat
+from neo4j_graphrag.schema import get_structured_schema
+
+
+logger = logging.getLogger(__name__)
 
 
 class PropertyType(BaseModel):
@@ -306,7 +312,12 @@ class GraphSchema(DataModel):
             raise SchemaValidationError(str(e)) from e
 
 
-class SchemaBuilder(Component):
+class BaseSchemaBuilder(Component):
+    async def run(self, *args: Any, **kwargs: Any) -> GraphSchema:
+        raise NotImplementedError()
+
+
+class SchemaBuilder(BaseSchemaBuilder):
     """
     A builder class for constructing GraphSchema objects from given entities,
     relations, and their interrelationships defined in a potential schema.
@@ -424,7 +435,7 @@ class SchemaBuilder(Component):
         )
 
 
-class SchemaFromTextExtractor(Component):
+class SchemaFromTextExtractor(BaseSchemaBuilder):
     """
     A component for constructing GraphSchema objects from the output of an LLM after
     automatic schema extraction from text.
@@ -620,4 +631,166 @@ class SchemaFromTextExtractor(Component):
                 "relationship_types": extracted_relationship_types,
                 "patterns": extracted_patterns,
             }
+        )
+
+
+class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
+    """A class to build a GraphSchema object from an existing graph.
+
+     Uses the get_structured_schema function to extract existing node labels,
+     relationship types, properties and existence constraints.
+
+     By default, the built schema does not allow any additional item (property,
+     node label, relationship type or pattern).
+
+    Args:
+         driver (neo4j.Driver): connection to the neo4j database.
+         additional_properties (bool, default False): see GraphSchema
+         additional_node_types (bool, default False): see GraphSchema
+         additional_relationship_types (bool, default False): see GraphSchema:
+         additional_patterns (bool, default False): see GraphSchema:
+         neo4j_database (Optional | str): name of the neo4j database to use
+    """
+
+    def __init__(
+        self,
+        driver: neo4j.Driver,
+        additional_properties: bool | None = None,
+        additional_node_types: bool | None = None,
+        additional_relationship_types: bool | None = None,
+        additional_patterns: bool | None = None,
+        neo4j_database: Optional[str] = None,
+    ) -> None:
+        self.driver = driver
+        self.database = neo4j_database
+
+        self.additional_properties = additional_properties
+        self.additional_node_types = additional_node_types
+        self.additional_relationship_types = additional_relationship_types
+        self.additional_patterns = additional_patterns
+
+    @staticmethod
+    def _extract_required_properties(
+        structured_schema: dict[str, Any],
+    ) -> list[tuple[str, str]]:
+        """Extract a list of (node label (or rel type), property name) for which
+         an "EXISTENCE" or "KEY" constraint is defined in the DB.
+
+         Args:
+
+             structured_schema (dict[str, Any]): the result of the `get_structured_schema()` function.
+
+        Returns:
+
+            list of tuples of (node label (or rel type), property name)
+
+        """
+        schema_metadata = structured_schema.get("metadata", {})
+        existence_constraint = []  # list of (node label, property name)
+        for constraint in schema_metadata.get("constraint", []):
+            if constraint["type"] in (
+                "NODE_PROPERTY_EXISTENCE",
+                "NODE_KEY",
+                "RELATIONSHIP_PROPERTY_EXISTENCE",
+                "RELATIONSHIP_KEY",
+            ):
+                properties = constraint["properties"]
+                labels = constraint["labelsOrTypes"]
+                # note: existence constraint only apply to a single property
+                # and a single label
+                prop = properties[0]
+                lab = labels[0]
+                existence_constraint.append((lab, prop))
+        return existence_constraint
+
+    def _to_schema_entity_dict(
+        self,
+        key: str,
+        property_dict: list[dict[str, Any]],
+        existence_constraint: list[tuple[str, str]],
+    ) -> dict[str, Any]:
+        entity_dict: dict[str, Any] = {
+            "label": key,
+            "properties": [
+                {
+                    "name": p["property"],
+                    "type": p["type"],
+                    "required": (key, p["property"]) in existence_constraint,
+                }
+                for p in property_dict
+            ],
+        }
+        if self.additional_properties:
+            entity_dict["additional_properties"] = self.additional_properties
+        return entity_dict
+
+    async def run(self, *args: Any, **kwargs: Any) -> GraphSchema:
+        structured_schema = get_structured_schema(self.driver, database=self.database)
+        existence_constraint = self._extract_required_properties(structured_schema)
+
+        # node label with properties
+        node_labels = set(structured_schema["node_props"].keys())
+        node_types = [
+            self._to_schema_entity_dict(key, properties, existence_constraint)
+            for key, properties in structured_schema["node_props"].items()
+        ]
+
+        # relationships with properties
+        rel_labels = set(structured_schema["rel_props"].keys())
+        relationship_types = [
+            self._to_schema_entity_dict(key, properties, existence_constraint)
+            for key, properties in structured_schema["rel_props"].items()
+        ]
+
+        patterns = [
+            (s["start"], s["type"], s["end"])
+            for s in structured_schema["relationships"]
+        ]
+
+        # deal with nodes and relationships without properties
+        for source, rel, target in patterns:
+            if source not in node_labels:
+                if self.additional_properties is False:
+                    logger.warning(
+                        f"SCHEMA: found node label {source} without property and additional_properties=False: this node label will always be pruned!"
+                    )
+                node_labels.add(source)
+                node_types.append(
+                    {
+                        "label": source,
+                    }
+                )
+            if target not in node_labels:
+                if self.additional_properties is False:
+                    logger.warning(
+                        f"SCHEMA: found node label {target} without property and additional_properties=False: this node label will always be pruned!"
+                    )
+                node_labels.add(target)
+                node_types.append(
+                    {
+                        "label": target,
+                    }
+                )
+            if rel not in rel_labels:
+                rel_labels.add(rel)
+                relationship_types.append(
+                    {
+                        "label": rel,
+                    }
+                )
+        schema_dict: dict[str, Any] = {
+            "node_types": node_types,
+            "relationship_types": relationship_types,
+            "patterns": patterns,
+        }
+        if self.additional_node_types is not None:
+            schema_dict["additional_node_types"] = self.additional_node_types
+        if self.additional_relationship_types is not None:
+            schema_dict["additional_relationship_types"] = (
+                self.additional_relationship_types
+            )
+        if self.additional_patterns is not None:
+            schema_dict["additional_patterns"] = self.additional_patterns
+        return GraphSchema.model_validate(
+            schema_dict,
         )

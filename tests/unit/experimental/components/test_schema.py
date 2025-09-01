@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 from typing import Tuple, Any
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, patch, Mock
 
 import pytest
 from pydantic import ValidationError
@@ -29,6 +29,7 @@ from neo4j_graphrag.experimental.components.schema import (
     RelationshipType,
     SchemaFromTextExtractor,
     GraphSchema,
+    SchemaFromExistingGraphExtractor,
 )
 import os
 import tempfile
@@ -957,3 +958,123 @@ async def test_schema_from_text_filters_relationships_without_labels(
     assert len(schema.patterns) == 2
     assert ("Person", "WORKS_FOR", "Organization") in schema.patterns
     assert ("Person", "MANAGES", "Organization") in schema.patterns
+
+
+@pytest.mark.asyncio
+@patch("neo4j_graphrag.experimental.components.schema.get_structured_schema")
+async def test_schema_from_existing_graph(mock_get_structured_schema: Mock) -> None:
+    mock_get_structured_schema.return_value = {
+        "node_props": {
+            "Person": [
+                {"property": "id", "type": "INTEGER"},
+                {"property": "name", "type": "STRING"},
+            ]
+        },
+        "rel_props": {"KNOWS": [{"property": "fromDate", "type": "DATE"}]},
+        "relationships": [
+            {"start": "Person", "type": "KNOWS", "end": "Person"},
+            {"start": "Person", "type": "LIVES_IN", "end": "City"},
+        ],
+        "metadata": {
+            "constraint": [
+                {
+                    "id": 7,
+                    "name": "person_id",
+                    "type": "NODE_PROPERTY_EXISTENCE",
+                    "entityType": "NODE",
+                    "labelsOrTypes": ["Person"],
+                    "properties": ["id"],
+                    "ownedIndex": "person_id",
+                    "propertyType": None,
+                },
+            ],
+            "index": [
+                {
+                    "label": "Person",
+                    "properties": ["name"],
+                    "size": 2,
+                    "type": "RANGE",
+                    "valuesSelectivity": 1.0,
+                    "distinctValues": 2.0,
+                },
+            ],
+        },
+    }
+    driver = Mock()
+    schema_builder = SchemaFromExistingGraphExtractor(
+        driver=driver,
+    )
+    schema = await schema_builder.run()
+    assert isinstance(schema, GraphSchema)
+    assert len(schema.node_types) == 2
+    person_node_type = schema.node_type_from_label("Person")
+    assert person_node_type is not None
+    id_person_property = [p for p in person_node_type.properties if p.name == "id"][0]
+    assert id_person_property.required is True
+    assert person_node_type.additional_properties is False
+    city_node_type = schema.node_type_from_label("City")
+    assert city_node_type is not None
+    assert city_node_type.additional_properties is True
+
+    assert len(schema.relationship_types) == 2
+    knows_rel = schema.relationship_type_from_label("KNOWS")
+    assert knows_rel is not None
+    assert knows_rel.additional_properties is False
+    lives_rel = schema.relationship_type_from_label("LIVES_IN")
+    assert lives_rel is not None
+    assert lives_rel.additional_properties is True
+
+    assert schema.additional_node_types is False
+    assert schema.additional_relationship_types is False
+    assert schema.additional_patterns is False
+
+    assert schema.patterns == (
+        ("Person", "KNOWS", "Person"),
+        ("Person", "LIVES_IN", "City"),
+    )
+
+
+@pytest.mark.asyncio
+@patch("neo4j_graphrag.experimental.components.schema.get_structured_schema")
+async def test_schema_from_existing_graph_additional_params(
+    mock_get_structured_schema: Mock,
+) -> None:
+    mock_get_structured_schema.return_value = {
+        "node_props": {
+            "Person": [
+                {"property": "id", "type": "INTEGER"},
+                {"property": "name", "type": "STRING"},
+            ]
+        },
+        "rel_props": {"KNOWS": [{"property": "fromDate", "type": "DATE"}]},
+        "relationships": [
+            {"start": "Person", "type": "KNOWS", "end": "Person"},
+            {"start": "Person", "type": "LIVES_IN", "end": "City"},
+        ],
+    }
+    driver = Mock()
+    schema_builder = SchemaFromExistingGraphExtractor(
+        driver=driver,
+        additional_node_types=True,
+        additional_relationship_types=True,
+        additional_patterns=True,
+        additional_properties=True,
+    )
+    schema = await schema_builder.run()
+    person_node_type = schema.node_type_from_label("Person")
+    assert person_node_type is not None
+    assert person_node_type.additional_properties is True
+    city_node_type = schema.node_type_from_label("City")
+    assert city_node_type is not None
+    assert city_node_type.additional_properties is True
+
+    knows_rel = schema.relationship_type_from_label("KNOWS")
+    assert knows_rel is not None
+    assert knows_rel.additional_properties is True
+    lives_rel = schema.relationship_type_from_label("LIVES_IN")
+    assert lives_rel is not None
+    assert lives_rel.additional_properties is True
+
+    assert schema.additional_node_types is True
+    assert schema.additional_relationship_types is True
+    assert schema.additional_patterns is True
