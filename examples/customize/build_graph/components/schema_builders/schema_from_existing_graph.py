@@ -16,7 +16,6 @@ from neo4j_graphrag.experimental.components.schema import (
 URI = "neo4j+s://demo.neo4jlabs.com"
 AUTH = ("recommendations", "recommendations")
 DATABASE = "recommendations"
-INDEX = "moviePlotsEmbedding"
 
 
 async def main() -> None:
