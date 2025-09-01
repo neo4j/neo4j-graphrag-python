@@ -3,6 +3,7 @@ to automatically extract a schema from an existing Neo4j database.
 """
 
 import asyncio
+from pprint import pprint
 
 import neo4j
 
@@ -25,10 +26,18 @@ async def main() -> None:
         URI,
         auth=AUTH,
     ) as driver:
-        extractor = SchemaFromExistingGraphExtractor(driver)
+        extractor = SchemaFromExistingGraphExtractor(
+            driver,
+            # optional:
+            neo4j_database=DATABASE,
+            additional_patterns=True,
+            additional_node_types=True,
+            additional_relationship_types=True,
+            additional_properties=True,
+        )
         schema: GraphSchema = await extractor.run()
         # schema.store_as_json("my_schema.json")
-        print(schema)
+        pprint(schema.model_dump())
 
 
 if __name__ == "__main__":

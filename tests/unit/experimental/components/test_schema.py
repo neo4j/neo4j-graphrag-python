@@ -1011,13 +1011,70 @@ async def test_schema_from_existing_graph(mock_get_structured_schema: Mock) -> N
     assert person_node_type is not None
     id_person_property = [p for p in person_node_type.properties if p.name == "id"][0]
     assert id_person_property.required is True
+    assert person_node_type.additional_properties is False
+    city_node_type = schema.node_type_from_label("City")
+    assert city_node_type is not None
+    assert city_node_type.additional_properties is True
 
-    assert schema.node_type_from_label("City") is not None
     assert len(schema.relationship_types) == 2
-    assert schema.relationship_type_from_label("KNOWS") is not None
-    assert schema.relationship_type_from_label("LIVES_IN") is not None
+    knows_rel = schema.relationship_type_from_label("KNOWS")
+    assert knows_rel is not None
+    assert knows_rel.additional_properties is False
+    lives_rel = schema.relationship_type_from_label("LIVES_IN")
+    assert lives_rel is not None
+    assert lives_rel.additional_properties is True
+
+    assert schema.additional_node_types is False
+    assert schema.additional_relationship_types is False
+    assert schema.additional_patterns is False
 
     assert schema.patterns == (
         ("Person", "KNOWS", "Person"),
         ("Person", "LIVES_IN", "City"),
     )
+
+
+@pytest.mark.asyncio
+@patch("neo4j_graphrag.experimental.components.schema.get_structured_schema")
+async def test_schema_from_existing_graph_additional_params(
+    mock_get_structured_schema: Mock,
+) -> None:
+    mock_get_structured_schema.return_value = {
+        "node_props": {
+            "Person": [
+                {"property": "id", "type": "INTEGER"},
+                {"property": "name", "type": "STRING"},
+            ]
+        },
+        "rel_props": {"KNOWS": [{"property": "fromDate", "type": "DATE"}]},
+        "relationships": [
+            {"start": "Person", "type": "KNOWS", "end": "Person"},
+            {"start": "Person", "type": "LIVES_IN", "end": "City"},
+        ],
+    }
+    driver = Mock()
+    schema_builder = SchemaFromExistingGraphExtractor(
+        driver=driver,
+        additional_node_types=True,
+        additional_relationship_types=True,
+        additional_patterns=True,
+        additional_properties=True,
+    )
+    schema = await schema_builder.run()
+    person_node_type = schema.node_type_from_label("Person")
+    assert person_node_type is not None
+    assert person_node_type.additional_properties is True
+    city_node_type = schema.node_type_from_label("City")
+    assert city_node_type is not None
+    assert city_node_type.additional_properties is True
+
+    knows_rel = schema.relationship_type_from_label("KNOWS")
+    assert knows_rel is not None
+    assert knows_rel.additional_properties is True
+    lives_rel = schema.relationship_type_from_label("LIVES_IN")
+    assert lives_rel is not None
+    assert lives_rel.additional_properties is True
+
+    assert schema.additional_node_types is True
+    assert schema.additional_relationship_types is True
+    assert schema.additional_patterns is True

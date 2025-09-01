@@ -655,10 +655,10 @@ class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
     def __init__(
         self,
         driver: neo4j.Driver,
-        additional_properties: bool = False,
-        additional_node_types: bool = False,
-        additional_relationship_types: bool = False,
-        additional_patterns: bool = False,
+        additional_properties: bool | None = None,
+        additional_node_types: bool | None = None,
+        additional_relationship_types: bool | None = None,
+        additional_patterns: bool | None = None,
         neo4j_database: Optional[str] = None,
     ) -> None:
         self.driver = driver
@@ -703,6 +703,27 @@ class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
                 existence_constraint.append((lab, prop))
         return existence_constraint
 
+    def _to_schema_entity_dict(
+        self,
+        key: str,
+        property_dict: list[dict[str, Any]],
+        existence_constraint: list[tuple[str, str]],
+    ) -> dict[str, Any]:
+        entity_dict: dict[str, Any] = {
+            "label": key,
+            "properties": [
+                {
+                    "name": p["property"],
+                    "type": p["type"],
+                    "required": (key, p["property"]) in existence_constraint,
+                }
+                for p in property_dict
+            ],
+        }
+        if self.additional_properties:
+            entity_dict["additional_properties"] = self.additional_properties
+        return entity_dict
+
     async def run(self, *args: Any, **kwargs: Any) -> GraphSchema:
         structured_schema = get_structured_schema(self.driver, database=self.database)
         existence_constraint = self._extract_required_properties(structured_schema)
@@ -710,35 +731,14 @@ class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
         # node label with properties
         node_labels = set(structured_schema["node_props"].keys())
         node_types = [
-            {
-                "label": key,
-                "properties": [
-                    {
-                        "name": p["property"],
-                        "type": p["type"],
-                        "required": (key, p["property"]) in existence_constraint,
-                    }
-                    for p in properties
-                ],
-                "additional_properties": self.additional_properties,
-            }
+            self._to_schema_entity_dict(key, properties, existence_constraint)
             for key, properties in structured_schema["node_props"].items()
         ]
 
         # relationships with properties
         rel_labels = set(structured_schema["rel_props"].keys())
         relationship_types = [
-            {
-                "label": key,
-                "properties": [
-                    {
-                        "name": p["property"],
-                        "type": p["type"],
-                        "required": (key, p["property"]) in existence_constraint,
-                    }
-                    for p in properties
-                ],
-            }
+            self._to_schema_entity_dict(key, properties, existence_constraint)
             for key, properties in structured_schema["rel_props"].items()
         ]
 
@@ -750,7 +750,7 @@ class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
         # deal with nodes and relationships without properties
         for source, rel, target in patterns:
             if source not in node_labels:
-                if not self.additional_properties:
+                if self.additional_properties is False:
                     logger.warning(
                         f"SCHEMA: found node label {source} without property and additional_properties=False: this node label will always be pruned!"
                     )
@@ -761,7 +761,7 @@ class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
                     }
                 )
             if target not in node_labels:
-                if not self.additional_properties:
+                if self.additional_properties is False:
                     logger.warning(
                         f"SCHEMA: found node label {target} without property and additional_properties=False: this node label will always be pruned!"
                     )
@@ -772,23 +772,25 @@ class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
                     }
                 )
             if rel not in rel_labels:
-                if not self.additional_properties:
-                    logger.warning(
-                        f"SCHEMA: found relationship type {rel} without property and additional_properties=False: this relationship type will always be pruned!"
-                    )
                 rel_labels.add(rel)
                 relationship_types.append(
                     {
                         "label": rel,
                     }
                 )
+        schema_dict: dict[str, Any] = {
+            "node_types": node_types,
+            "relationship_types": relationship_types,
+            "patterns": patterns,
+        }
+        if self.additional_node_types is not None:
+            schema_dict["additional_node_types"] = self.additional_node_types
+        if self.additional_relationship_types is not None:
+            schema_dict["additional_relationship_types"] = (
+                self.additional_relationship_types
+            )
+        if self.additional_patterns is not None:
+            schema_dict["additional_patterns"] = self.additional_patterns
         return GraphSchema.model_validate(
-            {
-                "node_types": node_types,
-                "relationship_types": relationship_types,
-                "patterns": patterns,
-                "additional_node_types": self.additional_node_types,
-                "additional_relationship_types": self.additional_relationship_types,
-                "additional_patterns": self.additional_patterns,
-            }
+            schema_dict,
         )
