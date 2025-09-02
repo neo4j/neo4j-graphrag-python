@@ -148,16 +148,14 @@ class SimpleKGPipeline:
         self,
         file_path: Optional[str] = None,
         text: Optional[str] = None,
-        document_path: Optional[str] = None,
         document_metadata: Optional[dict[str, Any]] = None,
     ) -> PipelineResult:
         """
         Asynchronously runs the knowledge graph building process.
 
         Args:
-            file_path (Optional[str]): The path to the PDF file to process. Required if `from_pdf` is True.
+            file_path (Optional[str]): The path to the PDF file to process. Required if `from_pdf` is True. If `from_pdf` is False, can be used to set the Document node path property.
             text (Optional[str]): The text content to process. Required if `from_pdf` is False.
-            document_path (Optional[str]): The path to the document to process. Required if `from_pdf` is True.
             document_metadata (Optional[dict[str, Any]]): The metadata to attach to the document.
 
         Returns:
@@ -167,7 +165,6 @@ class SimpleKGPipeline:
             {
                 "file_path": file_path,
                 "text": text,
-                "document_path": document_path,
                 "document_metadata": document_metadata,
             }
         )

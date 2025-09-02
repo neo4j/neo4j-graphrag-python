@@ -224,7 +224,6 @@ Run Parameters
 
 SimpleKGPipeline also accepts addition runtime parameters:
 
-- ``document_path`` (str): only used when ``from_pdf=False``, this is the path property of the ``Document`` node.
 - ``document_metadata`` (dict): each item will be saved as a property attached to the ``Document`` node.
 
 

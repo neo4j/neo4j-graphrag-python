@@ -322,16 +322,6 @@ def test_simple_kg_pipeline_config_run_params_no_file_no_text() -> None:
     )
 
 
-def test_simple_kg_pipeline_config_run_params_both_file_and_text() -> None:
-    config = SimpleKGPipelineConfig(from_pdf=False)
-    with pytest.raises(PipelineDefinitionError) as excinfo:
-        config.get_run_params({"text": "my text", "file_path": "my file"})
-    assert (
-        "Use either 'text' (when from_pdf=False) or 'file_path' (when from_pdf=True) argument."
-        in str(excinfo)
-    )
-
-
 def test_simple_kg_pipeline_config_process_schema_with_precedence_legacy() -> None:
     entities: list[EntityInputType] = [
         "Person",

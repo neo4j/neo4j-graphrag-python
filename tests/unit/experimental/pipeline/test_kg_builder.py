@@ -90,7 +90,7 @@ async def test_knowledge_graph_builder_document_info_with_text(_: Mock) -> None:
     ) as mock_run:
         await kg_builder.run_async(
             text=text_input,
-            document_path="my_document.txt",
+            file_path="my_document.txt",
             document_metadata={"source": "google drive"},
         )
 

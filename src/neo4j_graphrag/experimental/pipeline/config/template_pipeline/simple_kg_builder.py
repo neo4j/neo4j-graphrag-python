@@ -339,8 +339,8 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     def get_run_params(self, user_input: dict[str, Any]) -> dict[str, Any]:
         text = user_input.get("text")
         file_path = user_input.get("file_path")
-        if not ((text is None) ^ (file_path is None)):
-            # exactly one of text or user_input must be set
+        if text is None and file_path is None:
+            # use must provide either text or file_path or both
             raise PipelineDefinitionError(
                 "Use either 'text' (when from_pdf=False) or 'file_path' (when from_pdf=True) argument."
             )
@@ -367,7 +367,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
                 run_params["schema"]["text"] = text
             run_params["extractor"]["document_info"] = dict(
                 path=user_input.get(
-                    "document_path",
+                    "file_path",
                 )
                 or "document.txt",
                 metadata=user_input.get("document_metadata"),

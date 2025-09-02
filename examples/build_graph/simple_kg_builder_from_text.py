@@ -81,9 +81,9 @@ async def define_and_run_pipeline(
     )
     return await kg_builder.run_async(
         text=TEXT,
-        # optional, specify document path for the Document node
+        # optional, specify file path for the Document node
         # if not, a random name will be generated
-        # document_path="my_document.txt"
+        # file_path="my_document.txt"
         # optional, add document metadata, each item will
         # be saved as a property of the Document node
         # document_metadata={"author": "Frank Herbert"},
