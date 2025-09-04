@@ -18,7 +18,9 @@ from unittest.mock import MagicMock, Mock, patch
 import neo4j
 import pytest
 from neo4j_graphrag.embeddings import Embedder
-from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
+from neo4j_graphrag.experimental.components.types import (
+    LexicalGraphConfig,
+)
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
@@ -49,11 +51,16 @@ async def test_knowledge_graph_builder_document_info_with_file(_: Mock) -> None:
         "run",
         return_value=PipelineResult(run_id="test_run", result=None),
     ) as mock_run:
-        await kg_builder.run_async(file_path=file_path)
+        await kg_builder.run_async(
+            file_path=file_path, document_metadata={"source": "google drive"}
+        )
 
         pipe_inputs = mock_run.call_args[1]["data"]
         assert "pdf_loader" in pipe_inputs
-        assert pipe_inputs["pdf_loader"] == {"filepath": file_path}
+        assert pipe_inputs["pdf_loader"] == {
+            "filepath": file_path,
+            "metadata": {"source": "google drive"},
+        }
         assert "extractor" not in pipe_inputs
 
 
@@ -81,11 +88,19 @@ async def test_knowledge_graph_builder_document_info_with_text(_: Mock) -> None:
         "run",
         return_value=PipelineResult(run_id="test_run", result=None),
     ) as mock_run:
-        await kg_builder.run_async(text=text_input)
+        await kg_builder.run_async(
+            text=text_input,
+            file_path="my_document.txt",
+            document_metadata={"source": "google drive"},
+        )
 
         pipe_inputs = mock_run.call_args[1]["data"]
         assert "splitter" in pipe_inputs
         assert pipe_inputs["splitter"] == {"text": text_input}
+        assert pipe_inputs["extractor"]["document_info"]["path"] == "my_document.txt"
+        assert pipe_inputs["extractor"]["document_info"]["metadata"] == {
+            "source": "google drive"
+        }
 
 
 @mock.patch(
@@ -175,6 +190,6 @@ async def test_knowledge_graph_builder_with_lexical_graph_config(_: Mock) -> Non
 
         pipe_inputs = mock_run.call_args[1]["data"]
         assert "extractor" in pipe_inputs
-        assert pipe_inputs["extractor"] == {
-            "lexical_graph_config": lexical_graph_config
-        }
+        assert pipe_inputs["extractor"]["lexical_graph_config"] == lexical_graph_config
+        assert pipe_inputs["extractor"]["document_info"] is not None
+        assert pipe_inputs["extractor"]["document_info"]["path"] == "document.txt"
