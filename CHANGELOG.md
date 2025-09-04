@@ -2,6 +2,8 @@
 
 ## Next
 
+## 1.10.0
+
 ### Added
 
 - Added a `ToolsRetriever` retriever that uses an LLM to decide on what tools to use to find the relevant data.
