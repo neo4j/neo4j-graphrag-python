@@ -19,15 +19,18 @@ from typing import Any, List, Optional, Sequence, Union
 
 from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
+from .rate_limit import rate_limit_handler
 
 from .types import LLMResponse, ToolCallResponse
 from .rate_limit import (
     DEFAULT_RATE_LIMIT_HANDLER,
+    async_rate_limit_handler,
 )
 
 from neo4j_graphrag.tool import Tool
 
 from .rate_limit import RateLimitHandler
+from .utils import legacy_inputs_to_messages
 
 
 class LLMInterface(ABC):
@@ -55,20 +58,25 @@ class LLMInterface(ABC):
         else:
             self._rate_limit_handler = DEFAULT_RATE_LIMIT_HANDLER
 
-    @abstractmethod
+    @rate_limit_handler
     def invoke(
         self,
-        input: str,
+        input: Union[str, List[LLMMessage], MessageHistory],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+    ) -> LLMResponse:
+        messages = legacy_inputs_to_messages(input, message_history, system_instruction)
+        return self._invoke(messages)
+
+    @abstractmethod
+    def _invoke(
+        self,
+        input: list[LLMMessage],
     ) -> LLMResponse:
         """Sends a text input to the LLM and retrieves a response.
 
         Args:
-            input (str): Text sent to the LLM.
-            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
-                with each message having a specific role assigned.
-            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
+            input (MessageHistory): Text sent to the LLM.
 
         Returns:
             LLMResponse: The response from the LLM.
@@ -77,20 +85,25 @@ class LLMInterface(ABC):
             LLMGenerationError: If anything goes wrong.
         """
 
-    @abstractmethod
+    @async_rate_limit_handler
     async def ainvoke(
         self,
-        input: str,
+        input: Union[str, List[LLMMessage], MessageHistory],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+    ) -> LLMResponse:
+        messages = legacy_inputs_to_messages(input, message_history, system_instruction)
+        return await self._ainvoke(messages)
+
+    @abstractmethod
+    async def _ainvoke(
+        self,
+        input: list[LLMMessage],
     ) -> LLMResponse:
         """Asynchronously sends a text input to the LLM and retrieves a response.
 
         Args:
             input (str): Text sent to the LLM.
-            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
-                with each message having a specific role assigned.
-            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
 
         Returns:
             LLMResponse: The response from the LLM.
@@ -99,6 +112,7 @@ class LLMInterface(ABC):
             LLMGenerationError: If anything goes wrong.
         """
 
+    @rate_limit_handler
     def invoke_with_tools(
         self,
         input: str,
@@ -124,6 +138,12 @@ class LLMInterface(ABC):
             LLMGenerationError: If anything goes wrong.
             NotImplementedError: If the LLM provider does not support tool calling.
         """
+        messages = legacy_inputs_to_messages(input, message_history, system_instruction)
+        return self._invoke_with_tools(messages, tools)
+
+    def _invoke_with_tools(
+        self, inputs: list[LLMMessage], tools: Sequence[Tool]
+    ) -> ToolCallResponse:
         raise NotImplementedError("This LLM provider does not support tool calling.")
 
     async def ainvoke_with_tools(
@@ -151,4 +171,10 @@ class LLMInterface(ABC):
             LLMGenerationError: If anything goes wrong.
             NotImplementedError: If the LLM provider does not support tool calling.
         """
+        messages = legacy_inputs_to_messages(input, message_history, system_instruction)
+        return await self._ainvoke_with_tools(messages, tools)
+
+    async def _ainvoke_with_tools(
+        self, inputs: list[LLMMessage], tools: Sequence[Tool]
+    ) -> ToolCallResponse:
         raise NotImplementedError("This LLM provider does not support tool calling.")
