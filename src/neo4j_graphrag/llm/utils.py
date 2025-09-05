@@ -18,28 +18,21 @@ def legacy_inputs_to_messages(
     system_instruction: Optional[str] = None,
 ) -> list[LLMMessage]:
     if message_history:
-        warnings.warn(
-            "Using message_history parameter is deprecated and will be removed in 2.0. Use a list of inputs or a MessageHistory instead.",
-            DeprecationWarning,
-        )
         if isinstance(message_history, MessageHistory):
             messages = message_history.messages
         else:  # list[LLMMessage]
-            messages = []
+            messages = message_history
     else:
         messages = []
     if system_instruction is not None:
-        warnings.warn(
-            "Using system_instruction parameter is deprecated and will be removed in 2.0. Use a list of inputs or a MessageHistory instead.",
-            DeprecationWarning,
-        )
         if system_instruction_from_messages(messages) is not None:
             warnings.warn(
                 "system_instruction provided but ignored as the message history already contains a system message",
-                RuntimeWarning,
+                UserWarning,
             )
         else:
-            messages.append(
+            messages.insert(
+                0,
                 LLMMessage(
                     role="system",
                     content=system_instruction,
