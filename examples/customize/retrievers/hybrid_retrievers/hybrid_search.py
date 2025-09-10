@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import Any
 from random import random
 
 from neo4j import GraphDatabase
@@ -12,7 +13,7 @@ AUTH = ("neo4j", "password")
 
 INDEX_NAME = "embedding-name"
 FULLTEXT_INDEX_NAME = "fulltext-index-name"
-DIMENSION = 1536
+EMBEDDING_DIMENSIONS = 1536
 
 # Connect to Neo4j database
 driver = GraphDatabase.driver(URI, auth=AUTH)
@@ -20,8 +21,11 @@ driver = GraphDatabase.driver(URI, auth=AUTH)
 
 # Create Embedder object
 class CustomEmbedder(Embedder):
-    def embed_query(self, text: str) -> list[float]:
-        return [random() for _ in range(DIMENSION)]
+    def embed_query(
+        self, text: str, dimensions: int | None = None, **kwargs: Any
+    ) -> list[float]:
+        dimensions = dimensions or EMBEDDING_DIMENSIONS
+        return [random() for _ in range(dimensions)]
 
 
 embedder = CustomEmbedder()
@@ -32,7 +36,7 @@ create_vector_index(
     INDEX_NAME,
     label="Document",
     embedding_property="vectorProperty",
-    dimensions=DIMENSION,
+    dimensions=EMBEDDING_DIMENSIONS,
     similarity_fn="euclidean",
 )
 create_fulltext_index(
@@ -43,7 +47,7 @@ create_fulltext_index(
 retriever = HybridRetriever(driver, INDEX_NAME, FULLTEXT_INDEX_NAME, embedder)
 
 # Upsert the query
-vector = [random() for _ in range(DIMENSION)]
+vector = [random() for _ in range(EMBEDDING_DIMENSIONS)]
 insert_query = (
     "MERGE (n:Document {id: $id})"
     "WITH n "
