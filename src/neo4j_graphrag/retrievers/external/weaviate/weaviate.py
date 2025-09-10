@@ -100,6 +100,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
             Callable[[neo4j.Record], RetrieverResultItem]
         ] = None,
         neo4j_database: Optional[str] = None,
+        node_label: Optional[str] = None,
     ):
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -116,6 +117,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
                 retrieval_query=retrieval_query,
                 result_formatter=result_formatter,
                 neo4j_database=neo4j_database,
+                node_label=node_label,
             )
         except ValidationError as e:
             raise RetrieverInitializationError(e.errors()) from e
@@ -134,6 +136,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         self.return_properties = validated_data.return_properties
         self.retrieval_query = validated_data.retrieval_query
         self.result_formatter = validated_data.result_formatter
+        self.node_label = validated_data.node_label
 
     def get_search_results(
         self,
@@ -234,6 +237,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         search_query = get_match_query(
             return_properties=self.return_properties,
             retrieval_query=self.retrieval_query,
+            node_label=self.node_label,
         )
 
         parameters = {

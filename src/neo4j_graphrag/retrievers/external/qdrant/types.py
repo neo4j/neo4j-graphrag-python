@@ -54,3 +54,4 @@ class QdrantNeo4jRetrieverModel(BaseModel):
     retrieval_query: Optional[str] = None
     result_formatter: Optional[Callable[[neo4j.Record], RetrieverResultItem]] = None
     neo4j_database: Optional[str] = None
+    node_label: Optional[str] = None
