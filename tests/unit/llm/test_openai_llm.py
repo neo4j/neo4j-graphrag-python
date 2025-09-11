@@ -21,6 +21,7 @@ from neo4j_graphrag.llm import LLMResponse
 from neo4j_graphrag.llm.openai_llm import AzureOpenAILLM, OpenAILLM
 from neo4j_graphrag.llm.types import ToolCallResponse
 from neo4j_graphrag.tool import Tool
+from neo4j_graphrag.types import LLMMessage
 
 
 def get_mock_openai() -> MagicMock:
@@ -50,7 +51,9 @@ def test_openai_llm_happy_path(mock_import: Mock) -> None:
 
 
 @patch("builtins.__import__")
-def test_openai_llm_with_message_history_happy_path(mock_import: Mock) -> None:
+@patch("neo4j_graphrag.llm.openai_llm.legacy_inputs_to_messages")
+def test_openai_llm_with_message_history_happy_path(mock_inputs: Mock, mock_import: Mock) -> None:
+    mock_inputs.return_value = [LLMMessage(role="user", content="text")]
     mock_openai = get_mock_openai()
     mock_import.return_value = mock_openai
     mock_openai.OpenAI.return_value.chat.completions.create.return_value = MagicMock(
@@ -63,18 +66,10 @@ def test_openai_llm_with_message_history_happy_path(mock_import: Mock) -> None:
     ]
     question = "What about next season?"
 
-    res = llm.invoke(question, message_history)  # type: ignore
-    assert isinstance(res, LLMResponse)
-    assert res.content == "openai chat response"
-    message_history.append({"role": "user", "content": question})
-    # Use assert_called_once() instead of assert_called_once_with() to avoid issues with overloaded functions
-    llm.client.chat.completions.create.assert_called_once()  # type: ignore
-    # Check call arguments individually
-    call_args = llm.client.chat.completions.create.call_args[  # type: ignore
-        1
-    ]  # Get the keyword arguments
-    assert call_args["messages"] == message_history
-    assert call_args["model"] == "gpt"
+    with patch.object(llm, "_invoke") as mock_invoke:
+        llm.invoke(question, message_history)  # type: ignore
+        mock_invoke.assert_called_once_with([LLMMessage(role="user", content="text")])
+    mock_inputs.assert_called_once_with(input=question, message_history=message_history)
 
 
 @patch("builtins.__import__")
@@ -404,5 +399,6 @@ def test_azure_openai_llm_with_message_history_validation_error(
     question = "What about next season?"
 
     with pytest.raises(LLMGenerationError) as exc_info:
-        llm.invoke(question, message_history)  # type: ignore
+        r = llm.invoke(question, message_history)  # type: ignore
+        print(r)
     assert "Input should be a valid string" in str(exc_info.value)
