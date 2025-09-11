@@ -21,7 +21,7 @@ def legacy_inputs_to_messages(
         if isinstance(message_history, MessageHistory):
             messages = message_history.messages
         else:  # list[LLMMessage]
-            messages = message_history
+            messages = [LLMMessage(**m) for m in message_history]
     else:
         messages = []
     if system_instruction is not None:
