@@ -340,9 +340,9 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         text = user_input.get("text")
         file_path = user_input.get("file_path")
         if text is None and file_path is None:
-            # use must provide either text or file_path or both
+            # user must provide either text or file_path or both
             raise PipelineDefinitionError(
-                "Use either 'text' (when from_pdf=False) or 'file_path' (when from_pdf=True) argument."
+                "At least one of `text` (when from_pdf=False) or 'file_path' (when from_pdf=True) argument must be provided."
             )
         run_params: dict[str, dict[str, Any]] = defaultdict(dict)
         if self.lexical_graph_config:
