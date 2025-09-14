@@ -1,5 +1,21 @@
+#  Copyright (c) "Neo4j"
+#  Neo4j Sweden AB [https://neo4j.com]
+#  #
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#  #
+#      https://www.apache.org/licenses/LICENSE-2.0
+#  #
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
 import warnings
 from typing import Union, Optional
+
+from pydantic import TypeAdapter
 
 from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
@@ -12,6 +28,9 @@ def system_instruction_from_messages(messages: list[LLMMessage]) -> str | None:
     return None
 
 
+llm_messages_adapter = TypeAdapter(list[LLMMessage])
+
+
 def legacy_inputs_to_messages(
     input: Union[str, list[LLMMessage], MessageHistory],
     message_history: Optional[Union[list[LLMMessage], MessageHistory]] = None,
@@ -21,7 +40,7 @@ def legacy_inputs_to_messages(
         if isinstance(message_history, MessageHistory):
             messages = message_history.messages
         else:  # list[LLMMessage]
-            messages = [LLMMessage(**m) for m in message_history]
+            messages = llm_messages_adapter.validate_python(message_history)
     else:
         messages = []
     if system_instruction is not None:
