@@ -17,6 +17,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, List, Optional, Sequence, Union
 
+from pydantic import ValidationError
+
 from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
 
@@ -30,6 +32,7 @@ from neo4j_graphrag.utils.rate_limit import (
 from neo4j_graphrag.tool import Tool
 
 from .utils import legacy_inputs_to_messages
+from ..exceptions import LLMGenerationError
 
 
 class LLMInterface(ABC):
@@ -64,7 +67,12 @@ class LLMInterface(ABC):
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
-        messages = legacy_inputs_to_messages(input, message_history, system_instruction)
+        try:
+            messages = legacy_inputs_to_messages(
+                input, message_history, system_instruction
+            )
+        except ValidationError as e:
+            raise LLMGenerationError("Input validation failed") from e
         return self._invoke(messages)
 
     @abstractmethod
@@ -137,7 +145,12 @@ class LLMInterface(ABC):
             LLMGenerationError: If anything goes wrong.
             NotImplementedError: If the LLM provider does not support tool calling.
         """
-        messages = legacy_inputs_to_messages(input, message_history, system_instruction)
+        try:
+            messages = legacy_inputs_to_messages(
+                input, message_history, system_instruction
+            )
+        except ValidationError as e:
+            raise LLMGenerationError("Input validation failed") from e
         return self._invoke_with_tools(messages, tools)
 
     def _invoke_with_tools(
