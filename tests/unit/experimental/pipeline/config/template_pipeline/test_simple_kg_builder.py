@@ -12,6 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import re
 from unittest.mock import Mock, patch
 
 import neo4j
@@ -314,12 +315,13 @@ def test_simple_kg_pipeline_config_run_params_from_text_file_path() -> None:
 
 def test_simple_kg_pipeline_config_run_params_no_file_no_text() -> None:
     config = SimpleKGPipelineConfig(from_pdf=False)
-    with pytest.raises(PipelineDefinitionError) as excinfo:
+    with pytest.raises(
+        PipelineDefinitionError,
+        match=re.escape(
+            "At least one of `text` (when from_pdf=False) or `file_path` (when from_pdf=True) argument must be provided."
+        ),
+    ):
         config.get_run_params({})
-    assert (
-        "Use either 'text' (when from_pdf=False) or 'file_path' (when from_pdf=True) argument."
-        in str(excinfo)
-    )
 
 
 def test_simple_kg_pipeline_config_process_schema_with_precedence_legacy() -> None:
