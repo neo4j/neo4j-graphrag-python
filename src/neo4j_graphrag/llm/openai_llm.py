@@ -101,7 +101,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
                     self.openai.types.chat.ChatCompletionAssistantMessageParam
                 )
             else:
-                raise ValueError(f"Unknown message type: {m['role']}")
+                raise ValueError(f"Unknown role: {m['role']}")
             chat_messages.append(
                 message_type(
                     role=m["role"],  # type: ignore
