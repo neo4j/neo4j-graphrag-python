@@ -13,9 +13,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
+import pandas as pd
 
 import logging
 from abc import abstractmethod
+from collections import defaultdict
+from pathlib import Path
 from typing import Any, Generator, Literal, Optional
 
 import neo4j
@@ -81,6 +84,100 @@ class KGWriter(Component):
             lexical_graph_config (LexicalGraphConfig): Node labels and relationship types in the lexical graph.
         """
         pass
+
+
+class ParquetWriter(KGWriter):
+    """Writes a knowledge graph to Parquet files.
+
+    Args:
+        node_file_path (str): The file path to write the nodes Parquet file.
+        relationship_file_path (str): The file path to write the relationships Parquet file.
+    """
+
+    def __init__(
+        self,
+        output_folder: str,
+    ):
+        self._output_folder = Path(output_folder)
+
+    @staticmethod
+    def _nodes_to_rows(
+        nodes: list[Neo4jNode],
+        label_to_rows: dict[str, list[dict[str, Any]]],
+        lexical_graph_config: LexicalGraphConfig,
+    ) -> None:
+        for node in nodes:
+            row: dict[str, Any] = dict()
+
+            labels = [node.label]
+            if node.label not in lexical_graph_config.lexical_graph_node_labels:
+                labels.append("__Entity__")
+
+            row["id"] = node.id
+            row["labels"] = labels
+            row.update(node.properties)
+            if node.embedding_properties is not None:
+                row.update(node.embedding_properties)
+
+            label_to_rows[node.label].append(row)
+
+    @staticmethod
+    def _relationships_to_rows(
+        relationships: list[Neo4jRelationship],
+        type_to_rows: dict[str, list[dict[str, Any]]],
+    ) -> None:
+        for rel in relationships:
+            row: dict[str, Any] = dict()
+
+            row["from"] = rel.start_node_id
+            row["to"] = rel.end_node_id
+            row["type"] = rel.type
+            row.update(rel.properties)
+            if rel.embedding_properties is not None:
+                row.update(rel.embedding_properties)
+
+            type_to_rows[rel.type].append(row)
+
+    @validate_call
+    async def run(
+        self,
+        graph: Neo4jGraph,
+        lexical_graph_config: LexicalGraphConfig = LexicalGraphConfig(),
+    ) -> KGWriterModel:
+        """Writes a knowledge graph to Parquet files.
+
+        Args:
+            graph (Neo4jGraph): The knowledge graph to write to Parquet files.
+            lexical_graph_config (LexicalGraphConfig): Node labels and relationship types for the lexical graph.
+        """
+        (self._output_folder / "nodes").mkdir(parents=True, exist_ok=True)
+        (self._output_folder / "relationships").mkdir(parents=True, exist_ok=True)
+
+        label_to_rows: defaultdict[str, list[dict[str, Any]]] = defaultdict(list)
+        type_to_rows: defaultdict[str, list[dict[str, Any]]] = defaultdict(list)
+
+        # TODO: Parallelize?
+        self._nodes_to_rows(graph.nodes, label_to_rows, lexical_graph_config)
+        self._relationships_to_rows(graph.relationships, type_to_rows)
+
+        for label, node_df in label_to_rows.items():
+            pd.DataFrame(node_df).to_parquet(
+                self._output_folder / "nodes" / f"{label}.parquet", index=False
+            )
+
+        for rtype, rel_df in type_to_rows.items():
+            pd.DataFrame(rel_df).to_parquet(
+                self._output_folder / "relationships" / f"{rtype}.parquet", index=False
+            )
+
+        return KGWriterModel(
+            status="SUCCESS",
+            metadata={
+                "node_count": len(graph.nodes),
+                "relationship_count": len(graph.relationships),
+                "output_folder": str(self._output_folder),
+            },
+        )
 
 
 class Neo4jWriter(KGWriter):

@@ -61,6 +61,7 @@ scipy = [
   { version = "^1.15.0", python = ">=3.13,<3.14" }
 ]
 tenacity = "^9.1.2"
+pyarrow = "^21.0.0"
 
 [tool.poetry.group.dev.dependencies]
 urllib3 = "<2"
