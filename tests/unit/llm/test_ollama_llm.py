@@ -62,10 +62,8 @@ def test_ollama_llm_happy_path_deprecated_options(mock_import: Mock) -> None:
     assert res.content == "ollama chat response"
     llm.client.chat.assert_called_once_with(  # type: ignore[attr-defined]
         model=model,
-        messages=[
-            {"role": "user", "content": "test"}
-        ],
-        options={"temperature": 0.3}
+        messages=[{"role": "user", "content": "test"}],
+        options={"temperature": 0.3},
     )
 
 
