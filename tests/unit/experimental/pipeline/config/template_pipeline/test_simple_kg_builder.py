@@ -12,6 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import re
 from unittest.mock import Mock, patch
 
 import neo4j
@@ -286,16 +287,16 @@ def test_simple_kg_pipeline_config_connections_with_er() -> None:
 def test_simple_kg_pipeline_config_run_params_from_pdf_file_path() -> None:
     config = SimpleKGPipelineConfig(from_pdf=True)
     assert config.get_run_params({"file_path": "my_file"}) == {
-        "pdf_loader": {"filepath": "my_file"}
+        "pdf_loader": {"filepath": "my_file", "metadata": None}
     }
 
 
 def test_simple_kg_pipeline_config_run_params_from_text_text() -> None:
     config = SimpleKGPipelineConfig(from_pdf=False)
-    assert config.get_run_params({"text": "my text"}) == {
-        "splitter": {"text": "my text"},
-        "schema": {"text": "my text"},
-    }
+    run_params = config.get_run_params({"text": "my text"})
+    assert run_params["splitter"] == {"text": "my text"}
+    assert run_params["schema"] == {"text": "my text"}
+    assert run_params["extractor"]["document_info"]["path"] == "document.txt"
 
 
 def test_simple_kg_pipeline_config_run_params_from_pdf_text() -> None:
@@ -314,22 +315,13 @@ def test_simple_kg_pipeline_config_run_params_from_text_file_path() -> None:
 
 def test_simple_kg_pipeline_config_run_params_no_file_no_text() -> None:
     config = SimpleKGPipelineConfig(from_pdf=False)
-    with pytest.raises(PipelineDefinitionError) as excinfo:
+    with pytest.raises(
+        PipelineDefinitionError,
+        match=re.escape(
+            "At least one of `text` (when from_pdf=False) or `file_path` (when from_pdf=True) argument must be provided."
+        ),
+    ):
         config.get_run_params({})
-    assert (
-        "Use either 'text' (when from_pdf=False) or 'file_path' (when from_pdf=True) argument."
-        in str(excinfo)
-    )
-
-
-def test_simple_kg_pipeline_config_run_params_both_file_and_text() -> None:
-    config = SimpleKGPipelineConfig(from_pdf=False)
-    with pytest.raises(PipelineDefinitionError) as excinfo:
-        config.get_run_params({"text": "my text", "file_path": "my file"})
-    assert (
-        "Use either 'text' (when from_pdf=False) or 'file_path' (when from_pdf=True) argument."
-        in str(excinfo)
-    )
 
 
 def test_simple_kg_pipeline_config_process_schema_with_precedence_legacy() -> None:

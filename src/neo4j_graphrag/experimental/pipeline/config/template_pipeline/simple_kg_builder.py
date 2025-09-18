@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+from collections import defaultdict
 from typing import (
     Any,
     ClassVar,
@@ -336,37 +337,40 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         return connections
 
     def get_run_params(self, user_input: dict[str, Any]) -> dict[str, Any]:
-        run_params = {}
-        if self.lexical_graph_config:
-            run_params["extractor"] = {
-                "lexical_graph_config": self.lexical_graph_config,
-            }
-            run_params["writer"] = {
-                "lexical_graph_config": self.lexical_graph_config,
-            }
-            run_params["pruner"] = {
-                "lexical_graph_config": self.lexical_graph_config,
-            }
         text = user_input.get("text")
         file_path = user_input.get("file_path")
-        if not ((text is None) ^ (file_path is None)):
-            # exactly one of text or user_input must be set
+        if text is None and file_path is None:
+            # user must provide either text or file_path or both
             raise PipelineDefinitionError(
-                "Use either 'text' (when from_pdf=False) or 'file_path' (when from_pdf=True) argument."
+                "At least one of `text` (when from_pdf=False) or `file_path` (when from_pdf=True) argument must be provided."
             )
+        run_params: dict[str, dict[str, Any]] = defaultdict(dict)
+        if self.lexical_graph_config:
+            run_params["extractor"]["lexical_graph_config"] = self.lexical_graph_config
+            run_params["writer"]["lexical_graph_config"] = self.lexical_graph_config
+            run_params["pruner"]["lexical_graph_config"] = self.lexical_graph_config
         if self.from_pdf:
             if not file_path:
                 raise PipelineDefinitionError(
                     "Expected 'file_path' argument when 'from_pdf' is True."
                 )
-            run_params["pdf_loader"] = {"filepath": file_path}
+            run_params["pdf_loader"]["filepath"] = file_path
+            run_params["pdf_loader"]["metadata"] = user_input.get("document_metadata")
         else:
             if not text:
                 raise PipelineDefinitionError(
                     "Expected 'text' argument when 'from_pdf' is False."
                 )
-            run_params["splitter"] = {"text": text}
+            run_params["splitter"]["text"] = text
             # Add full text to schema component for automatic schema extraction
             if not self.has_user_provided_schema():
-                run_params["schema"] = {"text": text}
+                run_params["schema"]["text"] = text
+            run_params["extractor"]["document_info"] = dict(
+                path=user_input.get(
+                    "file_path",
+                )
+                or "document.txt",
+                metadata=user_input.get("document_metadata"),
+                document_type="inline_text",
+            )
         return run_params

@@ -79,7 +79,15 @@ async def define_and_run_pipeline(
         from_pdf=False,
         neo4j_database=DATABASE,
     )
-    return await kg_builder.run_async(text=TEXT)
+    return await kg_builder.run_async(
+        text=TEXT,
+        # optional, specify file path for the Document node
+        # if not, a random name will be generated
+        # file_path="my_document.txt"
+        # optional, add document metadata, each item will
+        # be saved as a property of the Document node
+        # document_metadata={"author": "Frank Herbert"},
+    )
 
 
 async def main() -> PipelineResult:
