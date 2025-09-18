@@ -2,6 +2,16 @@
 
 ## Next
 
+### Added
+
+- Document node is now always created when running SimpleKGPipeline, even if `from_pdf=False`.
+- Document metadata is exposed in SimpleKGPipeline run method.
+
+### Fixed
+
+- LangChain Chat models compatibility is now working again.
+
+
 ## 1.10.0
 
 ### Added
@@ -13,12 +23,6 @@
 ### Fixed
 
 - Fixed an edge case where the LLM can output a property with type 'map', which was causing errors during import as it is not a valid property type in Neo4j.
-
-
-### Added
-
-- Document node is now always created when running SimpleKGPipeline, even if `from_pdf=False`.
-- Document metadata is exposed in SimpleKGPipeline run method.
 
 
 ## 1.9.1
