@@ -20,6 +20,7 @@ from neo4j_graphrag.embeddings.openai import (
     AzureOpenAIEmbeddings,
     OpenAIEmbeddings,
 )
+from neo4j_graphrag.exceptions import EmbeddingsGenerationError
 
 
 def get_mock_openai() -> MagicMock:
@@ -92,3 +93,18 @@ def test_azure_openai_embedder_does_not_call_openai_client() -> None:
             api_key="my_key",
             api_version="2023-05-15",
         )
+
+
+@patch("builtins.__import__")
+def test_openai_embedder_error_handling(mock_import: Mock) -> None:
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    mock_openai.OpenAI.return_value.embeddings.create.side_effect = Exception(
+        "API Error"
+    )
+    embedder = OpenAIEmbeddings(api_key="my key")
+    with pytest.raises(
+        EmbeddingsGenerationError, match="Failed to generate embedding with OpenAI"
+    ):
+        embedder.embed_query("my text")
