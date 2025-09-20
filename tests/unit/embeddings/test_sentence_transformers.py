@@ -7,6 +7,7 @@ from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.embeddings.sentence_transformers import (
     SentenceTransformerEmbeddings,
 )
+from neo4j_graphrag.exceptions import EmbeddingsGenerationError
 
 
 def get_mock_sentence_transformers() -> MagicMock:
@@ -55,3 +56,18 @@ def test_embed_query(mock_import: Mock) -> None:
 def test_import_error(mock_import: Mock) -> None:
     with pytest.raises(ImportError):
         SentenceTransformerEmbeddings()
+
+
+@patch("builtins.__import__")
+def test_embed_query_error_handling(mock_import: Mock) -> None:
+    MockSentenceTransformer = get_mock_sentence_transformers()
+    mock_import.return_value = MockSentenceTransformer
+    mock_model = MockSentenceTransformer.SentenceTransformer.return_value
+    mock_model.encode.side_effect = Exception("Model error")
+
+    instance = SentenceTransformerEmbeddings()
+    with pytest.raises(
+        EmbeddingsGenerationError,
+        match="Failed to generate embedding with SentenceTransformer",
+    ):
+        instance.embed_query("test query")

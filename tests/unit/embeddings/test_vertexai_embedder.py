@@ -16,6 +16,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from neo4j_graphrag.embeddings.vertexai import VertexAIEmbeddings
+from neo4j_graphrag.exceptions import EmbeddingsGenerationError
 
 
 @patch("neo4j_graphrag.embeddings.vertexai.TextEmbeddingModel", None)
@@ -33,3 +34,15 @@ def test_vertexai_embedder_happy_path(mock_vertexai: Mock) -> None:
     res = embedder.embed_query("my text")
     assert isinstance(res, list)
     assert res == [1.0, 2.0]
+
+
+@patch("neo4j_graphrag.embeddings.vertexai.TextEmbeddingModel")
+def test_vertexai_embedder_error_handling(mock_vertexai: Mock) -> None:
+    mock_vertexai.from_pretrained.return_value.get_embeddings.side_effect = Exception(
+        "API Error"
+    )
+    embedder = VertexAIEmbeddings()
+    with pytest.raises(
+        EmbeddingsGenerationError, match="Failed to generate embedding with VertexAI"
+    ):
+        embedder.embed_query("my text")

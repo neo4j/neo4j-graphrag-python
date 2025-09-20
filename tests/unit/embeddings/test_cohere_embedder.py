@@ -16,6 +16,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from neo4j_graphrag.embeddings.cohere import CohereEmbeddings
+from neo4j_graphrag.exceptions import EmbeddingsGenerationError
 
 
 @patch("neo4j_graphrag.embeddings.cohere.cohere", None)
@@ -32,3 +33,13 @@ def test_cohere_embedder_happy_path(mock_cohere: Mock) -> None:
     embedder = CohereEmbeddings()
     res = embedder.embed_query("my text")
     assert res == [1.0, 2.0]
+
+
+@patch("neo4j_graphrag.embeddings.cohere.cohere")
+def test_cohere_embedder_error_handling(mock_cohere: Mock) -> None:
+    mock_cohere.Client.return_value.embed.side_effect = Exception("API Error")
+    embedder = CohereEmbeddings()
+    with pytest.raises(
+        EmbeddingsGenerationError, match="Failed to generate embedding with Cohere"
+    ):
+        embedder.embed_query("my text")
