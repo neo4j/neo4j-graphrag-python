@@ -15,13 +15,28 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import Any, Optional
+
+from neo4j_graphrag.llm.rate_limit import (
+    DEFAULT_RATE_LIMIT_HANDLER,
+    RateLimitHandler,
+)
 
 
 class Embedder(ABC):
     """
     Interface for embedding models.
     An embedder passed into a retriever must implement this interface.
+
+    Args:
+        rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting. Defaults to retry with exponential backoff.
     """
+
+    def __init__(self, rate_limit_handler: Optional[RateLimitHandler] = None):
+        if rate_limit_handler is not None:
+            self._rate_limit_handler = rate_limit_handler
+        else:
+            self._rate_limit_handler = DEFAULT_RATE_LIMIT_HANDLER
 
     @abstractmethod
     def embed_query(self, text: str) -> list[float]:

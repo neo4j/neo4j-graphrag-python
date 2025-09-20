@@ -16,10 +16,11 @@
 from __future__ import annotations
 
 import os
-from typing import Any
+from typing import Any, Optional
 
 from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.exceptions import EmbeddingsGenerationError
+from neo4j_graphrag.llm.rate_limit import RateLimitHandler, rate_limit_handler
 
 try:
     from mistralai import Mistral
@@ -36,18 +37,25 @@ class MistralAIEmbeddings(Embedder):
         model (str): The name of the Mistral AI text embedding model to use. Defaults to "mistral-embed".
     """
 
-    def __init__(self, model: str = "mistral-embed", **kwargs: Any) -> None:
+    def __init__(
+        self,
+        model: str = "mistral-embed",
+        rate_limit_handler: Optional[RateLimitHandler] = None,
+        **kwargs: Any,
+    ) -> None:
         if Mistral is None:
             raise ImportError(
                 """Could not import mistralai.
                 Please install it with `pip install "neo4j-graphrag[mistralai]"`."""
             )
+        super().__init__(rate_limit_handler)
         api_key = kwargs.pop("api_key", None)
         if api_key is None:
             api_key = os.getenv("MISTRAL_API_KEY", "")
         self.model = model
         self.mistral_client = Mistral(api_key=api_key, **kwargs)
 
+    @rate_limit_handler
     def embed_query(self, text: str, **kwargs: Any) -> list[float]:
         """
         Generate embeddings for a given query using a Mistral AI text embedding model.

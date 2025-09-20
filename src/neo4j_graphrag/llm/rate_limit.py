@@ -147,7 +147,7 @@ class RetryRateLimitHandler(RateLimitHandler):
 
 
 def is_rate_limit_error(exception: Exception) -> bool:
-    """Check if an exception is a rate limit error from any LLM provider.
+    """Check if an exception is a rate limit error from any LLM provider or embedder.
 
     Args:
         exception: The exception to check.
@@ -158,8 +158,8 @@ def is_rate_limit_error(exception: Exception) -> bool:
     error_type = type(exception).__name__.lower()
     exception_str = str(exception).lower()
 
-    # For LLMGenerationError (which wraps all provider errors), check provider-specific patterns
-    if error_type == "llmgenerationerror":
+    # For LLMGenerationError or EmbeddingsGenerationError (which wrap all provider errors), check provider-specific patterns
+    if error_type in ["llmgenerationerror", "embeddingsgenerationerror"]:
         # Check for various rate limit patterns from different providers
         rate_limit_patterns = [
             "error code: 429",  # Azure OpenAI
