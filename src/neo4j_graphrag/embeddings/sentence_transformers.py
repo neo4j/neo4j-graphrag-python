@@ -43,7 +43,7 @@ class SentenceTransformerEmbeddings(Embedder):
         self.model = sentence_transformers.SentenceTransformer(model, *args, **kwargs)
 
     @rate_limit_handler
-    def embed_query(self, text: str) -> list[float]:
+    def embed_query(self, text: str) -> Any:
         try:
             result = self.model.encode([text])
 
