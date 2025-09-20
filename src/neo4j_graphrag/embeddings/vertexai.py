@@ -23,7 +23,7 @@ from neo4j_graphrag.llm.rate_limit import RateLimitHandler, rate_limit_handler
 try:
     from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
 except (ImportError, AttributeError):
-    TextEmbeddingModel = TextEmbeddingInput = None
+    TextEmbeddingModel = TextEmbeddingInput = None  # type: ignore[misc, assignment]
 
 
 if TYPE_CHECKING:
