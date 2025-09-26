@@ -8,7 +8,7 @@ class CustomEmbeddings(Embedder):
     def __init__(self, dimension: int = 10, **kwargs: Any):
         self.dimension = dimension
 
-    def embed_query(self, input: str) -> list[float]:
+    def _embed_query(self, input: str) -> list[float]:
         return [random.random() for _ in range(self.dimension)]
 
 

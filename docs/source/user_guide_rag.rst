@@ -528,6 +528,37 @@ The `OpenAIEmbeddings` was illustrated previously. Here is how to use the `Sente
 
 If another embedder is desired, a custom embedder can be created, using the `Embedder` interface.
 
+Embedder Rate Limiting
+----------------------
+
+All embedder implementations include automatic rate limiting that uses retry logic with exponential backoff by default, similar to LLM implementations. This feature helps handle API rate limits from embedding providers gracefully.
+
+.. code:: python
+
+    from neo4j_graphrag.embeddings import OpenAIEmbeddings
+    from neo4j_graphrag.llm.rate_limit import RetryRateLimitHandler, NoOpRateLimitHandler
+
+    # Default rate limiting (automatically enabled)
+    embedder = OpenAIEmbeddings(model="text-embedding-3-large")
+
+    # Custom rate limiting configuration
+    embedder = OpenAIEmbeddings(
+        model="text-embedding-3-large",
+        rate_limit_handler=RetryRateLimitHandler(
+            max_attempts=5,
+            min_wait=2.0,
+            max_wait=120.0
+        )
+    )
+
+    # Disable rate limiting
+    embedder = OpenAIEmbeddings(
+        model="text-embedding-3-large",
+        rate_limit_handler=NoOpRateLimitHandler()
+    )
+
+The rate limiting configuration works the same way as for LLMs. See the :ref:`Rate Limit Handling <Rate Limit Handling>` section above for more details on customization options.
+
 
 Other Vector Retriever Configuration
 ----------------------------------------
