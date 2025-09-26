@@ -20,7 +20,7 @@ from typing import Any, Optional
 
 from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.exceptions import EmbeddingsGenerationError
-from neo4j_graphrag.llm.rate_limit import RateLimitHandler, rate_limit_handler
+from neo4j_graphrag.llm.rate_limit import RateLimitHandler
 
 try:
     from mistralai import Mistral
@@ -55,8 +55,7 @@ class MistralAIEmbeddings(Embedder):
         self.model = model
         self.mistral_client = Mistral(api_key=api_key, **kwargs)
 
-    @rate_limit_handler
-    def embed_query(self, text: str, **kwargs: Any) -> list[float]:
+    def _embed_query(self, text: str, **kwargs: Any) -> list[float]:
         """
         Generate embeddings for a given query using a Mistral AI text embedding model.
 

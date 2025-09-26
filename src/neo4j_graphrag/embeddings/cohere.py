@@ -18,7 +18,7 @@ from typing import Any, Optional
 
 from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.exceptions import EmbeddingsGenerationError
-from neo4j_graphrag.llm.rate_limit import RateLimitHandler, rate_limit_handler
+from neo4j_graphrag.llm.rate_limit import RateLimitHandler
 
 try:
     import cohere
@@ -42,8 +42,7 @@ class CohereEmbeddings(Embedder):
         self.model = model
         self.client = cohere.Client(**kwargs)
 
-    @rate_limit_handler
-    def embed_query(self, text: str, **kwargs: Any) -> list[float]:
+    def _embed_query(self, text: str, **kwargs: Any) -> list[float]:
         try:
             response = self.client.embed(
                 texts=[text],

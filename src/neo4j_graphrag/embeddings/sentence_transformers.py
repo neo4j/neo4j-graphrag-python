@@ -17,7 +17,7 @@ from typing import Any, Optional
 
 from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.exceptions import EmbeddingsGenerationError
-from neo4j_graphrag.llm.rate_limit import RateLimitHandler, rate_limit_handler
+from neo4j_graphrag.llm.rate_limit import RateLimitHandler
 
 
 class SentenceTransformerEmbeddings(Embedder):
@@ -42,8 +42,7 @@ class SentenceTransformerEmbeddings(Embedder):
         self.np = np
         self.model = sentence_transformers.SentenceTransformer(model, *args, **kwargs)
 
-    @rate_limit_handler
-    def embed_query(self, text: str) -> Any:
+    def _embed_query(self, text: str) -> Any:
         try:
             result = self.model.encode([text])
 
