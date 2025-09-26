@@ -16,6 +16,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 import openai
 import pytest
+from tenacity import RetryError
 from neo4j_graphrag.embeddings.openai import (
     AzureOpenAIEmbeddings,
     OpenAIEmbeddings,
@@ -96,15 +97,67 @@ def test_azure_openai_embedder_does_not_call_openai_client() -> None:
 
 
 @patch("builtins.__import__")
-def test_openai_embedder_error_handling(mock_import: Mock) -> None:
+def test_openai_embedder_non_retryable_error_handling(mock_import: Mock) -> None:
+    """Test that non-retryable errors fail immediately without retries."""
     mock_openai = get_mock_openai()
     mock_import.return_value = mock_openai
 
-    mock_openai.OpenAI.return_value.embeddings.create.side_effect = Exception(
-        "API Error"
-    )
+    # Generic API error that doesn't match rate limit patterns - should not be retried
+    mock_embeddings = mock_openai.OpenAI.return_value.embeddings.create
+    mock_embeddings.side_effect = Exception("API Error")
     embedder = OpenAIEmbeddings(api_key="my key")
+
     with pytest.raises(
         EmbeddingsGenerationError, match="Failed to generate embedding with OpenAI"
     ):
         embedder.embed_query("my text")
+
+    # Verify the API was called only once (no retries for non-rate-limit errors)
+    assert mock_embeddings.call_count == 1
+
+
+@patch("builtins.__import__")
+def test_openai_embedder_rate_limit_error_retries(mock_import: Mock) -> None:
+    """Test that rate limit errors are retried the expected number of times."""
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    # Rate limit error that should trigger retries (matches "429" pattern)
+    # Create separate exception instances for each retry attempt
+    mock_embeddings = mock_openai.OpenAI.return_value.embeddings.create
+    mock_embeddings.side_effect = [
+        Exception("Error code: 429 - Too many requests"),
+        Exception("Error code: 429 - Too many requests"),
+        Exception("Error code: 429 - Too many requests"),
+    ]
+    embedder = OpenAIEmbeddings(api_key="my key")
+
+    # After exhausting retries, tenacity raises RetryError
+    with pytest.raises(RetryError):
+        embedder.embed_query("my text")
+
+    # Verify the API was called 3 times (default max_attempts for RetryRateLimitHandler)
+    assert mock_embeddings.call_count == 3
+
+
+@patch("builtins.__import__")
+def test_openai_embedder_rate_limit_error_eventual_success(mock_import: Mock) -> None:
+    """Test that rate limit errors eventually succeed after retries."""
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    # First two calls fail with rate limit, third succeeds
+    mock_embeddings = mock_openai.OpenAI.return_value.embeddings.create
+    mock_embeddings.side_effect = [
+        Exception("Error code: 429 - Too many requests"),
+        Exception("Error code: 429 - Too many requests"),
+        MagicMock(data=[MagicMock(embedding=[1.0, 2.0])]),
+    ]
+    embedder = OpenAIEmbeddings(api_key="my key")
+
+    result = embedder.embed_query("my text")
+
+    # Verify successful result
+    assert result == [1.0, 2.0]
+    # Verify the API was called 3 times before succeeding
+    assert mock_embeddings.call_count == 3
