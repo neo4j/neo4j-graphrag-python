@@ -64,9 +64,15 @@ class MistralAIEmbeddings(Embedder):
             text (str): The text to generate an embedding for.
             **kwargs (Any): Additional keyword arguments to pass to the Mistral AI client.
         """
-        embeddings_batch_response = self.mistral_client.embeddings.create(
-            model=self.model, inputs=[text], **kwargs
-        )
+        try:
+            embeddings_batch_response = self.mistral_client.embeddings.create(
+                model=self.model, inputs=[text], **kwargs
+            )
+        except Exception as e:
+            raise EmbeddingsGenerationError(
+                f"Failed to generate embedding with MistralAI: {e}"
+            ) from e
+
         if embeddings_batch_response is None or not embeddings_batch_response.data:
             raise EmbeddingsGenerationError("Failed to retrieve embeddings.")
 

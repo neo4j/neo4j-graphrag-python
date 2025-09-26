@@ -59,5 +59,5 @@ class SentenceTransformerEmbeddings(Embedder):
                 raise ValueError("Unexpected return type from model encoding")
         except Exception as e:
             raise EmbeddingsGenerationError(
-                "Failed to generate embedding with SentenceTransformer"
+                f"Failed to generate embedding with SentenceTransformer: {e}"
             ) from e
