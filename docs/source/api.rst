@@ -359,19 +359,19 @@ Rate Limiting
 RateLimitHandler
 ----------------
 
-.. autoclass:: neo4j_graphrag.llm.rate_limit.RateLimitHandler
+.. autoclass:: neo4j_graphrag.utils.rate_limit.RateLimitHandler
     :members:
 
 RetryRateLimitHandler
 ---------------------
 
-.. autoclass:: neo4j_graphrag.llm.rate_limit.RetryRateLimitHandler
+.. autoclass:: neo4j_graphrag.utils.rate_limit.RetryRateLimitHandler
     :members:
 
 NoOpRateLimitHandler
 --------------------
 
-.. autoclass:: neo4j_graphrag.llm.rate_limit.NoOpRateLimitHandler
+.. autoclass:: neo4j_graphrag.utils.rate_limit.NoOpRateLimitHandler
     :members:
 
 
