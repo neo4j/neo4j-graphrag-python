@@ -27,6 +27,7 @@ from neo4j_graphrag.utils.rate_limit import (
     DEFAULT_RATE_LIMIT_HANDLER,
     rate_limit_handler,
     async_rate_limit_handler,
+    RateLimitHandler,
 )
 
 from neo4j_graphrag.tool import Tool
