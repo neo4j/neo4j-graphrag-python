@@ -18,7 +18,7 @@ from .cohere_llm import CohereLLM
 from .mistralai_llm import MistralAILLM
 from .ollama_llm import OllamaLLM
 from .openai_llm import AzureOpenAILLM, OpenAILLM
-from .rate_limit import (
+from neo4j_graphrag.utils.rate_limit import (
     RateLimitHandler,
     NoOpRateLimitHandler,
     RetryRateLimitHandler,

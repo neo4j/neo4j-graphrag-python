@@ -21,13 +21,13 @@ from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
 
 from .types import LLMResponse, ToolCallResponse
-from .rate_limit import (
+from neo4j_graphrag.utils.rate_limit import (
     DEFAULT_RATE_LIMIT_HANDLER,
 )
 
 from neo4j_graphrag.tool import Tool
 
-from .rate_limit import RateLimitHandler
+from neo4j_graphrag.utils.rate_limit import RateLimitHandler
 
 
 class LLMInterface(ABC):

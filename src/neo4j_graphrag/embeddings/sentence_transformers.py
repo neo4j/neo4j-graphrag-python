@@ -17,7 +17,7 @@ from typing import Any, Optional
 
 from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.exceptions import EmbeddingsGenerationError
-from neo4j_graphrag.llm.rate_limit import RateLimitHandler
+from neo4j_graphrag.utils.rate_limit import RateLimitHandler
 
 
 class SentenceTransformerEmbeddings(Embedder):

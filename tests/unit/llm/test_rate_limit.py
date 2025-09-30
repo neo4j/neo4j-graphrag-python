@@ -19,7 +19,7 @@ import pytest
 from unittest.mock import Mock
 from tenacity import RetryError
 
-from neo4j_graphrag.llm.rate_limit import (
+from neo4j_graphrag.utils.rate_limit import (
     RateLimitHandler,
     NoOpRateLimitHandler,
     DEFAULT_RATE_LIMIT_HANDLER,
