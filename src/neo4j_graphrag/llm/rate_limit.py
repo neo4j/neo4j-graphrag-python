@@ -48,7 +48,7 @@ def __getattr__(name: str) -> Any:
         "convert_to_rate_limit_error": _convert_to_rate_limit_error,
         "DEFAULT_RATE_LIMIT_HANDLER": _DEFAULT_RATE_LIMIT_HANDLER,
     }
-    
+
     if name in deprecated_items:
         warnings.warn(
             f"{name} has been moved to neo4j_graphrag.utils.rate_limit. "
@@ -57,7 +57,7 @@ def __getattr__(name: str) -> Any:
             stacklevel=2,
         )
         return deprecated_items[name]
-    
+
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
