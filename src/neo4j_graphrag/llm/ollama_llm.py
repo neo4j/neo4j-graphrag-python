@@ -24,7 +24,11 @@ from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
 
 from .base import LLMInterface
-from .rate_limit import RateLimitHandler, rate_limit_handler, async_rate_limit_handler
+from neo4j_graphrag.utils.rate_limit import (
+    RateLimitHandler,
+    rate_limit_handler,
+    async_rate_limit_handler,
+)
 from .types import (
     BaseMessage,
     LLMResponse,

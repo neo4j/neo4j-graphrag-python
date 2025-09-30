@@ -12,21 +12,18 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import warnings
+from typing import Any
+
 from .anthropic_llm import AnthropicLLM
 from .base import LLMInterface
 from .cohere_llm import CohereLLM
 from .mistralai_llm import MistralAILLM
 from .ollama_llm import OllamaLLM
 from .openai_llm import AzureOpenAILLM, OpenAILLM
-from .rate_limit import (
-    RateLimitHandler,
-    NoOpRateLimitHandler,
-    RetryRateLimitHandler,
-    rate_limit_handler,
-    async_rate_limit_handler,
-)
 from .types import LLMResponse
 from .vertexai_llm import VertexAILLM
+
 
 __all__ = [
     "AnthropicLLM",
@@ -38,10 +35,40 @@ __all__ = [
     "VertexAILLM",
     "AzureOpenAILLM",
     "MistralAILLM",
-    # Rate limiting components
-    "RateLimitHandler",
-    "NoOpRateLimitHandler",
-    "RetryRateLimitHandler",
-    "rate_limit_handler",
-    "async_rate_limit_handler",
 ]
+
+
+def __getattr__(name: str) -> Any:
+    """Handle deprecated imports with warnings."""
+    from neo4j_graphrag.utils.rate_limit import (
+        RateLimitHandler,
+        NoOpRateLimitHandler,
+        RetryRateLimitHandler,
+        rate_limit_handler,
+        async_rate_limit_handler,
+        is_rate_limit_error,
+        convert_to_rate_limit_error,
+        DEFAULT_RATE_LIMIT_HANDLER,
+    )
+
+    deprecated_items = {
+        "RateLimitHandler": RateLimitHandler,
+        "NoOpRateLimitHandler": NoOpRateLimitHandler,
+        "RetryRateLimitHandler": RetryRateLimitHandler,
+        "rate_limit_handler": rate_limit_handler,
+        "async_rate_limit_handler": async_rate_limit_handler,
+        "is_rate_limit_error": is_rate_limit_error,
+        "convert_to_rate_limit_error": convert_to_rate_limit_error,
+        "DEFAULT_RATE_LIMIT_HANDLER": DEFAULT_RATE_LIMIT_HANDLER,
+    }
+
+    if name in deprecated_items:
+        warnings.warn(
+            f"{name} has been moved to neo4j_graphrag.utils.rate_limit. "
+            f"Please update your imports to use 'from neo4j_graphrag.utils.rate_limit import {name}'.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return deprecated_items[name]
+
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

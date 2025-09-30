@@ -3,7 +3,7 @@ import string
 from typing import Any, Awaitable, Callable, List, Optional, TypeVar, Union
 
 from neo4j_graphrag.llm import LLMInterface, LLMResponse
-from neo4j_graphrag.llm.rate_limit import (
+from neo4j_graphrag.utils.rate_limit import (
     RateLimitHandler,
     # rate_limit_handler,
     # async_rate_limit_handler,

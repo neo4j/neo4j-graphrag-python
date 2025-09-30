@@ -58,12 +58,12 @@ def embedder() -> Embedder:
 
 
 class RandomEmbedder(Embedder):
-    def embed_query(self, text: str) -> list[float]:
+    def _embed_query(self, text: str) -> list[float]:
         return [random.random() for _ in range(1536)]
 
 
 class BiologyEmbedder(Embedder):
-    def embed_query(self, text: str) -> list[float]:
+    def _embed_query(self, text: str) -> list[float]:
         if text == "biology":
             return EMBEDDING_BIOLOGY
         raise ValueError(f"Unknown embedding text: {text}")

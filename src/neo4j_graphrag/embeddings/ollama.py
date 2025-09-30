@@ -15,10 +15,11 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 
 from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.exceptions import EmbeddingsGenerationError
+from neo4j_graphrag.utils.rate_limit import RateLimitHandler
 
 
 class OllamaEmbeddings(Embedder):
@@ -30,7 +31,12 @@ class OllamaEmbeddings(Embedder):
         model (str): The name of the Mistral AI text embedding model to use. Defaults to "mistral-embed".
     """
 
-    def __init__(self, model: str, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        model: str,
+        rate_limit_handler: Optional[RateLimitHandler] = None,
+        **kwargs: Any,
+    ) -> None:
         try:
             import ollama
         except ImportError:
@@ -38,10 +44,11 @@ class OllamaEmbeddings(Embedder):
                 """Could not import ollama python client.
                 Please install it with `pip install "neo4j_graphrag[ollama]"`."""
             )
+        super().__init__(rate_limit_handler)
         self.model = model
         self.client = ollama.Client(**kwargs)
 
-    def embed_query(self, text: str, **kwargs: Any) -> list[float]:
+    def _embed_query(self, text: str, **kwargs: Any) -> list[float]:
         """
         Generate embeddings for a given query using an Ollama text embedding model.
 

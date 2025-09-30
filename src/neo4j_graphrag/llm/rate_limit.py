@@ -12,243 +12,59 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from __future__ import annotations
 
-import functools
-import logging
-from abc import ABC, abstractmethod
-from typing import Any, Awaitable, Callable, TypeVar
+"""
+Deprecated module: Rate limiting functionality has been moved to neo4j_graphrag.utils.rate_limit.
 
-from neo4j_graphrag.exceptions import RateLimitError
+This module provides backward compatibility with deprecation warnings.
+All new code should import from neo4j_graphrag.utils.rate_limit instead.
+"""
 
-from tenacity import (
-    retry,
-    stop_after_attempt,
-    wait_exponential,
-    wait_random_exponential,
-    retry_if_exception_type,
-    before_sleep_log,
+import warnings
+from typing import Any
+
+# Import the actual implementations from the new location
+from neo4j_graphrag.utils.rate_limit import (
+    RateLimitHandler as _RateLimitHandler,
+    NoOpRateLimitHandler as _NoOpRateLimitHandler,
+    RetryRateLimitHandler as _RetryRateLimitHandler,
+    rate_limit_handler as _rate_limit_handler,
+    async_rate_limit_handler as _async_rate_limit_handler,
+    is_rate_limit_error as _is_rate_limit_error,
+    convert_to_rate_limit_error as _convert_to_rate_limit_error,
+    DEFAULT_RATE_LIMIT_HANDLER as _DEFAULT_RATE_LIMIT_HANDLER,
 )
 
 
-logger = logging.getLogger(__name__)
+def __getattr__(name: str) -> Any:
+    """Handle deprecated imports with warnings."""
+    deprecated_items = {
+        "RateLimitHandler": _RateLimitHandler,
+        "NoOpRateLimitHandler": _NoOpRateLimitHandler,
+        "RetryRateLimitHandler": _RetryRateLimitHandler,
+        "rate_limit_handler": _rate_limit_handler,
+        "async_rate_limit_handler": _async_rate_limit_handler,
+        "is_rate_limit_error": _is_rate_limit_error,
+        "convert_to_rate_limit_error": _convert_to_rate_limit_error,
+        "DEFAULT_RATE_LIMIT_HANDLER": _DEFAULT_RATE_LIMIT_HANDLER,
+    }
 
-F = TypeVar("F", bound=Callable[..., Any])
-AF = TypeVar("AF", bound=Callable[..., Awaitable[Any]])
-
-
-class RateLimitHandler(ABC):
-    """Abstract base class for rate limit handling strategies."""
-
-    @abstractmethod
-    def handle_sync(self, func: F) -> F:
-        """Apply rate limit handling to a synchronous function.
-
-        Args:
-            func: The function to wrap with rate limit handling.
-
-        Returns:
-            The wrapped function.
-        """
-        pass
-
-    @abstractmethod
-    def handle_async(self, func: AF) -> AF:
-        """Apply rate limit handling to an asynchronous function.
-
-        Args:
-            func: The async function to wrap with rate limit handling.
-
-        Returns:
-            The wrapped async function.
-        """
-        pass
-
-
-class NoOpRateLimitHandler(RateLimitHandler):
-    """A no-op rate limit handler that does not apply any rate limiting."""
-
-    def handle_sync(self, func: F) -> F:
-        """Return the function unchanged."""
-        return func
-
-    def handle_async(self, func: AF) -> AF:
-        """Return the async function unchanged."""
-        return func
-
-
-class RetryRateLimitHandler(RateLimitHandler):
-    """Rate limit handler using exponential backoff retry strategy.
-
-    This handler uses tenacity for retry logic with exponential backoff.
-
-    Args:
-        max_attempts: Maximum number of retry attempts. Defaults to 3.
-        min_wait: Minimum wait time between retries in seconds. Defaults to 1.
-        max_wait: Maximum wait time between retries in seconds. Defaults to 60.
-        multiplier: Exponential backoff multiplier. Defaults to 2.
-        jitter: Whether to add random jitter to retry delays to prevent thundering herd. Defaults to True.
-    """
-
-    def __init__(
-        self,
-        max_attempts: int = 3,
-        min_wait: float = 1.0,
-        max_wait: float = 60.0,
-        multiplier: float = 2.0,
-        jitter: bool = True,
-    ):
-        self.max_attempts = max_attempts
-        self.min_wait = min_wait
-        self.max_wait = max_wait
-        self.multiplier = multiplier
-        self.jitter = jitter
-
-    def _get_wait_strategy(self) -> Any:
-        """Get the appropriate wait strategy based on jitter setting.
-
-        Returns:
-            The configured wait strategy for tenacity retry.
-        """
-        if self.jitter:
-            # Use built-in random exponential backoff with jitter
-            return wait_random_exponential(
-                multiplier=self.multiplier,
-                min=self.min_wait,
-                max=self.max_wait,
-            )
-        else:
-            # Use standard exponential backoff without jitter
-            return wait_exponential(
-                multiplier=self.multiplier,
-                min=self.min_wait,
-                max=self.max_wait,
-            )
-
-    def handle_sync(self, func: F) -> F:
-        """Apply retry logic to a synchronous function."""
-        decorator = retry(
-            retry=retry_if_exception_type(RateLimitError),
-            stop=stop_after_attempt(self.max_attempts),
-            wait=self._get_wait_strategy(),
-            before_sleep=before_sleep_log(logger, logging.WARNING),
+    if name in deprecated_items:
+        warnings.warn(
+            f"{name} has been moved to neo4j_graphrag.utils.rate_limit. "
+            f"Please update your imports to use 'from neo4j_graphrag.utils.rate_limit import {name}'.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        return decorator(func)
+        return deprecated_items[name]
 
-    def handle_async(self, func: AF) -> AF:
-        """Apply retry logic to an asynchronous function."""
-        decorator = retry(
-            retry=retry_if_exception_type(RateLimitError),
-            stop=stop_after_attempt(self.max_attempts),
-            wait=self._get_wait_strategy(),
-            before_sleep=before_sleep_log(logger, logging.WARNING),
-        )
-        return decorator(func)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-def is_rate_limit_error(exception: Exception) -> bool:
-    """Check if an exception is a rate limit error from any LLM provider.
-
-    Args:
-        exception: The exception to check.
-
-    Returns:
-        True if the exception indicates a rate limit error, False otherwise.
-    """
-    error_type = type(exception).__name__.lower()
-    exception_str = str(exception).lower()
-
-    # For LLMGenerationError (which wraps all provider errors), check provider-specific patterns
-    if error_type == "llmgenerationerror":
-        # Check for various rate limit patterns from different providers
-        rate_limit_patterns = [
-            "error code: 429",  # Azure OpenAI
-            "too many requests",  # Anthropic, Cohere, MistralAI
-            "resource exhausted",  # VertexAI
-            "rate limit",  # Generic rate limit messages
-            "429",  # Generic rate limit messages
-        ]
-
-        return any(pattern in exception_str for pattern in rate_limit_patterns)
-
-    return False
-
-
-def convert_to_rate_limit_error(exception: Exception) -> RateLimitError:
-    """Convert a provider-specific rate limit exception to RateLimitError.
-
-    Args:
-        exception: The original exception from the LLM provider.
-
-    Returns:
-        A RateLimitError with the original exception message.
-    """
-    return RateLimitError(f"Rate limit exceeded: {exception}")
-
-
-def rate_limit_handler(func: F) -> F:
-    """Decorator to apply rate limit handling to synchronous methods.
-
-    This decorator works with instance methods and uses the instance's rate limit handler.
-
-    Args:
-        func: The function to wrap with rate limit handling.
-
-    Returns:
-        The wrapped function.
-    """
-
-    @functools.wraps(func)
-    def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
-        # Use instance handler or default
-        active_handler = getattr(
-            self, "_rate_limit_handler", DEFAULT_RATE_LIMIT_HANDLER
-        )
-
-        def inner_func() -> Any:
-            try:
-                return func(self, *args, **kwargs)
-            except Exception as e:
-                if is_rate_limit_error(e):
-                    raise convert_to_rate_limit_error(e)
-                raise
-
-        return active_handler.handle_sync(inner_func)()
-
-    return wrapper  # type: ignore
-
-
-def async_rate_limit_handler(func: AF) -> AF:
-    """Decorator to apply rate limit handling to asynchronous methods.
-
-    This decorator works with instance methods and uses the instance's rate limit handler.
-
-    Args:
-        func: The async function to wrap with rate limit handling.
-
-    Returns:
-        The wrapped async function.
-    """
-
-    @functools.wraps(func)
-    async def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
-        # Use instance handler or default
-        active_handler = getattr(
-            self, "_rate_limit_handler", DEFAULT_RATE_LIMIT_HANDLER
-        )
-
-        async def inner_func() -> Any:
-            try:
-                return await func(self, *args, **kwargs)
-            except Exception as e:
-                if is_rate_limit_error(e):
-                    raise convert_to_rate_limit_error(e)
-                raise
-
-        return await active_handler.handle_async(inner_func)()
-
-    return wrapper  # type: ignore
-
-
-# Default rate limit handler instance
-DEFAULT_RATE_LIMIT_HANDLER = RetryRateLimitHandler()
+# Issue a single deprecation warning when the module is imported
+warnings.warn(
+    "The neo4j_graphrag.llm.rate_limit module has been moved to neo4j_graphrag.utils.rate_limit. "
+    "Please update your imports to use 'from neo4j_graphrag.utils.rate_limit import ...'.",
+    DeprecationWarning,
+    stacklevel=2,
+)

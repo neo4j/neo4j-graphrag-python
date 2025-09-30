@@ -16,9 +16,11 @@
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from neo4j_graphrag.embeddings.base import Embedder
+from neo4j_graphrag.exceptions import EmbeddingsGenerationError
+from neo4j_graphrag.utils.rate_limit import RateLimitHandler
 
 if TYPE_CHECKING:
     import openai
@@ -31,7 +33,12 @@ class BaseOpenAIEmbeddings(Embedder, abc.ABC):
 
     client: openai.OpenAI
 
-    def __init__(self, model: str = "text-embedding-ada-002", **kwargs: Any) -> None:
+    def __init__(
+        self,
+        model: str = "text-embedding-ada-002",
+        rate_limit_handler: Optional[RateLimitHandler] = None,
+        **kwargs: Any,
+    ) -> None:
         try:
             import openai
         except ImportError:
@@ -39,6 +46,7 @@ class BaseOpenAIEmbeddings(Embedder, abc.ABC):
                 """Could not import openai python client.
                 Please install it with `pip install "neo4j-graphrag[openai]"`."""
             )
+        super().__init__(rate_limit_handler)
         self.openai = openai
         self.model = model
         self.client = self._initialize_client(**kwargs)
@@ -51,7 +59,7 @@ class BaseOpenAIEmbeddings(Embedder, abc.ABC):
         """
         pass
 
-    def embed_query(self, text: str, **kwargs: Any) -> list[float]:
+    def _embed_query(self, text: str, **kwargs: Any) -> list[float]:
         """
         Generate embeddings for a given query using an OpenAI text embedding model.
 
@@ -59,9 +67,16 @@ class BaseOpenAIEmbeddings(Embedder, abc.ABC):
             text (str): The text to generate an embedding for.
             **kwargs (Any): Additional arguments to pass to the OpenAI embedding generation function.
         """
-        response = self.client.embeddings.create(input=text, model=self.model, **kwargs)
-        embedding: list[float] = response.data[0].embedding
-        return embedding
+        try:
+            response = self.client.embeddings.create(
+                input=text, model=self.model, **kwargs
+            )
+            embedding: list[float] = response.data[0].embedding
+            return embedding
+        except Exception as e:
+            raise EmbeddingsGenerationError(
+                f"Failed to generate embedding with OpenAI: {e}"
+            ) from e
 
 
 class OpenAIEmbeddings(BaseOpenAIEmbeddings):

@@ -14,9 +14,11 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Optional
 
 from neo4j_graphrag.embeddings.base import Embedder
+from neo4j_graphrag.exceptions import EmbeddingsGenerationError
+from neo4j_graphrag.utils.rate_limit import RateLimitHandler
 
 try:
     from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
@@ -37,15 +39,20 @@ class VertexAIEmbeddings(Embedder):
         model (str): The name of the Vertex AI text embedding model to use. Defaults to "text-embedding-004".
     """
 
-    def __init__(self, model: str = "text-embedding-004") -> None:
+    def __init__(
+        self,
+        model: str = "text-embedding-004",
+        rate_limit_handler: Optional[RateLimitHandler] = None,
+    ) -> None:
         if TextEmbeddingModel is None:
             raise ImportError(
                 """Could not import Vertex AI Python client.
                 Please install it with `pip install "neo4j-graphrag[google]"`."""
             )
+        super().__init__(rate_limit_handler)
         self.model = TextEmbeddingModel.from_pretrained(model)
 
-    def embed_query(
+    def _embed_query(
         self, text: str, task_type: str = "RETRIEVAL_QUERY", **kwargs: Any
     ) -> list[float]:
         """
@@ -56,7 +63,14 @@ class VertexAIEmbeddings(Embedder):
             task_type (str): The type of the text embedding task. Defaults to "RETRIEVAL_QUERY". See https://cloud.google.com/vertex-ai/generative-ai/docs/model-reference/text-embeddings-api#tasktype for a full list.
             **kwargs (Any): Additional keyword arguments to pass to the Vertex AI client's get_embeddings method.
         """
-        # type annotation needed for mypy
-        inputs: list[str | TextEmbeddingInput] = [TextEmbeddingInput(text, task_type)]
-        embeddings = self.model.get_embeddings(inputs, **kwargs)
-        return embeddings[0].values
+        try:
+            # type annotation needed for mypy
+            inputs: list[str | TextEmbeddingInput] = [
+                TextEmbeddingInput(text, task_type)
+            ]
+            embeddings = self.model.get_embeddings(inputs, **kwargs)
+            return list(embeddings[0].values)
+        except Exception as e:
+            raise EmbeddingsGenerationError(
+                f"Failed to generate embedding with VertexAI: {e}"
+            ) from e
