@@ -48,7 +48,7 @@ def __getattr__(name: str) -> Any:
         "convert_to_rate_limit_error": _convert_to_rate_limit_error,
         "DEFAULT_RATE_LIMIT_HANDLER": _DEFAULT_RATE_LIMIT_HANDLER,
     }
-
+    
     if name in deprecated_items:
         warnings.warn(
             f"{name} has been moved to neo4j_graphrag.utils.rate_limit. "
@@ -57,22 +57,11 @@ def __getattr__(name: str) -> Any:
             stacklevel=2,
         )
         return deprecated_items[name]
-
+    
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-# For backward compatibility, also expose the deprecated items at module level
-# This handles cases where users do: import neo4j_graphrag.llm.rate_limit; rate_limit.RateLimitHandler
-RateLimitHandler = _RateLimitHandler
-NoOpRateLimitHandler = _NoOpRateLimitHandler
-RetryRateLimitHandler = _RetryRateLimitHandler
-rate_limit_handler = _rate_limit_handler
-async_rate_limit_handler = _async_rate_limit_handler
-is_rate_limit_error = _is_rate_limit_error
-convert_to_rate_limit_error = _convert_to_rate_limit_error
-DEFAULT_RATE_LIMIT_HANDLER = _DEFAULT_RATE_LIMIT_HANDLER
-
-# Issue deprecation warnings for module-level access
+# Issue a single deprecation warning when the module is imported
 warnings.warn(
     "The neo4j_graphrag.llm.rate_limit module has been moved to neo4j_graphrag.utils.rate_limit. "
     "Please update your imports to use 'from neo4j_graphrag.utils.rate_limit import ...'.",
