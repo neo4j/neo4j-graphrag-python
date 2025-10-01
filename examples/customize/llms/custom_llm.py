@@ -37,6 +37,8 @@ llm = CustomLLM("")
 res: LLMResponse = llm.invoke("text")
 print(res.content)
 
+# If  you want to use a custom rate limit handler
+# Type variables for function signatures used in rate limit handlers
 F = TypeVar("F", bound=Callable[..., Any])
 AF = TypeVar("AF", bound=Callable[..., Awaitable[Any]])
 
