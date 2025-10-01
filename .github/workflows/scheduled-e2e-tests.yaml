@@ -3,7 +3,8 @@ name: 'Neo4j-GraphRAG Scheduled E2E Tests'
 on:
   workflow_dispatch:
   push:
-    branches: [ main, fix/scheduled-e2e-tests ]
+    branches:
+      - main
     
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
