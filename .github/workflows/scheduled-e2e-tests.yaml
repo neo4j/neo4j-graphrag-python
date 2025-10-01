@@ -5,8 +5,7 @@ on:
   schedule:
     - cron:  '0 6 * * 1-5'  # Runs at 6am on working days
   push:
-    branches:
-      - main
+    branches: [ main, fix/scheduled-e2e-tests ]
 
 jobs:
   e2e-tests:
