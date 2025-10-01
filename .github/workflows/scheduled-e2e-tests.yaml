@@ -1,6 +1,7 @@
 name: 'Neo4j-GraphRAG Scheduled E2E Tests'
 
 on:
+  workflow_dispatch:
   schedule:
     - cron:  '0 6 * * 1-5'  # Runs at 6am on working days
   push:
@@ -59,10 +60,17 @@ jobs:
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
-      - name: Docker Prune
+      - name: Free up disk space (ubuntu-latest)
         run: |
-          docker system prune -af
-          docker volume prune -f
+          sudo rm -rf /usr/local/lib/android \
+                      /usr/share/dotnet \
+                      /opt/ghc \
+                      /opt/hostedtoolcache
+          docker system prune -af || true
+          docker volume prune -f || true
+          docker builder prune -af || true
+          sudo apt-get clean || true
+          df -h
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
