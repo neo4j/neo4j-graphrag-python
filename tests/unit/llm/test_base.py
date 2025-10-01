@@ -147,7 +147,7 @@ def test_base_llm_interface_invoke_with_tools_with_invalid_inputs(
 @patch("neo4j_graphrag.llm.base.legacy_inputs_to_messages")
 def test_base_llm_interface_invoke_retry_ok(
     mock_inputs: Mock, llm_interface: Type[LLMInterface]
-):
+) -> None:
     mock_inputs.return_value = [
         LLMMessage(
             role="user",
@@ -182,7 +182,7 @@ def test_base_llm_interface_invoke_retry_ok(
 @patch("neo4j_graphrag.llm.base.legacy_inputs_to_messages")
 def test_base_llm_interface_invoke_retry_fail(
     mock_inputs: Mock, llm_interface: Type[LLMInterface]
-):
+) -> None:
     mock_inputs.return_value = [
         LLMMessage(
             role="user",

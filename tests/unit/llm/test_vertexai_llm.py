@@ -93,7 +93,7 @@ def test_vertexai_get_messages_validation_error(GenerativeModelMock: MagicMock) 
     model_name = "gemini-1.5-flash-001"
     question = "hi!"
     message_history = [
-        {"role": "model", "content": "hello!"},
+        LLMMessage(**{"role": "model", "content": "hello!"}),
     ]
 
     llm = VertexAILLM(model_name=model_name, system_instruction=system_instruction)

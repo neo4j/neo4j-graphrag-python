@@ -71,7 +71,7 @@ def test_openai_llm_get_messages() -> None:
 def test_openai_llm_get_messages_unknown_role() -> None:
     llm = OpenAILLM(api_key="my key", model_name="gpt")
     message_history = [
-        LLMMessage(**{"role": "unknown role", "content": "Usually around 6am."}),
+        LLMMessage(**{"role": "unknown role", "content": "Usually around 6am."}),  # type: ignore[typeddict-item]
     ]
     with pytest.raises(ValueError, match="Unknown role"):
         llm.get_messages(message_history)
