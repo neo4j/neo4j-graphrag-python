@@ -2,10 +2,12 @@ name: 'Neo4j-GraphRAG Scheduled E2E Tests'
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron:  '0 6 * * 1-5'  # Runs at 6am on working days
   push:
     branches: [ main, fix/scheduled-e2e-tests ]
+    
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
   e2e-tests:
