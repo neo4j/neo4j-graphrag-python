@@ -108,7 +108,7 @@ class CohereLLM(LLMInterface):
                 model=self.model_name,
             )
         except self.cohere_api_error as e:
-            raise LLMGenerationError(e)
+            raise LLMGenerationError("Error calling cohere") from e
         return LLMResponse(
             content=res.message.content[0].text if res.message.content else "",
         )
@@ -132,7 +132,7 @@ class CohereLLM(LLMInterface):
                 model=self.model_name,
             )
         except self.cohere_api_error as e:
-            raise LLMGenerationError(e)
+            raise LLMGenerationError("Error calling cohere") from e
         return LLMResponse(
             content=res.message.content[0].text if res.message.content else "",
         )

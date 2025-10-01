@@ -70,7 +70,7 @@ async def test_cohere_llm_happy_path_async(mock_cohere: Mock) -> None:
 def test_cohere_llm_failed(mock_cohere: Mock) -> None:
     mock_cohere.ClientV2.return_value.chat.side_effect = cohere.core.ApiError
     llm = CohereLLM(model_name="something")
-    with pytest.raises(LLMGenerationError, match="ApiError"):
+    with pytest.raises(LLMGenerationError, match="Error calling cohere"):
         llm.invoke("my text")
 
 
@@ -79,5 +79,5 @@ async def test_cohere_llm_failed_async(mock_cohere: Mock) -> None:
     mock_cohere.AsyncClientV2.return_value.chat.side_effect = cohere.core.ApiError
     llm = CohereLLM(model_name="something")
 
-    with pytest.raises(LLMGenerationError, match="ApiError"):
+    with pytest.raises(LLMGenerationError, match="Error calling cohere"):
         await llm.ainvoke("my text")
