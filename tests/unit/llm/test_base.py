@@ -1,12 +1,20 @@
+"""The base LLMInterface is responsible
+for formatting the inputs as a list of LLMMessage objects
+and handling the rate limits. This is what is being tested
+in this file.
+"""
+
 from typing import Type, Generator
-from unittest.mock import patch, Mock
+from unittest import mock
+from unittest.mock import patch, Mock, call
 
 import pytest
+import tenacity
 from joblib.testing import fixture
 from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm import LLMInterface
+from neo4j_graphrag.llm import LLMInterface, LLMResponse
 from neo4j_graphrag.types import LLMMessage
 
 
@@ -133,4 +141,76 @@ def test_base_llm_interface_invoke_with_tools_with_invalid_inputs(
         question,
         None,
         None,
+    )
+
+
+@patch("neo4j_graphrag.llm.base.legacy_inputs_to_messages")
+def test_base_llm_interface_invoke_retry_ok(
+    mock_inputs: Mock, llm_interface: Type[LLMInterface]
+):
+    mock_inputs.return_value = [
+        LLMMessage(
+            role="user",
+            content="return value of the legacy_inputs_to_messages function",
+        )
+    ]
+    llm = llm_interface(model_name="test")
+    question = "What about next season?"
+
+    with mock.patch.object(llm, "_invoke") as mock_invoke_core:
+        mock_invoke_core.side_effect = [
+            LLMGenerationError("rate limit"),
+            LLMResponse(content="all good"),
+        ]
+        res = llm.invoke(question, [])
+    assert res.content == "all good"
+    call_args = [
+        {
+            "role": "user",
+            "content": "return value of the legacy_inputs_to_messages function",
+        }
+    ]
+    assert mock_invoke_core.call_count == 2
+    mock_invoke_core.assert_has_calls(
+        [
+            call(call_args),
+            call(call_args),
+        ]
+    )
+
+
+@patch("neo4j_graphrag.llm.base.legacy_inputs_to_messages")
+def test_base_llm_interface_invoke_retry_fail(
+    mock_inputs: Mock, llm_interface: Type[LLMInterface]
+):
+    mock_inputs.return_value = [
+        LLMMessage(
+            role="user",
+            content="return value of the legacy_inputs_to_messages function",
+        )
+    ]
+    llm = llm_interface(model_name="test")
+    question = "What about next season?"
+
+    with mock.patch.object(llm, "_invoke") as mock_invoke_core:
+        mock_invoke_core.side_effect = [
+            LLMGenerationError("rate limit"),
+            LLMGenerationError("rate limit"),
+            LLMGenerationError("rate limit"),
+        ]
+        with pytest.raises(tenacity.RetryError):
+            llm.invoke(question, [])
+    call_args = [
+        {
+            "role": "user",
+            "content": "return value of the legacy_inputs_to_messages function",
+        }
+    ]
+    assert mock_invoke_core.call_count == 3
+    mock_invoke_core.assert_has_calls(
+        [
+            call(call_args),
+            call(call_args),
+            call(call_args),
+        ]
     )
