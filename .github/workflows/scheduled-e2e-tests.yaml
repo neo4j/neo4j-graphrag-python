@@ -3,7 +3,7 @@ name: 'Neo4j-GraphRAG Scheduled E2E Tests'
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 6 * * 1'
+    - cron: '0 6 * * 1,4' # Mon, Thu
   push:
     branches:
       - main
