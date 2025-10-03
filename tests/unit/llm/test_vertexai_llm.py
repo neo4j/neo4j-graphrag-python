@@ -16,7 +16,6 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
-from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.types import ToolCallResponse
 from neo4j_graphrag.llm.vertexai_llm import VertexAILLM
 from neo4j_graphrag.tool import Tool
@@ -89,16 +88,14 @@ def test_vertexai_get_messages(GenerativeModelMock: MagicMock) -> None:
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
 def test_vertexai_get_messages_validation_error(GenerativeModelMock: MagicMock) -> None:
-    system_instruction = "You are a helpful assistant."
     model_name = "gemini-1.5-flash-001"
-    question = "hi!"
     message_history = [
         LLMMessage(**{"role": "model", "content": "hello!"}),  # type: ignore[typeddict-item]
     ]
 
-    llm = VertexAILLM(model_name=model_name, system_instruction=system_instruction)
-    with pytest.raises(LLMGenerationError, match="Input validation failed"):
-        llm.invoke(question, message_history)
+    llm = VertexAILLM(model_name=model_name)
+    with pytest.raises(ValueError, match="Unknown role"):
+        llm.get_messages(message_history)
 
 
 @pytest.mark.asyncio

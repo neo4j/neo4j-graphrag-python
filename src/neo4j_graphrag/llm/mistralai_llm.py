@@ -86,6 +86,7 @@ class MistralAILLM(LLMInterface):
             if m["role"] == "assistant":
                 messages.append(AssistantMessage(content=m["content"]))
                 continue
+            raise ValueError(f"Unknown role: {m['role']}")
         return messages
 
     def _invoke(

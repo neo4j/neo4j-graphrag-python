@@ -83,6 +83,15 @@ def test_anthropic_llm_get_messages_without_system_instructions() -> None:
         assert actual["content"] == expected["content"]
 
 
+def test_anthropic_llm_get_messages_unknown_role() -> None:
+    llm = AnthropicLLM(api_key="my key", model_name="claude")
+    message_history = [
+        LLMMessage(**{"role": "unknown role", "content": "Usually around 6am."}),  # type: ignore[typeddict-item]
+    ]
+    with pytest.raises(ValueError, match="Unknown role"):
+        llm.get_messages(message_history)
+
+
 def test_anthropic_invoke_happy_path(mock_anthropic: Mock) -> None:
     mock_anthropic.Anthropic.return_value.messages.create.return_value = MagicMock(
         content=[MagicMock(text="generated text")]

@@ -97,10 +97,11 @@ class VertexAILLM(LLMInterface):
         messages = []
         system_instruction = self.system_instruction
         for message in input:
-            if message.get("role") == "system":
+            role = message.get("role")
+            if role == "system":
                 system_instruction = message.get("content")
                 continue
-            if message.get("role") == "user":
+            if role == "user":
                 messages.append(
                     Content(
                         role="user",
@@ -108,7 +109,7 @@ class VertexAILLM(LLMInterface):
                     )
                 )
                 continue
-            if message.get("role") == "assistant":
+            if role == "assistant":
                 messages.append(
                     Content(
                         role="model",
@@ -116,6 +117,7 @@ class VertexAILLM(LLMInterface):
                     )
                 )
                 continue
+            raise ValueError(f"Unknown role: {role}")
         return system_instruction, messages
 
     def _invoke(

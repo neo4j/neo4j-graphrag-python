@@ -81,12 +81,14 @@ class CohereLLM(LLMInterface):
         for i in input:
             if i["role"] == "system":
                 messages.append(self.cohere.SystemChatMessageV2(content=i["content"]))
-            if i["role"] == "user":
+            elif i["role"] == "user":
                 messages.append(self.cohere.UserChatMessageV2(content=i["content"]))
-            if i["role"] == "assistant":
+            elif i["role"] == "assistant":
                 messages.append(
                     self.cohere.AssistantChatMessageV2(content=i["content"])
                 )
+            else:
+                raise ValueError(f"Unknown role: {i['role']}")
         return messages
 
     def _invoke(

@@ -159,6 +159,7 @@ class LLMInterface(ABC):
     ) -> ToolCallResponse:
         raise NotImplementedError("This LLM provider does not support tool calling.")
 
+    @async_rate_limit_handler
     async def ainvoke_with_tools(
         self,
         input: str,

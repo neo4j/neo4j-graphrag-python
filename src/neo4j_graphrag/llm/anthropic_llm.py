@@ -85,6 +85,8 @@ class AnthropicLLM(LLMInterface):
             if i["role"] == "system":
                 system_instruction = i["content"]
             else:
+                if i["role"] not in ("user", "assistant"):
+                    raise ValueError(f"Unknown role: {i['role']}")
                 messages.append(
                     self.anthropic.types.MessageParam(
                         role=i["role"],
