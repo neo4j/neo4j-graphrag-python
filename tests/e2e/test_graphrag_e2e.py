@@ -60,7 +60,14 @@ def test_graphrag_happy_path(
     )
 
     llm.invoke.assert_called_once_with(
-        """Context:
+        [
+            {
+                "role": "system",
+                "content": "Answer the user question using the provided context.",
+            },
+            {
+                "role": "user",
+                "content": """Context:
 <Record node={'question': 'In 1953 Watson & Crick built a model of the molecular structure of this, the gene-carrying substance'}>
 <Record node={'question': 'This organ removes excess glucose from the blood & stores it as glycogen'}>
 
@@ -72,8 +79,8 @@ biology
 
 Answer:
 """,
-        None,
-        system_instruction="Answer the user question using the provided context.",
+            },
+        ]
     )
     assert isinstance(result, RagResultModel)
     assert result.answer == "some text"
@@ -148,13 +155,21 @@ Answer:
     llm.invoke.assert_has_calls(
         [
             call(
-                input=first_invocation_input,
-                system_instruction=first_invocation_system_instruction,
+                [
+                    {"role": "system", "content": first_invocation_system_instruction},
+                    {"role": "user", "content": first_invocation_input},
+                ]
             ),
             call(
-                second_invocation,
-                message_history.messages,
-                system_instruction="Answer the user question using the provided context.",
+                [
+                    {
+                        "role": "system",
+                        "content": "Answer the user question using the provided context.",
+                    },
+                    {"role": "user", "content": "initial question"},
+                    {"role": "assistant", "content": "answer to initial question"},
+                    {"role": "user", "content": second_invocation},
+                ]
             ),
         ]
     )
@@ -190,7 +205,14 @@ def test_graphrag_happy_path_return_context(
     )
 
     llm.invoke.assert_called_once_with(
-        """Context:
+        [
+            {
+                "role": "system",
+                "content": "Answer the user question using the provided context.",
+            },
+            {
+                "role": "user",
+                "content": """Context:
 <Record node={'question': 'In 1953 Watson & Crick built a model of the molecular structure of this, the gene-carrying substance'}>
 <Record node={'question': 'This organ removes excess glucose from the blood & stores it as glycogen'}>
 
@@ -202,8 +224,8 @@ biology
 
 Answer:
 """,
-        None,
-        system_instruction="Answer the user question using the provided context.",
+            },
+        ],
     )
     assert isinstance(result, RagResultModel)
     assert result.answer == "some text"
@@ -236,7 +258,14 @@ def test_graphrag_happy_path_examples(
     )
 
     llm.invoke.assert_called_once_with(
-        """Context:
+        [
+            {
+                "role": "system",
+                "content": "Answer the user question using the provided context.",
+            },
+            {
+                "role": "user",
+                "content": """Context:
 <Record node={'question': 'In 1953 Watson & Crick built a model of the molecular structure of this, the gene-carrying substance'}>
 <Record node={'question': 'This organ removes excess glucose from the blood & stores it as glycogen'}>
 
@@ -248,8 +277,8 @@ biology
 
 Answer:
 """,
-        None,
-        system_instruction="Answer the user question using the provided context.",
+            },
+        ]
     )
     assert result.answer == "some text"
 

@@ -24,30 +24,18 @@ from typing import (
     Optional,
     Iterable,
     Sequence,
-    Union,
     cast,
+    Type,
 )
 
-from pydantic import ValidationError
-
-from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
 
 from ..exceptions import LLMGenerationError
 from .base import LLMInterface
-from neo4j_graphrag.utils.rate_limit import (
-    RateLimitHandler,
-    rate_limit_handler,
-    async_rate_limit_handler,
-)
 from .types import (
-    BaseMessage,
     LLMResponse,
-    MessageList,
     ToolCall,
     ToolCallResponse,
-    SystemMessage,
-    UserMessage,
 )
 
 from neo4j_graphrag.tool import Tool
@@ -58,11 +46,13 @@ if TYPE_CHECKING:
         ChatCompletionToolParam,
     )
     from openai import OpenAI, AsyncOpenAI
+    from neo4j_graphrag.utiles.rate_limit import RateLimitHandler
 else:
     ChatCompletionMessageParam = Any
     ChatCompletionToolParam = Any
     OpenAI = Any
     AsyncOpenAI = Any
+    RateLimitHandler = Any
 
 
 class BaseOpenAILLM(LLMInterface, abc.ABC):
@@ -97,23 +87,28 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
 
     def get_messages(
         self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
+        messages: list[LLMMessage],
     ) -> Iterable[ChatCompletionMessageParam]:
-        messages = []
-        if system_instruction:
-            messages.append(SystemMessage(content=system_instruction).model_dump())
-        if message_history:
-            if isinstance(message_history, MessageHistory):
-                message_history = message_history.messages
-            try:
-                MessageList(messages=cast(list[BaseMessage], message_history))
-            except ValidationError as e:
-                raise LLMGenerationError(e.errors()) from e
-            messages.extend(cast(Iterable[dict[str, Any]], message_history))
-        messages.append(UserMessage(content=input).model_dump())
-        return messages  # type: ignore
+        chat_messages = []
+        for m in messages:
+            message_type: Type[ChatCompletionMessageParam]
+            if m["role"] == "system":
+                message_type = self.openai.types.chat.ChatCompletionSystemMessageParam
+            elif m["role"] == "user":
+                message_type = self.openai.types.chat.ChatCompletionUserMessageParam
+            elif m["role"] == "assistant":
+                message_type = (
+                    self.openai.types.chat.ChatCompletionAssistantMessageParam
+                )
+            else:
+                raise ValueError(f"Unknown role: {m['role']}")
+            chat_messages.append(
+                message_type(
+                    role=m["role"],  # type: ignore
+                    content=m["content"],
+                )
+            )
+        return chat_messages
 
     def _convert_tool_to_openai_format(self, tool: Tool) -> Dict[str, Any]:
         """Convert a Tool object to OpenAI's expected format.
@@ -136,21 +131,15 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         except AttributeError:
             raise LLMGenerationError(f"Tool {tool} is not a valid Tool object")
 
-    @rate_limit_handler
-    def invoke(
+    def _invoke(
         self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
+        input: list[LLMMessage],
     ) -> LLMResponse:
         """Sends a text input to the OpenAI chat completion model
         and returns the response's content.
 
         Args:
             input (str): Text sent to the LLM.
-            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
-                with each message having a specific role assigned.
-            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
 
         Returns:
             LLMResponse: The response from OpenAI.
@@ -159,10 +148,8 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
             LLMGenerationError: If anything goes wrong.
         """
         try:
-            if isinstance(message_history, MessageHistory):
-                message_history = message_history.messages
             response = self.client.chat.completions.create(
-                messages=self.get_messages(input, message_history, system_instruction),
+                messages=self.get_messages(input),
                 model=self.model_name,
                 **self.model_params,
             )
@@ -171,13 +158,10 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
-    @rate_limit_handler
-    def invoke_with_tools(
+    def _invoke_with_tools(
         self,
-        input: str,
-        tools: Sequence[Tool],  # Tools definition as a sequence of Tool objects
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
+        input: list[LLMMessage],
+        tools: Sequence[Tool],
     ) -> ToolCallResponse:
         """Sends a text input to the OpenAI chat completion model with tool definitions
         and retrieves a tool call response.
@@ -185,9 +169,6 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         Args:
             input (str): Text sent to the LLM.
             tools (List[Tool]): List of Tools for the LLM to choose from.
-            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
-                with each message having a specific role assigned.
-            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
 
         Returns:
             ToolCallResponse: The response from the LLM containing a tool call.
@@ -196,9 +177,6 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
             LLMGenerationError: If anything goes wrong.
         """
         try:
-            if isinstance(message_history, MessageHistory):
-                message_history = message_history.messages
-
             params = self.model_params.copy() if self.model_params else {}
             if "temperature" not in params:
                 params["temperature"] = 0.0
@@ -210,7 +188,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
                 openai_tools.append(cast(ChatCompletionToolParam, openai_format_tool))
 
             response = self.client.chat.completions.create(
-                messages=self.get_messages(input, message_history, system_instruction),
+                messages=self.get_messages(input),
                 model=self.model_name,
                 tools=openai_tools,
                 tool_choice="auto",
@@ -246,21 +224,15 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
-    @async_rate_limit_handler
-    async def ainvoke(
+    async def _ainvoke(
         self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
+        input: list[LLMMessage],
     ) -> LLMResponse:
         """Asynchronously sends a text input to the OpenAI chat
         completion model and returns the response's content.
 
         Args:
             input (str): Text sent to the LLM.
-            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
-                with each message having a specific role assigned.
-            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
 
         Returns:
             LLMResponse: The response from OpenAI.
@@ -269,10 +241,8 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
             LLMGenerationError: If anything goes wrong.
         """
         try:
-            if isinstance(message_history, MessageHistory):
-                message_history = message_history.messages
             response = await self.async_client.chat.completions.create(
-                messages=self.get_messages(input, message_history, system_instruction),
+                messages=self.get_messages(input),
                 model=self.model_name,
                 **self.model_params,
             )
@@ -281,13 +251,10 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
-    @async_rate_limit_handler
-    async def ainvoke_with_tools(
+    async def _ainvoke_with_tools(
         self,
-        input: str,
+        input: list[LLMMessage],
         tools: Sequence[Tool],  # Tools definition as a sequence of Tool objects
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
     ) -> ToolCallResponse:
         """Asynchronously sends a text input to the OpenAI chat completion model with tool definitions
         and retrieves a tool call response.
@@ -295,9 +262,6 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         Args:
             input (str): Text sent to the LLM.
             tools (List[Tool]): List of Tools for the LLM to choose from.
-            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
-                with each message having a specific role assigned.
-            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
 
         Returns:
             ToolCallResponse: The response from the LLM containing a tool call.
@@ -306,9 +270,6 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
             LLMGenerationError: If anything goes wrong.
         """
         try:
-            if isinstance(message_history, MessageHistory):
-                message_history = message_history.messages
-
             params = self.model_params.copy()
             if "temperature" not in params:
                 params["temperature"] = 0.0
@@ -320,7 +281,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
                 openai_tools.append(cast(ChatCompletionToolParam, openai_format_tool))
 
             response = await self.async_client.chat.completions.create(
-                messages=self.get_messages(input, message_history, system_instruction),
+                messages=self.get_messages(input),
                 model=self.model_name,
                 tools=openai_tools,
                 tool_choice="auto",
