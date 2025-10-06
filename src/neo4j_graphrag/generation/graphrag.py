@@ -27,6 +27,7 @@ from neo4j_graphrag.exceptions import (
 from neo4j_graphrag.generation.prompts import RagTemplate
 from neo4j_graphrag.generation.types import RagInitModel, RagResultModel, RagSearchModel
 from neo4j_graphrag.llm import LLMInterface
+from neo4j_graphrag.llm.utils import legacy_inputs_to_messages
 from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.retrievers.base import Retriever
 from neo4j_graphrag.types import LLMMessage, RetrieverResult
@@ -145,12 +146,17 @@ class GraphRAG:
             prompt = self.prompt_template.format(
                 query_text=query_text, context=context, examples=validated_data.examples
             )
+
+            messages = legacy_inputs_to_messages(
+                prompt,
+                message_history=message_history,
+                system_instruction=self.prompt_template.system_instructions,
+            )
+
             logger.debug(f"RAG: retriever_result={prettify(retriever_result)}")
             logger.debug(f"RAG: prompt={prompt}")
             llm_response = self.llm.invoke(
-                prompt,
-                message_history,
-                system_instruction=self.prompt_template.system_instructions,
+                messages,
             )
             answer = llm_response.content
         result: dict[str, Any] = {"answer": answer}
@@ -168,9 +174,12 @@ class GraphRAG:
             summarization_prompt = self._chat_summary_prompt(
                 message_history=message_history
             )
-            summary = self.llm.invoke(
-                input=summarization_prompt,
+            messages = legacy_inputs_to_messages(
+                summarization_prompt,
                 system_instruction=summary_system_message,
+            )
+            summary = self.llm.invoke(
+                messages,
             ).content
             return self.conversation_prompt(summary=summary, current_query=query_text)
         return query_text

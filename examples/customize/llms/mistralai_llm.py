@@ -1,9 +1,10 @@
-from neo4j_graphrag.llm import LLMResponse, OpenAILLM
+from neo4j_graphrag.llm import MistralAILLM, LLMResponse
 from neo4j_graphrag.message_history import InMemoryMessageHistory
 from neo4j_graphrag.types import LLMMessage
 
-# set api key here on in the OPENAI_API_KEY env var
+# set api key here on in the MISTRAL_API_KEY env var
 api_key = None
+
 
 messages: list[LLMMessage] = [
     {
@@ -17,7 +18,10 @@ messages: list[LLMMessage] = [
 ]
 
 
-llm = OpenAILLM(model_name="gpt-4o", api_key=api_key)
+llm = MistralAILLM(
+    model_name="mistral-small-latest",
+    api_key=api_key,
+)
 res: LLMResponse = llm.invoke(
     # "say something",
     # messages,
