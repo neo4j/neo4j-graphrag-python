@@ -14,7 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+import warnings
 from typing import Any, List, Optional, Sequence, Union
 
 from pydantic import ValidationError
@@ -36,7 +36,7 @@ from .utils import legacy_inputs_to_messages
 from ..exceptions import LLMGenerationError
 
 
-class LLMInterface(ABC):
+class LLMInterface:
     """Interface for large language models.
 
     Args:
@@ -68,6 +68,16 @@ class LLMInterface(ABC):
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
+        if message_history:
+            warnings.warn(
+                "Using 'message_history' in the llm.invoke method is deprecated. Please use invoke(list[LLMMessage]) instead.",
+                DeprecationWarning,
+            )
+        if system_instruction:
+            warnings.warn(
+                "Using 'system_instruction' in the llm.invoke method is deprecated. Please use invoke(list[LLMMessage]) instead.",
+                DeprecationWarning,
+            )
         try:
             messages = legacy_inputs_to_messages(
                 input, message_history, system_instruction
@@ -76,7 +86,6 @@ class LLMInterface(ABC):
             raise LLMGenerationError("Input validation failed") from e
         return self._invoke(messages)
 
-    @abstractmethod
     def _invoke(
         self,
         input: list[LLMMessage],
@@ -92,6 +101,7 @@ class LLMInterface(ABC):
         Raises:
             LLMGenerationError: If anything goes wrong.
         """
+        raise NotImplementedError()
 
     @async_rate_limit_handler
     async def ainvoke(
@@ -100,10 +110,19 @@ class LLMInterface(ABC):
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
+        if message_history:
+            warnings.warn(
+                "Using 'message_history' in the llm.ainvoke method is deprecated. Please use invoke(list[LLMMessage]) instead.",
+                DeprecationWarning,
+            )
+        if system_instruction:
+            warnings.warn(
+                "Using 'system_instruction' in the llm.ainvoke method is deprecated. Please use invoke(list[LLMMessage]) instead.",
+                DeprecationWarning,
+            )
         messages = legacy_inputs_to_messages(input, message_history, system_instruction)
         return await self._ainvoke(messages)
 
-    @abstractmethod
     async def _ainvoke(
         self,
         input: list[LLMMessage],
@@ -119,6 +138,7 @@ class LLMInterface(ABC):
         Raises:
             LLMGenerationError: If anything goes wrong.
         """
+        raise NotImplementedError()
 
     @rate_limit_handler
     def invoke_with_tools(
