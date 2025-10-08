@@ -253,6 +253,10 @@ Its interface is compatible with our `GraphRAG` interface, facilitating integrat
 
 It is however not mandatory to use LangChain.
 
+.. warning:: ToolsRetriever
+
+    LangChain models are not compatible with the :ref:`toolsretriever`.
+
 Using a Custom Model
 --------------------
 
