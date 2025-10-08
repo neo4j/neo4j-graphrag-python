@@ -214,6 +214,13 @@ Text2CypherRetriever
     :members: search
 
 
+ToolsRetriever
+==============
+
+.. autoclass:: neo4j_graphrag.retrievers.ToolsRetriever
+    :members: search
+
+
 *******************
 External Retrievers
 *******************

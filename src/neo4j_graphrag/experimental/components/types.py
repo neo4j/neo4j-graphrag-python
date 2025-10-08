@@ -36,7 +36,7 @@ class DocumentInfo(DataModel):
     """
 
     path: str
-    metadata: Optional[Dict[str, str]] = None
+    metadata: Optional[Dict[str, Any]] = None
     uid: str = Field(default_factory=lambda: str(uuid.uuid4()))
     document_type: Optional[str] = None
 

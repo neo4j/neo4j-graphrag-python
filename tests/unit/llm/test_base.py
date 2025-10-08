@@ -20,15 +20,10 @@ from neo4j_graphrag.types import LLMMessage
 
 @fixture(scope="module")  # type: ignore[misc]
 def llm_interface() -> Generator[Type[LLMInterface], None, None]:
-    real_abstract_methods = LLMInterface.__abstractmethods__
-    LLMInterface.__abstractmethods__ = frozenset()
-
     class CustomLLMInterface(LLMInterface):
         pass
 
     yield CustomLLMInterface
-
-    LLMInterface.__abstractmethods__ = real_abstract_methods
 
 
 @patch("neo4j_graphrag.llm.base.legacy_inputs_to_messages")
@@ -52,7 +47,8 @@ def test_base_llm_interface_invoke_with_input_as_str(
     system_instruction = "You are a genius."
 
     with patch.object(llm, "_invoke") as mock_invoke:
-        llm.invoke(question, message_history, system_instruction)
+        with pytest.warns(DeprecationWarning) as record:
+            llm.invoke(question, message_history, system_instruction)
         mock_invoke.assert_called_once_with(
             [
                 LLMMessage(
@@ -65,6 +61,15 @@ def test_base_llm_interface_invoke_with_input_as_str(
         question,
         message_history,
         system_instruction,
+    )
+    assert len(record) == 2
+    assert (
+        "Using 'message_history' in the llm.invoke method is deprecated"
+        in record[0].message.args[0]  # type: ignore[union-attr]
+    )
+    assert (
+        "Using 'system_instruction' in the llm.invoke method is deprecated"
+        in record[1].message.args[0]  # type: ignore[union-attr]
     )
 
 

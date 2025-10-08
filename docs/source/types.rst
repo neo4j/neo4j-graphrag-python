@@ -32,6 +32,30 @@ LLMMessage
 ===========
 
 .. autoclass:: neo4j_graphrag.types.LLMMessage
+   :members:
+   :undoc-members:
+
+Tool
+====
+
+.. autoclass:: neo4j_graphrag.tool.Tool
+
+
+ToolParameter
+=============
+
+.. autoclass:: neo4j_graphrag.tool.ToolParameter
+
+
+ObjectParameter
+===============
+
+.. autoclass:: neo4j_graphrag.tool.ObjectParameter
+
+ParameterType
+=============
+
+.. autoenum:: neo4j_graphrag.tool.ParameterType
 
 
 RagResultModel

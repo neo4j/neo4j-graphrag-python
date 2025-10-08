@@ -253,6 +253,10 @@ Its interface is compatible with our `GraphRAG` interface, facilitating integrat
 
 It is however not mandatory to use LangChain.
 
+.. warning:: ToolsRetriever
+
+    LangChain models are not compatible with the :ref:`toolsretriever`.
+
 Using a Custom Model
 --------------------
 
@@ -265,21 +269,17 @@ Here's an example using the Python Ollama client:
 
     import ollama
     from neo4j_graphrag.llm import LLMInterface, LLMResponse
+    from neo4j_graphrag.types import LLMMessage
 
     class OllamaLLM(LLMInterface):
 
-        def invoke(self, input: str) -> LLMResponse:
-            response = ollama.chat(model=self.model_name, messages=[
-              {
-                'role': 'user',
-                'content': input,
-              },
-            ])
+        def _invoke(self, input: list[LLMMessage]) -> LLMResponse:
+            response = ollama.chat(model=self.model_name, messages=input)
             return LLMResponse(
                 content=response["message"]["content"]
             )
 
-        async def ainvoke(self, input: str) -> LLMResponse:
+        async def _ainvoke(self, input: list[LLMMessage]) -> LLMResponse:
             return self.invoke(input)  # TODO: implement async with ollama.AsyncClient
 
 

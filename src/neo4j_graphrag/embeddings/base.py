@@ -14,7 +14,6 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from typing import Optional
 
 from neo4j_graphrag.utils.rate_limit import (
@@ -24,7 +23,7 @@ from neo4j_graphrag.utils.rate_limit import (
 )
 
 
-class Embedder(ABC):
+class Embedder:
     """
     Interface for embedding models.
     An embedder passed into a retriever must implement this interface.
@@ -51,7 +50,6 @@ class Embedder(ABC):
         """
         return self._embed_query(text)
 
-    @abstractmethod
     def _embed_query(self, text: str) -> list[float]:
         """Embed query text.
 
@@ -61,3 +59,4 @@ class Embedder(ABC):
         Returns:
             list[float]: A vector embedding.
         """
+        raise NotImplementedError()
