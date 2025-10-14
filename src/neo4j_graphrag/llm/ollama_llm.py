@@ -15,15 +15,26 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Any, Optional, Sequence
+from typing import TYPE_CHECKING, Any, Iterable, List, Optional, Sequence, Union, cast
+
+from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
+from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
 
 from .base import LLMInterface
-from neo4j_graphrag.utils.rate_limit import RateLimitHandler
+from neo4j_graphrag.utils.rate_limit import (
+    RateLimitHandler,
+    rate_limit_handler,
+    async_rate_limit_handler,
+)
 from .types import (
+    BaseMessage,
     LLMResponse,
+    MessageList,
+    SystemMessage,
+    UserMessage,
 )
 
 if TYPE_CHECKING:
@@ -69,26 +80,48 @@ class OllamaLLM(LLMInterface):
 
     def get_messages(
         self,
-        input: list[LLMMessage],
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
     ) -> Sequence[Message]:
-        return [self.ollama.Message(**i) for i in input]
+        messages = []
+        if system_instruction:
+            messages.append(SystemMessage(content=system_instruction).model_dump())
+        if message_history:
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
+            try:
+                MessageList(messages=cast(list[BaseMessage], message_history))
+            except ValidationError as e:
+                raise LLMGenerationError(e.errors()) from e
+            messages.extend(cast(Iterable[dict[str, Any]], message_history))
+        messages.append(UserMessage(content=input).model_dump())
+        return messages  # type: ignore
 
-    def _invoke(
+    @rate_limit_handler
+    def invoke(
         self,
-        input: list[LLMMessage],
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Sends text to the LLM and returns a response.
 
         Args:
             input (str): The text to send to the LLM.
+            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
+                with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
 
         Returns:
             LLMResponse: The response from the LLM.
         """
         try:
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
             response = self.client.chat(
                 model=self.model_name,
-                messages=self.get_messages(input),
+                messages=self.get_messages(input, message_history, system_instruction),
                 **self.model_params,
             )
             content = response.message.content or ""
@@ -96,15 +129,21 @@ class OllamaLLM(LLMInterface):
         except self.ollama.ResponseError as e:
             raise LLMGenerationError(e)
 
-    async def _ainvoke(
+    @async_rate_limit_handler
+    async def ainvoke(
         self,
-        input: list[LLMMessage],
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Asynchronously sends a text input to the OpenAI chat
         completion model and returns the response's content.
 
         Args:
             input (str): Text sent to the LLM.
+            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
+                with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
 
         Returns:
             LLMResponse: The response from OpenAI.
@@ -113,9 +152,11 @@ class OllamaLLM(LLMInterface):
             LLMGenerationError: If anything goes wrong.
         """
         try:
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
             response = await self.async_client.chat(
                 model=self.model_name,
-                messages=self.get_messages(input),
+                messages=self.get_messages(input, message_history, system_instruction),
                 options=self.model_params,
             )
             content = response.message.content or ""

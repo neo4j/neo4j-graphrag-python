@@ -41,7 +41,6 @@ def test_ollama_llm_happy_path_deprecated_options(mock_import: Mock) -> None:
     mock_ollama.Client.return_value.chat.return_value = MagicMock(
         message=MagicMock(content="ollama chat response"),
     )
-    mock_ollama.Message.return_value = {"role": "user", "content": "test"}
     model = "gpt"
     model_params = {"temperature": 0.3}
     with pytest.warns(DeprecationWarning) as record:
@@ -60,10 +59,11 @@ def test_ollama_llm_happy_path_deprecated_options(mock_import: Mock) -> None:
     res = llm.invoke(question)
     assert isinstance(res, LLMResponse)
     assert res.content == "ollama chat response"
+    messages = [
+        {"role": "user", "content": question},
+    ]
     llm.client.chat.assert_called_once_with(  # type: ignore[attr-defined]
-        model=model,
-        messages=[{"role": "user", "content": "test"}],
-        options={"temperature": 0.3},
+        model=model, messages=messages, options={"temperature": 0.3}
     )
 
 
@@ -90,7 +90,6 @@ def test_ollama_llm_happy_path(mock_import: Mock) -> None:
     mock_ollama.Client.return_value.chat.return_value = MagicMock(
         message=MagicMock(content="ollama chat response"),
     )
-    mock_ollama.Message.return_value = {"role": "user", "content": "test"}
     model = "gpt"
     options = {"temperature": 0.3}
     model_params = {"options": options, "format": "json"}
@@ -103,7 +102,7 @@ def test_ollama_llm_happy_path(mock_import: Mock) -> None:
     assert isinstance(res, LLMResponse)
     assert res.content == "ollama chat response"
     messages = [
-        {"role": "user", "content": "test"},
+        {"role": "user", "content": question},
     ]
     llm.client.chat.assert_called_once_with(  # type: ignore[attr-defined]
         model=model,
@@ -111,6 +110,102 @@ def test_ollama_llm_happy_path(mock_import: Mock) -> None:
         options=options,
         format="json",
     )
+
+
+@patch("builtins.__import__")
+def test_ollama_invoke_with_system_instruction_happy_path(mock_import: Mock) -> None:
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+    mock_ollama.Client.return_value.chat.return_value = MagicMock(
+        message=MagicMock(content="ollama chat response"),
+    )
+    model = "gpt"
+    options = {"temperature": 0.3}
+    model_params = {"options": options, "format": "json"}
+    llm = OllamaLLM(
+        model,
+        model_params=model_params,
+    )
+    system_instruction = "You are a helpful assistant."
+    question = "What about next season?"
+
+    response = llm.invoke(question, system_instruction=system_instruction)
+    assert response.content == "ollama chat response"
+    messages = [{"role": "system", "content": system_instruction}]
+    messages.append({"role": "user", "content": question})
+    llm.client.chat.assert_called_once_with(  # type: ignore[attr-defined]
+        model=model,
+        messages=messages,
+        options=options,
+        format="json",
+    )
+
+
+@patch("builtins.__import__")
+def test_ollama_invoke_with_message_history_happy_path(mock_import: Mock) -> None:
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+    mock_ollama.Client.return_value.chat.return_value = MagicMock(
+        message=MagicMock(content="ollama chat response"),
+    )
+    model = "gpt"
+    options = {"temperature": 0.3}
+    model_params = {"options": options}
+    llm = OllamaLLM(
+        model,
+        model_params=model_params,
+    )
+    message_history = [
+        {"role": "user", "content": "When does the sun come up in the summer?"},
+        {"role": "assistant", "content": "Usually around 6am."},
+    ]
+    question = "What about next season?"
+
+    response = llm.invoke(question, message_history)  # type: ignore
+    assert response.content == "ollama chat response"
+    messages = [m for m in message_history]
+    messages.append({"role": "user", "content": question})
+    llm.client.chat.assert_called_once_with(  # type: ignore[attr-defined]
+        model=model, messages=messages, options=options
+    )
+
+
+@patch("builtins.__import__")
+def test_ollama_invoke_with_message_history_and_system_instruction(
+    mock_import: Mock,
+) -> None:
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+    mock_ollama.Client.return_value.chat.return_value = MagicMock(
+        message=MagicMock(content="ollama chat response"),
+    )
+    model = "gpt"
+    options = {"temperature": 0.3}
+    model_params = {"options": options}
+    system_instruction = "You are a helpful assistant."
+    llm = OllamaLLM(
+        model,
+        model_params=model_params,
+    )
+    message_history = [
+        {"role": "user", "content": "When does the sun come up in the summer?"},
+        {"role": "assistant", "content": "Usually around 6am."},
+    ]
+    question = "What about next season?"
+
+    response = llm.invoke(
+        question,
+        message_history,  # type: ignore
+        system_instruction=system_instruction,
+    )
+    assert response.content == "ollama chat response"
+    messages = [{"role": "system", "content": system_instruction}]
+    messages.extend(message_history)
+    messages.append({"role": "user", "content": question})
+    llm.client.chat.assert_called_once_with(  # type: ignore[attr-defined]
+        model=model, messages=messages, options=options
+    )
+    assert llm.client.chat.call_count == 1  # type: ignore
 
 
 @patch("builtins.__import__")
@@ -133,8 +228,9 @@ def test_ollama_invoke_with_message_history_validation_error(mock_import: Mock) 
     ]
     question = "What about next season?"
 
-    with pytest.raises(LLMGenerationError, match="Input validation failed"):
+    with pytest.raises(LLMGenerationError) as exc_info:
         llm.invoke(question, message_history)  # type: ignore
+    assert "Input should be 'user', 'assistant' or 'system" in str(exc_info.value)
 
 
 @pytest.mark.asyncio

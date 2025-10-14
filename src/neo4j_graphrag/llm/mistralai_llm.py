@@ -15,31 +15,33 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Optional
+from typing import Any, Iterable, List, Optional, Union, cast
+
+from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface
 from neo4j_graphrag.utils.rate_limit import (
     RateLimitHandler,
+    rate_limit_handler,
+    async_rate_limit_handler,
 )
 from neo4j_graphrag.llm.types import (
+    BaseMessage,
     LLMResponse,
+    MessageList,
+    SystemMessage,
+    UserMessage,
 )
+from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
 
 try:
-    from mistralai import (
-        Messages,
-        UserMessage,
-        AssistantMessage,
-        SystemMessage,
-        Mistral,
-    )
+    from mistralai import Messages, Mistral
     from mistralai.models.sdkerror import SDKError
 except ImportError:
     Mistral = None  # type: ignore
     SDKError = None  # type: ignore
-    Messages = None  # type: ignore
 
 
 class MistralAILLM(LLMInterface):
@@ -73,31 +75,38 @@ class MistralAILLM(LLMInterface):
 
     def get_messages(
         self,
-        input: list[LLMMessage],
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
     ) -> list[Messages]:
-        messages: list[Messages] = []
-        for m in input:
-            if m["role"] == "system":
-                messages.append(SystemMessage(content=m["content"]))
-                continue
-            if m["role"] == "user":
-                messages.append(UserMessage(content=m["content"]))
-                continue
-            if m["role"] == "assistant":
-                messages.append(AssistantMessage(content=m["content"]))
-                continue
-            raise ValueError(f"Unknown role: {m['role']}")
-        return messages
+        messages = []
+        if system_instruction:
+            messages.append(SystemMessage(content=system_instruction).model_dump())
+        if message_history:
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
+            try:
+                MessageList(messages=cast(list[BaseMessage], message_history))
+            except ValidationError as e:
+                raise LLMGenerationError(e.errors()) from e
+            messages.extend(cast(Iterable[dict[str, Any]], message_history))
+        messages.append(UserMessage(content=input).model_dump())
+        return cast(list[Messages], messages)
 
-    def _invoke(
+    @rate_limit_handler
+    def invoke(
         self,
-        input: list[LLMMessage],
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Sends a text input to the Mistral chat completion model
         and returns the response's content.
 
         Args:
             input (str): Text sent to the LLM.
+            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages, with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
 
         Returns:
             LLMResponse: The response from MistralAI.
@@ -106,7 +115,9 @@ class MistralAILLM(LLMInterface):
             LLMGenerationError: If anything goes wrong.
         """
         try:
-            messages = self.get_messages(input)
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
+            messages = self.get_messages(input, message_history, system_instruction)
             response = self.client.chat.complete(
                 model=self.model_name,
                 messages=messages,
@@ -121,15 +132,21 @@ class MistralAILLM(LLMInterface):
         except SDKError as e:
             raise LLMGenerationError(e)
 
-    async def _ainvoke(
+    @async_rate_limit_handler
+    async def ainvoke(
         self,
-        input: list[LLMMessage],
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Asynchronously sends a text input to the MistralAI chat
         completion model and returns the response's content.
 
         Args:
             input (str): Text sent to the LLM.
+            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
+                with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
 
         Returns:
             LLMResponse: The response from MistralAI.
@@ -138,7 +155,9 @@ class MistralAILLM(LLMInterface):
             LLMGenerationError: If anything goes wrong.
         """
         try:
-            messages = self.get_messages(input)
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
+            messages = self.get_messages(input, message_history, system_instruction)
             response = await self.client.chat.complete_async(
                 model=self.model_name,
                 messages=messages,

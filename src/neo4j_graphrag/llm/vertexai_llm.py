@@ -13,19 +13,25 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Any, Optional, Sequence
+from typing import Any, List, Optional, Union, cast, Sequence
 
+from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface
 from neo4j_graphrag.utils.rate_limit import (
     RateLimitHandler,
+    rate_limit_handler,
+    async_rate_limit_handler,
 )
 from neo4j_graphrag.llm.types import (
+    BaseMessage,
     LLMResponse,
+    MessageList,
     ToolCall,
     ToolCallResponse,
 )
+from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.tool import Tool
 from neo4j_graphrag.types import LLMMessage
 
@@ -92,75 +98,92 @@ class VertexAILLM(LLMInterface):
 
     def get_messages(
         self,
-        input: list[LLMMessage],
-    ) -> tuple[str | None, list[Content]]:
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+    ) -> list[Content]:
         messages = []
-        system_instruction = self.system_instruction
-        for message in input:
-            role = message.get("role")
-            if role == "system":
-                system_instruction = message.get("content")
-                continue
-            if role == "user":
-                messages.append(
-                    Content(
-                        role="user",
-                        parts=[Part.from_text(message.get("content", ""))],
-                    )
-                )
-                continue
-            if role == "assistant":
-                messages.append(
-                    Content(
-                        role="model",
-                        parts=[Part.from_text(message.get("content", ""))],
-                    )
-                )
-                continue
-            raise ValueError(f"Unknown role: {role}")
-        return system_instruction, messages
+        if message_history:
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
+            try:
+                MessageList(messages=cast(list[BaseMessage], message_history))
+            except ValidationError as e:
+                raise LLMGenerationError(e.errors()) from e
 
-    def _invoke(
+            for message in message_history:
+                if message.get("role") == "user":
+                    messages.append(
+                        Content(
+                            role="user",
+                            parts=[Part.from_text(message.get("content", ""))],
+                        )
+                    )
+                elif message.get("role") == "assistant":
+                    messages.append(
+                        Content(
+                            role="model",
+                            parts=[Part.from_text(message.get("content", ""))],
+                        )
+                    )
+
+        messages.append(Content(role="user", parts=[Part.from_text(input)]))
+        return messages
+
+    @rate_limit_handler
+    def invoke(
         self,
-        input: list[LLMMessage],
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Sends text to the LLM and returns a response.
 
         Args:
             input (str): The text to send to the LLM.
+            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
+                with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
 
         Returns:
             LLMResponse: The response from the LLM.
         """
-        system_instruction, messages = self.get_messages(input)
         model = self._get_model(
             system_instruction=system_instruction,
         )
         try:
-            options = self._get_call_params(messages, tools=None)
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
+            options = self._get_call_params(input, message_history, tools=None)
             response = model.generate_content(**options)
             return self._parse_content_response(response)
         except ResponseValidationError as e:
             raise LLMGenerationError("Error calling VertexAILLM") from e
 
-    async def _ainvoke(
+    @async_rate_limit_handler
+    async def ainvoke(
         self,
-        input: list[LLMMessage],
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         """Asynchronously sends text to the LLM and returns a response.
 
         Args:
             input (str): The text to send to the LLM.
+            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
+                with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
 
         Returns:
             LLMResponse: The response from the LLM.
         """
         try:
-            system_instruction, messages = self.get_messages(input)
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
             model = self._get_model(
                 system_instruction=system_instruction,
             )
-            options = self._get_call_params(messages, tools=None)
+            options = self._get_call_params(input, message_history, tools=None)
             response = await model.generate_content_async(**options)
             return self._parse_content_response(response)
         except ResponseValidationError as e:
@@ -190,6 +213,7 @@ class VertexAILLM(LLMInterface):
         self,
         system_instruction: Optional[str] = None,
     ) -> GenerativeModel:
+        # system_message = [system_instruction] if system_instruction is not None else []
         model = GenerativeModel(
             model_name=self.model_name,
             system_instruction=system_instruction,
@@ -198,7 +222,8 @@ class VertexAILLM(LLMInterface):
 
     def _get_call_params(
         self,
-        contents: list[Content],
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]],
         tools: Optional[Sequence[Tool]],
     ) -> dict[str, Any]:
         options = dict(self.options)
@@ -215,28 +240,32 @@ class VertexAILLM(LLMInterface):
         else:
             # no tools, remove tool_config if defined
             options.pop("tool_config", None)
-        options["contents"] = contents
+
+        messages = self.get_messages(input, message_history)
+        options["contents"] = messages
         return options
 
     async def _acall_llm(
         self,
-        input: list[LLMMessage],
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
         tools: Optional[Sequence[Tool]] = None,
     ) -> GenerationResponse:
-        system_instruction, contents = self.get_messages(input)
-        model = self._get_model(system_instruction)
-        options = self._get_call_params(contents, tools)
+        model = self._get_model(system_instruction=system_instruction)
+        options = self._get_call_params(input, message_history, tools)
         response = await model.generate_content_async(**options)
         return response  # type: ignore[no-any-return]
 
     def _call_llm(
         self,
-        input: list[LLMMessage],
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
         tools: Optional[Sequence[Tool]] = None,
     ) -> GenerationResponse:
-        system_instruction, contents = self.get_messages(input)
-        model = self._get_model(system_instruction)
-        options = self._get_call_params(contents, tools)
+        model = self._get_model(system_instruction=system_instruction)
+        options = self._get_call_params(input, message_history, tools)
         response = model.generate_content(**options)
         return response  # type: ignore[no-any-return]
 
@@ -258,24 +287,32 @@ class VertexAILLM(LLMInterface):
             content=response.text,
         )
 
-    async def _ainvoke_with_tools(
+    async def ainvoke_with_tools(
         self,
-        input: list[LLMMessage],
+        input: str,
         tools: Sequence[Tool],
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
     ) -> ToolCallResponse:
         response = await self._acall_llm(
             input,
+            message_history=message_history,
+            system_instruction=system_instruction,
             tools=tools,
         )
         return self._parse_tool_response(response)
 
-    def _invoke_with_tools(
+    def invoke_with_tools(
         self,
-        input: list[LLMMessage],
+        input: str,
         tools: Sequence[Tool],
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
     ) -> ToolCallResponse:
         response = self._call_llm(
             input,
+            message_history=message_history,
+            system_instruction=system_instruction,
             tools=tools,
         )
         return self._parse_tool_response(response)
