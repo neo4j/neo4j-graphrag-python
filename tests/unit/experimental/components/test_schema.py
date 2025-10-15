@@ -960,55 +960,6 @@ async def test_schema_from_text_filters_relationships_without_labels(
     assert ("Person", "MANAGES", "Organization") in schema.patterns
 
 
-@pytest.fixture
-def valid_schema_json_with_markdown() -> str:
-    return """```json
-{
-    "node_types": [
-        {
-            "label": "Person",
-            "properties": [
-                {"name": "name", "type": "STRING"}
-            ]
-        },
-        {
-            "label": "Organization",
-            "properties": [
-                {"name": "name", "type": "STRING"}
-            ]
-        }
-    ],
-    "relationship_types": [
-        {
-            "label": "WORKS_FOR",
-            "properties": [
-                {"name": "since", "type": "DATE"}
-            ]
-        }
-    ],
-    "patterns": [
-        ["Person", "WORKS_FOR", "Organization"]
-    ]
-}
-```"""
-
-
-@pytest.fixture
-def valid_schema_json_with_markdown_no_language() -> str:
-    return """```
-{
-    "node_types": [
-        {
-            "label": "Person",
-            "properties": [
-                {"name": "name", "type": "STRING"}
-            ]
-        }
-    ]
-}
-```"""
-
-
 def test_clean_json_content_markdown_with_json_language(
     schema_from_text: SchemaFromTextExtractor,
 ) -> None:
