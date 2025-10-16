@@ -42,7 +42,7 @@ class SentenceTransformerEmbeddings(Embedder):
         self.np = np
         self.model = sentence_transformers.SentenceTransformer(model, *args, **kwargs)
 
-    def _embed_query(self, text: str) -> Any:
+    def embed_query(self, text: str) -> Any:
         try:
             result = self.model.encode([text])
 

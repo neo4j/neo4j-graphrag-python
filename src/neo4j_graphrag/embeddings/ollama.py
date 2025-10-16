@@ -19,7 +19,7 @@ from typing import Any, Optional
 
 from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.exceptions import EmbeddingsGenerationError
-from neo4j_graphrag.utils.rate_limit import RateLimitHandler
+from neo4j_graphrag.utils.rate_limit import RateLimitHandler, rate_limit_handler
 
 
 class OllamaEmbeddings(Embedder):
@@ -48,7 +48,8 @@ class OllamaEmbeddings(Embedder):
         self.model = model
         self.client = ollama.Client(**kwargs)
 
-    def _embed_query(self, text: str, **kwargs: Any) -> list[float]:
+    @rate_limit_handler
+    def embed_query(self, text: str, **kwargs: Any) -> list[float]:
         """
         Generate embeddings for a given query using an Ollama text embedding model.
 

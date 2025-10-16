@@ -6,9 +6,10 @@ from neo4j_graphrag.embeddings import Embedder
 
 class CustomEmbeddings(Embedder):
     def __init__(self, dimension: int = 10, **kwargs: Any):
+        super().__init__(**kwargs)
         self.dimension = dimension
 
-    def _embed_query(self, input: str) -> list[float]:
+    def embed_query(self, input: str) -> list[float]:
         return [random.random() for _ in range(self.dimension)]
 
 
