@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.exceptions import EmbeddingsGenerationError
-from neo4j_graphrag.utils.rate_limit import RateLimitHandler
+from neo4j_graphrag.utils.rate_limit import RateLimitHandler, rate_limit_handler
 
 if TYPE_CHECKING:
     import openai
@@ -59,7 +59,8 @@ class BaseOpenAIEmbeddings(Embedder, abc.ABC):
         """
         pass
 
-    def _embed_query(self, text: str, **kwargs: Any) -> list[float]:
+    @rate_limit_handler
+    def embed_query(self, text: str, **kwargs: Any) -> list[float]:
         """
         Generate embeddings for a given query using an OpenAI text embedding model.
 

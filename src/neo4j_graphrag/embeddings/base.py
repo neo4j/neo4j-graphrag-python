@@ -20,7 +20,6 @@ from typing import Optional
 from neo4j_graphrag.utils.rate_limit import (
     DEFAULT_RATE_LIMIT_HANDLER,
     RateLimitHandler,
-    rate_limit_handler,
 )
 
 
@@ -39,20 +38,8 @@ class Embedder(ABC):
         else:
             self._rate_limit_handler = DEFAULT_RATE_LIMIT_HANDLER
 
-    @rate_limit_handler
-    def embed_query(self, text: str) -> list[float]:
-        """Embed query text.
-
-        Args:
-            text (str): Text to convert to vector embedding
-
-        Returns:
-            list[float]: A vector embedding.
-        """
-        return self._embed_query(text)
-
     @abstractmethod
-    def _embed_query(self, text: str) -> list[float]:
+    def embed_query(self, text: str) -> list[float]:
         """Embed query text.
 
         Args:

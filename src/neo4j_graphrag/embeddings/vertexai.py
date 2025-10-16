@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.exceptions import EmbeddingsGenerationError
-from neo4j_graphrag.utils.rate_limit import RateLimitHandler
+from neo4j_graphrag.utils.rate_limit import RateLimitHandler, rate_limit_handler
 
 try:
     from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
@@ -52,7 +52,8 @@ class VertexAIEmbeddings(Embedder):
         super().__init__(rate_limit_handler)
         self.model = TextEmbeddingModel.from_pretrained(model)
 
-    def _embed_query(
+    @rate_limit_handler
+    def embed_query(
         self, text: str, task_type: str = "RETRIEVAL_QUERY", **kwargs: Any
     ) -> list[float]:
         """
