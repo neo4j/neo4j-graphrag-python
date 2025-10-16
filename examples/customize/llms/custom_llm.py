@@ -1,6 +1,6 @@
 import random
 import string
-from typing import Any, Awaitable, Callable, Optional, TypeVar
+from typing import Any, Awaitable, Callable, List, Optional, TypeVar, Union
 
 from neo4j_graphrag.llm import LLMInterface, LLMResponse
 from neo4j_graphrag.utils.rate_limit import (
@@ -8,6 +8,7 @@ from neo4j_graphrag.utils.rate_limit import (
     # rate_limit_handler,
     # async_rate_limit_handler,
 )
+from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
 
 
@@ -17,27 +18,37 @@ class CustomLLM(LLMInterface):
     ):
         super().__init__(model_name, **kwargs)
 
-    def _invoke(
+    # Optional: Apply rate limit handling to synchronous invoke method
+    # @rate_limit_handler
+    def invoke(
         self,
-        input: list[LLMMessage],
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         content: str = (
             self.model_name + ": " + "".join(random.choices(string.ascii_letters, k=30))
         )
         return LLMResponse(content=content)
 
-    async def _ainvoke(
+    # Optional: Apply rate limit handling to asynchronous ainvoke method
+    # @async_rate_limit_handler
+    async def ainvoke(
         self,
-        input: list[LLMMessage],
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         raise NotImplementedError()
 
 
-llm = CustomLLM("")
+llm = CustomLLM(
+    ""
+)  # if rate_limit_handler and async_rate_limit_handler decorators are used, the default rate limit handler will be applied automatically (retry with exponential backoff)
 res: LLMResponse = llm.invoke("text")
 print(res.content)
 
-# If  you want to use a custom rate limit handler
+# If rate_limit_handler and async_rate_limit_handler decorators are used and you want to use a custom rate limit handler
 # Type variables for function signatures used in rate limit handlers
 F = TypeVar("F", bound=Callable[..., Any])
 AF = TypeVar("AF", bound=Callable[..., Awaitable[Any]])

@@ -19,11 +19,9 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import anthropic
 import pytest
-from anthropic import NOT_GIVEN, NotGiven
-
-from neo4j_graphrag.llm import LLMResponse
+from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.anthropic_llm import AnthropicLLM
-from neo4j_graphrag.types import LLMMessage
+from neo4j_graphrag.llm.types import LLMResponse
 
 
 @pytest.fixture
@@ -42,73 +40,131 @@ def test_anthropic_llm_missing_dependency(mock_import: Mock) -> None:
         AnthropicLLM(model_name="claude-3-opus-20240229")
 
 
-def test_anthropic_llm_get_messages_with_system_instructions() -> None:
-    llm = AnthropicLLM(api_key="my key", model_name="claude")
-    message_history = [
-        LLMMessage(**{"role": "system", "content": "do something"}),
-        LLMMessage(
-            **{"role": "user", "content": "When does the sun come up in the summer?"}
-        ),
-        LLMMessage(**{"role": "assistant", "content": "Usually around 6am."}),
-    ]
-
-    system_instruction, messages = llm.get_messages(message_history)
-    assert isinstance(system_instruction, str)
-    assert system_instruction == "do something"
-    assert isinstance(messages, list)
-    assert len(messages) == 2  # exclude system instruction
-    for actual, expected in zip(messages, message_history[1:]):
-        assert isinstance(actual, dict)
-        assert actual["role"] == expected["role"]
-        assert actual["content"] == expected["content"]
-
-
-def test_anthropic_llm_get_messages_without_system_instructions() -> None:
-    llm = AnthropicLLM(api_key="my key", model_name="claude")
-    message_history = [
-        LLMMessage(
-            **{"role": "user", "content": "When does the sun come up in the summer?"}
-        ),
-        LLMMessage(**{"role": "assistant", "content": "Usually around 6am."}),
-    ]
-
-    system_instruction, messages = llm.get_messages(message_history)
-    assert isinstance(system_instruction, NotGiven)
-    assert system_instruction == NOT_GIVEN
-    assert isinstance(messages, list)
-    assert len(messages) == 2
-    for actual, expected in zip(messages, message_history):
-        assert isinstance(actual, dict)
-        assert actual["role"] == expected["role"]
-        assert actual["content"] == expected["content"]
-
-
-def test_anthropic_llm_get_messages_unknown_role() -> None:
-    llm = AnthropicLLM(api_key="my key", model_name="claude")
-    message_history = [
-        LLMMessage(**{"role": "unknown role", "content": "Usually around 6am."}),  # type: ignore[typeddict-item]
-    ]
-    with pytest.raises(ValueError, match="Unknown role"):
-        llm.get_messages(message_history)
-
-
 def test_anthropic_invoke_happy_path(mock_anthropic: Mock) -> None:
     mock_anthropic.Anthropic.return_value.messages.create.return_value = MagicMock(
         content=[MagicMock(text="generated text")]
     )
-    mock_anthropic.types.MessageParam.return_value = {"role": "user", "content": "hi"}
     model_params = {"temperature": 0.3}
     llm = AnthropicLLM("claude-3-opus-20240229", model_params=model_params)
     input_text = "may thy knife chip and shatter"
     response = llm.invoke(input_text)
-    assert isinstance(response, LLMResponse)
     assert response.content == "generated text"
     llm.client.messages.create.assert_called_once_with(  # type: ignore
-        messages=[{"role": "user", "content": "hi"}],
+        messages=[{"role": "user", "content": input_text}],
         model="claude-3-opus-20240229",
         system=anthropic.NOT_GIVEN,
         **model_params,
     )
+
+
+def test_anthropic_invoke_with_message_history_happy_path(mock_anthropic: Mock) -> None:
+    mock_anthropic.Anthropic.return_value.messages.create.return_value = MagicMock(
+        content=[MagicMock(text="generated text")]
+    )
+    model_params = {"temperature": 0.3}
+    llm = AnthropicLLM(
+        "claude-3-opus-20240229",
+        model_params=model_params,
+    )
+    message_history = [
+        {"role": "user", "content": "When does the sun come up in the summer?"},
+        {"role": "assistant", "content": "Usually around 6am."},
+    ]
+    question = "What about next season?"
+
+    response = llm.invoke(question, message_history)  # type: ignore
+    assert response.content == "generated text"
+    message_history.append({"role": "user", "content": question})
+    llm.client.messages.create.assert_called_once_with(  # type: ignore[attr-defined]
+        messages=message_history,
+        model="claude-3-opus-20240229",
+        system=anthropic.NOT_GIVEN,
+        **model_params,
+    )
+
+
+def test_anthropic_invoke_with_system_instruction(
+    mock_anthropic: Mock,
+) -> None:
+    mock_anthropic.Anthropic.return_value.messages.create.return_value = MagicMock(
+        content=[MagicMock(text="generated text")]
+    )
+    model_params = {"temperature": 0.3}
+    system_instruction = "You are a helpful assistant."
+    llm = AnthropicLLM(
+        "claude-3-opus-20240229",
+        model_params=model_params,
+    )
+
+    question = "When does it come up in the winter?"
+    response = llm.invoke(question, system_instruction=system_instruction)
+    assert isinstance(response, LLMResponse)
+    assert response.content == "generated text"
+    messages = [{"role": "user", "content": question}]
+    llm.client.messages.create.assert_called_with(  # type: ignore[attr-defined]
+        model="claude-3-opus-20240229",
+        system=system_instruction,
+        messages=messages,
+        **model_params,
+    )
+
+    assert llm.client.messages.create.call_count == 1  # type: ignore
+
+
+def test_anthropic_invoke_with_message_history_and_system_instruction(
+    mock_anthropic: Mock,
+) -> None:
+    mock_anthropic.Anthropic.return_value.messages.create.return_value = MagicMock(
+        content=[MagicMock(text="generated text")]
+    )
+    model_params = {"temperature": 0.3}
+    system_instruction = "You are a helpful assistant."
+    llm = AnthropicLLM(
+        "claude-3-opus-20240229",
+        model_params=model_params,
+    )
+    message_history = [
+        {"role": "user", "content": "When does the sun come up in the summer?"},
+        {"role": "assistant", "content": "Usually around 6am."},
+    ]
+
+    question = "When does it come up in the winter?"
+    response = llm.invoke(question, message_history, system_instruction)  # type: ignore
+    assert isinstance(response, LLMResponse)
+    assert response.content == "generated text"
+    message_history.append({"role": "user", "content": question})
+    llm.client.messages.create.assert_called_with(  # type: ignore[attr-defined]
+        model="claude-3-opus-20240229",
+        system=system_instruction,
+        messages=message_history,
+        **model_params,
+    )
+
+    assert llm.client.messages.create.call_count == 1  # type: ignore
+
+
+def test_anthropic_invoke_with_message_history_validation_error(
+    mock_anthropic: Mock,
+) -> None:
+    mock_anthropic.Anthropic.return_value.messages.create.return_value = MagicMock(
+        content=[MagicMock(text="generated text")]
+    )
+    model_params = {"temperature": 0.3}
+    system_instruction = "You are a helpful assistant."
+    llm = AnthropicLLM(
+        "claude-3-opus-20240229",
+        model_params=model_params,
+        system_instruction=system_instruction,
+    )
+    message_history = [
+        {"role": "human", "content": "When does the sun come up in the summer?"},
+        {"role": "assistant", "content": "Usually around 6am."},
+    ]
+    question = "What about next season?"
+
+    with pytest.raises(LLMGenerationError) as exc_info:
+        llm.invoke(question, message_history)  # type: ignore
+    assert "Input should be 'user', 'assistant' or 'system'" in str(exc_info.value)
 
 
 @pytest.mark.asyncio
@@ -117,16 +173,14 @@ async def test_anthropic_ainvoke_happy_path(mock_anthropic: Mock) -> None:
     mock_response.content = [MagicMock(text="Return text")]
     mock_model = mock_anthropic.AsyncAnthropic.return_value
     mock_model.messages.create = AsyncMock(return_value=mock_response)
-    mock_anthropic.types.MessageParam.return_value = {"role": "user", "content": "hi"}
     model_params = {"temperature": 0.3}
     llm = AnthropicLLM("claude-3-opus-20240229", model_params)
     input_text = "may thy knife chip and shatter"
     response = await llm.ainvoke(input_text)
-    assert isinstance(response, LLMResponse)
     assert response.content == "Return text"
     llm.async_client.messages.create.assert_awaited_once_with(  # type: ignore
         model="claude-3-opus-20240229",
         system=anthropic.NOT_GIVEN,
-        messages=[{"role": "user", "content": "hi"}],
+        messages=[{"role": "user", "content": input_text}],
         **model_params,
     )

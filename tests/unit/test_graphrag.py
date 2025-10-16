@@ -63,14 +63,7 @@ def test_graphrag_happy_path(retriever_mock: MagicMock, llm: MagicMock) -> None:
 
     retriever_mock.search.assert_called_once_with(query_text="question", top_k=111)
     llm.invoke.assert_called_once_with(
-        [
-            {
-                "role": "system",
-                "content": "Answer the user question using the provided context.",
-            },
-            {
-                "role": "user",
-                "content": """Context:
+        """Context:
 item content 1
 item content 2
 
@@ -82,8 +75,8 @@ question
 
 Answer:
 """,
-            },
-        ]
+        None,  # message history
+        system_instruction="Answer the user question using the provided context.",
     )
 
     assert isinstance(res, RagResultModel)
@@ -149,20 +142,13 @@ Answer:
     llm.invoke.assert_has_calls(
         [
             call(
-                [
-                    {"role": "system", "content": first_invocation_system_instruction},
-                    {"role": "user", "content": first_invocation_input},
-                ]
+                input=first_invocation_input,
+                system_instruction=first_invocation_system_instruction,
             ),
             call(
-                [
-                    {
-                        "role": "system",
-                        "content": "Answer the user question using the provided context.",
-                    },
-                    *message_history,
-                    {"role": "user", "content": second_invocation},
-                ]
+                second_invocation,
+                message_history,
+                system_instruction="Answer the user question using the provided context.",
             ),
         ]
     )
@@ -232,20 +218,13 @@ Answer:
     llm.invoke.assert_has_calls(
         [
             call(
-                [
-                    {"role": "system", "content": first_invocation_system_instruction},
-                    {"role": "user", "content": first_invocation_input},
-                ]
+                input=first_invocation_input,
+                system_instruction=first_invocation_system_instruction,
             ),
             call(
-                [
-                    {
-                        "role": "system",
-                        "content": "Answer the user question using the provided context.",
-                    },
-                    *message_history.messages,
-                    {"role": "user", "content": second_invocation},
-                ]
+                second_invocation,
+                message_history.messages,
+                system_instruction="Answer the user question using the provided context.",
             ),
         ]
     )
@@ -274,10 +253,9 @@ def test_graphrag_happy_path_custom_system_instruction(
     llm.invoke.assert_has_calls(
         [
             call(
-                [
-                    {"role": "system", "content": "Custom instruction"},
-                    {"role": "user", "content": mock.ANY},
-                ]
+                mock.ANY,
+                None,  # no message history
+                system_instruction="Custom instruction",
             ),
         ]
     )

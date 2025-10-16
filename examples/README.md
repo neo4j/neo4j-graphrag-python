@@ -69,7 +69,7 @@ are listed in [the last section of this file](#customize).
 - [OpenAI (GPT)](./customize/llms/openai_llm.py)
 - [Azure OpenAI]()
 - [VertexAI (Gemini)](./customize/llms/vertexai_llm.py)
-- [MistralAI](customize/llms/mistralai_llm.py)
+- [MistralAI](./customize/llms/mistalai_llm.py)
 - [Cohere](./customize/llms/cohere_llm.py)
 - [Anthropic (Claude)](./customize/llms/anthropic_llm.py)
 - [Ollama](./customize/llms/ollama_llm.py)
@@ -142,7 +142,7 @@ are listed in [the last section of this file](#customize).
 
 ### Answer: GraphRAG
 
-- [LangChain compatibility](customize/answer/langchain_compatibility.py)
+- [LangChain compatibility](./customize/answer/langchain_compatiblity.py)
 - [Use a custom prompt](./customize/answer/custom_prompt.py)
 
 
