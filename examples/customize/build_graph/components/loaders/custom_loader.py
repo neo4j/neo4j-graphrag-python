@@ -18,7 +18,6 @@ class MyLoader(DataLoader):
             text="<extracted text>",
             document_info=DocumentInfo(
                 path=str(filepath),
-                # optionally, add some metadata as a dict
-                metadata=None,
+                metadata=metadata,
             ),
         )

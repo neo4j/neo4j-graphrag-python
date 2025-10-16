@@ -602,9 +602,15 @@ To implement your own loader, use the `DataLoader` interface:
     from neo4j_graphrag.experimental.components.pdf_loader import DataLoader, PdfDocument
 
     class MyDataLoader(DataLoader):
-        async def run(self, path: Path) -> PdfDocument:
-            # process file in `path`
-            return PdfDocument(text="text")
+        async def run(self, filepath: Path, metadata: Optional[Dict[str, str]] = None) -> PdfDocument:
+            # process file in `filepath`
+            return PdfDocument(
+                text="text",
+                document_info=DocumentInfo(
+                    path=str(filepath),
+                    metadata=metadata,
+                )
+            )
 
 
 
