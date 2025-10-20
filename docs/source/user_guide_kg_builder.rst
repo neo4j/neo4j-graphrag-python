@@ -903,6 +903,10 @@ It can be used in this way:
     from neo4j_graphrag.experimental.components.entity_relation_extractor import (
         LLMEntityRelationExtractor,
     )
+    from neo4j_graphrag.experimental.components.types import (
+        TextChunks,
+        TextChunk
+    )
     from neo4j_graphrag.llm import OpenAILLM
 
     extractor = LLMEntityRelationExtractor(
@@ -914,7 +918,7 @@ It can be used in this way:
             },
         )
     )
-    await extractor.run(chunks=TextChunks(chunks=[TextChunk(text="some text")]))
+    await extractor.run(chunks=TextChunks(chunks=[TextChunk(text="some text", index=0)]))
 
 
 .. warning::
