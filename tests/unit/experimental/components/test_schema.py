@@ -960,6 +960,37 @@ async def test_schema_from_text_filters_relationships_without_labels(
     assert ("Person", "MANAGES", "Organization") in schema.patterns
 
 
+def test_clean_json_content_markdown_with_json_language(
+    schema_from_text: SchemaFromTextExtractor,
+) -> None:
+    content = """```json
+{"node_types": [{"label": "Person"}]}
+```"""
+
+    cleaned = schema_from_text._clean_json_content(content)
+    assert cleaned == '{"node_types": [{"label": "Person"}]}'
+
+
+def test_clean_json_content_markdown_without_language(
+    schema_from_text: SchemaFromTextExtractor,
+) -> None:
+    content = """```
+{"node_types": [{"label": "Person"}]}
+```"""
+
+    cleaned = schema_from_text._clean_json_content(content)
+    assert cleaned == '{"node_types": [{"label": "Person"}]}'
+
+
+def test_clean_json_content_plain_json(
+    schema_from_text: SchemaFromTextExtractor,
+) -> None:
+    content = '{"node_types": [{"label": "Person"}]}'
+
+    cleaned = schema_from_text._clean_json_content(content)
+    assert cleaned == '{"node_types": [{"label": "Person"}]}'
+
+
 @pytest.mark.asyncio
 @patch("neo4j_graphrag.experimental.components.schema.get_structured_schema")
 async def test_schema_from_existing_graph(mock_get_structured_schema: Mock) -> None:
