@@ -557,11 +557,11 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
 
     def _clean_json_content(self, content: str) -> str:
         content = content.strip()
-        
+
         # Remove markdown code block markers if present
-        content = re.sub(r'^```(?:json)?\s*', '', content, flags=re.MULTILINE)
-        content = re.sub(r'```\s*$', '', content, flags=re.MULTILINE)
-        
+        content = re.sub(r"^```(?:json)?\s*", "", content, flags=re.MULTILINE)
+        content = re.sub(r"```\s*$", "", content, flags=re.MULTILINE)
+
         return content.strip()
 
     @validate_call

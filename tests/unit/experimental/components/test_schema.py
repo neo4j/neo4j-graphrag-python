@@ -966,7 +966,7 @@ def test_clean_json_content_markdown_with_json_language(
     content = """```json
 {"node_types": [{"label": "Person"}]}
 ```"""
-    
+
     cleaned = schema_from_text._clean_json_content(content)
     assert cleaned == '{"node_types": [{"label": "Person"}]}'
 
@@ -977,7 +977,7 @@ def test_clean_json_content_markdown_without_language(
     content = """```
 {"node_types": [{"label": "Person"}]}
 ```"""
-    
+
     cleaned = schema_from_text._clean_json_content(content)
     assert cleaned == '{"node_types": [{"label": "Person"}]}'
 
@@ -986,7 +986,7 @@ def test_clean_json_content_plain_json(
     schema_from_text: SchemaFromTextExtractor,
 ) -> None:
     content = '{"node_types": [{"label": "Person"}]}'
-    
+
     cleaned = schema_from_text._clean_json_content(content)
     assert cleaned == '{"node_types": [{"label": "Person"}]}'
 
