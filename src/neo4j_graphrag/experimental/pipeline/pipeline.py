@@ -203,7 +203,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         G = self._get_neo4j_viz_graph(hide_unused_outputs)
 
         # Write the visualization to an HTML file
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             f.write(G.render().data)
 
         return G
