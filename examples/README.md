@@ -81,6 +81,7 @@ are listed in [the last section of this file](#customize).
 
 - [Tool Calling with OpenAI](./customize/llms/openai_tool_calls.py)
 - [Tool Calling with VertexAI](./customize/llms/vertexai_tool_calls.py)
+- [Tool Calling with Ollama](./customize/llms/ollama_tool_calls.py)
 
 
 ### Prompts

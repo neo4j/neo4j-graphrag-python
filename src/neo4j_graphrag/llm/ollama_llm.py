@@ -15,7 +15,17 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Any, Iterable, List, Optional, Sequence, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Union,
+    cast,
+    Dict,
+)
 
 from pydantic import ValidationError
 
@@ -33,9 +43,12 @@ from .types import (
     BaseMessage,
     LLMResponse,
     MessageList,
+    ToolCall,
+    ToolCallResponse,
     SystemMessage,
     UserMessage,
 )
+from neo4j_graphrag.tool import Tool
 
 if TYPE_CHECKING:
     from ollama import Message
@@ -163,3 +176,146 @@ class OllamaLLM(LLMInterface):
             return LLMResponse(content=content)
         except self.ollama.ResponseError as e:
             raise LLMGenerationError(e)
+
+    @rate_limit_handler
+    def invoke_with_tools(
+        self,
+        input: str,
+        tools: Sequence[Tool],  # Tools definition as a sequence of Tool objects
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> ToolCallResponse:
+        """Sends a text input to the LLM with tool definitions
+        and retrieves a tool call response.
+
+        Args:
+            input (str): Text sent to the LLM.
+            tools (List[Tool]): List of Tools for the LLM to choose from.
+            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
+                with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
+
+        Returns:
+            ToolCallResponse: The response from the LLM containing a tool call.
+
+        Raises:
+            LLMGenerationError: If anything goes wrong.
+        """
+        try:
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
+
+            # Convert tools to Ollama's expected type
+            ollama_tools = []
+            for tool in tools:
+                ollama_tool_format = self._convert_tool_to_ollama_format(tool)
+                ollama_tools.append(ollama_tool_format)
+            response = self.client.chat(
+                model=self.model_name,
+                messages=self.get_messages(input, message_history, system_instruction),
+                tools=ollama_tools,
+                **self.model_params,
+            )
+            message = response.message
+            # If there's no tool call, return the content as a regular response
+            if not message.tool_calls or len(message.tool_calls) == 0:
+                return ToolCallResponse(
+                    tool_calls=[],
+                    content=message.content,
+                )
+
+            # Process all tool calls
+            tool_calls = []
+
+            for tool_call in message.tool_calls:
+                args = tool_call.function.arguments
+                tool_calls.append(
+                    ToolCall(name=tool_call.function.name, arguments=args)
+                )
+
+            return ToolCallResponse(tool_calls=tool_calls, content=message.content)
+        except self.ollama.ResponseError as e:
+            raise LLMGenerationError(e)
+
+    @async_rate_limit_handler
+    async def ainvoke_with_tools(
+        self,
+        input: str,
+        tools: Sequence[Tool],  # Tools definition as a sequence of Tool objects
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> ToolCallResponse:
+        """Sends a text input to the LLM with tool definitions
+        and retrieves a tool call response.
+
+        Args:
+            input (str): Text sent to the LLM.
+            tools (List[Tool]): List of Tools for the LLM to choose from.
+            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
+                with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
+
+        Returns:
+            ToolCallResponse: The response from the LLM containing a tool call.
+
+        Raises:
+            LLMGenerationError: If anything goes wrong.
+        """
+        try:
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
+
+            # Convert tools to Ollama's expected type
+            ollama_tools = []
+            for tool in tools:
+                ollama_tool_format = self._convert_tool_to_ollama_format(tool)
+                ollama_tools.append(ollama_tool_format)
+
+            response = await self.async_client.chat(
+                model=self.model_name,
+                messages=self.get_messages(input, message_history, system_instruction),
+                tools=ollama_tools,
+                **self.model_params,
+            )
+            message = response.message
+
+            # If there's no tool call, return the content as a regular response
+            if not message.tool_calls or len(message.tool_calls) == 0:
+                return ToolCallResponse(
+                    tool_calls=[],
+                    content=message.content,
+                )
+
+            # Process all tool calls
+            tool_calls = []
+
+            for tool_call in message.tool_calls:
+                args = tool_call.function.arguments
+                tool_calls.append(
+                    ToolCall(name=tool_call.function.name, arguments=args)
+                )
+
+            return ToolCallResponse(tool_calls=tool_calls, content=message.content)
+        except self.ollama.ResponseError as e:
+            raise LLMGenerationError(e)
+
+    def _convert_tool_to_ollama_format(self, tool: Tool) -> Dict[str, Any]:
+        """Convert a Tool object to Ollama's expected format.
+
+        Args:
+            tool: A Tool object to convert to Ollama's format.
+
+        Returns:
+            A dictionary in Ollama's tool format.
+        """
+        try:
+            return {
+                "type": "function",
+                "function": {
+                    "name": tool.get_name(),
+                    "description": tool.get_description(),
+                    "parameters": tool.get_parameters(),
+                },
+            }
+        except AttributeError:
+            raise LLMGenerationError(f"Tool {tool} is not a valid Tool object")
