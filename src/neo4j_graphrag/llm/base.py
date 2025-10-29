@@ -225,7 +225,6 @@ class LLMInterfaceV2(ABC):
             LLMGenerationError: If anything goes wrong.
         """
 
-    @abstractmethod
     def invoke_with_tools(
         self,
         input: list[LLMMessage],
@@ -243,8 +242,8 @@ class LLMInterfaceV2(ABC):
         Raises:
             LLMGenerationError: If anything goes wrong.
         """
+        raise NotImplementedError("This LLM provider does not support tool calling.")
 
-    @abstractmethod
     async def ainvoke_with_tools(
         self,
         input: list[LLMMessage],
@@ -262,3 +261,4 @@ class LLMInterfaceV2(ABC):
         Raises:
             LLMGenerationError: If anything goes wrong.
         """
+        raise NotImplementedError("This LLM provider does not support tool calling.")
