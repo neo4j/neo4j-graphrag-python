@@ -184,6 +184,7 @@ async def test_vertexai_ainvoke_happy_path(
     llm = VertexAILLM("gemini-1.5-flash-001", model_params)
     input_text = "may thy knife chip and shatter"
     response = await llm.ainvoke(input_text)
+    print(f"Response: {response}")
     assert response.content == "Return text"
     mock_model.generate_content_async.assert_awaited_once_with(
         contents=[{"text": "Return text"}]

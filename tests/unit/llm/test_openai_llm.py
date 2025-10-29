@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import openai
 import pytest
@@ -406,3 +406,30 @@ def test_azure_openai_llm_with_message_history_validation_error(
     with pytest.raises(LLMGenerationError) as exc_info:
         llm.invoke(question, message_history)  # type: ignore
     assert "Input should be a valid string" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+@patch("builtins.__import__")
+async def test_openai_llm_ainvoke_happy_path(mock_import: Mock) -> None:
+    """Test that ainvoke properly awaits the async call and returns LLMResponse."""
+    # Mock OpenAI module
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    # Mock async response
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock(message=MagicMock(content="Return text"))]
+    mock_openai.AsyncOpenAI.return_value.chat.completions.create = AsyncMock(
+        return_value=mock_response
+    )
+
+    model_name = "gpt-3.5-turbo"
+    input_text = "may thy knife chip and shatter"
+    model_params = {"temperature": 0.5}
+    llm = OpenAILLM(model_name, model_params, api_key="test-key")
+
+    response = await llm.ainvoke(input_text)
+
+    # Verify we get an LLMResponse, not a coroutine
+    assert response.content == "Return text"
+    assert isinstance(response, LLMResponse)

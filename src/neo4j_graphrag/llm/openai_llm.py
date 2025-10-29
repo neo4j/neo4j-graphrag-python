@@ -171,10 +171,8 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         if isinstance(input, str):
-            print("legacy invoke branch is called")
             return self.__legacy_invoke(input, message_history, system_instruction)
         elif isinstance(input, list):
-            print("brand new invoke branch is called")
             return self.__brand_new_invoke(input)
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
@@ -186,9 +184,11 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
         if isinstance(input, str):
-            return self.__legacy_ainvoke(input, message_history, system_instruction)
+            return await self.__legacy_ainvoke(
+                input, message_history, system_instruction
+            )
         elif isinstance(input, list):
-            return self.__brand_new_ainvoke(input)
+            return await self.__brand_new_ainvoke(input)
         else:
             raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
 
@@ -250,7 +250,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         messages.append(UserMessage(content=input).model_dump())
         return messages  # type: ignore
 
-    def brand_new_get_messages(
+    def get_brand_new_messages(
         self,
         messages: list[LLMMessage],
     ) -> Iterable[ChatCompletionMessageParam]:
@@ -311,7 +311,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         """
         try:
             response = self.client.chat.completions.create(
-                messages=self.brand_new_get_messages(input),
+                messages=self.get_brand_new_messages(input),
                 model=self.model_name,
                 **self.model_params,
             )
@@ -460,7 +460,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
                 openai_tools.append(cast(ChatCompletionToolParam, openai_format_tool))
 
             response = self.client.chat.completions.create(
-                messages=self.brand_new_get_messages(input),
+                messages=self.get_brand_new_messages(input),
                 model=self.model_name,
                 tools=openai_tools,
                 tool_choice="auto",
@@ -538,7 +538,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         """Asynchronous new invoke method for LLMInterfaceV2."""
         try:
             response = await self.async_client.chat.completions.create(
-                messages=self.brand_new_get_messages(input),
+                messages=self.get_brand_new_messages(input),
                 model=self.model_name,
                 **self.model_params,
             )
@@ -653,7 +653,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
                 openai_tools.append(cast(ChatCompletionToolParam, openai_format_tool))
 
             response = await self.async_client.chat.completions.create(
-                messages=self.brand_new_get_messages(input),
+                messages=self.get_brand_new_messages(input),
                 model=self.model_name,
                 tools=openai_tools,
                 tool_choice="auto",
