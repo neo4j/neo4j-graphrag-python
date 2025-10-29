@@ -152,3 +152,114 @@ async def test_cohere_llm_failed_async(mock_cohere: Mock) -> None:
     with pytest.raises(LLMGenerationError) as excinfo:
         await llm.ainvoke("my text")
     assert "ApiError" in str(excinfo)
+
+
+# V2 Interface Tests
+
+
+def test_cohere_llm_invoke_v2_happy_path(mock_cohere: Mock) -> None:
+    """Test V2 interface invoke method with List[LLMMessage] input."""
+    chat_response_mock = MagicMock()
+    chat_response_mock.message.content = [MagicMock(text="cohere v2 response text")]
+    mock_cohere.ClientV2.return_value.chat.return_value = chat_response_mock
+
+    # Mock Cohere message types
+    mock_cohere.SystemChatMessageV2 = MagicMock()
+    mock_cohere.UserChatMessageV2 = MagicMock()
+    mock_cohere.AssistantChatMessageV2 = MagicMock()
+
+    messages = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "What is the capital of France?"},
+    ]
+
+    llm = CohereLLM(model_name="something")
+    response = llm.invoke(messages)
+
+    assert isinstance(response, LLMResponse)
+    assert response.content == "cohere v2 response text"
+
+    # Verify the client was called correctly
+    mock_cohere.ClientV2.return_value.chat.assert_called_once()
+    call_args = mock_cohere.ClientV2.return_value.chat.call_args[1]
+    assert call_args["model"] == "something"
+
+
+@pytest.mark.asyncio
+async def test_cohere_llm_ainvoke_v2_happy_path(mock_cohere: Mock) -> None:
+    """Test V2 interface async invoke method with List[LLMMessage] input."""
+    chat_response_mock = MagicMock()
+    chat_response_mock.message.content = [
+        MagicMock(text="cohere v2 async response text")
+    ]
+    mock_cohere.AsyncClientV2.return_value.chat = AsyncMock(
+        return_value=chat_response_mock
+    )
+
+    # Mock Cohere message types
+    mock_cohere.SystemChatMessageV2 = MagicMock()
+    mock_cohere.UserChatMessageV2 = MagicMock()
+    mock_cohere.AssistantChatMessageV2 = MagicMock()
+
+    messages = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "What is the capital of France?"},
+    ]
+
+    llm = CohereLLM(model_name="something")
+    response = await llm.ainvoke(messages)
+
+    assert isinstance(response, LLMResponse)
+    assert response.content == "cohere v2 async response text"
+
+    # Verify the async client was called correctly
+    mock_cohere.AsyncClientV2.return_value.chat.assert_awaited_once()
+
+
+def test_cohere_llm_invoke_v2_validation_error(mock_cohere: Mock) -> None:
+    """Test V2 interface invoke with invalid message role raises error."""
+    chat_response_mock = MagicMock()
+    chat_response_mock.message.content = [MagicMock(text="should not get here")]
+    mock_cohere.ClientV2.return_value.chat.return_value = chat_response_mock
+
+    messages = [
+        {"role": "invalid_role", "content": "This should fail."},
+    ]
+
+    llm = CohereLLM(model_name="something")
+
+    with pytest.raises(ValueError) as exc_info:
+        llm.invoke(messages)
+    assert "Unknown role: invalid_role" in str(exc_info.value)
+
+
+def test_cohere_llm_get_brand_new_messages_all_roles(mock_cohere: Mock) -> None:
+    """Test get_brand_new_messages method handles all message roles correctly."""
+    # Mock Cohere message types
+    mock_system_msg = MagicMock()
+    mock_user_msg = MagicMock()
+    mock_assistant_msg = MagicMock()
+
+    mock_cohere.SystemChatMessageV2.return_value = mock_system_msg
+    mock_cohere.UserChatMessageV2.return_value = mock_user_msg
+    mock_cohere.AssistantChatMessageV2.return_value = mock_assistant_msg
+
+    messages = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Hi there!"},
+        {"role": "user", "content": "How are you?"},
+    ]
+
+    llm = CohereLLM(model_name="something")
+    result_messages = llm.get_brand_new_messages(messages)
+
+    # Verify the correct number of messages are returned
+    assert len(result_messages) == 4
+
+    # Verify the correct Cohere message constructors were called
+    mock_cohere.SystemChatMessageV2.assert_called_once_with(
+        content="You are a helpful assistant."
+    )
+    assert mock_cohere.UserChatMessageV2.call_count == 2
+    mock_cohere.AssistantChatMessageV2.assert_called_once_with(content="Hi there!")
