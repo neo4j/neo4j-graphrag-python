@@ -206,10 +206,24 @@ class GraphRAG:
             summarization_prompt = self._chat_summary_prompt(
                 message_history=message_history
             )
-            summary = self.llm.invoke(
-                input=summarization_prompt,
+            messages = legacy_inputs_to_messages(
+                summarization_prompt,
                 system_instruction=summary_system_message,
-            ).content
+            )
+            if isinstance(self.llm, LLMInterfaceV2) or self.llm.__module__.startswith(
+                "langchain"
+            ):
+                summary = self.llm.invoke(
+                    input=messages,
+                ).content
+            elif isinstance(self.llm, LLMInterface):
+                summary = self.llm.invoke(
+                    input=summarization_prompt,
+                    system_instruction=summary_system_message,
+                ).content
+            else:
+                raise ValueError(f"Type {type(self.llm)} of LLM is not supported.")
+
             return self.conversation_prompt(summary=summary, current_query=query_text)
         return query_text
 

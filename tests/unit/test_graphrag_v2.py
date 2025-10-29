@@ -155,10 +155,15 @@ Answer:
     assert llm_v2.invoke.call_count == 2
     llm_v2.invoke.assert_has_calls(
         [
-            # First call for summarization still uses V1 interface (this is a bug in GraphRAG)
+            # First call for summarization uses V2 interface
             call(
-                input=first_invocation_input,
-                system_instruction=first_invocation_system_instruction,
+                input=[
+                    {
+                        "role": "system",
+                        "content": first_invocation_system_instruction,
+                    },
+                    {"role": "user", "content": first_invocation_input},
+                ],
             ),
             # Second call uses V2 interface
             call(
@@ -241,10 +246,15 @@ Answer:
     assert llm_v2.invoke.call_count == 2
     llm_v2.invoke.assert_has_calls(
         [
-            # First call for summarization still uses V1 interface (this is a bug in GraphRAG)
+            # First call for summarization uses V2 interface
             call(
-                input=first_invocation_input,
-                system_instruction=first_invocation_system_instruction,
+                input=[
+                    {
+                        "role": "system",
+                        "content": first_invocation_system_instruction,
+                    },
+                    {"role": "user", "content": first_invocation_input},
+                ],
             ),
             # Second call uses V2 interface
             call(
