@@ -13,12 +13,12 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Iterable, List, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Iterable, List, Optional, Union, cast, overload
 
 from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.base import LLMInterface
+from neo4j_graphrag.llm.base import LLMInterface, LLMInterfaceV2
 from neo4j_graphrag.utils.rate_limit import (
     RateLimitHandler,
     rate_limit_handler,
@@ -35,9 +35,11 @@ from neo4j_graphrag.types import LLMMessage
 
 if TYPE_CHECKING:
     from anthropic.types.message_param import MessageParam
+    from anthropic import NotGiven
 
 
-class AnthropicLLM(LLMInterface):
+# pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return
+class AnthropicLLM(LLMInterface, LLMInterfaceV2):
     """Interface for large language models on Anthropic
 
     Args:
@@ -82,25 +84,67 @@ class AnthropicLLM(LLMInterface):
         self.client = anthropic.Anthropic(**kwargs)
         self.async_client = anthropic.AsyncAnthropic(**kwargs)
 
-    def get_messages(
+    # overloads for LLMInterface and LLMInterfaceV2 methods
+    @overload
+    def invoke(
         self,
         input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-    ) -> Iterable[MessageParam]:
-        messages: list[dict[str, str]] = []
-        if message_history:
-            if isinstance(message_history, MessageHistory):
-                message_history = message_history.messages
-            try:
-                MessageList(messages=cast(list[BaseMessage], message_history))
-            except ValidationError as e:
-                raise LLMGenerationError(e.errors()) from e
-            messages.extend(cast(Iterable[dict[str, Any]], message_history))
-        messages.append(UserMessage(content=input).model_dump())
-        return messages  # type: ignore
+        system_instruction: Optional[str] = None,
+    ) -> LLMResponse: ...
 
-    @rate_limit_handler
+    @overload
     def invoke(
+        self,
+        input: List[LLMMessage],
+    ) -> LLMResponse: ...
+
+    @overload
+    async def ainvoke(
+        self,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> LLMResponse: ...
+
+    @overload
+    async def ainvoke(
+        self,
+        input: List[LLMMessage],
+    ) -> LLMResponse: ...
+
+    # switching logics to LLMInterface or LLMInterfaceV2
+    def invoke(
+        self,
+        input: Union[str, List[LLMMessage]],
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> LLMResponse:
+        if isinstance(input, str):
+            return self.__legacy_invoke(input, message_history, system_instruction)
+        elif isinstance(input, list):
+            return self.__brand_new_invoke(input)
+        else:
+            raise ValueError(f"Invalid input type for invoke method - {type(input)}")
+
+    async def ainvoke(
+        self,
+        input: Union[str, List[LLMMessage]],
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> LLMResponse:
+        if isinstance(input, str):
+            return await self.__legacy_ainvoke(
+                input, message_history, system_instruction
+            )
+        elif isinstance(input, list):
+            return await self.__brand_new_ainvoke(input)
+        else:
+            raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
+
+    # implementaions
+    @rate_limit_handler
+    def __legacy_invoke(
         self,
         input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -136,8 +180,29 @@ class AnthropicLLM(LLMInterface):
         except self.anthropic.APIError as e:
             raise LLMGenerationError(e)
 
+    def __brand_new_invoke(
+        self,
+        input: List[LLMMessage],
+    ) -> LLMResponse:
+        try:
+            system_instruction, messages = self.get_brand_new_messages(input)
+            response = self.client.messages.create(
+                model=self.model_name,
+                system=system_instruction,
+                messages=messages,
+                **self.model_params,
+            )
+            response_content = response.content
+            if response_content and len(response_content) > 0:
+                text = response_content[0].text
+            else:
+                raise LLMGenerationError("LLM returned empty response.")
+            return LLMResponse(content=text)
+        except self.anthropic.APIError as e:
+            raise LLMGenerationError(e)
+
     @async_rate_limit_handler
-    async def ainvoke(
+    async def __legacy_ainvoke(
         self,
         input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -172,3 +237,72 @@ class AnthropicLLM(LLMInterface):
             return LLMResponse(content=text)
         except self.anthropic.APIError as e:
             raise LLMGenerationError(e)
+
+    async def __brand_new_ainvoke(
+        self,
+        input: List[LLMMessage],
+    ) -> LLMResponse:
+        """Asynchronously sends text to the LLM and returns a response.
+
+        Args:
+            input (str): The text to send to the LLM.
+
+        Returns:
+            LLMResponse: The response from the LLM.
+        """
+        try:
+            system_instruction, messages = self.get_brand_new_messages(input)
+            response = await self.async_client.messages.create(
+                model=self.model_name,
+                system=system_instruction,
+                messages=messages,
+                **self.model_params,
+            )
+            response_content = response.content
+            if response_content and len(response_content) > 0:
+                text = response_content[0].text
+            else:
+                raise LLMGenerationError("LLM returned empty response.")
+            return LLMResponse(content=text)
+        except self.anthropic.APIError as e:
+            raise LLMGenerationError(e)
+
+    # subsidiary methods
+    def get_messages(
+        self,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+    ) -> Iterable[MessageParam]:
+        """Constructs the message list for the LLM from the input and message history."""
+        messages: list[dict[str, str]] = []
+        if message_history:
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
+            try:
+                MessageList(messages=cast(list[BaseMessage], message_history))
+            except ValidationError as e:
+                raise LLMGenerationError(e.errors()) from e
+            messages.extend(cast(Iterable[dict[str, Any]], message_history))
+        messages.append(UserMessage(content=input).model_dump())
+        return messages  # type: ignore
+
+    def get_brand_new_messages(
+        self,
+        input: list[LLMMessage],
+    ) -> tuple[Union[str, NotGiven], Iterable[MessageParam]]:
+        """Constructs the message list for the LLM from the input."""
+        messages: list[MessageParam] = []
+        system_instruction: Union[str, NotGiven] = self.anthropic.NOT_GIVEN
+        for i in input:
+            if i["role"] == "system":
+                system_instruction = i["content"]
+            else:
+                if i["role"] not in ("user", "assistant"):
+                    raise ValueError(f"Unknown role: {i['role']}")
+                messages.append(
+                    self.anthropic.types.MessageParam(
+                        role=i["role"],
+                        content=i["content"],
+                    )
+                )
+        return system_instruction, messages
