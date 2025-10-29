@@ -13,6 +13,8 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
+import logging
+
 
 from abc import ABC, abstractmethod
 from typing import Any, List, Optional, Sequence, Union
@@ -28,6 +30,10 @@ from neo4j_graphrag.utils.rate_limit import (
 from neo4j_graphrag.tool import Tool
 
 from neo4j_graphrag.utils.rate_limit import RateLimitHandler
+
+# pylint: disable=redefined-builtin
+
+logger = logging.getLogger(__name__)
 
 
 class LLMInterface(ABC):
@@ -152,3 +158,107 @@ class LLMInterface(ABC):
             NotImplementedError: If the LLM provider does not support tool calling.
         """
         raise NotImplementedError("This LLM provider does not support tool calling.")
+
+
+class LLMInterfaceV2(ABC):
+    """Interface for large language models.
+
+    Args:
+        model_name (str): The name of the language model.
+        model_params (Optional[dict]): Additional parameters passed to the model when text is sent to it. Defaults to None.
+        rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting. Defaults to retry with exponential backoff.
+        **kwargs (Any): Arguments passed to the model when for the class is initialised. Defaults to None.
+    """
+
+    def __init__(
+        self,
+        model_name: str,
+        model_params: Optional[dict[str, Any]] = None,
+        rate_limit_handler: Optional[RateLimitHandler] = None,
+        **kwargs: Any,
+    ):
+        self.model_name = model_name
+        self.model_params = model_params or {}
+
+        if rate_limit_handler is not None:
+            self._rate_limit_handler = rate_limit_handler
+        else:
+            self._rate_limit_handler = DEFAULT_RATE_LIMIT_HANDLER
+
+    @abstractmethod
+    def invoke(
+        self,
+        input: List[LLMMessage],
+    ) -> LLMResponse:
+        """Sends a text input to the LLM and retrieves a response.
+
+        Args:
+            input (str): Text sent to the LLM.
+            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
+                with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
+
+        Returns:
+            LLMResponse: The response from the LLM.
+
+        Raises:
+            LLMGenerationError: If anything goes wrong.
+        """
+
+    @abstractmethod
+    async def ainvoke(
+        self,
+        input: List[LLMMessage],
+    ) -> LLMResponse:
+        """Asynchronously sends a text input to the LLM and retrieves a response.
+
+        Args:
+            input (str): Text sent to the LLM.
+            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
+                with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
+
+        Returns:
+            LLMResponse: The response from the LLM.
+
+        Raises:
+            LLMGenerationError: If anything goes wrong.
+        """
+
+    @abstractmethod
+    def invoke_with_tools(
+        self,
+        input: list[LLMMessage],
+        tools: Sequence[Tool],  # Tools definition as a sequence of Tool objects
+    ) -> ToolCallResponse:
+        """Sends a text input to the LLM with tool definitions and retrieves a tool call response.
+
+        Args:
+            input (list of llm message): Texts sent to the LLM.
+            tools (List[Tool]): List of Tools for the LLM to choose from.
+
+        Returns:
+            ToolCallResponse: The response from the LLM containing a tool call.
+
+        Raises:
+            LLMGenerationError: If anything goes wrong.
+        """
+
+    @abstractmethod
+    async def ainvoke_with_tools(
+        self,
+        input: list[LLMMessage],
+        tools: Sequence[Tool],  # Tools definition as a sequence of Tool objects
+    ) -> ToolCallResponse:
+        """Asynchronously sends a text input to the LLM with tool definitions and retrieves a tool call response.
+
+        Args:
+            input (list of llm message): Texts sent to the LLM.
+            tools (List[Tool]): List of Tools for the LLM to choose from.
+
+        Returns:
+            ToolCallResponse: The response from the LLM containing a tool call.
+
+        Raises:
+            LLMGenerationError: If anything goes wrong.
+        """
