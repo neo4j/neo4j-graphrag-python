@@ -63,7 +63,7 @@ def test_graphrag_happy_path(retriever_mock: MagicMock, llm: MagicMock) -> None:
 
     retriever_mock.search.assert_called_once_with(query_text="question", top_k=111)
     llm.invoke.assert_called_once_with(
-        """Context:
+        input="""Context:
 item content 1
 item content 2
 
@@ -75,7 +75,7 @@ question
 
 Answer:
 """,
-        None,  # message history
+        message_history=None,
         system_instruction="Answer the user question using the provided context.",
     )
 
@@ -146,8 +146,8 @@ Answer:
                 system_instruction=first_invocation_system_instruction,
             ),
             call(
-                second_invocation,
-                message_history,
+                input=second_invocation,
+                message_history=message_history,
                 system_instruction="Answer the user question using the provided context.",
             ),
         ]
@@ -222,8 +222,8 @@ Answer:
                 system_instruction=first_invocation_system_instruction,
             ),
             call(
-                second_invocation,
-                message_history.messages,
+                input=second_invocation,
+                message_history=message_history.messages,
                 system_instruction="Answer the user question using the provided context.",
             ),
         ]
@@ -253,8 +253,8 @@ def test_graphrag_happy_path_custom_system_instruction(
     llm.invoke.assert_has_calls(
         [
             call(
-                mock.ANY,
-                None,  # no message history
+                input=mock.ANY,
+                message_history=None,
                 system_instruction="Custom instruction",
             ),
         ]
