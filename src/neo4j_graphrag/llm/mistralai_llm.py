@@ -39,9 +39,9 @@ from neo4j_graphrag.types import LLMMessage
 try:
     from mistralai import (
         Messages,
-        UserMessage,
+        UserMessage as MistralUserMessage,
         AssistantMessage,
-        SystemMessage,
+        SystemMessage as MistralSystemMessage,
         Mistral,
     )
     from mistralai.models.sdkerror import SDKError
@@ -51,8 +51,7 @@ except ImportError:
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return
-class MistralAILLM(LLMInterface):
-
+class MistralAILLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
     def __init__(
         self,
         model_name: str,
@@ -82,7 +81,7 @@ class MistralAILLM(LLMInterface):
         self.client = Mistral(api_key=api_key, **kwargs)
 
     # overloads for LLMInterface and LLMInterfaceV2 methods
-    @overload
+    @overload  # type: ignore[no-overload-impl]
     def invoke(
         self,
         input: str,
@@ -96,7 +95,7 @@ class MistralAILLM(LLMInterface):
         input: List[LLMMessage],
     ) -> LLMResponse: ...
 
-    @overload
+    @overload  # type: ignore[no-overload-impl]
     async def ainvoke(
         self,
         input: str,
@@ -111,7 +110,7 @@ class MistralAILLM(LLMInterface):
     ) -> LLMResponse: ...
 
     # switching logics to LLMInterface or LLMInterfaceV2
-    def invoke(
+    def invoke(  # type: ignore[no-redef]
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -124,7 +123,7 @@ class MistralAILLM(LLMInterface):
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 
-    async def ainvoke(
+    async def ainvoke(  # type: ignore[no-redef]
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -313,10 +312,10 @@ class MistralAILLM(LLMInterface):
         messages: list[Messages] = []
         for m in input:
             if m["role"] == "system":
-                messages.append(SystemMessage(content=m["content"]))
+                messages.append(MistralSystemMessage(content=m["content"]))
                 continue
             if m["role"] == "user":
-                messages.append(UserMessage(content=m["content"]))
+                messages.append(MistralUserMessage(content=m["content"]))
                 continue
             if m["role"] == "assistant":
                 messages.append(AssistantMessage(content=m["content"]))

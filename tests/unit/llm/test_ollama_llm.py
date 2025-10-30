@@ -295,7 +295,7 @@ def test_ollama_llm_invoke_v2_happy_path(mock_import: Mock) -> None:
     mock_ollama.Message.assert_any_call(**messages[1])
 
     # Verify the client was called with correct parameters
-    llm.client.chat.assert_called_once_with(
+    llm.client.chat.assert_called_once_with(  # type: ignore[attr-defined]
         model=model,
         messages=[mock_ollama.Message.return_value, mock_ollama.Message.return_value],
         options=options,
@@ -406,8 +406,8 @@ def test_ollama_llm_input_type_switching_string(mock_import: Mock) -> None:
     assert res.content == "legacy response"
 
     # Verify legacy method was used (messages should be built via get_messages)
-    llm.client.chat.assert_called_once()
-    call_args = llm.client.chat.call_args[1]
+    llm.client.chat.assert_called_once()  # type: ignore[attr-defined]
+    call_args = llm.client.chat.call_args[1]  # type: ignore[attr-defined]
     assert call_args["model"] == model
     assert len(call_args["messages"]) == 1
     assert call_args["messages"][0]["role"] == "user"

@@ -12,7 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
-
+from typing import List
 import sys
 from typing import Generator
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
@@ -22,6 +22,7 @@ import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.anthropic_llm import AnthropicLLM
 from neo4j_graphrag.llm.types import LLMResponse
+from neo4j_graphrag.types import LLMMessage
 
 
 @pytest.fixture
@@ -100,7 +101,7 @@ def test_anthropic_invoke_with_system_instruction(
     response = llm.invoke(question, system_instruction=system_instruction)
     assert isinstance(response, LLMResponse)
     assert response.content == "generated text"
-    messages = [{"role": "user", "content": question}]
+    messages: List[LLMMessage] = [{"role": "user", "content": question}]
     llm.client.messages.create.assert_called_with(  # type: ignore[attr-defined]
         model="claude-3-opus-20240229",
         system=system_instruction,
@@ -196,7 +197,7 @@ def test_anthropic_llm_invoke_v2_happy_path(mock_anthropic: Mock) -> None:
     )
     mock_anthropic.types.MessageParam = MagicMock(side_effect=lambda **kwargs: kwargs)
 
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "What is machine learning?"},
     ]
@@ -209,7 +210,7 @@ def test_anthropic_llm_invoke_v2_happy_path(mock_anthropic: Mock) -> None:
     assert response.content == "anthropic v2 response"
 
     # Verify the correct method was called with system instruction and messages
-    llm.client.messages.create.assert_called_once_with(
+    llm.client.messages.create.assert_called_once_with(  # type: ignore
         model="claude-3-opus-20240229",
         system="You are a helpful assistant.",
         messages=[{"role": "user", "content": "What is machine learning?"}],
@@ -226,7 +227,7 @@ def test_anthropic_llm_invoke_v2_with_conversation_history(
     )
     mock_anthropic.types.MessageParam = MagicMock(side_effect=lambda **kwargs: kwargs)
 
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Tell me about Python."},
         {"role": "assistant", "content": "Python is a programming language."},
@@ -240,8 +241,8 @@ def test_anthropic_llm_invoke_v2_with_conversation_history(
     assert response.content == "anthropic conversation response"
 
     # Verify the correct number of messages were passed (excluding system)
-    llm.client.messages.create.assert_called_once()
-    call_args = llm.client.messages.create.call_args[1]
+    llm.client.messages.create.assert_called_once()  # type: ignore
+    call_args = llm.client.messages.create.call_args[1]  # type: ignore
     assert call_args["system"] == "You are a helpful assistant."
     assert len(call_args["messages"]) == 3
 
@@ -253,7 +254,7 @@ def test_anthropic_llm_invoke_v2_no_system_message(mock_anthropic: Mock) -> None
     )
     mock_anthropic.types.MessageParam = MagicMock(side_effect=lambda **kwargs: kwargs)
 
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "user", "content": "What is the capital of France?"},
     ]
 
@@ -264,8 +265,8 @@ def test_anthropic_llm_invoke_v2_no_system_message(mock_anthropic: Mock) -> None
     assert response.content == "anthropic no system response"
 
     # Verify only user message was passed and no system instruction
-    llm.client.messages.create.assert_called_once()
-    call_args = llm.client.messages.create.call_args[1]
+    llm.client.messages.create.assert_called_once()  # type: ignore
+    call_args = llm.client.messages.create.call_args[1]  # type: ignore
     assert call_args["system"] == anthropic.NOT_GIVEN
     assert len(call_args["messages"]) == 1
 
@@ -279,7 +280,7 @@ async def test_anthropic_llm_ainvoke_v2_happy_path(mock_anthropic: Mock) -> None
     mock_model.messages.create = AsyncMock(return_value=mock_response)
     mock_anthropic.types.MessageParam = MagicMock(side_effect=lambda **kwargs: kwargs)
 
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "What is async programming?"},
     ]
@@ -292,7 +293,7 @@ async def test_anthropic_llm_ainvoke_v2_happy_path(mock_anthropic: Mock) -> None
     assert response.content == "async anthropic v2 response"
 
     # Verify the async client was called correctly
-    llm.async_client.messages.create.assert_awaited_once_with(
+    llm.async_client.messages.create.assert_awaited_once_with(  # type: ignore
         model="claude-3-opus-20240229",
         system="You are a helpful assistant.",
         messages=[{"role": "user", "content": "What is async programming?"}],
@@ -304,8 +305,8 @@ def test_anthropic_llm_invoke_v2_validation_error(mock_anthropic: Mock) -> None:
     """Test V2 interface invoke method with invalid role."""
     mock_anthropic.types.MessageParam = MagicMock(side_effect=lambda **kwargs: kwargs)
 
-    messages = [
-        {"role": "invalid_role", "content": "This should fail."},
+    messages: List[LLMMessage] = [
+        {"role": "invalid_role", "content": "This should fail."},  # type: ignore[typeddict-item]
     ]
 
     llm = AnthropicLLM(model_name="claude-3-opus-20240229")
@@ -346,7 +347,7 @@ def test_anthropic_llm_get_brand_new_messages_all_roles(mock_anthropic: Mock) ->
 
     mock_anthropic.types.MessageParam = MagicMock(side_effect=create_message_param)
 
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Hello"},
         {"role": "assistant", "content": "Hi there!"},
@@ -359,21 +360,23 @@ def test_anthropic_llm_get_brand_new_messages_all_roles(mock_anthropic: Mock) ->
     # Verify system instruction is extracted
     assert system_instruction == "You are a helpful assistant."
 
+    result_messages = list(result_messages)
+
     # Verify the correct number of non-system messages are returned
     assert len(result_messages) == 3
 
     # Verify message content is preserved
-    assert result_messages[0].content == "Hello"
-    assert result_messages[1].content == "Hi there!"
-    assert result_messages[2].content == "How are you?"
+    assert result_messages[0].content == "Hello"  # type: ignore[attr-defined]
+    assert result_messages[1].content == "Hi there!"  # type: ignore[attr-defined]
+    assert result_messages[2].content == "How are you?"  # type: ignore[attr-defined]
 
 
 def test_anthropic_llm_get_brand_new_messages_unknown_role(
     mock_anthropic: Mock,
 ) -> None:  # noqa: ARG001
     """Test get_brand_new_messages method raises error for unknown role."""
-    messages = [
-        {"role": "unknown_role", "content": "This should fail."},
+    messages: List[LLMMessage] = [
+        {"role": "unknown_role", "content": "This should fail."},  # type: ignore[typeddict-item]
     ]
 
     llm = AnthropicLLM(model_name="claude-3-opus-20240229")
@@ -390,7 +393,7 @@ def test_anthropic_llm_invoke_v2_empty_response_error(mock_anthropic: Mock) -> N
     )
     mock_anthropic.types.MessageParam = MagicMock(side_effect=lambda **kwargs: kwargs)
 
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "user", "content": "This should return empty response."},
     ]
 

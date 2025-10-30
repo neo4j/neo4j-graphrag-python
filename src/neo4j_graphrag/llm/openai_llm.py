@@ -103,7 +103,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         super().__init__(model_name, model_params, rate_limit_handler)
 
     # overloads for LLMInterface and LLMInterfaceV2 methods
-    @overload
+    @overload  # type: ignore[no-overload-impl]
     def invoke(
         self,
         input: str,
@@ -117,7 +117,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         input: List[LLMMessage],
     ) -> LLMResponse: ...
 
-    @overload
+    @overload  # type: ignore[no-overload-impl]
     async def ainvoke(
         self,
         input: str,
@@ -131,7 +131,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         input: List[LLMMessage],
     ) -> LLMResponse: ...
 
-    @overload
+    @overload  # type: ignore[no-overload-impl]
     def invoke_with_tools(
         self,
         input: str,
@@ -147,7 +147,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         tools: Sequence[Tool],  # Tools definition as a sequence of Tool objects
     ) -> ToolCallResponse: ...
 
-    @overload
+    @overload  # type: ignore[no-overload-impl]
     async def ainvoke_with_tools(
         self,
         input: str,
@@ -164,7 +164,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
     ) -> ToolCallResponse: ...
 
     # switching logics to LLMInterface or LLMInterfaceV2
-    def invoke(
+    def invoke(  # type: ignore[no-redef]
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -177,7 +177,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 
-    async def ainvoke(
+    async def ainvoke(  # type: ignore[no-redef]
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -192,7 +192,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         else:
             raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
 
-    def invoke_with_tools(
+    def invoke_with_tools(  # type: ignore[no-redef]
         self,
         input: Union[str, List[LLMMessage]],
         tools: Sequence[Tool],  # Tools definition as a sequence of Tool objects
@@ -210,7 +210,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
                 f"Invalid input type for invoke_with_tools method - {type(input)}"
             )
 
-    async def ainvoke_with_tools(
+    async def ainvoke_with_tools(  # type: ignore[no-redef]
         self,
         input: Union[str, List[LLMMessage]],
         tools: Sequence[Tool],

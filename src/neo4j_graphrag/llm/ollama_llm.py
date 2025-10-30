@@ -56,7 +56,7 @@ if TYPE_CHECKING:
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return
 
 
-class OllamaLLM(LLMInterface, LLMInterfaceV2):
+class OllamaLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
     """LLM wrapper for Ollama models."""
 
     def __init__(
@@ -96,7 +96,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
             self.model_params = {"options": self.model_params}
 
     # overloads for LLMInterface and LLMInterfaceV2 methods
-    @overload
+    @overload  # type: ignore[no-overload-impl]
     def invoke(
         self,
         input: str,
@@ -110,7 +110,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
         input: List[LLMMessage],
     ) -> LLMResponse: ...
 
-    @overload
+    @overload  # type: ignore[no-overload-impl]
     async def ainvoke(
         self,
         input: str,
@@ -125,7 +125,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
     ) -> LLMResponse: ...
 
     # switching logics to LLMInterface or LLMInterfaceV2
-    def invoke(
+    def invoke(  # type: ignore[no-redef]
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -138,7 +138,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 
-    async def ainvoke(
+    async def ainvoke(  # type: ignore[no-redef]
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,

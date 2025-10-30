@@ -14,19 +14,21 @@
 from __future__ import annotations
 
 from typing import cast
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from typing import List
 
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 import pytest
-from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.types import ToolCallResponse
-from neo4j_graphrag.llm.vertexai_llm import VertexAILLM
-from neo4j_graphrag.tool import Tool
-from neo4j_graphrag.types import LLMMessage
 from vertexai.generative_models import (
     Content,
     GenerationResponse,
     Part,
 )
+
+from neo4j_graphrag.exceptions import LLMGenerationError
+from neo4j_graphrag.llm.types import ToolCallResponse
+from neo4j_graphrag.llm.vertexai_llm import VertexAILLM
+from neo4j_graphrag.tool import Tool
+from neo4j_graphrag.types import LLMMessage
 
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel", None)
@@ -318,7 +320,7 @@ async def test_vertexai_acall_llm_with_tools(mock_model: Mock, test_tool: Tool) 
 def test_vertexai_invoke_v2_happy_path(GenerativeModelMock: MagicMock) -> None:
     """Test V2 interface invoke method with List[LLMMessage] input."""
     model_name = "gemini-1.5-flash-001"
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "What is the capital of France?"},
     ]
@@ -349,7 +351,7 @@ def test_vertexai_invoke_v2_with_conversation_history(
 ) -> None:
     """Test V2 interface invoke with conversation history."""
     model_name = "gemini-1.5-flash-001"
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "What is the capital of France?"},
         {"role": "assistant", "content": "Paris is the capital of France."},
@@ -383,7 +385,7 @@ def test_vertexai_invoke_v2_with_conversation_history(
 def test_vertexai_invoke_v2_no_system_message(GenerativeModelMock: MagicMock) -> None:
     """Test V2 interface invoke without system message."""
     model_name = "gemini-1.5-flash-001"
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "user", "content": "Hello, how are you?"},
     ]
     mock_response = Mock()
@@ -406,7 +408,7 @@ def test_vertexai_invoke_v2_no_system_message(GenerativeModelMock: MagicMock) ->
 async def test_vertexai_ainvoke_v2_happy_path(GenerativeModelMock: MagicMock) -> None:
     """Test V2 interface async invoke method with List[LLMMessage] input."""
     model_name = "gemini-1.5-flash-001"
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "What is 2+2?"},
     ]
@@ -434,7 +436,7 @@ def test_vertexai_invoke_with_tools_v2(
     test_tool: Tool,
 ) -> None:
     """Test V2 interface invoke_with_tools method with List[LLMMessage] input."""
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "What is the weather like?"},
     ]
@@ -468,7 +470,7 @@ async def test_vertexai_ainvoke_with_tools_v2(
     test_tool: Tool,
 ) -> None:
     """Test V2 interface async invoke_with_tools method with List[LLMMessage] input."""
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "user", "content": "What tools are available?"},
     ]
     # Mock the model call response
@@ -496,8 +498,8 @@ async def test_vertexai_ainvoke_with_tools_v2(
 def test_vertexai_invoke_v2_validation_error(_GenerativeModelMock: MagicMock) -> None:
     """Test V2 interface invoke with invalid role raises error."""
     model_name = "gemini-1.5-flash-001"
-    messages = [
-        {"role": "invalid_role", "content": "This should fail."},
+    messages: List[LLMMessage] = [
+        {"role": "invalid_role", "content": "This should fail."},  # type: ignore[typeddict-item]
     ]
 
     llm = VertexAILLM(model_name=model_name)
@@ -514,7 +516,7 @@ def test_vertexai_get_brand_new_messages_system_instruction_override(
     """Test that system instruction in messages overrides class-level system instruction."""
     model_name = "gemini-1.5-flash-001"
     class_system_instruction = "You are a class-level assistant."
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a message-level assistant."},
         {"role": "user", "content": "Hello"},
     ]

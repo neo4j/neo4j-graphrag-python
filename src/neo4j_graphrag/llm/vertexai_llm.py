@@ -101,7 +101,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         self.options = kwargs
 
     # overloads for LLMInterface and LLMInterfaceV2 methods
-    @overload
+    @overload  # type: ignore[no-overload-impl]
     def invoke(
         self,
         input: str,
@@ -115,7 +115,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         input: List[LLMMessage],
     ) -> LLMResponse: ...
 
-    @overload
+    @overload  # type: ignore[no-overload-impl]
     async def ainvoke(
         self,
         input: str,
@@ -129,7 +129,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         input: List[LLMMessage],
     ) -> LLMResponse: ...
 
-    @overload
+    @overload  # type: ignore[no-overload-impl]
     def invoke_with_tools(
         self,
         input: str,
@@ -145,7 +145,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         tools: Sequence[Tool],  # Tools definition as a sequence of Tool objects
     ) -> ToolCallResponse: ...
 
-    @overload
+    @overload  # type: ignore[no-overload-impl]
     async def ainvoke_with_tools(
         self,
         input: str,
@@ -163,7 +163,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
 
     # switching logics to LLMInterface or LLMInterfaceV2
 
-    def invoke(
+    def invoke(  # type: ignore[no-redef]
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -176,7 +176,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 
-    async def ainvoke(
+    async def ainvoke(  # type: ignore[no-redef]
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -191,7 +191,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         else:
             raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
 
-    def invoke_with_tools(
+    def invoke_with_tools(  # type: ignore[no-redef]
         self,
         input: Union[str, List[LLMMessage]],
         tools: Sequence[Tool],  # Tools definition as a sequence of Tool objects
@@ -209,7 +209,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
                 f"Invalid input type for invoke_with_tools method - {type(input)}"
             )
 
-    async def ainvoke_with_tools(
+    async def ainvoke_with_tools(  # type: ignore[no-redef]
         self,
         input: Union[str, List[LLMMessage]],
         tools: Sequence[Tool],

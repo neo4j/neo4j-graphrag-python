@@ -14,10 +14,12 @@
 #  limitations under the License.
 from typing import Any
 from unittest.mock import MagicMock, Mock, patch
+from typing import List
 
 import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm import LLMResponse, MistralAILLM
+from neo4j_graphrag.types import LLMMessage
 
 
 # Mock SDKError for testing
@@ -65,16 +67,16 @@ def test_mistralai_llm_invoke_with_message_history(mock_mistral: Mock) -> None:
 
     llm = MistralAILLM(model_name=model)
 
-    message_history = [
+    message_history: List[LLMMessage] = [
         {"role": "user", "content": "When does the sun come up in the summer?"},
         {"role": "assistant", "content": "Usually around 6am."},
     ]
     question = "What about next season?"
-    res = llm.invoke(question, message_history, system_instruction=system_instruction)  # type: ignore
+    res = llm.invoke(question, message_history, system_instruction=system_instruction)
 
     assert isinstance(res, LLMResponse)
     assert res.content == "mistral response"
-    messages = [{"role": "system", "content": system_instruction}]
+    messages: List[LLMMessage] = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
     llm.client.chat.complete.assert_called_once_with(  # type: ignore[attr-defined]
@@ -96,17 +98,17 @@ def test_mistralai_llm_invoke_with_message_history_and_system_instruction(
     model = "mistral-model"
     system_instruction = "You are a helpful assistant."
     llm = MistralAILLM(model_name=model)
-    message_history = [
+    message_history: List[LLMMessage] = [
         {"role": "user", "content": "When does the sun come up in the summer?"},
         {"role": "assistant", "content": "Usually around 6am."},
     ]
     question = "What about next season?"
 
     # first invocation - initial instructions
-    res = llm.invoke(question, message_history, system_instruction=system_instruction)  # type: ignore
+    res = llm.invoke(question, message_history, system_instruction=system_instruction)
     assert isinstance(res, LLMResponse)
     assert res.content == "mistral response"
-    messages = [{"role": "system", "content": system_instruction}]
+    messages: List[LLMMessage] = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
     llm.client.chat.complete.assert_called_once_with(  # type: ignore[attr-defined]
@@ -207,7 +209,7 @@ def test_mistralai_llm_invoke_v2_happy_path(mock_mistral: Mock) -> None:
     ]
     mock_mistral_instance.chat.complete.return_value = chat_response_mock
 
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "What is machine learning?"},
     ]
@@ -219,8 +221,8 @@ def test_mistralai_llm_invoke_v2_happy_path(mock_mistral: Mock) -> None:
     assert response.content == "mistral v2 response"
 
     # Verify the correct method was called
-    llm.client.chat.complete.assert_called_once()
-    call_args = llm.client.chat.complete.call_args[1]
+    llm.client.chat.complete.assert_called_once()  # type: ignore[attr-defined]
+    call_args = llm.client.chat.complete.call_args[1]  # type: ignore[attr-defined]
     assert call_args["model"] == "mistral-model"
     assert len(call_args["messages"]) == 2
 
@@ -235,7 +237,7 @@ def test_mistralai_llm_invoke_v2_with_conversation_history(mock_mistral: Mock) -
     ]
     mock_mistral_instance.chat.complete.return_value = chat_response_mock
 
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Tell me about Python."},
         {"role": "assistant", "content": "Python is a programming language."},
@@ -249,8 +251,8 @@ def test_mistralai_llm_invoke_v2_with_conversation_history(mock_mistral: Mock) -
     assert response.content == "mistral conversation response"
 
     # Verify the correct number of messages were passed
-    llm.client.chat.complete.assert_called_once()
-    call_args = llm.client.chat.complete.call_args[1]
+    llm.client.chat.complete.assert_called_once()  # type: ignore[attr-defined]
+    call_args = llm.client.chat.complete.call_args[1]  # type: ignore[attr-defined]
     assert len(call_args["messages"]) == 4
 
 
@@ -264,7 +266,7 @@ def test_mistralai_llm_invoke_v2_no_system_message(mock_mistral: Mock) -> None:
     ]
     mock_mistral_instance.chat.complete.return_value = chat_response_mock
 
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "user", "content": "What is the capital of France?"},
     ]
 
@@ -275,8 +277,8 @@ def test_mistralai_llm_invoke_v2_no_system_message(mock_mistral: Mock) -> None:
     assert response.content == "mistral no system response"
 
     # Verify only user message was passed
-    llm.client.chat.complete.assert_called_once()
-    call_args = llm.client.chat.complete.call_args[1]
+    llm.client.chat.complete.assert_called_once()  # type: ignore[attr-defined]
+    call_args = llm.client.chat.complete.call_args[1]  # type: ignore[attr-defined]
     assert len(call_args["messages"]) == 1
 
 
@@ -295,7 +297,7 @@ async def test_mistralai_llm_ainvoke_v2_happy_path(mock_mistral: Mock) -> None:
 
     mock_mistral_instance.chat.complete_async = mock_complete_async
 
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "What is async programming?"},
     ]
@@ -319,7 +321,7 @@ async def test_mistralai_llm_ainvoke_v2_error_handling(mock_mistral: Mock) -> No
 
     mock_mistral_instance.chat.complete_async = mock_complete_async
 
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "user", "content": "This should fail"},
     ]
 
@@ -339,8 +341,8 @@ def test_mistralai_llm_invoke_v2_validation_error(mock_mistral: Mock) -> None:
     ]
     mock_mistral_instance.chat.complete.return_value = chat_response_mock
 
-    messages = [
-        {"role": "invalid_role", "content": "This should fail."},
+    messages: List[LLMMessage] = [
+        {"role": "invalid_role", "content": "This should fail."},  # type: ignore[typeddict-item]
     ]
 
     llm = MistralAILLM(model_name="mistral-model")
@@ -374,7 +376,7 @@ async def test_mistralai_llm_ainvoke_invalid_input_type(_mock_mistral: Mock) -> 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
 def test_mistralai_llm_get_brand_new_messages_all_roles(_mock_mistral: Mock) -> None:
     """Test get_brand_new_messages method handles all message roles correctly."""
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Hello"},
         {"role": "assistant", "content": "Hi there!"},
@@ -397,8 +399,8 @@ def test_mistralai_llm_get_brand_new_messages_all_roles(_mock_mistral: Mock) -> 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
 def test_mistralai_llm_get_brand_new_messages_unknown_role(_mock_mistral: Mock) -> None:
     """Test get_brand_new_messages method raises error for unknown role."""
-    messages = [
-        {"role": "unknown_role", "content": "This should fail."},
+    messages: List[LLMMessage] = [
+        {"role": "unknown_role", "content": "This should fail."},  # type: ignore[typeddict-item]
     ]
 
     llm = MistralAILLM(model_name="mistral-model")

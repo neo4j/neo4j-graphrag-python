@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import sys
-from typing import Generator
+from typing import Generator, List
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import cohere.core
@@ -21,6 +21,7 @@ import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm import LLMResponse
 from neo4j_graphrag.llm.cohere_llm import CohereLLM
+from neo4j_graphrag.types import LLMMessage
 
 
 @pytest.fixture
@@ -55,16 +56,16 @@ def test_cohere_llm_invoke_with_message_history_happy_path(mock_cohere: Mock) ->
 
     system_instruction = "You are a helpful assistant."
     llm = CohereLLM(model_name="something")
-    message_history = [
+    message_history: List[LLMMessage] = [
         {"role": "user", "content": "When does the sun come up in the summer?"},
         {"role": "assistant", "content": "Usually around 6am."},
     ]
     question = "What about next season?"
 
-    res = llm.invoke(question, message_history, system_instruction=system_instruction)  # type: ignore
+    res = llm.invoke(question, message_history, system_instruction=system_instruction)
     assert isinstance(res, LLMResponse)
     assert res.content == "cohere response text"
-    messages = [{"role": "system", "content": system_instruction}]
+    messages: List[LLMMessage] = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
     mock_cohere_client_chat.assert_called_once_with(
@@ -83,16 +84,16 @@ def test_cohere_llm_invoke_with_message_history_and_system_instruction(
 
     system_instruction = "You are a helpful assistant."
     llm = CohereLLM(model_name="gpt")
-    message_history = [
+    message_history: List[LLMMessage] = [
         {"role": "user", "content": "When does the sun come up in the summer?"},
         {"role": "assistant", "content": "Usually around 6am."},
     ]
     question = "What about next season?"
 
-    res = llm.invoke(question, message_history, system_instruction=system_instruction)  # type: ignore
+    res = llm.invoke(question, message_history, system_instruction=system_instruction)
     assert isinstance(res, LLMResponse)
     assert res.content == "cohere response text"
-    messages = [{"role": "system", "content": system_instruction}]
+    messages: List[LLMMessage] = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
     mock_cohere_client_chat.assert_called_once_with(
@@ -168,7 +169,7 @@ def test_cohere_llm_invoke_v2_happy_path(mock_cohere: Mock) -> None:
     mock_cohere.UserChatMessageV2 = MagicMock()
     mock_cohere.AssistantChatMessageV2 = MagicMock()
 
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "What is the capital of France?"},
     ]
@@ -201,7 +202,7 @@ async def test_cohere_llm_ainvoke_v2_happy_path(mock_cohere: Mock) -> None:
     mock_cohere.UserChatMessageV2 = MagicMock()
     mock_cohere.AssistantChatMessageV2 = MagicMock()
 
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "What is the capital of France?"},
     ]
@@ -222,8 +223,8 @@ def test_cohere_llm_invoke_v2_validation_error(mock_cohere: Mock) -> None:
     chat_response_mock.message.content = [MagicMock(text="should not get here")]
     mock_cohere.ClientV2.return_value.chat.return_value = chat_response_mock
 
-    messages = [
-        {"role": "invalid_role", "content": "This should fail."},
+    messages: List[LLMMessage] = [
+        {"role": "invalid_role", "content": "This should fail."},  # type: ignore[typeddict-item]
     ]
 
     llm = CohereLLM(model_name="something")
@@ -244,7 +245,7 @@ def test_cohere_llm_get_brand_new_messages_all_roles(mock_cohere: Mock) -> None:
     mock_cohere.UserChatMessageV2.return_value = mock_user_msg
     mock_cohere.AssistantChatMessageV2.return_value = mock_assistant_msg
 
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Hello"},
         {"role": "assistant", "content": "Hi there!"},

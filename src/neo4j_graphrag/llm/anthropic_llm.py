@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return
-class AnthropicLLM(LLMInterface, LLMInterfaceV2):
+class AnthropicLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
     """Interface for large language models on Anthropic
 
     Args:
@@ -85,7 +85,7 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):
         self.async_client = anthropic.AsyncAnthropic(**kwargs)
 
     # overloads for LLMInterface and LLMInterfaceV2 methods
-    @overload
+    @overload  # type: ignore[no-overload-impl]
     def invoke(
         self,
         input: str,
@@ -99,7 +99,7 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):
         input: List[LLMMessage],
     ) -> LLMResponse: ...
 
-    @overload
+    @overload  # type: ignore[no-overload-impl]
     async def ainvoke(
         self,
         input: str,
@@ -114,7 +114,7 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):
     ) -> LLMResponse: ...
 
     # switching logics to LLMInterface or LLMInterfaceV2
-    def invoke(
+    def invoke(  # type: ignore[no-redef]
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -127,7 +127,7 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 
-    async def ainvoke(
+    async def ainvoke(  # type: ignore[no-redef]
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,

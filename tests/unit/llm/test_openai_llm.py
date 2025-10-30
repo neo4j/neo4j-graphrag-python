@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from typing import List
 
 import openai
 import pytest
@@ -21,6 +22,7 @@ from neo4j_graphrag.llm import LLMResponse
 from neo4j_graphrag.llm.openai_llm import AzureOpenAILLM, OpenAILLM
 from neo4j_graphrag.llm.types import ToolCallResponse
 from neo4j_graphrag.tool import Tool
+from neo4j_graphrag.types import LLMMessage
 
 
 def get_mock_openai() -> MagicMock:
@@ -449,7 +451,7 @@ def test_openai_llm_invoke_v2_happy_path(mock_import: Mock) -> None:
         ],
     )
 
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "What is the capital of France?"},
     ]
@@ -461,8 +463,8 @@ def test_openai_llm_invoke_v2_happy_path(mock_import: Mock) -> None:
     assert response.content == "Paris is the capital of France."
 
     # Verify the client was called correctly
-    llm.client.chat.completions.create.assert_called_once()
-    call_args = llm.client.chat.completions.create.call_args[1]
+    llm.client.chat.completions.create.assert_called_once()  # type: ignore
+    call_args = llm.client.chat.completions.create.call_args[1]  # type: ignore
     # Verify we have the right number of messages and model
     assert len(call_args["messages"]) == 2
     assert call_args["model"] == "gpt"
@@ -479,7 +481,7 @@ def test_openai_llm_invoke_v2_with_conversation_history(mock_import: Mock) -> No
         ],
     )
 
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "What is the capital of France?"},
         {"role": "assistant", "content": "Paris is the capital of France."},
@@ -493,8 +495,8 @@ def test_openai_llm_invoke_v2_with_conversation_history(mock_import: Mock) -> No
     assert response.content == "Berlin is the capital of Germany."
 
     # Verify all messages were passed correctly
-    llm.client.chat.completions.create.assert_called_once()
-    call_args = llm.client.chat.completions.create.call_args[1]
+    llm.client.chat.completions.create.assert_called_once()  # type: ignore
+    call_args = llm.client.chat.completions.create.call_args[1]  # type: ignore
     assert len(call_args["messages"]) == 4
     assert call_args["model"] == "gpt"
 
@@ -508,7 +510,7 @@ def test_openai_llm_invoke_v2_no_system_message(mock_import: Mock) -> None:
         choices=[MagicMock(message=MagicMock(content="I'm doing well, thank you!"))],
     )
 
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "user", "content": "Hello, how are you?"},
     ]
 
@@ -519,8 +521,8 @@ def test_openai_llm_invoke_v2_no_system_message(mock_import: Mock) -> None:
     assert response.content == "I'm doing well, thank you!"
 
     # Verify only user message was passed
-    llm.client.chat.completions.create.assert_called_once()
-    call_args = llm.client.chat.completions.create.call_args[1]
+    llm.client.chat.completions.create.assert_called_once()  # type: ignore
+    call_args = llm.client.chat.completions.create.call_args[1]  # type: ignore
     assert len(call_args["messages"]) == 1
 
 
@@ -538,7 +540,7 @@ async def test_openai_llm_ainvoke_v2_happy_path(mock_import: Mock) -> None:
         return_value=mock_response
     )
 
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "What is 2+2?"},
     ]
@@ -550,8 +552,8 @@ async def test_openai_llm_ainvoke_v2_happy_path(mock_import: Mock) -> None:
     assert response.content == "2+2 equals 4."
 
     # Verify async client was called
-    llm.async_client.chat.completions.create.assert_awaited_once()
-    call_args = llm.async_client.chat.completions.create.call_args[1]
+    llm.async_client.chat.completions.create.assert_awaited_once()  # type: ignore
+    call_args = llm.async_client.chat.completions.create.call_args[1]  # type: ignore
     assert len(call_args["messages"]) == 2
     assert call_args["model"] == "gpt"
 
@@ -588,7 +590,7 @@ def test_openai_llm_invoke_with_tools_v2_happy_path(
         ],
     )
 
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "What tools are available?"},
     ]
@@ -604,8 +606,8 @@ def test_openai_llm_invoke_with_tools_v2_happy_path(
     assert res.content == "openai tool response"
 
     # Verify the correct parameters were passed
-    llm.client.chat.completions.create.assert_called_once()
-    call_args = llm.client.chat.completions.create.call_args[1]
+    llm.client.chat.completions.create.assert_called_once()  # type: ignore
+    call_args = llm.client.chat.completions.create.call_args[1]  # type: ignore
     assert len(call_args["messages"]) == 2
     assert call_args["model"] == "gpt"
     assert len(call_args["tools"]) == 1
@@ -625,8 +627,8 @@ def test_openai_llm_invoke_v2_validation_error(mock_import: Mock) -> None:
     mock_openai = get_mock_openai()
     mock_import.return_value = mock_openai
 
-    messages = [
-        {"role": "invalid_role", "content": "This should fail."},
+    messages: List[LLMMessage] = [
+        {"role": "invalid_role", "content": "This should fail."},  # type: ignore
     ]
 
     llm = OpenAILLM(api_key="my key", model_name="gpt")
@@ -642,7 +644,7 @@ def test_openai_llm_get_brand_new_messages_all_roles(mock_import: Mock) -> None:
     mock_openai = get_mock_openai()
     mock_import.return_value = mock_openai
 
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Hello"},
         {"role": "assistant", "content": "Hi there!"},
@@ -671,7 +673,7 @@ def test_azure_openai_llm_invoke_v2_happy_path(mock_import: Mock) -> None:
         )
     )
 
-    messages = [
+    messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "What is Azure?"},
     ]
@@ -688,7 +690,7 @@ def test_azure_openai_llm_invoke_v2_happy_path(mock_import: Mock) -> None:
     assert response.content == "Azure OpenAI response"
 
     # Verify the correct messages were passed
-    llm.client.chat.completions.create.assert_called_once()
-    call_args = llm.client.chat.completions.create.call_args[1]
+    llm.client.chat.completions.create.assert_called_once()  # type: ignore
+    call_args = llm.client.chat.completions.create.call_args[1]  # type: ignore
     assert len(call_args["messages"]) == 2
     assert call_args["model"] == "gpt"
