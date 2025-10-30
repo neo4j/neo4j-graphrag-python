@@ -18,7 +18,7 @@ from typing import List
 import openai
 import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm import LLMResponse
+from neo4j_graphrag.llm.types import LLMResponse
 from neo4j_graphrag.llm.openai_llm import AzureOpenAILLM, OpenAILLM
 from neo4j_graphrag.llm.types import ToolCallResponse
 from neo4j_graphrag.tool import Tool
