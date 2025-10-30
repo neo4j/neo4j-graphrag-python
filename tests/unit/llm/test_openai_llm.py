@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 from typing import List
 
 import openai
@@ -428,10 +428,11 @@ async def test_openai_llm_ainvoke_happy_path(mock_import: Mock) -> None:
     mock_response = MagicMock()
     mock_response.choices = [mock_choice]
 
-    # Async mock for the chat completion
-    mock_openai.AsyncOpenAI.return_value.chat.completions.create = AsyncMock(
-        return_value=mock_response
-    )
+    # Async function instead of AsyncMock
+    async def async_create(*args, **kwargs):  # type: ignore[no-untyped-def]
+        return mock_response
+
+    mock_openai.AsyncOpenAI.return_value.chat.completions.create = async_create
 
     model_name = "gpt-3.5-turbo"
     input_text = "may thy knife chip and shatter"
@@ -441,8 +442,8 @@ async def test_openai_llm_ainvoke_happy_path(mock_import: Mock) -> None:
     response = await llm.ainvoke(input_text)
 
     # Assert we got the expected content in LLMResponse
-    assert response.content == "Return text"
     assert isinstance(response, LLMResponse)
+    assert response.content == "Return text"
 
 
 # LLM Interface V2 Tests
