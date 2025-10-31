@@ -114,7 +114,7 @@ class GraphRAG:
         Args:
             query_text (str): The user question.
             message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection
-                previous messages, with each message having a specific role assigned.
+                of previous messages, with each message having a specific role assigned.
             examples (str): Examples added to the LLM prompt.
             retriever_config (Optional[dict]): Parameters passed to the retriever.
                 search method; e.g.: top_k
