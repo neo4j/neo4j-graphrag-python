@@ -128,15 +128,15 @@ class GraphRAG:
 
         """
         if return_context is None:
-            if isinstance(self.llm, LLMInterface):
+            if self.is_langchain_compatible():
+                return_context = True
+            else:  # e.g. LLMInterface
                 warnings.warn(
                     "The default value of 'return_context' will change from 'False'"
                     " to 'True' in a future version.",
                     DeprecationWarning,
                 )
                 return_context = False
-            else:
-                return_context = True
         try:
             validated_data = RagSearchModel(
                 query_text=query_text,
@@ -164,9 +164,7 @@ class GraphRAG:
             logger.debug("RAG: retriever_result=%s", prettify(retriever_result))
             logger.debug("RAG: prompt=%s", prompt)
 
-            if isinstance(self.llm, LLMInterfaceV2) or self.llm.__module__.startswith(
-                "langchain"
-            ):
+            if self.is_langchain_compatible():
                 messages = legacy_inputs_to_messages(
                     prompt=prompt,
                     message_history=message_history,
@@ -206,9 +204,7 @@ class GraphRAG:
             summarization_prompt = self._chat_summary_prompt(
                 message_history=message_history
             )
-            if isinstance(self.llm, LLMInterfaceV2) or self.llm.__module__.startswith(
-                "langchain"
-            ):
+            if self.is_langchain_compatible():
                 messages = legacy_inputs_to_messages(
                     summarization_prompt,
                     system_instruction=summary_system_message,
@@ -226,6 +222,12 @@ class GraphRAG:
 
             return self.conversation_prompt(summary=summary, current_query=query_text)
         return query_text
+
+    def is_langchain_compatible(self) -> bool:
+        """Checks if the LLM is compatible with LangChain."""
+        return isinstance(self.llm, LLMInterfaceV2) or self.llm.__module__.startswith(
+            "langchain"
+        )
 
     def _chat_summary_prompt(self, message_history: List[LLMMessage]) -> str:
         message_list = [
