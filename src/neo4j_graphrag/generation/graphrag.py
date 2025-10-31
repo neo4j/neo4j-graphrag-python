@@ -206,13 +206,13 @@ class GraphRAG:
             summarization_prompt = self._chat_summary_prompt(
                 message_history=message_history
             )
-            messages = legacy_inputs_to_messages(
-                summarization_prompt,
-                system_instruction=summary_system_message,
-            )
             if isinstance(self.llm, LLMInterfaceV2) or self.llm.__module__.startswith(
                 "langchain"
             ):
+                messages = legacy_inputs_to_messages(
+                    summarization_prompt,
+                    system_instruction=summary_system_message,
+                )
                 summary = self.llm.invoke(
                     input=messages,
                 ).content
