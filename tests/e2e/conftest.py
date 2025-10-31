@@ -134,7 +134,7 @@ def setup_neo4j_for_retrieval(driver: Driver) -> None:
         driver,
         fulltext_index_name,
         label="Document",
-        node_properties=["vectorProperty"],
+        node_properties=["short_text_property"],
     )
 
     # Insert 10 vectors and authors
