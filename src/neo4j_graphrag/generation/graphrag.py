@@ -225,9 +225,16 @@ class GraphRAG:
 
     def is_langchain_compatible(self) -> bool:
         """Checks if the LLM is compatible with LangChain."""
-        return isinstance(self.llm, LLMInterfaceV2) or self.llm.__module__.startswith(
-            "langchain"
-        )
+        if isinstance(self.llm, LLMInterfaceV2):
+            return True
+
+        try:
+            # langchain-core is an optional dependency
+            from langchain_core.language_models import BaseChatModel
+
+            return isinstance(self.llm, BaseChatModel)
+        except ImportError:
+            return False
 
     def _chat_summary_prompt(self, message_history: List[LLMMessage]) -> str:
         message_list = [
