@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 import neo4j
 import logging
@@ -554,6 +555,15 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
             relationship_types, "relationship type"
         )
 
+    def _clean_json_content(self, content: str) -> str:
+        content = content.strip()
+
+        # Remove markdown code block markers if present
+        content = re.sub(r"^```(?:json)?\s*", "", content, flags=re.MULTILINE)
+        content = re.sub(r"```\s*$", "", content, flags=re.MULTILINE)
+
+        return content.strip()
+
     @validate_call
     async def run(self, text: str, examples: str = "", **kwargs: Any) -> GraphSchema:
         """
@@ -574,6 +584,9 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         except LLMGenerationError as e:
             # Re-raise the LLMGenerationError
             raise LLMGenerationError("Failed to generate schema from text") from e
+
+        # Clean response
+        content = self._clean_json_content(content)
 
         try:
             extracted_schema: Dict[str, Any] = json.loads(content)
