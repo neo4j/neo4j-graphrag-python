@@ -21,8 +21,8 @@ from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface, LLMInterfaceV2
 from neo4j_graphrag.utils.rate_limit import (
     RateLimitHandler,
-    rate_limit_handler,
-    async_rate_limit_handler,
+    rate_limit_handler as rate_limit_handler_decorator,
+    async_rate_limit_handler as async_rate_limit_handler_decorator,
 )
 from neo4j_graphrag.llm.types import (
     BaseMessage,
@@ -147,7 +147,7 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
             raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
 
     # implementaions
-    @rate_limit_handler
+    @rate_limit_handler_decorator
     def __legacy_invoke(
         self,
         input: str,
@@ -207,7 +207,7 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
         except self.anthropic.APIError as e:
             raise LLMGenerationError(e)
 
-    @async_rate_limit_handler
+    @async_rate_limit_handler_decorator
     async def __legacy_ainvoke(
         self,
         input: str,

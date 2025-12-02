@@ -25,8 +25,8 @@ from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface, LLMInterfaceV2
 from neo4j_graphrag.utils.rate_limit import (
     RateLimitHandler,
-    rate_limit_handler,
-    async_rate_limit_handler,
+    rate_limit_handler as rate_limit_handler_decorator,
+    async_rate_limit_handler as async_rate_limit_handler_decorator,
 )
 from neo4j_graphrag.llm.types import (
     BaseMessage,
@@ -149,7 +149,7 @@ class CohereLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
             raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
 
     # implementations
-    @rate_limit_handler
+    @rate_limit_handler_decorator
     def __legacy_invoke(
         self,
         input: str,
@@ -202,7 +202,7 @@ class CohereLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
             content=res.message.content[0].text if res.message.content else "",
         )
 
-    @async_rate_limit_handler
+    @async_rate_limit_handler_decorator
     async def __legacy_ainvoke(
         self,
         input: str,

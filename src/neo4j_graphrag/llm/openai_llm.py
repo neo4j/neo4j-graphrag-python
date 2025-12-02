@@ -39,8 +39,8 @@ from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.rate_limit import (
     RateLimitHandler,
-    rate_limit_handler,
-    async_rate_limit_handler,
+    rate_limit_handler as rate_limit_handler_decorator,
+    async_rate_limit_handler as async_rate_limit_handler_decorator,
 )
 from neo4j_graphrag.tool import Tool
 
@@ -326,7 +326,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
-    @rate_limit_handler
+    @rate_limit_handler_decorator
     def __legacy_invoke(
         self,
         input: str,
@@ -361,7 +361,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
-    @rate_limit_handler
+    @rate_limit_handler_decorator
     def __legacy_invoke_with_tools(
         self,
         input: str,
@@ -502,7 +502,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
-    @async_rate_limit_handler
+    @async_rate_limit_handler_decorator
     async def __legacy_ainvoke(
         self,
         input: str,
@@ -555,7 +555,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
-    @async_rate_limit_handler
+    @async_rate_limit_handler_decorator
     async def __legacy_ainvoke_with_tools(
         self,
         input: str,
