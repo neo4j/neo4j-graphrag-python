@@ -189,6 +189,7 @@ class LLMInterfaceV2(ABC):
     def invoke(
         self,
         input: List[LLMMessage],
+        **kwargs: Any,
     ) -> LLMResponse:
         """Sends a text input to the LLM and retrieves a response.
 
@@ -209,6 +210,7 @@ class LLMInterfaceV2(ABC):
     async def ainvoke(
         self,
         input: List[LLMMessage],
+        **kwargs: Any,
     ) -> LLMResponse:
         """Asynchronously sends a text input to the LLM and retrieves a response.
 
