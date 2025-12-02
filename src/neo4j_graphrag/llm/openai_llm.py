@@ -115,6 +115,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
     def invoke(
         self,
         input: List[LLMMessage],
+        **kwargs: Any,
     ) -> LLMResponse: ...
 
     @overload  # type: ignore[no-overload-impl]
@@ -129,6 +130,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
     async def ainvoke(
         self,
         input: List[LLMMessage],
+        **kwargs: Any,
     ) -> LLMResponse: ...
 
     @overload  # type: ignore[no-overload-impl]
@@ -169,11 +171,12 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+        **kwargs: Any,
     ) -> LLMResponse:
         if isinstance(input, str):
             return self.__legacy_invoke(input, message_history, system_instruction)
         elif isinstance(input, list):
-            return self.__brand_new_invoke(input)
+            return self.__brand_new_invoke(input, **kwargs)
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 
@@ -182,13 +185,14 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+        **kwargs: Any,
     ) -> LLMResponse:
         if isinstance(input, str):
             return await self.__legacy_ainvoke(
                 input, message_history, system_instruction
             )
         elif isinstance(input, list):
-            return await self.__brand_new_ainvoke(input)
+            return await self.__brand_new_ainvoke(input, **kwargs)
         else:
             raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
 
@@ -300,6 +304,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
     def __brand_new_invoke(
         self,
         input: List[LLMMessage],
+        **kwargs: Any,
     ) -> LLMResponse:
         """New invoke method for LLMInterfaceV2.
 
@@ -314,6 +319,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
                 messages=self.get_brand_new_messages(input),
                 model=self.model_name,
                 **self.model_params,
+                **kwargs,
             )
             content = response.choices[0].message.content or ""
             return LLMResponse(content=content)
@@ -534,6 +540,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
     async def __brand_new_ainvoke(
         self,
         input: List[LLMMessage],
+        **kwargs: Any,
     ) -> LLMResponse:
         """Asynchronous new invoke method for LLMInterfaceV2."""
         try:
@@ -541,6 +548,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
                 messages=self.get_brand_new_messages(input),
                 model=self.model_name,
                 **self.model_params,
+                **kwargs,
             )
             content = response.choices[0].message.content or ""
             return LLMResponse(content=content)

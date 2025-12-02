@@ -108,6 +108,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
     def invoke(
         self,
         input: List[LLMMessage],
+        **kwargs: Any,
     ) -> LLMResponse: ...
 
     @overload  # type: ignore[no-overload-impl]
@@ -122,6 +123,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
     async def ainvoke(
         self,
         input: List[LLMMessage],
+        **kwargs: Any,
     ) -> LLMResponse: ...
 
     # switching logics to LLMInterface or LLMInterfaceV2
@@ -130,11 +132,12 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+        **kwargs: Any,
     ) -> LLMResponse:
         if isinstance(input, str):
             return self.__legacy_invoke(input, message_history, system_instruction)
         elif isinstance(input, list):
-            return self.__brand_new_invoke(input)
+            return self.__brand_new_invoke(input, **kwargs)
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 
@@ -143,13 +146,14 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+        **kwargs: Any,
     ) -> LLMResponse:
         if isinstance(input, str):
             return await self.__legacy_ainvoke(
                 input, message_history, system_instruction
             )
         elif isinstance(input, list):
-            return await self.__brand_new_ainvoke(input)
+            return await self.__brand_new_ainvoke(input, **kwargs)
         else:
             raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
 
@@ -187,6 +191,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
     def __brand_new_invoke(
         self,
         input: List[LLMMessage],
+        **kwargs: Any,
     ) -> LLMResponse:
         """Sends text to the LLM and returns a response.
 
@@ -201,6 +206,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
                 model=self.model_name,
                 messages=self.get_brand_new_messages(input),
                 **self.model_params,
+                **kwargs,
             )
             content = response.message.content or ""
             return LLMResponse(content=content)
@@ -245,6 +251,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
     async def __brand_new_ainvoke(
         self,
         input: List[LLMMessage],
+        **kwargs: Any,
     ) -> LLMResponse:
         """Asynchronously sends a text input to the OpenAI chat
         completion model and returns the response's content.
@@ -259,10 +266,11 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
             LLMGenerationError: If anything goes wrong.
         """
         try:
+            params = {**self.model_params, **kwargs}
             response = await self.async_client.chat(
                 model=self.model_name,
                 messages=self.get_brand_new_messages(input),
-                options=self.model_params,
+                options=params,
             )
             content = response.message.content or ""
             return LLMResponse(content=content)

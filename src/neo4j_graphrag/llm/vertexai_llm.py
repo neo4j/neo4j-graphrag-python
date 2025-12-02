@@ -113,6 +113,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
     def invoke(
         self,
         input: List[LLMMessage],
+        **kwargs: Any,
     ) -> LLMResponse: ...
 
     @overload  # type: ignore[no-overload-impl]
@@ -127,6 +128,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
     async def ainvoke(
         self,
         input: List[LLMMessage],
+        **kwargs: Any,
     ) -> LLMResponse: ...
 
     @overload  # type: ignore[no-overload-impl]
@@ -168,11 +170,12 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+        **kwargs: Any,
     ) -> LLMResponse:
         if isinstance(input, str):
             return self.__legacy_invoke(input, message_history, system_instruction)
         elif isinstance(input, list):
-            return self.__brand_new_invoke(input)
+            return self.__brand_new_invoke(input, **kwargs)
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 
@@ -181,13 +184,14 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+        **kwargs: Any,
     ) -> LLMResponse:
         if isinstance(input, str):
             return await self.__legacy_ainvoke(
                 input, message_history, system_instruction
             )
         elif isinstance(input, list):
-            return await self.__brand_new_ainvoke(input)
+            return await self.__brand_new_ainvoke(input, **kwargs)
         else:
             raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
 
@@ -262,6 +266,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
     def __brand_new_invoke(
         self,
         input: List[LLMMessage],
+        **kwargs: Any,
     ) -> LLMResponse:
         """New invoke method for LLMInterfaceV2.
 
@@ -315,6 +320,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
     async def __brand_new_ainvoke(
         self,
         input: list[LLMMessage],
+        **kwargs: Any,
     ) -> LLMResponse:
         """Asynchronously sends text to the LLM and returns a response.
 
