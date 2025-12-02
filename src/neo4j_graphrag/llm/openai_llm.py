@@ -81,6 +81,9 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
         rate_limit_handler: Optional[RateLimitHandler] = None,
+        model_kwargs: Optional[dict[str, Any]] = None,
+        rate_limiter: Optional[RateLimitHandler] = None,
+        **kwargs: Any,
     ):
         """
         Base class for OpenAI LLM.
@@ -100,7 +103,23 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
                 Please install it with `pip install "neo4j-graphrag[openai]"`."""
             )
         self.openai = openai
-        super().__init__(model_name, model_params, rate_limit_handler)
+
+        if isinstance(self, LLMInterfaceV2):
+            LLMInterfaceV2.__init__(
+                self,
+                model_name=model_name,
+                model_kwargs=model_kwargs or model_params or {},
+                rate_limiter=rate_limiter or rate_limit_handler,
+                **kwargs,
+            )
+        else:
+            LLMInterface.__init__(
+                self,
+                model_name=model_name,
+                model_params=model_params or {},
+                rate_limit_handler=rate_limit_handler,
+                **kwargs,
+            )
 
     # overloads for LLMInterface and LLMInterfaceV2 methods
     @overload  # type: ignore[no-overload-impl]
@@ -705,8 +724,8 @@ class OpenAILLM(BaseOpenAILLM):
     def __init__(
         self,
         model_name: str,
-        model_params: Optional[dict[str, Any]] = None,
-        rate_limit_handler: Optional[RateLimitHandler] = None,
+        model_kwargs: Optional[dict[str, Any]] = None,
+        rate_limiter: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ):
         """OpenAI LLM
@@ -715,11 +734,13 @@ class OpenAILLM(BaseOpenAILLM):
 
         Args:
             model_name (str):
-            model_params (str): Parameters like temperature that will be passed to the model when text is sent to it. Defaults to None.
-            rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting. Defaults to retry with exponential backoff.
+            model_kwargs (str): Parameters like temperature that will be passed to the model when text is sent to it. Defaults to None.
+            rate_limiter (Optional[RateLimitHandler]): Handler for rate limiting. Defaults to retry with exponential backoff.
             kwargs: All other parameters will be passed to the openai.OpenAI init.
         """
-        super().__init__(model_name, model_params, rate_limit_handler)
+        super().__init__(
+            model_name=model_name, model_kwargs=model_kwargs, rate_limiter=rate_limiter
+        )
         self.client = self.openai.OpenAI(**kwargs)
         self.async_client = self.openai.AsyncOpenAI(**kwargs)
 
@@ -730,9 +751,9 @@ class AzureOpenAILLM(BaseOpenAILLM):
     def __init__(
         self,
         model_name: str,
-        model_params: Optional[dict[str, Any]] = None,
+        model_kwargs: Optional[dict[str, Any]] = None,
         system_instruction: Optional[str] = None,
-        rate_limit_handler: Optional[RateLimitHandler] = None,
+        rate_limiter: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ):
         """Azure OpenAI LLM. Use this class when using an OpenAI model
@@ -740,10 +761,12 @@ class AzureOpenAILLM(BaseOpenAILLM):
 
         Args:
             model_name (str):
-            model_params (str): Parameters like temperature that will be passed to the model when text is sent to it. Defaults to None.
-            rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting. Defaults to retry with exponential backoff.
+            model_kwargs (str): Parameters like temperature that will be passed to the model when text is sent to it. Defaults to None.
+            rate_limiter (Optional[RateLimitHandler]): Handler for rate limiting. Defaults to retry with exponential backoff.
             kwargs: All other parameters will be passed to the openai.OpenAI init.
         """
-        super().__init__(model_name, model_params, rate_limit_handler)
+        super().__init__(
+            model_name=model_name, model_kwargs=model_kwargs, rate_limiter=rate_limiter
+        )
         self.client = self.openai.AzureOpenAI(**kwargs)
         self.async_client = self.openai.AsyncAzureOpenAI(**kwargs)

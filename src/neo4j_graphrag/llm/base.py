@@ -173,15 +173,15 @@ class LLMInterfaceV2(ABC):
     def __init__(
         self,
         model_name: str,
-        model_params: Optional[dict[str, Any]] = None,
-        rate_limit_handler: Optional[RateLimitHandler] = None,
+        model_kwargs: Optional[dict[str, Any]] = None,
+        rate_limiter: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ):
         self.model_name = model_name
-        self.model_params = model_params or {}
+        self.model_params = model_kwargs or {}
 
-        if rate_limit_handler is not None:
-            self._rate_limit_handler = rate_limit_handler
+        if rate_limiter is not None:
+            self._rate_limit_handler = rate_limiter
         else:
             self._rate_limit_handler = DEFAULT_RATE_LIMIT_HANDLER
 

@@ -88,6 +88,8 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         model_params: Optional[dict[str, Any]] = None,
         system_instruction: Optional[str] = None,
         rate_limit_handler: Optional[RateLimitHandler] = None,
+        model_kwargs: Optional[dict[str, Any]] = None,
+        rate_limiter: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ):
         if GenerativeModel is None or ResponseValidationError is None:
@@ -95,7 +97,22 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
                 """Could not import Vertex AI Python client.
                 Please install it with `pip install "neo4j-graphrag[google]"`."""
             )
-        super().__init__(model_name, model_params, rate_limit_handler)
+        if isinstance(self, LLMInterfaceV2):
+            LLMInterfaceV2.__init__(
+                self,
+                model_name=model_name,
+                model_kwargs=model_kwargs or model_params or {},
+                rate_limiter=rate_limiter or rate_limit_handler,
+                **kwargs,
+            )
+        else:
+            LLMInterface.__init__(
+                self,
+                model_name=model_name,
+                model_params=model_params or {},
+                rate_limit_handler=rate_limit_handler,
+                **kwargs,
+            )
         self.model_name = model_name
         self.system_instruction = system_instruction
         self.options = kwargs
