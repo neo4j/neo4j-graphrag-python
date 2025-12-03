@@ -65,9 +65,12 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
 
         Args:
             model_name (str):
-            model_params (str): Parameters like temperature and such that will be
+            model_params (str): Parameters for LLMInterface(V1) like temperature and such that will be
              passed to the chat completions endpoint
-            rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting. Defaults to retry with exponential backoff.
+            rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting for LLMInterface(V1). Defaults to retry with exponential backoff.
+            model_kwargs (Optional[dict[str, Any]]): Parameters for LLMInterfaceV2 like temperature and such that will be
+             passed to the chat completions endpoint
+            rate_limiter (Optional[RateLimitHandler]): Handler for rate limiting for LLMInterfaceV2. Defaults to retry with exponential backoff.
             kwargs: All other parameters will be passed to the Mistral client.
 
         """

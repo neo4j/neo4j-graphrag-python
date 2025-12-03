@@ -61,8 +61,11 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
 
     Args:
         model_name (str, optional): Name of the LLM to use. Defaults to "gemini-1.5-flash-001".
-        model_params (Optional[dict], optional): Additional parameters passed to the model when text is sent to it. Defaults to None.
+        model_params (Optional[dict], optional): Additional parameters for LLMInterface(V1) passed to the model when text is sent to it. Defaults to None.
         system_instruction: Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
+        rate_limit_handler (Optional[RateLimitHandler], optional): Rate limit handler for LLMInterface(V1). Defaults to None.
+        model_kwargs (Optional[dict], optional): Additional parameters for LLMInterfaceV2 passed to the model when text is sent to it. Defaults to None.
+        rate_limiter (Optional[RateLimitHandler], optional): Rate limit handler for LLMInterfaceV2. Defaults to None.
         **kwargs (Any): Arguments passed to the model when for the class is initialised. Defaults to None.
 
     Raises:

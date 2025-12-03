@@ -42,14 +42,17 @@ if TYPE_CHECKING:
     from cohere import ChatMessages
 
 
-# pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return
+# pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
 class CohereLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
     """Interface for large language models on the Cohere platform
 
     Args:
         model_name (str, optional): Name of the LLM to use. Defaults to "gemini-1.5-flash-001".
-        model_params (Optional[dict], optional): Additional parameters passed to the model when text is sent to it. Defaults to None.
-        system_instruction: Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
+        model_params (Optional[dict], optional): Additional parameters for LLMInterface(V1) passed to the model when text is sent to it. Defaults to None.
+        system_instruction (Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
+        rate_limit_handler (Optional[RateLimitHandler], optional): A rate limit handler for LLMInterface(V1) to manage API rate limits. Defaults to None.
+        model_kwargs (Optional[dict], optional): Additional parameters for LLMInterfaceV2 passed to the model when text is sent to it. Defaults to None.
+        rate_limiter (Optional[RateLimitHandler], optional): A rate limit handler for LLMInterfaceV2 to manage API rate limits. Defaults to None.
         **kwargs (Any): Arguments passed to the model when for the class is initialised. Defaults to None.
 
     Raises:

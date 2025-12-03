@@ -69,7 +69,7 @@ else:
     AsyncOpenAI = Any
 
 
-# pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return
+# pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel, line-too-long
 class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
     """Base class for OpenAI LLMs."""
 
@@ -94,6 +94,8 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
             model_name (str):
             model_params (str): Parameters like temperature that will be passed to the model when text is sent to it. Defaults to None.
             rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting. Defaults to retry with exponential backoff.
+            model_kwargs (Optional[dict[str, Any]]): Additional keyword arguments in LLMInterfaceV2 for the model. Defaults to None.
+            rate_limiter (Optional[RateLimitHandler]): Handler for rate limiting in LLMInterfaceV2. Defaults to None.
         """
         try:
             import openai
@@ -631,7 +633,6 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
 
             # Process all tool calls
             tool_calls = []
-            import json
 
             for tool_call in message.tool_calls:
                 try:
@@ -698,7 +699,6 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
 
             # Process all tool calls
             tool_calls = []
-            import json
 
             for tool_call in message.tool_calls:
                 try:
@@ -724,6 +724,8 @@ class OpenAILLM(BaseOpenAILLM):
     def __init__(
         self,
         model_name: str,
+        model_params: Optional[dict[str, Any]] = None,
+        rate_limit_handler: Optional[RateLimitHandler] = None,
         model_kwargs: Optional[dict[str, Any]] = None,
         rate_limiter: Optional[RateLimitHandler] = None,
         **kwargs: Any,
@@ -734,12 +736,18 @@ class OpenAILLM(BaseOpenAILLM):
 
         Args:
             model_name (str):
-            model_kwargs (str): Parameters like temperature that will be passed to the model when text is sent to it. Defaults to None.
-            rate_limiter (Optional[RateLimitHandler]): Handler for rate limiting. Defaults to retry with exponential backoff.
+            model_params (str): Parameters for LLMInterface(V1) like temperature that will be passed to the model when text is sent to it. Defaults to None.
+            rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting for LLMInterface(V1). Defaults to retry with exponential backoff.
+            model_kwargs (Optional[dict[str, Any]]): Additional keyword arguments in LLMInterfaceV2 for the model. Defaults to None.
+            rate_limiter (Optional[RateLimitHandler]): Handler for rate limiting in LLMInterfaceV2. Defaults to None.
             kwargs: All other parameters will be passed to the openai.OpenAI init.
         """
         super().__init__(
-            model_name=model_name, model_kwargs=model_kwargs, rate_limiter=rate_limiter
+            model_name=model_name,
+            model_params=model_params,
+            rate_limit_handler=rate_limit_handler,
+            model_kwargs=model_kwargs,
+            rate_limiter=rate_limiter,
         )
         self.client = self.openai.OpenAI(**kwargs)
         self.async_client = self.openai.AsyncOpenAI(**kwargs)
@@ -751,8 +759,10 @@ class AzureOpenAILLM(BaseOpenAILLM):
     def __init__(
         self,
         model_name: str,
-        model_kwargs: Optional[dict[str, Any]] = None,
+        model_params: Optional[dict[str, Any]] = None,
         system_instruction: Optional[str] = None,
+        rate_limit_handler: Optional[RateLimitHandler] = None,
+        model_kwargs: Optional[dict[str, Any]] = None,
         rate_limiter: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ):
@@ -761,12 +771,18 @@ class AzureOpenAILLM(BaseOpenAILLM):
 
         Args:
             model_name (str):
-            model_kwargs (str): Parameters like temperature that will be passed to the model when text is sent to it. Defaults to None.
-            rate_limiter (Optional[RateLimitHandler]): Handler for rate limiting. Defaults to retry with exponential backoff.
+            model_params (str): Parameters for LLMInterface(V1) like temperature that will be passed to the model when text is sent to it. Defaults to None.
+            rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting for LLMInterface(V1). Defaults to retry with exponential backoff.
+            model_kwargs (Optional[dict[str, Any]]): Additional keyword arguments in LLMInterfaceV2 for the model. Defaults to None.
+            rate_limiter (Optional[RateLimitHandler]): Handler for rate limiting in LLMInterfaceV2. Defaults to None.
             kwargs: All other parameters will be passed to the openai.OpenAI init.
         """
         super().__init__(
-            model_name=model_name, model_kwargs=model_kwargs, rate_limiter=rate_limiter
+            model_name=model_name,
+            model_params=model_params,
+            rate_limit_handler=rate_limit_handler,
+            model_kwargs=model_kwargs,
+            rate_limiter=rate_limiter,
         )
         self.client = self.openai.AzureOpenAI(**kwargs)
         self.async_client = self.openai.AsyncAzureOpenAI(**kwargs)

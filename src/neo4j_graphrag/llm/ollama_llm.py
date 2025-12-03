@@ -53,7 +53,7 @@ from .types import (
 if TYPE_CHECKING:
     from ollama import Message
 
-# pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return
+# pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
 
 
 class OllamaLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]

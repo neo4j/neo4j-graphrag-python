@@ -14,22 +14,18 @@
 #  limitations under the License.
 from __future__ import annotations
 import logging
-
-
 from abc import ABC, abstractmethod
 from typing import Any, List, Optional, Sequence, Union
 
 from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
-
-from .types import LLMResponse, ToolCallResponse
 from neo4j_graphrag.utils.rate_limit import (
     DEFAULT_RATE_LIMIT_HANDLER,
 )
-
 from neo4j_graphrag.tool import Tool
-
 from neo4j_graphrag.utils.rate_limit import RateLimitHandler
+
+from .types import LLMResponse, ToolCallResponse
 
 # pylint: disable=redefined-builtin
 
@@ -161,7 +157,7 @@ class LLMInterface(ABC):
 
 
 class LLMInterfaceV2(ABC):
-    """Interface for large language models.
+    """Interface for large language models compatible with LangChain.
 
     Args:
         model_name (str): The name of the language model.
