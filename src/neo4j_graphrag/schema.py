@@ -29,7 +29,7 @@ LIST_LIMIT = 128
 DISTINCT_VALUE_LIMIT = 10
 
 NODE_PROPERTIES_QUERY = (
-    "CALL apoc.meta.data() "
+    "CALL apoc.meta.data({sample: $SAMPLE}) "
     "YIELD label, other, elementType, type, property "
     "WHERE NOT type = 'RELATIONSHIP' AND elementType = 'node' "
     "AND NOT label IN $EXCLUDED_LABELS "
@@ -38,7 +38,7 @@ NODE_PROPERTIES_QUERY = (
 )
 
 REL_PROPERTIES_QUERY = (
-    "CALL apoc.meta.data() "
+    "CALL apoc.meta.data({sample: $SAMPLE}) "
     "YIELD label, other, elementType, type, property "
     "WHERE NOT type = 'RELATIONSHIP' AND elementType = 'relationship' "
     "AND NOT label in $EXCLUDED_LABELS "
@@ -47,7 +47,7 @@ REL_PROPERTIES_QUERY = (
 )
 
 REL_QUERY = (
-    "CALL apoc.meta.data() "
+    "CALL apoc.meta.data({sample: $SAMPLE}) "
     "YIELD label, other, elementType, type, property "
     "WHERE type = 'RELATIONSHIP' AND elementType = 'node' "
     "UNWIND other AS other_node "
@@ -186,6 +186,7 @@ def get_schema(
     database: Optional[str] = None,
     timeout: Optional[float] = None,
     sanitize: bool = False,
+    sample: int = 1000,
 ) -> str:
     """
     Returns the schema of the graph as a string with following format:
@@ -210,6 +211,8 @@ def get_schema(
         sanitize (bool): A flag to indicate whether to remove lists with
                 more than 128 elements from results. Useful for removing
                 embedding-like properties from database responses. Default is False.
+        sample (int): Number of nodes to sample for the apoc.meta.data procedure. Setting sample to -1 will remove sampling.
+                Defaults to 1000.
 
 
     Returns:
@@ -221,6 +224,7 @@ def get_schema(
         database=database,
         timeout=timeout,
         sanitize=sanitize,
+        sample=sample,
     )
     return format_schema(structured_schema, is_enhanced)
 
@@ -231,6 +235,7 @@ def get_structured_schema(
     database: Optional[str] = None,
     timeout: Optional[float] = None,
     sanitize: bool = False,
+    sample: int = 1000,
 ) -> dict[str, Any]:
     """
     Returns the structured schema of the graph.
@@ -280,6 +285,8 @@ def get_structured_schema(
         sanitize (bool): A flag to indicate whether to remove lists with
             more than 128 elements from results. Useful for removing
             embedding-like properties from database responses. Default is False.
+        sample (int): Number of nodes to sample for the apoc.meta.data procedure. Setting sample to -1 will remove sampling.
+            Defaults to 1000.
 
     Returns:
         dict[str, Any]: the graph schema information in a structured format.
@@ -291,7 +298,8 @@ def get_structured_schema(
             query=NODE_PROPERTIES_QUERY,
             params={
                 "EXCLUDED_LABELS": EXCLUDED_LABELS
-                + [BASE_ENTITY_LABEL, BASE_KG_BUILDER_LABEL]
+                + [BASE_ENTITY_LABEL, BASE_KG_BUILDER_LABEL],
+                "SAMPLE": sample,
             },
             database=database,
             timeout=timeout,
@@ -304,7 +312,7 @@ def get_structured_schema(
         for data in query_database(
             driver=driver,
             query=REL_PROPERTIES_QUERY,
-            params={"EXCLUDED_LABELS": EXCLUDED_RELS},
+            params={"EXCLUDED_LABELS": EXCLUDED_RELS, "SAMPLE": sample},
             database=database,
             timeout=timeout,
             sanitize=sanitize,
@@ -318,7 +326,8 @@ def get_structured_schema(
             query=REL_QUERY,
             params={
                 "EXCLUDED_LABELS": EXCLUDED_LABELS
-                + [BASE_ENTITY_LABEL, BASE_KG_BUILDER_LABEL]
+                + [BASE_ENTITY_LABEL, BASE_KG_BUILDER_LABEL],
+                "SAMPLE": sample,
             },
             database=database,
             timeout=timeout,
