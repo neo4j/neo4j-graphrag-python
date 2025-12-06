@@ -2,6 +2,9 @@
 
 ## Next
 
+### Added
+- Exposed optional `sample` parameter on `get_schema` and `get_structured_schema` to control APOC sampling for schema discovery.
+
 ## 1.10.1
 
 ### Added
