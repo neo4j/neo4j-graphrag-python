@@ -81,6 +81,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         return_properties (Optional[list[str]]): List of node properties to return.
         result_formatter (Optional[Callable[[neo4j.Record], RetrieverResultItem]]): Function to transform a neo4j.Record to a RetrieverResultItem.
         neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to the server's default database ("neo4j" by default) (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
+        node_label_neo4j (Optional[str]): The label of the Neo4j node to retrieve.
 
     Raises:
         RetrieverInitializationError: If validation of the input arguments fail.
@@ -170,6 +171,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
               collection="Jeopardy",
               id_property_external="neo4j_id",
               id_property_neo4j="id",
+              node_label_neo4j="Document",
           )
 
           biology_embedding = ...

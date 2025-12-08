@@ -261,7 +261,6 @@ def test_match_query_with_both_return_properties_and_retrieval_query() -> None:
 
 
 def test_match_query_with_custom_node_label() -> None:
-    # Should ignore return_properties
     match_query = get_match_query(
         return_properties=["name", "age"], node_label="MyNodeLabel"
     )

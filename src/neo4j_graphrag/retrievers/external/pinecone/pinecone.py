@@ -83,6 +83,7 @@ class PineconeNeo4jRetriever(ExternalRetriever):
         retrieval_query (str): Cypher query that gets appended.
         result_formatter (Optional[Callable[[neo4j.Record], RetrieverResultItem]]): Function to transform a neo4j.Record to a RetrieverResultItem.
         neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to the server's default database ("neo4j" by default) (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
+        node_label_neo4j (Optional[str]): The label of the Neo4j node to retrieve.
 
     Raises:
         RetrieverInitializationError: If validation of the input arguments fail.
@@ -101,6 +102,7 @@ class PineconeNeo4jRetriever(ExternalRetriever):
             Callable[[neo4j.Record], RetrieverResultItem]
         ] = None,
         neo4j_database: Optional[str] = None,
+        node_label_neo4j: Optional[str] = None,
     ):
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -116,6 +118,7 @@ class PineconeNeo4jRetriever(ExternalRetriever):
                 retrieval_query=retrieval_query,
                 result_formatter=result_formatter,
                 neo4j_database=neo4j_database,
+                node_label_neo4j=node_label_neo4j,
             )
         except ValidationError as e:
             raise RetrieverInitializationError(e.errors()) from e
@@ -125,6 +128,7 @@ class PineconeNeo4jRetriever(ExternalRetriever):
             id_property_external="id",
             id_property_neo4j=validated_data.id_property_neo4j,
             neo4j_database=neo4j_database,
+            node_label_neo4j=node_label_neo4j,
         )
         self.driver = validated_data.driver_model.driver
         self.client = validated_data.client_model.client
@@ -172,7 +176,8 @@ class PineconeNeo4jRetriever(ExternalRetriever):
                   driver=neo4j_driver,
                   client=pc_client,
                   index_name="jeopardy",
-                  id_property_neo4j="id"
+                  id_property_neo4j="id",
+                  node_label_neo4j="Document",
               )
               biology_embedding = ...
               retriever.search(query_vector=biology_embedding, top_k=2)
@@ -223,6 +228,7 @@ class PineconeNeo4jRetriever(ExternalRetriever):
         search_query = get_match_query(
             return_properties=self.return_properties,
             retrieval_query=self.retrieval_query,
+            node_label=self.node_label_neo4j,
         )
 
         parameters = {
