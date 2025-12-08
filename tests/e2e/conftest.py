@@ -109,6 +109,21 @@ def harry_potter_text_part2() -> str:
     return text
 
 
+def wait_for_index_online(driver: Driver, index_name: str, timeout: int = 30) -> None:
+    """Wait for an index to become ONLINE."""
+    import time
+    start = time.time()
+    while time.time() - start < timeout:
+        result = driver.execute_query(
+            "SHOW INDEXES YIELD name, state WHERE name = $name RETURN state",
+            {"name": index_name}
+        )
+        if result.records and result.records[0]["state"] == "ONLINE":
+            return
+        time.sleep(0.5)
+    raise TimeoutError(f"Index {index_name} did not become ONLINE within {timeout}s")
+
+
 @pytest.fixture(scope="module")
 def setup_neo4j_for_retrieval(driver: Driver) -> None:
     vector_index_name = "vector-index-name"
@@ -136,6 +151,9 @@ def setup_neo4j_for_retrieval(driver: Driver) -> None:
         label="Document",
         node_properties=["vectorProperty"],
     )
+
+    wait_for_index_online(driver, vector_index_name)
+    wait_for_index_online(driver, fulltext_index_name)
 
     # Insert 10 vectors and authors
     vector = [random.random() for _ in range(1536)]
