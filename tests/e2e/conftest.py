@@ -112,11 +112,12 @@ def harry_potter_text_part2() -> str:
 def wait_for_index_online(driver: Driver, index_name: str, timeout: int = 30) -> None:
     """Wait for an index to become ONLINE."""
     import time
+
     start = time.time()
     while time.time() - start < timeout:
         result = driver.execute_query(
             "SHOW INDEXES YIELD name, state WHERE name = $name RETURN state",
-            {"name": index_name}
+            {"name": index_name},
         )
         if result.records and result.records[0]["state"] == "ONLINE":
             return
