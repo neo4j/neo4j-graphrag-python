@@ -97,6 +97,22 @@ jobs:
         run: |
           set +e
           count=0; until curl -s --fail localhost:8080/v1/.well-known/ready; do ((count++)); [ $count -ge 10 ] && echo "Reached maximum retry limit" && exit 1; sleep 15; done
+      - name: Wait for Neo4j to be ready
+        shell: bash
+        run: |
+          echo "Waiting for Neo4j to be ready..."
+          count=0
+          until curl -s --fail http://localhost:7474 > /dev/null 2>&1; do
+            ((count++))
+            if [ $count -ge 30 ]; then
+              echo "Neo4j failed to start within timeout"
+              docker logs neo4j
+              exit 1
+            fi
+            echo "Waiting for Neo4j... (attempt $count/30)"
+            sleep 5
+          done
+          echo "Neo4j is ready!"
       - name: Run tests
         shell: bash
         run: |
