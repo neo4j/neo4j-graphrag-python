@@ -20,12 +20,15 @@ from neo4j_graphrag.neo4j_queries import get_query_tail
 
 
 def get_match_query(
-    return_properties: Optional[list[str]] = None, retrieval_query: Optional[str] = None
+    return_properties: Optional[list[str]] = None,
+    retrieval_query: Optional[str] = None,
+    node_label: Optional[str] = None,
 ) -> str:
+    node_label_filter = f":`{node_label}`" if node_label else ""
     match_query = (
         "UNWIND $match_params AS match_param "
         "WITH match_param[0] AS match_id_value, match_param[1] AS score "
-        "MATCH (node) "
+        f"MATCH (node{node_label_filter}) "
         "WHERE node[$id_property] = match_id_value "
     )
     return match_query + get_query_tail(
