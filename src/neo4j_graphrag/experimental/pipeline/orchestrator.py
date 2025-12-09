@@ -26,7 +26,6 @@ from neo4j_graphrag.experimental.pipeline.exceptions import (
     PipelineMissingDependencyError,
     PipelineStatusUpdateError,
 )
-from neo4j_graphrag.experimental.pipeline.notification import EventNotifier
 from neo4j_graphrag.experimental.pipeline.types.context import RunContext
 from neo4j_graphrag.experimental.pipeline.types.orchestration import (
     RunResult,

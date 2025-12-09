@@ -41,8 +41,6 @@ from neo4j_graphrag.experimental.pipeline.exceptions import (
 from neo4j_graphrag.experimental.pipeline.notification import (
     Event,
     EventCallbackProtocol,
-    EventType,
-    PipelineEvent,
     EventNotifier,
 )
 from neo4j_graphrag.experimental.pipeline.orchestrator import Orchestrator
@@ -510,7 +508,6 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         """
         # Create queue for events
         event_queue: asyncio.Queue[Event] = asyncio.Queue()
-        run_id = None
 
         async def event_stream(event: Event) -> None:
             # Put event in queue for streaming
@@ -545,7 +542,6 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                     # we are sure to get an Event here, since this is the only
                     # thing we put in the queue, but mypy still complains
                     event = event_future.result()
-                    run_id = getattr(event, "run_id", None)
                     yield event  # type: ignore
 
             if exc := run_task.exception():
