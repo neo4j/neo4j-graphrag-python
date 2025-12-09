@@ -59,6 +59,7 @@ def test_qdrant_neo4j_vector_input(driver: Driver, qdrant_client: QdrantClient) 
         collection_name="Jeopardy",
         id_property_external="neo4j_id",
         id_property_neo4j="id",
+        node_label_neo4j="Question",
     )
 
     top_k = 1
