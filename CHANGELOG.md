@@ -5,7 +5,7 @@
 ### Added
 
 - Added an optional `node_label_neo4j` parameter in the external retrievers to speed up the search query in Neo4j.
-
+- Added an optional `id_property_getter` callable parameter in the Qdrant retriever to allow for custom ID retrieval.
 
 ## 1.10.1
 
