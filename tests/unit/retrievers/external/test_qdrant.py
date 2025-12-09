@@ -71,7 +71,7 @@ def test_qdrant_retriever_search_happy_path(
         driver.execute_query.assert_called_once_with(
             search_query,
             {
-                "match_params": [[f"node_{i}", i / top_k] for i in range(top_k)],
+                "match_params": [(f"node_{i}", i / top_k) for i in range(top_k)],
                 "id_property": "sync_id",
             },
             database_=None,
@@ -150,7 +150,7 @@ def test_qdrant_retriever_search_return_properties(
         driver.execute_query.assert_called_once_with(
             search_query,
             {
-                "match_params": [[f"node_{i}", i / top_k] for i in range(top_k)],
+                "match_params": [(f"node_{i}", i / top_k) for i in range(top_k)],
                 "id_property": "sync_id",
             },
             database_=None,
@@ -216,7 +216,7 @@ def test_qdrant_retriever_search_retrieval_query(
         driver.execute_query.assert_called_once_with(
             search_query,
             {
-                "match_params": [[f"node_{i}", i / top_k] for i in range(top_k)],
+                "match_params": [(f"node_{i}", i / top_k) for i in range(top_k)],
                 "id_property": "sync_id",
             },
             database_=None,
@@ -315,7 +315,7 @@ def test_qdrant_retriever_search_custom_match_id_getter(
         driver.execute_query.assert_called_once_with(
             search_query,
             {
-                "match_params": [[f"node_{i}", i / top_k] for i in range(top_k)],
+                "match_params": [(f"node_{i}", i / top_k) for i in range(top_k)],
                 "id_property": "sync_id",
             },
             database_=None,

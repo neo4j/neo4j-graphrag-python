@@ -231,7 +231,7 @@ class QdrantNeo4jRetriever(ExternalRetriever):
 
         result_tuples = []
         for point in points:
-            result_tuples.append([self.get_match_id_from_point(point), point.score])
+            result_tuples.append((self.get_match_id_from_point(point), point.score))
 
         search_query = get_match_query(
             return_properties=self.return_properties,

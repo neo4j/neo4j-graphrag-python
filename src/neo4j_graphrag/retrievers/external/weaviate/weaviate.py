@@ -235,7 +235,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
             logger.debug("Response: %s", response)
 
         result_tuples = [
-            [f"{o.properties[self.id_property_external]}", o.metadata.certainty or 0.0]
+            (f"{o.properties[self.id_property_external]}", o.metadata.certainty or 0.0)
             for o in response.objects
         ]
 
