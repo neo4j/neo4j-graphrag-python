@@ -97,7 +97,8 @@ def test_get_structured_schema_happy_path(driver: MagicMock) -> None:
     assert query_obj.timeout is None
     assert kwargs["database_"] is None
     assert kwargs["parameters_"] == {
-        "EXCLUDED_LABELS": EXCLUDED_LABELS + [BASE_ENTITY_LABEL, BASE_KG_BUILDER_LABEL]
+        "EXCLUDED_LABELS": EXCLUDED_LABELS + [BASE_ENTITY_LABEL, BASE_KG_BUILDER_LABEL],
+        "SAMPLE": 1000,
     }
 
     args, kwargs = calls[1]
@@ -106,7 +107,7 @@ def test_get_structured_schema_happy_path(driver: MagicMock) -> None:
     assert query_obj.text == REL_PROPERTIES_QUERY
     assert query_obj.timeout is None
     assert kwargs["database_"] is None
-    assert kwargs["parameters_"] == {"EXCLUDED_LABELS": EXCLUDED_RELS}
+    assert kwargs["parameters_"] == {"EXCLUDED_LABELS": EXCLUDED_RELS, "SAMPLE": 1000}
 
     args, kwargs = calls[2]
     query_obj = args[0]
@@ -115,7 +116,8 @@ def test_get_structured_schema_happy_path(driver: MagicMock) -> None:
     assert query_obj.timeout is None
     assert kwargs["database_"] is None
     assert kwargs["parameters_"] == {
-        "EXCLUDED_LABELS": EXCLUDED_LABELS + [BASE_ENTITY_LABEL, BASE_KG_BUILDER_LABEL]
+        "EXCLUDED_LABELS": EXCLUDED_LABELS + [BASE_ENTITY_LABEL, BASE_KG_BUILDER_LABEL],
+        "SAMPLE": 1000,
     }
 
     args, kwargs = calls[3]
