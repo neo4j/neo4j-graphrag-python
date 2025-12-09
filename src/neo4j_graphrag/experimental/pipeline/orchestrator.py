@@ -52,10 +52,10 @@ class Orchestrator:
     (checking that all dependencies are met), and run them.
     """
 
-    def __init__(self, pipeline: Pipeline):
+    def __init__(self, pipeline: Pipeline, run_id: Optional[str] = None):
         self.pipeline = pipeline
-        self.event_notifier = EventNotifier(pipeline.callbacks)
-        self.run_id = str(uuid.uuid4())
+        self.event_notifier = self.pipeline.event_notifier
+        self.run_id = run_id or str(uuid.uuid4())
 
     async def run_task(self, task: TaskPipelineNode, data: dict[str, Any]) -> None:
         """Get inputs and run a specific task. Once the task is done,

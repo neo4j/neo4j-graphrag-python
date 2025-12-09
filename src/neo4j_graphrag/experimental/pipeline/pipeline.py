@@ -21,6 +21,8 @@ from collections import defaultdict
 from timeit import default_timer
 from typing import Any, AsyncGenerator, Optional
 
+import uuid
+
 from neo4j_graphrag.utils.logging import prettify
 
 try:
@@ -41,6 +43,7 @@ from neo4j_graphrag.experimental.pipeline.notification import (
     EventCallbackProtocol,
     EventType,
     PipelineEvent,
+    EventNotifier,
 )
 from neo4j_graphrag.experimental.pipeline.orchestrator import Orchestrator
 from neo4j_graphrag.experimental.pipeline.pipeline_graph import (
@@ -124,7 +127,6 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
     ) -> None:
         super().__init__()
         self.store = store or InMemoryStore()
-        self.callbacks = [callback] if callback else []
         self.final_results = InMemoryStore()
         self.is_validated = False
         self.param_mapping: dict[str, dict[str, dict[str, str]]] = defaultdict(dict)
@@ -139,6 +141,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         }
         """
         self.missing_inputs: dict[str, list[str]] = defaultdict()
+        self.event_notifier = EventNotifier([callback] if callback else [])
 
     @classmethod
     def from_template(
@@ -514,7 +517,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
             await event_queue.put(event)
 
         # Add event streaming callback
-        self.callbacks.append(event_stream)
+        self.event_notifier.add_callback(event_stream)
 
         event_queue_getter_task = None
         try:
@@ -546,34 +549,36 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                     yield event  # type: ignore
 
             if exc := run_task.exception():
-                yield PipelineEvent(
-                    event_type=EventType.PIPELINE_FAILED,
-                    # run_id is null if pipeline fails before even starting
-                    # ie during pipeline validation
-                    run_id=run_id or "",
-                    message=str(exc),
-                )
                 if raise_exception:
                     raise exc
 
         finally:
             # Restore original callback
-            self.callbacks.remove(event_stream)
+            self.event_notifier.remove_callback(event_stream)
             if event_queue_getter_task and not event_queue_getter_task.done():
                 event_queue_getter_task.cancel()
 
     async def run(self, data: dict[str, Any]) -> PipelineResult:
-        logger.debug("PIPELINE START")
         start_time = default_timer()
+        run_id = str(uuid.uuid4())
+        logger.debug(f"PIPELINE START with {run_id=}")
+        try:
+            res = await self._run(run_id, data)
+        except Exception as e:
+            await self.event_notifier.notify_pipeline_failed(
+                run_id,
+                message=f"Pipeline failed with error {e}",
+            )
+            raise e
+        end_time = default_timer()
+        logger.debug(f"PIPELINE FINISHED {run_id} in {end_time - start_time}s")
+        return res
+
+    async def _run(self, run_id: str, data: dict[str, Any]) -> PipelineResult:
         self.invalidate()
         self.validate_input_data(data)
-        orchestrator = Orchestrator(self)
-        logger.debug(f"PIPELINE ORCHESTRATOR: {orchestrator.run_id}")
+        orchestrator = Orchestrator(self, run_id)
         await orchestrator.run(data)
-        end_time = default_timer()
-        logger.debug(
-            f"PIPELINE FINISHED {orchestrator.run_id} in {end_time - start_time}s"
-        )
         return PipelineResult(
             run_id=orchestrator.run_id,
             result=await self.get_final_results(orchestrator.run_id),

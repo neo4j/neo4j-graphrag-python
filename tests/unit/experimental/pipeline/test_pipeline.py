@@ -503,7 +503,7 @@ async def test_pipeline_streaming_no_user_callback_happy_path() -> None:
     assert len(events) == 2
     assert events[0].event_type == EventType.PIPELINE_STARTED
     assert events[1].event_type == EventType.PIPELINE_FINISHED
-    assert len(pipe.callbacks) == 0
+    assert len(pipe.event_notifier.callbacks) == 0
 
 
 @pytest.mark.asyncio
@@ -515,7 +515,7 @@ async def test_pipeline_streaming_with_user_callback_happy_path() -> None:
         events.append(e)
     assert len(events) == 2
     assert len(callback.call_args_list) == 2
-    assert len(pipe.callbacks) == 1
+    assert len(pipe.event_notifier.callbacks) == 1
 
 
 @pytest.mark.asyncio
@@ -528,7 +528,7 @@ async def test_pipeline_streaming_very_long_running_user_callback() -> None:
     async for e in pipe.stream({}):
         events.append(e)
     assert len(events) == 2
-    assert len(pipe.callbacks) == 1
+    assert len(pipe.event_notifier.callbacks) == 1
 
 
 @pytest.mark.asyncio
@@ -559,9 +559,9 @@ async def test_pipeline_streaming_error_in_pipeline_definition() -> None:
             events.append(e)
     # validation happens before pipeline run actually starts
     # but we have the PIPELINE_FAILED event
+    print(events)
     assert len(events) == 1
     assert events[0].event_type == EventType.PIPELINE_FAILED
-    assert events[0].run_id == ""
 
 
 @pytest.mark.asyncio
@@ -573,6 +573,7 @@ async def test_pipeline_streaming_error_in_component() -> None:
     with pytest.raises(TypeError):
         async for e in pipe.stream({"component": {"number1": None, "number2": 2}}):
             events.append(e)
+    print(events)
     assert len(events) == 3
     assert events[0].event_type == EventType.PIPELINE_STARTED
     assert events[1].event_type == EventType.TASK_STARTED
@@ -589,4 +590,4 @@ async def test_pipeline_streaming_error_in_user_callback() -> None:
     async for e in pipe.stream({}):
         events.append(e)
     assert len(events) == 2
-    assert len(pipe.callbacks) == 1
+    assert len(pipe.event_notifier.callbacks) == 1
