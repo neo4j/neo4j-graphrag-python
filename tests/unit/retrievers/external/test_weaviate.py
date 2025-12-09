@@ -75,7 +75,7 @@ def test_text_search_remote_vector_store_happy_path(driver: MagicMock) -> None:
         search_query,
         {
             "match_params": [
-                [node_id_value, node_match_score],
+                (node_id_value, node_match_score),
             ],
             "id_property": "sync_id",
         },
@@ -142,7 +142,7 @@ def test_text_search_remote_vector_store_return_properties(driver: MagicMock) ->
         search_query,
         {
             "match_params": [
-                [node_id_value, node_match_score],
+                (node_id_value, node_match_score),
             ],
             "id_property": "sync_id",
         },
@@ -190,7 +190,7 @@ def test_text_search_remote_vector_store_retrieval_query(driver: MagicMock) -> N
         search_query,
         {
             "match_params": [
-                [node_id_value, node_match_score],
+                (node_id_value, node_match_score),
             ],
             "id_property": "sync_id",
         },

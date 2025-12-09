@@ -221,7 +221,7 @@ class PineconeNeo4jRetriever(ExternalRetriever):
         )
 
         result_tuples = [
-            [f"{o[self.id_property_external]}", o["score"] or 0.0]
+            (f"{o[self.id_property_external]}", o["score"] or 0.0)
             for o in response["matches"]
         ]
 
