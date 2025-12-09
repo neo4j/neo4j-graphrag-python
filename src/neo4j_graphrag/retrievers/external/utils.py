@@ -24,11 +24,14 @@ def get_match_query(
     retrieval_query: Optional[str] = None,
     node_label: Optional[str] = None,
 ) -> str:
-    node_label_filter = f":`{node_label}`" if node_label else ""
+    # node_label is not escaped on purpose, allowing users to use any valid
+    # node label expression, e.g. "Actor|Director". It's up to the user to ensure
+    # labels are properly escaped, i.e. "`My label with space`".
+    node_label_expression = f":{node_label}" if node_label else ""
     match_query = (
         "UNWIND $match_params AS match_param "
         "WITH match_param[0] AS match_id_value, match_param[1] AS score "
-        f"MATCH (node{node_label_filter}) "
+        f"MATCH (node{node_label_expression}) "
         "WHERE node[$id_property] = match_id_value "
     )
     return match_query + get_query_tail(

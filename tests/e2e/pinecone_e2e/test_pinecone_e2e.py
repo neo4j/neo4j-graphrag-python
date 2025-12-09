@@ -56,7 +56,7 @@ def test_pinecone_neo4j_vector_input(driver: MagicMock, client: MagicMock) -> No
         client=client,
         index_name="jeopardy",
         id_property_neo4j="id",
-        node_label_neo4j="Question",
+        node_label_neo4j="`Question`",
     )
     with mock.patch.object(retriever, "index") as mock_index:
         top_k = 2
