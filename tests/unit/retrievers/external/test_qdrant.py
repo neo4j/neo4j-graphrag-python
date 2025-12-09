@@ -12,6 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from typing import Any
 from unittest import mock
 from unittest.mock import MagicMock
 
@@ -70,7 +71,7 @@ def test_qdrant_retriever_search_happy_path(
         driver.execute_query.assert_called_once_with(
             search_query,
             {
-                "match_params": [[f"node_{i}", i / top_k] for i in range(top_k)],
+                "match_params": [(f"node_{i}", i / top_k) for i in range(top_k)],
                 "id_property": "sync_id",
             },
             database_=None,
@@ -149,7 +150,7 @@ def test_qdrant_retriever_search_return_properties(
         driver.execute_query.assert_called_once_with(
             search_query,
             {
-                "match_params": [[f"node_{i}", i / top_k] for i in range(top_k)],
+                "match_params": [(f"node_{i}", i / top_k) for i in range(top_k)],
                 "id_property": "sync_id",
             },
             database_=None,
@@ -215,7 +216,7 @@ def test_qdrant_retriever_search_retrieval_query(
         driver.execute_query.assert_called_once_with(
             search_query,
             {
-                "match_params": [[f"node_{i}", i / top_k] for i in range(top_k)],
+                "match_params": [(f"node_{i}", i / top_k) for i in range(top_k)],
                 "id_property": "sync_id",
             },
             database_=None,
@@ -267,3 +268,70 @@ def test_qdrant_retriever_invalid_retrieval_query(
 
     assert "retrieval_query" in str(exc_info.value)
     assert "Input should be a valid string" in str(exc_info.value)
+
+
+def test_qdrant_retriever_search_custom_match_id_getter(
+    driver: MagicMock, client: MagicMock
+) -> None:
+    def my_id_getter(point: ScoredPoint) -> Any:
+        if point.payload is None:
+            raise Exception("Payload is None")
+        return point.payload["data"]["id"]
+
+    retriever = QdrantNeo4jRetriever(
+        driver=driver,
+        client=client,
+        collection_name="dummy-text",
+        id_property_neo4j="sync_id",
+        id_property_getter=my_id_getter,
+    )
+    with mock.patch.object(retriever, "client") as mock_client:
+        top_k = 5
+        mock_client.query_points.return_value = QueryResponse(
+            points=[
+                ScoredPoint(
+                    id=i,
+                    version=0,
+                    score=i / top_k,
+                    payload={
+                        "data": {"id": f"node_{i}"},
+                    },
+                )
+                for i in range(top_k)
+            ]
+        )
+        driver.execute_query.return_value = (
+            [
+                neo4j.Record({"node": {"sync_id": f"node_{i}"}, "score": i / top_k})
+                for i in range(top_k)
+            ],
+            None,
+            None,
+        )
+        query_vector = [1.0 for _ in range(1536)]
+        search_query = get_match_query()
+        records = retriever.search(query_vector=query_vector)
+
+        driver.execute_query.assert_called_once_with(
+            search_query,
+            {
+                "match_params": [(f"node_{i}", i / top_k) for i in range(top_k)],
+                "id_property": "sync_id",
+            },
+            database_=None,
+            routing_=neo4j.RoutingControl.READ,
+        )
+
+    assert records == RetrieverResult(
+        items=[
+            RetrieverResultItem(
+                content="<Record node={'sync_id': "
+                + f"'node_{i}'"
+                + "} "
+                + f"score={i / top_k}>",
+                metadata=None,
+            )
+            for i in range(top_k)
+        ],
+        metadata={"__retriever": "QdrantNeo4jRetriever"},
+    )

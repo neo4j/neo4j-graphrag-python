@@ -20,6 +20,7 @@ from typing import Any, Callable, Optional
 import neo4j
 from pydantic import ValidationError
 from qdrant_client import QdrantClient
+from qdrant_client.conversions.common_types import ScoredPoint
 
 from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.exceptions import (
@@ -80,6 +81,7 @@ class QdrantNeo4jRetriever(ExternalRetriever):
         result_formatter (Optional[Callable[[neo4j.Record], RetrieverResultItem]]): Function to transform a neo4j.Record to a RetrieverResultItem.
         neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to the server's default database ("neo4j" by default) (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
         node_label_neo4j (Optional[str]): The label of the Neo4j node to retrieve. This label must be properly escaped if needed, eg "`Label with spaces`".
+        id_property_getter (Optional[Callable[[ScoredPoint], str]]): Function to get the id property from a ScoredPoint. Defaults to point.payload.get(id_property_external, point.id).
 
     Raises:
         RetrieverInitializationError: If validation of the input arguments fail.
@@ -101,6 +103,7 @@ class QdrantNeo4jRetriever(ExternalRetriever):
         ] = None,
         neo4j_database: Optional[str] = None,
         node_label_neo4j: Optional[str] = None,
+        id_property_getter: Optional[Callable[[ScoredPoint], Any]] = None,
     ):
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -142,6 +145,14 @@ class QdrantNeo4jRetriever(ExternalRetriever):
         self.return_properties = validated_data.return_properties
         self.retrieval_query = validated_data.retrieval_query
         self.result_formatter = validated_data.result_formatter
+        self.id_property_getter = id_property_getter
+
+    def get_match_id_from_point(self, point: ScoredPoint) -> Any:
+        if self.id_property_getter:
+            return self.id_property_getter(point)
+        if point.payload is None:
+            raise ValueError(f"Payload is None for point {point}")
+        return point.payload.get(self.id_property_external, point.id)
 
     def get_search_results(
         self,
@@ -220,10 +231,7 @@ class QdrantNeo4jRetriever(ExternalRetriever):
 
         result_tuples = []
         for point in points:
-            assert point.payload is not None
-            result_tuples.append(
-                [point.payload.get(self.id_property_external, point.id), point.score]
-            )
+            result_tuples.append((self.get_match_id_from_point(point), point.score))
 
         search_query = get_match_query(
             return_properties=self.return_properties,
