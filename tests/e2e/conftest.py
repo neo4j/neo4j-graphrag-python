@@ -153,8 +153,8 @@ def setup_neo4j_for_retrieval(driver: Driver) -> None:
         node_properties=["short_text_property"],
     )
 
-    wait_for_index_online(driver, vector_index_name)
-    wait_for_index_online(driver, fulltext_index_name)
+    # wait_for_index_online(driver, vector_index_name)
+    # wait_for_index_online(driver, fulltext_index_name)
 
     # Insert 10 vectors and authors
     vector = [random.random() for _ in range(1536)]
