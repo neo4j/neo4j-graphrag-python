@@ -260,6 +260,20 @@ def test_match_query_with_both_return_properties_and_retrieval_query() -> None:
     assert match_query.strip() == expected.strip()
 
 
+def test_match_query_with_custom_node_label() -> None:
+    match_query = get_match_query(
+        return_properties=["name", "age"], node_label="`MyNodeLabel`"
+    )
+    expected = (
+        "UNWIND $match_params AS match_param "
+        "WITH match_param[0] AS match_id_value, match_param[1] AS score "
+        "MATCH (node:`MyNodeLabel`) "
+        "WHERE node[$id_property] = match_id_value "
+        "RETURN node {.name, .age} AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score "
+    )
+    assert match_query.strip() == expected.strip()
+
+
 def test_weaviate_retriever_with_result_format_function(
     driver: MagicMock, neo4j_record: MagicMock, result_formatter: MagicMock
 ) -> None:

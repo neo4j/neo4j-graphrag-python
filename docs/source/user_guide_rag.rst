@@ -762,6 +762,7 @@ Weaviate Retrievers
         collection="Movies",
         id_property_external="neo4j_id",
         id_property_neo4j="id",
+        node_label_neo4j="Document",  # optional
     )
 
 Internally, this retriever performs the vector search in Weaviate, finds the corresponding node by matching
@@ -795,6 +796,7 @@ Pinecone Retrievers
         index_name="Movies",
         id_property_neo4j="id",
         embedder=embedder,
+        node_label_neo4j="Document",  # optional
     )
 
 Also see :ref:`pineconeneo4jretriever`.
@@ -825,6 +827,7 @@ Qdrant Retrievers
         id_property_external="neo4j_id",    # The payload field that contains identifier to a corresponding Neo4j node id property
         id_property_neo4j="id",
         embedder=embedder,
+        node_label_neo4j="Document",  # optional
     )
 
 See :ref:`qdrantneo4jretriever`.

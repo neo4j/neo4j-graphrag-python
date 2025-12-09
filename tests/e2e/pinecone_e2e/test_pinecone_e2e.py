@@ -52,7 +52,11 @@ def populate_neo4j_db(driver: MagicMock) -> None:
 @pytest.mark.usefixtures("populate_neo4j_db")
 def test_pinecone_neo4j_vector_input(driver: MagicMock, client: MagicMock) -> None:
     retriever = PineconeNeo4jRetriever(
-        driver=driver, client=client, index_name="jeopardy", id_property_neo4j="id"
+        driver=driver,
+        client=client,
+        index_name="jeopardy",
+        id_property_neo4j="id",
+        node_label_neo4j="`Question`",
     )
     with mock.patch.object(retriever, "index") as mock_index:
         top_k = 2

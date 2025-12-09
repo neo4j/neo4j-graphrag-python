@@ -3,6 +3,9 @@
 ## Next
 
 ### Added
+
+- Added an optional `node_label_neo4j` parameter in the external retrievers to speed up the search query in Neo4j.
+
 - Exposed optional `sample` parameter on `get_schema` and `get_structured_schema` to control APOC sampling for schema discovery.
 
 ## 1.10.1

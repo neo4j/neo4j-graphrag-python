@@ -454,10 +454,12 @@ class ExternalRetriever(Retriever, ABC):
         id_property_external: str,
         id_property_neo4j: str,
         neo4j_database: Optional[str] = None,
+        node_label_neo4j: Optional[str] = None,
     ):
         super().__init__(driver)
         self.id_property_external = id_property_external
         self.id_property_neo4j = id_property_neo4j
+        self.node_label_neo4j = node_label_neo4j
         self.neo4j_database = neo4j_database
 
     @abstractmethod
