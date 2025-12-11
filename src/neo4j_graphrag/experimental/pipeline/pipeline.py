@@ -104,7 +104,7 @@ class TaskPipelineNode(PipelineNode):
         res = await self.execute(context, inputs)
         end_time = default_timer()
         logger.debug(
-            f"TASK FINISHED {self.name} in {round(end_time - start_time)}s res={prettify(res)}"
+            f"TASK FINISHED {self.name} in {round(end_time - start_time, 2)}s res={prettify(res)}"
         )
         return res
 
@@ -567,7 +567,9 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
             )
             raise e
         end_time = default_timer()
-        logger.debug(f"PIPELINE FINISHED {run_id} in {round(end_time - start_time)}s")
+        logger.debug(
+            f"PIPELINE FINISHED {run_id} in {round(end_time - start_time, 2)}s"
+        )
         return res
 
     async def _run(self, run_id: str, data: dict[str, Any]) -> PipelineResult:
