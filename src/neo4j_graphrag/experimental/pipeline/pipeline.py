@@ -571,11 +571,16 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         return res
 
     async def _run(self, run_id: str, data: dict[str, Any]) -> PipelineResult:
+        await self.event_notifier.notify_pipeline_started(run_id, data)
         self.invalidate()
         self.validate_input_data(data)
         orchestrator = Orchestrator(self, run_id)
         await orchestrator.run(data)
-        return PipelineResult(
+        result = PipelineResult(
             run_id=orchestrator.run_id,
             result=await self.get_final_results(orchestrator.run_id),
         )
+        await self.event_notifier.notify_pipeline_finished(
+            run_id, await self.get_final_results(run_id),
+        )
+        return result

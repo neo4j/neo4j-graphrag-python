@@ -483,6 +483,23 @@ async def test_pipeline_event_notification() -> None:
         previous_ts = actual_event.timestamp
 
 
+@pytest.mark.asyncio
+async def test_pipeline_event_notification_error_in_pipeline_run() -> None:
+    callback = AsyncMock(spec=EventCallbackProtocol)
+    pipe = Pipeline(callback=callback)
+    component_a = ComponentAdd()
+    component_b = ComponentAdd()
+    pipe.add_component(component_a, "a")
+    pipe.add_component(component_b, "b")
+    pipe.connect("a", "b", {"number1": "a.result"})
+
+    with pytest.raises(PipelineDefinitionError):
+        await pipe.run({"a": {"number1": 1, "number2": 2}})
+    assert len(callback.await_args_list) == 2
+    assert callback.await_args_list[0][0][0].event_type == EventType.PIPELINE_STARTED
+    assert callback.await_args_list[1][0][0].event_type == EventType.PIPELINE_FAILED
+
+
 def test_event_model_no_warning(recwarn: Sized) -> None:
     event = Event(
         event_type=EventType.PIPELINE_STARTED,
@@ -557,10 +574,9 @@ async def test_pipeline_streaming_error_in_pipeline_definition() -> None:
     with pytest.raises(PipelineDefinitionError):
         async for e in pipe.stream({"a": {"number1": 1, "number2": 2}}):
             events.append(e)
-    # validation happens before pipeline run actually starts
-    # but we have the PIPELINE_FAILED event
-    assert len(events) == 1
-    assert events[0].event_type == EventType.PIPELINE_FAILED
+    assert len(events) == 2
+    assert events[0].event_type == EventType.PIPELINE_STARTED
+    assert events[1].event_type == EventType.PIPELINE_FAILED
 
 
 @pytest.mark.asyncio

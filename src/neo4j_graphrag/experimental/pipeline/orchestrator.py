@@ -264,9 +264,5 @@ class Orchestrator:
         (node without any parent). Then the callback on_task_complete
         will handle the task dependencies.
         """
-        await self.event_notifier.notify_pipeline_started(self.run_id, data)
         tasks = [self.run_task(root, data) for root in self.pipeline.roots()]
         await asyncio.gather(*tasks)
-        await self.event_notifier.notify_pipeline_finished(
-            self.run_id, await self.pipeline.get_final_results(self.run_id)
-        )
