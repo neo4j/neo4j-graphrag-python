@@ -161,6 +161,22 @@ class RelationshipType(BaseModel):
         return None
 
 
+class ConstraintType(BaseModel):
+    """
+    Represents a constraint on a node in the graph.
+    """
+
+    type: Literal[
+        "UNIQUENESS"
+    ]  # TODO: add other constraint types ["propertyExistence", "propertyType", "key"]
+    node_type: str
+    property_name: str
+
+    model_config = ConfigDict(
+        frozen=True,
+    )
+
+
 class GraphSchema(DataModel):
     """This model represents the expected
     node and relationship types in the graph.
@@ -177,6 +193,7 @@ class GraphSchema(DataModel):
     node_types: Tuple[NodeType, ...]
     relationship_types: Tuple[RelationshipType, ...] = tuple()
     patterns: Tuple[Tuple[str, str, str], ...] = tuple()
+    constraints: Tuple[ConstraintType, ...] = tuple()
 
     additional_node_types: bool = Field(
         default_factory=default_additional_item("node_types")
@@ -237,6 +254,21 @@ class GraphSchema(DataModel):
             raise ValueError(
                 "`additional_relationship_types` must be set to False when using `additional_patterns=False`"
             )
+        return self
+
+    @model_validator(mode="after")
+    def validate_constraints_against_node_types(self) -> Self:
+        if not self.constraints:
+            return self
+        for constraint in self.constraints:
+            if not constraint.property_name:
+                raise SchemaValidationError(
+                    f"Constraint has no property name: {constraint}. Property name is required."
+                )
+            if constraint.node_type not in self._node_type_index:
+                raise SchemaValidationError(
+                    f"Constraint references undefined node type: {constraint.node_type}"
+                )
         return self
 
     def node_type_from_label(self, label: str) -> Optional[NodeType]:
@@ -382,6 +414,7 @@ class SchemaBuilder(BaseSchemaBuilder):
         node_types: Sequence[NodeType],
         relationship_types: Optional[Sequence[RelationshipType]] = None,
         patterns: Optional[Sequence[Tuple[str, str, str]]] = None,
+        constraints: Optional[Sequence[ConstraintType]] = None,
         **kwargs: Any,
     ) -> GraphSchema:
         """
@@ -403,6 +436,7 @@ class SchemaBuilder(BaseSchemaBuilder):
                     node_types=node_types,
                     relationship_types=relationship_types or (),
                     patterns=patterns or (),
+                    constraints=constraints or (),
                     **kwargs,
                 )
             )
@@ -415,6 +449,7 @@ class SchemaBuilder(BaseSchemaBuilder):
         node_types: Sequence[NodeType],
         relationship_types: Optional[Sequence[RelationshipType]] = None,
         patterns: Optional[Sequence[Tuple[str, str, str]]] = None,
+        constraints: Optional[Sequence[ConstraintType]] = None,
         **kwargs: Any,
     ) -> GraphSchema:
         """
@@ -432,6 +467,7 @@ class SchemaBuilder(BaseSchemaBuilder):
             node_types,
             relationship_types,
             patterns,
+            constraints,
             **kwargs,
         )
 
@@ -555,6 +591,41 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
             relationship_types, "relationship type"
         )
 
+    def _filter_invalid_constraints(
+        self, constraints: List[Dict[str, Any]], node_types: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Filter out constraints that reference undefined node types or have no property name."""
+        if not constraints:
+            return []
+
+        if not node_types:
+            logging.info(
+                "Filtering out all constraints because no node types are defined. "
+                "Constraints reference node types that must be defined."
+            )
+            return []
+
+        valid_node_labels = {node_type.get("label") for node_type in node_types}
+
+        filtered_constraints = []
+        for constraint in constraints:
+            # check if the property_name is provided
+            if not constraint.get("property_name"):
+                logging.info(
+                    f"Filtering out constraint: {constraint}. "
+                    f"Property name is not provided."
+                )
+                continue
+            # check if the node_type is valid
+            if constraint.get("node_type") not in valid_node_labels:
+                logging.info(
+                    f"Filtering out constraint: {constraint}. "
+                    f"Node type '{constraint.get('node_type')}' is not valid. Valid node types: {valid_node_labels}"
+                )
+                continue
+            filtered_constraints.append(constraint)
+        return filtered_constraints
+
     def _clean_json_content(self, content: str) -> str:
         content = content.strip()
 
@@ -624,6 +695,9 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         extracted_patterns: Optional[List[Tuple[str, str, str]]] = extracted_schema.get(
             "patterns"
         )
+        extracted_constraints: Optional[List[Dict[str, Any]]] = extracted_schema.get(
+            "constraints"
+        )
 
         # Filter out nodes and relationships without labels
         extracted_node_types = self._filter_nodes_without_labels(extracted_node_types)
@@ -638,11 +712,18 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
                 extracted_patterns, extracted_node_types, extracted_relationship_types
             )
 
+        # Filter out invalid constraints
+        if extracted_constraints:
+            extracted_constraints = self._filter_invalid_constraints(
+                extracted_constraints, extracted_node_types
+            )
+
         return GraphSchema.model_validate(
             {
                 "node_types": extracted_node_types,
                 "relationship_types": extracted_relationship_types,
                 "patterns": extracted_patterns,
+                "constraints": extracted_constraints or [],
             }
         )
 
