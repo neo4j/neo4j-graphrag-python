@@ -22,9 +22,6 @@ URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
 DATABASE = "neo4j"
 
-import logging
-
-logging.basicConfig(level=logging.DEBUG)
 
 root_dir = Path(__file__).parents[1]
 file_path = root_dir / "data" / "Harry Potter and the Chamber of Secrets Summary.pdf"
