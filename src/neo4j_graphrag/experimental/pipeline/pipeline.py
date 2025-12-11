@@ -581,6 +581,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
             result=await self.get_final_results(orchestrator.run_id),
         )
         await self.event_notifier.notify_pipeline_finished(
-            run_id, await self.get_final_results(run_id),
+            run_id,
+            await self.get_final_results(run_id),
         )
         return result
