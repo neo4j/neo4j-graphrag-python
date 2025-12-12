@@ -76,7 +76,7 @@ class PropertyType(BaseModel):
     ]
     description: str = ""
     required: bool = False
-
+    # unique: bool = False
     model_config = ConfigDict(
         frozen=True,
     )
@@ -269,6 +269,16 @@ class GraphSchema(DataModel):
                 raise SchemaValidationError(
                     f"Constraint references undefined node type: {constraint.node_type}"
                 )
+            # Check if property_name exists on the node type (only if additional_properties is False)
+            node_type = self._node_type_index[constraint.node_type]
+            if not node_type.additional_properties:
+                valid_property_names = {p.name for p in node_type.properties}
+                if constraint.property_name not in valid_property_names:
+                    raise SchemaValidationError(
+                        f"Constraint references undefined property '{constraint.property_name}' "
+                        f"on node type '{constraint.node_type}'. "
+                        f"Valid properties: {valid_property_names}"
+                    )
         return self
 
     def node_type_from_label(self, label: str) -> Optional[NodeType]:
@@ -594,7 +604,8 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
     def _filter_invalid_constraints(
         self, constraints: List[Dict[str, Any]], node_types: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
-        """Filter out constraints that reference undefined node types or have no property name."""
+        """Filter out constraints that reference undefined node types, have no property name,
+        or reference a property that doesn't exist on the node type."""
         if not constraints:
             return []
 
@@ -605,7 +616,16 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
             )
             return []
 
-        valid_node_labels = {node_type.get("label") for node_type in node_types}
+        # Build a mapping of node_type label -> set of property names
+        node_type_properties: Dict[str, set[str]] = {}
+        for node_type_dict in node_types:
+            label = node_type_dict.get("label")
+            if label:
+                properties = node_type_dict.get("properties", [])
+                property_names = {p.get("name") for p in properties if p.get("name")}
+                node_type_properties[label] = property_names
+
+        valid_node_labels = set(node_type_properties.keys())
 
         filtered_constraints = []
         for constraint in constraints:
@@ -617,10 +637,20 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
                 )
                 continue
             # check if the node_type is valid
-            if constraint.get("node_type") not in valid_node_labels:
+            node_type = constraint.get("node_type")
+            if node_type not in valid_node_labels:
                 logging.info(
                     f"Filtering out constraint: {constraint}. "
-                    f"Node type '{constraint.get('node_type')}' is not valid. Valid node types: {valid_node_labels}"
+                    f"Node type '{node_type}' is not valid. Valid node types: {valid_node_labels}"
+                )
+                continue
+            # check if the property_name exists on the node type
+            property_name = constraint.get("property_name")
+            if property_name not in node_type_properties.get(node_type, set()):
+                logging.info(
+                    f"Filtering out constraint: {constraint}. "
+                    f"Property '{property_name}' does not exist on node type '{node_type}'. "
+                    f"Valid properties: {node_type_properties.get(node_type, set())}"
                 )
                 continue
             filtered_constraints.append(constraint)

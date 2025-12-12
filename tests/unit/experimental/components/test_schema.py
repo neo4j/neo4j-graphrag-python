@@ -27,6 +27,7 @@ from neo4j_graphrag.experimental.components.schema import (
     NodeType,
     PropertyType,
     RelationshipType,
+    ConstraintType,
     SchemaFromTextExtractor,
     GraphSchema,
     SchemaFromExistingGraphExtractor,
@@ -119,6 +120,30 @@ def test_relationship_type_additional_properties_default() -> None:
     assert relationship_type.additional_properties is True
 
 
+def test_constraint_type_initialization() -> None:
+    constraint = ConstraintType(
+        type="UNIQUENESS", node_type="Person", property_name="name"
+    )
+    assert constraint.type == "UNIQUENESS"
+    assert constraint.node_type == "Person"
+    assert constraint.property_name == "name"
+
+
+def test_constraint_type_is_frozen() -> None:
+    constraint = ConstraintType(
+        type="UNIQUENESS", node_type="Person", property_name="name"
+    )
+
+    with pytest.raises(ValidationError):
+        constraint.type = "UNIQUENESS"
+
+    with pytest.raises(ValidationError):
+        constraint.node_type = "Organization"
+
+    with pytest.raises(ValidationError):
+        constraint.property_name = "id"
+
+
 def test_schema_additional_node_types_default() -> None:
     schema_dict: dict[str, Any] = {
         "node_types": [],
@@ -200,6 +225,61 @@ def test_schema_additional_parameter_validation() -> None:
         GraphSchema.model_validate(schema_dict)
 
 
+def test_schema_with_valid_constraints() -> None:
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]}
+        ],
+        "constraints": [
+            {"type": "UNIQUENESS", "node_type": "Person", "property_name": "name"}
+        ],
+    }
+    schema = GraphSchema.model_validate(schema_dict)
+
+    assert len(schema.constraints) == 1
+    assert schema.constraints[0].type == "UNIQUENESS"
+    assert schema.constraints[0].node_type == "Person"
+    assert schema.constraints[0].property_name == "name"
+
+
+def test_schema_constraint_validation_invalid_node_type() -> None:
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]}
+        ],
+        "constraints": [
+            {
+                "type": "UNIQUENESS",
+                "node_type": "NonExistentNode",
+                "property_name": "id",
+            }
+        ],
+    }
+
+    with pytest.raises(SchemaValidationError) as exc_info:
+        GraphSchema.model_validate(schema_dict)
+
+    assert "Constraint references undefined node type: NonExistentNode" in str(
+        exc_info.value
+    )
+
+
+def test_schema_constraint_validation_missing_property_name() -> None:
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]}
+        ],
+        "constraints": [
+            {"type": "UNIQUENESS", "node_type": "Person", "property_name": ""}
+        ],
+    }
+
+    with pytest.raises(SchemaValidationError) as exc_info:
+        GraphSchema.model_validate(schema_dict)
+
+    assert "Constraint has no property name" in str(exc_info.value)
+
+
 @pytest.fixture
 def valid_node_types() -> tuple[NodeType, ...]:
     return (
@@ -259,6 +339,13 @@ def patterns_with_invalid_entity() -> tuple[tuple[str, str, str], ...]:
 
 
 @pytest.fixture
+def valid_constraints() -> tuple[ConstraintType, ...]:
+    return (
+        ConstraintType(type="UNIQUENESS", node_type="PERSON", property_name="name"),
+    )
+
+
+@pytest.fixture
 def patterns_with_invalid_relation() -> tuple[tuple[str, str, str], ...]:
     return (("PERSON", "NON_EXISTENT_RELATION", "ORGANIZATION"),)
 
@@ -298,6 +385,24 @@ def test_create_schema_model_valid_data(
     assert schema.additional_patterns is False
 
 
+def test_create_schema_model_with_constraints(
+    schema_builder: SchemaBuilder,
+    valid_node_types: Tuple[NodeType, ...],
+    valid_constraints: Tuple[ConstraintType, ...],
+) -> None:
+    schema = schema_builder.create_schema_model(
+        list(valid_node_types),
+        constraints=list(valid_constraints),
+    )
+
+    assert schema.node_types == valid_node_types
+    assert schema.constraints == valid_constraints
+    assert len(schema.constraints) == 1
+    assert schema.constraints[0].type == "UNIQUENESS"
+    assert schema.constraints[0].node_type == "PERSON"
+    assert schema.constraints[0].property_name == "name"
+
+
 @pytest.mark.asyncio
 async def test_run_method(
     schema_builder: SchemaBuilder,
@@ -324,6 +429,25 @@ async def test_run_method(
     assert schema.additional_node_types is False
     assert schema.additional_relationship_types is False
     assert schema.additional_patterns is False
+
+
+@pytest.mark.asyncio
+async def test_run_method_with_constraints(
+    schema_builder: SchemaBuilder,
+    valid_node_types: Tuple[NodeType, ...],
+    valid_constraints: Tuple[ConstraintType, ...],
+) -> None:
+    schema = await schema_builder.run(
+        list(valid_node_types),
+        constraints=list(valid_constraints),
+    )
+
+    assert schema.node_types == valid_node_types
+    assert schema.constraints == valid_constraints
+    assert len(schema.constraints) == 1
+    assert schema.constraints[0].type == "UNIQUENESS"
+    assert schema.constraints[0].node_type == "PERSON"
+    assert schema.constraints[0].property_name == "name"
 
 
 def test_create_schema_model_invalid_entity(
@@ -448,6 +572,116 @@ def valid_schema_json() -> str:
         "patterns": [
             ["Person", "WORKS_FOR", "Organization"]
         ]
+    }
+    """
+
+
+@pytest.fixture
+def schema_json_with_valid_constraints() -> str:
+    return """
+    {
+        "node_types": [
+            {
+                "label": "Person",
+                "properties": [
+                    {"name": "name", "type": "STRING"},
+                    {"name": "email", "type": "STRING"}
+                ]
+            },
+            {
+                "label": "Organization",
+                "properties": [
+                    {"name": "name", "type": "STRING"}
+                ]
+            }
+        ],
+        "relationship_types": [
+            {
+                "label": "WORKS_FOR",
+                "properties": [
+                    {"name": "since", "type": "DATE"}
+                ]
+            }
+        ],
+        "patterns": [
+            ["Person", "WORKS_FOR", "Organization"]
+        ],
+        "constraints": [
+            {"type": "UNIQUENESS", "node_type": "Person", "property_name": "name"}
+        ]
+    }
+    """
+
+
+@pytest.fixture
+def schema_json_with_invalid_constraints() -> str:
+    return """
+    {
+        "node_types": [
+            {
+                "label": "Person",
+                "properties": [
+                    {"name": "name", "type": "STRING"}
+                ]
+            },
+            {
+                "label": "Organization",
+                "properties": [
+                    {"name": "name", "type": "STRING"}
+                ]
+            }
+        ],
+        "relationship_types": [
+            {
+                "label": "WORKS_FOR",
+                "properties": [
+                    {"name": "since", "type": "DATE"}
+                ]
+            }
+        ],
+        "patterns": [
+            ["Person", "WORKS_FOR", "Organization"]
+        ],
+        "constraints": [
+            {"type": "UNIQUENESS", "node_type": "Person", "property_name": "name"},
+            {"type": "UNIQUENESS", "node_type": "Person", "property_name": "email"},
+            {"type": "UNIQUENESS", "node_type": "NonExistentNode", "property_name": "id"},
+            {"type": "UNIQUENESS", "node_type": "Person", "property_name": ""}
+        ]
+    }
+    """
+
+
+@pytest.fixture
+def schema_json_with_null_constraints() -> str:
+    return """
+    {
+        "node_types": [
+            {
+                "label": "Person",
+                "properties": [
+                    {"name": "name", "type": "STRING"}
+                ]
+            },
+            {
+                "label": "Organization",
+                "properties": [
+                    {"name": "name", "type": "STRING"}
+                ]
+            }
+        ],
+        "relationship_types": [
+            {
+                "label": "WORKS_FOR",
+                "properties": [
+                    {"name": "since", "type": "DATE"}
+                ]
+            }
+        ],
+        "patterns": [
+            ["Person", "WORKS_FOR", "Organization"]
+        ],
+        "constraints": null
     }
     """
 
@@ -958,6 +1192,83 @@ async def test_schema_from_text_filters_relationships_without_labels(
     assert len(schema.patterns) == 2
     assert ("Person", "WORKS_FOR", "Organization") in schema.patterns
     assert ("Person", "MANAGES", "Organization") in schema.patterns
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_with_valid_constraints(
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+    schema_json_with_valid_constraints: str,
+) -> None:
+    # configure the mock LLM to return schema with valid constraints
+    mock_llm.ainvoke.return_value = LLMResponse(
+        content=schema_json_with_valid_constraints
+    )
+
+    # run the schema extraction
+    schema = await schema_from_text.run(text="Sample text for extraction")
+
+    assert len(schema.constraints) == 1
+    assert schema.constraints[0].type == "UNIQUENESS"
+    assert schema.constraints[0].node_type == "Person"
+    assert schema.constraints[0].property_name == "name"
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_filters_invalid_constraints(
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+    schema_json_with_invalid_constraints: str,
+) -> None:
+    # configure the mock LLM to return schema with invalid constraints
+    mock_llm.ainvoke.return_value = LLMResponse(
+        content=schema_json_with_invalid_constraints
+    )
+
+    # run the schema extraction
+    schema = await schema_from_text.run(text="Sample text for extraction")
+
+    # verify that invalid constraints were filtered out:
+    # constraints with NonExistentNode should be removed
+    # constraint with empty property_name should be removed
+    # only the valid constraint should remain
+    assert len(schema.constraints) == 1
+    assert schema.constraints[0].node_type == "Person"
+    assert schema.constraints[0].property_name == "name"
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_handles_null_constraints(
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+    schema_json_with_null_constraints: str,
+) -> None:
+    # configure the mock LLM to return schema with null constraints
+    mock_llm.ainvoke.return_value = LLMResponse(
+        content=schema_json_with_null_constraints
+    )
+
+    # run the schema extraction - should not crash
+    schema = await schema_from_text.run(text="Sample text for extraction")
+
+    # verify schema was created with empty constraints
+    assert len(schema.constraints) == 0
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_handles_missing_constraints(
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+    valid_schema_json: str,
+) -> None:
+    # configure the mock LLM to return schema without constraints field
+    mock_llm.ainvoke.return_value = LLMResponse(content=valid_schema_json)
+
+    #  run the schema extraction - should not crash
+    schema = await schema_from_text.run(text="Sample text for extraction")
+
+    # verify schema was created with empty constraints
+    assert len(schema.constraints) == 0
 
 
 def test_clean_json_content_markdown_with_json_language(
