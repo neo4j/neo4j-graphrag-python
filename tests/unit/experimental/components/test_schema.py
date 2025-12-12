@@ -225,6 +225,48 @@ def test_schema_additional_parameter_validation() -> None:
         GraphSchema.model_validate(schema_dict)
 
 
+def test_schema_constraint_validation_property_not_in_node_type() -> None:
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {
+                "label": "Person",
+                "properties": [{"name": "name", "type": "STRING"}],
+            }
+        ],
+        "constraints": [
+            {"type": "UNIQUENESS", "node_type": "Person", "property_name": "email"}
+        ]
+    }
+
+    with pytest.raises(SchemaValidationError) as exc_info:
+        GraphSchema.model_validate(schema_dict)
+
+    assert "Constraint references undefined property" in str(exc_info.value)
+    assert "on node type 'Person'" in str(exc_info.value)
+
+
+def test_schema_constraint_with_additional_properties_allows_unknown_property() -> None:
+    # if additional_properties is True, we can define constraints that are not in the node_type
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {
+                "label": "Person",
+                "properties": [{"name": "name", "type": "STRING"}],
+                "additional_properties": True,
+            }
+        ],
+        "constraints": [
+            {"type": "UNIQUENESS", "node_type": "Person", "property_name": "email"}
+        ],
+    }
+
+    # Should NOT raise - email is allowed because additional_properties=True
+    schema = GraphSchema.model_validate(schema_dict)
+
+    assert len(schema.constraints) == 1
+    assert schema.constraints[0].property_name == "email"
+
+
 def test_schema_with_valid_constraints() -> None:
     schema_dict: dict[str, Any] = {
         "node_types": [
@@ -1100,6 +1142,28 @@ def schema_json_with_relationships_without_labels() -> str:
     """
 
 
+@pytest.fixture
+def schema_json_with_nonexistent_property_constraint() -> str:
+    return """
+    {
+        "node_types": [
+            {
+                "label": "Person",
+                "properties": [
+                    {"name": "name", "type": "STRING"}
+                ]
+            }
+        ],
+        "relationship_types": [],
+        "patterns": [],
+        "constraints": [
+            {"type": "UNIQUENESS", "node_type": "Person", "property_name": "name"},
+            {"type": "UNIQUENESS", "node_type": "Person", "property_name": "nonexistent_property"}
+        ]
+    }
+    """
+
+
 @pytest.mark.asyncio
 async def test_schema_from_text_filters_invalid_node_patterns(
     schema_from_text: SchemaFromTextExtractor,
@@ -1234,6 +1298,26 @@ async def test_schema_from_text_filters_invalid_constraints(
     # only the valid constraint should remain
     assert len(schema.constraints) == 1
     assert schema.constraints[0].node_type == "Person"
+    assert schema.constraints[0].property_name == "name"
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_filters_constraint_with_nonexistent_property(
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+    schema_json_with_nonexistent_property_constraint: str,
+) -> None:
+    # configure the mock LLM to return schema with constraint on nonexistent property
+    mock_llm.ainvoke.return_value = LLMResponse(
+        content=schema_json_with_nonexistent_property_constraint
+    )
+
+    # run the schema extraction
+    schema = await schema_from_text.run(text="Sample text for extraction")
+
+    # verify that only the valid constraint (with "name" property) remains
+    # the constraint with "nonexistent_property" should be filtered out
+    assert len(schema.constraints) == 1
     assert schema.constraints[0].property_name == "name"
 
 
