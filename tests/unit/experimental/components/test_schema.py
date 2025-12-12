@@ -235,7 +235,7 @@ def test_schema_constraint_validation_property_not_in_node_type() -> None:
         ],
         "constraints": [
             {"type": "UNIQUENESS", "node_type": "Person", "property_name": "email"}
-        ]
+        ],
     }
 
     with pytest.raises(SchemaValidationError) as exc_info:
