@@ -15,6 +15,7 @@
 
 - Added automatic rate limiting with retry logic and exponential backoff for all Embedding providers using tenacity. The `RateLimitHandler` interface allows for custom rate limiting strategies, including the ability to disable rate limiting entirely.
 - JSON response returned to `SchemaFromTextExtractor` is cleansed of any markdown code blocks before being loaded.
+- Tool calling support for Ollama in LLMInterface.
 
 ## 1.10.0
 
