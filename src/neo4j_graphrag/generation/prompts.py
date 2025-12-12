@@ -218,6 +218,12 @@ IMPORTANT RULES:
 5. When defining patterns, ensure that every node label and relationship label mentioned exists in your lists of node types and relationship types.
 6. Do not create node types that aren't clearly mentioned in the text.
 7. Keep your schema minimal and focused on clearly identifiable patterns in the text.
+8. UNIQUENESS CONSTRAINTS:
+8.1 UNIQUENESS is optional; each node_type may or may not have exactly one uniqueness constraint.
+8.2 Only use properties that seem to not have too many missing values in the sample.
+8.3 Constraints reference node_types by label and specify which property is unique.
+8.4 If a property appears in a uniqueness constraint it MUST also appear in the corresponding node_type as a property.
+
 
 Accepted property types are: BOOLEAN, DATE, DURATION, FLOAT, INTEGER, LIST,
 LOCAL_DATETIME, LOCAL_TIME, POINT, STRING, ZONED_DATETIME, ZONED_TIME.
@@ -233,17 +239,25 @@ Return a valid JSON object that follows this precise structure:
           "type": "STRING"
         }}
       ]
-    }},
+    }}
     ...
   ],
   "relationship_types": [
     {{
       "label": "WORKS_FOR"
-    }},
+    }}
     ...
   ],
   "patterns": [
     ["Person", "WORKS_FOR", "Company"],
+    ...
+  ],
+  "constraints": [
+    {{
+      "type": "UNIQUENESS",
+      "node_type": "Person",
+      "property_name": "name"
+    }}
     ...
   ]
 }}
