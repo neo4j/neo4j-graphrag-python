@@ -49,7 +49,7 @@ class Embedder(ABC):
             list[float]: A vector embedding.
         """
 
-    def aembed_query(self, text: str) -> list[float]:
+    async def aembed_query(self, text: str) -> list[float]:
         """Asynchronously embed query text. 
         Call embed_query by default as suggested by @stellasia. 
         Implementation for all embedder will be added progressively.
