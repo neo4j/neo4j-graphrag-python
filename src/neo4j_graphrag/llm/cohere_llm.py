@@ -12,18 +12,21 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+
+# built-in dependencies
 from __future__ import annotations
+from typing import TYPE_CHECKING, Any, Iterable, List, Optional, Union, cast, overload
 
-from typing import TYPE_CHECKING, Any, Iterable, List, Optional, Union, cast
-
+# 3rd party dependencies
 from pydantic import ValidationError
 
+# project dependencies
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.base import LLMInterface
+from neo4j_graphrag.llm.base import LLMInterface, LLMInterfaceV2
 from neo4j_graphrag.utils.rate_limit import (
     RateLimitHandler,
-    rate_limit_handler,
-    async_rate_limit_handler,
+    rate_limit_handler as rate_limit_handler_decorator,
+    async_rate_limit_handler as async_rate_limit_handler_decorator,
 )
 from neo4j_graphrag.llm.types import (
     BaseMessage,
@@ -39,13 +42,17 @@ if TYPE_CHECKING:
     from cohere import ChatMessages
 
 
-class CohereLLM(LLMInterface):
+# pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
+class CohereLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
     """Interface for large language models on the Cohere platform
 
     Args:
         model_name (str, optional): Name of the LLM to use. Defaults to "gemini-1.5-flash-001".
-        model_params (Optional[dict], optional): Additional parameters passed to the model when text is sent to it. Defaults to None.
-        system_instruction: Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
+        model_params (Optional[dict], optional): Additional parameters for LLMInterface(V1) passed to the model when text is sent to it. Defaults to None.
+        system_instruction (Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
+        rate_limit_handler (Optional[RateLimitHandler], optional): A rate limit handler for LLMInterface(V1) to manage API rate limits. Defaults to None.
+        model_kwargs (Optional[dict], optional): Additional parameters for LLMInterfaceV2 passed to the model when text is sent to it. Defaults to None.
+        rate_limiter (Optional[RateLimitHandler], optional): A rate limit handler for LLMInterfaceV2 to manage API rate limits. Defaults to None.
         **kwargs (Any): Arguments passed to the model when for the class is initialised. Defaults to None.
 
     Raises:
@@ -66,6 +73,8 @@ class CohereLLM(LLMInterface):
         model_name: str = "",
         model_params: Optional[dict[str, Any]] = None,
         rate_limit_handler: Optional[RateLimitHandler] = None,
+        model_kwargs: Optional[dict[str, Any]] = None,
+        rate_limiter: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ) -> None:
         try:
@@ -75,35 +84,93 @@ class CohereLLM(LLMInterface):
                 """Could not import cohere python client.
                 Please install it with `pip install "neo4j-graphrag[cohere]"`."""
             )
-        super().__init__(model_name, model_params, rate_limit_handler)
+        if isinstance(self, LLMInterfaceV2):
+            LLMInterfaceV2.__init__(
+                self,
+                model_name=model_name,
+                model_kwargs=model_kwargs or model_params or {},
+                rate_limiter=rate_limiter or rate_limit_handler,
+                **kwargs,
+            )
+        else:
+            LLMInterface.__init__(
+                self,
+                model_name=model_name,
+                model_params=model_params or {},
+                rate_limit_handler=rate_limit_handler,
+                **kwargs,
+            )
         self.cohere = cohere
         self.cohere_api_error = cohere.core.api_error.ApiError
 
         self.client = cohere.ClientV2(**kwargs)
         self.async_client = cohere.AsyncClientV2(**kwargs)
 
-    def get_messages(
+    # overloads for LLMInterface and LLMInterfaceV2 methods
+    @overload  # type: ignore[no-overload-impl]
+    def invoke(
         self,
         input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
-    ) -> ChatMessages:
-        messages = []
-        if system_instruction:
-            messages.append(SystemMessage(content=system_instruction).model_dump())
-        if message_history:
-            if isinstance(message_history, MessageHistory):
-                message_history = message_history.messages
-            try:
-                MessageList(messages=cast(list[BaseMessage], message_history))
-            except ValidationError as e:
-                raise LLMGenerationError(e.errors()) from e
-            messages.extend(cast(Iterable[dict[str, Any]], message_history))
-        messages.append(UserMessage(content=input).model_dump())
-        return messages  # type: ignore
+    ) -> LLMResponse: ...
 
-    @rate_limit_handler
+    @overload
     def invoke(
+        self,
+        input: List[LLMMessage],
+        **kwargs: Any,
+    ) -> LLMResponse: ...
+
+    @overload  # type: ignore[no-overload-impl]
+    async def ainvoke(
+        self,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> LLMResponse: ...
+
+    @overload
+    async def ainvoke(
+        self,
+        input: List[LLMMessage],
+        **kwargs: Any,
+    ) -> LLMResponse: ...
+
+    # switching logics to LLMInterface or LLMInterfaceV2
+    def invoke(  # type: ignore[no-redef]
+        self,
+        input: Union[str, List[LLMMessage]],
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        if isinstance(input, str):
+            return self.__legacy_invoke(input, message_history, system_instruction)
+        elif isinstance(input, list):
+            return self.__brand_new_invoke(input, **kwargs)
+        else:
+            raise ValueError(f"Invalid input type for invoke method - {type(input)}")
+
+    async def ainvoke(  # type: ignore[no-redef]
+        self,
+        input: Union[str, List[LLMMessage]],
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        if isinstance(input, str):
+            return await self.__legacy_ainvoke(
+                input, message_history, system_instruction
+            )
+        elif isinstance(input, list):
+            return await self.__brand_new_ainvoke(input, **kwargs)
+        else:
+            raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
+
+    # implementations
+    @rate_limit_handler_decorator
+    def __legacy_invoke(
         self,
         input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -134,8 +201,29 @@ class CohereLLM(LLMInterface):
             content=res.message.content[0].text if res.message.content else "",
         )
 
-    @async_rate_limit_handler
-    async def ainvoke(
+    def __brand_new_invoke(self, input: List[LLMMessage], **kwargs: Any) -> LLMResponse:
+        """Sends text to the LLM and returns a response.
+
+        Args:
+            input (str): The text to send to the LLM.
+
+        Returns:
+            LLMResponse: The response from the LLM.
+        """
+        try:
+            messages = self.get_brand_new_messages(input)
+            res = self.client.chat(
+                messages=messages,
+                model=self.model_name,
+            )
+        except self.cohere_api_error as e:
+            raise LLMGenerationError("Error calling cohere") from e
+        return LLMResponse(
+            content=res.message.content[0].text if res.message.content else "",
+        )
+
+    @async_rate_limit_handler_decorator
+    async def __legacy_ainvoke(
         self,
         input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -165,3 +253,59 @@ class CohereLLM(LLMInterface):
         return LLMResponse(
             content=res.message.content[0].text if res.message.content else "",
         )
+
+    async def __brand_new_ainvoke(
+        self, input: List[LLMMessage], **kwargs: Any
+    ) -> LLMResponse:
+        try:
+            messages = self.get_brand_new_messages(input)
+            res = await self.async_client.chat(
+                messages=messages,
+                model=self.model_name,
+            )
+        except self.cohere_api_error as e:
+            raise LLMGenerationError("Error calling cohere") from e
+        return LLMResponse(
+            content=res.message.content[0].text if res.message.content else "",
+        )
+
+    # subsdiary methods
+    def get_messages(
+        self,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> ChatMessages:
+        """Converts input and message history to ChatMessages for Cohere."""
+        messages = []
+        if system_instruction:
+            messages.append(SystemMessage(content=system_instruction).model_dump())
+        if message_history:
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
+            try:
+                MessageList(messages=cast(list[BaseMessage], message_history))
+            except ValidationError as e:
+                raise LLMGenerationError(e.errors()) from e
+            messages.extend(cast(Iterable[dict[str, Any]], message_history))
+        messages.append(UserMessage(content=input).model_dump())
+        return messages  # type: ignore
+
+    def get_brand_new_messages(
+        self,
+        input: list[LLMMessage],
+    ) -> ChatMessages:
+        """Converts a list of LLMMessage to ChatMessages for Cohere."""
+        messages: ChatMessages = []
+        for i in input:
+            if i["role"] == "system":
+                messages.append(self.cohere.SystemChatMessageV2(content=i["content"]))
+            elif i["role"] == "user":
+                messages.append(self.cohere.UserChatMessageV2(content=i["content"]))
+            elif i["role"] == "assistant":
+                messages.append(
+                    self.cohere.AssistantChatMessageV2(content=i["content"])
+                )
+            else:
+                raise ValueError(f"Unknown role: {i['role']}")
+        return messages

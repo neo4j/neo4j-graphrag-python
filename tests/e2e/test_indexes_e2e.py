@@ -123,7 +123,7 @@ def test_retrieve_fulltext_index_info_happy_path(driver: neo4j.Driver) -> None:
         driver=driver,
         index_name="fulltext-index-name",
         label_or_type="Document",
-        text_properties=["vectorProperty"],
+        text_properties=["short_text_property"],
     )
     assert index_info is not None
     index_name = index_info.get("name")
