@@ -245,7 +245,9 @@ def test_schema_constraint_validation_property_not_in_node_type() -> None:
     assert "on node type 'Person'" in str(exc_info.value)
 
 
-def test_schema_constraint_with_additional_properties_allows_unknown_property() -> None:
+def test_schema_constraint_with_additional_properties_with_allows_unknown_property() -> (
+    None
+):
     # if additional_properties is True, we can define constraints that are not in the node_type
     schema_dict: dict[str, Any] = {
         "node_types": [
@@ -260,11 +262,11 @@ def test_schema_constraint_with_additional_properties_allows_unknown_property() 
         ],
     }
 
-    # Should NOT raise - email is allowed because additional_properties=True
-    schema = GraphSchema.model_validate(schema_dict)
+    # Should raise - email is not allowed because the property is not defined in the node
+    with pytest.raises(SchemaValidationError) as exc_info:
+        GraphSchema.model_validate(schema_dict)
 
-    assert len(schema.constraints) == 1
-    assert schema.constraints[0].property_name == "email"
+    assert "Constraint references undefined property 'email'" in str(exc_info.value)
 
 
 def test_schema_with_valid_constraints() -> None:
