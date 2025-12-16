@@ -76,7 +76,6 @@ class PropertyType(BaseModel):
     ]
     description: str = ""
     required: bool = False
-    # unique: bool = False
     model_config = ConfigDict(
         frozen=True,
     )
