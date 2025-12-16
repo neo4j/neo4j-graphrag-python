@@ -26,7 +26,6 @@ from neo4j_graphrag.experimental.pipeline.exceptions import (
     PipelineMissingDependencyError,
     PipelineStatusUpdateError,
 )
-from neo4j_graphrag.experimental.pipeline.notification import EventNotifier
 from neo4j_graphrag.experimental.pipeline.types.context import RunContext
 from neo4j_graphrag.experimental.pipeline.types.orchestration import (
     RunResult,
@@ -52,10 +51,10 @@ class Orchestrator:
     (checking that all dependencies are met), and run them.
     """
 
-    def __init__(self, pipeline: Pipeline):
+    def __init__(self, pipeline: Pipeline, run_id: Optional[str] = None):
         self.pipeline = pipeline
-        self.event_notifier = EventNotifier(pipeline.callbacks)
-        self.run_id = str(uuid.uuid4())
+        self.event_notifier = self.pipeline.event_notifier
+        self.run_id = run_id or str(uuid.uuid4())
 
     async def run_task(self, task: TaskPipelineNode, data: dict[str, Any]) -> None:
         """Get inputs and run a specific task. Once the task is done,
@@ -265,9 +264,5 @@ class Orchestrator:
         (node without any parent). Then the callback on_task_complete
         will handle the task dependencies.
         """
-        await self.event_notifier.notify_pipeline_started(self.run_id, data)
         tasks = [self.run_task(root, data) for root in self.pipeline.roots()]
         await asyncio.gather(*tasks)
-        await self.event_notifier.notify_pipeline_finished(
-            self.run_id, await self.pipeline.get_final_results(self.run_id)
-        )
