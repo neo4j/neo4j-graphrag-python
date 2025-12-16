@@ -261,6 +261,10 @@ class GraphSchema(DataModel):
         if not self.constraints:
             return self
         for constraint in self.constraints:
+            # Only validate UNIQUENESS constraints (other types will be added)
+            if constraint.type != "UNIQUENESS":
+                continue
+
             if not constraint.property_name:
                 raise SchemaValidationError(
                     f"Constraint has no property name: {constraint}. Property name is required."
@@ -269,16 +273,15 @@ class GraphSchema(DataModel):
                 raise SchemaValidationError(
                     f"Constraint references undefined node type: {constraint.node_type}"
                 )
-            # Check if property_name exists on the node type (only if additional_properties is False)
+            # Check if property_name exists on the node type
             node_type = self._node_type_index[constraint.node_type]
-            if not node_type.additional_properties:
-                valid_property_names = {p.name for p in node_type.properties}
-                if constraint.property_name not in valid_property_names:
-                    raise SchemaValidationError(
-                        f"Constraint references undefined property '{constraint.property_name}' "
-                        f"on node type '{constraint.node_type}'. "
-                        f"Valid properties: {valid_property_names}"
-                    )
+            valid_property_names = {p.name for p in node_type.properties}
+            if constraint.property_name not in valid_property_names:
+                raise SchemaValidationError(
+                    f"Constraint references undefined property '{constraint.property_name}' "
+                    f"on node type '{constraint.node_type}'. "
+                    f"Valid properties: {valid_property_names}"
+                )
         return self
 
     def node_type_from_label(self, label: str) -> Optional[NodeType]:
@@ -604,7 +607,7 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
     def _filter_invalid_constraints(
         self, constraints: List[Dict[str, Any]], node_types: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
-        """Filter out constraints that reference undefined node types, have no property name,
+        """Filter out constraints that reference undefined node types, have no property name, are not UNIQUENESS type
         or reference a property that doesn't exist on the node type."""
         if not constraints:
             return []
@@ -629,6 +632,14 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
 
         filtered_constraints = []
         for constraint in constraints:
+            # Only process UNIQUENESS constraints (other types will be added)
+            if constraint.get("type") != "UNIQUENESS":
+                logging.info(
+                    f"Filtering out constraint: {constraint}. "
+                    f"Only UNIQUENESS constraints are supported."
+                )
+                continue
+
             # check if the property_name is provided
             if not constraint.get("property_name"):
                 logging.info(
