@@ -666,6 +666,66 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
             filtered_constraints.append(constraint)
         return filtered_constraints
 
+    def _filter_properties_required_field(
+        self, node_types: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Sanitize the 'required' field in node type properties. Ensures 'required' is a valid boolean.
+           converts known string values (true, yes, 1, false, no, 0) to booleans and removes unrecognized values.
+        """
+        for node_type in node_types:
+            properties = node_type.get("properties", [])
+            if not properties:
+                continue
+            for prop in properties:
+                if not isinstance(prop, dict):
+                    continue
+
+                required_value = prop.get("required")
+
+                #  Not provided - will use Pydantic default (false)
+                if required_value is None:
+                    continue
+
+                # already a valid boolean
+                if isinstance(required_value, bool):
+                    continue
+
+                prop_name = prop.get("name", "unknown")
+                node_label = node_type.get("label", "unknown")
+
+                if isinstance(required_value, str):
+                    if required_value.lower() in ("true", "yes", "1"):
+                        prop["required"] = True
+                        logging.info(
+                            f"Converted 'required' value {required_value} to True "
+                            f"for property '{prop_name}' on node '{node_label}'"
+                        )
+                    elif required_value.lower() in ("false", "no", "0"):
+                        prop["required"] = False
+                        logging.info(
+                            f"Converted 'required' value '{required_value}' to False "
+                            f"for property '{prop_name}' on node '{node_label}' "
+                        )
+                    # Unknown string values
+                    else:
+                        logging.info(
+                            f"Removing unrecognized 'required' value '{required_value}' "
+                            f"for property '{prop_name}' on node '{node_label}'. "
+                            f"Using default (False) " # TODO: Not sure if we have to convert it to the default value - double check!
+                        )
+                        prop.pop("required", None)
+                else:
+                    # Non-string, non-boolean - remove
+                    logging.info(
+                        f"Removing invalid 'required' value '{required_value}' (type: {type(required_value).__name__}) "
+                        f"for property '{prop_name}' on node '{node_label}'. "
+                        f"Using default (False). "
+                    )
+                    prop.pop("required", None)
+
+        return node_types
+
+
     def _clean_json_content(self, content: str) -> str:
         content = content.strip()
 
@@ -745,6 +805,10 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
             extracted_relationship_types = self._filter_relationships_without_labels(
                 extracted_relationship_types
             )
+
+        extracted_node_types = self._filter_properties_required_field(
+            extracted_node_types
+        )
 
         # Filter out invalid patterns before validation
         if extracted_patterns:
