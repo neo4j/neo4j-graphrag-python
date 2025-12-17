@@ -670,7 +670,7 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         self, node_types: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
         """Sanitize the 'required' field in node type properties. Ensures 'required' is a valid boolean.
-           converts known string values (true, yes, 1, false, no, 0) to booleans and removes unrecognized values.
+        converts known string values (true, yes, 1, false, no, 0) to booleans and removes unrecognized values.
         """
         for node_type in node_types:
             properties = node_type.get("properties", [])
@@ -711,7 +711,7 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
                         logging.info(
                             f"Removing unrecognized 'required' value '{required_value}' "
                             f"for property '{prop_name}' on node '{node_label}'. "
-                            f"Using default (False) " # TODO: Not sure if we have to convert it to the default value - double check!
+                            f"Using default (False) "  # TODO: Not sure if we have to convert it to the default value - double check!
                         )
                         prop.pop("required", None)
                 else:
@@ -724,7 +724,6 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
                     prop.pop("required", None)
 
         return node_types
-
 
     def _clean_json_content(self, content: str) -> str:
         content = content.strip()
