@@ -2,6 +2,8 @@
 
 ## Next
 
+## 1.11.0
+
 ### Added
 
 - Added an optional `node_label_neo4j` parameter in the external retrievers to speed up the search query in Neo4j.
