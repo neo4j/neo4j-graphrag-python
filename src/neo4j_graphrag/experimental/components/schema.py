@@ -725,6 +725,40 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
 
         return node_types
 
+    def _enforce_required_for_constraint_properties(
+        self,
+        node_types: List[Dict[str, Any]],
+        constraints: List[Dict[str, Any]],
+    ) -> None:
+        """Ensure properties with UNIQUENESS constraints are marked as required."""
+        if not constraints:
+            return
+
+        # Build a lookup for property_names and constraints
+        constraint_props: Dict[str, set[str]] = {}
+        for c in constraints:
+            if c.get("type") == "UNIQUENESS":
+                label = c.get("node_type")
+                prop = c.get("property_name")
+                if label and prop:
+                    constraint_props.setdefault(label, set()).add(prop)
+
+        # Skop node_types without constraints
+        for node_type in node_types:
+            label = node_type.get("label")
+            if label not in constraint_props:
+                continue
+
+            props_to_fix = constraint_props[label]
+            for prop in node_type.get("properties", []):
+                if isinstance(prop, dict) and prop.get("name") in props_to_fix:
+                    if prop.get("required") is not True:
+                        logging.info(
+                            f"Auto-setting 'required' as True for property '{prop.get('name')}' "
+                            f"on node '{label}' (has UNIQUENESS constraint)."
+                        )
+                        prop["required"] = True
+
     def _clean_json_content(self, content: str) -> str:
         content = content.strip()
 
@@ -813,6 +847,12 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         if extracted_patterns:
             extracted_patterns = self._filter_invalid_patterns(
                 extracted_patterns, extracted_node_types, extracted_relationship_types
+            )
+
+        # Enforce required=true for properties with UNIQUENESS constraints
+        if extracted_constraints:
+            self._enforce_required_for_constraint_properties(
+                extracted_node_types, extracted_constraints
             )
 
         # Filter out invalid constraints

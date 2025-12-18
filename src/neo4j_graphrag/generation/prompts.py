@@ -229,6 +229,7 @@ IMPORTANT RULES:
 9.3 Properties that are identifiers, names, or essential characteristics are typically required.
 9.4 Properties that are supplementary information (phone numbers, descriptions, metadata) are typically optional.
 9.5 When uncertain, default to "required": false.
+9.6 If a property has a UNIQUENESS constraint, it MUST be marked as "required": true.
 
 Accepted property types are: BOOLEAN, DATE, DURATION, FLOAT, INTEGER, LIST,
 LOCAL_DATETIME, LOCAL_TIME, POINT, STRING, ZONED_DATETIME, ZONED_TIME.
