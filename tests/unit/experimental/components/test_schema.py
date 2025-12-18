@@ -1568,6 +1568,77 @@ def test_filter_properties_required_field_missing(
 
 
 @pytest.mark.asyncio
+async def test_schema_from_text_with_required_properties(
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+    schema_json_with_required_properties: str,
+) -> None:
+    mock_llm.ainvoke.return_value = LLMResponse(
+        content=schema_json_with_required_properties
+    )
+
+    schema = await schema_from_text.run(text="Sample text for test")
+
+    person = schema.node_type_from_label("Person")
+    assert person is not None
+
+    # Check required properties
+    name_prop = next((p for p in person.properties if p.name == "name"), None)
+    email_prop = next((p for p in person.properties if p.name == "email"), None)
+    phone_prop = next((p for p in person.properties if p.name == "phone"), None)
+
+    assert name_prop is not None and name_prop.required is True
+    assert email_prop is not None and email_prop.required is False
+    assert phone_prop is not None and phone_prop.required is False
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_sanitizes_string_required_values(
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+    schema_json_with_string_required_values: str,
+) -> None:
+    mock_llm.ainvoke.return_value = LLMResponse(
+        content=schema_json_with_string_required_values
+    )
+
+    schema = await schema_from_text.run(text="Sample text for test")
+
+    person = schema.node_type_from_label("Person")
+    assert person is not None
+
+    # true and yes should become True
+    name_prop = next((p for p in person.properties if p.name == "name"), None)
+    email_prop = next((p for p in person.properties if p.name == "email"), None)
+    assert name_prop is not None and name_prop.required is True
+    assert email_prop is not None and email_prop.required is True
+
+    # false and no should become False
+    phone_prop = next((p for p in person.properties if p.name == "phone"), None)
+    address_prop = next((p for p in person.properties if p.name == "address"), None)
+    assert phone_prop is not None and phone_prop.required is False
+    assert address_prop is not None and address_prop.required is False
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_handles_missing_required_field(
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+    valid_schema_json: str,
+) -> None:
+    mock_llm.ainvoke.return_value = LLMResponse(content=valid_schema_json)
+
+    schema = await schema_from_text.run(text="Sample text")
+
+    person = schema.node_type_from_label("Person")
+    assert person is not None
+
+    # All properties should have required=False (default)
+    for prop in person.properties:
+        assert prop.required is False
+
+
+@pytest.mark.asyncio
 @patch("neo4j_graphrag.experimental.components.schema.get_structured_schema")
 async def test_schema_from_existing_graph(mock_get_structured_schema: Mock) -> None:
     mock_get_structured_schema.return_value = {
