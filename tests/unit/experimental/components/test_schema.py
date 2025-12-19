@@ -1536,16 +1536,34 @@ def test_filter_properties_required_field_invalid_string(
     assert "required" not in result[0]["properties"][1]
 
 
-def test_filter_properties_required_field_invalid_type(
+def test_filter_properties_required_field_int_values(
     schema_from_text: SchemaFromTextExtractor,
 ) -> None:
+    """Test that int values like 1 and 0 are converted to True/False."""
     node_types = [
         {
             "label": "Person",
             "properties": [
                 {"name": "prop1", "type": "STRING", "required": 1},
-                {"name": "prop2", "type": "STRING", "required": []},
-                {"name": "prop3", "type": "STRING", "required": {"value": True}},
+                {"name": "prop2", "type": "STRING", "required": 0},
+            ],
+        }
+    ]
+    result = schema_from_text._filter_properties_required_field(node_types)
+    assert result[0]["properties"][0]["required"] is True
+    assert result[0]["properties"][1]["required"] is False
+
+
+def test_filter_properties_required_field_invalid_type(
+    schema_from_text: SchemaFromTextExtractor,
+) -> None:
+    """Test that unrecognized types like list and dict are removed."""
+    node_types = [
+        {
+            "label": "Person",
+            "properties": [
+                {"name": "prop1", "type": "STRING", "required": []},
+                {"name": "prop2", "type": "STRING", "required": {"value": True}},
             ],
         }
     ]

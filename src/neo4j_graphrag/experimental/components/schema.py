@@ -693,33 +693,26 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
                 prop_name = prop.get("name", "unknown")
                 node_label = node_type.get("label", "unknown")
 
-                if isinstance(required_value, str):
-                    if required_value.lower() in ("true", "yes", "1"):
-                        prop["required"] = True
-                        logging.info(
-                            f"Converted 'required' value {required_value} to True "
-                            f"for property '{prop_name}' on node '{node_label}'"
-                        )
-                    elif required_value.lower() in ("false", "no", "0"):
-                        prop["required"] = False
-                        logging.info(
-                            f"Converted 'required' value '{required_value}' to False "
-                            f"for property '{prop_name}' on node '{node_label}' "
-                        )
-                    # Unknown string values
-                    else:
-                        logging.info(
-                            f"Removing unrecognized 'required' value '{required_value}' "
-                            f"for property '{prop_name}' on node '{node_label}'. "
-                            f"Using default (False) "  # TODO: Not sure if we have to convert it to the default value - double check!
-                        )
-                        prop.pop("required", None)
-                else:
-                    # Non-string, non-boolean - remove
+                # Convert to string to handle int values like 1 or 0
+                required_str = str(required_value).lower()
+
+                if required_str in ("true", "yes", "1"):
+                    prop["required"] = True
                     logging.info(
-                        f"Removing invalid 'required' value '{required_value}' (type: {type(required_value).__name__}) "
+                        f"Converted 'required' value '{required_value}' to True "
+                        f"for property '{prop_name}' on node '{node_label}'"
+                    )
+                elif required_str in ("false", "no", "0"):
+                    prop["required"] = False
+                    logging.info(
+                        f"Converted 'required' value '{required_value}' to False "
+                        f"for property '{prop_name}' on node '{node_label}'"
+                    )
+                else:
+                    logging.info(
+                        f"Removing unrecognized 'required' value '{required_value}' "
                         f"for property '{prop_name}' on node '{node_label}'. "
-                        f"Using default (False). "
+                        f"Using default (False)."
                     )
                     prop.pop("required", None)
 
@@ -743,7 +736,7 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
                 if label and prop:
                     constraint_props.setdefault(label, set()).add(prop)
 
-        # Skop node_types without constraints
+        # Skip node_types without constraints
         for node_type in node_types:
             label = node_type.get("label")
             if label not in constraint_props:
