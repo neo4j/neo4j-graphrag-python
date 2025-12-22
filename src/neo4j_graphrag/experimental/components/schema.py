@@ -666,6 +666,92 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
             filtered_constraints.append(constraint)
         return filtered_constraints
 
+    def _filter_properties_required_field(
+        self, node_types: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Sanitize the 'required' field in node type properties. Ensures 'required' is a valid boolean.
+        converts known string values (true, yes, 1, false, no, 0) to booleans and removes unrecognized values.
+        """
+        for node_type in node_types:
+            properties = node_type.get("properties", [])
+            if not properties:
+                continue
+            for prop in properties:
+                if not isinstance(prop, dict):
+                    continue
+
+                required_value = prop.get("required")
+
+                #  Not provided - will use Pydantic default (false)
+                if required_value is None:
+                    continue
+
+                # already a valid boolean
+                if isinstance(required_value, bool):
+                    continue
+
+                prop_name = prop.get("name", "unknown")
+                node_label = node_type.get("label", "unknown")
+
+                # Convert to string to handle int values like 1 or 0
+                required_str = str(required_value).lower()
+
+                if required_str in ("true", "yes", "1"):
+                    prop["required"] = True
+                    logging.info(
+                        f"Converted 'required' value '{required_value}' to True "
+                        f"for property '{prop_name}' on node '{node_label}'"
+                    )
+                elif required_str in ("false", "no", "0"):
+                    prop["required"] = False
+                    logging.info(
+                        f"Converted 'required' value '{required_value}' to False "
+                        f"for property '{prop_name}' on node '{node_label}'"
+                    )
+                else:
+                    logging.info(
+                        f"Removing unrecognized 'required' value '{required_value}' "
+                        f"for property '{prop_name}' on node '{node_label}'. "
+                        f"Using default (False)."
+                    )
+                    prop.pop("required", None)
+
+        return node_types
+
+    def _enforce_required_for_constraint_properties(
+        self,
+        node_types: List[Dict[str, Any]],
+        constraints: List[Dict[str, Any]],
+    ) -> None:
+        """Ensure properties with UNIQUENESS constraints are marked as required."""
+        if not constraints:
+            return
+
+        # Build a lookup for property_names and constraints
+        constraint_props: Dict[str, set[str]] = {}
+        for c in constraints:
+            if c.get("type") == "UNIQUENESS":
+                label = c.get("node_type")
+                prop = c.get("property_name")
+                if label and prop:
+                    constraint_props.setdefault(label, set()).add(prop)
+
+        # Skip node_types without constraints
+        for node_type in node_types:
+            label = node_type.get("label")
+            if label not in constraint_props:
+                continue
+
+            props_to_fix = constraint_props[label]
+            for prop in node_type.get("properties", []):
+                if isinstance(prop, dict) and prop.get("name") in props_to_fix:
+                    if prop.get("required") is not True:
+                        logging.info(
+                            f"Auto-setting 'required' as True for property '{prop.get('name')}' "
+                            f"on node '{label}' (has UNIQUENESS constraint)."
+                        )
+                        prop["required"] = True
+
     def _clean_json_content(self, content: str) -> str:
         content = content.strip()
 
@@ -746,10 +832,20 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
                 extracted_relationship_types
             )
 
+        extracted_node_types = self._filter_properties_required_field(
+            extracted_node_types
+        )
+
         # Filter out invalid patterns before validation
         if extracted_patterns:
             extracted_patterns = self._filter_invalid_patterns(
                 extracted_patterns, extracted_node_types, extracted_relationship_types
+            )
+
+        # Enforce required=true for properties with UNIQUENESS constraints
+        if extracted_constraints:
+            self._enforce_required_for_constraint_properties(
+                extracted_node_types, extracted_constraints
             )
 
         # Filter out invalid constraints

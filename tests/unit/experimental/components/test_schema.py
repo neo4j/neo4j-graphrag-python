@@ -79,6 +79,28 @@ def test_node_type_additional_properties_default() -> None:
     assert node_type.additional_properties is True
 
 
+def test_property_type_initalization() -> None:
+    prop = PropertyType(name="email", type="STRING")
+    assert prop.name == "email"
+    assert prop.type == "STRING"
+    assert prop.required is False
+
+
+def test_property_type_with_required_true() -> None:
+    prop = PropertyType(name="id", type="INTEGER", required=True)
+    assert prop.required is True
+
+
+def test_property_type_is_frozen() -> None:
+    prop = PropertyType(name="email", type="STRING", required=False)
+
+    with pytest.raises(ValidationError):
+        prop.name = "other"
+
+    with pytest.raises(ValidationError):
+        prop.required = True
+
+
 def test_relationship_type_initialization_from_string() -> None:
     relationship_type = RelationshipType.model_validate("REL")
     assert isinstance(relationship_type, RelationshipType)
@@ -726,6 +748,55 @@ def schema_json_with_null_constraints() -> str:
             ["Person", "WORKS_FOR", "Organization"]
         ],
         "constraints": null
+    }
+    """
+
+
+@pytest.fixture
+def schema_json_with_required_properties() -> str:
+    return """
+    {
+        "node_types": [
+            {
+                "label": "Person",
+                "properties": [
+                    {"name": "name", "type": "STRING", "required": true},
+                    {"name": "email", "type": "STRING", "required": false},
+                    {"name": "phone", "type": "STRING"}
+                ]
+            }
+        ],
+        "relationship_types": [
+            {"label": "KNOWS"}
+        ],
+        "patterns": [
+            ["Person", "KNOWS", "Person"]
+        ]
+    }
+    """
+
+
+@pytest.fixture
+def schema_json_with_string_required_values() -> str:
+    return """
+    {
+        "node_types": [
+            {
+                "label": "Person",
+                "properties": [
+                    {"name": "name", "type": "STRING", "required": "true"},
+                    {"name": "email", "type": "STRING", "required": "yes"},
+                    {"name": "phone", "type": "STRING", "required": "false"},
+                    {"name": "address", "type": "STRING", "required": "no"}
+                ]
+            }
+        ],
+        "relationship_types": [
+            {"label": "KNOWS"}
+        ],
+        "patterns": [
+            ["Person", "KNOWS", "Person"]
+        ]
     }
     """
 
@@ -1386,6 +1457,363 @@ def test_clean_json_content_plain_json(
 
     cleaned = schema_from_text._clean_json_content(content)
     assert cleaned == '{"node_types": [{"label": "Person"}]}'
+
+
+def test_filter_properties_required_field_valid_true(
+    schema_from_text: SchemaFromTextExtractor,
+) -> None:
+    node_types = [
+        {
+            "label": "Person",
+            "properties": [{"name": "name", "type": "STRING", "required": True}],
+        }
+    ]
+    result = schema_from_text._filter_properties_required_field(node_types)
+    assert result[0]["properties"][0]["required"] is True
+
+
+def test_filter_properties_required_field_valid_false(
+    schema_from_text: SchemaFromTextExtractor,
+) -> None:
+    node_types = [
+        {
+            "label": "Person",
+            "properties": [{"name": "name", "type": "STRING", "required": False}],
+        }
+    ]
+    result = schema_from_text._filter_properties_required_field(node_types)
+    assert result[0]["properties"][0]["required"] is False
+
+
+def test_filter_properties_required_field_string(
+    schema_from_text: SchemaFromTextExtractor,
+) -> None:
+    node_types = [
+        {
+            "label": "Person",
+            "properties": [
+                {"name": "prop1", "type": "STRING", "required": "true"},
+                {"name": "prop2", "type": "STRING", "required": "yes"},
+                {"name": "prop3", "type": "STRING", "required": "1"},
+                {"name": "prop4", "type": "STRING", "required": "TRUE"},
+            ],
+        }
+    ]
+    result = schema_from_text._filter_properties_required_field(node_types)
+    for prop in result[0]["properties"]:
+        assert prop["required"] is True
+    node_types = [
+        {
+            "label": "Person",
+            "properties": [
+                {"name": "prop1", "type": "STRING", "required": "false"},
+                {"name": "prop2", "type": "STRING", "required": "no"},
+                {"name": "prop3", "type": "STRING", "required": "0"},
+                {"name": "prop4", "type": "STRING", "required": "FALSE"},
+            ],
+        }
+    ]
+    result = schema_from_text._filter_properties_required_field(node_types)
+    for prop in result[0]["properties"]:
+        assert prop["required"] is False
+
+
+def test_filter_properties_required_field_invalid_string(
+    schema_from_text: SchemaFromTextExtractor,
+) -> None:
+    node_types = [
+        {
+            "label": "Person",
+            "properties": [
+                {"name": "name", "type": "STRING", "required": "mandatory"},
+                {"name": "email", "type": "STRING", "required": "always"},
+            ],
+        }
+    ]
+    result = schema_from_text._filter_properties_required_field(node_types)
+
+    assert "required" not in result[0]["properties"][0]
+    assert "required" not in result[0]["properties"][1]
+
+
+def test_filter_properties_required_field_int_values(
+    schema_from_text: SchemaFromTextExtractor,
+) -> None:
+    """Test that int values like 1 and 0 are converted to True/False."""
+    node_types = [
+        {
+            "label": "Person",
+            "properties": [
+                {"name": "prop1", "type": "STRING", "required": 1},
+                {"name": "prop2", "type": "STRING", "required": 0},
+            ],
+        }
+    ]
+    result = schema_from_text._filter_properties_required_field(node_types)
+    assert result[0]["properties"][0]["required"] is True
+    assert result[0]["properties"][1]["required"] is False
+
+
+def test_filter_properties_required_field_invalid_type(
+    schema_from_text: SchemaFromTextExtractor,
+) -> None:
+    """Test that unrecognized types like list and dict are removed."""
+    node_types = [
+        {
+            "label": "Person",
+            "properties": [
+                {"name": "prop1", "type": "STRING", "required": []},
+                {"name": "prop2", "type": "STRING", "required": {"value": True}},
+            ],
+        }
+    ]
+    result = schema_from_text._filter_properties_required_field(node_types)
+    for prop in result[0]["properties"]:
+        assert "required" not in prop
+
+
+def test_filter_properties_required_field_missing(
+    schema_from_text: SchemaFromTextExtractor,
+) -> None:
+    node_types = [
+        {
+            "label": "Person",
+            "properties": [{"name": "name", "type": "STRING"}],
+        }
+    ]
+    result = schema_from_text._filter_properties_required_field(node_types)
+    assert "required" not in result[0]["properties"][0]
+
+
+def test_enforce_required_for_constraint_properties_sets_required_true(
+    schema_from_text: SchemaFromTextExtractor,
+) -> None:
+    node_types: list[dict[str, Any]] = [
+        {
+            "label": "Person",
+            "properties": [
+                {"name": "name", "type": "STRING", "required": False},
+                {"name": "email", "type": "STRING", "required": False},
+            ],
+        }
+    ]
+    constraints = [
+        {"type": "UNIQUENESS", "node_type": "Person", "property_name": "name"}
+    ]
+
+    schema_from_text._enforce_required_for_constraint_properties(
+        node_types, constraints
+    )
+
+    # name should now be required=true
+    assert node_types[0]["properties"][0]["required"] is True
+    # email should remain required=false
+    assert node_types[0]["properties"][1]["required"] is False
+
+
+def test_enforce_required_for_constraint_properties_already_true(
+    schema_from_text: SchemaFromTextExtractor,
+) -> None:
+    node_types: list[dict[str, Any]] = [
+        {
+            "label": "Person",
+            "properties": [
+                {"name": "name", "type": "STRING", "required": True},
+            ],
+        }
+    ]
+    constraints = [
+        {"type": "UNIQUENESS", "node_type": "Person", "property_name": "name"}
+    ]
+
+    schema_from_text._enforce_required_for_constraint_properties(
+        node_types, constraints
+    )
+
+    assert node_types[0]["properties"][0]["required"] is True
+
+
+def test_enforce_required_for_constraint_properties_missing_required_field(
+    schema_from_text: SchemaFromTextExtractor,
+) -> None:
+    node_types: list[dict[str, Any]] = [
+        {
+            "label": "Person",
+            "properties": [
+                {"name": "name", "type": "STRING"},  # No required field
+            ],
+        }
+    ]
+    constraints = [
+        {"type": "UNIQUENESS", "node_type": "Person", "property_name": "name"}
+    ]
+
+    schema_from_text._enforce_required_for_constraint_properties(
+        node_types, constraints
+    )
+
+    assert node_types[0]["properties"][0]["required"] is True
+
+
+def test_enforce_required_for_constraint_properties_no_constraints(
+    schema_from_text: SchemaFromTextExtractor,
+) -> None:
+    node_types: list[dict[str, Any]] = [
+        {
+            "label": "Person",
+            "properties": [
+                {"name": "name", "type": "STRING", "required": False},
+            ],
+        }
+    ]
+    constraints: list[dict[str, Any]] = []
+
+    schema_from_text._enforce_required_for_constraint_properties(
+        node_types, constraints
+    )
+
+    assert node_types[0]["properties"][0]["required"] is False
+
+
+def test_enforce_required_for_constraint_properties_skips_unconstrained_nodes(
+    schema_from_text: SchemaFromTextExtractor,
+) -> None:
+    node_types: list[dict[str, Any]] = [
+        {
+            "label": "Person",
+            "properties": [
+                {"name": "name", "type": "STRING", "required": False},
+            ],
+        },
+        {
+            "label": "Company",
+            "properties": [
+                {"name": "name", "type": "STRING", "required": False},
+            ],
+        },
+    ]
+    constraints = [
+        {"type": "UNIQUENESS", "node_type": "Person", "property_name": "name"}
+    ]
+
+    schema_from_text._enforce_required_for_constraint_properties(
+        node_types, constraints
+    )
+
+    # Person.name should be required=true
+    assert node_types[0]["properties"][0]["required"] is True
+    # Company.name should remain required=false (no constraint on Company)
+    assert node_types[1]["properties"][0]["required"] is False
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_with_required_properties(
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+    schema_json_with_required_properties: str,
+) -> None:
+    mock_llm.ainvoke.return_value = LLMResponse(
+        content=schema_json_with_required_properties
+    )
+
+    schema = await schema_from_text.run(text="Sample text for test")
+
+    person = schema.node_type_from_label("Person")
+    assert person is not None
+
+    # Check required properties
+    name_prop = next((p for p in person.properties if p.name == "name"), None)
+    email_prop = next((p for p in person.properties if p.name == "email"), None)
+    phone_prop = next((p for p in person.properties if p.name == "phone"), None)
+
+    assert name_prop is not None and name_prop.required is True
+    assert email_prop is not None and email_prop.required is False
+    assert phone_prop is not None and phone_prop.required is False
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_sanitizes_string_required_values(
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+    schema_json_with_string_required_values: str,
+) -> None:
+    mock_llm.ainvoke.return_value = LLMResponse(
+        content=schema_json_with_string_required_values
+    )
+
+    schema = await schema_from_text.run(text="Sample text for test")
+
+    person = schema.node_type_from_label("Person")
+    assert person is not None
+
+    # true and yes should become True
+    name_prop = next((p for p in person.properties if p.name == "name"), None)
+    email_prop = next((p for p in person.properties if p.name == "email"), None)
+    assert name_prop is not None and name_prop.required is True
+    assert email_prop is not None and email_prop.required is True
+
+    # false and no should become False
+    phone_prop = next((p for p in person.properties if p.name == "phone"), None)
+    address_prop = next((p for p in person.properties if p.name == "address"), None)
+    assert phone_prop is not None and phone_prop.required is False
+    assert address_prop is not None and address_prop.required is False
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_handles_missing_required_field(
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+    valid_schema_json: str,
+) -> None:
+    mock_llm.ainvoke.return_value = LLMResponse(content=valid_schema_json)
+
+    schema = await schema_from_text.run(text="Sample text")
+
+    person = schema.node_type_from_label("Person")
+    assert person is not None
+
+    # All properties should have required=False (default)
+    for prop in person.properties:
+        assert prop.required is False
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_enforces_required_for_constrained_properties(
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+) -> None:
+    schema_json = """
+    {
+        "node_types": [
+            {
+                "label": "Person",
+                "properties": [
+                    {"name": "name", "type": "STRING", "required": false},
+                    {"name": "email", "type": "STRING", "required": false}
+                ]
+            }
+        ],
+        "relationship_types": [],
+        "patterns": [],
+        "constraints": [
+            {"type": "UNIQUENESS", "node_type": "Person", "property_name": "name"}
+        ]
+    }
+    """
+    mock_llm.ainvoke.return_value = LLMResponse(content=schema_json)
+
+    schema = await schema_from_text.run(text="Sample text")
+
+    person = schema.node_type_from_label("Person")
+    assert person is not None
+
+    name_prop = next((p for p in person.properties if p.name == "name"), None)
+    email_prop = next((p for p in person.properties if p.name == "email"), None)
+
+    # name should be auto-fixed to required=true
+    assert name_prop is not None and name_prop.required is True
+    # email should remain required=false
+    assert email_prop is not None and email_prop.required is False
 
 
 @pytest.mark.asyncio
