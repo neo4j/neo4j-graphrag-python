@@ -22,8 +22,7 @@ jobs:
 
       - name: Bump version
         run: |
-          uv version --bump major --frozen
-          uv version --bump alpha --frozen
+          uv version --bump major --bump alpha
 
       - name: Get version
         id: get-version
