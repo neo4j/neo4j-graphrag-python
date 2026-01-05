@@ -54,7 +54,7 @@ jobs:
             -e DEFAULT_VECTORIZER_MODULE='text2vec-transformers' \
             -e ENABLE_MODULES='text2vec-transformers' \
             -e CLUSTER_HOSTNAME='node1' \
-            cr.weaviate.io/semitechnologies/weaviate:1.25.1
+            cr.weaviate.io/semitechnologies/weaviate:1.27.0
       - name: Start Neo4j
         run: |
           docker run -d --name neo4j \
