@@ -27,7 +27,6 @@ Python versions supported:
 * Python 3.12
 * Python 3.11
 * Python 3.10
-* Python 3.9
 
 
 ******
@@ -60,7 +59,7 @@ Usage
 Installation
 ************
 
-This package requires Python (>=3.9).
+This package requires Python (>=3.10).
 
 To install the latest stable version, use:
 
