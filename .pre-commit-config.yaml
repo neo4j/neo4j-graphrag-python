@@ -8,13 +8,13 @@ repos:
     hooks:
       - id: ruff-lint-isort
         name: Ruff Lint Sort Imports
-        entry: poetry run ruff check .
+        entry: uv run ruff check .
         language: system
         types: [ python ]
         stages: [ commit, push ]
       - id: ruff-lint
         name: Ruff Lint Check
-        entry: poetry run ruff format --check .
+        entry: uv run ruff format --check .
         language: system
         types: [ python ]
         stages: [ commit, push ]
