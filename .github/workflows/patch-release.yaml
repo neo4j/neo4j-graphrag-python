@@ -21,11 +21,11 @@ jobs:
         uses: astral-sh/setup-uv@v3
 
       - name: Bump version
-        run: uvx hatch version patch
+        run: uv version --bump patch --frozen
 
       - name: Get version
         id: get-version
-        run: echo version=`uvx hatch version` >> "$GITHUB_OUTPUT"
+        run: echo version=`uv version --short` >> "$GITHUB_OUTPUT"
       - name: Print version
         run: |
           echo Version: ${{ steps.get-version.outputs.version }}

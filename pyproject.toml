@@ -75,7 +75,6 @@ dev = [
     "coverage>=7.4.3,<8.0.0",
     "pytest-asyncio>=0.23.8,<0.24.0",
     "pre-commit>=3.6.2,<4.0.0; python_version >= '3.9'",
-    "hatch>=1.10.0,<2.0.0",
     "sphinx>=7.2.6,<8.0.0; python_version >= '3.9'",
     "enum-tools[sphinx]>=0.12.0,<0.13.0",
 ]
