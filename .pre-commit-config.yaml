@@ -20,7 +20,7 @@ repos:
         stages: [ commit, push ]
       - id: mypy
         name: Mypy Type Check
-        entry: mypy .
+        entry: uv run mypy .
         language: system
         types: [ python ]
         stages: [ commit, push ]
