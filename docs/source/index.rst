@@ -226,7 +226,7 @@ Install dependencies
 
 .. code:: bash
 
-    poetry install --all-extras
+    uv sync --all-extras
 
 ***************
 Getting started
@@ -252,7 +252,7 @@ Make changes
 ~~~~~~~~~~~~
 
 1. Fork the repository.
-2. Install Python and Poetry.
+2. Install Python and uv.
 3. Create a working branch from `main` and start with your changes!
 
 ~~~~~~~~~~~~
@@ -277,12 +277,11 @@ When you're finished with your changes, create a pull request, also known as a P
 Run tests
 *********
 
-Open a new virtual environment and then run the tests.
+Run the tests using uv.
 
 .. code:: bash
 
-    poetry shell
-    pytest
+    uv run pytest
 
 ~~~~~~~~~~
 Unit tests
@@ -292,7 +291,7 @@ This should run out of the box once the dependencies are installed.
 
 .. code:: bash
 
-    poetry run pytest tests/unit
+    uv run pytest tests/unit
 
 ~~~~~~~~~
 E2E tests
@@ -319,7 +318,7 @@ Once the services are running, execute the following command to run the e2e test
 
 .. code:: bash
 
-    poetry run pytest tests/e2e
+    uv run pytest tests/e2e
 
 *******************
 Further information
