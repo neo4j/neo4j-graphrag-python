@@ -26,7 +26,7 @@ services:
     environment:
       ENABLE_CUDA: "0"
   neo4j:
-    image: neo4j:5.24-enterprise
+    image: neo4j:enterprise
     ports:
       - 7687:7687
       - 7474:7474
