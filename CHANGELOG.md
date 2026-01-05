@@ -5,6 +5,8 @@
 ### Changed
 
 - Switched project/dependency management from Poetry to uv.
+- Dropped support for Python 3.9 (EOL)
+
 
 ## 1.11.0
 
