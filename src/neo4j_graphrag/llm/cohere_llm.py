@@ -131,7 +131,7 @@ class CohereLLM(LLMInterface):
         except self.cohere_api_error as e:
             raise LLMGenerationError(e)
         return LLMResponse(
-            content=res.message.content[0].text if res.message.content else "",  # type: ignore[union-attr]
+            content=text,  # type: ignore[union-attr]
         )
 
     @async_rate_limit_handler
@@ -163,5 +163,5 @@ class CohereLLM(LLMInterface):
         except self.cohere_api_error as e:
             raise LLMGenerationError(e)
         return LLMResponse(
-            content=res.message.content[0].text if res.message.content else "",  # type: ignore[union-attr]
+            content=text,  # type: ignore[union-attr]
         )
