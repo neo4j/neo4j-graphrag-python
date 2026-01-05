@@ -2,6 +2,10 @@
 
 ## Next
 
+### Changed
+
+- Switched project/dependency management from Poetry to uv.
+
 ## 1.11.0
 
 ### Added
