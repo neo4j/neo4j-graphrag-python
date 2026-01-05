@@ -8,6 +8,14 @@ jobs:
       matrix:
         python-version: [ '3.10', '3.11', '3.12', '3.13' ]
     steps:
+      - name: Free up disk space (ubuntu-latest)
+        run: |
+          sudo rm -rf /usr/local/lib/android \
+                      /usr/share/dotnet \
+                      /opt/ghc \
+                      /opt/hostedtoolcache
+          sudo apt-get clean || true
+          df -h
       - name: Check out repository code
         uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
