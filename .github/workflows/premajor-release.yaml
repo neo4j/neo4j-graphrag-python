@@ -21,8 +21,7 @@ jobs:
         uses: astral-sh/setup-uv@v3
 
       - name: Bump version
-        run: |
-          uv version --bump major --bump alpha
+        run: uv version --bump major --bump alpha --frozen
 
       - name: Get version
         id: get-version
