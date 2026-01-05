@@ -17,20 +17,15 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: Install and configure Poetry
-        uses: snok/install-poetry@v1
-        with:
-          version: 1.8.2
-          virtualenvs-create: false
-          virtualenvs-in-project: false
-          installer-parallel: true
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
 
       - name: Bump version
-        run: poetry version patch
+        run: uvx hatch version patch
 
       - name: Get version
         id: get-version
-        run: echo version=`poetry version -s` >> "$GITHUB_OUTPUT"
+        run: echo version=`uvx hatch version` >> "$GITHUB_OUTPUT"
       - name: Print version
         run: |
           echo Version: ${{ steps.get-version.outputs.version }}
