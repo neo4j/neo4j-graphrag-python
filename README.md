@@ -26,13 +26,13 @@ A list of Neo4j GenAI-related features can also be found at [Neo4j GenAI Ecosyst
 ## 🐍 Python Version Support
 
 | Version | Supported? |
-|---------| ---------: |
-| 3.13    | &check;    |
-| 3.12    | &check;    |
-| 3.11    | &check;    |
-| 3.10    | &check;    |
-| 3.9     | &check;    |
-| 3.8     | &cross;    |
+|---------|-----------:|
+| 3.13    |    &check; |
+| 3.12    |    &check; |
+| 3.11    |    &check; |
+| 3.10    |    &check; |
+| 3.9     |    &cross; |
+| 3.8     |    &cross; |
 
 ## 📦 Installation
 

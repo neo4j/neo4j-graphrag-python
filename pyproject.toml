@@ -22,7 +22,7 @@ authors = [
 ]
 license = {text = "Apache License, Version 2.0"}
 readme = "README.md"
-requires-python = ">=3.9.0,<3.14"
+requires-python = ">=3.10.0,<3.14"
 dependencies = [
     "neo4j>=5.17.0,<6.0.0",
     "pydantic>=2.6.3,<3.0.0",
