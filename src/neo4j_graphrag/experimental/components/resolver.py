@@ -17,22 +17,20 @@ from __future__ import annotations
 import abc
 import logging
 from itertools import combinations
-from typing import Any, List, Optional, TYPE_CHECKING
-
+from typing import TYPE_CHECKING, Any, List, Optional
 
 try:
-    from rapidfuzz import fuzz
-    from rapidfuzz import utils
+    from rapidfuzz import fuzz, utils
 
     IS_RAPIDFUZZ_INSTALLED = True
 except ImportError:
     IS_RAPIDFUZZ_INSTALLED = False
 
 try:
+    import numpy as np
     import spacy
     from spacy.cli.download import download as spacy_download
     from spacy.language import Language
-    import numpy as np
 
     IS_SPACY_INSTALLED = True
 except ImportError:
@@ -44,6 +42,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 import neo4j
+
 from neo4j_graphrag.experimental.components.types import ResolutionStats
 from neo4j_graphrag.experimental.pipeline import Component
 from neo4j_graphrag.experimental.pipeline.component import ComponentMeta
@@ -349,7 +348,9 @@ class SpaCySemanticMatchResolver(BasePropertySimilarityResolver):
         filter_query: Optional[str] = None,
         resolve_properties: Optional[List[str]] = None,
         similarity_threshold: float = 0.8,
+        nlp: Any = None,
         spacy_model: str = "en_core_web_lg",
+        auto_download_spacy_model: bool = True,
         neo4j_database: Optional[str] = None,
     ) -> None:
         if not IS_SPACY_INSTALLED:
@@ -364,7 +365,9 @@ class SpaCySemanticMatchResolver(BasePropertySimilarityResolver):
             similarity_threshold,
             neo4j_database,
         )
-        self.nlp = self._load_or_download_spacy_model(spacy_model)
+        self.nlp = nlp or self._load_or_download_spacy_model(
+            spacy_model, auto_download_spacy_model=auto_download_spacy_model
+        )
         self.embedding_cache: dict[str, NDArray[np.float64]] = {}
 
     async def run(self) -> ResolutionStats:
@@ -397,7 +400,9 @@ class SpaCySemanticMatchResolver(BasePropertySimilarityResolver):
         return float(dot_product / (norm1 * norm2))
 
     @staticmethod
-    def _load_or_download_spacy_model(model_name: str) -> Language:
+    def _load_or_download_spacy_model(
+        model_name: str, *, auto_download_spacy_model: bool = True
+    ) -> Language:
         """
         Attempt to load the specified spaCy model by name.
         If not installed, automatically download and then load it.
@@ -405,10 +410,22 @@ class SpaCySemanticMatchResolver(BasePropertySimilarityResolver):
         try:
             return spacy.load(model_name)
         except OSError as e:
-            # handling cases where the spaCy model is not yet downloaded:
             if "doesn't seem to be a Python package or a valid path" in str(e):
+                if not auto_download_spacy_model:
+                    raise OSError(
+                        f"spaCy model '{model_name}' is not installed. "
+                        "Install it manually (e.g. `python -m spacy download "
+                        f"{model_name}`) or pass a pre-loaded `nlp` instance."
+                    ) from e
                 logger.info(f"Model '{model_name}' not found. Downloading...")
-                spacy_download(model_name)
+                try:
+                    spacy_download(model_name)
+                except SystemExit as se:
+                    raise OSError(
+                        f"Failed to auto-download spaCy model '{model_name}'. "
+                        "Install it manually (e.g. `python -m spacy download "
+                        f"{model_name}`) or pass a pre-loaded `nlp` instance."
+                    ) from se
                 return spacy.load(model_name)
             else:
                 raise e
