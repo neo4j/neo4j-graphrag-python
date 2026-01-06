@@ -31,7 +31,7 @@ except ImportError as e:
     if missing_module == "qdrant_client":
         raise ImportError(
             "The 'qdrant-client' package is missing. Please install it by running "
-            '`poetry install --extras "qdrant"` or `pip install qdrant-client`, or follow the instructions '
+            "`uv sync --extra qdrant` or `pip install qdrant-client`, or follow the instructions "
             "in the Qdrant examples section of the README at https://github.com/neo4j/neo4j-graphrag-python/"
         ) from e
     else:

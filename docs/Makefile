@@ -5,13 +5,13 @@
 VERSION       = SNAPSHOT
 PRODUCT       = neo4j-graphrag-python
 SPHINXOPTS    =
-SPHINXBUILD   = poetry run sphinx-build
+SPHINXBUILD   = uv run sphinx-build
 PAPER         =
 BUILDDIR      = build
 
-# User-friendly check for sphinx-build via Poetry
-ifeq ($(shell poetry run which sphinx-build >/dev/null 2>&1; echo $$?), 1)
-$(error The 'sphinx-build' command was not found within the Poetry environment. Make sure Sphinx is installed in your project dependencies.)
+# User-friendly check for sphinx-build via uv
+ifeq ($(shell uv run which sphinx-build >/dev/null 2>&1; echo $$?), 1)
+$(error The 'sphinx-build' command was not found within the uv environment. Make sure Sphinx is installed in your project dependencies.)
 endif
 
 # Internal variables.

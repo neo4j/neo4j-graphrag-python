@@ -13,88 +13,79 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-[tool.poetry]
+[project]
 name = "neo4j-graphrag"
 version = "1.11.0"
 description = "Python package to allow easy integration to Neo4j's GraphRAG features"
-authors = ["Neo4j, Inc <team-gen-ai@neo4j.com>"]
-license = "Apache License, Version 2.0"
+authors = [
+    {name = "Neo4j, Inc", email = "team-gen-ai@neo4j.com"}
+]
+license = {text = "Apache License, Version 2.0"}
 readme = "README.md"
-homepage = "https://neo4j.com/"
-repository = "https://github.com/neo4j/neo4j-graphrag-python"
-
-[[tool.poetry.packages]]
-include = "neo4j_graphrag"
-from = "src"
-
-[tool.poetry.dependencies]
-python = ">=3.9.0,<3.14"
-neo4j = "^5.17.0"
-pydantic = "^2.6.3"
-fsspec = "^2024.9.0"
-pypdf = "^6.0.0"
-json-repair = "^0.44.1"
-pyyaml = "^6.0.2"
-types-pyyaml = "^6.0.12.20240917"
-# optional deps
-langchain-text-splitters = {version = "^0.3.0", optional = true }
-neo4j-viz = {version = "^0.4.2", optional = true }
-weaviate-client = {version = "^4.6.1", optional = true }
-pinecone-client = {version = "^4.1.0", optional = true }
-google-cloud-aiplatform = {version = "^1.66.0", optional = true }
-cohere = {version = "^5.9.0", optional = true}
-mistralai = {version = "^1.0.3", optional = true}
-qdrant-client = {version = "^1.11.3", optional = true}
-llama-index = {version = "^0.13.0", optional = true }
-openai = {version = "^1.51.1", optional = true }
-anthropic = {version = "^0.49.0", optional = true}
-sentence-transformers = {version = "^3.0.0", optional = true }
-ollama = {version = "^0.4.4", optional = true}
-spacy = {version = "3.8.7", optional = true}
-rapidfuzz = {version ="^3.12.2", optional = true}
-numpy = [
-  { version = "^2.0.0", python = ">=3.9,<3.13" },
-  { version = "^2.1.0", python = ">=3.13,<3.14" }
+requires-python = ">=3.9.0,<3.14"
+dependencies = [
+    "neo4j>=5.17.0,<6.0.0",
+    "pydantic>=2.6.3,<3.0.0",
+    "fsspec>=2024.9.0,<2025.0.0",
+    "pypdf>=6.0.0,<7.0.0",
+    "json-repair>=0.44.1,<0.45.0",
+    "pyyaml>=6.0.2,<7.0.0",
+    "types-pyyaml>=6.0.12.20240917,<7.0.0",
+    "numpy>=2.0.0,<3.0.0; python_version >= '3.9' and python_version < '3.13'",
+    "numpy>=2.1.0,<3.0.0; python_version >= '3.13' and python_version < '3.14'",
+    "scipy>=1.13.0,<2.0.0; python_version >= '3.9' and python_version < '3.13'",
+    "scipy>=1.15.0,<2.0.0; python_version >= '3.13' and python_version < '3.14'",
+    "tenacity>=9.1.2,<10.0.0",
 ]
-scipy = [
-  { version = "^1.13.0", python = ">=3.9,<3.13" },
-  { version = "^1.15.0", python = ">=3.13,<3.14" }
+
+[project.urls]
+Homepage = "https://neo4j.com/"
+Repository = "https://github.com/neo4j/neo4j-graphrag-python"
+
+[project.optional-dependencies]
+weaviate = ["weaviate-client>=4.6.1,<5.0.0"]
+pinecone = ["pinecone-client>=4.1.0,<5.0.0"]
+google = ["google-cloud-aiplatform>=1.66.0,<2.0.0"]
+cohere = ["cohere>=5.9.0,<6.0.0"]
+anthropic = ["anthropic>=0.49.0,<0.50.0"]
+ollama = ["ollama>=0.4.4,<0.5.0"]
+openai = ["openai>=1.51.1,<2.0.0"]
+mistralai = ["mistralai>=1.0.3,<2.0.0"]
+qdrant = ["qdrant-client>=1.11.3,<2.0.0"]
+kg_creation_tools = ["neo4j-viz>=0.4.2,<0.5.0"]
+sentence-transformers = ["sentence-transformers>=3.0.0,<4.0.0"]
+experimental = [
+    "langchain-text-splitters>=0.3.0,<0.4.0",
+    "neo4j-viz>=0.4.2,<0.5.0",
+    "llama-index>=0.13.0,<0.14.0",
 ]
-tenacity = "^9.1.2"
+examples = [
+    "langchain-openai>=0.2.2,<0.3.0",
+    "langchain-huggingface>=0.1.0,<0.2.0",
+]
+nlp = ["spacy==3.8.7"]
+fuzzy-matching = ["rapidfuzz>=3.12.2,<4.0.0"]
 
-[tool.poetry.group.dev.dependencies]
-urllib3 = "<2"
-ruff = "^0.3.0"
-mypy = "^1.10.0"
-pytest = "^8.0.2"
-coverage = "^7.4.3"
-pytest-asyncio = "^0.23.8"
-pre-commit = { version = "^3.6.2", python = "^3.9" }
-sphinx = { version = "^7.2.6", python = "^3.9" }
-langchain-openai = {version = "^0.2.2", optional = true }
-langchain-huggingface = {version = "^0.1.0", optional = true }
-enum-tools = {extras = ["sphinx"], version = "^0.12.0"}
-
-[tool.poetry.extras]
-weaviate = ["weaviate-client"]
-pinecone = ["pinecone-client"]
-google = ["google-cloud-aiplatform"]
-cohere = ["cohere"]
-anthropic = ["anthropic"]
-ollama = ["ollama"]
-openai = ["openai"]
-mistralai = ["mistralai"]
-qdrant = ["qdrant-client"]
-kg_creation_tools = ["neo4j-viz"]
-sentence-transformers = ["sentence-transformers"]
-experimental = ["langchain-text-splitters", "neo4j-viz", "llama-index"]
-examples = ["langchain-openai", "langchain-huggingface"]
-nlp = ["spacy"]
-fuzzy-matching = ["rapidfuzz"]
+[dependency-groups]
+dev = [
+    "urllib3<2",
+    "ruff>=0.3.0,<0.4.0",
+    "mypy>=1.10.0,<2.0.0",
+    "pytest>=8.0.2,<9.0.0",
+    "coverage>=7.4.3,<8.0.0",
+    "pytest-asyncio>=0.23.8,<0.24.0",
+    "pre-commit>=3.6.2,<4.0.0; python_version >= '3.9'",
+    "sphinx>=7.2.6,<8.0.0; python_version >= '3.9'",
+    "enum-tools[sphinx]>=0.12.0,<0.13.0",
+    "en-core-web-lg",
+]
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/neo4j_graphrag"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -119,3 +110,6 @@ module = [
     "conftest",
 ]
 ignore_missing_imports = true
+
+[tool.uv.sources]
+en-core-web-lg = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl" }

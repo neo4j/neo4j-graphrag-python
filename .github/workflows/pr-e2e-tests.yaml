@@ -50,7 +50,7 @@ jobs:
             -e DEFAULT_VECTORIZER_MODULE='text2vec-transformers' \
             -e ENABLE_MODULES='text2vec-transformers' \
             -e CLUSTER_HOSTNAME='node1' \
-            cr.weaviate.io/semitechnologies/weaviate:1.25.1
+            cr.weaviate.io/semitechnologies/weaviate:1.27.0
       - name: Start Neo4j
         run: |
           docker run -d --name neo4j \
@@ -70,26 +70,18 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          installer-parallel: true
-      - name: Set Python version for Poetry
-        run: poetry env use python${{ matrix.python-version }}
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
       - name: Load cached venv
-        id: cached-poetry-dependencies
+        id: cached-venv
         uses: actions/cache@v4
         with:
           path: .venv
-          key: ${{ runner.os }}-venv-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+          key: ${{ runner.os }}-venv-${{ matrix.python-version }}-${{ hashFiles('**/uv.lock') }}
       - name: Install dependencies
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --no-cache --with dev --all-extras
-      - name: Clear Poetry cache
-        run: poetry cache clear --all --no-interaction .
-      - name: Show disk usage after Poetry installation
+        if: steps.cached-venv.outputs.cache-hit != 'true'
+        run: uv sync --frozen --all-extras --group dev
+      - name: Show disk usage after dependency installation
         run: |
           df -h
       - name: Wait for Weaviate to start
@@ -117,7 +109,10 @@ jobs:
         shell: bash
         run: |
           if [[ "${{ matrix.neo4j-tag }}" == "latest" || "${{ matrix.neo4j-tag }}" == *-community ]]; then
-              poetry run pytest -m 'not enterprise_only' ./tests/e2e
+              uv run pytest -m 'not enterprise_only' ./tests/e2e
           else
-              poetry run pytest ./tests/e2e
+              uv run pytest ./tests/e2e
           fi
+      - name: Prune uv cache
+        if: always()
+        run: uv cache prune --ci

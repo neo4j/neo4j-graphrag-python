@@ -275,12 +275,12 @@ You must sign the [contributors license agreement](https://neo4j.com/developer/c
 
 ### Install Dependencies
 
-Our Python dependencies are managed using Poetry.
-If Poetry is not yet installed on your system, you can follow the instructions [here](https://python-poetry.org/) to set it up.
+Our Python dependencies are managed using uv.
+If uv is not yet installed on your system, you can follow the instructions [here](https://docs.astral.sh/uv/getting-started/installation/) to set it up.
 To begin development on this project, start by cloning the repository and then install all necessary dependencies, including the development dependencies, with the following command:
 
 ```bash
-poetry install --with dev
+uv sync --group dev
 ```
 
 ### Reporting Issues
@@ -298,7 +298,7 @@ and/or [Discord](https://discord.gg/neo4j).
 ### Workflow for Contributions
 
 1. Fork the repository.
-2. Install Python and Poetry.
+2. Install Python and uv.
 3. Create a working branch from `main` and start with your changes!
 
 ### Code Formatting and Linting
@@ -373,7 +373,7 @@ To be able to run all tests, all extra packages needs to be installed.
 This is achieved by:
 
 ```bash
-poetry install --all-extras
+uv sync --all-extras
 ```
 
 ### Unit Tests
@@ -381,7 +381,7 @@ poetry install --all-extras
 Install the project dependencies then run the following command to run the unit tests locally:
 
 ```bash
-poetry run pytest tests/unit
+uv run pytest tests/unit
 ```
 
 ### E2E tests
@@ -403,7 +403,7 @@ _(tip: If you encounter any caching issues within the databases, you can complet
 Once all the services are running, execute the following command to run the e2e tests:
 
 ```bash
-poetry run pytest tests/e2e
+uv run pytest tests/e2e
 ```
 
 ## ℹ️ Additional Information
