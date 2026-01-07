@@ -26,11 +26,7 @@ try:
 except ImportError:
     IS_RAPIDFUZZ_INSTALLED = False
 
-try:
-    import numpy as np
-except ImportError:
-    raise
-
+import numpy as np
 
 if TYPE_CHECKING:
     import numpy as np
