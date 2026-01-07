@@ -483,7 +483,7 @@ def test_ollama_llm_get_brand_new_messages_all_roles(mock_import: Mock) -> None:
     ]
 
     llm = OllamaLLM(model_name="llama2")
-    result_messages = llm.get_brand_new_messages(messages)
+    result_messages = llm.get_messages_v2(messages)
 
     # Convert to list for easier testing
     result_list = list(result_messages)

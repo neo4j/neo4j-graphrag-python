@@ -56,7 +56,7 @@ if TYPE_CHECKING:
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
 
 
-class OllamaLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
+class OllamaLLM(LLMInterface, LLMInterfaceV2):
     """LLM wrapper for Ollama models."""
 
     def __init__(
@@ -211,7 +211,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
         try:
             response = self.client.chat(
                 model=self.model_name,
-                messages=self.get_brand_new_messages(input),
+                messages=self.get_messages_v2(input),
                 **self.model_params,
                 **kwargs,
             )
@@ -277,7 +277,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
             params = {**self.model_params, **kwargs}
             response = await self.async_client.chat(
                 model=self.model_name,
-                messages=self.get_brand_new_messages(input),
+                messages=self.get_messages_v2(input),
                 options=params,
             )
             content = response.message.content or ""
@@ -307,7 +307,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
         messages.append(UserMessage(content=input).model_dump())
         return messages  # type: ignore
 
-    def get_brand_new_messages(
+    def get_messages_v2(
         self,
         input: list[LLMMessage],
     ) -> Sequence[Message]:

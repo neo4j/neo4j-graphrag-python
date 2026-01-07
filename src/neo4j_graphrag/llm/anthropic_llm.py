@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
-class AnthropicLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
+class AnthropicLLM(LLMInterface, LLMInterfaceV2):
     """Interface for large language models on Anthropic
 
     Args:
@@ -200,7 +200,7 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
         **kwargs: Any,
     ) -> LLMResponse:
         try:
-            system_instruction, messages = self.get_brand_new_messages(input)
+            system_instruction, messages = self.get_messages_v2(input)
             response = self.client.messages.create(
                 model=self.model_name,
                 system=system_instruction,
@@ -265,7 +265,7 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
             LLMResponse: The response from the LLM.
         """
         try:
-            system_instruction, messages = self.get_brand_new_messages(input)
+            system_instruction, messages = self.get_messages_v2(input)
             response = await self.async_client.messages.create(
                 model=self.model_name,
                 system=system_instruction,
@@ -301,7 +301,7 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
         messages.append(UserMessage(content=input).model_dump())
         return messages  # type: ignore
 
-    def get_brand_new_messages(
+    def get_messages_v2(
         self,
         input: list[LLMMessage],
     ) -> tuple[Union[str, NotGiven], Iterable[MessageParam]]:

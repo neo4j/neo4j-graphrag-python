@@ -355,7 +355,7 @@ def test_anthropic_llm_get_brand_new_messages_all_roles(mock_anthropic: Mock) ->
     ]
 
     llm = AnthropicLLM(model_name="claude-3-opus-20240229")
-    system_instruction, result_messages = llm.get_brand_new_messages(messages)
+    system_instruction, result_messages = llm.get_messages_v2(messages)
 
     # Verify system instruction is extracted
     assert system_instruction == "You are a helpful assistant."
@@ -382,7 +382,7 @@ def test_anthropic_llm_get_brand_new_messages_unknown_role(
     llm = AnthropicLLM(model_name="claude-3-opus-20240229")
 
     with pytest.raises(ValueError) as exc_info:
-        llm.get_brand_new_messages(messages)
+        llm.get_messages_v2(messages)
     assert "Unknown role: unknown_role" in str(exc_info.value)
 
 

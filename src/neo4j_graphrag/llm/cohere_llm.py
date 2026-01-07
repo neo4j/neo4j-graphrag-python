@@ -43,7 +43,7 @@ if TYPE_CHECKING:
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
-class CohereLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
+class CohereLLM(LLMInterface, LLMInterfaceV2):
     """Interface for large language models on the Cohere platform
 
     Args:
@@ -201,7 +201,7 @@ class CohereLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
             LLMResponse: The response from the LLM.
         """
         try:
-            messages = self.get_brand_new_messages(input)
+            messages = self.get_messages_v2(input)
             res = self.client.chat(
                 messages=messages,
                 model=self.model_name,
@@ -252,7 +252,7 @@ class CohereLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
     @async_rate_limit_handler_decorator
     async def __ainvoke_v2(self, input: List[LLMMessage], **kwargs: Any) -> LLMResponse:
         try:
-            messages = self.get_brand_new_messages(input)
+            messages = self.get_messages_v2(input)
             res = await self.async_client.chat(
                 messages=messages,
                 model=self.model_name,
@@ -289,7 +289,7 @@ class CohereLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
         messages.append(UserMessage(content=input).model_dump())
         return messages  # type: ignore
 
-    def get_brand_new_messages(
+    def get_messages_v2(
         self,
         input: list[LLMMessage],
     ) -> ChatMessages:

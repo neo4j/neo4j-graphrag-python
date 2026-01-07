@@ -51,7 +51,7 @@ except ImportError:
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return
-class MistralAILLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
+class MistralAILLM(LLMInterface, LLMInterfaceV2):
     def __init__(
         self,
         model_name: str,
@@ -197,7 +197,7 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
             LLMGenerationError: If anything goes wrong.
         """
         try:
-            messages = self.get_brand_new_messages(input)
+            messages = self.get_messages_v2(input)
             response = self.client.chat.complete(
                 model=self.model_name, messages=messages, **self.model_params, **kwargs
             )
@@ -264,7 +264,7 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
             LLMGenerationError: If anything goes wrong.
         """
         try:
-            messages = self.get_brand_new_messages(input)
+            messages = self.get_messages_v2(input)
             response = await self.client.chat.complete_async(
                 model=self.model_name,
                 messages=messages,
@@ -302,7 +302,7 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
         messages.append(UserMessage(content=input).model_dump())
         return cast(list[Messages], messages)
 
-    def get_brand_new_messages(
+    def get_messages_v2(
         self,
         input: list[LLMMessage],
     ) -> list[Messages]:

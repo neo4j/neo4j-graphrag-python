@@ -428,72 +428,6 @@ async def test_vertexai_ainvoke_v2_happy_path(GenerativeModelMock: MagicMock) ->
     mock_model.generate_content_async.assert_awaited_once()
 
 
-@patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM._parse_tool_response")
-@patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM._call_brand_new_llm")
-def test_vertexai_invoke_with_tools_v2(
-    mock_call_llm: Mock,
-    mock_parse_tool: Mock,
-    test_tool: Tool,
-) -> None:
-    """Test V2 interface invoke_with_tools method with List[LLMMessage] input."""
-    messages: List[LLMMessage] = [
-        {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": "What is the weather like?"},
-    ]
-    # Mock the model call response
-    tool_call_mock = MagicMock()
-    tool_call_mock.name = "function"
-    tool_call_mock.args = {}
-    mock_call_llm.return_value = MagicMock(
-        candidates=[MagicMock(function_calls=[tool_call_mock])]
-    )
-    mock_parse_tool.return_value = ToolCallResponse(tool_calls=[])
-
-    llm = VertexAILLM(model_name="gemini")
-    tools = [test_tool]
-
-    res = llm.invoke_with_tools(messages, tools)
-    mock_call_llm.assert_called_once_with(
-        messages,
-        tools=tools,
-    )
-    mock_parse_tool.assert_called_once()
-    assert isinstance(res, ToolCallResponse)
-
-
-@pytest.mark.asyncio
-@patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM._parse_tool_response")
-@patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM._acall_brand_new_llm")
-async def test_vertexai_ainvoke_with_tools_v2(
-    mock_call_llm: Mock,
-    mock_parse_tool: Mock,
-    test_tool: Tool,
-) -> None:
-    """Test V2 interface async invoke_with_tools method with List[LLMMessage] input."""
-    messages: List[LLMMessage] = [
-        {"role": "user", "content": "What tools are available?"},
-    ]
-    # Mock the model call response
-    tool_call_mock = MagicMock()
-    tool_call_mock.name = "function"
-    tool_call_mock.args = {}
-    mock_call_llm.return_value = AsyncMock(
-        return_value=MagicMock(candidates=[MagicMock(function_calls=[tool_call_mock])])
-    )
-    mock_parse_tool.return_value = ToolCallResponse(tool_calls=[])
-
-    llm = VertexAILLM(model_name="gemini")
-    tools = [test_tool]
-
-    res = await llm.ainvoke_with_tools(messages, tools)
-    mock_call_llm.assert_awaited_once_with(
-        messages,
-        tools=tools,
-    )
-    mock_parse_tool.assert_called_once()
-    assert isinstance(res, ToolCallResponse)
-
-
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
 def test_vertexai_invoke_v2_validation_error(_GenerativeModelMock: MagicMock) -> None:
     """Test V2 interface invoke with invalid role raises error."""
@@ -524,7 +458,7 @@ def test_vertexai_get_brand_new_messages_system_instruction_override(
     llm = VertexAILLM(
         model_name=model_name, system_instruction=class_system_instruction
     )
-    system_instruction, contents = llm.get_brand_new_messages(messages)
+    system_instruction, contents = llm.get_messages_v2(messages)
 
     assert system_instruction == "You are a message-level assistant."
     assert len(contents) == 1  # Only user message should remain

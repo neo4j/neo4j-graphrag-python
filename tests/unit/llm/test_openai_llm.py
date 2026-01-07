@@ -579,65 +579,6 @@ async def test_openai_llm_ainvoke_v2_happy_path(mock_import: Mock) -> None:
     assert called_args is None or True  # optional, depends on how strict tracking is
 
 
-@patch("builtins.__import__")
-@patch("json.loads")
-def test_openai_llm_invoke_with_tools_v2_happy_path(
-    mock_json_loads: Mock,
-    mock_import: Mock,
-    test_tool: Tool,
-) -> None:
-    """Test V2 interface invoke_with_tools method with List[LLMMessage] input."""
-    # Set up json.loads to return a dictionary
-    mock_json_loads.return_value = {"param1": "value1"}
-
-    mock_openai = get_mock_openai()
-    mock_import.return_value = mock_openai
-
-    # Mock the tool call response
-    mock_function = MagicMock()
-    mock_function.name = "test_tool"
-    mock_function.arguments = '{"param1": "value1"}'
-
-    mock_tool_call = MagicMock()
-    mock_tool_call.function = mock_function
-
-    mock_openai.OpenAI.return_value.chat.completions.create.return_value = MagicMock(
-        choices=[
-            MagicMock(
-                message=MagicMock(
-                    content="openai tool response", tool_calls=[mock_tool_call]
-                )
-            )
-        ],
-    )
-
-    messages: List[LLMMessage] = [
-        {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": "What tools are available?"},
-    ]
-
-    llm = OpenAILLM(api_key="my key", model_name="gpt")
-    tools = [test_tool]
-
-    res = llm.invoke_with_tools(messages, tools)
-    assert isinstance(res, ToolCallResponse)
-    assert len(res.tool_calls) == 1
-    assert res.tool_calls[0].name == "test_tool"
-    assert res.tool_calls[0].arguments == {"param1": "value1"}
-    assert res.content == "openai tool response"
-
-    # Verify the correct parameters were passed
-    llm.client.chat.completions.create.assert_called_once()  # type: ignore
-    call_args = llm.client.chat.completions.create.call_args[1]  # type: ignore
-    assert len(call_args["messages"]) == 2
-    assert call_args["model"] == "gpt"
-    assert len(call_args["tools"]) == 1
-    assert call_args["tools"][0]["type"] == "function"
-    assert call_args["tools"][0]["function"]["name"] == "test_tool"
-    assert call_args["tool_choice"] == "auto"
-    assert call_args["temperature"] == 0.0
-
-
 # Note: Async tool calling test is covered by the synchronous version above
 # The complex mocking of json.loads with local imports makes this test difficult to maintain
 
@@ -660,8 +601,8 @@ def test_openai_llm_invoke_v2_validation_error(mock_import: Mock) -> None:
 
 
 @patch("builtins.__import__")
-def test_openai_llm_get_brand_new_messages_all_roles(mock_import: Mock) -> None:
-    """Test get_brand_new_messages method handles all message roles correctly."""
+def test_openai_llm_get_messages_v2_all_roles(mock_import: Mock) -> None:
+    """Test get_messages_v2 method handles all message roles correctly."""
     mock_openai = get_mock_openai()
     mock_import.return_value = mock_openai
 
@@ -673,7 +614,7 @@ def test_openai_llm_get_brand_new_messages_all_roles(mock_import: Mock) -> None:
     ]
 
     llm = OpenAILLM(api_key="my key", model_name="gpt")
-    result_messages = llm.get_brand_new_messages(messages)
+    result_messages = llm.get_messages_v2(messages)
 
     # Convert to list for easier testing
     result_list = list(result_messages)

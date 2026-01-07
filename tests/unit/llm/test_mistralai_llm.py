@@ -383,8 +383,8 @@ async def test_mistralai_llm_ainvoke_invalid_input_type(_mock_mistral: Mock) -> 
 
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
-def test_mistralai_llm_get_brand_new_messages_all_roles(_mock_mistral: Mock) -> None:
-    """Test get_brand_new_messages method handles all message roles correctly."""
+def test_mistralai_llm_get_messages_v2_all_roles(_mock_mistral: Mock) -> None:
+    """Test get_messages_v2 method handles all message roles correctly."""
     messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Hello"},
@@ -393,7 +393,7 @@ def test_mistralai_llm_get_brand_new_messages_all_roles(_mock_mistral: Mock) -> 
     ]
 
     llm = MistralAILLM(model_name="mistral-model")
-    result_messages = llm.get_brand_new_messages(messages)
+    result_messages = llm.get_messages_v2(messages)
 
     # Verify the correct number of messages are returned
     assert len(result_messages) == 4
@@ -406,8 +406,8 @@ def test_mistralai_llm_get_brand_new_messages_all_roles(_mock_mistral: Mock) -> 
 
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
-def test_mistralai_llm_get_brand_new_messages_unknown_role(_mock_mistral: Mock) -> None:
-    """Test get_brand_new_messages method raises error for unknown role."""
+def test_mistralai_llm_get_messages_v2_unknown_role(_mock_mistral: Mock) -> None:
+    """Test get_messages_v2 method raises error for unknown role."""
     messages: List[LLMMessage] = [
         {"role": "unknown_role", "content": "This should fail."},  # type: ignore[typeddict-item]
     ]
@@ -415,5 +415,5 @@ def test_mistralai_llm_get_brand_new_messages_unknown_role(_mock_mistral: Mock) 
     llm = MistralAILLM(model_name="mistral-model")
 
     with pytest.raises(ValueError) as exc_info:
-        llm.get_brand_new_messages(messages)
+        llm.get_messages_v2(messages)
     assert "Unknown role: unknown_role" in str(exc_info.value)

@@ -234,8 +234,8 @@ def test_cohere_llm_invoke_v2_validation_error(mock_cohere: Mock) -> None:
     assert "Unknown role: invalid_role" in str(exc_info.value)
 
 
-def test_cohere_llm_get_brand_new_messages_all_roles(mock_cohere: Mock) -> None:
-    """Test get_brand_new_messages method handles all message roles correctly."""
+def test_cohere_llm_get_messages_v2_all_roles(mock_cohere: Mock) -> None:
+    """Test get_messages_v2 method handles all message roles correctly."""
     # Mock Cohere message types
     mock_system_msg = MagicMock()
     mock_user_msg = MagicMock()
@@ -253,7 +253,7 @@ def test_cohere_llm_get_brand_new_messages_all_roles(mock_cohere: Mock) -> None:
     ]
 
     llm = CohereLLM(model_name="something")
-    result_messages = llm.get_brand_new_messages(messages)
+    result_messages = llm.get_messages_v2(messages)
 
     # Verify the correct number of messages are returned
     assert len(result_messages) == 4
