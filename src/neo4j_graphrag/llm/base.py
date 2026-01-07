@@ -49,6 +49,9 @@ class LLMInterface(ABC):
         rate_limit_handler: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ):
+        logger.warning(
+            "LLMInterface is deprecated and will be removed in future versions. Please use LLMInterfaceV2 instead."
+        )
         self.model_name = model_name
         self.model_params = model_params or {}
 
