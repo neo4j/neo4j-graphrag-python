@@ -26,7 +26,6 @@ try:
 except ImportError:
     IS_RAPIDFUZZ_INSTALLED = False
 
-
 try:
     import numpy as np
     import spacy
