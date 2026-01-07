@@ -88,7 +88,7 @@ Answer:
     llm_v2_fixture.invoke.assert_called_once_with(input=expected_messages)
     assert isinstance(result, RagResultModel)
     assert result.answer == "some text"
-    assert result.retriever_result is not None  # V2 defaults to returning context
+    assert result.retriever_result is None
 
 
 @pytest.mark.usefixtures("populate_neo4j_db")
@@ -194,7 +194,7 @@ Answer:
 
     assert isinstance(res, RagResultModel)
     assert res.answer == "llm generated text"
-    assert res.retriever_result is not None  # V2 defaults to returning context
+    assert res.retriever_result is None
     message_history.clear()
 
 
