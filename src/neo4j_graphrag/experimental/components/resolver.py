@@ -407,6 +407,7 @@ class SpaCySemanticMatchResolver(BasePropertySimilarityResolver):
                 raise ImportError("""`spacy` python module needs to be installed to use
                 the SpaCySemanticMatchResolver. Install it with:
                 `pip install "neo4j-graphrag[nlp]"`
+                . SpaCy is not supported on Python 3.14 and later.
                 """)
             return spacy.load(model_name)
         except OSError as e:
