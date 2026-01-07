@@ -15,22 +15,17 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: '3.13'
 
-      - name: Install and configure Poetry
-        uses: snok/install-poetry@v1
-        with:
-          version: 1.8.2
-          virtualenvs-create: false
-          virtualenvs-in-project: false
-          installer-parallel: true
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
 
       - name: Bump version
-        run: poetry version minor
+        run: uv version --bump minor --frozen
 
       - name: Get version
         id: get-version
-        run: echo version=`poetry version -s` >> "$GITHUB_OUTPUT"
+        run: echo version=`uv version --short` >> "$GITHUB_OUTPUT"
       - name: Print version
         run: |
           echo Version: ${{ steps.get-version.outputs.version }}

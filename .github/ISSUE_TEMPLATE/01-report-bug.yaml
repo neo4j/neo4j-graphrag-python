@@ -46,7 +46,7 @@ body:
     attributes:
       label: Dependencies
       description: |
-        Please provide python dependencies with calling `pip freeze` in your terminal (or `poetry show` if you are using Poetry).
+        Please provide your Python dependencies by running `pip freeze` in your terminal (or `uv pip freeze` if you are using uv).
     validations:
       required: true
   - type: textarea
@@ -68,7 +68,7 @@ body:
     id: expected
     attributes:
       label: Expected Result
-      description: What did you expect to happen? 
+      description: What did you expect to happen?
     validations:
       required: false
   - type: textarea

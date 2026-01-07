@@ -2,6 +2,23 @@
 
 ## Next
 
+### Changed
+
+- Switched project/dependency management from Poetry to uv.
+- Dropped support for Python 3.9 (EOL)
+
+
+## 1.11.0
+
+### Added
+
+- Added an optional `node_label_neo4j` parameter in the external retrievers to speed up the search query in Neo4j.
+
+- Exposed optional `sample` parameter on `get_schema` and `get_structured_schema` to control APOC sampling for schema discovery.
+- Added an optional `id_property_getter` callable parameter in the Qdrant retriever to allow for custom ID retrieval.
+
+## 1.10.1
+
 ### Added
 
 - Added automatic rate limiting with retry logic and exponential backoff for all Embedding providers using tenacity. The `RateLimitHandler` interface allows for custom rate limiting strategies, including the ability to disable rate limiting entirely.

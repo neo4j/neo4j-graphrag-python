@@ -16,6 +16,7 @@ from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 from typing import List
 
+import httpx
 import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm import LLMResponse, MistralAILLM
@@ -171,7 +172,10 @@ async def test_mistralai_llm_ainvoke(mock_mistral: Mock) -> None:
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
 def test_mistralai_llm_invoke_sdkerror(mock_mistral: Mock) -> None:
     mock_mistral_instance = mock_mistral.return_value
-    mock_mistral_instance.chat.complete.side_effect = MockSDKError("Some error")
+    raw_response = httpx.Response(status_code=500)
+    mock_mistral_instance.chat.complete.side_effect = SDKError(
+        "Some error", raw_response=raw_response
+    )
 
     llm = MistralAILLM(model_name="mistral-model")
 
@@ -186,7 +190,8 @@ async def test_mistralai_llm_ainvoke_sdkerror(mock_mistral: Mock) -> None:
     mock_mistral_instance = mock_mistral.return_value
 
     async def mock_complete_async(*args: Any, **kwargs: Any) -> None:
-        raise MockSDKError("Some async error")
+        raw_response = httpx.Response(status_code=500)
+        raise SDKError("Some async error", raw_response=raw_response)
 
     mock_mistral_instance.chat.complete_async = mock_complete_async
 

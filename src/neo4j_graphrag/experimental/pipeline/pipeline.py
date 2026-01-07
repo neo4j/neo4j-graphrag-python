@@ -21,6 +21,8 @@ from collections import defaultdict
 from timeit import default_timer
 from typing import Any, AsyncGenerator, Optional
 
+import uuid
+
 from neo4j_graphrag.utils.logging import prettify
 
 try:
@@ -39,8 +41,7 @@ from neo4j_graphrag.experimental.pipeline.exceptions import (
 from neo4j_graphrag.experimental.pipeline.notification import (
     Event,
     EventCallbackProtocol,
-    EventType,
-    PipelineEvent,
+    EventNotifier,
 )
 from neo4j_graphrag.experimental.pipeline.orchestrator import Orchestrator
 from neo4j_graphrag.experimental.pipeline.pipeline_graph import (
@@ -103,7 +104,7 @@ class TaskPipelineNode(PipelineNode):
         res = await self.execute(context, inputs)
         end_time = default_timer()
         logger.debug(
-            f"TASK FINISHED {self.name} in {end_time - start_time} res={prettify(res)}"
+            f"TASK FINISHED {self.name} in {round(end_time - start_time, 2)}s res={prettify(res)}"
         )
         return res
 
@@ -124,7 +125,6 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
     ) -> None:
         super().__init__()
         self.store = store or InMemoryStore()
-        self.callbacks = [callback] if callback else []
         self.final_results = InMemoryStore()
         self.is_validated = False
         self.param_mapping: dict[str, dict[str, dict[str, str]]] = defaultdict(dict)
@@ -139,6 +139,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         }
         """
         self.missing_inputs: dict[str, list[str]] = defaultdict()
+        self.event_notifier = EventNotifier([callback] if callback else [])
 
     @classmethod
     def from_template(
@@ -203,7 +204,7 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         G = self._get_neo4j_viz_graph(hide_unused_outputs)
 
         # Write the visualization to an HTML file
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             f.write(G.render().data)
 
         return G
@@ -507,14 +508,13 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
         """
         # Create queue for events
         event_queue: asyncio.Queue[Event] = asyncio.Queue()
-        run_id = None
 
         async def event_stream(event: Event) -> None:
             # Put event in queue for streaming
             await event_queue.put(event)
 
         # Add event streaming callback
-        self.callbacks.append(event_stream)
+        self.event_notifier.add_callback(event_stream)
 
         event_queue_getter_task = None
         try:
@@ -542,39 +542,48 @@ class Pipeline(PipelineGraph[TaskPipelineNode, PipelineEdge]):
                     # we are sure to get an Event here, since this is the only
                     # thing we put in the queue, but mypy still complains
                     event = event_future.result()
-                    run_id = getattr(event, "run_id", None)
                     yield event  # type: ignore
 
             if exc := run_task.exception():
-                yield PipelineEvent(
-                    event_type=EventType.PIPELINE_FAILED,
-                    # run_id is null if pipeline fails before even starting
-                    # ie during pipeline validation
-                    run_id=run_id or "",
-                    message=str(exc),
-                )
                 if raise_exception:
                     raise exc
 
         finally:
             # Restore original callback
-            self.callbacks.remove(event_stream)
+            self.event_notifier.remove_callback(event_stream)
             if event_queue_getter_task and not event_queue_getter_task.done():
                 event_queue_getter_task.cancel()
 
     async def run(self, data: dict[str, Any]) -> PipelineResult:
-        logger.debug("PIPELINE START")
         start_time = default_timer()
-        self.invalidate()
-        self.validate_input_data(data)
-        orchestrator = Orchestrator(self)
-        logger.debug(f"PIPELINE ORCHESTRATOR: {orchestrator.run_id}")
-        await orchestrator.run(data)
+        run_id = str(uuid.uuid4())
+        logger.debug(f"PIPELINE START with {run_id=}")
+        try:
+            res = await self._run(run_id, data)
+        except Exception as e:
+            await self.event_notifier.notify_pipeline_failed(
+                run_id,
+                message=f"Pipeline failed with error {e}",
+            )
+            raise e
         end_time = default_timer()
         logger.debug(
-            f"PIPELINE FINISHED {orchestrator.run_id} in {end_time - start_time}s"
+            f"PIPELINE FINISHED {run_id} in {round(end_time - start_time, 2)}s"
         )
-        return PipelineResult(
+        return res
+
+    async def _run(self, run_id: str, data: dict[str, Any]) -> PipelineResult:
+        await self.event_notifier.notify_pipeline_started(run_id, data)
+        self.invalidate()
+        self.validate_input_data(data)
+        orchestrator = Orchestrator(self, run_id)
+        await orchestrator.run(data)
+        result = PipelineResult(
             run_id=orchestrator.run_id,
             result=await self.get_final_results(orchestrator.run_id),
         )
+        await self.event_notifier.notify_pipeline_finished(
+            run_id,
+            await self.get_final_results(run_id),
+        )
+        return result

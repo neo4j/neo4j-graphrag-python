@@ -33,7 +33,7 @@ def test_filtering_labels_node_properties(driver: Driver) -> None:
         for data in query_database(
             driver,
             NODE_PROPERTIES_QUERY,
-            params={"EXCLUDED_LABELS": EXCLUDED_LABELS},
+            params={"EXCLUDED_LABELS": EXCLUDED_LABELS, "SAMPLE": 1000},
         )
     ]
 
@@ -45,7 +45,9 @@ def test_filtering_labels_relationship_properties(driver: Driver) -> None:
     relationship_properties = [
         data["output"]
         for data in query_database(
-            driver, REL_PROPERTIES_QUERY, params={"EXCLUDED_LABELS": EXCLUDED_RELS}
+            driver,
+            REL_PROPERTIES_QUERY,
+            params={"EXCLUDED_LABELS": EXCLUDED_RELS, "SAMPLE": 1000},
         )
     ]
 
@@ -59,7 +61,10 @@ def test_filtering_labels_relationships(driver: Driver) -> None:
         for data in query_database(
             driver,
             REL_QUERY,
-            params={"EXCLUDED_LABELS": EXCLUDED_LABELS + [BASE_ENTITY_LABEL]},
+            params={
+                "EXCLUDED_LABELS": EXCLUDED_LABELS + [BASE_ENTITY_LABEL],
+                "SAMPLE": 1000,
+            },
         )
     ]
 

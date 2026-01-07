@@ -11,7 +11,7 @@ docker compose -f tests/e2e/docker-compose.yml up
 Run this from the project root to write data to both Neo4J and Qdrant.
 
 ```bash
-poetry run python -m examples.customize.retrievers.external.qdrant.populate_dbs
+uv run python -m examples.customize.retrievers.external.qdrant.populate_dbs
 ```
 
 ### Install Qdrant client
@@ -24,8 +24,8 @@ pip install qdrant-client
 
 ```bash
 # search by vector
-poetry run python -m examples.customize.retrievers.external.qdrant.vector_search
+uv run python -m examples.customize.retrievers.external.qdrant.vector_search
 
 # search by text, with embeddings generated locally
-poetry run python -m examples.customize.retrievers.external.qdrant.text_search
+uv run python -m examples.customize.retrievers.external.qdrant.text_search
 ```
