@@ -144,7 +144,7 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
         **kwargs: Any,
     ) -> LLMResponse:
         if isinstance(input, str):
-            return self.__legacy_invoke(input, message_history, system_instruction)
+            return self.__invoke_v1(input, message_history, system_instruction)
         elif isinstance(input, list):
             return self.__invoke_v2(input, **kwargs)
         else:
@@ -158,7 +158,7 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
         **kwargs: Any,
     ) -> LLMResponse:
         if isinstance(input, str):
-            return await self.__legacy_ainvoke(
+            return await self.__ainvoke_v1(
                 input, message_history, system_instruction
             )
         elif isinstance(input, list):
@@ -168,7 +168,7 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
 
     # implementaions
     @rate_limit_handler_decorator
-    def __legacy_invoke(
+    def __invoke_v1(
         self,
         input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -228,7 +228,7 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
             raise LLMGenerationError(e)
 
     @async_rate_limit_handler_decorator
-    async def __legacy_ainvoke(
+    async def __ainvoke_v1(
         self,
         input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
