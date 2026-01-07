@@ -35,6 +35,8 @@ try:
     IS_SPACY_INSTALLED = True
 except Exception:
     IS_SPACY_INSTALLED = False
+
+
 if TYPE_CHECKING:
     import numpy as np
     from numpy.typing import NDArray
