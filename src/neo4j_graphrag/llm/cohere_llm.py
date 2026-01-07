@@ -217,8 +217,13 @@ class CohereLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
             )
         except self.cohere_api_error as e:
             raise LLMGenerationError("Error calling cohere") from e
+
         return LLMResponse(
-            content=res.message.content[0].text if res.message.content else "",
+            content=(
+                res.message.content[0].text
+                if res.message.content and hasattr(res.message.content[0], "text")
+                else ""
+            ),
         )
 
     @async_rate_limit_handler_decorator
@@ -264,7 +269,11 @@ class CohereLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
         except self.cohere_api_error as e:
             raise LLMGenerationError("Error calling cohere") from e
         return LLMResponse(
-            content=res.message.content[0].text if res.message.content else "",
+            content=(
+                res.message.content[0].text
+                if res.message.content and hasattr(res.message.content[0], "text")
+                else ""
+            ),
         )
 
     # subsdiary methods

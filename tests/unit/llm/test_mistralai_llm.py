@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Any
+from typing import Any, Optional
 from unittest.mock import MagicMock, Mock, patch
 from typing import List
 
@@ -27,7 +27,9 @@ from neo4j_graphrag.types import LLMMessage
 class MockSDKError(Exception):
     """Mock SDKError for testing purposes."""
 
-    def __init__(self, message: str, raw_response: httpx.Response = None) -> None:
+    def __init__(
+        self, message: str, raw_response: Optional[httpx.Response] = None
+    ) -> None:
         super().__init__(message)
         self.raw_response = raw_response
 
