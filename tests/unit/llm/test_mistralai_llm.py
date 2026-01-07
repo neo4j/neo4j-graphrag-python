@@ -27,7 +27,9 @@ from neo4j_graphrag.types import LLMMessage
 class MockSDKError(Exception):
     """Mock SDKError for testing purposes."""
 
-    ...
+    def __init__(self, message: str, raw_response: httpx.Response = None) -> None:
+        super().__init__(message)
+        self.raw_response = raw_response
 
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral", None)
@@ -173,7 +175,7 @@ async def test_mistralai_llm_ainvoke(mock_mistral: Mock) -> None:
 def test_mistralai_llm_invoke_sdkerror(mock_mistral: Mock) -> None:
     mock_mistral_instance = mock_mistral.return_value
     raw_response = httpx.Response(status_code=500)
-    mock_mistral_instance.chat.complete.side_effect = SDKError(
+    mock_mistral_instance.chat.complete.side_effect = MockSDKError(
         "Some error", raw_response=raw_response
     )
 
@@ -191,7 +193,7 @@ async def test_mistralai_llm_ainvoke_sdkerror(mock_mistral: Mock) -> None:
 
     async def mock_complete_async(*args: Any, **kwargs: Any) -> None:
         raw_response = httpx.Response(status_code=500)
-        raise SDKError("Some async error", raw_response=raw_response)
+        raise MockSDKError("Some async error", raw_response=raw_response)
 
     mock_mistral_instance.chat.complete_async = mock_complete_async
 
