@@ -190,11 +190,7 @@ class LLMInterfaceV2(ABC):
         """Sends a text input to the LLM and retrieves a response.
 
         Args:
-            input (str): Text sent to the LLM.
-            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
-                with each message having a specific role assigned.
-            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
-
+            input (List[LLMMessage]): Text sent to the LLM as a list of LLMMessage objects.
         Returns:
             LLMResponse: The response from the LLM.
 
