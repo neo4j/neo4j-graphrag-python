@@ -128,15 +128,13 @@ class GraphRAG:
 
         """
         if return_context is None:
-            if self.is_langchain_compatible():
-                return_context = True
-            else:  # e.g. LLMInterface
-                warnings.warn(
-                    "The default value of 'return_context' will change from 'False'"
-                    " to 'True' in a future version.",
-                    DeprecationWarning,
-                )
-                return_context = False
+            warnings.warn(
+                "The default value of 'return_context' will change from 'False'"
+                " to 'True' in a future version.",
+                DeprecationWarning,
+            )
+            return_context = False
+
         try:
             validated_data = RagSearchModel(
                 query_text=query_text,

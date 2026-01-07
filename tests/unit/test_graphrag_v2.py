@@ -93,9 +93,7 @@ Answer:
 
     assert isinstance(res, RagResultModel)
     assert res.answer == "llm generated text"
-    assert (
-        res.retriever_result is not None
-    )  # LLMInterfaceV2 defaults return_context to True
+    assert res.retriever_result is None
 
 
 def test_graphrag_happy_path_with_message_history(
@@ -182,9 +180,7 @@ Answer:
 
     assert isinstance(res, RagResultModel)
     assert res.answer == "llm generated text"
-    assert (
-        res.retriever_result is not None
-    )  # LLMInterfaceV2 defaults return_context to True
+    assert res.retriever_result is None
 
 
 def test_graphrag_happy_path_with_in_memory_message_history(
@@ -273,9 +269,7 @@ Answer:
 
     assert isinstance(res, RagResultModel)
     assert res.answer == "llm generated text"
-    assert (
-        res.retriever_result is not None
-    )  # LLMInterfaceV2 defaults return_context to True
+    assert res.retriever_result is None
 
 
 def test_graphrag_happy_path_custom_system_instruction(
