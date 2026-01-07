@@ -160,9 +160,7 @@ class CohereLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
         **kwargs: Any,
     ) -> LLMResponse:
         if isinstance(input, str):
-            return await self.__ainvoke_v1(
-                input, message_history, system_instruction
-            )
+            return await self.__ainvoke_v1(input, message_history, system_instruction)
         elif isinstance(input, list):
             return await self.__ainvoke_v2(input, **kwargs)
         else:
@@ -256,9 +254,7 @@ class CohereLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
         )
 
     @async_rate_limit_handler_decorator
-    async def __ainvoke_v2(
-        self, input: List[LLMMessage], **kwargs: Any
-    ) -> LLMResponse:
+    async def __ainvoke_v2(self, input: List[LLMMessage], **kwargs: Any) -> LLMResponse:
         try:
             messages = self.get_brand_new_messages(input)
             res = await self.async_client.chat(

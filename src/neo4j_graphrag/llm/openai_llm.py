@@ -209,9 +209,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         **kwargs: Any,
     ) -> LLMResponse:
         if isinstance(input, str):
-            return await self.__ainvoke_v1(
-                input, message_history, system_instruction
-            )
+            return await self.__ainvoke_v1(input, message_history, system_instruction)
         elif isinstance(input, list):
             return await self.__ainvoke_v2(input, **kwargs)
         else:
