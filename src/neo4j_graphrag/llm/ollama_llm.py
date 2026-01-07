@@ -205,6 +205,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
         except self.ollama.ResponseError as e:
             raise LLMGenerationError(e)
 
+    @rate_limit_handler_decorator
     def __invoke_v2(
         self,
         input: List[LLMMessage],
@@ -265,6 +266,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
         except self.ollama.ResponseError as e:
             raise LLMGenerationError(e)
 
+    @async_rate_limit_handler_decorator
     async def __ainvoke_v2(
         self,
         input: List[LLMMessage],

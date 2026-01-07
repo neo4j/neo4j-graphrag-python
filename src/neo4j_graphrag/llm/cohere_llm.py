@@ -201,6 +201,7 @@ class CohereLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
             content=res.message.content[0].text if res.message.content else "",
         )
 
+    @rate_limit_handler_decorator
     def __invoke_v2(self, input: List[LLMMessage], **kwargs: Any) -> LLMResponse:
         """Sends text to the LLM and returns a response.
 
@@ -254,6 +255,7 @@ class CohereLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
             content=res.message.content[0].text if res.message.content else "",
         )
 
+    @async_rate_limit_handler_decorator
     async def __ainvoke_v2(
         self, input: List[LLMMessage], **kwargs: Any
     ) -> LLMResponse:
