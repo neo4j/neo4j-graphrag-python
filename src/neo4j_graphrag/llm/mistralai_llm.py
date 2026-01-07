@@ -134,7 +134,7 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
         if isinstance(input, str):
             return self.__legacy_invoke(input, message_history, system_instruction)
         elif isinstance(input, list):
-            return self.__brand_new_invoke(input, **kwargs)
+            return self.__invoke_v2(input, **kwargs)
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 
@@ -150,7 +150,7 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
                 input, message_history, system_instruction
             )
         elif isinstance(input, list):
-            return await self.__brand_new_ainvoke(input, **kwargs)
+            return await self.__ainvoke_v2(input, **kwargs)
         else:
             raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
 
@@ -194,7 +194,7 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
         except SDKError as e:
             raise LLMGenerationError(e)
 
-    def __brand_new_invoke(self, input: List[LLMMessage], **kwargs: Any) -> LLMResponse:
+    def __invoke_v2(self, input: List[LLMMessage], **kwargs: Any) -> LLMResponse:
         """Sends a text input to the Mistral chat completion model
         and returns the response's content.
 
@@ -261,7 +261,7 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
         except SDKError as e:
             raise LLMGenerationError(e)
 
-    async def __brand_new_ainvoke(
+    async def __ainvoke_v2(
         self, input: List[LLMMessage], **kwargs: Any
     ) -> LLMResponse:
         """Asynchronously sends a text input to the MistralAI chat

@@ -146,7 +146,7 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
         if isinstance(input, str):
             return self.__legacy_invoke(input, message_history, system_instruction)
         elif isinstance(input, list):
-            return self.__brand_new_invoke(input, **kwargs)
+            return self.__invoke_v2(input, **kwargs)
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 
@@ -162,7 +162,7 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
                 input, message_history, system_instruction
             )
         elif isinstance(input, list):
-            return await self.__brand_new_ainvoke(input, **kwargs)
+            return await self.__ainvoke_v2(input, **kwargs)
         else:
             raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
 
@@ -204,7 +204,7 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
         except self.anthropic.APIError as e:
             raise LLMGenerationError(e)
 
-    def __brand_new_invoke(
+    def __invoke_v2(
         self,
         input: List[LLMMessage],
         **kwargs: Any,
@@ -264,7 +264,7 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
         except self.anthropic.APIError as e:
             raise LLMGenerationError(e)
 
-    async def __brand_new_ainvoke(
+    async def __ainvoke_v2(
         self, input: List[LLMMessage], **kwargs: Any
     ) -> LLMResponse:
         """Asynchronously sends text to the LLM and returns a response.

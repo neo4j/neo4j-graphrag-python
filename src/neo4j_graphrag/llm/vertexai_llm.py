@@ -195,7 +195,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         if isinstance(input, str):
             return self.__legacy_invoke(input, message_history, system_instruction)
         elif isinstance(input, list):
-            return self.__brand_new_invoke(input, **kwargs)
+            return self.__invoke_v2(input, **kwargs)
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 
@@ -211,7 +211,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
                 input, message_history, system_instruction
             )
         elif isinstance(input, list):
-            return await self.__brand_new_ainvoke(input, **kwargs)
+            return await self.__ainvoke_v2(input, **kwargs)
         else:
             raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
 
@@ -227,7 +227,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
                 input, tools, message_history, system_instruction
             )
         elif isinstance(input, list):
-            return self.__brand_new_invoke_with_tools(input, tools)
+            return self.__invoke_v2_with_tools(input, tools)
         else:
             raise ValueError(
                 f"Invalid input type for invoke_with_tools method - {type(input)}"
@@ -245,7 +245,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
                 input, tools, message_history, system_instruction
             )
         elif isinstance(input, list):
-            return await self.__brand_new_ainvoke_with_tools(input, tools)
+            return await self.__ainvoke_v2_with_tools(input, tools)
         else:
             raise ValueError(
                 f"Invalid input type for ainvoke_with_tools method - {type(input)}"
@@ -283,7 +283,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         except ResponseValidationError as e:
             raise LLMGenerationError("Error calling VertexAILLM") from e
 
-    def __brand_new_invoke(
+    def __invoke_v2(
         self,
         input: List[LLMMessage],
         **kwargs: Any,
@@ -337,7 +337,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         except ResponseValidationError as e:
             raise LLMGenerationError("Error calling VertexAILLM") from e
 
-    async def __brand_new_ainvoke(
+    async def __ainvoke_v2(
         self,
         input: list[LLMMessage],
         **kwargs: Any,
@@ -376,7 +376,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         )
         return self._parse_tool_response(response)
 
-    def __brand_new_invoke_with_tools(
+    def __invoke_v2_with_tools(
         self,
         input: List[LLMMessage],
         tools: Sequence[Tool],  # Tools definition as a sequence of Tool objects
@@ -402,7 +402,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         )
         return self._parse_tool_response(response)
 
-    async def __brand_new_ainvoke_with_tools(
+    async def __ainvoke_v2_with_tools(
         self,
         input: List[LLMMessage],
         tools: Sequence[Tool],  # Tools definition as a sequence of Tool objects
