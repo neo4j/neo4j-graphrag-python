@@ -15,10 +15,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.10', '3.13']
+        python-version: ['3.10', '3.14']
         neo4j-tag:
           - 'latest'
-    steps:
+    steps:s
       - name: Check out repository code
         uses: actions/checkout@v4
       - name: Free up disk space (ubuntu-latest)

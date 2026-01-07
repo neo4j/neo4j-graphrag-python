@@ -28,13 +28,8 @@ except ImportError:
 
 try:
     import numpy as np
-    import spacy
-    from spacy.cli.download import download as spacy_download
-    from spacy.language import Language
-
-    IS_SPACY_INSTALLED = True
 except ImportError:
-    IS_SPACY_INSTALLED = False
+    raise
 
 
 if TYPE_CHECKING:
@@ -49,6 +44,30 @@ from neo4j_graphrag.experimental.pipeline.component import ComponentMeta
 from neo4j_graphrag.utils import driver_config
 
 logger = logging.getLogger(__name__)
+
+
+def _import_spacy() -> tuple[Any, Any]:
+    """
+    Import spaCy lazily.
+
+    spaCy (via `confection`) currently imports `pydantic.v1`, which is not compatible
+    with Python 3.14 in some scenarios and can raise non-ImportError exceptions at
+    import time. Treat any such failure as "spaCy unavailable".
+
+    Upstream reference: https://github.com/explosion/spaCy/issues/13895
+    """
+
+    try:
+        import spacy
+        from spacy.cli.download import download as spacy_download
+
+        return spacy, spacy_download
+    except Exception as e:  # noqa: BLE001
+        raise ImportError(
+            "`spacy` python module needs to be installed (and importable) to use "
+            "the SpaCySemanticMatchResolver. Install it with: "
+            '`pip install "neo4j-graphrag[nlp]"`'
+        ) from e
 
 
 class EntityResolver(Component):
@@ -353,11 +372,6 @@ class SpaCySemanticMatchResolver(BasePropertySimilarityResolver):
         auto_download_spacy_model: bool = True,
         neo4j_database: Optional[str] = None,
     ) -> None:
-        if not IS_SPACY_INSTALLED:
-            raise ImportError("""`spacy` python module needs to be installed to use
-            the SpaCySemanticMatchResolver. Install it with:
-            `pip install "neo4j-graphrag[nlp]"`
-            """)
         super().__init__(
             driver,
             filter_query,
@@ -365,9 +379,12 @@ class SpaCySemanticMatchResolver(BasePropertySimilarityResolver):
             similarity_threshold,
             neo4j_database,
         )
-        self.nlp = nlp or self._load_or_download_spacy_model(
-            spacy_model, auto_download_spacy_model=auto_download_spacy_model
-        )
+        if nlp is not None:
+            self.nlp = nlp
+        else:
+            self.nlp = self._load_or_download_spacy_model(
+                spacy_model, auto_download_spacy_model=auto_download_spacy_model
+            )
         self.embedding_cache: dict[str, NDArray[np.float64]] = {}
 
     async def run(self) -> ResolutionStats:
@@ -402,11 +419,12 @@ class SpaCySemanticMatchResolver(BasePropertySimilarityResolver):
     @staticmethod
     def _load_or_download_spacy_model(
         model_name: str, *, auto_download_spacy_model: bool = True
-    ) -> Language:
+    ) -> Any:
         """
         Attempt to load the specified spaCy model by name.
         If not installed, automatically download and then load it.
         """
+        spacy, spacy_download = _import_spacy()
         try:
             return spacy.load(model_name)
         except OSError as e:
