@@ -50,30 +50,6 @@ from neo4j_graphrag.utils import driver_config
 logger = logging.getLogger(__name__)
 
 
-def _import_spacy() -> tuple[Any, Any]:
-    """
-    Import spaCy lazily.
-
-    spaCy (via `confection`) currently imports `pydantic.v1`, which is not compatible
-    with Python 3.14 in some scenarios and can raise non-ImportError exceptions at
-    import time. Treat any such failure as "spaCy unavailable".
-
-    Upstream reference: https://github.com/explosion/spaCy/issues/13895
-    """
-
-    try:
-        import spacy
-        from spacy.cli.download import download as spacy_download
-
-        return spacy, spacy_download
-    except Exception as e:  # noqa: BLE001
-        raise ImportError(
-            "`spacy` python module needs to be installed (and importable) to use "
-            "the SpaCySemanticMatchResolver. Install it with: "
-            '`pip install "neo4j-graphrag[nlp]"`'
-        ) from e
-
-
 class EntityResolver(Component):
     """Entity resolution base class
 
