@@ -26,8 +26,16 @@ try:
 except ImportError:
     IS_RAPIDFUZZ_INSTALLED = False
 
-import numpy as np
 
+try:
+    import numpy as np
+    import spacy
+    from spacy.cli.download import download as spacy_download
+    from spacy.language import Language
+
+    IS_SPACY_INSTALLED = True
+except Exception:
+    IS_SPACY_INSTALLED = False
 if TYPE_CHECKING:
     import numpy as np
     from numpy.typing import NDArray
@@ -375,12 +383,9 @@ class SpaCySemanticMatchResolver(BasePropertySimilarityResolver):
             similarity_threshold,
             neo4j_database,
         )
-        if nlp is not None:
-            self.nlp = nlp
-        else:
-            self.nlp = self._load_or_download_spacy_model(
-                spacy_model, auto_download_spacy_model=auto_download_spacy_model
-            )
+        self.nlp = nlp or self._load_or_download_spacy_model(
+            spacy_model, auto_download_spacy_model=auto_download_spacy_model
+        )
         self.embedding_cache: dict[str, NDArray[np.float64]] = {}
 
     async def run(self) -> ResolutionStats:
@@ -415,13 +420,17 @@ class SpaCySemanticMatchResolver(BasePropertySimilarityResolver):
     @staticmethod
     def _load_or_download_spacy_model(
         model_name: str, *, auto_download_spacy_model: bool = True
-    ) -> Any:
+    ) -> Language:
         """
         Attempt to load the specified spaCy model by name.
         If not installed, automatically download and then load it.
         """
-        spacy, spacy_download = _import_spacy()
         try:
+            if not IS_SPACY_INSTALLED:
+                raise ImportError("""`spacy` python module needs to be installed to use
+                the SpaCySemanticMatchResolver. Install it with:
+                `pip install "neo4j-graphrag[nlp]"`
+                """)
             return spacy.load(model_name)
         except OSError as e:
             if "doesn't seem to be a Python package or a valid path" in str(e):
