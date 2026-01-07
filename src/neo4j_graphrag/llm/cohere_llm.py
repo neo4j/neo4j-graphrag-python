@@ -84,22 +84,13 @@ class CohereLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
                 """Could not import cohere python client.
                 Please install it with `pip install "neo4j-graphrag[cohere]"`."""
             )
-        if isinstance(self, LLMInterfaceV2):
-            LLMInterfaceV2.__init__(
-                self,
-                model_name=model_name,
-                model_kwargs=model_kwargs or model_params or {},
-                rate_limiter=rate_limiter or rate_limit_handler,
-                **kwargs,
-            )
-        else:
-            LLMInterface.__init__(
-                self,
-                model_name=model_name,
-                model_params=model_params or {},
-                rate_limit_handler=rate_limit_handler,
-                **kwargs,
-            )
+        LLMInterfaceV2.__init__(
+            self,
+            model_name=model_name,
+            model_kwargs=model_kwargs or model_params or {},
+            rate_limiter=rate_limiter or rate_limit_handler,
+            **kwargs,
+        )
         self.cohere = cohere
         self.cohere_api_error = cohere.core.api_error.ApiError
 

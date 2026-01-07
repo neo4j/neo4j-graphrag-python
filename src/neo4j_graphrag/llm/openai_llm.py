@@ -106,22 +106,13 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
             )
         self.openai = openai
 
-        if isinstance(self, LLMInterfaceV2):
-            LLMInterfaceV2.__init__(
-                self,
-                model_name=model_name,
-                model_kwargs=model_kwargs or model_params or {},
-                rate_limiter=rate_limiter or rate_limit_handler,
-                **kwargs,
-            )
-        else:
-            LLMInterface.__init__(
-                self,
-                model_name=model_name,
-                model_params=model_params or {},
-                rate_limit_handler=rate_limit_handler,
-                **kwargs,
-            )
+        LLMInterfaceV2.__init__(
+            self,
+            model_name=model_name,
+            model_kwargs=model_kwargs or model_params or {},
+            rate_limiter=rate_limiter or rate_limit_handler,
+            **kwargs,
+        )
 
     # overloads for LLMInterface and LLMInterfaceV2 methods
     @overload  # type: ignore[no-overload-impl]

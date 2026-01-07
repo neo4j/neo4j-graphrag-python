@@ -84,22 +84,13 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):  # type: ignore[misc]
                 """Could not import Anthropic Python client.
                 Please install it with `pip install "neo4j-graphrag[anthropic]"`."""
             )
-        if isinstance(self, LLMInterfaceV2):
-            LLMInterfaceV2.__init__(
-                self,
-                model_name=model_name,
-                model_kwargs=model_kwargs or model_params or {},
-                rate_limiter=rate_limiter or rate_limit_handler,
-                **kwargs,
-            )
-        else:
-            LLMInterface.__init__(
-                self,
-                model_name=model_name,
-                model_params=model_params or {},
-                rate_limit_handler=rate_limit_handler,
-                **kwargs,
-            )
+        LLMInterfaceV2.__init__(
+            self,
+            model_name=model_name,
+            model_kwargs=model_kwargs or model_params or {},
+            rate_limiter=rate_limiter or rate_limit_handler,
+            **kwargs,
+        )
         self.anthropic = anthropic
         self.client = anthropic.Anthropic(**kwargs)
         self.async_client = anthropic.AsyncAnthropic(**kwargs)
