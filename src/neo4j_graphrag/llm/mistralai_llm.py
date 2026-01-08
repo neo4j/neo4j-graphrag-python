@@ -15,17 +15,12 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Iterable, List, Optional, Union, cast, overload
+from typing import Any, Iterable, List, Optional, Type, Union, cast, overload
 
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface, LLMInterfaceV2
-from neo4j_graphrag.utils.rate_limit import (
-    RateLimitHandler,
-    rate_limit_handler as rate_limit_handler_decorator,
-    async_rate_limit_handler as async_rate_limit_handler_decorator,
-)
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
@@ -35,14 +30,27 @@ from neo4j_graphrag.llm.types import (
 )
 from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
+from neo4j_graphrag.utils.rate_limit import (
+    RateLimitHandler,
+)
+from neo4j_graphrag.utils.rate_limit import (
+    async_rate_limit_handler as async_rate_limit_handler_decorator,
+)
+from neo4j_graphrag.utils.rate_limit import (
+    rate_limit_handler as rate_limit_handler_decorator,
+)
 
 try:
     from mistralai import (
-        Messages,
-        UserMessage as MistralUserMessage,
         AssistantMessage,
-        SystemMessage as MistralSystemMessage,
+        Messages,
         Mistral,
+    )
+    from mistralai import (
+        SystemMessage as MistralSystemMessage,
+    )
+    from mistralai import (
+        UserMessage as MistralUserMessage,
     )
     from mistralai.models.sdkerror import SDKError
 except ImportError:
@@ -96,7 +104,12 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):
     ) -> LLMResponse: ...
 
     @overload
-    def invoke(self, input: List[LLMMessage], **kwargs: Any) -> LLMResponse: ...
+    def invoke(
+        self,
+        input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> LLMResponse: ...
 
     @overload  # type: ignore[no-overload-impl]
     async def ainvoke(
@@ -107,7 +120,12 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):
     ) -> LLMResponse: ...
 
     @overload
-    async def ainvoke(self, input: List[LLMMessage], **kwargs: Any) -> LLMResponse: ...
+    async def ainvoke(
+        self,
+        input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> LLMResponse: ...
 
     # switching logics to LLMInterface or LLMInterfaceV2
     def invoke(  # type: ignore[no-redef]
@@ -115,12 +133,15 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
         if isinstance(input, str):
             return self.__invoke_v1(input, message_history, system_instruction)
         elif isinstance(input, list):
-            return self.__invoke_v2(input, **kwargs)
+            return self.__invoke_v2(
+                input, response_format=response_format, **kwargs
+            )
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 
@@ -129,12 +150,15 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
         if isinstance(input, str):
             return await self.__ainvoke_v1(input, message_history, system_instruction)
         elif isinstance(input, list):
-            return await self.__ainvoke_v2(input, **kwargs)
+            return await self.__ainvoke_v2(
+                input, response_format=response_format, **kwargs
+            )
         else:
             raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
 
@@ -178,12 +202,18 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):
         except SDKError as e:
             raise LLMGenerationError(e)
 
-    def __invoke_v2(self, input: List[LLMMessage], **kwargs: Any) -> LLMResponse:
+    def __invoke_v2(
+        self,
+        input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
         """Sends a text input to the Mistral chat completion model
         and returns the response's content.
 
         Args:
-            input (str): Text sent to the LLM.
+            input (List[LLMMessage]): Messages sent to the LLM.
+            response_format: Not supported by MistralAILLM.
 
         Returns:
             LLMResponse: The response from MistralAI.
@@ -191,6 +221,10 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):
         Raises:
             LLMGenerationError: If anything goes wrong.
         """
+        if response_format is not None:
+            raise NotImplementedError(
+                "MistralAILLM does not currently support structured output"
+            )
         try:
             messages = self.get_messages_v2(input)
             response = self.client.chat.complete(
@@ -245,12 +279,16 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):
         except SDKError as e:
             raise LLMGenerationError(e)
 
-    async def __ainvoke_v2(self, input: List[LLMMessage], **kwargs: Any) -> LLMResponse:
+    async def __ainvoke_v2(self,
+        input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,) -> LLMResponse:
         """Asynchronously sends a text input to the MistralAI chat
         completion model and returns the response's content.
 
         Args:
-            input (str): Text sent to the LLM.
+            input (List[LLMMessage]): Messages sent to the LLM.
+            response_format: Not supported by MistralAILLM.
 
         Returns:
             LLMResponse: The response from MistralAI.
@@ -258,6 +296,10 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):
         Raises:
             LLMGenerationError: If anything goes wrong.
         """
+        if response_format is not None:
+            raise NotImplementedError(
+                "MistralAILLM does not currently support structured output"
+            )
         try:
             messages = self.get_messages_v2(input)
             response = await self.client.chat.complete_async(

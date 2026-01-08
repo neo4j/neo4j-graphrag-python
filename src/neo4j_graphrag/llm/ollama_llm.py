@@ -15,6 +15,7 @@
 
 # built-in dependencies
 from __future__ import annotations
+
 import warnings
 from typing import (
     TYPE_CHECKING,
@@ -23,6 +24,7 @@ from typing import (
     List,
     Optional,
     Sequence,
+    Type,
     Union,
     cast,
     Dict,
@@ -30,7 +32,7 @@ from typing import (
 )
 
 # 3rd-party dependencies
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 # project dependencies
 from neo4j_graphrag.exceptions import LLMGenerationError
@@ -38,8 +40,12 @@ from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.rate_limit import (
     RateLimitHandler,
-    rate_limit_handler as rate_limit_handler_decorator,
+)
+from neo4j_graphrag.utils.rate_limit import (
     async_rate_limit_handler as async_rate_limit_handler_decorator,
+)
+from neo4j_graphrag.utils.rate_limit import (
+    rate_limit_handler as rate_limit_handler_decorator,
 )
 
 from .base import LLMInterface, LLMInterfaceV2
@@ -118,6 +124,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
     def invoke(
         self,
         input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse: ...
 
@@ -133,6 +140,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
     async def ainvoke(
         self,
         input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse: ...
 
@@ -142,12 +150,15 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
         if isinstance(input, str):
             return self.__invoke_v1(input, message_history, system_instruction)
         elif isinstance(input, list):
-            return self.__invoke_v2(input, **kwargs)
+            return self.__invoke_v2(
+                input, response_format=response_format, **kwargs
+            )
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 
@@ -156,12 +167,15 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
         if isinstance(input, str):
             return await self.__ainvoke_v1(input, message_history, system_instruction)
         elif isinstance(input, list):
-            return await self.__ainvoke_v2(input, **kwargs)
+            return await self.__ainvoke_v2(
+                input, response_format=response_format, **kwargs
+            )
         else:
             raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
 
@@ -200,16 +214,22 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
     def __invoke_v2(
         self,
         input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
         """Sends text to the LLM and returns a response.
 
         Args:
-            input (str): The text to send to the LLM.
+            input (List[LLMMessage]): The messages to send to the LLM.
+            response_format: Not supported by OllamaLLM.
 
         Returns:
             LLMResponse: The response from the LLM.
         """
+        if response_format is not None:
+            raise NotImplementedError(
+                "OllamaLLM does not currently support structured output"
+            )
         try:
             response = self.client.chat(
                 model=self.model_name,
@@ -261,20 +281,26 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
     async def __ainvoke_v2(
         self,
         input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        """Asynchronously sends a text input to the OpenAI chat
+        """Asynchronously sends a text input to the Ollama chat
         completion model and returns the response's content.
 
         Args:
-            input (str): Text sent to the LLM.
+            input (List[LLMMessage]): Messages sent to the LLM.
+            response_format: Not supported by OllamaLLM.
 
         Returns:
-            LLMResponse: The response from OpenAI.
+            LLMResponse: The response from Ollama.
 
         Raises:
             LLMGenerationError: If anything goes wrong.
         """
+        if response_format is not None:
+            raise NotImplementedError(
+                "OllamaLLM does not currently support structured output"
+            )
         try:
             params = {**self.model_params, **kwargs}
             response = await self.async_client.chat(
