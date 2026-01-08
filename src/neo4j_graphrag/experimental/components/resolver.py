@@ -33,7 +33,7 @@ try:
     from spacy.language import Language
 
     IS_SPACY_INSTALLED = True
-except ImportError:
+except Exception:
     IS_SPACY_INSTALLED = False
 
 
@@ -353,11 +353,6 @@ class SpaCySemanticMatchResolver(BasePropertySimilarityResolver):
         auto_download_spacy_model: bool = True,
         neo4j_database: Optional[str] = None,
     ) -> None:
-        if not IS_SPACY_INSTALLED:
-            raise ImportError("""`spacy` python module needs to be installed to use
-            the SpaCySemanticMatchResolver. Install it with:
-            `pip install "neo4j-graphrag[nlp]"`
-            """)
         super().__init__(
             driver,
             filter_query,
@@ -408,6 +403,12 @@ class SpaCySemanticMatchResolver(BasePropertySimilarityResolver):
         If not installed, automatically download and then load it.
         """
         try:
+            if not IS_SPACY_INSTALLED:
+                raise ImportError("""`spacy` python module needs to be installed to use
+                the SpaCySemanticMatchResolver. Install it with:
+                `pip install "neo4j-graphrag[nlp]"`
+                . SpaCy is not supported on Python 3.14 and later.
+                """)
             return spacy.load(model_name)
         except OSError as e:
             if "doesn't seem to be a Python package or a valid path" in str(e):

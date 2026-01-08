@@ -27,12 +27,11 @@ A list of Neo4j GenAI-related features can also be found at [Neo4j GenAI Ecosyst
 
 | Version | Supported? |
 |---------|-----------:|
+| 3.14    |    &check; |
 | 3.13    |    &check; |
 | 3.12    |    &check; |
 | 3.11    |    &check; |
 | 3.10    |    &check; |
-| 3.9     |    &cross; |
-| 3.8     |    &cross; |
 
 ## 📦 Installation
 
@@ -60,6 +59,10 @@ the extra dependencies described below:
     - **pinecone**: store vectors in Pinecone
     - **qdrant**: store vectors in Qdrant
 - **experimental**: experimental features mainly related to the Knowledge Graph creation pipelines.
+- **nlp**: installs spaCy for NLP pipelines, used by `SpaCySemanticMatchResolver` in the experimental KG builder components.
+- **fuzzy-matching**: installs RapidFuzz, used by `FuzzyMatchResolver` in the experimental KG builder components.
+
+> Note: The **`nlp`** extra is currently **not supported on Python 3.14** due to an upstream spaCy import-time issue ([spaCy #13895](https://github.com/explosion/spaCy/issues/13895)). Use Python **3.13 or earlier** for spaCy-based features until that is resolved upstream.
 
 
 Install package with optional dependencies with (for instance):

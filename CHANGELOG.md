@@ -2,6 +2,11 @@
 
 ## Next
 
+## Added
+
+- Support for Python 3.14
+- Support for version 6.0.0 of the Neo4j Python driver
+
 ### Changed
 
 - Switched project/dependency management from Poetry to uv.
