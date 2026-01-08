@@ -75,7 +75,7 @@ class GraphRAG:
     def __init__(
         self,
         retriever: Retriever,
-        llm: Union[LLMInterface, LLMInterfaceV2],
+        llm: Union[LLMInterface, LLMInterfaceV2, Any],
         prompt_template: RagTemplate = RagTemplate(),
     ):
         try:
@@ -163,6 +163,7 @@ class GraphRAG:
             logger.debug("RAG: prompt=%s", prompt)
 
             if self.is_langchain_compatible():
+                # llm interface v2 or langchain chat model
                 messages = legacy_inputs_to_messages(
                     prompt=prompt,
                     message_history=message_history,
