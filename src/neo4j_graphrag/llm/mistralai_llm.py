@@ -57,8 +57,6 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
         rate_limit_handler: Optional[RateLimitHandler] = None,
-        model_kwargs: Optional[dict[str, Any]] = None,
-        rate_limiter: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ):
         """
@@ -68,9 +66,6 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):
             model_params (str): Parameters for LLMInterface(V1) like temperature and such that will be
              passed to the chat completions endpoint
             rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting for LLMInterface(V1). Defaults to retry with exponential backoff.
-            model_kwargs (Optional[dict[str, Any]]): Parameters for LLMInterfaceV2 like temperature and such that will be
-             passed to the chat completions endpoint
-            rate_limiter (Optional[RateLimitHandler]): Handler for rate limiting for LLMInterfaceV2. Defaults to retry with exponential backoff.
             kwargs: All other parameters will be passed to the Mistral client.
 
         """
@@ -82,8 +77,8 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):
         LLMInterfaceV2.__init__(
             self,
             model_name=model_name,
-            model_kwargs=model_kwargs or model_params or {},
-            rate_limiter=rate_limiter or rate_limit_handler,
+            model_params=model_params or {},
+            rate_limit_handler=rate_limit_handler,
             **kwargs,
         )
         api_key = kwargs.pop("api_key", None)

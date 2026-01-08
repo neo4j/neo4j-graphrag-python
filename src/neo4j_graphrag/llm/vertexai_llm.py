@@ -64,8 +64,6 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         model_params (Optional[dict], optional): Additional parameters for LLMInterface(V1) passed to the model when text is sent to it. Defaults to None.
         system_instruction: Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
         rate_limit_handler (Optional[RateLimitHandler], optional): Rate limit handler for LLMInterface(V1). Defaults to None.
-        model_kwargs (Optional[dict], optional): Additional parameters for LLMInterfaceV2 passed to the model when text is sent to it. Defaults to None.
-        rate_limiter (Optional[RateLimitHandler], optional): Rate limit handler for LLMInterfaceV2. Defaults to None.
         **kwargs (Any): Arguments passed to the model when for the class is initialised. Defaults to None.
 
     Raises:
@@ -91,8 +89,6 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         model_params: Optional[dict[str, Any]] = None,
         system_instruction: Optional[str] = None,
         rate_limit_handler: Optional[RateLimitHandler] = None,
-        model_kwargs: Optional[dict[str, Any]] = None,
-        rate_limiter: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ):
         if GenerativeModel is None or ResponseValidationError is None:
@@ -103,8 +99,8 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         LLMInterfaceV2.__init__(
             self,
             model_name=model_name,
-            model_kwargs=model_kwargs or model_params or {},
-            rate_limiter=rate_limiter or rate_limit_handler,
+            model_params=model_params or {},
+            rate_limit_handler=rate_limit_handler,
             **kwargs,
         )
         self.model_name = model_name
