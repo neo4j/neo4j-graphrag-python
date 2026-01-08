@@ -15,7 +15,7 @@
 
 [project]
 name = "neo4j-graphrag"
-version = "1.11.0"
+version = "1.12.0"
 description = "Python package to allow easy integration to Neo4j's GraphRAG features"
 authors = [
     {name = "Neo4j, Inc", email = "team-gen-ai@neo4j.com"}

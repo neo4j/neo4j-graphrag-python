@@ -2,6 +2,8 @@
 
 ## Next
 
+## 1.12.0
+
 ## Added
 
 - Support for Python 3.14
