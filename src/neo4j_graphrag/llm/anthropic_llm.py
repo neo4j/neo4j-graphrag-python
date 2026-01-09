@@ -352,6 +352,3 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):
                     )
                 )
         return system_instruction, messages
-
-anthropic_llm = AnthropicLLM(model_name="claude-3-opus-20240229")
-anthropic_llm.invoke(input="What is the capital of France?", response_format=Person)

@@ -483,15 +483,6 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        """Asynchronous new invoke method for LLMInterfaceV2."""
-        try:
-            response = await self.async_client.chat.completions.create(
-                messages=self.get_messages_v2(input),
-                model=self.model_name,
-                **self.model_params,
-                **kwargs,
-            )
-            content = response.choices[0].message.content or ""
         """Asynchronous new invoke method for LLMInterfaceV2.
 
         Args:
