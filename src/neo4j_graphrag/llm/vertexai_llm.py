@@ -14,19 +14,15 @@
 
 # built-in dependencies
 from __future__ import annotations
-from typing import Any, List, Optional, Union, cast, Sequence, overload
+
+from typing import Any, List, Optional, Sequence, Type, Union, cast, overload
 
 # 3rd party dependencies
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 # project dependencies
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface, LLMInterfaceV2
-from neo4j_graphrag.utils.rate_limit import (
-    RateLimitHandler,
-    rate_limit_handler as rate_limit_handler_decorator,
-    async_rate_limit_handler as async_rate_limit_handler_decorator,
-)
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
@@ -37,6 +33,15 @@ from neo4j_graphrag.llm.types import (
 from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.tool import Tool
 from neo4j_graphrag.types import LLMMessage
+from neo4j_graphrag.utils.rate_limit import (
+    RateLimitHandler,
+)
+from neo4j_graphrag.utils.rate_limit import (
+    async_rate_limit_handler as async_rate_limit_handler_decorator,
+)
+from neo4j_graphrag.utils.rate_limit import (
+    rate_limit_handler as rate_limit_handler_decorator,
+)
 
 try:
     from vertexai.generative_models import (
@@ -47,8 +52,10 @@ try:
         GenerativeModel,
         Part,
         ResponseValidationError,
-        Tool as VertexAITool,
         ToolConfig,
+    )
+    from vertexai.generative_models import (
+        Tool as VertexAITool,
     )
 except ImportError:
     GenerativeModel = None  # type: ignore[misc, assignment]
@@ -120,6 +127,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
     def invoke(
         self,
         input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse: ...
 
@@ -135,6 +143,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
     async def ainvoke(
         self,
         input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse: ...
 
@@ -145,12 +154,15 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
         if isinstance(input, str):
             return self.__invoke_v1(input, message_history, system_instruction)
         elif isinstance(input, list):
-            return self.__invoke_v2(input, **kwargs)
+            return self.__invoke_v2(
+                input, response_format=response_format, **kwargs
+            )
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 
@@ -159,12 +171,15 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
         if isinstance(input, str):
             return await self.__ainvoke_v1(input, message_history, system_instruction)
         elif isinstance(input, list):
-            return await self.__ainvoke_v2(input, **kwargs)
+            return await self.__ainvoke_v2(
+                input, response_format=response_format, **kwargs
+            )
         else:
             raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
 
@@ -225,12 +240,16 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
     def __invoke_v2(
         self,
         input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
         """New invoke method for LLMInterfaceV2.
 
         Args:
             input (List[LLMMessage]): Input to the LLM.
+            response_format (Optional[Union[Type[BaseModel], dict[str, Any]]]): Optional
+                response format. Can be a Pydantic model class for structured output
+                or a JSON schema dict.
 
         Returns:
             LLMResponse: The response from the LLM.
@@ -240,7 +259,9 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
             system_instruction=system_instruction,
         )
         try:
-            options = self._get_call_params_v2(messages, tools=None)
+            options = self._get_call_params_v2(
+                messages, tools=None, response_format=response_format
+            )
             response = model.generate_content(**options)
             return self._parse_content_response(response)
         except ResponseValidationError as e:
@@ -279,12 +300,16 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
     async def __ainvoke_v2(
         self,
         input: list[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
         """Asynchronously sends text to the LLM and returns a response.
 
         Args:
-            input (str): The text to send to the LLM.
+            input (List[LLMMessage]): Input to the LLM.
+            response_format (Optional[Union[Type[BaseModel], dict[str, Any]]]): Optional
+                response format. Can be a Pydantic model class for structured output
+                or a JSON schema dict.
 
         Returns:
             LLMResponse: The response from the LLM.
@@ -294,7 +319,9 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
             model = self._get_model(
                 system_instruction=system_instruction,
             )
-            options = self._get_call_params_v2(messages, tools=None)
+            options = self._get_call_params_v2(
+                messages, tools=None, response_format=response_format
+            )
             response = await model.generate_content_async(**options)
             return self._parse_content_response(response)
         except ResponseValidationError as e:
@@ -457,7 +484,10 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         self,
         contents: list[Content],
         tools: Optional[Sequence[Tool]],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
     ) -> dict[str, Any]:
+        from vertexai.generative_models import GenerationConfig
+
         options = dict(self.options)
         if tools:
             # we want a tool back, remove generation_config if defined
@@ -472,6 +502,32 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         else:
             # no tools, remove tool_config if defined
             options.pop("tool_config", None)
+
+            # Apply response_format if provided
+            if response_format is not None:
+                # Convert to JSON schema
+                if isinstance(response_format, type) and issubclass(
+                    response_format, BaseModel
+                ):
+                    # if we migrate to new google-genai-sdk, Pydantic models can be passed directly
+                    schema = response_format.model_json_schema()
+                else:
+                    schema = response_format
+
+                # Merge with existing generation_config to preserve other params
+                existing_config = options.get("generation_config")
+                if existing_config:
+                    config_dict = {
+                        k: v for k, v in vars(existing_config).items() if v is not None
+                    }
+                    config_dict["response_mime_type"] = "application/json"
+                    config_dict["response_schema"] = schema
+                    options["generation_config"] = GenerationConfig(**config_dict)
+                else:
+                    options["generation_config"] = GenerationConfig(
+                        response_mime_type="application/json",
+                        response_schema=schema,
+                    )
         options["contents"] = contents
         return options
 
