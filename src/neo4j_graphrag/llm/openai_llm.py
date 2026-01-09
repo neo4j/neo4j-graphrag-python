@@ -291,13 +291,6 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
             LLMResponse: The response from the LLM.
         """
         try:
-            response = self.client.chat.completions.create(
-                messages=self.get_messages_v2(input),
-                model=self.model_name,
-                **self.model_params,
-                **kwargs,
-            )
-            content = response.choices[0].message.content or ""
             messages = self.get_messages_v2(input)
             params = self.model_params.copy() if self.model_params else {}
 
