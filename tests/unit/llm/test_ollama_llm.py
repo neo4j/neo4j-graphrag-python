@@ -20,6 +20,8 @@ import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm import LLMResponse
 from neo4j_graphrag.llm.ollama_llm import OllamaLLM
+from neo4j_graphrag.llm.types import ToolCallResponse
+from neo4j_graphrag.tool import Tool
 
 
 def get_mock_ollama() -> MagicMock:
@@ -257,3 +259,153 @@ async def test_ollama_ainvoke_happy_path(mock_import: Mock) -> None:
     res = await llm.ainvoke(question)
     assert isinstance(res, LLMResponse)
     assert res.content == "ollama chat response"
+
+
+@patch("builtins.__import__")
+def test_ollama_llm_invoke_with_tools_happy_path(
+    mock_import: Mock,
+    test_tool: Tool,
+) -> None:
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+
+    # Mock the tool call response
+    mock_function = MagicMock()
+    mock_function.name = "test_tool"
+    mock_function.arguments = {"param1": "value1"}
+
+    mock_tool_call = MagicMock()
+    mock_tool_call.function = mock_function
+
+    mock_ollama.Client.return_value.chat.return_value = MagicMock(
+        message=MagicMock(content="ollama tool response", tool_calls=[mock_tool_call])
+    )
+
+    llm = OllamaLLM(model_name="gpt", model_params={"options": {"temperature": 0}})
+    tools = [test_tool]
+
+    res = llm.invoke_with_tools("my text", tools)
+    assert isinstance(res, ToolCallResponse)
+    assert len(res.tool_calls) == 1
+    assert res.tool_calls[0].name == "test_tool"
+    assert res.tool_calls[0].arguments == {"param1": "value1"}
+    assert res.content == "ollama tool response"
+
+
+@patch("builtins.__import__")
+def test_ollama_llm_invoke_with_tools_with_message_history(
+    mock_import: Mock,
+    test_tool: Tool,
+) -> None:
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+
+    # Mock the tool call response
+    mock_function = MagicMock()
+    mock_function.name = "test_tool"
+    mock_function.arguments = {"param1": "value1"}
+
+    mock_tool_call = MagicMock()
+    mock_tool_call.function = mock_function
+    mock_ollama.Client.return_value.chat.return_value = MagicMock(
+        message=MagicMock(content="ollama tool response", tool_calls=[mock_tool_call])
+    )
+    llm = OllamaLLM(
+        api_key="my key", model_name="gpt", model_params={"options": {"temperature": 0}}
+    )
+    tools = [test_tool]
+
+    message_history = [
+        {"role": "user", "content": "When does the sun come up in the summer?"},
+        {"role": "assistant", "content": "Usually around 6am."},
+    ]
+    question = "What about next season?"
+
+    res = llm.invoke_with_tools(question, tools, message_history)  # type: ignore
+    assert isinstance(res, ToolCallResponse)
+    assert len(res.tool_calls) == 1
+    assert res.tool_calls[0].name == "test_tool"
+    assert res.tool_calls[0].arguments == {"param1": "value1"}
+
+    # Verify the correct messages were passed
+    message_history.append({"role": "user", "content": question})
+    # Use assert_called_once() instead of assert_called_once_with() to avoid issues with overloaded functions
+    llm.client.chat.assert_called_once()  # type: ignore
+    # Check call arguments individually
+    call_args = llm.client.chat.call_args[  # type: ignore
+        1
+    ]  # Get the keyword arguments
+    assert call_args["messages"] == message_history
+    assert call_args["model"] == "gpt"
+    # Check tools content rather than direct equality
+    assert len(call_args["tools"]) == 1
+    assert call_args["tools"][0]["type"] == "function"
+    assert call_args["tools"][0]["function"]["name"] == "test_tool"
+    assert call_args["tools"][0]["function"]["description"] == "A test tool"
+
+
+@patch("builtins.__import__")
+def test_ollama_llm_invoke_with_tools_with_system_instruction(
+    mock_import: Mock,
+    test_tool: Mock,
+) -> None:
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+
+    # Mock the tool call response
+    mock_function = MagicMock()
+    mock_function.name = "test_tool"
+    mock_function.arguments = {"param1": "value1"}
+
+    mock_tool_call = MagicMock()
+    mock_tool_call.function = mock_function
+
+    mock_ollama.Client.return_value.chat.return_value = MagicMock(
+        message=MagicMock(content="ollama tool response", tool_calls=[mock_tool_call])
+    )
+
+    llm = OllamaLLM(
+        api_key="my key", model_name="gpt", model_params={"options": {"temperature": 0}}
+    )
+    tools = [test_tool]
+
+    system_instruction = "You are a helpful assistant."
+
+    res = llm.invoke_with_tools("my text", tools, system_instruction=system_instruction)
+    assert isinstance(res, ToolCallResponse)
+
+    # Verify system instruction was included
+    messages = [{"role": "system", "content": system_instruction}]
+    messages.append({"role": "user", "content": "my text"})
+    # Use assert_called_once() instead of assert_called_once_with() to avoid issues with overloaded functions
+    llm.client.chat.assert_called_once()  # type: ignore
+    # Check call arguments individually
+    call_args = llm.client.chat.call_args[  # type: ignore
+        1
+    ]  # Get the keyword arguments
+    assert call_args["messages"] == messages
+    assert call_args["model"] == "gpt"
+    # Check tools content rather than direct equality
+    assert len(call_args["tools"]) == 1
+    assert call_args["tools"][0]["type"] == "function"
+    assert call_args["tools"][0]["function"]["name"] == "test_tool"
+    assert call_args["tools"][0]["function"]["description"] == "A test tool"
+
+
+@patch("builtins.__import__")
+def test_ollama_llm_invoke_with_tools_error(mock_import: Mock, test_tool: Tool) -> None:
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+
+    # Mock an Ollama response error
+    mock_ollama.Client.return_value.chat.side_effect = ollama.ResponseError(
+        "Test error"
+    )
+
+    llm = OllamaLLM(
+        api_key="my key", model_name="gpt", model_params={"options": {"temperature": 0}}
+    )
+    tools = [test_tool]
+
+    with pytest.raises(LLMGenerationError):
+        llm.invoke_with_tools("my text", tools)
