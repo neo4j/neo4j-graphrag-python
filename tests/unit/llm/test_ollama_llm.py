@@ -498,6 +498,7 @@ def test_ollama_llm_get_brand_new_messages_all_roles(mock_import: Mock) -> None:
     for message in messages:
         mock_ollama.Message.assert_any_call(**message)
 
+
 @patch("builtins.__import__")
 def test_ollama_llm_invoke_with_tools_happy_path(
     mock_import: Mock,
