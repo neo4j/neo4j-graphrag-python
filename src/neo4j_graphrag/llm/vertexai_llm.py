@@ -15,6 +15,7 @@
 # built-in dependencies
 from __future__ import annotations
 
+import logging
 from typing import Any, List, Optional, Sequence, Type, Union, cast, overload
 
 # 3rd party dependencies
@@ -60,6 +61,8 @@ try:
 except ImportError:
     GenerativeModel = None  # type: ignore[misc, assignment]
     ResponseValidationError = None  # type: ignore[misc, assignment]
+
+logger = logging.getLogger(__name__)
 
 
 # pylint: disable=arguments-differ, redefined-builtin, no-else-return
@@ -501,6 +504,33 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
             # no tools, remove tool_config if defined
             options.pop("tool_config", None)
 
+            # Check if constructor's generation_config has response_schema
+            # In V2, response_format should be passed via invoke(), not constructor
+            existing_config = options.get("generation_config")
+            if (
+                existing_config is not None
+                and hasattr(existing_config, "response_schema")
+                and existing_config.response_schema is not None
+            ):
+                # Only warn if user didn't pass response_format to invoke()
+                if response_format is None:
+                    logger.warning(
+                        "response_schema in generation_config is ignored in V2. "
+                        "Pass response_format to invoke() instead."
+                    )
+                # Remove response_schema from existing config
+                config_dict = {
+                    k: v
+                    for k, v in vars(existing_config).items()
+                    if v is not None and k != "response_schema"
+                }
+                config_dict.pop("response_mime_type", None)  # Also remove mime type
+                if config_dict:
+                    options["generation_config"] = GenerationConfig(**config_dict)
+                else:
+                    options.pop("generation_config", None)
+                existing_config = options.get("generation_config")
+
             # Apply response_format if provided
             if response_format is not None:
                 # Convert to JSON schema
@@ -513,7 +543,6 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
                     schema = response_format
 
                 # Merge with existing generation_config to preserve other params
-                existing_config = options.get("generation_config")
                 if existing_config:
                     config_dict = {
                         k: v for k, v in vars(existing_config).items() if v is not None

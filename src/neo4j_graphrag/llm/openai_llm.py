@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import abc
 import json
+import logging
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -72,6 +73,8 @@ else:
     ChatCompletionToolParam = Any
     OpenAI = Any
     AsyncOpenAI = Any
+
+logger = logging.getLogger(__name__)
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel, line-too-long
@@ -293,6 +296,16 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         try:
             messages = self.get_messages_v2(input)
             params = self.model_params.copy() if self.model_params else {}
+            # Remove response_format from params to avoid conflicts
+            # In V2, response_format should be passed via invoke(), not constructor
+            if (
+                params.pop("response_format", None) is not None
+                and response_format is None
+            ):
+                logger.warning(
+                    "response_format in model_params is ignored. "
+                    "Pass response_format to invoke() instead."
+                )
 
             if isinstance(response_format, type) and issubclass(
                 response_format, BaseModel
@@ -488,6 +501,16 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         try:
             messages = self.get_messages_v2(input)
             params = self.model_params.copy() if self.model_params else {}
+            # Remove response_format from params to avoid conflicts
+            # In V2, response_format should be passed via invoke(), not constructor
+            if (
+                params.pop("response_format", None) is not None
+                and response_format is None
+            ):
+                logger.warning(
+                    "response_format in model_params is ignored. "
+                    "Pass response_format to invoke() instead."
+                )
 
             if isinstance(response_format, type) and issubclass(
                 response_format, BaseModel
