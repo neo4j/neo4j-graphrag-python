@@ -2,6 +2,13 @@
 
 ## Next
 
+## 1.12.0
+
+## Added
+
+- Support for Python 3.14
+- Support for version 6.0.0 of the Neo4j Python driver
+
 ### Changed
 
 - Switched project/dependency management from Poetry to uv.
@@ -23,6 +30,7 @@
 
 - Added automatic rate limiting with retry logic and exponential backoff for all Embedding providers using tenacity. The `RateLimitHandler` interface allows for custom rate limiting strategies, including the ability to disable rate limiting entirely.
 - JSON response returned to `SchemaFromTextExtractor` is cleansed of any markdown code blocks before being loaded.
+- Tool calling support for OllamaLLM.
 
 ## 1.10.0
 

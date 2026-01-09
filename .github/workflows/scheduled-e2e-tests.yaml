@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ '3.10', '3.11', '3.12', '3.13']
+        python-version: [ '3.10', '3.11', '3.12', '3.13', '3.14']
         neo4j-tag:
           - 'community'
           - 'enterprise'
@@ -112,7 +112,7 @@ jobs:
       - name: Run tests
         shell: bash
         run: |
-          if [[ "${{ matrix.neo4j-tag }}" == "latest" || "${{ matrix.neo4j-tag }}" == *-community ]]; then
+          if [[ "${{ matrix.neo4j-tag }}" == "latest" || "${{ matrix.neo4j-tag }}" == "community" ]]; then
               uv run pytest -m 'not enterprise_only' ./tests/e2e
           else
               uv run pytest ./tests/e2e
