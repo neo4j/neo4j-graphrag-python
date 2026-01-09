@@ -160,9 +160,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         if isinstance(input, str):
             return self.__invoke_v1(input, message_history, system_instruction)
         elif isinstance(input, list):
-            return self.__invoke_v2(
-                input, response_format=response_format, **kwargs
-            )
+            return self.__invoke_v2(input, response_format=response_format, **kwargs)
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 

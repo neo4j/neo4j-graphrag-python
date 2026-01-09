@@ -153,9 +153,7 @@ class CohereLLM(LLMInterface, LLMInterfaceV2):
         if isinstance(input, str):
             return self.__invoke_v1(input, message_history, system_instruction)
         elif isinstance(input, list):
-            return self.__invoke_v2(
-                input, response_format=response_format, **kwargs
-            )
+            return self.__invoke_v2(input, response_format=response_format, **kwargs)
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 
@@ -279,10 +277,12 @@ class CohereLLM(LLMInterface, LLMInterfaceV2):
         )
 
     @async_rate_limit_handler_decorator
-    async def __ainvoke_v2(self,
+    async def __ainvoke_v2(
+        self,
         input: List[LLMMessage],
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,) -> LLMResponse:
+        **kwargs: Any,
+    ) -> LLMResponse:
         if response_format is not None:
             raise NotImplementedError(
                 "CohereLLM does not currently support structured output"
