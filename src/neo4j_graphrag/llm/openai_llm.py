@@ -12,8 +12,9 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from __future__ import annotations
 
+# built-in dependencies
+from __future__ import annotations
 import abc
 import json
 from typing import (
@@ -26,20 +27,25 @@ from typing import (
     Sequence,
     Union,
     cast,
+    overload,
+    Type,
 )
 
+# 3rd party dependencies
 from pydantic import ValidationError
 
+# project dependencies
 from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
-
-from ..exceptions import LLMGenerationError
-from .base import LLMInterface
 from neo4j_graphrag.utils.rate_limit import (
     RateLimitHandler,
-    rate_limit_handler,
-    async_rate_limit_handler,
+    rate_limit_handler as rate_limit_handler_decorator,
+    async_rate_limit_handler as async_rate_limit_handler_decorator,
 )
+from neo4j_graphrag.tool import Tool
+
+from ..exceptions import LLMGenerationError
+from .base import LLMInterface, LLMInterfaceV2
 from .types import (
     BaseMessage,
     LLMResponse,
@@ -49,8 +55,6 @@ from .types import (
     SystemMessage,
     UserMessage,
 )
-
-from neo4j_graphrag.tool import Tool
 
 if TYPE_CHECKING:
     from openai.types.chat import (
@@ -65,7 +69,10 @@ else:
     AsyncOpenAI = Any
 
 
-class BaseOpenAILLM(LLMInterface, abc.ABC):
+# pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel, line-too-long
+class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
+    """Base class for OpenAI LLMs."""
+
     client: OpenAI
     async_client: AsyncOpenAI
 
@@ -74,6 +81,7 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
         rate_limit_handler: Optional[RateLimitHandler] = None,
+        **kwargs: Any,
     ):
         """
         Base class for OpenAI LLM.
@@ -93,14 +101,105 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
                 Please install it with `pip install "neo4j-graphrag[openai]"`."""
             )
         self.openai = openai
-        super().__init__(model_name, model_params, rate_limit_handler)
 
+        LLMInterfaceV2.__init__(
+            self,
+            model_name=model_name,
+            model_params=model_params or {},
+            rate_limit_handler=rate_limit_handler,
+            **kwargs,
+        )
+
+    # overloads for LLMInterface and LLMInterfaceV2 methods
+    @overload  # type: ignore[no-overload-impl]
+    def invoke(
+        self,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> LLMResponse: ...
+
+    @overload
+    def invoke(
+        self,
+        input: List[LLMMessage],
+        **kwargs: Any,
+    ) -> LLMResponse: ...
+
+    @overload  # type: ignore[no-overload-impl]
+    async def ainvoke(
+        self,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> LLMResponse: ...
+
+    @overload
+    async def ainvoke(
+        self,
+        input: List[LLMMessage],
+        **kwargs: Any,
+    ) -> LLMResponse: ...
+
+    # switching logics to LLMInterface or LLMInterfaceV2
+    def invoke(  # type: ignore[no-redef]
+        self,
+        input: Union[str, List[LLMMessage]],
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        if isinstance(input, str):
+            return self.__invoke_v1(input, message_history, system_instruction)
+        elif isinstance(input, list):
+            return self.__invoke_v2(input, **kwargs)
+        else:
+            raise ValueError(f"Invalid input type for invoke method - {type(input)}")
+
+    async def ainvoke(  # type: ignore[no-redef]
+        self,
+        input: Union[str, List[LLMMessage]],
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        if isinstance(input, str):
+            return await self.__ainvoke_v1(input, message_history, system_instruction)
+        elif isinstance(input, list):
+            return await self.__ainvoke_v2(input, **kwargs)
+        else:
+            raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
+
+    def invoke_with_tools(
+        self,
+        input: str,
+        tools: Sequence[Tool],  # Tools definition as a sequence of Tool objects
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> ToolCallResponse:
+        return self.__invoke_v1_with_tools(
+            input, tools, message_history, system_instruction
+        )
+
+    async def ainvoke_with_tools(
+        self,
+        input: str,
+        tools: Sequence[Tool],
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> ToolCallResponse:
+        return await self.__ainvoke_v1_with_tools(
+            input, tools, message_history, system_instruction
+        )
+
+    # subsidiary methods
     def get_messages(
         self,
         input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> Iterable[ChatCompletionMessageParam]:
+        """Constructs the message list for OpenAI chat completion for legacy LLMInterface."""
         messages = []
         if system_instruction:
             messages.append(SystemMessage(content=system_instruction).model_dump())
@@ -114,6 +213,32 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
             messages.extend(cast(Iterable[dict[str, Any]], message_history))
         messages.append(UserMessage(content=input).model_dump())
         return messages  # type: ignore
+
+    def get_messages_v2(
+        self,
+        messages: list[LLMMessage],
+    ) -> Iterable[ChatCompletionMessageParam]:
+        """Constructs the message list for OpenAI chat completion for LLMInterfaceV2."""
+        chat_messages = []
+        for m in messages:
+            message_type: Type[ChatCompletionMessageParam]
+            if m["role"] == "system":
+                message_type = self.openai.types.chat.ChatCompletionSystemMessageParam
+            elif m["role"] == "user":
+                message_type = self.openai.types.chat.ChatCompletionUserMessageParam
+            elif m["role"] == "assistant":
+                message_type = (
+                    self.openai.types.chat.ChatCompletionAssistantMessageParam
+                )
+            else:
+                raise ValueError(f"Unknown role: {m['role']}")
+            chat_messages.append(
+                message_type(
+                    role=m["role"],  # type: ignore
+                    content=m["content"],
+                )
+            )
+        return chat_messages
 
     def _convert_tool_to_openai_format(self, tool: Tool) -> Dict[str, Any]:
         """Convert a Tool object to OpenAI's expected format.
@@ -136,8 +261,34 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         except AttributeError:
             raise LLMGenerationError(f"Tool {tool} is not a valid Tool object")
 
-    @rate_limit_handler
-    def invoke(
+    @rate_limit_handler_decorator
+    def __invoke_v2(
+        self,
+        input: List[LLMMessage],
+        **kwargs: Any,
+    ) -> LLMResponse:
+        """New invoke method for LLMInterfaceV2.
+
+        Args:
+            input (List[LLMMessage]): Input to the LLM.
+
+        Returns:
+            LLMResponse: The response from the LLM.
+        """
+        try:
+            response = self.client.chat.completions.create(
+                messages=self.get_messages_v2(input),
+                model=self.model_name,
+                **self.model_params,
+                **kwargs,
+            )
+            content = response.choices[0].message.content or ""
+            return LLMResponse(content=content)
+        except self.openai.OpenAIError as e:
+            raise LLMGenerationError(e)
+
+    @rate_limit_handler_decorator
+    def __invoke_v1(
         self,
         input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -171,8 +322,8 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
-    @rate_limit_handler
-    def invoke_with_tools(
+    @rate_limit_handler_decorator
+    def __invoke_v1_with_tools(
         self,
         input: str,
         tools: Sequence[Tool],  # Tools definition as a sequence of Tool objects
@@ -246,8 +397,8 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
-    @async_rate_limit_handler
-    async def ainvoke(
+    @async_rate_limit_handler_decorator
+    async def __ainvoke_v1(
         self,
         input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -281,8 +432,27 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
-    @async_rate_limit_handler
-    async def ainvoke_with_tools(
+    @async_rate_limit_handler_decorator
+    async def __ainvoke_v2(
+        self,
+        input: List[LLMMessage],
+        **kwargs: Any,
+    ) -> LLMResponse:
+        """Asynchronous new invoke method for LLMInterfaceV2."""
+        try:
+            response = await self.async_client.chat.completions.create(
+                messages=self.get_messages_v2(input),
+                model=self.model_name,
+                **self.model_params,
+                **kwargs,
+            )
+            content = response.choices[0].message.content or ""
+            return LLMResponse(content=content)
+        except self.openai.OpenAIError as e:
+            raise LLMGenerationError(e)
+
+    @async_rate_limit_handler_decorator
+    async def __ainvoke_v1_with_tools(
         self,
         input: str,
         tools: Sequence[Tool],  # Tools definition as a sequence of Tool objects
@@ -338,7 +508,6 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
 
             # Process all tool calls
             tool_calls = []
-            import json
 
             for tool_call in message.tool_calls:
                 try:
@@ -359,6 +528,8 @@ class BaseOpenAILLM(LLMInterface, abc.ABC):
 
 
 class OpenAILLM(BaseOpenAILLM):
+    """OpenAI LLM."""
+
     def __init__(
         self,
         model_name: str,
@@ -372,16 +543,22 @@ class OpenAILLM(BaseOpenAILLM):
 
         Args:
             model_name (str):
-            model_params (str): Parameters like temperature that will be passed to the model when text is sent to it. Defaults to None.
-            rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting. Defaults to retry with exponential backoff.
+            model_params (str): Parameters for LLMInterface(V1) like temperature that will be passed to the model when text is sent to it. Defaults to None.
+            rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting for LLMInterface(V1). Defaults to retry with exponential backoff.
             kwargs: All other parameters will be passed to the openai.OpenAI init.
         """
-        super().__init__(model_name, model_params, rate_limit_handler)
+        super().__init__(
+            model_name=model_name,
+            model_params=model_params,
+            rate_limit_handler=rate_limit_handler,
+        )
         self.client = self.openai.OpenAI(**kwargs)
         self.async_client = self.openai.AsyncOpenAI(**kwargs)
 
 
 class AzureOpenAILLM(BaseOpenAILLM):
+    """Azure OpenAI LLM."""
+
     def __init__(
         self,
         model_name: str,
@@ -395,10 +572,14 @@ class AzureOpenAILLM(BaseOpenAILLM):
 
         Args:
             model_name (str):
-            model_params (str): Parameters like temperature that will be passed to the model when text is sent to it. Defaults to None.
-            rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting. Defaults to retry with exponential backoff.
+            model_params (str): Parameters for LLMInterface(V1) like temperature that will be passed to the model when text is sent to it. Defaults to None.
+            rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting for LLMInterface(V1). Defaults to retry with exponential backoff.
             kwargs: All other parameters will be passed to the openai.OpenAI init.
         """
-        super().__init__(model_name, model_params, rate_limit_handler)
+        super().__init__(
+            model_name=model_name,
+            model_params=model_params,
+            rate_limit_handler=rate_limit_handler,
+        )
         self.client = self.openai.AzureOpenAI(**kwargs)
         self.async_client = self.openai.AsyncAzureOpenAI(**kwargs)

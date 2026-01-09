@@ -13,21 +13,23 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
-
+import logging
 from abc import ABC, abstractmethod
 from typing import Any, List, Optional, Sequence, Union
 
 from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
-
-from .types import LLMResponse, ToolCallResponse
 from neo4j_graphrag.utils.rate_limit import (
     DEFAULT_RATE_LIMIT_HANDLER,
 )
-
 from neo4j_graphrag.tool import Tool
-
 from neo4j_graphrag.utils.rate_limit import RateLimitHandler
+
+from .types import LLMResponse, ToolCallResponse
+
+# pylint: disable=redefined-builtin
+
+logger = logging.getLogger(__name__)
 
 
 class LLMInterface(ABC):
@@ -47,6 +49,9 @@ class LLMInterface(ABC):
         rate_limit_handler: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ):
+        logger.warning(
+            "LLMInterface is deprecated and will be removed in future versions. Please use LLMInterfaceV2 instead."
+        )
         self.model_name = model_name
         self.model_params = model_params or {}
 
@@ -152,3 +157,67 @@ class LLMInterface(ABC):
             NotImplementedError: If the LLM provider does not support tool calling.
         """
         raise NotImplementedError("This LLM provider does not support tool calling.")
+
+
+class LLMInterfaceV2(ABC):
+    """Interface for large language models compatible with LangChain.
+
+    Args:
+        model_name (str): The name of the language model.
+        model_params (Optional[dict]): Additional parameters passed to the model when text is sent to it. Defaults to None.
+        rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting. Defaults to retry with exponential backoff.
+        **kwargs (Any): Arguments passed to the model when for the class is initialised. Defaults to None.
+    """
+
+    def __init__(
+        self,
+        model_name: str,
+        model_params: Optional[dict[str, Any]] = None,
+        rate_limit_handler: Optional[RateLimitHandler] = None,
+        **kwargs: Any,
+    ):
+        self.model_name = model_name
+        self.model_params = model_params or {}
+
+        if rate_limit_handler is not None:
+            self._rate_limit_handler = rate_limit_handler
+        else:
+            self._rate_limit_handler = DEFAULT_RATE_LIMIT_HANDLER
+
+    @abstractmethod
+    def invoke(
+        self,
+        input: List[LLMMessage],
+        **kwargs: Any,
+    ) -> LLMResponse:
+        """Sends a text input to the LLM and retrieves a response.
+
+        Args:
+            input (List[LLMMessage]): Text sent to the LLM as a list of LLMMessage objects.
+        Returns:
+            LLMResponse: The response from the LLM.
+
+        Raises:
+            LLMGenerationError: If anything goes wrong.
+        """
+
+    @abstractmethod
+    async def ainvoke(
+        self,
+        input: List[LLMMessage],
+        **kwargs: Any,
+    ) -> LLMResponse:
+        """Asynchronously sends a text input to the LLM and retrieves a response.
+
+        Args:
+            input (str): Text sent to the LLM.
+            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
+                with each message having a specific role assigned.
+            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
+
+        Returns:
+            LLMResponse: The response from the LLM.
+
+        Raises:
+            LLMGenerationError: If anything goes wrong.
+        """

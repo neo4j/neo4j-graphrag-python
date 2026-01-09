@@ -14,19 +14,21 @@
 from __future__ import annotations
 
 from typing import cast
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from typing import List
 
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 import pytest
-from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.types import ToolCallResponse
-from neo4j_graphrag.llm.vertexai_llm import VertexAILLM
-from neo4j_graphrag.tool import Tool
-from neo4j_graphrag.types import LLMMessage
 from vertexai.generative_models import (
     Content,
     GenerationResponse,
     Part,
 )
+
+from neo4j_graphrag.exceptions import LLMGenerationError
+from neo4j_graphrag.llm.types import ToolCallResponse
+from neo4j_graphrag.llm.vertexai_llm import VertexAILLM
+from neo4j_graphrag.tool import Tool
+from neo4j_graphrag.types import LLMMessage
 
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel", None)
@@ -155,7 +157,9 @@ def test_vertexai_get_messages(GenerativeModelMock: MagicMock) -> None:
 
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
-def test_vertexai_get_messages_validation_error(GenerativeModelMock: MagicMock) -> None:
+def test_vertexai_get_messages_validation_error(
+    _GenerativeModelMock: MagicMock,
+) -> None:
     system_instruction = "You are a helpful assistant."
     model_name = "gemini-1.5-flash-001"
     question = "hi!"
@@ -184,6 +188,7 @@ async def test_vertexai_ainvoke_happy_path(
     llm = VertexAILLM("gemini-1.5-flash-001", model_params)
     input_text = "may thy knife chip and shatter"
     response = await llm.ainvoke(input_text)
+    print(f"Response: {response}")
     assert response.content == "Return text"
     mock_model.generate_content_async.assert_awaited_once_with(
         contents=[{"text": "Return text"}]
@@ -306,3 +311,156 @@ async def test_vertexai_acall_llm_with_tools(mock_model: Mock, test_tool: Tool) 
         system_instruction=None,
     )
     assert isinstance(res, GenerationResponse)
+
+
+# LLM Interface V2 Tests
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_invoke_v2_happy_path(GenerativeModelMock: MagicMock) -> None:
+    """Test V2 interface invoke method with List[LLMMessage] input."""
+    model_name = "gemini-1.5-flash-001"
+    messages: List[LLMMessage] = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "What is the capital of France?"},
+    ]
+    mock_response = Mock()
+    mock_response.text = "Paris is the capital of France."
+    mock_model = GenerativeModelMock.return_value
+    mock_model.generate_content.return_value = mock_response
+
+    llm = VertexAILLM(model_name=model_name)
+    response = llm.invoke(messages)
+
+    assert response.content == "Paris is the capital of France."
+    GenerativeModelMock.assert_called_once_with(
+        model_name=model_name,
+        system_instruction="You are a helpful assistant.",
+    )
+    mock_model.generate_content.assert_called_once()
+    call_args = mock_model.generate_content.call_args
+    contents = call_args.kwargs["contents"]
+    assert len(contents) == 1  # Only user message after system is extracted
+    assert contents[0].role == "user"
+    assert contents[0].parts[0].text == "What is the capital of France?"
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_invoke_v2_with_conversation_history(
+    GenerativeModelMock: MagicMock,
+) -> None:
+    """Test V2 interface invoke with conversation history."""
+    model_name = "gemini-1.5-flash-001"
+    messages: List[LLMMessage] = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "What is the capital of France?"},
+        {"role": "assistant", "content": "Paris is the capital of France."},
+        {"role": "user", "content": "What about Germany?"},
+    ]
+    mock_response = Mock()
+    mock_response.text = "Berlin is the capital of Germany."
+    mock_model = GenerativeModelMock.return_value
+    mock_model.generate_content.return_value = mock_response
+
+    llm = VertexAILLM(model_name=model_name)
+    response = llm.invoke(messages)
+
+    assert response.content == "Berlin is the capital of Germany."
+    GenerativeModelMock.assert_called_once_with(
+        model_name=model_name,
+        system_instruction="You are a helpful assistant.",
+    )
+    call_args = mock_model.generate_content.call_args
+    contents = call_args.kwargs["contents"]
+    assert len(contents) == 3  # user -> assistant -> user
+    assert contents[0].role == "user"
+    assert contents[0].parts[0].text == "What is the capital of France?"
+    assert contents[1].role == "model"
+    assert contents[1].parts[0].text == "Paris is the capital of France."
+    assert contents[2].role == "user"
+    assert contents[2].parts[0].text == "What about Germany?"
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_invoke_v2_no_system_message(GenerativeModelMock: MagicMock) -> None:
+    """Test V2 interface invoke without system message."""
+    model_name = "gemini-1.5-flash-001"
+    messages: List[LLMMessage] = [
+        {"role": "user", "content": "Hello, how are you?"},
+    ]
+    mock_response = Mock()
+    mock_response.text = "I'm doing well, thank you!"
+    mock_model = GenerativeModelMock.return_value
+    mock_model.generate_content.return_value = mock_response
+
+    llm = VertexAILLM(model_name=model_name)
+    response = llm.invoke(messages)
+
+    assert response.content == "I'm doing well, thank you!"
+    GenerativeModelMock.assert_called_once_with(
+        model_name=model_name,
+        system_instruction=None,  # No system instruction should be used
+    )
+
+
+@pytest.mark.asyncio
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+async def test_vertexai_ainvoke_v2_happy_path(GenerativeModelMock: MagicMock) -> None:
+    """Test V2 interface async invoke method with List[LLMMessage] input."""
+    model_name = "gemini-1.5-flash-001"
+    messages: List[LLMMessage] = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "What is 2+2?"},
+    ]
+    mock_response = AsyncMock()
+    mock_response.text = "2+2 equals 4."
+    mock_model = GenerativeModelMock.return_value
+    mock_model.generate_content_async = AsyncMock(return_value=mock_response)
+
+    llm = VertexAILLM(model_name=model_name)
+    response = await llm.ainvoke(messages)
+
+    assert response.content == "2+2 equals 4."
+    GenerativeModelMock.assert_called_once_with(
+        model_name=model_name,
+        system_instruction="You are a helpful assistant.",
+    )
+    mock_model.generate_content_async.assert_awaited_once()
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_invoke_v2_validation_error(_GenerativeModelMock: MagicMock) -> None:
+    """Test V2 interface invoke with invalid role raises error."""
+    model_name = "gemini-1.5-flash-001"
+    messages: List[LLMMessage] = [
+        {"role": "invalid_role", "content": "This should fail."},  # type: ignore[typeddict-item]
+    ]
+
+    llm = VertexAILLM(model_name=model_name)
+
+    with pytest.raises(ValueError) as exc_info:
+        llm.invoke(messages)
+    assert "Unknown role: invalid_role" in str(exc_info.value)
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_get_brand_new_messages_system_instruction_override(
+    _GenerativeModelMock: MagicMock,
+) -> None:
+    """Test that system instruction in messages overrides class-level system instruction."""
+    model_name = "gemini-1.5-flash-001"
+    class_system_instruction = "You are a class-level assistant."
+    messages: List[LLMMessage] = [
+        {"role": "system", "content": "You are a message-level assistant."},
+        {"role": "user", "content": "Hello"},
+    ]
+
+    llm = VertexAILLM(
+        model_name=model_name, system_instruction=class_system_instruction
+    )
+    system_instruction, contents = llm.get_messages_v2(messages)
+
+    assert system_instruction == "You are a message-level assistant."
+    assert len(contents) == 1  # Only user message should remain
+    assert contents[0].role == "user"
+    assert contents[0].parts[0].text == "Hello"

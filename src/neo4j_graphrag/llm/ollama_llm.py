@@ -12,8 +12,9 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from __future__ import annotations
 
+# built-in dependencies
+from __future__ import annotations
 import warnings
 from typing import (
     TYPE_CHECKING,
@@ -25,20 +26,23 @@ from typing import (
     Union,
     cast,
     Dict,
+    overload,
 )
 
+# 3rd-party dependencies
 from pydantic import ValidationError
 
+# project dependencies
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
-
-from .base import LLMInterface
 from neo4j_graphrag.utils.rate_limit import (
     RateLimitHandler,
-    rate_limit_handler,
-    async_rate_limit_handler,
+    rate_limit_handler as rate_limit_handler_decorator,
+    async_rate_limit_handler as async_rate_limit_handler_decorator,
 )
+
+from .base import LLMInterface, LLMInterfaceV2
 from .types import (
     BaseMessage,
     LLMResponse,
@@ -53,8 +57,12 @@ from neo4j_graphrag.tool import Tool
 if TYPE_CHECKING:
     from ollama import Message
 
+# pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
 
-class OllamaLLM(LLMInterface):
+
+class OllamaLLM(LLMInterface, LLMInterfaceV2):
+    """LLM wrapper for Ollama models."""
+
     def __init__(
         self,
         model_name: str,
@@ -69,7 +77,13 @@ class OllamaLLM(LLMInterface):
                 "Could not import ollama Python client. "
                 "Please install it with `pip install ollama`."
             )
-        super().__init__(model_name, model_params, rate_limit_handler)
+        LLMInterfaceV2.__init__(
+            self,
+            model_name=model_name,
+            model_params=model_params or {},
+            rate_limit_handler=rate_limit_handler,
+            **kwargs,
+        )
         self.ollama = ollama
         self.client = ollama.Client(
             **kwargs,
@@ -91,28 +105,68 @@ class OllamaLLM(LLMInterface):
             )
             self.model_params = {"options": self.model_params}
 
-    def get_messages(
+    # overloads for LLMInterface and LLMInterfaceV2 methods
+    @overload  # type: ignore[no-overload-impl]
+    def invoke(
         self,
         input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
-    ) -> Sequence[Message]:
-        messages = []
-        if system_instruction:
-            messages.append(SystemMessage(content=system_instruction).model_dump())
-        if message_history:
-            if isinstance(message_history, MessageHistory):
-                message_history = message_history.messages
-            try:
-                MessageList(messages=cast(list[BaseMessage], message_history))
-            except ValidationError as e:
-                raise LLMGenerationError(e.errors()) from e
-            messages.extend(cast(Iterable[dict[str, Any]], message_history))
-        messages.append(UserMessage(content=input).model_dump())
-        return messages  # type: ignore
+    ) -> LLMResponse: ...
 
-    @rate_limit_handler
+    @overload
     def invoke(
+        self,
+        input: List[LLMMessage],
+        **kwargs: Any,
+    ) -> LLMResponse: ...
+
+    @overload  # type: ignore[no-overload-impl]
+    async def ainvoke(
+        self,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> LLMResponse: ...
+
+    @overload
+    async def ainvoke(
+        self,
+        input: List[LLMMessage],
+        **kwargs: Any,
+    ) -> LLMResponse: ...
+
+    # switching logics to LLMInterface or LLMInterfaceV2
+    def invoke(  # type: ignore[no-redef]
+        self,
+        input: Union[str, List[LLMMessage]],
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        if isinstance(input, str):
+            return self.__invoke_v1(input, message_history, system_instruction)
+        elif isinstance(input, list):
+            return self.__invoke_v2(input, **kwargs)
+        else:
+            raise ValueError(f"Invalid input type for invoke method - {type(input)}")
+
+    async def ainvoke(  # type: ignore[no-redef]
+        self,
+        input: Union[str, List[LLMMessage]],
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        if isinstance(input, str):
+            return await self.__ainvoke_v1(input, message_history, system_instruction)
+        elif isinstance(input, list):
+            return await self.__ainvoke_v2(input, **kwargs)
+        else:
+            raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
+
+    @rate_limit_handler_decorator
+    def __invoke_v1(
         self,
         input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -142,8 +196,34 @@ class OllamaLLM(LLMInterface):
         except self.ollama.ResponseError as e:
             raise LLMGenerationError(e)
 
-    @async_rate_limit_handler
-    async def ainvoke(
+    @rate_limit_handler_decorator
+    def __invoke_v2(
+        self,
+        input: List[LLMMessage],
+        **kwargs: Any,
+    ) -> LLMResponse:
+        """Sends text to the LLM and returns a response.
+
+        Args:
+            input (str): The text to send to the LLM.
+
+        Returns:
+            LLMResponse: The response from the LLM.
+        """
+        try:
+            response = self.client.chat(
+                model=self.model_name,
+                messages=self.get_messages_v2(input),
+                **self.model_params,
+                **kwargs,
+            )
+            content = response.message.content or ""
+            return LLMResponse(content=content)
+        except self.ollama.ResponseError as e:
+            raise LLMGenerationError(e)
+
+    @async_rate_limit_handler_decorator
+    async def __ainvoke_v1(
         self,
         input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -177,7 +257,66 @@ class OllamaLLM(LLMInterface):
         except self.ollama.ResponseError as e:
             raise LLMGenerationError(e)
 
-    @rate_limit_handler
+    @async_rate_limit_handler_decorator
+    async def __ainvoke_v2(
+        self,
+        input: List[LLMMessage],
+        **kwargs: Any,
+    ) -> LLMResponse:
+        """Asynchronously sends a text input to the OpenAI chat
+        completion model and returns the response's content.
+
+        Args:
+            input (str): Text sent to the LLM.
+
+        Returns:
+            LLMResponse: The response from OpenAI.
+
+        Raises:
+            LLMGenerationError: If anything goes wrong.
+        """
+        try:
+            params = {**self.model_params, **kwargs}
+            response = await self.async_client.chat(
+                model=self.model_name,
+                messages=self.get_messages_v2(input),
+                options=params,
+            )
+            content = response.message.content or ""
+            return LLMResponse(content=content)
+        except self.ollama.ResponseError as e:
+            raise LLMGenerationError(e)
+
+    # subsdiary methods
+    def get_messages(
+        self,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> Sequence[Message]:
+        """Constructs the message list for the Ollama chat API."""
+        messages = []
+        if system_instruction:
+            messages.append(SystemMessage(content=system_instruction).model_dump())
+        if message_history:
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
+            try:
+                MessageList(messages=cast(list[BaseMessage], message_history))
+            except ValidationError as e:
+                raise LLMGenerationError(e.errors()) from e
+            messages.extend(cast(Iterable[dict[str, Any]], message_history))
+        messages.append(UserMessage(content=input).model_dump())
+        return messages  # type: ignore
+
+    def get_messages_v2(
+        self,
+        input: list[LLMMessage],
+    ) -> Sequence[Message]:
+        """Constructs the message list for the Ollama chat API."""
+        return [self.ollama.Message(**i) for i in input]
+
+    @rate_limit_handler_decorator
     def invoke_with_tools(
         self,
         input: str,
@@ -187,17 +326,14 @@ class OllamaLLM(LLMInterface):
     ) -> ToolCallResponse:
         """Sends a text input to the LLM with tool definitions
         and retrieves a tool call response.
-
         Args:
             input (str): Text sent to the LLM.
             tools (List[Tool]): List of Tools for the LLM to choose from.
             message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
                 with each message having a specific role assigned.
             system_instruction (Optional[str]): An option to override the llm system message for this invocation.
-
         Returns:
             ToolCallResponse: The response from the LLM containing a tool call.
-
         Raises:
             LLMGenerationError: If anything goes wrong.
         """
@@ -237,7 +373,7 @@ class OllamaLLM(LLMInterface):
         except self.ollama.ResponseError as e:
             raise LLMGenerationError(e)
 
-    @async_rate_limit_handler
+    @async_rate_limit_handler_decorator
     async def ainvoke_with_tools(
         self,
         input: str,
@@ -247,17 +383,14 @@ class OllamaLLM(LLMInterface):
     ) -> ToolCallResponse:
         """Sends a text input to the LLM with tool definitions
         and retrieves a tool call response.
-
         Args:
             input (str): Text sent to the LLM.
             tools (List[Tool]): List of Tools for the LLM to choose from.
             message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
                 with each message having a specific role assigned.
             system_instruction (Optional[str]): An option to override the llm system message for this invocation.
-
         Returns:
             ToolCallResponse: The response from the LLM containing a tool call.
-
         Raises:
             LLMGenerationError: If anything goes wrong.
         """
@@ -301,10 +434,8 @@ class OllamaLLM(LLMInterface):
 
     def _convert_tool_to_ollama_format(self, tool: Tool) -> Dict[str, Any]:
         """Convert a Tool object to Ollama's expected format.
-
         Args:
             tool: A Tool object to convert to Ollama's format.
-
         Returns:
             A dictionary in Ollama's tool format.
         """

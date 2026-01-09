@@ -16,7 +16,7 @@ import warnings
 from typing import Any
 
 from .anthropic_llm import AnthropicLLM
-from .base import LLMInterface
+from .base import LLMInterface, LLMInterfaceV2
 from .cohere_llm import CohereLLM
 from .mistralai_llm import MistralAILLM
 from .ollama_llm import OllamaLLM
@@ -30,6 +30,7 @@ __all__ = [
     "CohereLLM",
     "LLMResponse",
     "LLMInterface",
+    "LLMInterfaceV2",
     "OllamaLLM",
     "OpenAILLM",
     "VertexAILLM",
