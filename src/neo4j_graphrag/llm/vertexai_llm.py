@@ -15,6 +15,7 @@
 # built-in dependencies
 from __future__ import annotations
 
+import inspect
 import logging
 from typing import Any, List, Optional, Sequence, Type, Union, cast, overload
 
@@ -63,6 +64,52 @@ except ImportError:
     ResponseValidationError = None  # type: ignore[misc, assignment]
 
 logger = logging.getLogger(__name__)
+
+# Params to exclude when extracting from GenerationConfig for structured output
+_GENERATION_CONFIG_SCHEMA_PARAMS = {"response_schema", "response_mime_type"}
+
+
+def _extract_generation_config_params(
+    config: Any, exclude_schema: bool = True
+) -> dict[str, Any]:
+    """Extract valid parameters from a GenerationConfig object.
+
+    This function extracts parameters from the internal _raw_generation_config
+    protobuf and returns them as a dict that can be passed to GenerationConfig().
+
+    Args:
+        config: A GenerationConfig object
+        exclude_schema: If True, excludes response_schema and response_mime_type
+
+    Returns:
+        Dict of parameter name to value for non-empty params
+    """
+    from vertexai.generative_models import GenerationConfig
+
+    if not hasattr(config, "_raw_generation_config"):
+        return {}
+
+    raw = config._raw_generation_config
+
+    # Get valid params from GenerationConfig signature
+    sig = inspect.signature(GenerationConfig.__init__)
+    valid_params = {
+        name
+        for name, _ in sig.parameters.items()
+        if name != "self"
+        and (not exclude_schema or name not in _GENERATION_CONFIG_SCHEMA_PARAMS)
+    }
+
+    preserved = {}
+    for param in valid_params:
+        val = getattr(raw, param, None)
+        if val:  # Only include non-empty values
+            # Convert repeated fields (like stop_sequences) to lists
+            if hasattr(val, "__iter__") and not isinstance(val, (str, bytes, dict)):
+                val = list(val)
+            preserved[param] = val
+
+    return preserved
 
 
 # pylint: disable=arguments-differ, redefined-builtin, no-else-return
@@ -506,27 +553,27 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
 
             # Check if constructor's generation_config has response_schema
             # In V2, response_format should be passed via invoke(), not constructor
+            # Note: GenerationConfig stores data in _raw_generation_config protobuf
             existing_config = options.get("generation_config")
-            if (
+            has_schema_in_config = (
                 existing_config is not None
-                and hasattr(existing_config, "response_schema")
-                and existing_config.response_schema is not None
-            ):
+                and hasattr(existing_config, "_raw_generation_config")
+                and bool(str(existing_config._raw_generation_config.response_schema))
+            )
+
+            if has_schema_in_config:
                 # Only warn if user didn't pass response_format to invoke()
                 if response_format is None:
                     logger.warning(
                         "response_schema in generation_config is ignored in V2. "
                         "Pass response_format to invoke() instead."
                     )
-                # Remove response_schema from existing config
-                config_dict = {
-                    k: v
-                    for k, v in vars(existing_config).items()
-                    if v is not None and k != "response_schema"
-                }
-                config_dict.pop("response_mime_type", None)  # Also remove mime type
-                if config_dict:
-                    options["generation_config"] = GenerationConfig(**config_dict)
+                # Remove response_schema from existing config by extracting other params
+                preserved_params = _extract_generation_config_params(
+                    existing_config, exclude_schema=True
+                )
+                if preserved_params:
+                    options["generation_config"] = GenerationConfig(**preserved_params)
                 else:
                     options.pop("generation_config", None)
                 existing_config = options.get("generation_config")
@@ -543,18 +590,12 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
                     schema = response_format
 
                 # Merge with existing generation_config to preserve other params
-                if existing_config:
-                    config_dict = {
-                        k: v for k, v in vars(existing_config).items() if v is not None
-                    }
-                    config_dict["response_mime_type"] = "application/json"
-                    config_dict["response_schema"] = schema
-                    options["generation_config"] = GenerationConfig(**config_dict)
-                else:
-                    options["generation_config"] = GenerationConfig(
-                        response_mime_type="application/json",
-                        response_schema=schema,
-                    )
+                preserved_params = _extract_generation_config_params(
+                    existing_config, exclude_schema=True
+                )
+                preserved_params["response_mime_type"] = "application/json"
+                preserved_params["response_schema"] = schema
+                options["generation_config"] = GenerationConfig(**preserved_params)
         options["contents"] = contents
         return options
 
