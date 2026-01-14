@@ -120,7 +120,7 @@ class Neo4jNode(BaseModel):
     Attributes:
         id (str): The ID of the node. This ID is used to refer to the node for relationship creation.
         label (str): The label of the node.
-        properties (Optional[dict[str, PropertyValue]]): A dictionary of properties attached to the node.
+        properties (dict[str, PropertyValue]): A dictionary of properties attached to the node.
         embedding_properties (Optional[dict[str, list[float]]]): A list of embedding properties attached to the node.
     """
 
@@ -128,7 +128,7 @@ class Neo4jNode(BaseModel):
 
     id: str
     label: str
-    properties: Optional[dict[str, PropertyValue]] = Field(default_factory=dict)
+    properties: dict[str, PropertyValue] = Field(default_factory=dict)
     embedding_properties: Optional[dict[str, list[float]]] = None
 
     @property
@@ -143,7 +143,7 @@ class Neo4jRelationship(BaseModel):
         start_node_id (str): The ID of the start node.
         end_node_id (str): The ID of the end node.
         type (str): The relationship type.
-        properties (Optional[dict[str, PropertyValue]]): A dictionary of properties attached to the relationship.
+        properties (dict[str, PropertyValue]): A dictionary of properties attached to the relationship.
         embedding_properties (Optional[dict[str, list[float]]]): A list of embedding properties attached to the relationship.
     """
 
@@ -152,7 +152,7 @@ class Neo4jRelationship(BaseModel):
     start_node_id: str
     end_node_id: str
     type: str
-    properties: Optional[dict[str, PropertyValue]] = Field(default_factory=dict)
+    properties: dict[str, PropertyValue] = Field(default_factory=dict)
     embedding_properties: Optional[dict[str, list[float]]] = None
 
     @property
