@@ -37,6 +37,9 @@ from neo4j_graphrag.experimental.pipeline.component import Component
 from neo4j_graphrag.experimental.pipeline.exceptions import InvalidJSONError
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate, PromptTemplate
 from neo4j_graphrag.llm import LLMInterface
+from neo4j_graphrag.llm.openai_llm import OpenAILLM
+from neo4j_graphrag.llm.vertexai_llm import VertexAILLM
+from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.logging import prettify
 
 logger = logging.getLogger(__name__)
@@ -167,8 +170,10 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         create_lexical_graph (bool): Whether to include the text chunks in the graph in addition to the extracted entities and relations. Defaults to True.
         on_error (OnError): What to do when an error occurs during extraction. Defaults to raising an error.
         max_concurrency (int): The maximum number of concurrent tasks which can be used to make requests to the LLM.
+        use_structured_output (bool): Whether to use structured output (LLMInterfaceV2) with the Neo4jGraph Pydantic model.
+            Only supported for OpenAILLM and VertexAILLM. Defaults to False (uses V1 prompt-based JSON extraction).
 
-    Example:
+    Example with V1 (default, prompt-based JSON):
 
     .. code-block:: python
 
@@ -182,6 +187,19 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         pipe = Pipeline()
         pipe.add_component(extractor, "extractor")
 
+    Example with V2 (structured output):
+
+    .. code-block:: python
+
+        from neo4j_graphrag.experimental.components.entity_relation_extractor import LLMEntityRelationExtractor
+        from neo4j_graphrag.llm import OpenAILLM
+        from neo4j_graphrag.experimental.pipeline import Pipeline
+
+        llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0})
+        extractor = LLMEntityRelationExtractor(llm=llm, use_structured_output=True)
+        pipe = Pipeline()
+        pipe.add_component(extractor, "extractor")
+
     """
 
     def __init__(
@@ -191,10 +209,20 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         create_lexical_graph: bool = True,
         on_error: OnError = OnError.RAISE,
         max_concurrency: int = 5,
+        use_structured_output: bool = False,
     ) -> None:
         super().__init__(on_error=on_error, create_lexical_graph=create_lexical_graph)
-        self.llm = llm  # with response_format={ "type": "json_object" },
+        self.llm = llm
         self.max_concurrency = max_concurrency
+        self.use_structured_output = use_structured_output
+
+        # Validate that structured output is only used with supported LLMs
+        if use_structured_output and not isinstance(llm, (OpenAILLM, VertexAILLM)):
+            raise ValueError(
+                f"use_structured_output=True is only supported for OpenAILLM and VertexAILLM. "
+                f"Got {type(llm).__name__}."
+            )
+
         if isinstance(prompt_template, str):
             template = PromptTemplate(prompt_template, expected_inputs=[])
         else:
@@ -210,6 +238,37 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             schema=schema.model_dump(exclude_none=True),
             examples=examples,
         )
+
+        # Use structured output (V2) if enabled
+        if self.use_structured_output:
+            # Type narrowing with isinstance check
+            # This should always be true due to __init__ validation, but satisfies type checker
+            if isinstance(self.llm, (OpenAILLM, VertexAILLM)):
+                messages = [LLMMessage(role="user", content=prompt)]
+                llm_result = await self.llm.ainvoke(
+                    messages, response_format=Neo4jGraph
+                )
+                try:
+                    chunk_graph = Neo4jGraph.model_validate_json(llm_result.content)
+                except ValidationError as e:
+                    if self.on_error == OnError.RAISE:
+                        raise LLMGenerationError(
+                            "LLM response has improper format"
+                        ) from e
+                    else:
+                        logger.error(
+                            f"LLM response has improper format for chunk_index={chunk.index}"
+                        )
+                        logger.debug(f"Invalid response: {llm_result.content}")
+                    chunk_graph = Neo4jGraph()
+                return chunk_graph
+            else:
+                # This should never happen due to __init__ validation
+                raise RuntimeError(
+                    f"Structured output requires OpenAILLM or VertexAILLM, got {type(self.llm).__name__}"
+                )
+
+        # Use V1 prompt-based JSON extraction (default)
         llm_result = await self.llm.ainvoke(prompt)
         try:
             llm_generated_json = fix_invalid_json(llm_result.content)
