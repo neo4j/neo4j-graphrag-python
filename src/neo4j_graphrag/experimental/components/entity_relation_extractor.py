@@ -242,31 +242,25 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         # Use structured output (V2) if enabled
         if self.use_structured_output:
             # Type narrowing with isinstance check
-            # This should always be true due to __init__ validation, but satisfies type checker
-            if isinstance(self.llm, (OpenAILLM, VertexAILLM)):
-                messages = [LLMMessage(role="user", content=prompt)]
-                llm_result = await self.llm.ainvoke(
-                    messages, response_format=Neo4jGraph
-                )
-                try:
-                    chunk_graph = Neo4jGraph.model_validate_json(llm_result.content)
-                except ValidationError as e:
-                    if self.on_error == OnError.RAISE:
-                        raise LLMGenerationError(
-                            "LLM response has improper format"
-                        ) from e
-                    else:
-                        logger.error(
-                            f"LLM response has improper format for chunk_index={chunk.index}"
-                        )
-                        logger.debug(f"Invalid response: {llm_result.content}")
-                    chunk_graph = Neo4jGraph()
-                return chunk_graph
-            else:
-                # This should never happen due to __init__ validation
+            # This should never happen due to __init__ validation
+            if not isinstance(self.llm, (OpenAILLM, VertexAILLM)):
                 raise RuntimeError(
                     f"Structured output requires OpenAILLM or VertexAILLM, got {type(self.llm).__name__}"
                 )
+
+            messages = [LLMMessage(role="user", content=prompt)]
+            llm_result = await self.llm.ainvoke(messages, response_format=Neo4jGraph)
+            try:
+                chunk_graph = Neo4jGraph.model_validate_json(llm_result.content)
+            except ValidationError as e:
+                if self.on_error == OnError.RAISE:
+                    raise LLMGenerationError("LLM response has improper format") from e
+                logger.error(
+                    f"LLM response has improper format for chunk_index={chunk.index}"
+                )
+                logger.debug(f"Invalid response: {llm_result.content}")
+                chunk_graph = Neo4jGraph()
+            return chunk_graph
 
         # Use V1 prompt-based JSON extraction (default)
         llm_result = await self.llm.ainvoke(prompt)
@@ -276,22 +270,20 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         except (json.JSONDecodeError, InvalidJSONError) as e:
             if self.on_error == OnError.RAISE:
                 raise LLMGenerationError("LLM response is not valid JSON") from e
-            else:
-                logger.error(
-                    f"LLM response is not valid JSON for chunk_index={chunk.index}"
-                )
-                logger.debug(f"Invalid JSON: {llm_result.content}")
+            logger.error(
+                f"LLM response is not valid JSON for chunk_index={chunk.index}"
+            )
+            logger.debug(f"Invalid JSON: {llm_result.content}")
             result = {"nodes": [], "relationships": []}
         try:
             chunk_graph = Neo4jGraph.model_validate(result)
         except ValidationError as e:
             if self.on_error == OnError.RAISE:
                 raise LLMGenerationError("LLM response has improper format") from e
-            else:
-                logger.error(
-                    f"LLM response has improper format for chunk_index={chunk.index}"
-                )
-                logger.debug(f"Invalid JSON format: {result}")
+            logger.error(
+                f"LLM response has improper format for chunk_index={chunk.index}"
+            )
+            logger.debug(f"Invalid JSON format: {result}")
             chunk_graph = Neo4jGraph()
         return chunk_graph
 
