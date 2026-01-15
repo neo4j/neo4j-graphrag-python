@@ -153,13 +153,13 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
                 """Could not import Vertex AI Python client.
                 Please install it with `pip install "neo4j-graphrag[google]"`."""
             )
-        LLMInterfaceV2.__init__(
-            self,
-            model_name=model_name,
-            model_params=model_params or {},
-            rate_limit_handler=rate_limit_handler,
-            **kwargs,
-        )
+            LLMInterfaceV2.__init__(
+                self,
+                model_name=model_name,
+                model_params=model_params or {},
+                rate_limit_handler=rate_limit_handler,
+                **kwargs,
+            )
         self.model_name = model_name
         self.system_instruction = system_instruction
         self.options = kwargs
@@ -298,6 +298,8 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
             response_format (Optional[Union[Type[BaseModel], dict[str, Any]]]): Optional
                 response format. Can be a Pydantic model class for structured output
                 or a JSON schema dict.
+            **kwargs: Additional parameters to pass to GenerationConfig (e.g., temperature,
+                max_output_tokens, top_p, top_k). These override constructor values.
 
         Returns:
             LLMResponse: The response from the LLM.
@@ -308,7 +310,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         )
         try:
             options = self._get_call_params_v2(
-                messages, tools=None, response_format=response_format
+                messages, tools=None, response_format=response_format, **kwargs
             )
             response = model.generate_content(**options)
             return self._parse_content_response(response)
@@ -358,6 +360,8 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
             response_format (Optional[Union[Type[BaseModel], dict[str, Any]]]): Optional
                 response format. Can be a Pydantic model class for structured output
                 or a JSON schema dict.
+            **kwargs: Additional parameters to pass to GenerationConfig (e.g., temperature,
+                max_output_tokens, top_p, top_k). These override constructor values.
 
         Returns:
             LLMResponse: The response from the LLM.
@@ -368,7 +372,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
                 system_instruction=system_instruction,
             )
             options = self._get_call_params_v2(
-                messages, tools=None, response_format=response_format
+                messages, tools=None, response_format=response_format, **kwargs
             )
             response = await model.generate_content_async(**options)
             return self._parse_content_response(response)
@@ -533,6 +537,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         contents: list[Content],
         tools: Optional[Sequence[Tool]],
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
     ) -> dict[str, Any]:
         from vertexai.generative_models import GenerationConfig
 
@@ -551,51 +556,31 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
             # no tools, remove tool_config if defined
             options.pop("tool_config", None)
 
-            # Check if constructor's generation_config has response_schema
-            # In V2, response_format should be passed via invoke(), not constructor
-            # Note: GenerationConfig stores data in _raw_generation_config protobuf
-            existing_config = options.get("generation_config")
-            has_schema_in_config = (
-                existing_config is not None
-                and hasattr(existing_config, "_raw_generation_config")
-                and bool(str(existing_config._raw_generation_config.response_schema))
-            )
-
-            if has_schema_in_config:
-                # Only warn if user didn't pass response_format to invoke()
-                if response_format is None:
-                    logger.warning(
-                        "response_schema in generation_config is ignored in V2. "
-                        "Pass response_format to invoke() instead."
-                    )
-                # Remove response_schema from existing config by extracting other params
-                preserved_params = _extract_generation_config_params(
-                    existing_config, exclude_schema=True
-                )
-                if preserved_params:
-                    options["generation_config"] = GenerationConfig(**preserved_params)
-                else:
-                    options.pop("generation_config", None)
+            # Apply response_format and/or kwargs if provided
+            if response_format is not None or kwargs:
+                # Start with ALL existing params from constructor (including schema)
                 existing_config = options.get("generation_config")
-
-            # Apply response_format if provided
-            if response_format is not None:
-                # Convert to JSON schema
-                if isinstance(response_format, type) and issubclass(
-                    response_format, BaseModel
-                ):
-                    # if we migrate to new google-genai-sdk, Pydantic models can be passed directly
-                    schema = response_format.model_json_schema()
-                else:
-                    schema = response_format
-
-                # Merge with existing generation_config to preserve other params
-                preserved_params = _extract_generation_config_params(
-                    existing_config, exclude_schema=True
+                params = _extract_generation_config_params(
+                    existing_config, exclude_schema=False
                 )
-                preserved_params["response_mime_type"] = "application/json"
-                preserved_params["response_schema"] = schema
-                options["generation_config"] = GenerationConfig(**preserved_params)
+
+                # If response_format provided, override schema (prioritize it)
+                if response_format is not None:
+                    # Convert to JSON schema
+                    if isinstance(response_format, type) and issubclass(
+                        response_format, BaseModel
+                    ):
+                        # if we migrate to new google-genai-sdk, Pydantic models can be passed directly
+                        schema = response_format.model_json_schema()
+                    else:
+                        schema = response_format
+                    params["response_mime_type"] = "application/json"
+                    params["response_schema"] = schema
+
+                # Apply kwargs (they override constructor values but preserve schema)
+                params.update(kwargs)
+
+                options["generation_config"] = GenerationConfig(**params)
         options["contents"] = contents
         return options
 
