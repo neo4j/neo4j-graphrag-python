@@ -295,6 +295,84 @@ Here's an example using the Python Ollama client:
 See :ref:`llminterface`.
 
 
+Structured Output with LLMs
+============================
+
+Structured output enables LLMs to return responses conforming to a predefined schema (Pydantic model or JSON schema), ensuring type-safe and consistent data structures. This is useful for extracting entities, relationships, or any structured data with automatic validation.
+
+**V2 Interface (Recommended)**: For :ref:`OpenAILLM <openaillm>` and :ref:`VertexAILLM <vertexaillm>`, pass `response_format` as a parameter to the `invoke()` method when using the V2 interface (list of `LLMMessage`). The `response_format` accepts either a Pydantic model class or a JSON schema dictionary. Other LLM providers will raise `NotImplementedError` if `response_format` is used.
+
+**V1 Interface (Legacy)**: With the V1 interface (string input), standard JSON mode is supported for both OpenAI and VertexAI via constructor parameters only (`model_params` for OpenAI, `generation_config` for VertexAI). The `response_format` parameter in `invoke()` is not permitted with V1.
+
+.. code:: python
+
+    from pydantic import BaseModel
+    from neo4j_graphrag.llm import OpenAILLM
+    from neo4j_graphrag.types import LLMMessage
+
+    class Person(BaseModel):
+        name: str
+        age: int
+        occupation: str
+
+    llm = OpenAILLM(model_name="gpt-4o-mini")
+
+    # V2: Pass response_format to invoke()
+    messages = [LLMMessage(role="user", content="Extract: John is a 30 year old engineer.")]
+    response = llm.invoke(messages, response_format=Person, temperature=0)
+    person = Person.model_validate_json(response.content)  # {"name": "John", "age": 30, ...}
+
+    # V1: Use constructor parameters for standard JSON mode
+    llm_v1 = OpenAILLM(
+        model_name="gpt-4o-mini",
+        model_params={"response_format": {"type": "json_object"}, "temperature": 0}
+    )
+    response_v1 = llm_v1.invoke("Extract person in JSON format: John is 30 years old.")
+
+OpenAI Structured Output
+-------------------------
+
+OpenAI supports Pydantic models (via `beta.chat.completions.parse`), JSON schemas, and JSON object mode. For Pydantic models, the schema is automatically extracted and validated. For JSON object mode (`{"type": "json_object"}`), the prompt must include the word "json" (case-insensitive).
+
+.. code:: python
+
+    from neo4j_graphrag.llm import OpenAILLM
+    from neo4j_graphrag.types import LLMMessage
+
+    llm = OpenAILLM(model_name="gpt-4o-mini")
+
+    # JSON schema
+    json_schema = {
+        "type": "object",
+        "properties": {"name": {"type": "string"}, "age": {"type": "integer"}},
+        "required": ["name", "age"]
+    }
+    messages = [LLMMessage(role="user", content="Extract: John is 30.")]
+    response = llm.invoke(messages, response_format=json_schema, temperature=0)
+
+    # JSON object mode (no schema enforcement)
+    response = llm.invoke(messages, response_format={"type": "json_object"}, temperature=0.5)
+
+VertexAI Structured Output
+---------------------------
+
+VertexAI uses `GenerationConfig` with `response_mime_type` and `response_schema` internally when `response_format` is passed to `invoke()`. Both Pydantic models and JSON schemas are supported. Additional `GenerationConfig` parameters (e.g., `temperature`, `max_output_tokens`) can be passed as kwargs to `invoke()`, which override constructor values.
+
+.. code:: python
+
+    from pydantic import BaseModel
+    from neo4j_graphrag.llm import VertexAILLM
+    from neo4j_graphrag.types import LLMMessage
+
+    class Person(BaseModel):
+        name: str
+        age: int
+
+    llm = VertexAILLM(model_name="gemini-1.5-pro")
+    messages = [LLMMessage(role="user", content="Extract: John is 30.")]
+    response = llm.invoke(messages, response_format=Person, temperature=0)
+    person = Person.model_validate_json(response.content)
+
 Rate Limit Handling
 ===================
 

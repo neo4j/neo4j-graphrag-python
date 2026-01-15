@@ -932,6 +932,26 @@ It can be used in this way:
 The LLM to use can be customized, the only constraint is that it obeys the :ref:`LLMInterface <llminterface>`.
 
 
+Using Structured Output
+-----------------------
+
+For improved reliability and type safety with :ref:`OpenAILLM <openaillm>` or :ref:`VertexAILLM <vertexaillm>`, enable structured output mode. When `use_structured_output=True`, the extractor uses the LLMInterfaceV2, passing the `Neo4jGraph` Pydantic model as `response_format` to `invoke()`. This ensures the LLM response conforms to the expected graph structure with automatic type validation, reducing the need for JSON repair and error handling.
+
+.. code:: python
+
+    from neo4j_graphrag.experimental.components.entity_relation_extractor import (
+        LLMEntityRelationExtractor,
+    )
+    from neo4j_graphrag.llm import OpenAILLM
+
+    llm = OpenAILLM(model_name="gpt-4o-mini", model_params={"temperature": 0})
+    extractor = LLMEntityRelationExtractor(llm=llm, use_structured_output=True)
+
+.. note::
+
+    Using `use_structured_output=True` with other LLM providers will raise a `ValueError`. Do not pass `response_format` in constructor parameters (`model_params` or `generation_config`); the extractor automatically sets it when calling `invoke()`.
+
+
 Error Behaviour
 ---------------
 
