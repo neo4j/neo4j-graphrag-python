@@ -37,7 +37,6 @@ async def test_kg_writer(driver: neo4j.Driver) -> None:
         id="2",
         label="MyLabel",
         properties={"id": "def"},
-        embedding_properties=None,
     )
     relationship = Neo4jRelationship(
         start_node_id="1", end_node_id="2", type="MY_RELATIONSHIP"
@@ -118,7 +117,6 @@ async def test_kg_writer_no_neo4j_deprecation_warning(
         id="2",
         label="MyLabel",
         properties={},
-        embedding_properties=None,
     )
     relationship = Neo4jRelationship(
         start_node_id="1", end_node_id="2", type="MY_RELATIONSHIP"

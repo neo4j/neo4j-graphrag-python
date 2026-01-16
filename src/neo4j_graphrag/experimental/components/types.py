@@ -28,17 +28,19 @@ logger = logging.getLogger(__name__)
 
 
 class GeoPoint(BaseModel):
-    """Represents a geographic point with latitude, longitude, and optional height.
+    """Represents a geographic point with latitude, longitude, and height.
 
     Attributes:
         latitude (float): The latitude coordinate.
         longitude (float): The longitude coordinate.
-        height (Optional[float]): The height/altitude (optional).
+        height (float): The height/altitude coordinate.
     """
+
+    model_config = ConfigDict(extra="forbid")
 
     latitude: float
     longitude: float
-    height: Optional[float] = None
+    height: float
 
 
 # Define primitive value types
@@ -121,7 +123,7 @@ class Neo4jNode(BaseModel):
         id (str): The ID of the node. This ID is used to refer to the node for relationship creation.
         label (str): The label of the node.
         properties (dict[str, PropertyValue]): A dictionary of properties attached to the node.
-        embedding_properties (Optional[dict[str, list[float]]]): A list of embedding properties attached to the node.
+        embedding_properties (dict[str, list[float]]): A dictionary of embedding properties attached to the node.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -129,7 +131,7 @@ class Neo4jNode(BaseModel):
     id: str
     label: str
     properties: dict[str, PropertyValue] = Field(default_factory=dict)
-    embedding_properties: Optional[dict[str, list[float]]] = None
+    embedding_properties: dict[str, list[float]] = Field(default_factory=dict)
 
     @property
     def token(self) -> str:
@@ -144,7 +146,7 @@ class Neo4jRelationship(BaseModel):
         end_node_id (str): The ID of the end node.
         type (str): The relationship type.
         properties (dict[str, PropertyValue]): A dictionary of properties attached to the relationship.
-        embedding_properties (Optional[dict[str, list[float]]]): A list of embedding properties attached to the relationship.
+        embedding_properties (dict[str, list[float]]): A dictionary of embedding properties attached to the relationship.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -153,7 +155,7 @@ class Neo4jRelationship(BaseModel):
     end_node_id: str
     type: str
     properties: dict[str, PropertyValue] = Field(default_factory=dict)
-    embedding_properties: Optional[dict[str, list[float]]] = None
+    embedding_properties: dict[str, list[float]] = Field(default_factory=dict)
 
     @property
     def token(self) -> str:
@@ -172,6 +174,14 @@ class Neo4jGraph(DataModel):
 
     nodes: list[Neo4jNode] = Field(default_factory=list)
     relationships: list[Neo4jRelationship] = Field(default_factory=list)
+
+    @classmethod
+    def model_json_schema(cls, **kwargs: Any) -> dict[str, Any]:  # type: ignore[override]
+        """Override to mark nodes and relationships as required in JSON schema."""
+        schema = super().model_json_schema(**kwargs)
+        # Force nodes and relationships to be required for structured output compatibility
+        schema["required"] = ["nodes", "relationships"]
+        return schema
 
 
 class ResolutionStats(DataModel):

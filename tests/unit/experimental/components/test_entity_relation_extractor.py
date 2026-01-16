@@ -212,7 +212,7 @@ async def test_extractor_llm_badly_formatted_json_gets_fixed() -> None:
 
     assert len(res.nodes) == 1
     assert res.nodes[0].label == "Person"
-    assert res.nodes[0].embedding_properties is None
+    assert res.nodes[0].embedding_properties == {}
     assert res.relationships == []
 
 
