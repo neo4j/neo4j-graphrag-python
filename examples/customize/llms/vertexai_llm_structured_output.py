@@ -30,6 +30,7 @@ from neo4j_graphrag.llm import VertexAILLM
 from neo4j_graphrag.types import LLMMessage
 from vertexai.generative_models import GenerationConfig
 
+
 # Define a Pydantic model for structured output
 class Movie(BaseModel):
     title: str
@@ -45,13 +46,12 @@ print("=" * 60)
 print("V1 Legacy: Manual JSON extraction with prompt engineering")
 print("=" * 60)
 
-# V1: Use generation_config 
+# V1: Use generation_config
 llm_v1 = VertexAILLM(
     model_name="gemini-2.5-flash",
     generation_config=GenerationConfig(
-        response_mime_type="application/json",
-        temperature=0
-    )
+        response_mime_type="application/json", temperature=0
+    ),
 )
 
 # V1 requires string input
@@ -78,16 +78,12 @@ llm_v2 = VertexAILLM(model_name="gemini-2.5-flash")
 messages = [
     LLMMessage(
         role="user",
-        content="Inception was directed by Christopher Nolan in 2010. It's a science fiction thriller."
+        content="Inception was directed by Christopher Nolan in 2010. It's a science fiction thriller.",
     )
 ]
 
 # Pass response_format and temperature directly to invoke()
-response_v2 = llm_v2.invoke(
-    messages,
-    response_format=Movie,
-    temperature=0
-)
+response_v2 = llm_v2.invoke(messages, response_format=Movie, temperature=0)
 
 # Parse and validate in one step
 movie = Movie.model_validate_json(response_v2.content)
@@ -109,17 +105,15 @@ movie_schema = {
         "title": {"type": "string"},
         "year": {"type": "integer"},
         "director": {"type": "string"},
-        "genre": {"type": "string"}
+        "genre": {"type": "string"},
     },
     "required": ["title", "year", "director", "genre"],
-    "additionalProperties": False
+    "additionalProperties": False,
 }
 
 # Pass JSON schema as response_format
 response_v2_schema = llm_v2.invoke(
-    messages,
-    response_format=movie_schema,
-    temperature=0
+    messages, response_format=movie_schema, temperature=0
 )
 
 print(f"Response: {response_v2_schema.content}")

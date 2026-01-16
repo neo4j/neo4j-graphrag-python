@@ -29,10 +29,13 @@ from neo4j_graphrag.types import LLMMessage
 
 load_dotenv()
 
+
 # Define a Pydantic model for structured output
 class Movie(BaseModel):
-    model_config = ConfigDict(extra="forbid") # This is important to prevent extra properties from being added to the response
-    
+    model_config = ConfigDict(
+        extra="forbid"
+    )  # This is important to prevent extra properties from being added to the response
+
     title: str
     year: int
     director: str
@@ -49,10 +52,7 @@ print("=" * 60)
 # V1: Use model_params with response_format for JSON object mode
 llm_v1 = OpenAILLM(
     model_name="gpt-4o-mini",
-    model_params={
-        "response_format": {"type": "json_object"},
-        "temperature": 0
-    }
+    model_params={"response_format": {"type": "json_object"}, "temperature": 0},
 )
 
 # V1 requires string input and explicit JSON instructions in the prompt
@@ -79,16 +79,12 @@ llm_v2 = OpenAILLM(model_name="gpt-4o-mini")
 messages = [
     LLMMessage(
         role="user",
-        content="Inception was directed by Christopher Nolan in 2010. It's a science fiction thriller."
+        content="Inception was directed by Christopher Nolan in 2010. It's a science fiction thriller.",
     )
 ]
 
 # Pass response_format and temperature directly to invoke()
-response_v2 = llm_v2.invoke(
-    messages,
-    response_format=Movie,
-    temperature=0
-)
+response_v2 = llm_v2.invoke(messages, response_format=Movie, temperature=0)
 
 # Parse and validate in one step
 movie = Movie.model_validate_json(response_v2.content)
@@ -109,7 +105,7 @@ llm_v2 = OpenAILLM(model_name="gpt-4o-mini")
 messages = [
     LLMMessage(
         role="user",
-        content="Inception was directed by Christopher Nolan in 2010. It's a science fiction thriller."
+        content="Inception was directed by Christopher Nolan in 2010. It's a science fiction thriller.",
     )
 ]
 
@@ -125,19 +121,17 @@ movie_schema = {
                 "title": {"type": "string"},
                 "year": {"type": "integer"},
                 "director": {"type": "string"},
-                "genre": {"type": "string"}
+                "genre": {"type": "string"},
             },
             "required": ["title", "year", "director", "genre"],
-            "additionalProperties": False
-        }
-    }
+            "additionalProperties": False,
+        },
+    },
 }
 
 # Pass JSON schema as response_format
 response_v2_schema = llm_v2.invoke(
-    messages,
-    response_format=movie_schema,
-    temperature=0
+    messages, response_format=movie_schema, temperature=0
 )
 
 print(f"Response: {response_v2_schema.content}")

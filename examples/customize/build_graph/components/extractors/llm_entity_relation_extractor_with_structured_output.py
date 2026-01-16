@@ -26,10 +26,11 @@ from neo4j_graphrag.experimental.components.types import (
 )
 from neo4j_graphrag.llm import OpenAILLM, VertexAILLM
 
+
 async def main() -> Neo4jGraph:
     """
     Demonstrates entity and relation extraction with structured output.
-    
+
     With use_structured_output=True:
     - Uses LLMInterfaceV2 (list of messages)
     - Passes Neo4jGraph Pydantic model as response_format to invoke()
@@ -39,9 +40,7 @@ async def main() -> Neo4jGraph:
     """
     load_dotenv()
     # Initialize LLM - no response_format in constructor!
-    llm = VertexAILLM(
-        model_name="gemini-2.5-flash"
-    )
+    llm = VertexAILLM(model_name="gemini-2.5-flash")
 
     # llm = OpenAILLM(
     #     model_name="gpt-4o-mini",
@@ -53,23 +52,23 @@ async def main() -> Neo4jGraph:
         llm=llm,
         use_structured_output=True,  # This is the key parameter!
     )
-    
+
     # Sample text about a person and organization
     sample_text = """
     Albert Einstein was a theoretical physicist who developed the theory of relativity.
     He worked at the Institute for Advanced Study in Princeton from 1933 until his death in 1955.
     """
-    
+
     # Extract entities and relationships
     graph = await extractor.run(
         chunks=TextChunks(chunks=[TextChunk(text=sample_text, index=0)])
     )
-    
+
     return graph
 
 
 if __name__ == "__main__":
     # Run extraction
     graph = asyncio.run(main())
-    
+
     print(graph)
