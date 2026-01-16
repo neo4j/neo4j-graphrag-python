@@ -296,6 +296,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         try:
             messages = self.get_messages_v2(input)
             params = self.model_params.copy() if self.model_params else {}
+
             # Remove response_format from params to avoid conflicts
             # In V2, response_format should be passed via invoke(), not constructor
             if (
@@ -307,30 +308,35 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
                     "Pass response_format to invoke() instead."
                 )
 
-            if isinstance(response_format, type) and issubclass(
-                response_format, BaseModel
-            ):
-                # Pydantic model: use beta.parse
-                response = self.client.beta.chat.completions.parse(
-                    messages=messages,
-                    model=self.model_name,
-                    response_format=response_format,
-                    **params,
-                    **kwargs,
-                )
-                parsed = response.choices[0].message.parsed
-                content = parsed.model_dump_json() if parsed else ""
-            else:
-                # Dict format or no response_format: use standard create
-                if response_format is not None:
+            # Pre-process response_format if it's a Pydantic model
+            if response_format is not None:
+                if isinstance(response_format, type) and issubclass(
+                    response_format, BaseModel
+                ):
+                    # Convert Pydantic model to JSON schema for better compatibility
+                    # Using beta.parse() has strict limitations, so we convert to JSON schema
+                    schema = response_format.model_json_schema()
+                    kwargs["response_format"] = {
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": response_format.__name__,
+                            "strict": True,
+                            "schema": schema,
+                        },
+                    }
+                else:
+                    # Dict format (e.g., {"type": "json_object"})
                     kwargs["response_format"] = response_format
-                response = self.client.chat.completions.create(
-                    messages=messages,
-                    model=self.model_name,
-                    **params,
-                    **kwargs,
-                )
-                content = response.choices[0].message.content or ""
+
+            # Make single API call
+            response = self.client.chat.completions.create(
+                messages=messages,
+                model=self.model_name,
+                **params,
+                **kwargs,
+            )
+
+            content = response.choices[0].message.content or ""
             return LLMResponse(content=content)
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
@@ -501,6 +507,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         try:
             messages = self.get_messages_v2(input)
             params = self.model_params.copy() if self.model_params else {}
+
             # Remove response_format from params to avoid conflicts
             # In V2, response_format should be passed via invoke(), not constructor
             if (
@@ -512,30 +519,35 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
                     "Pass response_format to invoke() instead."
                 )
 
-            if isinstance(response_format, type) and issubclass(
-                response_format, BaseModel
-            ):
-                # Pydantic model: use beta.parse
-                response = await self.async_client.beta.chat.completions.parse(
-                    messages=messages,
-                    model=self.model_name,
-                    response_format=response_format,
-                    **params,
-                    **kwargs,
-                )
-                parsed = response.choices[0].message.parsed
-                content = parsed.model_dump_json() if parsed else ""
-            else:
-                # Dict format or no response_format: use standard create
-                if response_format is not None:
+            # Pre-process response_format if it's a Pydantic model
+            if response_format is not None:
+                if isinstance(response_format, type) and issubclass(
+                    response_format, BaseModel
+                ):
+                    # Convert Pydantic model to JSON schema for better compatibility
+                    # Using beta.parse() has strict limitations, so we convert to JSON schema
+                    schema = response_format.model_json_schema()
+                    kwargs["response_format"] = {
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": response_format.__name__,
+                            "strict": True,
+                            "schema": schema,
+                        },
+                    }
+                else:
+                    # Dict format (e.g., {"type": "json_object"})
                     kwargs["response_format"] = response_format
-                response = await self.async_client.chat.completions.create(
-                    messages=messages,
-                    model=self.model_name,
-                    **params,
-                    **kwargs,
-                )
-                content = response.choices[0].message.content or ""
+
+            # Make single API call
+            response = await self.async_client.chat.completions.create(
+                messages=messages,
+                model=self.model_name,
+                **params,
+                **kwargs,
+            )
+
+            content = response.choices[0].message.content or ""
             return LLMResponse(content=content)
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)

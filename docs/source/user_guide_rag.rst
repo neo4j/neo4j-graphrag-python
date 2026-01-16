@@ -306,11 +306,13 @@ Structured output enables LLMs to return responses conforming to a predefined sc
 
 .. code:: python
 
-    from pydantic import BaseModel
+    from pydantic import BaseModel, ConfigDict
     from neo4j_graphrag.llm import OpenAILLM
     from neo4j_graphrag.types import LLMMessage
 
     class Person(BaseModel):
+        model_config = ConfigDict(extra="forbid")  # Required for OpenAI structured output
+        
         name: str
         age: int
         occupation: str
@@ -332,7 +334,7 @@ Structured output enables LLMs to return responses conforming to a predefined sc
 OpenAI Structured Output
 -------------------------
 
-OpenAI supports Pydantic models (via `beta.chat.completions.parse`), JSON schemas, and JSON object mode. For Pydantic models, the schema is automatically extracted and validated. For JSON object mode (`{"type": "json_object"}`), the prompt must include the word "json" (case-insensitive).
+OpenAI supports Pydantic models, JSON schemas, and JSON object mode. **Important**: Pydantic models must include `ConfigDict(extra="forbid")` to generate schemas with `additionalProperties: false`, which is required by OpenAI's strict mode. 
 
 .. code:: python
 
@@ -356,15 +358,16 @@ OpenAI supports Pydantic models (via `beta.chat.completions.parse`), JSON schema
 VertexAI Structured Output
 ---------------------------
 
-VertexAI uses `GenerationConfig` with `response_mime_type` and `response_schema` internally when `response_format` is passed to `invoke()`. Both Pydantic models and JSON schemas are supported. Additional `GenerationConfig` parameters (e.g., `temperature`, `max_output_tokens`) can be passed as kwargs to `invoke()`, which override constructor values.
-
+VertexAI uses `GenerationConfig` with `response_mime_type` and `response_schema` internally when `response_format` is passed to `invoke()`. Both Pydantic models and JSON schemas are supported. **Important**: Additional `GenerationConfig` parameters (e.g., `temperature`, `max_output_tokens`) can be passed as kwargs to `invoke()`.
 .. code:: python
 
-    from pydantic import BaseModel
+    from pydantic import BaseModel, ConfigDict
     from neo4j_graphrag.llm import VertexAILLM
     from neo4j_graphrag.types import LLMMessage
 
     class Person(BaseModel):
+        model_config = ConfigDict(extra="forbid")
+        
         name: str
         age: int
 
