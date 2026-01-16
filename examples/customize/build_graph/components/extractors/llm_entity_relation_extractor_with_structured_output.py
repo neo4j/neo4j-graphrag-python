@@ -24,7 +24,7 @@ from neo4j_graphrag.experimental.components.types import (
     TextChunk,
     TextChunks,
 )
-from neo4j_graphrag.llm import OpenAILLM, VertexAILLM
+from neo4j_graphrag.llm import VertexAILLM
 
 
 async def main() -> Neo4jGraph:
