@@ -14,19 +14,17 @@
 
 # built-in dependencies
 from __future__ import annotations
-from typing import Any, List, Optional, Union, cast, Sequence, overload
+
+import inspect
+import logging
+from typing import Any, List, Optional, Sequence, Type, Union, cast, overload
 
 # 3rd party dependencies
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 # project dependencies
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMInterface, LLMInterfaceV2
-from neo4j_graphrag.utils.rate_limit import (
-    RateLimitHandler,
-    rate_limit_handler as rate_limit_handler_decorator,
-    async_rate_limit_handler as async_rate_limit_handler_decorator,
-)
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
@@ -37,6 +35,15 @@ from neo4j_graphrag.llm.types import (
 from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.tool import Tool
 from neo4j_graphrag.types import LLMMessage
+from neo4j_graphrag.utils.rate_limit import (
+    RateLimitHandler,
+)
+from neo4j_graphrag.utils.rate_limit import (
+    async_rate_limit_handler as async_rate_limit_handler_decorator,
+)
+from neo4j_graphrag.utils.rate_limit import (
+    rate_limit_handler as rate_limit_handler_decorator,
+)
 
 try:
     from vertexai.generative_models import (
@@ -47,12 +54,62 @@ try:
         GenerativeModel,
         Part,
         ResponseValidationError,
-        Tool as VertexAITool,
         ToolConfig,
+    )
+    from vertexai.generative_models import (
+        Tool as VertexAITool,
     )
 except ImportError:
     GenerativeModel = None  # type: ignore[misc, assignment]
     ResponseValidationError = None  # type: ignore[misc, assignment]
+
+logger = logging.getLogger(__name__)
+
+# Params to exclude when extracting from GenerationConfig for structured output
+_GENERATION_CONFIG_SCHEMA_PARAMS = {"response_schema", "response_mime_type"}
+
+
+def _extract_generation_config_params(
+    config: Any, exclude_schema: bool = True
+) -> dict[str, Any]:
+    """Extract valid parameters from a GenerationConfig object.
+
+    This function extracts parameters from the internal _raw_generation_config
+    protobuf and returns them as a dict that can be passed to GenerationConfig().
+
+    Args:
+        config: A GenerationConfig object
+        exclude_schema: If True, excludes response_schema and response_mime_type
+
+    Returns:
+        Dict of parameter name to value for non-empty params
+    """
+    from vertexai.generative_models import GenerationConfig
+
+    if not hasattr(config, "_raw_generation_config"):
+        return {}
+
+    raw = config._raw_generation_config
+
+    # Get valid params from GenerationConfig signature
+    sig = inspect.signature(GenerationConfig.__init__)
+    valid_params = {
+        name
+        for name, _ in sig.parameters.items()
+        if name != "self"
+        and (not exclude_schema or name not in _GENERATION_CONFIG_SCHEMA_PARAMS)
+    }
+
+    preserved = {}
+    for param in valid_params:
+        val = getattr(raw, param, None)
+        if val:  # Only include non-empty values
+            # Convert repeated fields (like stop_sequences) to lists
+            if hasattr(val, "__iter__") and not isinstance(val, (str, bytes, dict)):
+                val = list(val)
+            preserved[param] = val
+
+    return preserved
 
 
 # pylint: disable=arguments-differ, redefined-builtin, no-else-return
@@ -96,13 +153,13 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
                 """Could not import Vertex AI Python client.
                 Please install it with `pip install "neo4j-graphrag[google]"`."""
             )
-        LLMInterfaceV2.__init__(
-            self,
-            model_name=model_name,
-            model_params=model_params or {},
-            rate_limit_handler=rate_limit_handler,
-            **kwargs,
-        )
+            LLMInterfaceV2.__init__(
+                self,
+                model_name=model_name,
+                model_params=model_params or {},
+                rate_limit_handler=rate_limit_handler,
+                **kwargs,
+            )
         self.model_name = model_name
         self.system_instruction = system_instruction
         self.options = kwargs
@@ -120,6 +177,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
     def invoke(
         self,
         input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse: ...
 
@@ -135,6 +193,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
     async def ainvoke(
         self,
         input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse: ...
 
@@ -145,12 +204,13 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
         if isinstance(input, str):
             return self.__invoke_v1(input, message_history, system_instruction)
         elif isinstance(input, list):
-            return self.__invoke_v2(input, **kwargs)
+            return self.__invoke_v2(input, response_format=response_format, **kwargs)
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 
@@ -159,12 +219,15 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
         if isinstance(input, str):
             return await self.__ainvoke_v1(input, message_history, system_instruction)
         elif isinstance(input, list):
-            return await self.__ainvoke_v2(input, **kwargs)
+            return await self.__ainvoke_v2(
+                input, response_format=response_format, **kwargs
+            )
         else:
             raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
 
@@ -225,12 +288,18 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
     def __invoke_v2(
         self,
         input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
         """New invoke method for LLMInterfaceV2.
 
         Args:
             input (List[LLMMessage]): Input to the LLM.
+            response_format (Optional[Union[Type[BaseModel], dict[str, Any]]]): Optional
+                response format. Can be a Pydantic model class for structured output
+                or a JSON schema dict.
+            **kwargs: Additional parameters to pass to GenerationConfig (e.g., temperature,
+                max_output_tokens, top_p, top_k). These override constructor values.
 
         Returns:
             LLMResponse: The response from the LLM.
@@ -240,7 +309,9 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
             system_instruction=system_instruction,
         )
         try:
-            options = self._get_call_params_v2(messages, tools=None)
+            options = self._get_call_params_v2(
+                messages, tools=None, response_format=response_format, **kwargs
+            )
             response = model.generate_content(**options)
             return self._parse_content_response(response)
         except ResponseValidationError as e:
@@ -279,12 +350,18 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
     async def __ainvoke_v2(
         self,
         input: list[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
         """Asynchronously sends text to the LLM and returns a response.
 
         Args:
-            input (str): The text to send to the LLM.
+            input (List[LLMMessage]): Input to the LLM.
+            response_format (Optional[Union[Type[BaseModel], dict[str, Any]]]): Optional
+                response format. Can be a Pydantic model class for structured output
+                or a JSON schema dict.
+            **kwargs: Additional parameters to pass to GenerationConfig (e.g., temperature,
+                max_output_tokens, top_p, top_k). These override constructor values.
 
         Returns:
             LLMResponse: The response from the LLM.
@@ -294,7 +371,9 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
             model = self._get_model(
                 system_instruction=system_instruction,
             )
-            options = self._get_call_params_v2(messages, tools=None)
+            options = self._get_call_params_v2(
+                messages, tools=None, response_format=response_format, **kwargs
+            )
             response = await model.generate_content_async(**options)
             return self._parse_content_response(response)
         except ResponseValidationError as e:
@@ -457,7 +536,11 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         self,
         contents: list[Content],
         tools: Optional[Sequence[Tool]],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
     ) -> dict[str, Any]:
+        from vertexai.generative_models import GenerationConfig
+
         options = dict(self.options)
         if tools:
             # we want a tool back, remove generation_config if defined
@@ -472,6 +555,32 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         else:
             # no tools, remove tool_config if defined
             options.pop("tool_config", None)
+
+            # Apply response_format and/or kwargs if provided
+            if response_format is not None or kwargs:
+                # Start with ALL existing params from constructor (including schema)
+                existing_config = options.get("generation_config")
+                params = _extract_generation_config_params(
+                    existing_config, exclude_schema=False
+                )
+
+                # If response_format provided, override schema (prioritize it)
+                if response_format is not None:
+                    # Convert to JSON schema
+                    if isinstance(response_format, type) and issubclass(
+                        response_format, BaseModel
+                    ):
+                        # if we migrate to new google-genai-sdk, Pydantic models can be passed directly
+                        schema = response_format.model_json_schema()
+                    else:
+                        schema = response_format
+                    params["response_mime_type"] = "application/json"
+                    params["response_schema"] = schema
+
+                # Apply kwargs (they override constructor values but preserve schema)
+                params.update(kwargs)
+
+                options["generation_config"] = GenerationConfig(**params)
         options["contents"] = contents
         return options
 

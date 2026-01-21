@@ -30,6 +30,8 @@ from neo4j_graphrag.llm.vertexai_llm import VertexAILLM
 from neo4j_graphrag.tool import Tool
 from neo4j_graphrag.types import LLMMessage
 
+from pydantic import BaseModel, ConfigDict
+
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel", None)
 def test_vertexai_llm_missing_dependency() -> None:
@@ -464,3 +466,116 @@ def test_vertexai_get_brand_new_messages_system_instruction_override(
     assert len(contents) == 1  # Only user message should remain
     assert contents[0].role == "user"
     assert contents[0].parts[0].text == "Hello"
+
+
+class _TestModelForVertexAI(BaseModel):
+    """Test model for structured output tests."""
+
+    model_config = ConfigDict(extra="forbid")
+    name: str
+    age: int
+
+
+_TEST_JSON_SCHEMA = {
+    "type": "object",
+    "properties": {"result": {"type": "string"}},
+    "required": ["result"],
+}
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_invoke_v2_with_pydantic_response_format(
+    GenerativeModelMock: MagicMock,
+) -> None:
+    """Test V2 interface with Pydantic model as response_format."""
+
+    model_name = "gemini-2.5-flash"
+    messages: List[LLMMessage] = [
+        {"role": "user", "content": "Extract person info"},
+    ]
+    mock_response = Mock()
+    mock_response.text = '{"name": "John", "age": 30}'
+    mock_model = GenerativeModelMock.return_value
+    mock_model.generate_content.return_value = mock_response
+
+    llm = VertexAILLM(model_name=model_name)
+    response = llm.invoke(messages, response_format=_TestModelForVertexAI)
+
+    assert response.content == '{"name": "John", "age": 30}'
+
+    # Verify the method was called with generation_config
+    mock_model.generate_content.assert_called_once()
+    call_args = mock_model.generate_content.call_args.kwargs
+    assert "generation_config" in call_args
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_invoke_v2_with_json_schema_response_format(
+    GenerativeModelMock: MagicMock,
+) -> None:
+    """Test V2 interface with JSON schema dict as response_format."""
+    model_name = "gemini-2.5-flash"
+    messages: List[LLMMessage] = [
+        {"role": "user", "content": "Test"},
+    ]
+    mock_response = Mock()
+    mock_response.text = '{"result": "success"}'
+    mock_model = GenerativeModelMock.return_value
+    mock_model.generate_content.return_value = mock_response
+
+    llm = VertexAILLM(model_name=model_name)
+    response = llm.invoke(messages, response_format=_TEST_JSON_SCHEMA)
+
+    assert response.content == '{"result": "success"}'
+
+    # Verify the method was called with generation_config
+    mock_model.generate_content.assert_called_once()
+    call_args = mock_model.generate_content.call_args.kwargs
+    assert "generation_config" in call_args
+
+
+@pytest.mark.asyncio
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+async def test_vertexai_ainvoke_v2_with_pydantic_response_format(
+    GenerativeModelMock: MagicMock,
+) -> None:
+    """Test V2 interface async invoke with Pydantic response_format."""
+
+    model_name = "gemini-2.5-flash"
+    messages: List[LLMMessage] = [{"role": "user", "content": "Test"}]
+    mock_response = AsyncMock()
+    mock_response.text = '{"value": "test"}'
+    mock_model = GenerativeModelMock.return_value
+    mock_model.generate_content_async = AsyncMock(return_value=mock_response)
+
+    llm = VertexAILLM(model_name=model_name)
+    response = await llm.ainvoke(messages, response_format=_TestModelForVertexAI)
+
+    assert response.content == '{"value": "test"}'
+
+    # Verify generation_config has response_schema
+    call_args = mock_model.generate_content_async.call_args.kwargs
+    assert "generation_config" in call_args
+
+
+@pytest.mark.asyncio
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+async def test_vertexai_ainvoke_v2_with_json_schema_response_format(
+    GenerativeModelMock: MagicMock,
+) -> None:
+    """Test V2 interface async invoke with JSON schema response_format."""
+    model_name = "gemini-2.5-flash"
+    messages: List[LLMMessage] = [{"role": "user", "content": "Test"}]
+    mock_response = AsyncMock()
+    mock_response.text = '{"result": "success"}'
+    mock_model = GenerativeModelMock.return_value
+    mock_model.generate_content_async = AsyncMock(return_value=mock_response)
+
+    llm = VertexAILLM(model_name=model_name)
+    response = await llm.ainvoke(messages, response_format=_TEST_JSON_SCHEMA)
+
+    assert response.content == '{"result": "success"}'
+
+    # Verify generation_config has response_schema
+    call_args = mock_model.generate_content_async.call_args.kwargs
+    assert "generation_config" in call_args

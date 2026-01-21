@@ -13,7 +13,8 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from unittest.mock import MagicMock, Mock, patch
-from typing import List
+from typing import Any, Callable, List
+import builtins
 
 import openai
 import pytest
@@ -23,12 +24,27 @@ from neo4j_graphrag.llm.openai_llm import AzureOpenAILLM, OpenAILLM
 from neo4j_graphrag.llm.types import ToolCallResponse
 from neo4j_graphrag.tool import Tool
 from neo4j_graphrag.types import LLMMessage
+from pydantic import BaseModel, ConfigDict
+
+# Save the original __import__ before any patches are applied
+_original_import = builtins.__import__
 
 
 def get_mock_openai() -> MagicMock:
     mock = MagicMock()
     mock.OpenAIError = openai.OpenAIError
     return mock
+
+
+def create_selective_import_mock(mock_openai: MagicMock) -> Callable[..., Any]:
+    """Create a mock that only intercepts 'openai' imports, letting others pass through."""
+
+    def selective_import(name: str, *args: Any, **kwargs: Any) -> Any:
+        if name == "openai":
+            return mock_openai
+        return _original_import(name, *args, **kwargs)
+
+    return selective_import
 
 
 @patch("builtins.__import__", side_effect=ImportError)
@@ -656,3 +672,122 @@ def test_azure_openai_llm_invoke_v2_happy_path(mock_import: Mock) -> None:
     call_args = llm.client.chat.completions.create.call_args[1]  # type: ignore
     assert len(call_args["messages"]) == 2
     assert call_args["model"] == "gpt"
+
+
+class _TestModelForOpenAI(BaseModel):
+    """Test model for structured output tests."""
+
+    model_config = ConfigDict(extra="forbid")
+    name: str
+    age: int
+
+
+# JSON schema for structured output tests
+_TEST_JSON_SCHEMA = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "test_schema",
+        "strict": True,
+        "schema": {"type": "object", "properties": {"result": {"type": "string"}}},
+    },
+}
+
+
+@patch("builtins.__import__")
+def test_openai_llm_invoke_v2_with_pydantic_response_format(mock_import: Mock) -> None:
+    """Test V2 interface with Pydantic model as response_format."""
+
+    mock_openai = get_mock_openai()
+    mock_import.side_effect = create_selective_import_mock(mock_openai)
+    mock_openai.OpenAI.return_value.chat.completions.create.return_value = MagicMock(
+        choices=[MagicMock(message=MagicMock(content='{"name": "John", "age": 30}'))],
+    )
+
+    messages: List[LLMMessage] = [
+        {"role": "user", "content": "Extract person info"},
+    ]
+
+    llm = OpenAILLM(api_key="my key", model_name="gpt")
+    response = llm.invoke(messages, response_format=_TestModelForOpenAI)
+
+    assert response.content == '{"name": "John", "age": 30}'
+
+    # Verify the method was called (response_format handling is internal)
+    llm.client.chat.completions.create.assert_called_once()  # type: ignore
+
+
+@patch("builtins.__import__")
+def test_openai_llm_invoke_v2_with_json_schema_response_format(
+    mock_import: Mock,
+) -> None:
+    """Test V2 interface with JSON schema dict as response_format."""
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+    mock_openai.OpenAI.return_value.chat.completions.create.return_value = MagicMock(
+        choices=[MagicMock(message=MagicMock(content='{"result": "success"}'))],
+    )
+
+    messages: List[LLMMessage] = [
+        {"role": "user", "content": "Test"},
+    ]
+
+    llm = OpenAILLM(api_key="my key", model_name="gpt")
+    response = llm.invoke(messages, response_format=_TEST_JSON_SCHEMA)
+
+    assert response.content == '{"result": "success"}'
+
+    # Verify the method was called (response_format handling is internal)
+    llm.client.chat.completions.create.assert_called_once()  # type: ignore
+
+
+@pytest.mark.asyncio
+@patch("builtins.__import__")
+async def test_openai_llm_ainvoke_v2_with_pydantic_response_format(
+    mock_import: Mock,
+) -> None:
+    """Test V2 interface async invoke with Pydantic response_format."""
+
+    mock_openai = get_mock_openai()
+    mock_import.side_effect = create_selective_import_mock(mock_openai)
+
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock(message=MagicMock(content='{"value": "test"}'))]
+
+    async def async_create(*args, **kwargs):  # type: ignore[no-untyped-def]
+        return mock_response
+
+    mock_openai.AsyncOpenAI.return_value.chat.completions.create = async_create
+
+    messages: List[LLMMessage] = [{"role": "user", "content": "Test"}]
+
+    llm = OpenAILLM(api_key="my key", model_name="gpt")
+    response = await llm.ainvoke(messages, response_format=_TestModelForOpenAI)
+
+    assert response.content == '{"value": "test"}'
+
+
+@pytest.mark.asyncio
+@patch("builtins.__import__")
+async def test_openai_llm_ainvoke_v2_with_json_schema_response_format(
+    mock_import: Mock,
+) -> None:
+    """Test V2 interface async invoke with JSON schema response_format."""
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    mock_response = MagicMock()
+    mock_response.choices = [
+        MagicMock(message=MagicMock(content='{"result": "success"}'))
+    ]
+
+    async def async_create(*args, **kwargs):  # type: ignore[no-untyped-def]
+        return mock_response
+
+    mock_openai.AsyncOpenAI.return_value.chat.completions.create = async_create
+
+    messages: List[LLMMessage] = [{"role": "user", "content": "Test"}]
+
+    llm = OpenAILLM(api_key="my key", model_name="gpt")
+    response = await llm.ainvoke(messages, response_format=_TEST_JSON_SCHEMA)
+
+    assert response.content == '{"result": "success"}'

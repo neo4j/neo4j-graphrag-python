@@ -72,7 +72,7 @@ def test_upsert_nodes(_: Mock, driver: MagicMock) -> None:
                     "labels": ["Label", "__Entity__"],
                     "id": "1",
                     "properties": {"key": "value"},
-                    "embedding_properties": None,
+                    "embedding_properties": {},
                 }
             ]
         },
@@ -148,7 +148,7 @@ def test_upsert_relationship(_: Mock, driver: MagicMock) -> None:
                 "start_node_id": "1",
                 "end_node_id": "2",
                 "properties": {"key": "value"},
-                "embedding_properties": None,
+                "embedding_properties": {},
             }
         ]
     }
@@ -230,7 +230,7 @@ async def test_run(_: Mock, driver: MagicMock) -> None:
                     "labels": ["Label", "__Entity__"],
                     "id": "1",
                     "properties": {},
-                    "embedding_properties": None,
+                    "embedding_properties": {},
                 }
             ]
         },
@@ -243,7 +243,7 @@ async def test_run(_: Mock, driver: MagicMock) -> None:
                 "start_node_id": "1",
                 "end_node_id": "2",
                 "properties": {},
-                "embedding_properties": None,
+                "embedding_properties": {},
             }
         ]
     }
@@ -288,7 +288,7 @@ async def test_run_is_version_below_5_23(_: Mock) -> None:
                     "labels": ["Label", "__Entity__"],
                     "id": "1",
                     "properties": {},
-                    "embedding_properties": None,
+                    "embedding_properties": {},
                 }
             ]
         },
@@ -301,7 +301,7 @@ async def test_run_is_version_below_5_23(_: Mock) -> None:
                 "start_node_id": "1",
                 "end_node_id": "2",
                 "properties": {},
-                "embedding_properties": None,
+                "embedding_properties": {},
             }
         ]
     }
@@ -347,7 +347,7 @@ async def test_run_is_version_5_23_or_above(_: Mock) -> None:
                     "labels": ["Label", "__Entity__"],
                     "id": "1",
                     "properties": {},
-                    "embedding_properties": None,
+                    "embedding_properties": {},
                 }
             ]
         },
@@ -360,7 +360,7 @@ async def test_run_is_version_5_23_or_above(_: Mock) -> None:
                 "start_node_id": "1",
                 "end_node_id": "2",
                 "properties": {},
-                "embedding_properties": None,
+                "embedding_properties": {},
             }
         ]
     }

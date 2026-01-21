@@ -70,6 +70,11 @@ Neo4jGraph
 
 .. autoclass:: neo4j_graphrag.experimental.components.types.Neo4jGraph
 
+GeoPoint
+========
+
+.. autoclass:: neo4j_graphrag.experimental.components.types.GeoPoint
+
 KGWriterModel
 =============
 

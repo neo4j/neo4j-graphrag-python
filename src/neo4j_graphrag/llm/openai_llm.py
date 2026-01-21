@@ -15,34 +15,40 @@
 
 # built-in dependencies
 from __future__ import annotations
+
 import abc
 import json
+import logging
 from typing import (
     TYPE_CHECKING,
     Any,
     Dict,
+    Iterable,
     List,
     Optional,
-    Iterable,
     Sequence,
+    Type,
     Union,
     cast,
     overload,
-    Type,
 )
 
 # 3rd party dependencies
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 # project dependencies
 from neo4j_graphrag.message_history import MessageHistory
+from neo4j_graphrag.tool import Tool
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.rate_limit import (
     RateLimitHandler,
-    rate_limit_handler as rate_limit_handler_decorator,
+)
+from neo4j_graphrag.utils.rate_limit import (
     async_rate_limit_handler as async_rate_limit_handler_decorator,
 )
-from neo4j_graphrag.tool import Tool
+from neo4j_graphrag.utils.rate_limit import (
+    rate_limit_handler as rate_limit_handler_decorator,
+)
 
 from ..exceptions import LLMGenerationError
 from .base import LLMInterface, LLMInterfaceV2
@@ -50,23 +56,25 @@ from .types import (
     BaseMessage,
     LLMResponse,
     MessageList,
+    SystemMessage,
     ToolCall,
     ToolCallResponse,
-    SystemMessage,
     UserMessage,
 )
 
 if TYPE_CHECKING:
+    from openai import AsyncOpenAI, OpenAI
     from openai.types.chat import (
         ChatCompletionMessageParam,
         ChatCompletionToolParam,
     )
-    from openai import OpenAI, AsyncOpenAI
 else:
     ChatCompletionMessageParam = Any
     ChatCompletionToolParam = Any
     OpenAI = Any
     AsyncOpenAI = Any
+
+logger = logging.getLogger(__name__)
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel, line-too-long
@@ -123,6 +131,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
     def invoke(
         self,
         input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse: ...
 
@@ -138,6 +147,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
     async def ainvoke(
         self,
         input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse: ...
 
@@ -147,12 +157,13 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
         if isinstance(input, str):
             return self.__invoke_v1(input, message_history, system_instruction)
         elif isinstance(input, list):
-            return self.__invoke_v2(input, **kwargs)
+            return self.__invoke_v2(input, response_format=response_format, **kwargs)
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 
@@ -161,12 +172,15 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
         if isinstance(input, str):
             return await self.__ainvoke_v1(input, message_history, system_instruction)
         elif isinstance(input, list):
-            return await self.__ainvoke_v2(input, **kwargs)
+            return await self.__ainvoke_v2(
+                input, response_format=response_format, **kwargs
+            )
         else:
             raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
 
@@ -265,23 +279,63 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
     def __invoke_v2(
         self,
         input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
         """New invoke method for LLMInterfaceV2.
 
         Args:
             input (List[LLMMessage]): Input to the LLM.
+            response_format (Optional[Union[Type[BaseModel], dict[str, Any]]]): Optional
+                response format. Can be a Pydantic model class for structured output
+                or a dict like {"type": "json_object"}.
 
         Returns:
             LLMResponse: The response from the LLM.
         """
         try:
+            messages = self.get_messages_v2(input)
+            params = self.model_params.copy() if self.model_params else {}
+
+            # Remove response_format from params to avoid conflicts
+            # In V2, response_format should be passed via invoke(), not constructor
+            if (
+                params.pop("response_format", None) is not None
+                and response_format is None
+            ):
+                logger.warning(
+                    "response_format in model_params is ignored. "
+                    "Pass response_format to invoke() instead."
+                )
+
+            # Pre-process response_format if it's a Pydantic model
+            if response_format is not None:
+                if isinstance(response_format, type) and issubclass(
+                    response_format, BaseModel
+                ):
+                    # Convert Pydantic model to JSON schema for better compatibility
+                    # Using beta.parse() has strict limitations, so we convert to JSON schema
+                    schema = response_format.model_json_schema()
+                    kwargs["response_format"] = {
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": response_format.__name__,
+                            "strict": True,
+                            "schema": schema,
+                        },
+                    }
+                else:
+                    # Dict format (e.g., {"type": "json_object"})
+                    kwargs["response_format"] = response_format
+
+            # Make single API call
             response = self.client.chat.completions.create(
-                messages=self.get_messages_v2(input),
+                messages=messages,
                 model=self.model_name,
-                **self.model_params,
+                **params,
                 **kwargs,
             )
+
             content = response.choices[0].message.content or ""
             return LLMResponse(content=content)
         except self.openai.OpenAIError as e:
@@ -436,16 +490,63 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
     async def __ainvoke_v2(
         self,
         input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        """Asynchronous new invoke method for LLMInterfaceV2."""
+        """Asynchronous new invoke method for LLMInterfaceV2.
+
+        Args:
+            input (List[LLMMessage]): Input to the LLM.
+            response_format (Optional[Union[Type[BaseModel], dict[str, Any]]]): Optional
+                response format. Can be a Pydantic model class for structured output
+                or a dict like {"type": "json_object"}.
+
+        Returns:
+            LLMResponse: The response from the LLM.
+        """
         try:
+            messages = self.get_messages_v2(input)
+            params = self.model_params.copy() if self.model_params else {}
+
+            # Remove response_format from params to avoid conflicts
+            # In V2, response_format should be passed via invoke(), not constructor
+            if (
+                params.pop("response_format", None) is not None
+                and response_format is None
+            ):
+                logger.warning(
+                    "response_format in model_params is ignored. "
+                    "Pass response_format to invoke() instead."
+                )
+
+            # Pre-process response_format if it's a Pydantic model
+            if response_format is not None:
+                if isinstance(response_format, type) and issubclass(
+                    response_format, BaseModel
+                ):
+                    # Convert Pydantic model to JSON schema for better compatibility
+                    # Using beta.parse() has strict limitations, so we convert to JSON schema
+                    schema = response_format.model_json_schema()
+                    kwargs["response_format"] = {
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": response_format.__name__,
+                            "strict": True,
+                            "schema": schema,
+                        },
+                    }
+                else:
+                    # Dict format (e.g., {"type": "json_object"})
+                    kwargs["response_format"] = response_format
+
+            # Make single API call
             response = await self.async_client.chat.completions.create(
-                messages=self.get_messages_v2(input),
+                messages=messages,
                 model=self.model_name,
-                **self.model_params,
+                **params,
                 **kwargs,
             )
+
             content = response.choices[0].message.content or ""
             return LLMResponse(content=content)
         except self.openai.OpenAIError as e:

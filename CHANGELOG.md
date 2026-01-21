@@ -8,12 +8,14 @@
 
 - Support for Python 3.14
 - Support for version 6.0.0 of the Neo4j Python driver
+- Support for structured output in `OpenAILLM` and `VertexAILLM` via `response_format` parameter. Accepts Pydantic models (requires `ConfigDict(extra="forbid")`) or JSON schemas.
+- Added `use_structured_output` parameter to `LLMEntityRelationExtractor` for improved entity extraction reliability with OpenAI/VertexAI LLMs.
 
 ### Changed
 
 - Switched project/dependency management from Poetry to uv.
 - Dropped support for Python 3.9 (EOL)
-
+- Made `Neo4jNode`, `Neo4jRelationship`, and `Neo4jGraph` stricter: properties field now uses typed `PropertyValue` (Neo4j primitives, temporal values, lists, `GeoPoint`) and fixed mutable defaults with `Field(default_factory=...)`.
 
 ## 1.11.0
 

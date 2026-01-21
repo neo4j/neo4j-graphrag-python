@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Any
+from typing import Any, List
 from unittest.mock import MagicMock, Mock, patch
 
 import ollama
@@ -23,6 +23,7 @@ from neo4j_graphrag.llm.ollama_llm import OllamaLLM
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.llm.types import ToolCallResponse
 from neo4j_graphrag.tool import Tool
+from pydantic import BaseModel, ConfigDict
 
 
 def get_mock_ollama() -> MagicMock:
@@ -647,3 +648,27 @@ def test_ollama_llm_invoke_with_tools_error(mock_import: Mock, test_tool: Tool) 
 
     with pytest.raises(LLMGenerationError):
         llm.invoke_with_tools("my text", tools)
+
+
+class _TestModelForOllama(BaseModel):
+    """Test model for structured output tests."""
+
+    model_config = ConfigDict(extra="forbid")
+    value: str
+
+
+@patch("builtins.__import__")
+def test_ollama_invoke_v2_with_response_format_raises_error(mock_import: Mock) -> None:
+    """Test V2 interface raises NotImplementedError when response_format is used."""
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+
+    messages: List[LLMMessage] = [{"role": "user", "content": "Test"}]
+    llm = OllamaLLM(model_name="llama2")
+
+    with pytest.raises(NotImplementedError) as exc_info:
+        llm.invoke(messages, response_format=_TestModelForOllama)
+
+    assert "OllamaLLM does not currently support structured output" in str(
+        exc_info.value
+    )

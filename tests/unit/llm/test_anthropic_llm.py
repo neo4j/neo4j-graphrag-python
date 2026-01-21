@@ -23,6 +23,7 @@ from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.anthropic_llm import AnthropicLLM
 from neo4j_graphrag.llm.types import LLMResponse
 from neo4j_graphrag.types import LLMMessage
+from pydantic import BaseModel, ConfigDict
 
 
 @pytest.fixture
@@ -402,3 +403,23 @@ def test_anthropic_llm_invoke_v2_empty_response_error(mock_anthropic: Mock) -> N
     with pytest.raises(LLMGenerationError) as exc_info:
         llm.invoke(messages)
     assert "LLM returned empty response" in str(exc_info.value)
+
+
+def test_anthropic_invoke_v2_with_response_format_raises_error(
+    mock_anthropic: Mock,
+) -> None:
+    """Test V2 interface raises NotImplementedError when response_format is used."""
+
+    class TestModel(BaseModel):
+        model_config = ConfigDict(extra="forbid")
+        value: str
+
+    messages: List[LLMMessage] = [{"role": "user", "content": "Test"}]
+    llm = AnthropicLLM(api_key="test", model_name="claude-3-opus")
+
+    with pytest.raises(NotImplementedError) as exc_info:
+        llm.invoke(messages, response_format=TestModel)
+
+    assert "AnthropicLLM does not currently support structured output" in str(
+        exc_info.value
+    )

@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
@@ -33,6 +33,8 @@ from neo4j_graphrag.experimental.components.types import (
 )
 from neo4j_graphrag.experimental.pipeline.exceptions import InvalidJSONError
 from neo4j_graphrag.llm import LLMInterface, LLMResponse
+from neo4j_graphrag.llm import AnthropicLLM, OpenAILLM, VertexAILLM
+from unittest.mock import patch
 
 
 @pytest.mark.asyncio
@@ -212,7 +214,7 @@ async def test_extractor_llm_badly_formatted_json_gets_fixed() -> None:
 
     assert len(res.nodes) == 1
     assert res.nodes[0].label == "Person"
-    assert res.nodes[0].embedding_properties is None
+    assert res.nodes[0].embedding_properties == {}
     assert res.relationships == []
 
 
@@ -417,3 +419,77 @@ def test_balance_curly_braces_unbalanced_with_string() -> None:
 
     assert json.loads(fixed_json)
     assert fixed_json == expected_result
+
+
+@pytest.mark.asyncio
+async def test_extractor_structured_output_with_openai() -> None:
+    """Test that use_structured_output=True works with OpenAILLM."""
+    llm = MagicMock(spec=OpenAILLM)
+    llm.ainvoke.return_value = LLMResponse(content='{"nodes": [], "relationships": []}')
+
+    extractor = LLMEntityRelationExtractor(
+        llm=llm,
+        use_structured_output=True,
+    )
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
+    await extractor.run(chunks=chunks)
+
+    # Verify ainvoke was called with response_format=Neo4jGraph
+    llm.ainvoke.assert_called_once()
+    call_args = llm.ainvoke.call_args
+    assert call_args[1]["response_format"] == Neo4jGraph
+
+
+@pytest.mark.asyncio
+async def test_extractor_structured_output_with_vertexai() -> None:
+    """Test that use_structured_output=True works with VertexAILLM."""
+    llm = MagicMock(spec=VertexAILLM)
+    llm.ainvoke.return_value = LLMResponse(content='{"nodes": [], "relationships": []}')
+
+    extractor = LLMEntityRelationExtractor(
+        llm=llm,
+        use_structured_output=True,
+    )
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
+    await extractor.run(chunks=chunks)
+
+    # Verify ainvoke was called with response_format=Neo4jGraph
+    llm.ainvoke.assert_called_once()
+    call_args = llm.ainvoke.call_args
+    assert call_args[1]["response_format"] == Neo4jGraph
+
+
+def test_extractor_structured_output_unsupported_llm() -> None:
+    """Test that use_structured_output=True raises error with unsupported LLMs."""
+    llm = AnthropicLLM(api_key="test", model_name="claude-3-opus")
+
+    with pytest.raises(ValueError) as exc_info:
+        LLMEntityRelationExtractor(
+            llm=llm,
+            use_structured_output=True,
+        )
+
+    assert (
+        "use_structured_output=True is only supported for OpenAILLM and VertexAILLM"
+        in str(exc_info.value)
+    )
+
+
+@pytest.mark.asyncio
+async def test_extractor_structured_output_false_uses_v1() -> None:
+    """Test that use_structured_output=False uses V1 interface (prompt-based)."""
+    llm = MagicMock(spec=LLMInterface)
+    llm.ainvoke.return_value = LLMResponse(content='{"nodes": [], "relationships": []}')
+
+    extractor = LLMEntityRelationExtractor(
+        llm=llm,
+        use_structured_output=False,  # Default behavior
+    )
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
+    await extractor.run(chunks=chunks)
+
+    # Verify ainvoke was called with just a string prompt (V1), not response_format
+    llm.ainvoke.assert_called_once()
+    call_args = llm.ainvoke.call_args
+    assert isinstance(call_args[0][0], str)  # First arg is string prompt
+    assert "response_format" not in call_args[1]  # No response_format kwarg
