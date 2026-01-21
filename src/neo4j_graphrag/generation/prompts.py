@@ -219,7 +219,7 @@ IMPORTANT RULES:
     4.2 Consider what attributes are explicitly mentioned or strongly implied in the text for each node type.
     4.3 A node type with no properties should be rare — look carefully for attributes in the text.
     4.4 If a property is supported by the input text but you cannot confidently determine its type, use type STRING (do not omit solely due to type uncertainty). If a property is not supported by the input text, omit it.
-    4.5 If you still cannot find any supported properties for a node type, return an empty properties list only as a last resort.
+    4.5 Do not remove a node type just because you cannot confidently extract any properties for it. If the node type is clearly mentioned in the text, keep it and allow "properties": [].
 5. When defining patterns, ensure that every node label and relationship label mentioned exists in your lists of node types and relationship types.
 6. Do not create node types that aren't clearly mentioned in the text.
 7. Keep your schema minimal and focused on clearly identifiable patterns in the text.
