@@ -22,6 +22,7 @@ from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm import LLMResponse
 from neo4j_graphrag.llm.cohere_llm import CohereLLM
 from neo4j_graphrag.types import LLMMessage
+from pydantic import BaseModel, ConfigDict
 
 
 @pytest.fixture
@@ -264,3 +265,21 @@ def test_cohere_llm_get_messages_v2_all_roles(mock_cohere: Mock) -> None:
     )
     assert mock_cohere.UserChatMessageV2.call_count == 2
     mock_cohere.AssistantChatMessageV2.assert_called_once_with(content="Hi there!")
+
+
+def test_cohere_invoke_v2_with_response_format_raises_error(mock_cohere: Mock) -> None:
+    """Test V2 interface raises NotImplementedError when response_format is used."""
+
+    class TestModel(BaseModel):
+        model_config = ConfigDict(extra="forbid")
+        value: str
+
+    messages: List[LLMMessage] = [{"role": "user", "content": "Test"}]
+    llm = CohereLLM(api_key="test")
+
+    with pytest.raises(NotImplementedError) as exc_info:
+        llm.invoke(messages, response_format=TestModel)
+
+    assert "CohereLLM does not currently support structured output" in str(
+        exc_info.value
+    )

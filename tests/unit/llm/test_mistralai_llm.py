@@ -21,6 +21,7 @@ import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm import LLMResponse, MistralAILLM
 from neo4j_graphrag.types import LLMMessage
+from pydantic import BaseModel, ConfigDict
 
 
 # Mock SDKError for testing
@@ -417,3 +418,24 @@ def test_mistralai_llm_get_messages_v2_unknown_role(_mock_mistral: Mock) -> None
     with pytest.raises(ValueError) as exc_info:
         llm.get_messages_v2(messages)
     assert "Unknown role: unknown_role" in str(exc_info.value)
+
+
+@patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
+def test_mistralai_invoke_v2_with_response_format_raises_error(
+    mock_mistral: Mock,
+) -> None:
+    """Test V2 interface raises NotImplementedError when response_format is used."""
+
+    class TestModel(BaseModel):
+        model_config = ConfigDict(extra="forbid")
+        value: str
+
+    messages: List[LLMMessage] = [{"role": "user", "content": "Test"}]
+    llm = MistralAILLM(api_key="test", model_name="mistral-model")
+
+    with pytest.raises(NotImplementedError) as exc_info:
+        llm.invoke(messages, response_format=TestModel)
+
+    assert "MistralAILLM does not currently support structured output" in str(
+        exc_info.value
+    )
