@@ -29,7 +29,9 @@ from neo4j_graphrag.schema import (
 @pytest.mark.usefixtures("setup_neo4j_for_schema_query")
 def test_cypher_returns_correct_node_properties(driver: Driver) -> None:
     node_properties = query_database(
-        driver, NODE_PROPERTIES_QUERY, params={"EXCLUDED_LABELS": [BASE_ENTITY_LABEL]}
+        driver,
+        NODE_PROPERTIES_QUERY,
+        params={"EXCLUDED_LABELS": [BASE_ENTITY_LABEL], "SAMPLE": 1000},
     )
 
     expected_node_properties = [
@@ -47,7 +49,9 @@ def test_cypher_returns_correct_node_properties(driver: Driver) -> None:
 @pytest.mark.usefixtures("setup_neo4j_for_schema_query")
 def test_cypher_returns_correct_relationship_properties(driver: Driver) -> None:
     relationships_properties = query_database(
-        driver, REL_PROPERTIES_QUERY, params={"EXCLUDED_LABELS": [BASE_ENTITY_LABEL]}
+        driver,
+        REL_PROPERTIES_QUERY,
+        params={"EXCLUDED_LABELS": [BASE_ENTITY_LABEL], "SAMPLE": 1000},
     )
 
     expected_relationships_properties = [
@@ -65,7 +69,9 @@ def test_cypher_returns_correct_relationship_properties(driver: Driver) -> None:
 @pytest.mark.usefixtures("setup_neo4j_for_schema_query")
 def test_cypher_returns_correct_relationships(driver: Driver) -> None:
     relationships = query_database(
-        driver, REL_QUERY, params={"EXCLUDED_LABELS": [BASE_ENTITY_LABEL]}
+        driver,
+        REL_QUERY,
+        params={"EXCLUDED_LABELS": [BASE_ENTITY_LABEL], "SAMPLE": 1000},
     )
 
     expected_relationships = [

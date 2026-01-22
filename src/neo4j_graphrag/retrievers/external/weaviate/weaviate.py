@@ -81,6 +81,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
         return_properties (Optional[list[str]]): List of node properties to return.
         result_formatter (Optional[Callable[[neo4j.Record], RetrieverResultItem]]): Function to transform a neo4j.Record to a RetrieverResultItem.
         neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to the server's default database ("neo4j" by default) (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
+        node_label_neo4j (Optional[str]): The label of the Neo4j node to retrieve. This label must be properly escaped if needed, eg "`Label with spaces`".
 
     Raises:
         RetrieverInitializationError: If validation of the input arguments fail.
@@ -100,6 +101,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
             Callable[[neo4j.Record], RetrieverResultItem]
         ] = None,
         neo4j_database: Optional[str] = None,
+        node_label_neo4j: Optional[str] = None,
     ):
         try:
             driver_model = Neo4jDriverModel(driver=driver)
@@ -116,12 +118,17 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
                 retrieval_query=retrieval_query,
                 result_formatter=result_formatter,
                 neo4j_database=neo4j_database,
+                node_label_neo4j=node_label_neo4j,
             )
         except ValidationError as e:
             raise RetrieverInitializationError(e.errors()) from e
 
         super().__init__(
-            driver, id_property_external, id_property_neo4j, neo4j_database
+            driver,
+            id_property_external,
+            id_property_neo4j,
+            neo4j_database,
+            node_label_neo4j,
         )
         self.client = validated_data.client_model.client
         collection = validated_data.collection
@@ -164,6 +171,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
               collection="Jeopardy",
               id_property_external="neo4j_id",
               id_property_neo4j="id",
+              node_label_neo4j="Document",
           )
 
           biology_embedding = ...
@@ -227,13 +235,14 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
             logger.debug("Response: %s", response)
 
         result_tuples = [
-            [f"{o.properties[self.id_property_external]}", o.metadata.certainty or 0.0]
+            (f"{o.properties[self.id_property_external]}", o.metadata.certainty or 0.0)
             for o in response.objects
         ]
 
         search_query = get_match_query(
             return_properties=self.return_properties,
             retrieval_query=self.retrieval_query,
+            node_label=self.node_label_neo4j,
         )
 
         parameters = {

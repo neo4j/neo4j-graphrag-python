@@ -12,8 +12,11 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from types import SimpleNamespace
 from unittest.mock import MagicMock, call, patch
 
+import neo4j
+import numpy as np
 import pytest
 from neo4j_graphrag.experimental.components.resolver import (
     FuzzyMatchResolver,
@@ -22,7 +25,19 @@ from neo4j_graphrag.experimental.components.resolver import (
 )
 from neo4j_graphrag.experimental.components.types import ResolutionStats
 
-import neo4j
+
+class FakeNLPModel:
+    """
+    Stand-in for a spaCy NLP model for unit tests.
+    It returns an object with a `.vector` attribute so the resolver can compute cosine similarity.
+    """
+
+    def __call__(self, text: str) -> SimpleNamespace:
+        if "23-45-6789" in text or text == "Alice":
+            return SimpleNamespace(vector=np.array([1.0, 0.0], dtype=np.float64))
+        if text == "Bob":
+            return SimpleNamespace(vector=np.array([0.0, 1.0], dtype=np.float64))
+        return SimpleNamespace(vector=np.array([0.0, 0.0], dtype=np.float64))
 
 
 @pytest.mark.asyncio
@@ -87,7 +102,7 @@ async def test_spacy_resolver_match_on_name_property(driver: MagicMock) -> None:
         ),
     ]
 
-    resolver = SpaCySemanticMatchResolver(driver=driver)
+    resolver = SpaCySemanticMatchResolver(driver=driver, nlp=FakeNLPModel())
 
     res = await resolver.run()
     assert isinstance(res, ResolutionStats)
@@ -117,7 +132,7 @@ async def test_spacy_resolver_no_merge(driver: MagicMock) -> None:
         ),
     ]
 
-    resolver = SpaCySemanticMatchResolver(driver=driver)
+    resolver = SpaCySemanticMatchResolver(driver=driver, nlp=FakeNLPModel())
 
     res = await resolver.run()
     assert res.number_of_nodes_to_resolve == 2
@@ -154,7 +169,7 @@ async def test_spacy_resolver_match_on_multiple_text_properties(
     ]
 
     resolver = SpaCySemanticMatchResolver(
-        driver=driver, resolve_properties=["name", "ssn"]
+        driver=driver, resolve_properties=["name", "ssn"], nlp=FakeNLPModel()
     )
     res = await resolver.run()
     assert isinstance(res, ResolutionStats)
@@ -270,7 +285,7 @@ async def test_spacy_resolver_caching(driver: MagicMock) -> None:
         ),
     ]
 
-    resolver = SpaCySemanticMatchResolver(driver=driver)
+    resolver = SpaCySemanticMatchResolver(driver=driver, nlp=FakeNLPModel())
 
     # patch spaCy NLP call to track how often embeddings are computed
     with patch.object(resolver, "nlp", wraps=resolver.nlp) as mock_nlp:

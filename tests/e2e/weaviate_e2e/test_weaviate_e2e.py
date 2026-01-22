@@ -63,6 +63,7 @@ def test_weaviate_neo4j_vector_input(
         collection="Jeopardy",
         id_property_external="neo4j_id",
         id_property_neo4j="id",
+        node_label_neo4j="Question|Answer",
     )
 
     top_k = 2

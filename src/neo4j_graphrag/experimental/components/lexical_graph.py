@@ -27,6 +27,7 @@ from neo4j_graphrag.experimental.components.types import (
     Neo4jGraph,
     Neo4jNode,
     Neo4jRelationship,
+    PropertyValue,
     TextChunk,
     TextChunks,
 )
@@ -107,15 +108,19 @@ class LexicalGraphBuilder(Component):
         added as a node property.
         """
         document_metadata = document_info.metadata or {}
+        properties: dict[str, PropertyValue] = {
+            "path": document_info.path,
+            "createdAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            **document_metadata,
+        }
+        # Only add document_type if it's not None
+        if document_info.document_type is not None:
+            properties["document_type"] = document_info.document_type
+
         return Neo4jNode(
             id=document_info.document_id,
             label=self.config.document_node_label,
-            properties={
-                "path": document_info.path,
-                "createdAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                "document_type": document_info.document_type,
-                **document_metadata,
-            },
+            properties=properties,
         )
 
     def create_chunk_node(

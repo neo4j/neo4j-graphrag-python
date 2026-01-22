@@ -7,7 +7,7 @@ You will need both a Pinecone vector database and a Neo4j database to use this r
 Update  `NEO4J_AUTH`, `NEO4J_URL`, and `PC_API_KEY` variables in the `tests/e2e/pinecone_e2e/populate_dbs.py` script then run this from the project root to write test data to both dbs.
 
 ```
-poetry run python -m tests/e2e/pinecone_e2e/populate_dbs.py
+uv run python -m tests/e2e/pinecone_e2e/populate_dbs.py
 ```
 
 ### Install Pinecone client
@@ -23,8 +23,8 @@ Update the `NEO4J_AUTH`, `NEO4J_URL`, and `PC_API_KEY` variables in each file th
 
 ```
 # Search by vector
-poetry run python -m examples.customize.retrievers.external.pinecone.vector_search
+uv run python -m examples.customize.retrievers.external.pinecone.vector_search
 
 # Search by text, with embeddings generated locally
-poetry run python -m examples.customize.retrievers.external.pinecone.text_search
+uv run python -m examples.customize.retrievers.external.pinecone.text_search
 ```

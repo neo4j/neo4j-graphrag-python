@@ -2,12 +2,37 @@
 
 ## Next
 
+## 1.12.0
+
+## Added
+
+- Support for Python 3.14
+- Support for version 6.0.0 of the Neo4j Python driver
+- Support for structured output in `OpenAILLM` and `VertexAILLM` via `response_format` parameter. Accepts Pydantic models (requires `ConfigDict(extra="forbid")`) or JSON schemas.
+- Added `use_structured_output` parameter to `LLMEntityRelationExtractor` for improved entity extraction reliability with OpenAI/VertexAI LLMs.
+
+### Changed
+
+- Switched project/dependency management from Poetry to uv.
+- Dropped support for Python 3.9 (EOL)
+- Made `Neo4jNode`, `Neo4jRelationship`, and `Neo4jGraph` stricter: properties field now uses typed `PropertyValue` (Neo4j primitives, temporal values, lists, `GeoPoint`) and fixed mutable defaults with `Field(default_factory=...)`.
+
+## 1.11.0
+
+### Added
+
+- Added an optional `node_label_neo4j` parameter in the external retrievers to speed up the search query in Neo4j.
+
+- Exposed optional `sample` parameter on `get_schema` and `get_structured_schema` to control APOC sampling for schema discovery.
+- Added an optional `id_property_getter` callable parameter in the Qdrant retriever to allow for custom ID retrieval.
+
 ## 1.10.1
 
 ### Added
 
 - Added automatic rate limiting with retry logic and exponential backoff for all Embedding providers using tenacity. The `RateLimitHandler` interface allows for custom rate limiting strategies, including the ability to disable rate limiting entirely.
 - JSON response returned to `SchemaFromTextExtractor` is cleansed of any markdown code blocks before being loaded.
+- Tool calling support for OllamaLLM.
 
 ## 1.10.0
 

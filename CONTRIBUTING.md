@@ -55,15 +55,15 @@ Remember that many community members have become regular contributors and some a
 Setting up the development environment:
 
 1. Install Python 3.9+
-2. Install poetry (see https://python-poetry.org/docs/#installation)
+2. Install uv (see https://docs.astral.sh/uv/getting-started/installation/)
 3. Install dependencies:
 
 ```shell
-poetry install
+uv sync --group dev
 ```
 
 4. Install the pre-commit hook, that will do some code-format-checking everytime you commit.
 
 ```shell
-pre-commit install
+uv run pre-commit install
 ```

@@ -16,14 +16,50 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any, Dict, Optional
+from datetime import date, datetime, time
+from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from neo4j_graphrag.experimental.pipeline.component import DataModel
 
 
 logger = logging.getLogger(__name__)
+
+
+class GeoPoint(BaseModel):
+    """Represents a geographic point with latitude, longitude, and height.
+
+    Attributes:
+        latitude (float): The latitude coordinate.
+        longitude (float): The longitude coordinate.
+        height (float): The height/altitude coordinate.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    latitude: float
+    longitude: float
+    height: float
+
+
+# Define primitive value types
+PrimitiveValue = Union[bool, int, float, str]
+
+# Define temporal value types (ISO 8601 strings for date, time, datetime)
+TemporalValue = Union[date, time, datetime]
+
+# Define duration as a string with ISO 8601 duration pattern (e.g., "P1Y2M3DT4H5M6S")
+Duration = str
+
+# Define the complete PropertyValue union covering all Neo4j property types
+PropertyValue = Union[
+    PrimitiveValue,
+    TemporalValue,
+    Duration,
+    List[Union[bool, int, float, str]],  # Arrays of primitives
+    GeoPoint,
+]
 
 
 class DocumentInfo(DataModel):
@@ -86,14 +122,16 @@ class Neo4jNode(BaseModel):
     Attributes:
         id (str): The ID of the node. This ID is used to refer to the node for relationship creation.
         label (str): The label of the node.
-        properties (dict[str, Any]): A dictionary of properties attached to the node.
-        embedding_properties (Optional[dict[str, list[float]]]): A list of embedding properties attached to the node.
+        properties (dict[str, PropertyValue]): A dictionary of properties attached to the node.
+        embedding_properties (dict[str, list[float]]): A dictionary of embedding properties attached to the node.
     """
+
+    model_config = ConfigDict(extra="forbid")
 
     id: str
     label: str
-    properties: dict[str, Any] = {}
-    embedding_properties: Optional[dict[str, list[float]]] = None
+    properties: dict[str, PropertyValue] = Field(default_factory=dict)
+    embedding_properties: dict[str, list[float]] = Field(default_factory=dict)
 
     @property
     def token(self) -> str:
@@ -107,15 +145,17 @@ class Neo4jRelationship(BaseModel):
         start_node_id (str): The ID of the start node.
         end_node_id (str): The ID of the end node.
         type (str): The relationship type.
-        properties (dict[str, Any]): A dictionary of properties attached to the relationship.
-        embedding_properties (Optional[dict[str, list[float]]]): A list of embedding properties attached to the relationship.
+        properties (dict[str, PropertyValue]): A dictionary of properties attached to the relationship.
+        embedding_properties (dict[str, list[float]]): A dictionary of embedding properties attached to the relationship.
     """
+
+    model_config = ConfigDict(extra="forbid")
 
     start_node_id: str
     end_node_id: str
     type: str
-    properties: dict[str, Any] = {}
-    embedding_properties: Optional[dict[str, list[float]]] = None
+    properties: dict[str, PropertyValue] = Field(default_factory=dict)
+    embedding_properties: dict[str, list[float]] = Field(default_factory=dict)
 
     @property
     def token(self) -> str:
@@ -130,8 +170,18 @@ class Neo4jGraph(DataModel):
         relationships (list[Neo4jRelationship]): A list of relationships in the graph.
     """
 
-    nodes: list[Neo4jNode] = []
-    relationships: list[Neo4jRelationship] = []
+    model_config = ConfigDict(extra="forbid")
+
+    nodes: list[Neo4jNode] = Field(default_factory=list)
+    relationships: list[Neo4jRelationship] = Field(default_factory=list)
+
+    @classmethod
+    def model_json_schema(cls, **kwargs: Any) -> dict[str, Any]:  # type: ignore[override]
+        """Override to mark nodes and relationships as required in JSON schema."""
+        schema = super().model_json_schema(**kwargs)
+        # Force nodes and relationships to be required for structured output compatibility
+        schema["required"] = ["nodes", "relationships"]
+        return schema
 
 
 class ResolutionStats(DataModel):

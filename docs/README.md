@@ -1,6 +1,6 @@
 # Sphinx Documentation
 
-Building the docs requires Python 3.8.1+
+Building the docs requires Python 3.9+
 
 1. Ensure the dev dependencies in `pyproject.toml` are installed.
 

@@ -86,6 +86,12 @@ class EventNotifier:
     def __init__(self, callbacks: list[EventCallbackProtocol]) -> None:
         self.callbacks = callbacks
 
+    def add_callback(self, callback: EventCallbackProtocol) -> None:
+        self.callbacks.append(callback)
+
+    def remove_callback(self, callback: EventCallbackProtocol) -> None:
+        self.callbacks.remove(callback)
+
     async def notify(self, event: Event) -> None:
         await asyncio.gather(
             *[c(event) for c in self.callbacks],
@@ -111,6 +117,17 @@ class EventNotifier:
             run_id=run_id,
             message=None,
             payload=output_data,
+        )
+        await self.notify(event)
+
+    async def notify_pipeline_failed(
+        self, run_id: str, message: Optional[str] = None
+    ) -> None:
+        event = PipelineEvent(
+            event_type=EventType.PIPELINE_FAILED,
+            run_id=run_id,
+            message=message,
+            payload=None,
         )
         await self.notify(event)
 

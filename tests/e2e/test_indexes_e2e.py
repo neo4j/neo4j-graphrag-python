@@ -123,7 +123,7 @@ def test_retrieve_fulltext_index_info_happy_path(driver: neo4j.Driver) -> None:
         driver=driver,
         index_name="fulltext-index-name",
         label_or_type="Document",
-        text_properties=["vectorProperty"],
+        text_properties=["short_text_property"],
     )
     assert index_info is not None
     index_name = index_info.get("name")
@@ -133,7 +133,7 @@ def test_retrieve_fulltext_index_info_happy_path(driver: neo4j.Driver) -> None:
     labels_or_types = index_info.get("labelsOrTypes")
     assert labels_or_types == ["Document"]
     properties = index_info.get("properties")
-    assert properties == ["vectorProperty"]
+    assert properties == ["short_text_property"]
     entity_type = index_info.get("entityType")
     assert entity_type == "NODE"
 
@@ -144,7 +144,7 @@ def test_retrieve_fulltext_index_info_no_index_name(driver: neo4j.Driver) -> Non
         driver=driver,
         index_name="",
         label_or_type="Document",
-        text_properties=["vectorProperty"],
+        text_properties=["short_text_property"],
     )
     assert index_info is not None
     index_name = index_info.get("name")
@@ -154,7 +154,7 @@ def test_retrieve_fulltext_index_info_no_index_name(driver: neo4j.Driver) -> Non
     labels_or_types = index_info.get("labelsOrTypes")
     assert labels_or_types == ["Document"]
     properties = index_info.get("properties")
-    assert properties == ["vectorProperty"]
+    assert properties == ["short_text_property"]
     entity_type = index_info.get("entityType")
     assert entity_type == "NODE"
 
@@ -177,7 +177,7 @@ def test_retrieve_fulltext_index_info_no_label_or_properties(
     labels_or_types = index_info.get("labelsOrTypes")
     assert labels_or_types == ["Document"]
     properties = index_info.get("properties")
-    assert properties == ["vectorProperty"]
+    assert properties == ["short_text_property"]
     entity_type = index_info.get("entityType")
     assert entity_type == "NODE"
 

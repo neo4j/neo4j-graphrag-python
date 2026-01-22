@@ -23,11 +23,11 @@ Neo4j versions supported:
 
 Python versions supported:
 
+* Python 3.14
 * Python 3.13
 * Python 3.12
 * Python 3.11
 * Python 3.10
-* Python 3.9
 
 
 ******
@@ -60,7 +60,7 @@ Usage
 Installation
 ************
 
-This package requires Python (>=3.9).
+This package requires Python (>=3.10).
 
 To install the latest stable version, use:
 
@@ -101,6 +101,10 @@ List of extra dependencies:
 - **experimental**: experimental features mainly from the Knowledge Graph creation pipelines.
 - **nlp**: installs spaCy for nlp pipelines, used by `SpaCySemanticMatchResolver` component from the Knowledge Graph creation pipelines.
 - **fuzzy-matching**: installs **rapidfuzz** to fuzzy matching using string similarity, used by `FuzzyMatchResolver` component from the Knowledge Graph creation pipelines.
+
+.. note::
+
+   The **`nlp`** extra (spaCy) is currently **not supported on Python 3.14** due to an upstream spaCy import-time issue (see `spaCy #13895 <https://github.com/explosion/spaCy/issues/13895>`_). Use Python **3.13 or earlier** for spaCy-based features until that is resolved upstream.
 
 ********
 Examples
@@ -226,7 +230,7 @@ Install dependencies
 
 .. code:: bash
 
-    poetry install --all-extras
+    uv sync --all-extras
 
 ***************
 Getting started
@@ -252,7 +256,7 @@ Make changes
 ~~~~~~~~~~~~
 
 1. Fork the repository.
-2. Install Python and Poetry.
+2. Install Python and uv.
 3. Create a working branch from `main` and start with your changes!
 
 ~~~~~~~~~~~~
@@ -277,12 +281,11 @@ When you're finished with your changes, create a pull request, also known as a P
 Run tests
 *********
 
-Open a new virtual environment and then run the tests.
+Run the tests using uv.
 
 .. code:: bash
 
-    poetry shell
-    pytest
+    uv run pytest
 
 ~~~~~~~~~~
 Unit tests
@@ -292,7 +295,7 @@ This should run out of the box once the dependencies are installed.
 
 .. code:: bash
 
-    poetry run pytest tests/unit
+    uv run pytest tests/unit
 
 ~~~~~~~~~
 E2E tests
@@ -319,7 +322,7 @@ Once the services are running, execute the following command to run the e2e test
 
 .. code:: bash
 
-    poetry run pytest tests/e2e
+    uv run pytest tests/e2e
 
 *******************
 Further information

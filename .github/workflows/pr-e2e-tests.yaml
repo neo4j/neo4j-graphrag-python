@@ -15,39 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.9', '3.13']
+        python-version: ['3.10', '3.14']
         neo4j-tag:
           - 'latest'
-    services:
-      t2v-transformers:
-        image: cr.weaviate.io/semitechnologies/transformers-inference:sentence-transformers-all-MiniLM-L6-v2
-        env:
-          ENABLE_CUDA: '0'
-      weaviate:
-        image: cr.weaviate.io/semitechnologies/weaviate:1.25.1
-        env:
-          TRANSFORMERS_INFERENCE_API: 'http://t2v-transformers:8080'
-          AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
-          DEFAULT_VECTORIZER_MODULE: 'text2vec-transformers'
-          ENABLE_MODULES: 'text2vec-transformers'
-          CLUSTER_HOSTNAME: 'node1'
-        ports:
-          - 8080:8080
-          - 50051:50051
-      neo4j:
-        image: neo4j:${{ matrix.neo4j-tag }}
-        env:
-          NEO4J_AUTH: neo4j/password
-          NEO4J_ACCEPT_LICENSE_AGREEMENT: 'eval'
-          NEO4J_PLUGINS: '["apoc"]'
-        ports:
-          - 7687:7687
-          - 7474:7474
-      qdrant:
-        image: qdrant/qdrant
-        ports:
-          - 6333:6333
-
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -62,30 +32,56 @@ jobs:
           docker builder prune -af || true
           sudo apt-get clean || true
           df -h
+      - name: Create Docker network
+        run: docker network create test-network
+      - name: Start t2v-transformers
+        run: |
+          docker run -d --name t2v-transformers \
+            --network test-network \
+            -e ENABLE_CUDA=0 \
+            cr.weaviate.io/semitechnologies/transformers-inference:sentence-transformers-all-MiniLM-L6-v2
+      - name: Start Weaviate
+        run: |
+          docker run -d --name weaviate \
+            --network test-network \
+            -p 8080:8080 -p 50051:50051 \
+            -e TRANSFORMERS_INFERENCE_API='http://t2v-transformers:8080' \
+            -e AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED='true' \
+            -e DEFAULT_VECTORIZER_MODULE='text2vec-transformers' \
+            -e ENABLE_MODULES='text2vec-transformers' \
+            -e CLUSTER_HOSTNAME='node1' \
+            cr.weaviate.io/semitechnologies/weaviate:1.27.0
+      - name: Start Neo4j
+        run: |
+          docker run -d --name neo4j \
+            --network test-network \
+            -p 7687:7687 -p 7474:7474 \
+            -e NEO4J_AUTH=neo4j/password \
+            -e NEO4J_ACCEPT_LICENSE_AGREEMENT=eval \
+            -e NEO4J_PLUGINS='["apoc"]' \
+            neo4j:${{ matrix.neo4j-tag }}
+      - name: Start Qdrant
+        run: |
+          docker run -d --name qdrant \
+            --network test-network \
+            -p 6333:6333 \
+            qdrant/qdrant
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          installer-parallel: true
-      - name: Set Python version for Poetry
-        run: poetry env use python${{ matrix.python-version }}
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
       - name: Load cached venv
-        id: cached-poetry-dependencies
+        id: cached-venv
         uses: actions/cache@v4
         with:
           path: .venv
-          key: ${{ runner.os }}-venv-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+          key: ${{ runner.os }}-venv-${{ matrix.python-version }}-${{ hashFiles('**/uv.lock') }}
       - name: Install dependencies
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --no-cache --with dev --all-extras
-      - name: Clear Poetry cache
-        run: poetry cache clear --all --no-interaction .
-      - name: Show disk usage after Poetry installation
+        if: steps.cached-venv.outputs.cache-hit != 'true'
+        run: uv sync --frozen --all-extras --group dev
+      - name: Show disk usage after dependency installation
         run: |
           df -h
       - name: Wait for Weaviate to start
@@ -93,11 +89,30 @@ jobs:
         run: |
           set +e
           count=0; until curl -s --fail localhost:8080/v1/.well-known/ready; do ((count++)); [ $count -ge 10 ] && echo "Reached maximum retry limit" && exit 1; sleep 15; done
+      - name: Wait for Neo4j to be ready
+        shell: bash
+        run: |
+          echo "Waiting for Neo4j to be ready..."
+          count=0
+          until curl -s --fail http://localhost:7474 > /dev/null 2>&1; do
+            ((count++))
+            if [ $count -ge 30 ]; then
+              echo "Neo4j failed to start within timeout"
+              docker logs neo4j
+              exit 1
+            fi
+            echo "Waiting for Neo4j... (attempt $count/30)"
+            sleep 5
+          done
+          echo "Neo4j is ready!"
       - name: Run tests
         shell: bash
         run: |
-          if [[ "${{ matrix.neo4j-tag }}" == "latest" || "${{ matrix.neo4j-tag }}" == *-community ]]; then
-              poetry run pytest -m 'not enterprise_only' ./tests/e2e
+          if [[ "${{ matrix.neo4j-tag }}" == "latest" || "${{ matrix.neo4j-tag }}" == "community" ]]; then
+              uv run pytest -m 'not enterprise_only' ./tests/e2e
           else
-              poetry run pytest ./tests/e2e
+              uv run pytest ./tests/e2e
           fi
+      - name: Prune uv cache
+        if: always()
+        run: uv cache prune --ci

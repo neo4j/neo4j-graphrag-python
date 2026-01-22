@@ -14,20 +14,25 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional, Sequence, Union
+from typing import Any, List, Optional, Sequence, Type, Union
+
+from pydantic import BaseModel
 
 from neo4j_graphrag.message_history import MessageHistory
+from neo4j_graphrag.tool import Tool
 from neo4j_graphrag.types import LLMMessage
-
-from .types import LLMResponse, ToolCallResponse
 from neo4j_graphrag.utils.rate_limit import (
     DEFAULT_RATE_LIMIT_HANDLER,
+    RateLimitHandler,
 )
 
-from neo4j_graphrag.tool import Tool
+from .types import LLMResponse, ToolCallResponse
 
-from neo4j_graphrag.utils.rate_limit import RateLimitHandler
+# pylint: disable=redefined-builtin
+
+logger = logging.getLogger(__name__)
 
 
 class LLMInterface(ABC):
@@ -47,6 +52,9 @@ class LLMInterface(ABC):
         rate_limit_handler: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ):
+        logger.warning(
+            "LLMInterface is deprecated and will be removed in future versions. Please use LLMInterfaceV2 instead."
+        )
         self.model_name = model_name
         self.model_params = model_params or {}
 
@@ -152,3 +160,75 @@ class LLMInterface(ABC):
             NotImplementedError: If the LLM provider does not support tool calling.
         """
         raise NotImplementedError("This LLM provider does not support tool calling.")
+
+
+class LLMInterfaceV2(ABC):
+    """Interface for large language models compatible with LangChain.
+
+    Args:
+        model_name (str): The name of the language model.
+        model_params (Optional[dict]): Additional parameters passed to the model when text is sent to it. Defaults to None.
+        rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting. Defaults to retry with exponential backoff.
+        **kwargs (Any): Arguments passed to the model when for the class is initialised. Defaults to None.
+    """
+
+    def __init__(
+        self,
+        model_name: str,
+        model_params: Optional[dict[str, Any]] = None,
+        rate_limit_handler: Optional[RateLimitHandler] = None,
+        **kwargs: Any,
+    ):
+        self.model_name = model_name
+        self.model_params = model_params or {}
+
+        if rate_limit_handler is not None:
+            self._rate_limit_handler = rate_limit_handler
+        else:
+            self._rate_limit_handler = DEFAULT_RATE_LIMIT_HANDLER
+
+    @abstractmethod
+    def invoke(
+        self,
+        input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        """Sends a list of messages to the LLM and retrieves a response.
+
+        Args:
+            input (List[LLMMessage]): Text sent to the LLM as a list of LLMMessage objects.
+            response_format (Optional[Union[Type[BaseModel], dict[str, Any]]]): Optional
+                response format specification. Can be a Pydantic model class for structured
+                output or a dict for provider-specific formats. Defaults to None.
+
+        Returns:
+            LLMResponse: The response from the LLM.
+
+        Raises:
+            LLMGenerationError: If anything goes wrong.
+            NotImplementedError: If the LLM provider does not support structured output.
+        """
+
+    @abstractmethod
+    async def ainvoke(
+        self,
+        input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        """Asynchronously sends a list of messages to the LLM and retrieves a response.
+
+        Args:
+            input (List[LLMMessage]): List of messages sent to the LLM.
+            response_format (Optional[Union[Type[BaseModel], dict[str, Any]]]): Optional
+                response format specification. Can be a Pydantic model class for structured
+                output or a dict for provider-specific formats. Defaults to None.
+
+        Returns:
+            LLMResponse: The response from the LLM.
+
+        Raises:
+            LLMGenerationError: If anything goes wrong.
+            NotImplementedError: If the LLM provider does not support structured output.
+        """
