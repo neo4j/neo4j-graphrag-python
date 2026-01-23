@@ -46,6 +46,9 @@ from neo4j_graphrag.experimental.pipeline.types.schema import (
 )
 from neo4j_graphrag.generation import SchemaExtractionTemplate, PromptTemplate
 from neo4j_graphrag.llm import LLMInterface
+from neo4j_graphrag.llm.openai_llm import OpenAILLM
+from neo4j_graphrag.llm.vertexai_llm import VertexAILLM
+from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.file_handler import FileHandler, FileFormat
 from neo4j_graphrag.schema import get_structured_schema
 
@@ -95,7 +98,7 @@ class NodeType(BaseModel):
 
     label: str
     description: str = ""
-    properties: list[PropertyType] = []
+    properties: list[PropertyType] = Field(default_factory=list, min_length=1)
     additional_properties: bool = Field(
         default_factory=default_additional_item("properties")
     )
@@ -488,6 +491,33 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
     """
     A component for constructing GraphSchema objects from the output of an LLM after
     automatic schema extraction from text.
+
+    Args:
+        llm (LLMInterface): The language model to use for schema extraction.
+        prompt_template (Optional[PromptTemplate]): A custom prompt template to use for extraction.
+        llm_params (Optional[Dict[str, Any]]): Additional parameters passed to the LLM.
+        use_structured_output (bool): Whether to use structured output (LLMInterfaceV2) with the GraphSchema Pydantic model.
+            Only supported for OpenAILLM and VertexAILLM. Defaults to False (uses V1 prompt-based JSON extraction).
+
+    Example with V1 (default, prompt-based JSON):
+
+    .. code-block:: python
+
+        from neo4j_graphrag.experimental.components.schema import SchemaFromTextExtractor
+        from neo4j_graphrag.llm import OpenAILLM
+
+        llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0})
+        extractor = SchemaFromTextExtractor(llm=llm)
+
+    Example with V2 (structured output):
+
+    .. code-block:: python
+
+        from neo4j_graphrag.experimental.components.schema import SchemaFromTextExtractor
+        from neo4j_graphrag.llm import OpenAILLM
+
+        llm = OpenAILLM(model_name="gpt-4o")
+        extractor = SchemaFromTextExtractor(llm=llm, use_structured_output=True)
     """
 
     def __init__(
@@ -495,12 +525,21 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         llm: LLMInterface,
         prompt_template: Optional[PromptTemplate] = None,
         llm_params: Optional[Dict[str, Any]] = None,
+        use_structured_output: bool = False,
     ) -> None:
         self._llm: LLMInterface = llm
         self._prompt_template: PromptTemplate = (
             prompt_template or SchemaExtractionTemplate()
         )
         self._llm_params: dict[str, Any] = llm_params or {}
+        self.use_structured_output = use_structured_output
+
+        # Validate that structured output is only used with supported LLMs
+        if use_structured_output and not isinstance(llm, (OpenAILLM, VertexAILLM)):
+            raise ValueError(
+                f"use_structured_output=True is only supported for OpenAILLM and VertexAILLM. "
+                f"Got {type(llm).__name__}."
+            )
 
     def _filter_invalid_patterns(
         self,
@@ -775,6 +814,35 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         """
         prompt: str = self._prompt_template.format(text=text, examples=examples)
 
+        # Use structured output (V2) if enabled
+        if self.use_structured_output:
+            # Type narrowing with isinstance check
+            # This should never happen due to __init__ validation
+            if not isinstance(self._llm, (OpenAILLM, VertexAILLM)):
+                raise RuntimeError(
+                    f"Structured output requires OpenAILLM or VertexAILLM, got {type(self._llm).__name__}"
+                )
+
+            messages = [LLMMessage(role="user", content=prompt)]
+            try:
+                llm_result = await self._llm.ainvoke(
+                    messages, response_format=GraphSchema
+                )
+            except LLMGenerationError as e:
+                raise SchemaExtractionError(
+                    "Failed to generate schema from text"
+                ) from e
+
+            try:
+                schema = GraphSchema.model_validate_json(llm_result.content)
+                logger.debug(f"Extracted schema with structured output: {schema}")
+                return schema
+            except ValidationError as e:
+                raise SchemaExtractionError(
+                    f"LLM response does not conform to GraphSchema: {str(e)}"
+                ) from e
+
+        # Use V1 prompt-based JSON extraction (default)
         try:
             response = await self._llm.ainvoke(prompt, **self._llm_params)
             content: str = response.content
