@@ -119,10 +119,16 @@ class NodeType(BaseModel):
     @classmethod
     def validate_input_if_string(cls, data: EntityInputType) -> EntityInputType:
         if isinstance(data, str):
+            logger.info(
+                f"Converting string '{data}' to NodeType with default 'name' property "
+                f"and additional_properties=True to allow flexible property extraction."
+            )
             return {
                 "label": data,
                 # added to satisfy the model validation (min_length=1 for properties of node types)
                 "properties": [{"name": "name", "type": "STRING"}],
+                # allow LLM to extract additional properties beyond the default "name"
+                "additional_properties": True,  # type: ignore[dict-item]
             }
         return data
 
@@ -741,7 +747,18 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         for item in items:
             if isinstance(item, str):
                 if item and " " not in item and not item.startswith("{"):
-                    filtered_items.append({"label": item})
+                    # Add default property for node types to satisfy min_length=1 constraint
+                    # This matches the behavior of NodeType.validate_input_if_string
+                    if item_type == "node type":
+                        filtered_items.append(
+                            {
+                                "label": item,
+                                "properties": [{"name": "name", "type": "STRING"}],
+                                "additional_properties": True,
+                            }
+                        )
+                    else:
+                        filtered_items.append({"label": item})
                 elif item:
                     logging.info(
                         f"Filtering out {item_type} with invalid label: {item}"

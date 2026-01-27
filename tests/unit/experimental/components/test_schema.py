@@ -125,15 +125,15 @@ def test_relationship_type_additional_properties_default() -> None:
     assert relationship_type.additional_properties is False
 
     # manually changing the default value
-    # impossible cases: no properties and no additional
-    with pytest.raises(ValidationError):
-        RelationshipType.model_validate(
-            {"label": "REL", "additional_properties": False}
-        )
-    with pytest.raises(ValidationError):
-        RelationshipType.model_validate(
-            {"label": "REL", "properties": [], "additional_properties": False}
-        )
+    # auto-correction: no properties and additional_properties=False -> auto-corrected to True
+    relationship_type = RelationshipType.model_validate(
+        {"label": "REL", "additional_properties": False}
+    )
+    assert relationship_type.additional_properties is True  # auto-corrected
+    relationship_type = RelationshipType.model_validate(
+        {"label": "REL", "properties": [], "additional_properties": False}
+    )
+    assert relationship_type.additional_properties is True  # auto-corrected
 
     # working case: properties and additional allowed
     relationship_type = RelationshipType.model_validate(
@@ -365,8 +365,15 @@ def valid_node_types() -> tuple[NodeType, ...]:
         NodeType(
             label="ORGANIZATION",
             description="A structured group of people with a common purpose.",
+            properties=[PropertyType(name="name", type="STRING")],
+            additional_properties=True,
         ),
-        NodeType(label="AGE", description="Age of a person in years."),
+        NodeType(
+            label="AGE",
+            description="Age of a person in years.",
+            properties=[PropertyType(name="value", type="INTEGER")],
+            additional_properties=True,
+        ),
     )
 
 
