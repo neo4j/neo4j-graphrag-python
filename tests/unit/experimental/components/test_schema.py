@@ -31,6 +31,7 @@ from neo4j_graphrag.experimental.components.schema import (
     SchemaFromTextExtractor,
     GraphSchema,
     SchemaFromExistingGraphExtractor,
+    Pattern,
 )
 import os
 import tempfile
@@ -45,15 +46,18 @@ def test_node_type_initialization_from_string() -> None:
     node_type = NodeType.model_validate("Label")
     assert isinstance(node_type, NodeType)
     assert node_type.label == "Label"
-    assert node_type.properties == []
+    assert len(node_type.properties) == 1
+    assert node_type.properties[0].name == "name"
+    assert node_type.properties[0].type == "STRING"
 
 
 def test_node_type_additional_properties_default() -> None:
     # default behavior:
     node_type = NodeType.model_validate({"label": "Label"})
     assert node_type.additional_properties is True
-    node_type = NodeType.model_validate({"label": "Label", "properties": []})
-    assert node_type.additional_properties is True
+    # Empty properties list now violates min_length=1 constraint
+    with pytest.raises(ValidationError):
+        NodeType.model_validate({"label": "Label", "properties": []})
     node_type = NodeType.model_validate(
         {"label": "Label", "properties": [{"name": "name", "type": "STRING"}]}
     )
@@ -389,18 +393,20 @@ def valid_relationship_types() -> tuple[RelationshipType, ...]:
 
 
 @pytest.fixture
-def valid_patterns() -> tuple[tuple[str, str, str], ...]:
+def valid_patterns() -> tuple[Pattern, ...]:
     return (
-        ("PERSON", "EMPLOYED_BY", "ORGANIZATION"),
-        ("ORGANIZATION", "ATTENDED_BY", "PERSON"),
+        Pattern(source="PERSON", relationship="EMPLOYED_BY", target="ORGANIZATION"),
+        Pattern(source="ORGANIZATION", relationship="ATTENDED_BY", target="PERSON"),
     )
 
 
 @pytest.fixture
-def patterns_with_invalid_entity() -> tuple[tuple[str, str, str], ...]:
+def patterns_with_invalid_entity() -> tuple[Pattern, ...]:
     return (
-        ("PERSON", "EMPLOYED_BY", "ORGANIZATION"),
-        ("NON_EXISTENT_ENTITY", "ATTENDED_BY", "PERSON"),
+        Pattern(source="PERSON", relationship="EMPLOYED_BY", target="ORGANIZATION"),
+        Pattern(
+            source="NON_EXISTENT_ENTITY", relationship="ATTENDED_BY", target="PERSON"
+        ),
     )
 
 
@@ -412,8 +418,12 @@ def valid_constraints() -> tuple[ConstraintType, ...]:
 
 
 @pytest.fixture
-def patterns_with_invalid_relation() -> tuple[tuple[str, str, str], ...]:
-    return (("PERSON", "NON_EXISTENT_RELATION", "ORGANIZATION"),)
+def patterns_with_invalid_relation() -> tuple[Pattern, ...]:
+    return (
+        Pattern(
+            source="PERSON", relationship="NON_EXISTENT_RELATION", target="ORGANIZATION"
+        ),
+    )
 
 
 @pytest.fixture
@@ -426,7 +436,7 @@ def graph_schema(
     schema_builder: SchemaBuilder,
     valid_node_types: Tuple[NodeType, ...],
     valid_relationship_types: Tuple[RelationshipType, ...],
-    valid_patterns: Tuple[Tuple[str, str, str], ...],
+    valid_patterns: tuple[Pattern, ...],
 ) -> GraphSchema:
     return schema_builder.create_schema_model(
         list(valid_node_types), list(valid_relationship_types), list(valid_patterns)
@@ -437,7 +447,7 @@ def test_create_schema_model_valid_data(
     schema_builder: SchemaBuilder,
     valid_node_types: Tuple[NodeType, ...],
     valid_relationship_types: Tuple[RelationshipType, ...],
-    valid_patterns: Tuple[Tuple[str, str, str], ...],
+    valid_patterns: tuple[Pattern, ...],
 ) -> None:
     schema = schema_builder.create_schema_model(
         list(valid_node_types), list(valid_relationship_types), list(valid_patterns)
@@ -474,7 +484,7 @@ async def test_run_method(
     schema_builder: SchemaBuilder,
     valid_node_types: Tuple[NodeType, ...],
     valid_relationship_types: Tuple[RelationshipType, ...],
-    valid_patterns: Tuple[Tuple[str, str, str], ...],
+    valid_patterns: tuple[Pattern, ...],
 ) -> None:
     with patch.object(
         schema_builder,
@@ -520,7 +530,7 @@ def test_create_schema_model_invalid_entity(
     schema_builder: SchemaBuilder,
     valid_node_types: Tuple[NodeType, ...],
     valid_relationship_types: Tuple[RelationshipType, ...],
-    patterns_with_invalid_entity: Tuple[Tuple[str, str, str], ...],
+    patterns_with_invalid_entity: tuple[Pattern, ...],
 ) -> None:
     with pytest.raises(SchemaValidationError) as exc_info:
         schema_builder.create_schema_model(
@@ -537,7 +547,7 @@ def test_create_schema_model_invalid_relation(
     schema_builder: SchemaBuilder,
     valid_node_types: Tuple[NodeType, ...],
     valid_relationship_types: Tuple[RelationshipType, ...],
-    patterns_with_invalid_relation: Tuple[Tuple[str, str, str], ...],
+    patterns_with_invalid_relation: tuple[Pattern, ...],
 ) -> None:
     with pytest.raises(SchemaValidationError) as exc_info:
         schema_builder.create_schema_model(
@@ -591,7 +601,7 @@ def test_create_schema_model_no_relations_or_potential_schema(
 def test_create_schema_model_missing_relations(
     schema_builder: SchemaBuilder,
     valid_node_types: Tuple[NodeType, ...],
-    valid_patterns: Tuple[Tuple[str, str, str], ...],
+    valid_patterns: tuple[Pattern, ...],
 ) -> None:
     with pytest.raises(SchemaValidationError) as exc_info:
         schema_builder.create_schema_model(
@@ -1885,8 +1895,8 @@ async def test_schema_from_existing_graph(mock_get_structured_schema: Mock) -> N
     assert schema.additional_patterns is False
 
     assert schema.patterns == (
-        ("Person", "KNOWS", "Person"),
-        ("Person", "LIVES_IN", "City"),
+        Pattern(source="Person", relationship="KNOWS", target="Person"),
+        Pattern(source="Person", relationship="LIVES_IN", target="City"),
     )
 
 

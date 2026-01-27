@@ -119,7 +119,11 @@ class NodeType(BaseModel):
     @classmethod
     def validate_input_if_string(cls, data: EntityInputType) -> EntityInputType:
         if isinstance(data, str):
-            return {"label": data}
+            return {
+                "label": data,
+                # added to satisfy the model validation (min_length=1 for properties of node types)
+                "properties": [{"name": "name", "type": "STRING"}],
+            }
         return data
 
     @model_validator(mode="after")
@@ -537,7 +541,7 @@ class SchemaBuilder(BaseSchemaBuilder):
     def create_schema_model(
         node_types: Sequence[NodeType],
         relationship_types: Optional[Sequence[RelationshipType]] = None,
-        patterns: Optional[Sequence[Tuple[str, str, str]]] = None,
+        patterns: Optional[Sequence[Union[Tuple[str, str, str], Pattern]]] = None,
         constraints: Optional[Sequence[ConstraintType]] = None,
         **kwargs: Any,
     ) -> GraphSchema:
@@ -572,7 +576,7 @@ class SchemaBuilder(BaseSchemaBuilder):
         self,
         node_types: Sequence[NodeType],
         relationship_types: Optional[Sequence[RelationshipType]] = None,
-        patterns: Optional[Sequence[Tuple[str, str, str]]] = None,
+        patterns: Optional[Sequence[Union[Tuple[str, str, str], Pattern]]] = None,
         constraints: Optional[Sequence[ConstraintType]] = None,
         **kwargs: Any,
     ) -> GraphSchema:
