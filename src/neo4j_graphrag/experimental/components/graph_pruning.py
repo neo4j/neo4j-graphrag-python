@@ -21,6 +21,7 @@ from pydantic import validate_call, BaseModel
 
 from neo4j_graphrag.experimental.components.schema import (
     GraphSchema,
+    Pattern,
     PropertyType,
     NodeType,
     RelationshipType,
@@ -272,7 +273,7 @@ class GraphPruning(Component):
         pruning_stats: PruningStats,
         relationship_type: Optional[RelationshipType],
         additional_relationship_types: bool,
-        patterns: tuple[tuple[str, str, str], ...],
+        patterns: tuple[Pattern, ...],
         additional_patterns: bool,
     ) -> Optional[Neo4jRelationship]:
         if not rel.type:
