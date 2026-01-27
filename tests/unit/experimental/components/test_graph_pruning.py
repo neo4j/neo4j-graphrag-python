@@ -27,6 +27,7 @@ from neo4j_graphrag.experimental.components.graph_pruning import (
 from neo4j_graphrag.experimental.components.schema import (
     GraphSchema,
     NodeType,
+    Pattern,
     PropertyType,
     RelationshipType,
 )
@@ -282,7 +283,9 @@ def neo4j_reversed_relationship(
                 label="REL",
             ),
             True,  # additional_relationship_types
-            (("Person", "REL", "Location"),),  # patterns
+            (
+                Pattern(source="Person", relationship="REL", target="Location"),
+            ),  # patterns
             True,  # additional_patterns
             "neo4j_relationship",  # expected_relationship
         ),
@@ -297,7 +300,7 @@ def neo4j_reversed_relationship(
                 label="REL",
             ),
             True,  # additional_relationship_types
-            (("Person", "REL", "Location"),),
+            (Pattern(source="Person", relationship="REL", target="Location"),),
             True,  # additional_patterns
             "neo4j_relationship",
         ),
@@ -312,7 +315,7 @@ def neo4j_reversed_relationship(
                 label="REL",
             ),
             True,  # additional_relationship_types
-            (("Person", "REL", "Location"),),
+            (Pattern(source="Person", relationship="REL", target="Location"),),
             True,  # additional_patterns
             None,
         ),
@@ -325,7 +328,7 @@ def neo4j_reversed_relationship(
             },
             None,  # relationship_type
             True,  # additional_relationship_types
-            (("Person", "REL", "Location"),),
+            (Pattern(source="Person", relationship="REL", target="Location"),),
             True,  # additional_patterns
             "neo4j_relationship",
         ),
@@ -337,7 +340,7 @@ def neo4j_reversed_relationship(
             },
             None,  # relationship_type
             True,  # additional_relationship_types
-            (("Person", "REL", "Location"),),
+            (Pattern(source="Person", relationship="REL", target="Location"),),
             True,  # additional_patterns
             None,
         ),
@@ -350,7 +353,7 @@ def neo4j_reversed_relationship(
             },
             None,  # relationship_type
             False,  # additional_relationship_types
-            (("Person", "REL", "Location"),),
+            (Pattern(source="Person", relationship="REL", target="Location"),),
             True,  # additional_patterns
             None,
         ),
@@ -365,7 +368,7 @@ def neo4j_reversed_relationship(
                 label="REL",
             ),
             True,  # additional_relationship_types
-            (("Person", "REL", "Person"),),
+            (Pattern(source="Person", relationship="REL", target="Person"),),
             True,  # additional_patterns
             "neo4j_relationship",
         ),
@@ -380,7 +383,7 @@ def neo4j_reversed_relationship(
                 label="REL",
             ),
             True,  # additional_relationship_types
-            (("Person", "REL", "Person"),),
+            (Pattern(source="Person", relationship="REL", target="Person"),),
             False,  # additional_patterns
             None,
         ),
@@ -395,7 +398,9 @@ def neo4j_reversed_relationship(
                 label="REL",
             ),
             True,  # additional_relationship_types
-            (("Person", "REL", "Location"),),  # patterns
+            (
+                Pattern(source="Person", relationship="REL", target="Location"),
+            ),  # patterns
             True,  # additional_patterns
             None,  # expected_relationship
         ),
@@ -406,7 +411,7 @@ def test_graph_pruning_validate_relationship(
     valid_nodes: dict[str, str],
     relationship_type: RelationshipType,
     additional_relationship_types: bool,
-    patterns: tuple[tuple[str, str, str], ...],
+    patterns: tuple[Pattern, ...],
     additional_patterns: bool,
     expected_relationship: Optional[str],
     request: pytest.FixtureRequest,
