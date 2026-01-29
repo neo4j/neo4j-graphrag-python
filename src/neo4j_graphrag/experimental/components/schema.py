@@ -58,8 +58,6 @@ from neo4j_graphrag.experimental.pipeline.types.schema import (
 )
 from neo4j_graphrag.generation import SchemaExtractionTemplate, PromptTemplate
 from neo4j_graphrag.llm import LLMInterface
-from neo4j_graphrag.llm.openai_llm import OpenAILLM
-from neo4j_graphrag.llm.vertexai_llm import VertexAILLM
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.file_handler import FileHandler, FileFormat
 from neo4j_graphrag.schema import get_structured_schema
@@ -654,10 +652,10 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         self.use_structured_output = use_structured_output
 
         # Validate that structured output is only used with supported LLMs
-        if use_structured_output and not isinstance(llm, (OpenAILLM, VertexAILLM)):
+        if use_structured_output and not llm.supports_structured_output:
             raise ValueError(
-                f"use_structured_output=True is only supported for OpenAILLM and VertexAILLM. "
-                f"Got {type(llm).__name__}."
+                f"Structured output is not supported by {type(llm).__name__}. "
+                f"Please use a model that supports structured output, or set use_structured_output=False."
             )
 
     def _filter_invalid_patterns(
@@ -1145,17 +1143,17 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
             RuntimeError: If LLM is not OpenAILLM or VertexAILLM
             SchemaExtractionError: If LLM generation or validation fails
         """
-        # Type narrowing with isinstance check
+        # Capability check
         # This should never happen due to __init__ validation
-        if not isinstance(self._llm, (OpenAILLM, VertexAILLM)):
+        if not self._llm.supports_structured_output:
             raise RuntimeError(
-                f"Structured output requires OpenAILLM or VertexAILLM, got {type(self._llm).__name__}"
+                f"Structured output is not supported by {type(self._llm).__name__}"
             )
 
         # Invoke LLM with structured output
         messages = [LLMMessage(role="user", content=prompt)]
         try:
-            llm_result = await self._llm.ainvoke(messages, response_format=GraphSchema)
+            llm_result = await self._llm.ainvoke(messages, response_format=GraphSchema)  # type: ignore[call-arg, arg-type]
         except LLMGenerationError as e:
             raise SchemaExtractionError("Failed to generate schema from text") from e
 
