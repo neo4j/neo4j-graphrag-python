@@ -20,7 +20,19 @@ import re
 import neo4j
 import logging
 import warnings
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union, Sequence, Callable
+from typing import (
+    Any,
+    Dict,
+    Iterator,
+    List,
+    Literal,
+    Optional,
+    Tuple,
+    Union,
+    Sequence,
+    Callable,
+    cast,
+)
 from pathlib import Path
 
 from pydantic import (
@@ -46,6 +58,7 @@ from neo4j_graphrag.experimental.pipeline.types.schema import (
 )
 from neo4j_graphrag.generation import SchemaExtractionTemplate, PromptTemplate
 from neo4j_graphrag.llm import LLMInterface
+from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.file_handler import FileHandler, FileFormat
 from neo4j_graphrag.schema import get_structured_schema
 
@@ -95,7 +108,7 @@ class NodeType(BaseModel):
 
     label: str
     description: str = ""
-    properties: list[PropertyType] = []
+    properties: list[PropertyType] = Field(default_factory=list, min_length=1)
     additional_properties: bool = Field(
         default_factory=default_additional_item("properties")
     )
@@ -104,7 +117,17 @@ class NodeType(BaseModel):
     @classmethod
     def validate_input_if_string(cls, data: EntityInputType) -> EntityInputType:
         if isinstance(data, str):
-            return {"label": data}
+            logger.info(
+                f"Converting string '{data}' to NodeType with default 'name' property "
+                f"and additional_properties=True to allow flexible property extraction."
+            )
+            return {
+                "label": data,
+                # added to satisfy the model validation (min_length=1 for properties of node types)
+                "properties": [{"name": "name", "type": "STRING"}],
+                # allow LLM to extract additional properties beyond the default "name"
+                "additional_properties": True,  # type: ignore[dict-item]
+            }
         return data
 
     @model_validator(mode="after")
@@ -146,11 +169,12 @@ class RelationshipType(BaseModel):
     @model_validator(mode="after")
     def validate_additional_properties(self) -> Self:
         if len(self.properties) == 0 and not self.additional_properties:
-            raise ValueError(
-                "Using `additional_properties=False` with no defined "
-                "properties will cause the model to be pruned during graph cleaning. "
-                f"Define some properties or remove this RelationshipType: {self}"
+            logger.info(
+                f"Auto-correcting RelationshipType '{self.label}': "
+                f"Setting additional_properties=True because properties list is empty. "
+                f"This allows the LLM to extract properties during graph construction."
             )
+            self.additional_properties = True
         return self
 
     def property_type_from_name(self, name: str) -> Optional[PropertyType]:
@@ -176,6 +200,47 @@ class ConstraintType(BaseModel):
     )
 
 
+class Pattern(BaseModel):
+    """Represents a relationship pattern in the graph schema.
+
+    This model provides backward compatibility with tuple-based patterns
+    through helper methods (__iter__, __getitem__, __eq__, __hash__).
+    """
+
+    source: str
+    relationship: str
+    target: str
+
+    model_config = ConfigDict(frozen=True)
+
+    def __iter__(self) -> Iterator[str]:  # type: ignore[override]
+        """Allow unpacking: source, rel, target = pattern"""
+        return iter((self.source, self.relationship, self.target))
+
+    def __getitem__(self, index: int) -> str:
+        """Allow indexing: pattern[0] returns source"""
+        return (self.source, self.relationship, self.target)[index]
+
+    def __eq__(self, other: object) -> bool:
+        """Allow comparison with tuples for backward compatibility."""
+        if isinstance(other, Pattern):
+            return (
+                self.source,
+                self.relationship,
+                self.target,
+            ) == (
+                other.source,
+                other.relationship,
+                other.target,
+            )
+        if isinstance(other, (tuple, list)) and len(other) == 3:
+            return (self.source, self.relationship, self.target) == tuple(other)
+        return False
+
+    def __hash__(self) -> int:
+        return hash((self.source, self.relationship, self.target))
+
+
 class GraphSchema(DataModel):
     """This model represents the expected
     node and relationship types in the graph.
@@ -191,7 +256,7 @@ class GraphSchema(DataModel):
 
     node_types: Tuple[NodeType, ...]
     relationship_types: Tuple[RelationshipType, ...] = tuple()
-    patterns: Tuple[Tuple[str, str, str], ...] = tuple()
+    patterns: Tuple[Pattern, ...] = tuple()
     constraints: Tuple[ConstraintType, ...] = tuple()
 
     additional_node_types: bool = Field(
@@ -210,6 +275,23 @@ class GraphSchema(DataModel):
     model_config = ConfigDict(
         frozen=True,
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def convert_tuple_patterns(cls, data: Any) -> Any:
+        """Convert tuple patterns to Pattern objects for backward compatibility."""
+        if isinstance(data, dict) and "patterns" in data and data["patterns"]:
+            patterns = data["patterns"]
+            converted = []
+            for p in patterns:
+                if isinstance(p, (tuple, list)) and len(p) == 3:
+                    converted.append(
+                        Pattern(source=p[0], relationship=p[1], target=p[2])
+                    )
+                else:
+                    converted.append(p)
+            data["patterns"] = converted
+        return data
 
     @model_validator(mode="after")
     def validate_patterns_against_node_and_rel_types(self) -> Self:
@@ -288,6 +370,44 @@ class GraphSchema(DataModel):
 
     def relationship_type_from_label(self, label: str) -> Optional[RelationshipType]:
         return self._relationship_type_index.get(label)
+
+    @classmethod
+    def model_json_schema(cls, **kwargs: Any) -> dict[str, Any]:  # type: ignore[override]
+        """Override for structured output compatibility.
+
+        OpenAI requires:
+        - additionalProperties: false on all objects
+        - All properties must be in required array
+
+        VertexAI requires:
+        - No 'const' keyword (convert to enum with single value)
+        """
+        schema = super().model_json_schema(**kwargs)
+
+        def make_strict(obj: dict[str, Any]) -> None:
+            """Recursively set additionalProperties, required, and fix const."""
+            if obj.get("type") == "object" and "properties" in obj:
+                obj["additionalProperties"] = False
+                obj["required"] = list(obj["properties"].keys())
+
+            # Convert 'const' to 'enum' for VertexAI compatibility
+            if "const" in obj:
+                obj["enum"] = [obj.pop("const")]
+
+            for value in obj.values():
+                if isinstance(value, dict):
+                    make_strict(value)
+                elif isinstance(value, list):
+                    for item in value:
+                        if isinstance(item, dict):
+                            make_strict(item)
+
+        make_strict(schema)
+        if "$defs" in schema:
+            for def_schema in schema["$defs"].values():
+                make_strict(def_schema)
+
+        return schema
 
     @classmethod
     def create_empty(cls) -> Self:
@@ -425,7 +545,7 @@ class SchemaBuilder(BaseSchemaBuilder):
     def create_schema_model(
         node_types: Sequence[NodeType],
         relationship_types: Optional[Sequence[RelationshipType]] = None,
-        patterns: Optional[Sequence[Tuple[str, str, str]]] = None,
+        patterns: Optional[Sequence[Union[Tuple[str, str, str], Pattern]]] = None,
         constraints: Optional[Sequence[ConstraintType]] = None,
         **kwargs: Any,
     ) -> GraphSchema:
@@ -460,7 +580,7 @@ class SchemaBuilder(BaseSchemaBuilder):
         self,
         node_types: Sequence[NodeType],
         relationship_types: Optional[Sequence[RelationshipType]] = None,
-        patterns: Optional[Sequence[Tuple[str, str, str]]] = None,
+        patterns: Optional[Sequence[Union[Tuple[str, str, str], Pattern]]] = None,
         constraints: Optional[Sequence[ConstraintType]] = None,
         **kwargs: Any,
     ) -> GraphSchema:
@@ -488,6 +608,33 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
     """
     A component for constructing GraphSchema objects from the output of an LLM after
     automatic schema extraction from text.
+
+    Args:
+        llm (LLMInterface): The language model to use for schema extraction.
+        prompt_template (Optional[PromptTemplate]): A custom prompt template to use for extraction.
+        llm_params (Optional[Dict[str, Any]]): Additional parameters passed to the LLM.
+        use_structured_output (bool): Whether to use structured output (LLMInterfaceV2) with the GraphSchema Pydantic model.
+            Only supported for OpenAILLM and VertexAILLM. Defaults to False (uses V1 prompt-based JSON extraction).
+
+    Example with V1 (default, prompt-based JSON):
+
+    .. code-block:: python
+
+        from neo4j_graphrag.experimental.components.schema import SchemaFromTextExtractor
+        from neo4j_graphrag.llm import OpenAILLM
+
+        llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0})
+        extractor = SchemaFromTextExtractor(llm=llm)
+
+    Example with V2 (structured output):
+
+    .. code-block:: python
+
+        from neo4j_graphrag.experimental.components.schema import SchemaFromTextExtractor
+        from neo4j_graphrag.llm import OpenAILLM
+
+        llm = OpenAILLM(model_name="gpt-4o")
+        extractor = SchemaFromTextExtractor(llm=llm, use_structured_output=True)
     """
 
     def __init__(
@@ -495,12 +642,21 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         llm: LLMInterface,
         prompt_template: Optional[PromptTemplate] = None,
         llm_params: Optional[Dict[str, Any]] = None,
+        use_structured_output: bool = False,
     ) -> None:
         self._llm: LLMInterface = llm
         self._prompt_template: PromptTemplate = (
             prompt_template or SchemaExtractionTemplate()
         )
         self._llm_params: dict[str, Any] = llm_params or {}
+        self.use_structured_output = use_structured_output
+
+        # Validate that structured output is only used with supported LLMs
+        if use_structured_output and not llm.supports_structured_output:
+            raise ValueError(
+                f"Structured output is not supported by {type(llm).__name__}. "
+                f"Please use a model that supports structured output, or set use_structured_output=False."
+            )
 
     def _filter_invalid_patterns(
         self,
@@ -543,10 +699,21 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         # Filter patterns
         filtered_patterns = []
         for pattern in patterns:
-            if not (isinstance(pattern, (list, tuple)) and len(pattern) == 3):
+            # Extract components based on pattern type
+            if isinstance(pattern, dict):
+                if not all(k in pattern for k in ("source", "relationship", "target")):
+                    continue
+                entity1 = pattern["source"]
+                relation = pattern["relationship"]
+                entity2 = pattern["target"]
+            elif isinstance(pattern, (list, tuple)):
+                if len(pattern) != 3:
+                    continue
+                entity1, relation, entity2 = pattern
+            elif isinstance(pattern, Pattern):
+                entity1, relation, entity2 = pattern  # Uses Pattern.__iter__
+            else:
                 continue
-
-            entity1, relation, entity2 = pattern
 
             # Check if all components are valid
             if (
@@ -578,7 +745,18 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         for item in items:
             if isinstance(item, str):
                 if item and " " not in item and not item.startswith("{"):
-                    filtered_items.append({"label": item})
+                    # Add default property for node types to satisfy min_length=1 constraint
+                    # This matches the behavior of NodeType.validate_input_if_string
+                    if item_type == "node type":
+                        filtered_items.append(
+                            {
+                                "label": item,
+                                "properties": [{"name": "name", "type": "STRING"}],
+                                "additional_properties": True,
+                            }
+                        )
+                    else:
+                        filtered_items.append({"label": item})
                 elif item:
                     logging.info(
                         f"Filtering out {item_type} with invalid label: {item}"
@@ -602,6 +780,51 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         return self._filter_items_without_labels(
             relationship_types, "relationship type"
         )
+
+    def _apply_cross_reference_filters(
+        self,
+        extracted_node_types: List[Dict[str, Any]],
+        extracted_relationship_types: Optional[List[Dict[str, Any]]],
+        extracted_patterns: Any,
+        extracted_constraints: Optional[List[Dict[str, Any]]],
+    ) -> tuple[Any, Optional[List[Dict[str, Any]]]]:
+        """Apply cross-reference filtering for patterns and constraints.
+
+        This filtering is common to both V1 and V2 paths and handles:
+        - Filtering out patterns that reference non-existent nodes/relationships
+        - Enforcing required=True for properties with UNIQUENESS constraints
+        - Filtering out invalid constraints
+
+        Args:
+            extracted_node_types: List of node type dictionaries
+            extracted_relationship_types: Optional list of relationship type dictionaries
+            extracted_patterns: Patterns in any format (dicts, tuples, lists, Pattern objects)
+            extracted_constraints: Optional list of constraint dictionaries
+
+        Returns:
+            Tuple of (filtered_patterns, filtered_constraints)
+        """
+        # Filter out invalid patterns before validation
+        if extracted_patterns:
+            extracted_patterns = self._filter_invalid_patterns(
+                extracted_patterns,
+                extracted_node_types,
+                extracted_relationship_types,
+            )
+
+        # Enforce required=true for properties with UNIQUENESS constraints
+        if extracted_constraints:
+            self._enforce_required_for_constraint_properties(
+                extracted_node_types, extracted_constraints
+            )
+
+        # Filter out invalid constraints
+        if extracted_constraints:
+            extracted_constraints = self._filter_invalid_constraints(
+                extracted_constraints, extracted_node_types
+            )
+
+        return extracted_patterns, extracted_constraints
 
     def _filter_invalid_constraints(
         self, constraints: List[Dict[str, Any]], node_types: List[Dict[str, Any]]
@@ -761,6 +984,220 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
 
         return content.strip()
 
+    def _parse_llm_response(self, content: str) -> Dict[str, Any]:
+        """Parse LLM response into schema dictionary.
+
+        Args:
+            content: JSON string from LLM response
+
+        Returns:
+            Parsed dictionary
+
+        Raises:
+            SchemaExtractionError: If content is not valid JSON
+        """
+        try:
+            result = json.loads(content)
+            return cast(Dict[str, Any], result)
+        except json.JSONDecodeError as exc:
+            raise SchemaExtractionError("LLM response is not valid JSON.") from exc
+
+    def _parse_and_normalize_schema(self, content: str) -> Dict[str, Any]:
+        """Parse and normalize V1 schema response (handles lists/dicts).
+
+        V1 (prompt-based) extraction sometimes returns lists instead of dicts.
+        This method normalizes the response to always return a dict.
+
+        Args:
+            content: JSON string from LLM response
+
+        Returns:
+            Normalized schema dictionary
+
+        Raises:
+            SchemaExtractionError: If content is not valid JSON or has unexpected format
+        """
+        extracted_schema = self._parse_llm_response(content)
+
+        # Handle list responses
+        if isinstance(extracted_schema, list):
+            if len(extracted_schema) == 0:
+                logging.info(
+                    "LLM returned an empty list for schema. Falling back to empty schema."
+                )
+                return {}
+            elif isinstance(extracted_schema[0], dict):
+                return extracted_schema[0]
+            else:
+                raise SchemaExtractionError(
+                    f"Expected a dictionary or list of dictionaries, but got list containing: {type(extracted_schema[0])}"
+                )
+        elif isinstance(extracted_schema, dict):
+            return extracted_schema
+        else:
+            raise SchemaExtractionError(
+                f"Unexpected schema format returned from LLM: {type(extracted_schema)}. Expected a dictionary or list of dictionaries."
+            )
+
+    def _apply_v1_filters(self, extracted_schema: Dict[str, Any]) -> Dict[str, Any]:
+        """Apply V1-specific filters before cross-reference filtering.
+
+        V1 (prompt-based) extraction requires additional filtering:
+        - Remove nodes/relationships without labels
+        - Clean up invalid 'required' field values
+        - Remove nodes with no properties (after property filtering)
+
+        Args:
+            extracted_schema: Raw schema dictionary from LLM
+
+        Returns:
+            Filtered schema dictionary
+        """
+        node_types = extracted_schema.get("node_types") or []
+        rel_types = extracted_schema.get("relationship_types")
+
+        # Filter items without labels
+        node_types = self._filter_nodes_without_labels(node_types)
+        if rel_types:
+            rel_types = self._filter_relationships_without_labels(rel_types)
+
+        # Filter invalid required fields
+        node_types = self._filter_properties_required_field(node_types)
+
+        # Filter nodes with no properties (after property filtering)
+        # This prevents validation errors from min_length=1 constraint on NodeType.properties
+        nodes_before = len(node_types)
+        node_types = [
+            node for node in node_types if len(node.get("properties", [])) > 0
+        ]
+        if len(node_types) < nodes_before:
+            removed_count = nodes_before - len(node_types)
+            logging.info(
+                f"Filtered out {removed_count} node type(s) with no properties after property validation. "
+                f"This can happen when all properties have invalid 'required' field values."
+            )
+
+        extracted_schema["node_types"] = node_types
+        extracted_schema["relationship_types"] = rel_types
+        return extracted_schema
+
+    def _validate_and_build_schema(
+        self, extracted_schema: Dict[str, Any]
+    ) -> GraphSchema:
+        """Apply cross-reference filters and validate schema.
+
+        This is the final step shared by both V1 and V2 paths:
+        - Extract node types, relationship types, patterns, and constraints
+        - Apply cross-reference filtering (remove invalid patterns/constraints)
+        - Validate using Pydantic GraphSchema model
+
+        Args:
+            extracted_schema: Schema dictionary (after V1/V2-specific filtering)
+
+        Returns:
+            Validated GraphSchema object
+
+        Raises:
+            SchemaExtractionError: If validation fails
+        """
+        node_types = extracted_schema.get("node_types") or []
+        rel_types = extracted_schema.get("relationship_types")
+        patterns = extracted_schema.get("patterns")
+        constraints = extracted_schema.get("constraints")
+
+        # Apply cross-reference filtering
+        patterns, constraints = self._apply_cross_reference_filters(
+            node_types, rel_types, patterns, constraints
+        )
+
+        # Validate and return
+        try:
+            schema = GraphSchema.model_validate(
+                {
+                    "node_types": node_types,
+                    "relationship_types": rel_types,
+                    "patterns": patterns,
+                    "constraints": constraints or [],
+                }
+            )
+            logger.debug(f"Extracted schema: {schema}")
+            return schema
+        except ValidationError as e:
+            raise SchemaExtractionError(
+                f"LLM response does not conform to GraphSchema: {str(e)}"
+            ) from e
+
+    async def _run_with_structured_output(self, prompt: str) -> GraphSchema:
+        """Extract schema using structured output (V2).
+
+        V2 uses LLMInterfaceV2 with response_format=GraphSchema to enforce
+        the schema structure at the LLM level. This requires OpenAI or VertexAI.
+
+        Args:
+            prompt: Formatted prompt for schema extraction
+
+        Returns:
+            Validated GraphSchema object
+
+        Raises:
+            RuntimeError: If LLM is not OpenAILLM or VertexAILLM
+            SchemaExtractionError: If LLM generation or validation fails
+        """
+        # Capability check
+        # This should never happen due to __init__ validation
+        if not self._llm.supports_structured_output:
+            raise RuntimeError(
+                f"Structured output is not supported by {type(self._llm).__name__}"
+            )
+
+        # Invoke LLM with structured output
+        messages = [LLMMessage(role="user", content=prompt)]
+        try:
+            llm_result = await self._llm.ainvoke(messages, response_format=GraphSchema)  # type: ignore[call-arg, arg-type]
+        except LLMGenerationError as e:
+            raise SchemaExtractionError("Failed to generate schema from text") from e
+
+        # Parse JSON response
+        # Note: With structured output, this should always succeed, but we keep
+        # error handling for unexpected provider issues
+        extracted_schema = self._parse_llm_response(llm_result.content)
+
+        # Validate and return (applies cross-reference filtering)
+        return self._validate_and_build_schema(extracted_schema)
+
+    async def _run_with_prompt_based_extraction(self, prompt: str) -> GraphSchema:
+        """Extract schema using prompt-based JSON extraction (V1).
+
+        V1 uses standard LLM prompting with JSON output. This requires additional
+        filtering and cleanup compared to V2 structured output.
+
+        Args:
+            prompt: Formatted prompt for schema extraction
+
+        Returns:
+            Validated GraphSchema object
+
+        Raises:
+            LLMGenerationError: If LLM generation fails
+            SchemaExtractionError: If parsing or validation fails
+        """
+        # Invoke LLM
+        try:
+            response = await self._llm.ainvoke(prompt, **self._llm_params)
+            content = response.content
+        except LLMGenerationError as e:
+            raise LLMGenerationError("Failed to generate schema from text") from e
+
+        # Clean and parse response
+        content = self._clean_json_content(content)
+        extracted_schema = self._parse_and_normalize_schema(content)
+
+        # Apply V1-specific filtering
+        extracted_schema = self._apply_v1_filters(extracted_schema)
+
+        # Validate and return (applies cross-reference filtering)
+        return self._validate_and_build_schema(extracted_schema)
+
     @validate_call
     async def run(self, text: str, examples: str = "", **kwargs: Any) -> GraphSchema:
         """
@@ -775,93 +1212,10 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         """
         prompt: str = self._prompt_template.format(text=text, examples=examples)
 
-        try:
-            response = await self._llm.ainvoke(prompt, **self._llm_params)
-            content: str = response.content
-        except LLMGenerationError as e:
-            # Re-raise the LLMGenerationError
-            raise LLMGenerationError("Failed to generate schema from text") from e
-
-        # Clean response
-        content = self._clean_json_content(content)
-
-        try:
-            extracted_schema: Dict[str, Any] = json.loads(content)
-
-            # handle dictionary
-            if isinstance(extracted_schema, dict):
-                pass  # Keep as is
-            # handle list
-            elif isinstance(extracted_schema, list):
-                if len(extracted_schema) == 0:
-                    logging.info(
-                        "LLM returned an empty list for schema. Falling back to empty schema."
-                    )
-                    extracted_schema = {}
-                elif isinstance(extracted_schema[0], dict):
-                    extracted_schema = extracted_schema[0]
-                else:
-                    raise SchemaExtractionError(
-                        f"Expected a dictionary or list of dictionaries, but got list containing: {type(extracted_schema[0])}"
-                    )
-            # any other types
-            else:
-                raise SchemaExtractionError(
-                    f"Unexpected schema format returned from LLM: {type(extracted_schema)}. Expected a dictionary or list of dictionaries."
-                )
-        except json.JSONDecodeError as exc:
-            raise SchemaExtractionError("LLM response is not valid JSON.") from exc
-
-        extracted_node_types: List[Dict[str, Any]] = (
-            extracted_schema.get("node_types") or []
-        )
-        extracted_relationship_types: Optional[List[Dict[str, Any]]] = (
-            extracted_schema.get("relationship_types")
-        )
-        extracted_patterns: Optional[List[Tuple[str, str, str]]] = extracted_schema.get(
-            "patterns"
-        )
-        extracted_constraints: Optional[List[Dict[str, Any]]] = extracted_schema.get(
-            "constraints"
-        )
-
-        # Filter out nodes and relationships without labels
-        extracted_node_types = self._filter_nodes_without_labels(extracted_node_types)
-        if extracted_relationship_types:
-            extracted_relationship_types = self._filter_relationships_without_labels(
-                extracted_relationship_types
-            )
-
-        extracted_node_types = self._filter_properties_required_field(
-            extracted_node_types
-        )
-
-        # Filter out invalid patterns before validation
-        if extracted_patterns:
-            extracted_patterns = self._filter_invalid_patterns(
-                extracted_patterns, extracted_node_types, extracted_relationship_types
-            )
-
-        # Enforce required=true for properties with UNIQUENESS constraints
-        if extracted_constraints:
-            self._enforce_required_for_constraint_properties(
-                extracted_node_types, extracted_constraints
-            )
-
-        # Filter out invalid constraints
-        if extracted_constraints:
-            extracted_constraints = self._filter_invalid_constraints(
-                extracted_constraints, extracted_node_types
-            )
-
-        return GraphSchema.model_validate(
-            {
-                "node_types": extracted_node_types,
-                "relationship_types": extracted_relationship_types,
-                "patterns": extracted_patterns,
-                "constraints": extracted_constraints or [],
-            }
-        )
+        if self.use_structured_output:
+            return await self._run_with_structured_output(prompt)
+        else:
+            return await self._run_with_prompt_based_extraction(prompt)
 
 
 class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):

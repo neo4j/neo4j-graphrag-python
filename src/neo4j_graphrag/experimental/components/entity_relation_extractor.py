@@ -37,8 +37,6 @@ from neo4j_graphrag.experimental.pipeline.component import Component
 from neo4j_graphrag.experimental.pipeline.exceptions import InvalidJSONError
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate, PromptTemplate
 from neo4j_graphrag.llm import LLMInterface
-from neo4j_graphrag.llm.openai_llm import OpenAILLM
-from neo4j_graphrag.llm.vertexai_llm import VertexAILLM
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.logging import prettify
 
@@ -217,10 +215,10 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         self.use_structured_output = use_structured_output
 
         # Validate that structured output is only used with supported LLMs
-        if use_structured_output and not isinstance(llm, (OpenAILLM, VertexAILLM)):
+        if use_structured_output and not llm.supports_structured_output:
             raise ValueError(
-                f"use_structured_output=True is only supported for OpenAILLM and VertexAILLM. "
-                f"Got {type(llm).__name__}."
+                f"Structured output is not supported by {type(llm).__name__}. "
+                f"Please use a model that supports structured output, or set use_structured_output=False."
             )
 
         if isinstance(prompt_template, str):
@@ -241,15 +239,15 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
 
         # Use structured output (V2) if enabled
         if self.use_structured_output:
-            # Type narrowing with isinstance check
+            # Capability check
             # This should never happen due to __init__ validation
-            if not isinstance(self.llm, (OpenAILLM, VertexAILLM)):
+            if not self.llm.supports_structured_output:
                 raise RuntimeError(
-                    f"Structured output requires OpenAILLM or VertexAILLM, got {type(self.llm).__name__}"
+                    f"Structured output is not supported by {type(self.llm).__name__}"
                 )
 
             messages = [LLMMessage(role="user", content=prompt)]
-            llm_result = await self.llm.ainvoke(messages, response_format=Neo4jGraph)
+            llm_result = await self.llm.ainvoke(messages, response_format=Neo4jGraph)  # type: ignore[call-arg, arg-type]
             try:
                 chunk_graph = Neo4jGraph.model_validate_json(llm_result.content)
             except ValidationError as e:

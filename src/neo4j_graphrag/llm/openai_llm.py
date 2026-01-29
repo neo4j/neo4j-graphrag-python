@@ -631,6 +631,8 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
 class OpenAILLM(BaseOpenAILLM):
     """OpenAI LLM."""
 
+    supports_structured_output: bool = True
+
     def __init__(
         self,
         model_name: str,

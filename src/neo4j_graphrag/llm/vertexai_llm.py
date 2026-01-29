@@ -140,6 +140,8 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         llm.invoke("Who is the mother of Paul Atreides?")
     """
 
+    supports_structured_output: bool = True
+
     def __init__(
         self,
         model_name: str = "gemini-1.5-flash-001",

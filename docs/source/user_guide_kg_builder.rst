@@ -867,6 +867,49 @@ You can also save and reload the extracted schema:
     restored_schema = GraphSchema.from_file("my_schema.json")  # or my_schema.yaml
 
 
+Using Structured Output with Schema Extraction
+-----------------------------------------------
+
+For improved reliability with :ref:`OpenAILLM <openaillm>` or :ref:`VertexAILLM <vertexaillm>`, enable structured output mode. When ``use_structured_output=True``, the extractor passes the ``GraphSchema`` Pydantic model as ``response_format`` to the LLM, ensuring responses conform to the expected schema structure with automatic validation:
+
+.. code:: python
+
+    from neo4j_graphrag.experimental.components.schema import SchemaFromTextExtractor
+    from neo4j_graphrag.llm import OpenAILLM
+
+    llm = OpenAILLM(model_name="gpt-4o-mini", model_params={"temperature": 0})
+    schema_extractor = SchemaFromTextExtractor(
+        llm=llm,
+        use_structured_output=True
+    )
+    
+    extracted_schema = await schema_extractor.run(text="Some text")
+
+.. note::
+
+    Using ``use_structured_output=True`` with other LLM providers will raise a ``ValueError``. Do not pass ``response_format`` in constructor parameters; the extractor automatically sets it when calling ``invoke()``.
+
+
+Schema Validation and Node Properties
+--------------------------------------
+
+**Important:** All node types must have at least one property defined. When using string shorthand for node types (e.g., ``"Person"``), a default ``"name"`` property is automatically added with ``additional_properties=True`` to allow flexible LLM extraction:
+
+.. code:: python
+
+    # String shorthand - automatically gets default property
+    NodeType("Person")  # Becomes: properties=[{"name": "name", "type": "STRING"}], additional_properties=True
+    
+    # Explicit definition - must include at least one property
+    NodeType(
+        label="Person",
+        properties=[PropertyType(name="name", type="STRING")],
+        additional_properties=True  # Allow LLM to extract additional properties
+    )
+
+**Relationship types** with no properties automatically set ``additional_properties=True`` to preserve LLM-extracted properties during graph construction.
+
+
 Schema Visualization
 --------------------
 
@@ -949,7 +992,7 @@ For improved reliability and type safety with :ref:`OpenAILLM <openaillm>` or :r
 
 .. note::
 
-    Using `use_structured_output=True` with other LLM providers will raise a `ValueError`. Do not pass `response_format` in constructor parameters (`model_params` or `generation_config`); the extractor automatically sets it when calling `invoke()`.
+    Structured output is only available for LLMs with ``supports_structured_output=True`` (currently :ref:`OpenAILLM <openaillm>` and :ref:`VertexAILLM <vertexaillm>`). Using ``use_structured_output=True`` with other providers will raise a ``ValueError``. Do not pass ``response_format`` in constructor parameters (``model_params`` or ``generation_config``); the extractor automatically sets it when calling ``invoke()``.
 
 
 Error Behaviour

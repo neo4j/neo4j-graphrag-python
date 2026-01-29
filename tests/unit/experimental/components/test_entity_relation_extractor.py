@@ -469,10 +469,7 @@ def test_extractor_structured_output_unsupported_llm() -> None:
             use_structured_output=True,
         )
 
-    assert (
-        "use_structured_output=True is only supported for OpenAILLM and VertexAILLM"
-        in str(exc_info.value)
-    )
+    assert "Structured output is not supported" in str(exc_info.value)
 
 
 @pytest.mark.asyncio

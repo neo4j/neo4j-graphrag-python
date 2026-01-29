@@ -10,12 +10,17 @@
 - Support for version 6.0.0 of the Neo4j Python driver
 - Support for structured output in `OpenAILLM` and `VertexAILLM` via `response_format` parameter. Accepts Pydantic models (requires `ConfigDict(extra="forbid")`) or JSON schemas.
 - Added `use_structured_output` parameter to `LLMEntityRelationExtractor` for improved entity extraction reliability with OpenAI/VertexAI LLMs.
+- Added `use_structured_output` parameter to `SchemaFromTextExtractor` for improved schema generation with OpenAI/VertexAI LLMs. Enforces `GraphSchema` structure via Pydantic model validation and includes automatic cleanup of invalid patterns/constraints.
+- Added `supports_structured_output` capability flag to `LLMInterface` for forward-compatible detection of structured output support across LLM implementations.
 
 ### Changed
 
 - Switched project/dependency management from Poetry to uv.
 - Dropped support for Python 3.9 (EOL)
 - Made `Neo4jNode`, `Neo4jRelationship`, and `Neo4jGraph` stricter: properties field now uses typed `PropertyValue` (Neo4j primitives, temporal values, lists, `GeoPoint`) and fixed mutable defaults with `Field(default_factory=...)`.
+- **Breaking**: `NodeType.properties` now requires at least one property (`min_length=1`). String-based node definitions (e.g., `NodeType("Person")`) automatically receive a default "name" property with `additional_properties=True`.
+- **Breaking**: `RelationshipType` with empty properties and `additional_properties=False` is now auto-corrected to `additional_properties=True` to prevent pruning of LLM-extracted properties.
+- Introduced `Pattern` Pydantic model for internal storage of graph patterns, replacing tuple format. Public APIs maintain backward compatibility by accepting both tuples and `Pattern` objects.
 
 ## 1.11.0
 

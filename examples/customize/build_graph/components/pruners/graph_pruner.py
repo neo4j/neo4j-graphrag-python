@@ -6,6 +6,7 @@ from neo4j_graphrag.experimental.components.graph_pruning import GraphPruning
 from neo4j_graphrag.experimental.components.schema import (
     GraphSchema,
     NodeType,
+    Pattern,
     PropertyType,
     RelationshipType,
 )
@@ -94,8 +95,8 @@ schema = GraphSchema(
         ),
     ),
     patterns=(
-        ("Person", "KNOWS", "Person"),
-        ("Person", "WORKS_FOR", "Organization"),
+        Pattern(source="Person", relationship="KNOWS", target="Person"),
+        Pattern(source="Person", relationship="WORKS_FOR", target="Organization"),
     ),
     additional_node_types=False,
     additional_relationship_types=False,

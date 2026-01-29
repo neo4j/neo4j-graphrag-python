@@ -427,7 +427,10 @@ def test_simple_kg_pipeline_config_process_schema_with_precedence_schema_dict() 
     patterns = schema_dict["patterns"]
     assert len(node_types) == 2
     assert node_types[0]["label"] == "Person"
-    assert len(node_types[0]["properties"]) == 0
+    # String input gets default "name" property and additional_properties=True
+    assert len(node_types[0]["properties"]) == 1
+    assert node_types[0]["properties"][0]["name"] == "name"
+    assert node_types[0]["additional_properties"] is True
     assert node_types[1]["label"] == "Organization"
     assert len(node_types[1]["properties"]) == 1
     assert relationship_types is not None
@@ -492,7 +495,10 @@ def test_simple_kg_pipeline_config_process_schema_with_precedence_schema_object(
     patterns = schema_dict["patterns"]
     assert len(node_types) == 2
     assert node_types[0]["label"] == "Person"
-    assert len(node_types[0]["properties"]) == 0
+    # String input gets default "name" property and additional_properties=True
+    assert len(node_types[0]["properties"]) == 1
+    assert node_types[0]["properties"][0]["name"] == "name"
+    assert node_types[0]["additional_properties"] is True
     assert node_types[1]["label"] == "Organization"
     assert len(node_types[1]["properties"]) == 1
     assert relationship_types is not None

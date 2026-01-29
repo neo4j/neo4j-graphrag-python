@@ -261,7 +261,7 @@ Return a valid JSON object that follows this precise structure:
     ...
   ],
   "patterns": [
-    ["Person", "WORKS_FOR", "Company"],
+    {{"source": "Person", "relationship": "WORKS_FOR", "target": "Company"}},
     ...
   ],
   "constraints": [

@@ -45,6 +45,9 @@ class LLMInterface(ABC):
         **kwargs (Any): Arguments passed to the model when for the class is initialised. Defaults to None.
     """
 
+    supports_structured_output: bool = False
+    """Whether this LLM supports structured output (response_format with Pydantic models or json schema)."""
+
     def __init__(
         self,
         model_name: str,
