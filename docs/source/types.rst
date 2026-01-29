@@ -95,6 +95,11 @@ RelationshipType
 
 .. autoclass:: neo4j_graphrag.experimental.components.schema.RelationshipType
 
+Pattern
+=======
+
+.. autoclass:: neo4j_graphrag.experimental.components.schema.Pattern
+
 GraphSchema
 ===========
 
