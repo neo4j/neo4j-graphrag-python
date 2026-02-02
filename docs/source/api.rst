@@ -181,11 +181,15 @@ RetrieverInterface
     :members:
 
 
+.. _vectorretriever:
+
 VectorRetriever
 ===============
 
 .. autoclass:: neo4j_graphrag.retrievers.VectorRetriever
     :members: search
+
+.. _vectorcypherretriever:
 
 VectorCypherRetriever
 =====================
@@ -194,6 +198,8 @@ VectorCypherRetriever
     :members: search
 
 
+.. _hybridretriever:
+
 HybridRetriever
 ===============
 
@@ -201,16 +207,28 @@ HybridRetriever
     :members: search
 
 
+.. _hybridcypherretriever:
+
 HybridCypherRetriever
 =====================
 
 .. autoclass:: neo4j_graphrag.retrievers.HybridCypherRetriever
     :members: search
 
+.. _text2cypherretriever:
+
 Text2CypherRetriever
 =====================
 
 .. autoclass:: neo4j_graphrag.retrievers.Text2CypherRetriever
+    :members: search
+
+.. _toolsretriever:
+
+ToolsRetriever
+==============
+
+.. autoclass:: neo4j_graphrag.retrievers.ToolsRetriever
     :members: search
 
 
@@ -221,6 +239,8 @@ External Retrievers
 This section includes retrievers that integrate with databases external to Neo4j.
 
 
+.. _weaviateneo4jretriever:
+
 WeaviateNeo4jRetriever
 ======================
 
@@ -228,11 +248,15 @@ WeaviateNeo4jRetriever
     :members: search
 
 
+.. _pineconeneo4jretriever:
+
 PineconeNeo4jRetriever
 ======================
 
 .. autoclass:: neo4j_graphrag.retrievers.external.pinecone.pinecone.PineconeNeo4jRetriever
     :members: search
+
+.. _qdrantneo4jretriever:
 
 QdrantNeo4jRetriever
 ====================
