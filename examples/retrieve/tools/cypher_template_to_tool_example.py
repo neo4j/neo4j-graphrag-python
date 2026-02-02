@@ -50,17 +50,20 @@ MATCH (m:Movie {title: $title})
         actor_names
 """
 
+
 class CypherTemplateRetriever(Retriever):
     """
     Custom retriever that executes a parameterized Cypher query template.
     """
-    
+
     def __init__(
         self,
         driver: neo4j.Driver,
         cypher_template: str,
         neo4j_database: Optional[str] = None,
-        result_formatter: Optional[callable] = None
+        result_formatter: Optional[
+            Callable[[neo4j.Record], RetrieverResultItem]
+        ] = None,
     ):
         """
         Args:
@@ -72,36 +75,36 @@ class CypherTemplateRetriever(Retriever):
         super().__init__(driver, neo4j_database)
         self.cypher_template = cypher_template
         self.result_formatter = result_formatter
-    
+
     def get_search_results(
         self,
         query_vector: Optional[list[float]] = None,
         query_text: Optional[str] = None,
         top_k: int = 5,
         query_params: Optional[Dict[str, Any]] = None,
-        **kwargs
+        **kwargs: Any,
     ) -> RawSearchResult:
         """
         Execute the Cypher template with provided parameters.
-        
+
         Args:
             query_text: Can be used as a parameter (e.g., for movie title)
             query_params: Dictionary of parameters for the Cypher query
             **kwargs: Additional parameters
-        
+
         Returns:
             RawSearchResult containing neo4j.Record objects
         """
         # Prepare parameters for the Cypher query
         parameters = query_params or {}
-        
+
         # Optionally use query_text as a parameter
         if query_text and "query_text" not in parameters:
             parameters["query_text"] = query_text
-        
+
         # Add any additional kwargs as parameters
         parameters.update(kwargs)
-        
+
         # Execute the query
         try:
             records, summary, keys = self.driver.execute_query(
@@ -110,17 +113,16 @@ class CypherTemplateRetriever(Retriever):
                 database_=self.neo4j_database,
                 routing_=neo4j.RoutingControl.READ,
             )
-            
+
             return RawSearchResult(
                 records=records,
                 metadata={
                     "cypher_query": self.cypher_template,
-                    "parameters": parameters
-                }
+                    "parameters": parameters,
+                },
             )
         except Exception as e:
             raise RuntimeError(f"Failed to execute Cypher template: {e}") from e
-
 
 
 def main() -> None:
@@ -145,7 +147,7 @@ def main() -> None:
                     "Dictionary containing 'title' key with the movie title to analyze. "
                     "Example: {'title': 'The Matrix'}"
                 )
-            }
+            },
         )
 
         llm = OpenAILLM(
