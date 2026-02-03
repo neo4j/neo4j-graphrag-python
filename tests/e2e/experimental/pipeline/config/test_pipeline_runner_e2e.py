@@ -121,9 +121,9 @@ async def test_simple_kg_pipeline_from_json_config(
             ),
         ]
     )
-    mock_embedder.return_value.embed_query.side_effect = [
+    mock_embedder.return_value.async_embed_query = AsyncMock(side_effect=[
         [1.0, 2.0],
-    ]
+    ])
 
     os.environ["NEO4J_URI"] = "neo4j://localhost:7687"
     os.environ["NEO4J_USER"] = "neo4j"
@@ -212,9 +212,9 @@ async def test_simple_kg_pipeline_from_yaml_config(
             ),
         ]
     )
-    mock_embedder.return_value.embed_query.side_effect = [
+    mock_embedder.return_value.async_embed_query = AsyncMock(side_effect=[
         [1.0, 2.0],
-    ]
+    ])
 
     os.environ["NEO4J_URI"] = "neo4j://localhost:7687"
     os.environ["NEO4J_USER"] = "neo4j"

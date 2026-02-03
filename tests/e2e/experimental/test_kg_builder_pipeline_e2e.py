@@ -137,7 +137,7 @@ async def test_pipeline_builder_happy_path(
     chunks must be in the DB
     """
     driver.execute_query("MATCH (n) DETACH DELETE n")
-    embedder.embed_query.return_value = [1, 2, 3]
+    embedder.async_embed_query.return_value = [1, 2, 3]
     llm.ainvoke.side_effect = [
         LLMResponse(
             content="""{
@@ -304,7 +304,7 @@ async def test_pipeline_builder_failing_chunk_raise(
     added to the DB
     """
     driver.execute_query("MATCH (n) DETACH DELETE n")
-    embedder.embed_query.return_value = [1, 2, 3]
+    embedder.async_embed_query.return_value = [1, 2, 3]
     llm.ainvoke.side_effect = [
         LLMResponse(
             content="""{
@@ -382,7 +382,7 @@ async def test_pipeline_builder_failing_chunk_do_not_raise(
     and nodes/relationships created for the chunks that succeeded
     """
     driver.execute_query("MATCH (n) DETACH DELETE n")
-    embedder.embed_query.return_value = [1, 2, 3]
+    embedder.async_embed_query.return_value = [1, 2, 3]
     llm.ainvoke.side_effect = [
         LLMResponse(content="invalid json"),
         LLMResponse(
@@ -508,7 +508,7 @@ async def test_pipeline_builder_two_documents(
     ==> 6 relationships
     """
     driver.execute_query("MATCH (n) DETACH DELETE n")
-    embedder.embed_query.return_value = [1, 2, 3]
+    embedder.async_embed_query.return_value = [1, 2, 3]
     llm.ainvoke.side_effect = [
         LLMResponse(
             content="""{
