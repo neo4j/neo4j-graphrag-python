@@ -2,6 +2,8 @@
 
 ## Next
 
+## 1.13.0
+
 ### Added
 
 - Support for structured output in `OpenAILLM` and `VertexAILLM` via `response_format` parameter. Accepts Pydantic models (requires `ConfigDict(extra="forbid")`) or JSON schemas.
