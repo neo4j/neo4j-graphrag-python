@@ -27,6 +27,7 @@ are listed in [the last section of this file](#customize).
 - [Hybrid retriever](./retrieve/hybrid_retriever.py)
 - [Hybrid Cypher retriever](./retrieve/hybrid_cypher_retriever.py)
 - [Text2Cypher retriever](./retrieve/text2cypher_search.py)
+- [Cypher Template retriever](./retrieve/tools/cypher_template_to_tool_example.py)
 
 
 ### External Retrievers
