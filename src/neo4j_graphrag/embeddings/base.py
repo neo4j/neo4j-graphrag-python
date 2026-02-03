@@ -48,3 +48,14 @@ class Embedder(ABC):
         Returns:
             list[float]: A vector embedding.
         """
+
+    async def async_embed_query(self, text: str) -> list[float]:
+        """Asynchronously embed query text.
+
+        Args:
+            text (str): Text to convert to vector embedding
+
+        Returns:
+            list[float]: A vector embedding.
+        """
+        return self.embed_query(text)

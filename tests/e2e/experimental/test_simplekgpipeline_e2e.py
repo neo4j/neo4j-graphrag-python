@@ -88,7 +88,7 @@ async def test_pipeline_builder_happy_path_legacy_schema(
     chunks must be in the DB
     """
     driver.execute_query("MATCH (n) DETACH DELETE n")
-    embedder.embed_query.return_value = [1, 2, 3]
+    embedder.async_embed_query.return_value = [1, 2, 3]
     llm.ainvoke.side_effect = [
         LLMResponse(
             content=llm_json_response_3_nodes_2_relationships,
@@ -151,7 +151,7 @@ async def test_pipeline_builder_happy_path(
     chunks must be in the DB
     """
     driver.execute_query("MATCH (n) DETACH DELETE n")
-    embedder.embed_query.return_value = [1, 2, 3]
+    embedder.async_embed_query.return_value = [1, 2, 3]
     llm.ainvoke.side_effect = [
         LLMResponse(
             content=llm_json_response_3_nodes_2_relationships,
@@ -213,7 +213,7 @@ async def test_pipeline_builder_two_documents(
     chunks must be in the DB
     """
     driver.execute_query("MATCH (n) DETACH DELETE n")
-    embedder.embed_query.return_value = [1, 2, 3]
+    embedder.async_embed_query.return_value = [1, 2, 3]
     llm.ainvoke.side_effect = [
         # first document
         # first chunk
@@ -295,7 +295,7 @@ async def test_pipeline_builder_same_document_two_runs(
     chunks must be in the DB
     """
     driver.execute_query("MATCH (n) DETACH DELETE n")
-    embedder.embed_query.return_value = [1, 2, 3]
+    embedder.async_embed_query.return_value = [1, 2, 3]
     llm.ainvoke.side_effect = [
         # first run
         # first chunk
@@ -376,7 +376,7 @@ async def test_pipeline_builder_with_automatic_schema_extraction(
     This test verifies that the pipeline correctly handles automatic schema extraction.
     """
     driver.execute_query("MATCH (n) DETACH DELETE n")
-    embedder.embed_query.return_value = [1, 2, 3]
+    embedder.async_embed_query.return_value = [1, 2, 3]
 
     # set up mock LLM responses for both schema extraction and entity extraction
     llm.ainvoke.side_effect = [

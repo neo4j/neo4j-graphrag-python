@@ -19,7 +19,11 @@ from typing import Any, Optional
 
 from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.exceptions import EmbeddingsGenerationError
-from neo4j_graphrag.utils.rate_limit import RateLimitHandler, rate_limit_handler
+from neo4j_graphrag.utils.rate_limit import (
+    RateLimitHandler,
+    rate_limit_handler,
+    async_rate_limit_handler,
+)
 
 
 class OllamaEmbeddings(Embedder):
@@ -47,6 +51,7 @@ class OllamaEmbeddings(Embedder):
         super().__init__(rate_limit_handler)
         self.model = model
         self.client = ollama.Client(**kwargs)
+        self.async_client = ollama.AsyncClient(**kwargs)
 
     @rate_limit_handler
     def embed_query(self, text: str, **kwargs: Any) -> list[float]:
@@ -58,6 +63,32 @@ class OllamaEmbeddings(Embedder):
             **kwargs (Any): Additional keyword arguments to pass to the Ollama client.
         """
         embeddings_response = self.client.embed(
+            model=self.model,
+            input=text,
+            **kwargs,
+        )
+
+        if embeddings_response is None or not embeddings_response.embeddings:
+            raise EmbeddingsGenerationError("Failed to retrieve embeddings.")
+
+        embeddings = embeddings_response.embeddings
+        # client always returns a sequence of sequences
+        embedding = embeddings[0]
+        if not isinstance(embedding, list):
+            raise EmbeddingsGenerationError("Embedding is not a list of floats.")
+
+        return embedding
+
+    @async_rate_limit_handler
+    async def async_embed_query(self, text: str, **kwargs: Any) -> list[float]:
+        """
+        Asynchronously generate embeddings for a given query using an Ollama text embedding model.
+
+        Args:
+            text (str): The text to generate an embedding for.
+            **kwargs (Any): Additional keyword arguments to pass to the Ollama client.
+        """
+        embeddings_response = await self.async_client.embed(
             model=self.model,
             input=text,
             **kwargs,
