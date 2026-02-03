@@ -24,13 +24,13 @@ from neo4j_graphrag.experimental.components.types import (
 
 @pytest.mark.asyncio
 async def test_text_chunk_embedder_run(embedder: MagicMock) -> None:
-    embedder.embed_query.return_value = [1.0, 2.0, 3.0]
+    embedder.async_embed_query.return_value = [1.0, 2.0, 3.0]
     text_chunk_embedder = TextChunkEmbedder(embedder=embedder)
     text_chunks = TextChunks(
         chunks=[TextChunk(text="may thy knife chip and shatter", index=0)]
     )
     embedded_chunks = await text_chunk_embedder.run(text_chunks)
-    embedder.embed_query.assert_called_once_with("may thy knife chip and shatter")
+    embedder.async_embed_query.assert_called_once_with("may thy knife chip and shatter")
     assert isinstance(embedded_chunks, TextChunks)
     for chunk in embedded_chunks.chunks:
         assert isinstance(chunk, TextChunk)

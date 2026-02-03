@@ -12,6 +12,7 @@
 - Added `use_structured_output` parameter to `LLMEntityRelationExtractor` for improved entity extraction reliability with OpenAI/VertexAI LLMs.
 - Added `use_structured_output` parameter to `SchemaFromTextExtractor` for improved schema generation with OpenAI/VertexAI LLMs. Enforces `GraphSchema` structure via Pydantic model validation and includes automatic cleanup of invalid patterns/constraints.
 - Added `supports_structured_output` capability flag to `LLMInterface` for forward-compatible detection of structured output support across LLM implementations.
+- Support for async embeddings in the `Embedder` base class and implementation for `OllamaEmbedding`.
 
 ### Changed
 
@@ -27,7 +28,6 @@
 ### Added
 
 - Added an optional `node_label_neo4j` parameter in the external retrievers to speed up the search query in Neo4j.
-
 - Exposed optional `sample` parameter on `get_schema` and `get_structured_schema` to control APOC sampling for schema discovery.
 - Added an optional `id_property_getter` callable parameter in the Qdrant retriever to allow for custom ID retrieval.
 
