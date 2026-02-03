@@ -60,10 +60,6 @@ API DESIGN: RAG pipeline follows init→compose→search flow with polymorphic `
 
 ## Deployment
 
-Perfect. Now I have a complete picture. Let me provide the deployment analysis:
-
----
-
 DEPLOYMENT STRATEGY: **PyPI package distribution with GitHub Actions CI/CD pipeline**
 
 CONTAINERIZATION: **Not containerized. Project designed as a Python library, not a containerized application. E2E tests use Docker Compose for service dependencies (Neo4j, Weaviate, Qdrant) but the package itself is distributed as a pure Python wheel.**
