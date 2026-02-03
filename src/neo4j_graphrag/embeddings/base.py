@@ -49,7 +49,6 @@ class Embedder(ABC):
             list[float]: A vector embedding.
         """
 
-    @abstractmethod
     async def async_embed_query(self, text: str) -> list[float]:
         """Asynchronously embed query text.
 
