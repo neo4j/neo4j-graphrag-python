@@ -1,6 +1,8 @@
 name: Publish Python 🐍 distribution 📦
 
-on: push
+on:
+  - push
+  - workflow_dispatch
 
 jobs:
   build:
