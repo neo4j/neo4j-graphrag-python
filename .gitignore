@@ -12,3 +12,4 @@ docs/build/
 .DS_Store
 .venv
 .tox/
+.plans

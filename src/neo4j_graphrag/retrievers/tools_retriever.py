@@ -32,12 +32,51 @@ class ToolsRetriever(Retriever):
     it uses the LLM to analyze the query and determine which tools (if any) should be used to retrieve
     the necessary data. It then executes the selected tools and returns the combined results.
 
+    Example:
+
+    .. code-block:: python
+
+        import neo4j
+        from neo4j_graphrag.retrievers import ToolsRetriever, VectorRetriever, Text2CypherRetriever
+        from neo4j_graphrag.llm import OpenAILLM
+        from neo4j_graphrag.embeddings import OpenAIEmbeddings
+
+        driver = neo4j.GraphDatabase.driver("neo4j://localhost:7687", auth=("neo4j", "password"))
+        llm = OpenAILLM(model_name="gpt-4", api_key="your-api-key")
+        embedder = OpenAIEmbeddings(model="text-embedding-3-small", api_key="your-api-key")
+
+        # Create retrievers and convert them to tools
+        vector_retriever = VectorRetriever(driver, "vector-index", embedder)
+        vector_tool = vector_retriever.convert_to_tool(
+            name="vector_search",
+            description="Search for documents using semantic similarity"
+        )
+
+        text2cypher_retriever = Text2CypherRetriever(driver, llm)
+        cypher_tool = text2cypher_retriever.convert_to_tool(
+            name="cypher_search",
+            description="Generate and execute Cypher queries for structured data retrieval"
+        )
+
+        # Initialize ToolsRetriever with the tools
+        tools_retriever = ToolsRetriever(
+            driver=driver,
+            llm=llm,
+            tools=[vector_tool, cypher_tool]
+        )
+
+        # Use the retriever - the LLM will automatically select appropriate tools
+        result = tools_retriever.search("What movies did Tom Hanks act in and what are their plots?")
+
     Args:
-        driver (neo4j.Driver): Neo4j driver instance.
-        llm (LLMInterface): LLM instance used to select tools.
-        tools (Sequence[Tool]): List of tools available for selection.
-        neo4j_database (Optional[str], optional): Neo4j database name. Defaults to None.
-        system_instruction (Optional[str], optional): Custom system instruction for the LLM. Defaults to None.
+        driver (neo4j.Driver): The Neo4j Python driver.
+        llm (LLMInterface): LLM instance used to select and coordinate tool execution.
+        tools (Sequence[Tool]): List of tools available for selection. All tools must have unique names.
+        neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to the server's default database ("neo4j" by default).
+        system_instruction (Optional[str]): Custom system instruction for the LLM to guide tool selection. If not provided, a default instruction is used.
+
+    Raises:
+        ValueError: If duplicate tool names are found in the tools list.
     """
 
     # Disable Neo4j version verification since this retriever doesn't directly interact with Neo4j

@@ -514,6 +514,8 @@ We provide implementations for the following retrievers:
      - Uses both a vector and a full-text index in Neo4j.
    * - :ref:`HybridCypherRetriever <hybrid-cypher-retriever-user-guide>`
      - Same as HybridRetriever with a retrieval query similar to VectorCypherRetriever.
+   * - :ref:`ToolsRetriever <tools-retriever-user-guide>`
+     - Uses an LLM to intelligently select and execute appropriate tools based on user queries. Combines results from multiple tools with proper attribution.
    * - :ref:`Text2Cypher <text2cypher-retriever-user-guide>`
      - Translates the user question into a Cypher query to be run against a Neo4j database (or Knowledge Graph). The results of the query are then passed to the LLM to generate the final answer.
    * - :ref:`WeaviateNeo4jRetriever <weaviate-neo4j-retriever-user-guide>`
@@ -1050,6 +1052,260 @@ LLMs can be different.
 
 
 See :ref:`text2cypherretriever`.
+
+.. _tools-retriever-user-guide:
+
+ToolsRetriever
+--------------
+
+The ToolsRetriever uses an LLM to intelligently select and execute appropriate tools based on user queries. This retriever analyzes the user's question using an LLM to determine which tools from a provided set would be most helpful for retrieving relevant information. It can select multiple tools if necessary or none if no tools are appropriate for the query, then combines results from the executed tools with proper attribution. This is particularly useful when different types of information retrieval might be needed for complex queries.
+
+.. code-block:: python
+
+    from neo4j import GraphDatabase
+    from neo4j_graphrag.retrievers import ToolsRetriever, VectorRetriever, Text2CypherRetriever
+    from neo4j_graphrag.llm import OpenAILLM
+    from neo4j_graphrag.embeddings import OpenAIEmbeddings
+
+    URI = "neo4j://localhost:7687"
+    AUTH = ("neo4j", "password")
+
+    # Connect to Neo4j database
+    driver = GraphDatabase.driver(URI, auth=AUTH)
+
+    # Create LLM object
+    llm = OpenAILLM(model_name="gpt-4o")
+
+    # Create embedder
+    embedder = OpenAIEmbeddings(model="text-embedding-3-large")
+
+    # Create individual retrievers to use as tools
+    vector_retriever = VectorRetriever(
+        driver=driver,
+        index_name="embedding-index",
+        embedder=embedder,
+    )
+
+    text2cypher_retriever = Text2CypherRetriever(
+        driver=driver,
+        llm=llm,
+    )
+
+    # Convert retrievers to tools
+    vector_tool = vector_retriever.convert_to_tool(
+        name="vector_search",
+        description="Search for similar documents using vector similarity",
+    )
+
+    cypher_tool = text2cypher_retriever.convert_to_tool(
+        name="cypher_search",
+        description="Generate and execute Cypher queries for structured data retrieval",
+    )
+
+    # Initialize ToolsRetriever with the tools
+    tools_retriever = ToolsRetriever(
+        driver=driver,
+        llm=llm,
+        tools=[vector_tool, cypher_tool],
+    )
+
+    # Use the retriever - the LLM will automatically select appropriate tools
+    result = tools_retriever.search("What movies did Tom Hanks act in and what are their plots?")
+
+Tool Creation Patterns
+~~~~~~~~~~~~~~~~~~~~~~
+
+The ToolsRetriever supports two primary approaches for creating tools:
+
+**1. Converting Retrievers to Tools**
+
+Any retriever can be converted to a tool using the ``convert_to_tool()`` method:
+
+.. code-block:: python
+
+    # Convert retriever with custom parameter descriptions
+    tool = retriever.convert_to_tool(
+        name="search_tool",
+        description="Custom tool description",
+        parameter_descriptions={
+            "query_text": "Search query for finding relevant information",
+            "top_k": "Maximum number of results to return",
+        }
+    )
+
+The ``convert_to_tool()`` method automatically infers parameters from the retriever's ``get_search_results()`` method signature, mapping Python types to tool parameter types (str → StringParameter, int → IntegerParameter, etc.).
+
+**2. Creating Custom Tools**
+
+Create custom tools by inheriting from the Tool class:
+
+.. code-block:: python
+
+    from neo4j_graphrag.tool import Tool, ObjectParameter, StringParameter
+
+    class CustomTool(Tool):
+        def __init__(self):
+            parameters = ObjectParameter(
+                description="Parameters for custom tool",
+                properties={
+                    "input": StringParameter(
+                        description="Input parameter description",
+                    ),
+                },
+                required_properties=["input"],
+            )
+
+            super().__init__(
+                name="custom_tool",
+                description="Tool description for LLM selection",
+                parameters=parameters,
+                execute_func=self.execute_custom_logic,
+            )
+
+        def execute_custom_logic(self, **kwargs):
+            # Custom implementation
+            return f"Processed: {kwargs.get('input')}"
+
+Tool Configuration
+~~~~~~~~~~~~~~~~~~
+
+**Parameter Types and Validation**
+
+Tools support various parameter types with automatic validation:
+
+.. code-block:: python
+
+    from neo4j_graphrag.tool import (
+        ObjectParameter, StringParameter, IntegerParameter,
+        NumberParameter, BooleanParameter, ArrayParameter
+    )
+
+    parameters = ObjectParameter(
+        properties={
+            "text": StringParameter(description="Text input"),
+            "count": IntegerParameter(description="Count", minimum=1, maximum=100),
+            "threshold": NumberParameter(description="Threshold", minimum=0.0, maximum=1.0),
+            "enabled": BooleanParameter(description="Enable feature"),
+            "items": ArrayParameter(
+                description="List of items",
+                items=StringParameter(description="String item")
+            ),
+        },
+        required_properties=["text", "count"]
+    )
+
+**System Instruction Customization**
+
+Customize how the LLM selects tools by providing a custom system instruction:
+
+.. code-block:: python
+
+    custom_instruction = """
+    You are a specialized assistant for movie database queries.
+    Select tools based on query type: use vector_search for plot similarity,
+    cypher_search for specific actor/director queries, and both for complex requests.
+    """
+
+    tools_retriever = ToolsRetriever(
+        driver=driver,
+        llm=llm,
+        tools=[vector_tool, cypher_tool],
+        system_instruction=custom_instruction,
+    )
+
+The system instruction guides the LLM's tool selection logic and can be tailored to your specific domain or use case.
+
+**Error Handling Patterns**
+
+Tools should implement proper error handling for common failure scenarios:
+
+.. code-block:: python
+
+    def execute_custom_logic(self, **kwargs):
+        try:
+            # Tool parameter validation
+            required_param = kwargs.get('required_param')
+            if not required_param:
+                raise ValueError("Required parameter 'required_param' is missing")
+
+            # Tool execution logic
+            result = perform_operation(required_param)
+            return result
+
+        except ValueError as e:
+            # Parameter validation errors
+            return f"Parameter error: {str(e)}"
+        except Exception as e:
+            # Tool execution errors
+            return f"Execution error: {str(e)}"
+
+The ToolsRetriever handles LLM selection errors internally and will retry tool selection or return appropriate error messages when tools cannot be executed successfully.
+
+**Integration with GraphRAG**
+
+The ToolsRetriever integrates seamlessly with the GraphRAG pipeline for automated question answering:
+
+.. code-block:: python
+
+    from neo4j import GraphDatabase
+    from neo4j_graphrag.retrievers import ToolsRetriever, VectorRetriever, Text2CypherRetriever
+    from neo4j_graphrag.llm import OpenAILLM
+    from neo4j_graphrag.embeddings import OpenAIEmbeddings
+    from neo4j_graphrag.generation import GraphRAG
+
+    URI = "neo4j://localhost:7687"
+    AUTH = ("neo4j", "password")
+
+    # Connect to Neo4j database
+    driver = GraphDatabase.driver(URI, auth=AUTH)
+
+    # Create LLM and embedder
+    llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0})
+    embedder = OpenAIEmbeddings(model="text-embedding-3-large")
+
+    # Create retrievers to use as tools
+    vector_retriever = VectorRetriever(
+        driver=driver,
+        index_name="vector-index",
+        embedder=embedder,
+    )
+
+    text2cypher_retriever = Text2CypherRetriever(
+        driver=driver,
+        llm=llm,
+    )
+
+    # Convert to tools
+    vector_tool = vector_retriever.convert_to_tool(
+        name="vector_search",
+        description="Search for similar documents using vector similarity",
+    )
+
+    cypher_tool = text2cypher_retriever.convert_to_tool(
+        name="cypher_search",
+        description="Generate and execute Cypher queries for structured data retrieval",
+    )
+
+    # Initialize ToolsRetriever
+    tools_retriever = ToolsRetriever(
+        driver=driver,
+        llm=llm,
+        tools=[vector_tool, cypher_tool],
+    )
+
+    # Initialize GraphRAG pipeline with ToolsRetriever
+    rag = GraphRAG(retriever=tools_retriever, llm=llm)
+
+    # Query the pipeline - the LLM will automatically select appropriate tools
+    query_text = "What movies did Tom Hanks act in and what are their plots?"
+    response = rag.search(query_text=query_text, retriever_config={"top_k": 5})
+    print(response.answer)
+
+.. warning::
+
+    ToolsRetriever requires an LLM instance to function. Using LLM providers like OpenAI requires their respective Python packages to be installed: `pip install "neo4j_graphrag[openai]"`.
+
+See :ref:`toolsretriever`.
 
 .. _custom-retriever:
 
