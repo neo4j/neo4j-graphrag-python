@@ -278,6 +278,12 @@ SentenceTransformerEmbeddings
 .. autoclass:: neo4j_graphrag.embeddings.sentence_transformers.SentenceTransformerEmbeddings
     :members:
 
+GeminiEmbedder
+==============
+
+.. autoclass:: neo4j_graphrag.embeddings.google_genai.GeminiEmbedder
+    :members:
+
 OpenAIEmbeddings
 ================
 
@@ -334,6 +340,13 @@ OpenAILLM
 .. autoclass:: neo4j_graphrag.llm.openai_llm.OpenAILLM
     :members:
     :undoc-members: get_messages, client_class, async_client_class
+
+
+GeminiLLM
+---------
+
+.. autoclass:: neo4j_graphrag.llm.google_genai_llm.GeminiLLM
+    :members:
 
 
 AzureOpenAILLM
