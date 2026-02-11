@@ -140,5 +140,11 @@ class SearchQueryParseError(Neo4jGraphRagError):
     """Exception raised when there is a query parse error in the text search string."""
 
 
-class RateLimitError(LLMGenerationError):
+class RetryableError(LLMGenerationError):
+    """Exception raised for transient errors that may succeed on retry (e.g. rate limits)."""
+
+    pass
+
+
+class RateLimitError(RetryableError):
     """Exception raised when API rate limit is exceeded."""
