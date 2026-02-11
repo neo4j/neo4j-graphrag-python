@@ -433,7 +433,9 @@ You can customize the rate limiting behavior by creating your own rate limit han
 
     class CustomRateLimitHandler(RateLimitHandler):
         """Implement your custom rate limiting strategy."""
-        # Implement required methods: handle_sync, handle_async
+        # Implement required methods: handle_sync, handle_async 
+        # and optionally override is_retryable_exception and to_retryable_error
+        # to classify additional exception types as retryable or convert them to retryable errors
         pass
 
     # Create custom rate limit handler and pass it to the LLM interface

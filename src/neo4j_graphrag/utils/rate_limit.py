@@ -19,7 +19,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Awaitable, Callable, TypeVar
 
-from neo4j_graphrag.exceptions import RateLimitError
+from neo4j_graphrag.exceptions import RateLimitError, RetryableError
 
 from tenacity import (
     retry,
@@ -64,6 +64,27 @@ class RateLimitHandler(ABC):
         """
         pass
 
+    def is_retryable_exception(self, exception: Exception) -> bool:
+        """Return True if the provider exception should be retried.
+
+        Default behaviour treats rate-limit errors as retryable.
+
+        Override this method (or provide a custom handler implementation) to
+        extend retry classification without modifying library code.
+        """
+        return is_rate_limit_error(exception)
+
+    def to_retryable_error(self, exception: Exception) -> RetryableError:
+        """Convert a provider exception into a retryable error type.
+
+        Default behaviour converts provider rate-limit errors into
+        :class:`~neo4j_graphrag.exceptions.RateLimitError` via
+        :func:`convert_to_rate_limit_error`.
+
+        Override this method to wrap additional transient provider errors.
+        """
+        return convert_to_rate_limit_error(exception)
+
 
 class NoOpRateLimitHandler(RateLimitHandler):
     """A no-op rate limit handler that does not apply any rate limiting."""
@@ -88,6 +109,7 @@ class RetryRateLimitHandler(RateLimitHandler):
         max_wait: Maximum wait time between retries in seconds. Defaults to 60.
         multiplier: Exponential backoff multiplier. Defaults to 2.
         jitter: Whether to add random jitter to retry delays to prevent thundering herd. Defaults to True.
+        retryable_exceptions: Tuple of exception types that should be retried. Defaults to (RateLimitError,).
     """
 
     def __init__(
@@ -97,12 +119,14 @@ class RetryRateLimitHandler(RateLimitHandler):
         max_wait: float = 60.0,
         multiplier: float = 2.0,
         jitter: bool = True,
+        retryable_exceptions: tuple[type[BaseException], ...] = (RateLimitError,),
     ):
         self.max_attempts = max_attempts
         self.min_wait = min_wait
         self.max_wait = max_wait
         self.multiplier = multiplier
         self.jitter = jitter
+        self.retryable_exceptions = retryable_exceptions
 
     def _get_wait_strategy(self) -> Any:
         """Get the appropriate wait strategy based on jitter setting.
@@ -128,7 +152,7 @@ class RetryRateLimitHandler(RateLimitHandler):
     def handle_sync(self, func: F) -> F:
         """Apply retry logic to a synchronous function."""
         decorator = retry(
-            retry=retry_if_exception_type(RateLimitError),
+            retry=retry_if_exception_type(self.retryable_exceptions),
             stop=stop_after_attempt(self.max_attempts),
             wait=self._get_wait_strategy(),
             before_sleep=before_sleep_log(logger, logging.WARNING),
@@ -138,7 +162,7 @@ class RetryRateLimitHandler(RateLimitHandler):
     def handle_async(self, func: AF) -> AF:
         """Apply retry logic to an asynchronous function."""
         decorator = retry(
-            retry=retry_if_exception_type(RateLimitError),
+            retry=retry_if_exception_type(self.retryable_exceptions),
             stop=stop_after_attempt(self.max_attempts),
             wait=self._get_wait_strategy(),
             before_sleep=before_sleep_log(logger, logging.WARNING),
@@ -177,8 +201,13 @@ def is_rate_limit_error(exception: Exception) -> bool:
 def convert_to_rate_limit_error(exception: Exception) -> RateLimitError:
     """Convert a provider-specific rate limit exception to RateLimitError.
 
+    This is the default conversion used when the handler treats an exception as
+    retryable (e.g. via :meth:`RateLimitHandler.is_retryable_exception`).
+    To support other retryable errors, use a custom handler and override
+    :meth:`RateLimitHandler.to_retryable_error`.
+
     Args:
-        exception: The original exception from the LLM provider.
+        exception: The original exception from the LLM or embedder provider.
 
     Returns:
         A RateLimitError with the original exception message.
@@ -209,8 +238,14 @@ def rate_limit_handler(func: F) -> F:
             try:
                 return func(self, *args, **kwargs)
             except Exception as e:
-                if is_rate_limit_error(e):
-                    raise convert_to_rate_limit_error(e)
+                is_retryable = getattr(
+                    active_handler, "is_retryable_exception", is_rate_limit_error
+                )
+                to_retryable = getattr(
+                    active_handler, "to_retryable_error", convert_to_rate_limit_error
+                )
+                if is_retryable(e):
+                    raise to_retryable(e)
                 raise
 
         return active_handler.handle_sync(inner_func)()
@@ -241,8 +276,14 @@ def async_rate_limit_handler(func: AF) -> AF:
             try:
                 return await func(self, *args, **kwargs)
             except Exception as e:
-                if is_rate_limit_error(e):
-                    raise convert_to_rate_limit_error(e)
+                is_retryable = getattr(
+                    active_handler, "is_retryable_exception", is_rate_limit_error
+                )
+                to_retryable = getattr(
+                    active_handler, "to_retryable_error", convert_to_rate_limit_error
+                )
+                if is_retryable(e):
+                    raise to_retryable(e)
                 raise
 
         return await active_handler.handle_async(inner_func)()

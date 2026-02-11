@@ -10,6 +10,7 @@ from neo4j_graphrag.utils.rate_limit import (
 )
 from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
+from neo4j_graphrag.exceptions import RetryableError
 
 
 class CustomLLM(LLMInterface):
@@ -65,6 +66,14 @@ class CustomRateLimitHandler(RateLimitHandler):
     def handle_async(self, func: AF) -> AF:
         # error handling here
         return func
+
+    def is_retryable_exception(self, exception: Exception) -> bool:
+        # return True if the exception should be retried
+        return True
+
+    def to_retryable_error(self, exception: Exception) -> RetryableError:
+        # convert the exception to a retryable error
+        return RetryableError(exception)
 
 
 llm_with_custom_rate_limit_handler = CustomLLM(
