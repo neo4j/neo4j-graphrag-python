@@ -2,6 +2,10 @@
 
 ## Next
 
+### Added
+
+- Added GoogleGenAI (via `google-genai` SDK): includes `GeminiLLM` (generation/tool calling), `GeminiEmbedder` (embeddings), and integration examples/docs.
+
 ## 1.13.0
 
 ### Added
