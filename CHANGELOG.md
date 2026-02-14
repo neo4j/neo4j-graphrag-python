@@ -5,6 +5,7 @@
 ### Added
 
 - MarkdownLoader (experimental): added a Markdown loader to support `.md` and `.markdown` files.
+- Added Amazon Bedrock support: `BedrockLLM` (generation/tool calling) via the boto3 Converse API, and `BedrockEmbeddings` (embeddings) via the boto3 InvokeModel API.
 
 ### Changed
 
