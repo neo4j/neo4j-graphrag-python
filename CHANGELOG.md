@@ -2,6 +2,10 @@
 
 ## Next
 
+### Added
+
+- Added Amazon Bedrock support: `BedrockLLM` (generation/tool calling) via the boto3 Converse API, and `BedrockEmbeddings` (embeddings) via the boto3 InvokeModel API.
+
 ### Changed
 
 - Updated examples, default values, and documentation to use `gpt-4.1` / `gpt-4.1-mini` instead of deprecated GPT-4* models (e.g. `gpt-4o`, `gpt-4`).
