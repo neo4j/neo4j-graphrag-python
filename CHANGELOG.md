@@ -2,6 +2,10 @@
 
 ## Next
 
+### Added
+
+- Added Amazon Bedrock support: `BedrockLLM` (generation/tool calling) via the boto3 Converse API, and `BedrockEmbeddings` (embeddings) via the boto3 InvokeModel API.
+
 ## 1.13.1
 
 - Fixed invalid lexical graph relationships causing "Relationship references unknown start node" errors during parquet import when nodes are pruned.
