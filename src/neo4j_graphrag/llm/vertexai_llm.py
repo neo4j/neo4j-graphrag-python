@@ -155,13 +155,12 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
                 """Could not import Vertex AI Python client.
                 Please install it with `pip install "neo4j-graphrag[google]"`."""
             )
-            LLMInterfaceV2.__init__(
-                self,
-                model_name=model_name,
-                model_params=model_params or {},
-                rate_limit_handler=rate_limit_handler,
-                **kwargs,
-            )
+        LLMInterfaceV2.__init__(
+            self,
+            model_name=model_name,
+            model_params=model_params or {},
+            rate_limit_handler=rate_limit_handler,
+        )
         self.model_name = model_name
         self.system_instruction = system_instruction
         self.options = kwargs
