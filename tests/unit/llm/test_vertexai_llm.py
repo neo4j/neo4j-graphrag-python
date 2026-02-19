@@ -40,6 +40,25 @@ def test_vertexai_llm_missing_dependency() -> None:
 
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_llm_rate_limit_handler_is_set(
+    _GenerativeModelMock: MagicMock,
+) -> None:
+    custom_handler = MagicMock()
+    llm = VertexAILLM(
+        model_name="gemini-1.5-flash-001", rate_limit_handler=custom_handler
+    )
+    assert llm._rate_limit_handler is custom_handler
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_llm_default_rate_limit_handler_is_set(
+    _GenerativeModelMock: MagicMock,
+) -> None:
+    llm = VertexAILLM(model_name="gemini-1.5-flash-001")
+    assert hasattr(llm, "_rate_limit_handler")
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
 def test_vertexai_invoke_happy_path(GenerativeModelMock: MagicMock) -> None:
     model_name = "gemini-1.5-flash-001"
     input_text = "may thy knife chip and shatter"
