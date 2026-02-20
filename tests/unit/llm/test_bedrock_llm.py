@@ -50,6 +50,29 @@ def test_bedrock_llm_missing_dependency() -> None:
         assert "Could not import boto3 python client" in str(exc.value)
 
 
+def test_bedrock_llm_default_model_from_env(mock_boto3: MagicMock) -> None:
+    with patch.dict("os.environ", {"BEDROCK_LLM_MODEL": "custom-llm-model"}):
+        import importlib
+        import sys
+
+        original_boto3 = sys.modules.get("boto3")
+        sys.modules["boto3"] = mock_boto3
+
+        try:
+            import neo4j_graphrag.llm.bedrock_llm as bedrock_llm_mod
+
+            importlib.reload(bedrock_llm_mod)
+
+            assert bedrock_llm_mod.DEFAULT_BEDROCK_LLM_MODEL == "custom-llm-model"
+
+            llm = bedrock_llm_mod.BedrockLLM()
+            assert llm.model_name == "custom-llm-model"
+        finally:
+            if original_boto3 is not None:
+                sys.modules["boto3"] = original_boto3
+            importlib.reload(bedrock_llm_mod)
+
+
 def test_bedrock_invoke_happy_path(mock_boto3: MagicMock) -> None:
     mock_client = mock_boto3.client.return_value
     mock_client.converse.return_value = _make_converse_response("hello world")
