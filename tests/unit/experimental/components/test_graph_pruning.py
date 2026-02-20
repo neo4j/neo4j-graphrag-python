@@ -237,6 +237,73 @@ def test_graph_pruning_enforce_nodes_lexical_graph(
     assert result[0].label == "Paragraph"
 
 
+def test_graph_pruning_enforce_relationships_lexical_graph_with_pruned_nodes(
+    lexical_graph_config: LexicalGraphConfig,
+) -> None:
+    """Test that lexical relationships are pruned when their nodes are pruned."""
+    pruner = GraphPruning()
+
+    # Create nodes: Chunk (lexical) and Person (extracted, will be pruned)
+    nodes = [
+        Neo4jNode(id="chunk-1", label="Paragraph", properties={"text": "test"}),
+        Neo4jNode(
+            id="person-1", label="Person", properties={"age": 30}
+        ),  # Missing required 'name'
+    ]
+
+    # Person node type requires 'name' property
+    person_type = NodeType(
+        label="Person",
+        properties=[
+            PropertyType(name="name", type="STRING", required=True),
+            PropertyType(name="age", type="INTEGER"),
+        ],
+    )
+    schema = GraphSchema(node_types=(person_type,))
+
+    # Filter nodes - Person should be pruned due to missing required property
+    pruning_stats = PruningStats()
+    filtered_nodes = pruner._enforce_nodes(
+        nodes=nodes,
+        schema=schema,
+        lexical_graph_config=lexical_graph_config,
+        pruning_stats=pruning_stats,
+    )
+
+    # Only Chunk should remain
+    assert len(filtered_nodes) == 1
+    assert filtered_nodes[0].id == "chunk-1"
+    assert pruning_stats.number_of_pruned_nodes == 1
+
+    # Create relationships including FROM_CHUNK to the pruned Person node
+    relationships = [
+        Neo4jRelationship(
+            start_node_id="person-1",
+            end_node_id="chunk-1",
+            type="FROM_CHUNK",  # Lexical relationship
+        ),
+        Neo4jRelationship(
+            start_node_id="chunk-1",
+            end_node_id="person-1",
+            type="NEXT_CHUNK",  # Another lexical relationship
+        ),
+    ]
+
+    # Filter relationships
+    pruning_stats_rels = PruningStats()
+    filtered_rels = pruner._enforce_relationships(
+        relationships=relationships,
+        filtered_nodes=filtered_nodes,
+        schema=schema,
+        lexical_graph_config=lexical_graph_config,
+        pruning_stats=pruning_stats_rels,
+    )
+
+    # Both lexical relationships should be pruned because person-1 node is missing
+    assert len(filtered_rels) == 0
+    assert pruning_stats_rels.number_of_pruned_relationships == 2
+
+
 @pytest.fixture
 def neo4j_relationship() -> Neo4jRelationship:
     return Neo4jRelationship(
