@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+import os
 from typing import Any, Optional
 
 from neo4j_graphrag.embeddings.base import Embedder
@@ -30,8 +31,10 @@ try:
 except ImportError:
     boto3 = None
 
-DEFAULT_MODEL_ID = "amazon.titan-embed-text-v2:0"
-DEFAULT_DIMENSIONS = 1024
+DEFAULT_MODEL_ID = os.getenv(
+    "BEDROCK_EMBED_MODEL_ID", "amazon.titan-embed-text-v2:0"
+)
+DEFAULT_DIMENSIONS = int(os.getenv("BEDROCK_EMBED_DIMENSIONS", "1024"))
 
 
 class BedrockEmbeddings(Embedder):
@@ -40,8 +43,10 @@ class BedrockEmbeddings(Embedder):
     Supports Amazon Titan Embed and Cohere Embed models available through Bedrock.
 
     Args:
-        model_id: Bedrock model ID. Defaults to "amazon.titan-embed-text-v2:0".
-        dimensions: Output embedding dimensionality. Defaults to 1024.
+        model_id: Bedrock model ID. Defaults to the ``BEDROCK_EMBED_MODEL_ID``
+            environment variable, or "amazon.titan-embed-text-v2:0" if not set.
+        dimensions: Output embedding dimensionality. Defaults to the
+            ``BEDROCK_EMBED_DIMENSIONS`` environment variable, or 1024 if not set.
         normalize: Whether to normalize the embedding vector. Defaults to True.
         region_name: AWS region. Defaults to boto3 session default.
         rate_limit_handler: Optional rate limit handler.
