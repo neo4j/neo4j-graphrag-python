@@ -368,7 +368,16 @@ class GraphPruning(Component):
         valid_nodes = {node.id: node.label for node in filtered_nodes}
         for rel in relationships:
             if rel.type in lexical_graph_config.lexical_graph_relationship_types:
-                valid_rels.append(rel)
+                # Need to validate start/end nodes exist for lexical relationships
+                if rel.start_node_id in valid_nodes and rel.end_node_id in valid_nodes:
+                    valid_rels.append(rel)
+                else:
+                    logger.debug(
+                        f"PRUNING:: Lexical relationship {rel} as one of {rel.start_node_id} or {rel.end_node_id} is not a valid node"
+                    )
+                    pruning_stats.add_pruned_relationship(
+                        rel, reason=PruningReason.INVALID_START_OR_END_NODE
+                    )
                 continue
             schema_relation = schema.relationship_type_from_label(rel.type)
             new_rel = self._validate_relationship(
