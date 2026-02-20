@@ -2,6 +2,10 @@
 
 ## Next
 
+### Fixed
+
+- Fixed invalid lexical graph relationships causing "Relationship references unknown start node" errors during parquet import when nodes are pruned.
+
 ## 1.13.0
 
 ### Added
