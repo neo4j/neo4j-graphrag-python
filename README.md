@@ -53,6 +53,7 @@ the extra dependencies described below:
     - **cohere**: LLMs from Cohere
     - **anthropic**: LLMs from Anthropic
     - **mistralai**: LLMs from MistralAI
+    - **bedrock**: LLMs from Amazon Bedrock
 - **sentence-transformers** : to use embeddings from the `sentence-transformers` Python package
 - Vector database (to use :ref:`External Retrievers`):
     - **weaviate**: store vectors in Weaviate

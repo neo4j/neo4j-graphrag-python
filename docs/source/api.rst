@@ -308,6 +308,12 @@ MistralAIEmbeddings
 .. autoclass:: neo4j_graphrag.embeddings.mistral.MistralAIEmbeddings
     :members:
 
+BedrockEmbeddings
+=================
+
+.. autoclass:: neo4j_graphrag.embeddings.bedrock.BedrockEmbeddings
+    :members:
+
 CohereEmbeddings
 ================
 
@@ -360,6 +366,13 @@ AnthropicLLM
 ------------
 
 .. autoclass:: neo4j_graphrag.llm.anthropic_llm.AnthropicLLM
+    :members:
+
+
+BedrockLLM
+----------
+
+.. autoclass:: neo4j_graphrag.llm.bedrock_llm.BedrockLLM
     :members:
 
 
