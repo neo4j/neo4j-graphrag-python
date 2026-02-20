@@ -45,6 +45,36 @@ def test_bedrock_embedder_missing_dependency() -> None:
     assert "Could not import boto3 python client" in str(exc.value)
 
 
+def test_bedrock_embedder_default_model_from_env(mock_boto3: MagicMock) -> None:
+    with patch.dict(
+        "os.environ",
+        {"BEDROCK_EMBED_MODEL_ID": "custom-model", "BEDROCK_EMBED_DIMENSIONS": "256"},
+    ):
+        import importlib
+        import sys
+
+        # Ensure reload picks up the mock instead of real boto3
+        original_boto3 = sys.modules.get("boto3")
+        sys.modules["boto3"] = mock_boto3
+
+        try:
+            import neo4j_graphrag.embeddings.bedrock as bedrock_mod
+
+            importlib.reload(bedrock_mod)
+
+            assert bedrock_mod.DEFAULT_MODEL_ID == "custom-model"
+            assert bedrock_mod.DEFAULT_DIMENSIONS == 256
+
+            embedder = bedrock_mod.BedrockEmbeddings()
+            assert embedder.model_id == "custom-model"
+            assert embedder.dimensions == 256
+        finally:
+            # Restore real boto3 and reload to reset defaults
+            if original_boto3 is not None:
+                sys.modules["boto3"] = original_boto3
+            importlib.reload(bedrock_mod)
+
+
 def test_bedrock_embed_query_happy_path(mock_boto3: MagicMock) -> None:
     mock_client = mock_boto3.client.return_value
     mock_client.invoke_model.return_value = _make_invoke_response([0.1, 0.2, 0.3])
