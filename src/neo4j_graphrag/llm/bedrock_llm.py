@@ -16,6 +16,7 @@
 # built-in dependencies
 from __future__ import annotations
 
+import os
 from typing import (
     Any,
     List,
@@ -58,13 +59,18 @@ try:
 except ImportError:
     boto3 = None
 
+DEFAULT_BEDROCK_LLM_MODEL = os.getenv(
+    "BEDROCK_LLM_MODEL", "us.anthropic.claude-sonnet-4-20250514-v1:0"
+)
+
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
 class BedrockLLM(LLMInterface, LLMInterfaceV2):
     """LLM interface for Amazon Bedrock via the boto3 Converse API.
 
     Args:
-        model_name (str): Bedrock model ID. Defaults to "us.anthropic.claude-sonnet-4-20250514-v1:0".
+        model_name (str): Bedrock model ID. Defaults to the ``BEDROCK_LLM_MODEL``
+            environment variable, or "us.anthropic.claude-sonnet-4-20250514-v1:0" if not set.
         model_params (Optional[dict]): Additional parameters passed to the model
             (e.g. ``{"temperature": 0.7, "maxTokens": 1024}``).
         region_name (Optional[str]): AWS region. Defaults to boto3 session default.
@@ -90,7 +96,7 @@ class BedrockLLM(LLMInterface, LLMInterfaceV2):
 
     def __init__(
         self,
-        model_name: str = "us.anthropic.claude-sonnet-4-20250514-v1:0",
+        model_name: str = DEFAULT_BEDROCK_LLM_MODEL,
         model_params: Optional[dict[str, Any]] = None,
         region_name: Optional[str] = None,
         rate_limit_handler: Optional[RateLimitHandler] = None,
