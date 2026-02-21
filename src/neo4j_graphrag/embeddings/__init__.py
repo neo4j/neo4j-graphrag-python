@@ -14,6 +14,7 @@
 #  limitations under the License.
 from .base import Embedder
 from .cohere import CohereEmbeddings
+from .google_genai import GeminiEmbedder
 from .mistral import MistralAIEmbeddings
 from .ollama import OllamaEmbeddings
 from .openai import AzureOpenAIEmbeddings, OpenAIEmbeddings
@@ -29,4 +30,5 @@ __all__ = [
     "VertexAIEmbeddings",
     "MistralAIEmbeddings",
     "CohereEmbeddings",
+    "GeminiEmbedder",
 ]
