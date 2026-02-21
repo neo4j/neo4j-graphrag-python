@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 # built-in dependencies
+import os
 from typing import Any, Optional
 
 # project dependencies
@@ -33,15 +34,15 @@ except ImportError:
     genai = None
     types = None
 
-DEFAULT_EMBEDDING_MODEL = "text-embedding-004"
-DEFAULT_EMBEDDING_DIM = 768
+DEFAULT_EMBEDDING_MODEL = os.getenv("GOOGLE_GENAI_EMB_MODEL", "gemini-embedding-001")
+DEFAULT_EMBEDDING_DIM = int(os.getenv("GOOGLE_GENAI_EMB_DIM", "768"))
 
 
 class GeminiEmbedder(Embedder):
     """Embedder that uses Google's Gemini API via the google.genai SDK.
 
     Args:
-        model: Embedding model name. Defaults to "text-embedding-004".
+        model: Embedding model name. Defaults to "gemini-embedding-001".
         embedding_dim: Output dimensionality. Defaults to 768.
         rate_limit_handler: Optional rate limit handler.
         **kwargs: Arguments passed to the genai.Client.
@@ -75,7 +76,7 @@ class GeminiEmbedder(Embedder):
                 ),
                 **kwargs,
             )
-            if not result.embeddings or not result.embeddings[0].values:
+            if not result or not result.embeddings or not result.embeddings[0].values:
                 raise ValueError("No embeddings returned from Gemini API")
             return list(result.embeddings[0].values)
         except Exception as e:
@@ -94,7 +95,7 @@ class GeminiEmbedder(Embedder):
                 ),
                 **kwargs,
             )
-            if not result.embeddings or not result.embeddings[0].values:
+            if not result or not result.embeddings or not result.embeddings[0].values:
                 raise ValueError("No embeddings returned from Gemini API")
             return list(result.embeddings[0].values)
         except Exception as e:
