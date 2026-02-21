@@ -50,6 +50,7 @@ the extra dependencies described below:
     - **ollama**: LLMs from Ollama
     - **openai**: LLMs from OpenAI (including AzureOpenAI)
     - **google**: LLMs from Vertex AI
+    - **google-genai**: LLMs and embeddings from Google Gemini
     - **cohere**: LLMs from Cohere
     - **anthropic**: LLMs from Anthropic
     - **mistralai**: LLMs from MistralAI
