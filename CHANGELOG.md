@@ -2,6 +2,8 @@
 
 ## Next
 
+## 1.13.1
+
 - Fixed invalid lexical graph relationships causing "Relationship references unknown start node" errors during parquet import when nodes are pruned.
 - Make rate limit handler open to which exceptions it can retry on
 - Fix the initialization of the vertexai LLM class
