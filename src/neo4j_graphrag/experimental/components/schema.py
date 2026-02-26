@@ -659,6 +659,21 @@ def _text_has_at_least_one_sentence(text: str) -> bool:
     return "." in stripped or "!" in stripped or "?" in stripped
 
 
+def _normalize_label(label: str) -> str:
+    """Normalize a node or relationship label to UPPER_SNAKE_CASE for consistent naming.
+
+    Replaces spaces and non-alphanumeric characters with underscores, collapses
+    multiple underscores, and converts to uppercase (e.g. \"Person\", \"person node\" -> \"PERSON_NODE\").
+    """
+    if not label or not isinstance(label, str):
+        return label
+    stripped = label.strip()
+    if not stripped:
+        return label
+    normalized = re.sub(r"[^a-zA-Z0-9]+", "_", stripped).strip("_").upper()
+    return normalized if normalized else label
+
+
 class SchemaFromTextExtractor(BaseSchemaBuilder):
     """
     A component for constructing GraphSchema objects from the output of an LLM after
@@ -1136,6 +1151,102 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         extracted_schema["relationship_types"] = rel_types
         return extracted_schema
 
+    def _normalize_labels(self, extracted_schema: Dict[str, Any]) -> None:
+        """Normalize node and relationship labels to UPPER_SNAKE_CASE and deduplicate in place.
+
+        Addresses inconsistent naming (e.g. person, Person, PERSON_NODE) and duplicate labels
+        that may result after normalization (e.g. \"Person\" and \"person\" both -> \"PERSON\").
+        """
+        node_types = extracted_schema.get("node_types") or []
+        rel_types = extracted_schema.get("relationship_types") or []
+        patterns = extracted_schema.get("patterns")
+        constraints = extracted_schema.get("constraints") or []
+
+        # Normalize node type labels
+        for node in node_types:
+            if isinstance(node, dict) and "label" in node:
+                old_label = node["label"]
+                new_label = _normalize_label(old_label)
+                if old_label != new_label:
+                    logging.info(
+                        f"Normalizing node label '{old_label}' to '{new_label}'."
+                    )
+                node["label"] = new_label
+
+        # Normalize relationship type labels
+        for rel in rel_types:
+            if isinstance(rel, dict) and "label" in rel:
+                old_label = rel["label"]
+                new_label = _normalize_label(old_label)
+                if old_label != new_label:
+                    logging.info(
+                        f"Normalizing relationship label '{old_label}' to '{new_label}'."
+                    )
+                rel["label"] = new_label
+
+        # Normalize pattern components (source, relationship, target)
+        if patterns:
+            normalized_patterns = []
+            for pattern in patterns:
+                if isinstance(pattern, dict):
+                    for key, pkey in (
+                        ("source", "source"),
+                        ("relationship", "relationship"),
+                        ("target", "target"),
+                    ):
+                        if key in pattern and isinstance(pattern[key], str):
+                            pattern[key] = _normalize_label(pattern[key])
+                    normalized_patterns.append(pattern)
+                elif isinstance(pattern, (list, tuple)) and len(pattern) == 3:
+                    normalized_patterns.append(
+                        (
+                            _normalize_label(str(pattern[0])),
+                            _normalize_label(str(pattern[1])),
+                            _normalize_label(str(pattern[2])),
+                        )
+                    )
+                else:
+                    normalized_patterns.append(pattern)
+            extracted_schema["patterns"] = normalized_patterns
+
+        # Normalize constraint node_type
+        for constraint in constraints:
+            if isinstance(constraint, dict) and "node_type" in constraint:
+                old_nt = constraint["node_type"]
+                new_nt = _normalize_label(old_nt)
+                if old_nt != new_nt:
+                    logging.info(
+                        f"Normalizing constraint node_type '{old_nt}' to '{new_nt}'."
+                    )
+                constraint["node_type"] = new_nt
+
+        # Deduplicate node types and relationship types by label (keep first)
+        seen_node_labels: set[str] = set()
+        deduped_nodes: List[Dict[str, Any]] = []
+        for node in node_types:
+            label = node.get("label") if isinstance(node, dict) else None
+            if label is not None and label not in seen_node_labels:
+                seen_node_labels.add(label)
+                deduped_nodes.append(node)
+            elif label is not None:
+                logging.info(
+                    f"Deduplicating node type: keeping first occurrence of label '{label}', dropping duplicate."
+                )
+        extracted_schema["node_types"] = deduped_nodes
+
+        seen_rel_labels: set[str] = set()
+        deduped_rels: List[Dict[str, Any]] = []
+        for rel in rel_types:
+            label = rel.get("label") if isinstance(rel, dict) else None
+            if label is not None and label not in seen_rel_labels:
+                seen_rel_labels.add(label)
+                deduped_rels.append(rel)
+            elif label is not None:
+                logging.info(
+                    f"Deduplicating relationship type: keeping first occurrence of label '{label}', dropping duplicate."
+                )
+        extracted_schema["relationship_types"] = deduped_rels
+
     def _normalize_property_types(self, extracted_schema: Dict[str, Any]) -> None:
         """Normalize malformed or alias property types to valid Neo4j types in place.
 
@@ -1190,6 +1301,7 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         """Apply cross-reference filters and validate schema.
 
         This is the final step shared by both V1 and V2 paths:
+        - Normalize labels (UPPER_SNAKE_CASE, deduplicate)
         - Normalize malformed property types
         - Extract node types, relationship types, patterns, and constraints
         - Apply cross-reference filtering (remove invalid patterns/constraints)
@@ -1204,6 +1316,7 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         Raises:
             SchemaExtractionError: If validation fails
         """
+        self._normalize_labels(extracted_schema)
         self._normalize_property_types(extracted_schema)
         node_types = extracted_schema.get("node_types") or []
         rel_types = extracted_schema.get("relationship_types")
