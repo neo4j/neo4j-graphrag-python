@@ -660,17 +660,18 @@ def _text_has_at_least_one_sentence(text: str) -> bool:
 
 
 def _normalize_label(label: str) -> str:
-    """Normalize a node or relationship label to UPPER_SNAKE_CASE for consistent naming.
+    """Normalize a node or relationship label to PascalCase for consistent naming.
 
-    Replaces spaces and non-alphanumeric characters with underscores, collapses
-    multiple underscores, and converts to uppercase (e.g. \"Person\", \"person node\" -> \"PERSON_NODE\").
+    Splits on spaces and non-alphanumeric characters, capitalizes the first letter
+    of each part, and joins with no separator (e.g. \"person node\", \"PERSON_NODE\" -> \"PersonNode\").
     """
     if not label or not isinstance(label, str):
         return label
     stripped = label.strip()
     if not stripped:
         return label
-    normalized = re.sub(r"[^a-zA-Z0-9]+", "_", stripped).strip("_").upper()
+    parts = re.split(r"[^a-zA-Z0-9]+", stripped)
+    normalized = "".join(p.capitalize() for p in parts if p)
     return normalized if normalized else label
 
 
@@ -1152,10 +1153,10 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         return extracted_schema
 
     def _normalize_labels(self, extracted_schema: Dict[str, Any]) -> None:
-        """Normalize node and relationship labels to UPPER_SNAKE_CASE and deduplicate in place.
+        """Normalize node and relationship labels to PascalCase and deduplicate in place.
 
-        Addresses inconsistent naming (e.g. person, Person, PERSON_NODE) and duplicate labels
-        that may result after normalization (e.g. \"Person\" and \"person\" both -> \"PERSON\").
+        Addresses inconsistent naming (e.g. person, Person, person node) and duplicate labels
+        that may result after normalization (e.g. \"person\" and \"Person\" both -> \"PersonNode\" for \"person node\").
         """
         node_types = extracted_schema.get("node_types") or []
         rel_types = extracted_schema.get("relationship_types") or []
