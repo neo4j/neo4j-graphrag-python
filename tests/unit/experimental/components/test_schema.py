@@ -884,6 +884,42 @@ async def test_schema_from_text_run_invalid_json(
     assert "not valid JSON" in str(exc_info.value)
 
 
+@pytest.fixture
+def empty_schema_json() -> str:
+    """JSON that parses to a valid schema with no node types (empty schema)."""
+    return '{"node_types": [], "relationship_types": [], "patterns": [], "constraints": []}'
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_empty_schema_raises_when_text_has_sentence(
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+    empty_schema_json: str,
+) -> None:
+    """When input text contains at least one sentence, empty schema extraction raises SchemaExtractionError."""
+    mock_llm.ainvoke.return_value = LLMResponse(content=empty_schema_json)
+
+    with pytest.raises(SchemaExtractionError) as exc_info:
+        await schema_from_text.run(text="This is a sample sentence with content.")
+
+    assert "empty schema" in str(exc_info.value).lower()
+    assert "no node types" in str(exc_info.value).lower()
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_empty_schema_allowed_when_text_has_no_sentence(
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+    empty_schema_json: str,
+) -> None:
+    """When input text has no sentence (no sentence-ending punctuation), empty schema is allowed."""
+    mock_llm.ainvoke.return_value = LLMResponse(content=empty_schema_json)
+
+    schema = await schema_from_text.run(text="Hi")
+
+    assert len(schema.node_types) == 0
+
+
 @pytest.mark.asyncio
 async def test_schema_from_text_custom_template(
     mock_llm: AsyncMock, valid_schema_json: str
