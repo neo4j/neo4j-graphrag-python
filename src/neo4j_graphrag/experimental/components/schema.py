@@ -66,6 +66,53 @@ from neo4j_graphrag.schema import get_structured_schema
 logger = logging.getLogger(__name__)
 
 
+# Valid Neo4j property types for schema validation and normalization.
+# See https://neo4j.com/docs/cypher-manual/current/values-and-types/property-structural-constructed/#property-types
+_VALID_PROPERTY_TYPES: Tuple[str, ...] = (
+    "BOOLEAN",
+    "DATE",
+    "DURATION",
+    "FLOAT",
+    "INTEGER",
+    "LIST",
+    "LOCAL_DATETIME",
+    "LOCAL_TIME",
+    "POINT",
+    "STRING",
+    "ZONED_DATETIME",
+    "ZONED_TIME",
+)
+
+# Map common malformed or alias values (lowercase) to valid Neo4j property types.
+_PROPERTY_TYPE_ALIASES: Dict[str, str] = {
+    "string": "STRING",
+    "str": "STRING",
+    "text": "STRING",
+    "integer": "INTEGER",
+    "int": "INTEGER",
+    "long": "INTEGER",
+    "float": "FLOAT",
+    "double": "FLOAT",
+    "number": "FLOAT",
+    "num": "FLOAT",
+    "boolean": "BOOLEAN",
+    "bool": "BOOLEAN",
+    "date": "DATE",
+    "list": "LIST",
+    "array": "LIST",
+    "duration": "DURATION",
+    "local_datetime": "LOCAL_DATETIME",
+    "datetime": "LOCAL_DATETIME",
+    "date_time": "LOCAL_DATETIME",
+    "local_time": "LOCAL_TIME",
+    "time": "LOCAL_TIME",
+    "zoned_datetime": "ZONED_DATETIME",
+    "zoned_date_time": "ZONED_DATETIME",
+    "zoned_time": "ZONED_TIME",
+    "point": "POINT",
+}
+
+
 class PropertyType(BaseModel):
     """
     Represents a property on a node or relationship in the graph.
@@ -1089,12 +1136,61 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         extracted_schema["relationship_types"] = rel_types
         return extracted_schema
 
+    def _normalize_property_types(self, extracted_schema: Dict[str, Any]) -> None:
+        """Normalize malformed or alias property types to valid Neo4j types in place.
+
+        LLM output may use lowercase or alias types (e.g. \"string\", \"int\", \"number\").
+        Valid types are coerced via _PROPERTY_TYPE_ALIASES; unrecognized types default to STRING.
+        """
+        valid_upper = set(_VALID_PROPERTY_TYPES)
+
+        def normalize_one(prop: Dict[str, Any], context: str) -> None:
+            raw = prop.get("type")
+            if not isinstance(raw, str):
+                logging.info(
+                    f"{context}: property 'type' is not a string ({type(raw).__name__}), defaulting to STRING."
+                )
+                prop["type"] = "STRING"
+                return
+            raw_stripped = raw.strip()
+            if not raw_stripped:
+                logging.info(f"{context}: property 'type' is empty, defaulting to STRING.")
+                prop["type"] = "STRING"
+                return
+            if raw_stripped.upper() in valid_upper:
+                prop["type"] = raw_stripped.upper()
+                return
+            alias = _PROPERTY_TYPE_ALIASES.get(raw_stripped.lower())
+            if alias is not None:
+                logging.info(
+                    f"{context}: normalizing property type '{raw_stripped}' to '{alias}'."
+                )
+                prop["type"] = alias
+                return
+            logging.info(
+                f"{context}: unrecognized property type '{raw_stripped}', defaulting to STRING."
+            )
+            prop["type"] = "STRING"
+
+        for node in extracted_schema.get("node_types") or []:
+            label = node.get("label", "?")
+            for prop in node.get("properties") or []:
+                if isinstance(prop, dict):
+                    normalize_one(prop, f"Node '{label}'")
+
+        for rel in extracted_schema.get("relationship_types") or []:
+            label = rel.get("label", "?")
+            for prop in rel.get("properties") or []:
+                if isinstance(prop, dict):
+                    normalize_one(prop, f"Relationship '{label}'")
+
     def _validate_and_build_schema(
         self, extracted_schema: Dict[str, Any]
     ) -> GraphSchema:
         """Apply cross-reference filters and validate schema.
 
         This is the final step shared by both V1 and V2 paths:
+        - Normalize malformed property types
         - Extract node types, relationship types, patterns, and constraints
         - Apply cross-reference filtering (remove invalid patterns/constraints)
         - Validate using Pydantic GraphSchema model
@@ -1108,6 +1204,7 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         Raises:
             SchemaExtractionError: If validation fails
         """
+        self._normalize_property_types(extracted_schema)
         node_types = extracted_schema.get("node_types") or []
         rel_types = extracted_schema.get("relationship_types")
         patterns = extracted_schema.get("patterns")
