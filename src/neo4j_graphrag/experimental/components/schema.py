@@ -604,6 +604,14 @@ class SchemaBuilder(BaseSchemaBuilder):
         )
 
 
+def _text_has_at_least_one_sentence(text: str) -> bool:
+    """Return True if text contains at least one sentence (non-empty and has sentence-ending punctuation)."""
+    stripped = text.strip()
+    if not stripped or len(stripped) < 2:
+        return False
+    return "." in stripped or "!" in stripped or "?" in stripped
+
+
 class SchemaFromTextExtractor(BaseSchemaBuilder):
     """
     A component for constructing GraphSchema objects from the output of an LLM after
@@ -1209,13 +1217,24 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         Returns:
             GraphSchema: A configured schema object, extracted automatically and
             constructed asynchronously.
+        Raises:
+            SchemaExtractionError: If the input text contains at least one sentence
+                but the extracted schema is empty (no node types).
         """
         prompt: str = self._prompt_template.format(text=text, examples=examples)
 
         if self.use_structured_output:
-            return await self._run_with_structured_output(prompt)
+            schema = await self._run_with_structured_output(prompt)
         else:
-            return await self._run_with_prompt_based_extraction(prompt)
+            schema = await self._run_with_prompt_based_extraction(prompt)
+
+        if _text_has_at_least_one_sentence(text) and len(schema.node_types) == 0:
+            raise SchemaExtractionError(
+                "Schema extraction returned an empty schema (no node types), "
+                "but the input text contains at least one sentence. "
+                "Provide more explicit text or check the extraction prompt/LLM."
+            )
+        return schema
 
 
 class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
