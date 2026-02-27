@@ -659,12 +659,8 @@ def _text_has_at_least_one_sentence(text: str) -> bool:
     return "." in stripped or "!" in stripped or "?" in stripped
 
 
-def _normalize_label(label: str) -> str:
-    """Normalize a node or relationship label to PascalCase for consistent naming.
-
-    Splits on spaces and non-alphanumeric characters, capitalizes the first letter
-    of each part, and joins with no separator (e.g. \"person node\", \"PERSON_NODE\" -> \"PersonNode\").
-    """
+def _normalize_node_label(label: str) -> str:
+    """Normalize a node label to PascalCase (e.g. \"person node\", \"PERSON_NODE\" -> \"PersonNode\")."""
     if not label or not isinstance(label, str):
         return label
     stripped = label.strip()
@@ -672,6 +668,17 @@ def _normalize_label(label: str) -> str:
         return label
     parts = re.split(r"[^a-zA-Z0-9]+", stripped)
     normalized = "".join(p.capitalize() for p in parts if p)
+    return normalized if normalized else label
+
+
+def _normalize_relationship_label(label: str) -> str:
+    """Normalize a relationship label to UPPER_SNAKE_CASE (e.g. \"works for\", \"WorksFor\" -> \"WORKS_FOR\")."""
+    if not label or not isinstance(label, str):
+        return label
+    stripped = label.strip()
+    if not stripped:
+        return label
+    normalized = re.sub(r"[^a-zA-Z0-9]+", "_", stripped).strip("_").upper()
     return normalized if normalized else label
 
 
@@ -1153,68 +1160,67 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         return extracted_schema
 
     def _normalize_labels(self, extracted_schema: Dict[str, Any]) -> None:
-        """Normalize node and relationship labels to PascalCase and deduplicate in place.
-
-        Addresses inconsistent naming (e.g. person, Person, person node) and duplicate labels
-        that may result after normalization (e.g. \"person\" and \"Person\" both -> \"PersonNode\" for \"person node\").
-        """
+        """Normalize labels: node labels to PascalCase, relationship labels to UPPER_SNAKE_CASE. Deduplicate in place."""
         node_types = extracted_schema.get("node_types") or []
         rel_types = extracted_schema.get("relationship_types") or []
         patterns = extracted_schema.get("patterns")
         constraints = extracted_schema.get("constraints") or []
 
-        # Normalize node type labels
+        # Normalize node type labels (PascalCase)
         for node in node_types:
             if isinstance(node, dict) and "label" in node:
                 old_label = node["label"]
-                new_label = _normalize_label(old_label)
+                new_label = _normalize_node_label(old_label)
                 if old_label != new_label:
                     logging.info(
                         f"Normalizing node label '{old_label}' to '{new_label}'."
                     )
                 node["label"] = new_label
 
-        # Normalize relationship type labels
+        # Normalize relationship type labels (UPPER_SNAKE_CASE)
         for rel in rel_types:
             if isinstance(rel, dict) and "label" in rel:
                 old_label = rel["label"]
-                new_label = _normalize_label(old_label)
+                new_label = _normalize_relationship_label(old_label)
                 if old_label != new_label:
                     logging.info(
                         f"Normalizing relationship label '{old_label}' to '{new_label}'."
                     )
                 rel["label"] = new_label
 
-        # Normalize pattern components (source, relationship, target)
+        # Normalize pattern components: source/target = PascalCase, relationship = UPPER_SNAKE_CASE
         if patterns:
             normalized_patterns = []
             for pattern in patterns:
                 if isinstance(pattern, dict):
-                    for key, pkey in (
-                        ("source", "source"),
-                        ("relationship", "relationship"),
-                        ("target", "target"),
+                    if "source" in pattern and isinstance(pattern["source"], str):
+                        pattern["source"] = _normalize_node_label(pattern["source"])
+                    if "relationship" in pattern and isinstance(
+                        pattern["relationship"], str
                     ):
-                        if key in pattern and isinstance(pattern[key], str):
-                            pattern[key] = _normalize_label(pattern[key])
+                        pattern["relationship"] = _normalize_relationship_label(
+                            pattern["relationship"]
+                        )
+                    if "target" in pattern and isinstance(pattern["target"], str):
+                        pattern["target"] = _normalize_node_label(pattern["target"])
                     normalized_patterns.append(pattern)
                 elif isinstance(pattern, (list, tuple)) and len(pattern) == 3:
                     normalized_patterns.append(
                         (
-                            _normalize_label(str(pattern[0])),
-                            _normalize_label(str(pattern[1])),
-                            _normalize_label(str(pattern[2])),
+                            _normalize_node_label(str(pattern[0])),
+                            _normalize_relationship_label(str(pattern[1])),
+                            _normalize_node_label(str(pattern[2])),
                         )
                     )
                 else:
                     normalized_patterns.append(pattern)
             extracted_schema["patterns"] = normalized_patterns
 
-        # Normalize constraint node_type
+        # Normalize constraint node_type (PascalCase)
         for constraint in constraints:
             if isinstance(constraint, dict) and "node_type" in constraint:
                 old_nt = constraint["node_type"]
-                new_nt = _normalize_label(old_nt)
+                new_nt = _normalize_node_label(old_nt)
                 if old_nt != new_nt:
                     logging.info(
                         f"Normalizing constraint node_type '{old_nt}' to '{new_nt}'."
