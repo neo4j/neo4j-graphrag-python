@@ -920,6 +920,53 @@ async def test_schema_from_text_empty_schema_allowed_when_text_has_no_sentence(
     assert len(schema.node_types) == 0
 
 
+@pytest.fixture
+def too_small_schema_json() -> str:
+    """Schema with 2 node types but 0 relationship types and 0 patterns (fails strict 'too small' check)."""
+    return """
+    {
+        "node_types": [
+            {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]},
+            {"label": "Organization", "properties": [{"name": "name", "type": "STRING"}]}
+        ],
+        "relationship_types": [],
+        "patterns": [],
+        "constraints": []
+    }
+    """
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_too_small_schema_raises_when_text_has_sentence(
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+    too_small_schema_json: str,
+) -> None:
+    """When input text has at least one sentence, schema with <2 node types or 0 rel types or 0 patterns raises."""
+    mock_llm.ainvoke.return_value = LLMResponse(content=too_small_schema_json)
+
+    with pytest.raises(SchemaExtractionError) as exc_info:
+        await schema_from_text.run(text="John works at Acme Corp.")
+
+    assert "too small" in str(exc_info.value).lower()
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_too_small_schema_allowed_when_text_has_no_sentence(
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+    too_small_schema_json: str,
+) -> None:
+    """When input text has no sentence, a small schema is allowed."""
+    mock_llm.ainvoke.return_value = LLMResponse(content=too_small_schema_json)
+
+    schema = await schema_from_text.run(text="Hi")
+
+    assert len(schema.node_types) == 2
+    assert len(schema.relationship_types or ()) == 0
+    assert len(schema.patterns or ()) == 0
+
+
 @pytest.mark.asyncio
 async def test_schema_from_text_custom_template(
     mock_llm: AsyncMock, valid_schema_json: str

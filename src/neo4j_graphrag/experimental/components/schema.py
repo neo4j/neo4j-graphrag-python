@@ -659,6 +659,25 @@ def _text_has_at_least_one_sentence(text: str) -> bool:
     return "." in stripped or "!" in stripped or "?" in stripped
 
 
+def _schema_too_small(
+    schema: GraphSchema,
+    *,
+    min_node_types: int = 2,
+    min_relationship_types: int = 1,
+    min_patterns: int = 1,
+) -> bool:
+    """Return True if the schema is below the minimum useful size (strict: 2+ node types, 1+ relationship type, 1+ pattern)."""
+    if len(schema.node_types) < min_node_types:
+        return True
+    rel_types = schema.relationship_types or ()
+    if len(rel_types) < min_relationship_types:
+        return True
+    patterns = schema.patterns or ()
+    if len(patterns) < min_patterns:
+        return True
+    return False
+
+
 def _normalize_node_label(label: str) -> str:
     """Normalize a node label to PascalCase (e.g. \"person node\", \"PERSON_NODE\" -> \"PersonNode\")."""
     if not label or not isinstance(label, str):
@@ -1436,7 +1455,9 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
             constructed asynchronously.
         Raises:
             SchemaExtractionError: If the input text contains at least one sentence
-                but the extracted schema is empty (no node types).
+                but the extracted schema is empty (no node types), or if the schema
+                is too small (strict: requires at least 2 node types, 1 relationship
+                type, and 1 pattern).
         """
         prompt: str = self._prompt_template.format(text=text, examples=examples)
 
@@ -1449,6 +1470,15 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
             raise SchemaExtractionError(
                 "Schema extraction returned an empty schema (no node types), "
                 "but the input text contains at least one sentence. "
+                "Provide more explicit text or check the extraction prompt/LLM."
+            )
+        if _text_has_at_least_one_sentence(text) and _schema_too_small(schema):
+            raise SchemaExtractionError(
+                "Schema extraction returned a schema that is too small to be useful. "
+                "Strict validation requires at least 2 node types, 1 relationship type, and 1 pattern. "
+                f"Got: {len(schema.node_types)} node type(s), "
+                f"{len(schema.relationship_types or ())} relationship type(s), "
+                f"{len(schema.patterns or ())} pattern(s). "
                 "Provide more explicit text or check the extraction prompt/LLM."
             )
         return schema
