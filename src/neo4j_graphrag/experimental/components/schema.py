@@ -66,6 +66,53 @@ from neo4j_graphrag.schema import get_structured_schema
 logger = logging.getLogger(__name__)
 
 
+# Valid Neo4j property types for schema validation and normalization.
+# See https://neo4j.com/docs/cypher-manual/current/values-and-types/property-structural-constructed/#property-types
+_VALID_PROPERTY_TYPES: Tuple[str, ...] = (
+    "BOOLEAN",
+    "DATE",
+    "DURATION",
+    "FLOAT",
+    "INTEGER",
+    "LIST",
+    "LOCAL_DATETIME",
+    "LOCAL_TIME",
+    "POINT",
+    "STRING",
+    "ZONED_DATETIME",
+    "ZONED_TIME",
+)
+
+# Map common malformed or alias values (lowercase) to valid Neo4j property types.
+_PROPERTY_TYPE_ALIASES: Dict[str, str] = {
+    "string": "STRING",
+    "str": "STRING",
+    "text": "STRING",
+    "integer": "INTEGER",
+    "int": "INTEGER",
+    "long": "INTEGER",
+    "float": "FLOAT",
+    "double": "FLOAT",
+    "number": "FLOAT",
+    "num": "FLOAT",
+    "boolean": "BOOLEAN",
+    "bool": "BOOLEAN",
+    "date": "DATE",
+    "list": "LIST",
+    "array": "LIST",
+    "duration": "DURATION",
+    "local_datetime": "LOCAL_DATETIME",
+    "datetime": "LOCAL_DATETIME",
+    "date_time": "LOCAL_DATETIME",
+    "local_time": "LOCAL_TIME",
+    "time": "LOCAL_TIME",
+    "zoned_datetime": "ZONED_DATETIME",
+    "zoned_date_time": "ZONED_DATETIME",
+    "zoned_time": "ZONED_TIME",
+    "point": "POINT",
+}
+
+
 class PropertyType(BaseModel):
     """
     Represents a property on a node or relationship in the graph.
@@ -604,6 +651,56 @@ class SchemaBuilder(BaseSchemaBuilder):
         )
 
 
+def _text_has_at_least_one_sentence(text: str) -> bool:
+    """Return True if text contains at least one sentence (non-empty and has sentence-ending punctuation)."""
+    stripped = text.strip()
+    if not stripped or len(stripped) < 2:
+        return False
+    return "." in stripped or "!" in stripped or "?" in stripped
+
+
+def _schema_too_small(
+    schema: GraphSchema,
+    *,
+    min_node_types: int = 2,
+    min_relationship_types: int = 1,
+    min_patterns: int = 1,
+) -> bool:
+    """Return True if the schema is below the minimum useful size (strict: 2+ node types, 1+ relationship type, 1+ pattern)."""
+    if len(schema.node_types) < min_node_types:
+        return True
+    rel_types = schema.relationship_types or ()
+    if len(rel_types) < min_relationship_types:
+        return True
+    patterns = schema.patterns or ()
+    if len(patterns) < min_patterns:
+        return True
+    return False
+
+
+def _normalize_node_label(label: str) -> str:
+    """Normalize a node label to PascalCase (e.g. \"person node\", \"PERSON_NODE\" -> \"PersonNode\")."""
+    if not label or not isinstance(label, str):
+        return label
+    stripped = label.strip()
+    if not stripped:
+        return label
+    parts = re.split(r"[^a-zA-Z0-9]+", stripped)
+    normalized = "".join(p.capitalize() for p in parts if p)
+    return normalized if normalized else label
+
+
+def _normalize_relationship_label(label: str) -> str:
+    """Normalize a relationship label to UPPER_SNAKE_CASE (e.g. \"works for\", \"WorksFor\" -> \"WORKS_FOR\")."""
+    if not label or not isinstance(label, str):
+        return label
+    stripped = label.strip()
+    if not stripped:
+        return label
+    normalized = re.sub(r"[^a-zA-Z0-9]+", "_", stripped).strip("_").upper()
+    return normalized if normalized else label
+
+
 class SchemaFromTextExtractor(BaseSchemaBuilder):
     """
     A component for constructing GraphSchema objects from the output of an LLM after
@@ -1081,12 +1178,157 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         extracted_schema["relationship_types"] = rel_types
         return extracted_schema
 
+    def _normalize_labels(self, extracted_schema: Dict[str, Any]) -> None:
+        """Normalize labels: node labels to PascalCase, relationship labels to UPPER_SNAKE_CASE. Deduplicate in place."""
+        node_types = extracted_schema.get("node_types") or []
+        rel_types = extracted_schema.get("relationship_types") or []
+        patterns = extracted_schema.get("patterns")
+        constraints = extracted_schema.get("constraints") or []
+
+        # Normalize node type labels (PascalCase)
+        for node in node_types:
+            if isinstance(node, dict) and "label" in node:
+                old_label = node["label"]
+                new_label = _normalize_node_label(old_label)
+                if old_label != new_label:
+                    logging.info(
+                        f"Normalizing node label '{old_label}' to '{new_label}'."
+                    )
+                node["label"] = new_label
+
+        # Normalize relationship type labels (UPPER_SNAKE_CASE)
+        for rel in rel_types:
+            if isinstance(rel, dict) and "label" in rel:
+                old_label = rel["label"]
+                new_label = _normalize_relationship_label(old_label)
+                if old_label != new_label:
+                    logging.info(
+                        f"Normalizing relationship label '{old_label}' to '{new_label}'."
+                    )
+                rel["label"] = new_label
+
+        # Normalize pattern components: source/target = PascalCase, relationship = UPPER_SNAKE_CASE
+        if patterns:
+            normalized_patterns = []
+            for pattern in patterns:
+                if isinstance(pattern, dict):
+                    if "source" in pattern and isinstance(pattern["source"], str):
+                        pattern["source"] = _normalize_node_label(pattern["source"])
+                    if "relationship" in pattern and isinstance(
+                        pattern["relationship"], str
+                    ):
+                        pattern["relationship"] = _normalize_relationship_label(
+                            pattern["relationship"]
+                        )
+                    if "target" in pattern and isinstance(pattern["target"], str):
+                        pattern["target"] = _normalize_node_label(pattern["target"])
+                    normalized_patterns.append(pattern)
+                elif isinstance(pattern, (list, tuple)) and len(pattern) == 3:
+                    normalized_patterns.append(
+                        (
+                            _normalize_node_label(str(pattern[0])),
+                            _normalize_relationship_label(str(pattern[1])),
+                            _normalize_node_label(str(pattern[2])),
+                        )
+                    )
+                else:
+                    normalized_patterns.append(pattern)
+            extracted_schema["patterns"] = normalized_patterns
+
+        # Normalize constraint node_type (PascalCase)
+        for constraint in constraints:
+            if isinstance(constraint, dict) and "node_type" in constraint:
+                old_nt = constraint["node_type"]
+                new_nt = _normalize_node_label(old_nt)
+                if old_nt != new_nt:
+                    logging.info(
+                        f"Normalizing constraint node_type '{old_nt}' to '{new_nt}'."
+                    )
+                constraint["node_type"] = new_nt
+
+        # Deduplicate node types and relationship types by label (keep first)
+        seen_node_labels: set[str] = set()
+        deduped_nodes: List[Dict[str, Any]] = []
+        for node in node_types:
+            label = node.get("label") if isinstance(node, dict) else None
+            if label is not None and label not in seen_node_labels:
+                seen_node_labels.add(label)
+                deduped_nodes.append(node)
+            elif label is not None:
+                logging.info(
+                    f"Deduplicating node type: keeping first occurrence of label '{label}', dropping duplicate."
+                )
+        extracted_schema["node_types"] = deduped_nodes
+
+        seen_rel_labels: set[str] = set()
+        deduped_rels: List[Dict[str, Any]] = []
+        for rel in rel_types:
+            label = rel.get("label") if isinstance(rel, dict) else None
+            if label is not None and label not in seen_rel_labels:
+                seen_rel_labels.add(label)
+                deduped_rels.append(rel)
+            elif label is not None:
+                logging.info(
+                    f"Deduplicating relationship type: keeping first occurrence of label '{label}', dropping duplicate."
+                )
+        extracted_schema["relationship_types"] = deduped_rels
+
+    def _normalize_property_types(self, extracted_schema: Dict[str, Any]) -> None:
+        """Normalize malformed or alias property types to valid Neo4j types in place.
+
+        LLM output may use lowercase or alias types (e.g. \"string\", \"int\", \"number\").
+        Valid types are coerced via _PROPERTY_TYPE_ALIASES; unrecognized types default to STRING.
+        """
+        valid_upper = set(_VALID_PROPERTY_TYPES)
+
+        def normalize_one(prop: Dict[str, Any], context: str) -> None:
+            raw = prop.get("type")
+            if not isinstance(raw, str):
+                logging.info(
+                    f"{context}: property 'type' is not a string ({type(raw).__name__}), defaulting to STRING."
+                )
+                prop["type"] = "STRING"
+                return
+            raw_stripped = raw.strip()
+            if not raw_stripped:
+                logging.info(f"{context}: property 'type' is empty, defaulting to STRING.")
+                prop["type"] = "STRING"
+                return
+            if raw_stripped.upper() in valid_upper:
+                prop["type"] = raw_stripped.upper()
+                return
+            alias = _PROPERTY_TYPE_ALIASES.get(raw_stripped.lower())
+            if alias is not None:
+                logging.info(
+                    f"{context}: normalizing property type '{raw_stripped}' to '{alias}'."
+                )
+                prop["type"] = alias
+                return
+            logging.info(
+                f"{context}: unrecognized property type '{raw_stripped}', defaulting to STRING."
+            )
+            prop["type"] = "STRING"
+
+        for node in extracted_schema.get("node_types") or []:
+            label = node.get("label", "?")
+            for prop in node.get("properties") or []:
+                if isinstance(prop, dict):
+                    normalize_one(prop, f"Node '{label}'")
+
+        for rel in extracted_schema.get("relationship_types") or []:
+            label = rel.get("label", "?")
+            for prop in rel.get("properties") or []:
+                if isinstance(prop, dict):
+                    normalize_one(prop, f"Relationship '{label}'")
+
     def _validate_and_build_schema(
         self, extracted_schema: Dict[str, Any]
     ) -> GraphSchema:
         """Apply cross-reference filters and validate schema.
 
         This is the final step shared by both V1 and V2 paths:
+        - Normalize labels (UPPER_SNAKE_CASE, deduplicate)
+        - Normalize malformed property types
         - Extract node types, relationship types, patterns, and constraints
         - Apply cross-reference filtering (remove invalid patterns/constraints)
         - Validate using Pydantic GraphSchema model
@@ -1100,6 +1342,8 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         Raises:
             SchemaExtractionError: If validation fails
         """
+        self._normalize_labels(extracted_schema)
+        self._normalize_property_types(extracted_schema)
         node_types = extracted_schema.get("node_types") or []
         rel_types = extracted_schema.get("relationship_types")
         patterns = extracted_schema.get("patterns")
@@ -1209,13 +1453,35 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         Returns:
             GraphSchema: A configured schema object, extracted automatically and
             constructed asynchronously.
+        Raises:
+            SchemaExtractionError: If the input text contains at least one sentence
+                but the extracted schema is empty (no node types), or if the schema
+                is too small (strict: requires at least 2 node types, 1 relationship
+                type, and 1 pattern).
         """
         prompt: str = self._prompt_template.format(text=text, examples=examples)
 
         if self.use_structured_output:
-            return await self._run_with_structured_output(prompt)
+            schema = await self._run_with_structured_output(prompt)
         else:
-            return await self._run_with_prompt_based_extraction(prompt)
+            schema = await self._run_with_prompt_based_extraction(prompt)
+
+        if _text_has_at_least_one_sentence(text) and len(schema.node_types) == 0:
+            raise SchemaExtractionError(
+                "Schema extraction returned an empty schema (no node types), "
+                "but the input text contains at least one sentence. "
+                "Provide more explicit text or check the extraction prompt/LLM."
+            )
+        if _text_has_at_least_one_sentence(text) and _schema_too_small(schema):
+            raise SchemaExtractionError(
+                "Schema extraction returned a schema that is too small to be useful. "
+                "Strict validation requires at least 2 node types, 1 relationship type, and 1 pattern. "
+                f"Got: {len(schema.node_types)} node type(s), "
+                f"{len(schema.relationship_types or ())} relationship type(s), "
+                f"{len(schema.patterns or ())} pattern(s). "
+                "Provide more explicit text or check the extraction prompt/LLM."
+            )
+        return schema
 
 
 class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
