@@ -16,6 +16,7 @@
 # built-in dependencies
 from __future__ import annotations
 
+import asyncio
 import os
 from typing import (
     Any,
@@ -222,14 +223,13 @@ class BedrockLLM(LLMInterface, LLMInterfaceV2):
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
-        # boto3 does not have native async support; run synchronously
         try:
-            messages = self.get_messages(input, message_history)
-            converse_kwargs = self._build_converse_kwargs(
-                messages, system_instruction=system_instruction
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(
+                None, self.__invoke_v1, input, message_history, system_instruction
             )
-            response = self.client.converse(**converse_kwargs)
-            return self._parse_response(response)
+        except LLMGenerationError:
+            raise
         except Exception as e:
             raise LLMGenerationError(f"Error calling BedrockLLM: {e}") from e
 
@@ -244,14 +244,13 @@ class BedrockLLM(LLMInterface, LLMInterfaceV2):
             raise NotImplementedError(
                 "BedrockLLM does not currently support structured output"
             )
-        # boto3 does not have native async support; run synchronously
         try:
-            system_instruction, messages = self.get_messages_v2(input)
-            converse_kwargs = self._build_converse_kwargs(
-                messages, system_instruction=system_instruction, **kwargs
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(
+                None, self.__invoke_v2, input, response_format
             )
-            response = self.client.converse(**converse_kwargs)
-            return self._parse_response(response)
+        except LLMGenerationError:
+            raise
         except Exception as e:
             raise LLMGenerationError(f"Error calling BedrockLLM: {e}") from e
 
@@ -283,15 +282,17 @@ class BedrockLLM(LLMInterface, LLMInterfaceV2):
         system_instruction: Optional[str] = None,
     ) -> ToolCallResponse:
         try:
-            messages = self.get_messages(input, message_history)
-            tool_config = self._get_tool_config(tools)
-            converse_kwargs = self._build_converse_kwargs(
-                messages,
-                system_instruction=system_instruction,
-                toolConfig=tool_config,
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(
+                None,
+                self.invoke_with_tools,
+                input,
+                tools,
+                message_history,
+                system_instruction,
             )
-            response = self.client.converse(**converse_kwargs)
-            return self._parse_tool_response(response)
+        except LLMGenerationError:
+            raise
         except Exception as e:
             raise LLMGenerationError(f"Error calling BedrockLLM with tools: {e}") from e
 
