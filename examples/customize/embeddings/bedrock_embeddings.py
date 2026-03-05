@@ -13,7 +13,9 @@ try:
     res = embedder.embed_query("my question")
     print(res[:10])
 except NoCredentialsError:
-    print("AWS credentials not found. Run 'aws configure' or set environment variables.")
+    print(
+        "AWS credentials not found. Run 'aws configure' or set environment variables."
+    )
 except PartialCredentialsError as e:
     print(f"Incomplete AWS credentials: {e}")
 except ClientError as e:

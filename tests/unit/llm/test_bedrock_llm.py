@@ -14,7 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Generator
+from typing import Any, Generator
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -32,7 +32,7 @@ def mock_boto3() -> Generator[MagicMock, None, None]:
         yield mock_boto
 
 
-def _make_converse_response(text: str = "generated text") -> dict:
+def _make_converse_response(text: str = "generated text") -> dict[str, Any]:
     return {
         "output": {
             "message": {

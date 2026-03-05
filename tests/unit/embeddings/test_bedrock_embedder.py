@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import io
 import json
-from typing import Generator
+from typing import Any, Generator
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -33,7 +33,7 @@ def mock_boto3() -> Generator[MagicMock, None, None]:
         yield mock_boto
 
 
-def _make_invoke_response(embedding: list[float]) -> dict:
+def _make_invoke_response(embedding: list[float]) -> dict[str, Any]:
     body_bytes = json.dumps({"embedding": embedding}).encode()
     return {"body": io.BytesIO(body_bytes)}
 

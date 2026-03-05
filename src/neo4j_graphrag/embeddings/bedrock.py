@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 from typing import Any, Optional
@@ -31,16 +32,17 @@ try:
 except ImportError:
     boto3 = None
 
-DEFAULT_MODEL_ID = os.getenv(
-    "BEDROCK_EMBED_MODEL_ID", "amazon.titan-embed-text-v2:0"
-)
-DEFAULT_DIMENSIONS = int(os.getenv("BEDROCK_EMBED_DIMENSIONS", "1024"))
+DEFAULT_MODEL_ID = os.getenv("BEDROCK_EMBED_MODEL_ID", "amazon.titan-embed-text-v2:0")
+try:
+    DEFAULT_DIMENSIONS = int(os.getenv("BEDROCK_EMBED_DIMENSIONS", "1024"))
+except ValueError:
+    DEFAULT_DIMENSIONS = 1024
 
 
 class BedrockEmbeddings(Embedder):
     """Embedder that uses Amazon Bedrock's embedding models via the boto3 SDK.
 
-    Supports Amazon Titan Embed and Cohere Embed models available through Bedrock.
+    Supports Amazon Titan Embed models available through Bedrock.
 
     Args:
         model_id: Bedrock model ID. Defaults to the ``BEDROCK_EMBED_MODEL_ID``
@@ -89,27 +91,34 @@ class BedrockEmbeddings(Embedder):
             client_kwargs["region_name"] = region_name
         self.client = boto3.client("bedrock-runtime", **client_kwargs)
 
+    def _invoke_embedding(self, text: str) -> list[float]:
+        """Invoke the Bedrock embedding model and return the embedding vector."""
+        body = json.dumps(
+            {
+                "inputText": text,
+                "dimensions": self.dimensions,
+                "normalize": self.normalize,
+            }
+        )
+        response = self.client.invoke_model(
+            body=body,
+            modelId=self.model_id,
+            accept="application/json",
+            contentType="application/json",
+        )
+        response_body_stream = response.get("body")
+        if response_body_stream is None:
+            raise ValueError("No body in Bedrock API response")
+        response_body = json.loads(response_body_stream.read())
+        embedding = response_body.get("embedding")
+        if not embedding:
+            raise ValueError("No embedding returned from Bedrock API")
+        return list(embedding)
+
     @rate_limit_handler
     def embed_query(self, text: str, **kwargs: Any) -> list[float]:
         try:
-            body = json.dumps(
-                {
-                    "inputText": text,
-                    "dimensions": self.dimensions,
-                    "normalize": self.normalize,
-                }
-            )
-            response = self.client.invoke_model(
-                body=body,
-                modelId=self.model_id,
-                accept="application/json",
-                contentType="application/json",
-            )
-            response_body = json.loads(response["body"].read())
-            embedding = response_body.get("embedding")
-            if not embedding:
-                raise ValueError("No embedding returned from Bedrock API")
-            return list(embedding)
+            return self._invoke_embedding(text)
         except Exception as e:
             raise EmbeddingsGenerationError(
                 f"Failed to generate embedding with Bedrock: {e}"
@@ -117,26 +126,9 @@ class BedrockEmbeddings(Embedder):
 
     @async_rate_limit_handler
     async def async_embed_query(self, text: str, **kwargs: Any) -> list[float]:
-        # boto3 does not have native async support; run synchronously
         try:
-            body = json.dumps(
-                {
-                    "inputText": text,
-                    "dimensions": self.dimensions,
-                    "normalize": self.normalize,
-                }
-            )
-            response = self.client.invoke_model(
-                body=body,
-                modelId=self.model_id,
-                accept="application/json",
-                contentType="application/json",
-            )
-            response_body = json.loads(response["body"].read())
-            embedding = response_body.get("embedding")
-            if not embedding:
-                raise ValueError("No embedding returned from Bedrock API")
-            return list(embedding)
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(None, self._invoke_embedding, text)
         except Exception as e:
             raise EmbeddingsGenerationError(
                 f"Failed to generate embedding with Bedrock: {e}"

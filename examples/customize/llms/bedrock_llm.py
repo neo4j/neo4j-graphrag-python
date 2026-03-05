@@ -13,7 +13,9 @@ try:
     res = llm.invoke("say something")
     print(res.content)
 except NoCredentialsError:
-    print("AWS credentials not found. Run 'aws configure' or set environment variables.")
+    print(
+        "AWS credentials not found. Run 'aws configure' or set environment variables."
+    )
 except PartialCredentialsError as e:
     print(f"Incomplete AWS credentials: {e}")
 except ClientError as e:
