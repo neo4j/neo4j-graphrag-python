@@ -5,6 +5,7 @@
 ### Changed
 
 - Updated examples, default values, and documentation to use `gpt-4.1` / `gpt-4.1-mini` instead of deprecated GPT-4* models (e.g. `gpt-4o`, `gpt-4`).
+- **Breaking**: `SimpleKGPipeline` now automatically enables structured output when the `LLMInterface` supports structured output (so far, `OpenAILLM`, `VertexAILLM`). This takes precedence over any `response_format` configured in `model_params` (e.g., `{"type": "json_object"}`), which will be ignored.
 
 ## 1.13.1
 
