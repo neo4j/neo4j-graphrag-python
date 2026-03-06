@@ -43,7 +43,7 @@ async def main() -> Neo4jGraph:
     llm = VertexAILLM(model_name="gemini-2.5-flash")
 
     # llm = OpenAILLM(
-    #     model_name="gpt-4o-mini",
+    #     model_name="gpt-5-mini",
     #     model_params={"temperature": 0}
     # )
 

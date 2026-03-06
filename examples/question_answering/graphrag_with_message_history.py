@@ -43,7 +43,7 @@ retriever = VectorCypherRetriever(
     neo4j_database=DATABASE,
 )
 
-llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0})
+llm = OpenAILLM(model_name="gpt-5", model_params={"temperature": 0})
 
 rag = GraphRAG(
     retriever=retriever,

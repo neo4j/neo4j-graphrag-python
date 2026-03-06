@@ -68,7 +68,7 @@ async def extract_and_save_schema() -> None:
 
     # Create the LLM instance
     llm = OpenAILLM(
-        model_name="gpt-4o",
+        model_name="gpt-5",
         model_params=llm_model_params,
     )
 

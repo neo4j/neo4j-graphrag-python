@@ -347,7 +347,7 @@ Below is an example of configuring an LLM in a JSON configuration file:
         "llm_config": {
             "class_": "OpenAILLM",
             "params_": {
-                "mode_name": "gpt-4o",
+                "model_name": "gpt-5",
                 "api_key": {
                     "resolver_": "ENV",
                     "var_": "OPENAI_API_KEY",
@@ -368,7 +368,7 @@ And the equivalent YAML:
     llm_config:
       class_: OpenAILLM
       params_:
-        model_name: gpt-4o
+        model_name: gpt-5
         api_key:
           resolver_: ENV
           var_: OPENAI_API_KEY
@@ -841,7 +841,7 @@ Instead of manually defining the schema, you can use the `SchemaFromTextExtracto
     # Instantiate the automatic schema extractor component
     schema_extractor = SchemaFromTextExtractor(
         llm=OpenAILLM(
-            model_name="gpt-4o",
+            model_name="gpt-5",
             model_params={
                 "max_tokens": 2000,
                 "response_format": {"type": "json_object"},
@@ -877,7 +877,7 @@ For improved reliability with :ref:`OpenAILLM <openaillm>` or :ref:`VertexAILLM 
     from neo4j_graphrag.experimental.components.schema import SchemaFromTextExtractor
     from neo4j_graphrag.llm import OpenAILLM
 
-    llm = OpenAILLM(model_name="gpt-4o-mini", model_params={"temperature": 0})
+    llm = OpenAILLM(model_name="gpt-5-mini", model_params={"temperature": 0})
     schema_extractor = SchemaFromTextExtractor(
         llm=llm,
         use_structured_output=True
@@ -954,7 +954,7 @@ It can be used in this way:
 
     extractor = LLMEntityRelationExtractor(
         llm=OpenAILLM(
-            model_name="gpt-4o",
+            model_name="gpt-5",
             model_params={
                 "max_tokens": 1000,
                 "response_format": {"type": "json_object"},
@@ -987,7 +987,7 @@ For improved reliability and type safety with :ref:`OpenAILLM <openaillm>` or :r
     )
     from neo4j_graphrag.llm import OpenAILLM
 
-    llm = OpenAILLM(model_name="gpt-4o-mini", model_params={"temperature": 0})
+    llm = OpenAILLM(model_name="gpt-5-mini", model_params={"temperature": 0})
     extractor = LLMEntityRelationExtractor(llm=llm, use_structured_output=True)
 
 .. note::

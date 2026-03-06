@@ -35,7 +35,7 @@ def get_mock_ollama() -> MagicMock:
 @patch("builtins.__import__", side_effect=ImportError)
 def test_ollama_llm_missing_dependency(mock_import: Mock) -> None:
     with pytest.raises(ImportError):
-        OllamaLLM(model_name="gpt-4o")
+        OllamaLLM(model_name="llama3.2")
 
 
 @patch("builtins.__import__")

@@ -102,7 +102,7 @@ async def test_v1_without_structured_output() -> GraphSchema:
 
     # Initialize LLM with response_format for JSON mode (V1 approach)
     llm = OpenAILLM(
-        model_name="gpt-4o-mini",
+        model_name="gpt-5-mini",
         model_params={
             "temperature": 0,
             "response_format": {"type": "json_object"},  # JSON mode for V1
@@ -147,7 +147,7 @@ async def test_v2_with_structured_output() -> GraphSchema:
     print("=" * 60)
 
     # Initialize LLM - NO response_format in constructor for V2!
-    llm = OpenAILLM(model_name="gpt-4o-mini", model_params={"temperature": 0})
+    llm = OpenAILLM(model_name="gpt-5-mini", model_params={"temperature": 0})
 
     # For VertexAI V2, use:
     # llm = VertexAILLM(

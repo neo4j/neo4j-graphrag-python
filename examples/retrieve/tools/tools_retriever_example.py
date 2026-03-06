@@ -251,7 +251,7 @@ def main() -> None:
     # Create an OpenAI LLM
     llm = OpenAILLM(
         api_key=os.getenv("OPENAI_API_KEY"),
-        model_name="gpt-4o",
+        model_name="gpt-5",
         model_params={
             "temperature": 0.2,
         },

@@ -119,7 +119,7 @@ embedder = OpenAIEmbeddings(model="text-embedding-3-large")
 
 # Instantiate the LLM
 llm = OpenAILLM(
-    model_name="gpt-4o",
+    model_name="gpt-5",
     model_params={
         "max_tokens": 2000,
         "response_format": {"type": "json_object"},
@@ -260,7 +260,7 @@ embedder = OpenAIEmbeddings(model="text-embedding-3-large")
 retriever = VectorRetriever(driver, INDEX_NAME, embedder)
 
 # Instantiate the LLM
-llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0})
+llm = OpenAILLM(model_name="gpt-5", model_params={"temperature": 0})
 
 # Instantiate the RAG pipeline
 rag = GraphRAG(retriever=retriever, llm=llm)

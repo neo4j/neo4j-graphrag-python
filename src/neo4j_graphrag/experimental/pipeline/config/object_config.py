@@ -20,7 +20,7 @@ Nomenclature in this file:
 - `*Config` models are used to represent "things" as dict to be used in a config file.
     e.g.:
     - neo4j.Driver => {"uri": "", "user": "", "password": ""}
-    - LLMInterface => {"class_": "OpenAI", "params_": {"model_name": "gpt-4o"}}
+    - LLMInterface => {"class_": "OpenAI", "params_": {"model_name": "gpt-5"}}
 - `*Type` models are wrappers around an object and a 'Config' the object can be created
     from. They are used to allow the instantiation of "PipelineConfig" either from
     instantiated objects (when used in code) and from a config dict (when used to

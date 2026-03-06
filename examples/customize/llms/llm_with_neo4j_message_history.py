@@ -20,7 +20,7 @@ INDEX = "moviePlotsEmbedding"
 # set api key here on in the OPENAI_API_KEY env var
 api_key = None
 
-llm = OpenAILLM(model_name="gpt-4o", api_key=api_key)
+llm = OpenAILLM(model_name="gpt-5", api_key=api_key)
 
 questions = [
     "What are some movies Tom Hanks starred in?",

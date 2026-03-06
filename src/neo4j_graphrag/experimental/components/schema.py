@@ -623,7 +623,7 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         from neo4j_graphrag.experimental.components.schema import SchemaFromTextExtractor
         from neo4j_graphrag.llm import OpenAILLM
 
-        llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0})
+        llm = OpenAILLM(model_name="gpt-5", model_params={"temperature": 0})
         extractor = SchemaFromTextExtractor(llm=llm)
 
     Example with V2 (structured output):
@@ -633,7 +633,7 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         from neo4j_graphrag.experimental.components.schema import SchemaFromTextExtractor
         from neo4j_graphrag.llm import OpenAILLM
 
-        llm = OpenAILLM(model_name="gpt-4o")
+        llm = OpenAILLM(model_name="gpt-5")
         extractor = SchemaFromTextExtractor(llm=llm, use_structured_output=True)
     """
 

@@ -45,7 +45,7 @@ In practice, it's done with only a few lines of code:
 
     # 3. LLM
     # Note: the OPENAI_API_KEY must be in the env vars
-    llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0})
+    llm = OpenAILLM(model_name="gpt-5", model_params={"temperature": 0})
 
     # Initialize the RAG pipeline
     rag = GraphRAG(retriever=retriever, llm=llm)
@@ -94,7 +94,7 @@ It is possible to use Azure OpenAI switching to the `AzureOpenAILLM` class:
 
     from neo4j_graphrag.llm import AzureOpenAILLM
     llm = AzureOpenAILLM(
-        model_name="gpt-4o",
+        model_name="gpt-5",
         azure_endpoint="https://example-endpoint.openai.azure.com/",  # update with your endpoint
         api_version="2024-06-01",  # update appropriate version
         api_key="...",  # api_key is optional and can also be set with OPENAI_API_KEY env var
@@ -317,7 +317,7 @@ Structured output enables LLMs to return responses conforming to a predefined sc
         age: int
         occupation: str
 
-    llm = OpenAILLM(model_name="gpt-4o-mini")
+    llm = OpenAILLM(model_name="gpt-5-mini")
 
     # V2: Pass response_format to invoke()
     messages = [LLMMessage(role="user", content="Extract: John is a 30 year old engineer.")]
@@ -326,7 +326,7 @@ Structured output enables LLMs to return responses conforming to a predefined sc
 
     # V1: Use constructor parameters for standard JSON mode
     llm_v1 = OpenAILLM(
-        model_name="gpt-4o-mini",
+        model_name="gpt-5-mini",
         model_params={"response_format": {"type": "json_object"}, "temperature": 0}
     )
     response_v1 = llm_v1.invoke("Extract person in JSON format: John is 30 years old.")
@@ -341,7 +341,7 @@ OpenAI supports Pydantic models, JSON schemas, and JSON object mode. **Important
     from neo4j_graphrag.llm import OpenAILLM
     from neo4j_graphrag.types import LLMMessage
 
-    llm = OpenAILLM(model_name="gpt-4o-mini")
+    llm = OpenAILLM(model_name="gpt-5-mini")
 
     # JSON schema
     json_schema = {
@@ -396,7 +396,7 @@ Rate limiting is enabled by default for all LLM instances with the following con
     from neo4j_graphrag.llm import OpenAILLM
 
     # Rate limiting is automatically enabled
-    llm = OpenAILLM(model_name="gpt-4o")
+    llm = OpenAILLM(model_name="gpt-5")
 
     # The LLM will automatically retry on rate limit errors
     response = llm.invoke("Hello, world!")
@@ -412,7 +412,7 @@ Rate limiting is enabled by default for all LLM instances with the following con
 
         # Customize rate limiting parameters
         llm = OpenAILLM(
-            model_name="gpt-4o",
+            model_name="gpt-5",
             rate_limit_handler=RetryRateLimitHandler(
                 max_attempts=10,    # Increase max retry attempts
                 min_wait=2.0,       # Increase minimum wait time
@@ -1001,7 +1001,7 @@ LLMs can be different.
     driver = GraphDatabase.driver(URI, auth=AUTH)
 
     # Create LLM object
-    llm = OpenAILLM(model_name="gpt-4o")
+    llm = OpenAILLM(model_name="gpt-5")
 
     # (Optional) Specify your own Neo4j schema
     neo4j_schema = """
@@ -1076,7 +1076,7 @@ The ToolsRetriever uses an LLM to intelligently select and execute appropriate t
     driver = GraphDatabase.driver(URI, auth=AUTH)
 
     # Create LLM object
-    llm = OpenAILLM(model_name="gpt-4o")
+    llm = OpenAILLM(model_name="gpt-5")
 
     # Create embedder
     embedder = OpenAIEmbeddings(model="text-embedding-3-large")
@@ -1262,7 +1262,7 @@ The ToolsRetriever integrates seamlessly with the GraphRAG pipeline for automate
     driver = GraphDatabase.driver(URI, auth=AUTH)
 
     # Create LLM and embedder
-    llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0})
+    llm = OpenAILLM(model_name="gpt-5", model_params={"temperature": 0})
     embedder = OpenAIEmbeddings(model="text-embedding-3-large")
 
     # Create retrievers to use as tools

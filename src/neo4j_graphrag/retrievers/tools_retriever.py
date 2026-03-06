@@ -42,7 +42,7 @@ class ToolsRetriever(Retriever):
         from neo4j_graphrag.embeddings import OpenAIEmbeddings
 
         driver = neo4j.GraphDatabase.driver("neo4j://localhost:7687", auth=("neo4j", "password"))
-        llm = OpenAILLM(model_name="gpt-4", api_key="your-api-key")
+        llm = OpenAILLM(model_name="gpt-5", api_key="your-api-key")
         embedder = OpenAIEmbeddings(model="text-embedding-3-small", api_key="your-api-key")
 
         # Create retrievers and convert them to tools
