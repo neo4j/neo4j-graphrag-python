@@ -48,7 +48,9 @@ def driver() -> Generator[Any, Any, Any]:
 
 @pytest.fixture(scope="function")
 def llm() -> MagicMock:
-    return MagicMock(spec=LLMInterface)
+    mock = MagicMock(spec=LLMInterface)
+    mock.supports_structured_output = False
+    return mock
 
 
 @pytest.fixture
