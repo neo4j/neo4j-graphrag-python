@@ -18,11 +18,6 @@ llm_config:
       resolver_: ENV
       var_: OPENAI_API_KEY
     model_name: gpt-5
-    model_params:
-      temperature: 0
-      max_tokens: 2000
-      response_format:
-        type: json_object
 embedder_config:
   class_: OpenAIEmbeddings
   params_:

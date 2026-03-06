@@ -25,7 +25,6 @@ logging.basicConfig()
 logging.getLogger("neo4j_graphrag").setLevel(logging.DEBUG)
 # logging.getLogger("neo4j_graphrag").setLevel(logging.INFO)
 
-
 # Neo4j db infos
 URI = "neo4j://localhost:7687"
 AUTH = ("neo4j", "password")
@@ -42,7 +41,11 @@ NODE_TYPES: list[EntityInputType] = [
     "Person",
     # ... or with a dict if more details are needed,
     # such as a description:
-    {"label": "House", "description": "Family the person belongs to"},
+    {
+        "label": "House",
+        "description": "Family the person belongs to",
+        "properties": [{"name": "name", "type": "STRING"}],
+    },
     # or a list of properties the LLM will try to attach to the entity:
     {"label": "Planet", "properties": [{"name": "weather", "type": "STRING"}]},
 ]
@@ -93,10 +96,6 @@ async def define_and_run_pipeline(
 async def main() -> PipelineResult:
     llm = OpenAILLM(
         model_name="gpt-5",
-        model_params={
-            "max_tokens": 2000,
-            "response_format": {"type": "json_object"},
-        },
     )
     with neo4j.GraphDatabase.driver(URI, auth=AUTH) as driver:
         res = await define_and_run_pipeline(driver, llm)
