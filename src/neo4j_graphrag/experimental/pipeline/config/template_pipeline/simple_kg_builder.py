@@ -186,7 +186,11 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         Return SchemaFromTextExtractor for automatic extraction or SchemaBuilder for manual schema.
         """
         if not self.has_user_provided_schema():
-            return SchemaFromTextExtractor(llm=self.get_default_llm())
+            llm = self.get_default_llm()
+            return SchemaFromTextExtractor(
+                llm=llm,
+                use_structured_output=llm.supports_structured_output,
+            )
         return SchemaBuilder()
 
     def _process_schema_with_precedence(self) -> dict[str, Any]:
@@ -218,10 +222,12 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             return schema_dict
 
     def _get_extractor(self) -> EntityRelationExtractor:
+        llm = self.get_default_llm()
         return LLMEntityRelationExtractor(
-            llm=self.get_default_llm(),
+            llm=llm,
             prompt_template=self.prompt_template,
             on_error=self.on_error,
+            use_structured_output=llm.supports_structured_output,
         )
 
     def _get_pruner(self) -> GraphPruning:

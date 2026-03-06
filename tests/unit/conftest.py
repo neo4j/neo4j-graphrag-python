@@ -42,7 +42,9 @@ def embedder() -> MagicMock:
 
 @pytest.fixture(scope="function")
 def llm() -> MagicMock:
-    return MagicMock(spec=LLMInterface)
+    mock = MagicMock(spec=LLMInterface)
+    mock.supports_structured_output = False
+    return mock
 
 
 @pytest.fixture(scope="function")

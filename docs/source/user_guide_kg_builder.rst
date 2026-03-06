@@ -190,6 +190,24 @@ To write to a non-default Neo4j database, specify the database name using this p
         # ...
     )
 
+Structured Output
+-----------------
+
+When the configured LLM declares support for structured output (i.e., ``supports_structured_output = True``,
+which is the case for :ref:`OpenAILLM <openaillm>` and :ref:`VertexAILLM <vertexaillm>`),
+``SimpleKGPipeline`` automatically enables structured output for both entity extraction and
+(when auto-extracting) schema generation. This enforces schema conformance at the API level,
+improving reliability over prompt-based JSON parsing.
+
+.. note::
+
+    Structured output takes precedence over any ``response_format`` set in ``model_params``
+    when instantiating the LLM. For example, ``{"type": "json_object"}`` will be ignored
+    in favour of structured output for supported LLMs.
+
+For more details on how structured output works at the component level, see
+:ref:`Using Structured Output <using-structured-output>` in the Entity and Relation Extractor section.
+
 Using Custom Components
 -----------------------
 
@@ -354,8 +372,7 @@ Below is an example of configuring an LLM in a JSON configuration file:
                 },
                 "model_params": {
                     "temperature": 0,
-                    "max_tokens": 2000,
-                    "response_format": {"type": "json_object"}
+                    "max_tokens": 2000
                 }
             }
         }
@@ -375,8 +392,6 @@ And the equivalent YAML:
         model_params:
           temperature: 0
           max_tokens: 2000
-          response_format:
-            type: json_object
 
 - The `class_` key specifies the path to the class to be instantiated.
 - The `params_` key contains the parameters to be passed to the class constructor.
@@ -968,12 +983,14 @@ It can be used in this way:
 
     Using `OpenAILLM` requires the `openai` Python client. You can install it with `pip install "neo4j_graphrag[openai]"`.
 
-.. warning::
+.. note::
 
-    The `LLMEntityRelationExtractor` works better if `"response_format": {"type": "json_object"}` is in the model parameters.
+    For :ref:`OpenAILLM <openaillm>` and :ref:`VertexAILLM <vertexaillm>`, structured output is recommended over ``"response_format": {"type": "json_object"}`` for improved reliability. See :ref:`Using Structured Output <using-structured-output>` below.
 
 The LLM to use can be customized, the only constraint is that it obeys the :ref:`LLMInterface <llminterface>`.
 
+
+.. _using-structured-output:
 
 Using Structured Output
 -----------------------

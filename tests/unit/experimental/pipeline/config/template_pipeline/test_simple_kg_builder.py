@@ -132,6 +132,21 @@ def test_simple_kg_pipeline_config_automatic_schema(
     schema = config._get_schema()
     assert isinstance(schema, SchemaFromTextExtractor)
     assert schema._llm == llm
+    assert schema.use_structured_output is False
+
+
+@patch(
+    "neo4j_graphrag.experimental.pipeline.config.template_pipeline.simple_kg_builder.SimpleKGPipelineConfig.get_default_llm"
+)
+def test_simple_kg_pipeline_config_automatic_schema_structured_output(
+    mock_llm: Mock, llm: LLMInterface
+) -> None:
+    llm.supports_structured_output = True
+    mock_llm.return_value = llm
+    config = SimpleKGPipelineConfig()
+    schema = config._get_schema()
+    assert isinstance(schema, SchemaFromTextExtractor)
+    assert schema.use_structured_output is True
 
 
 def test_simple_kg_pipeline_config_manual_schema() -> None:
@@ -176,6 +191,21 @@ def test_simple_kg_pipeline_config_extractor(mock_llm: Mock, llm: LLMInterface) 
     assert extractor.llm == llm
     assert extractor.on_error == OnError.IGNORE
     assert extractor.prompt_template.template == "my template {text}"
+    assert extractor.use_structured_output is False
+
+
+@patch(
+    "neo4j_graphrag.experimental.pipeline.config.template_pipeline.simple_kg_builder.SimpleKGPipelineConfig.get_default_llm"
+)
+def test_simple_kg_pipeline_config_extractor_structured_output(
+    mock_llm: Mock, llm: LLMInterface
+) -> None:
+    llm.supports_structured_output = True
+    mock_llm.return_value = llm
+    config = SimpleKGPipelineConfig()
+    extractor = config._get_extractor()
+    assert isinstance(extractor, LLMEntityRelationExtractor)
+    assert extractor.use_structured_output is True
 
 
 @patch(
