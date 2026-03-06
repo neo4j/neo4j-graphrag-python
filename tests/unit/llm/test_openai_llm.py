@@ -50,7 +50,7 @@ def create_selective_import_mock(mock_openai: MagicMock) -> Callable[..., Any]:
 @patch("builtins.__import__", side_effect=ImportError)
 def test_openai_llm_missing_dependency(_mock_import: Mock) -> None:
     with pytest.raises(ImportError):
-        OpenAILLM(model_name="gpt-4o")
+        OpenAILLM(model_name="gpt-5")
 
 
 @patch("builtins.__import__")
@@ -338,7 +338,7 @@ def test_openai_llm_invoke_with_tools_error(mock_import: Mock, test_tool: Tool) 
 @patch("builtins.__import__", side_effect=ImportError)
 def test_azure_openai_llm_missing_dependency(_mock_import: Mock) -> None:
     with pytest.raises(ImportError):
-        AzureOpenAILLM(model_name="gpt-4o")
+        AzureOpenAILLM(model_name="gpt-5")
 
 
 @patch("builtins.__import__")

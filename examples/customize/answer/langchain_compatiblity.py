@@ -33,7 +33,7 @@ retriever = VectorCypherRetriever(
     neo4j_database=DATABASE,
 )
 
-llm = ChatOpenAI(model="gpt-4o", temperature=0)
+llm = ChatOpenAI(model="gpt-5", temperature=0)
 
 rag = GraphRAG(
     retriever=retriever,

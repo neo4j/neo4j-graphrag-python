@@ -13,7 +13,7 @@ AUTH = ("recommendations", "recommendations")
 DATABASE = "recommendations"
 
 # Create LLM object
-llm = OpenAILLM(model_name="gpt-4o", model_params={"temperature": 0})
+llm = OpenAILLM(model_name="gpt-5", model_params={"temperature": 0})
 
 # (Optional) Specify your own Neo4j schema
 neo4j_schema = """

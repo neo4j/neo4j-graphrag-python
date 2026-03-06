@@ -51,7 +51,7 @@ print("=" * 60)
 
 # V1: Use model_params with response_format for JSON object mode
 llm_v1 = OpenAILLM(
-    model_name="gpt-4o-mini",
+    model_name="gpt-5-mini",
     model_params={"response_format": {"type": "json_object"}, "temperature": 0},
 )
 
@@ -73,7 +73,7 @@ print("V2: Structured output with Pydantic model")
 print("=" * 60)
 
 # V2: Use clean LLM without constructor params
-llm_v2 = OpenAILLM(model_name="gpt-4o-mini")
+llm_v2 = OpenAILLM(model_name="gpt-5-mini")
 
 # V2 uses list of LLMMessage for input
 messages = [
@@ -99,7 +99,7 @@ print("V2 Alternative: Structured output with JSON Schema")
 print("=" * 60)
 
 # V2: Use clean LLM without constructor params
-llm_v2 = OpenAILLM(model_name="gpt-4o-mini")
+llm_v2 = OpenAILLM(model_name="gpt-5-mini")
 
 # V2 uses list of LLMMessage for input
 messages = [

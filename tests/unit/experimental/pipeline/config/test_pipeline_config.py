@@ -130,7 +130,7 @@ def test_abstract_pipeline_config_llm_config_is_a_dict_with_params_(
 ) -> None:
     mock_llm_config.return_value = "text"
     config = AbstractPipelineConfig.model_validate(
-        {"llm_config": {"class_": "OpenAILLM", "params_": {"model_name": "gpt-4o"}}}
+        {"llm_config": {"class_": "OpenAILLM", "params_": {"model_name": "gpt-5"}}}
     )
     assert isinstance(config.llm_config, dict)
     assert "default" in config.llm_config
@@ -147,7 +147,7 @@ def test_abstract_pipeline_config_llm_config_is_a_dict_with_names(
     config = AbstractPipelineConfig.model_validate(
         {
             "llm_config": {
-                "my_llm": {"class_": "OpenAILLM", "params_": {"model_name": "gpt-4o"}}
+                "my_llm": {"class_": "OpenAILLM", "params_": {"model_name": "gpt-5"}}
             }
         }
     )

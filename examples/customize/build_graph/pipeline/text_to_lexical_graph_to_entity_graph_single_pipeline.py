@@ -173,7 +173,7 @@ async def main(driver: neo4j.Driver) -> PipelineResult:
             and quantum mechanics. He worked for many different institutions, including
             the University of Bern in Switzerland and the University of Oxford."""
     llm = OpenAILLM(
-        model_name="gpt-4o",
+        model_name="gpt-5",
         model_params={
             "max_tokens": 1000,
             "response_format": {"type": "json_object"},

@@ -134,13 +134,13 @@ def test_llm_config() -> None:
     config = LLMConfig.model_validate(
         {
             "class_": "OpenAILLM",
-            "params_": {"model_name": "gpt-4o", "api_key": "my-api-key"},
+            "params_": {"model_name": "gpt-5", "api_key": "my-api-key"},
         }
     )
     assert config.class_ == "OpenAILLM"
     assert config.get_module() == "neo4j_graphrag.llm"
     assert config.get_interface() == LLMInterface
-    assert config.params_ == {"model_name": "gpt-4o", "api_key": "my-api-key"}
+    assert config.params_ == {"model_name": "gpt-5", "api_key": "my-api-key"}
     d = config.parse()
     assert isinstance(d, OpenAILLM)
 
@@ -154,7 +154,7 @@ def test_llm_type_with_config() -> None:
     llm_type = LLMType(
         LLMConfig(
             class_="OpenAILLM",
-            params_={"model_name": "gpt-4o", "api_key": "my-api-key"},
+            params_={"model_name": "gpt-5", "api_key": "my-api-key"},
         )
     )
     llm = llm_type.parse()

@@ -9,7 +9,7 @@ from neo4j_graphrag.llm import LLMResponse, OpenAILLM
 api_key = None
 
 llm = OpenAILLM(
-    model_name="gpt-4o",
+    model_name="gpt-5",
     api_key=api_key,
 )
 

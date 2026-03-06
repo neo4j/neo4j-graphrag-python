@@ -143,7 +143,7 @@ async def define_and_run_pipeline(
 
 async def main() -> PipelineResult:
     llm = OpenAILLM(
-        model_name="gpt-4o",
+        model_name="gpt-5",
         model_params={
             "max_tokens": 1000,
             "response_format": {"type": "json_object"},
