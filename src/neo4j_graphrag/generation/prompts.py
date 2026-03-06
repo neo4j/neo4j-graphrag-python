@@ -214,22 +214,28 @@ IMPORTANT RULES:
 1. Return only abstract schema information, not concrete instances.
 2. Use singular PascalCase labels for node types (e.g., Person, Company, Product).
 3. Use UPPER_SNAKE_CASE labels for relationship types (e.g., WORKS_FOR, MANAGES).
-4. Include property definitions only when the type can be confidently inferred, otherwise omit them.
+4. PROPERTY EXTRACTION:
+    4.1 Analyze each node type and identify properties that would meaningfully identify or describe instances of that type (e.g., name, identifier, key attributes).
+    4.2 Consider what attributes are explicitly mentioned or strongly implied in the text for each node type.
+    4.3 A node type with no properties should be rare — look carefully for attributes in the text.
+    4.4 If a property is supported by the input text but you cannot confidently determine its type, use type STRING (do not omit solely due to type uncertainty). If a property is not supported by the input text, omit it.
+    4.5 Do not remove a node type just because you cannot confidently extract any properties for it.
 5. When defining patterns, ensure that every node label and relationship label mentioned exists in your lists of node types and relationship types.
 6. Do not create node types that aren't clearly mentioned in the text.
-7. Keep your schema minimal and focused on clearly identifiable patterns in the text.
-8. UNIQUENESS CONSTRAINTS:
-8.1 UNIQUENESS is optional; each node_type may or may not have exactly one uniqueness constraint.
-8.2 Only use properties that seem to not have too many missing values in the sample.
-8.3 Constraints reference node_types by label and specify which property is unique.
-8.4 If a property appears in a uniqueness constraint it MUST also appear in the corresponding node_type as a property.
-9. REQUIRED PROPERTIES:
-9.1 Mark a property as "required": true if every instance of that node/relationship type MUST have this property (non-nullable).
-9.2 Mark a property as "required": false if the property is optional and may be absent on some instances.
-9.3 Properties that are identifiers, names, or essential characteristics are typically required.
-9.4 Properties that are supplementary information (phone numbers, descriptions, metadata) are typically optional.
-9.5 When uncertain, default to "required": false.
-9.6 If a property has a UNIQUENESS constraint, it MUST be marked as "required": true.
+7. Model intermediate events or actions (e.g., transactions, encounters, orders, events, reports) as node types, not as relationships, when they are mentioned.
+8. Keep your schema minimal, but do not collapse clearly distinct concepts into a single node type when they are mentioned. Do not default to attaching all information directly to a single subject node; preserve intermediate entities when mentioned.
+9. UNIQUENESS CONSTRAINTS:
+    9.1 UNIQUENESS is optional; each node_type may or may not have exactly one uniqueness constraint.
+    9.2 Only use properties that seem to not have too many missing values in the sample.
+    9.3 Constraints reference node_types by label and specify which property is unique.
+    9.4 If a property appears in a uniqueness constraint it MUST also appear in the corresponding node_type as a property.
+10. REQUIRED PROPERTIES:
+    10.1 Mark a property as "required": true if every instance of that node/relationship type MUST have this property (non-nullable).
+    10.2 Mark a property as "required": false if the property is optional and may be absent on some instances.
+    10.3 Properties that are identifiers, names, or essential characteristics are typically required.
+    10.4 Properties that are supplementary information (phone numbers, descriptions, metadata) are typically optional.
+    10.5 When uncertain, default to "required": false.
+    10.6 If a property has a UNIQUENESS constraint, it MUST be marked as "required": true.
 
 Accepted property types are: BOOLEAN, DATE, DURATION, FLOAT, INTEGER, LIST,
 LOCAL_DATETIME, LOCAL_TIME, POINT, STRING, ZONED_DATETIME, ZONED_TIME.
