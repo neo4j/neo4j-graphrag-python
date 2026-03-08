@@ -193,3 +193,39 @@ async def test_knowledge_graph_builder_with_lexical_graph_config(_: Mock) -> Non
         assert pipe_inputs["extractor"]["lexical_graph_config"] == lexical_graph_config
         assert pipe_inputs["extractor"]["document_info"] is not None
         assert pipe_inputs["extractor"]["document_info"]["path"] == "document.txt"
+
+
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    return_value=((5, 23, 0), False, False),
+)
+def test_simple_kg_pipeline_accepts_use_structured_output(_: Mock) -> None:
+    llm = MagicMock(spec=LLMInterface)
+    llm.supports_structured_output = True
+    driver = MagicMock(spec=neo4j.Driver)
+    embedder = MagicMock(spec=Embedder)
+
+    # Should not raise
+    kg_builder = SimpleKGPipeline(
+        llm=llm,
+        driver=driver,
+        embedder=embedder,
+        from_pdf=False,
+        use_structured_output=True,
+    )
+    assert kg_builder is not None
+
+
+def test_simple_kg_pipeline_use_structured_output_unsupported_llm() -> None:
+    llm = MagicMock(spec=LLMInterface)
+    llm.supports_structured_output = False
+    driver = MagicMock(spec=neo4j.Driver)
+    embedder = MagicMock(spec=Embedder)
+
+    with pytest.raises(ValueError):
+        SimpleKGPipeline(
+            llm=llm,
+            driver=driver,
+            embedder=embedder,
+            use_structured_output=True,
+        )

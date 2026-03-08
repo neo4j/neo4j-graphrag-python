@@ -179,6 +179,39 @@ def test_simple_kg_pipeline_config_extractor(mock_llm: Mock, llm: LLMInterface) 
 
 
 @patch(
+    "neo4j_graphrag.experimental.pipeline.config.template_pipeline.simple_kg_builder.SimpleKGPipelineConfig.get_default_llm"
+)
+def test_simple_kg_pipeline_config_extractor_with_structured_output(
+    mock_llm: Mock, llm: LLMInterface
+) -> None:
+    llm.supports_structured_output = True
+    mock_llm.return_value = llm
+    config = SimpleKGPipelineConfig(
+        on_error="IGNORE",  # type: ignore
+        use_structured_output=True,
+    )
+    extractor = config._get_extractor()
+    assert isinstance(extractor, LLMEntityRelationExtractor)
+    assert extractor.use_structured_output is True
+
+
+@patch(
+    "neo4j_graphrag.experimental.pipeline.config.template_pipeline.simple_kg_builder.SimpleKGPipelineConfig.get_default_llm"
+)
+def test_simple_kg_pipeline_config_schema_with_structured_output(
+    mock_llm: Mock, llm: LLMInterface
+) -> None:
+    llm.supports_structured_output = True
+    mock_llm.return_value = llm
+    config = SimpleKGPipelineConfig(
+        use_structured_output=True,
+    )
+    schema = config._get_schema()
+    assert isinstance(schema, SchemaFromTextExtractor)
+    assert schema.use_structured_output is True
+
+
+@patch(
     "neo4j_graphrag.experimental.components.kg_writer.get_version",
     return_value=((5, 23, 0), False, False),
 )

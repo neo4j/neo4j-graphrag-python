@@ -6,6 +6,10 @@
 
 - Updated examples, default values, and documentation to use `gpt-4.1` / `gpt-4.1-mini` instead of deprecated GPT-4* models (e.g. `gpt-4o`, `gpt-4`).
 
+### Added
+
+- Exposed `use_structured_output` parameter in `SimpleKGPipeline` constructor for enabling structured output in entity extraction and automatic schema extraction with supported LLMs (OpenAI, VertexAI).
+
 ## 1.13.1
 
 - Fixed invalid lexical graph relationships causing "Relationship references unknown start node" errors during parquet import when nodes are pruned.

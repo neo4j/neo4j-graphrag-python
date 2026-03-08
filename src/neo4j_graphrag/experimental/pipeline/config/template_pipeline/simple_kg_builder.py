@@ -94,6 +94,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     perform_entity_resolution: bool = True
     lexical_graph_config: Optional[LexicalGraphConfig] = None
     neo4j_database: Optional[str] = None
+    use_structured_output: bool = False
 
     pdf_loader: Optional[ComponentType] = None
     kg_writer: Optional[ComponentType] = None
@@ -186,7 +187,10 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         Return SchemaFromTextExtractor for automatic extraction or SchemaBuilder for manual schema.
         """
         if not self.has_user_provided_schema():
-            return SchemaFromTextExtractor(llm=self.get_default_llm())
+            return SchemaFromTextExtractor(
+                llm=self.get_default_llm(),
+                use_structured_output=self.use_structured_output,
+            )
         return SchemaBuilder()
 
     def _process_schema_with_precedence(self) -> dict[str, Any]:
@@ -222,6 +226,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             llm=self.get_default_llm(),
             prompt_template=self.prompt_template,
             on_error=self.on_error,
+            use_structured_output=self.use_structured_output,
         )
 
     def _get_pruner(self) -> GraphPruning:

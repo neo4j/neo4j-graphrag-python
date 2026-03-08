@@ -162,6 +162,26 @@ They are also accessible via the `SimpleKGPipeline` interface.
         # ...
     )
 
+Structured Output
+-----------------
+
+When using an LLM that supports structured output (such as OpenAI or VertexAI),
+you can enable it to improve the reliability of entity extraction and automatic
+schema extraction:
+
+.. code:: python
+
+    kg_builder = SimpleKGPipeline(
+        # ...
+        use_structured_output=True,
+        # ...
+    )
+
+.. note::
+
+    Structured output is only supported by LLMs that have ``supports_structured_output=True``
+    (currently ``OpenAILLM`` and ``VertexAILLM``). Using it with an unsupported LLM will raise an error.
+
 Skip Entity Resolution
 ----------------------
 
@@ -479,7 +499,8 @@ within the configuration file.
         },
         "lexical_graph_config": {
             "chunk_node_label": "TextPart"
-        }
+        },
+        "use_structured_output": false
     }
 
 
@@ -520,6 +541,7 @@ or in YAML:
         - ["House", "RULES", "Planet"]
     lexical_graph_config:
         chunk_node_label: TextPart
+    use_structured_output: false
 
 
 It is also possible to further customize components, with a syntax similar to the one
