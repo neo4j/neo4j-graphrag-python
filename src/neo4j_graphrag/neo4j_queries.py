@@ -68,7 +68,9 @@ def _call_subquery_syntax(
     return "CALL { "
 
 
-def upsert_node_query(support_variable_scope_clause: bool) -> str:
+def upsert_node_query(
+    support_variable_scope_clause: bool, support_dynamic_labels: bool = False
+) -> str:
     """Build the Cypher query to upsert a batch of nodes:
     - Create the new node
     - Set its label(s) and properties
@@ -78,12 +80,16 @@ def upsert_node_query(support_variable_scope_clause: bool) -> str:
     call_prefix = _call_subquery_syntax(
         support_variable_scope_clause, variable_list=["n", "row"]
     )
+    if support_dynamic_labels:
+        set_labels = "SET n:$(row.labels) "
+    else:
+        set_labels = "WITH n, row CALL apoc.create.addLabels(n, row.labels) YIELD node WITH node as n, row "
     return (
         "UNWIND $rows AS row "
         "CREATE (n:__KGBuilder__ {__tmp_internal_id: row.id}) "
         "SET n += row.properties "
-        "WITH n, row CALL apoc.create.addLabels(n, row.labels) YIELD node "
-        "WITH node as n, row "
+        f"{set_labels}"
+        "WITH n, row "
         f"{call_prefix} "
         "WITH n, row WHERE row.embedding_properties IS NOT NULL "
         "UNWIND keys(row.embedding_properties) as emb "

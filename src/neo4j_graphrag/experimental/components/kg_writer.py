@@ -36,6 +36,7 @@ from neo4j_graphrag.neo4j_queries import (
 from neo4j_graphrag.utils.version_utils import (
     get_version,
     is_version_5_23_or_above,
+    is_version_5_24_or_above,
 )
 from neo4j_graphrag.utils import driver_config
 
@@ -124,6 +125,7 @@ class Neo4jWriter(KGWriter):
         self._clean_db = clean_db
         version_tuple, _, _ = get_version(self.driver, self.neo4j_database)
         self.is_version_5_23_or_above = is_version_5_23_or_above(version_tuple)
+        self.is_version_5_24_or_above = is_version_5_24_or_above(version_tuple)
 
     def _db_setup(self) -> None:
         self.driver.execute_query("""
@@ -154,7 +156,8 @@ class Neo4jWriter(KGWriter):
         """
         parameters = {"rows": self._nodes_to_rows(nodes, lexical_graph_config)}
         query = upsert_node_query(
-            support_variable_scope_clause=self.is_version_5_23_or_above
+            support_variable_scope_clause=self.is_version_5_23_or_above,
+            support_dynamic_labels=self.is_version_5_24_or_above,
         )
         self.driver.execute_query(
             query,
