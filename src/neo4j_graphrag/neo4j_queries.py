@@ -82,16 +82,14 @@ def upsert_node_query(
     )
     if support_dynamic_labels:
         set_labels = "SET n:$(row.labels) "
-        with_after_labels = ""
     else:
-        set_labels = "WITH n, row CALL apoc.create.addLabels(n, row.labels) YIELD node "
-        with_after_labels = "WITH node as n, row "
+        set_labels = "WITH n, row CALL apoc.create.addLabels(n, row.labels) YIELD node WITH node as n, row "
     return (
         "UNWIND $rows AS row "
         "CREATE (n:__KGBuilder__ {__tmp_internal_id: row.id}) "
         "SET n += row.properties "
         f"{set_labels}"
-        f"{with_after_labels}"
+        "WITH n, row "
         f"{call_prefix} "
         "WITH n, row WHERE row.embedding_properties IS NOT NULL "
         "UNWIND keys(row.embedding_properties) as emb "
