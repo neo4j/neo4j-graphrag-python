@@ -339,7 +339,65 @@ async def test_run_is_version_5_23_or_above(_: Mock) -> None:
     await neo4j_writer.run(graph=graph)
 
     driver.execute_query.assert_any_call(
-        upsert_node_query(True),
+        upsert_node_query(True, False),
+        parameters_={
+            "rows": [
+                {
+                    "label": "Label",
+                    "labels": ["Label", "__Entity__"],
+                    "id": "1",
+                    "properties": {},
+                    "embedding_properties": {},
+                }
+            ]
+        },
+        database_=None,
+    )
+    parameters_: dict[str, Any] = {
+        "rows": [
+            {
+                "type": "RELATIONSHIP",
+                "start_node_id": "1",
+                "end_node_id": "2",
+                "properties": {},
+                "embedding_properties": {},
+            }
+        ]
+    }
+    driver.execute_query.assert_any_call(
+        upsert_relationship_query(True),
+        parameters_=parameters_,
+        database_=None,
+    )
+
+
+@pytest.mark.asyncio
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._db_setup",
+    return_value=None,
+)
+async def test_run_is_version_5_24_or_above(_: Mock) -> None:
+    driver = MagicMock()
+    driver.execute_query = Mock(
+        side_effect=(
+            # get_version
+            ([{"versions": ["5.24.0"], "edition": "enterprise"}], None, None),
+            # upsert nodes
+            ([{"element_id": "#1"}], None, None),
+            # upsert relationships
+            (None, None, None),
+        )
+    )
+
+    neo4j_writer = Neo4jWriter(driver=driver)
+
+    node = Neo4jNode(id="1", label="Label")
+    rel = Neo4jRelationship(start_node_id="1", end_node_id="2", type="RELATIONSHIP")
+    graph = Neo4jGraph(nodes=[node], relationships=[rel])
+    await neo4j_writer.run(graph=graph)
+
+    driver.execute_query.assert_any_call(
+        upsert_node_query(True, True),
         parameters_={
             "rows": [
                 {
@@ -372,14 +430,15 @@ async def test_run_is_version_5_23_or_above(_: Mock) -> None:
 
 
 @pytest.mark.parametrize(
-    "description, version, is_5_23_or_above",
+    "description, version, is_5_23_or_above, is_5_24_or_above",
     [
-        ("SemVer, < 5.23", "5.22.0", False),
-        ("SemVer, > 5.23", "5.24.0", True),
-        ("SemVer, < 5.23, Aura", "5.22-aura", False),
-        ("SemVer, > 5.23, Aura", "5.24-aura", True),
-        ("CalVer", "2025.01.0", True),
-        ("CalVer, Aura", "2025.01-aura", True),
+        ("SemVer, < 5.23", "5.22.0", False, False),
+        ("SemVer, == 5.23", "5.23.0", True, False),
+        ("SemVer, > 5.23", "5.24.0", True, True),
+        ("SemVer, < 5.23, Aura", "5.22-aura", False, False),
+        ("SemVer, > 5.23, Aura", "5.24-aura", True, True),
+        ("CalVer", "2025.01.0", True, True),
+        ("CalVer, Aura", "2025.01-aura", True, True),
     ],
 )
 @mock.patch(
@@ -392,6 +451,7 @@ def test_get_version(
     description: str,
     version: str,
     is_5_23_or_above: bool,
+    is_5_24_or_above: bool,
 ) -> None:
     execute_query_mock = MagicMock(
         return_value=(
@@ -407,3 +467,6 @@ def test_get_version(
     assert (
         neo4j_writer.is_version_5_23_or_above is is_5_23_or_above
     ), f"Failed is_version_5_23_or_above test case: {description}"
+    assert (
+        neo4j_writer.is_version_5_24_or_above is is_5_24_or_above
+    ), f"Failed is_version_5_24_or_above test case: {description}"

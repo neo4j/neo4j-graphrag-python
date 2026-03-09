@@ -65,6 +65,23 @@ def is_version_5_23_or_above(version_tuple: tuple[int, ...]) -> bool:
     return version_tuple >= (5, 23, 0)
 
 
+def is_version_5_24_or_above(version_tuple: tuple[int, ...]) -> bool:
+    """
+    Determines if the Neo4j database version is 5.24 or above.
+
+    Dynamic label syntax (SET n:$(labels)) was introduced in Neo4j 5.24,
+    replacing the deprecated apoc.create.addLabels procedure.
+
+    Args:
+        version_tuple (tuple[int, ...]): A tuple of integers representing the database version
+            (major, minor, patch) or (year, month, patch) for later versions.
+
+    Returns:
+        bool: True if the version is 5.24.0 or above, False otherwise.
+    """
+    return version_tuple >= (5, 24, 0)
+
+
 def has_vector_index_support(version_tuple: tuple[int, ...]) -> bool:
     """
     Checks if a Neo4j database supports vector indexing based on its version and platform.
