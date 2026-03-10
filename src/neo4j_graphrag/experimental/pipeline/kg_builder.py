@@ -89,6 +89,7 @@ class SimpleKGPipeline:
         perform_entity_resolution (bool): Merge entities with same label and name. Default: True
         prompt_template (str): A custom prompt template to use for extraction.
         lexical_graph_config (Optional[LexicalGraphConfig], optional): Lexical graph configuration to customize node labels and relationship types in the lexical graph.
+        use_structured_output (bool): Whether to use structured output (LLMInterfaceV2) for entity extraction and automatic schema extraction. Only supported for OpenAILLM and VertexAILLM. Defaults to False.
     """
 
     def __init__(
@@ -115,6 +116,7 @@ class SimpleKGPipeline:
         perform_entity_resolution: bool = True,
         lexical_graph_config: Optional[LexicalGraphConfig] = None,
         neo4j_database: Optional[str] = None,
+        use_structured_output: bool = False,
     ):
         try:
             config = SimpleKGPipelineConfig.model_validate(
@@ -137,6 +139,7 @@ class SimpleKGPipeline:
                     perform_entity_resolution=perform_entity_resolution,
                     lexical_graph_config=lexical_graph_config,
                     neo4j_database=neo4j_database,
+                    use_structured_output=use_structured_output,
                 )
             )
         except (ValidationError, ValueError) as e:
