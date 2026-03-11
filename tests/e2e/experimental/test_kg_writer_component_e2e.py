@@ -227,8 +227,8 @@ async def test_parquet_writer_e2e() -> None:
         assert node_table.num_rows == 2
         assert "name" in node_table.column_names
         assert "age" in node_table.column_names
-        names = node_table.column("name")
-        assert "Alice" in names and "Bob" in names
+        name_values = node_table.column("name").to_pylist()
+        assert "Alice" in name_values and "Bob" in name_values
 
         rel_table = pyarrow.parquet.read_table(rel_file)
         assert rel_table.num_rows == 1
