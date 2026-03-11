@@ -52,6 +52,24 @@ from neo4j_graphrag.utils import driver_config
 logger = logging.getLogger(__name__)
 
 
+def _build_columns_from_schema(
+    schema: Any, primary_key_names: list[str]
+) -> list[dict[str, Any]]:
+    """Build a list of column dicts (name, type, is_primary_key) from a PyArrow schema."""
+    columns: list[dict[str, Any]] = []
+    for i in range(schema.num_fields):
+        field = schema.field(i)
+        type_info = Neo4jGraphParquetFormatter.pyarrow_type_to_type_info(field.type)
+        columns.append(
+            {
+                "name": field.name,
+                "type": type_info.source_type,
+                "is_primary_key": field.name in primary_key_names,
+            }
+        )
+    return columns
+
+
 def batched(rows: list[Any], batch_size: int) -> Generator[list[Any], None, None]:
     index = 0
     for i in range(0, len(rows), batch_size):
@@ -309,22 +327,80 @@ class ParquetWriter(KGWriter):
                 graph, lexical_graph_config, prefix=self.prefix
             )
 
+            meta_by_filename: dict[str, Any] = {m.filename: m for m in file_metadata}
             written_paths: list[str] = []
-            base = self.nodes_dest.output_path.rstrip("/")
+            files: list[dict[str, Any]] = []
+            node_label_to_source_name: dict[str, str] = {}
+
+            base_nodes = self.nodes_dest.output_path.rstrip("/")
             for filename, content in data["nodes"].items():
+                meta = meta_by_filename[filename]
                 unique_filename = self.collision_handler.get_unique_filename(
                     filename, self.nodes_dest.output_path
                 )
                 await self.nodes_dest.write(content, unique_filename)
-                written_paths.append(f"{base}/{unique_filename}")
+                file_path = f"{base_nodes}/{unique_filename}"
+                written_paths.append(file_path)
+
+                resolved_stem = (
+                    unique_filename[:-8] if unique_filename.endswith(".parquet") else unique_filename
+                )
+                if meta.node_label is not None:
+                    node_label_to_source_name[meta.node_label] = resolved_stem
+
+                columns = _build_columns_from_schema(
+                    meta.schema,
+                    meta.key_properties or [],
+                )
+                name = meta.node_label or (meta.labels[0] if meta.labels else resolved_stem)
+                files.append(
+                    {
+                        "name": name,
+                        "file_path": file_path,
+                        "columns": columns,
+                        "is_node": True,
+                        "labels": meta.labels or [],
+                    }
+                )
 
             base_rel = self.relationships_dest.output_path.rstrip("/")
             for filename, content in data["relationships"].items():
+                meta = meta_by_filename[filename]
                 unique_filename = self.collision_handler.get_unique_filename(
                     filename, self.relationships_dest.output_path
                 )
                 await self.relationships_dest.write(content, unique_filename)
-                written_paths.append(f"{base_rel}/{unique_filename}")
+                file_path = f"{base_rel}/{unique_filename}"
+                written_paths.append(file_path)
+
+                start_node_source = node_label_to_source_name.get(
+                    meta.relationship_head or "", meta.relationship_head or ""
+                )
+                end_node_source = node_label_to_source_name.get(
+                    meta.relationship_tail or "", meta.relationship_tail or ""
+                )
+                columns = _build_columns_from_schema(
+                    meta.schema,
+                    ["from", "to"],
+                )
+                rel_name = (
+                    f"{meta.relationship_head}_{meta.relationship_type}_{meta.relationship_tail}"
+                    if meta.relationship_head and meta.relationship_type and meta.relationship_tail
+                    else unique_filename[:-8] if unique_filename.endswith(".parquet") else unique_filename
+                )
+                files.append(
+                    {
+                        "name": rel_name,
+                        "file_path": file_path,
+                        "columns": columns,
+                        "is_node": False,
+                        "relationship_type": meta.relationship_type,
+                        "start_node_source": start_node_source,
+                        "start_node_primary_keys": meta.head_node_key_properties or ["__id__"],
+                        "end_node_source": end_node_source,
+                        "end_node_primary_keys": meta.tail_node_key_properties or ["__id__"],
+                    }
+                )
 
             logger.info(
                 "Wrote %d node files and %d relationship files",
@@ -339,6 +415,7 @@ class ParquetWriter(KGWriter):
                     "nodes_per_label": stats["nodes_per_label"],
                     "rel_per_type": stats["rel_per_type"],
                     "files_written": written_paths,
+                    "files": files,
                 },
             )
         except Exception as e:
