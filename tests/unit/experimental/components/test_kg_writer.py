@@ -625,47 +625,48 @@ async def test_parquet_writer_run_success() -> None:
 
         result = await writer.run(graph=graph)
 
-    assert result.status == "SUCCESS"
-    assert result.metadata is not None
-    assert result.metadata["node_count"] == 2
-    assert result.metadata["relationship_count"] == 1
-    assert result.metadata["nodes_per_label"] == {"Person": 2}
-    assert "Person_KNOWS_Person" in result.metadata["rel_per_type"]
-    assert (out / "Person.parquet").exists()
-    assert (out / "Person_KNOWS_Person.parquet").exists()
+        assert result.status == "SUCCESS"
+        assert result.metadata is not None
+        assert result.metadata["node_count"] == 2
+        assert result.metadata["relationship_count"] == 1
+        assert result.metadata["nodes_per_label"] == {"Person": 2}
+        assert "Person_KNOWS_Person" in result.metadata["rel_per_type"]
+        assert (out / "Person.parquet").exists()
+        assert (out / "Person_KNOWS_Person.parquet").exists()
 
-    # Check "files" metadata (file_path, columns, source mapping for rels)
-    assert "files" in result.metadata
-    assert len(result.metadata["files"]) == 2
-    node_file_info = next(f for f in result.metadata["files"] if f["is_node"])
-    assert node_file_info["name"] == "Person"
-    assert (
-        "file_path" in node_file_info
-        and "Person.parquet" in node_file_info["file_path"]
-    )
-    assert "columns" in node_file_info
-    assert any(
-        c["name"] == "__id__" and c["is_primary_key"] for c in node_file_info["columns"]
-    )
-    rel_file_info = next(f for f in result.metadata["files"] if not f["is_node"])
-    assert rel_file_info["relationship_type"] == "KNOWS"
-    assert rel_file_info["start_node_source"] == "Person"
-    assert rel_file_info["end_node_source"] == "Person"
-    assert rel_file_info["start_node_primary_keys"] == ["__id__"]
-    assert rel_file_info["end_node_primary_keys"] == ["__id__"]
+        # Check "files" metadata (file_path, columns, source mapping for rels)
+        assert "files" in result.metadata
+        assert len(result.metadata["files"]) == 2
+        node_file_info = next(f for f in result.metadata["files"] if f["is_node"])
+        assert node_file_info["name"] == "Person"
+        assert (
+            "file_path" in node_file_info
+            and "Person.parquet" in node_file_info["file_path"]
+        )
+        assert "columns" in node_file_info
+        assert any(
+            c["name"] == "__id__" and c["is_primary_key"]
+            for c in node_file_info["columns"]
+        )
+        rel_file_info = next(f for f in result.metadata["files"] if not f["is_node"])
+        assert rel_file_info["relationship_type"] == "KNOWS"
+        assert rel_file_info["start_node_source"] == "Person"
+        assert rel_file_info["end_node_source"] == "Person"
+        assert rel_file_info["start_node_primary_keys"] == ["__id__"]
+        assert rel_file_info["end_node_primary_keys"] == ["__id__"]
 
-    # Read back and sanity-check (formatter uses __id__, labels, and flat properties)
-    nodes_table = pq.read_table(out / "Person.parquet")
-    assert nodes_table.num_rows == 2
-    assert "__id__" in nodes_table.column_names
-    assert "labels" in nodes_table.column_names
-    assert "name" in nodes_table.column_names
+        # Read back and sanity-check (formatter uses __id__, labels, and flat properties)
+        nodes_table = pq.read_table(out / "Person.parquet")
+        assert nodes_table.num_rows == 2
+        assert "__id__" in nodes_table.column_names
+        assert "labels" in nodes_table.column_names
+        assert "name" in nodes_table.column_names
 
-    rels_table = pq.read_table(out / "Person_KNOWS_Person.parquet")
-    assert rels_table.num_rows == 1
-    assert "from" in rels_table.column_names
-    assert "to" in rels_table.column_names
-    assert rels_table.column("type")[0].as_py() == "KNOWS"
+        rels_table = pq.read_table(out / "Person_KNOWS_Person.parquet")
+        assert rels_table.num_rows == 1
+        assert "from" in rels_table.column_names
+        assert "to" in rels_table.column_names
+        assert rels_table.column("type")[0].as_py() == "KNOWS"
 
 
 @pytest.mark.asyncio
