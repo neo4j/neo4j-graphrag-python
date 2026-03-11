@@ -14,7 +14,6 @@
 #  limitations under the License.
 """Format Neo4j graph data as Parquet files (per-label nodes, per-type relationships).
 
-Requires the optional dependency: ``pip install \"neo4j-graphrag[parquet]\"``.
 """
 
 from __future__ import annotations
