@@ -24,6 +24,9 @@ import pytest
 from neo4j_graphrag.experimental.components.filename_collision_handler import (
     FilenameCollisionHandler,
 )
+from neo4j_graphrag.experimental.components.parquet_formatter import (
+    sanitize_parquet_filestem,
+)
 from neo4j_graphrag.experimental.components.kg_writer import (
     Neo4jWriter,
     ParquetWriter,
@@ -53,6 +56,38 @@ def test_batched() -> None:
     assert list(batched([1, 2, 3], batch_size=4)) == [
         [1, 2, 3],
     ]
+
+
+# --- sanitize_parquet_filestem tests ---
+
+
+def test_sanitize_parquet_filestem_empty_returns_fallback() -> None:
+    assert sanitize_parquet_filestem("") == "unnamed"
+
+
+def test_sanitize_parquet_filestem_safe_chars_unchanged() -> None:
+    assert sanitize_parquet_filestem("Person") == "Person"
+    assert sanitize_parquet_filestem("Person_KNOWS_Person") == "Person_KNOWS_Person"
+    assert sanitize_parquet_filestem("Label123") == "Label123"
+    assert sanitize_parquet_filestem("a_z_9") == "a_z_9"
+
+
+def test_sanitize_parquet_filestem_unicode_transliterated() -> None:
+    assert sanitize_parquet_filestem("Zürich") == "Zurich"
+    assert sanitize_parquet_filestem("café") == "cafe"
+    assert sanitize_parquet_filestem("naïve") == "naive"
+
+
+def test_sanitize_parquet_filestem_disallowed_replaced_with_underscore() -> None:
+    assert sanitize_parquet_filestem("a b") == "a_b"
+    assert sanitize_parquet_filestem("a-b") == "a_b"
+    assert sanitize_parquet_filestem("a.b") == "a_b"
+
+
+def test_sanitize_parquet_filestem_all_disallowed_replaced() -> None:
+    # All disallowed chars become underscores (result non-empty, so no fallback)
+    assert sanitize_parquet_filestem("...") == "___"
+    assert sanitize_parquet_filestem("  ") == "__"
 
 
 # --- FilenameCollisionHandler tests ---

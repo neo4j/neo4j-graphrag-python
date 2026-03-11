@@ -12,11 +12,17 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-"""Format Neo4j graph data as Parquet files (per-label nodes, per-type relationships)."""
+"""Format Neo4j graph data as Parquet files (per-label nodes, per-type relationships).
+
+Parquet filenames are derived from node labels and relationship types and are
+sanitized for filesystem and Neo4j import compatibility (safe characters:
+[a-zA-Z0-9_], Unicode normalized/transliterated to ASCII).
+"""
 
 from __future__ import annotations
 
 import logging
+import unicodedata
 from collections import defaultdict
 from dataclasses import dataclass, field
 from io import BytesIO
@@ -30,6 +36,43 @@ from neo4j_graphrag.experimental.components.types import (
 )
 
 logger = logging.getLogger(__name__)
+
+_FALLBACK_FILESTEM = "unnamed"
+
+
+def _is_allowed_filestem_char(c: str) -> bool:
+    """True if c is in [a-zA-Z0-9_]."""
+    return c.isalnum() or c == "_"
+
+
+def sanitize_parquet_filestem(name: str) -> str:
+    """Convert a label or name into a safe Parquet filename stem.
+
+    Safe means: only [a-zA-Z0-9_]. Accented and other Unicode characters
+    are transliterated to ASCII (e.g. Ü -> U, é -> e). Disallowed
+    characters are replaced with underscore. If the result is empty,
+    returns a fallback stem.
+
+    Used when building Parquet filenames from node labels and relationship
+    type names for filesystem and Neo4j Aura KG import compatibility.
+
+    Args:
+        name: Original name (e.g. node label, relationship type name).
+
+    Returns:
+        A string safe for use as the stem of a parquet filename.
+    """
+    if not name:
+        return _FALLBACK_FILESTEM
+    # Transliterate to ASCII (NFKD decomposes e.g. é -> e + combining accent)
+    normalized = unicodedata.normalize("NFKD", name)
+    ascii_bytes = normalized.encode("ascii", errors="ignore")
+    stem = ascii_bytes.decode("ascii")
+    # Replace any remaining disallowed characters with underscore
+    result = "".join(c if _is_allowed_filestem_char(c) else "_" for c in stem)
+    if not result:
+        return _FALLBACK_FILESTEM
+    return result
 
 
 def get_unique_properties_for_node_type(
@@ -443,7 +486,8 @@ class Neo4jGraphParquetFormatter:
 
         for label, rows in label_to_rows.items():
             current_label: str = f"{prefix}_{label}" if prefix else label
-            filename = f"{current_label}.parquet"
+            safe_stem = sanitize_parquet_filestem(current_label)
+            filename = f"{safe_stem}.parquet"
             parquet_bytes, schema = self.format_parquet(
                 rows, f"node label '{current_label}'"
             )
@@ -470,10 +514,11 @@ class Neo4jGraphParquetFormatter:
         # Key is (rel_type, head_label, tail_label) for consistent key properties per file
         relationships_data: dict[str, bytes] = {}
         for (rtype, head_label, tail_label), rows in type_to_rows.items():
-            # Filename pattern: {head_label}_{rel_type}_{tail_label}.parquet
+            # Filename pattern: {head_label}_{rel_type}_{tail_label}.parquet (sanitized)
             base_name = f"{head_label}_{rtype}_{tail_label}"
             current_name: str = f"{prefix}_{base_name}" if prefix else base_name
-            filename = f"{current_name}.parquet"
+            safe_stem = sanitize_parquet_filestem(current_name)
+            filename = f"{safe_stem}.parquet"
             parquet_bytes, schema = self.format_parquet(
                 rows, f"relationship '{current_name}'"
             )
