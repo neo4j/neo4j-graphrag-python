@@ -55,20 +55,12 @@ async def run_kg_pipeline_with_auto_schema() -> None:
     user = os.getenv("NEO4J_USER", "neo4j")
     password = os.getenv("NEO4J_PASSWORD", "password")
 
-    # Define LLM parameters
-    llm_model_params = {
-        "max_tokens": 2000,
-        "response_format": {"type": "json_object"},
-        "temperature": 0,  # Lower temperature for more consistent output
-    }
-
     # Initialize the Neo4j driver
     driver = neo4j.GraphDatabase.driver(uri, auth=(user, password))
 
     # Create the LLM instance
     llm = OpenAILLM(
         model_name="gpt-5",
-        model_params=llm_model_params,
     )
 
     # Create the embedder instance
