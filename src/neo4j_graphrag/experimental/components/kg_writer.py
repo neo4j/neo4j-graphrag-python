@@ -16,11 +16,18 @@ from __future__ import annotations
 
 import logging
 from abc import abstractmethod
+from pathlib import Path
 from typing import Any, Generator, Literal, Optional
 
 import neo4j
 from pydantic import validate_call
 
+from neo4j_graphrag.experimental.components.filename_collision_handler import (
+    FilenameCollisionHandler,
+)
+from neo4j_graphrag.experimental.components.parquet_formatter import (
+    Neo4jGraphParquetFormatter,
+)
 from neo4j_graphrag.experimental.components.types import (
     LexicalGraphConfig,
     Neo4jGraph,
@@ -228,5 +235,97 @@ class Neo4jWriter(KGWriter):
                 },
             )
         except neo4j.exceptions.ClientError as e:
+            logger.exception(e)
+            return KGWriterModel(status="FAILURE", metadata={"error": str(e)})
+
+
+class ParquetWriter(KGWriter):
+    """Writes a knowledge graph to Parquet files using Neo4jGraphParquetFormatter.
+
+    Writes one Parquet file per node label and one per (head_label, relationship_type, tail_label)
+    under the given output path, e.g. ``Person.parquet``, ``Person_KNOWS_Person.parquet``.
+
+    Args:
+        output_path (str | Path): Directory path where Parquet files will be written.
+        collision_handler (FilenameCollisionHandler): Handler for resolving filename collisions.
+        prefix (str): Optional filename prefix for all written files. Defaults to "".
+
+    Example:
+
+    .. code-block:: python
+
+        from pathlib import Path
+        from neo4j_graphrag.experimental.components.filename_collision_handler import FilenameCollisionHandler
+        from neo4j_graphrag.experimental.components.kg_writer import ParquetWriter
+        from neo4j_graphrag.experimental.pipeline import Pipeline
+
+        writer = ParquetWriter(
+            output_path=Path("./output_kg"),
+            collision_handler=FilenameCollisionHandler(),
+        )
+        pipeline = Pipeline()
+        pipeline.add_component(writer, "writer")
+    """
+
+    def __init__(
+        self,
+        output_path: str | Path,
+        collision_handler: FilenameCollisionHandler,
+        prefix: str = "",
+    ) -> None:
+        self.output_path = Path(output_path)
+        self.output_path.mkdir(parents=True, exist_ok=True)
+        self.collision_handler = collision_handler
+        self.prefix = prefix
+
+    @validate_call
+    async def run(
+        self,
+        graph: Neo4jGraph,
+        lexical_graph_config: LexicalGraphConfig = LexicalGraphConfig(),
+        schema: Optional[dict[str, Any]] = None,
+    ) -> KGWriterModel:
+        """Write the knowledge graph to Parquet files via Neo4jGraphParquetFormatter.
+
+        Args:
+            graph (Neo4jGraph): The knowledge graph to write.
+            lexical_graph_config (LexicalGraphConfig): Used by the formatter for
+                lexical graph labels (e.g. __Entity__) and key properties.
+            schema (Optional[dict[str, Any]]): Optional GraphSchema as a dictionary for
+                uniqueness constraints and key properties. If not provided, ``__id__`` is used.
+        """
+        try:
+            formatter = Neo4jGraphParquetFormatter(schema=schema)
+            data, file_metadata, stats = formatter.format_graph(
+                graph, lexical_graph_config, prefix=self.prefix
+            )
+
+            written_paths: list[str] = []
+            for category in ("nodes", "relationships"):
+                for filename, content in data[category].items():
+                    unique_filename = self.collision_handler.get_unique_filename(
+                        filename, self.output_path
+                    )
+                    path = self.output_path / unique_filename
+                    path.write_bytes(content)
+                    written_paths.append(str(path))
+
+            logger.info(
+                "Wrote %d node files and %d relationship files to %s",
+                len(data["nodes"]),
+                len(data["relationships"]),
+                self.output_path,
+            )
+            return KGWriterModel(
+                status="SUCCESS",
+                metadata={
+                    "node_count": len(graph.nodes),
+                    "relationship_count": len(graph.relationships),
+                    "nodes_per_label": stats["nodes_per_label"],
+                    "rel_per_type": stats["rel_per_type"],
+                    "files_written": written_paths,
+                },
+            )
+        except Exception as e:
             logger.exception(e)
             return KGWriterModel(status="FAILURE", metadata={"error": str(e)})
