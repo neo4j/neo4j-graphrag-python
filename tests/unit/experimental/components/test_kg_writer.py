@@ -557,6 +557,21 @@ def test_get_version(
 # --- ParquetWriter tests ---
 
 
+class _LocalParquetDestination:
+    """Test-only implementation of ParquetOutputDestination for a local directory."""
+
+    def __init__(self, path: Path) -> None:
+        self._path = Path(path)
+        self._path.mkdir(parents=True, exist_ok=True)
+
+    @property
+    def output_path(self) -> str:
+        return str(self._path.resolve())
+
+    async def write(self, data: bytes, filename: str) -> None:
+        (self._path / filename).write_bytes(data)
+
+
 @pytest.mark.asyncio
 async def test_parquet_writer_missing_pyarrow_raises() -> None:
     """When pyarrow is not installed, run() returns FAILURE with error mentioning pyarrow."""
@@ -570,8 +585,10 @@ async def test_parquet_writer_missing_pyarrow_raises() -> None:
         return real_import(name, *args, **kwargs)
 
     with tempfile.TemporaryDirectory() as tmpdir:
+        dest = _LocalParquetDestination(Path(tmpdir))
         writer = ParquetWriter(
-            output_path=Path(tmpdir),
+            nodes_dest=dest,
+            relationships_dest=dest,
             collision_handler=FilenameCollisionHandler(),
         )
         # Use non-empty graph so formatter calls format_parquet and triggers pyarrow import
@@ -592,8 +609,10 @@ async def test_parquet_writer_run_success() -> None:
 
     with tempfile.TemporaryDirectory() as tmpdir:
         out = Path(tmpdir)
+        dest = _LocalParquetDestination(out)
         writer = ParquetWriter(
-            output_path=out,
+            nodes_dest=dest,
+            relationships_dest=dest,
             collision_handler=FilenameCollisionHandler(),
         )
 
@@ -636,8 +655,10 @@ async def test_parquet_writer_run_empty_graph() -> None:
 
     with tempfile.TemporaryDirectory() as tmpdir:
         out = Path(tmpdir)
+        dest = _LocalParquetDestination(out)
         writer = ParquetWriter(
-            output_path=out,
+            nodes_dest=dest,
+            relationships_dest=dest,
             collision_handler=FilenameCollisionHandler(),
         )
         graph = Neo4jGraph(nodes=[], relationships=[])

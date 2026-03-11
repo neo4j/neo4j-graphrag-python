@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import logging
 from abc import abstractmethod
-from pathlib import Path
 from typing import Any, Generator, Literal, Optional
 
 import neo4j
@@ -27,6 +26,9 @@ from neo4j_graphrag.experimental.components.filename_collision_handler import (
 )
 from neo4j_graphrag.experimental.components.parquet_formatter import (
     Neo4jGraphParquetFormatter,
+)
+from neo4j_graphrag.experimental.components.parquet_output import (
+    ParquetOutputDestination,
 )
 from neo4j_graphrag.experimental.components.types import (
     LexicalGraphConfig,
@@ -243,10 +245,11 @@ class ParquetWriter(KGWriter):
     """Writes a knowledge graph to Parquet files using Neo4jGraphParquetFormatter.
 
     Writes one Parquet file per node label and one per (head_label, relationship_type, tail_label)
-    under the given output path, e.g. ``Person.parquet``, ``Person_KNOWS_Person.parquet``.
+    to the given destinations, e.g. ``Person.parquet``, ``Person_KNOWS_Person.parquet``.
 
     Args:
-        output_path (str | Path): Directory path where Parquet files will be written.
+        nodes_dest (ParquetOutputDestination): Destination for node Parquet files.
+        relationships_dest (ParquetOutputDestination): Destination for relationship Parquet files.
         collision_handler (FilenameCollisionHandler): Handler for resolving filename collisions.
         prefix (str): Optional filename prefix for all written files. Defaults to "".
 
@@ -254,13 +257,18 @@ class ParquetWriter(KGWriter):
 
     .. code-block:: python
 
-        from pathlib import Path
         from neo4j_graphrag.experimental.components.filename_collision_handler import FilenameCollisionHandler
         from neo4j_graphrag.experimental.components.kg_writer import ParquetWriter
+        from neo4j_graphrag.experimental.components.parquet_output import ParquetOutputDestination
         from neo4j_graphrag.experimental.pipeline import Pipeline
 
+        # Provide your own implementation of ParquetOutputDestination (local, GCS, S3, etc.)
+        nodes_dest: ParquetOutputDestination = ...
+        relationships_dest: ParquetOutputDestination = ...
+
         writer = ParquetWriter(
-            output_path=Path("./output_kg"),
+            nodes_dest=nodes_dest,
+            relationships_dest=relationships_dest,
             collision_handler=FilenameCollisionHandler(),
         )
         pipeline = Pipeline()
@@ -269,12 +277,13 @@ class ParquetWriter(KGWriter):
 
     def __init__(
         self,
-        output_path: str | Path,
+        nodes_dest: ParquetOutputDestination,
+        relationships_dest: ParquetOutputDestination,
         collision_handler: FilenameCollisionHandler,
         prefix: str = "",
     ) -> None:
-        self.output_path = Path(output_path)
-        self.output_path.mkdir(parents=True, exist_ok=True)
+        self.nodes_dest = nodes_dest
+        self.relationships_dest = relationships_dest
         self.collision_handler = collision_handler
         self.prefix = prefix
 
@@ -301,20 +310,26 @@ class ParquetWriter(KGWriter):
             )
 
             written_paths: list[str] = []
-            for category in ("nodes", "relationships"):
-                for filename, content in data[category].items():
-                    unique_filename = self.collision_handler.get_unique_filename(
-                        filename, self.output_path
-                    )
-                    path = self.output_path / unique_filename
-                    path.write_bytes(content)
-                    written_paths.append(str(path))
+            base = self.nodes_dest.output_path.rstrip("/")
+            for filename, content in data["nodes"].items():
+                unique_filename = self.collision_handler.get_unique_filename(
+                    filename, self.nodes_dest.output_path
+                )
+                await self.nodes_dest.write(content, unique_filename)
+                written_paths.append(f"{base}/{unique_filename}")
+
+            base_rel = self.relationships_dest.output_path.rstrip("/")
+            for filename, content in data["relationships"].items():
+                unique_filename = self.collision_handler.get_unique_filename(
+                    filename, self.relationships_dest.output_path
+                )
+                await self.relationships_dest.write(content, unique_filename)
+                written_paths.append(f"{base_rel}/{unique_filename}")
 
             logger.info(
-                "Wrote %d node files and %d relationship files to %s",
+                "Wrote %d node files and %d relationship files",
                 len(data["nodes"]),
                 len(data["relationships"]),
-                self.output_path,
             )
             return KGWriterModel(
                 status="SUCCESS",

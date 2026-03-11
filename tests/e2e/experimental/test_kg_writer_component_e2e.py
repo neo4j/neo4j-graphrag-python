@@ -147,6 +147,21 @@ async def test_kg_writer_no_neo4j_deprecation_warning(
     assert res.status == "SUCCESS"
 
 
+class _LocalParquetDestination:
+    """E2E test-only implementation of ParquetOutputDestination for a local directory."""
+
+    def __init__(self, path: Path) -> None:
+        self._path = Path(path)
+        self._path.mkdir(parents=True, exist_ok=True)
+
+    @property
+    def output_path(self) -> str:
+        return str(self._path.resolve())
+
+    async def write(self, data: bytes, filename: str) -> None:
+        (self._path / filename).write_bytes(data)
+
+
 @pytest.mark.asyncio
 async def test_parquet_writer_e2e() -> None:
     """E2E test for ParquetWriter: write graph to Parquet files and verify content."""
@@ -174,9 +189,11 @@ async def test_parquet_writer_e2e() -> None:
 
     with tempfile.TemporaryDirectory() as tmpdir:
         output_path = Path(tmpdir)
+        dest = _LocalParquetDestination(output_path)
         collision_handler = FilenameCollisionHandler()
         writer = ParquetWriter(
-            output_path=output_path,
+            nodes_dest=dest,
+            relationships_dest=dest,
             collision_handler=collision_handler,
             prefix="e2e_",
         )
