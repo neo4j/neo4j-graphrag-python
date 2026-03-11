@@ -343,7 +343,9 @@ class ParquetWriter(KGWriter):
                 written_paths.append(file_path)
 
                 resolved_stem = (
-                    unique_filename[:-8] if unique_filename.endswith(".parquet") else unique_filename
+                    unique_filename[:-8]
+                    if unique_filename.endswith(".parquet")
+                    else unique_filename
                 )
                 if meta.node_label is not None:
                     node_label_to_source_name[meta.node_label] = resolved_stem
@@ -352,7 +354,9 @@ class ParquetWriter(KGWriter):
                     meta.schema,
                     meta.key_properties or [],
                 )
-                name = meta.node_label or (meta.labels[0] if meta.labels else resolved_stem)
+                name = meta.node_label or (
+                    meta.labels[0] if meta.labels else resolved_stem
+                )
                 files.append(
                     {
                         "name": name,
@@ -385,8 +389,12 @@ class ParquetWriter(KGWriter):
                 )
                 rel_name = (
                     f"{meta.relationship_head}_{meta.relationship_type}_{meta.relationship_tail}"
-                    if meta.relationship_head and meta.relationship_type and meta.relationship_tail
-                    else unique_filename[:-8] if unique_filename.endswith(".parquet") else unique_filename
+                    if meta.relationship_head
+                    and meta.relationship_type
+                    and meta.relationship_tail
+                    else unique_filename[:-8]
+                    if unique_filename.endswith(".parquet")
+                    else unique_filename
                 )
                 files.append(
                     {
@@ -396,9 +404,11 @@ class ParquetWriter(KGWriter):
                         "is_node": False,
                         "relationship_type": meta.relationship_type,
                         "start_node_source": start_node_source,
-                        "start_node_primary_keys": meta.head_node_key_properties or ["__id__"],
+                        "start_node_primary_keys": meta.head_node_key_properties
+                        or ["__id__"],
                         "end_node_source": end_node_source,
-                        "end_node_primary_keys": meta.tail_node_key_properties or ["__id__"],
+                        "end_node_primary_keys": meta.tail_node_key_properties
+                        or ["__id__"],
                     }
                 )
 

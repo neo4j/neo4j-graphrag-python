@@ -117,7 +117,9 @@ class FileMetadata:
     schema: Any  # pa.Schema - using Any to avoid pyright issues with pyarrow types
     is_node: bool
     labels: Optional[list[str]] = None
-    node_label: Optional[str] = None  # Graph label for node files (for source-name mapping)
+    node_label: Optional[str] = (
+        None  # Graph label for node files (for source-name mapping)
+    )
     relationship_type: Optional[str] = None
     relationship_head: Optional[str] = None
     relationship_tail: Optional[str] = None

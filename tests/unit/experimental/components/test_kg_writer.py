@@ -639,9 +639,14 @@ async def test_parquet_writer_run_success() -> None:
     assert len(result.metadata["files"]) == 2
     node_file_info = next(f for f in result.metadata["files"] if f["is_node"])
     assert node_file_info["name"] == "Person"
-    assert "file_path" in node_file_info and "Person.parquet" in node_file_info["file_path"]
+    assert (
+        "file_path" in node_file_info
+        and "Person.parquet" in node_file_info["file_path"]
+    )
     assert "columns" in node_file_info
-    assert any(c["name"] == "__id__" and c["is_primary_key"] for c in node_file_info["columns"])
+    assert any(
+        c["name"] == "__id__" and c["is_primary_key"] for c in node_file_info["columns"]
+    )
     rel_file_info = next(f for f in result.metadata["files"] if not f["is_node"])
     assert rel_file_info["relationship_type"] == "KNOWS"
     assert rel_file_info["start_node_source"] == "Person"
