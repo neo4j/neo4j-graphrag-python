@@ -57,7 +57,7 @@ def _build_columns_from_schema(
 ) -> list[dict[str, Any]]:
     """Build a list of column dicts (name, type, is_primary_key) from a PyArrow schema."""
     columns: list[dict[str, Any]] = []
-    for i in range(schema.num_fields):
+    for i in range(len(schema)):
         field = schema.field(i)
         type_info = Neo4jGraphParquetFormatter.pyarrow_type_to_type_info(field.type)
         columns.append(
