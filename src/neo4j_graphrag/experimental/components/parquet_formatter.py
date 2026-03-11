@@ -12,9 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-"""Format Neo4j graph data as Parquet files (per-label nodes, per-type relationships).
-
-"""
+"""Format Neo4j graph data as Parquet files (per-label nodes, per-type relationships)."""
 
 from __future__ import annotations
 
