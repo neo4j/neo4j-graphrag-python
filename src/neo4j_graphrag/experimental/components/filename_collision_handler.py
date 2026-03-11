@@ -67,7 +67,7 @@ class FilenameCollisionHandler:
         self._filename_counts[key] += 1
         count = self._filename_counts[key]
         if base_filename.endswith(".parquet"):
-            name_without_ext = base_filename[:- len(".parquet")]
+            name_without_ext = base_filename[: -len(".parquet")]
             return f"{name_without_ext}_{count}.parquet"
         return f"{base_filename}_{count}"
 

@@ -16,6 +16,7 @@
 
 Requires the optional dependency: ``pip install \"neo4j-graphrag[parquet]\"``.
 """
+
 from __future__ import annotations
 
 import logging
@@ -435,9 +436,9 @@ class Neo4jGraphParquetFormatter:
             graph.nodes, lexical_graph_config
         )
         node_id_to_node: dict[str, Neo4jNode] = {node.id: node for node in graph.nodes}
-        type_to_rows: DefaultDict[
-            tuple[str, str, str], list[dict[str, Any]]
-        ] = self._relationships_to_rows(graph.relationships, node_id_to_node)
+        type_to_rows: DefaultDict[tuple[str, str, str], list[dict[str, Any]]] = (
+            self._relationships_to_rows(graph.relationships, node_id_to_node)
+        )
 
         # Format node Parquet files
         nodes_data: dict[str, bytes] = {}

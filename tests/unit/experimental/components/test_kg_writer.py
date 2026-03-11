@@ -526,6 +526,7 @@ def test_get_version(
 async def test_parquet_writer_missing_pyarrow_raises() -> None:
     """When pyarrow is not installed, run() returns FAILURE with error mentioning pyarrow."""
     import builtins
+
     real_import = builtins.__import__
 
     def fake_import(name: str, *args: Any, **kwargs: Any) -> Any:
