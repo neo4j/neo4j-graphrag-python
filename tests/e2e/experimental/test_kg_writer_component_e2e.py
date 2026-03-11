@@ -13,11 +13,18 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import logging
+import tempfile
+from pathlib import Path
 
 import neo4j
 import pytest
-from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
+
+from neo4j_graphrag.experimental.components.filename_collision_handler import (
+    FilenameCollisionHandler,
+)
+from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter, ParquetWriter
 from neo4j_graphrag.experimental.components.types import (
+    LexicalGraphConfig,
     Neo4jGraph,
     Neo4jNode,
     Neo4jRelationship,
@@ -138,3 +145,68 @@ async def test_kg_writer_no_neo4j_deprecation_warning(
             assert False, f"Deprecation warning found in logs: {record.message}"
 
     assert res.status == "SUCCESS"
+
+
+@pytest.mark.asyncio
+async def test_parquet_writer_e2e() -> None:
+    """E2E test for ParquetWriter: write graph to Parquet files and verify content."""
+    pyarrow = pytest.importorskip("pyarrow")
+
+    start_node = Neo4jNode(
+        id="p1",
+        label="Person",
+        properties={"name": "Alice", "age": 30},
+    )
+    end_node = Neo4jNode(
+        id="p2",
+        label="Person",
+        properties={"name": "Bob", "age": 25},
+    )
+    relationship = Neo4jRelationship(
+        start_node_id="p1",
+        end_node_id="p2",
+        type="KNOWS",
+    )
+    graph = Neo4jGraph(
+        nodes=[start_node, end_node],
+        relationships=[relationship],
+    )
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        output_path = Path(tmpdir)
+        collision_handler = FilenameCollisionHandler()
+        writer = ParquetWriter(
+            output_path=output_path,
+            collision_handler=collision_handler,
+            prefix="e2e_",
+        )
+        result = await writer.run(
+            graph=graph,
+            lexical_graph_config=LexicalGraphConfig(),
+        )
+
+        assert result.status == "SUCCESS"
+        assert result.metadata["node_count"] == 2
+        assert result.metadata["relationship_count"] == 1
+        assert result.metadata["nodes_per_label"]["Person"] == 2
+        assert result.metadata["rel_per_type"]["Person_KNOWS_Person"] == 1
+
+        node_file = output_path / "e2e_Person.parquet"
+        rel_file = output_path / "e2e_Person_KNOWS_Person.parquet"
+        assert node_file.exists(), f"Expected {node_file}"
+        assert rel_file.exists(), f"Expected {rel_file}"
+
+        node_table = pyarrow.parquet.read_table(node_file)
+        assert node_table.num_rows == 2
+        assert "name" in node_table.column_names
+        assert "age" in node_table.column_names
+        names = node_table.column("name")
+        assert "Alice" in names and "Bob" in names
+
+        rel_table = pyarrow.parquet.read_table(rel_file)
+        assert rel_table.num_rows == 1
+        assert "from" in rel_table.column_names
+        assert "to" in rel_table.column_names
+        assert rel_table.column("type")[0].as_py() == "KNOWS"
+        assert rel_table.column("from")[0].as_py() == "p1"
+        assert rel_table.column("to")[0].as_py() == "p2"
