@@ -192,10 +192,19 @@ async def test_parquet_writer_e2e() -> None:
         assert result.metadata["nodes_per_label"]["Person"] == 2
         assert result.metadata["rel_per_type"]["Person_KNOWS_Person"] == 1
 
-        node_file = output_path / "e2e_Person.parquet"
-        rel_file = output_path / "e2e_Person_KNOWS_Person.parquet"
-        assert node_file.exists(), f"Expected {node_file}"
-        assert rel_file.exists(), f"Expected {rel_file}"
+        files_written = result.metadata.get("files_written") or []
+        assert len(files_written) == 2, f"Expected 2 files, got {files_written}"
+        node_file = rel_file = None
+        for path_str in files_written:
+            path = Path(path_str)
+            assert path.exists(), f"Expected file {path}"
+            table = pyarrow.parquet.read_table(path)
+            if "from" in table.column_names and "to" in table.column_names:
+                rel_file = path
+            elif "labels" in table.column_names:
+                node_file = path
+        assert node_file is not None, "No node Parquet file found"
+        assert rel_file is not None, "No relationship Parquet file found"
 
         node_table = pyarrow.parquet.read_table(node_file)
         assert node_table.num_rows == 2

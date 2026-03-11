@@ -610,6 +610,7 @@ async def test_parquet_writer_run_empty_graph() -> None:
         result = await writer.run(graph=graph)
 
     assert result.status == "SUCCESS"
+    assert result.metadata is not None
     assert result.metadata["node_count"] == 0
     assert result.metadata["relationship_count"] == 0
     assert result.metadata["files_written"] == []
