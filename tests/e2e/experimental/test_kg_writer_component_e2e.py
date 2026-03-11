@@ -186,6 +186,7 @@ async def test_parquet_writer_e2e() -> None:
         )
 
         assert result.status == "SUCCESS"
+        assert result.metadata is not None
         assert result.metadata["node_count"] == 2
         assert result.metadata["relationship_count"] == 1
         assert result.metadata["nodes_per_label"]["Person"] == 2
