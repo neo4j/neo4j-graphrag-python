@@ -36,12 +36,20 @@ jobs:
         run: docker network create test-network
       - name: Start t2v-transformers
         run: |
+          for i in 1 2 3; do
+            docker pull cr.weaviate.io/semitechnologies/transformers-inference:sentence-transformers-all-MiniLM-L6-v2 \
+              && break || sleep $((30 + RANDOM % 30))
+          done
           docker run -d --name t2v-transformers \
             --network test-network \
             -e ENABLE_CUDA=0 \
             cr.weaviate.io/semitechnologies/transformers-inference:sentence-transformers-all-MiniLM-L6-v2
       - name: Start Weaviate
         run: |
+          for i in 1 2 3; do
+            docker pull cr.weaviate.io/semitechnologies/weaviate:1.27.0 \
+              && break || sleep $((30 + RANDOM % 30))
+          done
           docker run -d --name weaviate \
             --network test-network \
             -p 8080:8080 -p 50051:50051 \
@@ -53,6 +61,10 @@ jobs:
             cr.weaviate.io/semitechnologies/weaviate:1.27.0
       - name: Start Neo4j
         run: |
+          for i in 1 2 3; do
+            docker pull neo4j:${{ matrix.neo4j-tag }} \
+              && break || sleep $((30 + RANDOM % 30))
+          done
           docker run -d --name neo4j \
             --network test-network \
             -p 7687:7687 -p 7474:7474 \
@@ -62,6 +74,10 @@ jobs:
             neo4j:${{ matrix.neo4j-tag }}
       - name: Start Qdrant
         run: |
+          for i in 1 2 3; do
+            docker pull qdrant/qdrant \
+              && break || sleep $((30 + RANDOM % 30))
+          done
           docker run -d --name qdrant \
             --network test-network \
             -p 6333:6333 \
