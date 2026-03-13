@@ -637,9 +637,7 @@ def test_retrieval_query_cypher_error(
 class TestVectorRetrieverSearchClausePath:
     """Tests for VectorRetriever routing to SEARCH clause on Neo4j 2026.01+."""
 
-    @patch(
-        "neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=True
-    )
+    @patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=True)
     @patch("neo4j_graphrag.retrievers.VectorRetriever._fetch_index_infos")
     @patch("neo4j_graphrag.retrievers.base.get_version")
     def test_uses_search_clause_no_filters(
@@ -665,9 +663,7 @@ class TestVectorRetrieverSearchClausePath:
         assert "SCORE AS score" in executed_query
         assert "db.index.vector.queryNodes" not in executed_query
 
-    @patch(
-        "neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=True
-    )
+    @patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=True)
     @patch("neo4j_graphrag.retrievers.VectorRetriever._fetch_index_infos")
     @patch("neo4j_graphrag.retrievers.base.get_version")
     def test_uses_search_clause_with_compatible_filters(
@@ -698,9 +694,7 @@ class TestVectorRetrieverSearchClausePath:
         assert "WHERE" in executed_query
         assert "db.index.vector.queryNodes" not in executed_query
 
-    @patch(
-        "neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=True
-    )
+    @patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=True)
     @patch("neo4j_graphrag.retrievers.VectorRetriever._fetch_index_infos")
     @patch("neo4j_graphrag.retrievers.base.get_version")
     def test_falls_back_with_incompatible_filters(
@@ -731,9 +725,7 @@ class TestVectorRetrieverSearchClausePath:
         # Should fall back to brute-force (exact KNN) path
         assert "SEARCH node IN (VECTOR INDEX" not in executed_query
 
-    @patch(
-        "neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=True
-    )
+    @patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=True)
     @patch("neo4j_graphrag.retrievers.VectorRetriever._fetch_index_infos")
     @patch("neo4j_graphrag.retrievers.base.get_version")
     def test_falls_back_when_no_node_label(
@@ -758,9 +750,7 @@ class TestVectorRetrieverSearchClausePath:
         assert "SEARCH node IN (VECTOR INDEX" not in executed_query
         assert "db.index.vector.queryNodes" in executed_query
 
-    @patch(
-        "neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=True
-    )
+    @patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=True)
     @patch("neo4j_graphrag.retrievers.VectorRetriever._fetch_index_infos")
     @patch("neo4j_graphrag.retrievers.base.get_version")
     def test_search_clause_with_return_properties(
@@ -792,9 +782,7 @@ class TestVectorRetrieverSearchClausePath:
 class TestVectorCypherRetrieverSearchClausePath:
     """Tests for VectorCypherRetriever routing to SEARCH clause."""
 
-    @patch(
-        "neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=True
-    )
+    @patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=True)
     @patch("neo4j_graphrag.retrievers.VectorCypherRetriever._fetch_index_infos")
     @patch("neo4j_graphrag.retrievers.base.get_version")
     def test_uses_search_clause_with_retrieval_query(
@@ -826,9 +814,7 @@ class TestVectorCypherRetrieverSearchClausePath:
         assert "SEARCH node IN (VECTOR INDEX" in executed_query
         assert retrieval_query in executed_query
 
-    @patch(
-        "neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=True
-    )
+    @patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=True)
     @patch("neo4j_graphrag.retrievers.VectorCypherRetriever._fetch_index_infos")
     @patch("neo4j_graphrag.retrievers.base.get_version")
     def test_falls_back_when_no_node_label(
@@ -855,9 +841,7 @@ class TestVectorCypherRetrieverSearchClausePath:
         executed_query = call_args[0][0]
         assert "SEARCH node IN (VECTOR INDEX" not in executed_query
 
-    @patch(
-        "neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=True
-    )
+    @patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=True)
     @patch("neo4j_graphrag.retrievers.VectorCypherRetriever._fetch_index_infos")
     @patch("neo4j_graphrag.retrievers.base.get_version")
     def test_search_clause_with_compatible_filters(

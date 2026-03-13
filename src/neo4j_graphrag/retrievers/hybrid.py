@@ -215,7 +215,10 @@ class HybridRetriever(Retriever):
                 use_search_clause = True
 
         if use_search_clause:
-            if validated_data.ranker == HybridSearchRanker.LINEAR and validated_data.alpha:
+            if (
+                validated_data.ranker == HybridSearchRanker.LINEAR
+                and validated_data.alpha
+            ):
                 search_query_base = _build_hybrid_search_clause_query_linear(
                     vector_index_name=self.vector_index_name,
                     fulltext_index_name=self.fulltext_index_name,
@@ -439,7 +442,10 @@ class HybridCypherRetriever(Retriever):
                 use_search_clause = True
 
         if use_search_clause:
-            if validated_data.ranker == HybridSearchRanker.LINEAR and validated_data.alpha:
+            if (
+                validated_data.ranker == HybridSearchRanker.LINEAR
+                and validated_data.alpha
+            ):
                 search_query_base = _build_hybrid_search_clause_query_linear(
                     vector_index_name=self.vector_index_name,
                     fulltext_index_name=self.fulltext_index_name,
