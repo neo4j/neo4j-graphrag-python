@@ -211,6 +211,108 @@ def test_create_fulltext_index_ensure_escaping(driver: MagicMock) -> None:
     )
 
 
+def test_create_vector_index_with_filterable_properties(driver: MagicMock) -> None:
+    create_query = (
+        "CREATE VECTOR INDEX $name IF NOT EXISTS FOR (n:People) ON n.name OPTIONS "
+        "{ indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }"
+        " WITH [n.`age`, n.`city`]"
+    )
+
+    create_vector_index(
+        driver,
+        "my-index",
+        "People",
+        "name",
+        2048,
+        "cosine",
+        filterable_properties=["age", "city"],
+    )
+
+    driver.execute_query.assert_called_once_with(
+        create_query,
+        {"name": "my-index", "dimensions": 2048, "similarity_fn": "cosine"},
+        database_=None,
+    )
+
+
+def test_create_vector_index_with_single_filterable_property(
+    driver: MagicMock,
+) -> None:
+    create_query = (
+        "CREATE VECTOR INDEX $name IF NOT EXISTS FOR (n:People) ON n.name OPTIONS "
+        "{ indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }"
+        " WITH [n.`year`]"
+    )
+
+    create_vector_index(
+        driver,
+        "my-index",
+        "People",
+        "name",
+        2048,
+        "cosine",
+        filterable_properties=["year"],
+    )
+
+    driver.execute_query.assert_called_once_with(
+        create_query,
+        {"name": "my-index", "dimensions": 2048, "similarity_fn": "cosine"},
+        database_=None,
+    )
+
+
+def test_create_vector_index_with_empty_filterable_properties(
+    driver: MagicMock,
+) -> None:
+    """Empty list should produce same query as no filterable_properties."""
+    create_query = (
+        "CREATE VECTOR INDEX $name IF NOT EXISTS FOR (n:People) ON n.name OPTIONS "
+        "{ indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }"
+    )
+
+    create_vector_index(
+        driver,
+        "my-index",
+        "People",
+        "name",
+        2048,
+        "cosine",
+        filterable_properties=[],
+    )
+
+    driver.execute_query.assert_called_once_with(
+        create_query,
+        {"name": "my-index", "dimensions": 2048, "similarity_fn": "cosine"},
+        database_=None,
+    )
+
+
+def test_create_vector_index_with_none_filterable_properties(
+    driver: MagicMock,
+) -> None:
+    """None (default) should produce same query as no filterable_properties."""
+    create_query = (
+        "CREATE VECTOR INDEX $name IF NOT EXISTS FOR (n:People) ON n.name OPTIONS "
+        "{ indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }"
+    )
+
+    create_vector_index(
+        driver,
+        "my-index",
+        "People",
+        "name",
+        2048,
+        "cosine",
+        filterable_properties=None,
+    )
+
+    driver.execute_query.assert_called_once_with(
+        create_query,
+        {"name": "my-index", "dimensions": 2048, "similarity_fn": "cosine"},
+        database_=None,
+    )
+
+
 def test_upsert_vector_happy_path(driver: MagicMock) -> None:
     id = 1
     embedding_property = "embedding"
