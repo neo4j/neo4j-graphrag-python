@@ -116,3 +116,31 @@ Key Decisions:
 - VectorCypherRetriever passes retrieval_query to get_query_tail for SEARCH path
 
 Next Task: task-006
+
+================================================================================
+TASK-006: Integrate SEARCH clause into HybridRetriever and HybridCypherRetriever
+Date: 2026-03-13T17:00:00Z
+================================================================================
+
+Summary:
+Extended HybridRetriever and HybridCypherRetriever with SEARCH clause routing.
+Added _build_search_clause_fulltext_query(), _build_hybrid_search_clause_query(),
+and _build_hybrid_search_clause_query_linear() to neo4j_queries.py. Both hybrid
+retrievers now use SEARCH clause for both vector AND fulltext components on
+Neo4j 2026.01+ with known node label, using CALL () { ... UNION ... } pattern.
+Falls back to existing procedure path on older versions.
+
+Files Changed:
+- src/neo4j_graphrag/neo4j_queries.py (added 3 new query builders for fulltext SEARCH + hybrid SEARCH)
+- src/neo4j_graphrag/retrievers/hybrid.py (added SEARCH clause routing, imports, _node_label init, _fetch_index_infos in HybridCypherRetriever)
+- tests/unit/retrievers/test_hybrid.py (patched supports_search_clause=False + _fetch_index_infos on existing tests)
+
+Key Decisions:
+- SEARCH clause used for BOTH vector and fulltext (not just vector) since Neo4j 2026 supports FULLTEXT INDEX in SEARCH
+- HybridCypherRetriever now calls _fetch_index_infos in __init__ (needed for _node_label for SEARCH routing)
+- Both _node_label and _embedding_node_property initialized to None before _fetch_index_infos call
+- No filter support in hybrid (same as before — hybrid already raises on filters)
+- Uses CALL () { ... UNION ... } syntax (new 5.23+ syntax) since SEARCH requires 2026.01+
+- Existing 22 hybrid tests pass with supports_search_clause=False patch
+
+Next Task: task-007

@@ -27,8 +27,14 @@ from neo4j_graphrag.exceptions import (
     SearchValidationError,
     SearchQueryParseError,
 )
-from neo4j_graphrag.neo4j_queries import get_search_query
+from neo4j_graphrag.neo4j_queries import (
+    _build_hybrid_search_clause_query,
+    _build_hybrid_search_clause_query_linear,
+    get_query_tail,
+    get_search_query,
+)
 from neo4j_graphrag.retrievers.base import Retriever
+from neo4j_graphrag.utils.version_utils import supports_search_clause
 from neo4j_graphrag.types import (
     EmbedderModel,
     HybridCypherRetrieverModel,
@@ -120,6 +126,7 @@ class HybridRetriever(Retriever):
             else None
         )
         self.result_formatter = validated_data.result_formatter
+        self._node_label = None
         self._embedding_node_property = None
         self._embedding_dimension = None
         self._fetch_index_infos(self.vector_index_name)
@@ -201,14 +208,52 @@ class HybridRetriever(Retriever):
                 )
             query_vector = self.embedder.embed_query(query_text)
             parameters["query_vector"] = query_vector
-        search_query, _ = get_search_query(
-            search_type=SearchType.HYBRID,
-            return_properties=self.return_properties,
-            embedding_node_property=self._embedding_node_property,
-            neo4j_version_is_5_23_or_above=self.neo4j_version_is_5_23_or_above,
-            ranker=validated_data.ranker,
-            alpha=validated_data.alpha,
-        )
+
+        use_search_clause = False
+        if supports_search_clause(self.driver, self.neo4j_database):
+            if self._node_label:
+                use_search_clause = True
+
+        if use_search_clause:
+            if validated_data.ranker == HybridSearchRanker.LINEAR and validated_data.alpha:
+                search_query_base = _build_hybrid_search_clause_query_linear(
+                    vector_index_name=self.vector_index_name,
+                    fulltext_index_name=self.fulltext_index_name,
+                    node_label=self._node_label or "",
+                )
+            else:
+                search_query_base = _build_hybrid_search_clause_query(
+                    vector_index_name=self.vector_index_name,
+                    fulltext_index_name=self.fulltext_index_name,
+                    node_label=self._node_label or "",
+                )
+            query_tail = get_query_tail(
+                return_properties=self.return_properties,
+                fallback_return=(
+                    f"RETURN node {{ .*, `{self._embedding_node_property}`: null }} AS node, "
+                    "labels(node) AS nodeLabels, "
+                    "elementId(node) AS elementId, "
+                    "elementId(node) AS id, "
+                    "score"
+                )
+                if self._embedding_node_property
+                else (
+                    "RETURN node, labels(node) AS nodeLabels, "
+                    "elementId(node) AS elementId, "
+                    "elementId(node) AS id, "
+                    "score"
+                ),
+            )
+            search_query = f"{search_query_base} {query_tail}"
+        else:
+            search_query, _ = get_search_query(
+                search_type=SearchType.HYBRID,
+                return_properties=self.return_properties,
+                embedding_node_property=self._embedding_node_property,
+                neo4j_version_is_5_23_or_above=self.neo4j_version_is_5_23_or_above,
+                ranker=validated_data.ranker,
+                alpha=validated_data.alpha,
+            )
 
         if "ranker" in parameters:
             del parameters["ranker"]
@@ -313,6 +358,10 @@ class HybridCypherRetriever(Retriever):
             else None
         )
         self.result_formatter = validated_data.result_formatter
+        self._node_label = None
+        self._embedding_node_property = None
+        self._embedding_dimension = None
+        self._fetch_index_infos(self.vector_index_name)
 
     def get_search_results(
         self,
@@ -384,13 +433,36 @@ class HybridCypherRetriever(Retriever):
                     parameters[key] = value
             del parameters["query_params"]
 
-        search_query, _ = get_search_query(
-            search_type=SearchType.HYBRID,
-            retrieval_query=self.retrieval_query,
-            neo4j_version_is_5_23_or_above=self.neo4j_version_is_5_23_or_above,
-            ranker=validated_data.ranker,
-            alpha=validated_data.alpha,
-        )
+        use_search_clause = False
+        if supports_search_clause(self.driver, self.neo4j_database):
+            if self._node_label:
+                use_search_clause = True
+
+        if use_search_clause:
+            if validated_data.ranker == HybridSearchRanker.LINEAR and validated_data.alpha:
+                search_query_base = _build_hybrid_search_clause_query_linear(
+                    vector_index_name=self.vector_index_name,
+                    fulltext_index_name=self.fulltext_index_name,
+                    node_label=self._node_label or "",
+                )
+            else:
+                search_query_base = _build_hybrid_search_clause_query(
+                    vector_index_name=self.vector_index_name,
+                    fulltext_index_name=self.fulltext_index_name,
+                    node_label=self._node_label or "",
+                )
+            query_tail = get_query_tail(
+                retrieval_query=self.retrieval_query,
+            )
+            search_query = f"{search_query_base} {query_tail}"
+        else:
+            search_query, _ = get_search_query(
+                search_type=SearchType.HYBRID,
+                retrieval_query=self.retrieval_query,
+                neo4j_version_is_5_23_or_above=self.neo4j_version_is_5_23_or_above,
+                ranker=validated_data.ranker,
+                alpha=validated_data.alpha,
+            )
 
         if "ranker" in parameters:
             del parameters["ranker"]
