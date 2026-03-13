@@ -18,7 +18,10 @@ import warnings
 from typing import Any, Optional, Union
 
 from neo4j_graphrag.exceptions import InvalidHybridSearchRankerError
-from neo4j_graphrag.filters import get_metadata_filter
+from neo4j_graphrag.filters import (
+    FilterClassification,
+    get_metadata_filter,
+)
 from neo4j_graphrag.types import EntityType, SearchType, HybridSearchRanker
 
 NODE_VECTOR_INDEX_QUERY = (
@@ -287,6 +290,51 @@ def _get_filtered_vector_query(
         parallel_query + f"{base_query} AND ({where_filters}) {vector_query}",
         query_params,
     )
+
+
+def _build_search_clause_vector_query(
+    index_name: str,
+    node_label: str,
+    filter_classification: Optional[FilterClassification] = None,
+) -> tuple[str, dict[str, Any]]:
+    """Build a SEARCH clause Cypher query for vector search.
+
+    Generates:
+        MATCH (node:Label)
+        SEARCH node IN (VECTOR INDEX indexName FOR $query_vector
+          [WHERE <predicates>] LIMIT $top_k)
+        SCORE AS score
+
+    Args:
+        index_name: Name of the vector index.
+        node_label: Label of the nodes to search.
+        filter_classification: Optional classification result from
+            classify_filter_for_search. If provided and has a WHERE clause,
+            it will be embedded inside the SEARCH clause for in-index filtering.
+
+    Returns:
+        tuple[str, dict[str, Any]]: query string and parameters dict.
+    """
+    params: dict[str, Any] = {}
+
+    where_part = ""
+    if (
+        filter_classification is not None
+        and filter_classification.cypher_where_clause is not None
+    ):
+        where_part = f" WHERE {filter_classification.cypher_where_clause}"
+        if filter_classification.params:
+            params.update(filter_classification.params)
+
+    query = (
+        f"MATCH (node:`{node_label}`) "
+        f"SEARCH node IN (VECTOR INDEX `{index_name}` "
+        f"FOR $query_vector"
+        f"{where_part} "
+        f"LIMIT $top_k) "
+        f"SCORE AS score"
+    )
+    return query, params
 
 
 def get_search_query(

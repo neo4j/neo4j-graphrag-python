@@ -43,3 +43,27 @@ Key Decisions:
 - None/empty filters classified as compatible with no WHERE clause
 
 Next Task: task-003
+
+================================================================================
+TASK-003: Add SEARCH clause Cypher query builder in neo4j_queries.py
+Date: 2026-03-13T15:00:00Z
+================================================================================
+
+Summary:
+Added _build_search_clause_vector_query() to neo4j_queries.py. Generates
+MATCH (node:Label) SEARCH node IN (VECTOR INDEX indexName FOR $query_vector
+[WHERE ...] LIMIT $top_k) SCORE AS score. Accepts optional FilterClassification
+to embed WHERE predicates inside SEARCH clause for in-index filtering.
+
+Files Changed:
+- src/neo4j_graphrag/neo4j_queries.py (added _build_search_clause_vector_query, imported FilterClassification)
+- tests/unit/test_neo4j_queries.py (added 8 tests in TestBuildSearchClauseVectorQuery class)
+
+Key Decisions:
+- Uses node alias "node" to match existing query builder conventions
+- Backtick-escapes index name and node label for safety
+- Uses $query_vector and $top_k params matching existing parameter naming
+- Filter params merged into return dict when FilterClassification provided
+- Function is private (_build) since it'll be called internally by retrievers
+
+Next Task: task-004
