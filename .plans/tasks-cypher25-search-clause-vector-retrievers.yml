@@ -67,7 +67,7 @@ tasks:
       filterable_properties parameter (list of property name strings).
       When provided, generate the WITH [n.prop1, n.prop2] clause in the
       CREATE VECTOR INDEX Cypher. Add type annotations and validation.
-    status: pending
+    status: completed
     dependencies: []
     acceptance_criteria:
       - "create_vector_index() accepts optional filterable_properties: list[str]"
@@ -75,7 +75,7 @@ tasks:
       - "Generated Cypher unchanged when filterable_properties is None/empty"
       - "Unit tests verify Cypher output with and without filterable properties"
       - "MyPy strict passes with new parameter"
-    completed_at: null
+    completed_at: 2026-03-13T15:30:00Z
 
   - id: task-005
     title: "Integrate SEARCH clause into VectorRetriever and VectorCypherRetriever"

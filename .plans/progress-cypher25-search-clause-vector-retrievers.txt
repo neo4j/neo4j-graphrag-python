@@ -67,3 +67,26 @@ Key Decisions:
 - Function is private (_build) since it'll be called internally by retrievers
 
 Next Task: task-004
+
+================================================================================
+TASK-004: Add filterable_properties support to create_vector_index
+Date: 2026-03-13T15:30:00Z
+================================================================================
+
+Summary:
+Extended create_vector_index() with optional filterable_properties: List[str]
+parameter. When provided and non-empty, appends WITH [n.`prop1`, n.`prop2`]
+clause to the CREATE VECTOR INDEX Cypher. Property names are backtick-escaped.
+Empty list or None produces unchanged Cypher (backward compatible).
+
+Files Changed:
+- src/neo4j_graphrag/indexes.py (added filterable_properties param + WITH clause generation)
+- tests/unit/test_indexes.py (added 4 tests: multi-prop, single-prop, empty list, None)
+
+Key Decisions:
+- Parameter placed after neo4j_database to avoid breaking positional callers
+- Backtick-escapes property names in WITH clause for safety
+- Empty list treated same as None (no WITH clause) via truthiness check
+- All 25 index tests pass, mypy strict clean, ruff clean
+
+Next Task: task-005
