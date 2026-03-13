@@ -905,3 +905,262 @@ def test_hybrid_cypher_retriever_invalid_lucene_query_error(
         SearchQueryParseError, match="Invalid Lucene query generated from query_text"
     ):
         retriever.search(query_text="~aliens", top_k=5)
+
+
+# --- SEARCH clause routing tests ---
+
+
+class TestHybridRetrieverSearchClausePath:
+    """Tests for HybridRetriever routing to SEARCH clause on Neo4j 2026.01+."""
+
+    @patch(
+        "neo4j_graphrag.retrievers.hybrid.supports_search_clause", return_value=True
+    )
+    @patch("neo4j_graphrag.retrievers.HybridRetriever._fetch_index_infos")
+    @patch("neo4j_graphrag.retrievers.base.get_version")
+    def test_uses_search_clause_naive_ranker(
+        self,
+        mock_get_version: MagicMock,
+        _fetch_index_infos: MagicMock,
+        _mock_supports_search: MagicMock,
+        driver: MagicMock,
+        embedder: MagicMock,
+    ) -> None:
+        mock_get_version.return_value = ((2026, 1, 0), False, True)
+        embed_query_vector = [1.0, 2.0, 3.0]
+        embedder.embed_query.return_value = embed_query_vector
+
+        retriever = HybridRetriever(
+            driver, "vector-index", "fulltext-index", embedder
+        )
+        retriever._node_label = "Document"
+        retriever._embedding_node_property = "embedding"
+
+        driver.execute_query.return_value = [[], None, None]
+        retriever.search(query_text="test query", top_k=5)
+
+        call_args = driver.execute_query.call_args
+        executed_query = call_args[0][0]
+        assert "CALL () {" in executed_query
+        assert "VECTOR INDEX" in executed_query
+        assert "FULLTEXT INDEX" in executed_query
+        assert "SEARCH node IN" in executed_query
+        assert "db.index.vector.queryNodes" not in executed_query
+
+    @patch(
+        "neo4j_graphrag.retrievers.hybrid.supports_search_clause", return_value=True
+    )
+    @patch("neo4j_graphrag.retrievers.HybridRetriever._fetch_index_infos")
+    @patch("neo4j_graphrag.retrievers.base.get_version")
+    def test_uses_search_clause_linear_ranker(
+        self,
+        mock_get_version: MagicMock,
+        _fetch_index_infos: MagicMock,
+        _mock_supports_search: MagicMock,
+        driver: MagicMock,
+        embedder: MagicMock,
+    ) -> None:
+        mock_get_version.return_value = ((2026, 1, 0), False, True)
+        embed_query_vector = [1.0, 2.0, 3.0]
+        embedder.embed_query.return_value = embed_query_vector
+
+        retriever = HybridRetriever(
+            driver, "vector-index", "fulltext-index", embedder
+        )
+        retriever._node_label = "Document"
+        retriever._embedding_node_property = "embedding"
+
+        driver.execute_query.return_value = [[], None, None]
+        retriever.search(
+            query_text="test query",
+            top_k=5,
+            ranker=HybridSearchRanker.LINEAR,
+            alpha=0.7,
+        )
+
+        call_args = driver.execute_query.call_args
+        executed_query = call_args[0][0]
+        assert "CALL () {" in executed_query
+        assert "SEARCH node IN" in executed_query
+        assert "sum(score)" in executed_query
+
+    @patch(
+        "neo4j_graphrag.retrievers.hybrid.supports_search_clause", return_value=True
+    )
+    @patch("neo4j_graphrag.retrievers.HybridRetriever._fetch_index_infos")
+    @patch("neo4j_graphrag.retrievers.base.get_version")
+    def test_falls_back_when_no_node_label(
+        self,
+        mock_get_version: MagicMock,
+        _fetch_index_infos: MagicMock,
+        _mock_supports_search: MagicMock,
+        driver: MagicMock,
+        embedder: MagicMock,
+    ) -> None:
+        mock_get_version.return_value = ((2026, 1, 0), False, True)
+        embed_query_vector = [1.0, 2.0, 3.0]
+        embedder.embed_query.return_value = embed_query_vector
+
+        retriever = HybridRetriever(
+            driver, "vector-index", "fulltext-index", embedder
+        )
+        retriever._node_label = None
+
+        driver.execute_query.return_value = [[], None, None]
+        retriever.search(query_text="test query", top_k=5)
+
+        call_args = driver.execute_query.call_args
+        executed_query = call_args[0][0]
+        assert "SEARCH node IN" not in executed_query
+        assert "db.index.vector.queryNodes" in executed_query
+
+    @patch(
+        "neo4j_graphrag.retrievers.hybrid.supports_search_clause", return_value=True
+    )
+    @patch("neo4j_graphrag.retrievers.HybridRetriever._fetch_index_infos")
+    @patch("neo4j_graphrag.retrievers.base.get_version")
+    def test_search_clause_with_return_properties(
+        self,
+        mock_get_version: MagicMock,
+        _fetch_index_infos: MagicMock,
+        _mock_supports_search: MagicMock,
+        driver: MagicMock,
+        embedder: MagicMock,
+    ) -> None:
+        mock_get_version.return_value = ((2026, 1, 0), False, True)
+        embed_query_vector = [1.0, 2.0, 3.0]
+        embedder.embed_query.return_value = embed_query_vector
+
+        retriever = HybridRetriever(
+            driver,
+            "vector-index",
+            "fulltext-index",
+            embedder,
+            return_properties=["name", "text"],
+        )
+        retriever._node_label = "Document"
+        retriever._embedding_node_property = "embedding"
+
+        driver.execute_query.return_value = [[], None, None]
+        retriever.search(query_text="test query", top_k=5)
+
+        call_args = driver.execute_query.call_args
+        executed_query = call_args[0][0]
+        assert "SEARCH node IN" in executed_query
+        assert ".name" in executed_query
+        assert ".text" in executed_query
+
+
+class TestHybridCypherRetrieverSearchClausePath:
+    """Tests for HybridCypherRetriever routing to SEARCH clause."""
+
+    @patch(
+        "neo4j_graphrag.retrievers.hybrid.supports_search_clause", return_value=True
+    )
+    @patch("neo4j_graphrag.retrievers.HybridCypherRetriever._fetch_index_infos")
+    @patch("neo4j_graphrag.retrievers.base.get_version")
+    def test_uses_search_clause_with_retrieval_query(
+        self,
+        mock_get_version: MagicMock,
+        _fetch_index_infos: MagicMock,
+        _mock_supports_search: MagicMock,
+        driver: MagicMock,
+        embedder: MagicMock,
+    ) -> None:
+        mock_get_version.return_value = ((2026, 1, 0), False, True)
+        embed_query_vector = [1.0, 2.0, 3.0]
+        embedder.embed_query.return_value = embed_query_vector
+        retrieval_query = "RETURN node.id AS node_id, score"
+
+        retriever = HybridCypherRetriever(
+            driver,
+            "vector-index",
+            "fulltext-index",
+            retrieval_query,
+            embedder,
+        )
+        retriever._node_label = "Document"
+
+        driver.execute_query.return_value = [[], None, None]
+        retriever.search(query_text="test query", top_k=5)
+
+        call_args = driver.execute_query.call_args
+        executed_query = call_args[0][0]
+        assert "SEARCH node IN" in executed_query
+        assert "VECTOR INDEX" in executed_query
+        assert "FULLTEXT INDEX" in executed_query
+        assert retrieval_query in executed_query
+
+    @patch(
+        "neo4j_graphrag.retrievers.hybrid.supports_search_clause", return_value=True
+    )
+    @patch("neo4j_graphrag.retrievers.HybridCypherRetriever._fetch_index_infos")
+    @patch("neo4j_graphrag.retrievers.base.get_version")
+    def test_falls_back_when_no_node_label(
+        self,
+        mock_get_version: MagicMock,
+        _fetch_index_infos: MagicMock,
+        _mock_supports_search: MagicMock,
+        driver: MagicMock,
+        embedder: MagicMock,
+    ) -> None:
+        mock_get_version.return_value = ((2026, 1, 0), False, True)
+        embed_query_vector = [1.0, 2.0, 3.0]
+        embedder.embed_query.return_value = embed_query_vector
+        retrieval_query = "RETURN node.id AS node_id, score"
+
+        retriever = HybridCypherRetriever(
+            driver,
+            "vector-index",
+            "fulltext-index",
+            retrieval_query,
+            embedder,
+        )
+        retriever._node_label = None
+
+        driver.execute_query.return_value = [[], None, None]
+        retriever.search(query_text="test query", top_k=5)
+
+        call_args = driver.execute_query.call_args
+        executed_query = call_args[0][0]
+        assert "SEARCH node IN" not in executed_query
+
+    @patch(
+        "neo4j_graphrag.retrievers.hybrid.supports_search_clause", return_value=True
+    )
+    @patch("neo4j_graphrag.retrievers.HybridCypherRetriever._fetch_index_infos")
+    @patch("neo4j_graphrag.retrievers.base.get_version")
+    def test_search_clause_linear_ranker(
+        self,
+        mock_get_version: MagicMock,
+        _fetch_index_infos: MagicMock,
+        _mock_supports_search: MagicMock,
+        driver: MagicMock,
+        embedder: MagicMock,
+    ) -> None:
+        mock_get_version.return_value = ((2026, 1, 0), False, True)
+        embed_query_vector = [1.0, 2.0, 3.0]
+        embedder.embed_query.return_value = embed_query_vector
+        retrieval_query = "RETURN node.id AS node_id, score"
+
+        retriever = HybridCypherRetriever(
+            driver,
+            "vector-index",
+            "fulltext-index",
+            retrieval_query,
+            embedder,
+        )
+        retriever._node_label = "Document"
+
+        driver.execute_query.return_value = [[], None, None]
+        retriever.search(
+            query_text="test query",
+            top_k=5,
+            ranker=HybridSearchRanker.LINEAR,
+            alpha=0.7,
+        )
+
+        call_args = driver.execute_query.call_args
+        executed_query = call_args[0][0]
+        assert "SEARCH node IN" in executed_query
+        assert "sum(score)" in executed_query

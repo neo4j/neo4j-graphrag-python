@@ -167,3 +167,31 @@ Key Decisions:
 - Same env vars as existing docker-compose.yml neo4j service for conftest.py compatibility
 
 Next Task: task-007 (or task-009 after task-007)
+
+================================================================================
+TASK-007: Add comprehensive unit tests for all new functionality
+Date: 2026-03-13T19:00:00Z
+================================================================================
+
+Summary:
+Added tests covering the SEARCH clause code paths that were missing from
+previous task implementations. Existing tests already covered version utils,
+filter classification, vector SEARCH query builder, and index filterable
+properties thoroughly. The gaps were: hybrid SEARCH query builders and
+retriever routing logic for all 4 retrievers.
+
+Files Changed:
+- tests/unit/test_neo4j_queries.py (added 3 test classes: TestBuildSearchClauseFulltextQuery, TestBuildHybridSearchClauseQuery, TestBuildHybridSearchClauseQueryLinear — 8 new tests)
+- tests/unit/retrievers/test_vector.py (added 2 test classes: TestVectorRetrieverSearchClausePath, TestVectorCypherRetrieverSearchClausePath — 8 new tests)
+- tests/unit/retrievers/test_hybrid.py (added 2 test classes: TestHybridRetrieverSearchClausePath, TestHybridCypherRetrieverSearchClausePath — 7 new tests)
+
+Test Coverage:
+- 940 tests pass, 95% coverage (threshold: 90%)
+- SEARCH path tests cover: no filters, compatible filters, incompatible filter fallback, missing node_label fallback, return_properties, retrieval_query, naive ranker, linear ranker
+
+Key Decisions:
+- Focused on routing tests (SEARCH vs procedure path) since query building was already tested
+- Used supports_search_clause=True mock + _node_label set to trigger SEARCH path
+- Verified query string contents rather than exact match for resilience
+
+Next Task: task-009
