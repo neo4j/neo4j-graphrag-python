@@ -106,7 +106,7 @@ tasks:
       the SEARCH clause can also be used for the fulltext component. If not,
       use SEARCH for vector + existing approach for fulltext. Apply same
       filter classification and fallback logic.
-    status: pending
+    status: completed
     dependencies:
       - task-005
     acceptance_criteria:
@@ -115,7 +115,7 @@ tasks:
       - "Warning logged for incompatible filters on SEARCH-capable server"
       - "HybridCypherRetriever follows same routing logic"
       - "Existing hybrid retriever tests still pass"
-    completed_at: null
+    completed_at: 2026-03-13T17:00:00Z
 
   - id: task-007
     title: "Add comprehensive unit tests for all new functionality"

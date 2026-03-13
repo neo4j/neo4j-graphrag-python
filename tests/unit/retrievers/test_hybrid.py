@@ -72,9 +72,11 @@ def test_hybrid_retriever_invalid_fulltext_index_name(
     assert "Input should be a valid string" in str(exc_info.value)
 
 
+@patch("neo4j_graphrag.retrievers.hybrid.supports_search_clause", return_value=False)
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_hybrid_retriever_with_result_format_function(
     mock_get_version: MagicMock,
+    _mock_search_clause: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
     neo4j_record: MagicMock,
@@ -169,11 +171,13 @@ def test_hybrid_cypher_retriever_invalid_database_name(
     assert "Input should be a valid string" in str(exc_info.value)
 
 
+@patch("neo4j_graphrag.retrievers.hybrid.supports_search_clause", return_value=False)
 @patch("neo4j_graphrag.retrievers.HybridRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_hybrid_search_text_happy_path(
     mock_get_version: MagicMock,
     _fetch_index_infos_mock: MagicMock,
+    _mock_search_clause: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
     neo4j_record: MagicMock,
@@ -233,11 +237,13 @@ def test_hybrid_search_text_happy_path(
     )
 
 
+@patch("neo4j_graphrag.retrievers.hybrid.supports_search_clause", return_value=False)
 @patch("neo4j_graphrag.retrievers.HybridRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_hybrid_search_sanitizes_text(
     mock_get_version: MagicMock,
     _fetch_index_infos_mock: MagicMock,
+    _mock_search_clause: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
     neo4j_record: MagicMock,
@@ -284,11 +290,13 @@ def test_hybrid_search_sanitizes_text(
     )
 
 
+@patch("neo4j_graphrag.retrievers.hybrid.supports_search_clause", return_value=False)
 @patch("neo4j_graphrag.retrievers.HybridRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_hybrid_search_favors_query_vector_over_embedding_vector(
     mock_get_version: MagicMock,
     _fetch_index_infos_mock: MagicMock,
+    _mock_search_clause: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
     neo4j_record: MagicMock,
@@ -375,11 +383,13 @@ def test_hybrid_search_retriever_search_missing_embedder_for_text(
         )
 
 
+@patch("neo4j_graphrag.retrievers.hybrid.supports_search_clause", return_value=False)
 @patch("neo4j_graphrag.retrievers.HybridRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_hybrid_retriever_return_properties(
     mock_get_version: MagicMock,
     _fetch_index_infos_mock: MagicMock,
+    _mock_search_clause: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
     neo4j_record: MagicMock,
@@ -440,9 +450,13 @@ def test_hybrid_retriever_return_properties(
     )
 
 
+@patch("neo4j_graphrag.retrievers.hybrid.supports_search_clause", return_value=False)
+@patch("neo4j_graphrag.retrievers.HybridCypherRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_hybrid_cypher_retrieval_query_with_params(
     mock_get_version: MagicMock,
+    _fetch_index_infos_mock: MagicMock,
+    _mock_search_clause: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
     neo4j_record: MagicMock,
@@ -518,9 +532,13 @@ def test_hybrid_cypher_retrieval_query_with_params(
     )
 
 
+@patch("neo4j_graphrag.retrievers.hybrid.supports_search_clause", return_value=False)
+@patch("neo4j_graphrag.retrievers.HybridCypherRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_hybrid_cypher_retriever_with_result_format_function(
     mock_get_version: MagicMock,
+    _fetch_index_infos_mock: MagicMock,
+    _mock_search_clause: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
     neo4j_record: MagicMock,
@@ -564,9 +582,13 @@ def test_hybrid_cypher_retriever_with_result_format_function(
     )
 
 
+@patch("neo4j_graphrag.retrievers.hybrid.supports_search_clause", return_value=False)
+@patch("neo4j_graphrag.retrievers.HybridCypherRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_hybrid_cypher_search_sanitizes_text(
     mock_get_version: MagicMock,
+    _fetch_index_infos_mock: MagicMock,
+    _mock_search_clause: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
     neo4j_record: MagicMock,
@@ -651,11 +673,13 @@ def test_hybrid_cypher_retriever_linear_without_alpha(
     assert "alpha must be provided" in str(exc_info.value)
 
 
+@patch("neo4j_graphrag.retrievers.hybrid.supports_search_clause", return_value=False)
 @patch("neo4j_graphrag.retrievers.HybridRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_hybrid_search_linear_ranker_happy_path(
     mock_get_version: MagicMock,
     _fetch_index_infos_mock: MagicMock,
+    _mock_search_clause: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
     neo4j_record: MagicMock,
@@ -720,9 +744,13 @@ def test_hybrid_search_linear_ranker_happy_path(
     )
 
 
+@patch("neo4j_graphrag.retrievers.hybrid.supports_search_clause", return_value=False)
+@patch("neo4j_graphrag.retrievers.HybridCypherRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_hybrid_cypher_linear_ranker(
     mock_get_version: MagicMock,
+    _fetch_index_infos_mock: MagicMock,
+    _mock_search_clause: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
     neo4j_record: MagicMock,
@@ -805,11 +833,13 @@ def test_hybrid_cypher_linear_ranker(
     )
 
 
+@patch("neo4j_graphrag.retrievers.hybrid.supports_search_clause", return_value=False)
 @patch("neo4j_graphrag.retrievers.HybridRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_hybrid_retriever_invalid_lucene_query_error(
     mock_get_version: MagicMock,
     _fetch_index_infos_mock: MagicMock,
+    _mock_search_clause: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
 ) -> None:
@@ -838,11 +868,13 @@ def test_hybrid_retriever_invalid_lucene_query_error(
         retriever.search(query_text="~aliens", top_k=5)
 
 
+@patch("neo4j_graphrag.retrievers.hybrid.supports_search_clause", return_value=False)
 @patch("neo4j_graphrag.retrievers.HybridCypherRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_hybrid_cypher_retriever_invalid_lucene_query_error(
     mock_get_version: MagicMock,
     _fetch_index_infos_mock: MagicMock,
+    _mock_search_clause: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
 ) -> None:

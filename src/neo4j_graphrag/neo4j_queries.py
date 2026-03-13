@@ -337,6 +337,123 @@ def _build_search_clause_vector_query(
     return query, params
 
 
+def _build_search_clause_fulltext_query(
+    index_name: str,
+    node_label: str,
+) -> str:
+    """Build a SEARCH clause Cypher snippet for fulltext search.
+
+    Generates:
+        MATCH (node:Label)
+        SEARCH node IN (FULLTEXT INDEX indexName FOR $query_text LIMIT $top_k)
+        SCORE AS score
+
+    Args:
+        index_name: Name of the fulltext index.
+        node_label: Label of the nodes to search.
+
+    Returns:
+        str: query string snippet.
+    """
+    return (
+        f"MATCH (node:`{node_label}`) "
+        f"SEARCH node IN (FULLTEXT INDEX `{index_name}` "
+        f"FOR $query_text "
+        f"LIMIT $top_k) "
+        f"SCORE AS score"
+    )
+
+
+def _build_hybrid_search_clause_query(
+    vector_index_name: str,
+    fulltext_index_name: str,
+    node_label: str,
+) -> str:
+    """Build a hybrid SEARCH clause query using UNION of vector + fulltext.
+
+    Uses CALL subquery with UNION to combine normalized vector and fulltext
+    scores, then takes the max score per node (naive ranker).
+
+    Args:
+        vector_index_name: Name of the vector index.
+        fulltext_index_name: Name of the fulltext index.
+        node_label: Label of the nodes to search.
+
+    Returns:
+        str: The constructed Cypher query string.
+    """
+    vector_part = (
+        f"MATCH (node:`{node_label}`) "
+        f"SEARCH node IN (VECTOR INDEX `{vector_index_name}` "
+        f"FOR $query_vector "
+        f"LIMIT $top_k) "
+        f"SCORE AS score "
+        "WITH collect({node:node, score:score}) AS nodes, max(score) AS vector_index_max_score "
+        "UNWIND nodes AS n "
+        "RETURN n.node AS node, (n.score / vector_index_max_score) AS score"
+    )
+    fulltext_part = (
+        f"MATCH (node:`{node_label}`) "
+        f"SEARCH node IN (FULLTEXT INDEX `{fulltext_index_name}` "
+        f"FOR $query_text "
+        f"LIMIT $top_k) "
+        f"SCORE AS score "
+        "WITH collect({node:node, score:score}) AS nodes, max(score) AS ft_index_max_score "
+        "UNWIND nodes AS n "
+        "RETURN n.node AS node, (n.score / ft_index_max_score) AS score"
+    )
+    return (
+        f"CALL () {{ {vector_part} UNION {fulltext_part} }} "
+        "WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k"
+    )
+
+
+def _build_hybrid_search_clause_query_linear(
+    vector_index_name: str,
+    fulltext_index_name: str,
+    node_label: str,
+) -> str:
+    """Build a hybrid SEARCH clause query with linear ranker using UNION.
+
+    Uses CALL subquery with UNION to combine weighted vector and fulltext
+    scores using $alpha parameter.
+
+    Args:
+        vector_index_name: Name of the vector index.
+        fulltext_index_name: Name of the fulltext index.
+        node_label: Label of the nodes to search.
+
+    Returns:
+        str: The constructed Cypher query string.
+    """
+    vector_part = (
+        f"MATCH (node:`{node_label}`) "
+        f"SEARCH node IN (VECTOR INDEX `{vector_index_name}` "
+        f"FOR $query_vector "
+        f"LIMIT $top_k) "
+        f"SCORE AS score "
+        "WITH collect({node: node, score: score}) AS nodes, max(score) AS vector_index_max_score "
+        "UNWIND nodes AS n "
+        "WITH n.node AS node, (n.score / vector_index_max_score) AS rawScore "
+        "RETURN node, rawScore * $alpha AS score"
+    )
+    fulltext_part = (
+        f"MATCH (node:`{node_label}`) "
+        f"SEARCH node IN (FULLTEXT INDEX `{fulltext_index_name}` "
+        f"FOR $query_text "
+        f"LIMIT $top_k) "
+        f"SCORE AS score "
+        "WITH collect({node: node, score: score}) AS nodes, max(score) AS ft_index_max_score "
+        "UNWIND nodes AS n "
+        "WITH n.node AS node, (n.score / ft_index_max_score) AS rawScore "
+        "RETURN node, rawScore * (1 - $alpha) AS score"
+    )
+    return (
+        f"CALL () {{ {vector_part} UNION {fulltext_part} }} "
+        "WITH node, sum(score) AS score ORDER BY score DESC LIMIT $top_k"
+    )
+
+
 def get_search_query(
     search_type: SearchType,
     entity_type: EntityType = EntityType.NODE,
