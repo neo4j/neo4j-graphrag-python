@@ -1,0 +1,196 @@
+feature: cypher25-search-clause-vector-retrievers
+prd: ./prd-cypher25-search-clause-vector-retrievers.md
+created_at: 2026-03-13T12:00:00Z
+updated_at: 2026-03-13T13:00:00Z
+
+tasks:
+  - id: task-001
+    title: "Add Neo4j server version detection utility with caching"
+    description: |
+      Create a utility function that queries Neo4j server version via
+      `CALL dbms.components() YIELD versions` and parses the semver result.
+      Cache the version per driver instance to avoid repeated queries.
+      Add a helper to check if version >= 2026.01 (SEARCH clause support).
+      Place in a shared utility module accessible by all retrievers.
+    status: completed
+    dependencies: []
+    acceptance_criteria:
+      - "Function queries dbms.components() and returns parsed (major, minor, patch) tuple"
+      - "Result is cached per driver instance — second call does not hit the database"
+      - "Helper function `supports_search_clause(driver)` returns bool"
+      - "Unit tests with mocked driver verify parsing and caching behavior"
+      - "Handles connection errors gracefully (defaults to False / old path)"
+    completed_at: 2026-03-13T14:00:00Z
+
+  - id: task-002
+    title: "Add filter classification for SEARCH-compatible predicates"
+    description: |
+      Add a function in filters.py that inspects a filter dict and classifies
+      it as SEARCH-compatible or not. SEARCH-compatible means all predicates
+      are simple property comparisons (>, <, >=, <=, =) joined only by AND.
+      Filters using $or, $in, $like, $contains, or nested logic are incompatible.
+      Return a structured result with the compatible Cypher WHERE clause or a
+      fallback indicator.
+    status: pending
+    dependencies: []
+    acceptance_criteria:
+      - "Function accepts the existing filter dict format and returns (is_compatible, cypher_where_clause, params)"
+      - "Simple AND comparisons classified as compatible with correct Cypher output"
+      - "$or, $in, $like, $contains, nested filters classified as incompatible"
+      - "Empty/None filters classified as compatible (no WHERE clause needed)"
+      - "Unit tests cover all filter operator types and edge cases"
+    completed_at: null
+
+  - id: task-003
+    title: "Add SEARCH clause Cypher query builder in neo4j_queries.py"
+    description: |
+      Add a new function to generate the SEARCH clause Cypher for vector queries:
+      `MATCH (n:Label) SEARCH n IN (VECTOR INDEX indexName FOR $queryVector
+      WHERE <predicates> LIMIT $k) SCORE AS score`. Support optional WHERE clause
+      from the filter classification output. Integrate with existing query builder
+      patterns in the module.
+    status: pending
+    dependencies:
+      - task-002
+    acceptance_criteria:
+      - "Generates correct SEARCH clause Cypher with no filters"
+      - "Generates correct SEARCH clause Cypher with WHERE predicates"
+      - "Parameterizes query vector and filter values properly"
+      - "Follows existing query builder patterns in neo4j_queries.py"
+      - "Unit tests verify generated Cypher strings for various inputs"
+    completed_at: null
+
+  - id: task-004
+    title: "Add filterable_properties support to create_vector_index"
+    description: |
+      Extend create_vector_index() in indexes.py to accept an optional
+      filterable_properties parameter (list of property name strings).
+      When provided, generate the WITH [n.prop1, n.prop2] clause in the
+      CREATE VECTOR INDEX Cypher. Add type annotations and validation.
+    status: pending
+    dependencies: []
+    acceptance_criteria:
+      - "create_vector_index() accepts optional filterable_properties: list[str]"
+      - "Generated Cypher includes WITH [n.prop1, n.prop2] when properties provided"
+      - "Generated Cypher unchanged when filterable_properties is None/empty"
+      - "Unit tests verify Cypher output with and without filterable properties"
+      - "MyPy strict passes with new parameter"
+    completed_at: null
+
+  - id: task-005
+    title: "Integrate SEARCH clause into VectorRetriever and VectorCypherRetriever"
+    description: |
+      Modify VectorRetriever and VectorCypherRetriever to use the version
+      detection utility and filter classification to route queries. On
+      compatible Neo4j versions with compatible filters, use the SEARCH clause
+      query builder. Otherwise fall back to the existing procedure path with
+      a warning log for incompatible filters on new servers.
+    status: pending
+    dependencies:
+      - task-001
+      - task-002
+      - task-003
+    acceptance_criteria:
+      - "VectorRetriever uses SEARCH clause on Neo4j 2026.01+ with compatible filters"
+      - "VectorRetriever falls back to procedure on older Neo4j versions"
+      - "Warning logged when filters are incompatible on a SEARCH-capable server"
+      - "VectorCypherRetriever follows same routing logic"
+      - "Existing tests still pass — no regression on old code path"
+    completed_at: null
+
+  - id: task-006
+    title: "Integrate SEARCH clause into HybridRetriever and HybridCypherRetriever"
+    description: |
+      Extend HybridRetriever and HybridCypherRetriever with the same version
+      detection and query routing as the vector retrievers. Investigate whether
+      the SEARCH clause can also be used for the fulltext component. If not,
+      use SEARCH for vector + existing approach for fulltext. Apply same
+      filter classification and fallback logic.
+    status: pending
+    dependencies:
+      - task-005
+    acceptance_criteria:
+      - "HybridRetriever uses SEARCH clause for vector component on 2026.01+"
+      - "Fulltext component uses appropriate approach (SEARCH or existing)"
+      - "Warning logged for incompatible filters on SEARCH-capable server"
+      - "HybridCypherRetriever follows same routing logic"
+      - "Existing hybrid retriever tests still pass"
+    completed_at: null
+
+  - id: task-007
+    title: "Add comprehensive unit tests for all new functionality"
+    description: |
+      Add unit tests covering: version detection edge cases, filter
+      classification with all operator types, SEARCH query generation,
+      index creation with filterable properties, retriever routing logic
+      for all 4 retrievers. Ensure 90%+ coverage threshold is maintained.
+      Mock the Neo4j driver for all unit tests.
+    status: pending
+    dependencies:
+      - task-005
+      - task-006
+    acceptance_criteria:
+      - "Tests cover version detection (valid versions, errors, caching)"
+      - "Tests cover all filter operator classifications"
+      - "Tests cover SEARCH Cypher generation with/without filters"
+      - "Tests cover all 4 retrievers with both old and new code paths"
+      - "Coverage threshold of 90% maintained — uv run pytest --cov passes"
+    completed_at: null
+
+  - id: task-008
+    title: "Add docker-compose.neo4j2026.yml for SEARCH clause e2e tests"
+    description: |
+      Create a separate docker-compose override file at tests/e2e/docker-compose.neo4j2026.yml
+      that spins up Neo4j 2026.02-enterprise with APOC plugin. Model it on the
+      existing docker-compose.yml but use the 2026.02 image. Ensure the container
+      starts correctly and Neo4j is reachable. Use same auth (neo4j/password) and
+      port mapping as existing setup for compatibility with conftest.py fixtures.
+    status: pending
+    dependencies: []
+    acceptance_criteria:
+      - "docker-compose.neo4j2026.yml exists in tests/e2e/"
+      - "Uses neo4j:2026.02-enterprise (or equivalent available tag) with APOC"
+      - "Container starts successfully: docker compose -f tests/e2e/docker-compose.neo4j2026.yml up -d"
+      - "Neo4j is reachable on bolt://localhost:7687 with neo4j/password auth"
+      - "Verified manually: docker compose up + connect with driver succeeds"
+    completed_at: null
+
+  - id: task-009
+    title: "Add E2E tests for in-index filtered vector search in Docker"
+    description: |
+      Add E2E tests in tests/e2e/ that exercise the full SEARCH clause path
+      against the Neo4j 2026.02 Docker container. Tests must: create a vector
+      index with filterable properties, insert nodes with embeddings and
+      filterable property values, run VectorRetriever.search() with AND filters,
+      and assert correct results (matching nodes returned, non-matching excluded).
+      Also test the fallback path with incompatible filters. Tests must actually
+      pass when run against the Docker container — verify locally before marking done.
+    status: pending
+    dependencies:
+      - task-006
+      - task-008
+    acceptance_criteria:
+      - "E2E test creates vector index with WITH [...] filterable properties via create_vector_index()"
+      - "Test inserts nodes with embedding + varying filterable property values"
+      - "Test runs VectorRetriever.search() with simple AND filters and asserts correct filtered results"
+      - "Test verifies incompatible filter ($or) falls back gracefully and still returns results"
+      - "Tests actually pass: run docker compose -f tests/e2e/docker-compose.neo4j2026.yml up -d, then uv run pytest tests/e2e/test_search_clause_e2e.py -v succeeds"
+      - "Test follows existing e2e patterns (module-scoped driver, setup fixtures, conftest.py)"
+    completed_at: null
+
+  - id: task-010
+    title: "Update documentation for SEARCH clause and filterable properties"
+    description: |
+      Update user guide and API reference docs to cover: the new SEARCH clause
+      behavior, how to create indexes with filterable properties, which filter
+      types use in-index filtering vs fallback, and Neo4j version requirements.
+      Update existing filter documentation to note the performance difference.
+    status: pending
+    dependencies:
+      - task-006
+    acceptance_criteria:
+      - "User guide documents create_vector_index filterable_properties parameter"
+      - "User guide explains SEARCH clause auto-detection and filter routing"
+      - "API reference updated for all modified public APIs"
+      - "Filter docs note which operators use in-index filtering vs brute-force"
+    completed_at: null

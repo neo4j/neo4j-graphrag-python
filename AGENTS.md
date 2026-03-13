@@ -89,6 +89,13 @@ ENVIRONMENT MANAGEMENT:
 - Vector DB support (Weaviate, Pinecone, Qdrant)
 - Documentation via Sphinx; published separately
 
+## Gotchas
+
+- Version utils in `src/neo4j_graphrag/utils/version_utils.py` — new version checks go here
+- Unit test conftest provides `driver` fixture as MagicMock (see `tests/unit/conftest.py`)
+- Neo4j versions after 5.x use year-based format (2025.01, 2026.01) — tuple comparison still works
+- `WeakKeyDictionary` works for caching per-driver since `neo4j.Driver` is hashable
+
 ---
 
 *This AGENTS.md was generated using agent-based project discovery.*
