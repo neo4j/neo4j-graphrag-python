@@ -125,7 +125,7 @@ tasks:
       index creation with filterable properties, retriever routing logic
       for all 4 retrievers. Ensure 90%+ coverage threshold is maintained.
       Mock the Neo4j driver for all unit tests.
-    status: pending
+    status: completed
     dependencies:
       - task-005
       - task-006
@@ -135,7 +135,7 @@ tasks:
       - "Tests cover SEARCH Cypher generation with/without filters"
       - "Tests cover all 4 retrievers with both old and new code paths"
       - "Coverage threshold of 90% maintained — uv run pytest --cov passes"
-    completed_at: null
+    completed_at: 2026-03-13T19:00:00Z
 
   - id: task-008
     title: "Add docker-compose.neo4j2026.yml for SEARCH clause e2e tests"

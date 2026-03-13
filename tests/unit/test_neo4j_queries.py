@@ -20,7 +20,10 @@ import pytest
 from neo4j_graphrag.exceptions import InvalidHybridSearchRankerError
 from neo4j_graphrag.filters import FilterClassification
 from neo4j_graphrag.neo4j_queries import (
+    _build_search_clause_fulltext_query,
     _build_search_clause_vector_query,
+    _build_hybrid_search_clause_query,
+    _build_hybrid_search_clause_query_linear,
     get_query_tail,
     get_search_query,
     _get_hybrid_query_linear,
@@ -381,3 +384,100 @@ class TestBuildSearchClauseVectorQuery:
             filter_classification=classification,
         )
         assert params == {}
+
+
+class TestBuildSearchClauseFulltextQuery:
+    def test_basic(self) -> None:
+        query = _build_search_clause_fulltext_query(
+            index_name="ft_index",
+            node_label="Document",
+        )
+        assert "MATCH (node:`Document`)" in query
+        assert "FULLTEXT INDEX `ft_index`" in query
+        assert "$query_text" in query
+        assert "LIMIT $top_k" in query
+        assert "SCORE AS score" in query
+
+    def test_backtick_escaping(self) -> None:
+        query = _build_search_clause_fulltext_query(
+            index_name="my-ft-index",
+            node_label="My Label",
+        )
+        assert "`my-ft-index`" in query
+        assert "`My Label`" in query
+
+    def test_clause_ordering(self) -> None:
+        query = _build_search_clause_fulltext_query(
+            index_name="idx",
+            node_label="N",
+        )
+        match_pos = query.index("MATCH")
+        search_pos = query.index("SEARCH")
+        fulltext_pos = query.index("FULLTEXT")
+        for_pos = query.index("FOR")
+        limit_pos = query.index("LIMIT")
+        score_pos = query.index("SCORE")
+        assert match_pos < search_pos < fulltext_pos < for_pos < limit_pos < score_pos
+
+
+class TestBuildHybridSearchClauseQuery:
+    def test_basic_structure(self) -> None:
+        query = _build_hybrid_search_clause_query(
+            vector_index_name="vec_idx",
+            fulltext_index_name="ft_idx",
+            node_label="Document",
+        )
+        assert "CALL () {" in query
+        assert "UNION" in query
+        assert "VECTOR INDEX `vec_idx`" in query
+        assert "FULLTEXT INDEX `ft_idx`" in query
+        assert "`Document`" in query
+        assert "max(score) AS score" in query
+        assert "ORDER BY score DESC" in query
+
+    def test_contains_both_search_parts(self) -> None:
+        query = _build_hybrid_search_clause_query(
+            vector_index_name="v",
+            fulltext_index_name="f",
+            node_label="N",
+        )
+        assert "$query_vector" in query
+        assert "$query_text" in query
+        assert "vector_index_max_score" in query
+        assert "ft_index_max_score" in query
+
+    def test_backtick_escaping(self) -> None:
+        query = _build_hybrid_search_clause_query(
+            vector_index_name="my-vec",
+            fulltext_index_name="my-ft",
+            node_label="My Label",
+        )
+        assert "`my-vec`" in query
+        assert "`my-ft`" in query
+        assert "`My Label`" in query
+
+
+class TestBuildHybridSearchClauseQueryLinear:
+    def test_basic_structure(self) -> None:
+        query = _build_hybrid_search_clause_query_linear(
+            vector_index_name="vec_idx",
+            fulltext_index_name="ft_idx",
+            node_label="Document",
+        )
+        assert "CALL () {" in query
+        assert "UNION" in query
+        assert "$alpha" in query
+        assert "(1 - $alpha)" in query
+        assert "sum(score)" in query
+        assert "ORDER BY score DESC" in query
+
+    def test_contains_both_index_refs(self) -> None:
+        query = _build_hybrid_search_clause_query_linear(
+            vector_index_name="v",
+            fulltext_index_name="f",
+            node_label="N",
+        )
+        assert "VECTOR INDEX `v`" in query
+        assert "FULLTEXT INDEX `f`" in query
+        assert "$query_vector" in query
+        assert "$query_text" in query
