@@ -165,7 +165,7 @@ tasks:
       and assert correct results (matching nodes returned, non-matching excluded).
       Also test the fallback path with incompatible filters. Tests must actually
       pass when run against the Docker container — verify locally before marking done.
-    status: pending
+    status: completed
     dependencies:
       - task-006
       - task-008
@@ -176,7 +176,7 @@ tasks:
       - "Test verifies incompatible filter ($or) falls back gracefully and still returns results"
       - "Tests actually pass: run docker compose -f tests/e2e/docker-compose.neo4j2026.yml up -d, then uv run pytest tests/e2e/test_search_clause_e2e.py -v succeeds"
       - "Test follows existing e2e patterns (module-scoped driver, setup fixtures, conftest.py)"
-    completed_at: null
+    completed_at: 2026-03-13T20:00:00Z
 
   - id: task-010
     title: "Update documentation for SEARCH clause and filterable properties"

@@ -124,15 +124,17 @@ def create_vector_index(
         ) from e
 
     try:
-        query = (
-            f"CREATE VECTOR INDEX $name {'' if fail_if_exists else 'IF NOT EXISTS'} FOR (n:{label}) ON n.{embedding_property} OPTIONS "
-            "{ indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }"
-        )
+        with_clause = ""
         if filterable_properties:
             props_clause = ", ".join(
                 [f"n.`{prop}`" for prop in filterable_properties]
             )
-            query += f" WITH [{props_clause}]"
+            with_clause = f" WITH [{props_clause}]"
+        query = (
+            f"CREATE VECTOR INDEX $name {'' if fail_if_exists else 'IF NOT EXISTS'} FOR (n:{label}) ON n.{embedding_property}"
+            f"{with_clause}"
+            " OPTIONS { indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }"
+        )
         logger.info(f"Creating vector index named '{name}'")
         driver.execute_query(
             query,
