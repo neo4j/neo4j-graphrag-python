@@ -185,7 +185,7 @@ tasks:
       behavior, how to create indexes with filterable properties, which filter
       types use in-index filtering vs fallback, and Neo4j version requirements.
       Update existing filter documentation to note the performance difference.
-    status: pending
+    status: completed
     dependencies:
       - task-006
     acceptance_criteria:
@@ -193,4 +193,4 @@ tasks:
       - "User guide explains SEARCH clause auto-detection and filter routing"
       - "API reference updated for all modified public APIs"
       - "Filter docs note which operators use in-index filtering vs brute-force"
-    completed_at: null
+    completed_at: 2026-03-13T21:00:00Z
