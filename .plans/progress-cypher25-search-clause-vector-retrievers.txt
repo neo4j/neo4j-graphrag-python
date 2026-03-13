@@ -19,3 +19,27 @@ Key Decisions:
 - Version threshold is (2026, 1, 0) — tuple comparison works naturally with year-based versioning
 
 Next Task: task-002
+
+================================================================================
+TASK-002: Add filter classification for SEARCH-compatible predicates
+Date: 2026-03-13T14:30:00Z
+================================================================================
+
+Summary:
+Added classify_filter_for_search() and helper _is_filter_search_compatible()
+to filters.py. Returns FilterClassification dataclass with is_compatible flag,
+optional Cypher WHERE clause, and params. Compatible = simple comparisons
+(=, <>, <, <=, >, >=, BETWEEN) joined by AND only. Incompatible = $or, $in,
+$nin, $like, $ilike, nested OR logic.
+
+Files Changed:
+- src/neo4j_graphrag/filters.py (added FilterClassification, classify_filter_for_search, _is_filter_search_compatible, SEARCH_COMPATIBLE_OPERATORS)
+- tests/unit/test_filters.py (added 20 tests covering all operator types and edge cases)
+
+Key Decisions:
+- Reuses existing get_metadata_filter() for Cypher generation when compatible
+- FilterClassification is a dataclass, not a NamedTuple, for clarity
+- SEARCH_COMPATIBLE_OPERATORS set defined separately for maintainability
+- None/empty filters classified as compatible with no WHERE clause
+
+Next Task: task-003
