@@ -1,0 +1,21 @@
+================================================================================
+TASK-001: Add Neo4j server version detection utility with caching
+Date: 2026-03-13T14:00:00Z
+================================================================================
+
+Summary:
+Added get_version_cached(), clear_version_cache(), and supports_search_clause()
+to version_utils.py. Uses WeakKeyDictionary for per-driver caching so entries
+auto-clean on driver GC. supports_search_clause() catches all exceptions and
+returns False on error for graceful fallback.
+
+Files Changed:
+- src/neo4j_graphrag/utils/version_utils.py (modified: added caching + SEARCH clause check)
+- tests/unit/utils/test_version_utils.py (modified: added 11 new tests for caching and SEARCH support)
+
+Key Decisions:
+- WeakKeyDictionary keyed on driver instance for cache — no manual cleanup needed
+- supports_search_clause catches broad Exception to handle any driver/network error
+- Version threshold is (2026, 1, 0) — tuple comparison works naturally with year-based versioning
+
+Next Task: task-002
