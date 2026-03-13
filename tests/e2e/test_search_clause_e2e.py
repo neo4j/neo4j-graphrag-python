@@ -17,6 +17,7 @@
 Requires Neo4j 2026.02+ running via:
     docker compose -f tests/e2e/docker-compose.neo4j2026.yml up -d
 """
+
 from __future__ import annotations
 
 import time
@@ -183,9 +184,7 @@ class TestSearchClauseFilteredVectorSearch:
         assert isinstance(results, RetrieverResult)
         assert len(results.items) == 2  # doc2(science,2023), doc5(science,2021)
 
-    def test_search_with_incompatible_or_filter_fallback(
-        self, driver: Driver
-    ) -> None:
+    def test_search_with_incompatible_or_filter_fallback(self, driver: Driver) -> None:
         """$or filter is SEARCH-incompatible — should fall back gracefully
         to procedure path and still return results."""
         retriever = VectorRetriever(driver, INDEX_NAME)

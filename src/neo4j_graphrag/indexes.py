@@ -126,9 +126,7 @@ def create_vector_index(
     try:
         with_clause = ""
         if filterable_properties:
-            props_clause = ", ".join(
-                [f"n.`{prop}`" for prop in filterable_properties]
-            )
+            props_clause = ", ".join([f"n.`{prop}`" for prop in filterable_properties])
             with_clause = f" WITH [{props_clause}]"
         query = (
             f"CREATE VECTOR INDEX $name {'' if fail_if_exists else 'IF NOT EXISTS'} FOR (n:{label}) ON n.{embedding_property}"
