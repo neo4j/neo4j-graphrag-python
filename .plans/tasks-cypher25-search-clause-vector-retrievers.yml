@@ -49,7 +49,7 @@ tasks:
       WHERE <predicates> LIMIT $k) SCORE AS score`. Support optional WHERE clause
       from the filter classification output. Integrate with existing query builder
       patterns in the module.
-    status: pending
+    status: completed
     dependencies:
       - task-002
     acceptance_criteria:
@@ -58,7 +58,7 @@ tasks:
       - "Parameterizes query vector and filter values properly"
       - "Follows existing query builder patterns in neo4j_queries.py"
       - "Unit tests verify generated Cypher strings for various inputs"
-    completed_at: null
+    completed_at: 2026-03-13T15:00:00Z
 
   - id: task-004
     title: "Add filterable_properties support to create_vector_index"

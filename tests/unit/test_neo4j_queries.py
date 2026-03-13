@@ -18,7 +18,9 @@ from unittest.mock import patch
 import pytest
 
 from neo4j_graphrag.exceptions import InvalidHybridSearchRankerError
+from neo4j_graphrag.filters import FilterClassification
 from neo4j_graphrag.neo4j_queries import (
+    _build_search_clause_vector_query,
     get_query_tail,
     get_search_query,
     _get_hybrid_query_linear,
@@ -265,3 +267,117 @@ def test_get_hybrid_query_linear_with_alpha() -> None:
 def test_invalid_hybrid_search_ranker_error() -> None:
     with pytest.raises(InvalidHybridSearchRankerError):
         get_search_query(SearchType.HYBRID, ranker="invalid")
+
+
+class TestBuildSearchClauseVectorQuery:
+    def test_no_filters(self) -> None:
+        query, params = _build_search_clause_vector_query(
+            index_name="my_index",
+            node_label="Document",
+        )
+        expected = (
+            "MATCH (node:`Document`) "
+            "SEARCH node IN (VECTOR INDEX `my_index` "
+            "FOR $query_vector "
+            "LIMIT $top_k) "
+            "SCORE AS score"
+        )
+        assert query == expected
+        assert params == {}
+
+    def test_no_filters_with_none_classification(self) -> None:
+        query, params = _build_search_clause_vector_query(
+            index_name="my_index",
+            node_label="Document",
+            filter_classification=None,
+        )
+        assert "WHERE" not in query
+        assert params == {}
+
+    def test_empty_filter_classification(self) -> None:
+        classification = FilterClassification(is_compatible=True)
+        query, params = _build_search_clause_vector_query(
+            index_name="my_index",
+            node_label="Document",
+            filter_classification=classification,
+        )
+        assert "WHERE" not in query
+        assert params == {}
+
+    def test_with_where_predicates(self) -> None:
+        classification = FilterClassification(
+            is_compatible=True,
+            cypher_where_clause="node.`year` = $_e_year",
+            params={"_e_year": 2024},
+        )
+        query, params = _build_search_clause_vector_query(
+            index_name="my_index",
+            node_label="Document",
+            filter_classification=classification,
+        )
+        expected = (
+            "MATCH (node:`Document`) "
+            "SEARCH node IN (VECTOR INDEX `my_index` "
+            "FOR $query_vector "
+            "WHERE node.`year` = $_e_year "
+            "LIMIT $top_k) "
+            "SCORE AS score"
+        )
+        assert query == expected
+        assert params == {"_e_year": 2024}
+
+    def test_with_multiple_predicates(self) -> None:
+        classification = FilterClassification(
+            is_compatible=True,
+            cypher_where_clause="node.`year` >= $_e_year AND node.`status` = $_e_status",
+            params={"_e_year": 2020, "_e_status": "active"},
+        )
+        query, params = _build_search_clause_vector_query(
+            index_name="vector_idx",
+            node_label="Article",
+            filter_classification=classification,
+        )
+        assert "WHERE node.`year` >= $_e_year AND node.`status` = $_e_status" in query
+        assert params == {"_e_year": 2020, "_e_status": "active"}
+
+    def test_backtick_escaping_in_label_and_index(self) -> None:
+        query, _ = _build_search_clause_vector_query(
+            index_name="my-special-index",
+            node_label="My Label",
+        )
+        assert "`my-special-index`" in query
+        assert "`My Label`" in query
+
+    def test_query_structure_with_filters(self) -> None:
+        """Verify MATCH ... SEARCH ... FOR ... WHERE ... LIMIT ... SCORE order."""
+        classification = FilterClassification(
+            is_compatible=True,
+            cypher_where_clause="node.`x` > $_e_x",
+            params={"_e_x": 5},
+        )
+        query, _ = _build_search_clause_vector_query(
+            index_name="idx",
+            node_label="N",
+            filter_classification=classification,
+        )
+        # Verify ordering of clauses
+        match_pos = query.index("MATCH")
+        search_pos = query.index("SEARCH")
+        for_pos = query.index("FOR")
+        where_pos = query.index("WHERE")
+        limit_pos = query.index("LIMIT")
+        score_pos = query.index("SCORE")
+        assert match_pos < search_pos < for_pos < where_pos < limit_pos < score_pos
+
+    def test_filter_params_empty_dict(self) -> None:
+        classification = FilterClassification(
+            is_compatible=True,
+            cypher_where_clause="node.`a` = $_e_a",
+            params={},
+        )
+        _, params = _build_search_clause_vector_query(
+            index_name="idx",
+            node_label="N",
+            filter_classification=classification,
+        )
+        assert params == {}
