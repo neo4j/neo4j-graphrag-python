@@ -107,11 +107,13 @@ def test_vector_cypher_retriever_initialization(driver: MagicMock) -> None:
         mock_get_version.assert_called_once()
 
 
+@patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=False)
 @patch("neo4j_graphrag.retrievers.VectorRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_similarity_search_vector_happy_path(
     mock_get_version: MagicMock,
     _fetch_index_infos: MagicMock,
+    _mock_supports_search: MagicMock,
     driver: MagicMock,
     neo4j_record: MagicMock,
 ) -> None:
@@ -159,11 +161,13 @@ def test_similarity_search_vector_happy_path(
     )
 
 
+@patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=False)
 @patch("neo4j_graphrag.retrievers.VectorRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_similarity_search_text_happy_path(
     mock_get_version: MagicMock,
     _fetch_index_infos: MagicMock,
+    _mock_supports_search: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
     neo4j_record: MagicMock,
@@ -212,11 +216,13 @@ def test_similarity_search_text_happy_path(
     )
 
 
+@patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=False)
 @patch("neo4j_graphrag.retrievers.VectorRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_similarity_search_text_return_properties(
     mock_get_version: MagicMock,
     _fetch_index_infos: MagicMock,
+    _mock_supports_search: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
     neo4j_record: MagicMock,
@@ -304,11 +310,13 @@ def test_vector_retriever_search_both_text_and_vector(
         )
 
 
+@patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=False)
 @patch("neo4j_graphrag.retrievers.VectorRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_vector_retriever_with_result_format_function(
     mock_get_version: MagicMock,
     _fetch_index_infos: MagicMock,
+    _mock_supports_search: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
     neo4j_record: MagicMock,
@@ -378,11 +386,13 @@ def test_vector_cypher_retriever_search_both_text_and_vector(
         )
 
 
+@patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=False)
 @patch("neo4j_graphrag.retrievers.VectorCypherRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_retrieval_query_happy_path(
     mock_get_version: MagicMock,
     _fetch_index_infos: MagicMock,
+    _mock_supports_search: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
 ) -> None:
@@ -446,11 +456,13 @@ def test_retrieval_query_happy_path(
     )
 
 
+@patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=False)
 @patch("neo4j_graphrag.retrievers.VectorCypherRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_retrieval_query_with_result_format_function(
     mock_get_version: MagicMock,
     _fetch_index_infos: MagicMock,
+    _mock_supports_search: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
     neo4j_record: MagicMock,
@@ -514,11 +526,13 @@ def test_retrieval_query_with_result_format_function(
     )
 
 
+@patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=False)
 @patch("neo4j_graphrag.retrievers.VectorCypherRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_retrieval_query_with_params(
     mock_get_version: MagicMock,
     _fetch_index_infos: MagicMock,
+    _mock_supports_search: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
 ) -> None:
@@ -586,11 +600,13 @@ def test_retrieval_query_with_params(
     )
 
 
+@patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=False)
 @patch("neo4j_graphrag.retrievers.VectorCypherRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_retrieval_query_cypher_error(
     mock_get_version: MagicMock,
     _fetch_index_infos: MagicMock,
+    _mock_supports_search: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
 ) -> None:

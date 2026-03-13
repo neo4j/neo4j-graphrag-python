@@ -26,8 +26,14 @@ from neo4j_graphrag.exceptions import (
     RetrieverInitializationError,
     SearchValidationError,
 )
-from neo4j_graphrag.neo4j_queries import get_search_query
+from neo4j_graphrag.filters import FilterClassification, classify_filter_for_search
+from neo4j_graphrag.neo4j_queries import (
+    _build_search_clause_vector_query,
+    get_query_tail,
+    get_search_query,
+)
 from neo4j_graphrag.retrievers.base import Retriever
+from neo4j_graphrag.utils.version_utils import supports_search_clause
 from neo4j_graphrag.types import (
     EmbedderModel,
     Neo4jDriverModel,
@@ -198,14 +204,57 @@ class VectorRetriever(Retriever):
             parameters["query_vector"] = query_vector
             del parameters["query_text"]
 
-        search_query, search_params = get_search_query(
-            search_type=SearchType.VECTOR,
-            return_properties=self.return_properties,
-            node_label=self._node_label,
-            embedding_node_property=self._embedding_node_property,
-            embedding_dimension=self._embedding_dimension,
-            filters=filters,
-        )
+        use_search_clause = False
+        filter_cls: Optional[FilterClassification] = None
+        if supports_search_clause(self.driver, self.neo4j_database):
+            if filters:
+                filter_cls = classify_filter_for_search(filters, node_alias="node")
+                if filter_cls.is_compatible and self._node_label:
+                    use_search_clause = True
+                elif not filter_cls.is_compatible:
+                    logger.warning(
+                        "Filters are not compatible with SEARCH clause "
+                        "in-index filtering; falling back to procedure-based "
+                        "vector search with brute-force filtering."
+                    )
+            else:
+                # No filters — use SEARCH clause if we have a node label
+                if self._node_label:
+                    use_search_clause = True
+
+        if use_search_clause:
+            search_query_base, search_params = _build_search_clause_vector_query(
+                index_name=self.index_name,
+                node_label=self._node_label or "",
+                filter_classification=filter_cls,
+            )
+            query_tail = get_query_tail(
+                return_properties=self.return_properties,
+                fallback_return=(
+                    f"RETURN node {{ .*, `{self._embedding_node_property}`: null }} AS node, "
+                    "labels(node) AS nodeLabels, "
+                    "elementId(node) AS elementId, "
+                    "elementId(node) AS id, "
+                    "score"
+                )
+                if self._embedding_node_property
+                else (
+                    "RETURN node, labels(node) AS nodeLabels, "
+                    "elementId(node) AS elementId, "
+                    "elementId(node) AS id, "
+                    "score"
+                ),
+            )
+            search_query = f"{search_query_base} {query_tail}"
+        else:
+            search_query, search_params = get_search_query(
+                search_type=SearchType.VECTOR,
+                return_properties=self.return_properties,
+                node_label=self._node_label,
+                embedding_node_property=self._embedding_node_property,
+                embedding_dimension=self._embedding_dimension,
+                filters=filters,
+            )
         parameters.update(search_params)
 
         logger.debug("VectorRetriever Cypher parameters: %s", prettify(parameters))
@@ -365,14 +414,42 @@ class VectorCypherRetriever(Retriever):
                     parameters[key] = value
             del parameters["query_params"]
 
-        search_query, search_params = get_search_query(
-            search_type=SearchType.VECTOR,
-            retrieval_query=self.retrieval_query,
-            node_label=self._node_label,
-            embedding_node_property=self._node_embedding_property,
-            embedding_dimension=self._embedding_dimension,
-            filters=filters,
-        )
+        use_search_clause = False
+        filter_cls: Optional[FilterClassification] = None
+        if supports_search_clause(self.driver, self.neo4j_database):
+            if filters:
+                filter_cls = classify_filter_for_search(filters, node_alias="node")
+                if filter_cls.is_compatible and self._node_label:
+                    use_search_clause = True
+                elif not filter_cls.is_compatible:
+                    logger.warning(
+                        "Filters are not compatible with SEARCH clause "
+                        "in-index filtering; falling back to procedure-based "
+                        "vector search with brute-force filtering."
+                    )
+            else:
+                if self._node_label:
+                    use_search_clause = True
+
+        if use_search_clause:
+            search_query_base, search_params = _build_search_clause_vector_query(
+                index_name=self.index_name,
+                node_label=self._node_label or "",
+                filter_classification=filter_cls,
+            )
+            query_tail = get_query_tail(
+                retrieval_query=self.retrieval_query,
+            )
+            search_query = f"{search_query_base} {query_tail}"
+        else:
+            search_query, search_params = get_search_query(
+                search_type=SearchType.VECTOR,
+                retrieval_query=self.retrieval_query,
+                node_label=self._node_label,
+                embedding_node_property=self._node_embedding_property,
+                embedding_dimension=self._embedding_dimension,
+                filters=filters,
+            )
         parameters.update(search_params)
 
         logger.debug(
