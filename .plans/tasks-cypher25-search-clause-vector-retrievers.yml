@@ -31,7 +31,7 @@ tasks:
       Filters using $or, $in, $like, $contains, or nested logic are incompatible.
       Return a structured result with the compatible Cypher WHERE clause or a
       fallback indicator.
-    status: pending
+    status: completed
     dependencies: []
     acceptance_criteria:
       - "Function accepts the existing filter dict format and returns (is_compatible, cypher_where_clause, params)"
@@ -39,7 +39,7 @@ tasks:
       - "$or, $in, $like, $contains, nested filters classified as incompatible"
       - "Empty/None filters classified as compatible (no WHERE clause needed)"
       - "Unit tests cover all filter operator types and edge cases"
-    completed_at: null
+    completed_at: 2026-03-13T14:30:00Z
 
   - id: task-003
     title: "Add SEARCH clause Cypher query builder in neo4j_queries.py"
