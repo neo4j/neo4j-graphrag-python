@@ -213,9 +213,9 @@ def test_create_fulltext_index_ensure_escaping(driver: MagicMock) -> None:
 
 def test_create_vector_index_with_filterable_properties(driver: MagicMock) -> None:
     create_query = (
-        "CREATE VECTOR INDEX $name IF NOT EXISTS FOR (n:People) ON n.name OPTIONS "
-        "{ indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }"
+        "CREATE VECTOR INDEX $name IF NOT EXISTS FOR (n:People) ON n.name"
         " WITH [n.`age`, n.`city`]"
+        " OPTIONS { indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }"
     )
 
     create_vector_index(
@@ -239,9 +239,9 @@ def test_create_vector_index_with_single_filterable_property(
     driver: MagicMock,
 ) -> None:
     create_query = (
-        "CREATE VECTOR INDEX $name IF NOT EXISTS FOR (n:People) ON n.name OPTIONS "
-        "{ indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }"
+        "CREATE VECTOR INDEX $name IF NOT EXISTS FOR (n:People) ON n.name"
         " WITH [n.`year`]"
+        " OPTIONS { indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }"
     )
 
     create_vector_index(

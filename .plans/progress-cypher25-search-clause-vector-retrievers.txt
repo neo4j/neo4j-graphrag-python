@@ -195,3 +195,32 @@ Key Decisions:
 - Verified query string contents rather than exact match for resilience
 
 Next Task: task-009
+
+================================================================================
+TASK-009: Add E2E tests for in-index filtered vector search in Docker
+Date: 2026-03-13T20:00:00Z
+================================================================================
+
+Summary:
+Added tests/e2e/test_search_clause_e2e.py with 6 E2E tests exercising VectorRetriever
+against Neo4j 2026.02. Tests create a vector index with filterable_properties via
+create_vector_index(), insert 5 nodes with embeddings and category/year properties,
+then verify: no-filter search, $eq filter, $gt filter, $and multi-filter, $or
+incompatible filter fallback, and filter-excludes-all empty result.
+
+Also fixed a bug: create_vector_index WITH clause was appended AFTER OPTIONS but
+Neo4j 2026 requires WITH BEFORE OPTIONS. Fixed in indexes.py and updated unit tests.
+
+Files Changed:
+- tests/e2e/test_search_clause_e2e.py (new: 6 E2E tests)
+- src/neo4j_graphrag/indexes.py (fix: WITH clause moved before OPTIONS)
+- tests/unit/test_indexes.py (fix: updated expected Cypher in 2 filterable_properties tests)
+
+Key Decisions:
+- Module-scoped driver fixture with clear_version_cache() on teardown
+- Module-scoped setup fixture creates index, inserts 5 nodes, waits for ONLINE
+- Used 5-dimensional cosine vectors for simplicity and deterministic ordering
+- Verified $or filter falls back to procedure path (DeprecationWarning confirms)
+- All 6 e2e tests pass; all 940 unit tests pass
+
+Next Task: task-010
