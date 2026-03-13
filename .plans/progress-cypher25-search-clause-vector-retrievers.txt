@@ -144,3 +144,26 @@ Key Decisions:
 - Existing 22 hybrid tests pass with supports_search_clause=False patch
 
 Next Task: task-007
+
+================================================================================
+TASK-008: Add docker-compose.neo4j2026.yml for SEARCH clause e2e tests
+Date: 2026-03-13T18:00:00Z
+================================================================================
+
+Summary:
+Created tests/e2e/docker-compose.neo4j2026.yml modeled on existing docker-compose.yml
+but with only the neo4j service using neo4j:2026.02.2-enterprise image. Same auth
+(neo4j/password), ports (7687, 7474), APOC plugin, and heap config.
+
+Verified: container starts, Neo4j reports version 2026.02.2, Cypher 5/25,
+bolt://localhost:7687 reachable with neo4j/password auth via Python driver.
+
+Files Changed:
+- tests/e2e/docker-compose.neo4j2026.yml (new)
+
+Key Decisions:
+- Used neo4j:2026.02.2-enterprise (latest available 2026.x tag as of 2026-03-13)
+- Only includes neo4j service (no weaviate/qdrant) since SEARCH clause tests only need Neo4j
+- Same env vars as existing docker-compose.yml neo4j service for conftest.py compatibility
+
+Next Task: task-007 (or task-009 after task-007)
