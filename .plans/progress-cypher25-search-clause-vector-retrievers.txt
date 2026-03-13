@@ -224,3 +224,25 @@ Key Decisions:
 - All 6 e2e tests pass; all 940 unit tests pass
 
 Next Task: task-010
+
+================================================================================
+TASK-010: Update documentation for SEARCH clause and filterable properties
+Date: 2026-03-13T21:00:00Z
+================================================================================
+
+Summary:
+Updated user guide and index docs to cover SEARCH clause behavior, filterable
+properties, and filter routing. API reference auto-generates from docstrings
+(already updated in previous tasks).
+
+Files Changed:
+- docs/source/user_guide_rag.rst (added search-clause-filtering section, filterable-index-creation section, updated filter warning)
+- docs/source/index.rst (added Neo4j 2026.01+ to supported versions, noted filterable_properties in index example)
+
+Key Decisions:
+- Added anchor labels (search-clause-filtering, filterable-index-creation) for cross-referencing
+- Listed SEARCH-compatible vs fallback operators explicitly
+- Emphasized automatic detection — no user code changes needed
+- API reference relies on autofunction/autoclass pulling updated docstrings
+
+All tasks complete.
