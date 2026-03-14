@@ -939,7 +939,7 @@ class TestHybridRetrieverSearchClausePath:
         executed_query = call_args[0][0]
         assert "CALL () {" in executed_query
         assert "VECTOR INDEX" in executed_query
-        assert "FULLTEXT INDEX" in executed_query
+        assert "db.index.fulltext.queryNodes" in executed_query
         assert "SEARCH node IN" in executed_query
         assert "db.index.vector.queryNodes" not in executed_query
 
@@ -1072,7 +1072,7 @@ class TestHybridCypherRetrieverSearchClausePath:
         executed_query = call_args[0][0]
         assert "SEARCH node IN" in executed_query
         assert "VECTOR INDEX" in executed_query
-        assert "FULLTEXT INDEX" in executed_query
+        assert "db.index.fulltext.queryNodes" in executed_query
         assert retrieval_query in executed_query
 
     @patch("neo4j_graphrag.retrievers.hybrid.supports_search_clause", return_value=True)

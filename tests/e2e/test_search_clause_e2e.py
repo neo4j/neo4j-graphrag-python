@@ -128,6 +128,7 @@ def setup_search_clause_data(driver: Driver) -> None:
 # -- Tests --
 
 
+@pytest.mark.search_clause
 @pytest.mark.usefixtures("setup_search_clause_data")
 class TestSearchClauseFilteredVectorSearch:
     """Test SEARCH clause path with in-index filtering on Neo4j 2026.02."""

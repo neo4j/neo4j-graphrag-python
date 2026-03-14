@@ -260,12 +260,39 @@ class VectorRetriever(Retriever):
         logger.debug("VectorRetriever Cypher parameters: %s", prettify(parameters))
         logger.debug("VectorRetriever Cypher query: %s", search_query)
 
-        records, _, _ = self.driver.execute_query(
-            search_query,
-            parameters,
-            database_=self.neo4j_database,
-            routing_=neo4j.RoutingControl.READ,
-        )
+        try:
+            records, _, _ = self.driver.execute_query(
+                search_query,
+                parameters,
+                database_=self.neo4j_database,
+                routing_=neo4j.RoutingControl.READ,
+            )
+        except neo4j.exceptions.ClientError as e:
+            if use_search_clause and "PropertyNotFound" in str(e):
+                logger.warning(
+                    "SEARCH clause failed (filtered property not declared as "
+                    "filterable on the index); falling back to procedure-based "
+                    "vector search. To use in-index filtering, recreate the "
+                    "index with filterable_properties. Error: %s",
+                    e,
+                )
+                search_query, search_params = get_search_query(
+                    search_type=SearchType.VECTOR,
+                    return_properties=self.return_properties,
+                    node_label=self._node_label,
+                    embedding_node_property=self._embedding_node_property,
+                    embedding_dimension=self._embedding_dimension,
+                    filters=filters,
+                )
+                parameters.update(search_params)
+                records, _, _ = self.driver.execute_query(
+                    search_query,
+                    parameters,
+                    database_=self.neo4j_database,
+                    routing_=neo4j.RoutingControl.READ,
+                )
+            else:
+                raise
         return RawSearchResult(
             records=records,
             metadata={"query_vector": query_vector},
@@ -457,12 +484,39 @@ class VectorCypherRetriever(Retriever):
         )
         logger.debug("VectorCypherRetriever Cypher query: %s", search_query)
 
-        records, _, _ = self.driver.execute_query(
-            search_query,
-            parameters,
-            database_=self.neo4j_database,
-            routing_=neo4j.RoutingControl.READ,
-        )
+        try:
+            records, _, _ = self.driver.execute_query(
+                search_query,
+                parameters,
+                database_=self.neo4j_database,
+                routing_=neo4j.RoutingControl.READ,
+            )
+        except neo4j.exceptions.ClientError as e:
+            if use_search_clause and "PropertyNotFound" in str(e):
+                logger.warning(
+                    "SEARCH clause failed (filtered property not declared as "
+                    "filterable on the index); falling back to procedure-based "
+                    "vector search. To use in-index filtering, recreate the "
+                    "index with filterable_properties. Error: %s",
+                    e,
+                )
+                search_query, search_params = get_search_query(
+                    search_type=SearchType.VECTOR,
+                    retrieval_query=self.retrieval_query,
+                    node_label=self._node_label,
+                    embedding_node_property=self._node_embedding_property,
+                    embedding_dimension=self._embedding_dimension,
+                    filters=filters,
+                )
+                parameters.update(search_params)
+                records, _, _ = self.driver.execute_query(
+                    search_query,
+                    parameters,
+                    database_=self.neo4j_database,
+                    routing_=neo4j.RoutingControl.READ,
+                )
+            else:
+                raise
         return RawSearchResult(
             records=records,
             metadata={"query_vector": query_vector},
