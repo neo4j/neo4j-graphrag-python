@@ -337,42 +337,18 @@ def _build_search_clause_vector_query(
     return query, params
 
 
-def _build_search_clause_fulltext_query(
-    index_name: str,
-    node_label: str,
-) -> str:
-    """Build a SEARCH clause Cypher snippet for fulltext search.
-
-    Generates:
-        MATCH (node:Label)
-        SEARCH node IN (FULLTEXT INDEX indexName FOR $query_text LIMIT $top_k)
-        SCORE AS score
-
-    Args:
-        index_name: Name of the fulltext index.
-        node_label: Label of the nodes to search.
-
-    Returns:
-        str: query string snippet.
-    """
-    return (
-        f"MATCH (node:`{node_label}`) "
-        f"SEARCH node IN (FULLTEXT INDEX `{index_name}` "
-        f"FOR $query_text "
-        f"LIMIT $top_k) "
-        f"SCORE AS score"
-    )
-
-
 def _build_hybrid_search_clause_query(
     vector_index_name: str,
     fulltext_index_name: str,
     node_label: str,
 ) -> str:
-    """Build a hybrid SEARCH clause query using UNION of vector + fulltext.
+    """Build a hybrid query using SEARCH clause for vector + procedure for fulltext.
 
-    Uses CALL subquery with UNION to combine normalized vector and fulltext
-    scores, then takes the max score per node (naive ranker).
+    Uses CALL subquery with UNION to combine normalized vector (SEARCH clause)
+    and fulltext (procedure) scores, then takes the max score per node (naive ranker).
+
+    Note: SEARCH clause only supports VECTOR INDEX, not FULLTEXT INDEX,
+    so the fulltext component uses the db.index.fulltext.queryNodes procedure.
 
     Args:
         vector_index_name: Name of the vector index.
@@ -393,11 +369,7 @@ def _build_hybrid_search_clause_query(
         "RETURN n.node AS node, (n.score / vector_index_max_score) AS score"
     )
     fulltext_part = (
-        f"MATCH (node:`{node_label}`) "
-        f"SEARCH node IN (FULLTEXT INDEX `{fulltext_index_name}` "
-        f"FOR $query_text "
-        f"LIMIT $top_k) "
-        f"SCORE AS score "
+        f"{FULL_TEXT_SEARCH_QUERY} "
         "WITH collect({node:node, score:score}) AS nodes, max(score) AS ft_index_max_score "
         "UNWIND nodes AS n "
         "RETURN n.node AS node, (n.score / ft_index_max_score) AS score"
@@ -413,10 +385,13 @@ def _build_hybrid_search_clause_query_linear(
     fulltext_index_name: str,
     node_label: str,
 ) -> str:
-    """Build a hybrid SEARCH clause query with linear ranker using UNION.
+    """Build a hybrid query with linear ranker: SEARCH for vector + procedure for fulltext.
 
-    Uses CALL subquery with UNION to combine weighted vector and fulltext
-    scores using $alpha parameter.
+    Uses CALL subquery with UNION to combine weighted vector (SEARCH clause)
+    and fulltext (procedure) scores using $alpha parameter.
+
+    Note: SEARCH clause only supports VECTOR INDEX, not FULLTEXT INDEX,
+    so the fulltext component uses the db.index.fulltext.queryNodes procedure.
 
     Args:
         vector_index_name: Name of the vector index.
@@ -438,11 +413,7 @@ def _build_hybrid_search_clause_query_linear(
         "RETURN node, rawScore * $alpha AS score"
     )
     fulltext_part = (
-        f"MATCH (node:`{node_label}`) "
-        f"SEARCH node IN (FULLTEXT INDEX `{fulltext_index_name}` "
-        f"FOR $query_text "
-        f"LIMIT $top_k) "
-        f"SCORE AS score "
+        f"{FULL_TEXT_SEARCH_QUERY} "
         "WITH collect({node: node, score: score}) AS nodes, max(score) AS ft_index_max_score "
         "UNWIND nodes AS n "
         "WITH n.node AS node, (n.score / ft_index_max_score) AS rawScore "
