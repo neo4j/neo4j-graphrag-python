@@ -2,6 +2,10 @@
 
 ## Next
 
+### Added
+
+- Parquet export (experimental): `ParquetWriter` (extends `KGWriter`), `Neo4jGraphParquetFormatter`, and `FilenameCollisionHandler` for writing knowledge graphs to Parquet (one file per node label and per relationship type). 
+
 ### Changed
 
 - Updated examples, default values, and documentation to use `gpt-4.1` / `gpt-4.1-mini` instead of deprecated GPT-4* models (e.g. `gpt-4o`, `gpt-4`).

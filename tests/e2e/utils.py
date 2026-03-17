@@ -20,9 +20,7 @@ import os.path
 from typing import Any, Literal
 
 import neo4j
-import weaviate.classes as wvc
 from neo4j_graphrag.indexes import create_vector_index, drop_index_if_exists
-from qdrant_client import models
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -529,6 +527,8 @@ def build_data_objects(
             }
         )
         if q_vector_fmt == "weaviate":
+            import weaviate.classes as wvc
+
             question_objs.append(
                 wvc.data.DataObject(
                     properties={
@@ -543,6 +543,8 @@ def build_data_objects(
             # vector inserted into the neo4j object, nothing to do here
             pass
         elif q_vector_fmt == "qdrant":
+            from qdrant_client import models
+
             question_objs.append(
                 models.PointStruct(
                     id=i,

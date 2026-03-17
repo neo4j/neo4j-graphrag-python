@@ -14,12 +14,24 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import tempfile
+from pathlib import Path
 from typing import Any
 from unittest import mock
 from unittest.mock import MagicMock, Mock
 
 import pytest
-from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter, batched
+from neo4j_graphrag.experimental.components.filename_collision_handler import (
+    FilenameCollisionHandler,
+)
+from neo4j_graphrag.experimental.components.parquet_formatter import (
+    sanitize_parquet_filestem,
+)
+from neo4j_graphrag.experimental.components.kg_writer import (
+    Neo4jWriter,
+    ParquetWriter,
+    batched,
+)
 from neo4j_graphrag.experimental.components.types import (
     LexicalGraphConfig,
     Neo4jGraph,
@@ -44,6 +56,76 @@ def test_batched() -> None:
     assert list(batched([1, 2, 3], batch_size=4)) == [
         [1, 2, 3],
     ]
+
+
+# --- sanitize_parquet_filestem tests ---
+
+
+def test_sanitize_parquet_filestem_empty_returns_fallback() -> None:
+    assert sanitize_parquet_filestem("") == "unnamed"
+
+
+def test_sanitize_parquet_filestem_safe_chars_unchanged() -> None:
+    assert sanitize_parquet_filestem("Person") == "Person"
+    assert sanitize_parquet_filestem("Person_KNOWS_Person") == "Person_KNOWS_Person"
+    assert sanitize_parquet_filestem("Label123") == "Label123"
+    assert sanitize_parquet_filestem("a_z_9") == "a_z_9"
+
+
+def test_sanitize_parquet_filestem_unicode_transliterated() -> None:
+    assert sanitize_parquet_filestem("Zürich") == "Zurich"
+    assert sanitize_parquet_filestem("café") == "cafe"
+    assert sanitize_parquet_filestem("naïve") == "naive"
+
+
+def test_sanitize_parquet_filestem_disallowed_replaced_with_underscore() -> None:
+    assert sanitize_parquet_filestem("a b") == "a_b"
+    assert sanitize_parquet_filestem("a-b") == "a_b"
+    assert sanitize_parquet_filestem("a.b") == "a_b"
+
+
+def test_sanitize_parquet_filestem_all_disallowed_replaced() -> None:
+    # All disallowed chars become underscores (result non-empty, so no fallback)
+    assert sanitize_parquet_filestem("...") == "___"
+    assert sanitize_parquet_filestem("  ") == "__"
+
+
+# --- FilenameCollisionHandler tests ---
+
+
+def test_filename_collision_handler_first_call_returns_unchanged() -> None:
+    FilenameCollisionHandler.reset()
+    handler = FilenameCollisionHandler()
+    out = Path("/some/output")
+    assert handler.get_unique_filename("Person.parquet", out) == "Person.parquet"
+
+
+def test_filename_collision_handler_collisions_get_suffix() -> None:
+    FilenameCollisionHandler.reset()
+    handler = FilenameCollisionHandler()
+    out = Path("/some/output")
+    assert handler.get_unique_filename("Person.parquet", out) == "Person.parquet"
+    assert handler.get_unique_filename("Person.parquet", out) == "Person_1.parquet"
+    assert handler.get_unique_filename("Person.parquet", out) == "Person_2.parquet"
+
+
+def test_filename_collision_handler_different_paths_no_collision() -> None:
+    FilenameCollisionHandler.reset()
+    handler = FilenameCollisionHandler()
+    out1 = Path("/out/a")
+    out2 = Path("/out/b")
+    assert handler.get_unique_filename("Person.parquet", out1) == "Person.parquet"
+    assert handler.get_unique_filename("Person.parquet", out2) == "Person.parquet"
+
+
+def test_filename_collision_handler_reset_clears_state() -> None:
+    FilenameCollisionHandler.reset()
+    handler = FilenameCollisionHandler()
+    out = Path("/out")
+    handler.get_unique_filename("Person.parquet", out)
+    handler.get_unique_filename("Person.parquet", out)
+    FilenameCollisionHandler.reset()
+    assert handler.get_unique_filename("Person.parquet", out) == "Person.parquet"
 
 
 @mock.patch(
@@ -470,3 +552,148 @@ def test_get_version(
     assert (
         neo4j_writer.is_version_5_24_or_above is is_5_24_or_above
     ), f"Failed is_version_5_24_or_above test case: {description}"
+
+
+# --- ParquetWriter tests ---
+
+
+class _LocalParquetDestination:
+    """Test-only implementation of ParquetOutputDestination for a local directory."""
+
+    def __init__(self, path: Path) -> None:
+        self._path = Path(path)
+        self._path.mkdir(parents=True, exist_ok=True)
+
+    @property
+    def output_path(self) -> str:
+        return str(self._path.resolve())
+
+    async def write(self, data: bytes, filename: str) -> None:
+        (self._path / filename).write_bytes(data)
+
+
+@pytest.mark.asyncio
+async def test_parquet_writer_missing_pyarrow_raises() -> None:
+    """When pyarrow is not installed, run() returns FAILURE with error mentioning pyarrow."""
+    import builtins
+
+    real_import = builtins.__import__
+
+    def fake_import(name: str, *args: Any, **kwargs: Any) -> Any:
+        if name == "pyarrow":
+            raise ImportError("No module named 'pyarrow'")
+        return real_import(name, *args, **kwargs)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        dest = _LocalParquetDestination(Path(tmpdir))
+        writer = ParquetWriter(
+            nodes_dest=dest,
+            relationships_dest=dest,
+            collision_handler=FilenameCollisionHandler(),
+        )
+        # Use non-empty graph so formatter calls format_parquet and triggers pyarrow import
+        node = Neo4jNode(id="n1", label="Person", properties={})
+        graph = Neo4jGraph(nodes=[node], relationships=[])
+        with mock.patch("builtins.__import__", side_effect=fake_import):
+            result = await writer.run(graph=graph)
+    assert result.status == "FAILURE"
+    assert result.metadata is not None and "error" in result.metadata
+    assert "pyarrow" in result.metadata["error"].lower()
+
+
+@pytest.mark.asyncio
+async def test_parquet_writer_run_success() -> None:
+    """ParquetWriter uses formatter and writes one file per node label and per (head, type, tail)."""
+    pytest.importorskip("pyarrow")
+    import pyarrow.parquet as pq
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out = Path(tmpdir)
+        dest = _LocalParquetDestination(out)
+        writer = ParquetWriter(
+            nodes_dest=dest,
+            relationships_dest=dest,
+            collision_handler=FilenameCollisionHandler(),
+        )
+
+        node1 = Neo4jNode(id="n1", label="Person", properties={"name": "Alice"})
+        node2 = Neo4jNode(id="n2", label="Person", properties={"name": "Bob"})
+        rel = Neo4jRelationship(
+            start_node_id="n1", end_node_id="n2", type="KNOWS", properties={}
+        )
+        graph = Neo4jGraph(nodes=[node1, node2], relationships=[rel])
+
+        result = await writer.run(graph=graph)
+
+        assert result.status == "SUCCESS"
+        assert result.metadata is not None
+        stats = result.metadata.get("statistics") or {}
+        assert stats["node_count"] == 2
+        assert stats["relationship_count"] == 1
+        assert stats["nodes_per_label"] == {"Person": 2}
+        assert "KNOWS" in stats["rel_per_type"]
+        assert "input_files_count" in stats
+        assert "input_files_total_size_bytes" in stats
+        assert (out / "Person.parquet").exists()
+        assert (out / "Person_KNOWS_Person.parquet").exists()
+
+        # Check "files" metadata (file_path, columns, source mapping for rels)
+        assert "files" in result.metadata
+        assert len(result.metadata["files"]) == 2
+        node_file_info = next(f for f in result.metadata["files"] if f["is_node"])
+        assert node_file_info["name"] == "Person"
+        assert (
+            "file_path" in node_file_info
+            and "Person.parquet" in node_file_info["file_path"]
+        )
+        assert "columns" in node_file_info
+        assert any(
+            c["name"] == "__id__" and c["is_primary_key"]
+            for c in node_file_info["columns"]
+        )
+        rel_file_info = next(f for f in result.metadata["files"] if not f["is_node"])
+        assert rel_file_info["relationship_type"] == "KNOWS"
+        assert rel_file_info["start_node_source"] == "Person"
+        assert rel_file_info["end_node_source"] == "Person"
+        assert rel_file_info["start_node_primary_keys"] == ["__id__"]
+        assert rel_file_info["end_node_primary_keys"] == ["__id__"]
+
+        # Read back and sanity-check (formatter uses __id__, labels, and flat properties)
+        nodes_table = pq.read_table(out / "Person.parquet")
+        assert nodes_table.num_rows == 2
+        assert "__id__" in nodes_table.column_names
+        assert "labels" in nodes_table.column_names
+        assert "name" in nodes_table.column_names
+
+        rels_table = pq.read_table(out / "Person_KNOWS_Person.parquet")
+        assert rels_table.num_rows == 1
+        assert "from" in rels_table.column_names
+        assert "to" in rels_table.column_names
+        assert rels_table.column("type")[0].as_py() == "KNOWS"
+
+
+@pytest.mark.asyncio
+async def test_parquet_writer_run_empty_graph() -> None:
+    """ParquetWriter accepts an empty graph and writes no files."""
+    pytest.importorskip("pyarrow")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out = Path(tmpdir)
+        dest = _LocalParquetDestination(out)
+        writer = ParquetWriter(
+            nodes_dest=dest,
+            relationships_dest=dest,
+            collision_handler=FilenameCollisionHandler(),
+        )
+        graph = Neo4jGraph(nodes=[], relationships=[])
+
+        result = await writer.run(graph=graph)
+
+    assert result.status == "SUCCESS"
+    assert result.metadata is not None
+    stats = result.metadata.get("statistics") or {}
+    assert stats["node_count"] == 0
+    assert stats["relationship_count"] == 0
+    assert stats["nodes_per_label"] == {}
+    assert stats["rel_per_type"] == {}
+    assert result.metadata["files"] == []
