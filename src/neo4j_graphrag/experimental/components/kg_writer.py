@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import os
 import logging
 from abc import abstractmethod
 from typing import Any, Generator, Literal, Optional
@@ -377,7 +378,7 @@ class ParquetWriter(KGWriter):
                     filename, self.nodes_dest.output_path
                 )
                 await self.nodes_dest.write(content, unique_filename)
-                file_path = f"{base_nodes}/{unique_filename}"
+                file_path = os.path.join(base_nodes, unique_filename)
 
                 resolved_stem = (
                     unique_filename[:-8]
@@ -411,7 +412,7 @@ class ParquetWriter(KGWriter):
                     filename, self.relationships_dest.output_path
                 )
                 await self.relationships_dest.write(content, unique_filename)
-                file_path = f"{base_rel}/{unique_filename}"
+                file_path = os.path.join(base_rel, unique_filename)
 
                 start_node_source = node_label_to_source_name.get(
                     meta.relationship_head or "", meta.relationship_head or ""
