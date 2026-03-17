@@ -631,7 +631,7 @@ async def test_parquet_writer_run_success() -> None:
         assert stats["node_count"] == 2
         assert stats["relationship_count"] == 1
         assert stats["nodes_per_label"] == {"Person": 2}
-        assert "Person_KNOWS_Person" in stats["rel_per_type"]
+        assert "KNOWS" in stats["rel_per_type"]
         assert "input_files_count" in stats
         assert "input_files_total_size_bytes" in stats
         assert (out / "Person.parquet").exists()

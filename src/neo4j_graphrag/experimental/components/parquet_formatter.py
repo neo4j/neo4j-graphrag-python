@@ -545,15 +545,15 @@ class Neo4jGraphParquetFormatter:
                 )
             )
 
-        # Stats: use composite key for rel_per_type so each (head, type, tail) is unique
+        # Stats: rel_per_type keyed by relationship type only (aggregate counts)
+        rel_per_type: dict[str, int] = {}
+        for (rtype, _head_label, _tail_label), rows in type_to_rows.items():
+            rel_per_type[rtype] = rel_per_type.get(rtype, 0) + len(rows)
         stats: dict[str, dict[str, int]] = {
             "nodes_per_label": {
                 label: len(rows) for label, rows in label_to_rows.items()
             },
-            "rel_per_type": {
-                f"{head_label}_{rtype}_{tail_label}": len(rows)
-                for (rtype, head_label, tail_label), rows in type_to_rows.items()
-            },
+            "rel_per_type": rel_per_type,
         }
 
         return (

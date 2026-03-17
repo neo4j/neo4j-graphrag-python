@@ -208,7 +208,7 @@ async def test_parquet_writer_e2e() -> None:
         assert stats["node_count"] == 2
         assert stats["relationship_count"] == 1
         assert stats["nodes_per_label"]["Person"] == 2
-        assert stats["rel_per_type"]["Person_KNOWS_Person"] == 1
+        assert stats["rel_per_type"]["KNOWS"] == 1
         assert "input_files_count" in stats
         assert "input_files_total_size_bytes" in stats
 
@@ -365,49 +365,36 @@ async def test_parquet_writer_preserves_lexical_graph_nodes_and_rels() -> None:
             f"Labels: {list(nodes_per_label.keys())}"
         )
 
-        # Custom lexical relationship types must appear in rel_per_type (keys are composite: head_TYPE_tail)
-        assert any(
-            config.chunk_to_document_relationship_type in k for k in rel_per_type
-        ), (
+        # Custom lexical relationship types must appear in rel_per_type (keyed by type name)
+        assert config.chunk_to_document_relationship_type in rel_per_type, (
             f"FAIL: Custom '{config.chunk_to_document_relationship_type}' relationship not found. "
             f"Found: {list(rel_per_type.keys())}"
         )
-        assert any(
-            config.next_chunk_relationship_type in k for k in rel_per_type
-        ), (
+        assert config.next_chunk_relationship_type in rel_per_type, (
             f"FAIL: Custom '{config.next_chunk_relationship_type}' relationship not found. "
             f"Found: {list(rel_per_type.keys())}"
         )
-        assert any(
-            config.node_to_chunk_relationship_type in k for k in rel_per_type
-        ), (
+        assert config.node_to_chunk_relationship_type in rel_per_type, (
             f"FAIL: Custom '{config.node_to_chunk_relationship_type}' relationship not found. "
             f"Found: {list(rel_per_type.keys())}"
         )
 
         # Non-zero counts for lexical relationships
-        chunk_to_doc_key = f"{config.chunk_node_label}_{config.chunk_to_document_relationship_type}_{config.document_node_label}"
-        next_chunk_key = f"{config.chunk_node_label}_{config.next_chunk_relationship_type}_{config.chunk_node_label}"
-        assert rel_per_type.get(chunk_to_doc_key, 0) > 0, (
+        assert rel_per_type.get(config.chunk_to_document_relationship_type, 0) > 0, (
             f"Expected at least 1 {config.chunk_to_document_relationship_type} relationship"
         )
-        assert rel_per_type.get(next_chunk_key, 0) > 0, (
+        assert rel_per_type.get(config.next_chunk_relationship_type, 0) > 0, (
             f"Expected at least 1 {config.next_chunk_relationship_type} relationship"
         )
-        node_to_chunk_key = f"Person_{config.node_to_chunk_relationship_type}_{config.chunk_node_label}"
-        assert rel_per_type.get(node_to_chunk_key, 0) > 0, (
+        assert rel_per_type.get(config.node_to_chunk_relationship_type, 0) > 0, (
             f"Expected at least 1 {config.node_to_chunk_relationship_type} relationship"
         )
 
-        # Default relationship type names must NOT appear in any key
-        assert not any(
-            "FROM_DOCUMENT" in k for k in rel_per_type
-        ), (
+        # Default relationship type names must NOT be present
+        assert "FROM_DOCUMENT" not in rel_per_type, (
             f"FAIL: Found default 'FROM_DOCUMENT' (should be '{config.chunk_to_document_relationship_type}')"
         )
-        assert not any(
-            "FROM_CHUNK" in k for k in rel_per_type
-        ), (
+        assert "FROM_CHUNK" not in rel_per_type, (
             f"FAIL: Found default 'FROM_CHUNK' (should be '{config.node_to_chunk_relationship_type}')"
         )
 

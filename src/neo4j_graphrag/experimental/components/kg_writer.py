@@ -100,12 +100,8 @@ def _graph_stats(
             nodes_per_label[node.label] = nodes_per_label.get(node.label, 0) + 1
     if rel_per_type is None:
         rel_per_type = {}
-        node_id_to_label = {n.id: n.label for n in graph.nodes}
         for rel in graph.relationships:
-            head = node_id_to_label.get(rel.start_node_id, "?")
-            tail = node_id_to_label.get(rel.end_node_id, "?")
-            key = f"{head}_{rel.type}_{tail}"
-            rel_per_type[key] = rel_per_type.get(key, 0) + 1
+            rel_per_type[rel.type] = rel_per_type.get(rel.type, 0) + 1
     return {
         "node_count": len(graph.nodes),
         "relationship_count": len(graph.relationships),
