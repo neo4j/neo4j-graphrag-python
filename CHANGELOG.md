@@ -2,6 +2,8 @@
 
 ## Next
 
+## 1.14.0
+
 ### Added
 
 - Parquet export (experimental): `ParquetWriter` (extends `KGWriter`), `Neo4jGraphParquetFormatter`, and `FilenameCollisionHandler` for writing knowledge graphs to Parquet (one file per node label and per relationship type). 
