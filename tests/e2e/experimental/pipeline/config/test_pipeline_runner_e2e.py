@@ -40,10 +40,14 @@ async def test_pipeline_from_json_config(harry_potter_text: str, driver: Mock) -
     )
     res = await runner.run({"splitter": {"text": harry_potter_text}})
     assert isinstance(res, PipelineResult)
-    assert res.result["writer"]["metadata"] == {
-        "node_count": 11,
-        "relationship_count": 10,
-    }
+    meta = res.result["writer"]["metadata"]
+    assert "statistics" in meta
+    assert meta["statistics"]["node_count"] == 11
+    assert meta["statistics"]["relationship_count"] == 10
+    assert "nodes_per_label" in meta["statistics"]
+    assert "rel_per_type" in meta["statistics"]
+    assert "input_files_count" in meta["statistics"]
+    assert "input_files_total_size_bytes" in meta["statistics"]
     nodes = driver.execute_query("MATCH (n) RETURN n")
     assert len(nodes.records) == 11
 
@@ -59,10 +63,14 @@ async def test_pipeline_from_yaml_config(harry_potter_text: str, driver: Mock) -
     )
     res = await runner.run({"splitter": {"text": harry_potter_text}})
     assert isinstance(res, PipelineResult)
-    assert res.result["writer"]["metadata"] == {
-        "node_count": 11,
-        "relationship_count": 10,
-    }
+    meta = res.result["writer"]["metadata"]
+    assert "statistics" in meta
+    assert meta["statistics"]["node_count"] == 11
+    assert meta["statistics"]["relationship_count"] == 10
+    assert "nodes_per_label" in meta["statistics"]
+    assert "rel_per_type" in meta["statistics"]
+    assert "input_files_count" in meta["statistics"]
+    assert "input_files_total_size_bytes" in meta["statistics"]
 
     nodes = driver.execute_query("MATCH (n) RETURN n")
     assert len(nodes.records) == 11

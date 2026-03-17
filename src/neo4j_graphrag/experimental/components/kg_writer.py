@@ -80,11 +80,50 @@ def batched(rows: list[Any], batch_size: int) -> Generator[list[Any], None, None
         index += 1
 
 
+def _graph_stats(
+    graph: Neo4jGraph,
+    nodes_per_label: Optional[dict[str, int]] = None,
+    rel_per_type: Optional[dict[str, int]] = None,
+    input_files_count: int = 0,
+    input_files_total_size_bytes: int = 0,
+) -> dict[str, Any]:
+    """Build the statistics dict for writer metadata.
+
+    Schema:
+        node_count, relationship_count, nodes_per_label, rel_per_type,
+        input_files_count, input_files_total_size_bytes.
+    """
+    if nodes_per_label is None:
+        nodes_per_label = {}
+        for node in graph.nodes:
+            nodes_per_label[node.label] = nodes_per_label.get(node.label, 0) + 1
+    if rel_per_type is None:
+        rel_per_type = {}
+        node_id_to_label = {n.id: n.label for n in graph.nodes}
+        for rel in graph.relationships:
+            head = node_id_to_label.get(rel.start_node_id, "?")
+            tail = node_id_to_label.get(rel.end_node_id, "?")
+            key = f"{head}_{rel.type}_{tail}"
+            rel_per_type[key] = rel_per_type.get(key, 0) + 1
+    return {
+        "node_count": len(graph.nodes),
+        "relationship_count": len(graph.relationships),
+        "nodes_per_label": nodes_per_label,
+        "rel_per_type": rel_per_type,
+        "input_files_count": input_files_count,
+        "input_files_total_size_bytes": input_files_total_size_bytes,
+    }
+
+
 class KGWriterModel(DataModel):
     """Data model for the output of the Knowledge Graph writer.
 
     Attributes:
-        status (Literal["SUCCESS", "FAILURE"]): Whether the write operation was successful.
+        status: Whether the write operation was successful ("SUCCESS" or "FAILURE").
+        metadata: Optional dict. When status is SUCCESS, contains at least:
+            - "statistics": dict with node_count, relationship_count, nodes_per_label,
+              rel_per_type, input_files_count, input_files_total_size_bytes.
+            - "files": list of file descriptors with file_path, etc. (ParquetWriter).
     """
 
     status: Literal["SUCCESS", "FAILURE"]
@@ -250,8 +289,8 @@ class Neo4jWriter(KGWriter):
             return KGWriterModel(
                 status="SUCCESS",
                 metadata={
-                    "node_count": len(graph.nodes),
-                    "relationship_count": len(graph.relationships),
+                    "statistics": _graph_stats(graph),
+                    "files": [],
                 },
             )
         except neo4j.exceptions.ClientError as e:
@@ -328,7 +367,6 @@ class ParquetWriter(KGWriter):
             )
 
             meta_by_filename: dict[str, Any] = {m.filename: m for m in file_metadata}
-            written_paths: list[str] = []
             files: list[dict[str, Any]] = []
             node_label_to_source_name: dict[str, str] = {}
 
@@ -340,7 +378,6 @@ class ParquetWriter(KGWriter):
                 )
                 await self.nodes_dest.write(content, unique_filename)
                 file_path = f"{base_nodes}/{unique_filename}"
-                written_paths.append(file_path)
 
                 resolved_stem = (
                     unique_filename[:-8]
@@ -375,7 +412,6 @@ class ParquetWriter(KGWriter):
                 )
                 await self.relationships_dest.write(content, unique_filename)
                 file_path = f"{base_rel}/{unique_filename}"
-                written_paths.append(file_path)
 
                 start_node_source = node_label_to_source_name.get(
                     meta.relationship_head or "", meta.relationship_head or ""
@@ -417,14 +453,17 @@ class ParquetWriter(KGWriter):
                 len(data["nodes"]),
                 len(data["relationships"]),
             )
+            statistics = _graph_stats(
+                graph,
+                nodes_per_label=stats["nodes_per_label"],
+                rel_per_type=stats["rel_per_type"],
+                input_files_count=0,
+                input_files_total_size_bytes=0,
+            )
             return KGWriterModel(
                 status="SUCCESS",
                 metadata={
-                    "node_count": len(graph.nodes),
-                    "relationship_count": len(graph.relationships),
-                    "nodes_per_label": stats["nodes_per_label"],
-                    "rel_per_type": stats["rel_per_type"],
-                    "files_written": written_paths,
+                    "statistics": statistics,
                     "files": files,
                 },
             )

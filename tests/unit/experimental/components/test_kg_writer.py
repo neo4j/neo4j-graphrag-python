@@ -627,10 +627,13 @@ async def test_parquet_writer_run_success() -> None:
 
         assert result.status == "SUCCESS"
         assert result.metadata is not None
-        assert result.metadata["node_count"] == 2
-        assert result.metadata["relationship_count"] == 1
-        assert result.metadata["nodes_per_label"] == {"Person": 2}
-        assert "Person_KNOWS_Person" in result.metadata["rel_per_type"]
+        stats = result.metadata.get("statistics") or {}
+        assert stats["node_count"] == 2
+        assert stats["relationship_count"] == 1
+        assert stats["nodes_per_label"] == {"Person": 2}
+        assert "Person_KNOWS_Person" in stats["rel_per_type"]
+        assert "input_files_count" in stats
+        assert "input_files_total_size_bytes" in stats
         assert (out / "Person.parquet").exists()
         assert (out / "Person_KNOWS_Person.parquet").exists()
 
@@ -688,7 +691,9 @@ async def test_parquet_writer_run_empty_graph() -> None:
 
     assert result.status == "SUCCESS"
     assert result.metadata is not None
-    assert result.metadata["node_count"] == 0
-    assert result.metadata["relationship_count"] == 0
-    assert result.metadata["files_written"] == []
+    stats = result.metadata.get("statistics") or {}
+    assert stats["node_count"] == 0
+    assert stats["relationship_count"] == 0
+    assert stats["nodes_per_label"] == {}
+    assert stats["rel_per_type"] == {}
     assert result.metadata["files"] == []

@@ -41,12 +41,11 @@ async def test_lexical_graph_component_alone_default_config(
             }
         }
     )
-    assert result.result == {
-        "writer": {
-            "status": "SUCCESS",
-            "metadata": {"node_count": 1, "relationship_count": 0},
-        }
-    }
+    assert result.result["writer"]["status"] == "SUCCESS"
+    meta = result.result["writer"]["metadata"]
+    assert "statistics" in meta
+    assert meta["statistics"]["node_count"] == 1
+    assert meta["statistics"]["relationship_count"] == 0
     default_config = LexicalGraphConfig()
     created_chunks = driver.execute_query(
         f"MATCH (n:{default_config.chunk_node_label}) RETURN n"
