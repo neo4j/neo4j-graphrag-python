@@ -300,7 +300,6 @@ class Neo4jWriter(KGWriter):
             parameters = {"rows": self._nodes_to_rows(merge_nodes, lexical_graph_config)}
             if self.use_merge:
                 query = upsert_node_query_merge(
-                    support_variable_scope_clause=self.is_version_5_23_or_above,
                     merge_property=self.merge_property,
                 )
             else:

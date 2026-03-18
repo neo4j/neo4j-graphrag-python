@@ -560,27 +560,22 @@ def test_get_version(
 # =============================================================================
 
 
-def test_upsert_node_query_merge_below_5_23() -> None:
-    """Test that upsert_node_query_merge generates correct Cypher for Neo4j < 5.23."""
-    query = upsert_node_query_merge(support_variable_scope_clause=False)
-    assert "CALL { WITH n,row" in query
-    assert "apoc.merge.node" in query
+def test_upsert_node_query_merge_generates_correct_cypher() -> None:
+    """Test that upsert_node_query_merge generates correct Cypher."""
+    query = upsert_node_query_merge()
+    assert "CALL (n, row) {" in query
+    assert "MERGE (n:$(row.labels[0])" in query
+    assert "ON CREATE SET n += row.properties" in query
+    assert "ON MATCH SET n += row.properties" in query
+    assert "SET n:$(row.labels + ['__KGBuilder__'])" in query
     assert "row.properties.`name`" in query
     assert "elementId(n)" in query
-
-
-def test_upsert_node_query_merge_5_23_or_above() -> None:
-    """Test that upsert_node_query_merge generates correct Cypher for Neo4j >= 5.23."""
-    query = upsert_node_query_merge(support_variable_scope_clause=True)
-    assert "CALL (n,row) {" in query
-    assert "apoc.merge.node" in query
-    assert "row.properties.`name`" in query
+    assert "apoc" not in query.lower()
 
 
 def test_upsert_node_query_merge_custom_property() -> None:
     """Test that upsert_node_query_merge handles custom merge_property."""
     query = upsert_node_query_merge(
-        support_variable_scope_clause=True,
         merge_property="id",
     )
     assert "{`id`: row.properties.`id`}" in query
@@ -590,7 +585,6 @@ def test_upsert_node_query_merge_custom_property() -> None:
 def test_upsert_node_query_merge_special_chars_in_property() -> None:
     """Test that merge_property with special characters is properly escaped."""
     query = upsert_node_query_merge(
-        support_variable_scope_clause=True,
         merge_property="my property",
     )
     assert "{`my property`: row.properties.`my property`}" in query
@@ -615,7 +609,7 @@ def test_upsert_nodes_with_merge(_: Mock, driver: MagicMock) -> None:
     node = Neo4jNode(id="1", label="Label", properties={"name": "TestEntity"})
     neo4j_writer._upsert_nodes(nodes=[node], lexical_graph_config=LexicalGraphConfig())
     driver.execute_query.assert_called_once_with(
-        upsert_node_query_merge(False),
+        upsert_node_query_merge(),
         parameters_={
             "rows": [
                 {
@@ -633,24 +627,29 @@ def test_upsert_nodes_with_merge(_: Mock, driver: MagicMock) -> None:
 
 @mock.patch(
     "neo4j_graphrag.experimental.components.kg_writer.get_version",
-    return_value=((5, 23, 0), False, False),
+    return_value=((5, 22, 0), False, False),
 )
 @mock.patch(
     "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._db_setup",
     return_value=None,
 )
-def test_upsert_nodes_with_merge_5_23(_: Mock, driver: MagicMock) -> None:
-    """Test MERGE uses correct CALL syntax for Neo4j >= 5.23."""
+def test_upsert_nodes_with_merge_and_embedding(_: Mock, driver: MagicMock) -> None:
+    """Test node upsert using MERGE includes embedding properties."""
     driver.execute_query.return_value = (
         [{"element_id": "#1"}],
         None,
         None,
     )
     neo4j_writer = Neo4jWriter(driver=driver)
-    node = Neo4jNode(id="1", label="Label", properties={"name": "TestEntity"})
+    node = Neo4jNode(
+        id="1",
+        label="Label",
+        properties={"name": "TestEntity"},
+        embedding_properties={"embeddingProp": [1.0, 2.0, 3.0]},
+    )
     neo4j_writer._upsert_nodes(nodes=[node], lexical_graph_config=LexicalGraphConfig())
     driver.execute_query.assert_called_once_with(
-        upsert_node_query_merge(True),
+        upsert_node_query_merge(),
         parameters_={
             "rows": [
                 {
@@ -658,7 +657,7 @@ def test_upsert_nodes_with_merge_5_23(_: Mock, driver: MagicMock) -> None:
                     "labels": ["Label", "__Entity__"],
                     "id": "1",
                     "properties": {"name": "TestEntity"},
-                    "embedding_properties": {},
+                    "embedding_properties": {"embeddingProp": [1.0, 2.0, 3.0]},
                 }
             ]
         },
@@ -685,7 +684,7 @@ def test_upsert_nodes_with_custom_merge_property(_: Mock, driver: MagicMock) -> 
     node = Neo4jNode(id="1", label="Label", properties={"id": "entity-123"})
     neo4j_writer._upsert_nodes(nodes=[node], lexical_graph_config=LexicalGraphConfig())
     driver.execute_query.assert_called_once_with(
-        upsert_node_query_merge(False, merge_property="id"),
+        upsert_node_query_merge(merge_property="id"),
         parameters_={
             "rows": [
                 {
@@ -728,7 +727,7 @@ async def test_run_with_merge_default(_: Mock) -> None:
     await neo4j_writer.run(graph=graph)
 
     driver.execute_query.assert_any_call(
-        upsert_node_query_merge(False),
+        upsert_node_query_merge(),
         parameters_={
             "rows": [
                 {
