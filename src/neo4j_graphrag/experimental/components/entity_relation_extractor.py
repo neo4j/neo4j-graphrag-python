@@ -256,7 +256,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                 logger.error(
                     f"LLM response has improper format for chunk_index={chunk.index}"
                 )
-                logger.error(f"🔴 CHUNK TEXT (first 1000 chars): {chunk.text[:2000]}")
+                logger.error(f"🔴 CHUNK TEXT (first 1000 chars): {chunk.text[:1000]}")
                 logger.error(f"🔴 RAW LLM RESPONSE: {llm_result.content}")
                 logger.error(f"🔴 VALIDATION ERROR: {e}")
                 chunk_graph = Neo4jGraph()
@@ -273,7 +273,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             logger.error(
                 f"LLM response is not valid JSON for chunk_index={chunk.index}"
             )
-            logger.error(f"🔴 CHUNK TEXT (first 1000 chars): {chunk.text[:2000]}")
+            logger.error(f"🔴 CHUNK TEXT (first 1000 chars): {chunk.text[:1000]}")
             logger.error(f"🔴 RAW LLM RESPONSE: {llm_result.content}")
             logger.error(f"🔴 JSON ERROR: {e}")
             result = {"nodes": [], "relationships": []}

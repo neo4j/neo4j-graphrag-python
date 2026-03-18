@@ -183,6 +183,12 @@ Make sure you adhere to the following rules to produce valid JSON objects:
 - Omit any backticks around the JSON - simply output the JSON on its own.
 - The JSON object must not wrapped into a list - it is its own JSON object.
 - Property names must be enclosed in double quotes
+- Extract only information explicitly supported by the text.
+- Do not invent, infer, normalize, or transform values unless explicitly stated.
+- If a property is missing, ambiguous, or unsupported by the text, omit it.
+- Copy property values literally from the text whenever possible.
+- If uncertain, return fewer items rather than guessing.
+- Prioritize valid JSON over completeness.
 
 Examples:
 {examples}
