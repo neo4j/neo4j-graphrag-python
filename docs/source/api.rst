@@ -314,6 +314,14 @@ CohereEmbeddings
 .. autoclass:: neo4j_graphrag.embeddings.cohere.CohereEmbeddings
     :members:
 
+.. _bedrockembeddings:
+
+BedrockEmbeddings
+=================
+
+.. autoclass:: neo4j_graphrag.embeddings.bedrock.BedrockEmbeddings
+    :members:
+
 **********
 Generation
 **********
@@ -374,6 +382,15 @@ MistralAILLM
 ------------
 
 .. autoclass:: neo4j_graphrag.llm.mistralai_llm.MistralAILLM
+    :members:
+
+
+.. _bedrockllm:
+
+BedrockLLM
+----------
+
+.. autoclass:: neo4j_graphrag.llm.bedrock_llm.BedrockLLM
     :members:
 
 

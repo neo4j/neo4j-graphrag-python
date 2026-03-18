@@ -17,6 +17,7 @@ from typing import Any
 
 from .anthropic_llm import AnthropicLLM
 from .base import LLMInterface, LLMInterfaceV2
+from .bedrock_llm import BedrockLLM
 from .cohere_llm import CohereLLM
 from .mistralai_llm import MistralAILLM
 from .ollama_llm import OllamaLLM
@@ -27,6 +28,7 @@ from .vertexai_llm import VertexAILLM
 
 __all__ = [
     "AnthropicLLM",
+    "BedrockLLM",
     "CohereLLM",
     "LLMResponse",
     "LLMInterface",
