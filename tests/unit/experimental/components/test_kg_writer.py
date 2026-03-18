@@ -40,6 +40,7 @@ from neo4j_graphrag.experimental.components.types import (
 )
 from neo4j_graphrag.neo4j_queries import (
     upsert_node_query,
+    upsert_node_query_merge,
     upsert_relationship_query,
 )
 
@@ -142,7 +143,7 @@ def test_upsert_nodes(_: Mock, driver: MagicMock) -> None:
         None,
         None,
     )
-    neo4j_writer = Neo4jWriter(driver=driver)
+    neo4j_writer = Neo4jWriter(driver=driver, use_merge=False)
     node = Neo4jNode(id="1", label="Label", properties={"key": "value"})
     neo4j_writer._upsert_nodes(nodes=[node], lexical_graph_config=LexicalGraphConfig())
     driver.execute_query.assert_called_once_with(
@@ -179,7 +180,7 @@ def test_upsert_nodes_with_embedding(
         None,
         None,
     )
-    neo4j_writer = Neo4jWriter(driver=driver)
+    neo4j_writer = Neo4jWriter(driver=driver, use_merge=False)
     node = Neo4jNode(
         id="1",
         label="Label",
@@ -298,7 +299,7 @@ async def test_run(_: Mock, driver: MagicMock) -> None:
         None,
         None,
     )
-    neo4j_writer = Neo4jWriter(driver=driver)
+    neo4j_writer = Neo4jWriter(driver=driver, use_merge=False)
     node = Neo4jNode(id="1", label="Label")
     rel = Neo4jRelationship(start_node_id="1", end_node_id="2", type="RELATIONSHIP")
     graph = Neo4jGraph(nodes=[node], relationships=[rel])
@@ -354,7 +355,7 @@ async def test_run_is_version_below_5_23(_: Mock) -> None:
         )
     )
 
-    neo4j_writer = Neo4jWriter(driver=driver)
+    neo4j_writer = Neo4jWriter(driver=driver, use_merge=False)
 
     node = Neo4jNode(id="1", label="Label")
     rel = Neo4jRelationship(start_node_id="1", end_node_id="2", type="RELATIONSHIP")
@@ -412,7 +413,7 @@ async def test_run_is_version_5_23_or_above(_: Mock) -> None:
         )
     )
 
-    neo4j_writer = Neo4jWriter(driver=driver)
+    neo4j_writer = Neo4jWriter(driver=driver, use_merge=False)
     neo4j_writer.is_version_5_23_or_above = True
 
     node = Neo4jNode(id="1", label="Label")
@@ -471,7 +472,7 @@ async def test_run_is_version_5_24_or_above(_: Mock) -> None:
         )
     )
 
-    neo4j_writer = Neo4jWriter(driver=driver)
+    neo4j_writer = Neo4jWriter(driver=driver, use_merge=False)
 
     node = Neo4jNode(id="1", label="Label")
     rel = Neo4jRelationship(start_node_id="1", end_node_id="2", type="RELATIONSHIP")
@@ -552,6 +553,350 @@ def test_get_version(
     assert (
         neo4j_writer.is_version_5_24_or_above is is_5_24_or_above
     ), f"Failed is_version_5_24_or_above test case: {description}"
+
+
+# =============================================================================
+# Tests for MERGE functionality (use_merge=True, the default)
+# =============================================================================
+
+
+def test_upsert_node_query_merge_below_5_23() -> None:
+    """Test that upsert_node_query_merge generates correct Cypher for Neo4j < 5.23."""
+    query = upsert_node_query_merge(support_variable_scope_clause=False)
+    assert "CALL { WITH n,row" in query
+    assert "apoc.merge.node" in query
+    assert "row.properties.`name`" in query
+    assert "elementId(n)" in query
+
+
+def test_upsert_node_query_merge_5_23_or_above() -> None:
+    """Test that upsert_node_query_merge generates correct Cypher for Neo4j >= 5.23."""
+    query = upsert_node_query_merge(support_variable_scope_clause=True)
+    assert "CALL (n,row) {" in query
+    assert "apoc.merge.node" in query
+    assert "row.properties.`name`" in query
+
+
+def test_upsert_node_query_merge_custom_property() -> None:
+    """Test that upsert_node_query_merge handles custom merge_property."""
+    query = upsert_node_query_merge(
+        support_variable_scope_clause=True,
+        merge_property="id",
+    )
+    assert "{`id`: row.properties.`id`}" in query
+    assert "row.properties.`name`" not in query
+
+
+def test_upsert_node_query_merge_special_chars_in_property() -> None:
+    """Test that merge_property with special characters is properly escaped."""
+    query = upsert_node_query_merge(
+        support_variable_scope_clause=True,
+        merge_property="my property",
+    )
+    assert "{`my property`: row.properties.`my property`}" in query
+
+
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    return_value=((5, 22, 0), False, False),
+)
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._db_setup",
+    return_value=None,
+)
+def test_upsert_nodes_with_merge(_: Mock, driver: MagicMock) -> None:
+    """Test node upsert using MERGE (use_merge=True, the default)."""
+    driver.execute_query.return_value = (
+        [{"element_id": "#1"}],
+        None,
+        None,
+    )
+    neo4j_writer = Neo4jWriter(driver=driver)
+    node = Neo4jNode(id="1", label="Label", properties={"name": "TestEntity"})
+    neo4j_writer._upsert_nodes(nodes=[node], lexical_graph_config=LexicalGraphConfig())
+    driver.execute_query.assert_called_once_with(
+        upsert_node_query_merge(False),
+        parameters_={
+            "rows": [
+                {
+                    "label": "Label",
+                    "labels": ["Label", "__Entity__"],
+                    "id": "1",
+                    "properties": {"name": "TestEntity"},
+                    "embedding_properties": {},
+                }
+            ]
+        },
+        database_=None,
+    )
+
+
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    return_value=((5, 23, 0), False, False),
+)
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._db_setup",
+    return_value=None,
+)
+def test_upsert_nodes_with_merge_5_23(_: Mock, driver: MagicMock) -> None:
+    """Test MERGE uses correct CALL syntax for Neo4j >= 5.23."""
+    driver.execute_query.return_value = (
+        [{"element_id": "#1"}],
+        None,
+        None,
+    )
+    neo4j_writer = Neo4jWriter(driver=driver)
+    node = Neo4jNode(id="1", label="Label", properties={"name": "TestEntity"})
+    neo4j_writer._upsert_nodes(nodes=[node], lexical_graph_config=LexicalGraphConfig())
+    driver.execute_query.assert_called_once_with(
+        upsert_node_query_merge(True),
+        parameters_={
+            "rows": [
+                {
+                    "label": "Label",
+                    "labels": ["Label", "__Entity__"],
+                    "id": "1",
+                    "properties": {"name": "TestEntity"},
+                    "embedding_properties": {},
+                }
+            ]
+        },
+        database_=None,
+    )
+
+
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    return_value=((5, 22, 0), False, False),
+)
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._db_setup",
+    return_value=None,
+)
+def test_upsert_nodes_with_custom_merge_property(_: Mock, driver: MagicMock) -> None:
+    """Test node upsert using custom merge_property."""
+    driver.execute_query.return_value = (
+        [{"element_id": "#1"}],
+        None,
+        None,
+    )
+    neo4j_writer = Neo4jWriter(driver=driver, merge_property="id")
+    node = Neo4jNode(id="1", label="Label", properties={"id": "entity-123"})
+    neo4j_writer._upsert_nodes(nodes=[node], lexical_graph_config=LexicalGraphConfig())
+    driver.execute_query.assert_called_once_with(
+        upsert_node_query_merge(False, merge_property="id"),
+        parameters_={
+            "rows": [
+                {
+                    "label": "Label",
+                    "labels": ["Label", "__Entity__"],
+                    "id": "1",
+                    "properties": {"id": "entity-123"},
+                    "embedding_properties": {},
+                }
+            ]
+        },
+        database_=None,
+    )
+
+
+@pytest.mark.asyncio
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._db_setup",
+    return_value=None,
+)
+async def test_run_with_merge_default(_: Mock) -> None:
+    """Test full pipeline run using MERGE (the default behavior)."""
+    driver = MagicMock()
+    driver.execute_query = Mock(
+        side_effect=(
+            # get_version
+            ([{"versions": ["5.22.0"], "edition": "enterprise"}], None, None),
+            # upsert nodes
+            ([{"element_id": "#1"}], None, None),
+            # upsert relationships
+            (None, None, None),
+        )
+    )
+
+    neo4j_writer = Neo4jWriter(driver=driver)
+
+    node = Neo4jNode(id="1", label="Company", properties={"name": "Acme Corp"})
+    rel = Neo4jRelationship(start_node_id="1", end_node_id="2", type="WORKS_FOR")
+    graph = Neo4jGraph(nodes=[node], relationships=[rel])
+    await neo4j_writer.run(graph=graph)
+
+    driver.execute_query.assert_any_call(
+        upsert_node_query_merge(False),
+        parameters_={
+            "rows": [
+                {
+                    "label": "Company",
+                    "labels": ["Company", "__Entity__"],
+                    "id": "1",
+                    "properties": {"name": "Acme Corp"},
+                    "embedding_properties": {},
+                }
+            ]
+        },
+        database_=None,
+    )
+
+
+# =============================================================================
+# Tests for merge_property validation
+# =============================================================================
+
+
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    return_value=((5, 22, 0), False, False),
+)
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._db_setup",
+    return_value=None,
+)
+def test_validate_merge_property_skips_nodes_missing_property(
+    _: Mock, driver: MagicMock
+) -> None:
+    """Test that entity nodes without merge_property are skipped."""
+    driver.execute_query.return_value = ([{"element_id": "#1"}], None, None)
+    neo4j_writer = Neo4jWriter(driver=driver)
+
+    node_missing = Neo4jNode(id="1", label="Company", properties={"other": "value"})
+    node_valid = Neo4jNode(id="2", label="Company", properties={"name": "ValidEntity"})
+
+    merge_nodes, create_nodes, skipped = neo4j_writer._validate_merge_property(
+        [node_missing, node_valid], LexicalGraphConfig()
+    )
+
+    assert skipped == 1
+    assert len(merge_nodes) == 1
+    assert merge_nodes[0].id == "2"
+    assert len(create_nodes) == 0
+
+
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    return_value=((5, 22, 0), False, False),
+)
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._db_setup",
+    return_value=None,
+)
+def test_validate_merge_property_separates_lexical_nodes(
+    _: Mock, driver: MagicMock
+) -> None:
+    """Test that lexical graph nodes (Chunk, Document) go to create_nodes."""
+    driver.execute_query.return_value = ([{"element_id": "#1"}], None, None)
+    neo4j_writer = Neo4jWriter(driver=driver)
+
+    entity_node = Neo4jNode(id="1", label="Company", properties={"name": "Acme"})
+    chunk_node = Neo4jNode(id="2", label="Chunk", properties={"text": "some text"})
+    doc_node = Neo4jNode(id="3", label="Document", properties={"path": "/doc.pdf"})
+
+    merge_nodes, create_nodes, skipped = neo4j_writer._validate_merge_property(
+        [entity_node, chunk_node, doc_node], LexicalGraphConfig()
+    )
+
+    assert skipped == 0
+    assert len(merge_nodes) == 1
+    assert merge_nodes[0].id == "1"
+    assert len(create_nodes) == 2
+    assert {n.id for n in create_nodes} == {"2", "3"}
+
+
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    return_value=((5, 22, 0), False, False),
+)
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._db_setup",
+    return_value=None,
+)
+def test_validate_merge_property_skipped_when_use_merge_false(
+    _: Mock, driver: MagicMock
+) -> None:
+    """Test that all nodes go to merge_nodes when use_merge=False."""
+    driver.execute_query.return_value = ([{"element_id": "#1"}], None, None)
+    neo4j_writer = Neo4jWriter(driver=driver, use_merge=False)
+
+    node_missing = Neo4jNode(id="1", label="Label", properties={"other": "value"})
+
+    merge_nodes, create_nodes, skipped = neo4j_writer._validate_merge_property(
+        [node_missing], LexicalGraphConfig()
+    )
+
+    assert skipped == 0
+    assert len(merge_nodes) == 1
+    assert len(create_nodes) == 0
+
+
+@pytest.mark.asyncio
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._db_setup",
+    return_value=None,
+)
+async def test_run_returns_skipped_count_in_metadata(_: Mock) -> None:
+    """Test that skipped count is returned in metadata."""
+    driver = MagicMock()
+    driver.execute_query = Mock(
+        side_effect=(
+            # get_version
+            ([{"versions": ["5.22.0"], "edition": "enterprise"}], None, None),
+            # upsert nodes (only valid node is included)
+            ([{"element_id": "#1"}], None, None),
+            # upsert relationships
+            (None, None, None),
+        )
+    )
+
+    neo4j_writer = Neo4jWriter(driver=driver)
+
+    node_valid = Neo4jNode(id="1", label="Company", properties={"name": "Acme"})
+    node_invalid = Neo4jNode(id="2", label="Company", properties={"title": "Other"})
+    graph = Neo4jGraph(nodes=[node_valid, node_invalid], relationships=[])
+
+    result = await neo4j_writer.run(graph=graph)
+
+    assert result.status == "SUCCESS"
+    assert result.metadata is not None
+    stats = result.metadata["statistics"]
+    assert stats["node_count"] == 2
+    assert stats["nodes_created"] == 1
+    assert stats["nodes_skipped_missing_merge_property"] == 1
+
+
+@pytest.mark.asyncio
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter._db_setup",
+    return_value=None,
+)
+async def test_run_skips_empty_batch_after_validation(_: Mock) -> None:
+    """Test that empty batches after validation don't cause errors."""
+    driver = MagicMock()
+    driver.execute_query = Mock(
+        side_effect=(
+            # get_version
+            ([{"versions": ["5.22.0"], "edition": "enterprise"}], None, None),
+            # No upsert calls should happen - all nodes are invalid
+        )
+    )
+
+    neo4j_writer = Neo4jWriter(driver=driver)
+
+    node1 = Neo4jNode(id="1", label="Company", properties={"title": "A"})
+    node2 = Neo4jNode(id="2", label="Company", properties={"title": "B"})
+    graph = Neo4jGraph(nodes=[node1, node2], relationships=[])
+
+    result = await neo4j_writer.run(graph=graph)
+
+    assert result.status == "SUCCESS"
+    assert result.metadata is not None
+    stats = result.metadata["statistics"]
+    assert stats["nodes_created"] == 0
+    assert stats["nodes_skipped_missing_merge_property"] == 2
 
 
 # --- ParquetWriter tests ---

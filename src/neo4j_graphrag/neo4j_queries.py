@@ -71,11 +71,23 @@ def _call_subquery_syntax(
 def upsert_node_query(
     support_variable_scope_clause: bool, support_dynamic_labels: bool = False
 ) -> str:
-    """Build the Cypher query to upsert a batch of nodes:
-    - Create the new node
-    - Set its label(s) and properties
-    - Set its embedding properties if any
-    - Return the node elementId
+    """Build the Cypher query to upsert a batch of nodes using CREATE.
+
+    WARNING: This uses CREATE which always creates new nodes. If the same entity
+    is extracted from multiple chunks (e.g., "Apple Inc." appears in several
+    parts of a document), this will create duplicate nodes. If a uniqueness
+    constraint exists on the entity's properties, the second CREATE will fail.
+
+    For deduplication at write time, use upsert_node_query_merge() instead.
+
+    Args:
+        support_variable_scope_clause: Whether Neo4j version supports the new
+            CALL (variables) { } syntax (5.23+) vs CALL { WITH variables }
+        support_dynamic_labels: Whether Neo4j version supports dynamic labels
+            via SET n:$(row.labels) syntax (5.24+)
+
+    Returns:
+        Cypher query string for batch node creation
     """
     call_prefix = _call_subquery_syntax(
         support_variable_scope_clause, variable_list=["n", "row"]
@@ -89,6 +101,63 @@ def upsert_node_query(
         "CREATE (n:__KGBuilder__ {__tmp_internal_id: row.id}) "
         "SET n += row.properties "
         f"{set_labels}"
+        "WITH n, row "
+        f"{call_prefix} "
+        "WITH n, row WHERE row.embedding_properties IS NOT NULL "
+        "UNWIND keys(row.embedding_properties) as emb "
+        "CALL db.create.setNodeVectorProperty(n, emb, row.embedding_properties[emb]) "
+        "RETURN count(*) as nbEmb "
+        "} "
+        "RETURN elementId(n) as element_id"
+    )
+
+
+def upsert_node_query_merge(
+    support_variable_scope_clause: bool,
+    merge_property: str = "name",
+) -> str:
+    """Build a Cypher query to upsert nodes using MERGE for deduplication.
+
+    This query uses apoc.merge.node to merge nodes based on their labels and
+    an identifying property (default: "name"). This prevents duplicate nodes
+    when the same entity is extracted from multiple chunks of a document.
+
+    For example, if "Apple Inc." is mentioned in 5 different chunks, the LLM
+    will extract it 5 times with different internal IDs. Using CREATE would
+    create 5 separate nodes (failing if a uniqueness constraint exists).
+    Using MERGE ensures only one node is created/updated.
+
+    Args:
+        support_variable_scope_clause: Whether Neo4j version supports the new
+            CALL (variables) { } syntax (5.23+) vs CALL { WITH variables }
+        merge_property: The property to use as the merge key along with labels.
+            Defaults to "name" which is the standard identifying property for
+            entities in knowledge graphs.
+
+    Returns:
+        Cypher query string for batch node upsert with merge behavior
+
+    Note:
+        Requires APOC plugin for apoc.merge.node procedure.
+    """
+    call_prefix = _call_subquery_syntax(
+        support_variable_scope_clause, variable_list=["n", "row"]
+    )
+    identity_props = (
+        "{`" + merge_property + "`: row.properties.`" + merge_property + "`}"
+    )
+    # Merge on ONLY the primary entity label (first in row.labels), e.g., 'Company'.
+    # The row.labels list typically contains [EntityType, '__Entity__'] but pre-existing
+    # nodes (e.g., Company nodes created from CSV) only have the entity type label.
+    # We extract just the first label for merging, then add other labels afterward.
+    return (
+        "UNWIND $rows AS row "
+        f"CALL apoc.merge.node([row.labels[0]], {identity_props}, "
+        "row.properties, row.properties) YIELD node AS n "
+        "WITH n, row "
+        "CALL apoc.create.addLabels(n, row.labels + ['__KGBuilder__']) YIELD node "
+        "WITH node AS n, row "
+        "SET n.__tmp_internal_id = row.id "
         "WITH n, row "
         f"{call_prefix} "
         "WITH n, row WHERE row.embedding_properties IS NOT NULL "
