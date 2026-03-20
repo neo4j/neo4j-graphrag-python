@@ -89,6 +89,15 @@ ENVIRONMENT MANAGEMENT:
 - Vector DB support (Weaviate, Pinecone, Qdrant)
 - Documentation via Sphinx; published separately
 
+## Gotchas
+
+- Version utils in `src/neo4j_graphrag/utils/version_utils.py` — new version checks go here
+- Unit test conftest provides `driver` fixture as MagicMock (see `tests/unit/conftest.py`)
+- Neo4j versions after 5.x use year-based format (2025.01, 2026.01) — tuple comparison still works
+- `WeakKeyDictionary` works for caching per-driver since `neo4j.Driver` is hashable
+- Neo4j 2026 CREATE VECTOR INDEX syntax: WITH clause must come BEFORE OPTIONS, not after
+- E2E tests for SEARCH clause: use `docker compose -f tests/e2e/docker-compose.neo4j2026.yml up -d`
+
 ---
 
 *This AGENTS.md was generated using agent-based project discovery.*
