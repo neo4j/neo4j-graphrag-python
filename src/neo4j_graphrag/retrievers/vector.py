@@ -205,6 +205,9 @@ class VectorRetriever(Retriever):
             embedding_node_property=self._embedding_node_property,
             embedding_dimension=self._embedding_dimension,
             filters=filters,
+            neo4j_version_supports_search_clause=getattr(
+                self, "neo4j_version_supports_search_clause", False
+            ),
         )
         parameters.update(search_params)
 
@@ -372,6 +375,9 @@ class VectorCypherRetriever(Retriever):
             embedding_node_property=self._node_embedding_property,
             embedding_dimension=self._embedding_dimension,
             filters=filters,
+            neo4j_version_supports_search_clause=getattr(
+                self, "neo4j_version_supports_search_clause", False
+            ),
         )
         parameters.update(search_params)
 

@@ -367,3 +367,75 @@ def get_metadata_filter(
     param_store = ParameterStore()
     query = _construct_metadata_filter(filter, param_store, node_alias=node_alias)
     return query, param_store.params
+
+
+# Operators compatible with Cypher 25 SEARCH clause in-index filtering.
+# Only simple comparison operators (and AND combinations of them) can be
+# pushed down into the vector index scan.
+_SEARCH_COMPATIBLE_OPERATORS = {
+    OPERATOR_EQ,
+    OPERATOR_LT,
+    OPERATOR_LTE,
+    OPERATOR_GT,
+    OPERATOR_GTE,
+}
+
+
+def is_search_compatible_filter(filter: Any) -> bool:
+    """Check whether a filter dict can be evaluated inside a SEARCH clause.
+
+    The Cypher 25 SEARCH clause supports a limited subset of predicates
+    inside ``FOR ... WHERE``: simple comparisons (=, <, <=, >, >=) combined
+    with AND.  Anything else ($or, $in, $nin, $like, $ilike, $ne, $between)
+    requires the brute-force exact-KNN fallback.
+
+    Args:
+        filter: The filter dictionary to check.
+
+    Returns:
+        bool: True if the filter can be pushed into a SEARCH WHERE clause.
+    """
+    if not isinstance(filter, dict):
+        return False
+    if len(filter) == 0:
+        return True
+
+    for key, value in filter.items():
+        if key == OPERATOR_AND:
+            if not isinstance(value, list):
+                return False
+            return all(is_search_compatible_filter(item) for item in value)
+        if key == OPERATOR_OR:
+            return False
+        if key.startswith(OPERATOR_PREFIX):
+            return False
+        # key is a field name
+        if isinstance(value, dict):
+            if len(value) != 1:
+                return False
+            op = list(value.keys())[0]
+            if op not in _SEARCH_COMPATIBLE_OPERATORS:
+                return False
+        # bare value → implicit $eq, always compatible
+    return True
+
+
+def get_search_filter(
+    filter: dict[str, Any],
+    node_alias: str = DEFAULT_NODE_ALIAS,
+) -> tuple[str, dict[str, Any]]:
+    """Generate a WHERE clause suitable for use inside a SEARCH block.
+
+    This produces the same Cypher syntax as :func:`get_metadata_filter` but is
+    only called after :func:`is_search_compatible_filter` has confirmed the
+    filter is SEARCH-compatible.  The generated fragment is intended to be
+    placed inside ``SEARCH node IN (VECTOR INDEX ... FOR ... WHERE <here>)``.
+
+    Args:
+        filter: A SEARCH-compatible filter dict.
+        node_alias: The alias for the node variable in the generated Cypher.
+
+    Returns:
+        A ``(cypher_fragment, params)`` tuple.
+    """
+    return get_metadata_filter(filter, node_alias=node_alias)
