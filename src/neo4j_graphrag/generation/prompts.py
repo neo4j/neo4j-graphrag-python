@@ -230,6 +230,7 @@ IMPORTANT RULES:
 9.4 Properties that are supplementary information (phone numbers, descriptions, metadata) are typically optional.
 9.5 When uncertain, default to "required": false.
 9.6 If a property has a UNIQUENESS constraint, it MUST be marked as "required": true.
+10. Never use double underscores (__) as a prefix or suffix in node labels or relationship types (e.g. __Person__ or __KNOWS__ are forbidden).
 
 Accepted property types are: BOOLEAN, DATE, DURATION, FLOAT, INTEGER, LIST,
 LOCAL_DATETIME, LOCAL_TIME, POINT, STRING, ZONED_DATETIME, ZONED_TIME.
