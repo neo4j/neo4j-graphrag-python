@@ -38,6 +38,7 @@ from pathlib import Path
 from pydantic import (
     BaseModel,
     PrivateAttr,
+    field_validator,
     model_validator,
     validate_call,
     ConfigDict,
@@ -64,6 +65,18 @@ from neo4j_graphrag.schema import get_structured_schema
 
 
 logger = logging.getLogger(__name__)
+
+_DUNDER_RE = re.compile(r"^__|__$")
+
+
+def _reject_dunder_label(label: str, kind: str) -> str:
+    """Raise ValueError if *label* starts or ends with double underscores."""
+    if _DUNDER_RE.search(label):
+        raise ValueError(
+            f"{kind} label '{label}' uses a reserved '__' prefix or suffix. "
+            "This convention is reserved for internal Neo4j GraphRAG labels."
+        )
+    return label
 
 
 class PropertyType(BaseModel):
@@ -113,6 +126,11 @@ class NodeType(BaseModel):
         default_factory=default_additional_item("properties")
     )
 
+    @field_validator("label")
+    @classmethod
+    def label_must_not_use_dunder(cls, v: str) -> str:
+        return _reject_dunder_label(v, "Node")
+
     @model_validator(mode="before")
     @classmethod
     def validate_input_if_string(cls, data: EntityInputType) -> EntityInputType:
@@ -158,6 +176,11 @@ class RelationshipType(BaseModel):
     additional_properties: bool = Field(
         default_factory=default_additional_item("properties")
     )
+
+    @field_validator("label")
+    @classmethod
+    def label_must_not_use_dunder(cls, v: str) -> str:
+        return _reject_dunder_label(v, "Relationship")
 
     @model_validator(mode="before")
     @classmethod

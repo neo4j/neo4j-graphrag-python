@@ -83,6 +83,26 @@ def test_node_type_additional_properties_default() -> None:
     assert node_type.additional_properties is True
 
 
+@pytest.mark.parametrize(
+    "label",
+    ["__Person", "Person__", "__Person__", "__KNOWS", "KNOWS__", "__KNOWS__"],
+)
+def test_node_type_rejects_dunder_label(label: str) -> None:
+    with pytest.raises(ValidationError, match="reserved '__'"):
+        NodeType.model_validate(
+            {"label": label, "properties": [{"name": "name", "type": "STRING"}]}
+        )
+
+
+@pytest.mark.parametrize(
+    "label",
+    ["__KNOWS", "KNOWS__", "__KNOWS__"],
+)
+def test_relationship_type_rejects_dunder_label(label: str) -> None:
+    with pytest.raises(ValidationError, match="reserved '__'"):
+        RelationshipType.model_validate({"label": label})
+
+
 def test_property_type_initalization() -> None:
     prop = PropertyType(name="email", type="STRING")
     assert prop.name == "email"
