@@ -14,6 +14,7 @@
 #  limitations under the License.
 from .base import Embedder
 from .bedrock import BedrockEmbeddings
+from .bedrock_nova import BedrockNovaEmbeddings
 from .cohere import CohereEmbeddings
 from .mistral import MistralAIEmbeddings
 from .ollama import OllamaEmbeddings
@@ -24,6 +25,7 @@ from .vertexai import VertexAIEmbeddings
 __all__ = [
     "Embedder",
     "BedrockEmbeddings",
+    "BedrockNovaEmbeddings",
     "SentenceTransformerEmbeddings",
     "OllamaEmbeddings",
     "OpenAIEmbeddings",
