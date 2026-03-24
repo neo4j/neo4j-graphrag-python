@@ -79,7 +79,7 @@ async def define_and_run_pipeline(
             "relationship_types": RELATIONSHIP_TYPES,
             "patterns": PATTERNS,
         },
-        from_pdf=False,
+        from_file=False,
         neo4j_database=DATABASE,
     )
     return await kg_builder.run_async(
