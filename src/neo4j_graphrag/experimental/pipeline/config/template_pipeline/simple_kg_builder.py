@@ -25,7 +25,7 @@ from typing import (
 )
 import warnings
 
-from pydantic import ConfigDict, Field, model_validator, field_validator
+from pydantic import ConfigDict, Field, field_validator, model_validator
 from typing_extensions import Self
 
 from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
@@ -36,7 +36,7 @@ from neo4j_graphrag.experimental.components.entity_relation_extractor import (
 )
 from neo4j_graphrag.experimental.components.graph_pruning import GraphPruning
 from neo4j_graphrag.experimental.components.kg_writer import KGWriter, Neo4jWriter
-from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
+from neo4j_graphrag.experimental.components.data_loader import DataLoader, FileLoader
 from neo4j_graphrag.experimental.components.resolver import (
     EntityResolver,
     SinglePropertyExactMatchResolver,
@@ -70,7 +70,7 @@ from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 
 class SimpleKGPipelineConfig(TemplatePipelineConfig):
     COMPONENTS: ClassVar[list[str]] = [
-        "pdf_loader",
+        "file_loader",
         "splitter",
         "chunk_embedder",
         "schema",
@@ -84,7 +84,12 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         PipelineType.SIMPLE_KG_PIPELINE
     )
 
-    from_pdf: bool = False
+    from_file: bool = False
+    from_pdf: Optional[bool] = Field(
+        default=None,
+        exclude=True,
+        description="Deprecated. Use `from_file` instead.",
+    )
     entities: Sequence[EntityInputType] = []
     relations: Sequence[RelationInputType] = []
     potential_schema: Optional[list[tuple[str, str, str]]] = None
@@ -95,11 +100,42 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     lexical_graph_config: Optional[LexicalGraphConfig] = None
     neo4j_database: Optional[str] = None
 
-    pdf_loader: Optional[ComponentType] = None
+    file_loader: Optional[ComponentType] = None
+    pdf_loader: Optional[ComponentType] = Field(
+        default=None,
+        exclude=True,
+        description="Deprecated. Use `file_loader` instead.",
+    )
     kg_writer: Optional[ComponentType] = None
     text_splitter: Optional[ComponentType] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @model_validator(mode="after")
+    def apply_deprecated_from_pdf_and_pdf_loader(self) -> Self:
+        """Map legacy ``from_pdf`` / ``pdf_loader`` to ``from_file`` / ``file_loader``."""
+        if self.from_pdf is not None:
+            warnings.warn(
+                "`from_pdf` is deprecated and will be removed in a future version; "
+                "use `from_file` instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            self.from_file = self.from_pdf
+        if self.pdf_loader is not None:
+            if self.file_loader is not None:
+                raise ValueError(
+                    "Pass only one of `file_loader` and `pdf_loader`; "
+                    "`pdf_loader` is deprecated."
+                )
+            warnings.warn(
+                "`pdf_loader` is deprecated and will be removed in a future version; "
+                "use `file_loader` instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            self.file_loader = self.pdf_loader
+        return self
 
     @field_validator("schema_", mode="before")
     @classmethod
@@ -153,18 +189,18 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             or self.schema_ is not None
         )
 
-    def _get_pdf_loader(self) -> Optional[PdfLoader]:
-        if not self.from_pdf:
+    def _get_file_loader(self) -> Optional[DataLoader]:
+        if not self.from_file:
             return None
-        if self.pdf_loader:
-            return self.pdf_loader.parse(self._global_data)  # type: ignore
-        return PdfLoader()
+        if self.file_loader:
+            return self.file_loader.parse(self._global_data)  # type: ignore
+        return FileLoader()
 
-    def _get_run_params_for_pdf_loader(self) -> dict[str, Any]:
-        if not self.from_pdf:
+    def _get_run_params_for_file_loader(self) -> dict[str, Any]:
+        if not self.from_file:
             return {}
-        if self.pdf_loader:
-            return self.pdf_loader.get_run_params(self._global_data)
+        if self.file_loader:
+            return self.file_loader.get_run_params(self._global_data)
         return {}
 
     def _get_splitter(self) -> TextSplitter:
@@ -256,12 +292,12 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
 
     def _get_connections(self) -> list[ConnectionDefinition]:
         connections = []
-        if self.from_pdf:
+        if self.from_file:
             connections.append(
                 ConnectionDefinition(
-                    start="pdf_loader",
+                    start="file_loader",
                     end="splitter",
-                    input_config={"text": "pdf_loader.text"},
+                    input_config={"text": "file_loader.text"},
                 )
             )
 
@@ -269,9 +305,9 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             if not self.has_user_provided_schema():
                 connections.append(
                     ConnectionDefinition(
-                        start="pdf_loader",
+                        start="file_loader",
                         end="schema",
-                        input_config={"text": "pdf_loader.text"},
+                        input_config={"text": "file_loader.text"},
                     )
                 )
 
@@ -281,7 +317,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
                     end="extractor",
                     input_config={
                         "schema": "schema",
-                        "document_info": "pdf_loader.document_info",
+                        "document_info": "file_loader.document_info",
                     },
                 )
             )
@@ -348,24 +384,24 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         if text is None and file_path is None:
             # user must provide either text or file_path or both
             raise PipelineDefinitionError(
-                "At least one of `text` (when from_pdf=False) or `file_path` (when from_pdf=True) argument must be provided."
+                "At least one of `text` (when from_file=False) or `file_path` (when from_file=True) argument must be provided."
             )
         run_params: dict[str, dict[str, Any]] = defaultdict(dict)
         if self.lexical_graph_config:
             run_params["extractor"]["lexical_graph_config"] = self.lexical_graph_config
             run_params["writer"]["lexical_graph_config"] = self.lexical_graph_config
             run_params["pruner"]["lexical_graph_config"] = self.lexical_graph_config
-        if self.from_pdf:
+        if self.from_file:
             if not file_path:
                 raise PipelineDefinitionError(
-                    "Expected 'file_path' argument when 'from_pdf' is True."
+                    "Expected 'file_path' to a PDF or Markdown file when 'from_file' is True."
                 )
-            run_params["pdf_loader"]["filepath"] = file_path
-            run_params["pdf_loader"]["metadata"] = user_input.get("document_metadata")
+            run_params["file_loader"]["filepath"] = file_path
+            run_params["file_loader"]["metadata"] = user_input.get("document_metadata")
         else:
             if not text:
                 raise PipelineDefinitionError(
-                    "Expected 'text' argument when 'from_pdf' is False."
+                    "Expected 'text' argument when 'from_file' is False."
                 )
             run_params["splitter"]["text"] = text
             # Add full text to schema component for automatic schema extraction

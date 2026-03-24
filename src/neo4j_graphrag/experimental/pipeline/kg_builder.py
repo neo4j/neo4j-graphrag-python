@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from typing import List, Optional, Sequence, Union, Any, Literal
 import logging
+import warnings
 
 import neo4j
 from pydantic import ValidationError
@@ -24,7 +25,7 @@ from pydantic import ValidationError
 from neo4j_graphrag.embeddings import Embedder
 from neo4j_graphrag.experimental.components.entity_relation_extractor import OnError
 from neo4j_graphrag.experimental.components.kg_writer import KGWriter
-from neo4j_graphrag.experimental.components.pdf_loader import DataLoader
+from neo4j_graphrag.experimental.components.data_loader import DataLoader
 from neo4j_graphrag.experimental.components.text_splitters.base import TextSplitter
 from neo4j_graphrag.experimental.components.types import (
     LexicalGraphConfig,
@@ -79,11 +80,17 @@ class SimpleKGPipeline:
             .. deprecated:: 1.7.1
                 Use schema instead
 
-        from_pdf (bool): Determines whether to include the PdfLoader in the pipeline.
-                         If True, expects `file_path` input in `run` methods.
+        from_file (bool): Determines whether to include a file loader in the pipeline.
+                         If True, expects `file_path` input in `run` methods (PDF or Markdown).
                          If False, expects `text` input in `run` methods.
+        from_pdf (Optional[bool]): Deprecated. If set, it overrides ``from_file`` and emits a
+            warning. Prefer ``from_file``.
         text_splitter (Optional[TextSplitter]): A text splitter component. Defaults to FixedSizeSplitter().
-        pdf_loader (Optional[DataLoader]): A PDF loader component. Defaults to PdfLoader().
+        file_loader (Optional[DataLoader]): A document loader component. Defaults to
+            :class:`~neo4j_graphrag.experimental.components.data_loader.FileLoader`
+            (supports ``.pdf``, ``.md``, ``.markdown``). Use :class:`~neo4j_graphrag.experimental.components.data_loader.PdfLoader` for PDF-only paths.
+        pdf_loader (Optional[DataLoader]): Deprecated. If set, it is used as ``file_loader`` and emits a
+            warning. Do not pass both ``file_loader`` and ``pdf_loader``. Prefer ``file_loader``.
         kg_writer (Optional[KGWriter]): A knowledge graph writer component. Defaults to Neo4jWriter().
         on_error (str): Error handling strategy for the Entity and relation extractor. Defaults to "IGNORE", where chunk will be ignored if extraction fails. Possible values: "RAISE" or "IGNORE".
         perform_entity_resolution (bool): Merge entities with same label and name. Default: True
@@ -106,8 +113,10 @@ class SimpleKGPipeline:
                 Literal["FREE", "EXTRACTED"],
             ],
         ] = None,
-        from_pdf: bool = True,
+        from_file: bool = True,
+        from_pdf: Optional[bool] = None,
         text_splitter: Optional[TextSplitter] = None,
+        file_loader: Optional[DataLoader] = None,
         pdf_loader: Optional[DataLoader] = None,
         kg_writer: Optional[KGWriter] = None,
         on_error: str = "IGNORE",
@@ -116,6 +125,27 @@ class SimpleKGPipeline:
         lexical_graph_config: Optional[LexicalGraphConfig] = None,
         neo4j_database: Optional[str] = None,
     ):
+        if from_pdf is not None:
+            warnings.warn(
+                "`from_pdf` is deprecated and will be removed in a future version; "
+                "use `from_file` instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            from_file = from_pdf
+        if pdf_loader is not None:
+            if file_loader is not None:
+                raise ValueError(
+                    "Pass only one of `file_loader` and `pdf_loader`; "
+                    "`pdf_loader` is deprecated."
+                )
+            warnings.warn(
+                "`pdf_loader` is deprecated and will be removed in a future version; "
+                "use `file_loader` instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            file_loader = pdf_loader
         try:
             config = SimpleKGPipelineConfig.model_validate(
                 dict(
@@ -126,8 +156,8 @@ class SimpleKGPipeline:
                     relations=relations or [],
                     potential_schema=potential_schema,
                     schema=schema,
-                    from_pdf=from_pdf,
-                    pdf_loader=ComponentType(pdf_loader) if pdf_loader else None,
+                    from_file=from_file,
+                    file_loader=ComponentType(file_loader) if file_loader else None,
                     kg_writer=ComponentType(kg_writer) if kg_writer else None,
                     text_splitter=ComponentType(text_splitter)
                     if text_splitter
@@ -154,8 +184,9 @@ class SimpleKGPipeline:
         Asynchronously runs the knowledge graph building process.
 
         Args:
-            file_path (Optional[str]): The path to the PDF file to process. Required if `from_pdf` is True. If `from_pdf` is False, can be used to set the Document node path property.
-            text (Optional[str]): The text content to process. Required if `from_pdf` is False.
+            file_path (Optional[str]): Path to a PDF or Markdown file when `from_file` is True.
+                If `from_file` is False, can be used to set the Document node path property.
+            text (Optional[str]): The text content to process. Required if `from_file` is False.
             document_metadata (Optional[dict[str, Any]]): The metadata to attach to the document.
 
         Returns:
