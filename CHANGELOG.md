@@ -14,6 +14,10 @@
 
 - `SchemaExtractionTemplate` prompt updated to explicitly instruct the LLM not to use `__` as a prefix or suffix in node labels or relationship types.
 
+### Fixed
+
+- Fixed `ValueError` in `Neo4jGraphParquetFormatter` when nodes of the same label have mixed property types (e.g. `str` and `int` for the same property), which caused `pa.Table.from_pylist()` to fail. Mixed-type columns are now coerced to a consistent type before Parquet table creation.
+
 ## 1.14.0
 
 ### Added
