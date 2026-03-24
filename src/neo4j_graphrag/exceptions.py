@@ -128,6 +128,12 @@ class PdfLoaderError(Neo4jGraphRagError):
     pass
 
 
+class UnsupportedDocumentFormatError(Neo4jGraphRagError):
+    """Raised when a file extension is not supported by the document file loader."""
+
+    pass
+
+
 class PromptMissingPlaceholderError(Neo4jGraphRagError):
     """Exception raised when a prompt is missing an expected placeholder."""
 

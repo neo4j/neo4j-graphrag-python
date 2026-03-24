@@ -81,9 +81,15 @@ class DocumentInfo(DataModel):
         return self.uid
 
 
-class PdfDocument(DataModel):
+class LoadedDocument(DataModel):
+    """Extracted text and metadata for a file loaded by a :class:`~neo4j_graphrag.experimental.components.data_loader.DataLoader`."""
+
     text: str
     document_info: DocumentInfo
+
+
+# Backward compatibility (deprecated: use ``LoadedDocument``).
+PdfDocument = LoadedDocument
 
 
 class TextChunk(BaseModel):
