@@ -411,6 +411,7 @@ class BedrockLLM(LLMInterface, LLMInterfaceV2):
         tools: Sequence[Tool],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+        tool_choice: Optional[str] = None,
     ) -> ToolCallResponse:
         """Sends text to the LLM with tool definitions.
 
@@ -419,6 +420,9 @@ class BedrockLLM(LLMInterface, LLMInterfaceV2):
             tools: Sequence of Tools for the LLM to choose from.
             message_history: A collection of previous messages.
             system_instruction: Optional system message override.
+            tool_choice: Optional tool choice mode. "any" forces the model
+                to call at least one tool. "auto" lets the model decide.
+                A specific tool name forces that tool.
 
         Returns:
             ToolCallResponse: The response containing tool calls.
@@ -432,7 +436,9 @@ class BedrockLLM(LLMInterface, LLMInterfaceV2):
 
             messages = self.get_messages(input, message_history)
             system = self.get_system(system_instruction)
-            tool_config = self._convert_tools_to_bedrock_format(tools)
+            tool_config = self._convert_tools_to_bedrock_format(
+                tools, tool_choice=tool_choice
+            )
 
             converse_params: Dict[str, Any] = {
                 "modelId": self._get_model_identifier(),
@@ -473,9 +479,18 @@ class BedrockLLM(LLMInterface, LLMInterfaceV2):
         )
 
     def _convert_tools_to_bedrock_format(
-        self, tools: Sequence[Tool]
+        self,
+        tools: Sequence[Tool],
+        tool_choice: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Convert Tool objects to Bedrock's toolConfig format."""
+        """Convert Tool objects to Bedrock's toolConfig format.
+
+        Args:
+            tools: Sequence of Tool objects.
+            tool_choice: Optional tool choice mode. "any" forces the model to
+                call at least one tool. "auto" (default) lets the model decide.
+                A specific tool name forces that tool to be called.
+        """
         bedrock_tools = []
         for tool in tools:
             tool_spec = {
@@ -489,7 +504,16 @@ class BedrockLLM(LLMInterface, LLMInterfaceV2):
             }
             bedrock_tools.append(tool_spec)
 
-        return {"tools": bedrock_tools}
+        config: Dict[str, Any] = {"tools": bedrock_tools}
+
+        if tool_choice == "any":
+            config["toolChoice"] = {"any": {}}
+        elif tool_choice == "auto":
+            config["toolChoice"] = {"auto": {}}
+        elif tool_choice is not None:
+            config["toolChoice"] = {"tool": {"name": tool_choice}}
+
+        return config
 
     def _parse_tool_response(self, response: Dict[str, Any]) -> ToolCallResponse:
         """Parse the Converse API response for tool calls."""
