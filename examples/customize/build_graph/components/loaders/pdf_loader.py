@@ -3,7 +3,7 @@
 import asyncio
 from pathlib import Path
 
-from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
+from neo4j_graphrag.experimental.components.data_loader import PdfLoader
 
 root_dir = Path(__file__).parents[4]
 file_path = root_dir / "data" / "Harry Potter and the Chamber of Secrets Summary.pdf"
