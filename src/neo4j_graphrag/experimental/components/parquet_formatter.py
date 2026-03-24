@@ -420,10 +420,8 @@ class Neo4jGraphParquetFormatter:
         return type_to_rows
 
     @staticmethod
-    def _normalize_column_types(
-        rows: list[dict[str, Any]],
-    ) -> list[dict[str, Any]]:
-        """Coerce mixed-type columns to a single type so PyArrow can build the table.
+    def _normalize_column_types(rows: list[dict[str, Any]]) -> None:
+        """Coerce mixed-type columns in *rows* in-place so PyArrow can build the table.
 
         PyArrow infers the column type from the first row; if subsequent rows have a
         different Python type for the same column the table creation fails.  This method
@@ -432,7 +430,7 @@ class Neo4jGraphParquetFormatter:
         - anything else mixed -> str  (universal safe fallback)
         """
         if len(rows) <= 1:
-            return rows
+            return
 
         col_types: dict[str, set[type]] = defaultdict(set)
         for row in rows:
@@ -453,9 +451,6 @@ class Neo4jGraphParquetFormatter:
                 target.__name__,
             )
 
-        if not cols_to_coerce:
-            return rows
-
         for row in rows:
             for col, target_type in cols_to_coerce.items():
                 if col in row and row[col] is not None:
@@ -463,8 +458,6 @@ class Neo4jGraphParquetFormatter:
                         row[col] = target_type(row[col])
                     except (ValueError, TypeError):
                         row[col] = str(row[col])
-
-        return rows
 
     def format_parquet(
         self,
@@ -487,7 +480,7 @@ class Neo4jGraphParquetFormatter:
             import pyarrow as pa
             import pyarrow.parquet as pq
 
-            rows = self._normalize_column_types(rows)
+            self._normalize_column_types(rows)
             table = pa.Table.from_pylist(rows)
             # Write to BytesIO buffer
             buffer = BytesIO()

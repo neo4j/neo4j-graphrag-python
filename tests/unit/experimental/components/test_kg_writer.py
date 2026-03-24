@@ -707,33 +707,33 @@ async def test_parquet_writer_run_empty_graph() -> None:
 
 def test_normalize_column_types_single_row() -> None:
     rows = [{"age": 30, "name": "Alice"}]
-    result = Neo4jGraphParquetFormatter._normalize_column_types(rows)
-    assert result == [{"age": 30, "name": "Alice"}]
+    Neo4jGraphParquetFormatter._normalize_column_types(rows)
+    assert rows == [{"age": 30, "name": "Alice"}]
 
 
 def test_normalize_column_types_homogeneous() -> None:
     rows = [{"age": 30}, {"age": 25}]
-    result = Neo4jGraphParquetFormatter._normalize_column_types(rows)
-    assert result == [{"age": 30}, {"age": 25}]
+    Neo4jGraphParquetFormatter._normalize_column_types(rows)
+    assert rows == [{"age": 30}, {"age": 25}]
 
 
 def test_normalize_column_types_mixed_str_int() -> None:
     rows: list[dict[str, Any]] = [{"age": "45"}, {"age": 30}]
-    result = Neo4jGraphParquetFormatter._normalize_column_types(rows)
-    assert result == [{"age": "45"}, {"age": "30"}]
+    Neo4jGraphParquetFormatter._normalize_column_types(rows)
+    assert rows == [{"age": "45"}, {"age": "30"}]
 
 
 def test_normalize_column_types_mixed_int_float() -> None:
     rows: list[dict[str, Any]] = [{"score": 3}, {"score": 3.5}]
-    result = Neo4jGraphParquetFormatter._normalize_column_types(rows)
-    assert result == [{"score": 3.0}, {"score": 3.5}]
+    Neo4jGraphParquetFormatter._normalize_column_types(rows)
+    assert rows == [{"score": 3.0}, {"score": 3.5}]
 
 
 def test_normalize_column_types_none_ignored() -> None:
     """None values should not influence type detection."""
     rows: list[dict[str, Any]] = [{"age": None}, {"age": 30}]
-    result = Neo4jGraphParquetFormatter._normalize_column_types(rows)
-    assert result == [{"age": None}, {"age": 30}]
+    Neo4jGraphParquetFormatter._normalize_column_types(rows)
+    assert rows == [{"age": None}, {"age": 30}]
 
 
 @pytest.mark.asyncio
