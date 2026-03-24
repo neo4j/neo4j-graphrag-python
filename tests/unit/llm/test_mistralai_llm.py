@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from typing import Any, Optional
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 from typing import List
 
 import httpx
@@ -21,6 +21,7 @@ import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm import LLMResponse, MistralAILLM
 from neo4j_graphrag.types import LLMMessage
+from neo4j_graphrag.utils.rate_limit import NoOpRateLimitHandler
 from pydantic import BaseModel, ConfigDict
 
 
@@ -439,3 +440,46 @@ def test_mistralai_invoke_v2_with_response_format_raises_error(
     assert "MistralAILLM does not currently support structured output" in str(
         exc_info.value
     )
+
+
+@patch("neo4j_graphrag.llm.mistralai_llm.SDKError", MockSDKError)
+@patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
+def test_mistralai_invoke_v2_rate_limit_handler_called(
+    mock_mistral: Mock,
+) -> None:
+    """Test that the rate limit handler is invoked on the V2 (List[LLMMessage]) path."""
+    messages: List[LLMMessage] = [{"role": "user", "content": "Hello"}]
+    mock_mistral_instance = mock_mistral.return_value
+    chat_response_mock = MagicMock()
+    chat_response_mock.choices = [MagicMock(message=MagicMock(content="Hi there!"))]
+    mock_mistral_instance.chat.complete.return_value = chat_response_mock
+
+    spy_handler = MagicMock(wraps=NoOpRateLimitHandler())
+    llm = MistralAILLM(model_name="mistral-model", rate_limit_handler=spy_handler)
+    response = llm.invoke(messages)
+
+    assert response.content == "Hi there!"
+    spy_handler.handle_sync.assert_called_once()
+
+
+@pytest.mark.asyncio
+@patch("neo4j_graphrag.llm.mistralai_llm.SDKError", MockSDKError)
+@patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
+async def test_mistralai_ainvoke_v2_rate_limit_handler_called(
+    mock_mistral: Mock,
+) -> None:
+    """Test that the rate limit handler is invoked on the async V2 (List[LLMMessage]) path."""
+    messages: List[LLMMessage] = [{"role": "user", "content": "Hello"}]
+    mock_mistral_instance = mock_mistral.return_value
+    chat_response_mock = MagicMock()
+    chat_response_mock.choices = [MagicMock(message=MagicMock(content="Hi there!"))]
+    mock_mistral_instance.chat.complete_async = AsyncMock(
+        return_value=chat_response_mock
+    )
+
+    spy_handler = MagicMock(wraps=NoOpRateLimitHandler())
+    llm = MistralAILLM(model_name="mistral-model", rate_limit_handler=spy_handler)
+    response = await llm.ainvoke(messages)
+
+    assert response.content == "Hi there!"
+    spy_handler.handle_async.assert_called_once()

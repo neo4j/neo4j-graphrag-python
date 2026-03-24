@@ -29,6 +29,7 @@ from neo4j_graphrag.llm.types import ToolCallResponse
 from neo4j_graphrag.llm.vertexai_llm import VertexAILLM
 from neo4j_graphrag.tool import Tool
 from neo4j_graphrag.types import LLMMessage
+from neo4j_graphrag.utils.rate_limit import NoOpRateLimitHandler
 
 from pydantic import BaseModel, ConfigDict
 
@@ -598,3 +599,42 @@ async def test_vertexai_ainvoke_v2_with_json_schema_response_format(
     # Verify generation_config has response_schema
     call_args = mock_model.generate_content_async.call_args.kwargs
     assert "generation_config" in call_args
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_invoke_v2_rate_limit_handler_called(
+    GenerativeModelMock: MagicMock,
+) -> None:
+    """Test that the rate limit handler is invoked on the V2 (List[LLMMessage]) path."""
+    messages: List[LLMMessage] = [{"role": "user", "content": "Hello"}]
+    mock_response = Mock()
+    mock_response.text = "Hi there!"
+    mock_model = GenerativeModelMock.return_value
+    mock_model.generate_content.return_value = mock_response
+
+    spy_handler = MagicMock(wraps=NoOpRateLimitHandler())
+    llm = VertexAILLM(model_name="gemini-1.5-flash-001", rate_limit_handler=spy_handler)
+    response = llm.invoke(messages)
+
+    assert response.content == "Hi there!"
+    spy_handler.handle_sync.assert_called_once()
+
+
+@pytest.mark.asyncio
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+async def test_vertexai_ainvoke_v2_rate_limit_handler_called(
+    GenerativeModelMock: MagicMock,
+) -> None:
+    """Test that the rate limit handler is invoked on the async V2 (List[LLMMessage]) path."""
+    messages: List[LLMMessage] = [{"role": "user", "content": "Hello"}]
+    mock_response = AsyncMock()
+    mock_response.text = "Hi there!"
+    mock_model = GenerativeModelMock.return_value
+    mock_model.generate_content_async = AsyncMock(return_value=mock_response)
+
+    spy_handler = MagicMock(wraps=NoOpRateLimitHandler())
+    llm = VertexAILLM(model_name="gemini-1.5-flash-001", rate_limit_handler=spy_handler)
+    response = await llm.ainvoke(messages)
+
+    assert response.content == "Hi there!"
+    spy_handler.handle_async.assert_called_once()
