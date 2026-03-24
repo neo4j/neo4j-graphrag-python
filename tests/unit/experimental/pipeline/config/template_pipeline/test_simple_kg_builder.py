@@ -33,7 +33,10 @@ from neo4j_graphrag.experimental.components.schema import (
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
     FixedSizeSplitter,
 )
-from neo4j_graphrag.experimental.pipeline.config.object_config import ComponentConfig
+from neo4j_graphrag.experimental.pipeline.config.object_config import (
+    ComponentConfig,
+    ComponentType,
+)
 from neo4j_graphrag.experimental.pipeline.config.template_pipeline import (
     SimpleKGPipelineConfig,
 )
@@ -70,7 +73,7 @@ def test_simple_kg_pipeline_config_pdf_loader_deprecated_maps_to_file_loader() -
     with pytest.warns(DeprecationWarning, match="pdf_loader"):
         config = SimpleKGPipelineConfig(
             from_file=True,
-            pdf_loader=my_loader,
+            pdf_loader=ComponentType(my_loader),
         )
     assert config._get_file_loader() == my_loader
 
@@ -79,8 +82,8 @@ def test_simple_kg_pipeline_config_pdf_loader_and_file_loader_conflict() -> None
     with pytest.raises(ValueError, match="pdf_loader"):
         SimpleKGPipelineConfig(
             from_file=True,
-            file_loader=PdfLoader(),  # type: ignore[call-arg]
-            pdf_loader=PdfLoader(),
+            file_loader=ComponentType(PdfLoader()),
+            pdf_loader=ComponentType(PdfLoader()),
         )
 
 
@@ -88,7 +91,9 @@ def test_simple_kg_pipeline_config_file_loader_from_file_is_true_class_overwrite
     None
 ):
     my_file_loader = PdfLoader()
-    config = SimpleKGPipelineConfig(from_file=True, file_loader=my_file_loader)  # type: ignore
+    config = SimpleKGPipelineConfig(
+        from_file=True, file_loader=ComponentType(my_file_loader)
+    )
     assert config._get_file_loader() == my_file_loader
 
 
@@ -96,7 +101,9 @@ def test_simple_kg_pipeline_config_file_loader_class_overwrite_but_from_file_is_
     None
 ):
     my_file_loader = PdfLoader()
-    config = SimpleKGPipelineConfig(from_file=False, file_loader=my_file_loader)  # type: ignore
+    config = SimpleKGPipelineConfig(
+        from_file=False, file_loader=ComponentType(my_file_loader)
+    )
     assert config._get_file_loader() is None
 
 
@@ -111,7 +118,7 @@ def test_simple_kg_pipeline_config_file_loader_from_file_is_true_class_overwrite
     mock_component_parse.return_value = my_file_loader
     config = SimpleKGPipelineConfig(
         from_file=True,
-        file_loader=my_file_loader_config,  # type: ignore
+        file_loader=ComponentType(my_file_loader_config),
     )
     assert config._get_file_loader() == my_file_loader
 
