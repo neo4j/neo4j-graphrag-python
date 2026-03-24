@@ -25,6 +25,7 @@ from neo4j_graphrag.experimental.components.filename_collision_handler import (
     FilenameCollisionHandler,
 )
 from neo4j_graphrag.experimental.components.parquet_formatter import (
+    Neo4jGraphParquetFormatter,
     sanitize_parquet_filestem,
 )
 from neo4j_graphrag.experimental.components.kg_writer import (
@@ -697,3 +698,72 @@ async def test_parquet_writer_run_empty_graph() -> None:
     assert stats["nodes_per_label"] == {}
     assert stats["rel_per_type"] == {}
     assert result.metadata["files"] == []
+
+
+# ---------------------------------------------------------------------------
+# Neo4jGraphParquetFormatter._normalize_column_types
+# ---------------------------------------------------------------------------
+
+
+def test_normalize_column_types_single_row() -> None:
+    rows = [{"age": 30, "name": "Alice"}]
+    Neo4jGraphParquetFormatter._normalize_column_types(rows)
+    assert rows == [{"age": 30, "name": "Alice"}]
+
+
+def test_normalize_column_types_homogeneous() -> None:
+    rows = [{"age": 30}, {"age": 25}]
+    Neo4jGraphParquetFormatter._normalize_column_types(rows)
+    assert rows == [{"age": 30}, {"age": 25}]
+
+
+def test_normalize_column_types_mixed_str_int() -> None:
+    rows: list[dict[str, Any]] = [{"age": "45"}, {"age": 30}]
+    Neo4jGraphParquetFormatter._normalize_column_types(rows)
+    assert rows == [{"age": "45"}, {"age": "30"}]
+
+
+def test_normalize_column_types_mixed_int_float() -> None:
+    rows: list[dict[str, Any]] = [{"score": 3}, {"score": 3.5}]
+    Neo4jGraphParquetFormatter._normalize_column_types(rows)
+    assert rows == [{"score": 3.0}, {"score": 3.5}]
+
+
+def test_normalize_column_types_none_ignored() -> None:
+    """None values should not influence type detection."""
+    rows: list[dict[str, Any]] = [{"age": None}, {"age": 30}]
+    Neo4jGraphParquetFormatter._normalize_column_types(rows)
+    assert rows == [{"age": None}, {"age": 30}]
+
+
+@pytest.mark.asyncio
+async def test_parquet_writer_mixed_property_types() -> None:
+    """ParquetWriter succeeds when nodes of the same label have mixed property types."""
+    pytest.importorskip("pyarrow")
+    import pyarrow.parquet as pq
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out = Path(tmpdir)
+        dest = _LocalParquetDestination(out)
+        writer = ParquetWriter(
+            nodes_dest=dest,
+            relationships_dest=dest,
+            collision_handler=FilenameCollisionHandler(),
+        )
+
+        node1 = Neo4jNode(
+            id="p1", label="Patient", properties={"name": "John", "age": "45"}
+        )
+        node2 = Neo4jNode(
+            id="p2", label="Patient", properties={"name": "Jane", "age": 30}
+        )
+        graph = Neo4jGraph(nodes=[node1, node2], relationships=[])
+
+        result = await writer.run(graph=graph)
+
+        assert result.status == "SUCCESS"
+        table = pq.read_table(out / "Patient.parquet")
+        assert table.num_rows == 2
+        # Both ages should have been coerced to str
+        ages = {v.as_py() for v in table.column("age")}
+        assert ages == {"45", "30"}
