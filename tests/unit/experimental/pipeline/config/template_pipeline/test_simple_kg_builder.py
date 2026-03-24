@@ -361,8 +361,9 @@ def test_simple_kg_pipeline_config_run_params_from_file_text() -> None:
     config = SimpleKGPipelineConfig(from_file=True)
     with pytest.raises(PipelineDefinitionError) as excinfo:
         config.get_run_params({"text": "my text"})
-    assert "Expected 'file_path' to a PDF or Markdown file when 'from_file' is True" in str(
-        excinfo
+    assert (
+        "Expected 'file_path' to a PDF or Markdown file when 'from_file' is True"
+        in str(excinfo)
     )
 
 

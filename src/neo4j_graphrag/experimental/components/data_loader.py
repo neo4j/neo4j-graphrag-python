@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 """Document loaders: base class, PDF, Markdown, and extension-based file dispatch."""
+
 from __future__ import annotations
 
 import io
@@ -50,8 +51,7 @@ class DataLoader(Component):
         filepath: Union[str, Path],
         metadata: Optional[Dict[str, str]] = None,
         fs: Optional[Union[AbstractFileSystem, str]] = None,
-    ) -> LoadedDocument:
-        ...
+    ) -> LoadedDocument: ...
 
 
 class PdfLoader(DataLoader):
