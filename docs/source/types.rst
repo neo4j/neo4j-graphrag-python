@@ -44,6 +44,11 @@ DocumentInfo
 
 .. autoclass:: neo4j_graphrag.experimental.components.types.DocumentInfo
 
+LoadedDocument
+==============
+
+.. autoclass:: neo4j_graphrag.experimental.components.types.LoadedDocument
+
 
 TextChunk
 =========
