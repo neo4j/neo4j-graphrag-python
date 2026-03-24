@@ -24,7 +24,7 @@ from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     OnError,
 )
 from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
-from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
+from neo4j_graphrag.experimental.components.data_loader import FileLoader, PdfLoader
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
     SchemaFromTextExtractor,
@@ -46,46 +46,74 @@ from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 from neo4j_graphrag.llm import LLMInterface
 
 
-def test_simple_kg_pipeline_config_pdf_loader_from_pdf_is_false() -> None:
-    config = SimpleKGPipelineConfig(from_pdf=False)
-    assert config._get_pdf_loader() is None
+def test_simple_kg_pipeline_config_file_loader_from_file_is_false() -> None:
+    config = SimpleKGPipelineConfig(from_file=False)
+    assert config._get_file_loader() is None
 
 
-def test_simple_kg_pipeline_config_pdf_loader_from_pdf_is_true() -> None:
-    config = SimpleKGPipelineConfig(from_pdf=True)
-    assert isinstance(config._get_pdf_loader(), PdfLoader)
+def test_simple_kg_pipeline_config_file_loader_from_file_is_true() -> None:
+    config = SimpleKGPipelineConfig(from_file=True)
+    assert isinstance(config._get_file_loader(), FileLoader)
 
 
-def test_simple_kg_pipeline_config_pdf_loader_from_pdf_is_true_class_overwrite() -> (
+def test_simple_kg_pipeline_config_from_pdf_deprecated_maps_to_from_file() -> None:
+    with pytest.warns(DeprecationWarning, match="from_pdf"):
+        config = SimpleKGPipelineConfig(from_pdf=True)
+    assert config.from_file is True
+    with pytest.warns(DeprecationWarning, match="from_pdf"):
+        config_false = SimpleKGPipelineConfig(from_pdf=False)
+    assert config_false.from_file is False
+
+
+def test_simple_kg_pipeline_config_pdf_loader_deprecated_maps_to_file_loader() -> None:
+    my_loader = PdfLoader()
+    with pytest.warns(DeprecationWarning, match="pdf_loader"):
+        config = SimpleKGPipelineConfig(
+            from_file=True,
+            pdf_loader=my_loader,
+        )
+    assert config._get_file_loader() == my_loader
+
+
+def test_simple_kg_pipeline_config_pdf_loader_and_file_loader_conflict() -> None:
+    with pytest.raises(ValueError, match="pdf_loader"):
+        SimpleKGPipelineConfig(
+            from_file=True,
+            file_loader=PdfLoader(),  # type: ignore[call-arg]
+            pdf_loader=PdfLoader(),
+        )
+
+
+def test_simple_kg_pipeline_config_file_loader_from_file_is_true_class_overwrite() -> (
     None
 ):
-    my_pdf_loader = PdfLoader()
-    config = SimpleKGPipelineConfig(from_pdf=True, pdf_loader=my_pdf_loader)  # type: ignore
-    assert config._get_pdf_loader() == my_pdf_loader
+    my_file_loader = PdfLoader()
+    config = SimpleKGPipelineConfig(from_file=True, file_loader=my_file_loader)  # type: ignore
+    assert config._get_file_loader() == my_file_loader
 
 
-def test_simple_kg_pipeline_config_pdf_loader_class_overwrite_but_from_pdf_is_false() -> (
+def test_simple_kg_pipeline_config_file_loader_class_overwrite_but_from_file_is_false() -> (
     None
 ):
-    my_pdf_loader = PdfLoader()
-    config = SimpleKGPipelineConfig(from_pdf=False, pdf_loader=my_pdf_loader)  # type: ignore
-    assert config._get_pdf_loader() is None
+    my_file_loader = PdfLoader()
+    config = SimpleKGPipelineConfig(from_file=False, file_loader=my_file_loader)  # type: ignore
+    assert config._get_file_loader() is None
 
 
 @patch("neo4j_graphrag.experimental.pipeline.config.object_config.ComponentType.parse")
-def test_simple_kg_pipeline_config_pdf_loader_from_pdf_is_true_class_overwrite_from_config(
+def test_simple_kg_pipeline_config_file_loader_from_file_is_true_class_overwrite_from_config(
     mock_component_parse: Mock,
 ) -> None:
-    my_pdf_loader_config = ComponentConfig(
+    my_file_loader_config = ComponentConfig(
         class_="",
     )
-    my_pdf_loader = PdfLoader()
-    mock_component_parse.return_value = my_pdf_loader
+    my_file_loader = PdfLoader()
+    mock_component_parse.return_value = my_file_loader
     config = SimpleKGPipelineConfig(
-        from_pdf=True,
-        pdf_loader=my_pdf_loader_config,  # type: ignore
+        from_file=True,
+        file_loader=my_file_loader_config,  # type: ignore
     )
-    assert config._get_pdf_loader() == my_pdf_loader
+    assert config._get_file_loader() == my_file_loader
 
 
 def test_simple_kg_pipeline_config_text_splitter() -> None:
@@ -255,16 +283,16 @@ def test_simple_kg_pipeline_config_writer_overwrite(
     assert writer.neo4j_database == "my_db"
 
 
-def test_simple_kg_pipeline_config_connections_from_pdf() -> None:
+def test_simple_kg_pipeline_config_connections_from_file() -> None:
     config = SimpleKGPipelineConfig(
-        from_pdf=True,
+        from_file=True,
         perform_entity_resolution=False,
     )
     connections = config._get_connections()
     assert len(connections) == 7
     expected_connections = [
-        ("pdf_loader", "splitter"),
-        ("pdf_loader", "schema"),
+        ("file_loader", "splitter"),
+        ("file_loader", "schema"),
         ("schema", "extractor"),
         ("splitter", "chunk_embedder"),
         ("chunk_embedder", "extractor"),
@@ -277,7 +305,7 @@ def test_simple_kg_pipeline_config_connections_from_pdf() -> None:
 
 def test_simple_kg_pipeline_config_connections_from_text() -> None:
     config = SimpleKGPipelineConfig(
-        from_pdf=False,
+        from_file=False,
         perform_entity_resolution=False,
     )
     connections = config._get_connections()
@@ -295,14 +323,14 @@ def test_simple_kg_pipeline_config_connections_from_text() -> None:
 
 def test_simple_kg_pipeline_config_connections_with_er() -> None:
     config = SimpleKGPipelineConfig(
-        from_pdf=True,
+        from_file=True,
         perform_entity_resolution=True,
     )
     connections = config._get_connections()
     assert len(connections) == 8
     expected_connections = [
-        ("pdf_loader", "splitter"),
-        ("pdf_loader", "schema"),
+        ("file_loader", "splitter"),
+        ("file_loader", "schema"),
         ("schema", "extractor"),
         ("splitter", "chunk_embedder"),
         ("chunk_embedder", "extractor"),
@@ -314,41 +342,43 @@ def test_simple_kg_pipeline_config_connections_with_er() -> None:
         assert (actual.start, actual.end) == expected
 
 
-def test_simple_kg_pipeline_config_run_params_from_pdf_file_path() -> None:
-    config = SimpleKGPipelineConfig(from_pdf=True)
+def test_simple_kg_pipeline_config_run_params_from_file_file_path() -> None:
+    config = SimpleKGPipelineConfig(from_file=True)
     assert config.get_run_params({"file_path": "my_file"}) == {
-        "pdf_loader": {"filepath": "my_file", "metadata": None}
+        "file_loader": {"filepath": "my_file", "metadata": None}
     }
 
 
 def test_simple_kg_pipeline_config_run_params_from_text_text() -> None:
-    config = SimpleKGPipelineConfig(from_pdf=False)
+    config = SimpleKGPipelineConfig(from_file=False)
     run_params = config.get_run_params({"text": "my text"})
     assert run_params["splitter"] == {"text": "my text"}
     assert run_params["schema"] == {"text": "my text"}
     assert run_params["extractor"]["document_info"]["path"] == "document.txt"
 
 
-def test_simple_kg_pipeline_config_run_params_from_pdf_text() -> None:
-    config = SimpleKGPipelineConfig(from_pdf=True)
+def test_simple_kg_pipeline_config_run_params_from_file_text() -> None:
+    config = SimpleKGPipelineConfig(from_file=True)
     with pytest.raises(PipelineDefinitionError) as excinfo:
         config.get_run_params({"text": "my text"})
-    assert "Expected 'file_path' argument when 'from_pdf' is True" in str(excinfo)
+    assert "Expected 'file_path' to a PDF or Markdown file when 'from_file' is True" in str(
+        excinfo
+    )
 
 
 def test_simple_kg_pipeline_config_run_params_from_text_file_path() -> None:
-    config = SimpleKGPipelineConfig(from_pdf=False)
+    config = SimpleKGPipelineConfig(from_file=False)
     with pytest.raises(PipelineDefinitionError) as excinfo:
         config.get_run_params({"file_path": "my file"})
-    assert "Expected 'text' argument when 'from_pdf' is False" in str(excinfo)
+    assert "Expected 'text' argument when 'from_file' is False" in str(excinfo)
 
 
 def test_simple_kg_pipeline_config_run_params_no_file_no_text() -> None:
-    config = SimpleKGPipelineConfig(from_pdf=False)
+    config = SimpleKGPipelineConfig(from_file=False)
     with pytest.raises(
         PipelineDefinitionError,
         match=re.escape(
-            "At least one of `text` (when from_pdf=False) or `file_path` (when from_pdf=True) argument must be provided."
+            "At least one of `text` (when from_file=False) or `file_path` (when from_file=True) argument must be provided."
         ),
     ):
         config.get_run_params({})

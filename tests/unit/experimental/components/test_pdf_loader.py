@@ -18,8 +18,12 @@ from unittest.mock import patch
 
 import pytest
 from fsspec.implementations.local import LocalFileSystem
-from neo4j_graphrag.exceptions import PdfLoaderError
-from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
+from neo4j_graphrag.exceptions import PdfLoaderError, UnsupportedDocumentFormatError
+from neo4j_graphrag.experimental.components.data_loader import (
+    FileLoader,
+    MarkdownLoader,
+    PdfLoader,
+)
 
 BASE_DIR = Path(__file__).parent
 
@@ -47,3 +51,48 @@ def test_pdf_processing_error(pdf_loader: PdfLoader, dummy_pdf_path: str) -> Non
     ):
         with pytest.raises(PdfLoaderError):
             pdf_loader.load_file(dummy_pdf_path, fs=LocalFileSystem())
+
+
+def test_markdown_loading() -> None:
+    md_path = str(BASE_DIR / "sample_data/hello.md")
+    text = MarkdownLoader.load_file(md_path, fs=LocalFileSystem())
+    assert "# Hello" in text
+    assert "Markdown **content**" in text
+
+
+@pytest.mark.asyncio
+async def test_markdown_loader_run() -> None:
+    md_path = BASE_DIR / "sample_data/hello.md"
+    loader = MarkdownLoader()
+    doc = await loader.run(filepath=md_path)
+    assert doc.document_info.document_type == "markdown"
+    assert "# Hello" in doc.text
+
+
+def test_file_loader_dispatch_pdf() -> None:
+    pdf_path = str(BASE_DIR / "sample_data/lorem_ipsum.pdf")
+    text = FileLoader.load_file(pdf_path, fs=LocalFileSystem())
+    assert text == "Lorem ipsum dolor sit amet."
+
+
+def test_file_loader_dispatch_markdown() -> None:
+    md_path = str(BASE_DIR / "sample_data/hello.md")
+    text = FileLoader.load_file(md_path, fs=LocalFileSystem())
+    assert "# Hello" in text
+
+
+def test_file_loader_unsupported_extension() -> None:
+    with pytest.raises(UnsupportedDocumentFormatError):
+        FileLoader.load_file("/tmp/foo.txt", fs=LocalFileSystem())
+
+
+@pytest.mark.asyncio
+async def test_file_loader_run_sets_document_type() -> None:
+    loader = FileLoader()
+    md_path = BASE_DIR / "sample_data/hello.md"
+    doc = await loader.run(filepath=md_path)
+    assert doc.document_info.document_type == "markdown"
+
+    pdf_path = BASE_DIR / "sample_data/lorem_ipsum.pdf"
+    doc_pdf = await loader.run(filepath=pdf_path)
+    assert doc_pdf.document_info.document_type == "pdf"
