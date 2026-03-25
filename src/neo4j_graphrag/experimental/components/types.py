@@ -17,6 +17,7 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import date, datetime, time
+from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -62,6 +63,14 @@ PropertyValue = Union[
 ]
 
 
+class DocumentType(str, Enum):
+    """How the document text was produced (file format or inline)."""
+
+    PDF = "pdf"
+    MARKDOWN = "markdown"
+    INLINE_TEXT = "inline_text"
+
+
 class DocumentInfo(DataModel):
     """A document loaded by a DataLoader.
 
@@ -69,12 +78,13 @@ class DocumentInfo(DataModel):
         path (str): Document path.
         metadata (Optional[dict[str, Any]]): Metadata associated with this document.
         uid (str): Unique identifier for this document.
+        document_type (Optional[DocumentType]): Kind of document source, if known.
     """
 
     path: str
     metadata: Optional[Dict[str, str]] = None
     uid: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    document_type: Optional[str] = None
+    document_type: Optional[DocumentType] = None
 
     @property
     def document_id(self) -> str:

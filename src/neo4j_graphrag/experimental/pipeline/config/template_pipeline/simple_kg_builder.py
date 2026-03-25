@@ -52,6 +52,7 @@ from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter i
     FixedSizeSplitter,
 )
 from neo4j_graphrag.experimental.components.types import (
+    DocumentType,
     LexicalGraphConfig,
 )
 from neo4j_graphrag.experimental.pipeline.config.object_config import ComponentType
@@ -413,6 +414,6 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
                 )
                 or "document.txt",
                 metadata=user_input.get("document_metadata"),
-                document_type="inline_text",
+                document_type=DocumentType.INLINE_TEXT,
             )
         return run_params

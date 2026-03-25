@@ -27,7 +27,11 @@ from fsspec import AbstractFileSystem
 from fsspec.implementations.local import LocalFileSystem
 
 from neo4j_graphrag.exceptions import PdfLoaderError, UnsupportedDocumentFormatError
-from neo4j_graphrag.experimental.components.types import DocumentInfo, LoadedDocument
+from neo4j_graphrag.experimental.components.types import (
+    DocumentInfo,
+    DocumentType,
+    LoadedDocument,
+)
 from neo4j_graphrag.experimental.pipeline.component import Component
 
 
@@ -93,7 +97,7 @@ class PdfLoader(DataLoader):
             document_info=DocumentInfo(
                 path=filepath,
                 metadata=self.get_document_metadata(text, metadata),
-                document_type="pdf",
+                document_type=DocumentType.PDF,
             ),
         )
 
@@ -131,7 +135,7 @@ class MarkdownLoader(DataLoader):
             document_info=DocumentInfo(
                 path=filepath,
                 metadata=self.get_document_metadata(text, metadata),
-                document_type="markdown",
+                document_type=DocumentType.MARKDOWN,
             ),
         )
 
@@ -176,9 +180,9 @@ class FileLoader(DataLoader):
         text = FileLoader.load_file(filepath, fs)
         suffix = _suffix(filepath)
         if suffix == ".pdf":
-            doc_type = "pdf"
+            doc_type: DocumentType = DocumentType.PDF
         elif suffix in (".md", ".markdown"):
-            doc_type = "markdown"
+            doc_type = DocumentType.MARKDOWN
         else:
             raise UnsupportedDocumentFormatError(
                 f"Unsupported document format: {suffix!r}. "

@@ -24,6 +24,7 @@ from neo4j_graphrag.experimental.components.data_loader import (
     MarkdownLoader,
     PdfLoader,
 )
+from neo4j_graphrag.experimental.components.types import DocumentType
 
 BASE_DIR = Path(__file__).parent
 
@@ -65,7 +66,7 @@ async def test_markdown_loader_run() -> None:
     md_path = BASE_DIR / "sample_data/hello.md"
     loader = MarkdownLoader()
     doc = await loader.run(filepath=md_path)
-    assert doc.document_info.document_type == "markdown"
+    assert doc.document_info.document_type == DocumentType.MARKDOWN
     assert "# Hello" in doc.text
 
 
@@ -91,8 +92,8 @@ async def test_file_loader_run_sets_document_type() -> None:
     loader = FileLoader()
     md_path = BASE_DIR / "sample_data/hello.md"
     doc = await loader.run(filepath=md_path)
-    assert doc.document_info.document_type == "markdown"
+    assert doc.document_info.document_type == DocumentType.MARKDOWN
 
     pdf_path = BASE_DIR / "sample_data/lorem_ipsum.pdf"
     doc_pdf = await loader.run(filepath=pdf_path)
-    assert doc_pdf.document_info.document_type == "pdf"
+    assert doc_pdf.document_info.document_type == DocumentType.PDF
