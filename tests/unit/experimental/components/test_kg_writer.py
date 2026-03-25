@@ -736,6 +736,41 @@ def test_normalize_column_types_none_ignored() -> None:
     assert rows == [{"age": None}, {"age": 30}]
 
 
+def test_normalize_column_types_numpy_int_and_str() -> None:
+    """NumPy integers must unify with Python int so str values still coerce the column."""
+    np = pytest.importorskip("numpy")
+    rows: list[dict[str, Any]] = [
+        {"value": np.int64(32)},
+        {"value": "rmsprop"},
+    ]
+    Neo4jGraphParquetFormatter._normalize_column_types(rows)
+    assert rows[0]["value"] == "32"
+    assert rows[1]["value"] == "rmsprop"
+
+
+def test_format_parquet_mixed_numeric_and_optimizer_name() -> None:
+    """Regression: Hyperparameter-like rows with int/float and str in one property."""
+    pytest.importorskip("pyarrow")
+    np = pytest.importorskip("numpy")
+    formatter = Neo4jGraphParquetFormatter()
+    rows: list[dict[str, Any]] = [
+        {
+            "__id__": "h1",
+            "labels": ["Hyperparameter", "__Entity__"],
+            "name": "lr",
+            "value": np.float64(0.01),
+        },
+        {
+            "__id__": "h2",
+            "labels": ["Hyperparameter", "__Entity__"],
+            "name": "optimizer",
+            "value": "rmsprop",
+        },
+    ]
+    data, _schema = formatter.format_parquet(rows, "node label 'Hyperparameter'")
+    assert len(data) > 0
+
+
 @pytest.mark.asyncio
 async def test_parquet_writer_mixed_property_types() -> None:
     """ParquetWriter succeeds when nodes of the same label have mixed property types."""
