@@ -200,6 +200,7 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):
         except SDKError as e:
             raise LLMGenerationError(e)
 
+    @rate_limit_handler_decorator
     def __invoke_v2(
         self,
         input: List[LLMMessage],
@@ -277,6 +278,7 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):
         except SDKError as e:
             raise LLMGenerationError(e)
 
+    @async_rate_limit_handler_decorator
     async def __ainvoke_v2(
         self,
         input: List[LLMMessage],
