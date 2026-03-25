@@ -2,10 +2,6 @@
 
 ## Next
 
-### Fixed
-
-- Fixed a bug where the rate limit handler was not being called on the `VertexAILLM` and `MistralAILLM` `__invoke_v2` and `__ainvoke_v2` methods.
-
 ### Added
 
 - `NodeType` and `RelationshipType` now reject labels and types that start or end with double underscores (`__`), e.g. `__Person__`. This convention is reserved for internal Neo4j GraphRAG labels. A `ValidationError` is raised on construction.
@@ -17,6 +13,7 @@
 ### Fixed
 
 - Fixed `ValueError` in `Neo4jGraphParquetFormatter` when nodes of the same label have mixed property types (e.g. `str` and `int` for the same property), which caused `pa.Table.from_pylist()` to fail. Mixed-type columns are now coerced to a consistent type before Parquet table creation.
+- Fixed a bug where the rate limit handler was not being called on the `VertexAILLM` and `MistralAILLM` `__invoke_v2` and `__ainvoke_v2` methods.
 
 ## 1.14.0
 
