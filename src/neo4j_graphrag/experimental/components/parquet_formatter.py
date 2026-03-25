@@ -39,49 +39,6 @@ logger = logging.getLogger(__name__)
 
 _FALLBACK_FILESTEM = "unnamed"
 
-np: Any
-try:
-    import numpy as _numpy
-
-    np = _numpy
-    _HAS_NUMPY = True
-except ImportError:  # pragma: no cover
-    np = None
-    _HAS_NUMPY = False
-
-
-def _value_type_family(value: Any) -> str:
-    """Classify *value* into a coarse family for Parquet column typing.
-
-    NumPy scalars are grouped with Python ``int`` / ``float`` so mixed
-    ``numpy.int64`` and ``int`` do not force string coercion. ``bool`` is
-    handled before ``int`` because ``bool`` is a subclass of ``int`` in Python.
-    """
-    if value is None:
-        return "none"
-    if isinstance(value, bool):
-        return "bool"
-    if isinstance(value, str):
-        return "str"
-    if _HAS_NUMPY and np is not None and isinstance(value, np.generic):
-        if isinstance(value, np.integer):
-            return "int"
-        if isinstance(value, np.floating):
-            return "float"
-        if isinstance(value, np.bool_):
-            return "bool"
-    if isinstance(value, int):
-        return "int"
-    if isinstance(value, float):
-        return "float"
-    if isinstance(value, (bytes, bytearray, memoryview)):
-        return "bytes"
-    if isinstance(value, (list, tuple)):
-        return "sequence"
-    if isinstance(value, dict):
-        return "mapping"
-    return "other"
-
 
 def _is_allowed_filestem_char(c: str) -> bool:
     """True if c is in [a-zA-Z0-9_]."""
@@ -466,76 +423,41 @@ class Neo4jGraphParquetFormatter:
     def _normalize_column_types(rows: list[dict[str, Any]]) -> None:
         """Coerce mixed-type columns in *rows* in-place so PyArrow can build the table.
 
-        PyArrow infers column types from the data; if rows disagree on the logical type
-        for the same key, table creation can fail (e.g. ``int64`` vs ``str``). This
-        method groups values into coarse families (Python and NumPy scalars unified)
-        and coerces:
-        - ``{int, float}`` only → ``float`` (numeric promotion)
-        - any other non-homogeneous mix → ``str`` (safe for Parquet)
+        PyArrow infers the column type from the first row; if subsequent rows have a
+        different Python type for the same column the table creation fails.  This method
+        detects those mismatches and coerces:
+        - {int, float} -> float  (lossless numeric promotion)
+        - anything else mixed -> str  (universal safe fallback)
         """
         if len(rows) <= 1:
             return
 
-        col_families: dict[str, set[str]] = defaultdict(set)
+        col_types: dict[str, set[type]] = defaultdict(set)
         for row in rows:
             for key, value in row.items():
                 if value is not None:
-                    col_families[key].add(_value_type_family(value))
+                    col_types[key].add(type(value))
 
-        cols_to_float: set[str] = set()
-        cols_to_str: set[str] = set()
-        for col, families in col_families.items():
-            if len(families) <= 1:
+        cols_to_coerce: dict[str, type] = {}
+        for col, types in col_types.items():
+            if len(types) <= 1:
                 continue
-            numeric_only = families <= {"int", "float"}
-            if numeric_only:
-                cols_to_float.add(col)
-                logger.warning(
-                    "Mixed types for property '%s': %s — coercing to float",
-                    col,
-                    families,
-                )
-            else:
-                cols_to_str.add(col)
-                logger.warning(
-                    "Mixed types for property '%s': %s — coercing to str",
-                    col,
-                    families,
-                )
+            target: type = float if types <= {int, float} else str
+            cols_to_coerce[col] = target
+            logger.warning(
+                "Mixed types for property '%s': %s — coercing to %s",
+                col,
+                {t.__name__ for t in types},
+                target.__name__,
+            )
 
-        for col in cols_to_float:
-            for row in rows:
-                if col in row and row[col] is not None:
-                    try:
-                        row[col] = float(row[col])
-                    except (ValueError, TypeError):
-                        row[col] = str(row[col])
-
-        for col in cols_to_str:
-            for row in rows:
-                if col in row and row[col] is not None:
-                    try:
-                        row[col] = str(row[col])
-                    except (ValueError, TypeError):
-                        row[col] = repr(row[col])
-
-    @staticmethod
-    def _coerce_scalar_columns_to_str_for_parquet(rows: list[dict[str, Any]]) -> None:
-        """Last-resort coercion: stringify every scalar cell so PyArrow can build a table.
-
-        Skips ``None`` and leaves ``list`` / ``tuple`` / ``dict`` values unchanged so
-        ``labels`` and nested structures stay valid.
-        """
         for row in rows:
-            for key, value in row.items():
-                if value is None:
-                    continue
-                if isinstance(value, (list, tuple, dict)):
-                    continue
-                try:
-                    row[key] = str(value)
-                except (ValueError, TypeError):
-                    row[key] = repr(value)
+            for col, target_type in cols_to_coerce.items():
+                if col in row and row[col] is not None:
+                    try:
+                        row[col] = target_type(row[col])
+                    except (ValueError, TypeError):
+                        row[col] = str(row[col])
 
     def format_parquet(
         self,
@@ -559,17 +481,7 @@ class Neo4jGraphParquetFormatter:
             import pyarrow.parquet as pq
 
             self._normalize_column_types(rows)
-            try:
-                table = pa.Table.from_pylist(rows)
-            except pa.ArrowInvalid as err:
-                logger.warning(
-                    "Parquet table build failed (%s); applying scalar-to-str fallback",
-                    err,
-                )
-                Neo4jGraphParquetFormatter._coerce_scalar_columns_to_str_for_parquet(
-                    rows
-                )
-                table = pa.Table.from_pylist(rows)
+            table = pa.Table.from_pylist(rows)
             # Write to BytesIO buffer
             buffer = BytesIO()
             pq.write_table(table, buffer)
