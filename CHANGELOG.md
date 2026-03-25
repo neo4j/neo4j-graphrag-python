@@ -2,6 +2,8 @@
 
 ## Next
 
+## 1.14.1
+
 ### Added
 
 - `NodeType` and `RelationshipType` now reject labels and types that start or end with double underscores (`__`), e.g. `__Person__`. This convention is reserved for internal Neo4j GraphRAG labels. A `ValidationError` is raised on construction.
