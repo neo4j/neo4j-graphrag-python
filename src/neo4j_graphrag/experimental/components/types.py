@@ -16,9 +16,10 @@ from __future__ import annotations
 
 import logging
 import uuid
+import warnings
 from datetime import date, datetime, time
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -98,8 +99,27 @@ class LoadedDocument(DataModel):
     document_info: DocumentInfo
 
 
-# Backward compatibility (deprecated: use ``LoadedDocument``).
-PdfDocument = LoadedDocument
+if TYPE_CHECKING:
+    #: Deprecated alias for :class:`LoadedDocument`; use ``LoadedDocument`` instead.
+    PdfDocument = LoadedDocument
+
+
+def __getattr__(name: str) -> Any:
+    """Lazy export of deprecated ``PdfDocument`` alias with a deprecation warning."""
+    if name == "PdfDocument":
+        warnings.warn(
+            "PdfDocument is deprecated and will be removed in a future version. "
+            "Use LoadedDocument instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return LoadedDocument
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__() -> list[str]:
+    names = set(globals().keys()) | {"PdfDocument"}
+    return sorted(names)
 
 
 class TextChunk(BaseModel):
