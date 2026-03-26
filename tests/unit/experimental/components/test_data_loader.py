@@ -20,9 +20,8 @@ from unittest.mock import patch
 import pytest
 from fsspec import AbstractFileSystem
 from fsspec.implementations.local import LocalFileSystem
-from neo4j_graphrag.exceptions import PdfLoaderError, UnsupportedDocumentFormatError
+from neo4j_graphrag.exceptions import PdfLoaderError
 from neo4j_graphrag.experimental.components.data_loader import (
-    FileLoader,
     MarkdownLoader,
     PdfLoader,
 )
@@ -97,39 +96,6 @@ async def test_pdf_loader_run() -> None:
     assert doc.text == "Lorem ipsum dolor sit amet."
 
 
-def test_file_loader_dispatch_pdf() -> None:
-    pdf_path = str(BASE_DIR / "sample_data/lorem_ipsum.pdf")
-    text = FileLoader.load_file(pdf_path, fs=LocalFileSystem())
-    assert text == "Lorem ipsum dolor sit amet."
-
-
-def test_file_loader_dispatch_markdown() -> None:
-    md_path = str(BASE_DIR / "sample_data/hello.md")
-    text = FileLoader.load_file(md_path, fs=LocalFileSystem())
-    assert "# Hello" in text
-
-
-def test_file_loader_unsupported_extension() -> None:
-    with pytest.raises(UnsupportedDocumentFormatError):
-        FileLoader.load_file("/tmp/foo.txt", fs=LocalFileSystem())
-
-
-@pytest.mark.asyncio
-async def test_file_loader_run_sets_document_type_markdown() -> None:
-    loader = FileLoader()
-    md_path = BASE_DIR / "sample_data/hello.md"
-    doc = await loader.run(filepath=md_path)
-    assert doc.document_info.document_type == DocumentType.MARKDOWN
-
-
-@pytest.mark.asyncio
-async def test_file_loader_run_sets_document_type_pdf() -> None:
-    loader = FileLoader()
-    pdf_path = BASE_DIR / "sample_data/lorem_ipsum.pdf"
-    doc = await loader.run(filepath=pdf_path)
-    assert doc.document_info.document_type == DocumentType.PDF
-
-
 @pytest.mark.asyncio
 async def test_pdf_loader_run_fs_string_resolves_with_fsspec(
     dummy_pdf_path: str,
@@ -147,23 +113,6 @@ async def test_markdown_loader_run_fs_string() -> None:
     doc = await loader.run(filepath=md_path, fs="file")
     assert doc.document_info.document_type == DocumentType.MARKDOWN
     assert "# Hello" in doc.text
-
-
-@pytest.mark.asyncio
-async def test_file_loader_run_fs_string() -> None:
-    md_path = str(BASE_DIR / "sample_data/hello.md")
-    loader = FileLoader()
-    doc = await loader.run(filepath=md_path, fs="file")
-    assert doc.document_info.document_type == DocumentType.MARKDOWN
-
-
-def test_file_loader_dot_markdown_extension(tmp_path: Path) -> None:
-    """``.markdown`` is treated like ``.md`` for dispatch."""
-    src = BASE_DIR / "sample_data/hello.md"
-    md_copy = tmp_path / "note.markdown"
-    md_copy.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
-    text = FileLoader.load_file(str(md_copy), fs=LocalFileSystem())
-    assert "# Hello" in text
 
 
 @pytest.mark.asyncio

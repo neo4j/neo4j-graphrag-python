@@ -24,7 +24,7 @@ from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     OnError,
 )
 from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
-from neo4j_graphrag.experimental.components.data_loader import FileLoader, PdfLoader
+from neo4j_graphrag.experimental.components.data_loader import MarkdownLoader, PdfLoader
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
     SchemaFromTextExtractor,
@@ -45,6 +45,7 @@ from neo4j_graphrag.experimental.pipeline.types.schema import (
     EntityInputType,
     RelationInputType,
 )
+from neo4j_graphrag.experimental.components.types import DocumentType
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 from neo4j_graphrag.llm import LLMInterface
 
@@ -56,7 +57,16 @@ def test_simple_kg_pipeline_config_file_loader_from_file_is_false() -> None:
 
 def test_simple_kg_pipeline_config_file_loader_from_file_is_true() -> None:
     config = SimpleKGPipelineConfig(from_file=True)
-    assert isinstance(config._get_file_loader(), FileLoader)
+    assert config._get_file_loader() is not None
+
+
+@pytest.mark.asyncio
+async def test_simple_kg_pipeline_config_default_file_loader_supports_markdown() -> None:
+    config = SimpleKGPipelineConfig(from_file=True)
+    loader = config._get_file_loader()
+    assert loader is not None
+    doc = await loader.run(filepath="tests/unit/experimental/components/sample_data/hello.md")
+    assert doc.document_info.document_type == DocumentType.MARKDOWN
 
 
 def test_simple_kg_pipeline_config_from_pdf_deprecated_maps_to_from_file() -> None:
@@ -90,7 +100,7 @@ def test_simple_kg_pipeline_config_pdf_loader_and_file_loader_conflict() -> None
 def test_simple_kg_pipeline_config_file_loader_from_file_is_true_class_overwrite() -> (
     None
 ):
-    my_file_loader = PdfLoader()
+    my_file_loader = MarkdownLoader()
     config = SimpleKGPipelineConfig(
         from_file=True, file_loader=ComponentType(my_file_loader)
     )

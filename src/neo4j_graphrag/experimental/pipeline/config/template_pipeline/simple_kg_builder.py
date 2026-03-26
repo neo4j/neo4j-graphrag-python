@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from pathlib import Path
 from typing import (
     Any,
     ClassVar,
@@ -25,6 +26,7 @@ from typing import (
 )
 import warnings
 
+from fsspec import AbstractFileSystem
 from pydantic import ConfigDict, Field, field_validator, model_validator
 from typing_extensions import Self
 
@@ -36,7 +38,12 @@ from neo4j_graphrag.experimental.components.entity_relation_extractor import (
 )
 from neo4j_graphrag.experimental.components.graph_pruning import GraphPruning
 from neo4j_graphrag.experimental.components.kg_writer import KGWriter, Neo4jWriter
-from neo4j_graphrag.experimental.components.data_loader import DataLoader, FileLoader
+from neo4j_graphrag.exceptions import UnsupportedDocumentFormatError
+from neo4j_graphrag.experimental.components.data_loader import (
+    DataLoader,
+    MarkdownLoader,
+    PdfLoader,
+)
 from neo4j_graphrag.experimental.components.resolver import (
     EntityResolver,
     SinglePropertyExactMatchResolver,
@@ -54,6 +61,7 @@ from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter i
 from neo4j_graphrag.experimental.components.types import (
     DocumentType,
     LexicalGraphConfig,
+    LoadedDocument,
 )
 from neo4j_graphrag.experimental.pipeline.config.object_config import ComponentType
 from neo4j_graphrag.experimental.pipeline.config.template_pipeline.base import (
@@ -67,6 +75,29 @@ from neo4j_graphrag.experimental.pipeline.types.schema import (
     RelationInputType,
 )
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate
+
+
+class _DefaultPathDataLoader(DataLoader):
+    """Default loader for ``SimpleKGPipeline`` that supports PDF and Markdown."""
+
+    async def run(
+        self,
+        filepath: Union[str, Path],
+        metadata: Optional[dict[str, str]] = None,
+        fs: Optional[Union[AbstractFileSystem, str]] = None,
+    ) -> LoadedDocument:
+        path_str = str(filepath)
+        suffix = Path(path_str).suffix.lower()
+        if suffix == ".pdf":
+            return await PdfLoader().run(filepath=path_str, metadata=metadata, fs=fs)
+        if suffix in (".md", ".markdown"):
+            return await MarkdownLoader().run(
+                filepath=path_str, metadata=metadata, fs=fs
+            )
+        raise UnsupportedDocumentFormatError(
+            f"Unsupported document format: {suffix!r}. "
+            f"Supported: .pdf, .md, .markdown"
+        )
 
 
 class SimpleKGPipelineConfig(TemplatePipelineConfig):
@@ -195,7 +226,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             return None
         if self.file_loader:
             return self.file_loader.parse(self._global_data)  # type: ignore
-        return FileLoader()
+        return _DefaultPathDataLoader()
 
     def _get_run_params_for_file_loader(self) -> dict[str, Any]:
         if not self.from_file:

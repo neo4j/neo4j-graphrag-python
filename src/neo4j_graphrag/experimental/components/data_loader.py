@@ -26,7 +26,7 @@ import pypdf
 from fsspec import AbstractFileSystem
 from fsspec.implementations.local import LocalFileSystem
 
-from neo4j_graphrag.exceptions import PdfLoaderError, UnsupportedDocumentFormatError
+from neo4j_graphrag.exceptions import PdfLoaderError
 from neo4j_graphrag.experimental.components.types import (
     DocumentInfo,
     DocumentType,
@@ -139,60 +139,3 @@ class MarkdownLoader(DataLoader):
             ),
         )
 
-
-def _suffix(path: str) -> str:
-    return Path(path).suffix.lower()
-
-
-class FileLoader(DataLoader):
-    """Loads PDF or Markdown files based on the path extension.
-
-    Supported extensions: ``.pdf``, ``.md``, ``.markdown``.
-    """
-
-    @staticmethod
-    def load_file(
-        file: str,
-        fs: AbstractFileSystem,
-    ) -> str:
-        suffix = _suffix(file)
-        if suffix == ".pdf":
-            return PdfLoader.load_file(file, fs)
-        if suffix in (".md", ".markdown"):
-            return MarkdownLoader.load_file(file, fs)
-        raise UnsupportedDocumentFormatError(
-            f"Unsupported document format: {suffix!r}. "
-            f"Supported: .pdf, .md, .markdown"
-        )
-
-    async def run(
-        self,
-        filepath: Union[str, Path],
-        metadata: Optional[Dict[str, str]] = None,
-        fs: Optional[Union[AbstractFileSystem, str]] = None,
-    ) -> LoadedDocument:
-        if not isinstance(filepath, str):
-            filepath = str(filepath)
-        if isinstance(fs, str):
-            fs = fsspec.filesystem(fs)
-        elif fs is None:
-            fs = LocalFileSystem()
-        text = FileLoader.load_file(filepath, fs)
-        suffix = _suffix(filepath)
-        if suffix == ".pdf":
-            doc_type: DocumentType = DocumentType.PDF
-        elif suffix in (".md", ".markdown"):
-            doc_type = DocumentType.MARKDOWN
-        else:
-            raise UnsupportedDocumentFormatError(
-                f"Unsupported document format: {suffix!r}. "
-                f"Supported: .pdf, .md, .markdown"
-            )
-        return LoadedDocument(
-            text=text,
-            document_info=DocumentInfo(
-                path=filepath,
-                metadata=self.get_document_metadata(text, metadata),
-                document_type=doc_type,
-            ),
-        )

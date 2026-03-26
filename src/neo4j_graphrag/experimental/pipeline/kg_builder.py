@@ -86,9 +86,9 @@ class SimpleKGPipeline:
         from_pdf (Optional[bool]): Deprecated. If set, it overrides ``from_file`` and emits a
             warning. Prefer ``from_file``.
         text_splitter (Optional[TextSplitter]): A text splitter component. Defaults to FixedSizeSplitter().
-        file_loader (Optional[DataLoader]): A document loader component. Defaults to
-            :class:`~neo4j_graphrag.experimental.components.data_loader.FileLoader`
-            (supports ``.pdf``, ``.md``, ``.markdown``). Use :class:`~neo4j_graphrag.experimental.components.data_loader.PdfLoader` for PDF-only paths.
+        file_loader (Optional[DataLoader]): A document loader component. Defaults to an
+            internal extension-based loader that supports ``.pdf``, ``.md``, and ``.markdown``.
+            Use :class:`~neo4j_graphrag.experimental.components.data_loader.PdfLoader` for PDF-only paths.
         pdf_loader (Optional[DataLoader]): Deprecated. If set, it is used as ``file_loader`` and emits a
             warning. Do not pass both ``file_loader`` and ``pdf_loader``. Prefer ``file_loader``.
         kg_writer (Optional[KGWriter]): A knowledge graph writer component. Defaults to Neo4jWriter().

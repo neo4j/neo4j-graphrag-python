@@ -33,12 +33,6 @@ MarkdownLoader
 .. autoclass:: neo4j_graphrag.experimental.components.data_loader.MarkdownLoader
     :members: run, load_file
 
-FileLoader
-==========
-
-.. autoclass:: neo4j_graphrag.experimental.components.data_loader.FileLoader
-    :members: run, load_file
-
 TextSplitter
 ============
 

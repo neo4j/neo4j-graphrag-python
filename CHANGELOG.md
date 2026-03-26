@@ -9,7 +9,7 @@
 ### Added
 
 - `NodeType` and `RelationshipType` now reject labels and types that start or end with double underscores (`__`), e.g. `__Person__`. This convention is reserved for internal Neo4j GraphRAG labels. A `ValidationError` is raised on construction.
-- SimpleKG pipeline (experimental): Markdown inputs (`.md` / `.markdown`) are supported alongside PDF via the default `FileLoader` when building from a file path.
+- SimpleKG pipeline (experimental): Markdown inputs (`.md` / `.markdown`) are supported alongside PDF via the default extension-based file loader when building from a file path.
 
 ### Changed
 
