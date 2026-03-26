@@ -26,7 +26,7 @@ import pypdf
 from fsspec import AbstractFileSystem
 from fsspec.implementations.local import LocalFileSystem
 
-from neo4j_graphrag.exceptions import PdfLoaderError
+from neo4j_graphrag.exceptions import MarkdownLoadError, PdfLoaderError
 from neo4j_graphrag.experimental.components.types import (
     DocumentInfo,
     DocumentType,
@@ -115,7 +115,7 @@ class MarkdownLoader(DataLoader):
                 raw = fp.read()
             return cast(str, raw.decode("utf-8"))
         except Exception as e:
-            raise PdfLoaderError(e)
+            raise MarkdownLoadError(e)
 
     async def run(
         self,

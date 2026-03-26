@@ -20,7 +20,7 @@ from unittest.mock import patch
 import pytest
 from fsspec import AbstractFileSystem
 from fsspec.implementations.local import LocalFileSystem
-from neo4j_graphrag.exceptions import PdfLoaderError
+from neo4j_graphrag.exceptions import MarkdownLoadError, PdfLoaderError
 from neo4j_graphrag.experimental.components.data_loader import (
     MarkdownLoader,
     PdfLoader,
@@ -65,7 +65,7 @@ def test_markdown_processing_error(dummy_md_path: str) -> None:
         "fsspec.implementations.local.LocalFileSystem.open",
         side_effect=Exception("Failed to open"),
     ):
-        with pytest.raises(PdfLoaderError):
+        with pytest.raises(MarkdownLoadError):
             MarkdownLoader.load_file(dummy_md_path, fs=LocalFileSystem())
 
 
