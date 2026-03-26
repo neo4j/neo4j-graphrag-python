@@ -26,7 +26,6 @@ from typing import (
 )
 import warnings
 
-from fsspec import AbstractFileSystem
 from pydantic import ConfigDict, Field, field_validator, model_validator
 from typing_extensions import Self
 
@@ -84,16 +83,13 @@ class _DefaultPathDataLoader(DataLoader):
         self,
         filepath: Union[str, Path],
         metadata: Optional[dict[str, str]] = None,
-        fs: Optional[Union[AbstractFileSystem, str]] = None,
     ) -> LoadedDocument:
         path_str = str(filepath)
         suffix = Path(path_str).suffix.lower()
         if suffix == ".pdf":
-            return await PdfLoader().run(filepath=path_str, metadata=metadata, fs=fs)
+            return await PdfLoader().run(filepath=path_str, metadata=metadata)
         if suffix in (".md", ".markdown"):
-            return await MarkdownLoader().run(
-                filepath=path_str, metadata=metadata, fs=fs
-            )
+            return await MarkdownLoader().run(filepath=path_str, metadata=metadata)
         raise UnsupportedDocumentFormatError(
             f"Unsupported document format: {suffix!r}. "
             f"Supported: .pdf, .md, .markdown"
