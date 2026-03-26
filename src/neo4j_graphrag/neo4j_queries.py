@@ -402,7 +402,7 @@ def get_search_query(
                 raise Exception("Filters are not supported with hybrid search")
             if ranker == HybridSearchRanker.NAIVE:
                 query = _get_hybrid_query(neo4j_version_is_5_23_or_above)
-            elif ranker == HybridSearchRanker.LINEAR and alpha:
+            elif ranker == HybridSearchRanker.LINEAR and alpha is not None:
                 query = _get_hybrid_query_linear(
                     neo4j_version_is_5_23_or_above, alpha=alpha
                 )
