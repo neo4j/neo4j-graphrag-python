@@ -13,6 +13,8 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+import importlib
+import sys
 from pathlib import Path
 from typing import Optional, Union
 from unittest.mock import patch
@@ -182,3 +184,10 @@ def test_pdf_loader_backward_compat_reexport_module() -> None:
 
     assert PdfLoaderDirect is PdfLoaderReexport
     assert DataLoaderDirect is DataLoaderReexport
+
+
+def test_pdf_loader_module_emits_import_time_deprecation_warning() -> None:
+    module_name = "neo4j_graphrag.experimental.components.pdf_loader"
+    sys.modules.pop(module_name, None)
+    with pytest.warns(DeprecationWarning, match="Importing from .*pdf_loader"):
+        importlib.import_module(module_name)
