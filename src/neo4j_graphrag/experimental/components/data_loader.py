@@ -16,11 +16,15 @@
 
 from __future__ import annotations
 
+import io
 from abc import abstractmethod
 from pathlib import Path
-from typing import Dict, Optional, Union
+from typing import Dict, Optional, Union, cast
 
+import fsspec
 import pypdf
+from fsspec import AbstractFileSystem
+from fsspec.implementations.local import LocalFileSystem
 
 from neo4j_graphrag.exceptions import MarkdownLoadError, PdfLoaderError
 from neo4j_graphrag.experimental.components.types import (
@@ -29,6 +33,10 @@ from neo4j_graphrag.experimental.components.types import (
     LoadedDocument,
 )
 from neo4j_graphrag.experimental.pipeline.component import Component
+
+
+def is_default_fs(fs: fsspec.AbstractFileSystem) -> bool:
+    return isinstance(fs, LocalFileSystem) and not fs.auto_mkdir
 
 
 class DataLoader(Component):
@@ -46,6 +54,7 @@ class DataLoader(Component):
         self,
         filepath: Union[str, Path],
         metadata: Optional[Dict[str, str]] = None,
+        fs: Optional[Union[AbstractFileSystem, str]] = None,
     ) -> LoadedDocument: ...
 
 
@@ -53,11 +62,15 @@ class PdfLoader(DataLoader):
     """Loads text from PDF files using pypdf."""
 
     @staticmethod
-    def load_file(file: str) -> str:
+    def load_file(
+        file: str,
+        fs: AbstractFileSystem,
+    ) -> str:
         """Parse a PDF file and return extracted text."""
         try:
-            with open(file, "rb") as fp:
-                pdf = pypdf.PdfReader(fp)
+            with fs.open(file, "rb") as fp:
+                stream = fp if is_default_fs(fs) else io.BytesIO(fp.read())
+                pdf = pypdf.PdfReader(stream)
                 num_pages = len(pdf.pages)
                 text_parts = (
                     pdf.pages[page].extract_text() for page in range(num_pages)
@@ -70,10 +83,15 @@ class PdfLoader(DataLoader):
         self,
         filepath: Union[str, Path],
         metadata: Optional[Dict[str, str]] = None,
+        fs: Optional[Union[AbstractFileSystem, str]] = None,
     ) -> LoadedDocument:
         if not isinstance(filepath, str):
             filepath = str(filepath)
-        text = self.load_file(filepath)
+        if isinstance(fs, str):
+            fs = fsspec.filesystem(fs)
+        elif fs is None:
+            fs = LocalFileSystem()
+        text = self.load_file(filepath, fs)
         return LoadedDocument(
             text=text,
             document_info=DocumentInfo(
@@ -88,11 +106,14 @@ class MarkdownLoader(DataLoader):
     """Loads UTF-8 Markdown (``.md`` / ``.markdown``) files as plain text."""
 
     @staticmethod
-    def load_file(file: str) -> str:
+    def load_file(
+        file: str,
+        fs: AbstractFileSystem,
+    ) -> str:
         try:
-            with open(file, "rb") as fp:
+            with fs.open(file, "rb") as fp:
                 raw = fp.read()
-            return raw.decode("utf-8")
+            return cast(str, raw.decode("utf-8"))
         except Exception as e:
             raise MarkdownLoadError(e)
 
@@ -100,10 +121,15 @@ class MarkdownLoader(DataLoader):
         self,
         filepath: Union[str, Path],
         metadata: Optional[Dict[str, str]] = None,
+        fs: Optional[Union[AbstractFileSystem, str]] = None,
     ) -> LoadedDocument:
         if not isinstance(filepath, str):
             filepath = str(filepath)
-        text = MarkdownLoader.load_file(filepath)
+        if isinstance(fs, str):
+            fs = fsspec.filesystem(fs)
+        elif fs is None:
+            fs = LocalFileSystem()
+        text = MarkdownLoader.load_file(filepath, fs)
         return LoadedDocument(
             text=text,
             document_info=DocumentInfo(
