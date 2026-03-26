@@ -85,14 +85,23 @@ class _DefaultPathDataLoader(DataLoader):
         filepath: Union[str, Path],
         metadata: Optional[dict[str, str]] = None,
         fs: Optional[Union[AbstractFileSystem, str]] = None,
+        max_chars: Optional[int] = None,
     ) -> LoadedDocument:
         path_str = str(filepath)
         suffix = Path(path_str).suffix.lower()
         if suffix == ".pdf":
-            return await PdfLoader().run(filepath=path_str, metadata=metadata, fs=fs)
+            return await PdfLoader().run(
+                filepath=path_str,
+                metadata=metadata,
+                fs=fs,
+                max_chars=max_chars,
+            )
         if suffix in (".md", ".markdown"):
             return await MarkdownLoader().run(
-                filepath=path_str, metadata=metadata, fs=fs
+                filepath=path_str,
+                metadata=metadata,
+                fs=fs,
+                max_chars=max_chars,
             )
         raise UnsupportedDocumentFormatError(
             f"Unsupported document format: {suffix!r}. "
@@ -430,6 +439,10 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
                 )
             run_params["file_loader"]["filepath"] = file_path
             run_params["file_loader"]["metadata"] = user_input.get("document_metadata")
+            max_chars = user_input.get("max_chars")
+            # Backward-compatible: only forward new arg for the default loader.
+            if max_chars is not None and self.file_loader is None:
+                run_params["file_loader"]["max_chars"] = max_chars
         else:
             if not text:
                 raise PipelineDefinitionError(
