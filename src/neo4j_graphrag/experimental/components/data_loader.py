@@ -138,4 +138,3 @@ class MarkdownLoader(DataLoader):
                 document_type=DocumentType.MARKDOWN,
             ),
         )
-

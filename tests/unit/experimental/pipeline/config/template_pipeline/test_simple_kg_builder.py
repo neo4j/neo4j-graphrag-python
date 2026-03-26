@@ -61,11 +61,15 @@ def test_simple_kg_pipeline_config_file_loader_from_file_is_true() -> None:
 
 
 @pytest.mark.asyncio
-async def test_simple_kg_pipeline_config_default_file_loader_supports_markdown() -> None:
+async def test_simple_kg_pipeline_config_default_file_loader_supports_markdown() -> (
+    None
+):
     config = SimpleKGPipelineConfig(from_file=True)
     loader = config._get_file_loader()
     assert loader is not None
-    doc = await loader.run(filepath="tests/unit/experimental/components/sample_data/hello.md")
+    doc = await loader.run(
+        filepath="tests/unit/experimental/components/sample_data/hello.md"
+    )
     assert doc.document_info.document_type == DocumentType.MARKDOWN
 
 
