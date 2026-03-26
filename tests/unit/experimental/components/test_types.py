@@ -30,6 +30,17 @@ def test_pdf_document_alias_is_loaded_document_and_warns() -> None:
     assert PdfDocument is LoadedDocument
 
 
+def test_pdf_document_from_import_backward_compat_warns() -> None:
+    """``from ...types import PdfDocument`` still works and emits DeprecationWarning."""
+    with pytest.warns(DeprecationWarning, match="PdfDocument is deprecated"):
+        from neo4j_graphrag.experimental.components.types import (
+            LoadedDocument,
+            PdfDocument,
+        )
+
+    assert PdfDocument is LoadedDocument
+
+
 def test_types_dir_includes_pdf_document() -> None:
     import neo4j_graphrag.experimental.components.types as types_mod
 
