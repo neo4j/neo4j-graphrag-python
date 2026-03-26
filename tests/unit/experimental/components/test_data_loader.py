@@ -174,10 +174,11 @@ def test_pdf_loader_backward_compat_reexport_module() -> None:
         DataLoader as DataLoaderDirect,
         PdfLoader as PdfLoaderDirect,
     )
-    from neo4j_graphrag.experimental.components.pdf_loader import (
-        DataLoader as DataLoaderReexport,
-        PdfLoader as PdfLoaderReexport,
-    )
+    with pytest.warns(DeprecationWarning, match="pdf_loader"):
+        from neo4j_graphrag.experimental.components.pdf_loader import (
+            DataLoader as DataLoaderReexport,
+            PdfLoader as PdfLoaderReexport,
+        )
 
     assert PdfLoaderDirect is PdfLoaderReexport
     assert DataLoaderDirect is DataLoaderReexport

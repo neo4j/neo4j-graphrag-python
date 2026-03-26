@@ -17,6 +17,17 @@
 Import from ``neo4j_graphrag.experimental.components.data_loader`` in new code.
 """
 
+import warnings
+
 from .data_loader import PdfLoader, DataLoader
+
+warnings.warn(
+    "Importing from `neo4j_graphrag.experimental.components.pdf_loader` is "
+    "deprecated and will be removed in a future version. "
+    "Import `PdfLoader` and `DataLoader` from "
+    "`neo4j_graphrag.experimental.components.data_loader` instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 __all__ = ["PdfLoader", "DataLoader"]
