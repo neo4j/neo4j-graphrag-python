@@ -2,9 +2,16 @@
 
 ## Next
 
-### Fixed
+### Added
 
-- Fixed a bug where the rate limit handler was not being called on the `VertexAILLM` and `MistralAILLM` `__invoke_v2` and `__ainvoke_v2` methods.
+- MarkdownLoader (experimental): added a Markdown loader to support `.md` and `.markdown` files.
+
+### Changed
+
+- SimpleKG pipeline (experimental): the `from_pdf` parameter is deprecated in favor of `from_file` (PDF and Markdown inputs). `from_pdf` still works but emits a deprecation warning and will be removed in a future version.
+- Data loaders (experimental): the `PdfDocument` type name is deprecated in favor of `LoadedDocument`; `PdfDocument` remains available as a backward-compatible alias with a deprecation warning.
+
+## 1.14.1
 
 ### Added
 
@@ -13,13 +20,12 @@
 
 ### Changed
 
-- SimpleKG pipeline (experimental): the `from_pdf` parameter is deprecated in favor of `from_file` (PDF and Markdown inputs). `from_pdf` still works but emits a deprecation warning and will be removed in a future version.
-- Data loaders (experimental): the `PdfDocument` type name is deprecated in favor of `LoadedDocument`; `PdfDocument` remains available as a backward-compatible alias with a deprecation warning.
 - `SchemaExtractionTemplate` prompt updated to explicitly instruct the LLM not to use `__` as a prefix or suffix in node labels or relationship types.
 
 ### Fixed
 
 - Fixed `ValueError` in `Neo4jGraphParquetFormatter` when nodes of the same label have mixed property types (e.g. `str` and `int` for the same property), which caused `pa.Table.from_pylist()` to fail. Mixed-type columns are now coerced to a consistent type before Parquet table creation.
+- Fixed a bug where the rate limit handler was not being called on the `VertexAILLM` and `MistralAILLM` `__invoke_v2` and `__ainvoke_v2` methods.
 
 ## 1.14.0
 
