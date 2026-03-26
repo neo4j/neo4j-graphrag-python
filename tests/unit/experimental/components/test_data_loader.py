@@ -80,6 +80,14 @@ async def test_markdown_loader_run() -> None:
 
 
 @pytest.mark.asyncio
+async def test_markdown_loader_run_max_chars() -> None:
+    md_path = BASE_DIR / "sample_data/hello.md"
+    loader = MarkdownLoader()
+    doc = await loader.run(filepath=md_path, max_chars=7)
+    assert doc.text == "# Hello"
+
+
+@pytest.mark.asyncio
 async def test_pdf_loader_run() -> None:
     """``PdfLoader.run`` wraps ``load_file`` with :class:`DocumentInfo`."""
     pdf_path = BASE_DIR / "sample_data/lorem_ipsum.pdf"
@@ -88,6 +96,14 @@ async def test_pdf_loader_run() -> None:
     assert doc.document_info.document_type == DocumentType.PDF
     assert doc.document_info.path == str(pdf_path)
     assert doc.text == "Lorem ipsum dolor sit amet."
+
+
+@pytest.mark.asyncio
+async def test_pdf_loader_run_max_chars() -> None:
+    pdf_path = BASE_DIR / "sample_data/lorem_ipsum.pdf"
+    loader = PdfLoader()
+    doc = await loader.run(filepath=pdf_path, max_chars=5)
+    assert doc.text == "Lorem"
 
 
 @pytest.mark.asyncio
@@ -105,8 +121,11 @@ class _PdfLoaderWithDerivedMetadata(PdfLoader):
         self,
         filepath: Union[str, Path],
         metadata: Optional[dict[str, str]] = None,
+        max_chars: Optional[int] = None,
     ) -> LoadedDocument:
-        return await super().run(filepath=filepath, metadata=metadata)
+        return await super().run(
+            filepath=filepath, metadata=metadata, max_chars=max_chars
+        )
 
     def get_document_metadata(
         self, text: str, metadata: dict[str, str] | None = None

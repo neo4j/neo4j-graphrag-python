@@ -41,11 +41,20 @@ class DataLoader(Component):
     ) -> Dict[str, str] | None:
         return metadata
 
+    @staticmethod
+    def _apply_max_chars(text: str, max_chars: Optional[int] = None) -> str:
+        if max_chars is None:
+            return text
+        if max_chars < 0:
+            raise ValueError("max_chars must be >= 0")
+        return text[:max_chars]
+
     @abstractmethod
     async def run(
         self,
         filepath: Union[str, Path],
         metadata: Optional[Dict[str, str]] = None,
+        max_chars: Optional[int] = None,
     ) -> LoadedDocument: ...
 
 
@@ -70,10 +79,11 @@ class PdfLoader(DataLoader):
         self,
         filepath: Union[str, Path],
         metadata: Optional[Dict[str, str]] = None,
+        max_chars: Optional[int] = None,
     ) -> LoadedDocument:
         if not isinstance(filepath, str):
             filepath = str(filepath)
-        text = self.load_file(filepath)
+        text = self._apply_max_chars(self.load_file(filepath), max_chars=max_chars)
         return LoadedDocument(
             text=text,
             document_info=DocumentInfo(
@@ -100,10 +110,13 @@ class MarkdownLoader(DataLoader):
         self,
         filepath: Union[str, Path],
         metadata: Optional[Dict[str, str]] = None,
+        max_chars: Optional[int] = None,
     ) -> LoadedDocument:
         if not isinstance(filepath, str):
             filepath = str(filepath)
-        text = MarkdownLoader.load_file(filepath)
+        text = self._apply_max_chars(
+            MarkdownLoader.load_file(filepath), max_chars=max_chars
+        )
         return LoadedDocument(
             text=text,
             document_info=DocumentInfo(

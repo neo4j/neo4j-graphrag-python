@@ -12,8 +12,10 @@ class MyLoader(DataLoader):
         self,
         filepath: Union[str, Path],
         metadata: Optional[Dict[str, str]] = None,
+        max_chars: Optional[int] = None,
     ) -> LoadedDocument:
         # Implement logic here to read and transform the input file.
+        _ = max_chars
         return LoadedDocument(
             text="<extracted text>",
             document_info=DocumentInfo(
