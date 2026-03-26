@@ -216,7 +216,7 @@ instances of specific components to the `SimpleKGPipeline`. The components that 
 customized at the moment are:
 
 - `text_splitter`: must be an instance of :ref:`TextSplitter`
-- `file_loader`: must be an instance of :ref:`DataLoader`
+- `file_loader`: must be an instance of :ref:`PdfLoader` or :ref:`MarkdownLoader`
 - `kg_writer`: must be an instance of :ref:`KGWriter`
 
 The legacy names ``from_pdf`` and ``pdf_loader`` (in Python, YAML, or JSON) are still accepted
