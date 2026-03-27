@@ -19,7 +19,7 @@ from __future__ import annotations
 import io
 from abc import abstractmethod
 from pathlib import Path
-from typing import Any, Dict, Optional, Union, cast
+from typing import Dict, Optional, Union, cast
 
 import fsspec
 import pypdf
@@ -49,12 +49,21 @@ class DataLoader(Component):
     ) -> Dict[str, str] | None:
         return metadata
 
+    @staticmethod
+    def _apply_max_chars(text: str, max_chars: Optional[int] = None) -> str:
+        if max_chars is None:
+            return text
+        if max_chars < 0:
+            raise ValueError("max_chars must be >= 0")
+        return text[:max_chars]
+
     @abstractmethod
     async def run(
         self,
         filepath: Union[str, Path],
         metadata: Optional[Dict[str, str]] = None,
-        **kwargs: Any,
+        fs: Optional[Union[AbstractFileSystem, str]] = None,
+        max_chars: Optional[int] = None,
     ) -> LoadedDocument: ...
 
 
@@ -83,16 +92,18 @@ class PdfLoader(DataLoader):
         self,
         filepath: Union[str, Path],
         metadata: Optional[Dict[str, str]] = None,
-        **kwargs: Any,
+        fs: Optional[Union[AbstractFileSystem, str]] = None,
+        max_chars: Optional[int] = None,
     ) -> LoadedDocument:
-        fs = kwargs.get("fs")
         if not isinstance(filepath, str):
             filepath = str(filepath)
         if isinstance(fs, str):
             fs = fsspec.filesystem(fs)
         elif fs is None:
             fs = LocalFileSystem()
-        text = self.load_file(filepath, fs)
+        text = self._apply_max_chars(
+            self.load_file(filepath, fs), max_chars=max_chars
+        )
         return LoadedDocument(
             text=text,
             document_info=DocumentInfo(
@@ -122,16 +133,18 @@ class MarkdownLoader(DataLoader):
         self,
         filepath: Union[str, Path],
         metadata: Optional[Dict[str, str]] = None,
-        **kwargs: Any,
+        fs: Optional[Union[AbstractFileSystem, str]] = None,
+        max_chars: Optional[int] = None,
     ) -> LoadedDocument:
-        fs = kwargs.get("fs")
         if not isinstance(filepath, str):
             filepath = str(filepath)
         if isinstance(fs, str):
             fs = fsspec.filesystem(fs)
         elif fs is None:
             fs = LocalFileSystem()
-        text = MarkdownLoader.load_file(filepath, fs)
+        text = self._apply_max_chars(
+            MarkdownLoader.load_file(filepath, fs), max_chars=max_chars
+        )
         return LoadedDocument(
             text=text,
             document_info=DocumentInfo(

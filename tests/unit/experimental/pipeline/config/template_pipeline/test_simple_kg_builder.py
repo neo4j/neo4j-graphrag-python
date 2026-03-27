@@ -370,6 +370,26 @@ def test_simple_kg_pipeline_config_run_params_from_file_file_path() -> None:
     }
 
 
+def test_simple_kg_pipeline_config_run_params_from_file_file_path_with_max_chars() -> (
+    None
+):
+    config = SimpleKGPipelineConfig(from_file=True)
+    assert config.get_run_params({"file_path": "my_file", "max_chars": 42}) == {
+        "file_loader": {"filepath": "my_file", "metadata": None, "max_chars": 42}
+    }
+
+
+def test_simple_kg_pipeline_config_run_params_custom_file_loader_ignores_max_chars() -> (
+    None
+):
+    config = SimpleKGPipelineConfig(
+        from_file=True, file_loader=ComponentType(PdfLoader())
+    )
+    assert config.get_run_params({"file_path": "my_file", "max_chars": 42}) == {
+        "file_loader": {"filepath": "my_file", "metadata": None}
+    }
+
+
 def test_simple_kg_pipeline_config_run_params_from_text_text() -> None:
     config = SimpleKGPipelineConfig(from_file=False)
     run_params = config.get_run_params({"text": "my text"})
