@@ -18,7 +18,7 @@ import warnings
 from typing import Any, Optional, Union
 
 from neo4j_graphrag.exceptions import InvalidHybridSearchRankerError
-from neo4j_graphrag.filters import get_metadata_filter
+from neo4j_graphrag.filters import get_metadata_filter, get_search_filter, is_search_compatible_filter
 from neo4j_graphrag.types import EntityType, SearchType, HybridSearchRanker
 
 NODE_VECTOR_INDEX_QUERY = (
@@ -289,6 +289,64 @@ def _get_filtered_vector_query(
     )
 
 
+def _get_search_vector_query_no_filter(
+    node_label: str,
+) -> tuple[str, dict[str, Any]]:
+    """Build a SEARCH clause vector query without pre-filtering.
+
+    Uses the Cypher 25 ``MATCH ... SEARCH node IN (VECTOR INDEX ...)`` syntax
+    which leverages the ANN index directly without a WHERE predicate.
+
+    Args:
+        node_label: The label of the nodes to search.
+
+    Returns:
+        tuple[str, dict[str, Any]]: query and parameters
+    """
+    query = (
+        f"MATCH (node:`{node_label}`) "
+        "SEARCH node IN ("
+        "VECTOR INDEX $vector_index_name "
+        "FOR $query_vector "
+        "LIMIT $top_k"
+        ") SCORE AS score"
+    )
+    return query, {}
+
+
+def _get_search_vector_query(
+    filters: dict[str, Any],
+    node_label: str,
+    embedding_node_property: str,
+) -> tuple[str, dict[str, Any]]:
+    """Build a SEARCH clause vector query with in-index filtering.
+
+    Uses the Cypher 25 ``MATCH ... SEARCH node IN (VECTOR INDEX ... FOR ...
+    WHERE ... LIMIT ...) SCORE AS score`` syntax, which pushes compatible
+    predicates into the index scan itself — much faster than brute-force
+    exact KNN for filtered queries.
+
+    Args:
+        filters: A SEARCH-compatible filter dict (already validated).
+        node_label: The label of the nodes to search.
+        embedding_node_property: The name of the property holding the embeddings.
+
+    Returns:
+        tuple[str, dict[str, Any]]: query and parameters
+    """
+    where_clause, query_params = get_search_filter(filters, node_alias="node")
+    query = (
+        f"MATCH (node:`{node_label}`) "
+        "SEARCH node IN ("
+        "VECTOR INDEX $vector_index_name "
+        "FOR $query_vector "
+        f"WHERE {where_clause} "
+        "LIMIT $top_k"
+        ") SCORE AS score"
+    )
+    return query, query_params
+
+
 def get_search_query(
     search_type: SearchType,
     entity_type: EntityType = EntityType.NODE,
@@ -302,6 +360,7 @@ def get_search_query(
     use_parallel_runtime: bool = False,
     ranker: Union[str, HybridSearchRanker] = HybridSearchRanker.NAIVE,
     alpha: Optional[float] = None,
+    neo4j_version_supports_search_clause: bool = False,
 ) -> tuple[str, dict[str, Any]]:
     """
     Constructs a search query for vector or hybrid search, including optional pre-filtering
@@ -324,6 +383,7 @@ def get_search_query(
             Defaults to False.
         ranker (HybridSearchRanker): Type of ranker to order the results from retrieval.
         alpha (Optional[float]): Weight for the vector score when using the linear ranker. Only used when ranker is 'linear'. Defaults to 0.5 if not provided.
+        neo4j_version_supports_search_clause (bool): Whether the Neo4j version supports the Cypher 25 SEARCH clause (2026.01+). When True and filters are SEARCH-compatible, the query uses in-index filtering instead of brute-force exact KNN. Defaults to False.
 
     Returns:
         tuple[str, dict[str, Any]]: A tuple containing the constructed query string and
@@ -355,6 +415,17 @@ def get_search_query(
         elif search_type == SearchType.VECTOR:
             if filters:
                 if (
+                    neo4j_version_supports_search_clause
+                    and node_label is not None
+                    and embedding_node_property is not None
+                    and is_search_compatible_filter(filters)
+                ):
+                    query, params = _get_search_vector_query(
+                        filters,
+                        node_label,
+                        embedding_node_property,
+                    )
+                elif (
                     node_label is not None
                     and embedding_node_property is not None
                     and embedding_dimension is not None
@@ -370,6 +441,8 @@ def get_search_query(
                     raise Exception(
                         "Vector Search with filters requires: node_label, embedding_node_property, embedding_dimension"
                     )
+            elif neo4j_version_supports_search_clause and node_label is not None:
+                query, params = _get_search_vector_query_no_filter(node_label)
             else:
                 query, params = NODE_VECTOR_INDEX_QUERY, {}
         else:
