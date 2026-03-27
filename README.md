@@ -138,7 +138,7 @@ kg_builder = SimpleKGPipeline(
         "patterns": patterns,
     },
     on_error="IGNORE",
-    from_pdf=False,
+    from_file=False,
 )
 
 # Run the pipeline on a piece of text

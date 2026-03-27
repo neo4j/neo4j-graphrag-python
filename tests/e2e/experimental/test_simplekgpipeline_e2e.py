@@ -107,7 +107,7 @@ async def test_pipeline_builder_happy_path_legacy_schema(
 
     # Additional arguments
     lexical_graph_config = LexicalGraphConfig(chunk_node_label="chunkNodeLabel")
-    from_pdf = False
+    from_file = False
     on_error = "RAISE"
 
     # Create an instance of the SimpleKGPipeline
@@ -118,7 +118,7 @@ async def test_pipeline_builder_happy_path_legacy_schema(
         entities=entities,
         relations=relations,
         potential_schema=potential_schema,
-        from_pdf=from_pdf,
+        from_file=from_file,
         on_error=on_error,
         lexical_graph_config=lexical_graph_config,
     )
@@ -171,7 +171,7 @@ async def test_pipeline_builder_happy_path(
 
     # Additional arguments
     lexical_graph_config = LexicalGraphConfig(chunk_node_label="chunkNodeLabel")
-    from_pdf = False
+    from_file = False
     on_error = "RAISE"
 
     # Create an instance of the SimpleKGPipeline
@@ -180,7 +180,7 @@ async def test_pipeline_builder_happy_path(
         driver=driver,
         embedder=embedder,
         schema=schema,  # type: ignore[arg-type]
-        from_pdf=from_pdf,
+        from_file=from_file,
         on_error=on_error,
         lexical_graph_config=lexical_graph_config,
     )
@@ -258,7 +258,7 @@ async def test_pipeline_builder_two_documents(
         llm=llm,
         driver=driver,
         embedder=embedder,
-        from_pdf=False,
+        from_file=False,
         # provide minimal schema to bypass automatic schema extraction
         entities=["Person"],
         # in order to have 2 chunks:
@@ -340,7 +340,7 @@ async def test_pipeline_builder_same_document_two_runs(
         llm=llm,
         driver=driver,
         embedder=embedder,
-        from_pdf=False,
+        from_file=False,
         # provide minimal schema to bypass automatic schema extraction
         entities=["Person"],
         # in order to have 2 chunks:
@@ -449,7 +449,7 @@ async def test_pipeline_builder_with_automatic_schema_extraction(
         llm=llm,
         driver=driver,
         embedder=embedder,
-        from_pdf=False,
+        from_file=False,
         # use smaller chunk size to ensure we have at least 2 chunks
         text_splitter=FixedSizeSplitter(chunk_size=400, chunk_overlap=5),
     )

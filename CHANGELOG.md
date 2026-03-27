@@ -2,11 +2,21 @@
 
 ## Next
 
+### Added
+
+- MarkdownLoader (experimental): added a Markdown loader to support `.md` and `.markdown` files.
+
+### Changed
+
+- SimpleKG pipeline (experimental): the `from_pdf` parameter is deprecated in favor of `from_file` (PDF and Markdown inputs). `from_pdf` still works but emits a deprecation warning and will be removed in a future version.
+- Data loaders (experimental): the `PdfDocument` type name is deprecated in favor of `LoadedDocument`; `PdfDocument` remains available as a backward-compatible alias with a deprecation warning.
+
 ## 1.14.1
 
 ### Added
 
 - `NodeType` and `RelationshipType` now reject labels and types that start or end with double underscores (`__`), e.g. `__Person__`. This convention is reserved for internal Neo4j GraphRAG labels. A `ValidationError` is raised on construction.
+- SimpleKG pipeline (experimental): Markdown inputs (`.md` / `.markdown`) are supported alongside PDF via the default extension-based file loader when building from a file path.
 
 ### Changed
 

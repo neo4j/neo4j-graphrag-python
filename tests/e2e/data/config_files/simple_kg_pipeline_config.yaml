@@ -29,7 +29,7 @@ embedder_config:
     api_key:
       resolver_: ENV
       var_: OPENAI_API_KEY
-from_pdf: true
+from_file: true
 entities:
   - Person
   - Organization

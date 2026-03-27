@@ -18,13 +18,19 @@ Component
 DataLoader
 ==========
 
-.. autoclass:: neo4j_graphrag.experimental.components.pdf_loader.DataLoader
+.. autoclass:: neo4j_graphrag.experimental.components.data_loader.DataLoader
     :members: run, get_document_metadata
 
 PdfLoader
 =========
 
-.. autoclass:: neo4j_graphrag.experimental.components.pdf_loader.PdfLoader
+.. autoclass:: neo4j_graphrag.experimental.components.data_loader.PdfLoader
+    :members: run, load_file
+
+MarkdownLoader
+==============
+
+.. autoclass:: neo4j_graphrag.experimental.components.data_loader.MarkdownLoader
     :members: run, load_file
 
 TextSplitter

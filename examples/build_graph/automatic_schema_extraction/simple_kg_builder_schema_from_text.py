@@ -73,7 +73,7 @@ async def run_kg_pipeline_with_auto_schema() -> None:
             llm=llm,
             driver=driver,
             embedder=embedder,
-            from_pdf=False,  # Using raw text input, not PDF
+            from_file=False,  # Using raw text input, not PDF
         )
 
         # Run the pipeline on the text

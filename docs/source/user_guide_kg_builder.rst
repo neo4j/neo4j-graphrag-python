@@ -54,10 +54,10 @@ is utilizing the `SimpleKGPipeline` interface:
         llm=llm, # an LLMInterface for Entity and Relation extraction
         driver=neo4j_driver,  # a neo4j driver to write results to graph
         embedder=embedder,  # an Embedder for chunks
-        from_pdf=True,   # set to False if parsing an already extracted text
+        from_file=True,   # set to False if parsing an already extracted text
     )
     await kg_builder.run_async(file_path=str(file_path))
-    # await kg_builder.run_async(text="my text")  # if using from_pdf=False
+    # await kg_builder.run_async(text="my text")  # if using from_file=False
 
 
 See:
@@ -216,8 +216,11 @@ instances of specific components to the `SimpleKGPipeline`. The components that 
 customized at the moment are:
 
 - `text_splitter`: must be an instance of :ref:`TextSplitter`
-- `pdf_loader`: must be an instance of :ref:`PdfLoader`
+- `file_loader`: must be an instance of :ref:`PdfLoader` or :ref:`MarkdownLoader`
 - `kg_writer`: must be an instance of :ref:`KGWriter`
+
+The legacy names ``from_pdf`` and ``pdf_loader`` (in Python, YAML, or JSON) are still accepted
+with a deprecation warning; use ``from_file`` and ``file_loader`` instead.
 
 For instance, the following code can be used to customize the chunk size and
 chunk overlap in the text splitter component:
@@ -450,7 +453,7 @@ within the configuration file.
 .. code:: json
 
     {
-        "from_pdf": false,
+        "from_file": false,
         "perform_entity_resolution": true,
         "neo4j_database": "myDb",
         "on_error": "IGNORE",
@@ -502,7 +505,7 @@ or in YAML:
 
 .. code:: yaml
 
-    from_pdf: false
+    from_file: false
     perform_entity_resolution: true
     neo4j_database: myDb
     on_error: IGNORE
@@ -578,7 +581,7 @@ Each of these components can be run individually:
 .. code:: python
 
     import asyncio
-    from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
+    from neo4j_graphrag.experimental.components.data_loader import PdfLoader
     my_component = PdfLoader()
     asyncio.run(my_component.run("my_file.pdf"))
 
@@ -588,7 +591,7 @@ They can also be used within a pipeline:
 .. code:: python
 
     from neo4j_graphrag.experimental.pipeline import Pipeline
-    from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
+    from neo4j_graphrag.experimental.components.data_loader import PdfLoader
     pipeline = Pipeline()
     my_component = PdfLoader()
     pipeline.add_component(my_component, "component_name")
@@ -604,7 +607,7 @@ This package currently supports text extraction from PDFs:
 .. code:: python
 
     from pathlib import Path
-    from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
+    from neo4j_graphrag.experimental.components.data_loader import PdfLoader
 
     loader = PdfLoader()
     await loader.run(filepath=Path("my_file.pdf"))
@@ -614,12 +617,13 @@ To implement your own loader, use the `DataLoader` interface:
 .. code:: python
 
     from pathlib import Path
-    from neo4j_graphrag.experimental.components.pdf_loader import DataLoader, PdfDocument
+    from neo4j_graphrag.experimental.components.data_loader import DataLoader
+    from neo4j_graphrag.experimental.components.types import LoadedDocument
 
     class MyDataLoader(DataLoader):
-        async def run(self, filepath: Path, metadata: Optional[Dict[str, str]] = None) -> PdfDocument:
+        async def run(self, filepath: Path, metadata: Optional[Dict[str, str]] = None) -> LoadedDocument:
             # process file in `filepath`
-            return PdfDocument(
+            return LoadedDocument(
                 text="text",
                 document_info=DocumentInfo(
                     path=str(filepath),
