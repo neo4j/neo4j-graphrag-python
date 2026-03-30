@@ -1005,3 +1005,49 @@ def test_format_parquet_all_rows_empty_list_embedding_does_not_crash() -> None:
         assert (
             row["embedding"] == [] or row["embedding"] is None
         ), f"Expected empty list or null for embedding, got {row['embedding']}"
+
+
+# ---------------------------------------------------------------------------
+# Edge case: empty-list row before a float-list row must not crash
+# ---------------------------------------------------------------------------
+
+
+def test_format_parquet_empty_list_before_float_embedding_does_not_crash() -> None:
+    """Empty-list row appearing before a float-list row must not raise.
+
+    If [] is picked up as the type-inference sample, pa.infer_type([[]]) returns
+    list<null>, which causes ArrowInvalid when writing the float-list row.
+    The fix skips both None and [] when collecting samples so the float-list row
+    always wins as the sample for embedding type inference.
+    """
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    formatter = Neo4jGraphParquetFormatter()
+
+    rows: list[dict[str, Any]] = [
+        {"__id__": "node-1", "name": "Alice", "labels": ["Person"], "embedding": []},
+        {
+            "__id__": "node-2",
+            "name": "Bob",
+            "labels": ["Person"],
+            "embedding": [0.1, 0.2, 0.3],
+        },
+    ]
+
+    parquet_bytes, schema = formatter.format_parquet(rows, "node label 'Person'")
+
+    assert "embedding" in schema.names
+
+    emb_type = schema.field("embedding").type
+    assert pa.types.is_list(emb_type), f"Unexpected embedding type: {emb_type}"
+    assert emb_type.value_type == pa.float32()
+
+    table = pq.read_table(BytesIO(parquet_bytes))
+    rows_by_id = {r["__id__"]: r for r in table.to_pylist()}
+    assert (
+        rows_by_id["node-1"]["embedding"] is None
+        or rows_by_id["node-1"]["embedding"] == []
+    )
+    assert rows_by_id["node-2"]["embedding"] is not None

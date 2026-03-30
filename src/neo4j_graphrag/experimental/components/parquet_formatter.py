@@ -486,11 +486,17 @@ class Neo4jGraphParquetFormatter:
             # silent column drops when the first row lacks some keys (e.g. embeddings).
             # Dict preserves first-seen insertion order for deterministic column ordering.
             all_keys: dict[str, None] = {k: None for row in rows for k in row}
-            # First non-null value for each key, used to infer the column type.
+            # Collect the first non-null, non-empty-list value per key for type inference.
+            # Also track keys that carry at least one empty list, so we can fall back to
+            # list<null> when no richer sample exists (rather than pa.null(), which cannot
+            # hold [] values).
             sample: dict[str, Any] = {}
+            has_empty_list: set[str] = set()
             for row in rows:
                 for k, v in row.items():
-                    if k not in sample and v is not None:
+                    if v == []:
+                        has_empty_list.add(k)
+                    elif k not in sample and v is not None:
                         sample[k] = v
 
             fields: list[Any] = []
@@ -498,7 +504,10 @@ class Neo4jGraphParquetFormatter:
                 if k in sample:
                     t: Any = pa.infer_type([sample[k]])
                     if pa.types.is_list(t) and pa.types.is_floating(t.value_type):
-                        t = pa.list_(pa.float32())
+                        t = pa.list_(pa.float64())
+                elif k in has_empty_list:
+                    # Only empty lists seen — use list<null> so [] values round-trip correctly.
+                    t = pa.list_(pa.null())
                 else:
                     t = pa.null()
                 fields.append(pa.field(k, t))

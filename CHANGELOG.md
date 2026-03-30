@@ -16,6 +16,10 @@
 - SimpleKG pipeline (experimental): the `from_pdf` parameter is deprecated in favor of `from_file` (PDF and Markdown inputs). `from_pdf` still works but emits a deprecation warning and will be removed in a future version.
 - Data loaders (experimental): the `PdfDocument` type name is deprecated in favor of `LoadedDocument`; `PdfDocument` remains available as a backward-compatible alias with a deprecation warning.
 
+### Fixed
+
+- Fixed `Neo4jGraphParquetFormatter` silently dropping the embedding column when the first node (or relationship) row has no `embedding_properties`. The formatter now builds an explicit PyArrow schema from the union of all row keys before writing the Parquet table, so embedding values from later rows are no longer discarded.
+
 ## 1.14.1
 
 ### Added
