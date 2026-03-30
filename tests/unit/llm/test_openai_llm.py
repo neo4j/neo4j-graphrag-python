@@ -12,7 +12,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from unittest.mock import MagicMock, Mock, patch
+import warnings
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 from typing import Any, Callable, List
 import builtins
 
@@ -791,3 +792,48 @@ async def test_openai_llm_ainvoke_v2_with_json_schema_response_format(
     response = await llm.ainvoke(messages, response_format=_TEST_JSON_SCHEMA)
 
     assert response.content == '{"result": "success"}'
+
+
+@patch("builtins.__import__")
+def test_openai_llm_close(mock_import: Mock) -> None:
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+    mock_openai.AsyncOpenAI.return_value.aclose = AsyncMock()
+
+    llm = OpenAILLM(api_key="my key", model_name="gpt")
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        llm.close()
+
+    mock_openai.OpenAI.return_value.close.assert_called_once()
+    mock_openai.AsyncOpenAI.return_value.aclose.assert_called_once()
+
+
+@pytest.mark.asyncio
+@patch("builtins.__import__")
+async def test_openai_llm_aclose(mock_import: Mock) -> None:
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+    mock_openai.AsyncOpenAI.return_value.aclose = AsyncMock()
+
+    llm = OpenAILLM(api_key="my key", model_name="gpt")
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        await llm.aclose()
+
+    mock_openai.OpenAI.return_value.close.assert_called_once()
+    mock_openai.AsyncOpenAI.return_value.aclose.assert_called_once()
+
+
+@pytest.mark.asyncio
+@patch("builtins.__import__")
+async def test_openai_llm_close_raises_in_async_context(mock_import: Mock) -> None:
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    llm = OpenAILLM(api_key="my key", model_name="gpt")
+
+    with pytest.raises(RuntimeError, match="async with"):
+        llm.close()

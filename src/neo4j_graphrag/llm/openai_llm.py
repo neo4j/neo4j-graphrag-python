@@ -206,6 +206,10 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
             input, tools, message_history, system_instruction
         )
 
+    async def aclose(self) -> None:
+        self.client.close()
+        await self.async_client.close()
+
     # subsidiary methods
     def get_messages(
         self,
