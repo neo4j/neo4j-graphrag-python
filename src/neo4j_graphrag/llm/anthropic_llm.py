@@ -299,6 +299,10 @@ class AnthropicLLM(LLMBase):
         except self.anthropic.APIError as e:
             raise LLMGenerationError(e)
 
+    async def aclose(self) -> None:
+        self.client.close()
+        await self.async_client.aclose()
+
     # subsidiary methods
     def get_messages(
         self,

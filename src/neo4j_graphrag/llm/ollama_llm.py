@@ -333,6 +333,10 @@ class OllamaLLM(LLMBase):
         except self.ollama.ResponseError as e:
             raise LLMGenerationError(e)
 
+    async def aclose(self) -> None:
+        self.client.close()
+        await self.async_client.aclose()
+
     # subsdiary methods
     def get_messages(
         self,
