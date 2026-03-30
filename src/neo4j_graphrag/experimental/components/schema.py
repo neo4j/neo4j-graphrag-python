@@ -144,23 +144,21 @@ class NodeType(BaseModel):
                 # allow LLM to extract additional properties beyond the default "name"
                 "additional_properties": True,  # type: ignore[dict-item]
             }
-        if (
-            isinstance(data, dict)
-            and "properties" not in data
-            and data.get("additional_properties") is not False
-        ):
+        if isinstance(data, dict) and "properties" not in data:
+            if data.get("additional_properties") is False:  # type: ignore[comparison-overlap]
+                return data
             label = data.get("label", "")
             logger.info(
                 f"No properties defined for NodeType '{label}'. "
                 f"Adding default 'name' property and additional_properties=True "
                 f"to allow flexible property extraction."
             )
-            return {  # type: ignore[return-value]
+            return {
                 **data,
                 # added to satisfy the model validation (min_length=1 for properties of node types)
                 "properties": [{"name": "name", "type": "STRING"}],
                 # allow LLM to extract additional properties beyond the default "name"
-                "additional_properties": data.get("additional_properties", True),
+                "additional_properties": True,  # type: ignore[dict-item]
             }
 
         return data
