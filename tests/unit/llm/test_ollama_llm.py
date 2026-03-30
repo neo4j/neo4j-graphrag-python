@@ -12,8 +12,9 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import warnings
 from typing import Any, List
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import ollama
 import pytest
@@ -672,3 +673,36 @@ def test_ollama_invoke_v2_with_response_format_raises_error(mock_import: Mock) -
     assert "OllamaLLM does not currently support structured output" in str(
         exc_info.value
     )
+
+
+@patch("builtins.__import__")
+def test_ollama_llm_close(mock_import: Mock) -> None:
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+    mock_ollama.AsyncClient.return_value.aclose = AsyncMock()
+
+    llm = OllamaLLM(model_name="llama3.2", model_params={"options": {}})
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        llm.close()
+
+    mock_ollama.Client.return_value.close.assert_called_once()
+    mock_ollama.AsyncClient.return_value.aclose.assert_called_once()
+
+
+@pytest.mark.asyncio
+@patch("builtins.__import__")
+async def test_ollama_llm_aclose(mock_import: Mock) -> None:
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+    mock_ollama.AsyncClient.return_value.aclose = AsyncMock()
+
+    llm = OllamaLLM(model_name="llama3.2", model_params={"options": {}})
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        await llm.aclose()
+
+    mock_ollama.Client.return_value.close.assert_called_once()
+    mock_ollama.AsyncClient.return_value.aclose.assert_called_once()

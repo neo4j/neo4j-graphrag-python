@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import asyncio
 import logging
 from abc import ABC, abstractmethod
 from typing import Any, List, Optional, Sequence, Type, Union
@@ -235,3 +236,43 @@ class LLMInterfaceV2(ABC):
             LLMGenerationError: If anything goes wrong.
             NotImplementedError: If the LLM provider does not support structured output.
         """
+
+    def close(self) -> None:
+        """Close both clients and release any resources.
+
+        Must not be called from a running async context — use ``await aclose()`` instead.
+        """
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            # No running loop: safe to block
+            loop = asyncio.new_event_loop()
+            try:
+                loop.run_until_complete(self.aclose())
+            finally:
+                loop.close()
+        else:
+            raise RuntimeError(
+                "Cannot call close() from a running async context. "
+                "Use 'async with' or 'await aclose()' instead."
+            )
+
+    async def aclose(self) -> None:
+        """Close both clients and release any resources.
+
+        Override in subclasses that hold HTTP clients.
+        """
+        pass
+
+    def __enter__(self) -> "LLMInterfaceV2":
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        self.close()
+
+    async def __aenter__(self) -> "LLMInterfaceV2":
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        await self.aclose()
+
