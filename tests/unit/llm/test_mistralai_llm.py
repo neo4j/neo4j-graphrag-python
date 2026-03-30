@@ -12,6 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import warnings
 from typing import Any, List, Optional, cast
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
@@ -486,3 +487,32 @@ async def test_mistralai_ainvoke_v2_rate_limit_handler_called(
 
     assert response.content == "Hi there!"
     spy_handler.handle_async.assert_called_once()
+
+
+@patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
+def test_mistralai_llm_close(mock_mistral: Mock) -> None:
+    mock_mistral.return_value.aclose = AsyncMock()
+
+    llm = MistralAILLM(model_name="mistral-model")
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        llm.close()
+
+    mock_mistral.return_value.close.assert_called_once()
+    mock_mistral.return_value.aclose.assert_called_once()
+
+
+@pytest.mark.asyncio
+@patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
+async def test_mistralai_llm_aclose(mock_mistral: Mock) -> None:
+    mock_mistral.return_value.aclose = AsyncMock()
+
+    llm = MistralAILLM(model_name="mistral-model")
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        await llm.aclose()
+
+    mock_mistral.return_value.close.assert_called_once()
+    mock_mistral.return_value.aclose.assert_called_once()
