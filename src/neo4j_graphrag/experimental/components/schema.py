@@ -15,54 +15,52 @@
 from __future__ import annotations
 
 import json
-import re
-
-import neo4j
 import logging
+import re
 import warnings
+from pathlib import Path
 from typing import (
     Any,
+    Callable,
     Dict,
     Iterator,
     List,
     Literal,
     Optional,
+    Sequence,
     Tuple,
     Union,
-    Sequence,
-    Callable,
     cast,
 )
-from pathlib import Path
 
+import neo4j
 from pydantic import (
     BaseModel,
+    ConfigDict,
+    Field,
     PrivateAttr,
+    ValidationError,
     field_validator,
     model_validator,
     validate_call,
-    ConfigDict,
-    ValidationError,
-    Field,
 )
 from typing_extensions import Self
 
 from neo4j_graphrag.exceptions import (
-    SchemaValidationError,
     LLMGenerationError,
     SchemaExtractionError,
+    SchemaValidationError,
 )
 from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
 from neo4j_graphrag.experimental.pipeline.types.schema import (
     EntityInputType,
     RelationInputType,
 )
-from neo4j_graphrag.generation import SchemaExtractionTemplate, PromptTemplate
+from neo4j_graphrag.generation import PromptTemplate, SchemaExtractionTemplate
 from neo4j_graphrag.llm import LLMInterface
-from neo4j_graphrag.types import LLMMessage
-from neo4j_graphrag.utils.file_handler import FileHandler, FileFormat
 from neo4j_graphrag.schema import get_structured_schema
-
+from neo4j_graphrag.types import LLMMessage
+from neo4j_graphrag.utils.file_handler import FileFormat, FileHandler
 
 logger = logging.getLogger(__name__)
 
@@ -146,6 +144,23 @@ class NodeType(BaseModel):
                 # allow LLM to extract additional properties beyond the default "name"
                 "additional_properties": True,  # type: ignore[dict-item]
             }
+        if isinstance(data, dict) and "properties" not in data:
+            if data.get("additional_properties") is False:  # type: ignore[comparison-overlap]
+                return data
+            label = data.get("label", "")
+            logger.info(
+                f"No properties defined for NodeType '{label}'. "
+                f"Adding default 'name' property and additional_properties=True "
+                f"to allow flexible property extraction."
+            )
+            return {
+                **data,
+                # added to satisfy the model validation (min_length=1 for properties of node types)
+                "properties": [{"name": "name", "type": "STRING"}],
+                # allow LLM to extract additional properties beyond the default "name"
+                "additional_properties": True,  # type: ignore[dict-item]
+            }
+
         return data
 
     @model_validator(mode="after")

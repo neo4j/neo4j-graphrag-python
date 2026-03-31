@@ -79,18 +79,18 @@ with, optionally, a list of their expected properties)
 and instructions on how to connect them (patterns).
 Node and relationship types can be represented
 as either simple strings (for their labels) or dictionaries. If using a dictionary,
-it must include a label key and can optionally include description and properties keys,
+it must include a ``label`` key and can optionally include ``description`` and ``properties`` keys,
 as shown below:
 
 .. code:: python
 
     NODE_TYPES = [
-        # node types can be defined with a simple label...
+        # node types can be defined with a simple label string...
         "Person",
-        # ... or with a dict if more details are needed,
-        # such as a description:
+        # ... or with a dict for more detail such as a description.
+        # When no properties key is provided, a default "name" property is added automatically.
         {"label": "House", "description": "Family the person belongs to"},
-        # or a list of properties the LLM will try to attach to the entity:
+        # or with an explicit list of properties the LLM will try to attach to the entity:
         {"label": "Planet", "properties": [{"name": "name", "type": "STRING", "required": True}, {"name": "weather", "type": "STRING"}]},
     ]
     # same thing for relationships:
@@ -912,19 +912,32 @@ For improved reliability with :ref:`OpenAILLM <openaillm>` or :ref:`VertexAILLM 
 Schema Validation and Node Properties
 --------------------------------------
 
-**Important:** All node types must have at least one property defined. When using string shorthand for node types (e.g., ``"Person"``), a default ``"name"`` property is automatically added with ``additional_properties=True`` to allow flexible LLM extraction:
+All node types must have at least one property defined. When no properties are provided,
+a default ``name: STRING`` property is added automatically and ``additional_properties``
+is set to ``True`` to allow the LLM to extract additional properties freely.
+
+This applies to both the **string shorthand** and the **long dict syntax** when the
+``properties`` key is omitted:
 
 .. code:: python
 
-    # String shorthand - automatically gets default property
-    NodeType("Person")  # Becomes: properties=[{"name": "name", "type": "STRING"}], additional_properties=True
-    
-    # Explicit definition - must include at least one property
-    NodeType(
-        label="Person",
-        properties=[PropertyType(name="name", type="STRING")],
-        additional_properties=True  # Allow LLM to extract additional properties
-    )
+    # String shorthand — "name" property added automatically
+    "Person"
+    # equivalent to:
+    NodeType(label="Person", properties=[PropertyType(name="name", type="STRING")], additional_properties=True)
+
+    # Long syntax without a properties key — same auto-addition applies
+    {"label": "House", "description": "Family the person belongs to"}
+    # equivalent to:
+    NodeType(label="House", description="Family the person belongs to",
+             properties=[PropertyType(name="name", type="STRING")], additional_properties=True)
+
+Passing ``properties`` explicitly as an empty list raises a ``ValidationError``:
+
+.. code:: python
+
+    # Raises ValidationError — empty list is not auto-filled
+    {"label": "House", "properties": []}
 
 **Relationship types** with no properties automatically set ``additional_properties=True`` to preserve LLM-extracted properties during graph construction.
 
