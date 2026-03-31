@@ -6,10 +6,6 @@
 
 - MarkdownLoader (experimental): added a Markdown loader to support `.md` and `.markdown` files.
 
-### Fixed
-
-- `VertexAILLM`: passing a Pydantic model with `extra="forbid"` as `response_format` no longer raises a `ParseError`. Unsupported JSON Schema fields (e.g. `additionalProperties`) are now stripped before the schema is forwarded to VertexAI's protobuf `Schema` type.
-
 ### Changed
 
 - SimpleKG pipeline (experimental): the `from_pdf` parameter is deprecated in favor of `from_file` (PDF and Markdown inputs). `from_pdf` still works but emits a deprecation warning and will be removed in a future version.
