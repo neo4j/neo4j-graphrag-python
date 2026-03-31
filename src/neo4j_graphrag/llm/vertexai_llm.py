@@ -69,30 +69,6 @@ logger = logging.getLogger(__name__)
 _GENERATION_CONFIG_SCHEMA_PARAMS = {"response_schema", "response_mime_type"}
 
 
-def _strip_unsupported_schema_fields(schema: dict[str, Any]) -> dict[str, Any]:
-    """Recursively remove JSON Schema fields not supported by VertexAI's Schema proto.
-
-    For example, Pydantic adds ``additionalProperties: false`` when a model uses
-    ``extra="forbid"``, but the VertexAI protobuf Schema type does not have that
-    field and raises a ``ParseError`` when it encounters it.
-    """
-    _UNSUPPORTED = {"additionalProperties", "$defs", "$schema"}
-    result = {k: v for k, v in schema.items() if k not in _UNSUPPORTED}
-    if "properties" in result and isinstance(result["properties"], dict):
-        result["properties"] = {
-            k: _strip_unsupported_schema_fields(v)
-            for k, v in result["properties"].items()
-        }
-    if "items" in result and isinstance(result["items"], dict):
-        result["items"] = _strip_unsupported_schema_fields(result["items"])
-    if "anyOf" in result and isinstance(result["anyOf"], list):
-        result["anyOf"] = [
-            _strip_unsupported_schema_fields(s) if isinstance(s, dict) else s
-            for s in result["anyOf"]
-        ]
-    return result
-
-
 def _extract_generation_config_params(
     config: Any, exclude_schema: bool = True
 ) -> dict[str, Any]:
@@ -598,9 +574,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
                         response_format, BaseModel
                     ):
                         # if we migrate to new google-genai-sdk, Pydantic models can be passed directly
-                        schema = _strip_unsupported_schema_fields(
-                            response_format.model_json_schema()
-                        )
+                        schema = response_format.model_json_schema()
                     else:
                         schema = response_format
                     params["response_mime_type"] = "application/json"
