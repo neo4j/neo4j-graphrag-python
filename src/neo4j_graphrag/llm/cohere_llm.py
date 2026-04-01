@@ -169,7 +169,7 @@ class CohereLLM(LLMBase):
         except self.cohere_api_error as e:
             raise LLMGenerationError(e)
         return LLMResponse(
-            content=res.message.content[0].text if res.message.content else "",  # type: ignore[union-attr]
+            content=res.message.content[0].text if res.message.content else "",
         )
 
     @rate_limit_handler_decorator
@@ -238,7 +238,7 @@ class CohereLLM(LLMBase):
         except self.cohere_api_error as e:
             raise LLMGenerationError(e)
         return LLMResponse(
-            content=res.message.content[0].text if res.message.content else "",  # type: ignore[union-attr]
+            content=res.message.content[0].text if res.message.content else "",
         )
 
     @async_rate_limit_handler_decorator
@@ -288,7 +288,7 @@ class CohereLLM(LLMBase):
                 raise LLMGenerationError(e.errors()) from e
             messages.extend(cast(Iterable[dict[str, Any]], message_history))
         messages.append(UserMessage(content=input).model_dump())
-        return messages  # type: ignore
+        return messages
 
     def get_messages_v2(
         self,

@@ -36,6 +36,7 @@ from pydantic import BaseModel, ValidationError
 # project dependencies
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.message_history import MessageHistory
+from neo4j_graphrag.tool import Tool
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.rate_limit import (
     RateLimitHandler,
@@ -52,12 +53,11 @@ from .types import (
     BaseMessage,
     LLMResponse,
     MessageList,
+    SystemMessage,
     ToolCall,
     ToolCallResponse,
-    SystemMessage,
     UserMessage,
 )
-from neo4j_graphrag.tool import Tool
 
 if TYPE_CHECKING:
     from ollama import Message
@@ -296,7 +296,7 @@ class OllamaLLM(LLMBase):
                 raise LLMGenerationError(e.errors()) from e
             messages.extend(cast(Iterable[dict[str, Any]], message_history))
         messages.append(UserMessage(content=input).model_dump())
-        return messages  # type: ignore
+        return messages
 
     def get_messages_v2(
         self,
