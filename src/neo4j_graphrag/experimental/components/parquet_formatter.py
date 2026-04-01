@@ -504,7 +504,7 @@ class Neo4jGraphParquetFormatter:
                 if k in sample:
                     t: Any = pa.infer_type([sample[k]])
                     if pa.types.is_list(t) and pa.types.is_floating(t.value_type):
-                        t = pa.list_(pa.float64())
+                        t = pa.list_(pa.float32())
                 elif k in has_empty_list:
                     # Only empty lists seen — use list<null> so [] values round-trip correctly.
                     t = pa.list_(pa.null())

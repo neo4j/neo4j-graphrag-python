@@ -18,7 +18,7 @@
 
 ### Fixed
 
-- Fixed `Neo4jGraphParquetFormatter` silently dropping the embedding column when the first node (or relationship) row has no `embedding_properties`. The formatter now builds an explicit PyArrow schema from the union of all row keys before writing the Parquet table, so embedding values from later rows are no longer discarded.
+- Fixed `Neo4jGraphParquetFormatter` uses an explicit PyArrow schema (with embeddings typed as `float32`) derived from the union of all row keys.
 
 ## 1.14.1
 
