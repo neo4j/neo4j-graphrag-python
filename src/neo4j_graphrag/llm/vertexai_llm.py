@@ -17,14 +17,14 @@ from __future__ import annotations
 
 import inspect
 import logging
-from typing import Any, List, Optional, Sequence, Type, Union, cast
+from typing import Any, List, Optional, Sequence, Type, Union, cast, overload
 
 # 3rd party dependencies
 from pydantic import BaseModel, ValidationError
 
 # project dependencies
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.base import LLMBase
+from neo4j_graphrag.llm.base import LLMInterface, LLMInterfaceV2
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
@@ -60,37 +60,13 @@ try:
         Tool as VertexAITool,
     )
 except ImportError:
-    GenerativeModel = None
-    ResponseValidationError = None
+    GenerativeModel = None  # type: ignore[misc, assignment]
+    ResponseValidationError = None  # type: ignore[misc, assignment]
 
 logger = logging.getLogger(__name__)
 
 # Params to exclude when extracting from GenerationConfig for structured output
 _GENERATION_CONFIG_SCHEMA_PARAMS = {"response_schema", "response_mime_type"}
-
-
-def _strip_unsupported_schema_fields(schema: dict[str, Any]) -> dict[str, Any]:
-    """Recursively remove JSON Schema fields not supported by VertexAI's Schema proto.
-
-    For example, Pydantic adds ``additionalProperties: false`` when a model uses
-    ``extra="forbid"``, but the VertexAI protobuf Schema type does not have that
-    field and raises a ``ParseError`` when it encounters it.
-    """
-    _UNSUPPORTED = {"additionalProperties", "$defs", "$schema"}
-    result = {k: v for k, v in schema.items() if k not in _UNSUPPORTED}
-    if "properties" in result and isinstance(result["properties"], dict):
-        result["properties"] = {
-            k: _strip_unsupported_schema_fields(v)
-            for k, v in result["properties"].items()
-        }
-    if "items" in result and isinstance(result["items"], dict):
-        result["items"] = _strip_unsupported_schema_fields(result["items"])
-    if "anyOf" in result and isinstance(result["anyOf"], list):
-        result["anyOf"] = [
-            _strip_unsupported_schema_fields(s) if isinstance(s, dict) else s
-            for s in result["anyOf"]
-        ]
-    return result
 
 
 def _extract_generation_config_params(
@@ -137,7 +113,7 @@ def _extract_generation_config_params(
 
 
 # pylint: disable=arguments-differ, redefined-builtin, no-else-return
-class VertexAILLM(LLMBase):
+class VertexAILLM(LLMInterface, LLMInterfaceV2):
     """Interface for large language models on Vertex AI
 
     Args:
@@ -179,7 +155,7 @@ class VertexAILLM(LLMBase):
                 """Could not import Vertex AI Python client.
                 Please install it with `pip install "neo4j-graphrag[google]"`."""
             )
-        LLMBase.__init__(
+        LLMInterfaceV2.__init__(
             self,
             model_name=model_name,
             model_params=model_params or {},
@@ -189,7 +165,42 @@ class VertexAILLM(LLMBase):
         self.system_instruction = system_instruction
         self.options = kwargs
 
+    # overloads for LLMInterface and LLMInterfaceV2 methods
+    @overload  # type: ignore[no-overload-impl]
     def invoke(
+        self,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> LLMResponse: ...
+
+    @overload
+    def invoke(
+        self,
+        input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> LLMResponse: ...
+
+    @overload  # type: ignore[no-overload-impl]
+    async def ainvoke(
+        self,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> LLMResponse: ...
+
+    @overload
+    async def ainvoke(
+        self,
+        input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> LLMResponse: ...
+
+    # switching logics to LLMInterface or LLMInterfaceV2
+
+    def invoke(  # type: ignore[no-redef]
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -204,7 +215,7 @@ class VertexAILLM(LLMBase):
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 
-    async def ainvoke(
+    async def ainvoke(  # type: ignore[no-redef]
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -563,9 +574,7 @@ class VertexAILLM(LLMBase):
                         response_format, BaseModel
                     ):
                         # if we migrate to new google-genai-sdk, Pydantic models can be passed directly
-                        schema = _strip_unsupported_schema_fields(
-                            response_format.model_json_schema()
-                        )
+                        schema = response_format.model_json_schema()
                     else:
                         schema = response_format
                     params["response_mime_type"] = "application/json"
@@ -588,7 +597,7 @@ class VertexAILLM(LLMBase):
         model = self._get_model(system_instruction=system_instruction)
         options = self._get_call_params(input, message_history, tools)
         response = await model.generate_content_async(**options)
-        return response
+        return response  # type: ignore[no-any-return]
 
     def _call_llm(
         self,
@@ -600,7 +609,7 @@ class VertexAILLM(LLMBase):
         model = self._get_model(system_instruction=system_instruction)
         options = self._get_call_params(input, message_history, tools)
         response = model.generate_content(**options)
-        return response
+        return response  # type: ignore[no-any-return]
 
     def _to_tool_call(self, function_call: FunctionCall) -> ToolCall:
         return ToolCall(
