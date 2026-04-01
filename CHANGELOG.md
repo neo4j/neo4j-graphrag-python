@@ -4,6 +4,7 @@
 
 ### Added
 
+- `LLMBase`: new abstract base class (`neo4j_graphrag.llm.LLMBase`) that combines `LLMInterface` and `LLMInterfaceV2`. Concrete LLM subclasses can extend `LLMBase` instead of both interfaces to avoid repeating overload boilerplate and to suppress mypy `[no-overload-impl]` / `[no-redef]` errors.
 - MarkdownLoader (experimental): added a Markdown loader to support `.md` and `.markdown` files.
 - Added Amazon Bedrock support: `BedrockLLM` (generation/tool calling) via the boto3 Converse API, and `BedrockEmbeddings` (embeddings) via the boto3 InvokeModel API.
 

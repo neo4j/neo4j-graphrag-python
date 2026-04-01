@@ -20,6 +20,7 @@ import warnings
 from typing import (
     TYPE_CHECKING,
     Any,
+    Dict,
     Iterable,
     List,
     Optional,
@@ -27,8 +28,6 @@ from typing import (
     Type,
     Union,
     cast,
-    Dict,
-    overload,
 )
 
 # 3rd-party dependencies
@@ -37,6 +36,7 @@ from pydantic import BaseModel, ValidationError
 # project dependencies
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.message_history import MessageHistory
+from neo4j_graphrag.tool import Tool
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.rate_limit import (
     RateLimitHandler,
@@ -48,17 +48,16 @@ from neo4j_graphrag.utils.rate_limit import (
     rate_limit_handler as rate_limit_handler_decorator,
 )
 
-from .base import LLMInterface, LLMInterfaceV2
+from .base import LLMBase
 from .types import (
     BaseMessage,
     LLMResponse,
     MessageList,
+    SystemMessage,
     ToolCall,
     ToolCallResponse,
-    SystemMessage,
     UserMessage,
 )
-from neo4j_graphrag.tool import Tool
 
 if TYPE_CHECKING:
     from ollama import Message
@@ -66,7 +65,7 @@ if TYPE_CHECKING:
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
 
 
-class OllamaLLM(LLMInterface, LLMInterfaceV2):
+class OllamaLLM(LLMBase):
     """LLM wrapper for Ollama models."""
 
     def __init__(
@@ -83,7 +82,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
                 "Could not import ollama Python client. "
                 "Please install it with `pip install ollama`."
             )
-        LLMInterfaceV2.__init__(
+        LLMBase.__init__(
             self,
             model_name=model_name,
             model_params=model_params or {},
@@ -111,41 +110,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
             )
             self.model_params = {"options": self.model_params}
 
-    # overloads for LLMInterface and LLMInterfaceV2 methods
-    @overload  # type: ignore[no-overload-impl]
     def invoke(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse: ...
-
-    @overload
-    def invoke(
-        self,
-        input: List[LLMMessage],
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse: ...
-
-    @overload  # type: ignore[no-overload-impl]
-    async def ainvoke(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse: ...
-
-    @overload
-    async def ainvoke(
-        self,
-        input: List[LLMMessage],
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse: ...
-
-    # switching logics to LLMInterface or LLMInterfaceV2
-    def invoke(  # type: ignore[no-redef]
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -160,7 +125,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 
-    async def ainvoke(  # type: ignore[no-redef]
+    async def ainvoke(
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -319,7 +284,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
         system_instruction: Optional[str] = None,
     ) -> Sequence[Message]:
         """Constructs the message list for the Ollama chat API."""
-        messages = []
+        messages: list[dict[str, Any]] = []
         if system_instruction:
             messages.append(SystemMessage(content=system_instruction).model_dump())
         if message_history:
@@ -331,7 +296,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
                 raise LLMGenerationError(e.errors()) from e
             messages.extend(cast(Iterable[dict[str, Any]], message_history))
         messages.append(UserMessage(content=input).model_dump())
-        return messages  # type: ignore
+        return cast(Sequence[Message], messages)
 
     def get_messages_v2(
         self,

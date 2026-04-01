@@ -22,13 +22,12 @@ from typing import (
     Type,
     Union,
     cast,
-    overload,
 )
 
 from pydantic import BaseModel, ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.base import LLMInterface, LLMInterfaceV2
+from neo4j_graphrag.llm.base import LLMBase
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
@@ -53,7 +52,7 @@ if TYPE_CHECKING:
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
-class AnthropicLLM(LLMInterface, LLMInterfaceV2):
+class AnthropicLLM(LLMBase):
     """Interface for large language models on Anthropic
 
     Args:
@@ -94,7 +93,7 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):
                 """Could not import Anthropic Python client.
                 Please install it with `pip install "neo4j-graphrag[anthropic]"`."""
             )
-        LLMInterfaceV2.__init__(
+        LLMBase.__init__(
             self,
             model_name=model_name,
             model_params=model_params or {},
@@ -105,41 +104,7 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):
         self.client = anthropic.Anthropic(**kwargs)
         self.async_client = anthropic.AsyncAnthropic(**kwargs)
 
-    # overloads for LLMInterface and LLMInterfaceV2 methods
-    @overload  # type: ignore[no-overload-impl]
     def invoke(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse: ...
-
-    @overload
-    def invoke(
-        self,
-        input: List[LLMMessage],
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse: ...
-
-    @overload  # type: ignore[no-overload-impl]
-    async def ainvoke(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse: ...
-
-    @overload
-    async def ainvoke(
-        self,
-        input: List[LLMMessage],
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse: ...
-
-    # switching logics to LLMInterface or LLMInterfaceV2
-    def invoke(  # type: ignore[no-redef]
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -154,7 +119,7 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 
-    async def ainvoke(  # type: ignore[no-redef]
+    async def ainvoke(
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -330,7 +295,7 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):
                 raise LLMGenerationError(e.errors()) from e
             messages.extend(cast(Iterable[dict[str, Any]], message_history))
         messages.append(UserMessage(content=input).model_dump())
-        return messages  # type: ignore
+        return cast(Iterable[MessageParam], messages)
 
     def get_messages_v2(
         self,

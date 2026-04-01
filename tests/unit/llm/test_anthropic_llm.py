@@ -12,9 +12,9 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
-from typing import List
+
 import sys
-from typing import Generator
+from typing import Any, Generator, List, cast
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import anthropic
@@ -36,6 +36,14 @@ def mock_anthropic() -> Generator[MagicMock, None, None]:
         yield mock
 
 
+def _as_mock(value: Any) -> MagicMock:
+    return cast(MagicMock, value)
+
+
+def _as_async_mock(value: Any) -> AsyncMock:
+    return cast(AsyncMock, value)
+
+
 @patch("builtins.__import__", side_effect=ImportError)
 def test_anthropic_llm_missing_dependency(mock_import: Mock) -> None:
     with pytest.raises(ImportError):
@@ -51,7 +59,7 @@ def test_anthropic_invoke_happy_path(mock_anthropic: Mock) -> None:
     input_text = "may thy knife chip and shatter"
     response = llm.invoke(input_text)
     assert response.content == "generated text"
-    llm.client.messages.create.assert_called_once_with(  # type: ignore
+    _as_mock(llm.client.messages.create).assert_called_once_with(
         messages=[{"role": "user", "content": input_text}],
         model="claude-3-opus-20240229",
         system=anthropic.NOT_GIVEN,
@@ -77,7 +85,7 @@ def test_anthropic_invoke_with_message_history_happy_path(mock_anthropic: Mock) 
     response = llm.invoke(question, message_history)  # type: ignore
     assert response.content == "generated text"
     message_history.append({"role": "user", "content": question})
-    llm.client.messages.create.assert_called_once_with(  # type: ignore[attr-defined]
+    _as_mock(llm.client.messages.create).assert_called_once_with(
         messages=message_history,
         model="claude-3-opus-20240229",
         system=anthropic.NOT_GIVEN,
@@ -103,14 +111,14 @@ def test_anthropic_invoke_with_system_instruction(
     assert isinstance(response, LLMResponse)
     assert response.content == "generated text"
     messages: List[LLMMessage] = [{"role": "user", "content": question}]
-    llm.client.messages.create.assert_called_with(  # type: ignore[attr-defined]
+    _as_mock(llm.client.messages.create).assert_called_with(
         model="claude-3-opus-20240229",
         system=system_instruction,
         messages=messages,
         **model_params,
     )
 
-    assert llm.client.messages.create.call_count == 1  # type: ignore
+    assert _as_mock(llm.client.messages.create).call_count == 1
 
 
 def test_anthropic_invoke_with_message_history_and_system_instruction(
@@ -135,14 +143,14 @@ def test_anthropic_invoke_with_message_history_and_system_instruction(
     assert isinstance(response, LLMResponse)
     assert response.content == "generated text"
     message_history.append({"role": "user", "content": question})
-    llm.client.messages.create.assert_called_with(  # type: ignore[attr-defined]
+    _as_mock(llm.client.messages.create).assert_called_with(
         model="claude-3-opus-20240229",
         system=system_instruction,
         messages=message_history,
         **model_params,
     )
 
-    assert llm.client.messages.create.call_count == 1  # type: ignore
+    assert _as_mock(llm.client.messages.create).call_count == 1
 
 
 def test_anthropic_invoke_with_message_history_validation_error(
@@ -180,7 +188,7 @@ async def test_anthropic_ainvoke_happy_path(mock_anthropic: Mock) -> None:
     input_text = "may thy knife chip and shatter"
     response = await llm.ainvoke(input_text)
     assert response.content == "Return text"
-    llm.async_client.messages.create.assert_awaited_once_with(  # type: ignore
+    _as_async_mock(llm.async_client.messages.create).assert_awaited_once_with(
         model="claude-3-opus-20240229",
         system=anthropic.NOT_GIVEN,
         messages=[{"role": "user", "content": input_text}],
@@ -211,7 +219,7 @@ def test_anthropic_llm_invoke_v2_happy_path(mock_anthropic: Mock) -> None:
     assert response.content == "anthropic v2 response"
 
     # Verify the correct method was called with system instruction and messages
-    llm.client.messages.create.assert_called_once_with(  # type: ignore
+    _as_mock(llm.client.messages.create).assert_called_once_with(
         model="claude-3-opus-20240229",
         system="You are a helpful assistant.",
         messages=[{"role": "user", "content": "What is machine learning?"}],
@@ -242,8 +250,8 @@ def test_anthropic_llm_invoke_v2_with_conversation_history(
     assert response.content == "anthropic conversation response"
 
     # Verify the correct number of messages were passed (excluding system)
-    llm.client.messages.create.assert_called_once()  # type: ignore
-    call_args = llm.client.messages.create.call_args[1]  # type: ignore
+    _as_mock(llm.client.messages.create).assert_called_once()
+    call_args = _as_mock(llm.client.messages.create).call_args[1]
     assert call_args["system"] == "You are a helpful assistant."
     assert len(call_args["messages"]) == 3
 
@@ -266,8 +274,8 @@ def test_anthropic_llm_invoke_v2_no_system_message(mock_anthropic: Mock) -> None
     assert response.content == "anthropic no system response"
 
     # Verify only user message was passed and no system instruction
-    llm.client.messages.create.assert_called_once()  # type: ignore
-    call_args = llm.client.messages.create.call_args[1]  # type: ignore
+    _as_mock(llm.client.messages.create).assert_called_once()
+    call_args = _as_mock(llm.client.messages.create).call_args[1]
     assert call_args["system"] == anthropic.NOT_GIVEN
     assert len(call_args["messages"]) == 1
 
@@ -294,7 +302,7 @@ async def test_anthropic_llm_ainvoke_v2_happy_path(mock_anthropic: Mock) -> None
     assert response.content == "async anthropic v2 response"
 
     # Verify the async client was called correctly
-    llm.async_client.messages.create.assert_awaited_once_with(  # type: ignore
+    _as_async_mock(llm.async_client.messages.create).assert_awaited_once_with(
         model="claude-3-opus-20240229",
         system="You are a helpful assistant.",
         messages=[{"role": "user", "content": "What is async programming?"}],
@@ -361,15 +369,15 @@ def test_anthropic_llm_get_brand_new_messages_all_roles(mock_anthropic: Mock) ->
     # Verify system instruction is extracted
     assert system_instruction == "You are a helpful assistant."
 
-    result_messages = list(result_messages)
+    result_messages = cast(list[MagicMock], list(result_messages))
 
     # Verify the correct number of non-system messages are returned
     assert len(result_messages) == 3
 
     # Verify message content is preserved
-    assert result_messages[0].content == "Hello"  # type: ignore[attr-defined]
-    assert result_messages[1].content == "Hi there!"  # type: ignore[attr-defined]
-    assert result_messages[2].content == "How are you?"  # type: ignore[attr-defined]
+    assert result_messages[0].content == "Hello"
+    assert result_messages[1].content == "Hi there!"
+    assert result_messages[2].content == "How are you?"
 
 
 def test_anthropic_llm_get_brand_new_messages_unknown_role(
