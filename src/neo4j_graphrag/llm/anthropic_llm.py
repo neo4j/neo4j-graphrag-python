@@ -295,7 +295,7 @@ class AnthropicLLM(LLMBase):
                 raise LLMGenerationError(e.errors()) from e
             messages.extend(cast(Iterable[dict[str, Any]], message_history))
         messages.append(UserMessage(content=input).model_dump())
-        return messages
+        return cast(Iterable[MessageParam], messages)
 
     def get_messages_v2(
         self,

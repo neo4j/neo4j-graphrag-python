@@ -60,8 +60,8 @@ try:
         Tool as VertexAITool,
     )
 except ImportError:
-    GenerativeModel = None
-    ResponseValidationError = None
+    GenerativeModel = cast(Any, None)
+    ResponseValidationError = cast(Any, None)
 
 logger = logging.getLogger(__name__)
 
@@ -562,7 +562,7 @@ class VertexAILLM(LLMBase):
         model = self._get_model(system_instruction=system_instruction)
         options = self._get_call_params(input, message_history, tools)
         response = await model.generate_content_async(**options)
-        return response
+        return cast(GenerationResponse, response)
 
     def _call_llm(
         self,
@@ -574,7 +574,7 @@ class VertexAILLM(LLMBase):
         model = self._get_model(system_instruction=system_instruction)
         options = self._get_call_params(input, message_history, tools)
         response = model.generate_content(**options)
-        return response
+        return cast(GenerationResponse, response)
 
     def _to_tool_call(self, function_call: FunctionCall) -> ToolCall:
         return ToolCall(

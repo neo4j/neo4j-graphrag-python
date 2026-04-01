@@ -284,7 +284,7 @@ class OllamaLLM(LLMBase):
         system_instruction: Optional[str] = None,
     ) -> Sequence[Message]:
         """Constructs the message list for the Ollama chat API."""
-        messages = []
+        messages: list[dict[str, Any]] = []
         if system_instruction:
             messages.append(SystemMessage(content=system_instruction).model_dump())
         if message_history:
@@ -296,7 +296,7 @@ class OllamaLLM(LLMBase):
                 raise LLMGenerationError(e.errors()) from e
             messages.extend(cast(Iterable[dict[str, Any]], message_history))
         messages.append(UserMessage(content=input).model_dump())
-        return messages
+        return cast(Sequence[Message], messages)
 
     def get_messages_v2(
         self,

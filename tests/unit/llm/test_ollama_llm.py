@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Any, List
+from typing import Any, List, cast
 from unittest.mock import MagicMock, Mock, patch
 
 import ollama
@@ -30,6 +30,10 @@ def get_mock_ollama() -> MagicMock:
     mock = MagicMock()
     mock.ResponseError = ollama.ResponseError
     return mock
+
+
+def _as_mock(value: Any) -> MagicMock:
+    return cast(MagicMock, value)
 
 
 @patch("builtins.__import__", side_effect=ImportError)
@@ -66,7 +70,7 @@ def test_ollama_llm_happy_path_deprecated_options(mock_import: Mock) -> None:
     messages = [
         {"role": "user", "content": question},
     ]
-    llm.client.chat.assert_called_once_with(
+    _as_mock(llm.client.chat).assert_called_once_with(
         model=model, messages=messages, options={"temperature": 0.3}
     )
 
@@ -108,7 +112,7 @@ def test_ollama_llm_happy_path(mock_import: Mock) -> None:
     messages = [
         {"role": "user", "content": question},
     ]
-    llm.client.chat.assert_called_once_with(
+    _as_mock(llm.client.chat).assert_called_once_with(
         model=model,
         messages=messages,
         options=options,
@@ -137,7 +141,7 @@ def test_ollama_invoke_with_system_instruction_happy_path(mock_import: Mock) -> 
     assert response.content == "ollama chat response"
     messages = [{"role": "system", "content": system_instruction}]
     messages.append({"role": "user", "content": question})
-    llm.client.chat.assert_called_once_with(
+    _as_mock(llm.client.chat).assert_called_once_with(
         model=model,
         messages=messages,
         options=options,
@@ -169,7 +173,7 @@ def test_ollama_invoke_with_message_history_happy_path(mock_import: Mock) -> Non
     assert response.content == "ollama chat response"
     messages = [m for m in message_history]
     messages.append({"role": "user", "content": question})
-    llm.client.chat.assert_called_once_with(
+    _as_mock(llm.client.chat).assert_called_once_with(
         model=model, messages=messages, options=options
     )
 
@@ -206,10 +210,10 @@ def test_ollama_invoke_with_message_history_and_system_instruction(
     messages = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
-    llm.client.chat.assert_called_once_with(
+    _as_mock(llm.client.chat).assert_called_once_with(
         model=model, messages=messages, options=options
     )
-    assert llm.client.chat.call_count == 1
+    assert _as_mock(llm.client.chat).call_count == 1
 
 
 @patch("builtins.__import__")
@@ -298,7 +302,7 @@ def test_ollama_llm_invoke_v2_happy_path(mock_import: Mock) -> None:
     mock_ollama.Message.assert_any_call(**messages[1])
 
     # Verify the client was called with correct parameters
-    llm.client.chat.assert_called_once_with(
+    _as_mock(llm.client.chat).assert_called_once_with(
         model=model,
         messages=[mock_ollama.Message.return_value, mock_ollama.Message.return_value],
         options=options,
@@ -409,8 +413,8 @@ def test_ollama_llm_input_type_switching_string(mock_import: Mock) -> None:
     assert res.content == "legacy response"
 
     # Verify legacy method was used (messages should be built via get_messages)
-    llm.client.chat.assert_called_once()
-    call_args = llm.client.chat.call_args[1]
+    _as_mock(llm.client.chat).assert_called_once()
+    call_args = _as_mock(llm.client.chat).call_args[1]
     assert call_args["model"] == model
     assert len(call_args["messages"]) == 1
     assert call_args["messages"][0]["role"] == "user"
@@ -569,9 +573,9 @@ def test_ollama_llm_invoke_with_tools_with_message_history(
     # Verify the correct messages were passed
     message_history.append({"role": "user", "content": question})
     # Use assert_called_once() instead of assert_called_once_with() to avoid issues with overloaded functions
-    llm.client.chat.assert_called_once()
+    _as_mock(llm.client.chat).assert_called_once()
     # Check call arguments individually
-    call_args = llm.client.chat.call_args[1]  # Get the keyword arguments
+    call_args = _as_mock(llm.client.chat).call_args[1]  # Get the keyword arguments
     assert call_args["messages"] == message_history
     assert call_args["model"] == "gpt"
     # Check tools content rather than direct equality
@@ -615,9 +619,9 @@ def test_ollama_llm_invoke_with_tools_with_system_instruction(
     messages = [{"role": "system", "content": system_instruction}]
     messages.append({"role": "user", "content": "my text"})
     # Use assert_called_once() instead of assert_called_once_with() to avoid issues with overloaded functions
-    llm.client.chat.assert_called_once()
+    _as_mock(llm.client.chat).assert_called_once()
     # Check call arguments individually
-    call_args = llm.client.chat.call_args[1]  # Get the keyword arguments
+    call_args = _as_mock(llm.client.chat).call_args[1]  # Get the keyword arguments
     assert call_args["messages"] == messages
     assert call_args["model"] == "gpt"
     # Check tools content rather than direct equality

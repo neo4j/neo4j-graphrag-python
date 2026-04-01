@@ -54,8 +54,8 @@ try:
     )
     from mistralai.models.sdkerror import SDKError
 except ImportError:
-    Mistral = None
-    SDKError = None
+    Mistral = cast(Any, None)
+    SDKError = cast(Any, None)
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return

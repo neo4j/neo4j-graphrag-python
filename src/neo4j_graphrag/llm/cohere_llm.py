@@ -107,6 +107,12 @@ class CohereLLM(LLMBase):
         self.client = cohere.ClientV2(**kwargs)
         self.async_client = cohere.AsyncClientV2(**kwargs)
 
+    def _extract_text_content(self, content_items: Any) -> str:
+        if not content_items:
+            return ""
+        text = getattr(content_items[0], "text", None)
+        return text if isinstance(text, str) else ""
+
     def invoke(
         self,
         input: Union[str, List[LLMMessage]],
@@ -168,9 +174,7 @@ class CohereLLM(LLMBase):
             )
         except self.cohere_api_error as e:
             raise LLMGenerationError(e)
-        return LLMResponse(
-            content=res.message.content[0].text if res.message.content else "",
-        )
+        return LLMResponse(content=self._extract_text_content(res.message.content))
 
     @rate_limit_handler_decorator
     def __invoke_v2(
@@ -237,9 +241,7 @@ class CohereLLM(LLMBase):
             )
         except self.cohere_api_error as e:
             raise LLMGenerationError(e)
-        return LLMResponse(
-            content=res.message.content[0].text if res.message.content else "",
-        )
+        return LLMResponse(content=self._extract_text_content(res.message.content))
 
     @async_rate_limit_handler_decorator
     async def __ainvoke_v2(
@@ -307,4 +309,4 @@ class CohereLLM(LLMBase):
                 )
             else:
                 raise ValueError(f"Unknown role: {i['role']}")
-        return messages
+        return cast(ChatMessages, messages)
