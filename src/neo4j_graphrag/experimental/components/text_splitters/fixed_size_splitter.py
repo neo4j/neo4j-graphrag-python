@@ -144,6 +144,11 @@ class FixedSizeSplitter(TextSplitter):
             chunks.append(TextChunk(text=chunk_text, index=index))
             index += 1
 
-            approximate_start = start + step
+            # Guarantee forward progress: advance based on end position minus
+            # overlap, but never move backward from the current approximate_start.
+            # This prevents infinite loops when _adjust_chunk_start walks start
+            # backward past the step boundary (e.g., long runs without whitespace).
+            next_start = end - self.chunk_overlap
+            approximate_start = max(next_start, approximate_start + step)
 
         return TextChunks(chunks=chunks)
