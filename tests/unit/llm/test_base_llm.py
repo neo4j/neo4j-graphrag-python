@@ -24,7 +24,6 @@ from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.rate_limit import NoOpRateLimitHandler
 
-
 # ---------------------------------------------------------------------------
 # Minimal concrete subclass used across tests
 # ---------------------------------------------------------------------------
@@ -65,7 +64,7 @@ class _ConcreteLLM(LLMBase):
 
 def test_llmbase_cannot_be_instantiated_directly() -> None:
     with pytest.raises(TypeError):
-        LLMBase(model_name="m")  # type: ignore[abstract]
+        LLMBase(model_name="m")
 
 
 def test_llmbase_sets_model_name() -> None:

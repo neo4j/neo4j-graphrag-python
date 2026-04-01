@@ -12,9 +12,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Any, Optional
+from typing import Any, List, Optional
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
-from typing import List
 
 import httpx
 import pytest
@@ -86,7 +85,7 @@ def test_mistralai_llm_invoke_with_message_history(mock_mistral: Mock) -> None:
     messages: List[LLMMessage] = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
-    llm.client.chat.complete.assert_called_once_with(  # type: ignore[attr-defined]
+    llm.client.chat.complete.assert_called_once_with(
         messages=messages,
         model=model,
     )
@@ -118,12 +117,12 @@ def test_mistralai_llm_invoke_with_message_history_and_system_instruction(
     messages: List[LLMMessage] = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
-    llm.client.chat.complete.assert_called_once_with(  # type: ignore[attr-defined]
+    llm.client.chat.complete.assert_called_once_with(
         messages=messages,
         model=model,
     )
 
-    assert llm.client.chat.complete.call_count == 1  # type: ignore
+    assert llm.client.chat.complete.call_count == 1
 
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
@@ -232,8 +231,8 @@ def test_mistralai_llm_invoke_v2_happy_path(mock_mistral: Mock) -> None:
     assert response.content == "mistral v2 response"
 
     # Verify the correct method was called
-    llm.client.chat.complete.assert_called_once()  # type: ignore[attr-defined]
-    call_args = llm.client.chat.complete.call_args[1]  # type: ignore[attr-defined]
+    llm.client.chat.complete.assert_called_once()
+    call_args = llm.client.chat.complete.call_args[1]
     assert call_args["model"] == "mistral-model"
     assert len(call_args["messages"]) == 2
 
@@ -262,8 +261,8 @@ def test_mistralai_llm_invoke_v2_with_conversation_history(mock_mistral: Mock) -
     assert response.content == "mistral conversation response"
 
     # Verify the correct number of messages were passed
-    llm.client.chat.complete.assert_called_once()  # type: ignore[attr-defined]
-    call_args = llm.client.chat.complete.call_args[1]  # type: ignore[attr-defined]
+    llm.client.chat.complete.assert_called_once()
+    call_args = llm.client.chat.complete.call_args[1]
     assert len(call_args["messages"]) == 4
 
 
@@ -288,8 +287,8 @@ def test_mistralai_llm_invoke_v2_no_system_message(mock_mistral: Mock) -> None:
     assert response.content == "mistral no system response"
 
     # Verify only user message was passed
-    llm.client.chat.complete.assert_called_once()  # type: ignore[attr-defined]
-    call_args = llm.client.chat.complete.call_args[1]  # type: ignore[attr-defined]
+    llm.client.chat.complete.assert_called_once()
+    call_args = llm.client.chat.complete.call_args[1]
     assert len(call_args["messages"]) == 1
 
 
