@@ -16,6 +16,10 @@
 - SimpleKG pipeline (experimental): the `from_pdf` parameter is deprecated in favor of `from_file` (PDF and Markdown inputs). `from_pdf` still works but emits a deprecation warning and will be removed in a future version.
 - Data loaders (experimental): the `PdfDocument` type name is deprecated in favor of `LoadedDocument`; `PdfDocument` remains available as a backward-compatible alias with a deprecation warning.
 
+### Fixed
+
+- Fixed `Neo4jGraphParquetFormatter` uses an explicit PyArrow schema (with embeddings typed as `float32`) derived from the union of all row keys.
+
 ## 1.14.1
 
 ### Added
