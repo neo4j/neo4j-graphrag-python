@@ -60,8 +60,7 @@ try:
         Tool as VertexAITool,
     )
 except ImportError:
-    GenerativeModel = cast(Any, None)
-    ResponseValidationError = cast(Any, None)
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -150,7 +149,10 @@ class VertexAILLM(LLMBase):
         rate_limit_handler: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ):
-        if GenerativeModel is None or ResponseValidationError is None:
+        if (
+            "GenerativeModel" not in globals()
+            or "ResponseValidationError" not in globals()
+        ):
             raise ImportError(
                 """Could not import Vertex AI Python client.
                 Please install it with `pip install "neo4j-graphrag[google]"`."""

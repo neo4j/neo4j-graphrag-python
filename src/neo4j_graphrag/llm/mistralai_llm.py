@@ -54,8 +54,7 @@ try:
     )
     from mistralai.models.sdkerror import SDKError
 except ImportError:
-    Mistral = cast(Any, None)
-    SDKError = cast(Any, None)
+    pass
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return
@@ -77,7 +76,7 @@ class MistralAILLM(LLMBase):
             kwargs: All other parameters will be passed to the Mistral client.
 
         """
-        if Mistral is None:
+        if "Mistral" not in globals():
             raise ImportError(
                 """Could not import Mistral Python client.
                 Please install it with `pip install "neo4j-graphrag[mistralai]"`."""

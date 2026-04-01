@@ -290,7 +290,7 @@ class CohereLLM(LLMBase):
                 raise LLMGenerationError(e.errors()) from e
             messages.extend(cast(Iterable[dict[str, Any]], message_history))
         messages.append(UserMessage(content=input).model_dump())
-        return messages
+        return cast(ChatMessages, messages)
 
     def get_messages_v2(
         self,
@@ -309,4 +309,4 @@ class CohereLLM(LLMBase):
                 )
             else:
                 raise ValueError(f"Unknown role: {i['role']}")
-        return cast(ChatMessages, messages)
+        return messages
