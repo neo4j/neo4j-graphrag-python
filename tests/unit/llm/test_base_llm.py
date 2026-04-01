@@ -29,6 +29,7 @@ from neo4j_graphrag.utils.rate_limit import NoOpRateLimitHandler
 # Minimal concrete subclass used across tests
 # ---------------------------------------------------------------------------
 
+
 class _ConcreteLLM(LLMBase):
     """Minimal LLMBase subclass for unit testing."""
 
@@ -61,6 +62,7 @@ class _ConcreteLLM(LLMBase):
 # Instantiation
 # ---------------------------------------------------------------------------
 
+
 def test_llmbase_cannot_be_instantiated_directly() -> None:
     with pytest.raises(TypeError):
         LLMBase(model_name="m")  # type: ignore[abstract]
@@ -92,13 +94,16 @@ def test_llmbase_init_does_not_emit_deprecation_warning() -> None:
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         _ConcreteLLM(model_name="m")
-    deprecation_warnings = [w for w in caught if issubclass(w.category, DeprecationWarning)]
+    deprecation_warnings = [
+        w for w in caught if issubclass(w.category, DeprecationWarning)
+    ]
     assert deprecation_warnings == []
 
 
 # ---------------------------------------------------------------------------
 # invoke routing
 # ---------------------------------------------------------------------------
+
 
 def test_invoke_with_str_routes_to_v1() -> None:
     llm = _ConcreteLLM(model_name="m")
@@ -128,6 +133,7 @@ def test_invoke_v2_accepts_response_format_kwarg() -> None:
 # ainvoke routing
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_ainvoke_with_str_routes_to_v1() -> None:
     llm = _ConcreteLLM(model_name="m")
@@ -146,6 +152,7 @@ async def test_ainvoke_with_list_routes_to_v2() -> None:
 # ---------------------------------------------------------------------------
 # Tool calling defaults (inherited from LLMInterface)
 # ---------------------------------------------------------------------------
+
 
 def test_invoke_with_tools_raises_not_implemented() -> None:
     llm = _ConcreteLLM(model_name="m")
