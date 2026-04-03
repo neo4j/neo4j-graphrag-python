@@ -62,7 +62,7 @@ class CohereLLM(LLMInterface, LLMInterfaceV2):
     """Interface for large language models on the Cohere platform
 
     Args:
-        model_name (str, optional): Name of the LLM to use. Defaults to "gemini-1.5-flash-001".
+        model_name (str, optional): Name of the LLM to use. Defaults to "".
         model_params (Optional[dict], optional): Additional parameters for LLMInterface(V1) passed to the model when text is sent to it. Defaults to None.
         system_instruction (Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
         rate_limit_handler (Optional[RateLimitHandler], optional): A rate limit handler for LLMInterface(V1) to manage API rate limits. Defaults to None.

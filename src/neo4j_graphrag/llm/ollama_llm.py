@@ -247,7 +247,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
-        """Asynchronously sends a text input to the OpenAI chat
+        """Asynchronously sends a text input to the Ollama chat
         completion model and returns the response's content.
 
         Args:
@@ -257,7 +257,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
             system_instruction (Optional[str]): An option to override the llm system message for this invocation.
 
         Returns:
-            LLMResponse: The response from OpenAI.
+            LLMResponse: The response from Ollama.
 
         Raises:
             LLMGenerationError: If anything goes wrong.
