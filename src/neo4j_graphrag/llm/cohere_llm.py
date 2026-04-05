@@ -303,6 +303,10 @@ class CohereLLM(LLMInterface, LLMInterfaceV2):
             ),
         )
 
+    async def aclose(self) -> None:
+        self.client.close()
+        await self.async_client.aclose()
+
     # subsdiary methods
     def get_messages(
         self,

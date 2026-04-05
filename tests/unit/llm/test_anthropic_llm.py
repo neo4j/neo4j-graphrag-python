@@ -12,6 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
+import warnings
 from typing import List
 import sys
 from typing import Generator
@@ -423,3 +424,30 @@ def test_anthropic_invoke_v2_with_response_format_raises_error(
     assert "AnthropicLLM does not currently support structured output" in str(
         exc_info.value
     )
+
+
+def test_anthropic_llm_close(mock_anthropic: Mock) -> None:
+    mock_anthropic.AsyncAnthropic.return_value.aclose = AsyncMock()
+
+    llm = AnthropicLLM("claude-3-opus-20240229")
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        llm.close()
+
+    mock_anthropic.Anthropic.return_value.close.assert_called_once()
+    mock_anthropic.AsyncAnthropic.return_value.aclose.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_anthropic_llm_aclose(mock_anthropic: Mock) -> None:
+    mock_anthropic.AsyncAnthropic.return_value.aclose = AsyncMock()
+
+    llm = AnthropicLLM("claude-3-opus-20240229")
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        await llm.aclose()
+
+    mock_anthropic.Anthropic.return_value.close.assert_called_once()
+    mock_anthropic.AsyncAnthropic.return_value.aclose.assert_called_once()

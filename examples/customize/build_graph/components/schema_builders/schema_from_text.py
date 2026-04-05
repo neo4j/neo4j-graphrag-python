@@ -61,7 +61,7 @@ async def extract_and_save_schema() -> None:
 
     # Define LLM parameters
     llm_model_params = {
-        "max_tokens": 2000,
+        "max_completion_tokens": 2000,
         "response_format": {"type": "json_object"},
         "temperature": 0,  # Lower temperature for more consistent output
     }
@@ -104,7 +104,7 @@ async def extract_and_save_schema() -> None:
 
     finally:
         # Close the LLM client
-        await llm.async_client.close()
+        await llm.aclose()
 
 
 async def main() -> None:
