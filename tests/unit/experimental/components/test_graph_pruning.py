@@ -25,6 +25,7 @@ from neo4j_graphrag.experimental.components.graph_pruning import (
     PruningStats,
 )
 from neo4j_graphrag.experimental.components.schema import (
+    ConstraintKind,
     ConstraintType,
     GraphSchema,
     NodeType,
@@ -167,7 +168,7 @@ def schema_person_name_required(
         node_types=(node_type_required_name,),
         constraints=(
             ConstraintType(
-                type="EXISTENCE",
+                type=ConstraintKind.EXISTENCE,
                 node_type="Person",
                 property_name="name",
             ),
@@ -299,7 +300,7 @@ def test_graph_pruning_enforce_relationships_lexical_graph_with_pruned_nodes(
         node_types=(person_type,),
         constraints=(
             ConstraintType(
-                type="EXISTENCE",
+                type=ConstraintKind.EXISTENCE,
                 node_type="Person",
                 property_name="name",
             ),
