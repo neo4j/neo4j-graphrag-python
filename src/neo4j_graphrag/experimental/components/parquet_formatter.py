@@ -28,6 +28,7 @@ from dataclasses import dataclass, field
 from io import BytesIO
 from typing import Any, DefaultDict, Optional
 
+from neo4j_graphrag.experimental.components.schema import ConstraintKind
 from neo4j_graphrag.experimental.components.types import (
     LexicalGraphConfig,
     Neo4jGraph,
@@ -99,7 +100,7 @@ def get_unique_properties_for_node_type(
 
     for constraint in constraints:
         # Check if this constraint applies to the node's label
-        if constraint.get("type") == "UNIQUENESS":
+        if constraint.get("type") == ConstraintKind.UNIQUENESS.value:
             constraint_node_type = constraint.get("node_type", "")
             if constraint_node_type == node_label:
                 property_name = constraint.get("property_name", "")

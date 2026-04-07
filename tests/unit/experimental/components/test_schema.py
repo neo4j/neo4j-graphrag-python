@@ -24,6 +24,7 @@ from pydantic import ValidationError
 
 from neo4j_graphrag.exceptions import SchemaValidationError, SchemaExtractionError
 from neo4j_graphrag.experimental.components.schema import (
+    ConstraintKind,
     SchemaBuilder,
     NodeType,
     PropertyType,
@@ -179,6 +180,7 @@ def test_constraint_type_initialization() -> None:
     constraint = ConstraintType(
         type="UNIQUENESS", node_type="Person", property_name="name"
     )
+    assert constraint.type == ConstraintKind.UNIQUENESS
     assert constraint.type == "UNIQUENESS"
     assert constraint.node_type == "Person"
     assert constraint.property_name == "name"

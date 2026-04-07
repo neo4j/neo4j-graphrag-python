@@ -81,7 +81,7 @@ def print_schema_summary(schema: GraphSchema, title: str) -> None:
         print(f"\nConstraints ({len(schema.constraints)}):")
         for constraint in schema.constraints:
             print(
-                f"  - {constraint.type} on {constraint.node_type}.{constraint.property_name}"
+                f"  - {constraint.type.value} on {constraint.node_type}.{constraint.property_name}"
             )
 
 

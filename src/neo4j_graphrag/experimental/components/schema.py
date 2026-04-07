@@ -18,6 +18,7 @@ import json
 import logging
 import re
 import warnings
+from enum import Enum
 from pathlib import Path
 from typing import (
     Any,
@@ -67,20 +68,36 @@ logger = logging.getLogger(__name__)
 _DUNDER_RE = re.compile(r"^__|__$")
 
 
+class ConstraintKind(str, Enum):
+    """Kinds of constraints supported on :class:`GraphSchema`."""
+
+    UNIQUENESS = "UNIQUENESS"
+    EXISTENCE = "EXISTENCE"
+
+
+def _constraint_type_str(raw: Any) -> Optional[str]:
+    """Normalize ``type`` from dict or model input to ``UNIQUENESS`` / ``EXISTENCE`` or None."""
+    if raw is None:
+        return None
+    if isinstance(raw, ConstraintKind):
+        return raw.value
+    return str(raw)
+
+
 def _constraint_dedup_key(constraint: Dict[str, Any]) -> tuple[Any, ...]:
     """Stable key for deduplicating constraint dicts during normalization."""
-    ctype = constraint.get("type")
+    ctype = _constraint_type_str(constraint.get("type"))
     prop = constraint.get("property_name")
-    if ctype == "UNIQUENESS":
+    if ctype == ConstraintKind.UNIQUENESS.value:
         return (
-            "UNIQUENESS",
+            ConstraintKind.UNIQUENESS.value,
             (constraint.get("node_type") or "").strip(),
             prop,
         )
-    if ctype == "EXISTENCE":
+    if ctype == ConstraintKind.EXISTENCE.value:
         nt = (constraint.get("node_type") or "").strip() or None
         rt = (constraint.get("relationship_type") or "").strip() or None
-        return ("EXISTENCE", nt, rt, prop)
+        return (ConstraintKind.EXISTENCE.value, nt, rt, prop)
     return (ctype, str(constraint))
 
 
@@ -253,7 +270,7 @@ class ConstraintType(BaseModel):
     property as mandatory on every node of a label or every relationship of a type.
     """
 
-    type: Literal["UNIQUENESS", "EXISTENCE"]
+    type: ConstraintKind
     property_name: str
     node_type: Optional[str] = None
     relationship_type: Optional[str] = None
@@ -266,17 +283,22 @@ class ConstraintType(BaseModel):
     def validate_constraint_fields(self) -> Self:
         node = (self.node_type or "").strip()
         rel = (self.relationship_type or "").strip()
-        if self.type == "UNIQUENESS":
-            if not node:
-                raise ValueError("UNIQUENESS constraint requires a non-empty node_type")
-            if rel:
-                raise ValueError("UNIQUENESS constraint must not set relationship_type")
-        elif self.type == "EXISTENCE":
-            if bool(node) == bool(rel):
-                raise ValueError(
-                    "EXISTENCE constraint requires exactly one of node_type or "
-                    "relationship_type to be set"
-                )
+        match self.type:
+            case ConstraintKind.UNIQUENESS:
+                if not node:
+                    raise ValueError(
+                        "UNIQUENESS constraint requires a non-empty node_type"
+                    )
+                if rel:
+                    raise ValueError(
+                        "UNIQUENESS constraint must not set relationship_type"
+                    )
+            case ConstraintKind.EXISTENCE:
+                if bool(node) == bool(rel):
+                    raise ValueError(
+                        "EXISTENCE constraint requires exactly one of node_type or "
+                        "relationship_type to be set"
+                    )
         return self
 
 
@@ -394,13 +416,14 @@ class GraphSchema(DataModel):
                 continue
             props_out: list[Any] = []
             for prop in nt_dict.get("properties") or []:
+                pname: Optional[str]
                 if isinstance(prop, PropertyType):
                     req = prop.required
                     pname = prop.name
                     prop_d = prop.model_dump(mode="python")
                 elif isinstance(prop, dict):
                     req = prop.get("required") is True
-                    pname = prop.get("name")
+                    pname = cast(Optional[str], prop.get("name"))
                     prop_d = dict(prop)
                 else:
                     props_out.append(prop)
@@ -443,27 +466,28 @@ class GraphSchema(DataModel):
                 continue
             props_out = []
             for prop in rt_dict.get("properties") or []:
+                pname_rel: Optional[str]
                 if isinstance(prop, PropertyType):
                     req = prop.required
-                    pname = prop.name
+                    pname_rel = prop.name
                     prop_d = prop.model_dump(mode="python")
                 elif isinstance(prop, dict):
                     req = prop.get("required") is True
-                    pname = prop.get("name")
+                    pname_rel = cast(Optional[str], prop.get("name"))
                     prop_d = dict(prop)
                 else:
                     props_out.append(prop)
                     continue
                 if req is True:
                     legacy_converted = True
-                    if pname:
-                        key = ("EXISTENCE", None, rlabel, pname)
+                    if pname_rel:
+                        key = ("EXISTENCE", None, rlabel, pname_rel)
                         if key not in seen:
                             constraints.append(
                                 {
                                     "type": "EXISTENCE",
                                     "relationship_type": rlabel,
-                                    "property_name": pname,
+                                    "property_name": pname_rel,
                                 }
                             )
                             seen.add(key)
@@ -544,6 +568,51 @@ class GraphSchema(DataModel):
             )
         return self
 
+    def _validate_uniqueness_constraint(self, constraint: ConstraintType) -> None:
+        nt_label = (constraint.node_type or "").strip()
+        if nt_label not in self._node_type_index:
+            raise SchemaValidationError(
+                f"Constraint references undefined node type: {constraint.node_type}"
+            )
+        node_type = self._node_type_index[nt_label]
+        valid_property_names = {p.name for p in node_type.properties}
+        if constraint.property_name not in valid_property_names:
+            raise SchemaValidationError(
+                f"Constraint references undefined property '{constraint.property_name}' "
+                f"on node type '{nt_label}'. "
+                f"Valid properties: {valid_property_names}"
+            )
+
+    def _validate_existence_constraint(self, constraint: ConstraintType) -> None:
+        nt_label = (constraint.node_type or "").strip()
+        rt_label = (constraint.relationship_type or "").strip()
+        if nt_label:
+            if nt_label not in self._node_type_index:
+                raise SchemaValidationError(
+                    f"Constraint references undefined node type: {nt_label}"
+                )
+            node_t = self._node_type_index[nt_label]
+            valid_names = {p.name for p in node_t.properties}
+            if constraint.property_name not in valid_names:
+                raise SchemaValidationError(
+                    f"EXISTENCE constraint references undefined property "
+                    f"'{constraint.property_name}' on node type '{nt_label}'. "
+                    f"Valid properties: {valid_names}"
+                )
+        elif rt_label:
+            if rt_label not in self._relationship_type_index:
+                raise SchemaValidationError(
+                    f"Constraint references undefined relationship type: {rt_label}"
+                )
+            rel_t = self._relationship_type_index[rt_label]
+            valid_names = {p.name for p in rel_t.properties}
+            if constraint.property_name not in valid_names:
+                raise SchemaValidationError(
+                    f"EXISTENCE constraint references undefined property "
+                    f"'{constraint.property_name}' on relationship type '{rt_label}'. "
+                    f"Valid properties: {valid_names}"
+                )
+
     @model_validator(mode="after")
     def validate_constraints_against_node_types(self) -> Self:
         """Validate UNIQUENESS and EXISTENCE constraints against declared types."""
@@ -554,53 +623,11 @@ class GraphSchema(DataModel):
                 raise SchemaValidationError(
                     f"Constraint has no property name: {constraint}. Property name is required."
                 )
-            if constraint.type == "UNIQUENESS":
-                nt_label = (constraint.node_type or "").strip()
-                if nt_label not in self._node_type_index:
-                    raise SchemaValidationError(
-                        f"Constraint references undefined node type: {constraint.node_type}"
-                    )
-                node_type = self._node_type_index[nt_label]
-                valid_property_names = {p.name for p in node_type.properties}
-                if constraint.property_name not in valid_property_names:
-                    raise SchemaValidationError(
-                        f"Constraint references undefined property '{constraint.property_name}' "
-                        f"on node type '{nt_label}'. "
-                        f"Valid properties: {valid_property_names}"
-                    )
-            elif constraint.type == "EXISTENCE":
-                nt_label = (constraint.node_type or "").strip()
-                rt_label = (constraint.relationship_type or "").strip()
-                if nt_label and rt_label:
-                    raise SchemaValidationError(
-                        f"EXISTENCE constraint must not set both node_type and relationship_type: {constraint}"
-                    )
-                if nt_label:
-                    if nt_label not in self._node_type_index:
-                        raise SchemaValidationError(
-                            f"Constraint references undefined node type: {nt_label}"
-                        )
-                    node_t = self._node_type_index[nt_label]
-                    valid_names = {p.name for p in node_t.properties}
-                    if constraint.property_name not in valid_names:
-                        raise SchemaValidationError(
-                            f"EXISTENCE constraint references undefined property "
-                            f"'{constraint.property_name}' on node type '{nt_label}'. "
-                            f"Valid properties: {valid_names}"
-                        )
-                elif rt_label:
-                    if rt_label not in self._relationship_type_index:
-                        raise SchemaValidationError(
-                            f"Constraint references undefined relationship type: {rt_label}"
-                        )
-                    rel_t = self._relationship_type_index[rt_label]
-                    valid_names = {p.name for p in rel_t.properties}
-                    if constraint.property_name not in valid_names:
-                        raise SchemaValidationError(
-                            f"EXISTENCE constraint references undefined property "
-                            f"'{constraint.property_name}' on relationship type '{rt_label}'. "
-                            f"Valid properties: {valid_names}"
-                        )
+            match constraint.type:
+                case ConstraintKind.UNIQUENESS:
+                    self._validate_uniqueness_constraint(constraint)
+                case ConstraintKind.EXISTENCE:
+                    self._validate_existence_constraint(constraint)
         return self
 
     def node_type_from_label(self, label: str) -> Optional[NodeType]:
@@ -609,27 +636,36 @@ class GraphSchema(DataModel):
     def relationship_type_from_label(self, label: str) -> Optional[RelationshipType]:
         return self._relationship_type_index.get(label)
 
+    def _existence_constraints_for_node_label(
+        self, label: str
+    ) -> Iterator[ConstraintType]:
+        for c in self.constraints:
+            if c.type != ConstraintKind.EXISTENCE:
+                continue
+            if (c.node_type or "").strip() == label:
+                yield c
+
+    def _existence_constraints_for_relationship_type(
+        self, rel_type: str
+    ) -> Iterator[ConstraintType]:
+        for c in self.constraints:
+            if c.type != ConstraintKind.EXISTENCE:
+                continue
+            if (c.relationship_type or "").strip() == rel_type:
+                yield c
+
     def existence_required_property_names_for_node(self, label: str) -> frozenset[str]:
         """Property names that must exist on nodes with this label (EXISTENCE constraints)."""
-        names: set[str] = set()
-        for c in self.constraints:
-            if c.type != "EXISTENCE":
-                continue
-            nt = (c.node_type or "").strip()
-            if nt == label:
-                names.add(c.property_name)
-        return frozenset(names)
+        return frozenset(
+            c.property_name for c in self._existence_constraints_for_node_label(label)
+        )
 
     def existence_required_property_names_for_relationship(self, rel_type: str) -> frozenset[str]:
         """Property names that must exist on relationships of this type (EXISTENCE constraints)."""
-        names: set[str] = set()
-        for c in self.constraints:
-            if c.type != "EXISTENCE":
-                continue
-            rt = (c.relationship_type or "").strip()
-            if rt == rel_type:
-                names.add(c.property_name)
-        return frozenset(names)
+        return frozenset(
+            c.property_name
+            for c in self._existence_constraints_for_relationship_type(rel_type)
+        )
 
     @classmethod
     def model_json_schema(cls, **kwargs: Any) -> dict[str, Any]:  # type: ignore[override]
@@ -1116,8 +1152,11 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
 
         filtered_constraints = []
         for constraint in constraints:
-            ctype = constraint.get("type")
-            if ctype not in ("UNIQUENESS", "EXISTENCE"):
+            ctype = _constraint_type_str(constraint.get("type"))
+            if ctype not in (
+                ConstraintKind.UNIQUENESS.value,
+                ConstraintKind.EXISTENCE.value,
+            ):
                 logging.info(
                     f"Filtering out constraint: {constraint}. "
                     f"Only UNIQUENESS and EXISTENCE constraints are supported."
@@ -1131,7 +1170,7 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
                 )
                 continue
 
-            if ctype == "UNIQUENESS":
+            if ctype == ConstraintKind.UNIQUENESS.value:
                 node_type = constraint.get("node_type")
                 if not node_type or not str(node_type).strip():
                     logging.info(
