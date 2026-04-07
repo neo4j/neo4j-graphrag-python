@@ -52,17 +52,20 @@ def schema_visualization(
 
     schema_object = GraphSchema.model_validate(schema)
 
-    def _format_property_name(p: PropertyType) -> str:
+    def _format_property_name(
+        p: PropertyType, existence_required: frozenset[str]
+    ) -> str:
         """
 
         Args:
             p (PropertyType): the property to be formatted
+            existence_required: property names mandated by EXISTENCE constraints
 
         Returns:
-            str: the property name, suffixed with '*' if the property is required
+            str: the property name, suffixed with '*' if EXISTENCE requires it
 
         """
-        return p.name + ("*" if p.required else "")
+        return p.name + ("*" if p.name in existence_required else "")
 
     def _relationship_properties(rel_type: str) -> dict[str, str]:
         """Returns a dict {prop_name: prop_type} for all relationship properties.
@@ -76,8 +79,12 @@ def schema_visualization(
         for relationship_type in schema_object.relationship_types:
             if relationship_type.label != rel_type:
                 continue
+            exist = schema_object.existence_required_property_names_for_relationship(
+                rel_type
+            )
             return {
-                _format_property_name(p): p.type for p in relationship_type.properties
+                _format_property_name(p, exist): p.type
+                for p in relationship_type.properties
             }
         return {}
 
@@ -90,7 +97,10 @@ def schema_visualization(
         Returns:
             dict[str, str]: the node properties {name: type} mapping for display
         """
-        return {_format_property_name(p): p.type for p in node_type.properties}
+        exist = schema_object.existence_required_property_names_for_node(
+            node_type.label
+        )
+        return {_format_property_name(p, exist): p.type for p in node_type.properties}
 
     nodes = [
         Node(  # type: ignore

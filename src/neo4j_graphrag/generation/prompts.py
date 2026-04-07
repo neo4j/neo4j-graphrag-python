@@ -223,13 +223,12 @@ IMPORTANT RULES:
 8.2 Only use properties that seem to not have too many missing values in the sample.
 8.3 Constraints reference node_types by label and specify which property is unique.
 8.4 If a property appears in a uniqueness constraint it MUST also appear in the corresponding node_type as a property.
-9. REQUIRED PROPERTIES:
-9.1 Mark a property as "required": true if every instance of that node/relationship type MUST have this property (non-nullable).
-9.2 Mark a property as "required": false if the property is optional and may be absent on some instances.
-9.3 Properties that are identifiers, names, or essential characteristics are typically required.
-9.4 Properties that are supplementary information (phone numbers, descriptions, metadata) are typically optional.
-9.5 When uncertain, default to "required": false.
-9.6 If a property has a UNIQUENESS constraint, it MUST be marked as "required": true.
+9. EXISTENCE CONSTRAINTS (optional; mandatory properties):
+9.1 Use EXISTENCE when every node of a label (or every relationship of a type) must carry a given property.
+9.2 For a mandatory property on a node label, add an EXISTENCE entry with ``node_type`` and ``property_name``.
+9.3 For a mandatory property on a relationship type, add an EXISTENCE entry with ``relationship_type`` and ``property_name`` (do not set ``node_type`` on that entry).
+9.4 Each EXISTENCE entry must reference a property that also appears on the corresponding node_type or relationship_types entry.
+9.5 UNIQUENESS does not imply mandatory presence: only elements that have all constrained properties are checked for uniqueness. Add EXISTENCE separately when the property must be present on every element of that label or relationship type.
 10. Never use double underscores (__) as a prefix or suffix in node labels or relationship types (e.g. __Person__ or __KNOWS__ are forbidden).
 
 Accepted property types are: BOOLEAN, DATE, DURATION, FLOAT, INTEGER, LIST,
@@ -243,13 +242,11 @@ Return a valid JSON object that follows this precise structure:
       "properties": [
         {{
           "name": "name",
-          "type": "STRING",
-          "required": true
+          "type": "STRING"
         }},
         {{
           "name": "email",
-          "type": "STRING",
-          "required": false
+          "type": "STRING"
         }}
       ]
     }}
@@ -257,7 +254,10 @@ Return a valid JSON object that follows this precise structure:
   ],
   "relationship_types": [
     {{
-      "label": "WORKS_FOR"
+      "label": "WORKS_FOR",
+      "properties": [
+        {{ "name": "since", "type": "DATE" }}
+      ]
     }}
     ...
   ],
@@ -270,6 +270,11 @@ Return a valid JSON object that follows this precise structure:
       "type": "UNIQUENESS",
       "node_type": "Person",
       "property_name": "name"
+    }},
+    {{
+      "type": "EXISTENCE",
+      "relationship_type": "WORKS_FOR",
+      "property_name": "since"
     }}
     ...
   ]
