@@ -461,7 +461,9 @@ class GraphSchema(DataModel):
             if not rlabel:
                 rel_types_out.append(rt_dict)
                 continue
-            if rt_dict.get("properties") is None and not isinstance(rt, RelationshipType):
+            if rt_dict.get("properties") is None and not isinstance(
+                rt, RelationshipType
+            ):
                 rel_types_out.append(rt_dict)
                 continue
             props_out = []
@@ -660,7 +662,9 @@ class GraphSchema(DataModel):
             c.property_name for c in self._existence_constraints_for_node_label(label)
         )
 
-    def existence_required_property_names_for_relationship(self, rel_type: str) -> frozenset[str]:
+    def existence_required_property_names_for_relationship(
+        self, rel_type: str
+    ) -> frozenset[str]:
         """Property names that must exist on relationships of this type (EXISTENCE constraints)."""
         return frozenset(
             c.property_name
@@ -1144,7 +1148,9 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
                 rlab = rel_dict.get("label")
                 if rlab:
                     properties = rel_dict.get("properties", [])
-                    property_names = {p.get("name") for p in properties if p.get("name")}
+                    property_names = {
+                        p.get("name") for p in properties if p.get("name")
+                    }
                     rel_type_properties[rlab] = property_names
 
         valid_node_labels = set(node_type_properties.keys())

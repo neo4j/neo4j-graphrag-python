@@ -538,8 +538,12 @@ def test_graph_pruning_validate_relationship(
     rel_for_schema = relationship_type or RelationshipType(label="REL")
     schema = GraphSchema(
         node_types=(
-            NodeType(label="Person", properties=[PropertyType(name="n", type="STRING")]),
-            NodeType(label="Location", properties=[PropertyType(name="n", type="STRING")]),
+            NodeType(
+                label="Person", properties=[PropertyType(name="n", type="STRING")]
+            ),
+            NodeType(
+                label="Location", properties=[PropertyType(name="n", type="STRING")]
+            ),
         ),
         relationship_types=(rel_for_schema,),
         patterns=patterns,
