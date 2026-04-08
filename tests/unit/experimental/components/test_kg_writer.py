@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import tempfile
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 from unittest import mock
@@ -767,3 +768,286 @@ async def test_parquet_writer_mixed_property_types() -> None:
         # Both ages should have been coerced to str
         ages = {v.as_py() for v in table.column("age")}
         assert ages == {"45", "30"}
+
+
+# ---------------------------------------------------------------------------
+# Regression tests: node embedding column must be present regardless of row order
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "failed_first",
+    [
+        pytest.param(True, id="failed_batch_first"),
+        pytest.param(False, id="succeeded_batch_first"),
+    ],
+)
+def test_node_embedding_column_present_regardless_of_row_order(
+    failed_first: bool,
+) -> None:
+    """Embedding column must exist in the Parquet table regardless of which rows come first.
+
+    Regression test for the bug where failed-batch nodes (empty embedding_properties)
+    appearing before succeeded-batch nodes caused PyArrow to omit the embedding column
+    entirely from the inferred schema.
+    """
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    formatter = Neo4jGraphParquetFormatter()
+
+    # Rows simulating two batches of the same node label:
+    # - failed-batch row: no embedding key (as if embedding_properties was empty)
+    # - succeeded-batch row: embedding key present
+    failed_row: dict[str, Any] = {
+        "__id__": "node-1",
+        "name": "Alice",
+        "labels": ["Person", "__Entity__"],
+    }
+    succeeded_row: dict[str, Any] = {
+        "__id__": "node-2",
+        "name": "Bob",
+        "labels": ["Person", "__Entity__"],
+        "embedding": [0.1, 0.2, 0.3],
+    }
+
+    rows = [failed_row, succeeded_row] if failed_first else [succeeded_row, failed_row]
+
+    parquet_bytes, schema = formatter.format_parquet(rows, "node label 'Person'")
+
+    # The embedding column must always be present in the schema
+    assert "embedding" in schema.names, (
+        f"'embedding' column missing from schema when failed_first={failed_first}. "
+        f"Schema columns: {schema.names}"
+    )
+
+    # Read back the table and verify nulls and types
+    table = pq.read_table(BytesIO(parquet_bytes))
+    assert "embedding" in table.column_names
+
+    # The row without an embedding should have a null value
+    rows_as_dicts = table.to_pylist()
+    rows_by_id = {r["__id__"]: r for r in rows_as_dicts}
+    assert (
+        rows_by_id["node-1"]["embedding"] is None
+    ), "Row without embedding should have null value in the embedding column"
+    assert (
+        rows_by_id["node-2"]["embedding"] is not None
+    ), "Row with embedding should have a non-null value in the embedding column"
+
+    # The embedding field type must be a list of floats (variable or fixed-size)
+    emb_field = schema.field("embedding")
+    emb_type = emb_field.type
+    # Because node-1 has null, the formatter must fall back to list_(float32)
+    assert pa.types.is_list(emb_type) or pa.types.is_fixed_size_list(
+        emb_type
+    ), f"Unexpected embedding field type: {emb_type}"
+    # The value type must be float32
+    assert (
+        emb_type.value_type == pa.float32()
+    ), f"Embedding value type should be float32, got {emb_type.value_type}"
+
+
+# ---------------------------------------------------------------------------
+# Regression tests: relationship embedding column must be present regardless of row order
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "failed_first",
+    [
+        pytest.param(True, id="failed_batch_first"),
+        pytest.param(False, id="succeeded_batch_first"),
+    ],
+)
+def test_relationship_embedding_column_present_regardless_of_row_order(
+    failed_first: bool,
+) -> None:
+    """Embedding column must exist in the relationship Parquet table regardless of which rows come first.
+
+    Regression test for the bug where failed-batch relationships (empty embedding_properties)
+    appearing before succeeded-batch relationships caused PyArrow to omit the embedding column
+    entirely from the inferred schema.
+    """
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    formatter = Neo4jGraphParquetFormatter()
+
+    # Rows simulating two batches of the same relationship type:
+    # - failed-batch row: no embedding key (as if embedding_properties was empty)
+    # - succeeded-batch row: embedding key present
+    failed_row: dict[str, Any] = {
+        "from": "node-1",
+        "to": "node-2",
+        "from_label": "Person",
+        "to_label": "Person",
+        "type": "KNOWS",
+        "since": "2020",
+    }
+    succeeded_row: dict[str, Any] = {
+        "from": "node-3",
+        "to": "node-4",
+        "from_label": "Person",
+        "to_label": "Person",
+        "type": "KNOWS",
+        "since": "2021",
+        "embedding": [0.1, 0.2, 0.3],
+    }
+
+    rows = [failed_row, succeeded_row] if failed_first else [succeeded_row, failed_row]
+
+    parquet_bytes, schema = formatter.format_parquet(
+        rows, "relationship 'Person_KNOWS_Person'"
+    )
+
+    # The embedding column must always be present in the schema
+    assert "embedding" in schema.names, (
+        f"'embedding' column missing from relationship schema when failed_first={failed_first}. "
+        f"Schema columns: {schema.names}"
+    )
+
+    # Read back the table and verify nulls and types
+    table = pq.read_table(BytesIO(parquet_bytes))
+    assert "embedding" in table.column_names
+
+    # The row without an embedding should have a null value
+    rows_as_dicts = table.to_pylist()
+    rows_by_from = {r["from"]: r for r in rows_as_dicts}
+    assert (
+        rows_by_from["node-1"]["embedding"] is None
+    ), "Relationship row without embedding should have null value in the embedding column"
+    assert (
+        rows_by_from["node-3"]["embedding"] is not None
+    ), "Relationship row with embedding should have a non-null value in the embedding column"
+
+    # The embedding field type must be a list of floats (variable or fixed-size)
+    emb_field = schema.field("embedding")
+    emb_type = emb_field.type
+    # Because the failed row has null, the formatter must fall back to list_(float32)
+    assert pa.types.is_list(emb_type) or pa.types.is_fixed_size_list(
+        emb_type
+    ), f"Unexpected relationship embedding field type: {emb_type}"
+    # The value type must be float32
+    assert (
+        emb_type.value_type == pa.float32()
+    ), f"Relationship embedding value type should be float32, got {emb_type.value_type}"
+
+
+# ---------------------------------------------------------------------------
+# Degenerate case: all rows lack the embedding key (all-null column path)
+# ---------------------------------------------------------------------------
+
+
+def test_format_parquet_all_rows_missing_embedding_does_not_crash() -> None:
+    """format_parquet must not raise when no row has an embedding key.
+
+    When every row lacks a given key the formatter falls back to pa.null() for
+    that column's type.  This test verifies that path doesn't crash and that
+    the resulting table contains only the columns that were actually present.
+    """
+    pytest.importorskip("pyarrow")
+    import pyarrow.parquet as pq
+
+    formatter = Neo4jGraphParquetFormatter()
+
+    rows: list[dict[str, Any]] = [
+        {"__id__": "node-1", "name": "Alice", "labels": ["Person"]},
+        {"__id__": "node-2", "name": "Bob", "labels": ["Person"]},
+    ]
+
+    parquet_bytes, schema = formatter.format_parquet(rows, "node label 'Person'")
+
+    assert (
+        "embedding" not in schema.names
+    ), "Embedding column should not appear when no row carries an embedding key"
+
+    table = pq.read_table(BytesIO(parquet_bytes))
+    assert table.num_rows == 2
+    assert set(table.column_names) == {"__id__", "name", "labels"}
+
+
+# ---------------------------------------------------------------------------
+# Edge case: all rows have an empty list for the embedding key (all-null path)
+# ---------------------------------------------------------------------------
+
+
+def test_format_parquet_all_rows_empty_list_embedding_does_not_crash() -> None:
+    """format_parquet must not raise when every row has an empty list for the embedding key.
+
+    When the sample dict filters out empty lists (they are falsy but not None, so
+    they pass the `v is not None` guard), pa.infer_type([[]]) returns list<null>.
+    This test verifies the resulting table survives a Parquet round-trip and that
+    all embedding values are empty lists.
+    """
+    pytest.importorskip("pyarrow")
+    import pyarrow.parquet as pq
+
+    formatter = Neo4jGraphParquetFormatter()
+
+    rows: list[dict[str, Any]] = [
+        {"__id__": "node-1", "name": "Alice", "labels": ["Person"], "embedding": []},
+        {"__id__": "node-2", "name": "Bob", "labels": ["Person"], "embedding": []},
+    ]
+
+    parquet_bytes, schema = formatter.format_parquet(rows, "node label 'Person'")
+
+    assert (
+        "embedding" in schema.names
+    ), "Embedding column should be present even when all rows have an empty list"
+
+    table = pq.read_table(BytesIO(parquet_bytes))
+    assert table.num_rows == 2
+    assert "embedding" in table.column_names
+    for row in table.to_pylist():
+        assert (
+            row["embedding"] == [] or row["embedding"] is None
+        ), f"Expected empty list or null for embedding, got {row['embedding']}"
+
+
+# ---------------------------------------------------------------------------
+# Edge case: empty-list row before a float-list row must not crash
+# ---------------------------------------------------------------------------
+
+
+def test_format_parquet_empty_list_before_float_embedding_does_not_crash() -> None:
+    """Empty-list row appearing before a float-list row must not raise.
+
+    If [] is picked up as the type-inference sample, pa.infer_type([[]]) returns
+    list<null>, which causes ArrowInvalid when writing the float-list row.
+    The fix skips both None and [] when collecting samples so the float-list row
+    always wins as the sample for embedding type inference.
+    """
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    formatter = Neo4jGraphParquetFormatter()
+
+    rows: list[dict[str, Any]] = [
+        {"__id__": "node-1", "name": "Alice", "labels": ["Person"], "embedding": []},
+        {
+            "__id__": "node-2",
+            "name": "Bob",
+            "labels": ["Person"],
+            "embedding": [0.1, 0.2, 0.3],
+        },
+    ]
+
+    parquet_bytes, schema = formatter.format_parquet(rows, "node label 'Person'")
+
+    assert "embedding" in schema.names
+
+    emb_type = schema.field("embedding").type
+    assert pa.types.is_list(emb_type), f"Unexpected embedding type: {emb_type}"
+    assert emb_type.value_type == pa.float32()
+
+    table = pq.read_table(BytesIO(parquet_bytes))
+    rows_by_id = {r["__id__"]: r for r in table.to_pylist()}
+    assert (
+        rows_by_id["node-1"]["embedding"] is None
+        or rows_by_id["node-1"]["embedding"] == []
+    )
+    assert rows_by_id["node-2"]["embedding"] is not None
