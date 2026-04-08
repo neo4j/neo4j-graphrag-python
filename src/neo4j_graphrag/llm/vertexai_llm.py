@@ -564,7 +564,7 @@ class VertexAILLM(LLMBase):
         model = self._get_model(system_instruction=system_instruction)
         options = self._get_call_params(input, message_history, tools)
         response = await model.generate_content_async(**options)
-        return cast(GenerationResponse, response)
+        return response  # type: ignore[no-any-return]
 
     def _call_llm(
         self,
@@ -576,7 +576,7 @@ class VertexAILLM(LLMBase):
         model = self._get_model(system_instruction=system_instruction)
         options = self._get_call_params(input, message_history, tools)
         response = model.generate_content(**options)
-        return cast(GenerationResponse, response)
+        return response  # type: ignore[no-any-return]
 
     def _to_tool_call(self, function_call: FunctionCall) -> ToolCall:
         return ToolCall(

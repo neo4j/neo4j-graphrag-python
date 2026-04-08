@@ -76,7 +76,7 @@ class MistralAILLM(LLMBase):
             kwargs: All other parameters will be passed to the Mistral client.
 
         """
-        if "Mistral" not in globals():
+        if Mistral is None:
             raise ImportError(
                 """Could not import Mistral Python client.
                 Please install it with `pip install "neo4j-graphrag[mistralai]"`."""
@@ -304,7 +304,7 @@ class MistralAILLM(LLMBase):
                 raise LLMGenerationError(e.errors()) from e
             messages.extend(cast(Iterable[dict[str, Any]], message_history))
         messages.append(UserMessage(content=input).model_dump())
-        return cast(list[Messages], messages)
+        return messages  # type: ignore
 
     def get_messages_v2(
         self,

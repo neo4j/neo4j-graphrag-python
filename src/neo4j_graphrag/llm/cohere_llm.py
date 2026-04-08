@@ -290,7 +290,7 @@ class CohereLLM(LLMBase):
                 raise LLMGenerationError(e.errors()) from e
             messages.extend(cast(Iterable[dict[str, Any]], message_history))
         messages.append(UserMessage(content=input).model_dump())
-        return cast(ChatMessages, messages)
+        return messages  # type: ignore
 
     def get_messages_v2(
         self,
