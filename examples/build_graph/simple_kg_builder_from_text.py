@@ -97,7 +97,6 @@ async def main() -> PipelineResult:
     with neo4j.GraphDatabase.driver(URI, auth=AUTH) as driver:
         async with OpenAILLM(model_name="gpt-5") as llm:
             res = await define_and_run_pipeline(driver, llm)
-    await llm.aclose()
     return res
 
 

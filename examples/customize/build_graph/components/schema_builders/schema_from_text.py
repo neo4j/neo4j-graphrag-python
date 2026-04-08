@@ -104,7 +104,8 @@ async def extract_and_save_schema() -> None:
 
     finally:
         # Close the LLM client
-        await llm.aclose()
+        if hasattr(llm, "aclose"):
+            await llm.aclose()
 
 
 async def main() -> None:
