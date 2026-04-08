@@ -191,7 +191,7 @@ class BaseOpenAILLM(LLMBase, abc.ABC):
                 raise LLMGenerationError(e.errors()) from e
             messages.extend(cast(Iterable[dict[str, Any]], message_history))
         messages.append(UserMessage(content=input).model_dump())
-        return messages  # type: ignore
+        return messages
 
     def get_messages_v2(
         self,
@@ -213,7 +213,7 @@ class BaseOpenAILLM(LLMBase, abc.ABC):
                 raise ValueError(f"Unknown role: {m['role']}")
             chat_messages.append(
                 message_type(
-                    role=m["role"],  # type: ignore
+                    role=m["role"],
                     content=m["content"],
                 )
             )
