@@ -62,14 +62,15 @@ def extract_cypher(text: str) -> str:
     Returns:
         str: Properly formatted Cypher query with correct backtick quoting.
     """
-    # Extract Cypher code enclosed in triple backticks
-    pattern = r"```(.*?)```"
+    # Extract Cypher code enclosed in triple backticks, skipping optional language tag
+    pattern = r"```(?:\s*[a-zA-Z0-9_+-]+\s*\n)?(.*?)```"
     matches = re.findall(pattern, text, re.DOTALL)
     cypher_query = matches[0] if matches else text
     # Quote node labels in backticks if they contain spaces and are not already quoted
+    # Scoped to node pattern context (var: Label) to avoid matching map value colons
     cypher_query = re.sub(
-        r":\s*(?!`\s*)(\s*)([a-zA-Z0-9_]+(?:\s+[a-zA-Z0-9_]+)+)(?!\s*`)(\s*)",
-        r":`\2`",
+        r"(\(\s*[a-zA-Z0-9_]*\s*:)\s*(?!`)([a-zA-Z0-9_]+(?:\s+[a-zA-Z0-9_]+)+)\s*(?!`)(?=[\s)\[{,])",
+        r"\1`\2`",
         cypher_query,
     )
     # Quote property keys in backticks if they contain spaces and are not already quoted
@@ -80,7 +81,7 @@ def extract_cypher(text: str) -> str:
     )
     # Quote relationship types in backticks if they contain spaces and are not already quoted
     cypher_query = re.sub(
-        r"(\[\s*[a-zA-Z0-9_]*\s*:\s*)(?!`)([a-zA-Z0-9_]+(?:\s+[a-zA-Z0-9_]+)+)(?!`)(\s*(?:\]|-))",
+        r"(\[\s*[a-zA-Z0-9_]*\s*:)\s*(?!`)([a-zA-Z0-9_]+(?:\s+[a-zA-Z0-9_]+)+)\s*(?!`)(\s*(?:\]|-))",
         r"\1`\2`\3",
         cypher_query,
     )
