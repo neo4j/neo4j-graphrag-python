@@ -12,6 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import warnings
 from typing import Any
 
 import pytest
@@ -141,7 +142,7 @@ async def test_graph_pruning_loose(extracted_graph: Neo4jGraph) -> None:
 async def test_graph_pruning_missing_required_property(
     extracted_graph: Neo4jGraph,
 ) -> None:
-    """Person node type has a required 'name' property:
+    """Person must have ``name`` via an EXISTENCE constraint:
     - extracted nodes without this property are pruned
     - any relationship tied to this node is also pruned
     """
@@ -153,7 +154,6 @@ async def test_graph_pruning_missing_required_property(
                     {
                         "name": "name",
                         "type": "STRING",
-                        "required": True,
                     },
                     {"name": "height", "type": "INTEGER"},
                 ],
@@ -167,6 +167,13 @@ async def test_graph_pruning_missing_required_property(
         ],
         "patterns": [
             ("Person", "KNOWS", "Person"),
+        ],
+        "constraints": [
+            {
+                "type": "EXISTENCE",
+                "node_type": "Person",
+                "property_name": "name",
+            }
         ],
         "additional_node_types": True,
         "additional_relationship_types": True,
@@ -225,6 +232,191 @@ async def test_graph_pruning_missing_required_property(
             #     end_node_id="2",
             #     type="MANAGES",
             # ),
+            Neo4jRelationship(
+                start_node_id="1",
+                end_node_id="10",
+                type="MANAGES",
+            ),
+            Neo4jRelationship(
+                start_node_id="1",
+                end_node_id="10",
+                type="WORKS_FOR",
+            ),
+        ],
+    )
+    await _test(extracted_graph, schema_dict, filtered_graph)
+
+
+@pytest.mark.asyncio
+async def test_graph_pruning_legacy_required_normalizes_like_existence(
+    extracted_graph: Neo4jGraph,
+) -> None:
+    """Legacy ``required: true`` on properties is normalized to EXISTENCE constraints."""
+    schema_dict = {
+        "node_types": [
+            {
+                "label": "Person",
+                "properties": [
+                    {
+                        "name": "name",
+                        "type": "STRING",
+                        "required": True,
+                    },
+                    {"name": "height", "type": "INTEGER"},
+                ],
+                "additional_properties": True,
+            }
+        ],
+        "relationship_types": [
+            {
+                "label": "KNOWS",
+            }
+        ],
+        "patterns": [
+            ("Person", "KNOWS", "Person"),
+        ],
+        "additional_node_types": True,
+        "additional_relationship_types": True,
+        "additional_patterns": True,
+    }
+    filtered_graph = Neo4jGraph(
+        nodes=[
+            Neo4jNode(
+                id="1",
+                label="Person",
+                properties={
+                    "name": "John Doe",
+                },
+            ),
+            Neo4jNode(
+                id="3",
+                label="Person",
+                properties={
+                    "name": "Jane Doe",
+                    "weight": 90,
+                },
+            ),
+            Neo4jNode(
+                id="10",
+                label="Organization",
+                properties={
+                    "name": "Azerty Inc.",
+                    "created": 1999,
+                },
+            ),
+        ],
+        relationships=[
+            Neo4jRelationship(
+                start_node_id="1",
+                end_node_id="3",
+                type="KNOWS",
+            ),
+            Neo4jRelationship(
+                start_node_id="1",
+                end_node_id="10",
+                type="MANAGES",
+            ),
+            Neo4jRelationship(
+                start_node_id="1",
+                end_node_id="10",
+                type="WORKS_FOR",
+            ),
+        ],
+    )
+    with warnings.catch_warnings(record=True) as recorded:
+        warnings.simplefilter("always")
+        schema = GraphSchema.model_validate(schema_dict)
+    assert any(
+        issubclass(w.category, DeprecationWarning)
+        and "required" in str(w.message).lower()
+        for w in recorded
+    )
+    pruner = GraphPruning()
+    res = await pruner.run(extracted_graph, schema)
+    assert res.graph == filtered_graph
+
+
+@pytest.mark.asyncio
+async def test_graph_pruning_relationship_existence_constraint(
+    extracted_graph: Neo4jGraph,
+) -> None:
+    """KNOWS relationships without a property covered by EXISTENCE are pruned."""
+    schema_dict = {
+        "node_types": [
+            {
+                "label": "Person",
+                "properties": [
+                    {"name": "name", "type": "STRING"},
+                    {"name": "height", "type": "INTEGER"},
+                ],
+                "additional_properties": True,
+            }
+        ],
+        "relationship_types": [
+            {
+                "label": "KNOWS",
+                "properties": [{"name": "firstMetIn", "type": "INTEGER"}],
+            }
+        ],
+        "patterns": [
+            ("Person", "KNOWS", "Person"),
+        ],
+        "constraints": [
+            {
+                "type": "EXISTENCE",
+                "relationship_type": "KNOWS",
+                "property_name": "firstMetIn",
+            }
+        ],
+        "additional_node_types": True,
+        "additional_relationship_types": True,
+        "additional_patterns": True,
+    }
+    filtered_graph = Neo4jGraph(
+        nodes=[
+            Neo4jNode(
+                id="1",
+                label="Person",
+                properties={
+                    "name": "John Doe",
+                },
+            ),
+            Neo4jNode(
+                id="2",
+                label="Person",
+                properties={
+                    "height": 180,
+                },
+            ),
+            Neo4jNode(
+                id="3",
+                label="Person",
+                properties={
+                    "name": "Jane Doe",
+                    "weight": 90,
+                },
+            ),
+            Neo4jNode(
+                id="10",
+                label="Organization",
+                properties={
+                    "name": "Azerty Inc.",
+                    "created": 1999,
+                },
+            ),
+        ],
+        relationships=[
+            Neo4jRelationship(
+                start_node_id="1",
+                end_node_id="2",
+                type="KNOWS",
+                properties={"firstMetIn": 2025},
+            ),
+            Neo4jRelationship(
+                start_node_id="1",
+                end_node_id="2",
+                type="MANAGES",
+            ),
             Neo4jRelationship(
                 start_node_id="1",
                 end_node_id="10",

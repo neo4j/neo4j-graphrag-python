@@ -91,8 +91,9 @@ as shown below:
         # When no properties key is provided, a default "name" property is added automatically.
         {"label": "House", "description": "Family the person belongs to"},
         # or with an explicit list of properties the LLM will try to attach to the entity:
-        {"label": "Planet", "properties": [{"name": "name", "type": "STRING", "required": True}, {"name": "weather", "type": "STRING"}]},
+        {"label": "Planet", "properties": [{"name": "name", "type": "STRING"}, {"name": "weather", "type": "STRING"}]},
     ]
+    # Mandatory properties belong in ``constraints`` as EXISTENCE entries, not as ``required`` on each property — see CONSTRAINTS below.
     # same thing for relationships:
     RELATIONSHIP_TYPES = [
         "PARENT_OF",
@@ -114,6 +115,9 @@ The `patterns` are defined by a list of triplet in the format:
         ("Person", "HEIR_OF", "House"),
         ("House", "RULES", "Planet"),
     ]
+    CONSTRAINTS = [
+        {"type": "EXISTENCE", "node_type": "Planet", "property_name": "name"},
+    ]
 
 This schema information can be provided to the `SimpleKGBuilder` as demonstrated below:
 
@@ -126,6 +130,7 @@ This schema information can be provided to the `SimpleKGBuilder` as demonstrated
             "node_types": NODE_TYPES,
             "relationship_types": RELATIONSHIP_TYPES,
             "patterns": PATTERNS,
+            "constraints": CONSTRAINTS,
             "additional_node_types": False,
         },
         # ...
@@ -1147,8 +1152,10 @@ By default, all extracted elements — including nodes, relationships, and prope
 Configuration Options
 ---------------------
 
-- **Required Properties** (default: ``False``)
-  Required properties may be specified at the node or relationship type level. Any extracted node or relationship missing one or more of its required properties will be pruned from the graph.
+- **Mandatory properties (EXISTENCE constraints)** (optional)
+  Add entries to ``constraints`` with ``"type": "EXISTENCE"`` when a property must be present on every node of a label or every relationship of a type: use ``node_type`` and ``property_name``, or ``relationship_type`` and ``property_name``. Extracted elements missing such a property are pruned. The legacy ``"required": true`` on properties is still accepted but deprecated; it is normalized into ``EXISTENCE`` constraints when the schema is loaded.
+
+  **Uniqueness (``UNIQUENESS``) is separate:** uniqueness only applies among elements that actually have the constrained properties; it does not by itself require those properties on every element. Add ``EXISTENCE`` when you need mandatory presence.
 
 - **Additional Properties**
   This node- or relationship-level option determines whether extra properties not listed in the schema should be retained.
@@ -1198,7 +1205,7 @@ In addition to the user-defined configuration options described above,
 the `GraphPruning` component performs the following cleanup operations:
 
 - Nodes with empty label or ID are pruned.
-- Nodes with missing required properties are pruned.
+- Nodes and relationships missing a property required by an ``EXISTENCE`` constraint are pruned.
 - Nodes with no remaining properties are pruned.
 - Relationships with empty type are pruned.
 - Relationships with invalid source or target nodes (i.e., nodes no longer present in the graph) are pruned.

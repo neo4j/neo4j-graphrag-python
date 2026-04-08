@@ -13,7 +13,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import cast
+from typing import Optional, cast
 from typing import List
 
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
@@ -496,11 +496,42 @@ class _TestModelForVertexAI(BaseModel):
     age: int
 
 
+class _TestModelWithOptionalForVertexAI(BaseModel):
+    """Pydantic model whose JSON schema includes anyOf+null (Vertex must strip)."""
+
+    model_config = ConfigDict(extra="forbid")
+    title: str
+    subtitle: Optional[str] = None
+
+
 _TEST_JSON_SCHEMA = {
     "type": "object",
     "properties": {"result": {"type": "string"}},
     "required": ["result"],
 }
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_invoke_v2_with_optional_pydantic_response_format(
+    GenerativeModelMock: MagicMock,
+) -> None:
+    """Optional fields emit anyOf+null; Vertex GenerationConfig must not see type NULL."""
+    model_name = "gemini-2.5-flash"
+    messages: List[LLMMessage] = [
+        {"role": "user", "content": "Extract"},
+    ]
+    mock_response = Mock()
+    mock_response.text = '{"title": "A", "subtitle": null}'
+    mock_model = GenerativeModelMock.return_value
+    mock_model.generate_content.return_value = mock_response
+
+    llm = VertexAILLM(model_name=model_name)
+    response = llm.invoke(messages, response_format=_TestModelWithOptionalForVertexAI)
+
+    assert response.content == '{"title": "A", "subtitle": null}'
+    # GenerationConfig(**params) would raise ParseError if anyOf still contained type NULL.
+    mock_model.generate_content.assert_called_once()
+    assert "generation_config" in mock_model.generate_content.call_args.kwargs
 
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")

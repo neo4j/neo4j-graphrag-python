@@ -6,9 +6,15 @@
 
 - MarkdownLoader (experimental): added a Markdown loader to support `.md` and `.markdown` files.
 - Added Amazon Bedrock support: `BedrockLLM` (generation/tool calling) via the boto3 Converse API, and `BedrockEmbeddings` (embeddings) via the boto3 InvokeModel API.
+- `GraphSchema` constraints: `ConstraintType` now supports `type: "EXISTENCE"` for mandatory node or relationship properties. `UNIQUENESS` and `EXISTENCE` are independent (uniqueness does not imply every element has the property). Helpers `existence_required_property_names_for_node` and `existence_required_property_names_for_relationship` expose mandatory fields for pruning and visualization.
+
+### Deprecated
+
+- `PropertyType.required` is deprecated in favor of `EXISTENCE` constraints on `GraphSchema`. Legacy input with `"required": true` is still accepted: it is normalized into `EXISTENCE` constraints when the schema is validated, and a `DeprecationWarning` is emitted.
 
 ### Fixed
 
+- `GraphSchema.model_json_schema`: optional constraint fields no longer emit `anyOf` with `{"type": "null"}` in JSON Schema, so Vertex AI Gemini structured output (`response_schema`) can parse the schema (its protobuf converter rejects `NULL` in that form).
 - `NodeType`: a node type defined without a `properties` key (e.g. `{"label": "Person"}` or `{"label": "Person", "description": "..."}`) now automatically gets a default `name: STRING` property and `additional_properties=True`, preventing a `ValidationError` from the `min_length=1` constraint. This matches the existing behaviour for string input. Auto-addition is skipped when `properties` is explicitly provided (including as an empty list) or when `additional_properties` is explicitly set to `False`.
 
 ### Changed

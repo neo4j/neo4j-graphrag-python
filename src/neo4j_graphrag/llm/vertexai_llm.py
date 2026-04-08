@@ -15,6 +15,7 @@
 # built-in dependencies
 from __future__ import annotations
 
+import copy
 import inspect
 import logging
 from typing import Any, List, Optional, Sequence, Type, Union, cast, overload
@@ -44,6 +45,7 @@ from neo4j_graphrag.utils.rate_limit import (
 from neo4j_graphrag.utils.rate_limit import (
     rate_limit_handler as rate_limit_handler_decorator,
 )
+from neo4j_graphrag.utils.json_schema_vertex import sanitize_json_schema_for_vertex
 
 try:
     from vertexai.generative_models import (
@@ -576,7 +578,9 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
                         # if we migrate to new google-genai-sdk, Pydantic models can be passed directly
                         schema = response_format.model_json_schema()
                     else:
-                        schema = response_format
+                        schema = copy.deepcopy(response_format)
+                    # Vertex Schema protobuf rejects type NULL in anyOf and unknown keys like "deprecated".
+                    sanitize_json_schema_for_vertex(schema)
                     params["response_mime_type"] = "application/json"
                     params["response_schema"] = schema
 
