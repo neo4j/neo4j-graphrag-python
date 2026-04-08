@@ -717,9 +717,13 @@ using `filters`.
 
 .. warning::
 
-    When using filters, the similarity search bypasses the vector index and instead utilizes
-    an exact match algorithm
-    Ensure that the pre-filtering is stringent enough to prevent query overload.
+    On Neo4j versions prior to 2026.01, filters cause the similarity search to bypass the
+    vector index and use a brute-force exact match algorithm. Ensure that the pre-filtering
+    is stringent enough to prevent query overload.
+
+    On Neo4j 2026.01+, simple filters (see below) are automatically routed to use the
+    SEARCH clause with in-index filtering, which is significantly faster. See
+    :ref:`search-clause-filtering` for details.
 
 The currently supported operators are:
 
@@ -734,6 +738,44 @@ The currently supported operators are:
 - `$nin`: not in.
 - `$like`: LIKE operator case-sensitive.
 - `$ilike`: LIKE operator case-insensitive.
+
+.. _search-clause-filtering:
+
+In-Index Filtering with the SEARCH Clause (Neo4j 2026.01+)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+On Neo4j 2026.01 and later, the library automatically detects the server version and
+uses the Cypher ``SEARCH`` clause for vector queries. This enables in-index filtering,
+where compatible filter predicates are evaluated inside the vector index itself rather
+than via post-hoc brute-force scanning.
+
+**Requirements:**
+
+1. Neo4j server version 2026.01 or later.
+2. The vector index must be created with ``filterable_properties`` (see :ref:`filterable-index-creation`).
+3. The filter must use only SEARCH-compatible operators.
+
+**SEARCH-compatible operators** (use in-index filtering):
+
+- ``$eq``, ``$ne``
+- ``$lt``, ``$lte``, ``$gt``, ``$gte``
+- ``$between``
+- Multiple filters combined with implicit ``$and``
+
+**Operators that fall back to brute-force filtering:**
+
+- ``$or``
+- ``$in``, ``$nin``
+- ``$like``, ``$ilike``
+
+When a filter uses incompatible operators on a SEARCH-capable server, the library
+automatically falls back to the procedure-based search path and logs a warning.
+
+.. note::
+
+    The SEARCH clause routing is fully automatic. No code changes are needed beyond
+    creating the index with ``filterable_properties``. The same ``filters`` parameter
+    works on all Neo4j versions.
 
 
 Here are examples of valid filter syntaxes and their meaning:
@@ -1439,6 +1481,49 @@ Create a Vector Index
         dimensions=DIMENSION,
         similarity_fn="euclidean",
     )
+
+.. _filterable-index-creation:
+
+Create a Vector Index with Filterable Properties
+=================================================
+
+On Neo4j 2026.01+, you can create a vector index with filterable properties to enable
+in-index filtering via the ``SEARCH`` clause. This avoids brute-force scanning and
+provides significantly better performance for filtered vector searches.
+
+.. code:: python
+
+    from neo4j import GraphDatabase
+    from neo4j_graphrag.indexes import create_vector_index
+
+    URI = "neo4j://localhost:7687"
+    AUTH = ("neo4j", "password")
+
+    INDEX_NAME = "chunk-index"
+    DIMENSION = 1536
+
+    driver = GraphDatabase.driver(URI, auth=AUTH)
+
+    # Create index with filterable properties for in-index filtering
+    create_vector_index(
+        driver,
+        INDEX_NAME,
+        label="Document",
+        embedding_property="vectorProperty",
+        dimensions=DIMENSION,
+        similarity_fn="cosine",
+        filterable_properties=["year", "category"],
+    )
+
+The ``filterable_properties`` parameter accepts a list of node property names. These
+properties will be indexed alongside the vector embeddings, enabling the ``SEARCH`` clause
+to filter results within the index itself.
+
+.. note::
+
+    The ``filterable_properties`` parameter requires Neo4j 2026.01+. On older versions,
+    the parameter is accepted but the generated ``WITH`` clause may cause an error if the
+    server does not support it.
 
 
 Populate a Vector Index
