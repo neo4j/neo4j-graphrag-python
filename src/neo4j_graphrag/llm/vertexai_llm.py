@@ -149,10 +149,7 @@ class VertexAILLM(LLMBase):
         rate_limit_handler: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ):
-        if (
-            "GenerativeModel" not in globals()
-            or "ResponseValidationError" not in globals()
-        ):
+        if GenerativeModel is None or ResponseValidationError is None:
             raise ImportError(
                 """Could not import Vertex AI Python client.
                 Please install it with `pip install "neo4j-graphrag[google]"`."""
