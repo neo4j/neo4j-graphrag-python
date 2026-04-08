@@ -340,6 +340,13 @@ LLMInterface
     :members:
 
 
+LLMBase
+-------
+
+.. autoclass:: neo4j_graphrag.llm.LLMBase
+    :members:
+
+
 OpenAILLM
 ---------
 

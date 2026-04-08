@@ -16,7 +16,7 @@ import warnings
 from typing import Any
 
 from .anthropic_llm import AnthropicLLM
-from .base import LLMInterface, LLMInterfaceV2
+from .base import LLMBase, LLMInterface, LLMInterfaceV2
 from .bedrock_llm import BedrockLLM
 from .cohere_llm import CohereLLM
 from .mistralai_llm import MistralAILLM
@@ -25,12 +25,12 @@ from .openai_llm import AzureOpenAILLM, OpenAILLM
 from .types import LLMResponse
 from .vertexai_llm import VertexAILLM
 
-
 __all__ = [
     "AnthropicLLM",
     "BedrockLLM",
     "CohereLLM",
     "LLMResponse",
+    "LLMBase",
     "LLMInterface",
     "LLMInterfaceV2",
     "OllamaLLM",
@@ -44,14 +44,14 @@ __all__ = [
 def __getattr__(name: str) -> Any:
     """Handle deprecated imports with warnings."""
     from neo4j_graphrag.utils.rate_limit import (
-        RateLimitHandler,
-        NoOpRateLimitHandler,
-        RetryRateLimitHandler,
-        rate_limit_handler,
-        async_rate_limit_handler,
-        is_rate_limit_error,
-        convert_to_rate_limit_error,
         DEFAULT_RATE_LIMIT_HANDLER,
+        NoOpRateLimitHandler,
+        RateLimitHandler,
+        RetryRateLimitHandler,
+        async_rate_limit_handler,
+        convert_to_rate_limit_error,
+        is_rate_limit_error,
+        rate_limit_handler,
     )
 
     deprecated_items = {

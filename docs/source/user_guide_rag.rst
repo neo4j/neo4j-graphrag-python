@@ -257,35 +257,54 @@ Using a Custom Model
 --------------------
 
 If the provided implementations do not match their needs, developers can create a
-custom LLM class by subclassing the `LLMInterface`.
-Here's an example using the Python Ollama client:
+custom LLM class by subclassing :class:`neo4j_graphrag.llm.LLMBase`.
+``LLMBase`` combines ``LLMInterface`` (str input, v1 API) and ``LLMInterfaceV2``
+(``List[LLMMessage]`` input, structured output) into a single abstract base class.
+Subclasses implement one ``invoke`` and one ``ainvoke`` dispatcher that branches on
+the type of *input*.
 
+Here's an example using the Python Ollama client:
 
 .. code:: python
 
+    from typing import Any, List, Optional, Type, Union
     import ollama
-    from neo4j_graphrag.llm import LLMInterface, LLMResponse
+    from pydantic import BaseModel
+    from neo4j_graphrag.llm import LLMBase, LLMResponse
+    from neo4j_graphrag.message_history import MessageHistory
+    from neo4j_graphrag.types import LLMMessage
 
-    class OllamaLLM(LLMInterface):
+    class MyOllamaLLM(LLMBase):
 
-        def invoke(self, input: str) -> LLMResponse:
-            response = ollama.chat(model=self.model_name, messages=[
-              {
-                'role': 'user',
-                'content': input,
-              },
-            ])
-            return LLMResponse(
-                content=response["message"]["content"]
-            )
+        def invoke(
+            self,
+            input: Union[str, List[LLMMessage]],
+            message_history=None,
+            system_instruction=None,
+            response_format=None,
+            **kwargs: Any,
+        ) -> LLMResponse:
+            if isinstance(input, str):
+                messages = [{"role": "user", "content": input}]
+            else:
+                messages = list(input)
+            response = ollama.chat(model=self.model_name, messages=messages)
+            return LLMResponse(content=response["message"]["content"])
 
-        async def ainvoke(self, input: str) -> LLMResponse:
-            return self.invoke(input)  # TODO: implement async with ollama.AsyncClient
+        async def ainvoke(
+            self,
+            input: Union[str, List[LLMMessage]],
+            message_history=None,
+            system_instruction=None,
+            response_format=None,
+            **kwargs: Any,
+        ) -> LLMResponse:
+            return self.invoke(input)  # TODO: implement with ollama.AsyncClient
 
 
     # retriever = ...
 
-    llm = OllamaLLM("llama3:8b")
+    llm = MyOllamaLLM("llama3:8b")
 
     rag = GraphRAG(retriever=retriever, llm=llm)
     query_text = "How do I do similarity search in Neo4j?"

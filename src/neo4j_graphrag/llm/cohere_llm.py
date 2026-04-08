@@ -25,7 +25,6 @@ from typing import (
     Type,
     Union,
     cast,
-    overload,
 )
 
 # 3rd party dependencies
@@ -33,7 +32,7 @@ from pydantic import BaseModel, ValidationError
 
 # project dependencies
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.base import LLMInterface, LLMInterfaceV2
+from neo4j_graphrag.llm.base import LLMBase
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
@@ -58,7 +57,7 @@ if TYPE_CHECKING:
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
-class CohereLLM(LLMInterface, LLMInterfaceV2):
+class CohereLLM(LLMBase):
     """Interface for large language models on the Cohere platform
 
     Args:
@@ -95,7 +94,7 @@ class CohereLLM(LLMInterface, LLMInterfaceV2):
                 """Could not import cohere python client.
                 Please install it with `pip install "neo4j-graphrag[cohere]"`."""
             )
-        LLMInterfaceV2.__init__(
+        LLMBase.__init__(
             self,
             model_name=model_name,
             model_params=model_params or {},
@@ -108,41 +107,13 @@ class CohereLLM(LLMInterface, LLMInterfaceV2):
         self.client = cohere.ClientV2(**kwargs)
         self.async_client = cohere.AsyncClientV2(**kwargs)
 
-    # overloads for LLMInterface and LLMInterfaceV2 methods
-    @overload  # type: ignore[no-overload-impl]
+    def _extract_text_content(self, content_items: Any) -> str:
+        if not content_items:
+            return ""
+        text = getattr(content_items[0], "text", None)
+        return text if isinstance(text, str) else ""
+
     def invoke(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse: ...
-
-    @overload
-    def invoke(
-        self,
-        input: List[LLMMessage],
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse: ...
-
-    @overload  # type: ignore[no-overload-impl]
-    async def ainvoke(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse: ...
-
-    @overload
-    async def ainvoke(
-        self,
-        input: List[LLMMessage],
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse: ...
-
-    # switching logics to LLMInterface or LLMInterfaceV2
-    def invoke(  # type: ignore[no-redef]
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -157,7 +128,7 @@ class CohereLLM(LLMInterface, LLMInterfaceV2):
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 
-    async def ainvoke(  # type: ignore[no-redef]
+    async def ainvoke(
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -203,9 +174,7 @@ class CohereLLM(LLMInterface, LLMInterfaceV2):
             )
         except self.cohere_api_error as e:
             raise LLMGenerationError(e)
-        return LLMResponse(
-            content=res.message.content[0].text if res.message.content else "",  # type: ignore[union-attr]
-        )
+        return LLMResponse(content=self._extract_text_content(res.message.content))
 
     @rate_limit_handler_decorator
     def __invoke_v2(
@@ -272,9 +241,7 @@ class CohereLLM(LLMInterface, LLMInterfaceV2):
             )
         except self.cohere_api_error as e:
             raise LLMGenerationError(e)
-        return LLMResponse(
-            content=res.message.content[0].text if res.message.content else "",  # type: ignore[union-attr]
-        )
+        return LLMResponse(content=self._extract_text_content(res.message.content))
 
     @async_rate_limit_handler_decorator
     async def __ainvoke_v2(
