@@ -101,6 +101,40 @@ def _constraint_dedup_key(constraint: Dict[str, Any]) -> tuple[Any, ...]:
     return (ctype, str(constraint))
 
 
+def _strip_json_schema_null_anyof(obj: Any) -> None:
+    """Remove ``{\"type\": \"null\"}`` branches from ``anyOf`` (recursive, in place).
+
+    Pydantic emits ``anyOf: [<T>, {\"type\": \"null\"}]`` for ``Optional`` fields.
+    Vertex AI's ``response_schema`` protobuf parser rejects ``type: NULL``, so we
+    collapse optional scalars to the non-null branch only. Validation still accepts
+    omitted keys or empty strings at runtime.
+    """
+    if isinstance(obj, dict):
+        if "anyOf" in obj and isinstance(obj["anyOf"], list):
+            branches = obj["anyOf"]
+            non_null = [
+                b
+                for b in branches
+                if not (isinstance(b, dict) and b.get("type") == "null")
+            ]
+            if len(non_null) == 1 and isinstance(non_null[0], dict):
+                branch = non_null[0]
+                preserved = {k: v for k, v in obj.items() if k != "anyOf"}
+                preserved.pop("default", None)
+                preserved.update(branch)
+                obj.clear()
+                obj.update(preserved)
+            elif len(non_null) > 1:
+                obj["anyOf"] = non_null
+        if obj.get("default") is None and "default" in obj:
+            del obj["default"]
+        for v in obj.values():
+            _strip_json_schema_null_anyof(v)
+    elif isinstance(obj, list):
+        for item in obj:
+            _strip_json_schema_null_anyof(item)
+
+
 def _reject_dunder_label(label: str, kind: str) -> str:
     """Raise ValueError if *label* starts or ends with double underscores."""
     if _DUNDER_RE.search(label):
@@ -681,6 +715,8 @@ class GraphSchema(DataModel):
 
         VertexAI requires:
         - No 'const' keyword (convert to enum with single value)
+        - No ``{"type": "null"}`` inside ``anyOf`` (optional fields must be collapsed; see
+          :func:`_strip_json_schema_null_anyof`)
         """
         schema = super().model_json_schema(**kwargs)
 
@@ -706,6 +742,8 @@ class GraphSchema(DataModel):
         if "$defs" in schema:
             for def_schema in schema["$defs"].values():
                 make_strict(def_schema)
+
+        _strip_json_schema_null_anyof(schema)
 
         return schema
 
