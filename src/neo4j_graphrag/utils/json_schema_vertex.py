@@ -55,3 +55,30 @@ def strip_json_schema_null_anyof_for_vertex(obj: Any) -> None:
     elif isinstance(obj, list):
         for item in obj:
             strip_json_schema_null_anyof_for_vertex(item)
+
+
+def strip_json_schema_deprecated_for_vertex(obj: Any) -> None:
+    """Remove ``deprecated`` keys from schema objects (recursive, in place).
+
+    Pydantic v2 adds ``deprecated: true`` to JSON Schema for fields declared with
+    ``Field(deprecated=...)``. Vertex AI's ``Schema`` protobuf has no ``deprecated``
+    field and :func:`google.protobuf.json_format.ParseDict` rejects it.
+    """
+    if isinstance(obj, dict):
+        obj.pop("deprecated", None)
+        for v in obj.values():
+            strip_json_schema_deprecated_for_vertex(v)
+    elif isinstance(obj, list):
+        for item in obj:
+            strip_json_schema_deprecated_for_vertex(item)
+
+
+def sanitize_json_schema_for_vertex(obj: Any) -> None:
+    """Normalize JSON Schema for Vertex ``response_schema`` / ``GenerationConfig``.
+
+    Applies :func:`strip_json_schema_null_anyof_for_vertex` and
+    :func:`strip_json_schema_deprecated_for_vertex`. Call this (or the individual
+    strippers) after building a schema from Pydantic or user dicts.
+    """
+    strip_json_schema_null_anyof_for_vertex(obj)
+    strip_json_schema_deprecated_for_vertex(obj)

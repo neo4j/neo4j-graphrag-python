@@ -344,10 +344,13 @@ def test_schema_with_valid_constraints() -> None:
 
 
 def test_graph_schema_model_json_schema_has_no_null_type_for_vertex_compat() -> None:
-    """Vertex AI response_schema rejects protobuf type NULL; Pydantic uses anyOf+null for Optional."""
+    """Vertex AI response_schema rejects type NULL in anyOf and unknown keys like deprecated."""
     raw = GraphSchema.model_json_schema()
     dumped = json.dumps(raw)
     assert '"type": "null"' not in dumped
+    assert '"deprecated"' not in dumped
+    pt = raw["$defs"]["PropertyType"]
+    assert "deprecated" not in pt["properties"]["required"]
     ct = raw["$defs"]["ConstraintType"]
     assert ct["properties"]["node_type"] == {
         "title": "Node Type",

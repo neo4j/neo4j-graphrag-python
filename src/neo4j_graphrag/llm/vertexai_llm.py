@@ -45,9 +45,7 @@ from neo4j_graphrag.utils.rate_limit import (
 from neo4j_graphrag.utils.rate_limit import (
     rate_limit_handler as rate_limit_handler_decorator,
 )
-from neo4j_graphrag.utils.json_schema_vertex import (
-    strip_json_schema_null_anyof_for_vertex,
-)
+from neo4j_graphrag.utils.json_schema_vertex import sanitize_json_schema_for_vertex
 
 try:
     from vertexai.generative_models import (
@@ -581,8 +579,8 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
                         schema = response_format.model_json_schema()
                     else:
                         schema = copy.deepcopy(response_format)
-                    # Vertex protobuf rejects {"type": "null"} in anyOf (Pydantic Optional fields).
-                    strip_json_schema_null_anyof_for_vertex(schema)
+                    # Vertex Schema protobuf rejects type NULL in anyOf and unknown keys like "deprecated".
+                    sanitize_json_schema_for_vertex(schema)
                     params["response_mime_type"] = "application/json"
                     params["response_schema"] = schema
 

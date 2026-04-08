@@ -62,7 +62,7 @@ from neo4j_graphrag.llm import LLMInterface
 from neo4j_graphrag.schema import get_structured_schema
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.file_handler import FileFormat, FileHandler
-from neo4j_graphrag.utils.json_schema_vertex import strip_json_schema_null_anyof_for_vertex
+from neo4j_graphrag.utils.json_schema_vertex import sanitize_json_schema_for_vertex
 
 logger = logging.getLogger(__name__)
 
@@ -682,8 +682,9 @@ class GraphSchema(DataModel):
 
         VertexAI requires:
         - No 'const' keyword (convert to enum with single value)
-        - No ``{"type": "null"}`` inside ``anyOf`` (optional fields must be collapsed; see
-          :func:`~neo4j_graphrag.utils.json_schema_vertex.strip_json_schema_null_anyof_for_vertex`)
+        - No ``{"type": "null"}`` inside ``anyOf`` (optional fields must be collapsed)
+        - No ``deprecated`` keyword (not supported by Vertex's Schema protobuf); see
+          :func:`~neo4j_graphrag.utils.json_schema_vertex.sanitize_json_schema_for_vertex`
         """
         schema = super().model_json_schema(**kwargs)
 
@@ -710,7 +711,7 @@ class GraphSchema(DataModel):
             for def_schema in schema["$defs"].values():
                 make_strict(def_schema)
 
-        strip_json_schema_null_anyof_for_vertex(schema)
+        sanitize_json_schema_for_vertex(schema)
 
         return schema
 
