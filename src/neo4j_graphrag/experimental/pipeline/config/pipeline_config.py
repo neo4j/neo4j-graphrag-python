@@ -165,10 +165,8 @@ class AbstractPipelineConfig(AbstractConfig):
         for llm_name in llms:
             llm = llms[llm_name]
             logger.debug(f"PIPELINE_CONFIG: closing llm {llm_name}: {llm}")
-            try:
+            if hasattr(llm, "aclose"):
                 await llm.aclose()
-            except Exception as e:
-                logger.debug(f"PIPELINE_CONFIG: closing llm {llm_name} failed with error: {e}")
 
     def get_neo4j_driver_by_name(self, name: str) -> neo4j.Driver:
         drivers: dict[str, neo4j.Driver] = self._global_data.get("neo4j_config", {})
