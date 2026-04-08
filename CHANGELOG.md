@@ -4,6 +4,7 @@
 
 ### Added
 
+- Experimental: `GraphSchemaExtractionOutput`, `ExtractedNodeType`, `ExtractedRelationshipType`, and `ExtractedPropertyType` in `neo4j_graphrag.experimental.components.graph_schema_extraction` for schema-from-text LLM structured output; `Neo4jPropertyTypeName` type alias on `PropertyType`; `GraphSchema.from_extraction_output` and `validate_extraction_dict_to_graph_schema`; `make_strict_json_schema_for_structured_output` in `neo4j_graphrag.utils.json_schema_structured_output`.
 - `LLMBase`: new abstract base class (`neo4j_graphrag.llm.LLMBase`) that combines `LLMInterface` and `LLMInterfaceV2`. Concrete LLM subclasses can extend `LLMBase` instead of both interfaces to avoid repeating overload boilerplate and to suppress mypy `[no-overload-impl]` / `[no-redef]` errors.
 - MarkdownLoader (experimental): added a Markdown loader to support `.md` and `.markdown` files.
 - Added Amazon Bedrock support: `BedrockLLM` (generation/tool calling) via the boto3 Converse API, and `BedrockEmbeddings` (embeddings) via the boto3 InvokeModel API.
@@ -14,6 +15,7 @@
 
 ### Changed
 
+- Schema-from-text structured output (experimental): `SchemaFromTextExtractor` with `use_structured_output=True` now uses `GraphSchemaExtractionOutput` as `response_format` instead of `GraphSchema`, then converts to `GraphSchema` via `GraphSchema.from_extraction_output`. This keeps provider JSON schemas smaller while preserving the same runtime `GraphSchema` behavior.
 - SimpleKG pipeline (experimental): the `from_pdf` parameter is deprecated in favor of `from_file` (PDF and Markdown inputs). `from_pdf` still works but emits a deprecation warning and will be removed in a future version.
 - Data loaders (experimental): the `PdfDocument` type name is deprecated in favor of `LoadedDocument`; `PdfDocument` remains available as a backward-compatible alias with a deprecation warning.
 

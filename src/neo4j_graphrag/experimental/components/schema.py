@@ -20,6 +20,7 @@ import re
 import warnings
 from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -29,6 +30,7 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    TypeAlias,
     Union,
     cast,
 )
@@ -61,8 +63,32 @@ from neo4j_graphrag.llm import LLMInterface
 from neo4j_graphrag.schema import get_structured_schema
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.file_handler import FileFormat, FileHandler
+from neo4j_graphrag.utils.json_schema_structured_output import (
+    make_strict_json_schema_for_structured_output,
+)
+
+if TYPE_CHECKING:
+    from neo4j_graphrag.experimental.components.graph_schema_extraction import (
+        GraphSchemaExtractionOutput,
+    )
 
 logger = logging.getLogger(__name__)
+
+# Shared with :class:`ExtractedPropertyType` (schema extraction structured output).
+Neo4jPropertyTypeName: TypeAlias = Literal[
+    "BOOLEAN",
+    "DATE",
+    "DURATION",
+    "FLOAT",
+    "INTEGER",
+    "LIST",
+    "LOCAL_DATETIME",
+    "LOCAL_TIME",
+    "POINT",
+    "STRING",
+    "ZONED_DATETIME",
+    "ZONED_TIME",
+]
 
 _DUNDER_RE = re.compile(r"^__|__$")
 
@@ -84,20 +110,7 @@ class PropertyType(BaseModel):
 
     name: str
     # See https://neo4j.com/docs/cypher-manual/current/values-and-types/property-structural-constructed/#property-types
-    type: Literal[
-        "BOOLEAN",
-        "DATE",
-        "DURATION",
-        "FLOAT",
-        "INTEGER",
-        "LIST",
-        "LOCAL_DATETIME",
-        "LOCAL_TIME",
-        "POINT",
-        "STRING",
-        "ZONED_DATETIME",
-        "ZONED_TIME",
-    ]
+    type: Neo4jPropertyTypeName
     description: str = ""
     required: bool = False
     model_config = ConfigDict(
@@ -419,33 +432,33 @@ class GraphSchema(DataModel):
 
         VertexAI requires:
         - No 'const' keyword (convert to enum with single value)
+
+        Prefer :class:`~neo4j_graphrag.experimental.components.graph_schema_extraction.GraphSchemaExtractionOutput`
+        for schema-from-text structured output (leaner schema).
         """
         schema = super().model_json_schema(**kwargs)
-
-        def make_strict(obj: dict[str, Any]) -> None:
-            """Recursively set additionalProperties, required, and fix const."""
-            if obj.get("type") == "object" and "properties" in obj:
-                obj["additionalProperties"] = False
-                obj["required"] = list(obj["properties"].keys())
-
-            # Convert 'const' to 'enum' for VertexAI compatibility
-            if "const" in obj:
-                obj["enum"] = [obj.pop("const")]
-
-            for value in obj.values():
-                if isinstance(value, dict):
-                    make_strict(value)
-                elif isinstance(value, list):
-                    for item in value:
-                        if isinstance(item, dict):
-                            make_strict(item)
-
-        make_strict(schema)
-        if "$defs" in schema:
-            for def_schema in schema["$defs"].values():
-                make_strict(def_schema)
-
+        make_strict_json_schema_for_structured_output(schema)
         return schema
+
+    @classmethod
+    def from_extraction_output(cls, dto: GraphSchemaExtractionOutput) -> Self:
+        """Build a :class:`GraphSchema` from :class:`GraphSchemaExtractionOutput`.
+
+        Applies the same cross-reference filtering and validation as
+        :class:`SchemaFromTextExtractor`.
+        """
+        from neo4j_graphrag.experimental.components.graph_schema_extraction import (
+            GraphSchemaExtractionOutput,
+        )
+
+        if not isinstance(dto, GraphSchemaExtractionOutput):
+            raise TypeError(
+                f"Expected GraphSchemaExtractionOutput, got {type(dto).__name__}"
+            )
+        return cast(
+            Self,
+            validate_extraction_dict_to_graph_schema(dto.model_dump(mode="python")),
+        )
 
     @classmethod
     def create_empty(cls) -> Self:
@@ -651,7 +664,8 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         llm (LLMInterface): The language model to use for schema extraction.
         prompt_template (Optional[PromptTemplate]): A custom prompt template to use for extraction.
         llm_params (Optional[Dict[str, Any]]): Additional parameters passed to the LLM.
-        use_structured_output (bool): Whether to use structured output (LLMInterfaceV2) with the GraphSchema Pydantic model.
+        use_structured_output (bool): Whether to use structured output (LLMInterfaceV2) with
+            :class:`~neo4j_graphrag.experimental.components.graph_schema_extraction.GraphSchemaExtractionOutput`.
             Only supported for OpenAILLM and VertexAILLM. Defaults to False (uses V1 prompt-based JSON extraction).
 
     Example with V1 (default, prompt-based JSON):
@@ -1168,8 +1182,9 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
     async def _run_with_structured_output(self, prompt: str) -> GraphSchema:
         """Extract schema using structured output (V2).
 
-        V2 uses LLMInterfaceV2 with response_format=GraphSchema to enforce
-        the schema structure at the LLM level. This requires OpenAI or VertexAI.
+        V2 uses LLMInterfaceV2 with
+        :class:`~neo4j_graphrag.experimental.components.graph_schema_extraction.GraphSchemaExtractionOutput`
+        as ``response_format``, then converts to :class:`GraphSchema`. Requires OpenAI or VertexAI.
 
         Args:
             prompt: Formatted prompt for schema extraction
@@ -1181,6 +1196,10 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
             RuntimeError: If LLM is not OpenAILLM or VertexAILLM
             SchemaExtractionError: If LLM generation or validation fails
         """
+        from neo4j_graphrag.experimental.components.graph_schema_extraction import (
+            GraphSchemaExtractionOutput,
+        )
+
         # Capability check
         # This should never happen due to __init__ validation
         if not self._llm.supports_structured_output:
@@ -1191,17 +1210,23 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         # Invoke LLM with structured output
         messages = [LLMMessage(role="user", content=prompt)]
         try:
-            llm_result = await self._llm.ainvoke(messages, response_format=GraphSchema)  # type: ignore[call-arg, arg-type]
+            llm_result = await self._llm.ainvoke(
+                messages,  # type: ignore[arg-type]
+                response_format=GraphSchemaExtractionOutput,  # type: ignore[call-arg]
+            )
         except LLMGenerationError as e:
             raise SchemaExtractionError("Failed to generate schema from text") from e
 
-        # Parse JSON response
-        # Note: With structured output, this should always succeed, but we keep
-        # error handling for unexpected provider issues
-        extracted_schema = self._parse_llm_response(llm_result.content)
+        try:
+            dto = GraphSchemaExtractionOutput.model_validate(
+                self._parse_llm_response(llm_result.content)
+            )
+        except ValidationError as e:
+            raise SchemaExtractionError(
+                "LLM response does not conform to GraphSchemaExtractionOutput."
+            ) from e
 
-        # Validate and return (applies cross-reference filtering)
-        return self._validate_and_build_schema(extracted_schema)
+        return GraphSchema.from_extraction_output(dto)
 
     async def _run_with_prompt_based_extraction(self, prompt: str) -> GraphSchema:
         """Extract schema using prompt-based JSON extraction (V1).
@@ -1254,6 +1279,18 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
             return await self._run_with_structured_output(prompt)
         else:
             return await self._run_with_prompt_based_extraction(prompt)
+
+
+def validate_extraction_dict_to_graph_schema(
+    extracted_schema: Dict[str, Any],
+) -> GraphSchema:
+    """Cross-reference filter and build :class:`GraphSchema` from an extraction dict.
+
+    Used by :meth:`GraphSchema.from_extraction_output` and
+    :class:`SchemaFromTextExtractor` (V1 and V2). Does not require a configured LLM.
+    """
+    helper = object.__new__(SchemaFromTextExtractor)
+    return helper._validate_and_build_schema(extracted_schema)
 
 
 class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):

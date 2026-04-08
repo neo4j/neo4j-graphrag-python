@@ -1971,3 +1971,70 @@ async def test_schema_from_existing_graph_additional_params(
     assert schema.additional_node_types is True
     assert schema.additional_relationship_types is True
     assert schema.additional_patterns is True
+
+
+def test_graph_schema_extraction_output_json_schema_lean_root() -> None:
+    """Structured-output schema must not include pipeline-only GraphSchema flags."""
+    from neo4j_graphrag.experimental.components.graph_schema_extraction import (
+        GraphSchemaExtractionOutput,
+    )
+
+    raw = GraphSchemaExtractionOutput.model_json_schema()
+    dumped = json.dumps(raw)
+    assert "additional_node_types" not in dumped
+    assert "additional_relationship_types" not in dumped
+    assert "additional_patterns" not in dumped
+
+
+def test_graph_schema_from_extraction_output() -> None:
+    from neo4j_graphrag.experimental.components.graph_schema_extraction import (
+        ExtractedNodeType,
+        ExtractedPropertyType,
+        GraphSchemaExtractionOutput,
+    )
+
+    dto = GraphSchemaExtractionOutput(
+        node_types=[
+            ExtractedNodeType(
+                label="Person",
+                properties=[
+                    ExtractedPropertyType(name="name", type="STRING", required=True)
+                ],
+            )
+        ],
+        relationship_types=[],
+        patterns=[],
+        constraints=[
+            ConstraintType(
+                type="UNIQUENESS",
+                node_type="Person",
+                property_name="name",
+            )
+        ],
+    )
+    gs = GraphSchema.from_extraction_output(dto)
+    assert gs.node_types[0].label == "Person"
+    assert gs.node_types[0].properties[0].required is True
+    assert gs.constraints[0].property_name == "name"
+    assert gs.additional_node_types is False
+
+
+def test_validate_extraction_dict_to_graph_schema() -> None:
+    from neo4j_graphrag.experimental.components.schema import (
+        validate_extraction_dict_to_graph_schema,
+    )
+
+    d = {
+        "node_types": [
+            {
+                "label": "Person",
+                "properties": [{"name": "name", "type": "STRING", "required": False}],
+            }
+        ],
+        "relationship_types": [],
+        "patterns": [],
+        "constraints": [],
+    }
+    gs = validate_extraction_dict_to_graph_schema(d)
+    assert len(gs.node_types) == 1
+    assert gs.node_types[0].label == "Person"
