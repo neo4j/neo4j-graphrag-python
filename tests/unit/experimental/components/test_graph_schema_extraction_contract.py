@@ -28,7 +28,6 @@ from neo4j_graphrag.experimental.components.graph_schema_extraction import (
 )
 from neo4j_graphrag.experimental.components.schema import (
     GraphSchema,
-    Neo4jPropertyTypeName,
     NodeType,
     PropertyType,
     RelationshipType,
@@ -41,13 +40,10 @@ def test_extracted_property_type_field_names_match_property_type() -> None:
 
 
 def test_extracted_property_type_uses_same_type_annotation_as_property_type() -> None:
-    assert (
-        ExtractedPropertyType.model_fields["type"].annotation
-        is PropertyType.model_fields["type"].annotation
-    )
-    assert (
-        ExtractedPropertyType.model_fields["type"].annotation is Neo4jPropertyTypeName
-    )
+    """Both models must share the exact ``type`` annotation (``Neo4jPropertyTypeName`` in schema)."""
+    ext_ann = ExtractedPropertyType.model_fields["type"].annotation
+    prop_ann = PropertyType.model_fields["type"].annotation
+    assert ext_ann is prop_ann
 
 
 def test_extracted_node_type_has_core_node_type_fields_only() -> None:
