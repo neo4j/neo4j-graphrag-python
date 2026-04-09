@@ -105,6 +105,11 @@ Pattern
 
 .. autoclass:: neo4j_graphrag.experimental.components.schema.Pattern
 
+ConstraintType
+==============
+
+.. autoclass:: neo4j_graphrag.experimental.components.schema.ConstraintType
+
 GraphSchema
 ===========
 

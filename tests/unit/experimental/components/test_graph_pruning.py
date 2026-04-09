@@ -25,6 +25,7 @@ from neo4j_graphrag.experimental.components.graph_pruning import (
     PruningStats,
 )
 from neo4j_graphrag.experimental.components.schema import (
+    ConstraintType,
     GraphSchema,
     NodeType,
     Pattern,
@@ -151,10 +152,28 @@ def node_type_required_name() -> NodeType:
     return NodeType(
         label="Person",
         properties=[
-            PropertyType(name="name", type="STRING", required=True),
+            PropertyType(name="name", type="STRING"),
             PropertyType(name="age", type="INTEGER"),
         ],
     )
+
+
+def _graph_schema_for_node_entity(entity: Optional[NodeType]) -> GraphSchema:
+    if entity is None:
+        return GraphSchema(node_types=tuple())
+    prop_names = {p.name for p in entity.properties}
+    if entity.label == "Person" and "name" in prop_names and "age" in prop_names:
+        return GraphSchema(
+            node_types=(entity,),
+            constraints=(
+                ConstraintType(
+                    type="EXISTENCE",
+                    node_type="Person",
+                    property_name="name",
+                ),
+            ),
+        )
+    return GraphSchema(node_types=(entity,))
 
 
 @pytest.mark.parametrize(
@@ -212,9 +231,12 @@ def test_graph_pruning_validate_node(
     request: pytest.FixtureRequest,
 ) -> None:
     e = request.getfixturevalue(entity) if entity else None
+    schema = _graph_schema_for_node_entity(e)
 
     pruner = GraphPruning()
-    result = pruner._validate_node(node, PruningStats(), e, additional_node_types)
+    result = pruner._validate_node(
+        node, PruningStats(), e, additional_node_types, schema
+    )
     if expected_node is not None:
         assert result == expected_node
     else:
@@ -251,15 +273,24 @@ def test_graph_pruning_enforce_relationships_lexical_graph_with_pruned_nodes(
         ),  # Missing required 'name'
     ]
 
-    # Person node type requires 'name' property
+    # Person schema: 'name' is mandatory via EXISTENCE constraint
     person_type = NodeType(
         label="Person",
         properties=[
-            PropertyType(name="name", type="STRING", required=True),
+            PropertyType(name="name", type="STRING"),
             PropertyType(name="age", type="INTEGER"),
         ],
     )
-    schema = GraphSchema(node_types=(person_type,))
+    schema = GraphSchema(
+        node_types=(person_type,),
+        constraints=(
+            ConstraintType(
+                type="EXISTENCE",
+                node_type="Person",
+                property_name="name",
+            ),
+        ),
+    )
 
     # Filter nodes - Person should be pruned due to missing required property
     pruning_stats = PruningStats()
@@ -491,6 +522,12 @@ def test_graph_pruning_validate_relationship(
     )
 
     pruner = GraphPruning()
+    schema = GraphSchema(
+        node_types=tuple(),
+        relationship_types=(relationship_type,)
+        if relationship_type is not None
+        else tuple(),
+    )
     assert (
         pruner._validate_relationship(
             relationship_obj,
@@ -500,6 +537,7 @@ def test_graph_pruning_validate_relationship(
             additional_relationship_types,
             patterns,
             additional_patterns,
+            schema,
         )
         == expected_relationship_obj
     )
@@ -515,7 +553,16 @@ async def test_graph_pruning_run_happy_path(
     initial_graph = Neo4jGraph(
         nodes=[Neo4jNode(id="1", label="Person"), Neo4jNode(id="2", label="Location")],
     )
-    schema = GraphSchema(node_types=(node_type_required_name,))
+    schema = GraphSchema(
+        node_types=(node_type_required_name,),
+        constraints=(
+            ConstraintType(
+                type="EXISTENCE",
+                node_type="Person",
+                property_name="name",
+            ),
+        ),
+    )
     cleaned_graph = Neo4jGraph(nodes=[Neo4jNode(id="1", label="Person")])
     mock_clean_graph.return_value = (cleaned_graph, PruningStats())
     pruner = GraphPruning()

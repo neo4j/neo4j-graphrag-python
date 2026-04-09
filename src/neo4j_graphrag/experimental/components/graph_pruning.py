@@ -25,6 +25,8 @@ from neo4j_graphrag.experimental.components.schema import (
     PropertyType,
     NodeType,
     RelationshipType,
+    node_existence_property_names,
+    relationship_existence_property_names,
 )
 from neo4j_graphrag.experimental.components.types import (
     Neo4jGraph,
@@ -200,6 +202,7 @@ class GraphPruning(Component):
         pruning_stats: PruningStats,
         schema_entity: Optional[NodeType],
         additional_node_types: bool,
+        schema: GraphSchema,
     ) -> Optional[Neo4jNode]:
         if not node.label:
             pruning_stats.add_pruned_node(node, reason=PruningReason.MISSING_LABEL)
@@ -223,6 +226,7 @@ class GraphPruning(Component):
         filtered_props = self._enforce_properties(
             node,
             schema_entity,
+            schema,
             pruning_stats,
             prune_empty=True,
         )
@@ -261,6 +265,7 @@ class GraphPruning(Component):
                 pruning_stats,
                 schema_entity,
                 additional_node_types=schema.additional_node_types,
+                schema=schema,
             )
             if new_node:
                 valid_nodes.append(new_node)
@@ -275,6 +280,7 @@ class GraphPruning(Component):
         additional_relationship_types: bool,
         patterns: tuple[Pattern, ...],
         additional_patterns: bool,
+        schema: GraphSchema,
     ) -> Optional[Neo4jRelationship]:
         if not rel.type:
             pruning_stats.add_pruned_relationship(
@@ -332,6 +338,7 @@ class GraphPruning(Component):
             filtered_props = self._enforce_properties(
                 rel,
                 relationship_type,
+                schema,
                 pruning_stats,
                 prune_empty=False,
             )
@@ -388,6 +395,7 @@ class GraphPruning(Component):
                 schema.additional_relationship_types,
                 schema.patterns,
                 schema.additional_patterns,
+                schema,
             )
             if new_rel:
                 valid_rels.append(new_rel)
@@ -397,6 +405,7 @@ class GraphPruning(Component):
         self,
         item: Union[Neo4jNode, Neo4jRelationship],
         schema_item: Union[NodeType, RelationshipType],
+        schema: GraphSchema,
         pruning_stats: PruningStats,
         prune_empty: bool = False,
     ) -> dict[str, Any]:
@@ -422,6 +431,9 @@ class GraphPruning(Component):
         missing_required_properties = self._check_required_properties(
             filtered_properties,
             valid_properties=schema_item.properties,
+            schema=schema,
+            element_label=item.token,
+            is_relationship=isinstance(item, Neo4jRelationship),
         )
         if missing_required_properties:
             pruning_stats.add_pruned_item(
@@ -459,10 +471,24 @@ class GraphPruning(Component):
         return filtered_properties
 
     def _check_required_properties(
-        self, filtered_properties: dict[str, Any], valid_properties: list[PropertyType]
+        self,
+        filtered_properties: dict[str, Any],
+        valid_properties: list[PropertyType],
+        schema: GraphSchema,
+        element_label: str,
+        is_relationship: bool,
     ) -> list[str]:
         """Returns the list of missing required properties, if any."""
-        required_prop_names = {prop.name for prop in valid_properties if prop.required}
+        if is_relationship:
+            existence = relationship_existence_property_names(schema, element_label)
+        else:
+            existence = node_existence_property_names(schema, element_label)
+        deprecated_required = {
+            p.name
+            for p in valid_properties
+            if p.model_dump(mode="python").get("required") is True
+        }
+        required_prop_names = existence | deprecated_required
         missing_required_properties = []
         for req_prop in required_prop_names:
             if filtered_properties.get(req_prop) is None:

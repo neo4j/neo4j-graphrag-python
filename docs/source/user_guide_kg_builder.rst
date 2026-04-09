@@ -91,7 +91,7 @@ as shown below:
         # When no properties key is provided, a default "name" property is added automatically.
         {"label": "House", "description": "Family the person belongs to"},
         # or with an explicit list of properties the LLM will try to attach to the entity:
-        {"label": "Planet", "properties": [{"name": "name", "type": "STRING", "required": True}, {"name": "weather", "type": "STRING"}]},
+        {"label": "Planet", "properties": [{"name": "name", "type": "STRING"}, {"name": "weather", "type": "STRING"}]},
     ]
     # same thing for relationships:
     RELATIONSHIP_TYPES = [
@@ -114,6 +114,9 @@ The `patterns` are defined by a list of triplet in the format:
         ("Person", "HEIR_OF", "House"),
         ("House", "RULES", "Planet"),
     ]
+    # Mandatory properties are modeled on :class:`~neo4j_graphrag.experimental.components.schema.GraphSchema`
+    # using ``constraints`` with ``type="EXISTENCE"`` (and/or ``UNIQUENESS``), not the deprecated
+    # per-property ``required`` flag.
 
 This schema information can be provided to the `SimpleKGBuilder` as demonstrated below:
 
@@ -1147,8 +1150,8 @@ By default, all extracted elements — including nodes, relationships, and prope
 Configuration Options
 ---------------------
 
-- **Required Properties** (default: ``False``)
-  Required properties may be specified at the node or relationship type level. Any extracted node or relationship missing one or more of its required properties will be pruned from the graph.
+- **Mandatory properties (EXISTENCE constraints)**
+  On a :class:`~neo4j_graphrag.experimental.components.schema.GraphSchema`, declare mandatory node or relationship properties using ``constraints`` entries with ``type="EXISTENCE"`` (Neo4j-style existence: the property must be present). The legacy ``PropertyType.required`` field is deprecated and is migrated to EXISTENCE constraints when a schema is validated. During graph cleaning, any extracted node or relationship missing a mandatory property is pruned.
 
 - **Additional Properties**
   This node- or relationship-level option determines whether extra properties not listed in the schema should be retained.
@@ -1198,7 +1201,7 @@ In addition to the user-defined configuration options described above,
 the `GraphPruning` component performs the following cleanup operations:
 
 - Nodes with empty label or ID are pruned.
-- Nodes with missing required properties are pruned.
+- Nodes (and relationships) missing a property required by an EXISTENCE constraint are pruned.
 - Nodes with no remaining properties are pruned.
 - Relationships with empty type are pruned.
 - Relationships with invalid source or target nodes (i.e., nodes no longer present in the graph) are pruned.

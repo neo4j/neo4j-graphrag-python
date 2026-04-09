@@ -23,6 +23,8 @@ from neo4j_graphrag.experimental.components.schema import (
     GraphSchema,
     NodeType,
     PropertyType,
+    node_existence_property_names,
+    relationship_existence_property_names,
 )
 
 
@@ -52,17 +54,23 @@ def schema_visualization(
 
     schema_object = GraphSchema.model_validate(schema)
 
-    def _format_property_name(p: PropertyType) -> str:
+    def _format_property_name(
+        p: PropertyType,
+        *,
+        existence_names: set[str],
+    ) -> str:
         """
 
         Args:
             p (PropertyType): the property to be formatted
+            existence_names: property names with an EXISTENCE constraint on this element
 
         Returns:
-            str: the property name, suffixed with '*' if the property is required
+            str: the property name, suffixed with '*' if the property is mandatory
 
         """
-        return p.name + ("*" if p.required else "")
+        mark = p.name in existence_names or p.required
+        return p.name + ("*" if mark else "")
 
     def _relationship_properties(rel_type: str) -> dict[str, str]:
         """Returns a dict {prop_name: prop_type} for all relationship properties.
@@ -73,11 +81,13 @@ def schema_visualization(
         Returns:
             dict[str, str]: the relationship properties {name: type} mapping for display
         """
+        existence = relationship_existence_property_names(schema_object, rel_type)
         for relationship_type in schema_object.relationship_types:
             if relationship_type.label != rel_type:
                 continue
             return {
-                _format_property_name(p): p.type for p in relationship_type.properties
+                _format_property_name(p, existence_names=existence): p.type
+                for p in relationship_type.properties
             }
         return {}
 
@@ -90,7 +100,11 @@ def schema_visualization(
         Returns:
             dict[str, str]: the node properties {name: type} mapping for display
         """
-        return {_format_property_name(p): p.type for p in node_type.properties}
+        existence = node_existence_property_names(schema_object, node_type.label)
+        return {
+            _format_property_name(p, existence_names=existence): p.type
+            for p in node_type.properties
+        }
 
     nodes = [
         Node(  # type: ignore

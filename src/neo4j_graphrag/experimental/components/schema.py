@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import copy
 import json
 import logging
 import re
@@ -74,6 +75,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Use Literal (not Python Enum) so JSON Schema for Vertex/OpenAI structured output stays simple.
+GraphSchemaConstraintKind: TypeAlias = Literal["UNIQUENESS", "EXISTENCE"]
+
 # Shared with :class:`ExtractedPropertyType` (schema extraction structured output).
 Neo4jPropertyTypeName: TypeAlias = Literal[
     "BOOLEAN",
@@ -112,7 +116,10 @@ class PropertyType(BaseModel):
     # See https://neo4j.com/docs/cypher-manual/current/values-and-types/property-structural-constructed/#property-types
     type: Neo4jPropertyTypeName
     description: str = ""
-    required: bool = False
+    required: bool = Field(
+        default=False,
+        deprecated="Use an EXISTENCE entry in GraphSchema.constraints instead.",
+    )
     model_config = ConfigDict(
         frozen=True,
     )
@@ -237,18 +244,140 @@ class RelationshipType(BaseModel):
 
 class ConstraintType(BaseModel):
     """
-    Represents a constraint on a node in the graph.
+    Represents a constraint on a node label or a relationship type in the graph.
+
+    Use ``node_type`` for node-scoped constraints (``relationship_type`` empty).
+    Use ``relationship_type`` for relationship-scoped constraints (``node_type`` empty).
+
+    ``EXISTENCE`` constraints replace the deprecated per-:class:`PropertyType` ``required`` flag
+    for both node properties and relationship properties.
     """
 
-    type: Literal[
-        "UNIQUENESS"
-    ]  # TODO: add other constraint types ["propertyExistence", "propertyType", "key"]
-    node_type: str
+    type: GraphSchemaConstraintKind
+    node_type: str = Field(
+        default="",
+        description="Node label for node-scoped constraints; must be empty when relationship_type is set.",
+    )
+    relationship_type: str = Field(
+        default="",
+        description="Relationship type for relationship-scoped constraints; must be empty when node_type is set.",
+    )
     property_name: str
 
     model_config = ConfigDict(
         frozen=True,
     )
+
+    @model_validator(mode="after")
+    def node_or_relationship_target(self) -> Self:
+        has_node = bool(self.node_type)
+        has_rel = bool(self.relationship_type)
+        if has_node and has_rel:
+            raise ValueError(
+                f"Constraint must not set both node_type and relationship_type: {self!r}"
+            )
+        if not has_node and not has_rel:
+            raise ValueError(
+                "Constraint must set exactly one of node_type (node-scoped) or "
+                "relationship_type (relationship-scoped)."
+            )
+        return self
+
+
+def _constraint_key(d: dict[str, Any]) -> tuple[Any, ...]:
+    return (
+        d.get("type"),
+        d.get("node_type") or "",
+        d.get("relationship_type") or "",
+        d.get("property_name"),
+    )
+
+
+def _migrate_required_flags_to_existence_constraints(data: dict[str, Any]) -> None:
+    """Mutates *data* in place: EXISTENCE constraints from deprecated required=True, then required=False."""
+    constraints_raw = data.get("constraints")
+    constraints_list: list[dict[str, Any]]
+    if constraints_raw is None:
+        constraints_list = []
+        data["constraints"] = constraints_list
+    elif isinstance(constraints_raw, (list, tuple)):
+        constraints_list = [
+            c if isinstance(c, dict) else c.model_dump(mode="python") for c in constraints_raw
+        ]
+        data["constraints"] = constraints_list
+    else:
+        constraints_list = []
+        data["constraints"] = constraints_list
+
+    existing_keys = {_constraint_key(c) for c in constraints_list if isinstance(c, dict)}
+
+    def ensure_existence(
+        *,
+        label: str,
+        prop_name: str,
+        is_relationship: bool,
+    ) -> None:
+        new_c = {
+            "type": "EXISTENCE",
+            "property_name": prop_name,
+            "node_type": "" if is_relationship else label,
+            "relationship_type": label if is_relationship else "",
+        }
+        key = _constraint_key(new_c)
+        if key in existing_keys:
+            return
+        existing_keys.add(key)
+        constraints_list.append(new_c)
+
+    def migrate_entity_list(entities: Any, *, is_relationship: bool) -> None:
+        if not entities:
+            return
+        for ent in entities:
+            label = getattr(ent, "label", None) if not isinstance(ent, dict) else ent.get("label")
+            if not label:
+                continue
+            props = (
+                list(ent.get("properties") or [])
+                if isinstance(ent, dict)
+                else list(getattr(ent, "properties", []) or [])
+            )
+            new_props: list[Any] = []
+            for prop in props:
+                if isinstance(prop, dict):
+                    if prop.get("required") is True:
+                        pname = prop.get("name")
+                        if isinstance(pname, str) and pname:
+                            ensure_existence(
+                                label=label,
+                                prop_name=pname,
+                                is_relationship=is_relationship,
+                            )
+                        prop = {**prop, "required": False}
+                    new_props.append(prop)
+                else:
+                    # PropertyType model (frozen); use model_dump to avoid deprecated field access
+                    pdata = prop.model_dump(mode="python")
+                    if pdata.get("required") is True:
+                        pname = pdata.get("name")
+                        if isinstance(pname, str) and pname:
+                            ensure_existence(
+                                label=label,
+                                prop_name=pname,
+                                is_relationship=is_relationship,
+                            )
+                        new_props.append(prop.model_copy(update={"required": False}))
+                    else:
+                        new_props.append(prop)
+            if isinstance(ent, dict):
+                # Preserve omission of ``properties`` so :class:`NodeType` / :class:`RelationshipType`
+                # ``model_validator(mode="before")`` can inject defaults (min_length=1 for nodes).
+                if "properties" in ent or new_props:
+                    ent["properties"] = new_props
+            else:
+                ent.properties = new_props
+
+    migrate_entity_list(data.get("node_types"), is_relationship=False)
+    migrate_entity_list(data.get("relationship_types"), is_relationship=True)
 
 
 class Pattern(BaseModel):
@@ -344,6 +473,16 @@ class GraphSchema(DataModel):
             data["patterns"] = converted
         return data
 
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_deprecated_required_to_existence(cls, data: Any) -> Any:
+        """Map deprecated PropertyType.required=True to EXISTENCE constraints; clear required flags."""
+        if not isinstance(data, dict):
+            return data
+        data = copy.deepcopy(data)
+        _migrate_required_flags_to_existence_constraints(data)
+        return data
+
     @model_validator(mode="after")
     def validate_patterns_against_node_and_rel_types(self) -> Self:
         self._node_type_index = {node.label: node for node in self.node_types}
@@ -389,31 +528,46 @@ class GraphSchema(DataModel):
         return self
 
     @model_validator(mode="after")
-    def validate_constraints_against_node_types(self) -> Self:
+    def validate_constraints_against_schema_elements(self) -> Self:
+        """Validate UNIQUENESS and EXISTENCE constraints against declared node/relationship properties."""
         if not self.constraints:
             return self
         for constraint in self.constraints:
-            # Only validate UNIQUENESS constraints (other types will be added)
-            if constraint.type != "UNIQUENESS":
-                continue
-
+            if constraint.type not in ("UNIQUENESS", "EXISTENCE"):
+                raise SchemaValidationError(
+                    f"Unsupported constraint type: {constraint.type!r}"
+                )
             if not constraint.property_name:
                 raise SchemaValidationError(
                     f"Constraint has no property name: {constraint}. Property name is required."
                 )
-            if constraint.node_type not in self._node_type_index:
-                raise SchemaValidationError(
-                    f"Constraint references undefined node type: {constraint.node_type}"
-                )
-            # Check if property_name exists on the node type
-            node_type = self._node_type_index[constraint.node_type]
-            valid_property_names = {p.name for p in node_type.properties}
-            if constraint.property_name not in valid_property_names:
-                raise SchemaValidationError(
-                    f"Constraint references undefined property '{constraint.property_name}' "
-                    f"on node type '{constraint.node_type}'. "
-                    f"Valid properties: {valid_property_names}"
-                )
+            if constraint.relationship_type:
+                rel_t = self._relationship_type_index.get(constraint.relationship_type)
+                if not rel_t:
+                    raise SchemaValidationError(
+                        f"Constraint references undefined relationship type: "
+                        f"{constraint.relationship_type!r}"
+                    )
+                valid_property_names = {p.name for p in rel_t.properties}
+                if constraint.property_name not in valid_property_names:
+                    raise SchemaValidationError(
+                        f"Constraint references undefined property '{constraint.property_name}' "
+                        f"on relationship type '{constraint.relationship_type}'. "
+                        f"Valid properties: {valid_property_names}"
+                    )
+            else:
+                node_type = self._node_type_index.get(constraint.node_type)
+                if not node_type:
+                    raise SchemaValidationError(
+                        f"Constraint references undefined node type: {constraint.node_type!r}"
+                    )
+                valid_property_names = {p.name for p in node_type.properties}
+                if constraint.property_name not in valid_property_names:
+                    raise SchemaValidationError(
+                        f"Constraint references undefined property '{constraint.property_name}' "
+                        f"on node type '{constraint.node_type}'. "
+                        f"Valid properties: {valid_property_names}"
+                    )
         return self
 
     def node_type_from_label(self, label: str) -> Optional[NodeType]:
@@ -526,6 +680,34 @@ class GraphSchema(DataModel):
             return cls.model_validate(data)
         except ValidationError as e:
             raise SchemaValidationError(str(e)) from e
+
+
+def node_existence_property_names(schema: GraphSchema, node_label: str) -> set[str]:
+    """Property names that have an EXISTENCE constraint on *node_label*."""
+    names: set[str] = set()
+    for c in schema.constraints:
+        if c.type != "EXISTENCE":
+            continue
+        if c.relationship_type:
+            continue
+        if c.node_type == node_label:
+            names.add(c.property_name)
+    return names
+
+
+def relationship_existence_property_names(
+    schema: GraphSchema, relationship_label: str
+) -> set[str]:
+    """Property names that have an EXISTENCE constraint on *relationship_label*."""
+    names: set[str] = set()
+    for c in schema.constraints:
+        if c.type != "EXISTENCE":
+            continue
+        if not c.relationship_type:
+            continue
+        if c.relationship_type == relationship_label:
+            names.add(c.property_name)
+    return names
 
 
 class BaseSchemaBuilder(Component):
@@ -844,7 +1026,6 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
 
         This filtering is common to both V1 and V2 paths and handles:
         - Filtering out patterns that reference non-existent nodes/relationships
-        - Enforcing required=True for properties with UNIQUENESS constraints
         - Filtering out invalid constraints
 
         Args:
@@ -864,72 +1045,94 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
                 extracted_relationship_types,
             )
 
-        # Enforce required=true for properties with UNIQUENESS constraints
-        if extracted_constraints:
-            self._enforce_required_for_constraint_properties(
-                extracted_node_types, extracted_constraints
-            )
-
         # Filter out invalid constraints
         if extracted_constraints:
             extracted_constraints = self._filter_invalid_constraints(
-                extracted_constraints, extracted_node_types
+                extracted_constraints,
+                extracted_node_types,
+                extracted_relationship_types or [],
             )
 
         return extracted_patterns, extracted_constraints
 
     def _filter_invalid_constraints(
-        self, constraints: List[Dict[str, Any]], node_types: List[Dict[str, Any]]
+        self,
+        constraints: List[Dict[str, Any]],
+        node_types: List[Dict[str, Any]],
+        relationship_types: List[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
-        """Filter out constraints that reference undefined node types, have no property name, are not UNIQUENESS type
-        or reference a property that doesn't exist on the node type."""
+        """Filter out constraints that reference undefined types or undefined properties."""
         if not constraints:
             return []
 
-        if not node_types:
-            logging.info(
-                "Filtering out all constraints because no node types are defined. "
-                "Constraints reference node types that must be defined."
-            )
-            return []
-
-        # Build a mapping of node_type label -> set of property names
         node_type_properties: Dict[str, set[str]] = {}
-        for node_type_dict in node_types:
+        for node_type_dict in node_types or []:
             label = node_type_dict.get("label")
             if label:
                 properties = node_type_dict.get("properties", [])
                 property_names = {p.get("name") for p in properties if p.get("name")}
                 node_type_properties[label] = property_names
 
+        rel_type_properties: Dict[str, set[str]] = {}
+        for rel_dict in relationship_types or []:
+            label = rel_dict.get("label")
+            if label:
+                properties = rel_dict.get("properties", [])
+                property_names = {p.get("name") for p in properties if p.get("name")}
+                rel_type_properties[label] = property_names
+
         valid_node_labels = set(node_type_properties.keys())
+        valid_rel_labels = set(rel_type_properties.keys())
 
         filtered_constraints = []
         for constraint in constraints:
-            # Only process UNIQUENESS constraints (other types will be added)
-            if constraint.get("type") != "UNIQUENESS":
+            ctype = constraint.get("type")
+            if ctype not in ("UNIQUENESS", "EXISTENCE"):
                 logging.info(
                     f"Filtering out constraint: {constraint}. "
-                    f"Only UNIQUENESS constraints are supported."
+                    f"Only UNIQUENESS and EXISTENCE constraints are supported."
                 )
                 continue
 
-            # check if the property_name is provided
             if not constraint.get("property_name"):
                 logging.info(
                     f"Filtering out constraint: {constraint}. "
                     f"Property name is not provided."
                 )
                 continue
-            # check if the node_type is valid
+
+            rel_t = (constraint.get("relationship_type") or "").strip()
+            if rel_t:
+                if rel_t not in valid_rel_labels:
+                    logging.info(
+                        f"Filtering out constraint: {constraint}. "
+                        f"Relationship type '{rel_t}' is not valid. Valid types: {valid_rel_labels}"
+                    )
+                    continue
+                property_name = constraint.get("property_name")
+                if property_name not in rel_type_properties.get(rel_t, set()):
+                    logging.info(
+                        f"Filtering out constraint: {constraint}. "
+                        f"Property '{property_name}' does not exist on relationship type '{rel_t}'. "
+                        f"Valid properties: {rel_type_properties.get(rel_t, set())}"
+                    )
+                    continue
+                filtered_constraints.append(constraint)
+                continue
+
             node_type = constraint.get("node_type")
+            if not node_type:
+                logging.info(
+                    f"Filtering out constraint: {constraint}. "
+                    f"Node-scoped constraints must set node_type."
+                )
+                continue
             if node_type not in valid_node_labels:
                 logging.info(
                     f"Filtering out constraint: {constraint}. "
                     f"Node type '{node_type}' is not valid. Valid node types: {valid_node_labels}"
                 )
                 continue
-            # check if the property_name exists on the node type
             property_name = constraint.get("property_name")
             if property_name not in node_type_properties.get(node_type, set()):
                 logging.info(
@@ -992,40 +1195,6 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
                     prop.pop("required", None)
 
         return node_types
-
-    def _enforce_required_for_constraint_properties(
-        self,
-        node_types: List[Dict[str, Any]],
-        constraints: List[Dict[str, Any]],
-    ) -> None:
-        """Ensure properties with UNIQUENESS constraints are marked as required."""
-        if not constraints:
-            return
-
-        # Build a lookup for property_names and constraints
-        constraint_props: Dict[str, set[str]] = {}
-        for c in constraints:
-            if c.get("type") == "UNIQUENESS":
-                label = c.get("node_type")
-                prop = c.get("property_name")
-                if label and prop:
-                    constraint_props.setdefault(label, set()).add(prop)
-
-        # Skip node_types without constraints
-        for node_type in node_types:
-            label = node_type.get("label")
-            if label not in constraint_props:
-                continue
-
-            props_to_fix = constraint_props[label]
-            for prop in node_type.get("properties", []):
-                if isinstance(prop, dict) and prop.get("name") in props_to_fix:
-                    if prop.get("required") is not True:
-                        logging.info(
-                            f"Auto-setting 'required' as True for property '{prop.get('name')}' "
-                            f"on node '{label}' (has UNIQUENESS constraint)."
-                        )
-                        prop["required"] = True
 
     def _clean_json_content(self, content: str) -> str:
         content = content.strip()
@@ -1115,6 +1284,8 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
 
         # Filter invalid required fields
         node_types = self._filter_properties_required_field(node_types)
+        if rel_types:
+            rel_types = self._filter_properties_required_field(rel_types)
 
         # Filter nodes with no properties (after property filtering)
         # This prevents validation errors from min_length=1 constraint on NodeType.properties
@@ -1329,44 +1500,46 @@ class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
         self.additional_patterns = additional_patterns
 
     @staticmethod
-    def _extract_required_properties(
+    def _extract_existence_constraints_from_metadata(
         structured_schema: dict[str, Any],
-    ) -> list[tuple[str, str]]:
-        """Extract a list of (node label (or rel type), property name) for which
-         an "EXISTENCE" or "KEY" constraint is defined in the DB.
-
-         Args:
-
-             structured_schema (dict[str, Any]): the result of the `get_structured_schema()` function.
-
-        Returns:
-
-            list of tuples of (node label (or rel type), property name)
-
-        """
+    ) -> list[dict[str, Any]]:
+        """Build ``GraphSchema``-style EXISTENCE constraint dicts from DB metadata."""
         schema_metadata = structured_schema.get("metadata", {})
-        existence_constraint = []  # list of (node label, property name)
+        out: list[dict[str, Any]] = []
         for constraint in schema_metadata.get("constraint", []):
-            if constraint["type"] in (
-                "NODE_PROPERTY_EXISTENCE",
-                "NODE_KEY",
-                "RELATIONSHIP_PROPERTY_EXISTENCE",
-                "RELATIONSHIP_KEY",
-            ):
+            ct = constraint["type"]
+            if ct in ("NODE_PROPERTY_EXISTENCE", "NODE_KEY"):
                 properties = constraint["properties"]
                 labels = constraint["labelsOrTypes"]
-                # note: existence constraint only apply to a single property
-                # and a single label
                 prop = properties[0]
                 lab = labels[0]
-                existence_constraint.append((lab, prop))
-        return existence_constraint
+                out.append(
+                    {
+                        "type": "EXISTENCE",
+                        "node_type": lab,
+                        "relationship_type": "",
+                        "property_name": prop,
+                    }
+                )
+            elif ct in ("RELATIONSHIP_PROPERTY_EXISTENCE", "RELATIONSHIP_KEY"):
+                properties = constraint["properties"]
+                labels = constraint["labelsOrTypes"]
+                prop = properties[0]
+                lab = labels[0]
+                out.append(
+                    {
+                        "type": "EXISTENCE",
+                        "node_type": "",
+                        "relationship_type": lab,
+                        "property_name": prop,
+                    }
+                )
+        return out
 
     def _to_schema_entity_dict(
         self,
         key: str,
         property_dict: list[dict[str, Any]],
-        existence_constraint: list[tuple[str, str]],
     ) -> dict[str, Any]:
         entity_dict: dict[str, Any] = {
             "label": key,
@@ -1374,7 +1547,6 @@ class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
                 {
                     "name": p["property"],
                     "type": p["type"],
-                    "required": (key, p["property"]) in existence_constraint,
                 }
                 for p in property_dict
             ],
@@ -1385,19 +1557,21 @@ class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
 
     async def run(self, *args: Any, **kwargs: Any) -> GraphSchema:
         structured_schema = get_structured_schema(self.driver, database=self.database)
-        existence_constraint = self._extract_required_properties(structured_schema)
+        existence_constraints = self._extract_existence_constraints_from_metadata(
+            structured_schema
+        )
 
         # node label with properties
         node_labels = set(structured_schema["node_props"].keys())
         node_types = [
-            self._to_schema_entity_dict(key, properties, existence_constraint)
+            self._to_schema_entity_dict(key, properties)
             for key, properties in structured_schema["node_props"].items()
         ]
 
         # relationships with properties
         rel_labels = set(structured_schema["rel_props"].keys())
         relationship_types = [
-            self._to_schema_entity_dict(key, properties, existence_constraint)
+            self._to_schema_entity_dict(key, properties)
             for key, properties in structured_schema["rel_props"].items()
         ]
 
@@ -1450,6 +1624,8 @@ class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
             )
         if self.additional_patterns is not None:
             schema_dict["additional_patterns"] = self.additional_patterns
+        if existence_constraints:
+            schema_dict["constraints"] = existence_constraints
         return GraphSchema.model_validate(
             schema_dict,
         )

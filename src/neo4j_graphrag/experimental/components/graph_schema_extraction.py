@@ -37,12 +37,15 @@ from neo4j_graphrag.utils.json_schema_structured_output import (
 
 
 class ExtractedPropertyType(BaseModel):
-    """Property definition aligned with :class:`~neo4j_graphrag.experimental.components.schema.PropertyType` for extraction."""
+    """Property definition aligned with :class:`~neo4j_graphrag.experimental.components.schema.PropertyType` for extraction.
+
+    Mandatory properties are expressed via ``EXISTENCE`` entries in ``constraints``,
+    not via a per-property flag (see :class:`GraphSchema`).
+    """
 
     name: str
     type: Neo4jPropertyTypeName
     description: str = ""
-    required: bool = False
     model_config = ConfigDict(frozen=True, extra="forbid")
 
 

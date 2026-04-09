@@ -34,9 +34,10 @@ from neo4j_graphrag.experimental.components.schema import (
 )
 
 
-def test_extracted_property_type_field_names_match_property_type() -> None:
-    """Extraction wire format must stay in sync with :class:`PropertyType` for mapped fields."""
-    assert set(ExtractedPropertyType.model_fields) == set(PropertyType.model_fields)
+def test_extracted_property_type_fields_are_core_property_type_subset() -> None:
+    """Extraction uses the same core fields as :class:`PropertyType` (no deprecated ``required``)."""
+    assert set(ExtractedPropertyType.model_fields) == {"name", "type", "description"}
+    assert set(ExtractedPropertyType.model_fields).issubset(set(PropertyType.model_fields))
 
 
 def test_extracted_property_type_uses_same_type_annotation_as_property_type() -> None:
