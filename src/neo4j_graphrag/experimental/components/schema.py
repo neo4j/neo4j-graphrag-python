@@ -20,6 +20,7 @@ import re
 import warnings
 from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -29,6 +30,7 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    TypeAlias,
     Union,
     cast,
 )
@@ -61,8 +63,32 @@ from neo4j_graphrag.llm import LLMInterface
 from neo4j_graphrag.schema import get_structured_schema
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.file_handler import FileFormat, FileHandler
+from neo4j_graphrag.utils.json_schema_structured_output import (
+    make_strict_json_schema_for_structured_output,
+)
+
+if TYPE_CHECKING:
+    from neo4j_graphrag.experimental.components.graph_schema_extraction import (
+        GraphSchemaExtractionOutput,
+    )
 
 logger = logging.getLogger(__name__)
+
+# Shared with :class:`ExtractedPropertyType` (schema extraction structured output).
+Neo4jPropertyTypeName: TypeAlias = Literal[
+    "BOOLEAN",
+    "DATE",
+    "DURATION",
+    "FLOAT",
+    "INTEGER",
+    "LIST",
+    "LOCAL_DATETIME",
+    "LOCAL_TIME",
+    "POINT",
+    "STRING",
+    "ZONED_DATETIME",
+    "ZONED_TIME",
+]
 
 _DUNDER_RE = re.compile(r"^__|__$")
 
@@ -84,20 +110,7 @@ class PropertyType(BaseModel):
 
     name: str
     # See https://neo4j.com/docs/cypher-manual/current/values-and-types/property-structural-constructed/#property-types
-    type: Literal[
-        "BOOLEAN",
-        "DATE",
-        "DURATION",
-        "FLOAT",
-        "INTEGER",
-        "LIST",
-        "LOCAL_DATETIME",
-        "LOCAL_TIME",
-        "POINT",
-        "STRING",
-        "ZONED_DATETIME",
-        "ZONED_TIME",
-    ]
+    type: Neo4jPropertyTypeName
     description: str = ""
     required: bool = False
     model_config = ConfigDict(
@@ -419,33 +432,33 @@ class GraphSchema(DataModel):
 
         VertexAI requires:
         - No 'const' keyword (convert to enum with single value)
+
+        Prefer :class:`~neo4j_graphrag.experimental.components.graph_schema_extraction.GraphSchemaExtractionOutput`
+        for schema-from-text structured output (leaner schema).
         """
         schema = super().model_json_schema(**kwargs)
-
-        def make_strict(obj: dict[str, Any]) -> None:
-            """Recursively set additionalProperties, required, and fix const."""
-            if obj.get("type") == "object" and "properties" in obj:
-                obj["additionalProperties"] = False
-                obj["required"] = list(obj["properties"].keys())
-
-            # Convert 'const' to 'enum' for VertexAI compatibility
-            if "const" in obj:
-                obj["enum"] = [obj.pop("const")]
-
-            for value in obj.values():
-                if isinstance(value, dict):
-                    make_strict(value)
-                elif isinstance(value, list):
-                    for item in value:
-                        if isinstance(item, dict):
-                            make_strict(item)
-
-        make_strict(schema)
-        if "$defs" in schema:
-            for def_schema in schema["$defs"].values():
-                make_strict(def_schema)
-
+        make_strict_json_schema_for_structured_output(schema)
         return schema
+
+    @classmethod
+    def from_extraction_output(cls, dto: GraphSchemaExtractionOutput) -> Self:
+        """Build a :class:`GraphSchema` from :class:`GraphSchemaExtractionOutput`.
+
+        Applies the same cross-reference filtering and validation as
+        :class:`SchemaFromTextExtractor`.
+        """
+        from neo4j_graphrag.experimental.components.graph_schema_extraction import (
+            GraphSchemaExtractionOutput,
+        )
+
+        if not isinstance(dto, GraphSchemaExtractionOutput):
+            raise TypeError(
+                f"Expected GraphSchemaExtractionOutput, got {type(dto).__name__}"
+            )
+        return cast(
+            Self,
+            validate_extraction_dict_to_graph_schema(dto.model_dump(mode="python")),
+        )
 
     @classmethod
     def create_empty(cls) -> Self:
@@ -642,6 +655,217 @@ class SchemaBuilder(BaseSchemaBuilder):
         )
 
 
+def _extraction_filter_invalid_patterns(
+    patterns: Any,
+    node_types: List[Dict[str, Any]],
+    relationship_types: Optional[List[Dict[str, Any]]] = None,
+) -> Any:
+    """Filter out patterns that reference undefined node or relationship types."""
+    if not node_types:
+        logging.info(
+            "Filtering out all patterns because no node types are defined. "
+            "Patterns reference node types that must be defined."
+        )
+        return []
+
+    if not relationship_types:
+        logging.info(
+            "Filtering out all patterns because no relationship types are defined. "
+            "GraphSchema validation requires relationship_types when patterns are provided."
+        )
+        return []
+
+    valid_node_labels = {node_type["label"] for node_type in node_types}
+    valid_relationship_labels = {rel_type["label"] for rel_type in relationship_types}
+
+    filtered_patterns = []
+    for pattern in patterns:
+        if isinstance(pattern, dict):
+            if not all(k in pattern for k in ("source", "relationship", "target")):
+                continue
+            entity1 = pattern["source"]
+            relation = pattern["relationship"]
+            entity2 = pattern["target"]
+        elif isinstance(pattern, (list, tuple)):
+            if len(pattern) != 3:
+                continue
+            entity1, relation, entity2 = pattern
+        elif isinstance(pattern, Pattern):
+            entity1, relation, entity2 = pattern
+        else:
+            continue
+
+        if (
+            entity1 in valid_node_labels
+            and entity2 in valid_node_labels
+            and relation in valid_relationship_labels
+        ):
+            filtered_patterns.append(pattern)
+        else:
+            entity1_valid = entity1 in valid_node_labels
+            entity2_valid = entity2 in valid_node_labels
+            relation_valid = relation in valid_relationship_labels
+
+            logging.info(
+                f"Filtering out invalid pattern: {pattern}. "
+                f"Entity1 '{entity1}' valid: {entity1_valid}, "
+                f"Entity2 '{entity2}' valid: {entity2_valid}, "
+                f"Relation '{relation}' valid: {relation_valid}"
+            )
+
+    return filtered_patterns
+
+
+def _extraction_enforce_required_for_constraint_properties(
+    node_types: List[Dict[str, Any]],
+    constraints: List[Dict[str, Any]],
+) -> None:
+    """Ensure properties with UNIQUENESS constraints are marked as required."""
+    if not constraints:
+        return
+
+    constraint_props: Dict[str, set[str]] = {}
+    for c in constraints:
+        if c.get("type") == "UNIQUENESS":
+            label = c.get("node_type")
+            prop = c.get("property_name")
+            if label and prop:
+                constraint_props.setdefault(label, set()).add(prop)
+
+    for node_type in node_types:
+        label = node_type.get("label")
+        if label not in constraint_props:
+            continue
+
+        props_to_fix = constraint_props[label]
+        for prop in node_type.get("properties", []):
+            if isinstance(prop, dict) and prop.get("name") in props_to_fix:
+                if prop.get("required") is not True:
+                    logging.info(
+                        f"Auto-setting 'required' as True for property '{prop.get('name')}' "
+                        f"on node '{label}' (has UNIQUENESS constraint)."
+                    )
+                    prop["required"] = True
+
+
+def _extraction_filter_invalid_constraints(
+    constraints: List[Dict[str, Any]], node_types: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """Filter constraints that reference unknown node types or invalid properties."""
+    if not constraints:
+        return []
+
+    if not node_types:
+        logging.info(
+            "Filtering out all constraints because no node types are defined. "
+            "Constraints reference node types that must be defined."
+        )
+        return []
+
+    node_type_properties: Dict[str, set[str]] = {}
+    for node_type_dict in node_types:
+        label = node_type_dict.get("label")
+        if label:
+            properties = node_type_dict.get("properties", [])
+            property_names = {p.get("name") for p in properties if p.get("name")}
+            node_type_properties[label] = property_names
+
+    valid_node_labels = set(node_type_properties.keys())
+
+    filtered_constraints = []
+    for constraint in constraints:
+        if constraint.get("type") != "UNIQUENESS":
+            logging.info(
+                f"Filtering out constraint: {constraint}. "
+                f"Only UNIQUENESS constraints are supported."
+            )
+            continue
+
+        if not constraint.get("property_name"):
+            logging.info(
+                f"Filtering out constraint: {constraint}. "
+                f"Property name is not provided."
+            )
+            continue
+        node_type = constraint.get("node_type")
+        if node_type not in valid_node_labels:
+            logging.info(
+                f"Filtering out constraint: {constraint}. "
+                f"Node type '{node_type}' is not valid. Valid node types: {valid_node_labels}"
+            )
+            continue
+        property_name = constraint.get("property_name")
+        if property_name not in node_type_properties.get(node_type, set()):
+            logging.info(
+                f"Filtering out constraint: {constraint}. "
+                f"Property '{property_name}' does not exist on node type '{node_type}'. "
+                f"Valid properties: {node_type_properties.get(node_type, set())}"
+            )
+            continue
+        filtered_constraints.append(constraint)
+    return filtered_constraints
+
+
+def _extraction_apply_cross_reference_filters(
+    extracted_node_types: List[Dict[str, Any]],
+    extracted_relationship_types: Optional[List[Dict[str, Any]]],
+    extracted_patterns: Any,
+    extracted_constraints: Optional[List[Dict[str, Any]]],
+) -> tuple[Any, Optional[List[Dict[str, Any]]]]:
+    if extracted_patterns:
+        extracted_patterns = _extraction_filter_invalid_patterns(
+            extracted_patterns,
+            extracted_node_types,
+            extracted_relationship_types,
+        )
+
+    if extracted_constraints:
+        _extraction_enforce_required_for_constraint_properties(
+            extracted_node_types, extracted_constraints
+        )
+
+    if extracted_constraints:
+        extracted_constraints = _extraction_filter_invalid_constraints(
+            extracted_constraints, extracted_node_types
+        )
+
+    return extracted_patterns, extracted_constraints
+
+
+def validate_extraction_dict_to_graph_schema(
+    extracted_schema: Dict[str, Any],
+) -> GraphSchema:
+    """Cross-reference filter and build :class:`GraphSchema` from an extraction dict.
+
+    Used by :meth:`GraphSchema.from_extraction_output` and
+    :class:`SchemaFromTextExtractor` (V1 and V2). Does not require a configured LLM.
+    """
+    node_types = extracted_schema.get("node_types") or []
+    rel_types = extracted_schema.get("relationship_types")
+    patterns = extracted_schema.get("patterns")
+    constraints = extracted_schema.get("constraints")
+
+    patterns, constraints = _extraction_apply_cross_reference_filters(
+        node_types, rel_types, patterns, constraints
+    )
+
+    try:
+        schema = GraphSchema.model_validate(
+            {
+                "node_types": node_types,
+                "relationship_types": rel_types,
+                "patterns": patterns,
+                "constraints": constraints or [],
+            }
+        )
+        logger.debug(f"Extracted schema: {schema}")
+        return schema
+    except ValidationError as e:
+        raise SchemaExtractionError(
+            f"LLM response does not conform to GraphSchema: {str(e)}"
+        ) from e
+
+
 class SchemaFromTextExtractor(BaseSchemaBuilder):
     """
     A component for constructing GraphSchema objects from the output of an LLM after
@@ -651,7 +875,8 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         llm (LLMInterface): The language model to use for schema extraction.
         prompt_template (Optional[PromptTemplate]): A custom prompt template to use for extraction.
         llm_params (Optional[Dict[str, Any]]): Additional parameters passed to the LLM.
-        use_structured_output (bool): Whether to use structured output (LLMInterfaceV2) with the GraphSchema Pydantic model.
+        use_structured_output (bool): Whether to use structured output (LLMInterfaceV2) with
+            :class:`~neo4j_graphrag.experimental.components.graph_schema_extraction.GraphSchemaExtractionOutput`.
             Only supported for OpenAILLM and VertexAILLM. Defaults to False (uses V1 prompt-based JSON extraction).
 
     Example with V1 (default, prompt-based JSON):
@@ -696,85 +921,6 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
                 f"Please use a model that supports structured output, or set use_structured_output=False."
             )
 
-    def _filter_invalid_patterns(
-        self,
-        patterns: List[Tuple[str, str, str]],
-        node_types: List[Dict[str, Any]],
-        relationship_types: Optional[List[Dict[str, Any]]] = None,
-    ) -> List[Tuple[str, str, str]]:
-        """
-        Filter out patterns that reference undefined node types or relationship types.
-
-        Args:
-            patterns: List of patterns to filter.
-            node_types: List of node type definitions.
-            relationship_types: Optional list of relationship type definitions.
-
-        Returns:
-            Filtered list of patterns containing only valid references.
-        """
-        # Early returns for missing required types
-        if not node_types:
-            logging.info(
-                "Filtering out all patterns because no node types are defined. "
-                "Patterns reference node types that must be defined."
-            )
-            return []
-
-        if not relationship_types:
-            logging.info(
-                "Filtering out all patterns because no relationship types are defined. "
-                "GraphSchema validation requires relationship_types when patterns are provided."
-            )
-            return []
-
-        # Create sets of valid labels
-        valid_node_labels = {node_type["label"] for node_type in node_types}
-        valid_relationship_labels = {
-            rel_type["label"] for rel_type in relationship_types
-        }
-
-        # Filter patterns
-        filtered_patterns = []
-        for pattern in patterns:
-            # Extract components based on pattern type
-            if isinstance(pattern, dict):
-                if not all(k in pattern for k in ("source", "relationship", "target")):
-                    continue
-                entity1 = pattern["source"]
-                relation = pattern["relationship"]
-                entity2 = pattern["target"]
-            elif isinstance(pattern, (list, tuple)):
-                if len(pattern) != 3:
-                    continue
-                entity1, relation, entity2 = pattern
-            elif isinstance(pattern, Pattern):
-                entity1, relation, entity2 = pattern  # Uses Pattern.__iter__
-            else:
-                continue
-
-            # Check if all components are valid
-            if (
-                entity1 in valid_node_labels
-                and entity2 in valid_node_labels
-                and relation in valid_relationship_labels
-            ):
-                filtered_patterns.append(pattern)
-            else:
-                # Log invalid pattern with validation details
-                entity1_valid = entity1 in valid_node_labels
-                entity2_valid = entity2 in valid_node_labels
-                relation_valid = relation in valid_relationship_labels
-
-                logging.info(
-                    f"Filtering out invalid pattern: {pattern}. "
-                    f"Entity1 '{entity1}' valid: {entity1_valid}, "
-                    f"Entity2 '{entity2}' valid: {entity2_valid}, "
-                    f"Relation '{relation}' valid: {relation_valid}"
-                )
-
-        return filtered_patterns
-
     def _filter_items_without_labels(
         self, items: List[Dict[str, Any]], item_type: str
     ) -> List[Dict[str, Any]]:
@@ -818,114 +964,6 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         return self._filter_items_without_labels(
             relationship_types, "relationship type"
         )
-
-    def _apply_cross_reference_filters(
-        self,
-        extracted_node_types: List[Dict[str, Any]],
-        extracted_relationship_types: Optional[List[Dict[str, Any]]],
-        extracted_patterns: Any,
-        extracted_constraints: Optional[List[Dict[str, Any]]],
-    ) -> tuple[Any, Optional[List[Dict[str, Any]]]]:
-        """Apply cross-reference filtering for patterns and constraints.
-
-        This filtering is common to both V1 and V2 paths and handles:
-        - Filtering out patterns that reference non-existent nodes/relationships
-        - Enforcing required=True for properties with UNIQUENESS constraints
-        - Filtering out invalid constraints
-
-        Args:
-            extracted_node_types: List of node type dictionaries
-            extracted_relationship_types: Optional list of relationship type dictionaries
-            extracted_patterns: Patterns in any format (dicts, tuples, lists, Pattern objects)
-            extracted_constraints: Optional list of constraint dictionaries
-
-        Returns:
-            Tuple of (filtered_patterns, filtered_constraints)
-        """
-        # Filter out invalid patterns before validation
-        if extracted_patterns:
-            extracted_patterns = self._filter_invalid_patterns(
-                extracted_patterns,
-                extracted_node_types,
-                extracted_relationship_types,
-            )
-
-        # Enforce required=true for properties with UNIQUENESS constraints
-        if extracted_constraints:
-            self._enforce_required_for_constraint_properties(
-                extracted_node_types, extracted_constraints
-            )
-
-        # Filter out invalid constraints
-        if extracted_constraints:
-            extracted_constraints = self._filter_invalid_constraints(
-                extracted_constraints, extracted_node_types
-            )
-
-        return extracted_patterns, extracted_constraints
-
-    def _filter_invalid_constraints(
-        self, constraints: List[Dict[str, Any]], node_types: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
-        """Filter out constraints that reference undefined node types, have no property name, are not UNIQUENESS type
-        or reference a property that doesn't exist on the node type."""
-        if not constraints:
-            return []
-
-        if not node_types:
-            logging.info(
-                "Filtering out all constraints because no node types are defined. "
-                "Constraints reference node types that must be defined."
-            )
-            return []
-
-        # Build a mapping of node_type label -> set of property names
-        node_type_properties: Dict[str, set[str]] = {}
-        for node_type_dict in node_types:
-            label = node_type_dict.get("label")
-            if label:
-                properties = node_type_dict.get("properties", [])
-                property_names = {p.get("name") for p in properties if p.get("name")}
-                node_type_properties[label] = property_names
-
-        valid_node_labels = set(node_type_properties.keys())
-
-        filtered_constraints = []
-        for constraint in constraints:
-            # Only process UNIQUENESS constraints (other types will be added)
-            if constraint.get("type") != "UNIQUENESS":
-                logging.info(
-                    f"Filtering out constraint: {constraint}. "
-                    f"Only UNIQUENESS constraints are supported."
-                )
-                continue
-
-            # check if the property_name is provided
-            if not constraint.get("property_name"):
-                logging.info(
-                    f"Filtering out constraint: {constraint}. "
-                    f"Property name is not provided."
-                )
-                continue
-            # check if the node_type is valid
-            node_type = constraint.get("node_type")
-            if node_type not in valid_node_labels:
-                logging.info(
-                    f"Filtering out constraint: {constraint}. "
-                    f"Node type '{node_type}' is not valid. Valid node types: {valid_node_labels}"
-                )
-                continue
-            # check if the property_name exists on the node type
-            property_name = constraint.get("property_name")
-            if property_name not in node_type_properties.get(node_type, set()):
-                logging.info(
-                    f"Filtering out constraint: {constraint}. "
-                    f"Property '{property_name}' does not exist on node type '{node_type}'. "
-                    f"Valid properties: {node_type_properties.get(node_type, set())}"
-                )
-                continue
-            filtered_constraints.append(constraint)
-        return filtered_constraints
 
     def _filter_properties_required_field(
         self, node_types: List[Dict[str, Any]]
@@ -985,33 +1023,7 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         constraints: List[Dict[str, Any]],
     ) -> None:
         """Ensure properties with UNIQUENESS constraints are marked as required."""
-        if not constraints:
-            return
-
-        # Build a lookup for property_names and constraints
-        constraint_props: Dict[str, set[str]] = {}
-        for c in constraints:
-            if c.get("type") == "UNIQUENESS":
-                label = c.get("node_type")
-                prop = c.get("property_name")
-                if label and prop:
-                    constraint_props.setdefault(label, set()).add(prop)
-
-        # Skip node_types without constraints
-        for node_type in node_types:
-            label = node_type.get("label")
-            if label not in constraint_props:
-                continue
-
-            props_to_fix = constraint_props[label]
-            for prop in node_type.get("properties", []):
-                if isinstance(prop, dict) and prop.get("name") in props_to_fix:
-                    if prop.get("required") is not True:
-                        logging.info(
-                            f"Auto-setting 'required' as True for property '{prop.get('name')}' "
-                            f"on node '{label}' (has UNIQUENESS constraint)."
-                        )
-                        prop["required"] = True
+        _extraction_enforce_required_for_constraint_properties(node_types, constraints)
 
     def _clean_json_content(self, content: str) -> str:
         content = content.strip()
@@ -1119,57 +1131,12 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         extracted_schema["relationship_types"] = rel_types
         return extracted_schema
 
-    def _validate_and_build_schema(
-        self, extracted_schema: Dict[str, Any]
-    ) -> GraphSchema:
-        """Apply cross-reference filters and validate schema.
-
-        This is the final step shared by both V1 and V2 paths:
-        - Extract node types, relationship types, patterns, and constraints
-        - Apply cross-reference filtering (remove invalid patterns/constraints)
-        - Validate using Pydantic GraphSchema model
-
-        Args:
-            extracted_schema: Schema dictionary (after V1/V2-specific filtering)
-
-        Returns:
-            Validated GraphSchema object
-
-        Raises:
-            SchemaExtractionError: If validation fails
-        """
-        node_types = extracted_schema.get("node_types") or []
-        rel_types = extracted_schema.get("relationship_types")
-        patterns = extracted_schema.get("patterns")
-        constraints = extracted_schema.get("constraints")
-
-        # Apply cross-reference filtering
-        patterns, constraints = self._apply_cross_reference_filters(
-            node_types, rel_types, patterns, constraints
-        )
-
-        # Validate and return
-        try:
-            schema = GraphSchema.model_validate(
-                {
-                    "node_types": node_types,
-                    "relationship_types": rel_types,
-                    "patterns": patterns,
-                    "constraints": constraints or [],
-                }
-            )
-            logger.debug(f"Extracted schema: {schema}")
-            return schema
-        except ValidationError as e:
-            raise SchemaExtractionError(
-                f"LLM response does not conform to GraphSchema: {str(e)}"
-            ) from e
-
     async def _run_with_structured_output(self, prompt: str) -> GraphSchema:
         """Extract schema using structured output (V2).
 
-        V2 uses LLMInterfaceV2 with response_format=GraphSchema to enforce
-        the schema structure at the LLM level. This requires OpenAI or VertexAI.
+        V2 uses LLMInterfaceV2 with
+        :class:`~neo4j_graphrag.experimental.components.graph_schema_extraction.GraphSchemaExtractionOutput`
+        as ``response_format``, then converts to :class:`GraphSchema`. Requires OpenAI or VertexAI.
 
         Args:
             prompt: Formatted prompt for schema extraction
@@ -1181,6 +1148,10 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
             RuntimeError: If LLM is not OpenAILLM or VertexAILLM
             SchemaExtractionError: If LLM generation or validation fails
         """
+        from neo4j_graphrag.experimental.components.graph_schema_extraction import (
+            GraphSchemaExtractionOutput,
+        )
+
         # Capability check
         # This should never happen due to __init__ validation
         if not self._llm.supports_structured_output:
@@ -1191,17 +1162,23 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         # Invoke LLM with structured output
         messages = [LLMMessage(role="user", content=prompt)]
         try:
-            llm_result = await self._llm.ainvoke(messages, response_format=GraphSchema)  # type: ignore[call-arg, arg-type]
+            llm_result = await self._llm.ainvoke(
+                messages,  # type: ignore[arg-type]
+                response_format=GraphSchemaExtractionOutput,  # type: ignore[call-arg]
+            )
         except LLMGenerationError as e:
             raise SchemaExtractionError("Failed to generate schema from text") from e
 
-        # Parse JSON response
-        # Note: With structured output, this should always succeed, but we keep
-        # error handling for unexpected provider issues
-        extracted_schema = self._parse_llm_response(llm_result.content)
+        try:
+            dto = GraphSchemaExtractionOutput.model_validate(
+                self._parse_llm_response(llm_result.content)
+            )
+        except ValidationError as e:
+            raise SchemaExtractionError(
+                "LLM response does not conform to GraphSchemaExtractionOutput."
+            ) from e
 
-        # Validate and return (applies cross-reference filtering)
-        return self._validate_and_build_schema(extracted_schema)
+        return GraphSchema.from_extraction_output(dto)
 
     async def _run_with_prompt_based_extraction(self, prompt: str) -> GraphSchema:
         """Extract schema using prompt-based JSON extraction (V1).
@@ -1233,8 +1210,7 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         # Apply V1-specific filtering
         extracted_schema = self._apply_v1_filters(extracted_schema)
 
-        # Validate and return (applies cross-reference filtering)
-        return self._validate_and_build_schema(extracted_schema)
+        return validate_extraction_dict_to_graph_schema(extracted_schema)
 
     @validate_call
     async def run(self, text: str, examples: str = "", **kwargs: Any) -> GraphSchema:

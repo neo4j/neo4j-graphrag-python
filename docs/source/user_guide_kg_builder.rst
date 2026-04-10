@@ -889,7 +889,7 @@ You can also save and reload the extracted schema:
 Using Structured Output with Schema Extraction
 -----------------------------------------------
 
-For improved reliability with :ref:`OpenAILLM <openaillm>` or :ref:`VertexAILLM <vertexaillm>`, enable structured output mode. When ``use_structured_output=True``, the extractor passes the ``GraphSchema`` Pydantic model as ``response_format`` to the LLM, ensuring responses conform to the expected schema structure with automatic validation:
+For improved reliability with :ref:`OpenAILLM <openaillm>` or :ref:`VertexAILLM <vertexaillm>`, enable structured output mode. When ``use_structured_output=True``, the extractor passes the lean ``GraphSchemaExtractionOutput`` Pydantic model as ``response_format`` to the LLM; the response is validated and converted to a :class:`~neo4j_graphrag.experimental.components.schema.GraphSchema` for the rest of the pipeline:
 
 .. code:: python
 
