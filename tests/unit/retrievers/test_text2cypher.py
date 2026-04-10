@@ -493,6 +493,16 @@ def test_t2c_retriever_with_custom_prompt_and_schema(
             "Cypher query: ```MATCH (n)-[ : `RelationshipWithBackticks` ]->(m) RETURN n, m;```",
             "MATCH (n)-[ : `RelationshipWithBackticks` ]->(m) RETURN n, m;",
         ),
+        (
+            "Map literal values not corrupted",
+            "WITH collect(DISTINCT {\n tk:   e.TimekeeperID,\n name: e.Name,\n title: e.Title,\n s:    CASE WHEN r.start_date > d0 THEN r.start_date ELSE d0 END\n}) AS segs\nRETURN segs",
+            "WITH collect(DISTINCT {\n tk:   e.TimekeeperID,\n name: e.Name,\n title: e.Title,\n s:    CASE WHEN r.start_date > d0 THEN r.start_date ELSE d0 END\n}) AS segs\nRETURN segs",
+        ),
+        (
+            "Code block with language tag",
+            "Here is the query: ```cypher\nMATCH (n) RETURN n;```",
+            "MATCH (n) RETURN n;",
+        ),
     ],
 )
 def test_extract_cypher(
