@@ -17,7 +17,7 @@ from typing import Any, Union
 try:
     from neo4j_viz import VisualizationGraph, Node, Relationship
 except ImportError:
-    VisualizationGraph = Node = Relationship = None
+    VisualizationGraph = Node = Relationship = None  # type: ignore[misc,assignment]
 
 from neo4j_graphrag.experimental.components.schema import (
     GraphSchema,
@@ -99,7 +99,7 @@ def schema_visualization(
         }
 
     nodes = [
-        Node(
+        Node(  # type: ignore[call-arg]
             id=node_type.label,
             caption=node_type.label,
             properties=_node_properties(node_type),
@@ -107,7 +107,7 @@ def schema_visualization(
         for node_type in schema_object.node_types
     ]
     relationships = [
-        Relationship(
+        Relationship(  # type: ignore[call-arg]
             source=pattern[0],
             target=pattern[2],
             caption=pattern[1],

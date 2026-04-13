@@ -28,6 +28,7 @@ from neo4j_graphrag.experimental.components.schema import (
     PropertyType,
     RelationshipType,
     ConstraintType,
+    GraphConstraintType,
     SchemaFromTextExtractor,
     GraphSchema,
     SchemaFromExistingGraphExtractor,
@@ -174,7 +175,7 @@ def test_relationship_type_additional_properties_default() -> None:
 
 def test_constraint_type_initialization() -> None:
     constraint = ConstraintType(
-        type="UNIQUENESS", node_type="Person", property_name="name"
+        type=GraphConstraintType.UNIQUENESS, node_type="Person", property_name="name"
     )
     assert constraint.type == "UNIQUENESS"
     assert constraint.node_type == "Person"
@@ -183,11 +184,11 @@ def test_constraint_type_initialization() -> None:
 
 def test_constraint_type_is_frozen() -> None:
     constraint = ConstraintType(
-        type="UNIQUENESS", node_type="Person", property_name="name"
+        type=GraphConstraintType.UNIQUENESS, node_type="Person", property_name="name"
     )
 
     with pytest.raises(ValidationError):
-        constraint.type = "UNIQUENESS"
+        constraint.type = GraphConstraintType.UNIQUENESS
 
     with pytest.raises(ValidationError):
         constraint.node_type = "Organization"
@@ -446,7 +447,11 @@ def patterns_with_invalid_entity() -> tuple[Pattern, ...]:
 @pytest.fixture
 def valid_constraints() -> tuple[ConstraintType, ...]:
     return (
-        ConstraintType(type="UNIQUENESS", node_type="PERSON", property_name="name"),
+        ConstraintType(
+            type=GraphConstraintType.UNIQUENESS,
+            node_type="PERSON",
+            property_name="name",
+        ),
     )
 
 
@@ -1896,12 +1901,12 @@ def test_graph_schema_from_extraction_output() -> None:
         patterns=[],
         constraints=[
             ConstraintType(
-                type="UNIQUENESS",
+                type=GraphConstraintType.UNIQUENESS,
                 node_type="Person",
                 property_name="name",
             ),
             ConstraintType(
-                type="EXISTENCE",
+                type=GraphConstraintType.EXISTENCE,
                 node_type="Person",
                 property_name="name",
                 relationship_type=None,
