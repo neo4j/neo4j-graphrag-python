@@ -35,8 +35,10 @@ from neo4j_graphrag.experimental.components.schema import (
 
 
 def test_extracted_property_type_field_names_match_property_type() -> None:
-    """Extraction wire format must stay in sync with :class:`PropertyType` for mapped fields."""
-    assert set(ExtractedPropertyType.model_fields) == set(PropertyType.model_fields)
+    """Extraction wire format matches :class:`PropertyType` except deprecated ``required`` (use EXISTENCE)."""
+    assert set(ExtractedPropertyType.model_fields) == set(PropertyType.model_fields) - {
+        "required"
+    }
 
 
 def test_extracted_property_type_uses_same_type_annotation_as_property_type() -> None:

@@ -42,7 +42,6 @@ class ExtractedPropertyType(BaseModel):
     name: str
     type: Neo4jPropertyTypeName
     description: str = ""
-    required: bool = False
     model_config = ConfigDict(frozen=True, extra="forbid")
 
 

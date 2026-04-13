@@ -91,7 +91,7 @@ as shown below:
         # When no properties key is provided, a default "name" property is added automatically.
         {"label": "House", "description": "Family the person belongs to"},
         # or with an explicit list of properties the LLM will try to attach to the entity:
-        {"label": "Planet", "properties": [{"name": "name", "type": "STRING", "required": True}, {"name": "weather", "type": "STRING"}]},
+        {"label": "Planet", "properties": [{"name": "name", "type": "STRING"}, {"name": "weather", "type": "STRING"}]},
     ]
     # same thing for relationships:
     RELATIONSHIP_TYPES = [
@@ -1147,8 +1147,8 @@ By default, all extracted elements — including nodes, relationships, and prope
 Configuration Options
 ---------------------
 
-- **Required Properties** (default: ``False``)
-  Required properties may be specified at the node or relationship type level. Any extracted node or relationship missing one or more of its required properties will be pruned from the graph.
+- **Existence (mandatory properties)** — via ``GraphSchema.constraints``
+  Use constraints of type ``EXISTENCE`` (for a node property or a relationship property) to mark properties that must be present and non-null. The graph pruner removes nodes or relationships that violate these constraints. This mirrors Neo4j existence constraints; it is independent of ``UNIQUENESS`` (uniqueness does not imply existence). Legacy per-property ``required`` on ``PropertyType`` is deprecated and is migrated to ``EXISTENCE`` constraints when a schema is loaded.
 
 - **Additional Properties**
   This node- or relationship-level option determines whether extra properties not listed in the schema should be retained.
@@ -1198,7 +1198,7 @@ In addition to the user-defined configuration options described above,
 the `GraphPruning` component performs the following cleanup operations:
 
 - Nodes with empty label or ID are pruned.
-- Nodes with missing required properties are pruned.
+- Nodes or relationships missing properties required by an ``EXISTENCE`` constraint are pruned.
 - Nodes with no remaining properties are pruned.
 - Relationships with empty type are pruned.
 - Relationships with invalid source or target nodes (i.e., nodes no longer present in the graph) are pruned.

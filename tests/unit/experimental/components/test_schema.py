@@ -41,6 +41,11 @@ from neo4j_graphrag.generation import PromptTemplate
 from neo4j_graphrag.llm.types import LLMResponse
 from neo4j_graphrag.utils.file_handler import FileFormat
 
+# PropertyType.required is deprecated; tests still assert migration behavior via .required.
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:Use GraphSchema.constraints with type EXISTENCE:DeprecationWarning"
+)
+
 
 def test_node_type_initialization_from_string() -> None:
     node_type = NodeType.model_validate("Label")
@@ -1622,127 +1627,6 @@ def test_filter_properties_required_field_missing(
     assert "required" not in result[0]["properties"][0]
 
 
-def test_enforce_required_for_constraint_properties_sets_required_true(
-    schema_from_text: SchemaFromTextExtractor,
-) -> None:
-    node_types: list[dict[str, Any]] = [
-        {
-            "label": "Person",
-            "properties": [
-                {"name": "name", "type": "STRING", "required": False},
-                {"name": "email", "type": "STRING", "required": False},
-            ],
-        }
-    ]
-    constraints = [
-        {"type": "UNIQUENESS", "node_type": "Person", "property_name": "name"}
-    ]
-
-    schema_from_text._enforce_required_for_constraint_properties(
-        node_types, constraints
-    )
-
-    # name should now be required=true
-    assert node_types[0]["properties"][0]["required"] is True
-    # email should remain required=false
-    assert node_types[0]["properties"][1]["required"] is False
-
-
-def test_enforce_required_for_constraint_properties_already_true(
-    schema_from_text: SchemaFromTextExtractor,
-) -> None:
-    node_types: list[dict[str, Any]] = [
-        {
-            "label": "Person",
-            "properties": [
-                {"name": "name", "type": "STRING", "required": True},
-            ],
-        }
-    ]
-    constraints = [
-        {"type": "UNIQUENESS", "node_type": "Person", "property_name": "name"}
-    ]
-
-    schema_from_text._enforce_required_for_constraint_properties(
-        node_types, constraints
-    )
-
-    assert node_types[0]["properties"][0]["required"] is True
-
-
-def test_enforce_required_for_constraint_properties_missing_required_field(
-    schema_from_text: SchemaFromTextExtractor,
-) -> None:
-    node_types: list[dict[str, Any]] = [
-        {
-            "label": "Person",
-            "properties": [
-                {"name": "name", "type": "STRING"},  # No required field
-            ],
-        }
-    ]
-    constraints = [
-        {"type": "UNIQUENESS", "node_type": "Person", "property_name": "name"}
-    ]
-
-    schema_from_text._enforce_required_for_constraint_properties(
-        node_types, constraints
-    )
-
-    assert node_types[0]["properties"][0]["required"] is True
-
-
-def test_enforce_required_for_constraint_properties_no_constraints(
-    schema_from_text: SchemaFromTextExtractor,
-) -> None:
-    node_types: list[dict[str, Any]] = [
-        {
-            "label": "Person",
-            "properties": [
-                {"name": "name", "type": "STRING", "required": False},
-            ],
-        }
-    ]
-    constraints: list[dict[str, Any]] = []
-
-    schema_from_text._enforce_required_for_constraint_properties(
-        node_types, constraints
-    )
-
-    assert node_types[0]["properties"][0]["required"] is False
-
-
-def test_enforce_required_for_constraint_properties_skips_unconstrained_nodes(
-    schema_from_text: SchemaFromTextExtractor,
-) -> None:
-    node_types: list[dict[str, Any]] = [
-        {
-            "label": "Person",
-            "properties": [
-                {"name": "name", "type": "STRING", "required": False},
-            ],
-        },
-        {
-            "label": "Company",
-            "properties": [
-                {"name": "name", "type": "STRING", "required": False},
-            ],
-        },
-    ]
-    constraints = [
-        {"type": "UNIQUENESS", "node_type": "Person", "property_name": "name"}
-    ]
-
-    schema_from_text._enforce_required_for_constraint_properties(
-        node_types, constraints
-    )
-
-    # Person.name should be required=true
-    assert node_types[0]["properties"][0]["required"] is True
-    # Company.name should remain required=false (no constraint on Company)
-    assert node_types[1]["properties"][0]["required"] is False
-
-
 @pytest.mark.asyncio
 async def test_schema_from_text_with_required_properties(
     schema_from_text: SchemaFromTextExtractor,
@@ -1758,12 +1642,13 @@ async def test_schema_from_text_with_required_properties(
     person = schema.node_type_from_label("Person")
     assert person is not None
 
-    # Check required properties
+    # Legacy required:true migrates to EXISTENCE; flags are cleared on PropertyType
+    assert schema.existence_property_names_for_node("Person") == {"name"}
     name_prop = next((p for p in person.properties if p.name == "name"), None)
     email_prop = next((p for p in person.properties if p.name == "email"), None)
     phone_prop = next((p for p in person.properties if p.name == "phone"), None)
 
-    assert name_prop is not None and name_prop.required is True
+    assert name_prop is not None and name_prop.required is False
     assert email_prop is not None and email_prop.required is False
     assert phone_prop is not None and phone_prop.required is False
 
@@ -1783,13 +1668,12 @@ async def test_schema_from_text_sanitizes_string_required_values(
     person = schema.node_type_from_label("Person")
     assert person is not None
 
-    # true and yes should become True
+    assert schema.existence_property_names_for_node("Person") == {"name", "email"}
     name_prop = next((p for p in person.properties if p.name == "name"), None)
     email_prop = next((p for p in person.properties if p.name == "email"), None)
-    assert name_prop is not None and name_prop.required is True
-    assert email_prop is not None and email_prop.required is True
+    assert name_prop is not None and name_prop.required is False
+    assert email_prop is not None and email_prop.required is False
 
-    # false and no should become False
     phone_prop = next((p for p in person.properties if p.name == "phone"), None)
     address_prop = next((p for p in person.properties if p.name == "address"), None)
     assert phone_prop is not None and phone_prop.required is False
@@ -1815,7 +1699,7 @@ async def test_schema_from_text_handles_missing_required_field(
 
 
 @pytest.mark.asyncio
-async def test_schema_from_text_enforces_required_for_constrained_properties(
+async def test_schema_from_text_uniqueness_does_not_force_required_property(
     schema_from_text: SchemaFromTextExtractor,
     mock_llm: AsyncMock,
 ) -> None:
@@ -1847,10 +1731,10 @@ async def test_schema_from_text_enforces_required_for_constrained_properties(
     name_prop = next((p for p in person.properties if p.name == "name"), None)
     email_prop = next((p for p in person.properties if p.name == "email"), None)
 
-    # name should be auto-fixed to required=true
-    assert name_prop is not None and name_prop.required is True
-    # email should remain required=false
+    assert name_prop is not None and name_prop.required is False
     assert email_prop is not None and email_prop.required is False
+    assert schema.existence_property_names_for_node("Person") == set()
+    assert schema.constraints[0].type == "UNIQUENESS"
 
 
 @pytest.mark.asyncio
@@ -1903,7 +1787,12 @@ async def test_schema_from_existing_graph(mock_get_structured_schema: Mock) -> N
     person_node_type = schema.node_type_from_label("Person")
     assert person_node_type is not None
     id_person_property = [p for p in person_node_type.properties if p.name == "id"][0]
-    assert id_person_property.required is True
+    assert id_person_property.required is False
+    assert schema.existence_property_names_for_node("Person") == {"id"}
+    assert any(
+        c.type == "EXISTENCE" and c.node_type == "Person" and c.property_name == "id"
+        for c in schema.constraints
+    )
     assert person_node_type.additional_properties is False
     city_node_type = schema.node_type_from_label("City")
     assert city_node_type is not None
@@ -1998,7 +1887,7 @@ def test_graph_schema_from_extraction_output() -> None:
             ExtractedNodeType(
                 label="Person",
                 properties=[
-                    ExtractedPropertyType(name="name", type="STRING", required=True)
+                    ExtractedPropertyType(name="name", type="STRING"),
                 ],
             )
         ],
@@ -2009,13 +1898,20 @@ def test_graph_schema_from_extraction_output() -> None:
                 type="UNIQUENESS",
                 node_type="Person",
                 property_name="name",
-            )
+            ),
+            ConstraintType(
+                type="EXISTENCE",
+                node_type="Person",
+                property_name="name",
+                relationship_type=None,
+            ),
         ],
     )
     gs = GraphSchema.from_extraction_output(dto)
     assert gs.node_types[0].label == "Person"
-    assert gs.node_types[0].properties[0].required is True
-    assert gs.constraints[0].property_name == "name"
+    assert gs.node_types[0].properties[0].required is False
+    assert gs.existence_property_names_for_node("Person") == {"name"}
+    assert {c.property_name for c in gs.constraints} == {"name"}
     assert gs.additional_node_types is False
 
 
