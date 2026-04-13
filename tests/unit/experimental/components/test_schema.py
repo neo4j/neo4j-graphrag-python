@@ -41,7 +41,8 @@ from neo4j_graphrag.generation import PromptTemplate
 from neo4j_graphrag.llm.types import LLMResponse
 from neo4j_graphrag.utils.file_handler import FileFormat
 
-# PropertyType.required is deprecated; tests still assert migration behavior via .required.
+# Most tests below read ``PropertyType.required`` to assert migration; silence only that
+# deprecation. Explicit warning behavior is covered in ``test_property_type_deprecation.py``.
 pytestmark = pytest.mark.filterwarnings(
     "ignore:Use GraphSchema.constraints with type EXISTENCE:DeprecationWarning"
 )
