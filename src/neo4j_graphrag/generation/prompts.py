@@ -226,7 +226,7 @@ IMPORTANT RULES:
 8.5 Uniqueness does NOT imply that the property must exist on every node (existence is separate; see rule 9).
 9. EXISTENCE CONSTRAINTS (optional):
 9.1 Use EXISTENCE constraints to mark properties that MUST be present (non-null) on every instance.
-9.2 For a node property, add {{"type": "EXISTENCE", "node_type": "<Label>", "property_name": "<name>", "relationship_type": null}}.
+9.2 For a node property, add {{"type": "EXISTENCE", "node_type": "<Label>", "property_name": "<name>", "relationship_type": ""}} (use an empty string, not null, when the constraint is not on a relationship).
 9.3 For a relationship property, add {{"type": "EXISTENCE", "node_type": "", "property_name": "<name>", "relationship_type": "<REL_TYPE>"}}.
 9.4 Each EXISTENCE constraint must reference exactly one of node_type or relationship_type (non-empty), never both.
 9.5 Do not infer EXISTENCE from UNIQUENESS; they are independent (as in Neo4j Cypher constraints).
@@ -268,13 +268,13 @@ Return a valid JSON object that follows this precise structure:
       "type": "UNIQUENESS",
       "node_type": "Person",
       "property_name": "name",
-      "relationship_type": null
+      "relationship_type": ""
     }},
     {{
       "type": "EXISTENCE",
       "node_type": "Person",
       "property_name": "name",
-      "relationship_type": null
+      "relationship_type": ""
     }}
     ...
   ]

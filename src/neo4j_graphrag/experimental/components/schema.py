@@ -642,16 +642,18 @@ class GraphSchema(DataModel):
         """
         from neo4j_graphrag.experimental.components.graph_schema_extraction import (
             GraphSchemaExtractionOutput,
+            wire_extraction_constraints_for_graph_schema,
         )
 
         if not isinstance(dto, GraphSchemaExtractionOutput):
             raise TypeError(
                 f"Expected GraphSchemaExtractionOutput, got {type(dto).__name__}"
             )
-        return cast(
-            Self,
-            validate_extraction_dict_to_graph_schema(dto.model_dump(mode="python")),
+        payload = dto.model_dump(mode="python")
+        payload["constraints"] = wire_extraction_constraints_for_graph_schema(
+            payload.get("constraints") or []
         )
+        return cast(Self, validate_extraction_dict_to_graph_schema(payload))
 
     @classmethod
     def create_empty(cls) -> Self:

@@ -1881,8 +1881,25 @@ def test_graph_schema_extraction_output_json_schema_lean_root() -> None:
     assert "additional_patterns" not in dumped
 
 
+def test_graph_schema_extraction_constraint_schema_avoids_null_type_for_vertex() -> (
+    None
+):
+    """Vertex AI maps JSON Schema to protobuf and rejects ``type: \"null\"`` (e.g. ``Optional``)."""
+    from neo4j_graphrag.experimental.components.graph_schema_extraction import (
+        GraphSchemaExtractionOutput,
+    )
+
+    raw = GraphSchemaExtractionOutput.model_json_schema()
+    ect = (raw.get("$defs") or {}).get("ExtractedConstraintType")
+    assert ect is not None
+    rel_schema = (ect.get("properties") or {}).get("relationship_type", {})
+    assert "anyOf" not in rel_schema
+    assert '"type": "null"' not in json.dumps(rel_schema)
+
+
 def test_graph_schema_from_extraction_output() -> None:
     from neo4j_graphrag.experimental.components.graph_schema_extraction import (
+        ExtractedConstraintType,
         ExtractedNodeType,
         ExtractedPropertyType,
         GraphSchemaExtractionOutput,
@@ -1900,16 +1917,16 @@ def test_graph_schema_from_extraction_output() -> None:
         relationship_types=[],
         patterns=[],
         constraints=[
-            ConstraintType(
-                type=GraphConstraintType.UNIQUENESS,
+            ExtractedConstraintType(
+                type="UNIQUENESS",
                 node_type="Person",
                 property_name="name",
             ),
-            ConstraintType(
-                type=GraphConstraintType.EXISTENCE,
+            ExtractedConstraintType(
+                type="EXISTENCE",
                 node_type="Person",
                 property_name="name",
-                relationship_type=None,
+                relationship_type="",
             ),
         ],
     )
