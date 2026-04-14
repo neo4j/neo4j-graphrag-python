@@ -379,13 +379,15 @@ def test_schema_constraint_validation_missing_property_name() -> None:
 
 @pytest.fixture
 def valid_node_types() -> tuple[NodeType, ...]:
+    # required=False so tuples match GraphSchema after validation (legacy required=True
+    # is migrated to EXISTENCE and cleared).
     return (
         NodeType(
             label="PERSON",
             description="An individual human being.",
             properties=[
                 PropertyType(name="birth date", type="ZONED_DATETIME"),
-                PropertyType(name="name", type="STRING", required=True),
+                PropertyType(name="name", type="STRING", required=False),
             ],
             additional_properties=False,
         ),
@@ -411,7 +413,7 @@ def valid_relationship_types() -> tuple[RelationshipType, ...]:
             label="EMPLOYED_BY",
             description="Indicates employment relationship.",
             properties=[
-                PropertyType(name="start_time", type="LOCAL_DATETIME", required=True),
+                PropertyType(name="start_time", type="LOCAL_DATETIME", required=False),
                 PropertyType(name="end_time", type="LOCAL_DATETIME"),
             ],
             additional_properties=False,
