@@ -190,3 +190,27 @@ def test_from_extraction_output_two_constraints_same_property_distinct_kinds() -
     )
     gs = GraphSchema.from_extraction_output(dto)
     assert len(gs.constraints) == 2
+
+
+def test_from_extraction_output_key_constraint_node() -> None:
+    dto = GraphSchemaExtractionOutput(
+        node_types=[
+            ExtractedNodeType(
+                label="Person",
+                properties=[ExtractedPropertyType(name="email", type="STRING")],
+            )
+        ],
+        relationship_types=[],
+        patterns=[],
+        constraints=[
+            ExtractedConstraintType(
+                type="KEY",
+                node_type="Person",
+                property_name="email",
+                relationship_type="",
+            ),
+        ],
+    )
+    gs = GraphSchema.from_extraction_output(dto)
+    assert gs.key_property_names_for_node("Person") == {"email"}
+    assert gs.mandatory_property_names_for_node("Person") == {"email"}

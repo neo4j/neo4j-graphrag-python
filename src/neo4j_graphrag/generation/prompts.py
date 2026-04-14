@@ -230,7 +230,12 @@ IMPORTANT RULES:
 9.3 For a relationship property, add {{"type": "EXISTENCE", "node_type": "", "property_name": "<name>", "relationship_type": "<REL_TYPE>"}}.
 9.4 Each EXISTENCE constraint must reference exactly one of node_type or relationship_type (non-empty), never both.
 9.5 Do not infer EXISTENCE from UNIQUENESS; they are independent (as in Neo4j Cypher constraints).
-10. Never use double underscores (__) as a prefix or suffix in node labels or relationship types (e.g. __Person__ or __KNOWS__ are forbidden).
+10. KEY CONSTRAINTS (optional, Neo4j NODE KEY / RELATIONSHIP KEY for a single property):
+10.1 Use KEY when a property must exist on every instance and is the natural identifier (uniqueness + mandatory presence).
+10.2 Same wire shape as EXISTENCE: exactly one of node_type or relationship_type (non-empty), with the other as "".
+10.3 Do not combine UNIQUENESS and KEY on the same node property.
+10.4 Do not infer KEY from UNIQUENESS alone; KEY implies required presence, unlike UNIQUENESS alone.
+11. Never use double underscores (__) as a prefix or suffix in node labels or relationship types (e.g. __Person__ or __KNOWS__ are forbidden).
 
 Accepted property types are: BOOLEAN, DATE, DURATION, FLOAT, INTEGER, LIST,
 LOCAL_DATETIME, LOCAL_TIME, POINT, STRING, ZONED_DATETIME, ZONED_TIME.

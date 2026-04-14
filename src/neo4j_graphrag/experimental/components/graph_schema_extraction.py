@@ -77,7 +77,7 @@ class ExtractedConstraintType(BaseModel):
     when building :class:`~neo4j_graphrag.experimental.components.schema.GraphSchema`, not here.
     """
 
-    type: Literal["UNIQUENESS", "EXISTENCE"]
+    type: Literal["UNIQUENESS", "EXISTENCE", "KEY"]
     property_name: str
     node_type: str = ""
     relationship_type: str = ""

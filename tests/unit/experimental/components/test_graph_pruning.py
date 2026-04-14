@@ -351,6 +351,50 @@ def test_graph_pruning_enforce_relationships_lexical_graph_with_pruned_nodes(
     assert pruning_stats_rels.number_of_pruned_relationships == 2
 
 
+def test_graph_pruning_key_constraint_prunes_missing_property(
+    lexical_graph_config: LexicalGraphConfig,
+) -> None:
+    """KEY constraints require presence like EXISTENCE (Neo4j key mandatory properties)."""
+    pruner = GraphPruning()
+    nodes = [
+        Neo4jNode(id="chunk-1", label="Paragraph", properties={"text": "test"}),
+        Neo4jNode(
+            id="person-1", label="Person", properties={"age": 30}
+        ),  # Missing KEY 'email'
+    ]
+    schema = GraphSchema.model_validate(
+        {
+            "node_types": [
+                {
+                    "label": "Person",
+                    "properties": [
+                        {"name": "email", "type": "STRING"},
+                        {"name": "age", "type": "INTEGER"},
+                    ],
+                }
+            ],
+            "constraints": [
+                {
+                    "type": GraphConstraintType.KEY.value,
+                    "node_type": "Person",
+                    "property_name": "email",
+                    "relationship_type": None,
+                }
+            ],
+        }
+    )
+    pruning_stats = PruningStats()
+    filtered_nodes = pruner._enforce_nodes(
+        nodes=nodes,
+        schema=schema,
+        lexical_graph_config=lexical_graph_config,
+        pruning_stats=pruning_stats,
+    )
+    assert len(filtered_nodes) == 1
+    assert filtered_nodes[0].id == "chunk-1"
+    assert pruning_stats.number_of_pruned_nodes == 1
+
+
 @pytest.fixture
 def neo4j_relationship() -> Neo4jRelationship:
     return Neo4jRelationship(

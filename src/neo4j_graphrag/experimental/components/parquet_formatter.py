@@ -75,38 +75,67 @@ def sanitize_parquet_filestem(name: str) -> str:
     return result
 
 
+def _constraint_relationship_type_unset(constraint: dict[str, Any]) -> bool:
+    rt = constraint.get("relationship_type")
+    return rt is None or (isinstance(rt, str) and rt.strip() == "")
+
+
+def get_uniqueness_property_names_for_node_type(
+    schema: Optional[dict[str, Any]], node_label: str
+) -> list[str]:
+    """Property names with a UNIQUENESS constraint for this node label (order as in schema)."""
+    if not schema:
+        return []
+    out: list[str] = []
+    for constraint in schema.get("constraints", ()) or ():
+        if constraint.get("type") != "UNIQUENESS":
+            continue
+        if constraint.get("node_type", "") != node_label:
+            continue
+        pn = constraint.get("property_name", "")
+        if pn:
+            out.append(pn)
+    return out
+
+
+def get_key_property_names_for_node_type(
+    schema: Optional[dict[str, Any]], node_label: str
+) -> list[str]:
+    """Property names with a KEY constraint (node scope) for this node label."""
+    if not schema:
+        return []
+    out: list[str] = []
+    for constraint in schema.get("constraints", ()) or ():
+        if constraint.get("type") != "KEY":
+            continue
+        if constraint.get("node_type", "") != node_label:
+            continue
+        if not _constraint_relationship_type_unset(constraint):
+            continue
+        pn = constraint.get("property_name", "")
+        if pn:
+            out.append(pn)
+    return out
+
+
+def get_primary_key_column_names_for_node_type(
+    schema: Optional[dict[str, Any]], node_label: str
+) -> list[str]:
+    """Column names flagged as primary key in KG writer metadata: KEY properties, else ``__id__``."""
+    keys = get_key_property_names_for_node_type(schema, node_label)
+    if keys:
+        return keys
+    return ["__id__"]
+
+
 def get_unique_properties_for_node_type(
     schema: Optional[dict[str, Any]], node_label: str
 ) -> list[str]:
-    """Extract unique property names from schema constraints for a given node type.
+    """Deprecated synonym for :func:`get_primary_key_column_names_for_node_type`.
 
-    1. If the schema has constraints, use uniqueness constraints
-    2. Otherwise, fall back to "__id__"
-
-    Args:
-        schema: The GraphSchema as a dictionary (may contain 'constraints' key)
-        node_label: The label for the node type
-
-    Returns:
-        List of property names that have uniqueness constraints
+    Kept for backward compatibility; prefer explicit helpers for UNIQUENESS vs KEY.
     """
-    default = ["__id__"]
-    if not schema:
-        return default
-
-    constraints = schema.get("constraints", ())
-    unique_properties: list[str] = []
-
-    for constraint in constraints:
-        # Check if this constraint applies to the node's label
-        if constraint.get("type") == "UNIQUENESS":
-            constraint_node_type = constraint.get("node_type", "")
-            if constraint_node_type == node_label:
-                property_name = constraint.get("property_name", "")
-                if property_name:
-                    unique_properties.append(property_name)
-
-    return unique_properties or default
+    return get_primary_key_column_names_for_node_type(schema, node_label)
 
 
 @dataclass
@@ -123,10 +152,13 @@ class FileMetadata:
     relationship_type: Optional[str] = None
     relationship_head: Optional[str] = None
     relationship_tail: Optional[str] = None
-    # Key property info - computed once by the formatter
-    key_properties: Optional[list[str]] = None  # For nodes
-    head_node_key_properties: Optional[list[str]] = None  # For relationships
-    tail_node_key_properties: Optional[list[str]] = None  # For relationships
+    # Schema-driven column roles for KGWriter metadata (see ParquetWriter)
+    primary_key_property_names: Optional[list[str]] = None
+    uniqueness_property_names: Optional[list[str]] = None
+    head_primary_key_property_names: Optional[list[str]] = None
+    head_uniqueness_property_names: Optional[list[str]] = None
+    tail_primary_key_property_names: Optional[list[str]] = None
+    tail_uniqueness_property_names: Optional[list[str]] = None
 
 
 @dataclass
@@ -311,20 +343,15 @@ class Neo4jGraphParquetFormatter:
 
         return label_to_rows
 
-    def _get_key_property_name_for_label(self, node_label: str) -> Optional[str]:
-        """Get the primary key property name for a node label from schema constraints.
-
-        Args:
-            node_label: The label of the node type
-
-        Returns:
-            The property name that is the primary key, or None if using default "__id__"
-        """
-        unique_props = get_unique_properties_for_node_type(self.schema, node_label)
-        # If the only property is "__id__" (the default), return None to use node.id
-        if unique_props == ["__id__"]:
-            return None
-        return unique_props[0]
+    def _get_identity_property_name_for_label(self, node_label: str) -> Optional[str]:
+        """Resolve natural identity: first KEY property, else first UNIQUENESS, else None (use ``__id__``)."""
+        key_props = get_key_property_names_for_node_type(self.schema, node_label)
+        if key_props:
+            return key_props[0]
+        uq = get_uniqueness_property_names_for_node_type(self.schema, node_label)
+        if uq:
+            return uq[0]
+        return None
 
     def _get_node_key_property_value(self, node: Neo4jNode) -> Any:
         """Get the primary key property value for a node.
@@ -341,7 +368,7 @@ class Neo4jGraphParquetFormatter:
         Raises:
             ValueError: If the node is missing the key property or if the property value is null
         """
-        key_prop = self._get_key_property_name_for_label(node.label)
+        key_prop = self._get_identity_property_name_for_label(node.label)
         if not key_prop:
             # there is no key property, we use the node ID
             return node.id
@@ -549,7 +576,10 @@ class Neo4jGraphParquetFormatter:
                     is_node=True,
                     labels=labels_list,
                     node_label=label,
-                    key_properties=get_unique_properties_for_node_type(
+                    primary_key_property_names=get_key_property_names_for_node_type(
+                        self.schema, label
+                    ),
+                    uniqueness_property_names=get_uniqueness_property_names_for_node_type(
                         self.schema, label
                     ),
                 )
@@ -577,10 +607,16 @@ class Neo4jGraphParquetFormatter:
                     relationship_type=rtype,
                     relationship_head=head_label,
                     relationship_tail=tail_label,
-                    head_node_key_properties=get_unique_properties_for_node_type(
+                    head_primary_key_property_names=get_key_property_names_for_node_type(
                         self.schema, head_label
                     ),
-                    tail_node_key_properties=get_unique_properties_for_node_type(
+                    head_uniqueness_property_names=get_uniqueness_property_names_for_node_type(
+                        self.schema, head_label
+                    ),
+                    tail_primary_key_property_names=get_key_property_names_for_node_type(
+                        self.schema, tail_label
+                    ),
+                    tail_uniqueness_property_names=get_uniqueness_property_names_for_node_type(
                         self.schema, tail_label
                     ),
                 )

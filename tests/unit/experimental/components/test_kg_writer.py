@@ -649,7 +649,7 @@ async def test_parquet_writer_run_success() -> None:
         )
         assert "columns" in node_file_info
         assert any(
-            c["name"] == "__id__" and c["is_primary_key"]
+            c["name"] == "__id__" and c["is_primary_key"] and c["is_unique"] is False
             for c in node_file_info["columns"]
         )
         rel_file_info = next(f for f in result.metadata["files"] if not f["is_node"])
@@ -671,6 +671,108 @@ async def test_parquet_writer_run_success() -> None:
         assert "from" in rels_table.column_names
         assert "to" in rels_table.column_names
         assert rels_table.column("type")[0].as_py() == "KNOWS"
+
+        rel_cols = {c["name"]: c for c in rel_file_info["columns"]}
+        assert rel_cols["from"]["is_primary_key"] is True
+        assert rel_cols["from"]["is_unique"] is False
+        assert rel_cols["to"]["is_primary_key"] is True
+        assert rel_cols["to"]["is_unique"] is False
+
+
+@pytest.mark.asyncio
+async def test_parquet_writer_columns_uniqueness_sets_is_unique() -> None:
+    """UNIQUENESS maps to is_unique; __id__ remains synthetic primary key when no KEY."""
+    pytest.importorskip("pyarrow")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out = Path(tmpdir)
+        dest = _LocalParquetDestination(out)
+        writer = ParquetWriter(
+            nodes_dest=dest,
+            relationships_dest=dest,
+            collision_handler=FilenameCollisionHandler(),
+        )
+        schema_dict: dict[str, Any] = {
+            "node_types": [
+                {
+                    "label": "Person",
+                    "properties": [
+                        {"name": "email", "type": "STRING"},
+                        {"name": "name", "type": "STRING"},
+                    ],
+                }
+            ],
+            "constraints": [
+                {
+                    "type": "UNIQUENESS",
+                    "node_type": "Person",
+                    "property_name": "email",
+                    "relationship_type": None,
+                }
+            ],
+        }
+        node = Neo4jNode(
+            id="n1",
+            label="Person",
+            properties={"email": "a@b.c", "name": "Alice"},
+        )
+        graph = Neo4jGraph(nodes=[node], relationships=[])
+        result = await writer.run(graph=graph, schema=schema_dict)
+        assert result.status == "SUCCESS"
+        assert result.metadata is not None
+        node_file = next(f for f in result.metadata["files"] if f["is_node"])
+        cols = {c["name"]: c for c in node_file["columns"]}
+        assert cols["email"]["is_unique"] is True
+        assert cols["email"]["is_primary_key"] is False
+        assert cols["__id__"]["is_primary_key"] is True
+        assert cols["__id__"]["is_unique"] is False
+
+
+@pytest.mark.asyncio
+async def test_parquet_writer_columns_key_sets_is_primary_key() -> None:
+    """KEY maps to is_primary_key on that property; is_unique stays false."""
+    pytest.importorskip("pyarrow")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out = Path(tmpdir)
+        dest = _LocalParquetDestination(out)
+        writer = ParquetWriter(
+            nodes_dest=dest,
+            relationships_dest=dest,
+            collision_handler=FilenameCollisionHandler(),
+        )
+        schema_dict: dict[str, Any] = {
+            "node_types": [
+                {
+                    "label": "Person",
+                    "properties": [
+                        {"name": "email", "type": "STRING"},
+                        {"name": "name", "type": "STRING"},
+                    ],
+                }
+            ],
+            "constraints": [
+                {
+                    "type": "KEY",
+                    "node_type": "Person",
+                    "property_name": "email",
+                    "relationship_type": None,
+                }
+            ],
+        }
+        node = Neo4jNode(
+            id="n1",
+            label="Person",
+            properties={"email": "a@b.c", "name": "Alice"},
+        )
+        graph = Neo4jGraph(nodes=[node], relationships=[])
+        result = await writer.run(graph=graph, schema=schema_dict)
+        assert result.status == "SUCCESS"
+        assert result.metadata is not None
+        node_file = next(f for f in result.metadata["files"] if f["is_node"])
+        cols = {c["name"]: c for c in node_file["columns"]}
+        assert cols["email"]["is_primary_key"] is True
+        assert cols["email"]["is_unique"] is False
 
 
 @pytest.mark.asyncio

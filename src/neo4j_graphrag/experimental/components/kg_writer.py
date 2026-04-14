@@ -54,18 +54,22 @@ logger = logging.getLogger(__name__)
 
 
 def _build_columns_from_schema(
-    schema: Any, primary_key_names: list[str]
+    schema: Any,
+    primary_key_names: list[str],
+    uniqueness_names: list[str],
 ) -> list[dict[str, Any]]:
-    """Build a list of column dicts (name, type, is_primary_key) from a PyArrow schema."""
+    """Build column dicts (name, type, is_primary_key, is_unique) from a PyArrow schema."""
     columns: list[dict[str, Any]] = []
     for i in range(len(schema)):
         field = schema.field(i)
         type_info = Neo4jGraphParquetFormatter.pyarrow_type_to_type_info(field.type)
+        name = field.name
         columns.append(
             {
-                "name": field.name,
+                "name": name,
                 "type": type_info.source_type,
-                "is_primary_key": field.name in primary_key_names,
+                "is_primary_key": name in primary_key_names,
+                "is_unique": name in uniqueness_names,
             }
         )
     return columns
@@ -121,6 +125,9 @@ class KGWriterModel(DataModel):
             - "statistics": dict with node_count, relationship_count, nodes_per_label,
               rel_per_type, input_files_count, input_files_total_size_bytes.
             - "files": list of file descriptors with file_path, etc. (ParquetWriter).
+              Each file entry includes ``columns``: a list of dicts with ``name``, ``type``,
+              ``is_primary_key``, and ``is_unique`` (KEY / synthetic ``__id__`` / ``from``/``to``
+              vs UNIQUENESS constraints per :class:`~neo4j_graphrag.experimental.components.schema.GraphSchema`).
     """
 
     status: Literal["SUCCESS", "FAILURE"]
@@ -355,7 +362,9 @@ class ParquetWriter(KGWriter):
             lexical_graph_config (LexicalGraphConfig): Used by the formatter for
                 lexical graph labels (e.g. __Entity__) and key properties.
             schema (Optional[dict[str, Any]]): Optional GraphSchema as a dictionary for
-                uniqueness constraints and key properties. If not provided, ``__id__`` is used.
+                UNIQUENESS, KEY, and EXISTENCE constraints. Drives Parquet column metadata
+                (``is_unique`` vs ``is_primary_key``). If not provided, node files use ``__id__``
+                as the only primary-key column.
         """
         try:
             formatter = Neo4jGraphParquetFormatter(schema=schema)
@@ -384,9 +393,16 @@ class ParquetWriter(KGWriter):
                 if meta.node_label is not None:
                     node_label_to_source_name[meta.node_label] = resolved_stem
 
+                pk_names = (
+                    meta.primary_key_property_names
+                    if meta.primary_key_property_names
+                    else ["__id__"]
+                )
+                uq_names = meta.uniqueness_property_names or []
                 columns = _build_columns_from_schema(
                     meta.schema,
-                    meta.key_properties or [],
+                    pk_names,
+                    uq_names,
                 )
                 name = meta.node_label or (
                     meta.labels[0] if meta.labels else resolved_stem
@@ -419,6 +435,7 @@ class ParquetWriter(KGWriter):
                 columns = _build_columns_from_schema(
                     meta.schema,
                     ["from", "to"],
+                    [],
                 )
                 rel_name = (
                     f"{meta.relationship_head}_{meta.relationship_type}_{meta.relationship_tail}"
@@ -437,11 +454,17 @@ class ParquetWriter(KGWriter):
                         "is_node": False,
                         "relationship_type": meta.relationship_type,
                         "start_node_source": start_node_source,
-                        "start_node_primary_keys": meta.head_node_key_properties
-                        or ["__id__"],
+                        "start_node_primary_keys": (
+                            meta.head_primary_key_property_names
+                            if meta.head_primary_key_property_names
+                            else ["__id__"]
+                        ),
                         "end_node_source": end_node_source,
-                        "end_node_primary_keys": meta.tail_node_key_properties
-                        or ["__id__"],
+                        "end_node_primary_keys": (
+                            meta.tail_primary_key_property_names
+                            if meta.tail_primary_key_property_names
+                            else ["__id__"]
+                        ),
                     }
                 )
 

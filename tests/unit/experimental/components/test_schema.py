@@ -377,6 +377,75 @@ def test_schema_constraint_validation_missing_property_name() -> None:
     assert "Constraint has no property name" in str(exc_info.value)
 
 
+def test_schema_key_constraint_node_valid() -> None:
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {"label": "Person", "properties": [{"name": "email", "type": "STRING"}]}
+        ],
+        "constraints": [
+            {
+                "type": "KEY",
+                "node_type": "Person",
+                "property_name": "email",
+                "relationship_type": None,
+            }
+        ],
+    }
+    schema = GraphSchema.model_validate(schema_dict)
+    assert schema.key_property_names_for_node("Person") == {"email"}
+    assert schema.mandatory_property_names_for_node("Person") == {"email"}
+    assert schema.uniqueness_property_names_for_node("Person") == set()
+
+
+def test_schema_key_constraint_relationship_valid() -> None:
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]}
+        ],
+        "relationship_types": [
+            {
+                "label": "KNOWS",
+                "properties": [{"name": "since", "type": "INTEGER"}],
+            }
+        ],
+        "constraints": [
+            {
+                "type": "KEY",
+                "node_type": "",
+                "property_name": "since",
+                "relationship_type": "KNOWS",
+            }
+        ],
+    }
+    schema = GraphSchema.model_validate(schema_dict)
+    assert schema.key_property_names_for_relationship("KNOWS") == {"since"}
+    assert schema.mandatory_property_names_for_relationship("KNOWS") == {"since"}
+
+
+def test_schema_uniqueness_and_key_same_property_rejected() -> None:
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {"label": "Person", "properties": [{"name": "id", "type": "STRING"}]}
+        ],
+        "constraints": [
+            {
+                "type": "UNIQUENESS",
+                "node_type": "Person",
+                "property_name": "id",
+                "relationship_type": None,
+            },
+            {
+                "type": "KEY",
+                "node_type": "Person",
+                "property_name": "id",
+                "relationship_type": None,
+            },
+        ],
+    }
+    with pytest.raises(SchemaValidationError, match="UNIQUENESS and KEY"):
+        GraphSchema.model_validate(schema_dict)
+
+
 @pytest.fixture
 def valid_node_types() -> tuple[NodeType, ...]:
     # required=False so tuples match GraphSchema after validation (legacy required=True
