@@ -1507,132 +1507,6 @@ def test_clean_json_content_plain_json(
     assert cleaned == '{"node_types": [{"label": "Person"}]}'
 
 
-def test_filter_properties_required_field_valid_true(
-    schema_from_text: SchemaFromTextExtractor,
-) -> None:
-    node_types = [
-        {
-            "label": "Person",
-            "properties": [{"name": "name", "type": "STRING", "required": True}],
-        }
-    ]
-    result = schema_from_text._filter_properties_required_field(node_types)
-    assert result[0]["properties"][0]["required"] is True
-
-
-def test_filter_properties_required_field_valid_false(
-    schema_from_text: SchemaFromTextExtractor,
-) -> None:
-    node_types = [
-        {
-            "label": "Person",
-            "properties": [{"name": "name", "type": "STRING", "required": False}],
-        }
-    ]
-    result = schema_from_text._filter_properties_required_field(node_types)
-    assert result[0]["properties"][0]["required"] is False
-
-
-def test_filter_properties_required_field_string(
-    schema_from_text: SchemaFromTextExtractor,
-) -> None:
-    node_types = [
-        {
-            "label": "Person",
-            "properties": [
-                {"name": "prop1", "type": "STRING", "required": "true"},
-                {"name": "prop2", "type": "STRING", "required": "yes"},
-                {"name": "prop3", "type": "STRING", "required": "1"},
-                {"name": "prop4", "type": "STRING", "required": "TRUE"},
-            ],
-        }
-    ]
-    result = schema_from_text._filter_properties_required_field(node_types)
-    for prop in result[0]["properties"]:
-        assert prop["required"] is True
-    node_types = [
-        {
-            "label": "Person",
-            "properties": [
-                {"name": "prop1", "type": "STRING", "required": "false"},
-                {"name": "prop2", "type": "STRING", "required": "no"},
-                {"name": "prop3", "type": "STRING", "required": "0"},
-                {"name": "prop4", "type": "STRING", "required": "FALSE"},
-            ],
-        }
-    ]
-    result = schema_from_text._filter_properties_required_field(node_types)
-    for prop in result[0]["properties"]:
-        assert prop["required"] is False
-
-
-def test_filter_properties_required_field_invalid_string(
-    schema_from_text: SchemaFromTextExtractor,
-) -> None:
-    node_types = [
-        {
-            "label": "Person",
-            "properties": [
-                {"name": "name", "type": "STRING", "required": "mandatory"},
-                {"name": "email", "type": "STRING", "required": "always"},
-            ],
-        }
-    ]
-    result = schema_from_text._filter_properties_required_field(node_types)
-
-    assert "required" not in result[0]["properties"][0]
-    assert "required" not in result[0]["properties"][1]
-
-
-def test_filter_properties_required_field_int_values(
-    schema_from_text: SchemaFromTextExtractor,
-) -> None:
-    """Test that int values like 1 and 0 are converted to True/False."""
-    node_types = [
-        {
-            "label": "Person",
-            "properties": [
-                {"name": "prop1", "type": "STRING", "required": 1},
-                {"name": "prop2", "type": "STRING", "required": 0},
-            ],
-        }
-    ]
-    result = schema_from_text._filter_properties_required_field(node_types)
-    assert result[0]["properties"][0]["required"] is True
-    assert result[0]["properties"][1]["required"] is False
-
-
-def test_filter_properties_required_field_invalid_type(
-    schema_from_text: SchemaFromTextExtractor,
-) -> None:
-    """Test that unrecognized types like list and dict are removed."""
-    node_types = [
-        {
-            "label": "Person",
-            "properties": [
-                {"name": "prop1", "type": "STRING", "required": []},
-                {"name": "prop2", "type": "STRING", "required": {"value": True}},
-            ],
-        }
-    ]
-    result = schema_from_text._filter_properties_required_field(node_types)
-    for prop in result[0]["properties"]:
-        assert "required" not in prop
-
-
-def test_filter_properties_required_field_missing(
-    schema_from_text: SchemaFromTextExtractor,
-) -> None:
-    node_types = [
-        {
-            "label": "Person",
-            "properties": [{"name": "name", "type": "STRING"}],
-        }
-    ]
-    result = schema_from_text._filter_properties_required_field(node_types)
-    assert "required" not in result[0]["properties"][0]
-
-
 @pytest.mark.asyncio
 async def test_schema_from_text_with_required_properties(
     schema_from_text: SchemaFromTextExtractor,
@@ -1660,11 +1534,18 @@ async def test_schema_from_text_with_required_properties(
 
 
 @pytest.mark.asyncio
-async def test_schema_from_text_sanitizes_string_required_values(
+async def test_schema_from_text_string_required_coerced_without_existence_migration(
     schema_from_text: SchemaFromTextExtractor,
     mock_llm: AsyncMock,
     schema_json_with_string_required_values: str,
 ) -> None:
+    """LLMs may emit string truthiness for ``required``; Pydantic coerces it on ``PropertyType``.
+
+    Migration of legacy ``required`` to ``EXISTENCE`` constraints only runs when the raw
+    property dict has ``required is True`` (JSON boolean). String values such as ``\"true\"``
+    are not migrated; add ``ConstraintType`` rows with type ``EXISTENCE`` on ``GraphSchema``
+    if you need existence semantics for that case.
+    """
     mock_llm.ainvoke.return_value = LLMResponse(
         content=schema_json_with_string_required_values
     )
@@ -1674,16 +1555,20 @@ async def test_schema_from_text_sanitizes_string_required_values(
     person = schema.node_type_from_label("Person")
     assert person is not None
 
-    assert schema.existence_property_names_for_node("Person") == {"name", "email"}
+    assert schema.existence_property_names_for_node("Person") == set()
     name_prop = next((p for p in person.properties if p.name == "name"), None)
     email_prop = next((p for p in person.properties if p.name == "email"), None)
-    assert name_prop is not None and name_prop.required is False
-    assert email_prop is not None and email_prop.required is False
+    assert name_prop is not None
+    assert email_prop is not None
+    assert name_prop.model_dump().get("required") is True
+    assert email_prop.model_dump().get("required") is True
 
     phone_prop = next((p for p in person.properties if p.name == "phone"), None)
     address_prop = next((p for p in person.properties if p.name == "address"), None)
-    assert phone_prop is not None and phone_prop.required is False
-    assert address_prop is not None and address_prop.required is False
+    assert phone_prop is not None
+    assert address_prop is not None
+    assert phone_prop.model_dump().get("required") is False
+    assert address_prop.model_dump().get("required") is False
 
 
 @pytest.mark.asyncio

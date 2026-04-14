@@ -1189,58 +1189,6 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
             relationship_types, "relationship type"
         )
 
-    def _filter_properties_required_field(
-        self, node_types: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
-        """Sanitize the 'required' field in node type properties. Ensures 'required' is a valid boolean.
-        converts known string values (true, yes, 1, false, no, 0) to booleans and removes unrecognized values.
-        """
-        for node_type in node_types:
-            properties = node_type.get("properties", [])
-            if not properties:
-                continue
-            for prop in properties:
-                if not isinstance(prop, dict):
-                    continue
-
-                required_value = prop.get("required")
-
-                #  Not provided - will use Pydantic default (false)
-                if required_value is None:
-                    continue
-
-                # already a valid boolean
-                if isinstance(required_value, bool):
-                    continue
-
-                prop_name = prop.get("name", "unknown")
-                node_label = node_type.get("label", "unknown")
-
-                # Convert to string to handle int values like 1 or 0
-                required_str = str(required_value).lower()
-
-                if required_str in ("true", "yes", "1"):
-                    prop["required"] = True
-                    logging.info(
-                        f"Converted 'required' value '{required_value}' to True "
-                        f"for property '{prop_name}' on node '{node_label}'"
-                    )
-                elif required_str in ("false", "no", "0"):
-                    prop["required"] = False
-                    logging.info(
-                        f"Converted 'required' value '{required_value}' to False "
-                        f"for property '{prop_name}' on node '{node_label}'"
-                    )
-                else:
-                    logging.info(
-                        f"Removing unrecognized 'required' value '{required_value}' "
-                        f"for property '{prop_name}' on node '{node_label}'. "
-                        f"Using default (False)."
-                    )
-                    prop.pop("required", None)
-
-        return node_types
-
     def _clean_json_content(self, content: str) -> str:
         content = content.strip()
 
@@ -1310,8 +1258,11 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
 
         V1 (prompt-based) extraction requires additional filtering:
         - Remove nodes/relationships without labels
-        - Clean up invalid 'required' field values
         - Remove nodes with no properties (after property filtering)
+
+        Legacy ``required`` on properties is normalized by :class:`GraphSchema` validation
+        (migration to ``EXISTENCE`` constraints). Invalid ``required`` values fail validation
+        or are handled by Pydantic coercion where applicable.
 
         Args:
             extracted_schema: Raw schema dictionary from LLM
@@ -1327,9 +1278,6 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         if rel_types:
             rel_types = self._filter_relationships_without_labels(rel_types)
 
-        # Filter invalid required fields
-        node_types = self._filter_properties_required_field(node_types)
-
         # Filter nodes with no properties (after property filtering)
         # This prevents validation errors from min_length=1 constraint on NodeType.properties
         nodes_before = len(node_types)
@@ -1339,8 +1287,7 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         if len(node_types) < nodes_before:
             removed_count = nodes_before - len(node_types)
             logging.info(
-                f"Filtered out {removed_count} node type(s) with no properties after property validation. "
-                f"This can happen when all properties have invalid 'required' field values."
+                f"Filtered out {removed_count} node type(s) with no properties after property validation."
             )
 
         extracted_schema["node_types"] = node_types
