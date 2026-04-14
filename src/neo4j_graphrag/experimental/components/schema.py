@@ -392,6 +392,11 @@ class GraphSchema(DataModel):
         """Convert legacy ``PropertyType.required`` to ``EXISTENCE`` constraints and clear flags."""
         if not isinstance(data, dict):
             return data
+
+        def _property_type_required_is_true(prop: PropertyType) -> bool:
+            # Use model_dump so we do not access the deprecated ``.required`` attribute.
+            return prop.model_dump().get("required") is True
+
         constraints = list(data.get("constraints") or [])
 
         def _constraint_identity(c: Any) -> tuple[str, str, str, str]:
@@ -443,6 +448,41 @@ class GraphSchema(DataModel):
                 seen_existence.add(key)
                 prop["required"] = False
 
+        node_types_in = data.get("node_types") or []
+        if node_types_in:
+            node_types_list = list(node_types_in)
+            for i, node in enumerate(node_types_list):
+                if not isinstance(node, NodeType):
+                    continue
+                label = node.label
+                if not label:
+                    continue
+                new_props: list[PropertyType] = []
+                for prop in node.properties:
+                    if not _property_type_required_is_true(prop):
+                        new_props.append(prop)
+                        continue
+                    pname = prop.name
+                    if not pname:
+                        new_props.append(prop)
+                        continue
+                    key = (label, "", pname)
+                    if key in seen_existence:
+                        new_props.append(prop.model_copy(update={"required": False}))
+                        continue
+                    constraints.append(
+                        {
+                            "type": GraphConstraintType.EXISTENCE.value,
+                            "node_type": label,
+                            "property_name": pname,
+                            "relationship_type": None,
+                        }
+                    )
+                    seen_existence.add(key)
+                    new_props.append(prop.model_copy(update={"required": False}))
+                node_types_list[i] = node.model_copy(update={"properties": new_props})
+            data["node_types"] = tuple(node_types_list)
+
         for rel in data.get("relationship_types") or []:
             if not isinstance(rel, dict):
                 continue
@@ -471,6 +511,43 @@ class GraphSchema(DataModel):
                 )
                 seen_existence.add(key)
                 prop["required"] = False
+
+        rel_types_in = data.get("relationship_types") or []
+        if rel_types_in:
+            rel_types_list = list(rel_types_in)
+            for i, rel in enumerate(rel_types_list):
+                if not isinstance(rel, RelationshipType):
+                    continue
+                rlabel = rel.label
+                if not rlabel:
+                    continue
+                rel_new_props: list[PropertyType] = []
+                for prop in rel.properties:
+                    if not _property_type_required_is_true(prop):
+                        rel_new_props.append(prop)
+                        continue
+                    pname = prop.name
+                    if not pname:
+                        rel_new_props.append(prop)
+                        continue
+                    key = ("", rlabel, pname)
+                    if key in seen_existence:
+                        rel_new_props.append(
+                            prop.model_copy(update={"required": False})
+                        )
+                        continue
+                    constraints.append(
+                        {
+                            "type": GraphConstraintType.EXISTENCE.value,
+                            "node_type": "",
+                            "property_name": pname,
+                            "relationship_type": rlabel,
+                        }
+                    )
+                    seen_existence.add(key)
+                    rel_new_props.append(prop.model_copy(update={"required": False}))
+                rel_types_list[i] = rel.model_copy(update={"properties": rel_new_props})
+            data["relationship_types"] = tuple(rel_types_list)
 
         data["constraints"] = tuple(constraints)
         return data

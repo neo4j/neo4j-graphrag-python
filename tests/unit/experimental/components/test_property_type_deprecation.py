@@ -19,7 +19,14 @@ from __future__ import annotations
 
 import pytest
 
-from neo4j_graphrag.experimental.components.schema import GraphSchema, PropertyType
+from neo4j_graphrag.experimental.components.schema import (
+    ConstraintType,
+    GraphConstraintType,
+    GraphSchema,
+    NodeType,
+    PropertyType,
+    RelationshipType,
+)
 
 
 def test_property_type_required_field_emits_deprecation_on_access() -> None:
@@ -48,3 +55,58 @@ def test_legacy_required_true_in_json_becomes_existence_constraint() -> None:
         c.type == "EXISTENCE" and c.node_type == "Person" and c.property_name == "name"
         for c in schema.constraints
     )
+
+
+def test_programmatic_node_type_required_migrates_to_existence() -> None:
+    """``GraphSchema(node_types=(NodeType(..., required=True),))`` migrates like dict input."""
+    nt = NodeType(
+        label="Person",
+        properties=[PropertyType(name="name", type="STRING", required=True)],
+    )
+    schema = GraphSchema(node_types=(nt,))
+    assert schema.existence_property_names_for_node("Person") == {"name"}
+    assert len(schema.constraints) == 1
+    assert schema.constraints[0].type == GraphConstraintType.EXISTENCE
+    assert schema.constraints[0].node_type == "Person"
+    assert schema.constraints[0].property_name == "name"
+
+
+def test_programmatic_relationship_type_required_migrates_to_existence() -> None:
+    """``RelationshipType`` with ``PropertyType(required=True)`` migrates to relationship-scoped EXISTENCE."""
+    person = NodeType(
+        label="Person",
+        properties=[PropertyType(name="id", type="STRING")],
+    )
+    knows = RelationshipType(
+        label="KNOWS",
+        properties=[
+            PropertyType(name="since", type="LOCAL_DATETIME", required=True),
+        ],
+    )
+    schema = GraphSchema(node_types=(person,), relationship_types=(knows,))
+    assert schema.existence_property_names_for_relationship("KNOWS") == {"since"}
+    assert any(
+        c.type == GraphConstraintType.EXISTENCE
+        and c.relationship_type == "KNOWS"
+        and c.property_name == "since"
+        for c in schema.constraints
+    )
+
+
+def test_programmatic_required_deduped_when_existence_constraint_already_present() -> (
+    None
+):
+    """Pre-existing EXISTENCE constraint does not duplicate when ``required=True`` on instances."""
+    nt = NodeType(
+        label="Person",
+        properties=[PropertyType(name="name", type="STRING", required=True)],
+    )
+    existing = ConstraintType(
+        type=GraphConstraintType.EXISTENCE,
+        node_type="Person",
+        property_name="name",
+        relationship_type=None,
+    )
+    schema = GraphSchema(node_types=(nt,), constraints=(existing,))
+    assert len(schema.constraints) == 1
+    assert schema.existence_property_names_for_node("Person") == {"name"}
