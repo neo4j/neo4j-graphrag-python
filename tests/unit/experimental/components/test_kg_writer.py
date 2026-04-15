@@ -26,6 +26,7 @@ from neo4j_graphrag.experimental.components.filename_collision_handler import (
 )
 from neo4j_graphrag.experimental.components.parquet_formatter import (
     Neo4jGraphParquetFormatter,
+    get_unique_properties_for_node_type,
     sanitize_parquet_filestem,
 )
 from neo4j_graphrag.experimental.components.kg_writer import (
@@ -89,6 +90,11 @@ def test_sanitize_parquet_filestem_all_disallowed_replaced() -> None:
     # All disallowed chars become underscores (result non-empty, so no fallback)
     assert sanitize_parquet_filestem("...") == "___"
     assert sanitize_parquet_filestem("  ") == "__"
+
+
+def test_get_unique_properties_for_node_type_deprecation_warning() -> None:
+    with pytest.warns(DeprecationWarning, match="get_unique_properties_for_node_type"):
+        assert get_unique_properties_for_node_type(None, "Person") == ["__id__"]
 
 
 # --- FilenameCollisionHandler tests ---

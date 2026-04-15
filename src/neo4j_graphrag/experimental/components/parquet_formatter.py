@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import logging
 import unicodedata
+import warnings
 from collections import defaultdict
 from dataclasses import dataclass, field
 from io import BytesIO
@@ -133,8 +134,20 @@ def get_unique_properties_for_node_type(
 ) -> list[str]:
     """Deprecated synonym for :func:`get_primary_key_column_names_for_node_type`.
 
-    Kept for backward compatibility; prefer explicit helpers for UNIQUENESS vs KEY.
+    Historically this returned UNIQUENESS-backed property names (with a ``__id__``
+    fallback). It now follows **primary-key** semantics (KEY constraints, else
+    ``__id__``). Use :func:`get_uniqueness_property_names_for_node_type` or
+    :func:`get_primary_key_column_names_for_node_type` instead.
     """
+    warnings.warn(
+        "get_unique_properties_for_node_type is deprecated and its meaning has "
+        "changed: it now mirrors get_primary_key_column_names_for_node_type (KEY / "
+        "__id__), not UNIQUENESS-only lists. Use "
+        "get_uniqueness_property_names_for_node_type or "
+        "get_primary_key_column_names_for_node_type.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return get_primary_key_column_names_for_node_type(schema, node_label)
 
 
