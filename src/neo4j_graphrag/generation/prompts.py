@@ -253,6 +253,10 @@ Return a valid JSON object that follows this precise structure:
         {{
           "name": "email",
           "type": "STRING"
+        }},
+        {{
+          "name": "employee_id",
+          "type": "STRING"
         }}
       ]
     }}
@@ -272,13 +276,19 @@ Return a valid JSON object that follows this precise structure:
     {{
       "type": "UNIQUENESS",
       "node_type": "Person",
-      "property_name": "name",
+      "property_name": "email",
       "relationship_type": ""
     }},
     {{
       "type": "EXISTENCE",
       "node_type": "Person",
       "property_name": "name",
+      "relationship_type": ""
+    }},
+    {{
+      "type": "KEY",
+      "node_type": "Person",
+      "property_name": "employee_id",
       "relationship_type": ""
     }}
     ...
