@@ -301,6 +301,48 @@ class ConstraintType(BaseModel):
         return self
 
 
+def _validate_existence_or_key_property_defined(
+    constraint: ConstraintType,
+    *,
+    node_type_index: dict[str, NodeType],
+    relationship_type_index: dict[str, RelationshipType],
+    kind: Literal["EXISTENCE", "KEY"],
+) -> None:
+    """Raise SchemaValidationError if the property is not declared on the constrained entity."""
+    has_node = bool(constraint.node_type and constraint.node_type.strip())
+    has_rel = bool(
+        constraint.relationship_type and constraint.relationship_type.strip()
+    )
+    if has_node:
+        if constraint.node_type not in node_type_index:
+            raise SchemaValidationError(
+                f"Constraint references undefined node type: {constraint.node_type}"
+            )
+        node_type = node_type_index[constraint.node_type]
+        valid_property_names = {p.name for p in node_type.properties}
+        if constraint.property_name not in valid_property_names:
+            raise SchemaValidationError(
+                f"{kind} constraint references undefined property "
+                f"'{constraint.property_name}' on node type '{constraint.node_type}'. "
+                f"Valid properties: {valid_property_names}"
+            )
+    elif has_rel:
+        rlabel = constraint.relationship_type
+        assert rlabel is not None
+        if rlabel not in relationship_type_index:
+            raise SchemaValidationError(
+                f"Constraint references undefined relationship type: {rlabel}"
+            )
+        rel_type = relationship_type_index[rlabel]
+        valid_property_names = {p.name for p in rel_type.properties}
+        if constraint.property_name not in valid_property_names:
+            raise SchemaValidationError(
+                f"{kind} constraint references undefined property "
+                f"'{constraint.property_name}' on relationship type '{rlabel}'. "
+                f"Valid properties: {valid_property_names}"
+            )
+
+
 class Pattern(BaseModel):
     """Represents a relationship pattern in the graph schema.
 
@@ -630,74 +672,19 @@ class GraphSchema(DataModel):
                         f"on node type '{constraint.node_type}'. "
                         f"Valid properties: {valid_property_names}"
                     )
-            elif ctype == GraphConstraintType.EXISTENCE:
-                has_node = bool(constraint.node_type and constraint.node_type.strip())
-                has_rel = bool(
-                    constraint.relationship_type
-                    and constraint.relationship_type.strip()
+            elif ctype in (
+                GraphConstraintType.EXISTENCE,
+                GraphConstraintType.KEY,
+            ):
+                kind: Literal["EXISTENCE", "KEY"] = (
+                    "EXISTENCE" if ctype == GraphConstraintType.EXISTENCE else "KEY"
                 )
-                if has_node:
-                    if constraint.node_type not in self._node_type_index:
-                        raise SchemaValidationError(
-                            f"Constraint references undefined node type: {constraint.node_type}"
-                        )
-                    node_type = self._node_type_index[constraint.node_type]
-                    valid_property_names = {p.name for p in node_type.properties}
-                    if constraint.property_name not in valid_property_names:
-                        raise SchemaValidationError(
-                            f"EXISTENCE constraint references undefined property "
-                            f"'{constraint.property_name}' on node type '{constraint.node_type}'. "
-                            f"Valid properties: {valid_property_names}"
-                        )
-                elif has_rel:
-                    rlabel = constraint.relationship_type
-                    assert rlabel is not None
-                    if rlabel not in self._relationship_type_index:
-                        raise SchemaValidationError(
-                            f"Constraint references undefined relationship type: {rlabel}"
-                        )
-                    rel_type = self._relationship_type_index[rlabel]
-                    valid_property_names = {p.name for p in rel_type.properties}
-                    if constraint.property_name not in valid_property_names:
-                        raise SchemaValidationError(
-                            f"EXISTENCE constraint references undefined property "
-                            f"'{constraint.property_name}' on relationship type '{rlabel}'. "
-                            f"Valid properties: {valid_property_names}"
-                        )
-            elif ctype == GraphConstraintType.KEY:
-                has_node = bool(constraint.node_type and constraint.node_type.strip())
-                has_rel = bool(
-                    constraint.relationship_type
-                    and constraint.relationship_type.strip()
+                _validate_existence_or_key_property_defined(
+                    constraint,
+                    node_type_index=self._node_type_index,
+                    relationship_type_index=self._relationship_type_index,
+                    kind=kind,
                 )
-                if has_node:
-                    if constraint.node_type not in self._node_type_index:
-                        raise SchemaValidationError(
-                            f"Constraint references undefined node type: {constraint.node_type}"
-                        )
-                    node_type = self._node_type_index[constraint.node_type]
-                    valid_property_names = {p.name for p in node_type.properties}
-                    if constraint.property_name not in valid_property_names:
-                        raise SchemaValidationError(
-                            f"KEY constraint references undefined property "
-                            f"'{constraint.property_name}' on node type '{constraint.node_type}'. "
-                            f"Valid properties: {valid_property_names}"
-                        )
-                elif has_rel:
-                    rlabel = constraint.relationship_type
-                    assert rlabel is not None
-                    if rlabel not in self._relationship_type_index:
-                        raise SchemaValidationError(
-                            f"Constraint references undefined relationship type: {rlabel}"
-                        )
-                    rel_type = self._relationship_type_index[rlabel]
-                    valid_property_names = {p.name for p in rel_type.properties}
-                    if constraint.property_name not in valid_property_names:
-                        raise SchemaValidationError(
-                            f"KEY constraint references undefined property "
-                            f"'{constraint.property_name}' on relationship type '{rlabel}'. "
-                            f"Valid properties: {valid_property_names}"
-                        )
         return self
 
     @model_validator(mode="after")
