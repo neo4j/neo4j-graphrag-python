@@ -1824,6 +1824,58 @@ async def test_schema_from_existing_graph_additional_params(
     assert schema.additional_patterns is True
 
 
+def test_extract_graph_constraints_from_metadata_node_key_maps_to_key() -> None:
+    """Neo4j ``NODE_KEY`` metadata must become ``GraphConstraintType.KEY``, not EXISTENCE."""
+    structured_schema: dict[str, Any] = {
+        "metadata": {
+            "constraint": [
+                {
+                    "type": "NODE_KEY",
+                    "labelsOrTypes": ["Person"],
+                    "properties": ["email"],
+                }
+            ]
+        }
+    }
+    out = SchemaFromExistingGraphExtractor._extract_graph_constraints_from_metadata(
+        structured_schema
+    )
+    assert out == [
+        {
+            "type": GraphConstraintType.KEY.value,
+            "node_type": "Person",
+            "property_name": "email",
+            "relationship_type": None,
+        }
+    ]
+
+
+def test_extract_graph_constraints_from_metadata_relationship_key_maps_to_key() -> None:
+    """Neo4j ``RELATIONSHIP_KEY`` metadata maps to relationship-scoped ``KEY`` constraints."""
+    structured_schema: dict[str, Any] = {
+        "metadata": {
+            "constraint": [
+                {
+                    "type": "RELATIONSHIP_KEY",
+                    "labelsOrTypes": ["WORKS_FOR"],
+                    "properties": ["since"],
+                }
+            ]
+        }
+    }
+    out = SchemaFromExistingGraphExtractor._extract_graph_constraints_from_metadata(
+        structured_schema
+    )
+    assert out == [
+        {
+            "type": GraphConstraintType.KEY.value,
+            "node_type": "",
+            "property_name": "since",
+            "relationship_type": "WORKS_FOR",
+        }
+    ]
+
+
 def test_graph_schema_extraction_output_json_schema_lean_root() -> None:
     """Structured-output schema must not include pipeline-only GraphSchema flags."""
     from neo4j_graphrag.experimental.components.graph_schema_extraction import (
