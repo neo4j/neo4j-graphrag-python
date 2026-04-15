@@ -16,7 +16,10 @@ from typing import Any
 
 import pytest
 
-from neo4j_graphrag.experimental.components.graph_pruning import GraphPruning
+from neo4j_graphrag.experimental.components.graph_pruning import (
+    GraphPruning,
+    PruningReason,
+)
 from neo4j_graphrag.experimental.components.schema import GraphSchema
 from neo4j_graphrag.experimental.components.types import (
     Neo4jGraph,
@@ -238,6 +241,143 @@ async def test_graph_pruning_missing_required_property(
         ],
     )
     await _test(extracted_graph, schema_dict, filtered_graph)
+
+
+@pytest.mark.asyncio
+async def test_graph_pruning_existence_constraint_node_property_explicit(
+    extracted_graph: Neo4jGraph,
+) -> None:
+    """Same outcome as ``test_graph_pruning_missing_required_property`` using EXISTENCE only (no ``required``)."""
+    schema_dict = {
+        "node_types": [
+            {
+                "label": "Person",
+                "properties": [
+                    {"name": "name", "type": "STRING"},
+                    {"name": "height", "type": "INTEGER"},
+                ],
+                "additional_properties": True,
+            }
+        ],
+        "relationship_types": [
+            {
+                "label": "KNOWS",
+            }
+        ],
+        "patterns": [
+            ("Person", "KNOWS", "Person"),
+        ],
+        "constraints": [
+            {
+                "type": "EXISTENCE",
+                "node_type": "Person",
+                "property_name": "name",
+                "relationship_type": None,
+            }
+        ],
+        "additional_node_types": True,
+        "additional_relationship_types": True,
+        "additional_patterns": True,
+    }
+    schema = GraphSchema.model_validate(schema_dict)
+    assert schema.existence_property_names_for_node("Person") == {"name"}
+
+    filtered_graph = Neo4jGraph(
+        nodes=[
+            Neo4jNode(
+                id="1",
+                label="Person",
+                properties={
+                    "name": "John Doe",
+                },
+            ),
+            Neo4jNode(
+                id="3",
+                label="Person",
+                properties={
+                    "name": "Jane Doe",
+                    "weight": 90,
+                },
+            ),
+            Neo4jNode(
+                id="10",
+                label="Organization",
+                properties={
+                    "name": "Azerty Inc.",
+                    "created": 1999,
+                },
+            ),
+        ],
+        relationships=[
+            Neo4jRelationship(
+                start_node_id="1",
+                end_node_id="3",
+                type="KNOWS",
+            ),
+            Neo4jRelationship(
+                start_node_id="1",
+                end_node_id="10",
+                type="MANAGES",
+            ),
+            Neo4jRelationship(
+                start_node_id="1",
+                end_node_id="10",
+                type="WORKS_FOR",
+            ),
+        ],
+    )
+    await _test(extracted_graph, schema_dict, filtered_graph)
+
+
+@pytest.mark.asyncio
+async def test_graph_pruning_existence_constraint_relationship_property(
+    extracted_graph: Neo4jGraph,
+) -> None:
+    """Relationship-scoped EXISTENCE: KNOWS without ``firstMetIn`` is flagged when that property is mandatory."""
+    schema_dict = {
+        "node_types": [
+            {
+                "label": "Person",
+                "properties": [
+                    {"name": "name", "type": "STRING"},
+                    {"name": "height", "type": "INTEGER"},
+                ],
+                "additional_properties": True,
+            }
+        ],
+        "relationship_types": [
+            {
+                "label": "KNOWS",
+                "properties": [
+                    {"name": "firstMetIn", "type": "INTEGER"},
+                ],
+                "additional_properties": True,
+            }
+        ],
+        "patterns": [
+            ("Person", "KNOWS", "Person"),
+        ],
+        "constraints": [
+            {
+                "type": "EXISTENCE",
+                "node_type": "",
+                "property_name": "firstMetIn",
+                "relationship_type": "KNOWS",
+            }
+        ],
+        "additional_node_types": True,
+        "additional_relationship_types": True,
+        "additional_patterns": True,
+    }
+    schema = GraphSchema.model_validate(schema_dict)
+    assert schema.existence_property_names_for_relationship("KNOWS") == {"firstMetIn"}
+
+    pruner = GraphPruning()
+    res = await pruner.run(extracted_graph, schema)
+    assert any(
+        x.pruned_reason == PruningReason.MISSING_REQUIRED_PROPERTY
+        for x in res.pruning_stats.pruned_relationships
+    )
 
 
 @pytest.mark.asyncio

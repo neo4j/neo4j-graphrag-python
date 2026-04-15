@@ -4,6 +4,8 @@ import asyncio
 
 from neo4j_graphrag.experimental.components.graph_pruning import GraphPruning
 from neo4j_graphrag.experimental.components.schema import (
+    ConstraintType,
+    GraphConstraintType,
     GraphSchema,
     NodeType,
     Pattern,
@@ -69,8 +71,8 @@ schema = GraphSchema(
         NodeType(
             label="Person",
             properties=[
-                PropertyType(name="firstName", type="STRING", required=True),
-                PropertyType(name="lastName", type="STRING", required=True),
+                PropertyType(name="firstName", type="STRING"),
+                PropertyType(name="lastName", type="STRING"),
                 PropertyType(name="age", type="INTEGER"),
             ],
             additional_properties=False,
@@ -78,7 +80,7 @@ schema = GraphSchema(
         NodeType(
             label="Organization",
             properties=[
-                PropertyType(name="name", type="STRING", required=True),
+                PropertyType(name="name", type="STRING"),
                 PropertyType(name="address", type="STRING"),
             ],
             additional_properties=True,
@@ -97,6 +99,26 @@ schema = GraphSchema(
     patterns=(
         Pattern(source="Person", relationship="KNOWS", target="Person"),
         Pattern(source="Person", relationship="WORKS_FOR", target="Organization"),
+    ),
+    constraints=(
+        ConstraintType(
+            type=GraphConstraintType.EXISTENCE,
+            node_type="Person",
+            property_name="firstName",
+            relationship_type=None,
+        ),
+        ConstraintType(
+            type=GraphConstraintType.EXISTENCE,
+            node_type="Person",
+            property_name="lastName",
+            relationship_type=None,
+        ),
+        ConstraintType(
+            type=GraphConstraintType.EXISTENCE,
+            node_type="Organization",
+            property_name="name",
+            relationship_type=None,
+        ),
     ),
     additional_node_types=False,
     additional_relationship_types=False,

@@ -199,6 +199,7 @@ class GraphPruning(Component):
         node: Neo4jNode,
         pruning_stats: PruningStats,
         schema_entity: Optional[NodeType],
+        schema: GraphSchema,
         additional_node_types: bool,
     ) -> Optional[Neo4jNode]:
         if not node.label:
@@ -223,6 +224,7 @@ class GraphPruning(Component):
         filtered_props = self._enforce_properties(
             node,
             schema_entity,
+            schema,
             pruning_stats,
             prune_empty=True,
         )
@@ -260,6 +262,7 @@ class GraphPruning(Component):
                 node,
                 pruning_stats,
                 schema_entity,
+                schema,
                 additional_node_types=schema.additional_node_types,
             )
             if new_node:
@@ -275,6 +278,7 @@ class GraphPruning(Component):
         additional_relationship_types: bool,
         patterns: tuple[Pattern, ...],
         additional_patterns: bool,
+        schema: GraphSchema,
     ) -> Optional[Neo4jRelationship]:
         if not rel.type:
             pruning_stats.add_pruned_relationship(
@@ -332,6 +336,7 @@ class GraphPruning(Component):
             filtered_props = self._enforce_properties(
                 rel,
                 relationship_type,
+                schema,
                 pruning_stats,
                 prune_empty=False,
             )
@@ -388,6 +393,7 @@ class GraphPruning(Component):
                 schema.additional_relationship_types,
                 schema.patterns,
                 schema.additional_patterns,
+                schema,
             )
             if new_rel:
                 valid_rels.append(new_rel)
@@ -397,6 +403,7 @@ class GraphPruning(Component):
         self,
         item: Union[Neo4jNode, Neo4jRelationship],
         schema_item: Union[NodeType, RelationshipType],
+        schema: GraphSchema,
         pruning_stats: PruningStats,
         prune_empty: bool = False,
     ) -> dict[str, Any]:
@@ -404,7 +411,7 @@ class GraphPruning(Component):
         Enforce properties:
         - Ensure property type: for now, just prevent having invalid property types (e.g. map)
         - Filter out those that are not in schema (i.e., valid properties) if allowed properties is False.
-        - Check that all required properties are present and not null.
+        - Check that all EXISTENCE-constrained properties are present and not null.
         """
         type_safe_properties = self._ensure_property_types(
             item.properties,
@@ -421,7 +428,9 @@ class GraphPruning(Component):
             return filtered_properties
         missing_required_properties = self._check_required_properties(
             filtered_properties,
-            valid_properties=schema_item.properties,
+            schema,
+            schema_item,
+            item,
         )
         if missing_required_properties:
             pruning_stats.add_pruned_item(
@@ -459,12 +468,22 @@ class GraphPruning(Component):
         return filtered_properties
 
     def _check_required_properties(
-        self, filtered_properties: dict[str, Any], valid_properties: list[PropertyType]
+        self,
+        filtered_properties: dict[str, Any],
+        schema: GraphSchema,
+        schema_item: Union[NodeType, RelationshipType],
+        item: Union[Neo4jNode, Neo4jRelationship],
     ) -> list[str]:
-        """Returns the list of missing required properties, if any."""
-        required_prop_names = {prop.name for prop in valid_properties if prop.required}
+        """Returns properties missing per EXISTENCE constraints (must be present and not null)."""
+        if isinstance(item, Neo4jNode):
+            required_prop_names = schema.existence_property_names_for_node(item.label)
+        else:
+            required_prop_names = schema.existence_property_names_for_relationship(
+                item.type
+            )
+        declared_names = {p.name for p in schema_item.properties}
         missing_required_properties = []
-        for req_prop in required_prop_names:
+        for req_prop in required_prop_names & declared_names:
             if filtered_properties.get(req_prop) is None:
                 missing_required_properties.append(req_prop)
         return missing_required_properties

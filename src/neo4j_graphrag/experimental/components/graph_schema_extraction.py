@@ -18,16 +18,21 @@
 These types are a lean wire format for ``response_format`` with supported LLMs.
 Pipeline code uses :class:`~neo4j_graphrag.experimental.components.schema.GraphSchema`
 exclusively; convert via :meth:`~neo4j_graphrag.experimental.components.schema.GraphSchema.from_extraction_output`.
+
+Vertex AI builds JSON Schema from Pydantic and parses it with protobuf; it rejects
+``anyOf`` branches that use JSON Schema ``type: "null"`` (e.g. ``Optional[str]``).
+Extraction-specific models therefore avoid nullable fields (e.g. use empty string
+sentinels where runtime :class:`~neo4j_graphrag.experimental.components.schema.ConstraintType`
+uses ``None``).
 """
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from neo4j_graphrag.experimental.components.schema import (
-    ConstraintType,
     Neo4jPropertyTypeName,
     Pattern,
 )
@@ -42,7 +47,6 @@ class ExtractedPropertyType(BaseModel):
     name: str
     type: Neo4jPropertyTypeName
     description: str = ""
-    required: bool = False
     model_config = ConfigDict(frozen=True, extra="forbid")
 
 
@@ -64,6 +68,40 @@ class ExtractedRelationshipType(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class ExtractedConstraintType(BaseModel):
+    """Constraint in schema-from-text structured output (Vertex/OpenAI JSON Schema).
+
+    This is a **wire DTO** only: shapes the JSON Schema (e.g. no nullable ``relationship_type``,
+    which Vertex's protobuf parser rejects). Semantic rules match
+    :class:`~neo4j_graphrag.experimental.components.schema.ConstraintType`; those are enforced
+    when building :class:`~neo4j_graphrag.experimental.components.schema.GraphSchema`, not here.
+    """
+
+    type: Literal["UNIQUENESS", "EXISTENCE"]
+    property_name: str
+    node_type: str = ""
+    relationship_type: str = ""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+
+def wire_extraction_constraints_for_graph_schema(
+    constraints: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Map extraction constraint dicts to values compatible with :class:`~neo4j_graphrag.experimental.components.schema.ConstraintType`.
+
+    Empty ``relationship_type`` (the wire \"unset\" sentinel) becomes ``None`` for runtime validation.
+    """
+    out: list[dict[str, Any]] = []
+    for c in constraints:
+        d = dict(c)
+        rt = d.get("relationship_type")
+        if rt is None or (isinstance(rt, str) and rt.strip() == ""):
+            d["relationship_type"] = None
+        out.append(d)
+    return out
+
+
 class GraphSchemaExtractionOutput(BaseModel):
     """JSON shape for LLM schema-from-text structured output (V2).
 
@@ -74,7 +112,7 @@ class GraphSchemaExtractionOutput(BaseModel):
     node_types: list[ExtractedNodeType] = Field(default_factory=list)
     relationship_types: list[ExtractedRelationshipType] = Field(default_factory=list)
     patterns: list[Pattern] = Field(default_factory=list)
-    constraints: list[ConstraintType] = Field(default_factory=list)
+    constraints: list[ExtractedConstraintType] = Field(default_factory=list)
     model_config = ConfigDict(extra="forbid")
 
     @classmethod

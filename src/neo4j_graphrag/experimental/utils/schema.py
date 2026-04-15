@@ -17,7 +17,7 @@ from typing import Any, Union
 try:
     from neo4j_viz import VisualizationGraph, Node, Relationship
 except ImportError:
-    VisualizationGraph = Node = Relationship = None  # type: ignore
+    VisualizationGraph = Node = Relationship = None  # type: ignore[misc,assignment]
 
 from neo4j_graphrag.experimental.components.schema import (
     GraphSchema,
@@ -52,17 +52,18 @@ def schema_visualization(
 
     schema_object = GraphSchema.model_validate(schema)
 
-    def _format_property_name(p: PropertyType) -> str:
+    def _format_property_name(p: PropertyType, existence_names: set[str]) -> str:
         """
 
         Args:
             p (PropertyType): the property to be formatted
+            existence_names: property names that have an EXISTENCE constraint
 
         Returns:
-            str: the property name, suffixed with '*' if the property is required
+            str: the property name, suffixed with '*' if existence is required
 
         """
-        return p.name + ("*" if p.required else "")
+        return p.name + ("*" if p.name in existence_names else "")
 
     def _relationship_properties(rel_type: str) -> dict[str, str]:
         """Returns a dict {prop_name: prop_type} for all relationship properties.
@@ -73,11 +74,13 @@ def schema_visualization(
         Returns:
             dict[str, str]: the relationship properties {name: type} mapping for display
         """
+        existence = schema_object.existence_property_names_for_relationship(rel_type)
         for relationship_type in schema_object.relationship_types:
             if relationship_type.label != rel_type:
                 continue
             return {
-                _format_property_name(p): p.type for p in relationship_type.properties
+                _format_property_name(p, existence): p.type
+                for p in relationship_type.properties
             }
         return {}
 
@@ -90,10 +93,13 @@ def schema_visualization(
         Returns:
             dict[str, str]: the node properties {name: type} mapping for display
         """
-        return {_format_property_name(p): p.type for p in node_type.properties}
+        existence = schema_object.existence_property_names_for_node(node_type.label)
+        return {
+            _format_property_name(p, existence): p.type for p in node_type.properties
+        }
 
     nodes = [
-        Node(  # type: ignore
+        Node(  # type: ignore[call-arg]
             id=node_type.label,
             caption=node_type.label,
             properties=_node_properties(node_type),
@@ -101,7 +107,7 @@ def schema_visualization(
         for node_type in schema_object.node_types
     ]
     relationships = [
-        Relationship(  # type: ignore
+        Relationship(  # type: ignore[call-arg]
             source=pattern[0],
             target=pattern[2],
             caption=pattern[1],
