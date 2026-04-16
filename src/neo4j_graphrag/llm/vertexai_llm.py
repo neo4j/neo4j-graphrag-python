@@ -28,6 +28,7 @@ from neo4j_graphrag.llm.base import LLMBase
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
+    LLMUsage,
     MessageList,
     ToolCall,
     ToolCallResponse,
@@ -589,6 +590,12 @@ class VertexAILLM(LLMBase):
         )
 
     def _parse_content_response(self, response: GenerationResponse) -> LLMResponse:
-        return LLMResponse(
-            content=response.text,
-        )
+        usage = None
+        metadata = response.usage_metadata
+        if metadata:
+            usage = LLMUsage(
+                request_tokens=metadata.prompt_token_count,
+                response_tokens=metadata.candidates_token_count,
+                total_tokens=metadata.total_token_count,
+            )
+        return LLMResponse(content=response.text, usage=usage)

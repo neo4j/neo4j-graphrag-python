@@ -38,6 +38,7 @@ from neo4j_graphrag.llm.base import LLMInterface, LLMInterfaceV2
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
+    LLMUsage,
     MessageList,
     ToolCall,
     ToolCallResponse,
@@ -366,7 +367,15 @@ class BedrockLLM(LLMInterface, LLMInterfaceV2):
         text_parts = [block["text"] for block in content_blocks if "text" in block]
         if not text_parts:
             raise LLMGenerationError("LLM returned empty response.")
-        return LLMResponse(content="".join(text_parts))
+        usage = None
+        raw_usage = response.get("usage", {})
+        if raw_usage:
+            usage = LLMUsage(
+                request_tokens=raw_usage.get("inputTokens", 0),
+                response_tokens=raw_usage.get("outputTokens", 0),
+                total_tokens=raw_usage.get("totalTokens", 0),
+            )
+        return LLMResponse(content="".join(text_parts), usage=usage)
 
     def _get_tool_config(
         self, tools: Optional[Sequence[Tool]]

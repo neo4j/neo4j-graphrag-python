@@ -24,6 +24,7 @@ from neo4j_graphrag.llm.base import LLMBase
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
+    LLMUsage,
     MessageList,
     SystemMessage,
     UserMessage,
@@ -157,11 +158,18 @@ class MistralAILLM(LLMBase):
                 **self.model_params,
             )
             content: str = ""
+            usage = None
             if response and response.choices:
                 possible_content = response.choices[0].message.content
                 if isinstance(possible_content, str):
                     content = possible_content
-            return LLMResponse(content=content)
+            if response and response.usage:
+                usage = LLMUsage(
+                    request_tokens=response.usage.prompt_tokens or 0,
+                    response_tokens=response.usage.completion_tokens or 0,
+                    total_tokens=response.usage.total_tokens or 0,
+                )
+            return LLMResponse(content=content, usage=usage)
         except SDKError as e:
             raise LLMGenerationError(e)
 
@@ -195,11 +203,18 @@ class MistralAILLM(LLMBase):
                 model=self.model_name, messages=messages, **self.model_params, **kwargs
             )
             content: str = ""
+            usage = None
             if response and response.choices:
                 possible_content = response.choices[0].message.content
                 if isinstance(possible_content, str):
                     content = possible_content
-            return LLMResponse(content=content)
+            if response and response.usage:
+                usage = LLMUsage(
+                    request_tokens=response.usage.prompt_tokens or 0,
+                    response_tokens=response.usage.completion_tokens or 0,
+                    total_tokens=response.usage.total_tokens or 0,
+                )
+            return LLMResponse(content=content, usage=usage)
         except SDKError as e:
             raise LLMGenerationError(e)
 
@@ -235,11 +250,18 @@ class MistralAILLM(LLMBase):
                 **self.model_params,
             )
             content: str = ""
+            usage = None
             if response and response.choices:
                 possible_content = response.choices[0].message.content
                 if isinstance(possible_content, str):
                     content = possible_content
-            return LLMResponse(content=content)
+            if response and response.usage:
+                usage = LLMUsage(
+                    request_tokens=response.usage.prompt_tokens or 0,
+                    response_tokens=response.usage.completion_tokens or 0,
+                    total_tokens=response.usage.total_tokens or 0,
+                )
+            return LLMResponse(content=content, usage=usage)
         except SDKError as e:
             raise LLMGenerationError(e)
 
@@ -276,11 +298,18 @@ class MistralAILLM(LLMBase):
                 **kwargs,
             )
             content: str = ""
+            usage = None
             if response and response.choices:
                 possible_content = response.choices[0].message.content
                 if isinstance(possible_content, str):
                     content = possible_content
-            return LLMResponse(content=content)
+            if response and response.usage:
+                usage = LLMUsage(
+                    request_tokens=response.usage.prompt_tokens or 0,
+                    response_tokens=response.usage.completion_tokens or 0,
+                    total_tokens=response.usage.total_tokens or 0,
+                )
+            return LLMResponse(content=content, usage=usage)
         except SDKError as e:
             raise LLMGenerationError(e)
 
