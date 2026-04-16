@@ -184,7 +184,9 @@ class CohereLLM(LLMBase):
                 response_tokens=output_tokens,
                 total_tokens=input_tokens + output_tokens,
             )
-        return LLMResponse(content=self._extract_text_content(res.message.content), usage=usage)
+        return LLMResponse(
+            content=self._extract_text_content(res.message.content), usage=usage
+        )
 
     @rate_limit_handler_decorator
     def __invoke_v2(
@@ -270,7 +272,9 @@ class CohereLLM(LLMBase):
                 response_tokens=output_tokens,
                 total_tokens=input_tokens + output_tokens,
             )
-        return LLMResponse(content=self._extract_text_content(res.message.content), usage=usage)
+        return LLMResponse(
+            content=self._extract_text_content(res.message.content), usage=usage
+        )
 
     @async_rate_limit_handler_decorator
     async def __ainvoke_v2(

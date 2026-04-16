@@ -171,7 +171,10 @@ class OllamaLLM(LLMBase):
             )
             content = response.message.content or ""
             usage = None
-            if response.prompt_eval_count is not None or response.eval_count is not None:
+            if (
+                response.prompt_eval_count is not None
+                or response.eval_count is not None
+            ):
                 request_tokens = response.prompt_eval_count or 0
                 response_tokens = response.eval_count or 0
                 usage = LLMUsage(
@@ -212,7 +215,10 @@ class OllamaLLM(LLMBase):
             )
             content = response.message.content or ""
             usage = None
-            if response.prompt_eval_count is not None or response.eval_count is not None:
+            if (
+                response.prompt_eval_count is not None
+                or response.eval_count is not None
+            ):
                 request_tokens = response.prompt_eval_count or 0
                 response_tokens = response.eval_count or 0
                 usage = LLMUsage(
@@ -256,7 +262,10 @@ class OllamaLLM(LLMBase):
             )
             content = response.message.content or ""
             usage = None
-            if response.prompt_eval_count is not None or response.eval_count is not None:
+            if (
+                response.prompt_eval_count is not None
+                or response.eval_count is not None
+            ):
                 request_tokens = response.prompt_eval_count or 0
                 response_tokens = response.eval_count or 0
                 usage = LLMUsage(
@@ -301,7 +310,10 @@ class OllamaLLM(LLMBase):
             )
             content = response.message.content or ""
             usage = None
-            if response.prompt_eval_count is not None or response.eval_count is not None:
+            if (
+                response.prompt_eval_count is not None
+                or response.eval_count is not None
+            ):
                 request_tokens = response.prompt_eval_count or 0
                 response_tokens = response.eval_count or 0
                 usage = LLMUsage(
