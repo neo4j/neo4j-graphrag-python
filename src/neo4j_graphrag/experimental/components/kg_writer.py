@@ -407,15 +407,24 @@ class ParquetWriter(KGWriter):
                 name = meta.node_label or (
                     meta.labels[0] if meta.labels else resolved_stem
                 )
-                files.append(
-                    {
-                        "name": name,
-                        "file_path": file_path,
-                        "columns": columns,
-                        "is_node": True,
-                        "labels": meta.labels or [],
-                    }
-                )
+                # Build structured constraints list for composite support
+                constraints_meta: list[dict[str, Any]] = []
+                for props in meta.key_constraints or []:
+                    constraints_meta.append({"type": "KEY", "properties": list(props)})
+                for props in meta.uniqueness_constraints or []:
+                    constraints_meta.append(
+                        {"type": "UNIQUENESS", "properties": list(props)}
+                    )
+                file_entry: dict[str, Any] = {
+                    "name": name,
+                    "file_path": file_path,
+                    "columns": columns,
+                    "is_node": True,
+                    "labels": meta.labels or [],
+                }
+                if constraints_meta:
+                    file_entry["constraints"] = constraints_meta
+                files.append(file_entry)
 
             base_rel = self.relationships_dest.output_path.rstrip("/")
             for filename, content in data["relationships"].items():

@@ -81,10 +81,19 @@ def _constraint_relationship_type_unset(constraint: dict[str, Any]) -> bool:
     return rt is None or (isinstance(rt, str) and rt.strip() == "")
 
 
+def _resolve_constraint_property_names(constraint: dict[str, Any]) -> list[str]:
+    """Resolve property names from a constraint dict (``property_names`` or ``property_name``)."""
+    pns = constraint.get("property_names") or ()
+    if pns:
+        return list(pns)
+    pn = constraint.get("property_name", "")
+    return [pn] if pn else []
+
+
 def get_uniqueness_property_names_for_node_type(
     schema: Optional[dict[str, Any]], node_label: str
 ) -> list[str]:
-    """Property names with a UNIQUENESS constraint for this node label (order as in schema)."""
+    """Property names with a UNIQUENESS constraint for this node label (flat, order as in schema)."""
     if not schema:
         return []
     out: list[str] = []
@@ -93,16 +102,14 @@ def get_uniqueness_property_names_for_node_type(
             continue
         if constraint.get("node_type", "") != node_label:
             continue
-        pn = constraint.get("property_name", "")
-        if pn:
-            out.append(pn)
+        out.extend(_resolve_constraint_property_names(constraint))
     return out
 
 
 def get_key_property_names_for_node_type(
     schema: Optional[dict[str, Any]], node_label: str
 ) -> list[str]:
-    """Property names with a KEY constraint (node scope) for this node label."""
+    """Property names with a KEY constraint (node scope) for this node label (flat)."""
     if not schema:
         return []
     out: list[str] = []
@@ -113,9 +120,51 @@ def get_key_property_names_for_node_type(
             continue
         if not _constraint_relationship_type_unset(constraint):
             continue
-        pn = constraint.get("property_name", "")
-        if pn:
-            out.append(pn)
+        out.extend(_resolve_constraint_property_names(constraint))
+    return out
+
+
+def get_key_constraints_for_node_type(
+    schema: Optional[dict[str, Any]], node_label: str
+) -> list[tuple[str, ...]]:
+    """KEY constraints for a node label, preserving composite grouping.
+
+    Returns a list of tuples, each containing the property names for one KEY constraint.
+    """
+    if not schema:
+        return []
+    out: list[tuple[str, ...]] = []
+    for constraint in schema.get("constraints", ()) or ():
+        if constraint.get("type") != "KEY":
+            continue
+        if constraint.get("node_type", "") != node_label:
+            continue
+        if not _constraint_relationship_type_unset(constraint):
+            continue
+        props = _resolve_constraint_property_names(constraint)
+        if props:
+            out.append(tuple(props))
+    return out
+
+
+def get_uniqueness_constraints_for_node_type(
+    schema: Optional[dict[str, Any]], node_label: str
+) -> list[tuple[str, ...]]:
+    """UNIQUENESS constraints for a node label, preserving composite grouping.
+
+    Returns a list of tuples, each containing the property names for one UNIQUENESS constraint.
+    """
+    if not schema:
+        return []
+    out: list[tuple[str, ...]] = []
+    for constraint in schema.get("constraints", ()) or ():
+        if constraint.get("type") != "UNIQUENESS":
+            continue
+        if constraint.get("node_type", "") != node_label:
+            continue
+        props = _resolve_constraint_property_names(constraint)
+        if props:
+            out.append(tuple(props))
     return out
 
 
@@ -172,6 +221,9 @@ class FileMetadata:
     head_uniqueness_property_names: Optional[list[str]] = None
     tail_primary_key_property_names: Optional[list[str]] = None
     tail_uniqueness_property_names: Optional[list[str]] = None
+    # Grouped constraint metadata (preserves composite grouping)
+    key_constraints: Optional[list[tuple[str, ...]]] = None
+    uniqueness_constraints: Optional[list[tuple[str, ...]]] = None
 
 
 @dataclass
@@ -632,6 +684,12 @@ class Neo4jGraphParquetFormatter:
                         self.schema, label
                     ),
                     uniqueness_property_names=get_uniqueness_property_names_for_node_type(
+                        self.schema, label
+                    ),
+                    key_constraints=get_key_constraints_for_node_type(
+                        self.schema, label
+                    ),
+                    uniqueness_constraints=get_uniqueness_constraints_for_node_type(
                         self.schema, label
                     ),
                 )
