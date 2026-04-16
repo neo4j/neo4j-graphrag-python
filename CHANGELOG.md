@@ -4,6 +4,7 @@
 
 ### Added
 
+- `LLMUsage` model (`request_tokens`, `response_tokens`, `total_tokens`) added to `neo4j_graphrag.llm`; `LLMResponse` now carries an optional `usage: LLMUsage` field populated by all built-in LLM implementations (OpenAI, AzureOpenAI, Anthropic, Bedrock, Cohere, MistralAI, Ollama, VertexAI).
 - Experimental: `GraphSchemaExtractionOutput`, `ExtractedNodeType`, `ExtractedRelationshipType`, and `ExtractedPropertyType` in `neo4j_graphrag.experimental.components.graph_schema_extraction` for schema-from-text LLM structured output; `Neo4jPropertyTypeName` type alias on `PropertyType`; `GraphSchema.from_extraction_output` and `validate_extraction_dict_to_graph_schema`; `make_strict_json_schema_for_structured_output` in `neo4j_graphrag.utils.json_schema_structured_output`.
 - Experimental KG schemas: `GraphConstraintType` (`UNIQUENESS`, `EXISTENCE`) and extended `ConstraintType` so `EXISTENCE` can target a node property or a relationship property; graph pruning and schema visualization respect `EXISTENCE` constraints.
 - Experimental: `GraphConstraintType.KEY` (Neo4j NODE KEY / RELATIONSHIP KEY, single property) on `GraphSchema.constraints`; pruning treats KEY like EXISTENCE for mandatory (non-null) properties. UNIQUENESS and KEY cannot target the same node property. Helpers: `key_property_names_for_node`, `key_property_names_for_relationship`, `uniqueness_property_names_for_node`, `mandatory_property_names_for_node`, `mandatory_property_names_for_relationship`.
