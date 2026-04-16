@@ -411,7 +411,7 @@ class GraphPruning(Component):
         Enforce properties:
         - Ensure property type: for now, just prevent having invalid property types (e.g. map)
         - Filter out those that are not in schema (i.e., valid properties) if allowed properties is False.
-        - Check that all EXISTENCE-constrained properties are present and not null.
+        - Check that all EXISTENCE- or KEY-constrained properties are present and not null.
         """
         type_safe_properties = self._ensure_property_types(
             item.properties,
@@ -474,11 +474,11 @@ class GraphPruning(Component):
         schema_item: Union[NodeType, RelationshipType],
         item: Union[Neo4jNode, Neo4jRelationship],
     ) -> list[str]:
-        """Returns properties missing per EXISTENCE constraints (must be present and not null)."""
+        """Returns properties missing per mandatory constraints (EXISTENCE or KEY; non-null)."""
         if isinstance(item, Neo4jNode):
-            required_prop_names = schema.existence_property_names_for_node(item.label)
+            required_prop_names = schema.mandatory_property_names_for_node(item.label)
         else:
-            required_prop_names = schema.existence_property_names_for_relationship(
+            required_prop_names = schema.mandatory_property_names_for_relationship(
                 item.type
             )
         declared_names = {p.name for p in schema_item.properties}
