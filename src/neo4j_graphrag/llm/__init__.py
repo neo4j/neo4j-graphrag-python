@@ -22,7 +22,7 @@ from .cohere_llm import CohereLLM
 from .mistralai_llm import MistralAILLM
 from .ollama_llm import OllamaLLM
 from .openai_llm import AzureOpenAILLM, OpenAILLM
-from .types import LLMResponse
+from .types import LLMResponse, LLMUsage
 from .vertexai_llm import VertexAILLM
 
 __all__ = [
@@ -30,6 +30,7 @@ __all__ = [
     "BedrockLLM",
     "CohereLLM",
     "LLMResponse",
+    "LLMUsage",
     "LLMBase",
     "LLMInterface",
     "LLMInterfaceV2",
