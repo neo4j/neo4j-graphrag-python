@@ -16,13 +16,58 @@ import warnings
 from typing import Any, List, Optional, Type, Union
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from neo4j_graphrag.llm.base import LLMBase
-from neo4j_graphrag.llm.types import LLMResponse
+from neo4j_graphrag.llm.types import LLMResponse, LLMUsage
 from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.rate_limit import NoOpRateLimitHandler
+
+# ---------------------------------------------------------------------------
+# LLMUsage
+# ---------------------------------------------------------------------------
+
+
+def test_llm_usage_defaults_to_zero() -> None:
+    usage = LLMUsage()
+    assert usage.request_tokens == 0
+    assert usage.response_tokens == 0
+    assert usage.total_tokens == 0
+
+
+def test_llm_usage_accepts_explicit_values() -> None:
+    usage = LLMUsage(request_tokens=10, response_tokens=20, total_tokens=30)
+    assert usage.request_tokens == 10
+    assert usage.response_tokens == 20
+    assert usage.total_tokens == 30
+
+
+def test_llm_usage_partial_values_keep_other_defaults() -> None:
+    usage = LLMUsage(request_tokens=5)
+    assert usage.request_tokens == 5
+    assert usage.response_tokens == 0
+    assert usage.total_tokens == 0
+
+
+def test_llm_usage_rejects_non_integer_tokens() -> None:
+    with pytest.raises(ValidationError):
+        LLMUsage(request_tokens="bad")  # type: ignore[arg-type]
+
+
+def test_llm_response_usage_is_none_by_default() -> None:
+    response = LLMResponse(content="hello")
+    assert response.usage is None
+
+
+def test_llm_response_carries_usage() -> None:
+    usage = LLMUsage(request_tokens=3, response_tokens=7, total_tokens=10)
+    response = LLMResponse(content="hi", usage=usage)
+    assert response.usage is not None
+    assert response.usage.request_tokens == 3
+    assert response.usage.response_tokens == 7
+    assert response.usage.total_tokens == 10
+
 
 # ---------------------------------------------------------------------------
 # Minimal concrete subclass used across tests
