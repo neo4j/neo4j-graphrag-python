@@ -18,12 +18,27 @@ def __getattr__(name: str) -> Any:
 
 
 class LLMUsage(BaseModel):
+    """Token usage statistics returned by an LLM call.
+
+    Attributes:
+        request_tokens (int): Number of tokens in the prompt/request. Defaults to 0.
+        response_tokens (int): Number of tokens in the completion/response. Defaults to 0.
+        total_tokens (int): Total tokens consumed by the call. Defaults to 0.
+    """
+
     request_tokens: int = 0
     response_tokens: int = 0
     total_tokens: int = 0
 
 
 class LLMResponse(BaseModel):
+    """Response returned by an LLM invocation.
+
+    Attributes:
+        content (str): The text content of the LLM response.
+        usage (Optional[LLMUsage]): Token usage statistics for the call, if provided by the LLM.
+    """
+
     content: str
     usage: Optional[LLMUsage] = None
 
