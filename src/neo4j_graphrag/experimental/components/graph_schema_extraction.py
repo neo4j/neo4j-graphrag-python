@@ -78,7 +78,7 @@ class ExtractedConstraintType(BaseModel):
     """
 
     type: Literal["UNIQUENESS", "EXISTENCE", "KEY"]
-    property_name: str
+    property_names: list[str] = Field(default_factory=list)
     node_type: str = ""
     relationship_type: str = ""
 

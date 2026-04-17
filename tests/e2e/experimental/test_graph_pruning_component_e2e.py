@@ -271,7 +271,7 @@ async def test_graph_pruning_existence_constraint_node_property_explicit(
             {
                 "type": "EXISTENCE",
                 "node_type": "Person",
-                "property_name": "name",
+                "property_names": ["name"],
                 "relationship_type": None,
             }
         ],
@@ -361,7 +361,7 @@ async def test_graph_pruning_existence_constraint_relationship_property(
             {
                 "type": "EXISTENCE",
                 "node_type": "",
-                "property_name": "firstMetIn",
+                "property_names": ["firstMetIn"],
                 "relationship_type": "KNOWS",
             }
         ],

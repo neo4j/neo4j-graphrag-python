@@ -221,20 +221,23 @@ IMPORTANT RULES:
 8. UNIQUENESS CONSTRAINTS (optional, node properties only):
 8.1 Each node type may have at most one UNIQUENESS constraint in typical designs.
 8.2 Only use properties that seem to not have too many missing values in the sample.
-8.3 Constraints reference node_types by label and specify which property is unique.
-8.4 If a property appears in a uniqueness constraint it MUST also appear in the corresponding node_type as a property.
+8.3 Constraints reference node_types by label and specify which properties are unique via "property_names" (a list of one or more property names).
+8.4 Every property in a uniqueness constraint MUST also appear in the corresponding node_type as a property.
 8.5 Uniqueness does NOT imply that the property must exist on every node (existence is separate; see rule 9).
-9. EXISTENCE CONSTRAINTS (optional):
+8.6 For composite uniqueness (multiple properties), list all properties in "property_names". The combination of values must be unique.
+9. EXISTENCE CONSTRAINTS (optional, single property only):
 9.1 Use EXISTENCE constraints to mark properties that MUST be present (non-null) on every instance.
-9.2 For a node property, add {{"type": "EXISTENCE", "node_type": "<Label>", "property_name": "<name>", "relationship_type": ""}} (use an empty string, not null, when the constraint is not on a relationship).
-9.3 For a relationship property, add {{"type": "EXISTENCE", "node_type": "", "property_name": "<name>", "relationship_type": "<REL_TYPE>"}}.
+9.2 For a node property, add {{"type": "EXISTENCE", "node_type": "<Label>", "property_names": ["<name>"], "relationship_type": ""}} (use an empty string, not null, when the constraint is not on a relationship).
+9.3 For a relationship property, add {{"type": "EXISTENCE", "node_type": "", "property_names": ["<name>"], "relationship_type": "<REL_TYPE>"}}.
 9.4 Each EXISTENCE constraint must reference exactly one of node_type or relationship_type (non-empty), never both.
 9.5 Do not infer EXISTENCE from UNIQUENESS; they are independent (as in Neo4j Cypher constraints).
-10. KEY CONSTRAINTS (optional, Neo4j NODE KEY / RELATIONSHIP KEY for a single property):
-10.1 Use KEY when a property must exist on every instance and is the natural identifier (uniqueness + mandatory presence).
+9.6 EXISTENCE constraints must have exactly one property in "property_names" (composite existence is not supported).
+10. KEY CONSTRAINTS (optional, Neo4j NODE KEY / RELATIONSHIP KEY):
+10.1 Use KEY when properties must exist on every instance and together form the natural identifier (uniqueness + mandatory presence).
 10.2 Same wire shape as EXISTENCE: exactly one of node_type or relationship_type (non-empty), with the other as "".
-10.3 Do not combine UNIQUENESS and KEY on the same node property.
+10.3 Do not combine UNIQUENESS and KEY on the same node type with the same properties.
 10.4 Do not infer KEY from UNIQUENESS alone; KEY implies required presence, unlike UNIQUENESS alone.
+10.5 For composite key (multiple properties), list all properties in "property_names". All must exist and the combination must be unique.
 11. Never use double underscores (__) as a prefix or suffix in node labels or relationship types (e.g. __Person__ or __KNOWS__ are forbidden).
 
 Accepted property types are: BOOLEAN, DATE, DURATION, FLOAT, INTEGER, LIST,
@@ -276,19 +279,19 @@ Return a valid JSON object that follows this precise structure:
     {{
       "type": "UNIQUENESS",
       "node_type": "Person",
-      "property_name": "email",
+      "property_names": ["email"],
       "relationship_type": ""
     }},
     {{
       "type": "EXISTENCE",
       "node_type": "Person",
-      "property_name": "name",
+      "property_names": ["name"],
       "relationship_type": ""
     }},
     {{
       "type": "KEY",
       "node_type": "Person",
-      "property_name": "employee_id",
+      "property_names": ["employee_id"],
       "relationship_type": ""
     }}
     ...
