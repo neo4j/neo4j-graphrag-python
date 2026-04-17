@@ -28,7 +28,7 @@
 
 ### Fixed
 
-- Fixed `Neo4jGraphParquetFormatter` uses an explicit PyArrow schema (with embeddings typed as `float32`) derived from the union of all row keys.
+- Fixed `Neo4jGraphParquetFormatter` uses an explicit PyArrow schema (with embeddings typed as `float32`) derived from the union of all row keys. Integer embedding vectors (e.g. all-zero or one-hot) are now also cast to `float32`. Note: columns where only empty lists were observed are typed as `list<null>`, which may not be supported by all downstream consumers (e.g. DuckDB, Spark).
 
 ## 1.14.1
 

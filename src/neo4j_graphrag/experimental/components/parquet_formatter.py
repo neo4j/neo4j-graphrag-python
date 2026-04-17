@@ -539,14 +539,19 @@ class Neo4jGraphParquetFormatter:
                     elif k not in sample and v is not None:
                         sample[k] = v
 
-            fields: list[Any] = []
+            fields: list[pa.Field] = []
             for k in all_keys:
                 if k in sample:
                     t: Any = pa.infer_type([sample[k]])
-                    if pa.types.is_list(t) and pa.types.is_floating(t.value_type):
+                    if pa.types.is_list(t) and (
+                        pa.types.is_floating(t.value_type)
+                        or pa.types.is_integer(t.value_type)
+                    ):
                         t = pa.list_(pa.float32())
                 elif k in has_empty_list:
                     # Only empty lists seen — use list<null> so [] values round-trip correctly.
+                    # Note: list<null> is a known limitation; some consumers (DuckDB, Spark)
+                    # may not handle this type well.
                     t = pa.list_(pa.null())
                 else:
                     t = pa.null()

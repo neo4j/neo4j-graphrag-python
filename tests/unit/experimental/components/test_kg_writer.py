@@ -1111,8 +1111,8 @@ def test_format_parquet_all_rows_empty_list_embedding_does_not_crash() -> None:
     assert "embedding" in table.column_names
     for row in table.to_pylist():
         assert (
-            row["embedding"] == [] or row["embedding"] is None
-        ), f"Expected empty list or null for embedding, got {row['embedding']}"
+            row["embedding"] == []
+        ), f"Expected empty list for embedding, got {row['embedding']}"
 
 
 # ---------------------------------------------------------------------------
