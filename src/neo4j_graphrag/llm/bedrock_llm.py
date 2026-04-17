@@ -371,9 +371,9 @@ class BedrockLLM(LLMInterface, LLMInterfaceV2):
         raw_usage = response.get("usage", {})
         if raw_usage:
             usage = LLMUsage(
-                request_tokens=raw_usage.get("inputTokens", 0),
-                response_tokens=raw_usage.get("outputTokens", 0),
-                total_tokens=raw_usage.get("totalTokens", 0),
+                request_tokens=raw_usage.get("inputTokens"),
+                response_tokens=raw_usage.get("outputTokens"),
+                total_tokens=raw_usage.get("totalTokens"),
             )
         return LLMResponse(content="".join(text_parts), usage=usage)
 

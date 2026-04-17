@@ -177,12 +177,12 @@ class CohereLLM(LLMBase):
             raise LLMGenerationError(e)
         usage = None
         if res.usage and res.usage.tokens:
-            input_tokens = int(res.usage.tokens.input_tokens or 0)
-            output_tokens = int(res.usage.tokens.output_tokens or 0)
+            input_tokens = int(res.usage.tokens.input_tokens) if res.usage.tokens.input_tokens is not None else None
+            output_tokens = int(res.usage.tokens.output_tokens) if res.usage.tokens.output_tokens is not None else None
             usage = LLMUsage(
                 request_tokens=input_tokens,
                 response_tokens=output_tokens,
-                total_tokens=input_tokens + output_tokens,
+                total_tokens=(input_tokens + output_tokens) if (input_tokens is not None and output_tokens is not None) else None,
             )
         return LLMResponse(
             content=self._extract_text_content(res.message.content), usage=usage
@@ -219,12 +219,12 @@ class CohereLLM(LLMBase):
 
         usage = None
         if res.usage and res.usage.tokens:
-            input_tokens = int(res.usage.tokens.input_tokens or 0)
-            output_tokens = int(res.usage.tokens.output_tokens or 0)
+            input_tokens = int(res.usage.tokens.input_tokens) if res.usage.tokens.input_tokens is not None else None
+            output_tokens = int(res.usage.tokens.output_tokens) if res.usage.tokens.output_tokens is not None else None
             usage = LLMUsage(
                 request_tokens=input_tokens,
                 response_tokens=output_tokens,
-                total_tokens=input_tokens + output_tokens,
+                total_tokens=(input_tokens + output_tokens) if (input_tokens is not None and output_tokens is not None) else None,
             )
         return LLMResponse(
             content=(
@@ -265,12 +265,12 @@ class CohereLLM(LLMBase):
             raise LLMGenerationError(e)
         usage = None
         if res.usage and res.usage.tokens:
-            input_tokens = int(res.usage.tokens.input_tokens or 0)
-            output_tokens = int(res.usage.tokens.output_tokens or 0)
+            input_tokens = int(res.usage.tokens.input_tokens) if res.usage.tokens.input_tokens is not None else None
+            output_tokens = int(res.usage.tokens.output_tokens) if res.usage.tokens.output_tokens is not None else None
             usage = LLMUsage(
                 request_tokens=input_tokens,
                 response_tokens=output_tokens,
-                total_tokens=input_tokens + output_tokens,
+                total_tokens=(input_tokens + output_tokens) if (input_tokens is not None and output_tokens is not None) else None,
             )
         return LLMResponse(
             content=self._extract_text_content(res.message.content), usage=usage
@@ -297,12 +297,12 @@ class CohereLLM(LLMBase):
             raise LLMGenerationError("Error calling cohere") from e
         usage = None
         if res.usage and res.usage.tokens:
-            input_tokens = int(res.usage.tokens.input_tokens or 0)
-            output_tokens = int(res.usage.tokens.output_tokens or 0)
+            input_tokens = int(res.usage.tokens.input_tokens) if res.usage.tokens.input_tokens is not None else None
+            output_tokens = int(res.usage.tokens.output_tokens) if res.usage.tokens.output_tokens is not None else None
             usage = LLMUsage(
                 request_tokens=input_tokens,
                 response_tokens=output_tokens,
-                total_tokens=input_tokens + output_tokens,
+                total_tokens=(input_tokens + output_tokens) if (input_tokens is not None and output_tokens is not None) else None,
             )
         return LLMResponse(
             content=(

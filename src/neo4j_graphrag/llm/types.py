@@ -21,14 +21,17 @@ class LLMUsage(BaseModel):
     """Token usage statistics returned by an LLM call.
 
     Attributes:
-        request_tokens (int): Number of tokens in the prompt/request. Defaults to 0.
-        response_tokens (int): Number of tokens in the completion/response. Defaults to 0.
-        total_tokens (int): Total tokens consumed by the call. Defaults to 0.
+        request_tokens (Optional[int]): Number of tokens in the prompt/request.
+            ``None`` when not reported by the provider.
+        response_tokens (Optional[int]): Number of tokens in the completion/response.
+            ``None`` when not reported by the provider.
+        total_tokens (Optional[int]): Total tokens consumed by the call.
+            ``None`` when not reported by the provider.
     """
 
-    request_tokens: int = 0
-    response_tokens: int = 0
-    total_tokens: int = 0
+    request_tokens: Optional[int] = None
+    response_tokens: Optional[int] = None
+    total_tokens: Optional[int] = None
 
 
 class LLMResponse(BaseModel):

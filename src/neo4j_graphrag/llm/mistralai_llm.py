@@ -165,9 +165,9 @@ class MistralAILLM(LLMBase):
                     content = possible_content
             if response and response.usage:
                 usage = LLMUsage(
-                    request_tokens=response.usage.prompt_tokens or 0,
-                    response_tokens=response.usage.completion_tokens or 0,
-                    total_tokens=response.usage.total_tokens or 0,
+                    request_tokens=response.usage.prompt_tokens,
+                    response_tokens=response.usage.completion_tokens,
+                    total_tokens=response.usage.total_tokens,
                 )
             return LLMResponse(content=content, usage=usage)
         except SDKError as e:
@@ -210,9 +210,9 @@ class MistralAILLM(LLMBase):
                     content = possible_content
             if response and response.usage:
                 usage = LLMUsage(
-                    request_tokens=response.usage.prompt_tokens or 0,
-                    response_tokens=response.usage.completion_tokens or 0,
-                    total_tokens=response.usage.total_tokens or 0,
+                    request_tokens=response.usage.prompt_tokens,
+                    response_tokens=response.usage.completion_tokens,
+                    total_tokens=response.usage.total_tokens,
                 )
             return LLMResponse(content=content, usage=usage)
         except SDKError as e:
@@ -257,9 +257,9 @@ class MistralAILLM(LLMBase):
                     content = possible_content
             if response and response.usage:
                 usage = LLMUsage(
-                    request_tokens=response.usage.prompt_tokens or 0,
-                    response_tokens=response.usage.completion_tokens or 0,
-                    total_tokens=response.usage.total_tokens or 0,
+                    request_tokens=response.usage.prompt_tokens,
+                    response_tokens=response.usage.completion_tokens,
+                    total_tokens=response.usage.total_tokens,
                 )
             return LLMResponse(content=content, usage=usage)
         except SDKError as e:
@@ -305,9 +305,9 @@ class MistralAILLM(LLMBase):
                     content = possible_content
             if response and response.usage:
                 usage = LLMUsage(
-                    request_tokens=response.usage.prompt_tokens or 0,
-                    response_tokens=response.usage.completion_tokens or 0,
-                    total_tokens=response.usage.total_tokens or 0,
+                    request_tokens=response.usage.prompt_tokens,
+                    response_tokens=response.usage.completion_tokens,
+                    total_tokens=response.usage.total_tokens,
                 )
             return LLMResponse(content=content, usage=usage)
         except SDKError as e:

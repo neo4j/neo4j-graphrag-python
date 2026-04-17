@@ -29,11 +29,11 @@ from neo4j_graphrag.utils.rate_limit import NoOpRateLimitHandler
 # ---------------------------------------------------------------------------
 
 
-def test_llm_usage_defaults_to_zero() -> None:
+def test_llm_usage_defaults_to_none() -> None:
     usage = LLMUsage()
-    assert usage.request_tokens == 0
-    assert usage.response_tokens == 0
-    assert usage.total_tokens == 0
+    assert usage.request_tokens is None
+    assert usage.response_tokens is None
+    assert usage.total_tokens is None
 
 
 def test_llm_usage_accepts_explicit_values() -> None:
@@ -46,8 +46,8 @@ def test_llm_usage_accepts_explicit_values() -> None:
 def test_llm_usage_partial_values_keep_other_defaults() -> None:
     usage = LLMUsage(request_tokens=5)
     assert usage.request_tokens == 5
-    assert usage.response_tokens == 0
-    assert usage.total_tokens == 0
+    assert usage.response_tokens is None
+    assert usage.total_tokens is None
 
 
 def test_llm_usage_rejects_non_integer_tokens() -> None:
