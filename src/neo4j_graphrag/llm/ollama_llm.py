@@ -52,6 +52,7 @@ from .base import LLMBase
 from .types import (
     BaseMessage,
     LLMResponse,
+    LLMUsage,
     MessageList,
     SystemMessage,
     ToolCall,
@@ -169,7 +170,21 @@ class OllamaLLM(LLMBase):
                 **self.model_params,
             )
             content = response.message.content or ""
-            return LLMResponse(content=content)
+            usage = None
+            if (
+                response.prompt_eval_count is not None
+                or response.eval_count is not None
+            ):
+                request_tokens = response.prompt_eval_count
+                response_tokens = response.eval_count
+                usage = LLMUsage(
+                    request_tokens=request_tokens,
+                    response_tokens=response_tokens,
+                    total_tokens=(request_tokens + response_tokens)
+                    if (request_tokens is not None and response_tokens is not None)
+                    else None,
+                )
+            return LLMResponse(content=content, usage=usage)
         except self.ollama.ResponseError as e:
             raise LLMGenerationError(e)
 
@@ -201,7 +216,21 @@ class OllamaLLM(LLMBase):
                 **kwargs,
             )
             content = response.message.content or ""
-            return LLMResponse(content=content)
+            usage = None
+            if (
+                response.prompt_eval_count is not None
+                or response.eval_count is not None
+            ):
+                request_tokens = response.prompt_eval_count
+                response_tokens = response.eval_count
+                usage = LLMUsage(
+                    request_tokens=request_tokens,
+                    response_tokens=response_tokens,
+                    total_tokens=(request_tokens + response_tokens)
+                    if (request_tokens is not None and response_tokens is not None)
+                    else None,
+                )
+            return LLMResponse(content=content, usage=usage)
         except self.ollama.ResponseError as e:
             raise LLMGenerationError(e)
 
@@ -236,7 +265,21 @@ class OllamaLLM(LLMBase):
                 options=self.model_params,
             )
             content = response.message.content or ""
-            return LLMResponse(content=content)
+            usage = None
+            if (
+                response.prompt_eval_count is not None
+                or response.eval_count is not None
+            ):
+                request_tokens = response.prompt_eval_count
+                response_tokens = response.eval_count
+                usage = LLMUsage(
+                    request_tokens=request_tokens,
+                    response_tokens=response_tokens,
+                    total_tokens=(request_tokens + response_tokens)
+                    if (request_tokens is not None and response_tokens is not None)
+                    else None,
+                )
+            return LLMResponse(content=content, usage=usage)
         except self.ollama.ResponseError as e:
             raise LLMGenerationError(e)
 
@@ -272,7 +315,21 @@ class OllamaLLM(LLMBase):
                 options=params,
             )
             content = response.message.content or ""
-            return LLMResponse(content=content)
+            usage = None
+            if (
+                response.prompt_eval_count is not None
+                or response.eval_count is not None
+            ):
+                request_tokens = response.prompt_eval_count
+                response_tokens = response.eval_count
+                usage = LLMUsage(
+                    request_tokens=request_tokens,
+                    response_tokens=response_tokens,
+                    total_tokens=(request_tokens + response_tokens)
+                    if (request_tokens is not None and response_tokens is not None)
+                    else None,
+                )
+            return LLMResponse(content=content, usage=usage)
         except self.ollama.ResponseError as e:
             raise LLMGenerationError(e)
 

@@ -65,6 +65,7 @@ def test_vertexai_invoke_happy_path(GenerativeModelMock: MagicMock) -> None:
     input_text = "may thy knife chip and shatter"
     mock_response = Mock()
     mock_response.text = "Return text"
+    mock_response.usage_metadata = None
     mock_model = GenerativeModelMock.return_value
     mock_model.generate_content.return_value = mock_response
     model_params = {"temperature": 0.5}
@@ -94,6 +95,7 @@ def test_vertexai_invoke_with_system_instruction(
     input_text = "may thy knife chip and shatter"
     mock_response = Mock()
     mock_response.text = "Return text"
+    mock_response.usage_metadata = None
     mock_model = GenerativeModelMock.return_value
     mock_model.generate_content.return_value = mock_response
 
@@ -121,6 +123,7 @@ def test_vertexai_invoke_with_message_history_and_system_instruction(
     model_name = "gemini-1.5-flash-001"
     mock_response = Mock()
     mock_response.text = "Return text"
+    mock_response.usage_metadata = None
     mock_model = GenerativeModelMock.return_value
     mock_model.generate_content.return_value = mock_response
     model_params = {"temperature": 0.5}
@@ -348,6 +351,7 @@ def test_vertexai_invoke_v2_happy_path(GenerativeModelMock: MagicMock) -> None:
     ]
     mock_response = Mock()
     mock_response.text = "Paris is the capital of France."
+    mock_response.usage_metadata = None
     mock_model = GenerativeModelMock.return_value
     mock_model.generate_content.return_value = mock_response
 
@@ -381,6 +385,7 @@ def test_vertexai_invoke_v2_with_conversation_history(
     ]
     mock_response = Mock()
     mock_response.text = "Berlin is the capital of Germany."
+    mock_response.usage_metadata = None
     mock_model = GenerativeModelMock.return_value
     mock_model.generate_content.return_value = mock_response
 
@@ -412,6 +417,7 @@ def test_vertexai_invoke_v2_no_system_message(GenerativeModelMock: MagicMock) ->
     ]
     mock_response = Mock()
     mock_response.text = "I'm doing well, thank you!"
+    mock_response.usage_metadata = None
     mock_model = GenerativeModelMock.return_value
     mock_model.generate_content.return_value = mock_response
 
@@ -515,6 +521,7 @@ def test_vertexai_invoke_v2_with_pydantic_response_format(
     ]
     mock_response = Mock()
     mock_response.text = '{"name": "John", "age": 30}'
+    mock_response.usage_metadata = None
     mock_model = GenerativeModelMock.return_value
     mock_model.generate_content.return_value = mock_response
 
@@ -540,6 +547,7 @@ def test_vertexai_invoke_v2_with_json_schema_response_format(
     ]
     mock_response = Mock()
     mock_response.text = '{"result": "success"}'
+    mock_response.usage_metadata = None
     mock_model = GenerativeModelMock.return_value
     mock_model.generate_content.return_value = mock_response
 
@@ -609,6 +617,7 @@ def test_vertexai_invoke_v2_rate_limit_handler_called(
     messages: List[LLMMessage] = [{"role": "user", "content": "Hello"}]
     mock_response = Mock()
     mock_response.text = "Hi there!"
+    mock_response.usage_metadata = None
     mock_model = GenerativeModelMock.return_value
     mock_model.generate_content.return_value = mock_response
 

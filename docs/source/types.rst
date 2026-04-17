@@ -22,6 +22,12 @@ RetrieverResultItem
 .. autoclass:: neo4j_graphrag.types.RetrieverResultItem
 
 
+LLMUsage
+========
+
+.. autoclass:: neo4j_graphrag.llm.types.LLMUsage
+
+
 LLMResponse
 ===========
 

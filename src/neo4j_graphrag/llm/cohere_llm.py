@@ -36,6 +36,7 @@ from neo4j_graphrag.llm.base import LLMBase
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
+    LLMUsage,
     MessageList,
     SystemMessage,
     UserMessage,
@@ -174,7 +175,28 @@ class CohereLLM(LLMBase):
             )
         except self.cohere_api_error as e:
             raise LLMGenerationError(e)
-        return LLMResponse(content=self._extract_text_content(res.message.content))
+        usage = None
+        if res.usage and res.usage.tokens:
+            input_tokens = (
+                int(res.usage.tokens.input_tokens)
+                if res.usage.tokens.input_tokens is not None
+                else None
+            )
+            output_tokens = (
+                int(res.usage.tokens.output_tokens)
+                if res.usage.tokens.output_tokens is not None
+                else None
+            )
+            usage = LLMUsage(
+                request_tokens=input_tokens,
+                response_tokens=output_tokens,
+                total_tokens=(input_tokens + output_tokens)
+                if (input_tokens is not None and output_tokens is not None)
+                else None,
+            )
+        return LLMResponse(
+            content=self._extract_text_content(res.message.content), usage=usage
+        )
 
     @rate_limit_handler_decorator
     def __invoke_v2(
@@ -205,12 +227,32 @@ class CohereLLM(LLMBase):
         except self.cohere_api_error as e:
             raise LLMGenerationError("Error calling cohere") from e
 
+        usage = None
+        if res.usage and res.usage.tokens:
+            input_tokens = (
+                int(res.usage.tokens.input_tokens)
+                if res.usage.tokens.input_tokens is not None
+                else None
+            )
+            output_tokens = (
+                int(res.usage.tokens.output_tokens)
+                if res.usage.tokens.output_tokens is not None
+                else None
+            )
+            usage = LLMUsage(
+                request_tokens=input_tokens,
+                response_tokens=output_tokens,
+                total_tokens=(input_tokens + output_tokens)
+                if (input_tokens is not None and output_tokens is not None)
+                else None,
+            )
         return LLMResponse(
             content=(
                 res.message.content[0].text
                 if res.message.content and hasattr(res.message.content[0], "text")
                 else ""
             ),
+            usage=usage,
         )
 
     @async_rate_limit_handler_decorator
@@ -241,7 +283,28 @@ class CohereLLM(LLMBase):
             )
         except self.cohere_api_error as e:
             raise LLMGenerationError(e)
-        return LLMResponse(content=self._extract_text_content(res.message.content))
+        usage = None
+        if res.usage and res.usage.tokens:
+            input_tokens = (
+                int(res.usage.tokens.input_tokens)
+                if res.usage.tokens.input_tokens is not None
+                else None
+            )
+            output_tokens = (
+                int(res.usage.tokens.output_tokens)
+                if res.usage.tokens.output_tokens is not None
+                else None
+            )
+            usage = LLMUsage(
+                request_tokens=input_tokens,
+                response_tokens=output_tokens,
+                total_tokens=(input_tokens + output_tokens)
+                if (input_tokens is not None and output_tokens is not None)
+                else None,
+            )
+        return LLMResponse(
+            content=self._extract_text_content(res.message.content), usage=usage
+        )
 
     @async_rate_limit_handler_decorator
     async def __ainvoke_v2(
@@ -262,12 +325,32 @@ class CohereLLM(LLMBase):
             )
         except self.cohere_api_error as e:
             raise LLMGenerationError("Error calling cohere") from e
+        usage = None
+        if res.usage and res.usage.tokens:
+            input_tokens = (
+                int(res.usage.tokens.input_tokens)
+                if res.usage.tokens.input_tokens is not None
+                else None
+            )
+            output_tokens = (
+                int(res.usage.tokens.output_tokens)
+                if res.usage.tokens.output_tokens is not None
+                else None
+            )
+            usage = LLMUsage(
+                request_tokens=input_tokens,
+                response_tokens=output_tokens,
+                total_tokens=(input_tokens + output_tokens)
+                if (input_tokens is not None and output_tokens is not None)
+                else None,
+            )
         return LLMResponse(
             content=(
                 res.message.content[0].text
                 if res.message.content and hasattr(res.message.content[0], "text")
                 else ""
             ),
+            usage=usage,
         )
 
     # subsdiary methods

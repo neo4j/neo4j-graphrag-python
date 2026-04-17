@@ -54,6 +54,7 @@ from .base import LLMBase
 from .types import (
     BaseMessage,
     LLMResponse,
+    LLMUsage,
     MessageList,
     SystemMessage,
     ToolCall,
@@ -302,7 +303,14 @@ class BaseOpenAILLM(LLMBase, abc.ABC):
             )
 
             content = response.choices[0].message.content or ""
-            return LLMResponse(content=content)
+            usage = None
+            if response.usage:
+                usage = LLMUsage(
+                    request_tokens=response.usage.prompt_tokens,
+                    response_tokens=response.usage.completion_tokens,
+                    total_tokens=response.usage.total_tokens,
+                )
+            return LLMResponse(content=content, usage=usage)
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
@@ -337,7 +345,14 @@ class BaseOpenAILLM(LLMBase, abc.ABC):
                 **self.model_params,
             )
             content = response.choices[0].message.content or ""
-            return LLMResponse(content=content)
+            usage = None
+            if response.usage:
+                usage = LLMUsage(
+                    request_tokens=response.usage.prompt_tokens,
+                    response_tokens=response.usage.completion_tokens,
+                    total_tokens=response.usage.total_tokens,
+                )
+            return LLMResponse(content=content, usage=usage)
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
@@ -447,7 +462,14 @@ class BaseOpenAILLM(LLMBase, abc.ABC):
                 **self.model_params,
             )
             content = response.choices[0].message.content or ""
-            return LLMResponse(content=content)
+            usage = None
+            if response.usage:
+                usage = LLMUsage(
+                    request_tokens=response.usage.prompt_tokens,
+                    response_tokens=response.usage.completion_tokens,
+                    total_tokens=response.usage.total_tokens,
+                )
+            return LLMResponse(content=content, usage=usage)
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
@@ -513,7 +535,14 @@ class BaseOpenAILLM(LLMBase, abc.ABC):
             )
 
             content = response.choices[0].message.content or ""
-            return LLMResponse(content=content)
+            usage = None
+            if response.usage:
+                usage = LLMUsage(
+                    request_tokens=response.usage.prompt_tokens,
+                    response_tokens=response.usage.completion_tokens,
+                    total_tokens=response.usage.total_tokens,
+                )
+            return LLMResponse(content=content, usage=usage)
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 

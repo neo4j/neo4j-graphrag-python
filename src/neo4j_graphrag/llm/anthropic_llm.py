@@ -31,6 +31,7 @@ from neo4j_graphrag.llm.base import LLMBase
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
+    LLMUsage,
     MessageList,
     UserMessage,
 )
@@ -170,7 +171,12 @@ class AnthropicLLM(LLMBase):
                 text = response_content[0].text
             else:
                 raise LLMGenerationError("LLM returned empty response.")
-            return LLMResponse(content=text)
+            usage = LLMUsage(
+                request_tokens=response.usage.input_tokens,
+                response_tokens=response.usage.output_tokens,
+                total_tokens=response.usage.input_tokens + response.usage.output_tokens,
+            )
+            return LLMResponse(content=text, usage=usage)
         except self.anthropic.APIError as e:
             raise LLMGenerationError(e)
 
@@ -199,7 +205,12 @@ class AnthropicLLM(LLMBase):
                 text = response_content[0].text
             else:
                 raise LLMGenerationError("LLM returned empty response.")
-            return LLMResponse(content=text)
+            usage = LLMUsage(
+                request_tokens=response.usage.input_tokens,
+                response_tokens=response.usage.output_tokens,
+                total_tokens=response.usage.input_tokens + response.usage.output_tokens,
+            )
+            return LLMResponse(content=text, usage=usage)
         except self.anthropic.APIError as e:
             raise LLMGenerationError(e)
 
@@ -236,7 +247,12 @@ class AnthropicLLM(LLMBase):
                 text = response_content[0].text
             else:
                 raise LLMGenerationError("LLM returned empty response.")
-            return LLMResponse(content=text)
+            usage = LLMUsage(
+                request_tokens=response.usage.input_tokens,
+                response_tokens=response.usage.output_tokens,
+                total_tokens=response.usage.input_tokens + response.usage.output_tokens,
+            )
+            return LLMResponse(content=text, usage=usage)
         except self.anthropic.APIError as e:
             raise LLMGenerationError(e)
 
@@ -274,7 +290,12 @@ class AnthropicLLM(LLMBase):
                 text = response_content[0].text
             else:
                 raise LLMGenerationError("LLM returned empty response.")
-            return LLMResponse(content=text)
+            usage = LLMUsage(
+                request_tokens=response.usage.input_tokens,
+                response_tokens=response.usage.output_tokens,
+                total_tokens=response.usage.input_tokens + response.usage.output_tokens,
+            )
+            return LLMResponse(content=text, usage=usage)
         except self.anthropic.APIError as e:
             raise LLMGenerationError(e)
 
