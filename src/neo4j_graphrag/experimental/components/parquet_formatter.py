@@ -521,13 +521,47 @@ class Neo4jGraphParquetFormatter:
             import pyarrow.parquet as pq
 
             self._normalize_column_types(rows)
-            table = pa.Table.from_pylist(rows)
-            # Write to BytesIO buffer
+
+            # Build an explicit schema from the union of all keys to avoid
+            # silent column drops when the first row lacks some keys (e.g. embeddings).
+            # Dict preserves first-seen insertion order for deterministic column ordering.
+            all_keys: dict[str, None] = {k: None for row in rows for k in row}
+            # Collect the first non-null, non-empty-list value per key for type inference.
+            # Also track keys that carry at least one empty list, so we can fall back to
+            # list<null> when no richer sample exists (rather than pa.null(), which cannot
+            # hold [] values).
+            sample: dict[str, Any] = {}
+            has_empty_list: set[str] = set()
+            for row in rows:
+                for k, v in row.items():
+                    if v == []:
+                        has_empty_list.add(k)
+                    elif k not in sample and v is not None:
+                        sample[k] = v
+
+            fields: list[Any] = []
+            for k in all_keys:
+                if k in sample:
+                    t: Any = pa.infer_type([sample[k]])
+                    if pa.types.is_list(t) and pa.types.is_floating(t.value_type):
+                        t = pa.list_(pa.float32())
+                elif k in has_empty_list:
+                    # Only empty lists seen — use list<null> so [] values round-trip correctly.
+                    t = pa.list_(pa.null())
+                else:
+                    t = pa.null()
+                fields.append(pa.field(k, t))
+
+            schema = pa.schema(fields) if fields else None
+            table = pa.Table.from_pylist(rows, schema=schema)
+
             buffer = BytesIO()
             pq.write_table(table, buffer)
             buffer.seek(0)
             return buffer.read(), table.schema
-        except (ValueError, TypeError) as e:
+        except ImportError:
+            raise
+        except (ValueError, TypeError, pa.ArrowInvalid) as e:
             raise ValueError(
                 f"Failed to create Parquet table for {entity_name}: {e}"
             ) from e
