@@ -542,7 +542,6 @@ class GraphSchema(DataModel):
                     {
                         "type": GraphConstraintType.EXISTENCE.value,
                         "node_type": label,
-                        "property_name": pname,
                         "property_names": (pname,),
                         "relationship_type": None,
                     }
@@ -576,7 +575,7 @@ class GraphSchema(DataModel):
                         {
                             "type": GraphConstraintType.EXISTENCE.value,
                             "node_type": label,
-                            "property_name": pname,
+                            "property_names": (pname,),
                             "relationship_type": None,
                         }
                     )
@@ -607,7 +606,6 @@ class GraphSchema(DataModel):
                     {
                         "type": GraphConstraintType.EXISTENCE.value,
                         "node_type": "",
-                        "property_name": pname,
                         "property_names": (pname,),
                         "relationship_type": rlabel,
                     }
@@ -643,7 +641,7 @@ class GraphSchema(DataModel):
                         {
                             "type": GraphConstraintType.EXISTENCE.value,
                             "node_type": "",
-                            "property_name": pname,
+                            "property_names": (pname,),
                             "relationship_type": rlabel,
                         }
                     )

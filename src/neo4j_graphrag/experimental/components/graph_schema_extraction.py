@@ -30,7 +30,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 from neo4j_graphrag.experimental.components.schema import (
     Neo4jPropertyTypeName,
@@ -75,38 +75,14 @@ class ExtractedConstraintType(BaseModel):
     which Vertex's protobuf parser rejects). Semantic rules match
     :class:`~neo4j_graphrag.experimental.components.schema.ConstraintType`; those are enforced
     when building :class:`~neo4j_graphrag.experimental.components.schema.GraphSchema`, not here.
-
-    ``property_names`` is the canonical field (list of one or more property names).
-    ``property_name`` is accepted for backward compatibility and auto-migrated.
     """
 
     type: Literal["UNIQUENESS", "EXISTENCE", "KEY"]
-    property_name: str = ""
     property_names: list[str] = Field(default_factory=list)
     node_type: str = ""
     relationship_type: str = ""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
-
-    @model_validator(mode="before")
-    @classmethod
-    def migrate_property_name_to_property_names(cls, data: Any) -> Any:
-        """Backward-compat: ``property_name`` → ``property_names``."""
-        if not isinstance(data, dict):
-            return data
-        pn = data.get("property_name") or ""
-        pns = data.get("property_names") or []
-        if isinstance(pns, str):
-            pns = [pns]
-        else:
-            pns = list(pns)
-        if pns and not pn:
-            data["property_name"] = pns[0]
-        elif pn and not pns:
-            data["property_names"] = [pn]
-        elif pn and pns:
-            data["property_name"] = pns[0]
-        return data
 
 
 def wire_extraction_constraints_for_graph_schema(
@@ -115,7 +91,6 @@ def wire_extraction_constraints_for_graph_schema(
     """Map extraction constraint dicts to values compatible with :class:`~neo4j_graphrag.experimental.components.schema.ConstraintType`.
 
     Empty ``relationship_type`` (the wire \"unset\" sentinel) becomes ``None`` for runtime validation.
-    ``property_names`` is propagated from the extraction DTO.
     """
     out: list[dict[str, Any]] = []
     for c in constraints:
@@ -123,13 +98,6 @@ def wire_extraction_constraints_for_graph_schema(
         rt = d.get("relationship_type")
         if rt is None or (isinstance(rt, str) and rt.strip() == ""):
             d["relationship_type"] = None
-        # Ensure property_names is propagated
-        pns = d.get("property_names") or []
-        pn = d.get("property_name") or ""
-        if not pns and pn:
-            d["property_names"] = [pn]
-        elif pns and not pn:
-            d["property_name"] = pns[0]
         out.append(d)
     return out
 
