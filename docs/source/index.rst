@@ -20,6 +20,7 @@ Neo4j versions supported:
 
 * Neo4j >=5.18.1
 * Neo4j Aura >=5.18.0
+* Neo4j 2026.01+ (enables SEARCH clause with in-index filtering)
 
 Python versions supported:
 
@@ -144,6 +145,9 @@ See :ref:`the API documentation<create-vector-index>` for more details.
 .. note::
 
     Assumed Neo4j is running
+
+On Neo4j 2026.01+, you can also specify ``filterable_properties`` to enable in-index
+filtering with the ``SEARCH`` clause. See :ref:`filterable-index-creation` for details.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Populating the Neo4j Vector Index
