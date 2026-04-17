@@ -180,7 +180,9 @@ class OllamaLLM(LLMBase):
                 usage = LLMUsage(
                     request_tokens=request_tokens,
                     response_tokens=response_tokens,
-                    total_tokens=(request_tokens + response_tokens) if (request_tokens is not None and response_tokens is not None) else None,
+                    total_tokens=(request_tokens + response_tokens)
+                    if (request_tokens is not None and response_tokens is not None)
+                    else None,
                 )
             return LLMResponse(content=content, usage=usage)
         except self.ollama.ResponseError as e:
@@ -224,7 +226,9 @@ class OllamaLLM(LLMBase):
                 usage = LLMUsage(
                     request_tokens=request_tokens,
                     response_tokens=response_tokens,
-                    total_tokens=(request_tokens + response_tokens) if (request_tokens is not None and response_tokens is not None) else None,
+                    total_tokens=(request_tokens + response_tokens)
+                    if (request_tokens is not None and response_tokens is not None)
+                    else None,
                 )
             return LLMResponse(content=content, usage=usage)
         except self.ollama.ResponseError as e:
@@ -271,7 +275,9 @@ class OllamaLLM(LLMBase):
                 usage = LLMUsage(
                     request_tokens=request_tokens,
                     response_tokens=response_tokens,
-                    total_tokens=(request_tokens + response_tokens) if (request_tokens is not None and response_tokens is not None) else None,
+                    total_tokens=(request_tokens + response_tokens)
+                    if (request_tokens is not None and response_tokens is not None)
+                    else None,
                 )
             return LLMResponse(content=content, usage=usage)
         except self.ollama.ResponseError as e:
@@ -319,7 +325,9 @@ class OllamaLLM(LLMBase):
                 usage = LLMUsage(
                     request_tokens=request_tokens,
                     response_tokens=response_tokens,
-                    total_tokens=(request_tokens + response_tokens) if (request_tokens is not None and response_tokens is not None) else None,
+                    total_tokens=(request_tokens + response_tokens)
+                    if (request_tokens is not None and response_tokens is not None)
+                    else None,
                 )
             return LLMResponse(content=content, usage=usage)
         except self.ollama.ResponseError as e:
