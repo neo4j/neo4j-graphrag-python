@@ -213,6 +213,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         self.llm = llm
         self.max_concurrency = max_concurrency
         self.use_structured_output = use_structured_output
+        self.extraction_stats: list[dict[str, Any]] = []
 
         # Validate that structured output is only used with supported LLMs
         if use_structured_output and not llm.supports_structured_output:
@@ -250,6 +251,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             llm_result = await self.llm.ainvoke(messages, response_format=Neo4jGraph)  # type: ignore[call-arg, arg-type]
             try:
                 chunk_graph = Neo4jGraph.model_validate_json(llm_result.content)
+                self.extraction_stats.append({"chunk_index": chunk.index, "status": "success"})
             except ValidationError as e:
                 if self.on_error == OnError.RAISE:
                     raise LLMGenerationError("LLM response has improper format") from e
@@ -257,11 +259,13 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                     f"LLM response has improper format for chunk_index={chunk.index}"
                 )
                 logger.debug(f"Invalid response: {llm_result.content}")
+                self.extraction_stats.append({"chunk_index": chunk.index, "status": "validation_error"})
                 chunk_graph = Neo4jGraph()
             return chunk_graph
 
         # Use V1 prompt-based JSON extraction (default)
         llm_result = await self.llm.ainvoke(prompt)
+        json_failed = False
         try:
             llm_generated_json = fix_invalid_json(llm_result.content)
             result = json.loads(llm_generated_json)
@@ -272,9 +276,13 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                 f"LLM response is not valid JSON for chunk_index={chunk.index}"
             )
             logger.debug(f"Invalid JSON: {llm_result.content}")
+            self.extraction_stats.append({"chunk_index": chunk.index, "status": "json_error"})
+            json_failed = True
             result = {"nodes": [], "relationships": []}
         try:
             chunk_graph = Neo4jGraph.model_validate(result)
+            if not json_failed:
+                self.extraction_stats.append({"chunk_index": chunk.index, "status": "success"})
         except ValidationError as e:
             if self.on_error == OnError.RAISE:
                 raise LLMGenerationError("LLM response has improper format") from e
@@ -282,6 +290,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                 f"LLM response has improper format for chunk_index={chunk.index}"
             )
             logger.debug(f"Invalid JSON format: {result}")
+            self.extraction_stats.append({"chunk_index": chunk.index, "status": "validation_error"})
             chunk_graph = Neo4jGraph()
         return chunk_graph
 
