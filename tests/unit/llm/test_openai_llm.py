@@ -798,7 +798,7 @@ async def test_openai_llm_ainvoke_v2_with_json_schema_response_format(
 def test_openai_llm_close(mock_import: Mock) -> None:
     mock_openai = get_mock_openai()
     mock_import.return_value = mock_openai
-    mock_openai.AsyncOpenAI.return_value.aclose = AsyncMock()
+    mock_openai.AsyncOpenAI.return_value.close = AsyncMock()
 
     llm = OpenAILLM(api_key="my key", model_name="gpt")
 
@@ -807,7 +807,7 @@ def test_openai_llm_close(mock_import: Mock) -> None:
         llm.close()
 
     mock_openai.OpenAI.return_value.close.assert_called_once()
-    mock_openai.AsyncOpenAI.return_value.aclose.assert_called_once()
+    mock_openai.AsyncOpenAI.return_value.close.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -815,7 +815,7 @@ def test_openai_llm_close(mock_import: Mock) -> None:
 async def test_openai_llm_aclose(mock_import: Mock) -> None:
     mock_openai = get_mock_openai()
     mock_import.return_value = mock_openai
-    mock_openai.AsyncOpenAI.return_value.aclose = AsyncMock()
+    mock_openai.AsyncOpenAI.return_value.close = AsyncMock()
 
     llm = OpenAILLM(api_key="my key", model_name="gpt")
 
@@ -824,7 +824,7 @@ async def test_openai_llm_aclose(mock_import: Mock) -> None:
         await llm.aclose()
 
     mock_openai.OpenAI.return_value.close.assert_called_once()
-    mock_openai.AsyncOpenAI.return_value.aclose.assert_called_once()
+    mock_openai.AsyncOpenAI.return_value.close.assert_called_once()
 
 
 @pytest.mark.asyncio

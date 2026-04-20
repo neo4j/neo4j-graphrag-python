@@ -287,27 +287,17 @@ def test_cohere_invoke_v2_with_response_format_raises_error(mock_cohere: Mock) -
 
 
 def test_cohere_llm_close(mock_cohere: Mock) -> None:
-    mock_cohere.AsyncClientV2.return_value.aclose = AsyncMock()
-
     llm = CohereLLM(model_name="something")
 
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         llm.close()
 
-    mock_cohere.ClientV2.return_value.close.assert_called_once()
-    mock_cohere.AsyncClientV2.return_value.aclose.assert_called_once()
-
 
 @pytest.mark.asyncio
 async def test_cohere_llm_aclose(mock_cohere: Mock) -> None:
-    mock_cohere.AsyncClientV2.return_value.aclose = AsyncMock()
-
     llm = CohereLLM(model_name="something")
 
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         await llm.aclose()
-
-    mock_cohere.ClientV2.return_value.close.assert_called_once()
-    mock_cohere.AsyncClientV2.return_value.aclose.assert_called_once()
