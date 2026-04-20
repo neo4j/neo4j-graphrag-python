@@ -354,8 +354,7 @@ class CohereLLM(LLMBase):
         )
 
     async def aclose(self) -> None:
-        self.client.close()
-        await self.async_client.aclose()
+        pass
 
     # subsdiary methods
     def get_messages(

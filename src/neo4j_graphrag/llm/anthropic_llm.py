@@ -301,7 +301,7 @@ class AnthropicLLM(LLMBase):
 
     async def aclose(self) -> None:
         self.client.close()
-        await self.async_client.aclose()
+        await self.async_client.close()
 
     # subsidiary methods
     def get_messages(
