@@ -26,9 +26,9 @@ requires-python = ">=3.10.0,<3.15"
 dependencies = [
     "neo4j>=5.17.0,<7.0.0",
     "pydantic>=2.6.3,<3.0.0",
-    "fsspec>=2024.9.0,<2025.0.0",
+    "fsspec>=2024.9.0",
     "pypdf>=6.0.0,<7.0.0",
-    "json-repair>=0.44.1,<0.45.0",
+    "json-repair>=0.44.1,<1.0.0",
     "pyyaml>=6.0.2,<7.0.0",
     "types-pyyaml>=6.0.12.20240917,<7.0.0",
     "numpy>=2.0.0,<3.0.0; python_version >= '3.9' and python_version < '3.13'",
@@ -56,14 +56,14 @@ qdrant = ["qdrant-client>=1.11.3,<2.0.0"]
 kg_creation_tools = ["neo4j-viz>=0.4.2,<0.5.0"]
 sentence-transformers = ["sentence-transformers>=3.0.0,<4.0.0"]
 experimental = [
-    "langchain-text-splitters>=0.3.0,<0.4.0",
+    "langchain-text-splitters>=0.3.0,<2.0.0",
     "neo4j-viz>=0.4.2,<0.5.0",
     "llama-index>=0.13.0,<0.14.0",
     "pyarrow>=20.0.0",  # ParquetWriter, Neo4jGraphParquetFormatter
 ]
 examples = [
-    "langchain-openai>=0.2.2,<0.3.0",
-    "langchain-huggingface>=0.1.0,<0.2.0",
+    "langchain-openai>=0.2.2,<2.0.0",
+    "langchain-huggingface>=0.1.0,<2.0.0",
 ]
 # NOTE: spaCy currently has a Python 3.14 import-time failure via its pydantic v1 path
 # (see https://github.com/explosion/spaCy/issues/13895). Until upstream resolves this,
