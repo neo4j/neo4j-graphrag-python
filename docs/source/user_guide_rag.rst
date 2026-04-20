@@ -377,6 +377,7 @@ VertexAI Structured Output
 ---------------------------
 
 VertexAI uses `GenerationConfig` with `response_mime_type` and `response_schema` internally when `response_format` is passed to `invoke()`. Both Pydantic models and JSON schemas are supported. **Important**: Additional `GenerationConfig` parameters (e.g., `temperature`, `max_output_tokens`) can be passed as kwargs to `invoke()`.
+
 .. code:: python
 
     from pydantic import BaseModel, ConfigDict
@@ -385,7 +386,6 @@ VertexAI uses `GenerationConfig` with `response_mime_type` and `response_schema`
 
     class Person(BaseModel):
         model_config = ConfigDict(extra="forbid")
-
         name: str
         age: int
 
@@ -393,6 +393,7 @@ VertexAI uses `GenerationConfig` with `response_mime_type` and `response_schema`
     messages = [LLMMessage(role="user", content="Extract: John is 30.")]
     response = llm.invoke(messages, response_format=Person, temperature=0)
     person = Person.model_validate_json(response.content)
+
 
 Rate Limit Handling
 ===================
