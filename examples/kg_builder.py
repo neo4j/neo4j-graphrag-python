@@ -142,7 +142,7 @@ async def main() -> PipelineResult:
     )
     res = await define_and_run_pipeline(driver, llm)
     driver.close()
-    await llm.async_client.close()
+    await llm.aclose()
     return res
 
 

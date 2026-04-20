@@ -204,7 +204,7 @@ async def main(driver: neo4j.Driver) -> PipelineResult:
     res = await read_chunk_and_perform_entity_extraction(
         driver, llm, lexical_graph_config
     )
-    await llm.async_client.close()
+    await llm.aclose()
     return res
 
 

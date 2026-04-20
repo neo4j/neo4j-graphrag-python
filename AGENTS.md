@@ -28,7 +28,7 @@ BUNDLING: Hatchling (wheel builder)
 TESTING FRAMEWORKS: pytest, coverage
 
 TEST COMMANDS:
-- Unit tests: `poetry run pytest tests/unit/` (per project instructions) or `uv run pytest tests/unit`
+- Unit tests: `uv run pytest tests/unit/` (per project instructions) or `uv run pytest tests/unit`
 - E2E tests: `uv run pytest tests/e2e`
 - Coverage check: `uv run coverage run -m pytest tests/unit && uv run coverage report --fail-under=90`
 
