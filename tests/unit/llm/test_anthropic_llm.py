@@ -434,7 +434,7 @@ def test_anthropic_invoke_v2_with_response_format_raises_error(
 
 
 def test_anthropic_llm_close(mock_anthropic: Mock) -> None:
-    mock_anthropic.AsyncAnthropic.return_value.aclose = AsyncMock()
+    mock_anthropic.AsyncAnthropic.return_value.close = AsyncMock()
 
     llm = AnthropicLLM("claude-3-opus-20240229")
 
@@ -443,12 +443,12 @@ def test_anthropic_llm_close(mock_anthropic: Mock) -> None:
         llm.close()
 
     mock_anthropic.Anthropic.return_value.close.assert_called_once()
-    mock_anthropic.AsyncAnthropic.return_value.aclose.assert_called_once()
+    mock_anthropic.AsyncAnthropic.return_value.close.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_anthropic_llm_aclose(mock_anthropic: Mock) -> None:
-    mock_anthropic.AsyncAnthropic.return_value.aclose = AsyncMock()
+    mock_anthropic.AsyncAnthropic.return_value.close = AsyncMock()
 
     llm = AnthropicLLM("claude-3-opus-20240229")
 
@@ -457,4 +457,4 @@ async def test_anthropic_llm_aclose(mock_anthropic: Mock) -> None:
         await llm.aclose()
 
     mock_anthropic.Anthropic.return_value.close.assert_called_once()
-    mock_anthropic.AsyncAnthropic.return_value.aclose.assert_called_once()
+    mock_anthropic.AsyncAnthropic.return_value.close.assert_called_once()
