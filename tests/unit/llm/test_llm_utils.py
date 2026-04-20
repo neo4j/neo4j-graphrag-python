@@ -14,7 +14,10 @@
 #  limitations under the License.
 import pytest
 
-from neo4j_graphrag.llm.utils import legacy_inputs_to_messages, system_instruction_from_messages
+from neo4j_graphrag.llm.utils import (
+    legacy_inputs_to_messages,
+    system_instruction_from_messages,
+)
 from neo4j_graphrag.message_history import InMemoryMessageHistory
 from neo4j_graphrag.types import LLMMessage
 
@@ -46,7 +49,9 @@ def test_legacy_inputs_system_instruction_conflict_warns() -> None:
     # Covers line 51: warnings.warn when system already in history
     messages = [LLMMessage(role="system", content="existing")]
     with pytest.warns(UserWarning, match="system_instruction provided but ignored"):
-        legacy_inputs_to_messages("hi", message_history=messages, system_instruction="new")
+        legacy_inputs_to_messages(
+            "hi", message_history=messages, system_instruction="new"
+        )
 
 
 def test_legacy_inputs_prompt_as_list() -> None:

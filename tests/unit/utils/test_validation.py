@@ -12,6 +12,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from typing import Tuple, Type, cast
+
 from neo4j_graphrag.utils.validation import issubclass_safe
 
 
@@ -26,5 +28,5 @@ def test_issubclass_safe_not_subclass_returns_false() -> None:
 
 def test_issubclass_safe_with_tuple() -> None:
     # Covers the `isinstance(class_or_tuple, tuple)` branch (line 32)
-    assert issubclass_safe(bool, (str, int)) is True
-    assert issubclass_safe(str, (int, float)) is False
+    assert issubclass_safe(bool, cast(Tuple[Type[object]], (str, int))) is True
+    assert issubclass_safe(str, cast(Tuple[Type[object]], (int, float))) is False
