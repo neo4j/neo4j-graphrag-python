@@ -15,6 +15,7 @@
 - `LLMBase`: new abstract base class (`neo4j_graphrag.llm.LLMBase`) that combines `LLMInterface` and `LLMInterfaceV2`. Concrete LLM subclasses can extend `LLMBase` instead of both interfaces to avoid repeating overload boilerplate and to suppress mypy `[no-overload-impl]` / `[no-redef]` errors.
 - MarkdownLoader (experimental): added a Markdown loader to support `.md` and `.markdown` files.
 - Added Amazon Bedrock support: `BedrockLLM` (generation/tool calling) via the boto3 Converse API, and `BedrockEmbeddings` (embeddings) via the boto3 InvokeModel API.
+- Added `close` and `aclose` methods to `LLMBase` to gracefully close resources.
 
 ### Fixed
 
@@ -54,7 +55,7 @@
 
 ### Added
 
-- Parquet export (experimental): `ParquetWriter` (extends `KGWriter`), `Neo4jGraphParquetFormatter`, and `FilenameCollisionHandler` for writing knowledge graphs to Parquet (one file per node label and per relationship type). 
+- Parquet export (experimental): `ParquetWriter` (extends `KGWriter`), `Neo4jGraphParquetFormatter`, and `FilenameCollisionHandler` for writing knowledge graphs to Parquet (one file per node label and per relationship type).
 
 ### Changed
 
