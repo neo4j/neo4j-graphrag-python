@@ -279,7 +279,6 @@ class LLMInterfaceV2(ABC):
         await self.aclose()
 
 
-
 class LLMBase(LLMInterface, LLMInterfaceV2, ABC):
     """Abstract base for LLMs that implement both the v1 (str input) and v2
     (List[LLMMessage] input) call signatures.
