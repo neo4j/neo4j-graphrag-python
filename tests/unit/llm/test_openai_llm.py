@@ -797,7 +797,7 @@ async def test_openai_llm_ainvoke_v2_with_json_schema_response_format(
 @patch("builtins.__import__")
 def test_openai_llm_close(mock_import: Mock) -> None:
     mock_openai = get_mock_openai()
-    mock_import.return_value = mock_openai
+    mock_import.side_effect = create_selective_import_mock(mock_openai)
     mock_openai.AsyncOpenAI.return_value.close = AsyncMock()
 
     llm = OpenAILLM(api_key="my key", model_name="gpt")
@@ -814,7 +814,7 @@ def test_openai_llm_close(mock_import: Mock) -> None:
 @patch("builtins.__import__")
 async def test_openai_llm_aclose(mock_import: Mock) -> None:
     mock_openai = get_mock_openai()
-    mock_import.return_value = mock_openai
+    mock_import.side_effect = create_selective_import_mock(mock_openai)
     mock_openai.AsyncOpenAI.return_value.close = AsyncMock()
 
     llm = OpenAILLM(api_key="my key", model_name="gpt")
