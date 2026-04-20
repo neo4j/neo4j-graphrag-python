@@ -97,6 +97,9 @@ filterwarnings = [
     "",
 ]
 
+[tool.coverage.run]
+source = ["src"]
+
 [tool.coverage.paths]
 source = ["src"]
 
