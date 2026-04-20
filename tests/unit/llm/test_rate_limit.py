@@ -173,3 +173,42 @@ async def test_custom_handler_async_retry_override() -> None:
     result = await handler.handle_async(mock_func)()
     assert result == "success after custom retry"
     assert call_count == 2
+
+
+def test_deprecated_llm_rate_limit_module_import_warning() -> None:
+    import importlib
+    import sys
+
+    # Remove cached module to force re-import and trigger the module-level warning
+    sys.modules.pop("neo4j_graphrag.llm.rate_limit", None)
+
+    with pytest.warns(DeprecationWarning, match="neo4j_graphrag.utils.rate_limit"):
+        importlib.import_module("neo4j_graphrag.llm.rate_limit")
+
+
+def test_deprecated_llm_rate_limit_getattr_known_name() -> None:
+    import importlib
+    import sys
+
+    sys.modules.pop("neo4j_graphrag.llm.rate_limit", None)
+    with pytest.warns(DeprecationWarning):
+        mod = importlib.import_module("neo4j_graphrag.llm.rate_limit")
+
+    with pytest.warns(DeprecationWarning, match="neo4j_graphrag.utils.rate_limit"):
+        result = mod.RateLimitHandler  # type: ignore[attr-defined]
+
+    from neo4j_graphrag.utils.rate_limit import RateLimitHandler
+
+    assert result is RateLimitHandler
+
+
+def test_deprecated_llm_rate_limit_getattr_unknown_name() -> None:
+    import importlib
+    import sys
+
+    sys.modules.pop("neo4j_graphrag.llm.rate_limit", None)
+    with pytest.warns(DeprecationWarning):
+        mod = importlib.import_module("neo4j_graphrag.llm.rate_limit")
+
+    with pytest.raises(AttributeError):
+        _ = mod.NonExistent  # type: ignore[attr-defined]

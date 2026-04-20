@@ -12,9 +12,19 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from importlib.metadata import version, PackageNotFoundError
+from neo4j_graphrag.utils.validation import issubclass_safe
 
-try:
-    __version__ = version("neo4j-graphrag")
-except PackageNotFoundError:  # pragma: no cover
-    __version__ = "0.0.0"
+
+def test_issubclass_safe_direct_subclass() -> None:
+    assert issubclass_safe(bool, int) is True
+
+
+def test_issubclass_safe_not_subclass_returns_false() -> None:
+    # Covers the `return False` branch (line 45)
+    assert issubclass_safe(str, int) is False
+
+
+def test_issubclass_safe_with_tuple() -> None:
+    # Covers the `isinstance(class_or_tuple, tuple)` branch (line 32)
+    assert issubclass_safe(bool, (str, int)) is True
+    assert issubclass_safe(str, (int, float)) is False
