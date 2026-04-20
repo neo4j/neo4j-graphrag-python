@@ -14,7 +14,7 @@
 #  limitations under the License.
 import warnings
 from typing import Any, List, cast
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import ollama
 import pytest
