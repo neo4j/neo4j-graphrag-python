@@ -331,7 +331,6 @@ Structured output enables LLMs to return responses conforming to a predefined sc
 
     class Person(BaseModel):
         model_config = ConfigDict(extra="forbid")  # Required for OpenAI structured output
-        
         name: str
         age: int
         occupation: str
@@ -353,7 +352,7 @@ Structured output enables LLMs to return responses conforming to a predefined sc
 OpenAI Structured Output
 -------------------------
 
-OpenAI supports Pydantic models, JSON schemas, and JSON object mode. **Important**: Pydantic models must include `ConfigDict(extra="forbid")` to generate schemas with `additionalProperties: false`, which is required by OpenAI's strict mode. 
+OpenAI supports Pydantic models, JSON schemas, and JSON object mode. **Important**: Pydantic models must include `ConfigDict(extra="forbid")` to generate schemas with `additionalProperties: false`, which is required by OpenAI's strict mode.
 
 .. code:: python
 
@@ -378,6 +377,7 @@ VertexAI Structured Output
 ---------------------------
 
 VertexAI uses `GenerationConfig` with `response_mime_type` and `response_schema` internally when `response_format` is passed to `invoke()`. Both Pydantic models and JSON schemas are supported. **Important**: Additional `GenerationConfig` parameters (e.g., `temperature`, `max_output_tokens`) can be passed as kwargs to `invoke()`.
+
 .. code:: python
 
     from pydantic import BaseModel, ConfigDict
@@ -386,7 +386,6 @@ VertexAI uses `GenerationConfig` with `response_mime_type` and `response_schema`
 
     class Person(BaseModel):
         model_config = ConfigDict(extra="forbid")
-        
         name: str
         age: int
 
@@ -394,6 +393,7 @@ VertexAI uses `GenerationConfig` with `response_mime_type` and `response_schema`
     messages = [LLMMessage(role="user", content="Extract: John is 30.")]
     response = llm.invoke(messages, response_format=Person, temperature=0)
     person = Person.model_validate_json(response.content)
+
 
 Rate Limit Handling
 ===================
@@ -452,7 +452,7 @@ You can customize the rate limiting behavior by creating your own rate limit han
 
     class CustomRateLimitHandler(RateLimitHandler):
         """Implement your custom rate limiting strategy."""
-        # Implement required methods: handle_sync, handle_async 
+        # Implement required methods: handle_sync, handle_async
         # and optionally override is_retryable_exception and to_retryable_error
         # to classify additional exception types as retryable or convert them to retryable errors
         pass
@@ -1076,8 +1076,8 @@ See :ref:`text2cypherretriever`.
 
 .. _tools-retriever-user-guide:
 
-ToolsRetriever
---------------
+Tools Retriever
+---------------
 
 The ToolsRetriever uses an LLM to intelligently select and execute appropriate tools based on user queries. This retriever analyzes the user's question using an LLM to determine which tools from a provided set would be most helpful for retrieving relevant information. It can select multiple tools if necessary or none if no tools are appropriate for the query, then combines results from the executed tools with proper attribution. This is particularly useful when different types of information retrieval might be needed for complex queries.
 
