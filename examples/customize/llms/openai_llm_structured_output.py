@@ -65,7 +65,6 @@ Text: Inception was directed by Christopher Nolan in 2010. It's a science fictio
     response_v1 = llm_v1.invoke(v1_prompt)
     print(f"Response: {response_v1.content}")
 
-
     # =============================================================================
     # V2 (New): Structured output with Pydantic model
     # =============================================================================
@@ -87,7 +86,6 @@ Text: Inception was directed by Christopher Nolan in 2010. It's a science fictio
     # Parse and validate in one step
     movie = Movie.model_validate_json(response_v2.content)
     print(f"Response: {response_v2.content}")
-
 
     # =============================================================================
     # V2: Using JSON Schema instead of Pydantic
