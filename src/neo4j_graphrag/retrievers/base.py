@@ -38,6 +38,7 @@ from neo4j_graphrag.types import RawSearchResult, RetrieverResult, RetrieverResu
 from neo4j_graphrag.utils.version_utils import (
     get_version,
     has_metadata_filtering_support,
+    has_search_clause_support,
     has_vector_index_support,
     is_version_5_23_or_above,
 )
@@ -112,6 +113,9 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
         if self.VERIFY_NEO4J_VERSION:
             version_tuple, is_aura, _ = get_version(self.driver, self.neo4j_database)
             self.neo4j_version_is_5_23_or_above = is_version_5_23_or_above(
+                version_tuple
+            )
+            self.neo4j_version_supports_search_clause = has_search_clause_support(
                 version_tuple
             )
             if not has_vector_index_support(

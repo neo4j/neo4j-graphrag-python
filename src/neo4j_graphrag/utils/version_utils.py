@@ -116,3 +116,22 @@ def has_metadata_filtering_support(
         target_version = (5, 18, 1)
 
     return version_tuple >= target_version
+
+
+def has_search_clause_support(version_tuple: tuple[int, ...]) -> bool:
+    """
+    Determines if the Neo4j database version supports the Cypher 25 SEARCH clause
+    with in-index filtering for vector indexes.
+
+    The SEARCH clause was introduced in Neo4j 2026.01 (the first calendar-versioned
+    release) and allows vector similarity search with pre-filtering directly inside
+    the index scan, replacing the brute-force exact KNN approach for filtered queries.
+
+    Args:
+        version_tuple (tuple[int, ...]): A tuple of integers representing the database
+            version (major, minor, patch) or (year, month, patch) for calendar versions.
+
+    Returns:
+        bool: True if the version is 2026.01.0 or above, False otherwise.
+    """
+    return version_tuple >= (2026, 1, 0)
