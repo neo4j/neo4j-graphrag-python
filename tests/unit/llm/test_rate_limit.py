@@ -212,3 +212,21 @@ def test_deprecated_llm_rate_limit_getattr_unknown_name() -> None:
 
     with pytest.raises(AttributeError):
         _ = mod.NonExistent
+
+
+def test_deprecated_llm_init_getattr_known_name() -> None:
+    import neo4j_graphrag.llm as llm_module
+
+    with pytest.warns(DeprecationWarning, match="neo4j_graphrag.utils.rate_limit"):
+        result = llm_module.RateLimitHandler
+
+    from neo4j_graphrag.utils.rate_limit import RateLimitHandler
+
+    assert result is RateLimitHandler
+
+
+def test_deprecated_llm_init_getattr_unknown_name() -> None:
+    import neo4j_graphrag.llm as llm_module
+
+    with pytest.raises(AttributeError):
+        _ = llm_module.NonExistent
