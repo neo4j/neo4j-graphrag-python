@@ -175,16 +175,20 @@ def test_relationship_type_additional_properties_default() -> None:
 
 def test_constraint_type_initialization() -> None:
     constraint = ConstraintType(
-        type=GraphConstraintType.UNIQUENESS, node_type="Person", property_name="name"
+        type=GraphConstraintType.UNIQUENESS,
+        node_type="Person",
+        property_names=("name",),
     )
     assert constraint.type == "UNIQUENESS"
     assert constraint.node_type == "Person"
-    assert constraint.property_name == "name"
+    assert constraint.property_names == ("name",)
 
 
 def test_constraint_type_is_frozen() -> None:
     constraint = ConstraintType(
-        type=GraphConstraintType.UNIQUENESS, node_type="Person", property_name="name"
+        type=GraphConstraintType.UNIQUENESS,
+        node_type="Person",
+        property_names=("name",),
     )
 
     with pytest.raises(ValidationError):
@@ -194,7 +198,27 @@ def test_constraint_type_is_frozen() -> None:
         constraint.node_type = "Organization"
 
     with pytest.raises(ValidationError):
-        constraint.property_name = "id"
+        constraint.property_names = ("id",)
+
+
+def test_constraint_type_rejects_empty_property_names() -> None:
+    """``property_names`` has ``min_length=1``; empty tuple/list fails validation."""
+    with pytest.raises(ValidationError) as exc_info:
+        ConstraintType(
+            type=GraphConstraintType.UNIQUENESS,
+            node_type="Person",
+            property_names=(),
+        )
+    assert "too_short" in str(exc_info.value).lower()
+
+    with pytest.raises(ValidationError):
+        ConstraintType.model_validate(
+            {
+                "type": "UNIQUENESS",
+                "node_type": "Person",
+                "property_names": [],
+            }
+        )
 
 
 def test_schema_additional_node_types_default() -> None:
@@ -336,7 +360,7 @@ def test_schema_with_valid_constraints() -> None:
     assert len(schema.constraints) == 1
     assert schema.constraints[0].type == "UNIQUENESS"
     assert schema.constraints[0].node_type == "Person"
-    assert schema.constraints[0].property_name == "name"
+    assert schema.constraints[0].property_names == ("name",)
 
 
 def test_schema_constraint_validation_invalid_node_type() -> None:
@@ -371,10 +395,8 @@ def test_schema_constraint_validation_missing_property_name() -> None:
         ],
     }
 
-    with pytest.raises(SchemaValidationError) as exc_info:
+    with pytest.raises((SchemaValidationError, ValidationError)):
         GraphSchema.model_validate(schema_dict)
-
-    assert "Constraint has no property name" in str(exc_info.value)
 
 
 def test_schema_key_constraint_node_valid() -> None:
@@ -444,6 +466,216 @@ def test_schema_uniqueness_and_key_same_property_rejected() -> None:
     }
     with pytest.raises(SchemaValidationError, match="UNIQUENESS and KEY"):
         GraphSchema.model_validate(schema_dict)
+
+
+# --- Composite (multi-property) constraint tests ---
+
+
+def test_composite_key_constraint_node_valid() -> None:
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {
+                "label": "Actor",
+                "properties": [
+                    {"name": "firstname", "type": "STRING"},
+                    {"name": "surname", "type": "STRING"},
+                ],
+            }
+        ],
+        "constraints": [
+            {
+                "type": "KEY",
+                "node_type": "Actor",
+                "property_names": ["firstname", "surname"],
+                "relationship_type": None,
+            }
+        ],
+    }
+    schema = GraphSchema.model_validate(schema_dict)
+    assert len(schema.constraints) == 1
+    assert schema.constraints[0].property_names == ("firstname", "surname")
+    assert schema.key_property_names_for_node("Actor") == {"firstname", "surname"}
+    assert schema.mandatory_property_names_for_node("Actor") == {
+        "firstname",
+        "surname",
+    }
+
+
+def test_composite_uniqueness_constraint_valid() -> None:
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {
+                "label": "Book",
+                "properties": [
+                    {"name": "title", "type": "STRING"},
+                    {"name": "year", "type": "INTEGER"},
+                ],
+            }
+        ],
+        "constraints": [
+            {
+                "type": "UNIQUENESS",
+                "node_type": "Book",
+                "property_names": ["title", "year"],
+            }
+        ],
+    }
+    schema = GraphSchema.model_validate(schema_dict)
+    assert len(schema.constraints) == 1
+    assert schema.constraints[0].property_names == ("title", "year")
+    assert schema.uniqueness_property_names_for_node("Book") == {"title", "year"}
+
+
+def test_existence_rejects_composite() -> None:
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {
+                "label": "Person",
+                "properties": [
+                    {"name": "name", "type": "STRING"},
+                    {"name": "email", "type": "STRING"},
+                ],
+            }
+        ],
+        "constraints": [
+            {
+                "type": "EXISTENCE",
+                "node_type": "Person",
+                "property_names": ["name", "email"],
+            }
+        ],
+    }
+    with pytest.raises(ValueError, match="EXISTENCE constraint must have exactly one"):
+        GraphSchema.model_validate(schema_dict)
+
+
+def test_backward_compat_property_name_migrates_to_property_names() -> None:
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]}
+        ],
+        "constraints": [
+            {
+                "type": "UNIQUENESS",
+                "node_type": "Person",
+                "property_name": "name",
+            }
+        ],
+    }
+    schema = GraphSchema.model_validate(schema_dict)
+    assert schema.constraints[0].property_names == ("name",)
+    with pytest.warns(DeprecationWarning, match="property_names"):
+        assert schema.constraints[0].property_name == "name"
+
+
+def test_composite_constraint_validates_all_properties_exist() -> None:
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {
+                "label": "Actor",
+                "properties": [
+                    {"name": "firstname", "type": "STRING"},
+                ],
+            }
+        ],
+        "constraints": [
+            {
+                "type": "KEY",
+                "node_type": "Actor",
+                "property_names": ["firstname", "nonexistent"],
+                "relationship_type": None,
+            }
+        ],
+    }
+    with pytest.raises(SchemaValidationError, match="nonexistent"):
+        GraphSchema.model_validate(schema_dict)
+
+
+def test_composite_uniqueness_and_key_same_properties_rejected() -> None:
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {
+                "label": "Actor",
+                "properties": [
+                    {"name": "firstname", "type": "STRING"},
+                    {"name": "surname", "type": "STRING"},
+                ],
+            }
+        ],
+        "constraints": [
+            {
+                "type": "UNIQUENESS",
+                "node_type": "Actor",
+                "property_names": ["firstname", "surname"],
+            },
+            {
+                "type": "KEY",
+                "node_type": "Actor",
+                "property_names": ["firstname", "surname"],
+                "relationship_type": None,
+            },
+        ],
+    }
+    with pytest.raises(SchemaValidationError, match="UNIQUENESS and KEY"):
+        GraphSchema.model_validate(schema_dict)
+
+
+def test_composite_uniqueness_and_key_different_properties_allowed() -> None:
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {
+                "label": "Actor",
+                "properties": [
+                    {"name": "firstname", "type": "STRING"},
+                    {"name": "surname", "type": "STRING"},
+                    {"name": "email", "type": "STRING"},
+                ],
+            }
+        ],
+        "constraints": [
+            {
+                "type": "UNIQUENESS",
+                "node_type": "Actor",
+                "property_names": ["email"],
+            },
+            {
+                "type": "KEY",
+                "node_type": "Actor",
+                "property_names": ["firstname", "surname"],
+                "relationship_type": None,
+            },
+        ],
+    }
+    schema = GraphSchema.model_validate(schema_dict)
+    assert len(schema.constraints) == 2
+    assert schema.key_property_names_for_node("Actor") == {"firstname", "surname"}
+    assert schema.uniqueness_property_names_for_node("Actor") == {"email"}
+
+
+def test_extract_graph_constraints_from_metadata_composite_key() -> None:
+    from neo4j_graphrag.experimental.components.schema import (
+        SchemaFromExistingGraphExtractor,
+    )
+
+    structured_schema: dict[str, Any] = {
+        "metadata": {
+            "constraint": [
+                {
+                    "type": "NODE_KEY",
+                    "properties": ["firstname", "surname"],
+                    "labelsOrTypes": ["Actor"],
+                }
+            ]
+        }
+    }
+    result = SchemaFromExistingGraphExtractor._extract_graph_constraints_from_metadata(
+        structured_schema
+    )
+    assert len(result) == 1
+    assert result[0]["type"] == "KEY"
+    assert result[0]["node_type"] == "Actor"
+    assert result[0]["property_names"] == ("firstname", "surname")
+    assert result[0]["property_name"] == "firstname"
 
 
 @pytest.fixture
@@ -521,7 +753,7 @@ def valid_constraints() -> tuple[ConstraintType, ...]:
         ConstraintType(
             type=GraphConstraintType.UNIQUENESS,
             node_type="PERSON",
-            property_name="name",
+            property_names=("name",),
         ),
     )
 
@@ -585,7 +817,7 @@ def test_create_schema_model_with_constraints(
     assert len(schema.constraints) == 1
     assert schema.constraints[0].type == "UNIQUENESS"
     assert schema.constraints[0].node_type == "PERSON"
-    assert schema.constraints[0].property_name == "name"
+    assert schema.constraints[0].property_names == ("name",)
 
 
 @pytest.mark.asyncio
@@ -632,7 +864,7 @@ async def test_run_method_with_constraints(
     assert len(schema.constraints) == 1
     assert schema.constraints[0].type == "UNIQUENESS"
     assert schema.constraints[0].node_type == "PERSON"
-    assert schema.constraints[0].property_name == "name"
+    assert schema.constraints[0].property_names == ("name",)
 
 
 def test_create_schema_model_invalid_entity(
@@ -1467,7 +1699,7 @@ async def test_schema_from_text_with_valid_constraints(
     assert len(schema.constraints) == 1
     assert schema.constraints[0].type == "UNIQUENESS"
     assert schema.constraints[0].node_type == "Person"
-    assert schema.constraints[0].property_name == "name"
+    assert schema.constraints[0].property_names == ("name",)
 
 
 @pytest.mark.asyncio
@@ -1490,7 +1722,7 @@ async def test_schema_from_text_filters_invalid_constraints(
     # only the valid constraint should remain
     assert len(schema.constraints) == 1
     assert schema.constraints[0].node_type == "Person"
-    assert schema.constraints[0].property_name == "name"
+    assert schema.constraints[0].property_names == ("name",)
 
 
 @pytest.mark.asyncio
@@ -1510,7 +1742,7 @@ async def test_schema_from_text_filters_constraint_with_nonexistent_property(
     # verify that only the valid constraint (with "name" property) remains
     # the constraint with "nonexistent_property" should be filtered out
     assert len(schema.constraints) == 1
-    assert schema.constraints[0].property_name == "name"
+    assert schema.constraints[0].property_names == ("name",)
 
 
 @pytest.mark.asyncio
@@ -1752,7 +1984,9 @@ async def test_schema_from_existing_graph(mock_get_structured_schema: Mock) -> N
     assert id_person_property.required is False
     assert schema.existence_property_names_for_node("Person") == {"id"}
     assert any(
-        c.type == "EXISTENCE" and c.node_type == "Person" and c.property_name == "id"
+        c.type == "EXISTENCE"
+        and c.node_type == "Person"
+        and c.property_names == ("id",)
         for c in schema.constraints
     )
     assert person_node_type.additional_properties is False
@@ -1845,6 +2079,7 @@ def test_extract_graph_constraints_from_metadata_node_key_maps_to_key() -> None:
             "type": GraphConstraintType.KEY.value,
             "node_type": "Person",
             "property_name": "email",
+            "property_names": ("email",),
             "relationship_type": None,
         }
     ]
@@ -1871,6 +2106,7 @@ def test_extract_graph_constraints_from_metadata_relationship_key_maps_to_key() 
             "type": GraphConstraintType.KEY.value,
             "node_type": "",
             "property_name": "since",
+            "property_names": ("since",),
             "relationship_type": "WORKS_FOR",
         }
     ]
@@ -1928,12 +2164,12 @@ def test_graph_schema_from_extraction_output() -> None:
             ExtractedConstraintType(
                 type="UNIQUENESS",
                 node_type="Person",
-                property_name="name",
+                property_names=["name"],
             ),
             ExtractedConstraintType(
                 type="EXISTENCE",
                 node_type="Person",
-                property_name="name",
+                property_names=["name"],
                 relationship_type="",
             ),
         ],
@@ -1942,7 +2178,7 @@ def test_graph_schema_from_extraction_output() -> None:
     assert gs.node_types[0].label == "Person"
     assert gs.node_types[0].properties[0].required is False
     assert gs.existence_property_names_for_node("Person") == {"name"}
-    assert {c.property_name for c in gs.constraints} == {"name"}
+    assert {c.property_names for c in gs.constraints} == {("name",)}
     assert gs.additional_node_types is False
 
 

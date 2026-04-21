@@ -104,19 +104,19 @@ schema = GraphSchema(
         ConstraintType(
             type=GraphConstraintType.EXISTENCE,
             node_type="Person",
-            property_name="firstName",
+            property_names=("firstName",),
             relationship_type=None,
         ),
         ConstraintType(
             type=GraphConstraintType.EXISTENCE,
             node_type="Person",
-            property_name="lastName",
+            property_names=("lastName",),
             relationship_type=None,
         ),
         ConstraintType(
             type=GraphConstraintType.EXISTENCE,
             node_type="Organization",
-            property_name="name",
+            property_names=("name",),
             relationship_type=None,
         ),
     ),

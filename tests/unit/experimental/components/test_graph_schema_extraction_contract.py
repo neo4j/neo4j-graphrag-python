@@ -78,10 +78,11 @@ def test_graph_schema_extraction_output_root_keys_match_validate_payload() -> No
 
 
 def test_extracted_constraint_type_aligns_with_runtime_constraint_type() -> None:
-    """Wire model avoids nullable ``relationship_type``; maps to :class:`ConstraintType` after conversion."""
+    """Wire model avoids nullable ``relationship_type`` and the deprecated ``property_name``;
+    maps to :class:`ConstraintType` after conversion."""
     wire_keys = set(ExtractedConstraintType.model_fields)
     runtime_keys = set(ConstraintType.model_fields)
-    assert wire_keys == runtime_keys
+    assert wire_keys == runtime_keys - {"property_name"}
     assert (
         ExtractedConstraintType.model_fields["type"].annotation
         != ConstraintType.model_fields["type"].annotation

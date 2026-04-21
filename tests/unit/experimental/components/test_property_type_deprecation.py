@@ -52,7 +52,9 @@ def test_legacy_required_true_in_json_becomes_existence_constraint() -> None:
     )
     assert schema.existence_property_names_for_node("Person") == {"name"}
     assert any(
-        c.type == "EXISTENCE" and c.node_type == "Person" and c.property_name == "name"
+        c.type == "EXISTENCE"
+        and c.node_type == "Person"
+        and c.property_names == ("name",)
         for c in schema.constraints
     )
 
@@ -68,7 +70,7 @@ def test_programmatic_node_type_required_migrates_to_existence() -> None:
     assert len(schema.constraints) == 1
     assert schema.constraints[0].type == GraphConstraintType.EXISTENCE
     assert schema.constraints[0].node_type == "Person"
-    assert schema.constraints[0].property_name == "name"
+    assert schema.constraints[0].property_names == ("name",)
 
 
 def test_programmatic_relationship_type_required_migrates_to_existence() -> None:
@@ -88,7 +90,7 @@ def test_programmatic_relationship_type_required_migrates_to_existence() -> None
     assert any(
         c.type == GraphConstraintType.EXISTENCE
         and c.relationship_type == "KNOWS"
-        and c.property_name == "since"
+        and c.property_names == ("since",)
         for c in schema.constraints
     )
 
@@ -104,6 +106,7 @@ def test_programmatic_required_deduped_when_existence_constraint_already_present
     existing = ConstraintType(
         type=GraphConstraintType.EXISTENCE,
         node_type="Person",
+        property_names=("name",),
         property_name="name",
         relationship_type=None,
     )
