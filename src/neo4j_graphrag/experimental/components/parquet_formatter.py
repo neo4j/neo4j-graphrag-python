@@ -168,14 +168,65 @@ def get_uniqueness_constraints_for_node_type(
     return out
 
 
+def schema_has_single_property_key_for_node_type(
+    schema: Optional[dict[str, Any]], node_label: str
+) -> bool:
+    """True if the schema defines at least one KEY constraint with exactly one property."""
+    for t in get_key_constraints_for_node_type(schema, node_label):
+        if len(t) == 1:
+            return True
+    return False
+
+
+def enrich_key_constraints_for_node_type(
+    schema: Optional[dict[str, Any]], node_label: str
+) -> list[tuple[str, ...]]:
+    """KEY constraint groups for export metadata, ensuring a single-property KEY exists.
+
+    If the schema has no single-property KEY for this label (including no KEY at all,
+    or only composite KEYs), appends a synthetic ``("__id__",)`` group so downstream
+    import specs always see at least one single-property KEY per node type.
+    """
+    base = get_key_constraints_for_node_type(schema, node_label)
+    if schema_has_single_property_key_for_node_type(schema, node_label):
+        return base
+    return [*base, ("__id__",)]
+
+
+def flatten_key_constraint_property_names(
+    key_constraints: list[tuple[str, ...]],
+) -> list[str]:
+    """Flatten grouped KEY tuples to a column list (schema / export order)."""
+    out: list[str] = []
+    for t in key_constraints:
+        out.extend(t)
+    return out
+
+
+def get_relationship_join_key_property_name(
+    schema: Optional[dict[str, Any]], node_label: str
+) -> str:
+    """Property used in relationship Parquet ``from``/``to`` and endpoint metadata.
+
+    Returns the first **single-property** KEY from the schema for this label; if none,
+    returns ``__id__`` (internal node id in row values). Independent of
+    :func:`enrich_key_constraints_for_node_type` ordering, but aligned with it:
+    when the schema has no single-property KEY, the join key is ``__id__`` and
+    enrichment adds a KEY on ``__id__``.
+    """
+    for t in get_key_constraints_for_node_type(schema, node_label):
+        if len(t) == 1:
+            return t[0]
+    return "__id__"
+
+
 def get_primary_key_column_names_for_node_type(
     schema: Optional[dict[str, Any]], node_label: str
 ) -> list[str]:
-    """Column names flagged as primary key in KG writer metadata: KEY properties, else ``__id__``."""
-    keys = get_key_property_names_for_node_type(schema, node_label)
-    if keys:
-        return keys
-    return ["__id__"]
+    """Column names flagged as primary key: enriched KEY properties (see enrich_key_constraints)."""
+    return flatten_key_constraint_property_names(
+        enrich_key_constraints_for_node_type(schema, node_label)
+    )
 
 
 def get_unique_properties_for_node_type(
@@ -408,34 +459,23 @@ class Neo4jGraphParquetFormatter:
 
         return label_to_rows
 
-    def _get_identity_property_name_for_label(self, node_label: str) -> Optional[str]:
-        """Resolve natural identity: first KEY property, else first UNIQUENESS, else None (use ``__id__``)."""
-        key_props = get_key_property_names_for_node_type(self.schema, node_label)
-        if key_props:
-            return key_props[0]
-        uq = get_uniqueness_property_names_for_node_type(self.schema, node_label)
-        if uq:
-            return uq[0]
-        return None
-
     def _get_node_key_property_value(self, node: Neo4jNode) -> Any:
-        """Get the primary key property value for a node.
+        """Get the join key value for relationship Parquet ``from``/``to`` columns.
 
-        Uses schema constraints to find the primary key property name,
-        then returns the value of that property from the node.
+        Uses :func:`get_relationship_join_key_property_name` so row values match
+        relationship endpoint metadata (single-property KEY or ``__id__``).
 
         Args:
             node: The Neo4jNode to get the key value from
 
         Returns:
-            The value of the primary key property, or node.id if no constraint is found
+            The property value for the join key, or ``node.id`` when the join key is ``__id__``.
 
         Raises:
             ValueError: If the node is missing the key property or if the property value is null
         """
-        key_prop = self._get_identity_property_name_for_label(node.label)
-        if not key_prop:
-            # there is no key property, we use the node ID
+        key_prop = get_relationship_join_key_property_name(self.schema, node.label)
+        if key_prop == "__id__":
             return node.id
         if key_prop not in node.properties:
             # the Key property is missing from the node properties
@@ -673,6 +713,7 @@ class Neo4jGraphParquetFormatter:
             if current_label not in lexical_graph_config.lexical_graph_node_labels:
                 labels_list.append("__Entity__")
 
+            enriched_keys = enrich_key_constraints_for_node_type(self.schema, label)
             file_metadata.append(
                 FileMetadata(
                     filename=filename,
@@ -680,15 +721,13 @@ class Neo4jGraphParquetFormatter:
                     is_node=True,
                     labels=labels_list,
                     node_label=label,
-                    primary_key_property_names=get_key_property_names_for_node_type(
-                        self.schema, label
+                    primary_key_property_names=flatten_key_constraint_property_names(
+                        enriched_keys
                     ),
                     uniqueness_property_names=get_uniqueness_property_names_for_node_type(
                         self.schema, label
                     ),
-                    key_constraints=get_key_constraints_for_node_type(
-                        self.schema, label
-                    ),
+                    key_constraints=enriched_keys,
                     uniqueness_constraints=get_uniqueness_constraints_for_node_type(
                         self.schema, label
                     ),
@@ -717,15 +756,15 @@ class Neo4jGraphParquetFormatter:
                     relationship_type=rtype,
                     relationship_head=head_label,
                     relationship_tail=tail_label,
-                    head_primary_key_property_names=get_key_property_names_for_node_type(
-                        self.schema, head_label
-                    ),
+                    head_primary_key_property_names=[
+                        get_relationship_join_key_property_name(self.schema, head_label)
+                    ],
                     head_uniqueness_property_names=get_uniqueness_property_names_for_node_type(
                         self.schema, head_label
                     ),
-                    tail_primary_key_property_names=get_key_property_names_for_node_type(
-                        self.schema, tail_label
-                    ),
+                    tail_primary_key_property_names=[
+                        get_relationship_join_key_property_name(self.schema, tail_label)
+                    ],
                     tail_uniqueness_property_names=get_uniqueness_property_names_for_node_type(
                         self.schema, tail_label
                     ),

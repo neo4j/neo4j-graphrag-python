@@ -659,6 +659,9 @@ async def test_parquet_writer_run_success() -> None:
             c["name"] == "__id__" and c["is_primary_key"] and c["is_unique"] is False
             for c in node_file_info["columns"]
         )
+        assert {"type": "KEY", "properties": ["__id__"]} in (
+            node_file_info.get("constraints") or []
+        )
         rel_file_info = next(f for f in result.metadata["files"] if not f["is_node"])
         assert rel_file_info["relationship_type"] == "KNOWS"
         assert rel_file_info["start_node_source"] == "Person"
@@ -687,8 +690,66 @@ async def test_parquet_writer_run_success() -> None:
 
 
 @pytest.mark.asyncio
+async def test_parquet_writer_relationship_joins_on_single_property_key() -> None:
+    """With a single-property KEY in schema, rel from/to use that property and metadata matches."""
+    pytest.importorskip("pyarrow")
+    import pyarrow.parquet as pq
+
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {
+                "label": "Person",
+                "properties": [
+                    {"name": "email", "type": "STRING"},
+                    {"name": "name", "type": "STRING"},
+                ],
+            }
+        ],
+        "constraints": [
+            {
+                "type": "KEY",
+                "node_type": "Person",
+                "property_names": ["email"],
+                "relationship_type": None,
+            }
+        ],
+    }
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out = Path(tmpdir)
+        dest = _LocalParquetDestination(out)
+        writer = ParquetWriter(
+            nodes_dest=dest,
+            relationships_dest=dest,
+            collision_handler=FilenameCollisionHandler(),
+        )
+        n1 = Neo4jNode(
+            id="n1",
+            label="Person",
+            properties={"email": "a@b.c", "name": "Alice"},
+        )
+        n2 = Neo4jNode(
+            id="n2",
+            label="Person",
+            properties={"email": "b@b.c", "name": "Bob"},
+        )
+        rel = Neo4jRelationship(
+            start_node_id="n1", end_node_id="n2", type="KNOWS", properties={}
+        )
+        graph = Neo4jGraph(nodes=[n1, n2], relationships=[rel])
+        result = await writer.run(graph=graph, schema=schema_dict)
+        assert result.status == "SUCCESS"
+        assert result.metadata is not None
+        rel_file = next(f for f in result.metadata["files"] if not f["is_node"])
+        assert rel_file["start_node_primary_keys"] == ["email"]
+        assert rel_file["end_node_primary_keys"] == ["email"]
+        rels_table = pq.read_table(Path(rel_file["file_path"]))
+        assert rels_table.column("from")[0].as_py() == "a@b.c"
+        assert rels_table.column("to")[0].as_py() == "b@b.c"
+
+
+@pytest.mark.asyncio
 async def test_parquet_writer_columns_uniqueness_sets_is_unique() -> None:
-    """UNIQUENESS maps to is_unique; __id__ remains synthetic primary key when no KEY."""
+    """UNIQUENESS maps to is_unique; synthetic single-property KEY on __id__ when no schema KEY."""
     pytest.importorskip("pyarrow")
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -733,6 +794,8 @@ async def test_parquet_writer_columns_uniqueness_sets_is_unique() -> None:
         assert cols["email"]["is_primary_key"] is False
         assert cols["__id__"]["is_primary_key"] is True
         assert cols["__id__"]["is_unique"] is False
+        key_cs = [c for c in node_file["constraints"] if c["type"] == "KEY"]
+        assert key_cs == [{"type": "KEY", "properties": ["__id__"]}]
 
 
 @pytest.mark.asyncio
@@ -830,11 +893,13 @@ async def test_parquet_writer_composite_key_constraint() -> None:
         assert cols["firstname"]["is_primary_key"] is True
         assert cols["surname"]["is_primary_key"] is True
         assert cols["age"]["is_primary_key"] is False
+        assert cols["__id__"]["is_primary_key"] is True
         # Structured constraints metadata should preserve composite grouping
         assert "constraints" in node_file
         key_constraints = [c for c in node_file["constraints"] if c["type"] == "KEY"]
-        assert len(key_constraints) == 1
+        assert len(key_constraints) == 2
         assert key_constraints[0]["properties"] == ["firstname", "surname"]
+        assert key_constraints[1]["properties"] == ["__id__"]
 
 
 @pytest.mark.asyncio
@@ -891,6 +956,8 @@ async def test_parquet_writer_composite_uniqueness_constraint() -> None:
         ]
         assert len(unique_constraints) == 1
         assert unique_constraints[0]["properties"] == ["title", "year"]
+        key_cs = [c for c in node_file["constraints"] if c["type"] == "KEY"]
+        assert key_cs == [{"type": "KEY", "properties": ["__id__"]}]
 
 
 @pytest.mark.asyncio

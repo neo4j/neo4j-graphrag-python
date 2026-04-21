@@ -128,6 +128,10 @@ class KGWriterModel(DataModel):
               Each file entry includes ``columns``: a list of dicts with ``name``, ``type``,
               ``is_primary_key``, and ``is_unique`` (KEY / synthetic ``__id__`` / ``from``/``to``
               vs UNIQUENESS constraints per :class:`~neo4j_graphrag.experimental.components.schema.GraphSchema`).
+              Node files include a ``constraints`` list with at least one single-property ``KEY``
+              (``__id__`` is injected when the schema has none). Relationship files include
+              ``start_node_primary_keys`` / ``end_node_primary_keys`` as a one-element list:
+              the first single-property schema ``KEY`` for that label, or ``__id__``.
     """
 
     status: Literal["SUCCESS", "FAILURE"]
