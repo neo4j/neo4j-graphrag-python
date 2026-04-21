@@ -106,6 +106,7 @@ def test_programmatic_required_deduped_when_existence_constraint_already_present
     existing = ConstraintType(
         type=GraphConstraintType.EXISTENCE,
         node_type="Person",
+        property_names=("name",),
         property_name="name",
         relationship_type=None,
     )

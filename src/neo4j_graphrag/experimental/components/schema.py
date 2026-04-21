@@ -281,7 +281,7 @@ class ConstraintType(BaseModel):
             "property_name. property_name is kept for backward compatibility."
         ),
     )
-    property_names: Tuple[str, ...] = ()
+    property_names: Tuple[str, ...] = Field(min_length=1)
     node_type: str = ""
     relationship_type: Optional[str] = None
 
@@ -313,10 +313,6 @@ class ConstraintType(BaseModel):
 
     @model_validator(mode="after")
     def validate_constraint_shape(self) -> Self:
-        if not self.property_names:
-            raise ValueError(
-                "Constraint must specify at least one property in property_names."
-            )
         if self.type == GraphConstraintType.UNIQUENESS:
             if not (self.node_type and self.node_type.strip()):
                 raise ValueError(

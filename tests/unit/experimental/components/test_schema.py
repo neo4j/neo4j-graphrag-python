@@ -201,6 +201,26 @@ def test_constraint_type_is_frozen() -> None:
         constraint.property_names = ("id",)
 
 
+def test_constraint_type_rejects_empty_property_names() -> None:
+    """``property_names`` has ``min_length=1``; empty tuple/list fails validation."""
+    with pytest.raises(ValidationError) as exc_info:
+        ConstraintType(
+            type=GraphConstraintType.UNIQUENESS,
+            node_type="Person",
+            property_names=(),
+        )
+    assert "too_short" in str(exc_info.value).lower()
+
+    with pytest.raises(ValidationError):
+        ConstraintType.model_validate(
+            {
+                "type": "UNIQUENESS",
+                "node_type": "Person",
+                "property_names": [],
+            }
+        )
+
+
 def test_schema_additional_node_types_default() -> None:
     schema_dict: dict[str, Any] = {
         "node_types": [],
