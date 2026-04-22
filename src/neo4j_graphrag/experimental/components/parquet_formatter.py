@@ -38,6 +38,9 @@ from neo4j_graphrag.experimental.components.types import (
 
 logger = logging.getLogger(__name__)
 
+INTERNAL_ID_PROPERTY = "__id__"
+"""Parquet column name for the graph-internal node identifier (not a user property)."""
+
 _FALLBACK_FILESTEM = "unnamed"
 
 
@@ -190,7 +193,7 @@ def enrich_key_constraints_for_node_type(
     base = get_key_constraints_for_node_type(schema, node_label)
     if schema_has_single_property_key_for_node_type(schema, node_label):
         return base
-    return [*base, ("__id__",)]
+    return [*base, (INTERNAL_ID_PROPERTY,)]
 
 
 def flatten_key_constraint_property_names(
@@ -217,7 +220,7 @@ def get_relationship_join_key_property_name(
     for t in get_key_constraints_for_node_type(schema, node_label):
         if len(t) == 1:
             return t[0]
-    return "__id__"
+    return INTERNAL_ID_PROPERTY
 
 
 def get_primary_key_column_names_for_node_type(
@@ -241,8 +244,8 @@ def get_unique_properties_for_node_type(
     """
     warnings.warn(
         "get_unique_properties_for_node_type is deprecated and its meaning has "
-        "changed: it now mirrors get_primary_key_column_names_for_node_type (KEY / "
-        "__id__), not UNIQUENESS-only lists. Use "
+        f"changed: it now mirrors get_primary_key_column_names_for_node_type (KEY / "
+        f"{INTERNAL_ID_PROPERTY}), not UNIQUENESS-only lists. Use "
         "get_uniqueness_property_names_for_node_type or "
         "get_primary_key_column_names_for_node_type.",
         DeprecationWarning,
@@ -446,7 +449,7 @@ class Neo4jGraphParquetFormatter:
                 labels.append("__Entity__")
 
             row: dict[str, Any] = {
-                "__id__": node.id,
+                INTERNAL_ID_PROPERTY: node.id,
                 "labels": labels,
             }
 
@@ -475,7 +478,7 @@ class Neo4jGraphParquetFormatter:
             ValueError: If the node is missing the key property or if the property value is null
         """
         key_prop = get_relationship_join_key_property_name(self.schema, node.label)
-        if key_prop == "__id__":
+        if key_prop == INTERNAL_ID_PROPERTY:
             return node.id
         if key_prop not in node.properties:
             # the Key property is missing from the node properties

@@ -26,6 +26,7 @@ from neo4j_graphrag.experimental.components.filename_collision_handler import (
     FilenameCollisionHandler,
 )
 from neo4j_graphrag.experimental.components.parquet_formatter import (
+    INTERNAL_ID_PROPERTY,
     Neo4jGraphParquetFormatter,
     get_unique_properties_for_node_type,
     sanitize_parquet_filestem,
@@ -95,7 +96,9 @@ def test_sanitize_parquet_filestem_all_disallowed_replaced() -> None:
 
 def test_get_unique_properties_for_node_type_deprecation_warning() -> None:
     with pytest.warns(DeprecationWarning, match="get_unique_properties_for_node_type"):
-        assert get_unique_properties_for_node_type(None, "Person") == ["__id__"]
+        assert get_unique_properties_for_node_type(None, "Person") == [
+            INTERNAL_ID_PROPERTY
+        ]
 
 
 # --- FilenameCollisionHandler tests ---
@@ -656,23 +659,25 @@ async def test_parquet_writer_run_success() -> None:
         )
         assert "columns" in node_file_info
         assert any(
-            c["name"] == "__id__" and c["is_primary_key"] and c["is_unique"] is False
+            c["name"] == INTERNAL_ID_PROPERTY
+            and c["is_primary_key"]
+            and c["is_unique"] is False
             for c in node_file_info["columns"]
         )
-        assert {"type": "KEY", "properties": ["__id__"]} in (
+        assert {"type": "KEY", "properties": [INTERNAL_ID_PROPERTY]} in (
             node_file_info.get("constraints") or []
         )
         rel_file_info = next(f for f in result.metadata["files"] if not f["is_node"])
         assert rel_file_info["relationship_type"] == "KNOWS"
         assert rel_file_info["start_node_source"] == "Person"
         assert rel_file_info["end_node_source"] == "Person"
-        assert rel_file_info["start_node_primary_keys"] == ["__id__"]
-        assert rel_file_info["end_node_primary_keys"] == ["__id__"]
+        assert rel_file_info["start_node_primary_keys"] == [INTERNAL_ID_PROPERTY]
+        assert rel_file_info["end_node_primary_keys"] == [INTERNAL_ID_PROPERTY]
 
-        # Read back and sanity-check (formatter uses __id__, labels, and flat properties)
+        # Read back and sanity-check (formatter uses internal id, labels, and flat properties)
         nodes_table = pq.read_table(out / "Person.parquet")
         assert nodes_table.num_rows == 2
-        assert "__id__" in nodes_table.column_names
+        assert INTERNAL_ID_PROPERTY in nodes_table.column_names
         assert "labels" in nodes_table.column_names
         assert "name" in nodes_table.column_names
 
@@ -749,7 +754,7 @@ async def test_parquet_writer_relationship_joins_on_single_property_key() -> Non
 
 @pytest.mark.asyncio
 async def test_parquet_writer_columns_uniqueness_sets_is_unique() -> None:
-    """UNIQUENESS maps to is_unique; synthetic single-property KEY on __id__ when no schema KEY."""
+    """UNIQUENESS maps to is_unique; synthetic single-property KEY on internal id when no schema KEY."""
     pytest.importorskip("pyarrow")
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -792,10 +797,10 @@ async def test_parquet_writer_columns_uniqueness_sets_is_unique() -> None:
         cols = {c["name"]: c for c in node_file["columns"]}
         assert cols["email"]["is_unique"] is True
         assert cols["email"]["is_primary_key"] is False
-        assert cols["__id__"]["is_primary_key"] is True
-        assert cols["__id__"]["is_unique"] is False
+        assert cols[INTERNAL_ID_PROPERTY]["is_primary_key"] is True
+        assert cols[INTERNAL_ID_PROPERTY]["is_unique"] is False
         key_cs = [c for c in node_file["constraints"] if c["type"] == "KEY"]
-        assert key_cs == [{"type": "KEY", "properties": ["__id__"]}]
+        assert key_cs == [{"type": "KEY", "properties": [INTERNAL_ID_PROPERTY]}]
 
 
 @pytest.mark.asyncio
@@ -893,13 +898,13 @@ async def test_parquet_writer_composite_key_constraint() -> None:
         assert cols["firstname"]["is_primary_key"] is True
         assert cols["surname"]["is_primary_key"] is True
         assert cols["age"]["is_primary_key"] is False
-        assert cols["__id__"]["is_primary_key"] is True
+        assert cols[INTERNAL_ID_PROPERTY]["is_primary_key"] is True
         # Structured constraints metadata should preserve composite grouping
         assert "constraints" in node_file
         key_constraints = [c for c in node_file["constraints"] if c["type"] == "KEY"]
         assert len(key_constraints) == 2
         assert key_constraints[0]["properties"] == ["firstname", "surname"]
-        assert key_constraints[1]["properties"] == ["__id__"]
+        assert key_constraints[1]["properties"] == [INTERNAL_ID_PROPERTY]
 
 
 @pytest.mark.asyncio
@@ -957,7 +962,7 @@ async def test_parquet_writer_composite_uniqueness_constraint() -> None:
         assert len(unique_constraints) == 1
         assert unique_constraints[0]["properties"] == ["title", "year"]
         key_cs = [c for c in node_file["constraints"] if c["type"] == "KEY"]
-        assert key_cs == [{"type": "KEY", "properties": ["__id__"]}]
+        assert key_cs == [{"type": "KEY", "properties": [INTERNAL_ID_PROPERTY]}]
 
 
 @pytest.mark.asyncio
@@ -1087,12 +1092,12 @@ def test_node_embedding_column_present_regardless_of_row_order(
     # - failed-batch row: no embedding key (as if embedding_properties was empty)
     # - succeeded-batch row: embedding key present
     failed_row: dict[str, Any] = {
-        "__id__": "node-1",
+        INTERNAL_ID_PROPERTY: "node-1",
         "name": "Alice",
         "labels": ["Person", "__Entity__"],
     }
     succeeded_row: dict[str, Any] = {
-        "__id__": "node-2",
+        INTERNAL_ID_PROPERTY: "node-2",
         "name": "Bob",
         "labels": ["Person", "__Entity__"],
         "embedding": [0.1, 0.2, 0.3],
@@ -1114,7 +1119,7 @@ def test_node_embedding_column_present_regardless_of_row_order(
 
     # The row without an embedding should have a null value
     rows_as_dicts = table.to_pylist()
-    rows_by_id = {r["__id__"]: r for r in rows_as_dicts}
+    rows_by_id = {r[INTERNAL_ID_PROPERTY]: r for r in rows_as_dicts}
     assert (
         rows_by_id["node-1"]["embedding"] is None
     ), "Row without embedding should have null value in the embedding column"
@@ -1240,8 +1245,8 @@ def test_format_parquet_all_rows_missing_embedding_does_not_crash() -> None:
     formatter = Neo4jGraphParquetFormatter()
 
     rows: list[dict[str, Any]] = [
-        {"__id__": "node-1", "name": "Alice", "labels": ["Person"]},
-        {"__id__": "node-2", "name": "Bob", "labels": ["Person"]},
+        {INTERNAL_ID_PROPERTY: "node-1", "name": "Alice", "labels": ["Person"]},
+        {INTERNAL_ID_PROPERTY: "node-2", "name": "Bob", "labels": ["Person"]},
     ]
 
     parquet_bytes, schema = formatter.format_parquet(rows, "node label 'Person'")
@@ -1252,7 +1257,7 @@ def test_format_parquet_all_rows_missing_embedding_does_not_crash() -> None:
 
     table = pq.read_table(BytesIO(parquet_bytes))
     assert table.num_rows == 2
-    assert set(table.column_names) == {"__id__", "name", "labels"}
+    assert set(table.column_names) == {INTERNAL_ID_PROPERTY, "name", "labels"}
 
 
 # ---------------------------------------------------------------------------
@@ -1274,8 +1279,18 @@ def test_format_parquet_all_rows_empty_list_embedding_does_not_crash() -> None:
     formatter = Neo4jGraphParquetFormatter()
 
     rows: list[dict[str, Any]] = [
-        {"__id__": "node-1", "name": "Alice", "labels": ["Person"], "embedding": []},
-        {"__id__": "node-2", "name": "Bob", "labels": ["Person"], "embedding": []},
+        {
+            INTERNAL_ID_PROPERTY: "node-1",
+            "name": "Alice",
+            "labels": ["Person"],
+            "embedding": [],
+        },
+        {
+            INTERNAL_ID_PROPERTY: "node-2",
+            "name": "Bob",
+            "labels": ["Person"],
+            "embedding": [],
+        },
     ]
 
     parquet_bytes, schema = formatter.format_parquet(rows, "node label 'Person'")
@@ -1313,9 +1328,14 @@ def test_format_parquet_empty_list_before_float_embedding_does_not_crash() -> No
     formatter = Neo4jGraphParquetFormatter()
 
     rows: list[dict[str, Any]] = [
-        {"__id__": "node-1", "name": "Alice", "labels": ["Person"], "embedding": []},
         {
-            "__id__": "node-2",
+            INTERNAL_ID_PROPERTY: "node-1",
+            "name": "Alice",
+            "labels": ["Person"],
+            "embedding": [],
+        },
+        {
+            INTERNAL_ID_PROPERTY: "node-2",
             "name": "Bob",
             "labels": ["Person"],
             "embedding": [0.1, 0.2, 0.3],
@@ -1331,7 +1351,7 @@ def test_format_parquet_empty_list_before_float_embedding_does_not_crash() -> No
     assert emb_type.value_type == pa.float32()
 
     table = pq.read_table(BytesIO(parquet_bytes))
-    rows_by_id = {r["__id__"]: r for r in table.to_pylist()}
+    rows_by_id = {r[INTERNAL_ID_PROPERTY]: r for r in table.to_pylist()}
     assert (
         rows_by_id["node-1"]["embedding"] is None
         or rows_by_id["node-1"]["embedding"] == []
