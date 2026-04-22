@@ -26,6 +26,7 @@ from neo4j_graphrag.experimental.components.filename_collision_handler import (
     FilenameCollisionHandler,
 )
 from neo4j_graphrag.experimental.components.parquet_formatter import (
+    INTERNAL_ID_PROPERTY,
     Neo4jGraphParquetFormatter,
 )
 from neo4j_graphrag.experimental.components.parquet_output import (
@@ -128,6 +129,10 @@ class KGWriterModel(DataModel):
               Each file entry includes ``columns``: a list of dicts with ``name``, ``type``,
               ``is_primary_key``, and ``is_unique`` (KEY / synthetic ``__id__`` / ``from``/``to``
               vs UNIQUENESS constraints per :class:`~neo4j_graphrag.experimental.components.schema.GraphSchema`).
+              Node files include a ``constraints`` list with at least one single-property ``KEY``
+              (``__id__`` is injected when the schema has none). Relationship files include
+              ``start_node_primary_keys`` / ``end_node_primary_keys`` as a one-element list:
+              the first single-property schema ``KEY`` for that label, or ``__id__``.
     """
 
     status: Literal["SUCCESS", "FAILURE"]
@@ -396,7 +401,7 @@ class ParquetWriter(KGWriter):
                 pk_names = (
                     meta.primary_key_property_names
                     if meta.primary_key_property_names
-                    else ["__id__"]
+                    else [INTERNAL_ID_PROPERTY]
                 )
                 uq_names = meta.uniqueness_property_names or []
                 columns = _build_columns_from_schema(
@@ -466,13 +471,13 @@ class ParquetWriter(KGWriter):
                         "start_node_primary_keys": (
                             meta.head_primary_key_property_names
                             if meta.head_primary_key_property_names
-                            else ["__id__"]
+                            else [INTERNAL_ID_PROPERTY]
                         ),
                         "end_node_source": end_node_source,
                         "end_node_primary_keys": (
                             meta.tail_primary_key_property_names
                             if meta.tail_primary_key_property_names
-                            else ["__id__"]
+                            else [INTERNAL_ID_PROPERTY]
                         ),
                     }
                 )

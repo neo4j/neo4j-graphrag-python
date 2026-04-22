@@ -23,6 +23,9 @@ from neo4j_graphrag.experimental.components.filename_collision_handler import (
     FilenameCollisionHandler,
 )
 from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter, ParquetWriter
+from neo4j_graphrag.experimental.components.parquet_formatter import (
+    INTERNAL_ID_PROPERTY,
+)
 from neo4j_graphrag.experimental.components.types import (
     LexicalGraphConfig,
     Neo4jGraph,
@@ -471,7 +474,7 @@ async def test_parquet_writer_preserves_lexical_graph_nodes_and_rels() -> None:
         assert (
             "__Entity__" not in doc_labels
         ), "Lexical document node must not have __Entity__ label"
-        assert doc_table.column("__id__")[0].as_py() == "doc-1"
+        assert doc_table.column(INTERNAL_ID_PROPERTY)[0].as_py() == "doc-1"
         assert doc_table.column("name")[0].as_py() == "MyDoc"
 
         chunk_table = pyarrow.parquet.read_table(node_files[config.chunk_node_label])
@@ -482,7 +485,7 @@ async def test_parquet_writer_preserves_lexical_graph_nodes_and_rels() -> None:
             assert (
                 "__Entity__" not in chunk_labels
             ), "Lexical chunk node must not have __Entity__ label"
-        ids = chunk_table.column("__id__").to_pylist()
+        ids = chunk_table.column(INTERNAL_ID_PROPERTY).to_pylist()
         assert "chunk-1" in ids and "chunk-2" in ids
         texts = chunk_table.column("text").to_pylist()
         assert "First chunk." in texts and "Second chunk." in texts
