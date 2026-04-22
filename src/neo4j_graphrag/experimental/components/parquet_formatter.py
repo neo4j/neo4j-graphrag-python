@@ -150,6 +150,16 @@ def get_key_constraints_for_node_type(
     return out
 
 
+def _first_single_property_key_name(
+    schema: Optional[dict[str, Any]], node_label: str
+) -> Optional[str]:
+    """First property name among KEY groups that list exactly one property, if any."""
+    for t in get_key_constraints_for_node_type(schema, node_label):
+        if len(t) == 1:
+            return t[0]
+    return None
+
+
 def get_uniqueness_constraints_for_node_type(
     schema: Optional[dict[str, Any]], node_label: str
 ) -> list[tuple[str, ...]]:
@@ -175,10 +185,7 @@ def schema_has_single_property_key_for_node_type(
     schema: Optional[dict[str, Any]], node_label: str
 ) -> bool:
     """True if the schema defines at least one KEY constraint with exactly one property."""
-    for t in get_key_constraints_for_node_type(schema, node_label):
-        if len(t) == 1:
-            return True
-    return False
+    return _first_single_property_key_name(schema, node_label) is not None
 
 
 def enrich_key_constraints_for_node_type(
@@ -217,10 +224,8 @@ def get_relationship_join_key_property_name(
     when the schema has no single-property KEY, the join key is ``__id__`` and
     enrichment adds a KEY on ``__id__``.
     """
-    for t in get_key_constraints_for_node_type(schema, node_label):
-        if len(t) == 1:
-            return t[0]
-    return INTERNAL_ID_PROPERTY
+    name = _first_single_property_key_name(schema, node_label)
+    return name if name is not None else INTERNAL_ID_PROPERTY
 
 
 def get_primary_key_column_names_for_node_type(
