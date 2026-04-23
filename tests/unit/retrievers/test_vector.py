@@ -107,11 +107,13 @@ def test_vector_cypher_retriever_initialization(driver: MagicMock) -> None:
         mock_get_version.assert_called_once()
 
 
+@patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=False)
 @patch("neo4j_graphrag.retrievers.VectorRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_similarity_search_vector_happy_path(
     mock_get_version: MagicMock,
     _fetch_index_infos: MagicMock,
+    _mock_supports_search: MagicMock,
     driver: MagicMock,
     neo4j_record: MagicMock,
 ) -> None:
@@ -159,11 +161,13 @@ def test_similarity_search_vector_happy_path(
     )
 
 
+@patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=False)
 @patch("neo4j_graphrag.retrievers.VectorRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_similarity_search_text_happy_path(
     mock_get_version: MagicMock,
     _fetch_index_infos: MagicMock,
+    _mock_supports_search: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
     neo4j_record: MagicMock,
@@ -212,11 +216,13 @@ def test_similarity_search_text_happy_path(
     )
 
 
+@patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=False)
 @patch("neo4j_graphrag.retrievers.VectorRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_similarity_search_text_return_properties(
     mock_get_version: MagicMock,
     _fetch_index_infos: MagicMock,
+    _mock_supports_search: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
     neo4j_record: MagicMock,
@@ -304,11 +310,13 @@ def test_vector_retriever_search_both_text_and_vector(
         )
 
 
+@patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=False)
 @patch("neo4j_graphrag.retrievers.VectorRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_vector_retriever_with_result_format_function(
     mock_get_version: MagicMock,
     _fetch_index_infos: MagicMock,
+    _mock_supports_search: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
     neo4j_record: MagicMock,
@@ -378,11 +386,13 @@ def test_vector_cypher_retriever_search_both_text_and_vector(
         )
 
 
+@patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=False)
 @patch("neo4j_graphrag.retrievers.VectorCypherRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_retrieval_query_happy_path(
     mock_get_version: MagicMock,
     _fetch_index_infos: MagicMock,
+    _mock_supports_search: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
 ) -> None:
@@ -446,11 +456,13 @@ def test_retrieval_query_happy_path(
     )
 
 
+@patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=False)
 @patch("neo4j_graphrag.retrievers.VectorCypherRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_retrieval_query_with_result_format_function(
     mock_get_version: MagicMock,
     _fetch_index_infos: MagicMock,
+    _mock_supports_search: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
     neo4j_record: MagicMock,
@@ -514,11 +526,13 @@ def test_retrieval_query_with_result_format_function(
     )
 
 
+@patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=False)
 @patch("neo4j_graphrag.retrievers.VectorCypherRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_retrieval_query_with_params(
     mock_get_version: MagicMock,
     _fetch_index_infos: MagicMock,
+    _mock_supports_search: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
 ) -> None:
@@ -586,11 +600,13 @@ def test_retrieval_query_with_params(
     )
 
 
+@patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=False)
 @patch("neo4j_graphrag.retrievers.VectorCypherRetriever._fetch_index_infos")
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_retrieval_query_cypher_error(
     mock_get_version: MagicMock,
     _fetch_index_infos: MagicMock,
+    _mock_supports_search: MagicMock,
     driver: MagicMock,
     embedder: MagicMock,
 ) -> None:
@@ -613,3 +629,247 @@ def test_retrieval_query_cypher_error(
             query_text=query_text,
             top_k=top_k,
         )
+
+
+# --- SEARCH clause routing tests ---
+
+
+class TestVectorRetrieverSearchClausePath:
+    """Tests for VectorRetriever routing to SEARCH clause on Neo4j 2026.01+."""
+
+    @patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=True)
+    @patch("neo4j_graphrag.retrievers.VectorRetriever._fetch_index_infos")
+    @patch("neo4j_graphrag.retrievers.base.get_version")
+    def test_uses_search_clause_no_filters(
+        self,
+        mock_get_version: MagicMock,
+        _fetch_index_infos: MagicMock,
+        _mock_supports_search: MagicMock,
+        driver: MagicMock,
+    ) -> None:
+        mock_get_version.return_value = ((2026, 1, 0), False, True)
+        retriever = VectorRetriever(driver=driver, index_name="my-index")
+        retriever._node_label = "Document"
+        retriever._embedding_node_property = "embedding"
+
+        query_vector = [1.0, 2.0, 3.0]
+        driver.execute_query.return_value = [[], None, None]
+
+        retriever.search(query_vector=query_vector, top_k=5)
+
+        call_args = driver.execute_query.call_args
+        executed_query = call_args[0][0]
+        assert "SEARCH node IN (VECTOR INDEX" in executed_query
+        assert "SCORE AS score" in executed_query
+        assert "db.index.vector.queryNodes" not in executed_query
+
+    @patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=True)
+    @patch("neo4j_graphrag.retrievers.VectorRetriever._fetch_index_infos")
+    @patch("neo4j_graphrag.retrievers.base.get_version")
+    def test_uses_search_clause_with_compatible_filters(
+        self,
+        mock_get_version: MagicMock,
+        _fetch_index_infos: MagicMock,
+        _mock_supports_search: MagicMock,
+        driver: MagicMock,
+    ) -> None:
+        mock_get_version.return_value = ((2026, 1, 0), False, True)
+        retriever = VectorRetriever(driver=driver, index_name="my-index")
+        retriever._node_label = "Document"
+        retriever._embedding_node_property = "embedding"
+        retriever._embedding_dimension = 3
+
+        query_vector = [1.0, 2.0, 3.0]
+        driver.execute_query.return_value = [[], None, None]
+
+        retriever.search(
+            query_vector=query_vector,
+            top_k=5,
+            filters={"year": {"$gte": 2020}},
+        )
+
+        call_args = driver.execute_query.call_args
+        executed_query = call_args[0][0]
+        assert "SEARCH node IN (VECTOR INDEX" in executed_query
+        assert "WHERE" in executed_query
+        assert "db.index.vector.queryNodes" not in executed_query
+
+    @patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=True)
+    @patch("neo4j_graphrag.retrievers.VectorRetriever._fetch_index_infos")
+    @patch("neo4j_graphrag.retrievers.base.get_version")
+    def test_falls_back_with_incompatible_filters(
+        self,
+        mock_get_version: MagicMock,
+        _fetch_index_infos: MagicMock,
+        _mock_supports_search: MagicMock,
+        driver: MagicMock,
+    ) -> None:
+        """$or filters are incompatible, should fall back to procedure path."""
+        mock_get_version.return_value = ((2026, 1, 0), False, True)
+        retriever = VectorRetriever(driver=driver, index_name="my-index")
+        retriever._node_label = "Document"
+        retriever._embedding_node_property = "embedding"
+        retriever._embedding_dimension = 3
+
+        query_vector = [1.0, 2.0, 3.0]
+        driver.execute_query.return_value = [[], None, None]
+
+        retriever.search(
+            query_vector=query_vector,
+            top_k=5,
+            filters={"$or": [{"a": 1}, {"b": 2}]},
+        )
+
+        call_args = driver.execute_query.call_args
+        executed_query = call_args[0][0]
+        # Should fall back to brute-force (exact KNN) path
+        assert "SEARCH node IN (VECTOR INDEX" not in executed_query
+
+    @patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=True)
+    @patch("neo4j_graphrag.retrievers.VectorRetriever._fetch_index_infos")
+    @patch("neo4j_graphrag.retrievers.base.get_version")
+    def test_falls_back_when_no_node_label(
+        self,
+        mock_get_version: MagicMock,
+        _fetch_index_infos: MagicMock,
+        _mock_supports_search: MagicMock,
+        driver: MagicMock,
+    ) -> None:
+        """Without _node_label, SEARCH clause cannot be used."""
+        mock_get_version.return_value = ((2026, 1, 0), False, True)
+        retriever = VectorRetriever(driver=driver, index_name="my-index")
+        retriever._node_label = None
+
+        query_vector = [1.0, 2.0, 3.0]
+        driver.execute_query.return_value = [[], None, None]
+
+        retriever.search(query_vector=query_vector, top_k=5)
+
+        call_args = driver.execute_query.call_args
+        executed_query = call_args[0][0]
+        assert "SEARCH node IN (VECTOR INDEX" not in executed_query
+        assert "db.index.vector.queryNodes" in executed_query
+
+    @patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=True)
+    @patch("neo4j_graphrag.retrievers.VectorRetriever._fetch_index_infos")
+    @patch("neo4j_graphrag.retrievers.base.get_version")
+    def test_search_clause_with_return_properties(
+        self,
+        mock_get_version: MagicMock,
+        _fetch_index_infos: MagicMock,
+        _mock_supports_search: MagicMock,
+        driver: MagicMock,
+    ) -> None:
+        mock_get_version.return_value = ((2026, 1, 0), False, True)
+        retriever = VectorRetriever(
+            driver=driver,
+            index_name="my-index",
+            return_properties=["name", "text"],
+        )
+        retriever._node_label = "Document"
+        retriever._embedding_node_property = "embedding"
+
+        driver.execute_query.return_value = [[], None, None]
+        retriever.search(query_vector=[1.0, 2.0], top_k=3)
+
+        call_args = driver.execute_query.call_args
+        executed_query = call_args[0][0]
+        assert "SEARCH node IN (VECTOR INDEX" in executed_query
+        assert ".name" in executed_query
+        assert ".text" in executed_query
+
+
+class TestVectorCypherRetrieverSearchClausePath:
+    """Tests for VectorCypherRetriever routing to SEARCH clause."""
+
+    @patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=True)
+    @patch("neo4j_graphrag.retrievers.VectorCypherRetriever._fetch_index_infos")
+    @patch("neo4j_graphrag.retrievers.base.get_version")
+    def test_uses_search_clause_with_retrieval_query(
+        self,
+        mock_get_version: MagicMock,
+        _fetch_index_infos: MagicMock,
+        _mock_supports_search: MagicMock,
+        driver: MagicMock,
+        embedder: MagicMock,
+    ) -> None:
+        mock_get_version.return_value = ((2026, 1, 0), False, True)
+        embed_query_vector = [1.0, 2.0, 3.0]
+        embedder.embed_query.return_value = embed_query_vector
+        retrieval_query = "RETURN node.id AS node_id, node.text AS text, score"
+
+        retriever = VectorCypherRetriever(
+            driver=driver,
+            index_name="my-index",
+            retrieval_query=retrieval_query,
+            embedder=embedder,
+        )
+        retriever._node_label = "Document"
+
+        driver.execute_query.return_value = [[], None, None]
+        retriever.search(query_text="test query", top_k=5)
+
+        call_args = driver.execute_query.call_args
+        executed_query = call_args[0][0]
+        assert "SEARCH node IN (VECTOR INDEX" in executed_query
+        assert retrieval_query in executed_query
+
+    @patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=True)
+    @patch("neo4j_graphrag.retrievers.VectorCypherRetriever._fetch_index_infos")
+    @patch("neo4j_graphrag.retrievers.base.get_version")
+    def test_falls_back_when_no_node_label(
+        self,
+        mock_get_version: MagicMock,
+        _fetch_index_infos: MagicMock,
+        _mock_supports_search: MagicMock,
+        driver: MagicMock,
+    ) -> None:
+        mock_get_version.return_value = ((2026, 1, 0), False, True)
+        retrieval_query = "RETURN node.id AS node_id, score"
+
+        retriever = VectorCypherRetriever(
+            driver=driver,
+            index_name="my-index",
+            retrieval_query=retrieval_query,
+        )
+        retriever._node_label = None
+
+        driver.execute_query.return_value = [[], None, None]
+        retriever.search(query_vector=[1.0, 2.0, 3.0], top_k=5)
+
+        call_args = driver.execute_query.call_args
+        executed_query = call_args[0][0]
+        assert "SEARCH node IN (VECTOR INDEX" not in executed_query
+
+    @patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=True)
+    @patch("neo4j_graphrag.retrievers.VectorCypherRetriever._fetch_index_infos")
+    @patch("neo4j_graphrag.retrievers.base.get_version")
+    def test_search_clause_with_compatible_filters(
+        self,
+        mock_get_version: MagicMock,
+        _fetch_index_infos: MagicMock,
+        _mock_supports_search: MagicMock,
+        driver: MagicMock,
+    ) -> None:
+        mock_get_version.return_value = ((2026, 1, 0), False, True)
+        retrieval_query = "RETURN node.id AS node_id, score"
+
+        retriever = VectorCypherRetriever(
+            driver=driver,
+            index_name="my-index",
+            retrieval_query=retrieval_query,
+        )
+        retriever._node_label = "Document"
+        retriever._embedding_dimension = 3
+
+        driver.execute_query.return_value = [[], None, None]
+        retriever.search(
+            query_vector=[1.0, 2.0, 3.0],
+            top_k=5,
+            filters={"status": "active"},
+        )
+
+        call_args = driver.execute_query.call_args
+        executed_query = call_args[0][0]
+        assert "SEARCH node IN (VECTOR INDEX" in executed_query
+        assert "WHERE" in executed_query

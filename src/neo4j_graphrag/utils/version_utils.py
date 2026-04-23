@@ -12,9 +12,19 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import logging
+import weakref
 from typing import Optional
 
 import neo4j
+
+logger = logging.getLogger(__name__)
+
+# Cache version info per driver instance using weak references
+# so entries are cleaned up when the driver is garbage collected.
+_version_cache: weakref.WeakKeyDictionary[
+    neo4j.Driver, tuple[tuple[int, ...], bool, bool]
+] = weakref.WeakKeyDictionary()
 
 
 def get_version(
@@ -116,3 +126,55 @@ def has_metadata_filtering_support(
         target_version = (5, 18, 1)
 
     return version_tuple >= target_version
+
+
+def get_version_cached(
+    driver: neo4j.Driver, database: Optional[str] = None
+) -> tuple[tuple[int, ...], bool, bool]:
+    """Like get_version but caches the result per driver instance.
+
+    Args:
+        driver: Neo4j Python driver instance.
+        database: Optional database name.
+
+    Returns:
+        Same as get_version: (version_tuple, is_aura, is_enterprise).
+    """
+    cached = _version_cache.get(driver)
+    if cached is not None:
+        return cached
+    result = get_version(driver, database)
+    _version_cache[driver] = result
+    return result
+
+
+def clear_version_cache() -> None:
+    """Clear the version cache. Useful for testing."""
+    _version_cache.clear()
+
+
+def supports_search_clause(
+    driver: neo4j.Driver, database: Optional[str] = None
+) -> bool:
+    """Check if the Neo4j server supports the SEARCH clause (>= 2026.01).
+
+    Uses cached version detection. On connection errors, returns False
+    so callers fall back to the procedure-based path.
+
+    Args:
+        driver: Neo4j Python driver instance.
+        database: Optional database name.
+
+    Returns:
+        True if SEARCH clause is supported, False otherwise.
+    """
+    try:
+        version_tuple, _, _ = get_version_cached(driver, database)
+    except Exception:
+        logger.debug(
+            "Failed to detect Neo4j version for SEARCH clause support, "
+            "falling back to procedure path.",
+            exc_info=True,
+        )
+        return False
+    return version_tuple >= (2026, 1, 0)
