@@ -215,7 +215,10 @@ async def test_extractor_llm_badly_formatted_json_gets_fixed() -> None:
     assert len(res.nodes) == 1
     assert res.nodes[0].label == "Person"
     assert res.nodes[0].embedding_properties == {}
-    assert res.relationships == []
+    # With create_lexical_graph=False a FROM_CHUNK relationship is still created
+    # so that extracted entities remain linked to the chunk they came from.
+    from_chunk_rels = [r for r in res.relationships if r.type == "FROM_CHUNK"]
+    assert len(from_chunk_rels) == 1
 
 
 @pytest.mark.asyncio
@@ -490,3 +493,89 @@ async def test_extractor_structured_output_false_uses_v1() -> None:
     call_args = llm.ainvoke.call_args
     assert isinstance(call_args[0][0], str)  # First arg is string prompt
     assert "response_format" not in call_args[1]  # No response_format kwarg
+
+
+# ---------------------------------------------------------------------------
+# Tests for entity-to-chunk relationship creation (issue #470)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_entity_to_chunk_rels_created_when_lexical_graph_disabled() -> None:
+    """
+    Regression test for #470.
+
+    When create_lexical_graph=False and no lexical_graph_config is provided,
+    entity-to-chunk (FROM_CHUNK) relationships must still be created.
+    Previously lexical_graph_builder was left as None in this path, so
+    process_chunk_extracted_entities() was never called and FROM_CHUNK
+    relationships were silently missing.
+    """
+    llm = MagicMock(spec=LLMInterface)
+    llm.ainvoke.return_value = LLMResponse(
+        content='{"nodes": [{"id": "p1", "label": "Person", "properties": {"name": "Alice"}}, '
+                '{"id": "o1", "label": "Organization", "properties": {"name": "Acme"}}], '
+                '"relationships": [{"start_node_id": "p1", "end_node_id": "o1", "type": "WORKS_FOR"}]}'
+    )
+    extractor = LLMEntityRelationExtractor(
+        llm=llm,
+        on_error=OnError.RAISE,
+        create_lexical_graph=False,
+    )
+    chunks = TextChunks(chunks=[TextChunk(text="Alice works at Acme.", index=0)])
+    res = await extractor.run(chunks=chunks)
+
+    from_chunk_rels = [r for r in res.relationships if r.type == "FROM_CHUNK"]
+    assert len(from_chunk_rels) == 2, (
+        f"Expected 2 FROM_CHUNK relationships (one per entity), got {len(from_chunk_rels)}. "
+        "This is the regression for issue #470."
+    )
+
+
+@pytest.mark.asyncio
+async def test_no_chunk_nodes_when_lexical_graph_disabled() -> None:
+    """
+    When create_lexical_graph=False, Chunk and Document nodes must NOT appear
+    in the graph — only extracted entities and their FROM_CHUNK links.
+    """
+    llm = MagicMock(spec=LLMInterface)
+    llm.ainvoke.return_value = LLMResponse(
+        content='{"nodes": [{"id": "p1", "label": "Person", "properties": {}}], "relationships": []}'
+    )
+    extractor = LLMEntityRelationExtractor(
+        llm=llm,
+        on_error=OnError.RAISE,
+        create_lexical_graph=False,
+    )
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
+    res = await extractor.run(chunks=chunks)
+
+    chunk_nodes = [n for n in res.nodes if n.label == "Chunk"]
+    doc_nodes = [n for n in res.nodes if n.label == "Document"]
+    assert chunk_nodes == [], "Chunk nodes must not appear when create_lexical_graph=False"
+    assert doc_nodes == [], "Document nodes must not appear when create_lexical_graph=False"
+
+
+@pytest.mark.asyncio
+async def test_entity_to_chunk_rels_created_with_custom_lexical_graph_config() -> None:
+    """
+    When a custom lexical_graph_config is supplied, FROM_CHUNK relationships
+    must use the custom relationship type.
+    """
+    from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
+
+    llm = MagicMock(spec=LLMInterface)
+    llm.ainvoke.return_value = LLMResponse(
+        content='{"nodes": [{"id": "p1", "label": "Person", "properties": {}}], "relationships": []}'
+    )
+    extractor = LLMEntityRelationExtractor(
+        llm=llm,
+        on_error=OnError.RAISE,
+        create_lexical_graph=False,
+    )
+    config = LexicalGraphConfig(node_to_chunk_relationship_type="EXTRACTED_FROM")
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
+    res = await extractor.run(chunks=chunks, lexical_graph_config=config)
+
+    custom_rels = [r for r in res.relationships if r.type == "EXTRACTED_FROM"]
+    assert len(custom_rels) == 1
