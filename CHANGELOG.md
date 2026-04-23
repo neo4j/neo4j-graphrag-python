@@ -2,6 +2,8 @@
 
 ## Next
 
+## 1.15.0
+
 ### Added
 
 - `LLMUsage` model (`request_tokens`, `response_tokens`, `total_tokens`) added to `neo4j_graphrag.llm`; `LLMResponse` now carries an optional `usage: LLMUsage` field populated by all built-in LLM implementations (OpenAI, AzureOpenAI, Anthropic, Bedrock, Cohere, MistralAI, Ollama, VertexAI).
