@@ -123,6 +123,7 @@ class KGWriterModel(DataModel):
     Attributes:
         status: Whether the write operation was successful ("SUCCESS" or "FAILURE").
         metadata: Optional dict. When status is SUCCESS, contains at least:
+
             - "statistics": dict with node_count, relationship_count, nodes_per_label,
               rel_per_type, input_files_count, input_files_total_size_bytes.
             - "files": list of file descriptors with file_path, etc. (ParquetWriter).

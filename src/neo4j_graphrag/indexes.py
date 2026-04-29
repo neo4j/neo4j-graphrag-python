@@ -260,6 +260,13 @@ def upsert_vectors(
     This method constructs a Cypher query and executes it to upsert
     (insert or update) embeddings on a set of nodes or relationships.
 
+    .. warning::
+
+        This function depends on Neo4j's internal element IDs, which are unsafe to use
+        outside of a transaction. It is intended solely as a helper for low-load
+        databases and must not be used in production environments, where element IDs
+        may be reassigned or overwritten by concurrent transactions.
+
     Example:
 
     .. code-block:: python
