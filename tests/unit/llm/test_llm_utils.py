@@ -23,7 +23,6 @@ from neo4j_graphrag.types import LLMMessage
 
 
 def test_system_instruction_from_messages_found() -> None:
-    # Covers line 29: return message["content"] when system role present
     messages = [
         LLMMessage(role="system", content="You are helpful"),
         LLMMessage(role="user", content="hi"),
@@ -37,7 +36,6 @@ def test_system_instruction_from_messages_not_found() -> None:
 
 
 def test_legacy_inputs_with_message_history_instance() -> None:
-    # Covers line 44: messages = message_history.messages when MessageHistory passed
     history = InMemoryMessageHistory()
     history.add_message(LLMMessage(role="user", content="previous"))
     result = legacy_inputs_to_messages("follow-up", message_history=history)
@@ -46,7 +44,6 @@ def test_legacy_inputs_with_message_history_instance() -> None:
 
 
 def test_legacy_inputs_system_instruction_conflict_warns() -> None:
-    # Covers line 51: warnings.warn when system already in history
     messages = [LLMMessage(role="system", content="existing")]
     with pytest.warns(UserWarning, match="system_instruction provided but ignored"):
         legacy_inputs_to_messages(
@@ -55,14 +52,12 @@ def test_legacy_inputs_system_instruction_conflict_warns() -> None:
 
 
 def test_legacy_inputs_prompt_as_list() -> None:
-    # Covers lines 67-69: isinstance(prompt, list) branch
     prompt_list = [LLMMessage(role="user", content="hello")]
     result = legacy_inputs_to_messages(prompt_list)
     assert result == prompt_list
 
 
 def test_legacy_inputs_prompt_as_message_history() -> None:
-    # Covers lines 70-72: prompt is a MessageHistory instance
     history = InMemoryMessageHistory()
     history.add_message(LLMMessage(role="user", content="from history"))
     result = legacy_inputs_to_messages(history)
