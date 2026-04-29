@@ -38,7 +38,7 @@ REL_VECTOR_INDEX_QUERY = (
 VECTOR_EXACT_QUERY = (
     "WITH node, "
     "vector.similarity.cosine(node.`{embedding_node_property}`, $query_vector) AS score "
-    "ORDER BY score, id(node) DESC LIMIT $top_k"
+    "ORDER BY score DESC, elementId(node) LIMIT $top_k"
 )
 
 BASE_VECTOR_EXACT_QUERY = (
@@ -204,7 +204,7 @@ def _get_hybrid_query(neo4j_version_is_5_23_or_above: bool) -> str:
         "WITH collect({node:node, score:score}) AS nodes, max(score) AS ft_index_max_score "
         "UNWIND nodes AS n "
         "RETURN n.node AS node, (n.score / ft_index_max_score) AS score } "
-        "WITH node, max(score) AS score ORDER BY score, id(node) DESC LIMIT $top_k"
+        "WITH node, max(score) AS score ORDER BY score DESC, elementId(node) LIMIT $top_k"
     )
     return call_prefix + query_body
 
@@ -243,7 +243,7 @@ def _get_hybrid_query_linear(neo4j_version_is_5_23_or_above: bool, alpha: float)
         "UNWIND nodes AS n "
         "WITH n.node AS node, (n.score / ft_index_max_score) AS rawScore "
         "RETURN node, rawScore * (1 - $alpha) AS score } "
-        "WITH node, sum(score) AS score ORDER BY score, id(node) DESC LIMIT $top_k"
+        "WITH node, sum(score) AS score ORDER BY score DESC, elementId(node) LIMIT $top_k"
     )
     return call_prefix + query_body
 
