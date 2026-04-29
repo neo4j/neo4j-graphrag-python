@@ -57,8 +57,8 @@ try:
     from google import genai
     from google.genai import types
 except ImportError:
-    genai = None
-    types = None
+    genai = None  # type: ignore[assignment]
+    types = None  # type: ignore[assignment]
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
@@ -160,9 +160,11 @@ class GeminiLLM(LLMInterface, LLMInterfaceV2):
             contents = self.get_messages(input, message_history)
             config = self._build_config(system_instruction=system_instruction)
             response = self.client.models.generate_content(
-                model=self.model_name, contents=contents, config=config
+                model=self.model_name,
+                contents=contents,  # type: ignore[arg-type]
+                config=config,
             )
-            return LLMResponse(content=response.text)
+            return LLMResponse(content=response.text or "")
         except Exception as e:
             raise LLMGenerationError(f"Error calling GeminiLLM: {e}") from e
 
@@ -177,9 +179,11 @@ class GeminiLLM(LLMInterface, LLMInterfaceV2):
             contents = self.get_messages(input, message_history)
             config = self._build_config(system_instruction=system_instruction)
             response = await self.client.aio.models.generate_content(
-                model=self.model_name, contents=contents, config=config
+                model=self.model_name,
+                contents=contents,  # type: ignore[arg-type]
+                config=config,
             )
-            return LLMResponse(content=response.text)
+            return LLMResponse(content=response.text or "")
         except Exception as e:
             raise LLMGenerationError(f"Error calling GeminiLLM: {e}") from e
 
@@ -198,9 +202,11 @@ class GeminiLLM(LLMInterface, LLMInterfaceV2):
                 **kwargs,
             )
             response = self.client.models.generate_content(
-                model=self.model_name, contents=contents, config=config
+                model=self.model_name,
+                contents=contents,  # type: ignore[arg-type]
+                config=config,
             )
-            return LLMResponse(content=response.text)
+            return LLMResponse(content=response.text or "")
         except Exception as e:
             raise LLMGenerationError(f"Error calling GeminiLLM: {e}") from e
 
@@ -219,9 +225,11 @@ class GeminiLLM(LLMInterface, LLMInterfaceV2):
                 **kwargs,
             )
             response = await self.client.aio.models.generate_content(
-                model=self.model_name, contents=contents, config=config
+                model=self.model_name,
+                contents=contents,  # type: ignore[arg-type]
+                config=config,
             )
-            return LLMResponse(content=response.text)
+            return LLMResponse(content=response.text or "")
         except Exception as e:
             raise LLMGenerationError(f"Error calling GeminiLLM: {e}") from e
 
@@ -238,7 +246,9 @@ class GeminiLLM(LLMInterface, LLMInterfaceV2):
                 system_instruction=system_instruction, tools=tools
             )
             response = self.client.models.generate_content(
-                model=self.model_name, contents=contents, config=config
+                model=self.model_name,
+                contents=contents,  # type: ignore[arg-type]
+                config=config,
             )
             return self._parse_tool_response(response)
         except Exception as e:
@@ -257,7 +267,9 @@ class GeminiLLM(LLMInterface, LLMInterfaceV2):
                 system_instruction=system_instruction, tools=tools
             )
             response = await self.client.aio.models.generate_content(
-                model=self.model_name, contents=contents, config=config
+                model=self.model_name,
+                contents=contents,  # type: ignore[arg-type]
+                config=config,
             )
             return self._parse_tool_response(response)
         except Exception as e:
@@ -367,7 +379,7 @@ class GeminiLLM(LLMInterface, LLMInterfaceV2):
                     types.FunctionDeclaration(
                         name=tool.get_name(),
                         description=tool.get_description(),
-                        parameters=tool.get_parameters(
+                        parameters=tool.get_parameters(  # type: ignore[arg-type]
                             exclude=["additional_properties"]
                         ),
                     )

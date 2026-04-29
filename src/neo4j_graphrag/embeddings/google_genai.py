@@ -31,8 +31,8 @@ try:
     from google import genai
     from google.genai import types
 except ImportError:
-    genai = None
-    types = None
+    genai = None  # type: ignore[assignment]
+    types = None  # type: ignore[assignment]
 
 DEFAULT_EMBEDDING_MODEL = os.getenv("GOOGLE_GENAI_EMB_MODEL", "gemini-embedding-001")
 DEFAULT_EMBEDDING_DIM = int(os.getenv("GOOGLE_GENAI_EMB_DIM", "768"))
@@ -70,7 +70,7 @@ class GeminiEmbedder(Embedder):
         try:
             result = self.client.models.embed_content(
                 model=self.model,
-                contents=[text],
+                contents=[text],  # type: ignore[arg-type]
                 config=types.EmbedContentConfig(
                     output_dimensionality=self.embedding_dim
                 ),
@@ -89,7 +89,7 @@ class GeminiEmbedder(Embedder):
         try:
             result = await self.client.aio.models.embed_content(
                 model=self.model,
-                contents=[text],
+                contents=[text],  # type: ignore[arg-type]
                 config=types.EmbedContentConfig(
                     output_dimensionality=self.embedding_dim
                 ),
