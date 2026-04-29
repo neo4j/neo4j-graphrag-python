@@ -404,6 +404,13 @@ docker compose -f tests/e2e/docker-compose.yml up
 
 _(tip: If you encounter any caching issues within the databases, you can completely remove them by running `docker compose -f tests/e2e/docker-compose.yml down`)_
 
+For SEARCH-clause e2e tests (`tests/e2e/test_search_clause_e2e.py`), use the Neo4j 2026 compose file instead. It pins Neo4j 2026.02.2 (required for the Cypher 25 `SEARCH` clause) and binds the same `7687`/`7474` ports — stop the default stack first:
+
+```bash
+docker compose -f tests/e2e/docker-compose.yml down
+docker compose -f tests/e2e/docker-compose.neo4j2026.yml up -d
+```
+
 Once all the services are running, execute the following command to run the e2e tests:
 
 ```bash

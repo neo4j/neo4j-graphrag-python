@@ -16,7 +16,8 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from typing import Any, Type, Union
+from dataclasses import dataclass
+from typing import Any, Optional, Type, Union
 
 from neo4j_graphrag.exceptions import FilterValidationError
 
@@ -367,3 +368,139 @@ def get_metadata_filter(
     param_store = ParameterStore()
     query = _construct_metadata_filter(filter, param_store, node_alias=node_alias)
     return query, param_store.params
+
+
+# Operators compatible with SEARCH clause in-index filtering.
+# These map to simple property comparisons that Neo4j can push into the index.
+SEARCH_COMPATIBLE_OPERATORS = {
+    OPERATOR_EQ,
+    OPERATOR_NE,
+    OPERATOR_LT,
+    OPERATOR_LTE,
+    OPERATOR_GT,
+    OPERATOR_GTE,
+    OPERATOR_BETWEEN,
+}
+
+
+@dataclass
+class FilterClassification:
+    """Result of classifying a filter dict for SEARCH clause compatibility.
+
+    Attributes:
+        is_compatible: True if filter can be used with SEARCH clause in-index filtering.
+        cypher_where_clause: The Cypher WHERE clause string if compatible, None otherwise.
+        params: Query parameters dict if compatible, None otherwise.
+    """
+
+    is_compatible: bool
+    cypher_where_clause: Optional[str] = None
+    params: Optional[dict[str, Any]] = None
+
+
+def _is_filter_search_compatible(filter_dict: dict[str, Any]) -> bool:
+    """Recursively check if a filter dict uses only SEARCH-compatible operators.
+
+    SEARCH-compatible means all predicates are simple property comparisons
+    (=, <>, <, <=, >, >=, BETWEEN) joined only by AND. Filters using $or,
+    $in, $nin, $like, $ilike, or nested OR logic are incompatible.
+
+    Args:
+        filter_dict: The filter dictionary to inspect.
+
+    Returns:
+        True if compatible with SEARCH clause, False otherwise.
+    """
+    if not isinstance(filter_dict, dict):
+        return False
+
+    if len(filter_dict) == 0:
+        return True
+
+    # Multiple top-level keys = implicit AND — check each field
+    if len(filter_dict) > 1:
+        for key, value in filter_dict.items():
+            if not _is_filter_search_compatible({key: value}):
+                return False
+        return True
+
+    key, value = list(filter_dict.items())[0]
+
+    # Logical operator
+    if key.startswith(OPERATOR_PREFIX):
+        lower_key = key.lower()
+        if lower_key == OPERATOR_OR:
+            return False
+        if lower_key == OPERATOR_AND:
+            if not isinstance(value, list):
+                return False
+            return all(_is_filter_search_compatible(item) for item in value)
+        # Key starts with $ but is not $and/$or — shouldn't appear at top level
+        # but let the existing validation handle it
+        return False
+
+    # Field-level filter
+    if isinstance(value, dict):
+        if len(value) != 1:
+            return False
+        operator = list(value.keys())[0].lower()
+        return operator in SEARCH_COMPATIBLE_OPERATORS
+    else:
+        # Implicit equality — compatible
+        return True
+
+
+def extract_filter_field_names(filters: Optional[dict[str, Any]]) -> set[str]:
+    """Extract all property names referenced in a filter dict.
+
+    Walks logical operators ($and/$or) and field-level entries to collect every
+    property the filter touches. Used to validate that all filtered properties
+    are declared as filterable on a vector index before routing through the
+    SEARCH clause.
+    """
+    if not filters:
+        return set()
+
+    fields: set[str] = set()
+    for key, value in filters.items():
+        if key.startswith(OPERATOR_PREFIX):
+            if isinstance(value, list):
+                for item in value:
+                    if isinstance(item, dict):
+                        fields |= extract_filter_field_names(item)
+        else:
+            fields.add(key)
+    return fields
+
+
+def classify_filter_for_search(
+    filters: Optional[dict[str, Any]],
+    node_alias: str = DEFAULT_NODE_ALIAS,
+) -> FilterClassification:
+    """Classify a filter dict as SEARCH-compatible or not.
+
+    SEARCH-compatible filters use only simple property comparisons
+    (=, <>, <, <=, >, >=, BETWEEN) joined by AND. Filters using $or, $in,
+    $nin, $like, $ilike, or nested OR logic are classified as incompatible.
+
+    Args:
+        filters: The filter dict (same format as get_metadata_filter accepts).
+            None or empty dict is considered compatible (no WHERE needed).
+        node_alias: The node alias for the Cypher WHERE clause.
+
+    Returns:
+        FilterClassification with is_compatible flag and optional Cypher/params.
+    """
+    if filters is None or len(filters) == 0:
+        return FilterClassification(is_compatible=True)
+
+    if not _is_filter_search_compatible(filters):
+        return FilterClassification(is_compatible=False)
+
+    # It's compatible — generate the WHERE clause using existing machinery
+    cypher_where, params = get_metadata_filter(filters, node_alias=node_alias)
+    return FilterClassification(
+        is_compatible=True,
+        cypher_where_clause=cypher_where,
+        params=params,
+    )

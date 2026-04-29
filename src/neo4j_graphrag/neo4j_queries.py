@@ -18,7 +18,10 @@ import warnings
 from typing import Any, Optional, Union
 
 from neo4j_graphrag.exceptions import InvalidHybridSearchRankerError
-from neo4j_graphrag.filters import get_metadata_filter
+from neo4j_graphrag.filters import (
+    FilterClassification,
+    get_metadata_filter,
+)
 from neo4j_graphrag.types import EntityType, SearchType, HybridSearchRanker
 
 NODE_VECTOR_INDEX_QUERY = (
@@ -286,6 +289,141 @@ def _get_filtered_vector_query(
     return (
         parallel_query + f"{base_query} AND ({where_filters}) {vector_query}",
         query_params,
+    )
+
+
+def _build_search_clause_vector_query(
+    index_name: str,
+    node_label: str,
+    filter_classification: Optional[FilterClassification] = None,
+) -> tuple[str, dict[str, Any]]:
+    """Build a SEARCH clause Cypher query for vector search.
+
+    Generates:
+        MATCH (node:Label)
+        SEARCH node IN (VECTOR INDEX indexName FOR $query_vector
+          [WHERE <predicates>] LIMIT $top_k * $effective_search_ratio)
+        SCORE AS score
+        WITH node, score ORDER BY score DESC LIMIT $top_k
+
+    Args:
+        index_name: Name of the vector index.
+        node_label: Label of the nodes to search.
+        filter_classification: Optional classification result from
+            classify_filter_for_search. If provided and has a WHERE clause,
+            it will be embedded inside the SEARCH clause for in-index filtering.
+
+    Returns:
+        tuple[str, dict[str, Any]]: query string and parameters dict.
+    """
+    params: dict[str, Any] = {}
+
+    where_part = ""
+    if (
+        filter_classification is not None
+        and filter_classification.cypher_where_clause is not None
+    ):
+        where_part = f" WHERE {filter_classification.cypher_where_clause}"
+        if filter_classification.params:
+            params.update(filter_classification.params)
+
+    query = (
+        f"MATCH (node:`{node_label}`) "
+        f"SEARCH node IN (VECTOR INDEX `{index_name}` "
+        f"FOR $query_vector"
+        f"{where_part} "
+        f"LIMIT $top_k * $effective_search_ratio) "
+        f"SCORE AS score "
+        "WITH node, score ORDER BY score DESC LIMIT $top_k"
+    )
+    return query, params
+
+
+def _build_hybrid_search_clause_query(
+    vector_index_name: str,
+    fulltext_index_name: str,
+    node_label: str,
+) -> str:
+    """Build a hybrid query using SEARCH clause for vector + procedure for fulltext.
+
+    Uses CALL subquery with UNION to combine normalized vector (SEARCH clause)
+    and fulltext (procedure) scores, then takes the max score per node (naive ranker).
+
+    Note: SEARCH clause only supports VECTOR INDEX, not FULLTEXT INDEX,
+    so the fulltext component uses the db.index.fulltext.queryNodes procedure.
+
+    Args:
+        vector_index_name: Name of the vector index.
+        fulltext_index_name: Name of the fulltext index.
+        node_label: Label of the nodes to search.
+
+    Returns:
+        str: The constructed Cypher query string.
+    """
+    vector_part = (
+        f"MATCH (node:`{node_label}`) "
+        f"SEARCH node IN (VECTOR INDEX `{vector_index_name}` "
+        f"FOR $query_vector "
+        f"LIMIT $top_k * $effective_search_ratio) "
+        f"SCORE AS score "
+        "WITH collect({node:node, score:score}) AS nodes, max(score) AS vector_index_max_score "
+        "UNWIND nodes AS n "
+        "RETURN n.node AS node, (n.score / vector_index_max_score) AS score"
+    )
+    fulltext_part = (
+        f"{FULL_TEXT_SEARCH_QUERY} "
+        "WITH collect({node:node, score:score}) AS nodes, max(score) AS ft_index_max_score "
+        "UNWIND nodes AS n "
+        "RETURN n.node AS node, (n.score / ft_index_max_score) AS score"
+    )
+    return (
+        f"CALL () {{ {vector_part} UNION {fulltext_part} }} "
+        "WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k"
+    )
+
+
+def _build_hybrid_search_clause_query_linear(
+    vector_index_name: str,
+    fulltext_index_name: str,
+    node_label: str,
+) -> str:
+    """Build a hybrid query with linear ranker: SEARCH for vector + procedure for fulltext.
+
+    Uses CALL subquery with UNION to combine weighted vector (SEARCH clause)
+    and fulltext (procedure) scores using $alpha parameter.
+
+    Note: SEARCH clause only supports VECTOR INDEX, not FULLTEXT INDEX,
+    so the fulltext component uses the db.index.fulltext.queryNodes procedure.
+
+    Args:
+        vector_index_name: Name of the vector index.
+        fulltext_index_name: Name of the fulltext index.
+        node_label: Label of the nodes to search.
+
+    Returns:
+        str: The constructed Cypher query string.
+    """
+    vector_part = (
+        f"MATCH (node:`{node_label}`) "
+        f"SEARCH node IN (VECTOR INDEX `{vector_index_name}` "
+        f"FOR $query_vector "
+        f"LIMIT $top_k * $effective_search_ratio) "
+        f"SCORE AS score "
+        "WITH collect({node: node, score: score}) AS nodes, max(score) AS vector_index_max_score "
+        "UNWIND nodes AS n "
+        "WITH n.node AS node, (n.score / vector_index_max_score) AS rawScore "
+        "RETURN node, rawScore * $alpha AS score"
+    )
+    fulltext_part = (
+        f"{FULL_TEXT_SEARCH_QUERY} "
+        "WITH collect({node: node, score: score}) AS nodes, max(score) AS ft_index_max_score "
+        "UNWIND nodes AS n "
+        "WITH n.node AS node, (n.score / ft_index_max_score) AS rawScore "
+        "RETURN node, rawScore * (1 - $alpha) AS score"
+    )
+    return (
+        f"CALL () {{ {vector_part} UNION {fulltext_part} }} "
+        "WITH node, sum(score) AS score ORDER BY score DESC LIMIT $top_k"
     )
 
 

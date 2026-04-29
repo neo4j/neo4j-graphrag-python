@@ -43,6 +43,7 @@ def create_vector_index(
     similarity_fn: Literal["euclidean", "cosine"],
     fail_if_exists: bool = False,
     neo4j_database: Optional[str] = None,
+    filterable_properties: Optional[List[str]] = None,
 ) -> None:
     """
     This method constructs a Cypher query and executes it
@@ -78,6 +79,17 @@ def create_vector_index(
             fail_if_exists=False,
         )
 
+        # Creating the index with filterable properties for in-index filtering
+        create_vector_index(
+            driver,
+            INDEX_NAME,
+            label="Document",
+            embedding_property="vectorProperty",
+            dimensions=1536,
+            similarity_fn="cosine",
+            filterable_properties=["year", "category"],
+        )
+
 
     Args:
         driver (neo4j.Driver): Neo4j Python driver instance.
@@ -89,6 +101,9 @@ def create_vector_index(
             ``euclidean`` or ``cosine``.
         fail_if_exists (bool): If True raise an error if the index already exists. Defaults to False.
         neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to the server's default database ("neo4j" by default) (`see reference to documentation <https://neo4j.com/docs/operations-manual/current/database-administration/#manage-databases-default>`_).
+        filterable_properties (Optional[List[str]]): List of node property names to enable
+            for in-index filtering with the SEARCH clause (Neo4j 2026.01+). When provided,
+            generates a WITH clause in the index creation Cypher.
 
     Raises:
         ValueError: If validation of the input arguments fail.
@@ -109,9 +124,14 @@ def create_vector_index(
         ) from e
 
     try:
+        with_clause = ""
+        if filterable_properties:
+            props_clause = ", ".join([f"n.`{prop}`" for prop in filterable_properties])
+            with_clause = f" WITH [{props_clause}]"
         query = (
-            f"CREATE VECTOR INDEX $name {'' if fail_if_exists else 'IF NOT EXISTS'} FOR (n:{label}) ON n.{embedding_property} OPTIONS "
-            "{ indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }"
+            f"CREATE VECTOR INDEX $name {'' if fail_if_exists else 'IF NOT EXISTS'} FOR (n:{label}) ON n.{embedding_property}"
+            f"{with_clause}"
+            " OPTIONS { indexConfig: { `vector.dimensions`: toInteger($dimensions), `vector.similarity_function`: $similarity_fn } }"
         )
         logger.info(f"Creating vector index named '{name}'")
         driver.execute_query(
