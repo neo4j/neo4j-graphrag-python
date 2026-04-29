@@ -678,6 +678,7 @@ class TestVectorRetrieverSearchClausePath:
         retriever._node_label = "Document"
         retriever._embedding_node_property = "embedding"
         retriever._embedding_dimension = 3
+        retriever._filterable_properties = ["year"]
 
         query_vector = [1.0, 2.0, 3.0]
         driver.execute_query.return_value = [[], None, None]
@@ -861,6 +862,7 @@ class TestVectorCypherRetrieverSearchClausePath:
         )
         retriever._node_label = "Document"
         retriever._embedding_dimension = 3
+        retriever._filterable_properties = ["status"]
 
         driver.execute_query.return_value = [[], None, None]
         retriever.search(

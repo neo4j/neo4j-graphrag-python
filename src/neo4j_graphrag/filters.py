@@ -450,6 +450,29 @@ def _is_filter_search_compatible(filter_dict: dict[str, Any]) -> bool:
         return True
 
 
+def extract_filter_field_names(filters: Optional[dict[str, Any]]) -> set[str]:
+    """Extract all property names referenced in a filter dict.
+
+    Walks logical operators ($and/$or) and field-level entries to collect every
+    property the filter touches. Used to validate that all filtered properties
+    are declared as filterable on a vector index before routing through the
+    SEARCH clause.
+    """
+    if not filters:
+        return set()
+
+    fields: set[str] = set()
+    for key, value in filters.items():
+        if key.startswith(OPERATOR_PREFIX):
+            if isinstance(value, list):
+                for item in value:
+                    if isinstance(item, dict):
+                        fields |= extract_filter_field_names(item)
+        else:
+            fields.add(key)
+    return fields
+
+
 def classify_filter_for_search(
     filters: Optional[dict[str, Any]],
     node_alias: str = DEFAULT_NODE_ALIAS,

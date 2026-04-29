@@ -26,7 +26,11 @@ from neo4j_graphrag.exceptions import (
     RetrieverInitializationError,
     SearchValidationError,
 )
-from neo4j_graphrag.filters import FilterClassification, classify_filter_for_search
+from neo4j_graphrag.filters import (
+    FilterClassification,
+    classify_filter_for_search,
+    extract_filter_field_names,
+)
 from neo4j_graphrag.neo4j_queries import (
     _build_search_clause_vector_query,
     get_query_tail,
@@ -130,6 +134,7 @@ class VectorRetriever(Retriever):
         self._node_label = None
         self._embedding_node_property = None
         self._embedding_dimension = None
+        self._filterable_properties: list[str] = []
         self._fetch_index_infos(self.index_name)
 
     def default_record_formatter(self, record: neo4j.Record) -> RetrieverResultItem:
@@ -209,14 +214,26 @@ class VectorRetriever(Retriever):
         if supports_search_clause(self.driver, self.neo4j_database):
             if filters:
                 filter_cls = classify_filter_for_search(filters, node_alias="node")
-                if filter_cls.is_compatible and self._node_label:
-                    use_search_clause = True
-                elif not filter_cls.is_compatible:
+                missing = extract_filter_field_names(filters) - set(
+                    self._filterable_properties
+                )
+                if not filter_cls.is_compatible:
                     logger.warning(
                         "Filters are not compatible with SEARCH clause "
                         "in-index filtering; falling back to procedure-based "
                         "vector search with brute-force filtering."
                     )
+                elif missing:
+                    logger.warning(
+                        "Filter properties %s not declared as filterable on "
+                        "index '%s'; falling back to procedure-based vector "
+                        "search. Recreate the index with filterable_properties "
+                        "to use in-index filtering.",
+                        sorted(missing),
+                        self.index_name,
+                    )
+                elif self._node_label:
+                    use_search_clause = True
             else:
                 # No filters — use SEARCH clause if we have a node label
                 if self._node_label:
@@ -374,6 +391,7 @@ class VectorCypherRetriever(Retriever):
         self._node_label = None
         self._node_embedding_property = None
         self._embedding_dimension = None
+        self._filterable_properties: list[str] = []
         self._fetch_index_infos(self.index_name)
 
     def get_search_results(
@@ -446,14 +464,26 @@ class VectorCypherRetriever(Retriever):
         if supports_search_clause(self.driver, self.neo4j_database):
             if filters:
                 filter_cls = classify_filter_for_search(filters, node_alias="node")
-                if filter_cls.is_compatible and self._node_label:
-                    use_search_clause = True
-                elif not filter_cls.is_compatible:
+                missing = extract_filter_field_names(filters) - set(
+                    self._filterable_properties
+                )
+                if not filter_cls.is_compatible:
                     logger.warning(
                         "Filters are not compatible with SEARCH clause "
                         "in-index filtering; falling back to procedure-based "
                         "vector search with brute-force filtering."
                     )
+                elif missing:
+                    logger.warning(
+                        "Filter properties %s not declared as filterable on "
+                        "index '%s'; falling back to procedure-based vector "
+                        "search. Recreate the index with filterable_properties "
+                        "to use in-index filtering.",
+                        sorted(missing),
+                        self.index_name,
+                    )
+                elif self._node_label:
+                    use_search_clause = True
             else:
                 if self._node_label:
                     use_search_clause = True

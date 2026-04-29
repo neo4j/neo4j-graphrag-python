@@ -752,7 +752,10 @@ than via post-hoc brute-force scanning.
 **Requirements:**
 
 1. Neo4j server version 2026.01 or later.
-2. The vector index must be created with ``filterable_properties`` (see :ref:`filterable-index-creation`).
+2. To filter, the vector index must declare every filtered property in
+   ``filterable_properties`` (see :ref:`filterable-index-creation`). If any filtered
+   property is missing, the library falls back to the procedure path and logs
+   a warning. Unfiltered queries do not require ``filterable_properties``.
 3. The filter must use only SEARCH-compatible operators.
 
 **SEARCH-compatible operators** (use in-index filtering):
