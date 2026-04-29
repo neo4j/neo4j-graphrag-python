@@ -82,7 +82,7 @@ def test_hybrid_search_basic() -> None:
         "UNWIND nodes AS n "
         "RETURN n.node AS node, (n.score / ft_index_max_score) AS score "
         "} "
-        "WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k "
+        "WITH node, max(score) AS score ORDER BY score DESC, elementId(node) LIMIT $top_k "
         "RETURN node { .*, `None`: null } AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score"
     )
     result, _ = get_search_query(SearchType.HYBRID)
@@ -121,7 +121,7 @@ def test_vector_search_with_filters(_mock: Any) -> None:
         " AND (True) "
         "WITH node, "
         "vector.similarity.cosine(node.`vector`, $query_vector) AS score "
-        "ORDER BY score DESC LIMIT $top_k "
+        "ORDER BY score DESC, elementId(node) LIMIT $top_k "
         "RETURN node { .*, `vector`: null } AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score"
     )
     result, params = get_search_query(
@@ -147,7 +147,7 @@ def test_vector_search_with_params_from_filters(_mock: Any) -> None:
         " AND (True) "
         "WITH node, "
         "vector.similarity.cosine(node.`vector`, $query_vector) AS score "
-        "ORDER BY score DESC LIMIT $top_k "
+        "ORDER BY score DESC, elementId(node) LIMIT $top_k "
         "RETURN node { .*, `vector`: null } AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score"
     )
     result, params = get_search_query(
@@ -177,7 +177,7 @@ def test_hybrid_search_with_retrieval_query() -> None:
         "UNWIND nodes AS n "
         "RETURN n.node AS node, (n.score / ft_index_max_score) AS score "
         "} "
-        "WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k "
+        "WITH node, max(score) AS score ORDER BY score DESC, elementId(node) LIMIT $top_k "
         + retrieval_query
     )
     result, _ = get_search_query(SearchType.HYBRID, retrieval_query=retrieval_query)
@@ -200,7 +200,7 @@ def test_hybrid_search_with_properties() -> None:
         "UNWIND nodes AS n "
         "RETURN n.node AS node, (n.score / ft_index_max_score) AS score "
         "} "
-        "WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k "
+        "WITH node, max(score) AS score ORDER BY score DESC, elementId(node) LIMIT $top_k "
         "RETURN node {.name, .age} AS node, labels(node) AS nodeLabels, elementId(node) AS elementId, elementId(node) AS id, score"
     )
     result, _ = get_search_query(SearchType.HYBRID, return_properties=properties)
