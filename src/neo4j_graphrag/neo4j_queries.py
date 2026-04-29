@@ -302,8 +302,9 @@ def _build_search_clause_vector_query(
     Generates:
         MATCH (node:Label)
         SEARCH node IN (VECTOR INDEX indexName FOR $query_vector
-          [WHERE <predicates>] LIMIT $top_k)
+          [WHERE <predicates>] LIMIT $top_k * $effective_search_ratio)
         SCORE AS score
+        WITH node, score ORDER BY score DESC LIMIT $top_k
 
     Args:
         index_name: Name of the vector index.
@@ -331,8 +332,9 @@ def _build_search_clause_vector_query(
         f"SEARCH node IN (VECTOR INDEX `{index_name}` "
         f"FOR $query_vector"
         f"{where_part} "
-        f"LIMIT $top_k) "
-        f"SCORE AS score"
+        f"LIMIT $top_k * $effective_search_ratio) "
+        f"SCORE AS score "
+        "WITH node, score ORDER BY score DESC LIMIT $top_k"
     )
     return query, params
 
@@ -362,7 +364,7 @@ def _build_hybrid_search_clause_query(
         f"MATCH (node:`{node_label}`) "
         f"SEARCH node IN (VECTOR INDEX `{vector_index_name}` "
         f"FOR $query_vector "
-        f"LIMIT $top_k) "
+        f"LIMIT $top_k * $effective_search_ratio) "
         f"SCORE AS score "
         "WITH collect({node:node, score:score}) AS nodes, max(score) AS vector_index_max_score "
         "UNWIND nodes AS n "
@@ -405,7 +407,7 @@ def _build_hybrid_search_clause_query_linear(
         f"MATCH (node:`{node_label}`) "
         f"SEARCH node IN (VECTOR INDEX `{vector_index_name}` "
         f"FOR $query_vector "
-        f"LIMIT $top_k) "
+        f"LIMIT $top_k * $effective_search_ratio) "
         f"SCORE AS score "
         "WITH collect({node: node, score: score}) AS nodes, max(score) AS vector_index_max_score "
         "UNWIND nodes AS n "

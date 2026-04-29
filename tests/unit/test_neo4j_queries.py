@@ -281,8 +281,9 @@ class TestBuildSearchClauseVectorQuery:
             "MATCH (node:`Document`) "
             "SEARCH node IN (VECTOR INDEX `my_index` "
             "FOR $query_vector "
-            "LIMIT $top_k) "
-            "SCORE AS score"
+            "LIMIT $top_k * $effective_search_ratio) "
+            "SCORE AS score "
+            "WITH node, score ORDER BY score DESC LIMIT $top_k"
         )
         assert query == expected
         assert params == {}
@@ -322,8 +323,9 @@ class TestBuildSearchClauseVectorQuery:
             "SEARCH node IN (VECTOR INDEX `my_index` "
             "FOR $query_vector "
             "WHERE node.`year` = $_e_year "
-            "LIMIT $top_k) "
-            "SCORE AS score"
+            "LIMIT $top_k * $effective_search_ratio) "
+            "SCORE AS score "
+            "WITH node, score ORDER BY score DESC LIMIT $top_k"
         )
         assert query == expected
         assert params == {"_e_year": 2024}
