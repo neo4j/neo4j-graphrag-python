@@ -6,6 +6,10 @@
 
 - Added `close` and `aclose` methods to `LLMBase` to gracefully close resources.
 
+### Changed
+
+- Make clear in documentation that `upsert_vectors` is not for production.
+
 
 ## 1.15.0
 
@@ -24,6 +28,7 @@
 ### Fixed
 
 - `NodeType`: a node type defined without a `properties` key (e.g. `{"label": "Person"}` or `{"label": "Person", "description": "..."}`) now automatically gets a default `name: STRING` property and `additional_properties=True`, preventing a `ValidationError` from the `min_length=1` constraint. This matches the existing behaviour for string input. Auto-addition is skipped when `properties` is explicitly provided (including as an empty list) or when `additional_properties` is explicitly set to `False`.
+- Fixed `Neo4jGraphParquetFormatter` uses an explicit PyArrow schema (with embeddings typed as `float32`) derived from the union of all row keys. Integer embedding vectors (e.g. all-zero or one-hot) are now also cast to `float32`. Note: columns where only empty lists were observed are typed as `list<null>`, which may not be supported by all downstream consumers (e.g. DuckDB, Spark).
 
 ### Changed
 
@@ -35,9 +40,6 @@
 - SimpleKG pipeline (experimental): the `from_pdf` parameter is deprecated in favor of `from_file` (PDF and Markdown inputs). `from_pdf` still works but emits a deprecation warning and will be removed in a future version.
 - Data loaders (experimental): the `PdfDocument` type name is deprecated in favor of `LoadedDocument`; `PdfDocument` remains available as a backward-compatible alias with a deprecation warning.
 
-### Fixed
-
-- Fixed `Neo4jGraphParquetFormatter` uses an explicit PyArrow schema (with embeddings typed as `float32`) derived from the union of all row keys. Integer embedding vectors (e.g. all-zero or one-hot) are now also cast to `float32`. Note: columns where only empty lists were observed are typed as `list<null>`, which may not be supported by all downstream consumers (e.g. DuckDB, Spark).
 
 ## 1.14.1
 
