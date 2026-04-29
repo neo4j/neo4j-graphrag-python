@@ -333,9 +333,6 @@ class OllamaLLM(LLMBase):
         except self.ollama.ResponseError as e:
             raise LLMGenerationError(e)
 
-    async def aclose(self) -> None:
-        pass
-
     # subsdiary methods
     def get_messages(
         self,

@@ -353,9 +353,6 @@ class CohereLLM(LLMBase):
             usage=usage,
         )
 
-    async def aclose(self) -> None:
-        pass
-
     # subsdiary methods
     def get_messages(
         self,
