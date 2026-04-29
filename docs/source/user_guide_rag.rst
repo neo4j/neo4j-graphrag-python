@@ -742,7 +742,7 @@ The currently supported operators are:
 .. _search-clause-filtering:
 
 In-Index Filtering with the SEARCH Clause (Neo4j 2026.01+)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 On Neo4j 2026.01 and later, the library automatically detects the server version and
 uses the Cypher ``SEARCH`` clause for vector queries. This enables in-index filtering,
