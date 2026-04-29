@@ -313,6 +313,10 @@ class MistralAILLM(LLMBase):
         except SDKError as e:
             raise LLMGenerationError(e)
 
+    async def aclose(self) -> None:
+        self.client.close()
+        await self.client.aclose()
+
     # subsidiary methods
     def get_messages(
         self,

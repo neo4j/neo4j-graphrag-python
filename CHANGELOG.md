@@ -2,6 +2,11 @@
 
 ## Next
 
+### Added
+
+- Added `close` and `aclose` methods to `LLMBase` to gracefully close resources.
+
+
 ## 1.15.0
 
 ### Added
@@ -54,7 +59,7 @@
 
 ### Added
 
-- Parquet export (experimental): `ParquetWriter` (extends `KGWriter`), `Neo4jGraphParquetFormatter`, and `FilenameCollisionHandler` for writing knowledge graphs to Parquet (one file per node label and per relationship type). 
+- Parquet export (experimental): `ParquetWriter` (extends `KGWriter`), `Neo4jGraphParquetFormatter`, and `FilenameCollisionHandler` for writing knowledge graphs to Parquet (one file per node label and per relationship type).
 
 ### Changed
 

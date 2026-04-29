@@ -185,7 +185,7 @@ async def main(driver: neo4j.Driver) -> PipelineResult:
         lexical_graph_config,
         text,
     )
-    await llm.async_client.close()
+    await llm.aclose()
     return res
 
 
