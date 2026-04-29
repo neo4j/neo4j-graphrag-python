@@ -33,9 +33,11 @@ from typing import (
     cast,
 )
 
-import httpx
-
 # 3rd party dependencies
+try:
+    import httpx
+except ImportError:
+    httpx = None  # type: ignore[assignment]
 from pydantic import BaseModel, ValidationError
 
 # project dependencies
@@ -660,12 +662,15 @@ class OpenAILLM(BaseOpenAILLM):
         params = kwargs.copy()
         sync_params = params.copy()
         async_params = params.copy()
-        if isinstance(http_client, httpx.Client):
+        if httpx is not None and isinstance(http_client, httpx.Client):
             sync_params["http_client"] = http_client
-        elif isinstance(http_client, httpx.AsyncClient):
+        elif httpx is not None and isinstance(http_client, httpx.AsyncClient):
             async_params["http_client"] = http_client
         elif http_client is not None:
-            warnings.warn("Invalid http_client type. Using default.")
+            warnings.warn(
+                f"Invalid http_client type (got {type(http_client)}, expected httpx.Client or httpx.AsyncClient). Using default client.",
+                stacklevel=2,
+            )
         self.client = self.openai.OpenAI(**sync_params)
         self.async_client = self.openai.AsyncOpenAI(**async_params)
 
@@ -699,11 +704,14 @@ class AzureOpenAILLM(BaseOpenAILLM):
         params = kwargs.copy()
         sync_params = params.copy()
         async_params = params.copy()
-        if isinstance(http_client, httpx.Client):
+        if httpx is not None and isinstance(http_client, httpx.Client):
             sync_params["http_client"] = http_client
-        elif isinstance(http_client, httpx.AsyncClient):
+        elif httpx is not None and isinstance(http_client, httpx.AsyncClient):
             async_params["http_client"] = http_client
         elif http_client is not None:
-            warnings.warn("Invalid http_client type. Using default.")
+            warnings.warn(
+                f"Invalid http_client type (got {type(http_client)}, expected httpx.Client or httpx.AsyncClient). Using default client.",
+                stacklevel=2,
+            )
         self.client = self.openai.AzureOpenAI(**sync_params)
         self.async_client = self.openai.AsyncAzureOpenAI(**async_params)

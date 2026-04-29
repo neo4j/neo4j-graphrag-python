@@ -35,6 +35,7 @@ _original_import = builtins.__import__
 def get_mock_openai() -> MagicMock:
     mock = MagicMock()
     mock.OpenAIError = openai.OpenAIError
+    mock.httpx = httpx
     return mock
 
 

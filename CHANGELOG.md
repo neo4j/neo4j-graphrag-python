@@ -10,6 +10,10 @@
 
 - Make clear in documentation that `upsert_vectors` is not for production.
 
+### Fixed
+
+- The `http_client` in `OpenAILLM` and `AzureOpenAILLM` is now properly passed to the `sync` or `async` opena client depending on its type.
+
 
 ## 1.15.0
 
