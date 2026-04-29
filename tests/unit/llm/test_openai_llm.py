@@ -17,6 +17,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 from typing import Any, Callable, List
 import builtins
 
+import httpx
 import openai
 import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
@@ -34,6 +35,7 @@ _original_import = builtins.__import__
 def get_mock_openai() -> MagicMock:
     mock = MagicMock()
     mock.OpenAIError = openai.OpenAIError
+    mock.httpx = httpx
     return mock
 
 
@@ -837,3 +839,139 @@ async def test_openai_llm_close_raises_in_async_context(mock_import: Mock) -> No
 
     with pytest.raises(RuntimeError, match="async with"):
         llm.close()
+
+
+# HTTP client tests
+
+
+@patch("builtins.__import__")
+def test_openai_llm_with_httpx_client(mock_import: Mock) -> None:
+    """Test that httpx.Client is forwarded only to the sync OpenAI client without warning."""
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    http_client = httpx.Client()
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        OpenAILLM(model_name="gpt", api_key="my key", http_client=http_client)
+
+    assert not any("Invalid http_client" in str(w.message) for w in caught)
+    _, sync_kwargs = mock_openai.OpenAI.call_args
+    assert sync_kwargs.get("http_client") is http_client
+    _, async_kwargs = mock_openai.AsyncOpenAI.call_args
+    assert async_kwargs.get("http_client") is None
+
+
+@patch("builtins.__import__")
+def test_openai_llm_with_httpx_async_client(mock_import: Mock) -> None:
+    """Test that httpx.AsyncClient is forwarded only to the async OpenAI client without warning."""
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    async_http_client = httpx.AsyncClient()
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        OpenAILLM(model_name="gpt", api_key="my key", http_client=async_http_client)
+
+    assert not any("Invalid http_client" in str(w.message) for w in caught)
+    _, sync_kwargs = mock_openai.OpenAI.call_args
+    assert sync_kwargs.get("http_client") is None
+    _, async_kwargs = mock_openai.AsyncOpenAI.call_args
+    assert async_kwargs.get("http_client") is async_http_client
+
+
+@patch("builtins.__import__")
+def test_openai_llm_no_http_client_no_warning(mock_import: Mock) -> None:
+    """Test that omitting http_client does not emit a warning."""
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        OpenAILLM(model_name="gpt", api_key="my key")
+
+    assert not any("Invalid http_client" in str(w.message) for w in caught)
+
+
+@patch("builtins.__import__")
+def test_openai_llm_with_invalid_http_client_warns(mock_import: Mock) -> None:
+    """Test that a non-None invalid http_client type emits a warning."""
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    with pytest.warns(UserWarning, match="Invalid http_client type"):
+        OpenAILLM(model_name="gpt", api_key="my key", http_client="not-a-client")
+
+
+@patch("builtins.__import__")
+def test_azure_openai_llm_with_httpx_client(mock_import: Mock) -> None:
+    """Test that httpx.Client is forwarded only to the sync AzureOpenAI client without warning."""
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    http_client = httpx.Client()
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        AzureOpenAILLM(
+            model_name="gpt",
+            azure_endpoint="https://test.openai.azure.com/",
+            api_key="my key",
+            api_version="version",
+            http_client=http_client,
+        )
+
+    assert not any("Invalid http_client" in str(w.message) for w in caught)
+    _, sync_kwargs = mock_openai.AzureOpenAI.call_args
+    assert sync_kwargs.get("http_client") is http_client
+    _, async_kwargs = mock_openai.AsyncAzureOpenAI.call_args
+    assert async_kwargs.get("http_client") is None
+
+
+@patch("builtins.__import__")
+def test_azure_openai_llm_with_httpx_async_client(mock_import: Mock) -> None:
+    """Test that httpx.AsyncClient is forwarded only to the async AzureOpenAI client without warning."""
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    async_http_client = httpx.AsyncClient()
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        AzureOpenAILLM(
+            model_name="gpt",
+            azure_endpoint="https://test.openai.azure.com/",
+            api_key="my key",
+            api_version="version",
+            http_client=async_http_client,
+        )
+
+    assert not any("Invalid http_client" in str(w.message) for w in caught)
+    _, sync_kwargs = mock_openai.AzureOpenAI.call_args
+    assert sync_kwargs.get("http_client") is None
+    _, async_kwargs = mock_openai.AsyncAzureOpenAI.call_args
+    assert async_kwargs.get("http_client") is async_http_client
+
+
+@patch("builtins.__import__")
+def test_openai_llm_with_default_aiohttp_client(mock_import: Mock) -> None:
+    """Test that DefaultAioHttpClient (subclass of httpx.AsyncClient) is forwarded to the async client.
+
+    DefaultAioHttpClient is a subclass of httpx.AsyncClient, so the isinstance check
+    already handles it without any special-casing.
+    """
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    class _FakeAioHttpClient(httpx.AsyncClient):
+        """Minimal stand-in for openai.DefaultAioHttpClient."""
+
+    aiohttp_client = _FakeAioHttpClient()
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        OpenAILLM(model_name="gpt", api_key="my key", http_client=aiohttp_client)
+
+    assert not any("Invalid http_client" in str(w.message) for w in caught)
+    _, sync_kwargs = mock_openai.OpenAI.call_args
+    assert sync_kwargs.get("http_client") is None
+    _, async_kwargs = mock_openai.AsyncOpenAI.call_args
+    assert async_kwargs.get("http_client") is aiohttp_client
