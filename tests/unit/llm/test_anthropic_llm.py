@@ -22,6 +22,7 @@ import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.anthropic_llm import AnthropicLLM
 from neo4j_graphrag.llm.types import LLMResponse
+from neo4j_graphrag.message_history import InMemoryMessageHistory
 from neo4j_graphrag.types import LLMMessage
 from pydantic import BaseModel, ConfigDict
 
@@ -458,3 +459,153 @@ async def test_anthropic_llm_aclose(mock_anthropic: Mock) -> None:
 
     mock_anthropic.Anthropic.return_value.close.assert_called_once()
     mock_anthropic.AsyncAnthropic.return_value.close.assert_called_once()
+
+
+# --- Additional coverage tests ---
+
+
+def test_anthropic_invoke_v1_with_message_history_object(mock_anthropic: Mock) -> None:
+    """Line 161: MessageHistory branch in __invoke_v1."""
+    mock_anthropic.Anthropic.return_value.messages.create.return_value = MagicMock(
+        content=[MagicMock(text="response")],
+        usage=MagicMock(input_tokens=5, output_tokens=10),
+    )
+    history = InMemoryMessageHistory(
+        messages=[
+            {"role": "user", "content": "prev question"},
+            {"role": "assistant", "content": "prev answer"},
+        ]
+    )
+    llm = AnthropicLLM("claude-3-opus-20240229")
+    response = llm.invoke("hello", message_history=history)
+    assert response.content == "response"
+
+
+def test_anthropic_invoke_v1_empty_response(mock_anthropic: Mock) -> None:
+    """Line 173: __invoke_v1 raises LLMGenerationError on empty response."""
+    mock_anthropic.Anthropic.return_value.messages.create.return_value = MagicMock(
+        content=[]
+    )
+    llm = AnthropicLLM("claude-3-opus-20240229")
+    with pytest.raises(LLMGenerationError, match="LLM returned empty response"):
+        llm.invoke("hello")
+
+
+def test_anthropic_invoke_v1_api_error(mock_anthropic: Mock) -> None:
+    """Line 181: __invoke_v1 wraps APIError as LLMGenerationError."""
+    err = anthropic.APIError("API error", MagicMock(), body=None)
+    mock_anthropic.Anthropic.return_value.messages.create.side_effect = err
+    llm = AnthropicLLM("claude-3-opus-20240229")
+    with pytest.raises(LLMGenerationError):
+        llm.invoke("hello")
+
+
+def test_anthropic_invoke_v2_api_error(mock_anthropic: Mock) -> None:
+    """Line 215: __invoke_v2 wraps APIError as LLMGenerationError."""
+    err = anthropic.APIError("API error", MagicMock(), body=None)
+    mock_anthropic.Anthropic.return_value.messages.create.side_effect = err
+    messages: List[LLMMessage] = [{"role": "user", "content": "hello"}]
+    llm = AnthropicLLM("claude-3-opus-20240229")
+    with pytest.raises(LLMGenerationError):
+        llm.invoke(messages)
+
+
+@pytest.mark.asyncio
+async def test_anthropic_ainvoke_v1_with_message_history_object(
+    mock_anthropic: Mock,
+) -> None:
+    """Line 237: MessageHistory branch in __ainvoke_v1."""
+    mock_response = AsyncMock()
+    mock_response.content = [MagicMock(text="async response")]
+    mock_response.usage = MagicMock(input_tokens=5, output_tokens=10)
+    mock_anthropic.AsyncAnthropic.return_value.messages.create = AsyncMock(
+        return_value=mock_response
+    )
+    history = InMemoryMessageHistory(
+        messages=[
+            {"role": "user", "content": "prev question"},
+            {"role": "assistant", "content": "prev answer"},
+        ]
+    )
+    llm = AnthropicLLM("claude-3-opus-20240229")
+    response = await llm.ainvoke("hello", message_history=history)
+    assert response.content == "async response"
+
+
+@pytest.mark.asyncio
+async def test_anthropic_ainvoke_v1_empty_response(mock_anthropic: Mock) -> None:
+    """Line 249: __ainvoke_v1 raises LLMGenerationError on empty response."""
+    mock_response = AsyncMock()
+    mock_response.content = []
+    mock_anthropic.AsyncAnthropic.return_value.messages.create = AsyncMock(
+        return_value=mock_response
+    )
+    llm = AnthropicLLM("claude-3-opus-20240229")
+    with pytest.raises(LLMGenerationError, match="LLM returned empty response"):
+        await llm.ainvoke("hello")
+
+
+@pytest.mark.asyncio
+async def test_anthropic_ainvoke_v1_api_error(mock_anthropic: Mock) -> None:
+    """Lines 256-257: __ainvoke_v1 wraps APIError as LLMGenerationError."""
+    err = anthropic.APIError("API error", MagicMock(), body=None)
+    mock_anthropic.AsyncAnthropic.return_value.messages.create = AsyncMock(
+        side_effect=err
+    )
+    llm = AnthropicLLM("claude-3-opus-20240229")
+    with pytest.raises(LLMGenerationError):
+        await llm.ainvoke("hello")
+
+
+@pytest.mark.asyncio
+async def test_anthropic_ainvoke_v2_with_response_format_raises_error(
+    mock_anthropic: Mock,
+) -> None:
+    """Line 276: __ainvoke_v2 raises NotImplementedError when response_format is set."""
+    messages: List[LLMMessage] = [{"role": "user", "content": "Test"}]
+    llm = AnthropicLLM(model_name="claude-3-opus-20240229")
+    with pytest.raises(NotImplementedError):
+        await llm.ainvoke(messages, response_format={"type": "json_object"})
+
+
+@pytest.mark.asyncio
+async def test_anthropic_ainvoke_v2_empty_response(mock_anthropic: Mock) -> None:
+    """Line 292: __ainvoke_v2 raises LLMGenerationError on empty response."""
+    mock_response = AsyncMock()
+    mock_response.content = []
+    mock_anthropic.AsyncAnthropic.return_value.messages.create = AsyncMock(
+        return_value=mock_response
+    )
+    messages: List[LLMMessage] = [{"role": "user", "content": "hello"}]
+    llm = AnthropicLLM("claude-3-opus-20240229")
+    with pytest.raises(LLMGenerationError, match="LLM returned empty response"):
+        await llm.ainvoke(messages)
+
+
+@pytest.mark.asyncio
+async def test_anthropic_ainvoke_v2_api_error(mock_anthropic: Mock) -> None:
+    """Lines 299-300: __ainvoke_v2 wraps APIError as LLMGenerationError."""
+    err = anthropic.APIError("API error", MagicMock(), body=None)
+    mock_anthropic.AsyncAnthropic.return_value.messages.create = AsyncMock(
+        side_effect=err
+    )
+    messages: List[LLMMessage] = [{"role": "user", "content": "hello"}]
+    llm = AnthropicLLM("claude-3-opus-20240229")
+    with pytest.raises(LLMGenerationError):
+        await llm.ainvoke(messages)
+
+
+def test_anthropic_get_messages_with_message_history_object(
+    mock_anthropic: Mock,
+) -> None:
+    """Line 316: MessageHistory branch in get_messages."""
+    history = InMemoryMessageHistory(
+        messages=[
+            {"role": "user", "content": "prev question"},
+            {"role": "assistant", "content": "prev answer"},
+        ]
+    )
+    llm = AnthropicLLM("claude-3-opus-20240229")
+    messages = list(llm.get_messages("new question", message_history=history))
+    # 2 history messages + 1 current = 3
+    assert len(messages) == 3
