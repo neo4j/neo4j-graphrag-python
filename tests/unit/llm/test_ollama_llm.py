@@ -22,6 +22,7 @@ from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm import LLMResponse
 from neo4j_graphrag.llm.ollama_llm import OllamaLLM
 from neo4j_graphrag.llm.types import ToolCallResponse
+from neo4j_graphrag.message_history import InMemoryMessageHistory
 from neo4j_graphrag.tool import Tool
 from neo4j_graphrag.types import LLMMessage
 from pydantic import BaseModel, ConfigDict
@@ -698,3 +699,275 @@ async def test_ollama_llm_aclose(mock_import: Mock) -> None:
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         await llm.aclose()
+
+
+# --- Additional coverage tests ---
+
+
+@patch("builtins.__import__")
+def test_ollama_invoke_v1_with_message_history_object(mock_import: Mock) -> None:
+    """Line 166: MessageHistory branch in __invoke_v1."""
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+    mock_ollama.Client.return_value.chat.return_value = MagicMock(
+        message=MagicMock(content="response", tool_calls=None),
+        prompt_eval_count=None,
+        eval_count=None,
+    )
+    history = InMemoryMessageHistory(
+        messages=[
+            {"role": "user", "content": "prev"},
+            {"role": "assistant", "content": "ok"},
+        ]
+    )
+    llm = OllamaLLM(model_name="gpt", model_params={"options": {}})
+    response = llm.invoke("hello", message_history=history)
+    assert response.content == "response"
+
+
+@patch("builtins.__import__")
+def test_ollama_invoke_v1_response_error(mock_import: Mock) -> None:
+    """Line 189: ResponseError in __invoke_v1 raises LLMGenerationError."""
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+    mock_ollama.Client.return_value.chat.side_effect = ollama.ResponseError("API error")
+    llm = OllamaLLM(model_name="gpt", model_params={"options": {}})
+    with pytest.raises(LLMGenerationError):
+        llm.invoke("hello")
+
+
+@pytest.mark.asyncio
+@patch("builtins.__import__")
+async def test_ollama_ainvoke_v1_with_message_history_object(mock_import: Mock) -> None:
+    """Line 261: MessageHistory branch in __ainvoke_v1."""
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+
+    async def mock_chat_async(*_args: Any, **_kwargs: Any) -> MagicMock:
+        return MagicMock(
+            message=MagicMock(content="async response"),
+            prompt_eval_count=None,
+            eval_count=None,
+        )
+
+    mock_ollama.AsyncClient.return_value.chat = mock_chat_async
+    history = InMemoryMessageHistory(
+        messages=[
+            {"role": "user", "content": "prev"},
+            {"role": "assistant", "content": "ok"},
+        ]
+    )
+    llm = OllamaLLM(model_name="gpt", model_params={"options": {}})
+    response = await llm.ainvoke("hello", message_history=history)
+    assert response.content == "async response"
+
+
+@pytest.mark.asyncio
+@patch("builtins.__import__")
+async def test_ollama_ainvoke_v1_response_error(mock_import: Mock) -> None:
+    """Lines 283-284: ResponseError in __ainvoke_v1 raises LLMGenerationError."""
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+
+    async def mock_chat_async_error(*_args: Any, **_kwargs: Any) -> None:
+        raise ollama.ResponseError("Async API error")
+
+    mock_ollama.AsyncClient.return_value.chat = mock_chat_async_error
+    llm = OllamaLLM(model_name="gpt", model_params={"options": {}})
+    with pytest.raises(LLMGenerationError):
+        await llm.ainvoke("hello")
+
+
+@pytest.mark.asyncio
+@patch("builtins.__import__")
+async def test_ollama_ainvoke_v2_with_response_format_raises_error(
+    mock_import: Mock,
+) -> None:
+    """Line 307: __ainvoke_v2 raises NotImplementedError when response_format is set."""
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+    messages: list[LLMMessage] = [{"role": "user", "content": "Test"}]
+    llm = OllamaLLM(model_name="llama2")
+    with pytest.raises(NotImplementedError):
+        await llm.ainvoke(messages, response_format={"type": "json_object"})
+
+
+@patch("builtins.__import__")
+def test_ollama_get_messages_with_message_history_object(mock_import: Mock) -> None:
+    """Line 349: MessageHistory branch in get_messages."""
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+    history = InMemoryMessageHistory(
+        messages=[
+            {"role": "user", "content": "prev question"},
+            {"role": "assistant", "content": "prev answer"},
+        ]
+    )
+    llm = OllamaLLM(model_name="gpt", model_params={"options": {}})
+    messages = llm.get_messages("new question", message_history=history)
+    # 2 history + 1 current = 3
+    assert len(list(messages)) == 3
+
+
+@patch("builtins.__import__")
+def test_ollama_invoke_with_tools_with_message_history_object(
+    mock_import: Mock,
+    test_tool: Tool,
+) -> None:
+    """Line 392: MessageHistory branch in invoke_with_tools."""
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+    mock_function = MagicMock()
+    mock_function.name = "test_tool"
+    mock_function.arguments = {"param1": "value1"}
+    mock_tool_call = MagicMock()
+    mock_tool_call.function = mock_function
+    mock_ollama.Client.return_value.chat.return_value = MagicMock(
+        message=MagicMock(content="response", tool_calls=[mock_tool_call])
+    )
+    history = InMemoryMessageHistory(
+        messages=[
+            {"role": "user", "content": "prev"},
+            {"role": "assistant", "content": "ok"},
+        ]
+    )
+    llm = OllamaLLM(model_name="gpt", model_params={"options": {}})
+    res = llm.invoke_with_tools("hello", [test_tool], message_history=history)
+    assert isinstance(res, ToolCallResponse)
+    assert res.tool_calls[0].name == "test_tool"
+
+
+@patch("builtins.__import__")
+def test_ollama_invoke_with_tools_no_tool_calls(
+    mock_import: Mock,
+    test_tool: Tool,
+) -> None:
+    """Line 408: invoke_with_tools returns empty tool_calls when no tool call in response."""
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+    mock_ollama.Client.return_value.chat.return_value = MagicMock(
+        message=MagicMock(content="just text", tool_calls=[])
+    )
+    llm = OllamaLLM(model_name="gpt", model_params={"options": {}})
+    res = llm.invoke_with_tools("hello", [test_tool])
+    assert isinstance(res, ToolCallResponse)
+    assert len(res.tool_calls) == 0
+    assert res.content == "just text"
+
+
+@pytest.mark.asyncio
+@patch("builtins.__import__")
+async def test_ollama_ainvoke_with_tools_happy_path(
+    mock_import: Mock,
+    test_tool: Tool,
+) -> None:
+    """Lines 450-486: ainvoke_with_tools happy path."""
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+    mock_function = MagicMock()
+    mock_function.name = "test_tool"
+    mock_function.arguments = {"param1": "value1"}
+    mock_tool_call = MagicMock()
+    mock_tool_call.function = mock_function
+
+    async def mock_chat_async(*_args: Any, **_kwargs: Any) -> MagicMock:
+        return MagicMock(
+            message=MagicMock(content="tool response", tool_calls=[mock_tool_call])
+        )
+
+    mock_ollama.AsyncClient.return_value.chat = mock_chat_async
+    llm = OllamaLLM(model_name="gpt", model_params={"options": {}})
+    res = await llm.ainvoke_with_tools("hello", [test_tool])
+    assert isinstance(res, ToolCallResponse)
+    assert len(res.tool_calls) == 1
+    assert res.tool_calls[0].name == "test_tool"
+    assert res.tool_calls[0].arguments == {"param1": "value1"}
+
+
+@pytest.mark.asyncio
+@patch("builtins.__import__")
+async def test_ollama_ainvoke_with_tools_no_tool_calls(
+    mock_import: Mock,
+    test_tool: Tool,
+) -> None:
+    """ainvoke_with_tools returns empty tool_calls when no tool call in response."""
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+
+    async def mock_chat_async(*_args: Any, **_kwargs: Any) -> MagicMock:
+        return MagicMock(message=MagicMock(content="just text", tool_calls=[]))
+
+    mock_ollama.AsyncClient.return_value.chat = mock_chat_async
+    llm = OllamaLLM(model_name="gpt", model_params={"options": {}})
+    res = await llm.ainvoke_with_tools("hello", [test_tool])
+    assert isinstance(res, ToolCallResponse)
+    assert len(res.tool_calls) == 0
+    assert res.content == "just text"
+
+
+@pytest.mark.asyncio
+@patch("builtins.__import__")
+async def test_ollama_ainvoke_with_tools_with_message_history_object(
+    mock_import: Mock,
+    test_tool: Tool,
+) -> None:
+    """ainvoke_with_tools with MessageHistory object (line 451-452)."""
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+    mock_function = MagicMock()
+    mock_function.name = "test_tool"
+    mock_function.arguments = {}
+    mock_tool_call = MagicMock()
+    mock_tool_call.function = mock_function
+
+    async def mock_chat_async(*_args: Any, **_kwargs: Any) -> MagicMock:
+        return MagicMock(
+            message=MagicMock(content="response", tool_calls=[mock_tool_call])
+        )
+
+    mock_ollama.AsyncClient.return_value.chat = mock_chat_async
+    history = InMemoryMessageHistory(
+        messages=[
+            {"role": "user", "content": "prev"},
+            {"role": "assistant", "content": "ok"},
+        ]
+    )
+    llm = OllamaLLM(model_name="gpt", model_params={"options": {}})
+    res = await llm.ainvoke_with_tools("hello", [test_tool], message_history=history)
+    assert isinstance(res, ToolCallResponse)
+    assert len(res.tool_calls) == 1
+
+
+@pytest.mark.asyncio
+@patch("builtins.__import__")
+async def test_ollama_ainvoke_with_tools_response_error(
+    mock_import: Mock,
+    test_tool: Tool,
+) -> None:
+    """ainvoke_with_tools raises LLMGenerationError on ResponseError."""
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+
+    async def mock_chat_async_error(*_args: Any, **_kwargs: Any) -> None:
+        raise ollama.ResponseError("API error")
+
+    mock_ollama.AsyncClient.return_value.chat = mock_chat_async_error
+    llm = OllamaLLM(model_name="gpt", model_params={"options": {}})
+    with pytest.raises(LLMGenerationError):
+        await llm.ainvoke_with_tools("hello", [test_tool])
+
+
+@patch("builtins.__import__")
+def test_ollama_convert_tool_to_ollama_format_attribute_error(
+    mock_import: Mock,
+) -> None:
+    """Lines 504-505: _convert_tool_to_ollama_format raises LLMGenerationError on AttributeError."""
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+    llm = OllamaLLM(model_name="gpt", model_params={"options": {}})
+
+    bad_tool = MagicMock()
+    bad_tool.get_name.side_effect = AttributeError("no name")
+
+    with pytest.raises(LLMGenerationError):
+        llm._convert_tool_to_ollama_format(bad_tool)

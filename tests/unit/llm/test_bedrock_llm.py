@@ -21,6 +21,8 @@ import pytest
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm import BedrockLLM
+from neo4j_graphrag.llm.types import ToolCallResponse
+from neo4j_graphrag.tool import Tool
 from neo4j_graphrag.types import LLMMessage
 
 
@@ -196,3 +198,135 @@ def test_bedrock_invoke_with_model_params(mock_boto3: MagicMock) -> None:
 
     call_kwargs = mock_client.converse.call_args[1]
     assert call_kwargs["inferenceConfig"] == {"temperature": 0.5, "maxTokens": 512}
+
+
+def test_bedrock_invoke_with_region_name(mock_boto3: MagicMock) -> None:
+    BedrockLLM("us.anthropic.claude-sonnet-4-20250514-v1:0", region_name="us-east-1")
+    mock_boto3.client.assert_called_once_with(
+        "bedrock-runtime", region_name="us-east-1"
+    )
+
+
+def test_bedrock_invoke_v2_error(mock_boto3: MagicMock) -> None:
+    mock_client = mock_boto3.client.return_value
+    mock_client.converse.side_effect = Exception("API error")
+    messages: list[LLMMessage] = [{"role": "user", "content": "hello"}]
+    llm = BedrockLLM("us.anthropic.claude-sonnet-4-20250514-v1:0")
+    with pytest.raises(LLMGenerationError):
+        llm.invoke(messages)
+
+
+def test_bedrock_parse_response_with_usage(mock_boto3: MagicMock) -> None:
+    mock_client = mock_boto3.client.return_value
+    mock_client.converse.return_value = {
+        **_make_converse_response("hello"),
+        "usage": {"inputTokens": 10, "outputTokens": 20, "totalTokens": 30},
+    }
+    llm = BedrockLLM("us.anthropic.claude-sonnet-4-20250514-v1:0")
+    response = llm.invoke("hello")
+    assert response.usage is not None
+    assert response.usage.request_tokens == 10
+    assert response.usage.response_tokens == 20
+    assert response.usage.total_tokens == 30
+
+
+def test_bedrock_invoke_with_tools_happy_path(
+    mock_boto3: MagicMock, test_tool: Tool
+) -> None:
+    mock_client = mock_boto3.client.return_value
+    mock_client.converse.return_value = {
+        "output": {
+            "message": {
+                "content": [
+                    {
+                        "toolUse": {
+                            "name": "test_tool",
+                            "input": {"param1": "value1"},
+                        }
+                    }
+                ]
+            }
+        }
+    }
+    llm = BedrockLLM("us.anthropic.claude-sonnet-4-20250514-v1:0")
+    res = llm.invoke_with_tools("hello", [test_tool])
+    assert isinstance(res, ToolCallResponse)
+    assert len(res.tool_calls) == 1
+    assert res.tool_calls[0].name == "test_tool"
+    assert res.tool_calls[0].arguments == {"param1": "value1"}
+
+
+def test_bedrock_invoke_with_tools_error(
+    mock_boto3: MagicMock, test_tool: Tool
+) -> None:
+    mock_client = mock_boto3.client.return_value
+    mock_client.converse.side_effect = Exception("API error")
+    llm = BedrockLLM("us.anthropic.claude-sonnet-4-20250514-v1:0")
+    with pytest.raises(LLMGenerationError):
+        llm.invoke_with_tools("hello", [test_tool])
+
+
+@pytest.mark.asyncio
+async def test_bedrock_ainvoke_error(mock_boto3: MagicMock) -> None:
+    mock_client = mock_boto3.client.return_value
+    mock_client.converse.side_effect = Exception("API error")
+    llm = BedrockLLM("us.anthropic.claude-sonnet-4-20250514-v1:0")
+    with pytest.raises(LLMGenerationError):
+        await llm.ainvoke("hello")
+
+
+@pytest.mark.asyncio
+async def test_bedrock_ainvoke_v2_with_response_format_raises_error(
+    mock_boto3: MagicMock,
+) -> None:
+    messages: list[LLMMessage] = [{"role": "user", "content": "hello"}]
+    llm = BedrockLLM("us.anthropic.claude-sonnet-4-20250514-v1:0")
+    with pytest.raises(NotImplementedError):
+        await llm.ainvoke(messages, response_format={"type": "json_object"})
+
+
+@pytest.mark.asyncio
+async def test_bedrock_ainvoke_v2_error(mock_boto3: MagicMock) -> None:
+    mock_client = mock_boto3.client.return_value
+    mock_client.converse.side_effect = Exception("API error")
+    messages: list[LLMMessage] = [{"role": "user", "content": "hello"}]
+    llm = BedrockLLM("us.anthropic.claude-sonnet-4-20250514-v1:0")
+    with pytest.raises(LLMGenerationError):
+        await llm.ainvoke(messages)
+
+
+@pytest.mark.asyncio
+async def test_bedrock_ainvoke_with_tools_happy_path(
+    mock_boto3: MagicMock, test_tool: Tool
+) -> None:
+    mock_client = mock_boto3.client.return_value
+    mock_client.converse.return_value = {
+        "output": {
+            "message": {
+                "content": [
+                    {
+                        "toolUse": {
+                            "name": "test_tool",
+                            "input": {"param1": "value1"},
+                        }
+                    }
+                ]
+            }
+        }
+    }
+    llm = BedrockLLM("us.anthropic.claude-sonnet-4-20250514-v1:0")
+    res = await llm.ainvoke_with_tools("hello", [test_tool])
+    assert isinstance(res, ToolCallResponse)
+    assert len(res.tool_calls) == 1
+    assert res.tool_calls[0].name == "test_tool"
+
+
+@pytest.mark.asyncio
+async def test_bedrock_ainvoke_with_tools_error(
+    mock_boto3: MagicMock, test_tool: Tool
+) -> None:
+    mock_client = mock_boto3.client.return_value
+    mock_client.converse.side_effect = Exception("API error")
+    llm = BedrockLLM("us.anthropic.claude-sonnet-4-20250514-v1:0")
+    with pytest.raises(LLMGenerationError):
+        await llm.ainvoke_with_tools("hello", [test_tool])
