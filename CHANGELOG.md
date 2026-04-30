@@ -13,6 +13,7 @@
 ### Fixed
 
 - The `http_client` in `OpenAILLM` and `AzureOpenAILLM` is now properly passed to the `sync` or `async` opena client depending on its type.
+- `Text2CypherRetriever` now runs `EXPLAIN` on the LLM-generated Cypher and refuses to execute anything that is not read-only, raising `Text2CypherRetrievalError`. This prevents prompt-injection attacks from coercing the LLM into running destructive statements such as `MATCH (n) DETACH DELETE n`.
 
 
 ## 1.15.0
