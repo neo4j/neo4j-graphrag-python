@@ -19,6 +19,7 @@ from .anthropic_llm import AnthropicLLM
 from .base import LLMBase, LLMInterface, LLMInterfaceV2
 from .bedrock_llm import BedrockLLM
 from .cohere_llm import CohereLLM
+from .google_genai_llm import GeminiLLM
 from .mistralai_llm import MistralAILLM
 from .ollama_llm import OllamaLLM
 from .openai_llm import AzureOpenAILLM, OpenAILLM
@@ -29,6 +30,7 @@ __all__ = [
     "AnthropicLLM",
     "BedrockLLM",
     "CohereLLM",
+    "GeminiLLM",
     "LLMResponse",
     "LLMUsage",
     "LLMBase",
