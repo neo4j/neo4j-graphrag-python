@@ -11,19 +11,29 @@
 {% endblock %}
 
 {%- block content %}
-<body class="article docs sphinx">
+<body class="light-mode dark-mode article docs sphinx">
+<script>
+  const userColorSchemeName = 'neo4j-docs-theme';
+  const userColorScheme = localStorage.getItem(userColorSchemeName) || 'system';
+  document.documentElement.style.colorScheme = userColorScheme;
+</script>
 
 {%- block document %}
 
 <header class="header">
   <nav class="navbar">
     <div class="navbar-brand">
-      <a class="navbar-item" href="https://neo4j.com/">
-        <img class="navbar-logo" src="https://dist.neo4j.com/wp-content/uploads/20210422142941/neo4j-logo-2020.svg" alt="Neo4j Logo">
+      <a class="navbar-item" href="/">
+        <img class="navbar-logo" src="https://dist.neo4j.com/wp-content/uploads/20210422142941/neo4j-logo-2020.svg" alt="Neo4j Graph Data Science Client API Reference">
       </a>
-      <a href="{{ pathto(root_doc)|e }}" class="navbar-item no-left-padding" aria-label="{{ html_title }}">
-          {{ html_title }}
+      <a href="{{ pathto(root_doc) }}" class="navbar-item no-left-padding" aria-label="Neo4j Graph Data Science Client API Reference">
+        Graph Data Science Client API Reference
       </a>
+
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-start">
+      </div>
     </div>
   </nav>
 </header>
