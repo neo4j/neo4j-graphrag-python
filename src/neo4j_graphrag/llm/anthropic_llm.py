@@ -57,7 +57,7 @@ class AnthropicLLM(LLMBase):
     """Interface for large language models on Anthropic
 
     Args:
-        model_name (str, optional): Name of the LLM to use. Defaults to "gemini-1.5-flash-001".
+        model_name (str): Name of the LLM to use.
         model_params (Optional[dict], optional): Additional parameters for LLMInterface(V1) passed to the model when text is sent to it. Defaults to None.
         system_instruction: Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
         rate_limit_handler (Optional[RateLimitHandler], optional): Handler for managing rate limits for LLMInterface(V1). Defaults to None.
