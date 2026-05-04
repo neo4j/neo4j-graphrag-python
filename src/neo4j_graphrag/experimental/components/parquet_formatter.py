@@ -22,6 +22,7 @@ sanitized for filesystem and Neo4j import compatibility (safe characters:
 from __future__ import annotations
 
 import logging
+from tkinter import constants
 import unicodedata
 import warnings
 from collections import defaultdict
@@ -29,6 +30,7 @@ from dataclasses import dataclass, field
 from io import BytesIO
 from typing import Any, DefaultDict, Optional
 
+from neo4j_graphrag.experimental.components.schema import ConstraintType, GraphConstraintType, GraphSchema
 from neo4j_graphrag.experimental.components.types import (
     LexicalGraphConfig,
     Neo4jGraph,
@@ -79,47 +81,49 @@ def sanitize_parquet_filestem(name: str) -> str:
     return result
 
 
-def _constraint_relationship_type_unset(constraint: dict[str, Any]) -> bool:
-    rt = constraint.get("relationship_type")
+def _constraint_relationship_type_unset(constraint: ConstraintType) -> bool:
+    rt = constraint.relationship_type
     return rt is None or (isinstance(rt, str) and rt.strip() == "")
 
 
-def _resolve_constraint_property_names(constraint: dict[str, Any]) -> list[str]:
+def _resolve_constraint_property_names(constraint: ConstraintType) -> list[str]:
     """Resolve property names from a constraint dict (``property_names`` or ``property_name``)."""
-    pns = constraint.get("property_names") or ()
-    if pns:
-        return list(pns)
-    pn = constraint.get("property_name", "")
-    return [pn] if pn else []
+    # ConstraintType has property_names as a list
+    if constraint.property_names:
+        return list(constraint.property_names)
+    # Backward if property_name exists
+    if hasattr(constraint, 'property_name') and constraint.property_name:
+        return [constraint.property_name]
+    return []
 
 
 def get_uniqueness_property_names_for_node_type(
-    schema: Optional[dict[str, Any]], node_label: str
+    schema: Optional[GraphSchema], node_label: str
 ) -> list[str]:
     """Property names with a UNIQUENESS constraint for this node label (flat, order as in schema)."""
     if not schema:
         return []
     out: list[str] = []
-    for constraint in schema.get("constraints", ()) or ():
-        if constraint.get("type") != "UNIQUENESS":
+    for constraint in schema.constraints:
+        if constraint.type != GraphConstraintType.UNIQUENESS:
             continue
-        if constraint.get("node_type", "") != node_label:
+        if constraint.node_type != node_label:
             continue
         out.extend(_resolve_constraint_property_names(constraint))
     return out
 
 
 def get_key_property_names_for_node_type(
-    schema: Optional[dict[str, Any]], node_label: str
+    schema: Optional[GraphSchema], node_label: str
 ) -> list[str]:
     """Property names with a KEY constraint (node scope) for this node label (flat)."""
     if not schema:
         return []
     out: list[str] = []
-    for constraint in schema.get("constraints", ()) or ():
-        if constraint.get("type") != "KEY":
+    for constraint in schema.constraints:
+        if constraint.type != GraphConstraintType.KEY:
             continue
-        if constraint.get("node_type", "") != node_label:
+        if constraint.node_type != node_label:
             continue
         if not _constraint_relationship_type_unset(constraint):
             continue
@@ -128,7 +132,7 @@ def get_key_property_names_for_node_type(
 
 
 def get_key_constraints_for_node_type(
-    schema: Optional[dict[str, Any]], node_label: str
+    schema: Optional[GraphSchema], node_label: str
 ) -> list[tuple[str, ...]]:
     """KEY constraints for a node label, preserving composite grouping.
 
@@ -137,10 +141,10 @@ def get_key_constraints_for_node_type(
     if not schema:
         return []
     out: list[tuple[str, ...]] = []
-    for constraint in schema.get("constraints", ()) or ():
-        if constraint.get("type") != "KEY":
+    for constraint in schema.constraints:
+        if constraint.type != GraphConstraintType.KEY:
             continue
-        if constraint.get("node_type", "") != node_label:
+        if constraint.node_type != node_label:
             continue
         if not _constraint_relationship_type_unset(constraint):
             continue
@@ -161,7 +165,7 @@ def _first_single_property_key_name_from_groups(
 
 
 def get_uniqueness_constraints_for_node_type(
-    schema: Optional[dict[str, Any]], node_label: str
+    schema: Optional[GraphSchema], node_label: str
 ) -> list[tuple[str, ...]]:
     """UNIQUENESS constraints for a node label, preserving composite grouping.
 
@@ -170,10 +174,10 @@ def get_uniqueness_constraints_for_node_type(
     if not schema:
         return []
     out: list[tuple[str, ...]] = []
-    for constraint in schema.get("constraints", ()) or ():
-        if constraint.get("type") != "UNIQUENESS":
+    for constraint in schema.constraints:
+        if constraint.type != GraphConstraintType.UNIQUENESS:
             continue
-        if constraint.get("node_type", "") != node_label:
+        if constraint.node_type != node_label:
             continue
         props = _resolve_constraint_property_names(constraint)
         if props:
@@ -182,7 +186,7 @@ def get_uniqueness_constraints_for_node_type(
 
 
 def enrich_key_constraints_for_node_type(
-    schema: Optional[dict[str, Any]], node_label: str
+    schema: Optional[GraphSchema], node_label: str
 ) -> list[tuple[str, ...]]:
     """KEY constraint groups for export metadata, ensuring a single-property KEY exists.
 
@@ -207,7 +211,7 @@ def flatten_key_constraint_property_names(
 
 
 def get_relationship_join_key_property_name(
-    schema: Optional[dict[str, Any]], node_label: str
+    schema: Optional[GraphSchema], node_label: str
 ) -> str:
     """Property used in relationship Parquet ``from``/``to`` and endpoint metadata.
 
@@ -223,7 +227,7 @@ def get_relationship_join_key_property_name(
 
 
 def get_primary_key_column_names_for_node_type(
-    schema: Optional[dict[str, Any]], node_label: str
+    schema: Optional[GraphSchema], node_label: str
 ) -> list[str]:
     """Column names flagged as primary key: enriched KEY properties (see enrich_key_constraints)."""
     return flatten_key_constraint_property_names(
@@ -232,7 +236,7 @@ def get_primary_key_column_names_for_node_type(
 
 
 def get_unique_properties_for_node_type(
-    schema: Optional[dict[str, Any]], node_label: str
+    schema: Optional[GraphSchema], node_label: str
 ) -> list[str]:
     """Deprecated synonym for :func:`get_primary_key_column_names_for_node_type`.
 
@@ -310,7 +314,7 @@ class TypeInfo:
 class Neo4jGraphParquetFormatter:
     """Formats Neo4j graph data into Parquet format."""
 
-    def __init__(self, schema: Optional[dict[str, Any]] = None) -> None:
+    def __init__(self, schema: Optional[GraphSchema] = None) -> None:
         self.schema = schema
 
     @staticmethod

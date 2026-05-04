@@ -38,6 +38,7 @@ from neo4j_graphrag.experimental.components.types import (
     Neo4jNode,
     Neo4jRelationship,
 )
+from neo4j_graphrag.experimental.components.schema import GraphSchema
 from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
 from neo4j_graphrag.neo4j_queries import (
     upsert_node_query,
@@ -359,7 +360,7 @@ class ParquetWriter(KGWriter):
         self,
         graph: Neo4jGraph,
         lexical_graph_config: LexicalGraphConfig = LexicalGraphConfig(),
-        schema: Optional[dict[str, Any]] = None,
+        schema: Optional[GraphSchema] = None,
     ) -> KGWriterModel:
         """Write the knowledge graph to Parquet files via Neo4jGraphParquetFormatter.
 
@@ -367,7 +368,7 @@ class ParquetWriter(KGWriter):
             graph (Neo4jGraph): The knowledge graph to write.
             lexical_graph_config (LexicalGraphConfig): Used by the formatter for
                 lexical graph labels (e.g. __Entity__) and key properties.
-            schema (Optional[dict[str, Any]]): Optional GraphSchema as a dictionary for
+            schema (Optional[GraphSchema]): Optional GraphSchema for
                 UNIQUENESS, KEY, and EXISTENCE constraints. Drives Parquet column metadata
                 (``is_unique`` vs ``is_primary_key``). If not provided, node files use ``__id__``
                 as the only primary-key column.
