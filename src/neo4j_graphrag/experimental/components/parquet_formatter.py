@@ -89,11 +89,6 @@ def _constraint_relationship_type_unset(constraint: ConstraintType) -> bool:
     return rt is None or (isinstance(rt, str) and rt.strip() == "")
 
 
-def _resolve_constraint_property_names(constraint: ConstraintType) -> list[str]:
-    """Resolve property names from a ConstraintType (always populated via model validator)."""
-    return list(constraint.property_names)
-
-
 def get_uniqueness_property_names_for_node_type(
     schema: Optional[GraphSchema], node_label: str
 ) -> list[str]:
@@ -106,7 +101,7 @@ def get_uniqueness_property_names_for_node_type(
             continue
         if constraint.node_type != node_label:
             continue
-        out.extend(_resolve_constraint_property_names(constraint))
+        out.extend(constraint.property_names)
     return out
 
 
@@ -124,7 +119,7 @@ def get_key_property_names_for_node_type(
             continue
         if not _constraint_relationship_type_unset(constraint):
             continue
-        out.extend(_resolve_constraint_property_names(constraint))
+        out.extend(constraint.property_names)
     return out
 
 
@@ -145,9 +140,7 @@ def get_key_constraints_for_node_type(
             continue
         if not _constraint_relationship_type_unset(constraint):
             continue
-        props = _resolve_constraint_property_names(constraint)
-        if props:
-            out.append(tuple(props))
+        out.append(constraint.property_names)
     return out
 
 
@@ -176,9 +169,7 @@ def get_uniqueness_constraints_for_node_type(
             continue
         if constraint.node_type != node_label:
             continue
-        props = _resolve_constraint_property_names(constraint)
-        if props:
-            out.append(tuple(props))
+        out.append(constraint.property_names)
     return out
 
 

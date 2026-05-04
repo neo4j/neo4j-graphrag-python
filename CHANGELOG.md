@@ -9,7 +9,7 @@
 ### Changed
 
 - Make clear in documentation that `upsert_vectors` is not for production.
-- Use typed `GraphSchema` instead of `dict[str, Any]` for improved type safety.
+- Use typed `GraphSchema` instead of `dict[str, Any]` for improved type safety in `ParquetWriter` and `KGWriter`.
 
 ### Fixed
 
