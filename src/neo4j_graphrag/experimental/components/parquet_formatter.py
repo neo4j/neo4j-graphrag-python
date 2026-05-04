@@ -22,7 +22,6 @@ sanitized for filesystem and Neo4j import compatibility (safe characters:
 from __future__ import annotations
 
 import logging
-from tkinter import constants
 import unicodedata
 import warnings
 from collections import defaultdict
@@ -30,7 +29,11 @@ from dataclasses import dataclass, field
 from io import BytesIO
 from typing import Any, DefaultDict, Optional
 
-from neo4j_graphrag.experimental.components.schema import ConstraintType, GraphConstraintType, GraphSchema
+from neo4j_graphrag.experimental.components.schema import (
+    ConstraintType,
+    GraphConstraintType,
+    GraphSchema,
+)
 from neo4j_graphrag.experimental.components.types import (
     LexicalGraphConfig,
     Neo4jGraph,
@@ -87,14 +90,8 @@ def _constraint_relationship_type_unset(constraint: ConstraintType) -> bool:
 
 
 def _resolve_constraint_property_names(constraint: ConstraintType) -> list[str]:
-    """Resolve property names from a constraint dict (``property_names`` or ``property_name``)."""
-    # ConstraintType has property_names as a list
-    if constraint.property_names:
-        return list(constraint.property_names)
-    # Backward if property_name exists
-    if hasattr(constraint, 'property_name') and constraint.property_name:
-        return [constraint.property_name]
-    return []
+    """Resolve property names from a ConstraintType (always populated via model validator)."""
+    return list(constraint.property_names)
 
 
 def get_uniqueness_property_names_for_node_type(
