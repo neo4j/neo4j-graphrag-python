@@ -36,6 +36,7 @@ from neo4j_graphrag.experimental.components.kg_writer import (
     ParquetWriter,
     batched,
 )
+from neo4j_graphrag.experimental.components.schema import GraphSchema
 from neo4j_graphrag.experimental.components.types import (
     LexicalGraphConfig,
     Neo4jGraph,
@@ -741,7 +742,9 @@ async def test_parquet_writer_relationship_joins_on_single_property_key() -> Non
             start_node_id="n1", end_node_id="n2", type="KNOWS", properties={}
         )
         graph = Neo4jGraph(nodes=[n1, n2], relationships=[rel])
-        result = await writer.run(graph=graph, schema=schema_dict)
+        result = await writer.run(
+            graph=graph, schema=GraphSchema.model_validate(schema_dict)
+        )
         assert result.status == "SUCCESS"
         assert result.metadata is not None
         rel_file = next(f for f in result.metadata["files"] if not f["is_node"])
@@ -790,7 +793,9 @@ async def test_parquet_writer_columns_uniqueness_sets_is_unique() -> None:
             properties={"email": "a@b.c", "name": "Alice"},
         )
         graph = Neo4jGraph(nodes=[node], relationships=[])
-        result = await writer.run(graph=graph, schema=schema_dict)
+        result = await writer.run(
+            graph=graph, schema=GraphSchema.model_validate(schema_dict)
+        )
         assert result.status == "SUCCESS"
         assert result.metadata is not None
         node_file = next(f for f in result.metadata["files"] if f["is_node"])
@@ -841,7 +846,9 @@ async def test_parquet_writer_columns_key_sets_is_primary_key() -> None:
             properties={"email": "a@b.c", "name": "Alice"},
         )
         graph = Neo4jGraph(nodes=[node], relationships=[])
-        result = await writer.run(graph=graph, schema=schema_dict)
+        result = await writer.run(
+            graph=graph, schema=GraphSchema.model_validate(schema_dict)
+        )
         assert result.status == "SUCCESS"
         assert result.metadata is not None
         node_file = next(f for f in result.metadata["files"] if f["is_node"])
@@ -889,7 +896,9 @@ async def test_parquet_writer_composite_key_constraint() -> None:
             properties={"firstname": "John", "surname": "Smith", "age": 42},
         )
         graph = Neo4jGraph(nodes=[node], relationships=[])
-        result = await writer.run(graph=graph, schema=schema_dict)
+        result = await writer.run(
+            graph=graph, schema=GraphSchema.model_validate(schema_dict)
+        )
         assert result.status == "SUCCESS"
         assert result.metadata is not None
         node_file = next(f for f in result.metadata["files"] if f["is_node"])
@@ -946,7 +955,9 @@ async def test_parquet_writer_composite_uniqueness_constraint() -> None:
             properties={"title": "Neo4j in Action", "year": 2024, "isbn": "123"},
         )
         graph = Neo4jGraph(nodes=[node], relationships=[])
-        result = await writer.run(graph=graph, schema=schema_dict)
+        result = await writer.run(
+            graph=graph, schema=GraphSchema.model_validate(schema_dict)
+        )
         assert result.status == "SUCCESS"
         assert result.metadata is not None
         node_file = next(f for f in result.metadata["files"] if f["is_node"])
