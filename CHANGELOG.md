@@ -5,6 +5,7 @@
 ### Added
 
 - Added `close` and `aclose` methods to `LLMBase` to gracefully close resources.
+- Added GoogleGenAI (via `google-genai` SDK): includes `GeminiLLM` (generation/tool calling), `GeminiEmbedder` (embeddings), and integration examples/docs.
 
 ### Changed
 
