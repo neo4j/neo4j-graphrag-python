@@ -2,6 +2,8 @@
 
 ## Next
 
+## 1.16.0
+
 ### Added
 
 - Added `close` and `aclose` methods to `LLMBase` to gracefully close resources.
