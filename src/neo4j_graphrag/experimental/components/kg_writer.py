@@ -131,10 +131,12 @@ class KGWriterModel(DataModel):
               Each file entry includes ``columns``: a list of dicts with ``name``, ``type``,
               ``is_primary_key``, and ``is_unique`` (KEY / synthetic ``__id__`` / ``from``/``to``
               vs UNIQUENESS constraints per :class:`~neo4j_graphrag.experimental.components.schema.GraphSchema`).
-              Node files include a ``constraints`` list with at least one single-property ``KEY``
-              (``__id__`` is injected when the schema has none). Relationship files include
-              ``start_node_primary_keys`` / ``end_node_primary_keys`` as a one-element list:
-              the first single-property schema ``KEY`` for that label, or ``__id__``.
+              Node files include a ``constraints`` list with ``KEY``, ``UNIQUENESS``, and node-scoped
+              ``EXISTENCE`` entries (grouped ``properties`` lists), plus at least one single-property
+              ``KEY`` (``__id__`` is injected when the schema has none). Relationship files do not
+              include a ``constraints`` list; they include ``start_node_primary_keys`` /
+              ``end_node_primary_keys`` as a one-element list: the first single-property schema
+              ``KEY`` for that label, or ``__id__``.
     """
 
     status: Literal["SUCCESS", "FAILURE"]
@@ -370,8 +372,9 @@ class ParquetWriter(KGWriter):
                 lexical graph labels (e.g. __Entity__) and key properties.
             schema (Optional[GraphSchema]): Optional GraphSchema for
                 UNIQUENESS, KEY, and EXISTENCE constraints. Drives Parquet column metadata
-                (``is_unique`` vs ``is_primary_key``). If not provided, node files use ``__id__``
-                as the only primary-key column.
+                (``is_unique`` vs ``is_primary_key`` from KEY/UNIQUENESS only). Node-scoped
+                EXISTENCE constraints appear in each node file's ``constraints`` metadata.
+                If not provided, node files use ``__id__`` as the only primary-key column.
         """
         try:
             formatter = Neo4jGraphParquetFormatter(schema=schema)
@@ -421,6 +424,10 @@ class ParquetWriter(KGWriter):
                 for props in meta.uniqueness_constraints or []:
                     constraints_meta.append(
                         {"type": "UNIQUENESS", "properties": list(props)}
+                    )
+                for props in meta.existence_constraints or []:
+                    constraints_meta.append(
+                        {"type": "EXISTENCE", "properties": list(props)}
                     )
                 file_entry: dict[str, Any] = {
                     "name": name,

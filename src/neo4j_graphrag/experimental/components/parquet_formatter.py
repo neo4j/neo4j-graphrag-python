@@ -173,6 +173,24 @@ def get_uniqueness_constraints_for_node_type(
     return out
 
 
+def get_existence_constraints_for_node_type(
+    schema: Optional[GraphSchema], node_label: str
+) -> list[tuple[str, ...]]:
+    """EXISTENCE constraints for a node label (each tuple has exactly one property)."""
+    if not schema:
+        return []
+    out: list[tuple[str, ...]] = []
+    for constraint in schema.constraints:
+        if constraint.type != GraphConstraintType.EXISTENCE:
+            continue
+        if constraint.node_type != node_label:
+            continue
+        if not _constraint_relationship_type_unset(constraint):
+            continue
+        out.append(constraint.property_names)
+    return out
+
+
 def enrich_key_constraints_for_node_type(
     schema: Optional[GraphSchema], node_label: str
 ) -> list[tuple[str, ...]]:
@@ -269,6 +287,7 @@ class FileMetadata:
     # Grouped constraint metadata (preserves composite grouping)
     key_constraints: Optional[list[tuple[str, ...]]] = None
     uniqueness_constraints: Optional[list[tuple[str, ...]]] = None
+    existence_constraints: Optional[list[tuple[str, ...]]] = None
 
 
 @dataclass
@@ -723,6 +742,9 @@ class Neo4jGraphParquetFormatter:
                     ),
                     key_constraints=enriched_keys,
                     uniqueness_constraints=get_uniqueness_constraints_for_node_type(
+                        self.schema, label
+                    ),
+                    existence_constraints=get_existence_constraints_for_node_type(
                         self.schema, label
                     ),
                 )

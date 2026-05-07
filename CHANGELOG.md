@@ -5,6 +5,7 @@
 ### Added
 
 - Added `close` and `aclose` methods to `LLMBase` to gracefully close resources.
+- Experimental: `ParquetWriter` node file `constraints` metadata now includes `EXISTENCE` constraints from `GraphSchema` (alongside existing `KEY` and `UNIQUENESS` entries).
 
 ### Changed
 

@@ -977,6 +977,133 @@ async def test_parquet_writer_composite_uniqueness_constraint() -> None:
 
 
 @pytest.mark.asyncio
+async def test_parquet_writer_existence_constraint_in_metadata() -> None:
+    """Node-scoped EXISTENCE appears in structured constraints; synthetic KEY on __id__ remains."""
+    pytest.importorskip("pyarrow")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out = Path(tmpdir)
+        dest = _LocalParquetDestination(out)
+        writer = ParquetWriter(
+            nodes_dest=dest,
+            relationships_dest=dest,
+            collision_handler=FilenameCollisionHandler(),
+        )
+        schema_dict: dict[str, Any] = {
+            "node_types": [
+                {
+                    "label": "Person",
+                    "properties": [
+                        {"name": "name", "type": "STRING"},
+                        {"name": "email", "type": "STRING"},
+                    ],
+                }
+            ],
+            "constraints": [
+                {
+                    "type": "EXISTENCE",
+                    "node_type": "Person",
+                    "property_names": ["name"],
+                    "relationship_type": None,
+                }
+            ],
+        }
+        node = Neo4jNode(
+            id="n1",
+            label="Person",
+            properties={"name": "Alice", "email": "a@b.c"},
+        )
+        graph = Neo4jGraph(nodes=[node], relationships=[])
+        result = await writer.run(
+            graph=graph, schema=GraphSchema.model_validate(schema_dict)
+        )
+        assert result.status == "SUCCESS"
+        assert result.metadata is not None
+        node_file = next(f for f in result.metadata["files"] if f["is_node"])
+        existence_cs = [c for c in node_file["constraints"] if c["type"] == "EXISTENCE"]
+        assert existence_cs == [{"type": "EXISTENCE", "properties": ["name"]}]
+        key_cs = [c for c in node_file["constraints"] if c["type"] == "KEY"]
+        assert key_cs == [{"type": "KEY", "properties": [INTERNAL_ID_PROPERTY]}]
+        cols = {c["name"]: c for c in node_file["columns"]}
+        assert cols["name"]["is_primary_key"] is False
+        assert cols["name"]["is_unique"] is False
+
+
+@pytest.mark.asyncio
+async def test_parquet_writer_key_uniqueness_existence_constraints_metadata() -> None:
+    """KEY, UNIQUENESS, and EXISTENCE all appear in constraints; EXISTENCE does not alter column flags."""
+    pytest.importorskip("pyarrow")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out = Path(tmpdir)
+        dest = _LocalParquetDestination(out)
+        writer = ParquetWriter(
+            nodes_dest=dest,
+            relationships_dest=dest,
+            collision_handler=FilenameCollisionHandler(),
+        )
+        schema_dict: dict[str, Any] = {
+            "node_types": [
+                {
+                    "label": "Person",
+                    "properties": [
+                        {"name": "email", "type": "STRING"},
+                        {"name": "external_id", "type": "STRING"},
+                        {"name": "name", "type": "STRING"},
+                    ],
+                }
+            ],
+            "constraints": [
+                {
+                    "type": "KEY",
+                    "node_type": "Person",
+                    "property_names": ["email"],
+                    "relationship_type": None,
+                },
+                {
+                    "type": "UNIQUENESS",
+                    "node_type": "Person",
+                    "property_names": ["external_id"],
+                    "relationship_type": None,
+                },
+                {
+                    "type": "EXISTENCE",
+                    "node_type": "Person",
+                    "property_names": ["name"],
+                    "relationship_type": None,
+                },
+            ],
+        }
+        node = Neo4jNode(
+            id="n1",
+            label="Person",
+            properties={
+                "email": "a@b.c",
+                "external_id": "ext-1",
+                "name": "Alice",
+            },
+        )
+        graph = Neo4jGraph(nodes=[node], relationships=[])
+        result = await writer.run(
+            graph=graph, schema=GraphSchema.model_validate(schema_dict)
+        )
+        assert result.status == "SUCCESS"
+        assert result.metadata is not None
+        node_file = next(f for f in result.metadata["files"] if f["is_node"])
+        cs = node_file["constraints"]
+        assert {"type": "KEY", "properties": ["email"]} in cs
+        assert {"type": "UNIQUENESS", "properties": ["external_id"]} in cs
+        assert {"type": "EXISTENCE", "properties": ["name"]} in cs
+        cols = {c["name"]: c for c in node_file["columns"]}
+        assert cols["email"]["is_primary_key"] is True
+        assert cols["email"]["is_unique"] is False
+        assert cols["external_id"]["is_primary_key"] is False
+        assert cols["external_id"]["is_unique"] is True
+        assert cols["name"]["is_primary_key"] is False
+        assert cols["name"]["is_unique"] is False
+
+
+@pytest.mark.asyncio
 async def test_parquet_writer_run_empty_graph() -> None:
     """ParquetWriter accepts an empty graph and writes no files."""
     pytest.importorskip("pyarrow")
