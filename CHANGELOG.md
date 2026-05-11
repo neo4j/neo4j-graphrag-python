@@ -2,13 +2,17 @@
 
 ## Next
 
+## 1.16.0
+
 ### Added
 
 - Added `close` and `aclose` methods to `LLMBase` to gracefully close resources.
+- Experimental: `ParquetWriter` node file `constraints` metadata now includes `EXISTENCE` constraints from `GraphSchema` (alongside existing `KEY` and `UNIQUENESS` entries).
 
 ### Changed
 
 - Make clear in documentation that `upsert_vectors` is not for production.
+- Use typed `GraphSchema` instead of `dict[str, Any]` for improved type safety in `ParquetWriter` and `KGWriter`.
 
 ### Fixed
 
