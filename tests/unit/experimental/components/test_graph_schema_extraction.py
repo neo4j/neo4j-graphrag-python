@@ -17,9 +17,6 @@
 
 from __future__ import annotations
 
-import pytest
-
-from neo4j_graphrag.exceptions import SchemaExtractionError
 from neo4j_graphrag.experimental.components.graph_schema_extraction import (
     ExtractedConstraintType,
     ExtractedNodeType,
@@ -53,6 +50,21 @@ def test_wire_extraction_constraints_empty_and_null_become_none() -> None:
     assert out[1]["relationship_type"] is None
 
 
+def test_wire_extraction_constraints_nulls_relationship_type_for_uniqueness() -> None:
+    """UNIQUENESS constraints always have ``relationship_type`` nulled out, even when the LLM emits a non-empty value."""
+    out = wire_extraction_constraints_for_graph_schema(
+        [
+            {
+                "type": "UNIQUENESS",
+                "node_type": "Person",
+                "property_names": ["id"],
+                "relationship_type": "KNOWS",
+            },
+        ]
+    )
+    assert out[0]["relationship_type"] is None
+
+
 def test_wire_extraction_constraints_preserves_relationship_scoped_existence() -> None:
     out = wire_extraction_constraints_for_graph_schema(
         [
@@ -67,8 +79,8 @@ def test_wire_extraction_constraints_preserves_relationship_scoped_existence() -
     assert out[0]["relationship_type"] == "KNOWS"
 
 
-def test_uniqueness_with_relationship_type_fails_at_graph_schema_validation() -> None:
-    """If a bad constraint survives extraction filters, :class:`ConstraintType` rejects it."""
+def test_uniqueness_with_relationship_type_is_sanitized_by_wire_conversion() -> None:
+    """A stray ``relationship_type`` on a UNIQUENESS constraint is nulled out before runtime validation."""
     dto = GraphSchemaExtractionOutput(
         node_types=[
             ExtractedNodeType(
@@ -87,8 +99,10 @@ def test_uniqueness_with_relationship_type_fails_at_graph_schema_validation() ->
             ),
         ],
     )
-    with pytest.raises(SchemaExtractionError):
-        GraphSchema.from_extraction_output(dto)
+    gs = GraphSchema.from_extraction_output(dto)
+    assert len(gs.constraints) == 1
+    assert gs.constraints[0].relationship_type is None
+    assert gs.constraints[0].node_type == "Person"
 
 
 def test_invalid_constraints_dropped_by_extraction_filters_without_error() -> None:
