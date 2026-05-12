@@ -56,7 +56,9 @@ def test_wire_extraction_constraints_drops_relationship_type_for_uniqueness() ->
         assert "relationship_type" not in entry
 
 
-def test_wire_extraction_constraints_empty_relationship_type_becomes_none_for_non_uniqueness() -> None:
+def test_wire_extraction_constraints_empty_relationship_type_becomes_none_for_non_uniqueness() -> (
+    None
+):
     """For non-UNIQUENESS constraints, empty/null ``relationship_type`` becomes ``None``."""
     out = wire_extraction_constraints_for_graph_schema(
         [
