@@ -28,8 +28,8 @@ from neo4j_graphrag.experimental.components.graph_schema_extraction import (
 from neo4j_graphrag.experimental.components.schema import GraphSchema, Pattern
 
 
-def test_wire_extraction_constraints_empty_and_null_become_none() -> None:
-    """Maps ``\"\"`` and legacy ``null`` to ``None`` for :class:`ConstraintType`."""
+def test_wire_extraction_constraints_drops_relationship_type_for_uniqueness() -> None:
+    """UNIQUENESS constraints always have ``relationship_type`` removed entirely, regardless of its emitted value."""
     out = wire_extraction_constraints_for_graph_schema(
         [
             {
@@ -44,25 +44,38 @@ def test_wire_extraction_constraints_empty_and_null_become_none() -> None:
                 "property_names": ["id"],
                 "relationship_type": None,
             },
-        ]
-    )
-    assert out[0]["relationship_type"] is None
-    assert out[1]["relationship_type"] is None
-
-
-def test_wire_extraction_constraints_nulls_relationship_type_for_uniqueness() -> None:
-    """UNIQUENESS constraints always have ``relationship_type`` nulled out, even when the LLM emits a non-empty value."""
-    out = wire_extraction_constraints_for_graph_schema(
-        [
             {
                 "type": "UNIQUENESS",
-                "node_type": "Person",
-                "property_names": ["id"],
+                "node_type": "Book",
+                "property_names": ["isbn"],
                 "relationship_type": "KNOWS",
             },
         ]
     )
+    for entry in out:
+        assert "relationship_type" not in entry
+
+
+def test_wire_extraction_constraints_empty_relationship_type_becomes_none_for_non_uniqueness() -> None:
+    """For non-UNIQUENESS constraints, empty/null ``relationship_type`` becomes ``None``."""
+    out = wire_extraction_constraints_for_graph_schema(
+        [
+            {
+                "type": "EXISTENCE",
+                "node_type": "Person",
+                "property_names": ["name"],
+                "relationship_type": "",
+            },
+            {
+                "type": "KEY",
+                "node_type": "Person",
+                "property_names": ["id"],
+                "relationship_type": None,
+            },
+        ]
+    )
     assert out[0]["relationship_type"] is None
+    assert out[1]["relationship_type"] is None
 
 
 def test_wire_extraction_constraints_preserves_relationship_scoped_existence() -> None:
