@@ -2,6 +2,10 @@
 
 ## Next
 
+### Fixed
+
+- Experimental: `wire_extraction_constraints_for_graph_schema` now removes `relationship_type` whenever `type == "UNIQUENESS"`, preventing a `validate_constraint_shape` `ValueError` when an LLM emits a stray `relationship_type` alongside a UNIQUENESS constraint (only node-level UNIQUENESS is supported).
+
 ## 1.16.0
 
 ### Added
