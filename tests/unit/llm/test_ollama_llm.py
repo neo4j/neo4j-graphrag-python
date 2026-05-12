@@ -651,6 +651,81 @@ def test_ollama_llm_invoke_with_tools_error(mock_import: Mock, test_tool: Tool) 
         llm.invoke_with_tools("my text", tools)
 
 
+@pytest.mark.asyncio
+@patch("builtins.__import__")
+async def test_ollama_llm_ainvoke_with_tools_happy_path(
+    mock_import: Mock, test_tool: Tool
+) -> None:
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+
+    mock_function = MagicMock()
+    mock_function.name = "test_tool"
+    mock_function.arguments = {"param1": "value1"}
+
+    mock_tool_call = MagicMock()
+    mock_tool_call.function = mock_function
+
+    async def mock_chat_async(*_args: Any, **_kwargs: Any) -> MagicMock:
+        return MagicMock(
+            message=MagicMock(
+                content="ollama tool response", tool_calls=[mock_tool_call]
+            )
+        )
+
+    mock_ollama.AsyncClient.return_value.chat = mock_chat_async
+
+    llm = OllamaLLM(model_name="gpt", model_params={"options": {"temperature": 0}})
+    res = await llm.ainvoke_with_tools("my text", [test_tool])
+
+    assert isinstance(res, ToolCallResponse)
+    assert len(res.tool_calls) == 1
+    assert res.tool_calls[0].name == "test_tool"
+    assert res.tool_calls[0].arguments == {"param1": "value1"}
+    assert res.content == "ollama tool response"
+
+
+@pytest.mark.asyncio
+@patch("builtins.__import__")
+async def test_ollama_llm_ainvoke_with_tools_no_tool_calls(
+    mock_import: Mock, test_tool: Tool
+) -> None:
+    """When the model returns no tool_calls, content is returned with empty tool_calls."""
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+
+    async def mock_chat_async(*_args: Any, **_kwargs: Any) -> MagicMock:
+        return MagicMock(message=MagicMock(content="plain content", tool_calls=[]))
+
+    mock_ollama.AsyncClient.return_value.chat = mock_chat_async
+
+    llm = OllamaLLM(model_name="gpt", model_params={"options": {"temperature": 0}})
+    res = await llm.ainvoke_with_tools("my text", [test_tool])
+
+    assert isinstance(res, ToolCallResponse)
+    assert res.tool_calls == []
+    assert res.content == "plain content"
+
+
+@pytest.mark.asyncio
+@patch("builtins.__import__")
+async def test_ollama_llm_ainvoke_with_tools_error(
+    mock_import: Mock, test_tool: Tool
+) -> None:
+    """ResponseError from the async client surfaces as LLMGenerationError."""
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+
+    async def mock_chat_async_error(*_args: Any, **_kwargs: Any) -> None:
+        raise ollama.ResponseError("async tool error")
+
+    mock_ollama.AsyncClient.return_value.chat = mock_chat_async_error
+
+    llm = OllamaLLM(model_name="gpt", model_params={"options": {"temperature": 0}})
+    with pytest.raises(LLMGenerationError):
+        await llm.ainvoke_with_tools("my text", [test_tool])
+
+
 class _TestModelForOllama(BaseModel):
     """Test model for structured output tests."""
 
