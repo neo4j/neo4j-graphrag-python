@@ -98,12 +98,15 @@ def wire_extraction_constraints_for_graph_schema(
     out: list[dict[str, Any]] = []
     for c in constraints:
         d = dict(c)
-        if d.get("type") == "UNIQUENESS":
+
+        rt = d.get("relationship_type")
+
+        if (
+            d.get("type") == "UNIQUENESS"
+            or rt is None
+            or (isinstance(rt, str) and rt.strip() == "")
+        ):
             d.pop("relationship_type", None)
-        else:
-            rt = d.get("relationship_type")
-            if rt is None or (isinstance(rt, str) and rt.strip() == ""):
-                d.pop("relationship_type", None)
         out.append(d)
     return out
 
