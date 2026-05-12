@@ -465,6 +465,124 @@ async def test_openai_llm_ainvoke_happy_path(mock_import: Mock) -> None:
     assert response.content == "Return text"
 
 
+@pytest.mark.asyncio
+@patch("builtins.__import__")
+@patch("json.loads")
+async def test_openai_llm_ainvoke_with_tools_happy_path(
+    mock_json_loads: Mock,
+    mock_import: Mock,
+    test_tool: Tool,
+) -> None:
+    mock_json_loads.return_value = {"param1": "value1"}
+
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    mock_function = MagicMock()
+    mock_function.name = "test_tool"
+    mock_function.arguments = '{"param1": "value1"}'
+
+    mock_tool_call = MagicMock()
+    mock_tool_call.function = mock_function
+
+    async def async_create(*args: Any, **kwargs: Any) -> MagicMock:
+        return MagicMock(
+            choices=[
+                MagicMock(
+                    message=MagicMock(
+                        content="openai tool response", tool_calls=[mock_tool_call]
+                    )
+                )
+            ],
+        )
+
+    mock_openai.AsyncOpenAI.return_value.chat.completions.create = async_create
+
+    llm = OpenAILLM(api_key="my key", model_name="gpt")
+    res = await llm.ainvoke_with_tools("my text", [test_tool])
+
+    assert isinstance(res, ToolCallResponse)
+    assert len(res.tool_calls) == 1
+    assert res.tool_calls[0].name == "test_tool"
+    assert res.tool_calls[0].arguments == {"param1": "value1"}
+    assert res.content == "openai tool response"
+
+
+@pytest.mark.asyncio
+@patch("builtins.__import__")
+async def test_openai_llm_ainvoke_with_tools_no_tool_calls(
+    mock_import: Mock, test_tool: Tool
+) -> None:
+    """When the model returns no tool_calls, content is returned as a regular response."""
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    async def async_create(*args: Any, **kwargs: Any) -> MagicMock:
+        return MagicMock(
+            choices=[MagicMock(message=MagicMock(content="plain text", tool_calls=[]))],
+        )
+
+    mock_openai.AsyncOpenAI.return_value.chat.completions.create = async_create
+
+    llm = OpenAILLM(api_key="my key", model_name="gpt")
+    res = await llm.ainvoke_with_tools("my text", [test_tool])
+
+    assert isinstance(res, ToolCallResponse)
+    assert len(res.tool_calls) == 1
+    assert res.tool_calls[0].name == ""
+    assert res.tool_calls[0].arguments == {}
+    assert res.content == "plain text"
+
+
+@pytest.mark.asyncio
+@patch("builtins.__import__")
+async def test_openai_llm_ainvoke_with_tools_invalid_arguments(
+    mock_import: Mock, test_tool: Tool
+) -> None:
+    """Malformed JSON in tool_call arguments raises LLMGenerationError."""
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    mock_function = MagicMock()
+    mock_function.name = "test_tool"
+    mock_function.arguments = "not-json"
+
+    mock_tool_call = MagicMock()
+    mock_tool_call.function = mock_function
+
+    async def async_create(*args: Any, **kwargs: Any) -> MagicMock:
+        return MagicMock(
+            choices=[
+                MagicMock(message=MagicMock(content=None, tool_calls=[mock_tool_call]))
+            ],
+        )
+
+    mock_openai.AsyncOpenAI.return_value.chat.completions.create = async_create
+
+    llm = OpenAILLM(api_key="my key", model_name="gpt")
+    with pytest.raises(LLMGenerationError):
+        await llm.ainvoke_with_tools("my text", [test_tool])
+
+
+@pytest.mark.asyncio
+@patch("builtins.__import__")
+async def test_openai_llm_ainvoke_with_tools_error(
+    mock_import: Mock, test_tool: Tool
+) -> None:
+    """OpenAIError from the async client surfaces as LLMGenerationError."""
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    async def async_create(*args: Any, **kwargs: Any) -> MagicMock:
+        raise openai.OpenAIError("async test error")
+
+    mock_openai.AsyncOpenAI.return_value.chat.completions.create = async_create
+
+    llm = OpenAILLM(api_key="my key", model_name="gpt")
+    with pytest.raises(LLMGenerationError):
+        await llm.ainvoke_with_tools("my text", [test_tool])
+
+
 # LLM Interface V2 Tests
 
 
