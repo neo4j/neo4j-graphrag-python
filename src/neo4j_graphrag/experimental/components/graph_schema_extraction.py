@@ -91,12 +91,15 @@ def wire_extraction_constraints_for_graph_schema(
     """Map extraction constraint dicts to values compatible with :class:`~neo4j_graphrag.experimental.components.schema.ConstraintType`.
 
     Empty ``relationship_type`` (the wire \"unset\" sentinel) becomes ``None`` for runtime validation.
+    UNIQUENESS constraints always have ``relationship_type`` nulled out, since only node-level UNIQUENESS is supported.
     """
     out: list[dict[str, Any]] = []
     for c in constraints:
         d = dict(c)
         rt = d.get("relationship_type")
-        if rt is None or (isinstance(rt, str) and rt.strip() == ""):
+        if d.get("type") == "UNIQUENESS":
+            d["relationship_type"] = None
+        elif rt is None or (isinstance(rt, str) and rt.strip() == ""):
             d["relationship_type"] = None
         out.append(d)
     return out
