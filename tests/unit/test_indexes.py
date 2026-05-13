@@ -14,19 +14,24 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import neo4j.exceptions
 import pytest
 from neo4j_graphrag.exceptions import Neo4jIndexError, Neo4jInsertionError
 from neo4j_graphrag.indexes import (
+    async_upsert_vector,
+    async_upsert_vector_on_relationship,
     create_fulltext_index,
     create_vector_index,
     drop_index_if_exists,
+    retrieve_fulltext_index_info,
+    retrieve_vector_index_info,
     upsert_vector,
     upsert_vector_on_relationship,
     upsert_vectors,
 )
+from neo4j_graphrag.types import EntityType
 
 
 def test_create_vector_index_happy_path(driver: MagicMock) -> None:
@@ -123,15 +128,9 @@ def test_drop_index_if_exists(driver: MagicMock) -> None:
 def test_drop_index_if_exists_raises_error_with_neo4j_client_error(
     driver: MagicMock,
 ) -> None:
-    drop_query = "DROP INDEX $name IF EXISTS"
-
-    drop_index_if_exists(driver, "my-index")
-
-    driver.execute_query.assert_called_once_with(
-        drop_query,
-        {"name": "my-index"},
-        database_=None,
-    )
+    driver.execute_query.side_effect = neo4j.exceptions.ClientError
+    with pytest.raises(Neo4jIndexError):
+        drop_index_if_exists(driver, "my-index")
 
 
 def test_create_fulltext_index_happy_path(driver: MagicMock) -> None:
@@ -427,3 +426,100 @@ def test_upsert_vectors_inconsistent_embedding_sizes(driver: MagicMock) -> None:
             neo4j_database="neo4j",
         )
     assert str(exc_info.value) == "All embeddings must be of the same size"
+
+
+def test_upsert_vectors_happy_path_node(driver: MagicMock) -> None:
+    upsert_vectors(
+        driver=driver,
+        ids=["1", "2"],
+        embedding_property="embedding",
+        embeddings=[[1.0, 2.0], [3.0, 4.0]],
+        entity_type=EntityType.NODE,
+    )
+    driver.execute_query.assert_called_once()
+
+
+def test_upsert_vectors_happy_path_relationship(driver: MagicMock) -> None:
+    upsert_vectors(
+        driver=driver,
+        ids=["1", "2"],
+        embedding_property="embedding",
+        embeddings=[[1.0, 2.0], [3.0, 4.0]],
+        entity_type=EntityType.RELATIONSHIP,
+    )
+    driver.execute_query.assert_called_once()
+
+
+def test_upsert_vectors_raises_neo4j_insertion_error(driver: MagicMock) -> None:
+    driver.execute_query.side_effect = neo4j.exceptions.ClientError
+    with pytest.raises(Neo4jInsertionError):
+        upsert_vectors(
+            driver=driver,
+            ids=["1"],
+            embedding_property="embedding",
+            embeddings=[[1.0, 2.0, 3.0]],
+        )
+
+
+@pytest.mark.asyncio
+async def test_async_upsert_vector_happy_path() -> None:
+    async_driver = AsyncMock(spec=neo4j.AsyncDriver)
+    await async_upsert_vector(async_driver, 1, "embedding", [1.0, 2.0, 3.0])
+    async_driver.execute_query.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_async_upsert_vector_raises_neo4j_insertion_error() -> None:
+    async_driver = AsyncMock(spec=neo4j.AsyncDriver)
+    async_driver.execute_query.side_effect = neo4j.exceptions.ClientError
+    with pytest.raises(Neo4jInsertionError):
+        await async_upsert_vector(async_driver, 1, "embedding", [1.0, 2.0, 3.0])
+
+
+@pytest.mark.asyncio
+async def test_async_upsert_vector_on_relationship_happy_path() -> None:
+    async_driver = AsyncMock(spec=neo4j.AsyncDriver)
+    await async_upsert_vector_on_relationship(
+        async_driver, 1, "embedding", [1.0, 2.0, 3.0]
+    )
+    async_driver.execute_query.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_async_upsert_vector_on_relationship_raises_neo4j_insertion_error() -> (
+    None
+):
+    async_driver = AsyncMock(spec=neo4j.AsyncDriver)
+    async_driver.execute_query.side_effect = neo4j.exceptions.ClientError
+    with pytest.raises(Neo4jInsertionError):
+        await async_upsert_vector_on_relationship(
+            async_driver, 1, "embedding", [1.0, 2.0, 3.0]
+        )
+
+
+def test_retrieve_vector_index_info_found(driver: MagicMock) -> None:
+    mock_record = MagicMock()
+    mock_record.get.return_value = "my-index"
+    driver.execute_query.return_value.records = [mock_record]
+    result = retrieve_vector_index_info(driver, "my-index", "Document", "embedding")
+    assert result == mock_record
+
+
+def test_retrieve_vector_index_info_not_found(driver: MagicMock) -> None:
+    driver.execute_query.return_value.records = []
+    result = retrieve_vector_index_info(driver, "my-index", "Document", "embedding")
+    assert result is None
+
+
+def test_retrieve_fulltext_index_info_found(driver: MagicMock) -> None:
+    mock_record = MagicMock()
+    mock_record.get.return_value = "my-index"
+    driver.execute_query.return_value.records = [mock_record]
+    result = retrieve_fulltext_index_info(driver, "my-index", "Document", ["text"])
+    assert result == mock_record
+
+
+def test_retrieve_fulltext_index_info_not_found(driver: MagicMock) -> None:
+    driver.execute_query.return_value.records = []
+    result = retrieve_fulltext_index_info(driver, "my-index", "Document", ["text"])
+    assert result is None

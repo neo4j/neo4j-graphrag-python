@@ -20,13 +20,16 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 import pytest
 from vertexai.generative_models import (
     Content,
+    FunctionCall,
     GenerationResponse,
     Part,
+    ResponseValidationError,
 )
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.types import ToolCallResponse
 from neo4j_graphrag.llm.vertexai_llm import VertexAILLM
+from neo4j_graphrag.message_history import InMemoryMessageHistory
 from neo4j_graphrag.tool import Tool
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.rate_limit import NoOpRateLimitHandler
@@ -647,3 +650,220 @@ async def test_vertexai_ainvoke_v2_rate_limit_handler_called(
 
     assert response.content == "Hi there!"
     spy_handler.handle_async.assert_called_once()
+
+
+# --- Additional coverage tests ---
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_invoke_invalid_input_type(_GenerativeModelMock: MagicMock) -> None:
+    """Line 181: invoke raises ValueError for non-str, non-list input."""
+    llm = VertexAILLM(model_name="gemini-1.5-flash-001")
+    with pytest.raises(ValueError, match="Invalid input type for invoke method"):
+        llm.invoke(123)  # type: ignore[arg-type]
+
+
+@pytest.mark.asyncio
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+async def test_vertexai_ainvoke_invalid_input_type(
+    _GenerativeModelMock: MagicMock,
+) -> None:
+    """Line 198: ainvoke raises ValueError for non-str, non-list input."""
+    llm = VertexAILLM(model_name="gemini-1.5-flash-001")
+    with pytest.raises(ValueError, match="Invalid input type for ainvoke method"):
+        await llm.ainvoke(123)  # type: ignore[arg-type]
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_invoke_v1_with_message_history_object(
+    GenerativeModelMock: MagicMock,
+) -> None:
+    """Line 247: MessageHistory branch in __invoke_v1."""
+    mock_response = Mock()
+    mock_response.text = "response"
+    mock_response.usage_metadata = None
+    GenerativeModelMock.return_value.generate_content.return_value = mock_response
+
+    history = InMemoryMessageHistory(
+        messages=[
+            {"role": "user", "content": "prev question"},
+            {"role": "assistant", "content": "prev answer"},
+        ]
+    )
+    llm = VertexAILLM(model_name="gemini-1.5-flash-001")
+    response = llm.invoke("hello", message_history=history)
+    assert response.content == "response"
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_invoke_v1_response_validation_error(
+    GenerativeModelMock: MagicMock,
+) -> None:
+    """Line 252: ResponseValidationError in __invoke_v1 is wrapped as LLMGenerationError."""
+    err = ResponseValidationError("blocked", MagicMock(), [MagicMock()])
+    GenerativeModelMock.return_value.generate_content.side_effect = err
+    llm = VertexAILLM(model_name="gemini-1.5-flash-001")
+    with pytest.raises(LLMGenerationError):
+        llm.invoke("hello")
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_invoke_v2_response_validation_error(
+    GenerativeModelMock: MagicMock,
+) -> None:
+    """Lines 284-285: ResponseValidationError in __invoke_v2 is wrapped as LLMGenerationError."""
+    err = ResponseValidationError("blocked", MagicMock(), [MagicMock()])
+    GenerativeModelMock.return_value.generate_content.side_effect = err
+    messages: List[LLMMessage] = [{"role": "user", "content": "hello"}]
+    llm = VertexAILLM(model_name="gemini-1.5-flash-001")
+    with pytest.raises(LLMGenerationError):
+        llm.invoke(messages)
+
+
+@pytest.mark.asyncio
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+async def test_vertexai_ainvoke_v1_with_message_history_object(
+    GenerativeModelMock: MagicMock,
+) -> None:
+    """Line 307: MessageHistory branch in __ainvoke_v1."""
+    mock_response = AsyncMock()
+    mock_response.text = "async response"
+    GenerativeModelMock.return_value.generate_content_async = AsyncMock(
+        return_value=mock_response
+    )
+
+    history = InMemoryMessageHistory(
+        messages=[
+            {"role": "user", "content": "prev question"},
+            {"role": "assistant", "content": "prev answer"},
+        ]
+    )
+    llm = VertexAILLM(model_name="gemini-1.5-flash-001")
+    response = await llm.ainvoke("hello", message_history=history)
+    assert response.content == "async response"
+
+
+@pytest.mark.asyncio
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+async def test_vertexai_ainvoke_v1_response_validation_error(
+    GenerativeModelMock: MagicMock,
+) -> None:
+    """Lines 314-315: ResponseValidationError in __ainvoke_v1 is wrapped as LLMGenerationError."""
+    err = ResponseValidationError("blocked", MagicMock(), [MagicMock()])
+    GenerativeModelMock.return_value.generate_content_async = AsyncMock(side_effect=err)
+    llm = VertexAILLM(model_name="gemini-1.5-flash-001")
+    with pytest.raises(LLMGenerationError):
+        await llm.ainvoke("hello")
+
+
+@pytest.mark.asyncio
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+async def test_vertexai_ainvoke_v2_response_validation_error(
+    GenerativeModelMock: MagicMock,
+) -> None:
+    """Lines 347-348: ResponseValidationError in __ainvoke_v2 is wrapped as LLMGenerationError."""
+    err = ResponseValidationError("blocked", MagicMock(), [MagicMock()])
+    GenerativeModelMock.return_value.generate_content_async = AsyncMock(side_effect=err)
+    messages: List[LLMMessage] = [{"role": "user", "content": "hello"}]
+    llm = VertexAILLM(model_name="gemini-1.5-flash-001")
+    with pytest.raises(LLMGenerationError):
+        await llm.ainvoke(messages)
+
+
+@pytest.mark.asyncio
+@patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM._parse_tool_response")
+@patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM._acall_llm")
+async def test_vertexai_ainvoke_with_tools_async(
+    mock_acall_llm: AsyncMock,
+    mock_parse_tool: Mock,
+    test_tool: Tool,
+) -> None:
+    """Lines 218, 372-378: ainvoke_with_tools calls __ainvoke_v1_with_tools."""
+    mock_response = MagicMock()
+    mock_acall_llm.return_value = mock_response
+    mock_parse_tool.return_value = ToolCallResponse(tool_calls=[])
+
+    llm = VertexAILLM(model_name="gemini")
+    tools = [test_tool]
+    res = await llm.ainvoke_with_tools("my text", tools)
+
+    mock_acall_llm.assert_called_once_with(
+        "my text",
+        message_history=None,
+        system_instruction=None,
+        tools=tools,
+    )
+    mock_parse_tool.assert_called_once_with(mock_response)
+    assert isinstance(res, ToolCallResponse)
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_get_llm_tools_empty(_GenerativeModelMock: MagicMock) -> None:
+    """Line 393: _get_llm_tools returns None for empty/None tools."""
+    llm = VertexAILLM(model_name="gemini")
+    assert llm._get_llm_tools(None) is None
+    assert llm._get_llm_tools([]) is None
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_get_messages_with_message_history_object(
+    _GenerativeModelMock: MagicMock,
+) -> None:
+    """Line 422: MessageHistory branch in get_messages."""
+    history = InMemoryMessageHistory(
+        messages=[
+            {"role": "user", "content": "prev question"},
+            {"role": "assistant", "content": "prev answer"},
+        ]
+    )
+    llm = VertexAILLM(model_name="gemini-1.5-flash-001")
+    messages = llm.get_messages("new question", message_history=history)
+    # 2 history messages + 1 current question = 3
+    assert len(messages) == 3
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_get_call_params_v2_with_tools(
+    _GenerativeModelMock: MagicMock, test_tool: Tool
+) -> None:
+    """Lines 515-518: _get_call_params_v2 with tools removes generation_config, sets tools/tool_config."""
+    llm = VertexAILLM(model_name="gemini")
+    contents = [Content(role="user", parts=[Part.from_text("hello")])]
+
+    with patch.object(llm, "_get_llm_tools", return_value=["my tools"]):
+        options = llm._get_call_params_v2(contents, tools=[test_tool])
+
+    assert options["tools"] == ["my tools"]
+    assert "tool_config" in options
+    assert "generation_config" not in options
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_to_tool_call(_GenerativeModelMock: MagicMock) -> None:
+    """Line 580: _to_tool_call converts a FunctionCall to ToolCall."""
+    llm = VertexAILLM(model_name="gemini")
+    mock_fc = MagicMock(spec=FunctionCall)
+    mock_fc.name = "test_function"
+    mock_fc.args = {"key": "value"}
+
+    tool_call = llm._to_tool_call(mock_fc)
+    assert tool_call.name == "test_function"
+    assert tool_call.arguments == {"key": "value"}
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_parse_tool_response(_GenerativeModelMock: MagicMock) -> None:
+    """Lines 586-587: _parse_tool_response extracts tool calls from response."""
+    llm = VertexAILLM(model_name="gemini")
+    mock_fc = MagicMock()
+    mock_fc.name = "test_function"
+    mock_fc.args = {"key": "value"}
+
+    mock_response = MagicMock(spec=GenerationResponse)
+    mock_response.candidates = [MagicMock(function_calls=[mock_fc])]
+
+    result = llm._parse_tool_response(mock_response)
+    assert isinstance(result, ToolCallResponse)
+    assert len(result.tool_calls) == 1
+    assert result.tool_calls[0].name == "test_function"
+    assert result.tool_calls[0].arguments == {"key": "value"}

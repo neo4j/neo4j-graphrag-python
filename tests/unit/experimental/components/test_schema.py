@@ -2201,3 +2201,864 @@ def test_validate_extraction_dict_to_graph_schema() -> None:
     gs = validate_extraction_dict_to_graph_schema(d)
     assert len(gs.node_types) == 1
     assert gs.node_types[0].label == "Person"
+
+
+# ============================================================
+# Additional tests for schema.py coverage
+# ============================================================
+
+
+# --- property_type_from_name returns None ---
+
+
+def test_node_type_property_type_from_name_not_found() -> None:
+    node_type = NodeType(
+        label="Person",
+        properties=[PropertyType(name="name", type="STRING")],
+    )
+    assert node_type.property_type_from_name("nonexistent") is None
+
+
+def test_relationship_type_property_type_from_name_not_found() -> None:
+    rel_type = RelationshipType(
+        label="KNOWS",
+        properties=[PropertyType(name="since", type="DATE")],
+    )
+    assert rel_type.property_type_from_name("nonexistent") is None
+
+
+# --- Pattern.__eq__ and __hash__ ---
+
+
+def test_pattern_eq_incompatible_type() -> None:
+    p = Pattern(source="A", relationship="R", target="B")
+    assert p != "not-a-pattern"
+    assert p != 42
+
+
+def test_pattern_eq_wrong_length_sequence() -> None:
+    p = Pattern(source="A", relationship="R", target="B")
+    assert p != ("A", "R")  # 2-element tuple
+    assert p != ["A", "R", "B", "C"]  # 4-element list
+
+
+def test_pattern_hash() -> None:
+    p = Pattern(source="A", relationship="R", target="B")
+    p2 = Pattern(source="A", relationship="R", target="B")
+    assert hash(p) == hash(p2)
+    # Can be stored in a set
+    s = {p, p2}
+    assert len(s) == 1
+
+
+# --- ConstraintType migration: non-dict input ---
+
+
+def test_constraint_type_migrate_non_dict_input() -> None:
+    existing = ConstraintType(
+        type=GraphConstraintType.UNIQUENESS,
+        node_type="Person",
+        property_names=("name",),
+    )
+    # Passing an existing ConstraintType to model_validate triggers the non-dict branch
+    result = ConstraintType.model_validate(existing)
+    assert result.node_type == "Person"
+
+
+def test_constraint_type_migrate_property_names_as_string() -> None:
+    # The migration converts the string locally for dedup logic, but Pydantic
+    # then fails because the dict still holds the raw string. This test
+    # exercises lines 301-302 in the migration validator.
+    with pytest.raises(ValidationError):
+        ConstraintType.model_validate(
+            {
+                "type": "UNIQUENESS",
+                "node_type": "Person",
+                "property_names": "name",  # string - exercises branch but fails validation
+            }
+        )
+
+
+# --- validate_constraint_shape errors ---
+
+
+def test_constraint_type_uniqueness_without_node_type_raises() -> None:
+    with pytest.raises(ValidationError):
+        ConstraintType(
+            type=GraphConstraintType.UNIQUENESS,
+            node_type="",
+            property_names=("name",),
+        )
+
+
+def test_constraint_type_existence_with_both_node_and_rel_raises() -> None:
+    with pytest.raises(ValidationError):
+        ConstraintType(
+            type=GraphConstraintType.EXISTENCE,
+            node_type="Person",
+            relationship_type="KNOWS",
+            property_names=("name",),
+        )
+
+
+# --- _validate_existence_or_key_property_defined ---
+
+
+def test_validate_existence_undefined_node_type_raises() -> None:
+    from neo4j_graphrag.experimental.components.schema import (
+        _validate_existence_or_key_property_defined,
+    )
+
+    constraint = ConstraintType(
+        type=GraphConstraintType.EXISTENCE,
+        node_type="UnknownNode",
+        property_names=("name",),
+    )
+    with pytest.raises(SchemaValidationError, match="undefined node type"):
+        _validate_existence_or_key_property_defined(
+            constraint,
+            node_type_index={},
+            relationship_type_index={},
+            kind="EXISTENCE",
+        )
+
+
+def test_validate_existence_undefined_relationship_type_raises() -> None:
+    from neo4j_graphrag.experimental.components.schema import (
+        _validate_existence_or_key_property_defined,
+    )
+
+    constraint = ConstraintType(
+        type=GraphConstraintType.EXISTENCE,
+        relationship_type="UNKNOWN_REL",
+        property_names=("name",),
+        node_type="",
+    )
+    with pytest.raises(SchemaValidationError, match="undefined relationship type"):
+        _validate_existence_or_key_property_defined(
+            constraint,
+            node_type_index={},
+            relationship_type_index={},
+            kind="EXISTENCE",
+        )
+
+
+def test_validate_existence_undefined_relationship_property_raises() -> None:
+    from neo4j_graphrag.experimental.components.schema import (
+        _validate_existence_or_key_property_defined,
+    )
+
+    rel_type = RelationshipType(
+        label="KNOWS",
+        properties=[PropertyType(name="since", type="DATE")],
+    )
+    constraint = ConstraintType(
+        type=GraphConstraintType.EXISTENCE,
+        relationship_type="KNOWS",
+        property_names=("nonexistent",),
+        node_type="",
+    )
+    with pytest.raises(SchemaValidationError, match="undefined property"):
+        _validate_existence_or_key_property_defined(
+            constraint,
+            node_type_index={},
+            relationship_type_index={"KNOWS": rel_type},
+            kind="EXISTENCE",
+        )
+
+
+# --- GraphSchema.model_json_schema ---
+
+
+def test_graph_schema_model_json_schema() -> None:
+    schema = GraphSchema.model_json_schema()
+    assert isinstance(schema, dict)
+    assert "title" in schema or "properties" in schema
+
+
+# --- GraphSchema.from_extraction_output TypeError ---
+
+
+def test_graph_schema_from_extraction_output_wrong_type_raises() -> None:
+    with pytest.raises(TypeError, match="Expected GraphSchemaExtractionOutput"):
+        GraphSchema.from_extraction_output("not a dto")  # type: ignore
+
+
+# --- store_as_json / store_as_yaml deprecation ---
+
+
+def test_graph_schema_store_as_json_deprecated(tmp_path: Any) -> None:
+    import warnings
+
+    gs = GraphSchema(
+        node_types=(
+            NodeType(
+                label="Person",
+                properties=[PropertyType(name="name", type="STRING")],
+            ),
+        ),
+    )
+    file_path = tmp_path / "schema.json"
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        gs.store_as_json(str(file_path))
+    assert any("save" in str(warning.message).lower() for warning in w)
+    assert file_path.exists()
+
+
+def test_graph_schema_store_as_yaml_deprecated(tmp_path: Any) -> None:
+    import warnings
+
+    gs = GraphSchema(
+        node_types=(
+            NodeType(
+                label="Person",
+                properties=[PropertyType(name="name", type="STRING")],
+            ),
+        ),
+    )
+    file_path = tmp_path / "schema.yaml"
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        gs.store_as_yaml(str(file_path))
+    assert any("save" in str(warning.message).lower() for warning in w)
+    assert file_path.exists()
+
+
+# --- GraphSchema.from_file ValidationError ---
+
+
+def test_graph_schema_from_file_invalid_raises_schema_validation_error(
+    tmp_path: Any,
+) -> None:
+    import json as _json
+
+    file_path = tmp_path / "schema.json"
+    # A UNIQUENESS constraint with empty node_type triggers a ValidationError in GraphSchema
+    file_path.write_text(
+        _json.dumps(
+            {
+                "node_types": [
+                    {
+                        "label": "Person",
+                        "properties": [{"name": "name", "type": "STRING"}],
+                    }
+                ],
+                "constraints": [
+                    {
+                        "type": "UNIQUENESS",
+                        "node_type": "",
+                        "property_names": ["name"],
+                    }
+                ],
+            }
+        )
+    )
+    with pytest.raises(SchemaValidationError):
+        GraphSchema.from_file(str(file_path))
+
+
+# --- BaseSchemaBuilder.run() NotImplementedError ---
+
+
+@pytest.mark.asyncio
+async def test_base_schema_builder_run_raises_not_implemented() -> None:
+    from neo4j_graphrag.experimental.components.schema import BaseSchemaBuilder
+
+    builder = BaseSchemaBuilder()
+    with pytest.raises(NotImplementedError):
+        await builder.run()
+
+
+# --- SchemaBuilder.create_schema_model ValidationError wrapping ---
+
+
+def test_schema_builder_create_schema_model_validation_error() -> None:
+    builder = SchemaBuilder()
+    with pytest.raises(SchemaValidationError):
+        # Patterns without relationship_types should fail GraphSchema validation
+        builder.create_schema_model(
+            node_types=[
+                NodeType(
+                    label="Person",
+                    properties=[PropertyType(name="name", type="STRING")],
+                )
+            ],
+            patterns=[("Person", "KNOWS", "Person")],
+        )
+
+
+# --- _extraction_filter_invalid_patterns ---
+
+
+def test_extraction_filter_invalid_patterns_no_node_types() -> None:
+    from neo4j_graphrag.experimental.components.schema import (
+        _extraction_filter_invalid_patterns,
+    )
+
+    result = _extraction_filter_invalid_patterns([("A", "R", "B")], node_types=[])
+    assert result == []
+
+
+def test_extraction_filter_invalid_patterns_no_rel_types() -> None:
+    from neo4j_graphrag.experimental.components.schema import (
+        _extraction_filter_invalid_patterns,
+    )
+
+    result = _extraction_filter_invalid_patterns(
+        [("A", "R", "B")],
+        node_types=[{"label": "A"}, {"label": "B"}],
+        relationship_types=[],
+    )
+    assert result == []
+
+
+def test_extraction_filter_invalid_patterns_dict_missing_keys() -> None:
+    from neo4j_graphrag.experimental.components.schema import (
+        _extraction_filter_invalid_patterns,
+    )
+
+    result = _extraction_filter_invalid_patterns(
+        [{"src": "A", "rel": "R", "tgt": "B"}],  # missing required keys
+        node_types=[{"label": "A"}, {"label": "B"}],
+        relationship_types=[{"label": "R"}],
+    )
+    assert result == []
+
+
+def test_extraction_filter_invalid_patterns_wrong_length_list() -> None:
+    from neo4j_graphrag.experimental.components.schema import (
+        _extraction_filter_invalid_patterns,
+    )
+
+    result = _extraction_filter_invalid_patterns(
+        [("A", "R")],  # only 2 elements
+        node_types=[{"label": "A"}],
+        relationship_types=[{"label": "R"}],
+    )
+    assert result == []
+
+
+def test_extraction_filter_invalid_patterns_pattern_object() -> None:
+    from neo4j_graphrag.experimental.components.schema import (
+        _extraction_filter_invalid_patterns,
+    )
+
+    pattern = Pattern(source="A", relationship="R", target="B")
+    result = _extraction_filter_invalid_patterns(
+        [pattern],
+        node_types=[{"label": "A"}, {"label": "B"}],
+        relationship_types=[{"label": "R"}],
+    )
+    assert len(result) == 1
+    assert result[0] == pattern
+
+
+def test_extraction_filter_invalid_patterns_unknown_type_skipped() -> None:
+    from neo4j_graphrag.experimental.components.schema import (
+        _extraction_filter_invalid_patterns,
+    )
+
+    result = _extraction_filter_invalid_patterns(
+        [42],  # unknown type, should be skipped
+        node_types=[{"label": "A"}],
+        relationship_types=[{"label": "R"}],
+    )
+    assert result == []
+
+
+# --- _extraction_filter_invalid_constraints ---
+
+
+def test_extraction_filter_invalid_constraints_empty() -> None:
+    from neo4j_graphrag.experimental.components.schema import (
+        _extraction_filter_invalid_constraints,
+    )
+
+    result = _extraction_filter_invalid_constraints([], node_types=[{"label": "A"}])
+    assert result == []
+
+
+def test_extraction_filter_invalid_constraints_unsupported_type() -> None:
+    from neo4j_graphrag.experimental.components.schema import (
+        _extraction_filter_invalid_constraints,
+    )
+
+    constraint = {
+        "type": "INVALID_TYPE",
+        "node_type": "Person",
+        "property_names": ["name"],
+    }
+    result = _extraction_filter_invalid_constraints(
+        [constraint],
+        node_types=[{"label": "Person", "properties": [{"name": "name"}]}],
+    )
+    assert result == []
+
+
+def test_extraction_filter_invalid_constraints_uniqueness_no_node_types() -> None:
+    from neo4j_graphrag.experimental.components.schema import (
+        _extraction_filter_invalid_constraints,
+    )
+
+    constraint = {
+        "type": "UNIQUENESS",
+        "node_type": "Person",
+        "property_names": ["name"],
+    }
+    result = _extraction_filter_invalid_constraints([constraint], node_types=[])
+    assert result == []
+
+
+def test_extraction_filter_invalid_constraints_uniqueness_invalid_node() -> None:
+    from neo4j_graphrag.experimental.components.schema import (
+        _extraction_filter_invalid_constraints,
+    )
+
+    constraint = {
+        "type": "UNIQUENESS",
+        "node_type": "UnknownNode",
+        "property_names": ["name"],
+    }
+    result = _extraction_filter_invalid_constraints(
+        [constraint],
+        node_types=[{"label": "Person", "properties": [{"name": "name"}]}],
+    )
+    assert result == []
+
+
+def test_extraction_filter_invalid_constraints_existence_invalid_node_type() -> None:
+    from neo4j_graphrag.experimental.components.schema import (
+        _extraction_filter_invalid_constraints,
+    )
+
+    constraint = {
+        "type": "EXISTENCE",
+        "node_type": "UnknownNode",
+        "property_names": ["name"],
+    }
+    result = _extraction_filter_invalid_constraints(
+        [constraint],
+        node_types=[{"label": "Person", "properties": [{"name": "name"}]}],
+    )
+    assert result == []
+
+
+def test_extraction_filter_invalid_constraints_existence_invalid_rel_type() -> None:
+    from neo4j_graphrag.experimental.components.schema import (
+        _extraction_filter_invalid_constraints,
+    )
+
+    constraint = {
+        "type": "EXISTENCE",
+        "relationship_type": "UNKNOWN_REL",
+        "property_names": ["since"],
+    }
+    result = _extraction_filter_invalid_constraints(
+        [constraint],
+        node_types=[{"label": "Person", "properties": [{"name": "name"}]}],
+        relationship_types=[{"label": "KNOWS", "properties": [{"name": "since"}]}],
+    )
+    assert result == []
+
+
+def test_extraction_filter_invalid_constraints_existence_invalid_rel_property() -> None:
+    from neo4j_graphrag.experimental.components.schema import (
+        _extraction_filter_invalid_constraints,
+    )
+
+    constraint = {
+        "type": "EXISTENCE",
+        "relationship_type": "KNOWS",
+        "property_names": ["nonexistent"],
+    }
+    result = _extraction_filter_invalid_constraints(
+        [constraint],
+        node_types=[{"label": "Person", "properties": [{"name": "name"}]}],
+        relationship_types=[{"label": "KNOWS", "properties": [{"name": "since"}]}],
+    )
+    assert result == []
+
+
+# --- SchemaFromTextExtractor: unsupported structured output ---
+
+
+def test_schema_from_text_extractor_unsupported_structured_output() -> None:
+    mock = AsyncMock()
+    mock.supports_structured_output = False
+    with pytest.raises(ValueError, match="Structured output is not supported"):
+        SchemaFromTextExtractor(llm=mock, use_structured_output=True)
+
+
+# --- _parse_and_normalize_schema edge cases ---
+
+
+def test_parse_and_normalize_schema_empty_list(mock_llm: AsyncMock) -> None:
+    extractor = SchemaFromTextExtractor(llm=mock_llm)
+    result = extractor._parse_and_normalize_schema("[]")
+    assert result == {}
+
+
+def test_parse_and_normalize_schema_list_of_non_dicts(mock_llm: AsyncMock) -> None:
+    extractor = SchemaFromTextExtractor(llm=mock_llm)
+    with pytest.raises(SchemaExtractionError):
+        extractor._parse_and_normalize_schema("[1, 2, 3]")
+
+
+def test_parse_and_normalize_schema_non_list_non_dict(mock_llm: AsyncMock) -> None:
+    extractor = SchemaFromTextExtractor(llm=mock_llm)
+    with pytest.raises(SchemaExtractionError):
+        extractor._parse_and_normalize_schema("42")
+
+
+# --- _apply_v1_filters: nodes with no properties ---
+
+
+def test_apply_v1_filters_removes_nodes_with_no_properties(
+    mock_llm: AsyncMock,
+) -> None:
+    extractor = SchemaFromTextExtractor(llm=mock_llm)
+    schema = {
+        "node_types": [
+            {
+                "label": "Person",
+                "properties": [{"name": "name", "type": "STRING"}],
+            },
+            {"label": "Empty", "properties": []},
+        ],
+    }
+    result = extractor._apply_v1_filters(schema)
+    labels = [n["label"] for n in result["node_types"]]
+    assert "Person" in labels
+    assert "Empty" not in labels
+
+
+# --- _run_with_structured_output error paths ---
+
+
+@pytest.mark.asyncio
+async def test_run_with_structured_output_llm_generation_error(
+    mock_llm: AsyncMock,
+) -> None:
+    from neo4j_graphrag.exceptions import LLMGenerationError
+
+    mock_llm.supports_structured_output = True
+    mock_llm.ainvoke.side_effect = LLMGenerationError("LLM failed")
+    extractor = SchemaFromTextExtractor(llm=mock_llm, use_structured_output=True)
+    with pytest.raises(SchemaExtractionError, match="Failed to generate schema"):
+        await extractor._run_with_structured_output("test prompt")
+
+
+@pytest.mark.asyncio
+async def test_run_with_structured_output_validation_error(
+    mock_llm: AsyncMock,
+) -> None:
+    mock_llm.supports_structured_output = True
+    mock_llm.ainvoke.return_value = LLMResponse(content='{"invalid_field": "bad"}')
+    extractor = SchemaFromTextExtractor(llm=mock_llm, use_structured_output=True)
+    with pytest.raises(SchemaExtractionError, match="does not conform"):
+        await extractor._run_with_structured_output("test prompt")
+
+
+# --- _run_with_prompt_based_extraction: LLMGenerationError ---
+
+
+@pytest.mark.asyncio
+async def test_run_with_prompt_based_extraction_llm_generation_error(
+    mock_llm: AsyncMock,
+) -> None:
+    from neo4j_graphrag.exceptions import LLMGenerationError
+
+    mock_llm.ainvoke.side_effect = LLMGenerationError("LLM failed")
+    extractor = SchemaFromTextExtractor(llm=mock_llm)
+    with pytest.raises(LLMGenerationError):
+        await extractor._run_with_prompt_based_extraction("test prompt")
+
+
+# --- _run_with_prompt_based_extraction: clean and parse path ---
+
+
+@pytest.mark.asyncio
+async def test_run_with_prompt_based_extraction_clean_and_parse(
+    mock_llm: AsyncMock,
+) -> None:
+    json_content = json.dumps(
+        {
+            "node_types": [
+                {
+                    "label": "Person",
+                    "properties": [{"name": "name", "type": "STRING"}],
+                }
+            ],
+            "relationship_types": [],
+            "patterns": [],
+            "constraints": [],
+        }
+    )
+    # Wrap in markdown code block to exercise _clean_json_content
+    mock_llm.ainvoke.return_value = LLMResponse(content=f"```json\n{json_content}\n```")
+    extractor = SchemaFromTextExtractor(llm=mock_llm)
+    result = await extractor._run_with_prompt_based_extraction("test prompt")
+    assert result.node_type_from_label("Person") is not None
+
+
+# --- migrate_deprecated_required_to_existence_constraints: non-dict ---
+
+
+def test_graph_schema_migrate_non_dict_input() -> None:
+    gs = GraphSchema(
+        node_types=(
+            NodeType(
+                label="Person",
+                properties=[PropertyType(name="name", type="STRING")],
+            ),
+        ),
+    )
+    # Passing an existing GraphSchema to model_validate triggers the non-dict branch
+    result = GraphSchema.model_validate(gs)
+    assert result.node_types[0].label == "Person"
+
+
+# --- Dict node migration with required=True ---
+
+
+def test_graph_schema_dict_node_required_migration() -> None:
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        gs = GraphSchema.model_validate(
+            {
+                "node_types": [
+                    {
+                        "label": "Person",
+                        "properties": [
+                            {"name": "name", "type": "STRING", "required": True}
+                        ],
+                    }
+                ],
+            }
+        )
+    existence_constraints = [
+        c
+        for c in gs.constraints
+        if str(c.type) in ("EXISTENCE", GraphConstraintType.EXISTENCE.value)
+    ]
+    assert len(existence_constraints) >= 1
+    assert any("name" in c.property_names for c in existence_constraints)
+
+
+# --- NodeType instance migration (required=True) ---
+
+
+def test_graph_schema_node_type_instance_required_migration() -> None:
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        prop = PropertyType.model_validate(
+            {"name": "email", "type": "STRING", "required": True}
+        )
+        node = NodeType(
+            label="Person",
+            properties=[PropertyType(name="name", type="STRING"), prop],
+        )
+        gs = GraphSchema.model_validate({"node_types": [node]})
+    existence_constraints = [
+        c
+        for c in gs.constraints
+        if str(c.type) in ("EXISTENCE", GraphConstraintType.EXISTENCE.value)
+    ]
+    assert any("email" in c.property_names for c in existence_constraints)
+
+
+# --- Dict relationship migration with required=True ---
+
+
+def test_graph_schema_dict_rel_required_migration() -> None:
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        gs = GraphSchema.model_validate(
+            {
+                "node_types": [
+                    {
+                        "label": "Person",
+                        "properties": [{"name": "name", "type": "STRING"}],
+                    },
+                    {
+                        "label": "Org",
+                        "properties": [{"name": "name", "type": "STRING"}],
+                    },
+                ],
+                "relationship_types": [
+                    {
+                        "label": "WORKS_FOR",
+                        "properties": [
+                            {"name": "since", "type": "DATE", "required": True}
+                        ],
+                    }
+                ],
+                "patterns": [("Person", "WORKS_FOR", "Org")],
+            }
+        )
+    existence_constraints = [
+        c
+        for c in gs.constraints
+        if str(c.type) in ("EXISTENCE", GraphConstraintType.EXISTENCE.value)
+    ]
+    assert any(c.relationship_type == "WORKS_FOR" for c in existence_constraints)
+
+
+# --- RelationshipType instance migration (required=True) ---
+
+
+def test_graph_schema_rel_type_instance_required_migration() -> None:
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        prop = PropertyType.model_validate(
+            {"name": "since", "type": "DATE", "required": True}
+        )
+        rel = RelationshipType(label="WORKS_FOR", properties=[prop])
+        gs = GraphSchema.model_validate(
+            {
+                "node_types": [
+                    {
+                        "label": "Person",
+                        "properties": [{"name": "name", "type": "STRING"}],
+                    },
+                    {
+                        "label": "Org",
+                        "properties": [{"name": "name", "type": "STRING"}],
+                    },
+                ],
+                "relationship_types": [rel],
+                "patterns": [("Person", "WORKS_FOR", "Org")],
+            }
+        )
+    existence_constraints = [
+        c
+        for c in gs.constraints
+        if str(c.type) in ("EXISTENCE", GraphConstraintType.EXISTENCE.value)
+    ]
+    assert any(c.relationship_type == "WORKS_FOR" for c in existence_constraints)
+
+
+# --- _extract_graph_constraints_from_metadata ---
+
+
+def test_extract_graph_constraints_missing_properties_or_labels() -> None:
+    from unittest.mock import MagicMock
+
+    extractor = SchemaFromExistingGraphExtractor(driver=MagicMock())
+    structured_schema = {
+        "metadata": {
+            "constraint": [
+                # Missing properties
+                {
+                    "type": "NODE_PROPERTY_EXISTENCE",
+                    "properties": [],
+                    "labelsOrTypes": ["Person"],
+                },
+                # Missing labels
+                {
+                    "type": "NODE_PROPERTY_EXISTENCE",
+                    "properties": ["name"],
+                    "labelsOrTypes": [],
+                },
+            ]
+        }
+    }
+    result = extractor._extract_graph_constraints_from_metadata(structured_schema)
+    assert result == []
+
+
+def test_extract_graph_constraints_deduplication() -> None:
+    from unittest.mock import MagicMock
+
+    extractor = SchemaFromExistingGraphExtractor(driver=MagicMock())
+    structured_schema = {
+        "metadata": {
+            "constraint": [
+                # NODE_PROPERTY_EXISTENCE duplicate
+                {
+                    "type": "NODE_PROPERTY_EXISTENCE",
+                    "properties": ["name"],
+                    "labelsOrTypes": ["Person"],
+                },
+                {
+                    "type": "NODE_PROPERTY_EXISTENCE",
+                    "properties": ["name"],
+                    "labelsOrTypes": ["Person"],
+                },
+                # NODE_KEY duplicate
+                {
+                    "type": "NODE_KEY",
+                    "properties": ["email"],
+                    "labelsOrTypes": ["Person"],
+                },
+                {
+                    "type": "NODE_KEY",
+                    "properties": ["email"],
+                    "labelsOrTypes": ["Person"],
+                },
+                # RELATIONSHIP_PROPERTY_EXISTENCE duplicate
+                {
+                    "type": "RELATIONSHIP_PROPERTY_EXISTENCE",
+                    "properties": ["since"],
+                    "labelsOrTypes": ["WORKS_FOR"],
+                },
+                {
+                    "type": "RELATIONSHIP_PROPERTY_EXISTENCE",
+                    "properties": ["since"],
+                    "labelsOrTypes": ["WORKS_FOR"],
+                },
+                # RELATIONSHIP_KEY duplicate
+                {
+                    "type": "RELATIONSHIP_KEY",
+                    "properties": ["id"],
+                    "labelsOrTypes": ["WORKS_FOR"],
+                },
+                {
+                    "type": "RELATIONSHIP_KEY",
+                    "properties": ["id"],
+                    "labelsOrTypes": ["WORKS_FOR"],
+                },
+            ]
+        }
+    }
+    result = extractor._extract_graph_constraints_from_metadata(structured_schema)
+    # Each should appear only once
+    assert len(result) == 4
+
+
+# --- SchemaFromExistingGraphExtractor.run(): nodes without properties ---
+
+
+@pytest.mark.asyncio
+async def test_schema_from_existing_graph_extractor_node_without_properties() -> None:
+    from unittest.mock import MagicMock, patch
+
+    driver = MagicMock()
+    extractor = SchemaFromExistingGraphExtractor(
+        driver=driver, additional_properties=False
+    )
+    structured_schema: dict[str, Any] = {
+        "node_props": {},
+        "rel_props": {},
+        "relationships": [
+            {"start": "Person", "type": "KNOWS", "end": "Organization"},
+        ],
+        "metadata": {"constraint": []},
+    }
+    with patch(
+        "neo4j_graphrag.experimental.components.schema.get_structured_schema",
+        return_value=structured_schema,
+    ):
+        gs = await extractor.run()
+    node_labels = {nt.label for nt in gs.node_types}
+    assert "Person" in node_labels
+    assert "Organization" in node_labels
