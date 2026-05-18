@@ -1104,6 +1104,189 @@ async def test_parquet_writer_key_uniqueness_existence_constraints_metadata() ->
 
 
 @pytest.mark.asyncio
+async def test_parquet_writer_relationship_key_constraint_in_metadata() -> None:
+    """KEY constraint on a relationship type is emitted in the relationship file's constraints."""
+    pytest.importorskip("pyarrow")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out = Path(tmpdir)
+        dest = _LocalParquetDestination(out)
+        writer = ParquetWriter(
+            nodes_dest=dest,
+            relationships_dest=dest,
+            collision_handler=FilenameCollisionHandler(),
+        )
+        schema_dict: dict[str, Any] = {
+            "node_types": [
+                {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]}
+            ],
+            "relationship_types": [
+                {"label": "KNOWS", "properties": [{"name": "since", "type": "INTEGER"}]}
+            ],
+            "constraints": [
+                {
+                    "type": "KEY",
+                    "node_type": "",
+                    "property_names": ["since"],
+                    "relationship_type": "KNOWS",
+                }
+            ],
+        }
+        node1 = Neo4jNode(id="n1", label="Person", properties={"name": "Alice"})
+        node2 = Neo4jNode(id="n2", label="Person", properties={"name": "Bob"})
+        rel = Neo4jRelationship(
+            start_node_id="n1",
+            end_node_id="n2",
+            type="KNOWS",
+            properties={"since": 2020},
+        )
+        graph = Neo4jGraph(nodes=[node1, node2], relationships=[rel])
+        result = await writer.run(graph=graph, schema=GraphSchema.model_validate(schema_dict))
+        assert result.status == "SUCCESS"
+        assert result.metadata is not None
+        rel_file = next(f for f in result.metadata["files"] if not f["is_node"])
+        assert {"type": "KEY", "properties": ["since"]} in rel_file["constraints"]
+
+
+@pytest.mark.asyncio
+async def test_parquet_writer_relationship_uniqueness_constraint_in_metadata() -> None:
+    """UNIQUENESS constraint on a relationship type is emitted in the relationship file's constraints."""
+    pytest.importorskip("pyarrow")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out = Path(tmpdir)
+        dest = _LocalParquetDestination(out)
+        writer = ParquetWriter(
+            nodes_dest=dest,
+            relationships_dest=dest,
+            collision_handler=FilenameCollisionHandler(),
+        )
+        schema_dict: dict[str, Any] = {
+            "node_types": [
+                {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]}
+            ],
+            "relationship_types": [
+                {"label": "KNOWS", "properties": [{"name": "since", "type": "INTEGER"}]}
+            ],
+            "constraints": [
+                {
+                    "type": "UNIQUENESS",
+                    "node_type": "",
+                    "property_names": ["since"],
+                    "relationship_type": "KNOWS",
+                }
+            ],
+        }
+        node1 = Neo4jNode(id="n1", label="Person", properties={"name": "Alice"})
+        node2 = Neo4jNode(id="n2", label="Person", properties={"name": "Bob"})
+        rel = Neo4jRelationship(
+            start_node_id="n1",
+            end_node_id="n2",
+            type="KNOWS",
+            properties={"since": 2020},
+        )
+        graph = Neo4jGraph(nodes=[node1, node2], relationships=[rel])
+        result = await writer.run(graph=graph, schema=GraphSchema.model_validate(schema_dict))
+        assert result.status == "SUCCESS"
+        assert result.metadata is not None
+        rel_file = next(f for f in result.metadata["files"] if not f["is_node"])
+        assert {"type": "UNIQUENESS", "properties": ["since"]} in rel_file["constraints"]
+
+
+@pytest.mark.asyncio
+async def test_parquet_writer_relationship_no_constraints_key_absent() -> None:
+    """Relationship file has no 'constraints' key when schema has no relationship constraints."""
+    pytest.importorskip("pyarrow")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out = Path(tmpdir)
+        dest = _LocalParquetDestination(out)
+        writer = ParquetWriter(
+            nodes_dest=dest,
+            relationships_dest=dest,
+            collision_handler=FilenameCollisionHandler(),
+        )
+        node1 = Neo4jNode(id="n1", label="Person", properties={"name": "Alice"})
+        node2 = Neo4jNode(id="n2", label="Person", properties={"name": "Bob"})
+        rel = Neo4jRelationship(
+            start_node_id="n1", end_node_id="n2", type="KNOWS", properties={}
+        )
+        graph = Neo4jGraph(nodes=[node1, node2], relationships=[rel])
+        result = await writer.run(graph=graph)
+        assert result.status == "SUCCESS"
+        assert result.metadata is not None
+        rel_file = next(f for f in result.metadata["files"] if not f["is_node"])
+        assert "constraints" not in rel_file
+
+
+@pytest.mark.asyncio
+async def test_parquet_writer_node_and_relationship_constraints_in_metadata() -> None:
+    """Node KEY constraint does not bleed into relationship file; relationship KEY does not bleed into node file."""
+    pytest.importorskip("pyarrow")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out = Path(tmpdir)
+        dest = _LocalParquetDestination(out)
+        writer = ParquetWriter(
+            nodes_dest=dest,
+            relationships_dest=dest,
+            collision_handler=FilenameCollisionHandler(),
+        )
+        schema_dict: dict[str, Any] = {
+            "node_types": [
+                {
+                    "label": "Person",
+                    "properties": [
+                        {"name": "email", "type": "STRING"},
+                        {"name": "name", "type": "STRING"},
+                    ],
+                }
+            ],
+            "relationship_types": [
+                {"label": "KNOWS", "properties": [{"name": "since", "type": "INTEGER"}]}
+            ],
+            "constraints": [
+                {
+                    "type": "KEY",
+                    "node_type": "Person",
+                    "property_names": ["email"],
+                    "relationship_type": None,
+                },
+                {
+                    "type": "KEY",
+                    "node_type": "",
+                    "property_names": ["since"],
+                    "relationship_type": "KNOWS",
+                },
+            ],
+        }
+        node1 = Neo4jNode(
+            id="n1", label="Person", properties={"email": "a@b.c", "name": "Alice"}
+        )
+        node2 = Neo4jNode(
+            id="n2", label="Person", properties={"email": "b@b.c", "name": "Bob"}
+        )
+        rel = Neo4jRelationship(
+            start_node_id="n1",
+            end_node_id="n2",
+            type="KNOWS",
+            properties={"since": 2020},
+        )
+        graph = Neo4jGraph(nodes=[node1, node2], relationships=[rel])
+        result = await writer.run(graph=graph, schema=GraphSchema.model_validate(schema_dict))
+        assert result.status == "SUCCESS"
+        assert result.metadata is not None
+        node_file = next(f for f in result.metadata["files"] if f["is_node"])
+        rel_file = next(f for f in result.metadata["files"] if not f["is_node"])
+        node_cs = node_file["constraints"]
+        rel_cs = rel_file["constraints"]
+        assert {"type": "KEY", "properties": ["email"]} in node_cs
+        assert not any(c["properties"] == ["since"] for c in node_cs)
+        assert {"type": "KEY", "properties": ["since"]} in rel_cs
+        assert not any(c["properties"] == ["email"] for c in rel_cs)
+
+
+@pytest.mark.asyncio
 async def test_parquet_writer_run_empty_graph() -> None:
     """ParquetWriter accepts an empty graph and writes no files."""
     pytest.importorskip("pyarrow")

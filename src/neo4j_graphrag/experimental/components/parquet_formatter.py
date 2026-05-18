@@ -191,6 +191,54 @@ def get_existence_constraints_for_node_type(
     return out
 
 
+def get_key_constraints_for_relationship_type(
+    schema: Optional[GraphSchema], rel_label: str
+) -> list[tuple[str, ...]]:
+    """KEY constraints for a relationship type, preserving composite grouping."""
+    if not schema:
+        return []
+    out: list[tuple[str, ...]] = []
+    for constraint in schema.constraints:
+        if constraint.type != GraphConstraintType.KEY:
+            continue
+        if constraint.relationship_type != rel_label:
+            continue
+        out.append(constraint.property_names)
+    return out
+
+
+def get_uniqueness_constraints_for_relationship_type(
+    schema: Optional[GraphSchema], rel_label: str
+) -> list[tuple[str, ...]]:
+    """UNIQUENESS constraints for a relationship type, preserving composite grouping."""
+    if not schema:
+        return []
+    out: list[tuple[str, ...]] = []
+    for constraint in schema.constraints:
+        if constraint.type != GraphConstraintType.UNIQUENESS:
+            continue
+        if constraint.relationship_type != rel_label:
+            continue
+        out.append(constraint.property_names)
+    return out
+
+
+def get_existence_constraints_for_relationship_type(
+    schema: Optional[GraphSchema], rel_label: str
+) -> list[tuple[str, ...]]:
+    """EXISTENCE constraints for a relationship type (each tuple has exactly one property)."""
+    if not schema:
+        return []
+    out: list[tuple[str, ...]] = []
+    for constraint in schema.constraints:
+        if constraint.type != GraphConstraintType.EXISTENCE:
+            continue
+        if constraint.relationship_type != rel_label:
+            continue
+        out.append(constraint.property_names)
+    return out
+
+
 def enrich_key_constraints_for_node_type(
     schema: Optional[GraphSchema], node_label: str
 ) -> list[tuple[str, ...]]:
@@ -783,6 +831,15 @@ class Neo4jGraphParquetFormatter:
                     ],
                     tail_uniqueness_property_names=get_uniqueness_property_names_for_node_type(
                         self.schema, tail_label
+                    ),
+                    key_constraints=get_key_constraints_for_relationship_type(
+                        self.schema, rtype
+                    ),
+                    uniqueness_constraints=get_uniqueness_constraints_for_relationship_type(
+                        self.schema, rtype
+                    ),
+                    existence_constraints=get_existence_constraints_for_relationship_type(
+                        self.schema, rtype
                     ),
                 )
             )
