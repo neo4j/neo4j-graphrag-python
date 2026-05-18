@@ -439,6 +439,8 @@ class ParquetWriter(KGWriter):
                 }
                 if constraints_meta:
                     file_entry["constraints"] = constraints_meta
+                if meta.indexes:
+                    file_entry["indexes"] = meta.indexes
                 files.append(file_entry)
 
             base_rel = self.relationships_dest.output_path.rstrip("/")
