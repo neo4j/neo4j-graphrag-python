@@ -1141,7 +1141,9 @@ async def test_parquet_writer_relationship_key_constraint_in_metadata() -> None:
             properties={"since": 2020},
         )
         graph = Neo4jGraph(nodes=[node1, node2], relationships=[rel])
-        result = await writer.run(graph=graph, schema=GraphSchema.model_validate(schema_dict))
+        result = await writer.run(
+            graph=graph, schema=GraphSchema.model_validate(schema_dict)
+        )
         assert result.status == "SUCCESS"
         assert result.metadata is not None
         rel_file = next(f for f in result.metadata["files"] if not f["is_node"])
@@ -1186,11 +1188,15 @@ async def test_parquet_writer_relationship_uniqueness_constraint_in_metadata() -
             properties={"since": 2020},
         )
         graph = Neo4jGraph(nodes=[node1, node2], relationships=[rel])
-        result = await writer.run(graph=graph, schema=GraphSchema.model_validate(schema_dict))
+        result = await writer.run(
+            graph=graph, schema=GraphSchema.model_validate(schema_dict)
+        )
         assert result.status == "SUCCESS"
         assert result.metadata is not None
         rel_file = next(f for f in result.metadata["files"] if not f["is_node"])
-        assert {"type": "UNIQUENESS", "properties": ["since"]} in rel_file["constraints"]
+        assert {"type": "UNIQUENESS", "properties": ["since"]} in rel_file[
+            "constraints"
+        ]
 
 
 @pytest.mark.asyncio
@@ -1273,7 +1279,9 @@ async def test_parquet_writer_node_and_relationship_constraints_in_metadata() ->
             properties={"since": 2020},
         )
         graph = Neo4jGraph(nodes=[node1, node2], relationships=[rel])
-        result = await writer.run(graph=graph, schema=GraphSchema.model_validate(schema_dict))
+        result = await writer.run(
+            graph=graph, schema=GraphSchema.model_validate(schema_dict)
+        )
         assert result.status == "SUCCESS"
         assert result.metadata is not None
         node_file = next(f for f in result.metadata["files"] if f["is_node"])

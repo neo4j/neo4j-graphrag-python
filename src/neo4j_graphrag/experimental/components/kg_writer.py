@@ -472,11 +472,17 @@ class ParquetWriter(KGWriter):
                 )
                 rel_constraints_meta: list[dict[str, Any]] = []
                 for props in meta.key_constraints or []:
-                    rel_constraints_meta.append({"type": "KEY", "properties": list(props)})
+                    rel_constraints_meta.append(
+                        {"type": "KEY", "properties": list(props)}
+                    )
                 for props in meta.uniqueness_constraints or []:
-                    rel_constraints_meta.append({"type": "UNIQUENESS", "properties": list(props)})
+                    rel_constraints_meta.append(
+                        {"type": "UNIQUENESS", "properties": list(props)}
+                    )
                 for props in meta.existence_constraints or []:
-                    rel_constraints_meta.append({"type": "EXISTENCE", "properties": list(props)})
+                    rel_constraints_meta.append(
+                        {"type": "EXISTENCE", "properties": list(props)}
+                    )
                 rel_entry: dict[str, Any] = {
                     "name": rel_name,
                     "file_path": file_path,
