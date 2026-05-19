@@ -336,7 +336,7 @@ class ConstraintType(BaseModel):
         return self
 
 
-def _validate_existence_or_key_property_defined(
+def _validate_constraint_property_defined(
     constraint: ConstraintType,
     *,
     node_type_index: dict[str, NodeType],
@@ -374,7 +374,7 @@ def _validate_existence_or_key_property_defined(
         for pn in constraint.property_names:
             if pn not in valid_property_names:
                 raise SchemaValidationError(
-                    f"{kind} constraint references undefined property "
+                    f"{kind.value} constraint references undefined property "
                     f"'{pn}' on relationship type '{rlabel}'. "
                     f"Valid properties: {valid_property_names}"
                 )
@@ -705,7 +705,7 @@ class GraphSchema(DataModel):
                 GraphConstraintType.EXISTENCE,
                 GraphConstraintType.KEY,
             ):
-                _validate_existence_or_key_property_defined(
+                _validate_constraint_property_defined(
                     constraint,
                     node_type_index=self._node_type_index,
                     relationship_type_index=self._relationship_type_index,
@@ -1722,7 +1722,7 @@ class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
     def _extract_graph_constraints_from_metadata(
         structured_schema: dict[str, Any],
     ) -> list[dict[str, Any]]:
-        """Build EXISTENCE / KEY constraint dicts from Neo4j ``SHOW CONSTRAINTS`` metadata."""
+        """Build EXISTENCE / KEY / UNIQUENESS constraint dicts from Neo4j ``SHOW CONSTRAINTS`` metadata."""
         schema_metadata = structured_schema.get("metadata", {})
         result: list[dict[str, Any]] = []
         seen: set[tuple[str, ...]] = set()
@@ -1786,6 +1786,34 @@ class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
                 result.append(
                     {
                         "type": GraphConstraintType.KEY.value,
+                        "node_type": "",
+                        "property_name": properties[0],
+                        "property_names": props_tuple,
+                        "relationship_type": lab,
+                    }
+                )
+            elif ctype == "NODE_PROPERTY_UNIQUENESS":
+                dedupe_key = ("UNIQUENESS", "NODE", lab, "", *props_tuple)
+                if dedupe_key in seen:
+                    continue
+                seen.add(dedupe_key)
+                result.append(
+                    {
+                        "type": GraphConstraintType.UNIQUENESS.value,
+                        "node_type": lab,
+                        "property_name": properties[0],
+                        "property_names": props_tuple,
+                        "relationship_type": None,
+                    }
+                )
+            elif ctype == "RELATIONSHIP_PROPERTY_UNIQUENESS":
+                dedupe_key = ("UNIQUENESS", "REL", "", lab, *props_tuple)
+                if dedupe_key in seen:
+                    continue
+                seen.add(dedupe_key)
+                result.append(
+                    {
+                        "type": GraphConstraintType.UNIQUENESS.value,
                         "node_type": "",
                         "property_name": properties[0],
                         "property_names": props_tuple,

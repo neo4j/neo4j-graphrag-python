@@ -28,7 +28,7 @@ from neo4j_graphrag.experimental.components.graph_schema_extraction import (
 from neo4j_graphrag.experimental.components.schema import GraphSchema, Pattern
 
 
-def test_wire_extraction_constraints_drops_relationship_type_for_uniqueness() -> None:
+def test_wire_extraction_constraints_keeps_relationship_type_for_uniqueness() -> None:
     """Empty/null relationship_type is removed for all constraint types; non-empty relationship_type is preserved for relationship-scoped constraints."""
     out = wire_extraction_constraints_for_graph_schema(
         [
