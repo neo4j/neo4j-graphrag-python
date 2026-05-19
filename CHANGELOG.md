@@ -2,6 +2,10 @@
 
 ## Next
 
+### Added
+
+- Experimental: `EXISTENCE`, `KEY`, and `UNIQUENESS` constraints can now be scoped to relationship types in `GraphSchema`. `ConstraintType` accepts a `relationship_type` field (mutually exclusive with `node_type`); validation rejects schemas where both `UNIQUENESS` and `KEY` target the same relationship type and property set. `ParquetWriter` relationship file entries now include a `constraints` list when the schema defines any for that relationship type.
+
 ### Fixed
 
 - Experimental: `wire_extraction_constraints_for_graph_schema` now removes `relationship_type` whenever `type == "UNIQUENESS"`, preventing a `validate_constraint_shape` `ValueError` when an LLM emits a stray `relationship_type` alongside a UNIQUENESS constraint (only node-level UNIQUENESS is supported).
