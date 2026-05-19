@@ -2220,7 +2220,9 @@ def test_extract_graph_constraints_from_metadata_relationship_key_maps_to_key() 
     ]
 
 
-def test_extract_graph_constraints_from_metadata_node_uniqueness_maps_to_uniqueness() -> None:
+def test_extract_graph_constraints_from_metadata_node_uniqueness_maps_to_uniqueness() -> (
+    None
+):
     """Neo4j ``NODE_PROPERTY_UNIQUENESS`` metadata maps to node-scoped ``UNIQUENESS`` constraints."""
     structured_schema: dict[str, Any] = {
         "metadata": {
@@ -2247,7 +2249,9 @@ def test_extract_graph_constraints_from_metadata_node_uniqueness_maps_to_uniquen
     ]
 
 
-def test_extract_graph_constraints_from_metadata_relationship_uniqueness_maps_to_uniqueness() -> None:
+def test_extract_graph_constraints_from_metadata_relationship_uniqueness_maps_to_uniqueness() -> (
+    None
+):
     """Neo4j ``RELATIONSHIP_PROPERTY_UNIQUENESS`` metadata maps to relationship-scoped ``UNIQUENESS`` constraints."""
     structured_schema: dict[str, Any] = {
         "metadata": {
