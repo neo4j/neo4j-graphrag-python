@@ -7,6 +7,10 @@
 - Experimental: `EXISTENCE`, `KEY`, and `UNIQUENESS` constraints can now be scoped to relationship types in `GraphSchema`. `ConstraintType` accepts a `relationship_type` field (mutually exclusive with `node_type`); validation rejects schemas where both `UNIQUENESS` and `KEY` target the same relationship type and property set. `ParquetWriter` relationship file entries now include a `constraints` list when the schema defines any for that relationship type.
 - Experimental: `SchemaFromExistingGraphExtractor._extract_graph_constraints_from_metadata` now maps `NODE_PROPERTY_UNIQUENESS` and `RELATIONSHIP_PROPERTY_UNIQUENESS` rows from `SHOW CONSTRAINTS` to the corresponding node-scoped and relationship-scoped `UNIQUENESS` constraints in `GraphSchema`.
 
+### Fixed
+
+- Experimental: `GraphPruning` now drops relationships whose `KEY`- or `EXISTENCE`-constrained properties are null, matching the existing behaviour for nodes. Previously such relationships were logged as pruned but still passed through with empty properties.
+
 ## 1.16.0
 
 ### Added
