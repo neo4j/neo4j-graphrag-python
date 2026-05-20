@@ -1694,7 +1694,7 @@ def test_format_parquet_empty_list_before_float_embedding_does_not_crash() -> No
 
 
 def _indexes_for_label(file_metadata: list[Any], label: str) -> Any:
-    """Return the indexes list on the FileMetadata for *label* (or None)."""
+    """Return the indexes list on the formatter FileMetadata for *label* (or None)."""
     meta = next(m for m in file_metadata if m.is_node and m.node_label == label)
     return meta.indexes
 
@@ -1729,9 +1729,7 @@ async def test_parquet_writer_chunk_file_emits_vector_index_in_metadata() -> Non
 
     assert result.status == "SUCCESS"
     assert result.metadata is not None
-    chunk_file = next(
-        f for f in result.metadata["files"] if f.get("name") == "Chunk"
-    )
+    chunk_file = next(f for f in result.metadata["files"] if f.get("name") == "Chunk")
     assert chunk_file.get("indexes") == [
         {
             "type": "VECTOR",

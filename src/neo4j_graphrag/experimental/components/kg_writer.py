@@ -133,11 +133,18 @@ class KGWriterModel(DataModel):
               vs UNIQUENESS constraints per :class:`~neo4j_graphrag.experimental.components.schema.GraphSchema`).
               Node files include a ``constraints`` list with ``KEY``, ``UNIQUENESS``, and node-scoped
               ``EXISTENCE`` entries (grouped ``properties`` lists), plus at least one single-property
-              ``KEY`` (``__id__`` is injected when the schema has none). Relationship files include
-              a ``constraints`` list with ``KEY``, ``UNIQUENESS``, and relationship-scoped
-              ``EXISTENCE`` entries when the schema defines them (key absent when none exist), plus
-              ``start_node_primary_keys`` / ``end_node_primary_keys`` as a one-element list: the
-              first single-property schema ``KEY`` for that label, or ``__id__``.
+              ``KEY`` (``__id__`` is injected when the schema has none). Node files whose
+              source ``Neo4jNode.embedding_properties`` contain one or more keys also include
+              an ``indexes`` list: one ``VECTOR`` entry per embedding property
+              (``properties``: ``[name]``, ``dimensions``: inferred from the first non-empty
+              embedding or ``None`` if absent, ``similarity``: ``"cosine"``). This covers the
+              lexical-graph Chunk file (where the chunk embedder populates
+              ``embedding_properties``) as well as any entity-level embeddings.
+              Relationship files include a ``constraints`` list with ``KEY``, ``UNIQUENESS``,
+              and relationship-scoped ``EXISTENCE`` entries when the schema defines them
+              (key absent when none exist), plus ``start_node_primary_keys`` /
+              ``end_node_primary_keys`` as a one-element list: the first single-property schema
+              ``KEY`` for that label, or ``__id__``.
     """
 
     status: Literal["SUCCESS", "FAILURE"]

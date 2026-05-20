@@ -821,7 +821,7 @@ class Neo4jGraphParquetFormatter:
             indexes_meta: Optional[list[dict[str, Any]]] = (
                 [
                     build_vector_index_for_property(name, dims_for_label[name])
-                    for name in sorted(dims_for_label)
+                    for name in dims_for_label
                 ]
                 if dims_for_label
                 else None
