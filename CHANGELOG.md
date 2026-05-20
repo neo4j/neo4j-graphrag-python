@@ -2,6 +2,11 @@
 
 ## Next
 
+### Added
+
+- Vector index for all nodes embedding properties in the ParquetWriter result metadata.
+
+
 ## 1.16.1
 
 ### Added
