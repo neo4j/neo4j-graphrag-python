@@ -133,10 +133,11 @@ class KGWriterModel(DataModel):
               vs UNIQUENESS constraints per :class:`~neo4j_graphrag.experimental.components.schema.GraphSchema`).
               Node files include a ``constraints`` list with ``KEY``, ``UNIQUENESS``, and node-scoped
               ``EXISTENCE`` entries (grouped ``properties`` lists), plus at least one single-property
-              ``KEY`` (``__id__`` is injected when the schema has none). Relationship files do not
-              include a ``constraints`` list; they include ``start_node_primary_keys`` /
-              ``end_node_primary_keys`` as a one-element list: the first single-property schema
-              ``KEY`` for that label, or ``__id__``.
+              ``KEY`` (``__id__`` is injected when the schema has none). Relationship files include
+              a ``constraints`` list with ``KEY``, ``UNIQUENESS``, and relationship-scoped
+              ``EXISTENCE`` entries when the schema defines them (key absent when none exist), plus
+              ``start_node_primary_keys`` / ``end_node_primary_keys`` as a one-element list: the
+              first single-property schema ``KEY`` for that label, or ``__id__``.
     """
 
     status: Literal["SUCCESS", "FAILURE"]
@@ -469,27 +470,41 @@ class ParquetWriter(KGWriter):
                     if unique_filename.endswith(".parquet")
                     else unique_filename
                 )
-                files.append(
-                    {
-                        "name": rel_name,
-                        "file_path": file_path,
-                        "columns": columns,
-                        "is_node": False,
-                        "relationship_type": meta.relationship_type,
-                        "start_node_source": start_node_source,
-                        "start_node_primary_keys": (
-                            meta.head_primary_key_property_names
-                            if meta.head_primary_key_property_names
-                            else [INTERNAL_ID_PROPERTY]
-                        ),
-                        "end_node_source": end_node_source,
-                        "end_node_primary_keys": (
-                            meta.tail_primary_key_property_names
-                            if meta.tail_primary_key_property_names
-                            else [INTERNAL_ID_PROPERTY]
-                        ),
-                    }
-                )
+                rel_constraints_meta: list[dict[str, Any]] = []
+                for props in meta.key_constraints or []:
+                    rel_constraints_meta.append(
+                        {"type": "KEY", "properties": list(props)}
+                    )
+                for props in meta.uniqueness_constraints or []:
+                    rel_constraints_meta.append(
+                        {"type": "UNIQUENESS", "properties": list(props)}
+                    )
+                for props in meta.existence_constraints or []:
+                    rel_constraints_meta.append(
+                        {"type": "EXISTENCE", "properties": list(props)}
+                    )
+                rel_entry: dict[str, Any] = {
+                    "name": rel_name,
+                    "file_path": file_path,
+                    "columns": columns,
+                    "is_node": False,
+                    "relationship_type": meta.relationship_type,
+                    "start_node_source": start_node_source,
+                    "start_node_primary_keys": (
+                        meta.head_primary_key_property_names
+                        if meta.head_primary_key_property_names
+                        else [INTERNAL_ID_PROPERTY]
+                    ),
+                    "end_node_source": end_node_source,
+                    "end_node_primary_keys": (
+                        meta.tail_primary_key_property_names
+                        if meta.tail_primary_key_property_names
+                        else [INTERNAL_ID_PROPERTY]
+                    ),
+                }
+                if rel_constraints_meta:
+                    rel_entry["constraints"] = rel_constraints_meta
+                files.append(rel_entry)
 
             logger.info(
                 "Wrote %d node files and %d relationship files",

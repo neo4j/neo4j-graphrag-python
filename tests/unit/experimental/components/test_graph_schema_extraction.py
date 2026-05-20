@@ -28,8 +28,8 @@ from neo4j_graphrag.experimental.components.graph_schema_extraction import (
 from neo4j_graphrag.experimental.components.schema import GraphSchema, Pattern
 
 
-def test_wire_extraction_constraints_drops_relationship_type_for_uniqueness() -> None:
-    """UNIQUENESS constraints always have ``relationship_type`` removed entirely, regardless of its emitted value."""
+def test_wire_extraction_constraints_keeps_relationship_type_for_uniqueness() -> None:
+    """Empty/null relationship_type is removed for all constraint types; non-empty relationship_type is preserved for relationship-scoped constraints."""
     out = wire_extraction_constraints_for_graph_schema(
         [
             {
@@ -46,14 +46,15 @@ def test_wire_extraction_constraints_drops_relationship_type_for_uniqueness() ->
             },
             {
                 "type": "UNIQUENESS",
-                "node_type": "Book",
+                "node_type": "",
                 "property_names": ["isbn"],
                 "relationship_type": "KNOWS",
             },
         ]
     )
-    for entry in out:
-        assert "relationship_type" not in entry
+    assert "relationship_type" not in out[0]
+    assert "relationship_type" not in out[1]
+    assert out[2]["relationship_type"] == "KNOWS"
 
 
 def test_wire_extraction_constraints_drops_empty_relationship_type_for_non_uniqueness() -> (
@@ -94,8 +95,8 @@ def test_wire_extraction_constraints_preserves_relationship_scoped_existence() -
     assert out[0]["relationship_type"] == "KNOWS"
 
 
-def test_uniqueness_with_relationship_type_is_sanitized_by_wire_conversion() -> None:
-    """A stray ``relationship_type`` on a UNIQUENESS constraint is nulled out before runtime validation."""
+def test_uniqueness_with_relationship_type_preserved_by_wire_conversion() -> None:
+    """Relationship-scoped UNIQUENESS flows through wire conversion and into GraphSchema correctly."""
     dto = GraphSchemaExtractionOutput(
         node_types=[
             ExtractedNodeType(
@@ -103,21 +104,27 @@ def test_uniqueness_with_relationship_type_is_sanitized_by_wire_conversion() -> 
                 properties=[ExtractedPropertyType(name="name", type="STRING")],
             )
         ],
-        relationship_types=[],
+        relationship_types=[
+            ExtractedRelationshipType(
+                label="KNOWS",
+                properties=[ExtractedPropertyType(name="since", type="INTEGER")],
+            )
+        ],
         patterns=[],
         constraints=[
             ExtractedConstraintType(
                 type="UNIQUENESS",
-                node_type="Person",
-                property_names=["name"],
+                node_type="",
+                property_names=["since"],
                 relationship_type="KNOWS",
             ),
         ],
     )
     gs = GraphSchema.from_extraction_output(dto)
     assert len(gs.constraints) == 1
-    assert gs.constraints[0].relationship_type is None
-    assert gs.constraints[0].node_type == "Person"
+    assert gs.constraints[0].relationship_type == "KNOWS"
+    assert gs.constraints[0].node_type is None
+    assert gs.uniqueness_property_names_for_relationship("KNOWS") == {"since"}
 
 
 def test_invalid_constraints_dropped_by_extraction_filters_without_error() -> None:
