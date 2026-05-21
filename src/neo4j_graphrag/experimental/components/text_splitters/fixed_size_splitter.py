@@ -12,10 +12,36 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import bisect
+from typing import cast
+
 from pydantic import validate_call
 
 from neo4j_graphrag.experimental.components.text_splitters.base import TextSplitter
 from neo4j_graphrag.experimental.components.types import TextChunk, TextChunks
+
+
+def _get_sentence_spans(text: str) -> list[tuple[int, int]]:
+    try:
+        import nltk
+        from nltk.tokenize import PunktSentenceTokenizer
+    except ImportError:
+        raise ImportError(
+            "nltk is required for sentence boundary splitting. "
+            "Install it with: pip install nltk"
+        ) from None
+    try:
+        tokenizer = cast(
+            PunktSentenceTokenizer,
+            nltk.data.load("tokenizers/punkt_tab/english.pickle"),
+        )
+    except LookupError:
+        nltk.download("punkt_tab", quiet=True)
+        tokenizer = cast(
+            PunktSentenceTokenizer,
+            nltk.data.load("tokenizers/punkt_tab/english.pickle"),
+        )
+    return list(tokenizer.span_tokenize(text))
 
 
 def _adjust_chunk_start(text: str, approximate_start: int) -> int:
@@ -67,6 +93,35 @@ def _adjust_chunk_end(text: str, start: int, approximate_end: int) -> int:
     return end
 
 
+def _adjust_chunk_start_by_sentence(
+    sentence_starts: list[int], approximate_start: int
+) -> int:
+    """
+    Shift the starting index backward to the beginning of the sentence that contains
+    approximate_start. Falls back to approximate_start if no sentence boundary is found.
+    """
+    if not sentence_starts:
+        return approximate_start
+    idx = bisect.bisect_right(sentence_starts, approximate_start) - 1
+    return sentence_starts[idx] if idx >= 0 else approximate_start
+
+
+def _adjust_chunk_end_by_sentence(
+    sentence_ends: list[int], start: int, approximate_end: int
+) -> int:
+    """
+    Shift the ending index backward to the nearest sentence end that is <= approximate_end
+    and > start. Falls back to approximate_end if no such boundary exists (e.g. a single
+    sentence exceeds chunk_size).
+    """
+    if not sentence_ends:
+        return approximate_end
+    idx = bisect.bisect_right(sentence_ends, approximate_end) - 1
+    if idx >= 0 and sentence_ends[idx] > start:
+        return sentence_ends[idx]
+    return approximate_end
+
+
 class FixedSizeSplitter(TextSplitter):
     """Text splitter which splits the input text into fixed or approximate fixed size
        chunks with optional overlap.
@@ -77,6 +132,11 @@ class FixedSizeSplitter(TextSplitter):
                             with each chunk. Must be less than `chunk_size`.
         approximate (bool): If True, avoids splitting words in the middle at chunk
                             boundaries. Defaults to True.
+        sentence_boundaries (bool): If True, avoids splitting sentences in the middle at
+                            chunk boundaries using nltk's sentence tokenizer. When a
+                            sentence exceeds chunk_size it falls back to approximate_end.
+                            Requires the ``nltk`` package and the ``punkt_tab`` corpus
+                            (downloaded automatically on first use). Defaults to False.
 
 
     Example:
@@ -93,7 +153,11 @@ class FixedSizeSplitter(TextSplitter):
 
     @validate_call
     def __init__(
-        self, chunk_size: int = 4000, chunk_overlap: int = 200, approximate: bool = True
+        self,
+        chunk_size: int = 4000,
+        chunk_overlap: int = 200,
+        approximate: bool = True,
+        sentence_boundaries: bool = False,
     ) -> None:
         if chunk_size <= 0:
             raise ValueError("chunk_size must be strictly greater than 0")
@@ -102,6 +166,7 @@ class FixedSizeSplitter(TextSplitter):
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
         self.approximate = approximate
+        self.sentence_boundaries = sentence_boundaries
 
     @validate_call
     async def run(self, text: str) -> TextChunks:
@@ -121,8 +186,24 @@ class FixedSizeSplitter(TextSplitter):
         skip_adjust_chunk_start = False
         end = 0
 
+        sentence_starts: list[int] = []
+        sentence_ends: list[int] = []
+        if self.sentence_boundaries:
+            spans = _get_sentence_spans(text)
+            sentence_starts = [s for s, _ in spans]
+            sentence_ends = [e for _, e in spans]
+
         while end < text_length:
-            if self.approximate:
+            if self.sentence_boundaries:
+                start = (
+                    approximate_start
+                    if skip_adjust_chunk_start
+                    else _adjust_chunk_start_by_sentence(sentence_starts, approximate_start)
+                )
+                approximate_end = min(start + self.chunk_size, text_length)
+                end = _adjust_chunk_end_by_sentence(sentence_ends, start, approximate_end)
+                skip_adjust_chunk_start = end == approximate_end
+            elif self.approximate:
                 start = (
                     approximate_start
                     if skip_adjust_chunk_start
