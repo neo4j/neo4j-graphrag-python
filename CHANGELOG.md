@@ -2,6 +2,10 @@
 
 ## Next
 
+### Added
+
+- Experimental: `FixedSizeSplitter` gains a `sentence_boundaries` parameter (default `False`). When `True`, chunk boundaries are aligned to sentence ends using the nltk Punkt tokenizer; sentences that exceed `chunk_size` fall back to fixed-size cuts. The `punkt_tab` corpus is downloaded automatically on first use. Requires the `experimental` extra (`nltk>=3.8.0`).
+
 ## 1.16.1
 
 ### Added
