@@ -173,6 +173,24 @@ def get_uniqueness_constraints_for_node_type(
     return out
 
 
+def build_vector_index_for_property(
+    embedding_property_name: str,
+    dimensions: Optional[int],
+) -> dict[str, Any]:
+    """Build a VECTOR index descriptor for an embedding property on a node file.
+
+    ``dimensions`` is the inferred embedding length, or ``None`` if no concrete
+    embedding has been seen — in which case the consumer decides whether to
+    materialize the index.
+    """
+    return {
+        "type": "VECTOR",
+        "properties": [embedding_property_name],
+        "dimensions": dimensions,
+        "similarity": "cosine",
+    }
+
+
 def get_existence_constraints_for_node_type(
     schema: Optional[GraphSchema], node_label: str
 ) -> list[tuple[str, ...]]:
@@ -336,6 +354,8 @@ class FileMetadata:
     key_constraints: Optional[list[tuple[str, ...]]] = None
     uniqueness_constraints: Optional[list[tuple[str, ...]]] = None
     existence_constraints: Optional[list[tuple[str, ...]]] = None
+    # Index metadata (e.g. VECTOR index on lexical-graph Chunk embedding)
+    indexes: Optional[list[dict[str, Any]]] = None
 
 
 @dataclass
@@ -493,15 +513,33 @@ class Neo4jGraphParquetFormatter:
         # Default fallback
         return TypeInfo(source_type="string", target_type="string", is_array=False)
 
-    def _nodes_to_rows(
+    def _process_nodes(
         self,
         nodes: list[Neo4jNode],
         lexical_graph_config: LexicalGraphConfig,
-    ) -> DefaultDict[str, list[dict[str, Any]]]:
-        """Convert Neo4jNode objects to row dictionaries."""
+    ) -> tuple[
+        DefaultDict[str, list[dict[str, Any]]],
+        dict[str, Neo4jNode],
+        DefaultDict[str, dict[str, Optional[int]]],
+    ]:
+        """Single-pass traversal of *nodes* producing every per-node derivation.
+
+        Returns:
+            label_to_rows: row dicts grouped by node label.
+            node_id_to_node: id → Neo4jNode lookup for relationship endpoint resolution.
+            label_to_embedding_dims: per label, per embedding property name, the
+                dimension inferred from the first non-empty embedding seen on a node;
+                ``None`` until a non-empty embedding appears.
+        """
         label_to_rows: DefaultDict[str, list[dict[str, Any]]] = defaultdict(list)
+        node_id_to_node: dict[str, Neo4jNode] = {}
+        label_to_embedding_dims: DefaultDict[str, dict[str, Optional[int]]] = (
+            defaultdict(dict)
+        )
 
         for node in nodes:
+            node_id_to_node[node.id] = node
+
             labels: list[str] = [node.label]
             if node.label not in lexical_graph_config.lexical_graph_node_labels:
                 labels.append("__Entity__")
@@ -510,15 +548,20 @@ class Neo4jGraphParquetFormatter:
                 INTERNAL_ID_PROPERTY: node.id,
                 "labels": labels,
             }
-
             if node.properties:
                 row.update(node.properties)
             if node.embedding_properties:
                 row.update(node.embedding_properties)
+                dims_for_label = label_to_embedding_dims[node.label]
+                for name, value in node.embedding_properties.items():
+                    if name not in dims_for_label:
+                        dims_for_label[name] = len(value) if value else None
+                    elif dims_for_label[name] is None and value:
+                        dims_for_label[name] = len(value)
 
             label_to_rows[node.label].append(row)
 
-        return label_to_rows
+        return label_to_rows, node_id_to_node, label_to_embedding_dims
 
     def _get_node_key_property_value(self, node: Neo4jNode) -> Any:
         """Get the join key value for relationship Parquet ``from``/``to`` columns.
@@ -748,10 +791,9 @@ class Neo4jGraphParquetFormatter:
             - List of FileMetadata objects with schema information
             - Statistics dictionary with 'nodes_per_label' and 'rel_per_type' counts
         """
-        label_to_rows: DefaultDict[str, list[dict[str, Any]]] = self._nodes_to_rows(
+        label_to_rows, node_id_to_node, label_to_embedding_dims = self._process_nodes(
             graph.nodes, lexical_graph_config
         )
-        node_id_to_node: dict[str, Neo4jNode] = {node.id: node for node in graph.nodes}
         type_to_rows: DefaultDict[tuple[str, str, str], list[dict[str, Any]]] = (
             self._relationships_to_rows(graph.relationships, node_id_to_node)
         )
@@ -775,6 +817,15 @@ class Neo4jGraphParquetFormatter:
                 labels_list.append("__Entity__")
 
             enriched_keys = enrich_key_constraints_for_node_type(self.schema, label)
+            dims_for_label = label_to_embedding_dims.get(label, {})
+            indexes_meta: Optional[list[dict[str, Any]]] = (
+                [
+                    build_vector_index_for_property(name, dims_for_label[name])
+                    for name in dims_for_label
+                ]
+                if dims_for_label
+                else None
+            )
             file_metadata.append(
                 FileMetadata(
                     filename=filename,
@@ -795,6 +846,7 @@ class Neo4jGraphParquetFormatter:
                     existence_constraints=get_existence_constraints_for_node_type(
                         self.schema, label
                     ),
+                    indexes=indexes_meta,
                 )
             )
 

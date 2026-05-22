@@ -1686,3 +1686,203 @@ def test_format_parquet_empty_list_before_float_embedding_does_not_crash() -> No
         or rows_by_id["node-1"]["embedding"] == []
     )
     assert rows_by_id["node-2"]["embedding"] is not None
+
+
+# ---------------------------------------------------------------------------
+# Vector index emission for any node label with embedding_properties
+# ---------------------------------------------------------------------------
+
+
+def _indexes_for_label(file_metadata: list[Any], label: str) -> Any:
+    """Return the indexes list on the formatter FileMetadata for *label* (or None)."""
+    meta = next(m for m in file_metadata if m.is_node and m.node_label == label)
+    return meta.indexes
+
+
+@pytest.mark.asyncio
+async def test_parquet_writer_chunk_file_emits_vector_index_in_metadata() -> None:
+    """End-to-end: ParquetWriter.run forwards the VECTOR index into KGWriterModel.metadata.
+
+    Single writer-level test that confirms the formatter→writer wiring; the rest of
+    the index-emission rules are exercised at the formatter level (no IO needed).
+    """
+    pytest.importorskip("pyarrow")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out = Path(tmpdir)
+        dest = _LocalParquetDestination(out)
+        writer = ParquetWriter(
+            nodes_dest=dest,
+            relationships_dest=dest,
+            collision_handler=FilenameCollisionHandler(),
+        )
+
+        chunk = Neo4jNode(
+            id="c1",
+            label="Chunk",
+            properties={"text": "hello"},
+            embedding_properties={"embedding": [0.1, 0.2, 0.3, 0.4]},
+        )
+        graph = Neo4jGraph(nodes=[chunk], relationships=[])
+
+        result = await writer.run(graph=graph)
+
+    assert result.status == "SUCCESS"
+    assert result.metadata is not None
+    chunk_file = next(f for f in result.metadata["files"] if f.get("name") == "Chunk")
+    assert chunk_file.get("indexes") == [
+        {
+            "type": "VECTOR",
+            "properties": ["embedding"],
+            "dimensions": 4,
+            "similarity": "cosine",
+        }
+    ]
+
+
+def test_formatter_emits_vector_index_for_any_label() -> None:
+    """Any node label with embedding_properties gets a VECTOR index entry."""
+    pytest.importorskip("pyarrow")
+
+    person = Neo4jNode(
+        id="p1",
+        label="Person",
+        properties={"name": "Alice"},
+        embedding_properties={"name_emb": [0.0] * 8},
+    )
+    graph = Neo4jGraph(nodes=[person], relationships=[])
+
+    _, file_metadata, _ = Neo4jGraphParquetFormatter().format_graph(
+        graph, LexicalGraphConfig()
+    )
+
+    assert _indexes_for_label(file_metadata, "Person") == [
+        {
+            "type": "VECTOR",
+            "properties": ["name_emb"],
+            "dimensions": 8,
+            "similarity": "cosine",
+        }
+    ]
+
+
+def test_formatter_emits_one_index_per_embedding_property() -> None:
+    """Multiple embedding_properties keys produce multiple VECTOR index entries, sorted by name."""
+    pytest.importorskip("pyarrow")
+
+    node = Neo4jNode(
+        id="n1",
+        label="Doc",
+        properties={"text": "hello"},
+        embedding_properties={
+            "text_emb": [0.1, 0.2, 0.3],
+            "title_emb": [0.0] * 5,
+        },
+    )
+    graph = Neo4jGraph(nodes=[node], relationships=[])
+
+    _, file_metadata, _ = Neo4jGraphParquetFormatter().format_graph(
+        graph, LexicalGraphConfig()
+    )
+
+    assert _indexes_for_label(file_metadata, "Doc") == [
+        {
+            "type": "VECTOR",
+            "properties": ["text_emb"],
+            "dimensions": 3,
+            "similarity": "cosine",
+        },
+        {
+            "type": "VECTOR",
+            "properties": ["title_emb"],
+            "dimensions": 5,
+            "similarity": "cosine",
+        },
+    ]
+
+
+def test_formatter_file_without_embeddings_has_no_indexes() -> None:
+    """Node files whose nodes carry no embedding_properties do not get an indexes entry."""
+    pytest.importorskip("pyarrow")
+
+    n1 = Neo4jNode(id="n1", label="Person", properties={"name": "Alice"})
+    n2 = Neo4jNode(id="n2", label="Person", properties={"name": "Bob"})
+    rel = Neo4jRelationship(
+        start_node_id="n1", end_node_id="n2", type="KNOWS", properties={}
+    )
+    graph = Neo4jGraph(nodes=[n1, n2], relationships=[rel])
+
+    _, file_metadata, _ = Neo4jGraphParquetFormatter().format_graph(
+        graph, LexicalGraphConfig()
+    )
+
+    for m in file_metadata:
+        assert m.indexes is None
+
+
+def test_formatter_indexes_emitted_for_multiple_labels() -> None:
+    """Each node label with embedding_properties gets its own vector index entries."""
+    pytest.importorskip("pyarrow")
+
+    chunk = Neo4jNode(
+        id="c1",
+        label="Chunk",
+        properties={"text": "hi"},
+        embedding_properties={"embedding": [0.1] * 4},
+    )
+    person = Neo4jNode(
+        id="p1",
+        label="Person",
+        properties={"name": "Alice"},
+        embedding_properties={"name_emb": [0.0] * 8},
+    )
+    graph = Neo4jGraph(nodes=[chunk, person], relationships=[])
+
+    _, file_metadata, _ = Neo4jGraphParquetFormatter().format_graph(
+        graph, LexicalGraphConfig()
+    )
+
+    assert _indexes_for_label(file_metadata, "Chunk") == [
+        {
+            "type": "VECTOR",
+            "properties": ["embedding"],
+            "dimensions": 4,
+            "similarity": "cosine",
+        }
+    ]
+    assert _indexes_for_label(file_metadata, "Person") == [
+        {
+            "type": "VECTOR",
+            "properties": ["name_emb"],
+            "dimensions": 8,
+            "similarity": "cosine",
+        }
+    ]
+
+
+def test_formatter_embedding_keys_unioned_across_nodes_of_same_label() -> None:
+    """Embedding keys are unioned across all nodes of a label; dimensions inferred from first non-empty."""
+    pytest.importorskip("pyarrow")
+
+    # First chunk has no embedding; second carries one.
+    n1 = Neo4jNode(id="c1", label="Chunk", properties={"text": "hi"})
+    n2 = Neo4jNode(
+        id="c2",
+        label="Chunk",
+        properties={"text": "bye"},
+        embedding_properties={"embedding": [0.1, 0.2, 0.3]},
+    )
+    graph = Neo4jGraph(nodes=[n1, n2], relationships=[])
+
+    _, file_metadata, _ = Neo4jGraphParquetFormatter().format_graph(
+        graph, LexicalGraphConfig()
+    )
+
+    assert _indexes_for_label(file_metadata, "Chunk") == [
+        {
+            "type": "VECTOR",
+            "properties": ["embedding"],
+            "dimensions": 3,
+            "similarity": "cosine",
+        }
+    ]
