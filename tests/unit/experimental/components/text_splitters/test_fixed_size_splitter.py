@@ -12,6 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import asyncio
 from itertools import zip_longest
 
 import pytest
@@ -184,6 +185,16 @@ def test_adjust_chunk_end(
             True,
             ["12345", "56789", "90"],
         ),
+        # Case: text with a single long word exceeding chunk_size (regression for #471)
+        # Previously caused infinite loop when _adjust_chunk_start walked backward
+        # past the step boundary, causing approximate_start to never advance.
+        (
+            "a" * 20,
+            5,
+            1,
+            True,
+            ["aaaaa", "aaaaa", "aaaaa", "aaaaa", "aaaa"],
+        ),
     ],
 )
 async def test_fixed_size_splitter_run(
@@ -212,3 +223,26 @@ async def test_fixed_size_splitter_run(
         assert text_chunks.chunks[i].text == expected_text
         assert isinstance(text_chunks.chunks[i], TextChunk)
         assert text_chunks.chunks[i].index == i
+
+
+@pytest.mark.asyncio
+async def test_no_infinite_loop_on_long_word_without_spaces() -> None:
+    """
+    Regression test for #471.
+
+    When a text contains a long run of characters with no whitespace and
+    approximate=True, _adjust_chunk_start could walk backward past the step
+    boundary, causing approximate_start to stall or decrease and the splitter
+    to loop forever.
+
+    The fix ensures approximate_start always advances by at least `step`
+    (chunk_size - chunk_overlap) characters per iteration. The asyncio
+    timeout below catches the regression even if the assertion logic is
+    changed; without it a bug here would hang the test runner.
+    """
+    long_text = "x" * 5000
+    splitter = FixedSizeSplitter(chunk_size=100, chunk_overlap=20, approximate=True)
+    result = await asyncio.wait_for(splitter.run(long_text), timeout=5)
+    assert len(result.chunks) > 0
+    for chunk in result.chunks:
+        assert len(chunk.text) > 0
