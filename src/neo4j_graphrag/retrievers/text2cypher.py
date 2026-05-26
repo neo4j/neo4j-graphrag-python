@@ -44,6 +44,10 @@ from neo4j_graphrag.types import (
 
 logger = logging.getLogger(__name__)
 
+# Value reported by neo4j.ResultSummary.query_type for a read-only Cypher
+# statement. The driver's possible values are "r", "w", "rw", and "s".
+READ_ONLY_QUERY_TYPE = "r"
+
 
 def extract_cypher(text: str) -> str:
     """Extract and format Cypher query from text, handling code blocks and special characters.
@@ -214,6 +218,19 @@ class Text2CypherRetriever(Retriever):
             llm_result = self.llm.invoke(prompt)
             t2c_query = extract_cypher(llm_result.content)
             logger.debug("Text2CypherRetriever Cypher query: %s", t2c_query)
+            # EXPLAIN plans the query without executing it, so we can inspect
+            # its type and refuse anything that would mutate the database
+            # before it ever runs.
+            _, explain_summary, _ = self.driver.execute_query(
+                query_=f"EXPLAIN {t2c_query}",
+                database_=self.neo4j_database,
+                routing_=neo4j.RoutingControl.READ,
+            )
+            if explain_summary.query_type != READ_ONLY_QUERY_TYPE:
+                raise Text2CypherRetrievalError(
+                    "Refusing to execute non-read-only Cypher "
+                    f"(query_type={explain_summary.query_type!r}): {t2c_query}"
+                )
             records, _, _ = self.driver.execute_query(
                 query_=t2c_query,
                 database_=self.neo4j_database,

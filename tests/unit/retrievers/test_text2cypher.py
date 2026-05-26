@@ -134,7 +134,7 @@ def test_t2c_retriever_happy_path(
     llm.invoke.return_value = LLMResponse(content=t2c_query)
     driver.execute_query.return_value = (
         [neo4j_record],
-        None,
+        MagicMock(query_type="r"),
         None,
     )
     template = Text2CypherTemplate()
@@ -145,7 +145,13 @@ def test_t2c_retriever_happy_path(
     )
     retriever.search(query_text=query_text)
     llm.invoke.assert_called_once_with(prompt)
-    driver.execute_query.assert_called_once_with(
+    assert driver.execute_query.call_count == 2
+    driver.execute_query.assert_any_call(
+        query_=f"EXPLAIN {t2c_query}",
+        database_=neo4j_database,
+        routing_=neo4j.RoutingControl.READ,
+    )
+    driver.execute_query.assert_any_call(
         query_=t2c_query,
         database_=neo4j_database,
         routing_=neo4j.RoutingControl.READ,
@@ -171,6 +177,38 @@ def test_t2c_retriever_cypher_error(
     assert "Failed to get search result" in str(e)
 
 
+@pytest.mark.parametrize("query_type", ["w", "rw", "s"])
+@patch("neo4j_graphrag.retrievers.base.get_version")
+def test_t2c_retriever_rejects_non_read_only_query(
+    mock_get_version: MagicMock,
+    driver: MagicMock,
+    llm: MagicMock,
+    query_type: str,
+) -> None:
+    mock_get_version.return_value = ((5, 23, 0), False, False)
+    t2c_query = "MATCH (n) DETACH DELETE n"
+    retriever = Text2CypherRetriever(
+        driver=driver, llm=llm, neo4j_schema="dummy-schema"
+    )
+    retriever.llm.invoke.return_value = LLMResponse(content=t2c_query)
+    driver.execute_query.return_value = (
+        [],
+        MagicMock(query_type=query_type),
+        None,
+    )
+
+    with pytest.raises(Text2CypherRetrievalError) as exc_info:
+        retriever.search(query_text="wipe the graph")
+
+    assert "non-read-only" in str(exc_info.value)
+    assert query_type in str(exc_info.value)
+    driver.execute_query.assert_called_once_with(
+        query_=f"EXPLAIN {t2c_query}",
+        database_=None,
+        routing_=neo4j.RoutingControl.READ,
+    )
+
+
 @patch("neo4j_graphrag.retrievers.base.get_version")
 def test_t2c_retriever_with_result_format_function(
     mock_get_version: MagicMock,
@@ -188,7 +226,7 @@ def test_t2c_retriever_with_result_format_function(
     query_text = "may thy knife chip and shatter"
     driver.execute_query.return_value = [
         [neo4j_record],
-        None,
+        MagicMock(query_type="r"),
         None,
     ]
 
@@ -218,7 +256,7 @@ def test_t2c_retriever_initialization_with_custom_prompt(
     retriever = Text2CypherRetriever(driver=driver, llm=llm, custom_prompt=prompt)
     driver.execute_query.return_value = (
         [neo4j_record],
-        None,
+        MagicMock(query_type="r"),
         None,
     )
     retriever.search(query_text="test")
@@ -250,7 +288,7 @@ def test_t2c_retriever_initialization_with_custom_prompt_and_schema_and_examples
 
     driver.execute_query.return_value = (
         [neo4j_record],
-        None,
+        MagicMock(query_type="r"),
         None,
     )
     retriever.search(query_text="test")
@@ -282,7 +320,7 @@ def test_t2c_retriever_initialization_with_custom_prompt_and_schema_and_examples
 
     driver.execute_query.return_value = (
         [neo4j_record],
-        None,
+        MagicMock(query_type="r"),
         None,
     )
     retriever.search(query_text="test")
@@ -316,7 +354,7 @@ def test_t2c_retriever_initialization_with_custom_prompt_and_unused_schema_and_e
 
     driver.execute_query.return_value = (
         [neo4j_record],
-        None,
+        MagicMock(query_type="r"),
         None,
     )
     retriever.search(
@@ -365,7 +403,7 @@ def test_t2c_retriever_with_custom_prompt_prompt_params(
     retriever = Text2CypherRetriever(driver=driver, llm=llm, custom_prompt=prompt)
     driver.execute_query.return_value = (
         [neo4j_record],
-        None,
+        MagicMock(query_type="r"),
         None,
     )
     retriever.search(query_text=query, prompt_params={"examples_custom": examples})
@@ -392,7 +430,7 @@ def test_t2c_retriever_with_custom_prompt_bad_prompt_params(
     retriever = Text2CypherRetriever(driver=driver, llm=llm, custom_prompt=prompt)
     driver.execute_query.return_value = (
         [neo4j_record],
-        None,
+        MagicMock(query_type="r"),
         None,
     )
     retriever.search(
@@ -425,7 +463,7 @@ def test_t2c_retriever_with_custom_prompt_and_schema(
 
     driver.execute_query.return_value = (
         [neo4j_record],
-        None,
+        MagicMock(query_type="r"),
         None,
     )
 

@@ -144,6 +144,16 @@ class FixedSizeSplitter(TextSplitter):
             chunks.append(TextChunk(text=chunk_text, index=index))
             index += 1
 
-            approximate_start = start + step
+            # Normal advancement is `start + step`, which lets the next iteration
+            # pick up where this chunk ended (minus overlap). However, if
+            # _adjust_chunk_start walked `start` backward past the previous
+            # approximate_start (e.g., a long run of non-whitespace characters
+            # with whitespace far behind it), `start + step` no longer advances
+            # and the while loop runs forever (#471). When that happens, force a
+            # step-sized advance from the current approximate_start instead.
+            next_start = start + step
+            if next_start <= approximate_start:
+                next_start = approximate_start + step
+            approximate_start = next_start
 
         return TextChunks(chunks=chunks)

@@ -38,6 +38,7 @@ from neo4j_graphrag.experimental.components.types import (
     Neo4jNode,
     Neo4jRelationship,
 )
+from neo4j_graphrag.experimental.components.schema import GraphSchema
 from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
 from neo4j_graphrag.neo4j_queries import (
     upsert_node_query,
@@ -130,10 +131,20 @@ class KGWriterModel(DataModel):
               Each file entry includes ``columns``: a list of dicts with ``name``, ``type``,
               ``is_primary_key``, and ``is_unique`` (KEY / synthetic ``__id__`` / ``from``/``to``
               vs UNIQUENESS constraints per :class:`~neo4j_graphrag.experimental.components.schema.GraphSchema`).
-              Node files include a ``constraints`` list with at least one single-property ``KEY``
-              (``__id__`` is injected when the schema has none). Relationship files include
-              ``start_node_primary_keys`` / ``end_node_primary_keys`` as a one-element list:
-              the first single-property schema ``KEY`` for that label, or ``__id__``.
+              Node files include a ``constraints`` list with ``KEY``, ``UNIQUENESS``, and node-scoped
+              ``EXISTENCE`` entries (grouped ``properties`` lists), plus at least one single-property
+              ``KEY`` (``__id__`` is injected when the schema has none). Node files whose
+              source ``Neo4jNode.embedding_properties`` contain one or more keys also include
+              an ``indexes`` list: one ``VECTOR`` entry per embedding property
+              (``properties``: ``[name]``, ``dimensions``: inferred from the first non-empty
+              embedding or ``None`` if absent, ``similarity``: ``"cosine"``). This covers the
+              lexical-graph Chunk file (where the chunk embedder populates
+              ``embedding_properties``) as well as any entity-level embeddings.
+              Relationship files include a ``constraints`` list with ``KEY``, ``UNIQUENESS``,
+              and relationship-scoped ``EXISTENCE`` entries when the schema defines them
+              (key absent when none exist), plus ``start_node_primary_keys`` /
+              ``end_node_primary_keys`` as a one-element list: the first single-property schema
+              ``KEY`` for that label, or ``__id__``.
     """
 
     status: Literal["SUCCESS", "FAILURE"]
@@ -359,7 +370,7 @@ class ParquetWriter(KGWriter):
         self,
         graph: Neo4jGraph,
         lexical_graph_config: LexicalGraphConfig = LexicalGraphConfig(),
-        schema: Optional[dict[str, Any]] = None,
+        schema: Optional[GraphSchema] = None,
     ) -> KGWriterModel:
         """Write the knowledge graph to Parquet files via Neo4jGraphParquetFormatter.
 
@@ -367,10 +378,11 @@ class ParquetWriter(KGWriter):
             graph (Neo4jGraph): The knowledge graph to write.
             lexical_graph_config (LexicalGraphConfig): Used by the formatter for
                 lexical graph labels (e.g. __Entity__) and key properties.
-            schema (Optional[dict[str, Any]]): Optional GraphSchema as a dictionary for
+            schema (Optional[GraphSchema]): Optional GraphSchema for
                 UNIQUENESS, KEY, and EXISTENCE constraints. Drives Parquet column metadata
-                (``is_unique`` vs ``is_primary_key``). If not provided, node files use ``__id__``
-                as the only primary-key column.
+                (``is_unique`` vs ``is_primary_key`` from KEY/UNIQUENESS only). Node-scoped
+                EXISTENCE constraints appear in each node file's ``constraints`` metadata.
+                If not provided, node files use ``__id__`` as the only primary-key column.
         """
         try:
             formatter = Neo4jGraphParquetFormatter(schema=schema)
@@ -421,6 +433,10 @@ class ParquetWriter(KGWriter):
                     constraints_meta.append(
                         {"type": "UNIQUENESS", "properties": list(props)}
                     )
+                for props in meta.existence_constraints or []:
+                    constraints_meta.append(
+                        {"type": "EXISTENCE", "properties": list(props)}
+                    )
                 file_entry: dict[str, Any] = {
                     "name": name,
                     "file_path": file_path,
@@ -430,6 +446,8 @@ class ParquetWriter(KGWriter):
                 }
                 if constraints_meta:
                     file_entry["constraints"] = constraints_meta
+                if meta.indexes:
+                    file_entry["indexes"] = meta.indexes
                 files.append(file_entry)
 
             base_rel = self.relationships_dest.output_path.rstrip("/")
@@ -461,27 +479,41 @@ class ParquetWriter(KGWriter):
                     if unique_filename.endswith(".parquet")
                     else unique_filename
                 )
-                files.append(
-                    {
-                        "name": rel_name,
-                        "file_path": file_path,
-                        "columns": columns,
-                        "is_node": False,
-                        "relationship_type": meta.relationship_type,
-                        "start_node_source": start_node_source,
-                        "start_node_primary_keys": (
-                            meta.head_primary_key_property_names
-                            if meta.head_primary_key_property_names
-                            else [INTERNAL_ID_PROPERTY]
-                        ),
-                        "end_node_source": end_node_source,
-                        "end_node_primary_keys": (
-                            meta.tail_primary_key_property_names
-                            if meta.tail_primary_key_property_names
-                            else [INTERNAL_ID_PROPERTY]
-                        ),
-                    }
-                )
+                rel_constraints_meta: list[dict[str, Any]] = []
+                for props in meta.key_constraints or []:
+                    rel_constraints_meta.append(
+                        {"type": "KEY", "properties": list(props)}
+                    )
+                for props in meta.uniqueness_constraints or []:
+                    rel_constraints_meta.append(
+                        {"type": "UNIQUENESS", "properties": list(props)}
+                    )
+                for props in meta.existence_constraints or []:
+                    rel_constraints_meta.append(
+                        {"type": "EXISTENCE", "properties": list(props)}
+                    )
+                rel_entry: dict[str, Any] = {
+                    "name": rel_name,
+                    "file_path": file_path,
+                    "columns": columns,
+                    "is_node": False,
+                    "relationship_type": meta.relationship_type,
+                    "start_node_source": start_node_source,
+                    "start_node_primary_keys": (
+                        meta.head_primary_key_property_names
+                        if meta.head_primary_key_property_names
+                        else [INTERNAL_ID_PROPERTY]
+                    ),
+                    "end_node_source": end_node_source,
+                    "end_node_primary_keys": (
+                        meta.tail_primary_key_property_names
+                        if meta.tail_primary_key_property_names
+                        else [INTERNAL_ID_PROPERTY]
+                    ),
+                }
+                if rel_constraints_meta:
+                    rel_entry["constraints"] = rel_constraints_meta
+                files.append(rel_entry)
 
             logger.info(
                 "Wrote %d node files and %d relationship files",

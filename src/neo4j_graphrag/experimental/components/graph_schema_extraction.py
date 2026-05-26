@@ -90,14 +90,19 @@ def wire_extraction_constraints_for_graph_schema(
 ) -> list[dict[str, Any]]:
     """Map extraction constraint dicts to values compatible with :class:`~neo4j_graphrag.experimental.components.schema.ConstraintType`.
 
-    Empty ``relationship_type`` (the wire \"unset\" sentinel) becomes ``None`` for runtime validation.
+    The empty-string ``relationship_type`` wire sentinel (and any missing or ``None`` value) is removed,
+    so that :class:`~neo4j_graphrag.experimental.components.schema.ConstraintType` falls back to its
+    default. All three constraint types (UNIQUENESS, EXISTENCE, KEY) support both node and relationship
+    scope; relationship_type is only removed when it is empty or None.
     """
     out: list[dict[str, Any]] = []
     for c in constraints:
         d = dict(c)
+
         rt = d.get("relationship_type")
+
         if rt is None or (isinstance(rt, str) and rt.strip() == ""):
-            d["relationship_type"] = None
+            d.pop("relationship_type", None)
         out.append(d)
     return out
 

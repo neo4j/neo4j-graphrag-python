@@ -318,8 +318,33 @@ def test_schema_constraint_validation_property_not_in_node_type() -> None:
     with pytest.raises(SchemaValidationError) as exc_info:
         GraphSchema.model_validate(schema_dict)
 
-    assert "Constraint references undefined property" in str(exc_info.value)
+    assert "constraint references undefined property" in str(exc_info.value)
     assert "on node type 'Person'" in str(exc_info.value)
+
+
+def test_schema_constraint_validation_property_not_in_relationship_type() -> None:
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]}
+        ],
+        "relationship_types": [
+            {"label": "KNOWS", "properties": [{"name": "since", "type": "INTEGER"}]}
+        ],
+        "constraints": [
+            {
+                "type": "UNIQUENESS",
+                "node_type": "",
+                "relationship_type": "KNOWS",
+                "property_names": ["nonexistent_property"],
+            }
+        ],
+    }
+
+    with pytest.raises(SchemaValidationError) as exc_info:
+        GraphSchema.model_validate(schema_dict)
+
+    assert "constraint references undefined property" in str(exc_info.value)
+    assert "on relationship type 'KNOWS'" in str(exc_info.value)
 
 
 def test_schema_constraint_with_additional_properties_with_allows_unknown_property() -> (
@@ -343,7 +368,7 @@ def test_schema_constraint_with_additional_properties_with_allows_unknown_proper
     with pytest.raises(SchemaValidationError) as exc_info:
         GraphSchema.model_validate(schema_dict)
 
-    assert "Constraint references undefined property 'email'" in str(exc_info.value)
+    assert "constraint references undefined property 'email'" in str(exc_info.value)
 
 
 def test_schema_with_valid_constraints() -> None:
@@ -461,6 +486,89 @@ def test_schema_uniqueness_and_key_same_property_rejected() -> None:
                 "node_type": "Person",
                 "property_name": "id",
                 "relationship_type": None,
+            },
+        ],
+    }
+    with pytest.raises(SchemaValidationError, match="UNIQUENESS and KEY"):
+        GraphSchema.model_validate(schema_dict)
+
+
+def test_constraint_type_node_type_none_accepted() -> None:
+    constraint = ConstraintType(
+        type=GraphConstraintType.UNIQUENESS,
+        node_type=None,
+        relationship_type="KNOWS",
+        property_names=("since",),
+    )
+    assert constraint.node_type is None
+    assert constraint.relationship_type == "KNOWS"
+
+
+def test_schema_uniqueness_constraint_relationship_valid() -> None:
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]}
+        ],
+        "relationship_types": [
+            {"label": "KNOWS", "properties": [{"name": "since", "type": "INTEGER"}]}
+        ],
+        "constraints": [
+            {
+                "type": "UNIQUENESS",
+                "node_type": "",
+                "property_names": ["since"],
+                "relationship_type": "KNOWS",
+            }
+        ],
+    }
+    schema = GraphSchema.model_validate(schema_dict)
+    assert schema.uniqueness_property_names_for_relationship("KNOWS") == {"since"}
+    assert schema.uniqueness_property_names_for_node("Person") == set()
+
+
+def test_schema_existence_constraint_relationship_valid() -> None:
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]}
+        ],
+        "relationship_types": [
+            {"label": "KNOWS", "properties": [{"name": "since", "type": "INTEGER"}]}
+        ],
+        "constraints": [
+            {
+                "type": "EXISTENCE",
+                "node_type": "",
+                "property_names": ["since"],
+                "relationship_type": "KNOWS",
+            }
+        ],
+    }
+    schema = GraphSchema.model_validate(schema_dict)
+    assert schema.existence_property_names_for_relationship("KNOWS") == {"since"}
+    assert schema.mandatory_property_names_for_relationship("KNOWS") == {"since"}
+    assert schema.existence_property_names_for_node("Person") == set()
+
+
+def test_schema_uniqueness_and_key_same_relationship_rejected() -> None:
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]}
+        ],
+        "relationship_types": [
+            {"label": "KNOWS", "properties": [{"name": "since", "type": "INTEGER"}]}
+        ],
+        "constraints": [
+            {
+                "type": "UNIQUENESS",
+                "node_type": "",
+                "property_names": ["since"],
+                "relationship_type": "KNOWS",
+            },
+            {
+                "type": "KEY",
+                "node_type": "",
+                "property_names": ["since"],
+                "relationship_type": "KNOWS",
             },
         ],
     }
@@ -2108,6 +2216,64 @@ def test_extract_graph_constraints_from_metadata_relationship_key_maps_to_key() 
             "property_name": "since",
             "property_names": ("since",),
             "relationship_type": "WORKS_FOR",
+        }
+    ]
+
+
+def test_extract_graph_constraints_from_metadata_node_uniqueness_maps_to_uniqueness() -> (
+    None
+):
+    """Neo4j ``NODE_PROPERTY_UNIQUENESS`` metadata maps to node-scoped ``UNIQUENESS`` constraints."""
+    structured_schema: dict[str, Any] = {
+        "metadata": {
+            "constraint": [
+                {
+                    "type": "NODE_PROPERTY_UNIQUENESS",
+                    "labelsOrTypes": ["Person"],
+                    "properties": ["email"],
+                }
+            ]
+        }
+    }
+    out = SchemaFromExistingGraphExtractor._extract_graph_constraints_from_metadata(
+        structured_schema
+    )
+    assert out == [
+        {
+            "type": GraphConstraintType.UNIQUENESS.value,
+            "node_type": "Person",
+            "property_name": "email",
+            "property_names": ("email",),
+            "relationship_type": None,
+        }
+    ]
+
+
+def test_extract_graph_constraints_from_metadata_relationship_uniqueness_maps_to_uniqueness() -> (
+    None
+):
+    """Neo4j ``RELATIONSHIP_PROPERTY_UNIQUENESS`` metadata maps to relationship-scoped ``UNIQUENESS`` constraints."""
+    structured_schema: dict[str, Any] = {
+        "metadata": {
+            "constraint": [
+                {
+                    "type": "RELATIONSHIP_PROPERTY_UNIQUENESS",
+                    "labelsOrTypes": ["KNOWS"],
+                    "properties": ["since"],
+                }
+            ]
+        }
+    }
+    out = SchemaFromExistingGraphExtractor._extract_graph_constraints_from_metadata(
+        structured_schema
+    )
+    assert out == [
+        {
+            "type": GraphConstraintType.UNIQUENESS.value,
+            "node_type": "",
+            "property_name": "since",
+            "property_names": ("since",),
+            "relationship_type": "KNOWS",
         }
     ]
 

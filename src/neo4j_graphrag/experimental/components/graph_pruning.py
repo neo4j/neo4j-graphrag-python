@@ -340,6 +340,12 @@ class GraphPruning(Component):
                 pruning_stats,
                 prune_empty=False,
             )
+            if not filtered_props and schema.mandatory_property_names_for_relationship(
+                rel.type
+            ):
+                # _enforce_properties already logged this relationship as pruned
+                # (MISSING_REQUIRED_PROPERTY); honour that decision
+                return None
         else:
             filtered_props = rel.properties
 

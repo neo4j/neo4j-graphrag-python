@@ -454,8 +454,7 @@ def test_graph_pruning_key_constraint_on_relationship_mandatory_enforced() -> No
         schema.additional_patterns,
         schema,
     )
-    assert out is not None
-    assert out.properties == {}
+    assert out is None
     assert len(pruning_stats.pruned_relationships) == 1
     assert (
         pruning_stats.pruned_relationships[0].pruned_reason
@@ -491,6 +490,67 @@ def test_graph_pruning_key_constraint_on_relationship_kept_when_present() -> Non
     assert out is not None
     assert out.properties == {"since": "2020-01-01", "role": "engineer"}
     assert pruning_stats.number_of_pruned_relationships == 0
+
+
+def test_graph_pruning_existence_constraint_on_relationship_prunes_when_missing() -> (
+    None
+):
+    """EXISTENCE on a relationship property causes the relationship to be dropped when null."""
+    schema = GraphSchema.model_validate(
+        {
+            "node_types": [
+                {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]},
+                {
+                    "label": "Company",
+                    "properties": [{"name": "name", "type": "STRING"}],
+                },
+            ],
+            "relationship_types": [
+                {
+                    "label": "WORKS_FOR",
+                    "properties": [
+                        {"name": "indication", "type": "STRING"},
+                        {"name": "role", "type": "STRING"},
+                    ],
+                }
+            ],
+            "patterns": [("Person", "WORKS_FOR", "Company")],
+            "constraints": [
+                {
+                    "type": GraphConstraintType.EXISTENCE.value,
+                    "node_type": "",
+                    "property_names": ["indication"],
+                    "relationship_type": "WORKS_FOR",
+                }
+            ],
+        }
+    )
+    pruner = GraphPruning()
+    rel = Neo4jRelationship(
+        start_node_id="p1",
+        end_node_id="c1",
+        type="WORKS_FOR",
+        properties={"role": "engineer"},  # indication missing
+    )
+    pruning_stats = PruningStats()
+    rel_type = schema.relationship_type_from_label("WORKS_FOR")
+    assert rel_type is not None
+    out = pruner._validate_relationship(
+        rel,
+        {"p1": "Person", "c1": "Company"},
+        pruning_stats,
+        rel_type,
+        schema.additional_relationship_types,
+        schema.patterns,
+        schema.additional_patterns,
+        schema,
+    )
+    assert out is None
+    assert len(pruning_stats.pruned_relationships) == 1
+    assert (
+        pruning_stats.pruned_relationships[0].pruned_reason
+        == PruningReason.MISSING_REQUIRED_PROPERTY
+    )
 
 
 @pytest.fixture

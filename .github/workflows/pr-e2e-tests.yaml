@@ -126,11 +126,11 @@ jobs:
         shell: bash
         run: |
           if [[ "${{ matrix.neo4j-tag }}" == "latest" || "${{ matrix.neo4j-tag }}" == "community" ]]; then
-              uv run pytest -m 'not enterprise_only' ./tests/e2e
+              uv run --frozen pytest -m 'not enterprise_only' ./tests/e2e
           elif [[ "${{ matrix.neo4j-tag }}" == "5-enterprise" ]]; then
-              uv run pytest -m 'not search_clause' ./tests/e2e
+              uv run --frozen pytest -m 'not search_clause' ./tests/e2e
           else
-              uv run pytest ./tests/e2e
+              uv run --frozen pytest ./tests/e2e
           fi
       - name: Prune uv cache
         if: always()

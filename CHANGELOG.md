@@ -4,16 +4,37 @@
 
 ### Added
 
+- Vector index for all nodes embedding properties in the ParquetWriter result metadata.
+
+
+## 1.16.1
+
+### Added
+
+- Experimental: `EXISTENCE`, `KEY`, and `UNIQUENESS` constraints can now be scoped to relationship types in `GraphSchema`. `ConstraintType` accepts a `relationship_type` field (mutually exclusive with `node_type`); validation rejects schemas where both `UNIQUENESS` and `KEY` target the same relationship type and property set. `ParquetWriter` relationship file entries now include a `constraints` list when the schema defines any for that relationship type.
+- Experimental: `SchemaFromExistingGraphExtractor._extract_graph_constraints_from_metadata` now maps `NODE_PROPERTY_UNIQUENESS` and `RELATIONSHIP_PROPERTY_UNIQUENESS` rows from `SHOW CONSTRAINTS` to the corresponding node-scoped and relationship-scoped `UNIQUENESS` constraints in `GraphSchema`.
+
+### Fixed
+
+- Experimental: `GraphPruning` now drops relationships whose `KEY`- or `EXISTENCE`-constrained properties are null, matching the existing behaviour for nodes. Previously such relationships were logged as pruned but still passed through with empty properties.
+
+## 1.16.0
+
+### Added
+
 - Added `close` and `aclose` methods to `LLMBase` to gracefully close resources.
 - Added GoogleGenAI (via `google-genai` SDK): includes `GeminiLLM` (generation/tool calling), `GeminiEmbedder` (embeddings), and integration examples/docs.
+- Experimental: `ParquetWriter` node file `constraints` metadata now includes `EXISTENCE` constraints from `GraphSchema` (alongside existing `KEY` and `UNIQUENESS` entries).
 
 ### Changed
 
 - Make clear in documentation that `upsert_vectors` is not for production.
+- Use typed `GraphSchema` instead of `dict[str, Any]` for improved type safety in `ParquetWriter` and `KGWriter`.
 
 ### Fixed
 
 - The `http_client` in `OpenAILLM` and `AzureOpenAILLM` is now properly passed to the `sync` or `async` opena client depending on its type.
+- `Text2CypherRetriever` now runs `EXPLAIN` on the LLM-generated Cypher and refuses to execute anything that is not read-only, raising `Text2CypherRetrievalError`. This prevents prompt-injection attacks from coercing the LLM into running destructive statements such as `MATCH (n) DETACH DELETE n`.
 
 
 ## 1.15.0
