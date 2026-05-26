@@ -228,13 +228,30 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         self.prompt_template = template
 
     async def extract_for_chunk(
-        self, schema: GraphSchema, examples: str, chunk: TextChunk
+        self,
+        schema: GraphSchema,
+        examples: str,
+        chunk: TextChunk,
+        existing_graph: Optional[Neo4jGraph] = None,
     ) -> Neo4jGraph:
         """Run entity extraction for a given text chunk."""
+        existing_nodes = None
+        existing_rels = None
+        if existing_graph:
+            existing_nodes = [
+                n.model_dump(exclude={"embedding_properties"}, exclude_none=True)
+                for n in existing_graph.nodes
+            ]
+            existing_rels = [
+                r.model_dump(exclude={"embedding_properties"}, exclude_none=True)
+                for r in existing_graph.relationships
+            ]
         prompt = self.prompt_template.format(
             text=chunk.text,
             schema=schema.model_dump(exclude_none=True),
             examples=examples,
+            existing_nodes=existing_nodes,
+            existing_rels=existing_rels,
         )
 
         # Use structured output (V2) if enabled
@@ -322,10 +339,13 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         schema: GraphSchema,
         examples: str,
         lexical_graph_builder: Optional[LexicalGraphBuilder] = None,
+        existing_graph: Optional[Neo4jGraph] = None,
     ) -> Neo4jGraph:
         """Run extraction, validation and post processing for a single chunk"""
         async with sem:
-            chunk_graph = await self.extract_for_chunk(schema, examples, chunk)
+            chunk_graph = await self.extract_for_chunk(
+                schema, examples, chunk, existing_graph
+            )
             # final_chunk_graph = self.validate_chunk(chunk_graph, schema)
             await self.post_process_chunk(
                 chunk_graph,
@@ -342,6 +362,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         lexical_graph_config: Optional[LexicalGraphConfig] = None,
         schema: Optional[GraphSchema] = None,
         examples: str = "",
+        existing_graph: Optional[Neo4jGraph] = None,
         **kwargs: Any,
     ) -> Neo4jGraph:
         """Perform entity and relation extraction for all chunks in a list.
@@ -357,6 +378,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             lexical_graph_config (Optional[LexicalGraphConfig], optional): Lexical graph configuration to customize node labels and relationship types in the lexical graph.
             schema (GraphSchema | None): Definition of the schema to guide the LLM in its extraction.
             examples (str): Examples for few-shot learning in the prompt.
+            existing_graph (Optional[Neo4jGraph]): Nodes and relationships already in the knowledge graph. When provided, the LLM is instructed to reuse their IDs for matching entities instead of creating new ones.
         """
         lexical_graph_builder = None
         lexical_graph = None
@@ -381,6 +403,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                 schema,
                 examples,
                 lexical_graph_builder,
+                existing_graph,
             )
             for chunk in chunks.chunks
         ]

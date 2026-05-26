@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import json
 import warnings
 from typing import Any, Optional
 
@@ -178,6 +179,7 @@ Assign a unique ID (string) to each node, and reuse it to define relationships.
 Do respect the source and target node types for relationship and
 the relationship direction.
 
+{existing_entities}
 Make sure you adhere to the following rules to produce valid JSON objects:
 - Do not return any additional information other than the JSON in it.
 - Omit any backticks around the JSON - simply output the JSON on its own.
@@ -198,8 +200,31 @@ Input text:
         schema: dict[str, Any],
         examples: str,
         text: str = "",
+        existing_nodes: Optional[list[dict[str, Any]]] = None,
+        existing_rels: Optional[list[dict[str, Any]]] = None,
     ) -> str:
-        return super().format(text=text, schema=schema, examples=examples)
+        if existing_nodes or existing_rels:
+            existing_entities = (
+                "The following nodes and relationships already exist in the knowledge graph.\n"
+                "When an entity in the text matches an existing node, reuse its exact ID instead of\n"
+                "creating a new one. Only assign a new ID to genuinely new entities.\n\n"
+                "Existing graph entities:\n"
+                + json.dumps(
+                    {
+                        "nodes": existing_nodes or [],
+                        "relationships": existing_rels or [],
+                    }
+                )
+                + "\n"
+            )
+        else:
+            existing_entities = ""
+        return super().format(
+            text=text,
+            schema=schema,
+            examples=examples,
+            existing_entities=existing_entities,
+        )
 
 
 class SchemaExtractionTemplate(PromptTemplate):
