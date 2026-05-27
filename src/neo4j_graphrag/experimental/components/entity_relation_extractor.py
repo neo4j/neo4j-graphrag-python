@@ -362,7 +362,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         lexical_graph_config: Optional[LexicalGraphConfig] = None,
         schema: Optional[GraphSchema] = None,
         examples: str = "",
-        existing_graph: Optional[Neo4jGraph] = None,
+        existing_graphs: Optional[list[Neo4jGraph]] = None,
         **kwargs: Any,
     ) -> Neo4jGraph:
         """Perform entity and relation extraction for all chunks in a list.
@@ -378,8 +378,13 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             lexical_graph_config (Optional[LexicalGraphConfig], optional): Lexical graph configuration to customize node labels and relationship types in the lexical graph.
             schema (GraphSchema | None): Definition of the schema to guide the LLM in its extraction.
             examples (str): Examples for few-shot learning in the prompt.
-            existing_graph (Optional[Neo4jGraph]): Nodes and relationships already in the knowledge graph. When provided, the LLM is instructed to reuse their IDs for matching entities instead of creating new ones.
+            existing_graphs (Optional[list[Neo4jGraph]]): One subgraph per chunk, each containing nodes and relationships already in the knowledge graph that are relevant to that chunk. When provided, the LLM is instructed to reuse their IDs for matching entities instead of creating new ones. Must have the same length as chunks.
         """
+        if existing_graphs is not None and len(existing_graphs) != len(chunks.chunks):
+            raise ValueError(
+                f"existing_graphs length ({len(existing_graphs)}) must match "
+                f"chunks length ({len(chunks.chunks)})"
+            )
         lexical_graph_builder = None
         lexical_graph = None
         if self.create_lexical_graph:
@@ -403,9 +408,9 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                 schema,
                 examples,
                 lexical_graph_builder,
-                existing_graph,
+                existing_graphs[i] if existing_graphs else None,
             )
-            for chunk in chunks.chunks
+            for i, chunk in enumerate(chunks.chunks)
         ]
         chunk_graphs: list[Neo4jGraph] = list(await asyncio.gather(*tasks))
         graph = self.combine_chunk_graphs(lexical_graph, chunk_graphs)

@@ -475,17 +475,19 @@ def test_extractor_structured_output_unsupported_llm() -> None:
 
 
 @pytest.mark.asyncio
-async def test_extractor_with_existing_graph_includes_entities_in_prompt() -> None:
+async def test_extractor_with_existing_graphs_includes_entities_in_prompt() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(content='{"nodes": [], "relationships": []}')
 
     extractor = LLMEntityRelationExtractor(llm=llm, create_lexical_graph=False)
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
-    existing_graph = Neo4jGraph(
-        nodes=[Neo4jNode(id="0", label="Person", properties={"name": "Alice"})],
-        relationships=[],
-    )
-    await extractor.run(chunks=chunks, existing_graph=existing_graph)
+    existing_graphs = [
+        Neo4jGraph(
+            nodes=[Neo4jNode(id="0", label="Person", properties={"name": "Alice"})],
+            relationships=[],
+        )
+    ]
+    await extractor.run(chunks=chunks, existing_graphs=existing_graphs)
 
     prompt = llm.ainvoke.call_args[0][0]
     assert "Existing graph entities" in prompt
@@ -493,38 +495,40 @@ async def test_extractor_with_existing_graph_includes_entities_in_prompt() -> No
 
 
 @pytest.mark.asyncio
-async def test_extractor_with_existing_graph_excludes_embedding_properties() -> None:
+async def test_extractor_with_existing_graphs_excludes_embedding_properties() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(content='{"nodes": [], "relationships": []}')
 
     extractor = LLMEntityRelationExtractor(llm=llm, create_lexical_graph=False)
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
-    existing_graph = Neo4jGraph(
-        nodes=[
-            Neo4jNode(
-                id="0",
-                label="Person",
-                properties={"name": "Alice"},
-                embedding_properties={"embedding": [0.1, 0.2, 0.3]},
-            )
-        ],
-        relationships=[
-            Neo4jRelationship(
-                start_node_id="0",
-                end_node_id="1",
-                type="KNOWS",
-                embedding_properties={"embedding": [0.4, 0.5]},
-            )
-        ],
-    )
-    await extractor.run(chunks=chunks, existing_graph=existing_graph)
+    existing_graphs = [
+        Neo4jGraph(
+            nodes=[
+                Neo4jNode(
+                    id="0",
+                    label="Person",
+                    properties={"name": "Alice"},
+                    embedding_properties={"embedding": [0.1, 0.2, 0.3]},
+                )
+            ],
+            relationships=[
+                Neo4jRelationship(
+                    start_node_id="0",
+                    end_node_id="1",
+                    type="KNOWS",
+                    embedding_properties={"embedding": [0.4, 0.5]},
+                )
+            ],
+        )
+    ]
+    await extractor.run(chunks=chunks, existing_graphs=existing_graphs)
 
     prompt = llm.ainvoke.call_args[0][0]
     assert "embedding_properties" not in prompt
 
 
 @pytest.mark.asyncio
-async def test_extractor_without_existing_graph_omits_entities_block() -> None:
+async def test_extractor_without_existing_graphs_omits_entities_block() -> None:
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(content='{"nodes": [], "relationships": []}')
 
@@ -534,6 +538,51 @@ async def test_extractor_without_existing_graph_omits_entities_block() -> None:
 
     prompt = llm.ainvoke.call_args[0][0]
     assert "Existing graph entities" not in prompt
+
+
+@pytest.mark.asyncio
+async def test_extractor_existing_graphs_per_chunk_routes_correctly() -> None:
+    llm = MagicMock(spec=LLMInterface)
+    llm.ainvoke.return_value = LLMResponse(content='{"nodes": [], "relationships": []}')
+
+    extractor = LLMEntityRelationExtractor(llm=llm, create_lexical_graph=False)
+    chunks = TextChunks(
+        chunks=[
+            TextChunk(text="chunk one", index=0),
+            TextChunk(text="chunk two", index=1),
+        ]
+    )
+    existing_graphs = [
+        Neo4jGraph(
+            nodes=[Neo4jNode(id="0", label="Person", properties={"name": "Alice"})],
+            relationships=[],
+        ),
+        Neo4jGraph(
+            nodes=[Neo4jNode(id="1", label="Company", properties={"name": "Acme"})],
+            relationships=[],
+        ),
+    ]
+    await extractor.run(chunks=chunks, existing_graphs=existing_graphs)
+
+    prompts = [call[0][0] for call in llm.ainvoke.call_args_list]
+    assert any('"Alice"' in p for p in prompts)
+    assert any('"Acme"' in p for p in prompts)
+
+
+@pytest.mark.asyncio
+async def test_extractor_existing_graphs_length_mismatch_raises() -> None:
+    llm = MagicMock(spec=LLMInterface)
+    extractor = LLMEntityRelationExtractor(llm=llm, create_lexical_graph=False)
+    chunks = TextChunks(
+        chunks=[
+            TextChunk(text="chunk one", index=0),
+            TextChunk(text="chunk two", index=1),
+        ]
+    )
+    existing_graphs = [Neo4jGraph()]  # only one graph for two chunks
+
+    with pytest.raises(ValueError, match="existing_graphs length"):
+        await extractor.run(chunks=chunks, existing_graphs=existing_graphs)
 
 
 @pytest.mark.asyncio
