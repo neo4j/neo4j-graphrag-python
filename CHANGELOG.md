@@ -23,6 +23,7 @@
 ### Added
 
 - Added `close` and `aclose` methods to `LLMBase` to gracefully close resources.
+- Added GoogleGenAI (via `google-genai` SDK): includes `GeminiLLM` (generation/tool calling), `GeminiEmbedder` (embeddings), and integration examples/docs.
 - Experimental: `ParquetWriter` node file `constraints` metadata now includes `EXISTENCE` constraints from `GraphSchema` (alongside existing `KEY` and `UNIQUENESS` entries).
 
 ### Changed
