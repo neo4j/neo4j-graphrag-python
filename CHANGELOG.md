@@ -5,6 +5,11 @@
 ### Added
 
 - Vector index for all nodes embedding properties in the ParquetWriter result metadata.
+- Added `GeminiEmbedder` and `GeminiLLM` to replace the to be deprecated `VertexAIEmbedder` and `VertexAILLM`.
+
+### Fixed
+
+- Fixed a bug in `FixedSizeSplitter` that was stuck into an infinite loop with texts containing long whitespaces.
 
 
 ## 1.16.1
