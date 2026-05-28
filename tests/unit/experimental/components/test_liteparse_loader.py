@@ -25,7 +25,7 @@ import pytest
 from fsspec.implementations.local import LocalFileSystem
 
 from neo4j_graphrag.exceptions import PdfLoaderError
-from neo4j_graphrag.experimental.components.data_loader import LiteParseLoader
+from neo4j_graphrag.experimental.components.liteparse_loader import LiteParseLoader
 from neo4j_graphrag.experimental.components.types import DocumentType
 
 SAMPLE_PDF = str(Path(__file__).parent / "sample_data/lorem_ipsum.pdf")
@@ -44,10 +44,10 @@ def _make_liteparse_stub(parse_text: str = SAMPLE_TEXT) -> ModuleType:
 def inject_liteparse_stub() -> Generator[ModuleType, None, None]:
     stub = _make_liteparse_stub()
     with patch.dict(sys.modules, {"liteparse": stub}), patch(
-        "neo4j_graphrag.experimental.components.data_loader._LiteParse",
+        "neo4j_graphrag.experimental.components.liteparse_loader._LiteParse",
         stub.LiteParse,
     ), patch(
-        "neo4j_graphrag.experimental.components.data_loader._LITEPARSE_AVAILABLE",
+        "neo4j_graphrag.experimental.components.liteparse_loader._LITEPARSE_AVAILABLE",
         True,
     ):
         yield stub
@@ -72,7 +72,7 @@ def test_load_file_non_local_fs_uses_bytes(inject_liteparse_stub: ModuleType) ->
 
     loader = LiteParseLoader()
     with patch(
-        "neo4j_graphrag.experimental.components.data_loader.is_default_fs",
+        "neo4j_graphrag.experimental.components.liteparse_loader.is_default_fs",
         return_value=False,
     ):
         text = loader.load_file(SAMPLE_PDF, fs=fake_fs)
@@ -96,7 +96,7 @@ def test_load_file_wraps_parse_error_as_pdf_loader_error(
 
 def test_missing_liteparse_raises_import_error() -> None:
     with patch(
-        "neo4j_graphrag.experimental.components.data_loader._LITEPARSE_AVAILABLE",
+        "neo4j_graphrag.experimental.components.liteparse_loader._LITEPARSE_AVAILABLE",
         False,
     ):
         loader = LiteParseLoader()

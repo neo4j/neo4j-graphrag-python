@@ -31,7 +31,7 @@ pytest.importorskip(
     "liteparse", reason="liteparse not installed — skipping integration tests"
 )
 
-from neo4j_graphrag.experimental.components.data_loader import LiteParseLoader  # noqa: E402
+from neo4j_graphrag.experimental.components.liteparse_loader import LiteParseLoader  # noqa: E402
 
 SAMPLE_PDF = Path(__file__).parent / "sample_data/lorem_ipsum.pdf"
 

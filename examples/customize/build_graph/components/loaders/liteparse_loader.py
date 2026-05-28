@@ -8,7 +8,7 @@ parser with optional OCR support.  Install the optional extra before running:
 Usage::
 
     from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
-    from neo4j_graphrag.experimental.components.data_loader import LiteParseLoader
+    from neo4j_graphrag.experimental.components.liteparse_loader import LiteParseLoader
 
     pipeline = SimpleKGPipeline(
         llm=...,
@@ -21,6 +21,6 @@ Usage::
 """
 
 # LiteParseLoader lives in the main package — import it from there.
-from neo4j_graphrag.experimental.components.data_loader import LiteParseLoader
+from neo4j_graphrag.experimental.components.liteparse_loader import LiteParseLoader
 
 __all__ = ["LiteParseLoader"]
