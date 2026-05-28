@@ -32,7 +32,7 @@ from neo4j_graphrag.experimental.components.types import (
 )
 
 try:
-    from liteparse import LiteParse as _LiteParse  # type: ignore[import]
+    from liteparse import LiteParse as _LiteParse
 
     _LITEPARSE_AVAILABLE = True
 except ImportError:
