@@ -15,7 +15,7 @@
 
 [project]
 name = "neo4j-graphrag"
-version = "1.14.0"
+version = "1.17.0"
 description = "Python package to allow easy integration to Neo4j's GraphRAG features"
 authors = [
     {name = "Neo4j, Inc", email = "team-gen-ai@neo4j.com"}
@@ -26,9 +26,9 @@ requires-python = ">=3.10.0,<3.15"
 dependencies = [
     "neo4j>=5.17.0,<7.0.0",
     "pydantic>=2.6.3,<3.0.0",
-    "fsspec>=2024.9.0,<2025.0.0",
+    "fsspec>=2024.9.0",
     "pypdf>=6.0.0,<7.0.0",
-    "json-repair>=0.44.1,<0.45.0",
+    "json-repair>=0.44.1,<1.0.0",
     "pyyaml>=6.0.2,<7.0.0",
     "types-pyyaml>=6.0.12.20240917,<7.0.0",
     "numpy>=2.0.0,<3.0.0; python_version >= '3.9' and python_version < '3.13'",
@@ -46,8 +46,10 @@ Repository = "https://github.com/neo4j/neo4j-graphrag-python"
 weaviate = ["weaviate-client>=4.6.1,<5.0.0"]
 pinecone = ["pinecone-client>=4.1.0,<5.0.0"]
 google = ["google-cloud-aiplatform>=1.66.0,<2.0.0"]
+google-genai = ["google-genai>=1.62.0,<2.0.0"]
 cohere = ["cohere>=5.9.0,<6.0.0"]
 anthropic = ["anthropic>=0.49.0,<0.50.0"]
+bedrock = ["boto3>=1.35.0,<2.0.0"]
 ollama = ["ollama>=0.4.4,<0.5.0"]
 openai = ["openai>=1.51.1,<2.0.0"]
 mistralai = ["mistralai>=1.0.3,<2.0.0"]
@@ -55,14 +57,14 @@ qdrant = ["qdrant-client>=1.11.3,<2.0.0"]
 kg_creation_tools = ["neo4j-viz>=0.4.2,<0.5.0"]
 sentence-transformers = ["sentence-transformers>=3.0.0,<4.0.0"]
 experimental = [
-    "langchain-text-splitters>=0.3.0,<0.4.0",
+    "langchain-text-splitters>=0.3.0,<2.0.0",
     "neo4j-viz>=0.4.2,<0.5.0",
     "llama-index>=0.13.0,<0.14.0",
     "pyarrow>=20.0.0",  # ParquetWriter, Neo4jGraphParquetFormatter
 ]
 examples = [
-    "langchain-openai>=0.2.2,<0.3.0",
-    "langchain-huggingface>=0.1.0,<0.2.0",
+    "langchain-openai>=0.2.2,<2.0.0",
+    "langchain-huggingface>=0.1.0,<2.0.0",
 ]
 # NOTE: spaCy currently has a Python 3.14 import-time failure via its pydantic v1 path
 # (see https://github.com/explosion/spaCy/issues/13895). Until upstream resolves this,
@@ -95,6 +97,9 @@ testpaths = ["tests"]
 filterwarnings = [
     "",
 ]
+
+[tool.coverage.run]
+source = ["src"]
 
 [tool.coverage.paths]
 source = ["src"]

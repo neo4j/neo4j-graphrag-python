@@ -54,10 +54,10 @@ is utilizing the `SimpleKGPipeline` interface:
         llm=llm, # an LLMInterface for Entity and Relation extraction
         driver=neo4j_driver,  # a neo4j driver to write results to graph
         embedder=embedder,  # an Embedder for chunks
-        from_pdf=True,   # set to False if parsing an already extracted text
+        from_file=True,   # set to False if parsing an already extracted text
     )
     await kg_builder.run_async(file_path=str(file_path))
-    # await kg_builder.run_async(text="my text")  # if using from_pdf=False
+    # await kg_builder.run_async(text="my text")  # if using from_file=False
 
 
 See:
@@ -79,19 +79,19 @@ with, optionally, a list of their expected properties)
 and instructions on how to connect them (patterns).
 Node and relationship types can be represented
 as either simple strings (for their labels) or dictionaries. If using a dictionary,
-it must include a label key and can optionally include description and properties keys,
+it must include a ``label`` key and can optionally include ``description`` and ``properties`` keys,
 as shown below:
 
 .. code:: python
 
     NODE_TYPES = [
-        # node types can be defined with a simple label...
+        # node types can be defined with a simple label string...
         "Person",
-        # ... or with a dict if more details are needed,
-        # such as a description:
+        # ... or with a dict for more detail such as a description.
+        # When no properties key is provided, a default "name" property is added automatically.
         {"label": "House", "description": "Family the person belongs to"},
-        # or a list of properties the LLM will try to attach to the entity:
-        {"label": "Planet", "properties": [{"name": "name", "type": "STRING", "required": True}, {"name": "weather", "type": "STRING"}]},
+        # or with an explicit list of properties the LLM will try to attach to the entity:
+        {"label": "Planet", "properties": [{"name": "name", "type": "STRING"}, {"name": "weather", "type": "STRING"}]},
     ]
     # same thing for relationships:
     RELATIONSHIP_TYPES = [
@@ -216,8 +216,11 @@ instances of specific components to the `SimpleKGPipeline`. The components that 
 customized at the moment are:
 
 - `text_splitter`: must be an instance of :ref:`TextSplitter`
-- `pdf_loader`: must be an instance of :ref:`PdfLoader`
+- `file_loader`: must be an instance of :ref:`PdfLoader` or :ref:`MarkdownLoader`
 - `kg_writer`: must be an instance of :ref:`KGWriter`
+
+The legacy names ``from_pdf`` and ``pdf_loader`` (in Python, YAML, or JSON) are still accepted
+with a deprecation warning; use ``from_file`` and ``file_loader`` instead.
 
 For instance, the following code can be used to customize the chunk size and
 chunk overlap in the text splitter component:
@@ -450,7 +453,7 @@ within the configuration file.
 .. code:: json
 
     {
-        "from_pdf": false,
+        "from_file": false,
         "perform_entity_resolution": true,
         "neo4j_database": "myDb",
         "on_error": "IGNORE",
@@ -502,7 +505,7 @@ or in YAML:
 
 .. code:: yaml
 
-    from_pdf: false
+    from_file: false
     perform_entity_resolution: true
     neo4j_database: myDb
     on_error: IGNORE
@@ -578,7 +581,7 @@ Each of these components can be run individually:
 .. code:: python
 
     import asyncio
-    from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
+    from neo4j_graphrag.experimental.components.data_loader import PdfLoader
     my_component = PdfLoader()
     asyncio.run(my_component.run("my_file.pdf"))
 
@@ -588,7 +591,7 @@ They can also be used within a pipeline:
 .. code:: python
 
     from neo4j_graphrag.experimental.pipeline import Pipeline
-    from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
+    from neo4j_graphrag.experimental.components.data_loader import PdfLoader
     pipeline = Pipeline()
     my_component = PdfLoader()
     pipeline.add_component(my_component, "component_name")
@@ -604,7 +607,7 @@ This package currently supports text extraction from PDFs:
 .. code:: python
 
     from pathlib import Path
-    from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
+    from neo4j_graphrag.experimental.components.data_loader import PdfLoader
 
     loader = PdfLoader()
     await loader.run(filepath=Path("my_file.pdf"))
@@ -614,12 +617,13 @@ To implement your own loader, use the `DataLoader` interface:
 .. code:: python
 
     from pathlib import Path
-    from neo4j_graphrag.experimental.components.pdf_loader import DataLoader, PdfDocument
+    from neo4j_graphrag.experimental.components.data_loader import DataLoader
+    from neo4j_graphrag.experimental.components.types import LoadedDocument
 
     class MyDataLoader(DataLoader):
-        async def run(self, filepath: Path, metadata: Optional[Dict[str, str]] = None) -> PdfDocument:
+        async def run(self, filepath: Path, metadata: Optional[Dict[str, str]] = None) -> LoadedDocument:
             # process file in `filepath`
-            return PdfDocument(
+            return LoadedDocument(
                 text="text",
                 document_info=DocumentInfo(
                     path=str(filepath),
@@ -885,7 +889,7 @@ You can also save and reload the extracted schema:
 Using Structured Output with Schema Extraction
 -----------------------------------------------
 
-For improved reliability with :ref:`OpenAILLM <openaillm>` or :ref:`VertexAILLM <vertexaillm>`, enable structured output mode. When ``use_structured_output=True``, the extractor passes the ``GraphSchema`` Pydantic model as ``response_format`` to the LLM, ensuring responses conform to the expected schema structure with automatic validation:
+For improved reliability with :ref:`OpenAILLM <openaillm>` or :ref:`VertexAILLM <vertexaillm>`, enable structured output mode. When ``use_structured_output=True``, the extractor passes the lean ``GraphSchemaExtractionOutput`` Pydantic model as ``response_format`` to the LLM; the response is validated and converted to a :class:`~neo4j_graphrag.experimental.components.schema.GraphSchema` for the rest of the pipeline:
 
 .. code:: python
 
@@ -908,19 +912,32 @@ For improved reliability with :ref:`OpenAILLM <openaillm>` or :ref:`VertexAILLM 
 Schema Validation and Node Properties
 --------------------------------------
 
-**Important:** All node types must have at least one property defined. When using string shorthand for node types (e.g., ``"Person"``), a default ``"name"`` property is automatically added with ``additional_properties=True`` to allow flexible LLM extraction:
+All node types must have at least one property defined. When no properties are provided,
+a default ``name: STRING`` property is added automatically and ``additional_properties``
+is set to ``True`` to allow the LLM to extract additional properties freely.
+
+This applies to both the **string shorthand** and the **long dict syntax** when the
+``properties`` key is omitted:
 
 .. code:: python
 
-    # String shorthand - automatically gets default property
-    NodeType("Person")  # Becomes: properties=[{"name": "name", "type": "STRING"}], additional_properties=True
-    
-    # Explicit definition - must include at least one property
-    NodeType(
-        label="Person",
-        properties=[PropertyType(name="name", type="STRING")],
-        additional_properties=True  # Allow LLM to extract additional properties
-    )
+    # String shorthand — "name" property added automatically
+    "Person"
+    # equivalent to:
+    NodeType(label="Person", properties=[PropertyType(name="name", type="STRING")], additional_properties=True)
+
+    # Long syntax without a properties key — same auto-addition applies
+    {"label": "House", "description": "Family the person belongs to"}
+    # equivalent to:
+    NodeType(label="House", description="Family the person belongs to",
+             properties=[PropertyType(name="name", type="STRING")], additional_properties=True)
+
+Passing ``properties`` explicitly as an empty list raises a ``ValidationError``:
+
+.. code:: python
+
+    # Raises ValidationError — empty list is not auto-filled
+    {"label": "House", "properties": []}
 
 **Relationship types** with no properties automatically set ``additional_properties=True`` to preserve LLM-extracted properties during graph construction.
 
@@ -1130,8 +1147,8 @@ By default, all extracted elements — including nodes, relationships, and prope
 Configuration Options
 ---------------------
 
-- **Required Properties** (default: ``False``)
-  Required properties may be specified at the node or relationship type level. Any extracted node or relationship missing one or more of its required properties will be pruned from the graph.
+- **Existence (mandatory properties)** — via ``GraphSchema.constraints``
+  Use constraints of type ``EXISTENCE`` (for a node property or a relationship property) to mark properties that must be present and non-null. The graph pruner removes nodes or relationships that violate these constraints. This mirrors Neo4j existence constraints; it is independent of ``UNIQUENESS`` (uniqueness does not imply existence). Legacy per-property ``required`` on ``PropertyType`` is deprecated and is migrated to ``EXISTENCE`` constraints when a schema is loaded.
 
 - **Additional Properties**
   This node- or relationship-level option determines whether extra properties not listed in the schema should be retained.
@@ -1181,7 +1198,7 @@ In addition to the user-defined configuration options described above,
 the `GraphPruning` component performs the following cleanup operations:
 
 - Nodes with empty label or ID are pruned.
-- Nodes with missing required properties are pruned.
+- Nodes or relationships missing properties required by an ``EXISTENCE`` constraint are pruned.
 - Nodes with no remaining properties are pruned.
 - Relationships with empty type are pruned.
 - Relationships with invalid source or target nodes (i.e., nodes no longer present in the graph) are pruned.

@@ -12,15 +12,16 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Any, Optional
-from unittest.mock import MagicMock, Mock, patch
-from typing import List
+import warnings
+from typing import Any, List, Optional, cast
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import httpx
 import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm import LLMResponse, MistralAILLM
 from neo4j_graphrag.types import LLMMessage
+from neo4j_graphrag.utils.rate_limit import NoOpRateLimitHandler
 from pydantic import BaseModel, ConfigDict
 
 
@@ -33,6 +34,10 @@ class MockSDKError(Exception):
     ) -> None:
         super().__init__(message)
         self.raw_response = raw_response
+
+
+def _as_mock(value: Any) -> MagicMock:
+    return cast(MagicMock, value)
 
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral", None)
@@ -85,7 +90,7 @@ def test_mistralai_llm_invoke_with_message_history(mock_mistral: Mock) -> None:
     messages: List[LLMMessage] = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
-    llm.client.chat.complete.assert_called_once_with(  # type: ignore[attr-defined]
+    _as_mock(llm.client.chat.complete).assert_called_once_with(
         messages=messages,
         model=model,
     )
@@ -117,12 +122,12 @@ def test_mistralai_llm_invoke_with_message_history_and_system_instruction(
     messages: List[LLMMessage] = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
-    llm.client.chat.complete.assert_called_once_with(  # type: ignore[attr-defined]
+    _as_mock(llm.client.chat.complete).assert_called_once_with(
         messages=messages,
         model=model,
     )
 
-    assert llm.client.chat.complete.call_count == 1  # type: ignore
+    assert _as_mock(llm.client.chat.complete).call_count == 1
 
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
@@ -231,8 +236,8 @@ def test_mistralai_llm_invoke_v2_happy_path(mock_mistral: Mock) -> None:
     assert response.content == "mistral v2 response"
 
     # Verify the correct method was called
-    llm.client.chat.complete.assert_called_once()  # type: ignore[attr-defined]
-    call_args = llm.client.chat.complete.call_args[1]  # type: ignore[attr-defined]
+    _as_mock(llm.client.chat.complete).assert_called_once()
+    call_args = _as_mock(llm.client.chat.complete).call_args[1]
     assert call_args["model"] == "mistral-model"
     assert len(call_args["messages"]) == 2
 
@@ -261,8 +266,8 @@ def test_mistralai_llm_invoke_v2_with_conversation_history(mock_mistral: Mock) -
     assert response.content == "mistral conversation response"
 
     # Verify the correct number of messages were passed
-    llm.client.chat.complete.assert_called_once()  # type: ignore[attr-defined]
-    call_args = llm.client.chat.complete.call_args[1]  # type: ignore[attr-defined]
+    _as_mock(llm.client.chat.complete).assert_called_once()
+    call_args = _as_mock(llm.client.chat.complete).call_args[1]
     assert len(call_args["messages"]) == 4
 
 
@@ -287,8 +292,8 @@ def test_mistralai_llm_invoke_v2_no_system_message(mock_mistral: Mock) -> None:
     assert response.content == "mistral no system response"
 
     # Verify only user message was passed
-    llm.client.chat.complete.assert_called_once()  # type: ignore[attr-defined]
-    call_args = llm.client.chat.complete.call_args[1]  # type: ignore[attr-defined]
+    _as_mock(llm.client.chat.complete).assert_called_once()
+    call_args = _as_mock(llm.client.chat.complete).call_args[1]
     assert len(call_args["messages"]) == 1
 
 
@@ -439,3 +444,75 @@ def test_mistralai_invoke_v2_with_response_format_raises_error(
     assert "MistralAILLM does not currently support structured output" in str(
         exc_info.value
     )
+
+
+@patch("neo4j_graphrag.llm.mistralai_llm.SDKError", MockSDKError)
+@patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
+def test_mistralai_invoke_v2_rate_limit_handler_called(
+    mock_mistral: Mock,
+) -> None:
+    """Test that the rate limit handler is invoked on the V2 (List[LLMMessage]) path."""
+    messages: List[LLMMessage] = [{"role": "user", "content": "Hello"}]
+    mock_mistral_instance = mock_mistral.return_value
+    chat_response_mock = MagicMock()
+    chat_response_mock.choices = [MagicMock(message=MagicMock(content="Hi there!"))]
+    mock_mistral_instance.chat.complete.return_value = chat_response_mock
+
+    spy_handler = MagicMock(wraps=NoOpRateLimitHandler())
+    llm = MistralAILLM(model_name="mistral-model", rate_limit_handler=spy_handler)
+    response = llm.invoke(messages)
+
+    assert response.content == "Hi there!"
+    spy_handler.handle_sync.assert_called_once()
+
+
+@pytest.mark.asyncio
+@patch("neo4j_graphrag.llm.mistralai_llm.SDKError", MockSDKError)
+@patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
+async def test_mistralai_ainvoke_v2_rate_limit_handler_called(
+    mock_mistral: Mock,
+) -> None:
+    """Test that the rate limit handler is invoked on the async V2 (List[LLMMessage]) path."""
+    messages: List[LLMMessage] = [{"role": "user", "content": "Hello"}]
+    mock_mistral_instance = mock_mistral.return_value
+    chat_response_mock = MagicMock()
+    chat_response_mock.choices = [MagicMock(message=MagicMock(content="Hi there!"))]
+    mock_mistral_instance.chat.complete_async = AsyncMock(
+        return_value=chat_response_mock
+    )
+
+    spy_handler = MagicMock(wraps=NoOpRateLimitHandler())
+    llm = MistralAILLM(model_name="mistral-model", rate_limit_handler=spy_handler)
+    response = await llm.ainvoke(messages)
+
+    assert response.content == "Hi there!"
+    spy_handler.handle_async.assert_called_once()
+
+
+@patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
+def test_mistralai_llm_close(mock_mistral: Mock) -> None:
+    mock_mistral.return_value.aclose = AsyncMock()
+
+    llm = MistralAILLM(model_name="mistral-model")
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        llm.close()
+
+    mock_mistral.return_value.close.assert_called_once()
+    mock_mistral.return_value.aclose.assert_called_once()
+
+
+@pytest.mark.asyncio
+@patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
+async def test_mistralai_llm_aclose(mock_mistral: Mock) -> None:
+    mock_mistral.return_value.aclose = AsyncMock()
+
+    llm = MistralAILLM(model_name="mistral-model")
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        await llm.aclose()
+
+    mock_mistral.return_value.close.assert_called_once()
+    mock_mistral.return_value.aclose.assert_called_once()

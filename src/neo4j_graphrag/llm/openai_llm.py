@@ -19,6 +19,7 @@ from __future__ import annotations
 import abc
 import json
 import logging
+import warnings
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -30,10 +31,13 @@ from typing import (
     Type,
     Union,
     cast,
-    overload,
 )
 
 # 3rd party dependencies
+try:
+    import httpx
+except ImportError:
+    httpx = None  # type: ignore[assignment]
 from pydantic import BaseModel, ValidationError
 
 # project dependencies
@@ -51,10 +55,11 @@ from neo4j_graphrag.utils.rate_limit import (
 )
 
 from ..exceptions import LLMGenerationError
-from .base import LLMInterface, LLMInterfaceV2
+from .base import LLMBase
 from .types import (
     BaseMessage,
     LLMResponse,
+    LLMUsage,
     MessageList,
     SystemMessage,
     ToolCall,
@@ -78,7 +83,7 @@ logger = logging.getLogger(__name__)
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel, line-too-long
-class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
+class BaseOpenAILLM(LLMBase, abc.ABC):
     """Base class for OpenAI LLMs."""
 
     client: OpenAI
@@ -110,7 +115,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
             )
         self.openai = openai
 
-        LLMInterfaceV2.__init__(
+        LLMBase.__init__(
             self,
             model_name=model_name,
             model_params=model_params or {},
@@ -118,41 +123,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
             **kwargs,
         )
 
-    # overloads for LLMInterface and LLMInterfaceV2 methods
-    @overload  # type: ignore[no-overload-impl]
     def invoke(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse: ...
-
-    @overload
-    def invoke(
-        self,
-        input: List[LLMMessage],
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse: ...
-
-    @overload  # type: ignore[no-overload-impl]
-    async def ainvoke(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse: ...
-
-    @overload
-    async def ainvoke(
-        self,
-        input: List[LLMMessage],
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse: ...
-
-    # switching logics to LLMInterface or LLMInterfaceV2
-    def invoke(  # type: ignore[no-redef]
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -167,7 +138,7 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 
-    async def ainvoke(  # type: ignore[no-redef]
+    async def ainvoke(
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -205,6 +176,10 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
         return await self.__ainvoke_v1_with_tools(
             input, tools, message_history, system_instruction
         )
+
+    async def aclose(self) -> None:
+        self.client.close()
+        await self.async_client.close()
 
     # subsidiary methods
     def get_messages(
@@ -337,7 +312,14 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
             )
 
             content = response.choices[0].message.content or ""
-            return LLMResponse(content=content)
+            usage = None
+            if response.usage:
+                usage = LLMUsage(
+                    request_tokens=response.usage.prompt_tokens,
+                    response_tokens=response.usage.completion_tokens,
+                    total_tokens=response.usage.total_tokens,
+                )
+            return LLMResponse(content=content, usage=usage)
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
@@ -372,7 +354,14 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
                 **self.model_params,
             )
             content = response.choices[0].message.content or ""
-            return LLMResponse(content=content)
+            usage = None
+            if response.usage:
+                usage = LLMUsage(
+                    request_tokens=response.usage.prompt_tokens,
+                    response_tokens=response.usage.completion_tokens,
+                    total_tokens=response.usage.total_tokens,
+                )
+            return LLMResponse(content=content, usage=usage)
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
@@ -482,7 +471,14 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
                 **self.model_params,
             )
             content = response.choices[0].message.content or ""
-            return LLMResponse(content=content)
+            usage = None
+            if response.usage:
+                usage = LLMUsage(
+                    request_tokens=response.usage.prompt_tokens,
+                    response_tokens=response.usage.completion_tokens,
+                    total_tokens=response.usage.total_tokens,
+                )
+            return LLMResponse(content=content, usage=usage)
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
@@ -548,7 +544,14 @@ class BaseOpenAILLM(LLMInterface, LLMInterfaceV2, abc.ABC):
             )
 
             content = response.choices[0].message.content or ""
-            return LLMResponse(content=content)
+            usage = None
+            if response.usage:
+                usage = LLMUsage(
+                    request_tokens=response.usage.prompt_tokens,
+                    response_tokens=response.usage.completion_tokens,
+                    total_tokens=response.usage.total_tokens,
+                )
+            return LLMResponse(content=content, usage=usage)
         except self.openai.OpenAIError as e:
             raise LLMGenerationError(e)
 
@@ -655,8 +658,21 @@ class OpenAILLM(BaseOpenAILLM):
             model_params=model_params,
             rate_limit_handler=rate_limit_handler,
         )
-        self.client = self.openai.OpenAI(**kwargs)
-        self.async_client = self.openai.AsyncOpenAI(**kwargs)
+        http_client = kwargs.pop("http_client", None)
+        params = kwargs.copy()
+        sync_params = params.copy()
+        async_params = params.copy()
+        if httpx is not None and isinstance(http_client, httpx.Client):
+            sync_params["http_client"] = http_client
+        elif httpx is not None and isinstance(http_client, httpx.AsyncClient):
+            async_params["http_client"] = http_client
+        elif http_client is not None:
+            warnings.warn(
+                f"Invalid http_client type (got {type(http_client)}, expected httpx.Client or httpx.AsyncClient). Using default client.",
+                stacklevel=2,
+            )
+        self.client = self.openai.OpenAI(**sync_params)
+        self.async_client = self.openai.AsyncOpenAI(**async_params)
 
 
 class AzureOpenAILLM(BaseOpenAILLM):
@@ -684,5 +700,18 @@ class AzureOpenAILLM(BaseOpenAILLM):
             model_params=model_params,
             rate_limit_handler=rate_limit_handler,
         )
-        self.client = self.openai.AzureOpenAI(**kwargs)
-        self.async_client = self.openai.AsyncAzureOpenAI(**kwargs)
+        http_client = kwargs.pop("http_client", None)
+        params = kwargs.copy()
+        sync_params = params.copy()
+        async_params = params.copy()
+        if httpx is not None and isinstance(http_client, httpx.Client):
+            sync_params["http_client"] = http_client
+        elif httpx is not None and isinstance(http_client, httpx.AsyncClient):
+            async_params["http_client"] = http_client
+        elif http_client is not None:
+            warnings.warn(
+                f"Invalid http_client type (got {type(http_client)}, expected httpx.Client or httpx.AsyncClient). Using default client.",
+                stacklevel=2,
+            )
+        self.client = self.openai.AzureOpenAI(**sync_params)
+        self.async_client = self.openai.AsyncAzureOpenAI(**async_params)

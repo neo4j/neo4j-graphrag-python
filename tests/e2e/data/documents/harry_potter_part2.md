@@ -1,0 +1,15 @@
+# Part 2 — Flight to the Burrow
+
+## Order escort
+
+The **Order of the Phoenix**, led by Alastor “Mad-Eye” **Moody**, arrives to take Harry to his new home at the **Weasleys’** house, *the Burrow*.
+
+### Decoy plan
+
+Six of Harry’s friends take `Polyjuice Potion` to disguise themselves as Harry and act as decoys, and they all fly off in different directions.
+
+## Ambush
+
+The **Death Eaters**, alerted to their departure by Snape, attack Harry and his friends. **Voldemort** chases Harry down, but Harry’s wand fends Voldemort off, seemingly without Harry’s help.
+
+> End of excerpt.

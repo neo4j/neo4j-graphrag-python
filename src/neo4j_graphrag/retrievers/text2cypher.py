@@ -44,6 +44,10 @@ from neo4j_graphrag.types import (
 
 logger = logging.getLogger(__name__)
 
+# Value reported by neo4j.ResultSummary.query_type for a read-only Cypher
+# statement. The driver's possible values are "r", "w", "rw", and "s".
+READ_ONLY_QUERY_TYPE = "r"
+
 
 def extract_cypher(text: str) -> str:
     """Extract and format Cypher query from text, handling code blocks and special characters.
@@ -62,14 +66,15 @@ def extract_cypher(text: str) -> str:
     Returns:
         str: Properly formatted Cypher query with correct backtick quoting.
     """
-    # Extract Cypher code enclosed in triple backticks
-    pattern = r"```(.*?)```"
+    # Extract Cypher code enclosed in triple backticks (strip optional language tag)
+    pattern = r"```(?:[a-zA-Z]+\n)?(.*?)```"
     matches = re.findall(pattern, text, re.DOTALL)
     cypher_query = matches[0] if matches else text
     # Quote node labels in backticks if they contain spaces and are not already quoted
+    # Anchored to node pattern (...) to avoid matching map literal values
     cypher_query = re.sub(
-        r":\s*(?!`\s*)(\s*)([a-zA-Z0-9_]+(?:\s+[a-zA-Z0-9_]+)+)(?!\s*`)(\s*)",
-        r":`\2`",
+        r"(\(\s*[A-Za-z0-9_]*\s*):\s*(?!`)([A-Za-z0-9_]+(?:\s+[A-Za-z0-9_]+)+)(?!\s*`)\s*",
+        r"\1:`\2`",
         cypher_query,
     )
     # Quote property keys in backticks if they contain spaces and are not already quoted
@@ -80,8 +85,8 @@ def extract_cypher(text: str) -> str:
     )
     # Quote relationship types in backticks if they contain spaces and are not already quoted
     cypher_query = re.sub(
-        r"(\[\s*[a-zA-Z0-9_]*\s*:\s*)(?!`)([a-zA-Z0-9_]+(?:\s+[a-zA-Z0-9_]+)+)(?!`)(\s*(?:\]|-))",
-        r"\1`\2`\3",
+        r"(\[\s*[a-zA-Z0-9_]*\s*):\s*(?!`)([a-zA-Z0-9_]+(?:\s+[a-zA-Z0-9_]+)+)(?!`)\s*(\s*(?:\]|-))",
+        r"\1:`\2`\3",
         cypher_query,
     )
     return cypher_query
@@ -213,6 +218,19 @@ class Text2CypherRetriever(Retriever):
             llm_result = self.llm.invoke(prompt)
             t2c_query = extract_cypher(llm_result.content)
             logger.debug("Text2CypherRetriever Cypher query: %s", t2c_query)
+            # EXPLAIN plans the query without executing it, so we can inspect
+            # its type and refuse anything that would mutate the database
+            # before it ever runs.
+            _, explain_summary, _ = self.driver.execute_query(
+                query_=f"EXPLAIN {t2c_query}",
+                database_=self.neo4j_database,
+                routing_=neo4j.RoutingControl.READ,
+            )
+            if explain_summary.query_type != READ_ONLY_QUERY_TYPE:
+                raise Text2CypherRetrievalError(
+                    "Refusing to execute non-read-only Cypher "
+                    f"(query_type={explain_summary.query_type!r}): {t2c_query}"
+                )
             records, _, _ = self.driver.execute_query(
                 query_=t2c_query,
                 database_=self.neo4j_database,

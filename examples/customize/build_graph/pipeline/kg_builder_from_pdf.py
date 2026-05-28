@@ -22,7 +22,7 @@ from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     OnError,
 )
 from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
-from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
+from neo4j_graphrag.experimental.components.data_loader import PdfLoader
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
     NodeType,
@@ -92,6 +92,7 @@ async def define_and_run_pipeline(
         LLMEntityRelationExtractor(
             llm=llm,
             on_error=OnError.RAISE,
+            use_structured_output=True,
         ),
         "extractor",
     )
@@ -126,19 +127,18 @@ async def define_and_run_pipeline(
 
 
 async def main() -> PipelineResult:
-    llm = OpenAILLM(
-        model_name="gpt-5",
-        model_params={
-            "max_tokens": 2000,
-            "response_format": {"type": "json_object"},
-        },
-    )
-    driver = neo4j.GraphDatabase.driver(
-        "bolt://localhost:7687", auth=("neo4j", "password")
-    )
-    res = await define_and_run_pipeline(driver, llm)
-    driver.close()
-    await llm.async_client.close()
+    res = None
+    try:
+        llm = OpenAILLM(
+            model_name="gpt-5",
+        )
+        driver = neo4j.GraphDatabase.driver(
+            "bolt://localhost:7687", auth=("neo4j", "password")
+        )
+        res = await define_and_run_pipeline(driver, llm)
+    finally:
+        driver.close()
+        await llm.aclose()
     return res
 
 

@@ -50,9 +50,11 @@ the extra dependencies described below:
     - **ollama**: LLMs from Ollama
     - **openai**: LLMs from OpenAI (including AzureOpenAI)
     - **google**: LLMs from Vertex AI
+    - **google-genai**: LLMs and embeddings from Google Gemini
     - **cohere**: LLMs from Cohere
     - **anthropic**: LLMs from Anthropic
     - **mistralai**: LLMs from MistralAI
+    - **bedrock**: LLMs from Amazon Bedrock
 - **sentence-transformers** : to use embeddings from the `sentence-transformers` Python package
 - Vector database (to use :ref:`External Retrievers`):
     - **weaviate**: store vectors in Weaviate
@@ -138,7 +140,7 @@ kg_builder = SimpleKGPipeline(
         "patterns": patterns,
     },
     on_error="IGNORE",
-    from_pdf=False,
+    from_file=False,
 )
 
 # Run the pipeline on a piece of text
@@ -402,6 +404,13 @@ docker compose -f tests/e2e/docker-compose.yml up
 ```
 
 _(tip: If you encounter any caching issues within the databases, you can completely remove them by running `docker compose -f tests/e2e/docker-compose.yml down`)_
+
+For SEARCH-clause e2e tests (`tests/e2e/test_search_clause_e2e.py`), use the Neo4j 2026 compose file instead. It pins Neo4j 2026.02.2 (required for the Cypher 25 `SEARCH` clause) and binds the same `7687`/`7474` ports — stop the default stack first:
+
+```bash
+docker compose -f tests/e2e/docker-compose.yml down
+docker compose -f tests/e2e/docker-compose.neo4j2026.yml up -d
+```
 
 Once all the services are running, execute the following command to run the e2e tests:
 

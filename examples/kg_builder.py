@@ -29,7 +29,7 @@ from neo4j_graphrag.experimental.components.entity_relation_extractor import (
     OnError,
 )
 from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
-from neo4j_graphrag.experimental.components.pdf_loader import PdfLoader
+from neo4j_graphrag.experimental.components.data_loader import PdfLoader
 from neo4j_graphrag.experimental.components.schema import (
     SchemaBuilder,
     NodeType,
@@ -142,7 +142,7 @@ async def main() -> PipelineResult:
     )
     res = await define_and_run_pipeline(driver, llm)
     driver.close()
-    await llm.async_client.close()
+    await llm.aclose()
     return res
 
 

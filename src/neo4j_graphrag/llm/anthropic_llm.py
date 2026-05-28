@@ -22,16 +22,16 @@ from typing import (
     Type,
     Union,
     cast,
-    overload,
 )
 
 from pydantic import BaseModel, ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.base import LLMInterface, LLMInterfaceV2
+from neo4j_graphrag.llm.base import LLMBase
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
+    LLMUsage,
     MessageList,
     UserMessage,
 )
@@ -53,11 +53,11 @@ if TYPE_CHECKING:
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
-class AnthropicLLM(LLMInterface, LLMInterfaceV2):
+class AnthropicLLM(LLMBase):
     """Interface for large language models on Anthropic
 
     Args:
-        model_name (str, optional): Name of the LLM to use. Defaults to "gemini-1.5-flash-001".
+        model_name (str): Name of the LLM to use.
         model_params (Optional[dict], optional): Additional parameters for LLMInterface(V1) passed to the model when text is sent to it. Defaults to None.
         system_instruction: Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
         rate_limit_handler (Optional[RateLimitHandler], optional): Handler for managing rate limits for LLMInterface(V1). Defaults to None.
@@ -94,7 +94,7 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):
                 """Could not import Anthropic Python client.
                 Please install it with `pip install "neo4j-graphrag[anthropic]"`."""
             )
-        LLMInterfaceV2.__init__(
+        LLMBase.__init__(
             self,
             model_name=model_name,
             model_params=model_params or {},
@@ -105,41 +105,7 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):
         self.client = anthropic.Anthropic(**kwargs)
         self.async_client = anthropic.AsyncAnthropic(**kwargs)
 
-    # overloads for LLMInterface and LLMInterfaceV2 methods
-    @overload  # type: ignore[no-overload-impl]
     def invoke(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse: ...
-
-    @overload
-    def invoke(
-        self,
-        input: List[LLMMessage],
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse: ...
-
-    @overload  # type: ignore[no-overload-impl]
-    async def ainvoke(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse: ...
-
-    @overload
-    async def ainvoke(
-        self,
-        input: List[LLMMessage],
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse: ...
-
-    # switching logics to LLMInterface or LLMInterfaceV2
-    def invoke(  # type: ignore[no-redef]
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -154,7 +120,7 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 
-    async def ainvoke(  # type: ignore[no-redef]
+    async def ainvoke(
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -205,7 +171,12 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):
                 text = response_content[0].text
             else:
                 raise LLMGenerationError("LLM returned empty response.")
-            return LLMResponse(content=text)
+            usage = LLMUsage(
+                request_tokens=response.usage.input_tokens,
+                response_tokens=response.usage.output_tokens,
+                total_tokens=response.usage.input_tokens + response.usage.output_tokens,
+            )
+            return LLMResponse(content=text, usage=usage)
         except self.anthropic.APIError as e:
             raise LLMGenerationError(e)
 
@@ -234,7 +205,12 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):
                 text = response_content[0].text
             else:
                 raise LLMGenerationError("LLM returned empty response.")
-            return LLMResponse(content=text)
+            usage = LLMUsage(
+                request_tokens=response.usage.input_tokens,
+                response_tokens=response.usage.output_tokens,
+                total_tokens=response.usage.input_tokens + response.usage.output_tokens,
+            )
+            return LLMResponse(content=text, usage=usage)
         except self.anthropic.APIError as e:
             raise LLMGenerationError(e)
 
@@ -271,7 +247,12 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):
                 text = response_content[0].text
             else:
                 raise LLMGenerationError("LLM returned empty response.")
-            return LLMResponse(content=text)
+            usage = LLMUsage(
+                request_tokens=response.usage.input_tokens,
+                response_tokens=response.usage.output_tokens,
+                total_tokens=response.usage.input_tokens + response.usage.output_tokens,
+            )
+            return LLMResponse(content=text, usage=usage)
         except self.anthropic.APIError as e:
             raise LLMGenerationError(e)
 
@@ -309,9 +290,18 @@ class AnthropicLLM(LLMInterface, LLMInterfaceV2):
                 text = response_content[0].text
             else:
                 raise LLMGenerationError("LLM returned empty response.")
-            return LLMResponse(content=text)
+            usage = LLMUsage(
+                request_tokens=response.usage.input_tokens,
+                response_tokens=response.usage.output_tokens,
+                total_tokens=response.usage.input_tokens + response.usage.output_tokens,
+            )
+            return LLMResponse(content=text, usage=usage)
         except self.anthropic.APIError as e:
             raise LLMGenerationError(e)
+
+    async def aclose(self) -> None:
+        self.client.close()
+        await self.async_client.close()
 
     # subsidiary methods
     def get_messages(

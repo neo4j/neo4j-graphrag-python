@@ -218,18 +218,28 @@ IMPORTANT RULES:
 5. When defining patterns, ensure that every node label and relationship label mentioned exists in your lists of node types and relationship types.
 6. Do not create node types that aren't clearly mentioned in the text.
 7. Keep your schema minimal and focused on clearly identifiable patterns in the text.
-8. UNIQUENESS CONSTRAINTS:
-8.1 UNIQUENESS is optional; each node_type may or may not have exactly one uniqueness constraint.
+8. UNIQUENESS CONSTRAINTS (optional, node or relationship properties):
+8.1 Each node or relationship type may have at most one UNIQUENESS constraint in typical designs.
 8.2 Only use properties that seem to not have too many missing values in the sample.
-8.3 Constraints reference node_types by label and specify which property is unique.
-8.4 If a property appears in a uniqueness constraint it MUST also appear in the corresponding node_type as a property.
-9. REQUIRED PROPERTIES:
-9.1 Mark a property as "required": true if every instance of that node/relationship type MUST have this property (non-nullable).
-9.2 Mark a property as "required": false if the property is optional and may be absent on some instances.
-9.3 Properties that are identifiers, names, or essential characteristics are typically required.
-9.4 Properties that are supplementary information (phone numbers, descriptions, metadata) are typically optional.
-9.5 When uncertain, default to "required": false.
-9.6 If a property has a UNIQUENESS constraint, it MUST be marked as "required": true.
+8.3 Constraints reference node_types or relationship_types by label and specify which properties are unique via "property_names" (a list of one or more property names).
+8.4 Every property in a uniqueness constraint MUST also appear in the corresponding node_type or relationship_type as a property.
+8.5 Uniqueness does NOT imply that the property must exist on every node (existence is separate; see rule 9).
+8.6 For composite uniqueness (multiple properties), list all properties in "property_names". The combination of values must be unique.
+8.7 For a node property, use {{"type": "UNIQUENESS", "node_type": "<Label>", "property_names": ["<name>"], "relationship_type": ""}}. For a relationship property, use {{"type": "UNIQUENESS", "node_type": "", "property_names": ["<name>"], "relationship_type": "<REL_TYPE>"}}.
+9. EXISTENCE CONSTRAINTS (optional, single property only):
+9.1 Use EXISTENCE constraints to mark properties that MUST be present (non-null) on every instance.
+9.2 For a node property, add {{"type": "EXISTENCE", "node_type": "<Label>", "property_names": ["<name>"], "relationship_type": ""}} (use an empty string, not null, when the constraint is not on a relationship).
+9.3 For a relationship property, add {{"type": "EXISTENCE", "node_type": "", "property_names": ["<name>"], "relationship_type": "<REL_TYPE>"}}.
+9.4 Each EXISTENCE constraint must reference exactly one of node_type or relationship_type (non-empty), never both.
+9.5 Do not infer EXISTENCE from UNIQUENESS; they are independent (as in Neo4j Cypher constraints).
+9.6 EXISTENCE constraints must have exactly one property in "property_names" (composite existence is not supported).
+10. KEY CONSTRAINTS (optional, Neo4j NODE KEY / RELATIONSHIP KEY):
+10.1 Use KEY when properties must exist on every instance and together form the natural identifier (uniqueness + mandatory presence).
+10.2 Same wire shape as EXISTENCE: exactly one of node_type or relationship_type (non-empty), with the other as "".
+10.3 Do not combine UNIQUENESS and KEY on the same node or relationship type with the same properties.
+10.4 Do not infer KEY from UNIQUENESS alone; KEY implies required presence, unlike UNIQUENESS alone.
+10.5 For composite key (multiple properties), list all properties in "property_names". All must exist and the combination must be unique.
+11. Never use double underscores (__) as a prefix or suffix in node labels or relationship types (e.g. __Person__ or __KNOWS__ are forbidden).
 
 Accepted property types are: BOOLEAN, DATE, DURATION, FLOAT, INTEGER, LIST,
 LOCAL_DATETIME, LOCAL_TIME, POINT, STRING, ZONED_DATETIME, ZONED_TIME.
@@ -242,13 +252,15 @@ Return a valid JSON object that follows this precise structure:
       "properties": [
         {{
           "name": "name",
-          "type": "STRING",
-          "required": true
+          "type": "STRING"
         }},
         {{
           "name": "email",
-          "type": "STRING",
-          "required": false
+          "type": "STRING"
+        }},
+        {{
+          "name": "employee_id",
+          "type": "STRING"
         }}
       ]
     }}
@@ -268,8 +280,27 @@ Return a valid JSON object that follows this precise structure:
     {{
       "type": "UNIQUENESS",
       "node_type": "Person",
-      "property_name": "name"
-    }}
+      "property_names": ["email"],
+      "relationship_type": ""
+    }},
+    {{
+      "type": "EXISTENCE",
+      "node_type": "Person",
+      "property_names": ["name"],
+      "relationship_type": ""
+    }},
+    {{
+      "type": "KEY",
+      "node_type": "Person",
+      "property_names": ["employee_id"],
+      "relationship_type": ""
+    }},
+    {{
+      "type": "UNIQUENESS",
+      "node_type": "",
+      "property_names": ["since"],
+      "relationship_type": "WORKS_FOR"
+    }},
     ...
   ]
 }}

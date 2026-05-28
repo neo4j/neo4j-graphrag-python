@@ -32,7 +32,7 @@ class OllamaEmbeddings(Embedder):
     This class uses the ollama Python client to generate vector embeddings for text data.
 
     Args:
-        model (str): The name of the Mistral AI text embedding model to use. Defaults to "mistral-embed".
+        model (str): The name of the Ollama text embedding model to use.
     """
 
     def __init__(

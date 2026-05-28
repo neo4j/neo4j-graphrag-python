@@ -24,6 +24,7 @@ from neo4j_graphrag.experimental.components.types import (
     DEFAULT_DOCUMENT_NODE_LABEL,
     DEFAULT_NEXT_CHUNK_RELATIONSHIP_TYPE,
     DocumentInfo,
+    DocumentType,
     GraphResult,
     LexicalGraphConfig,
     Neo4jNode,
@@ -81,7 +82,7 @@ async def test_lexical_graph_builder_run_with_document() -> None:
         document_info=DocumentInfo(
             path="test_lexical_graph",
             uid=doc_uid,
-            document_type="my_type",
+            document_type=DocumentType.PDF,
         ),
     )
     assert isinstance(result, GraphResult)
@@ -93,7 +94,7 @@ async def test_lexical_graph_builder_run_with_document() -> None:
     assert document.label == DEFAULT_DOCUMENT_NODE_LABEL
     assert document.properties["path"] == "test_lexical_graph"
     assert document.properties["createdAt"] is not None
-    assert document.properties["document_type"] == "my_type"
+    assert document.properties["document_type"] == "pdf"
     chunk1 = nodes[1]
     assert chunk1.label == DEFAULT_CHUNK_NODE_LABEL
     chunk2 = nodes[2]

@@ -10,8 +10,6 @@ from neo4j_graphrag.llm import LLMResponse, OpenAILLM
 # set api key here on in the OPENAI_API_KEY env var
 api_key = None
 
-llm = OpenAILLM(model_name="gpt-5", api_key=api_key)
-
 questions = [
     "What are some movies Tom Hanks starred in?",
     "Is he also a director?",
@@ -19,24 +17,15 @@ questions = [
 ]
 
 history: list[dict[str, str]] = []
-for question in questions:
-    res: LLMResponse = llm.invoke(
-        question,
-        message_history=history,  # type: ignore
-    )
-    history.append(
-        {
-            "role": "user",
-            "content": question,
-        }
-    )
-    history.append(
-        {
-            "role": "assistant",
-            "content": res.content,
-        }
-    )
+with OpenAILLM(model_name="gpt-5", api_key=api_key) as llm:
+    for question in questions:
+        res: LLMResponse = llm.invoke(
+            question,
+            message_history=history,  # type: ignore
+        )
+        history.append({"role": "user", "content": question})
+        history.append({"role": "assistant", "content": res.content})
 
-    print("#" * 50, question)
-    print(res.content)
-    print("#" * 50)
+        print("#" * 50, question)
+        print(res.content)
+        print("#" * 50)

@@ -22,6 +22,12 @@ RetrieverResultItem
 .. autoclass:: neo4j_graphrag.types.RetrieverResultItem
 
 
+LLMUsage
+========
+
+.. autoclass:: neo4j_graphrag.llm.types.LLMUsage
+
+
 LLMResponse
 ===========
 
@@ -43,6 +49,11 @@ DocumentInfo
 ============
 
 .. autoclass:: neo4j_graphrag.experimental.components.types.DocumentInfo
+
+LoadedDocument
+==============
+
+.. autoclass:: neo4j_graphrag.experimental.components.types.LoadedDocument
 
 
 TextChunk
@@ -99,6 +110,16 @@ Pattern
 =======
 
 .. autoclass:: neo4j_graphrag.experimental.components.schema.Pattern
+
+GraphConstraintType
+=====================
+
+.. autoclass:: neo4j_graphrag.experimental.components.schema.GraphConstraintType
+
+ConstraintType
+================
+
+.. autoclass:: neo4j_graphrag.experimental.components.schema.ConstraintType
 
 GraphSchema
 ===========

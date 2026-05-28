@@ -14,56 +14,109 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import enum
 import json
-import re
-
-import neo4j
 import logging
+import re
 import warnings
+from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Any,
+    Callable,
     Dict,
     Iterator,
     List,
     Literal,
     Optional,
-    Tuple,
-    Union,
     Sequence,
-    Callable,
+    Tuple,
+    TypeAlias,
+    Union,
     cast,
 )
-from pathlib import Path
 
+import neo4j
 from pydantic import (
     BaseModel,
+    ConfigDict,
+    Field,
     PrivateAttr,
+    ValidationError,
+    field_validator,
     model_validator,
     validate_call,
-    ConfigDict,
-    ValidationError,
-    Field,
 )
 from typing_extensions import Self
 
 from neo4j_graphrag.exceptions import (
-    SchemaValidationError,
     LLMGenerationError,
     SchemaExtractionError,
+    SchemaValidationError,
 )
 from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
 from neo4j_graphrag.experimental.pipeline.types.schema import (
     EntityInputType,
     RelationInputType,
 )
-from neo4j_graphrag.generation import SchemaExtractionTemplate, PromptTemplate
+from neo4j_graphrag.generation import PromptTemplate, SchemaExtractionTemplate
 from neo4j_graphrag.llm import LLMInterface
-from neo4j_graphrag.types import LLMMessage
-from neo4j_graphrag.utils.file_handler import FileHandler, FileFormat
 from neo4j_graphrag.schema import get_structured_schema
+from neo4j_graphrag.types import LLMMessage
+from neo4j_graphrag.utils.file_handler import FileFormat, FileHandler
+from neo4j_graphrag.utils.json_schema_structured_output import (
+    make_strict_json_schema_for_structured_output,
+)
 
+if TYPE_CHECKING:
+    from neo4j_graphrag.experimental.components.graph_schema_extraction import (
+        GraphSchemaExtractionOutput,
+    )
 
 logger = logging.getLogger(__name__)
+
+# Shared with :class:`ExtractedPropertyType` (schema extraction structured output).
+Neo4jPropertyTypeName: TypeAlias = Literal[
+    "BOOLEAN",
+    "DATE",
+    "DURATION",
+    "FLOAT",
+    "INTEGER",
+    "LIST",
+    "LOCAL_DATETIME",
+    "LOCAL_TIME",
+    "POINT",
+    "STRING",
+    "ZONED_DATETIME",
+    "ZONED_TIME",
+]
+
+_DUNDER_RE = re.compile(r"^__|__$")
+
+
+class GraphConstraintType(str, enum.Enum):
+    """Constraint kinds for :class:`ConstraintType`.
+
+    ``UNIQUENESS`` supports both node and relationship scope; composite (multi-property)
+    constraints are allowed.  ``EXISTENCE`` marks a mandatory (non-null) node or
+    relationship property (single property only — Neo4j does not support composite
+    existence).  ``KEY`` matches Neo4j NODE KEY / RELATIONSHIP KEY: mandatory and unique;
+    supports composite (multi-property) constraints.
+    """
+
+    UNIQUENESS = "UNIQUENESS"
+    EXISTENCE = "EXISTENCE"
+    KEY = "KEY"
+
+
+def _reject_dunder_label(label: str, kind: str) -> str:
+    """Raise ValueError if *label* starts or ends with double underscores."""
+    if _DUNDER_RE.search(label):
+        raise ValueError(
+            f"{kind} label '{label}' uses a reserved '__' prefix or suffix. "
+            "This convention is reserved for internal Neo4j GraphRAG labels."
+        )
+    return label
 
 
 class PropertyType(BaseModel):
@@ -73,22 +126,15 @@ class PropertyType(BaseModel):
 
     name: str
     # See https://neo4j.com/docs/cypher-manual/current/values-and-types/property-structural-constructed/#property-types
-    type: Literal[
-        "BOOLEAN",
-        "DATE",
-        "DURATION",
-        "FLOAT",
-        "INTEGER",
-        "LIST",
-        "LOCAL_DATETIME",
-        "LOCAL_TIME",
-        "POINT",
-        "STRING",
-        "ZONED_DATETIME",
-        "ZONED_TIME",
-    ]
+    type: Neo4jPropertyTypeName
     description: str = ""
-    required: bool = False
+    required: bool = Field(
+        default=False,
+        deprecated=(
+            "Use GraphSchema.constraints with type EXISTENCE instead of PropertyType.required. "
+            "Uniqueness does not imply existence; model existence explicitly with EXISTENCE constraints."
+        ),
+    )
     model_config = ConfigDict(
         frozen=True,
     )
@@ -113,6 +159,11 @@ class NodeType(BaseModel):
         default_factory=default_additional_item("properties")
     )
 
+    @field_validator("label")
+    @classmethod
+    def label_must_not_use_dunder(cls, v: str) -> str:
+        return _reject_dunder_label(v, "Node")
+
     @model_validator(mode="before")
     @classmethod
     def validate_input_if_string(cls, data: EntityInputType) -> EntityInputType:
@@ -128,6 +179,23 @@ class NodeType(BaseModel):
                 # allow LLM to extract additional properties beyond the default "name"
                 "additional_properties": True,  # type: ignore[dict-item]
             }
+        if isinstance(data, dict) and "properties" not in data:
+            if data.get("additional_properties") is False:  # type: ignore[comparison-overlap]
+                return data
+            label = data.get("label", "")
+            logger.info(
+                f"No properties defined for NodeType '{label}'. "
+                f"Adding default 'name' property and additional_properties=True "
+                f"to allow flexible property extraction."
+            )
+            return {
+                **data,
+                # added to satisfy the model validation (min_length=1 for properties of node types)
+                "properties": [{"name": "name", "type": "STRING"}],
+                # allow LLM to extract additional properties beyond the default "name"
+                "additional_properties": True,  # type: ignore[dict-item]
+            }
+
         return data
 
     @model_validator(mode="after")
@@ -159,6 +227,11 @@ class RelationshipType(BaseModel):
         default_factory=default_additional_item("properties")
     )
 
+    @field_validator("label")
+    @classmethod
+    def label_must_not_use_dunder(cls, v: str) -> str:
+        return _reject_dunder_label(v, "Relationship")
+
     @model_validator(mode="before")
     @classmethod
     def validate_input_if_string(cls, data: RelationInputType) -> RelationInputType:
@@ -186,18 +259,125 @@ class RelationshipType(BaseModel):
 
 class ConstraintType(BaseModel):
     """
-    Represents a constraint on a node in the graph.
+    Represents a schema-level constraint on a node or relationship property.
+
+    All three types (``UNIQUENESS``, ``EXISTENCE``, ``KEY``) use exactly one of
+    ``node_type`` or ``relationship_type`` (non-empty), like Neo4j node vs relationship scope.
+
+    ``UNIQUENESS`` and ``KEY`` support composite (multi-property) constraints via
+    ``property_names``.  ``EXISTENCE`` requires exactly one property (Neo4j does not
+    support composite existence constraints).
+
+    .. deprecated:: 0.x
+        ``property_name`` is deprecated in favour of ``property_names``.
+        It is kept for backward compatibility and is automatically migrated.
     """
 
-    type: Literal[
-        "UNIQUENESS"
-    ]  # TODO: add other constraint types ["propertyExistence", "propertyType", "key"]
-    node_type: str
-    property_name: str
+    type: GraphConstraintType
+    property_name: str = Field(
+        default="",
+        deprecated=(
+            "Use property_names (a tuple of one or more names) instead of "
+            "property_name. property_name is kept for backward compatibility."
+        ),
+    )
+    property_names: Tuple[str, ...] = Field(min_length=1)
+    node_type: Optional[str] = None
+    relationship_type: Optional[str] = None
 
     model_config = ConfigDict(
         frozen=True,
+        use_enum_values=True,
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_property_name_to_property_names(cls, data: Any) -> Any:
+        """Backward-compat migration: ``property_name`` → ``property_names``; normalizes empty-string scope fields to ``None``."""
+        if not isinstance(data, dict):
+            return data
+        for field in ("node_type", "relationship_type"):
+            if field in data and (data[field] or "").strip() == "":
+                data[field] = None
+        pn = data.get("property_name") or ""
+        pns = data.get("property_names") or ()
+        if isinstance(pns, str):
+            pns = (pns,)
+        else:
+            pns = tuple(pns)
+        if pns and not pn:
+            data["property_name"] = pns[0]
+        elif pn and not pns:
+            data["property_names"] = (pn,)
+        elif pn and pns:
+            # property_names takes precedence; keep property_name in sync
+            data["property_name"] = pns[0]
+        return data
+
+    @model_validator(mode="after")
+    def validate_constraint_shape(self) -> Self:
+        if self.type in (
+            GraphConstraintType.UNIQUENESS,
+            GraphConstraintType.EXISTENCE,
+            GraphConstraintType.KEY,
+        ):
+            has_node = bool(self.node_type and self.node_type.strip())
+            has_rel = bool(self.relationship_type and self.relationship_type.strip())
+            if has_node == has_rel:
+                raise ValueError(
+                    f"{self.type} constraint requires exactly one of node_type or "
+                    "relationship_type (non-empty), not both and not neither."
+                )
+        if self.type == GraphConstraintType.EXISTENCE and len(self.property_names) != 1:
+            raise ValueError(
+                "EXISTENCE constraint must have exactly one property; "
+                "Neo4j does not support composite existence constraints."
+            )
+        return self
+
+
+def _validate_constraint_property_defined(
+    constraint: ConstraintType,
+    *,
+    node_type_index: dict[str, NodeType],
+    relationship_type_index: dict[str, RelationshipType],
+    kind: GraphConstraintType,
+) -> None:
+    """Raise SchemaValidationError if any property in the constraint is not declared on the entity."""
+    has_node = bool(constraint.node_type and constraint.node_type.strip())
+    has_rel = bool(
+        constraint.relationship_type and constraint.relationship_type.strip()
+    )
+    if has_node:
+        if constraint.node_type not in node_type_index:
+            raise SchemaValidationError(
+                f"Constraint references undefined node type: {constraint.node_type}"
+            )
+        node_type = node_type_index[constraint.node_type]
+        valid_property_names = {p.name for p in node_type.properties}
+        for pn in constraint.property_names:
+            if pn not in valid_property_names:
+                raise SchemaValidationError(
+                    f"{kind.value} constraint references undefined property "
+                    f"'{pn}' on node type '{constraint.node_type}'. "
+                    f"Valid properties: {valid_property_names}"
+                )
+    elif has_rel:
+        rlabel = constraint.relationship_type
+        assert rlabel is not None
+        if rlabel not in relationship_type_index:
+            raise SchemaValidationError(
+                f"Constraint references undefined relationship type: {rlabel}"
+            )
+        rel_type = relationship_type_index[rlabel]
+        valid_property_names = {p.name for p in rel_type.properties}
+        for pn in constraint.property_names:
+            if pn not in valid_property_names:
+                raise SchemaValidationError(
+                    f"{kind.value} constraint references undefined property "
+                    f"'{pn}' on relationship type '{rlabel}'. "
+                    f"Valid properties: {valid_property_names}"
+                )
 
 
 class Pattern(BaseModel):
@@ -293,6 +473,175 @@ class GraphSchema(DataModel):
             data["patterns"] = converted
         return data
 
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_deprecated_required_to_existence_constraints(cls, data: Any) -> Any:
+        """Convert legacy ``PropertyType.required`` to ``EXISTENCE`` constraints and clear flags."""
+        if not isinstance(data, dict):
+            return data
+
+        def _property_type_required_is_true(prop: PropertyType) -> bool:
+            # Use model_dump so we do not access the deprecated ``.required`` attribute.
+            return prop.model_dump().get("required") is True
+
+        constraints = list(data.get("constraints") or [])
+
+        def _constraint_identity(c: Any) -> tuple[str, str, str, str]:
+            if isinstance(c, ConstraintType):
+                nt = c.node_type or ""
+                rt = c.relationship_type or ""
+                pn = c.property_names[0] if c.property_names else c.property_name
+                return (str(c.type), nt, rt, pn)
+            if isinstance(c, dict):
+                pns = c.get("property_names") or ()
+                pn = pns[0] if pns else str(c.get("property_name") or "")
+                return (
+                    str(c.get("type", "")),
+                    str(c.get("node_type") or ""),
+                    str(c.get("relationship_type") or ""),
+                    pn,
+                )
+            return ("", "", "", "")
+
+        seen_existence: set[tuple[str, str, str]] = set()
+        for c in constraints:
+            t, nt, rt, pn = _constraint_identity(c)
+            if t in (GraphConstraintType.EXISTENCE.value, "EXISTENCE"):
+                seen_existence.add((nt or "", rt or "", pn))
+
+        for node in data.get("node_types") or []:
+            if not isinstance(node, dict):
+                continue
+            label = node.get("label")
+            if not label:
+                continue
+            for prop in node.get("properties") or []:
+                if not isinstance(prop, dict):
+                    continue
+                if prop.get("required") is not True:
+                    continue
+                pname = prop.get("name")
+                if not pname:
+                    continue
+                key = (label, "", pname)
+                if key in seen_existence:
+                    prop["required"] = False
+                    continue
+                constraints.append(
+                    {
+                        "type": GraphConstraintType.EXISTENCE.value,
+                        "node_type": label,
+                        "property_names": (pname,),
+                        "relationship_type": None,
+                    }
+                )
+                seen_existence.add(key)
+                prop["required"] = False
+
+        node_types_in = data.get("node_types") or []
+        if node_types_in:
+            node_types_list = list(node_types_in)
+            for i, node in enumerate(node_types_list):
+                if not isinstance(node, NodeType):
+                    continue
+                label = node.label
+                if not label:
+                    continue
+                new_props: list[PropertyType] = []
+                for prop in node.properties:
+                    if not _property_type_required_is_true(prop):
+                        new_props.append(prop)
+                        continue
+                    pname = prop.name
+                    if not pname:
+                        new_props.append(prop)
+                        continue
+                    key = (label, "", pname)
+                    if key in seen_existence:
+                        new_props.append(prop.model_copy(update={"required": False}))
+                        continue
+                    constraints.append(
+                        {
+                            "type": GraphConstraintType.EXISTENCE.value,
+                            "node_type": label,
+                            "property_names": (pname,),
+                            "relationship_type": None,
+                        }
+                    )
+                    seen_existence.add(key)
+                    new_props.append(prop.model_copy(update={"required": False}))
+                node_types_list[i] = node.model_copy(update={"properties": new_props})
+            data["node_types"] = tuple(node_types_list)
+
+        for rel in data.get("relationship_types") or []:
+            if not isinstance(rel, dict):
+                continue
+            rlabel = rel.get("label")
+            if not rlabel:
+                continue
+            for prop in rel.get("properties") or []:
+                if not isinstance(prop, dict):
+                    continue
+                if prop.get("required") is not True:
+                    continue
+                pname = prop.get("name")
+                if not pname:
+                    continue
+                key = ("", rlabel, pname)
+                if key in seen_existence:
+                    prop["required"] = False
+                    continue
+                constraints.append(
+                    {
+                        "type": GraphConstraintType.EXISTENCE.value,
+                        "node_type": "",
+                        "property_names": (pname,),
+                        "relationship_type": rlabel,
+                    }
+                )
+                seen_existence.add(key)
+                prop["required"] = False
+
+        rel_types_in = data.get("relationship_types") or []
+        if rel_types_in:
+            rel_types_list = list(rel_types_in)
+            for i, rel in enumerate(rel_types_list):
+                if not isinstance(rel, RelationshipType):
+                    continue
+                rlabel = rel.label
+                if not rlabel:
+                    continue
+                rel_new_props: list[PropertyType] = []
+                for prop in rel.properties:
+                    if not _property_type_required_is_true(prop):
+                        rel_new_props.append(prop)
+                        continue
+                    pname = prop.name
+                    if not pname:
+                        rel_new_props.append(prop)
+                        continue
+                    key = ("", rlabel, pname)
+                    if key in seen_existence:
+                        rel_new_props.append(
+                            prop.model_copy(update={"required": False})
+                        )
+                        continue
+                    constraints.append(
+                        {
+                            "type": GraphConstraintType.EXISTENCE.value,
+                            "node_type": "",
+                            "property_names": (pname,),
+                            "relationship_type": rlabel,
+                        }
+                    )
+                    seen_existence.add(key)
+                    rel_new_props.append(prop.model_copy(update={"required": False}))
+                rel_types_list[i] = rel.model_copy(update={"properties": rel_new_props})
+            data["relationship_types"] = tuple(rel_types_list)
+
+        data["constraints"] = tuple(constraints)
+        return data
+
     @model_validator(mode="after")
     def validate_patterns_against_node_and_rel_types(self) -> Self:
         self._node_type_index = {node.label: node for node in self.node_types}
@@ -342,27 +691,69 @@ class GraphSchema(DataModel):
         if not self.constraints:
             return self
         for constraint in self.constraints:
-            # Only validate UNIQUENESS constraints (other types will be added)
-            if constraint.type != "UNIQUENESS":
-                continue
+            if not constraint.property_names:
+                raise SchemaValidationError(
+                    f"Constraint has no property names: {constraint}. "
+                    "At least one property name is required."
+                )
+            ctype = constraint.type
+            if isinstance(ctype, str):
+                ctype = GraphConstraintType(ctype)
 
-            if not constraint.property_name:
-                raise SchemaValidationError(
-                    f"Constraint has no property name: {constraint}. Property name is required."
+            if ctype in (
+                GraphConstraintType.UNIQUENESS,
+                GraphConstraintType.EXISTENCE,
+                GraphConstraintType.KEY,
+            ):
+                _validate_constraint_property_defined(
+                    constraint,
+                    node_type_index=self._node_type_index,
+                    relationship_type_index=self._relationship_type_index,
+                    kind=ctype,
                 )
-            if constraint.node_type not in self._node_type_index:
-                raise SchemaValidationError(
-                    f"Constraint references undefined node type: {constraint.node_type}"
-                )
-            # Check if property_name exists on the node type
-            node_type = self._node_type_index[constraint.node_type]
-            valid_property_names = {p.name for p in node_type.properties}
-            if constraint.property_name not in valid_property_names:
-                raise SchemaValidationError(
-                    f"Constraint references undefined property '{constraint.property_name}' "
-                    f"on node type '{constraint.node_type}'. "
-                    f"Valid properties: {valid_property_names}"
-                )
+        return self
+
+    @model_validator(mode="after")
+    def validate_constraints_uniqueness_key_exclusivity(self) -> Self:
+        """Neo4j: property uniqueness and key constraints cannot share the same schema."""
+        node_uniqueness: set[tuple[str, tuple[str, ...]]] = set()
+        node_key: set[tuple[str, tuple[str, ...]]] = set()
+        rel_uniqueness: set[tuple[str, tuple[str, ...]]] = set()
+        rel_key: set[tuple[str, tuple[str, ...]]] = set()
+        for c in self.constraints:
+            ct = c.type
+            if isinstance(ct, str):
+                ct = GraphConstraintType(ct)
+            has_node = bool(c.node_type and str(c.node_type).strip())
+            has_rel = bool(c.relationship_type and str(c.relationship_type).strip())
+            if ct == GraphConstraintType.UNIQUENESS:
+                if has_node:
+                    assert c.node_type is not None
+                    node_uniqueness.add((c.node_type, c.property_names))
+                elif has_rel:
+                    assert c.relationship_type is not None
+                    rel_uniqueness.add((c.relationship_type, c.property_names))
+            elif ct == GraphConstraintType.KEY:
+                if has_node:
+                    assert c.node_type is not None
+                    node_key.add((c.node_type, c.property_names))
+                elif has_rel:
+                    assert c.relationship_type is not None
+                    rel_key.add((c.relationship_type, c.property_names))
+        node_overlap = node_uniqueness & node_key
+        if node_overlap:
+            nt, pns = next(iter(node_overlap))
+            raise SchemaValidationError(
+                f"UNIQUENESS and KEY constraints cannot apply to the same node type "
+                f"and properties ({nt!r}, {pns!r})."
+            )
+        rel_overlap = rel_uniqueness & rel_key
+        if rel_overlap:
+            rt, pns = next(iter(rel_overlap))
+            raise SchemaValidationError(
+                f"UNIQUENESS and KEY constraints cannot apply to the same relationship type "
+                f"and properties ({rt!r}, {pns!r})."
+            )
         return self
 
     def node_type_from_label(self, label: str) -> Optional[NodeType]:
@@ -370,6 +761,100 @@ class GraphSchema(DataModel):
 
     def relationship_type_from_label(self, label: str) -> Optional[RelationshipType]:
         return self._relationship_type_index.get(label)
+
+    def existence_property_names_for_node(self, label: str) -> set[str]:
+        """Property names that have an EXISTENCE constraint for this node label."""
+        names: set[str] = set()
+        for c in self.constraints:
+            ct = c.type
+            if isinstance(ct, str):
+                ct = GraphConstraintType(ct)
+            if ct != GraphConstraintType.EXISTENCE:
+                continue
+            if c.node_type == label and not (
+                c.relationship_type and str(c.relationship_type).strip()
+            ):
+                names.update(c.property_names)
+        return names
+
+    def existence_property_names_for_relationship(self, rel_label: str) -> set[str]:
+        """Property names that have an EXISTENCE constraint for this relationship type."""
+        names: set[str] = set()
+        for c in self.constraints:
+            ct = c.type
+            if isinstance(ct, str):
+                ct = GraphConstraintType(ct)
+            if ct != GraphConstraintType.EXISTENCE:
+                continue
+            if c.relationship_type == rel_label:
+                names.update(c.property_names)
+        return names
+
+    def key_property_names_for_node(self, label: str) -> set[str]:
+        """Property names under a KEY constraint for this node label (Neo4j NODE KEY)."""
+        names: set[str] = set()
+        for c in self.constraints:
+            ct = c.type
+            if isinstance(ct, str):
+                ct = GraphConstraintType(ct)
+            if ct != GraphConstraintType.KEY:
+                continue
+            if c.node_type == label and not (
+                c.relationship_type and str(c.relationship_type).strip()
+            ):
+                names.update(c.property_names)
+        return names
+
+    def key_property_names_for_relationship(self, rel_label: str) -> set[str]:
+        """Property names under a KEY constraint for this relationship type (Neo4j RELATIONSHIP KEY)."""
+        names: set[str] = set()
+        for c in self.constraints:
+            ct = c.type
+            if isinstance(ct, str):
+                ct = GraphConstraintType(ct)
+            if ct != GraphConstraintType.KEY:
+                continue
+            if c.relationship_type == rel_label:
+                names.update(c.property_names)
+        return names
+
+    def uniqueness_property_names_for_node(self, label: str) -> set[str]:
+        """Property names under a UNIQUENESS constraint for this node label."""
+        names: set[str] = set()
+        for c in self.constraints:
+            ct = c.type
+            if isinstance(ct, str):
+                ct = GraphConstraintType(ct)
+            if ct != GraphConstraintType.UNIQUENESS:
+                continue
+            if c.node_type == label:
+                names.update(c.property_names)
+        return names
+
+    def uniqueness_property_names_for_relationship(self, rel_label: str) -> set[str]:
+        """Property names under a UNIQUENESS constraint for this relationship type."""
+        names: set[str] = set()
+        for c in self.constraints:
+            ct = c.type
+            if isinstance(ct, str):
+                ct = GraphConstraintType(ct)
+            if ct != GraphConstraintType.UNIQUENESS:
+                continue
+            if c.relationship_type == rel_label:
+                names.update(c.property_names)
+        return names
+
+    def mandatory_property_names_for_node(self, label: str) -> set[str]:
+        """Property names required to be present (non-null): EXISTENCE or KEY constraints."""
+        return self.existence_property_names_for_node(
+            label
+        ) | self.key_property_names_for_node(label)
+
+    def mandatory_property_names_for_relationship(self, rel_label: str) -> set[str]:
+        """Property names required to be present (non-null): EXISTENCE or KEY constraints."""
+        return self.existence_property_names_for_relationship(
+            rel_label
+        ) | self.key_property_names_for_relationship(rel_label)
 
     @classmethod
     def model_json_schema(cls, **kwargs: Any) -> dict[str, Any]:  # type: ignore[override]
@@ -381,33 +866,35 @@ class GraphSchema(DataModel):
 
         VertexAI requires:
         - No 'const' keyword (convert to enum with single value)
+
+        Prefer :class:`~neo4j_graphrag.experimental.components.graph_schema_extraction.GraphSchemaExtractionOutput`
+        for schema-from-text structured output (leaner schema).
         """
         schema = super().model_json_schema(**kwargs)
-
-        def make_strict(obj: dict[str, Any]) -> None:
-            """Recursively set additionalProperties, required, and fix const."""
-            if obj.get("type") == "object" and "properties" in obj:
-                obj["additionalProperties"] = False
-                obj["required"] = list(obj["properties"].keys())
-
-            # Convert 'const' to 'enum' for VertexAI compatibility
-            if "const" in obj:
-                obj["enum"] = [obj.pop("const")]
-
-            for value in obj.values():
-                if isinstance(value, dict):
-                    make_strict(value)
-                elif isinstance(value, list):
-                    for item in value:
-                        if isinstance(item, dict):
-                            make_strict(item)
-
-        make_strict(schema)
-        if "$defs" in schema:
-            for def_schema in schema["$defs"].values():
-                make_strict(def_schema)
-
+        make_strict_json_schema_for_structured_output(schema)
         return schema
+
+    @classmethod
+    def from_extraction_output(cls, dto: GraphSchemaExtractionOutput) -> Self:
+        """Build a :class:`GraphSchema` from :class:`GraphSchemaExtractionOutput`.
+
+        Applies the same cross-reference filtering and validation as
+        :class:`SchemaFromTextExtractor`.
+        """
+        from neo4j_graphrag.experimental.components.graph_schema_extraction import (
+            GraphSchemaExtractionOutput,
+            wire_extraction_constraints_for_graph_schema,
+        )
+
+        if not isinstance(dto, GraphSchemaExtractionOutput):
+            raise TypeError(
+                f"Expected GraphSchemaExtractionOutput, got {type(dto).__name__}"
+            )
+        payload = dto.model_dump(mode="python")
+        payload["constraints"] = wire_extraction_constraints_for_graph_schema(
+            payload.get("constraints") or []
+        )
+        return cast(Self, validate_extraction_dict_to_graph_schema(payload))
 
     @classmethod
     def create_empty(cls) -> Self:
@@ -604,6 +1091,293 @@ class SchemaBuilder(BaseSchemaBuilder):
         )
 
 
+def _extraction_filter_invalid_patterns(
+    patterns: Any,
+    node_types: List[Dict[str, Any]],
+    relationship_types: Optional[List[Dict[str, Any]]] = None,
+) -> Any:
+    """Filter out patterns that reference undefined node or relationship types."""
+    if not node_types:
+        logging.info(
+            "Filtering out all patterns because no node types are defined. "
+            "Patterns reference node types that must be defined."
+        )
+        return []
+
+    if not relationship_types:
+        logging.info(
+            "Filtering out all patterns because no relationship types are defined. "
+            "GraphSchema validation requires relationship_types when patterns are provided."
+        )
+        return []
+
+    valid_node_labels = {node_type["label"] for node_type in node_types}
+    valid_relationship_labels = {rel_type["label"] for rel_type in relationship_types}
+
+    filtered_patterns = []
+    for pattern in patterns:
+        if isinstance(pattern, dict):
+            if not all(k in pattern for k in ("source", "relationship", "target")):
+                continue
+            entity1 = pattern["source"]
+            relation = pattern["relationship"]
+            entity2 = pattern["target"]
+        elif isinstance(pattern, (list, tuple)):
+            if len(pattern) != 3:
+                continue
+            entity1, relation, entity2 = pattern
+        elif isinstance(pattern, Pattern):
+            entity1, relation, entity2 = pattern
+        else:
+            continue
+
+        if (
+            entity1 in valid_node_labels
+            and entity2 in valid_node_labels
+            and relation in valid_relationship_labels
+        ):
+            filtered_patterns.append(pattern)
+        else:
+            entity1_valid = entity1 in valid_node_labels
+            entity2_valid = entity2 in valid_node_labels
+            relation_valid = relation in valid_relationship_labels
+
+            logging.info(
+                f"Filtering out invalid pattern: {pattern}. "
+                f"Entity1 '{entity1}' valid: {entity1_valid}, "
+                f"Entity2 '{entity2}' valid: {entity2_valid}, "
+                f"Relation '{relation}' valid: {relation_valid}"
+            )
+
+    return filtered_patterns
+
+
+def _extraction_filter_invalid_constraints(
+    constraints: List[Dict[str, Any]],
+    node_types: List[Dict[str, Any]],
+    relationship_types: Optional[List[Dict[str, Any]]] = None,
+) -> List[Dict[str, Any]]:
+    """Filter constraints that reference unknown types or invalid properties."""
+    if not constraints:
+        return []
+
+    node_type_properties: Dict[str, set[str]] = {}
+    for node_type_dict in node_types:
+        label = node_type_dict.get("label")
+        if label:
+            properties = node_type_dict.get("properties", [])
+            property_names = {p.get("name") for p in properties if p.get("name")}
+            node_type_properties[label] = property_names
+
+    rel_type_properties: Dict[str, set[str]] = {}
+    for rel_dict in relationship_types or []:
+        label = rel_dict.get("label")
+        if label:
+            properties = rel_dict.get("properties", [])
+            property_names = {p.get("name") for p in properties if p.get("name")}
+            rel_type_properties[label] = property_names
+
+    valid_node_labels = set(node_type_properties.keys())
+    valid_rel_labels = set(rel_type_properties.keys())
+
+    def _resolve_property_names(constraint: Dict[str, Any]) -> list[str]:
+        """Resolve property_names from either property_names or property_name."""
+        pns = constraint.get("property_names") or []
+        if pns:
+            return list(pns) if not isinstance(pns, list) else pns
+        pn = constraint.get("property_name") or ""
+        return [pn] if pn else []
+
+    def _all_properties_valid(
+        prop_names: list[str], valid: set[str], entity_label: str, entity_kind: str
+    ) -> bool:
+        for pn in prop_names:
+            if pn not in valid:
+                logging.info(
+                    f"Filtering out constraint (has invalid property). "
+                    f"Property '{pn}' does not exist on {entity_kind} '{entity_label}'. "
+                    f"Valid properties: {valid}"
+                )
+                return False
+        return True
+
+    filtered_constraints = []
+    for constraint in constraints:
+        ctype = constraint.get("type")
+        if ctype not in (
+            GraphConstraintType.UNIQUENESS.value,
+            GraphConstraintType.EXISTENCE.value,
+            GraphConstraintType.KEY.value,
+        ):
+            logging.info(
+                f"Filtering out constraint: {constraint}. "
+                f"Unsupported constraint type (expected UNIQUENESS, EXISTENCE, or KEY)."
+            )
+            continue
+
+        prop_names = _resolve_property_names(constraint)
+        if not prop_names:
+            logging.info(
+                f"Filtering out constraint: {constraint}. "
+                f"No property names provided."
+            )
+            continue
+
+        if ctype == GraphConstraintType.EXISTENCE.value and len(prop_names) != 1:
+            logging.info(
+                f"Filtering out constraint: {constraint}. "
+                f"EXISTENCE constraint must have exactly one property."
+            )
+            continue
+
+        if ctype == GraphConstraintType.UNIQUENESS.value:
+            node_type = constraint.get("node_type") or ""
+            rel_type = constraint.get("relationship_type")
+            has_node = bool(str(node_type).strip())
+            has_rel = bool(rel_type and str(rel_type).strip())
+            if has_node == has_rel:
+                logging.info(
+                    f"Filtering out constraint: {constraint}. "
+                    f"UNIQUENESS requires exactly one of node_type or relationship_type."
+                )
+                continue
+            if has_node:
+                if node_type not in valid_node_labels:
+                    logging.info(
+                        f"Filtering out constraint: {constraint}. "
+                        f"Node type '{node_type}' is not valid. Valid node types: {valid_node_labels}"
+                    )
+                    continue
+                if not _all_properties_valid(
+                    prop_names,
+                    node_type_properties.get(node_type, set()),
+                    node_type,
+                    "node type",
+                ):
+                    continue
+            else:
+                assert rel_type is not None
+                if rel_type not in valid_rel_labels:
+                    logging.info(
+                        f"Filtering out constraint: {constraint}. "
+                        f"Relationship type '{rel_type}' is not valid. "
+                        f"Valid relationship types: {valid_rel_labels}"
+                    )
+                    continue
+                if not _all_properties_valid(
+                    prop_names,
+                    rel_type_properties.get(rel_type, set()),
+                    rel_type,
+                    "relationship type",
+                ):
+                    continue
+            filtered_constraints.append(constraint)
+            continue
+
+        # EXISTENCE or KEY
+        node_type = constraint.get("node_type") or ""
+        rel_type = constraint.get("relationship_type")
+        has_node = bool(str(node_type).strip())
+        has_rel = bool(rel_type and str(rel_type).strip())
+        if has_node == has_rel:
+            logging.info(
+                f"Filtering out constraint: {constraint}. "
+                f"{ctype} requires exactly one of node_type or relationship_type."
+            )
+            continue
+        if has_node:
+            if node_type not in valid_node_labels:
+                logging.info(
+                    f"Filtering out constraint: {constraint}. "
+                    f"Node type '{node_type}' is not valid. Valid node types: {valid_node_labels}"
+                )
+                continue
+            if not _all_properties_valid(
+                prop_names,
+                node_type_properties.get(node_type, set()),
+                node_type,
+                "node type",
+            ):
+                continue
+            filtered_constraints.append(constraint)
+        else:
+            assert rel_type is not None
+            if rel_type not in valid_rel_labels:
+                logging.info(
+                    f"Filtering out constraint: {constraint}. "
+                    f"Relationship type '{rel_type}' is not valid. "
+                    f"Valid relationship types: {valid_rel_labels}"
+                )
+                continue
+            if not _all_properties_valid(
+                prop_names,
+                rel_type_properties.get(rel_type, set()),
+                rel_type,
+                "relationship type",
+            ):
+                continue
+            filtered_constraints.append(constraint)
+
+    return filtered_constraints
+
+
+def _extraction_apply_cross_reference_filters(
+    extracted_node_types: List[Dict[str, Any]],
+    extracted_relationship_types: Optional[List[Dict[str, Any]]],
+    extracted_patterns: Any,
+    extracted_constraints: Optional[List[Dict[str, Any]]],
+) -> tuple[Any, Optional[List[Dict[str, Any]]]]:
+    if extracted_patterns:
+        extracted_patterns = _extraction_filter_invalid_patterns(
+            extracted_patterns,
+            extracted_node_types,
+            extracted_relationship_types,
+        )
+
+    if extracted_constraints:
+        extracted_constraints = _extraction_filter_invalid_constraints(
+            extracted_constraints,
+            extracted_node_types,
+            extracted_relationship_types,
+        )
+
+    return extracted_patterns, extracted_constraints
+
+
+def validate_extraction_dict_to_graph_schema(
+    extracted_schema: Dict[str, Any],
+) -> GraphSchema:
+    """Cross-reference filter and build :class:`GraphSchema` from an extraction dict.
+
+    Used by :meth:`GraphSchema.from_extraction_output` and
+    :class:`SchemaFromTextExtractor` (V1 and V2). Does not require a configured LLM.
+    """
+    node_types = extracted_schema.get("node_types") or []
+    rel_types = extracted_schema.get("relationship_types")
+    patterns = extracted_schema.get("patterns")
+    constraints = extracted_schema.get("constraints")
+
+    patterns, constraints = _extraction_apply_cross_reference_filters(
+        node_types, rel_types, patterns, constraints
+    )
+
+    try:
+        schema = GraphSchema.model_validate(
+            {
+                "node_types": node_types,
+                "relationship_types": rel_types,
+                "patterns": patterns,
+                "constraints": constraints or [],
+            }
+        )
+        logger.debug(f"Extracted schema: {schema}")
+        return schema
+    except ValidationError as e:
+        raise SchemaExtractionError(
+            f"LLM response does not conform to GraphSchema: {str(e)}"
+        ) from e
+
+
 class SchemaFromTextExtractor(BaseSchemaBuilder):
     """
     A component for constructing GraphSchema objects from the output of an LLM after
@@ -613,7 +1387,8 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         llm (LLMInterface): The language model to use for schema extraction.
         prompt_template (Optional[PromptTemplate]): A custom prompt template to use for extraction.
         llm_params (Optional[Dict[str, Any]]): Additional parameters passed to the LLM.
-        use_structured_output (bool): Whether to use structured output (LLMInterfaceV2) with the GraphSchema Pydantic model.
+        use_structured_output (bool): Whether to use structured output (LLMInterfaceV2) with
+            :class:`~neo4j_graphrag.experimental.components.graph_schema_extraction.GraphSchemaExtractionOutput`.
             Only supported for OpenAILLM and VertexAILLM. Defaults to False (uses V1 prompt-based JSON extraction).
 
     Example with V1 (default, prompt-based JSON):
@@ -658,85 +1433,6 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
                 f"Please use a model that supports structured output, or set use_structured_output=False."
             )
 
-    def _filter_invalid_patterns(
-        self,
-        patterns: List[Tuple[str, str, str]],
-        node_types: List[Dict[str, Any]],
-        relationship_types: Optional[List[Dict[str, Any]]] = None,
-    ) -> List[Tuple[str, str, str]]:
-        """
-        Filter out patterns that reference undefined node types or relationship types.
-
-        Args:
-            patterns: List of patterns to filter.
-            node_types: List of node type definitions.
-            relationship_types: Optional list of relationship type definitions.
-
-        Returns:
-            Filtered list of patterns containing only valid references.
-        """
-        # Early returns for missing required types
-        if not node_types:
-            logging.info(
-                "Filtering out all patterns because no node types are defined. "
-                "Patterns reference node types that must be defined."
-            )
-            return []
-
-        if not relationship_types:
-            logging.info(
-                "Filtering out all patterns because no relationship types are defined. "
-                "GraphSchema validation requires relationship_types when patterns are provided."
-            )
-            return []
-
-        # Create sets of valid labels
-        valid_node_labels = {node_type["label"] for node_type in node_types}
-        valid_relationship_labels = {
-            rel_type["label"] for rel_type in relationship_types
-        }
-
-        # Filter patterns
-        filtered_patterns = []
-        for pattern in patterns:
-            # Extract components based on pattern type
-            if isinstance(pattern, dict):
-                if not all(k in pattern for k in ("source", "relationship", "target")):
-                    continue
-                entity1 = pattern["source"]
-                relation = pattern["relationship"]
-                entity2 = pattern["target"]
-            elif isinstance(pattern, (list, tuple)):
-                if len(pattern) != 3:
-                    continue
-                entity1, relation, entity2 = pattern
-            elif isinstance(pattern, Pattern):
-                entity1, relation, entity2 = pattern  # Uses Pattern.__iter__
-            else:
-                continue
-
-            # Check if all components are valid
-            if (
-                entity1 in valid_node_labels
-                and entity2 in valid_node_labels
-                and relation in valid_relationship_labels
-            ):
-                filtered_patterns.append(pattern)
-            else:
-                # Log invalid pattern with validation details
-                entity1_valid = entity1 in valid_node_labels
-                entity2_valid = entity2 in valid_node_labels
-                relation_valid = relation in valid_relationship_labels
-
-                logging.info(
-                    f"Filtering out invalid pattern: {pattern}. "
-                    f"Entity1 '{entity1}' valid: {entity1_valid}, "
-                    f"Entity2 '{entity2}' valid: {entity2_valid}, "
-                    f"Relation '{relation}' valid: {relation_valid}"
-                )
-
-        return filtered_patterns
-
     def _filter_items_without_labels(
         self, items: List[Dict[str, Any]], item_type: str
     ) -> List[Dict[str, Any]]:
@@ -780,200 +1476,6 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         return self._filter_items_without_labels(
             relationship_types, "relationship type"
         )
-
-    def _apply_cross_reference_filters(
-        self,
-        extracted_node_types: List[Dict[str, Any]],
-        extracted_relationship_types: Optional[List[Dict[str, Any]]],
-        extracted_patterns: Any,
-        extracted_constraints: Optional[List[Dict[str, Any]]],
-    ) -> tuple[Any, Optional[List[Dict[str, Any]]]]:
-        """Apply cross-reference filtering for patterns and constraints.
-
-        This filtering is common to both V1 and V2 paths and handles:
-        - Filtering out patterns that reference non-existent nodes/relationships
-        - Enforcing required=True for properties with UNIQUENESS constraints
-        - Filtering out invalid constraints
-
-        Args:
-            extracted_node_types: List of node type dictionaries
-            extracted_relationship_types: Optional list of relationship type dictionaries
-            extracted_patterns: Patterns in any format (dicts, tuples, lists, Pattern objects)
-            extracted_constraints: Optional list of constraint dictionaries
-
-        Returns:
-            Tuple of (filtered_patterns, filtered_constraints)
-        """
-        # Filter out invalid patterns before validation
-        if extracted_patterns:
-            extracted_patterns = self._filter_invalid_patterns(
-                extracted_patterns,
-                extracted_node_types,
-                extracted_relationship_types,
-            )
-
-        # Enforce required=true for properties with UNIQUENESS constraints
-        if extracted_constraints:
-            self._enforce_required_for_constraint_properties(
-                extracted_node_types, extracted_constraints
-            )
-
-        # Filter out invalid constraints
-        if extracted_constraints:
-            extracted_constraints = self._filter_invalid_constraints(
-                extracted_constraints, extracted_node_types
-            )
-
-        return extracted_patterns, extracted_constraints
-
-    def _filter_invalid_constraints(
-        self, constraints: List[Dict[str, Any]], node_types: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
-        """Filter out constraints that reference undefined node types, have no property name, are not UNIQUENESS type
-        or reference a property that doesn't exist on the node type."""
-        if not constraints:
-            return []
-
-        if not node_types:
-            logging.info(
-                "Filtering out all constraints because no node types are defined. "
-                "Constraints reference node types that must be defined."
-            )
-            return []
-
-        # Build a mapping of node_type label -> set of property names
-        node_type_properties: Dict[str, set[str]] = {}
-        for node_type_dict in node_types:
-            label = node_type_dict.get("label")
-            if label:
-                properties = node_type_dict.get("properties", [])
-                property_names = {p.get("name") for p in properties if p.get("name")}
-                node_type_properties[label] = property_names
-
-        valid_node_labels = set(node_type_properties.keys())
-
-        filtered_constraints = []
-        for constraint in constraints:
-            # Only process UNIQUENESS constraints (other types will be added)
-            if constraint.get("type") != "UNIQUENESS":
-                logging.info(
-                    f"Filtering out constraint: {constraint}. "
-                    f"Only UNIQUENESS constraints are supported."
-                )
-                continue
-
-            # check if the property_name is provided
-            if not constraint.get("property_name"):
-                logging.info(
-                    f"Filtering out constraint: {constraint}. "
-                    f"Property name is not provided."
-                )
-                continue
-            # check if the node_type is valid
-            node_type = constraint.get("node_type")
-            if node_type not in valid_node_labels:
-                logging.info(
-                    f"Filtering out constraint: {constraint}. "
-                    f"Node type '{node_type}' is not valid. Valid node types: {valid_node_labels}"
-                )
-                continue
-            # check if the property_name exists on the node type
-            property_name = constraint.get("property_name")
-            if property_name not in node_type_properties.get(node_type, set()):
-                logging.info(
-                    f"Filtering out constraint: {constraint}. "
-                    f"Property '{property_name}' does not exist on node type '{node_type}'. "
-                    f"Valid properties: {node_type_properties.get(node_type, set())}"
-                )
-                continue
-            filtered_constraints.append(constraint)
-        return filtered_constraints
-
-    def _filter_properties_required_field(
-        self, node_types: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
-        """Sanitize the 'required' field in node type properties. Ensures 'required' is a valid boolean.
-        converts known string values (true, yes, 1, false, no, 0) to booleans and removes unrecognized values.
-        """
-        for node_type in node_types:
-            properties = node_type.get("properties", [])
-            if not properties:
-                continue
-            for prop in properties:
-                if not isinstance(prop, dict):
-                    continue
-
-                required_value = prop.get("required")
-
-                #  Not provided - will use Pydantic default (false)
-                if required_value is None:
-                    continue
-
-                # already a valid boolean
-                if isinstance(required_value, bool):
-                    continue
-
-                prop_name = prop.get("name", "unknown")
-                node_label = node_type.get("label", "unknown")
-
-                # Convert to string to handle int values like 1 or 0
-                required_str = str(required_value).lower()
-
-                if required_str in ("true", "yes", "1"):
-                    prop["required"] = True
-                    logging.info(
-                        f"Converted 'required' value '{required_value}' to True "
-                        f"for property '{prop_name}' on node '{node_label}'"
-                    )
-                elif required_str in ("false", "no", "0"):
-                    prop["required"] = False
-                    logging.info(
-                        f"Converted 'required' value '{required_value}' to False "
-                        f"for property '{prop_name}' on node '{node_label}'"
-                    )
-                else:
-                    logging.info(
-                        f"Removing unrecognized 'required' value '{required_value}' "
-                        f"for property '{prop_name}' on node '{node_label}'. "
-                        f"Using default (False)."
-                    )
-                    prop.pop("required", None)
-
-        return node_types
-
-    def _enforce_required_for_constraint_properties(
-        self,
-        node_types: List[Dict[str, Any]],
-        constraints: List[Dict[str, Any]],
-    ) -> None:
-        """Ensure properties with UNIQUENESS constraints are marked as required."""
-        if not constraints:
-            return
-
-        # Build a lookup for property_names and constraints
-        constraint_props: Dict[str, set[str]] = {}
-        for c in constraints:
-            if c.get("type") == "UNIQUENESS":
-                label = c.get("node_type")
-                prop = c.get("property_name")
-                if label and prop:
-                    constraint_props.setdefault(label, set()).add(prop)
-
-        # Skip node_types without constraints
-        for node_type in node_types:
-            label = node_type.get("label")
-            if label not in constraint_props:
-                continue
-
-            props_to_fix = constraint_props[label]
-            for prop in node_type.get("properties", []):
-                if isinstance(prop, dict) and prop.get("name") in props_to_fix:
-                    if prop.get("required") is not True:
-                        logging.info(
-                            f"Auto-setting 'required' as True for property '{prop.get('name')}' "
-                            f"on node '{label}' (has UNIQUENESS constraint)."
-                        )
-                        prop["required"] = True
 
     def _clean_json_content(self, content: str) -> str:
         content = content.strip()
@@ -1044,8 +1546,11 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
 
         V1 (prompt-based) extraction requires additional filtering:
         - Remove nodes/relationships without labels
-        - Clean up invalid 'required' field values
         - Remove nodes with no properties (after property filtering)
+
+        Legacy ``required`` on properties is normalized by :class:`GraphSchema` validation
+        (migration to ``EXISTENCE`` constraints). Invalid ``required`` values fail validation
+        or are handled by Pydantic coercion where applicable.
 
         Args:
             extracted_schema: Raw schema dictionary from LLM
@@ -1061,9 +1566,6 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         if rel_types:
             rel_types = self._filter_relationships_without_labels(rel_types)
 
-        # Filter invalid required fields
-        node_types = self._filter_properties_required_field(node_types)
-
         # Filter nodes with no properties (after property filtering)
         # This prevents validation errors from min_length=1 constraint on NodeType.properties
         nodes_before = len(node_types)
@@ -1073,65 +1575,19 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         if len(node_types) < nodes_before:
             removed_count = nodes_before - len(node_types)
             logging.info(
-                f"Filtered out {removed_count} node type(s) with no properties after property validation. "
-                f"This can happen when all properties have invalid 'required' field values."
+                f"Filtered out {removed_count} node type(s) with no properties after property validation."
             )
 
         extracted_schema["node_types"] = node_types
         extracted_schema["relationship_types"] = rel_types
         return extracted_schema
 
-    def _validate_and_build_schema(
-        self, extracted_schema: Dict[str, Any]
-    ) -> GraphSchema:
-        """Apply cross-reference filters and validate schema.
-
-        This is the final step shared by both V1 and V2 paths:
-        - Extract node types, relationship types, patterns, and constraints
-        - Apply cross-reference filtering (remove invalid patterns/constraints)
-        - Validate using Pydantic GraphSchema model
-
-        Args:
-            extracted_schema: Schema dictionary (after V1/V2-specific filtering)
-
-        Returns:
-            Validated GraphSchema object
-
-        Raises:
-            SchemaExtractionError: If validation fails
-        """
-        node_types = extracted_schema.get("node_types") or []
-        rel_types = extracted_schema.get("relationship_types")
-        patterns = extracted_schema.get("patterns")
-        constraints = extracted_schema.get("constraints")
-
-        # Apply cross-reference filtering
-        patterns, constraints = self._apply_cross_reference_filters(
-            node_types, rel_types, patterns, constraints
-        )
-
-        # Validate and return
-        try:
-            schema = GraphSchema.model_validate(
-                {
-                    "node_types": node_types,
-                    "relationship_types": rel_types,
-                    "patterns": patterns,
-                    "constraints": constraints or [],
-                }
-            )
-            logger.debug(f"Extracted schema: {schema}")
-            return schema
-        except ValidationError as e:
-            raise SchemaExtractionError(
-                f"LLM response does not conform to GraphSchema: {str(e)}"
-            ) from e
-
     async def _run_with_structured_output(self, prompt: str) -> GraphSchema:
         """Extract schema using structured output (V2).
 
-        V2 uses LLMInterfaceV2 with response_format=GraphSchema to enforce
-        the schema structure at the LLM level. This requires OpenAI or VertexAI.
+        V2 uses LLMInterfaceV2 with
+        :class:`~neo4j_graphrag.experimental.components.graph_schema_extraction.GraphSchemaExtractionOutput`
+        as ``response_format``, then converts to :class:`GraphSchema`. Requires OpenAI or VertexAI.
 
         Args:
             prompt: Formatted prompt for schema extraction
@@ -1143,6 +1599,10 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
             RuntimeError: If LLM is not OpenAILLM or VertexAILLM
             SchemaExtractionError: If LLM generation or validation fails
         """
+        from neo4j_graphrag.experimental.components.graph_schema_extraction import (
+            GraphSchemaExtractionOutput,
+        )
+
         # Capability check
         # This should never happen due to __init__ validation
         if not self._llm.supports_structured_output:
@@ -1153,17 +1613,23 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         # Invoke LLM with structured output
         messages = [LLMMessage(role="user", content=prompt)]
         try:
-            llm_result = await self._llm.ainvoke(messages, response_format=GraphSchema)  # type: ignore[call-arg, arg-type]
+            llm_result = await self._llm.ainvoke(
+                messages,  # type: ignore[arg-type]
+                response_format=GraphSchemaExtractionOutput,  # type: ignore[call-arg]
+            )
         except LLMGenerationError as e:
             raise SchemaExtractionError("Failed to generate schema from text") from e
 
-        # Parse JSON response
-        # Note: With structured output, this should always succeed, but we keep
-        # error handling for unexpected provider issues
-        extracted_schema = self._parse_llm_response(llm_result.content)
+        try:
+            dto = GraphSchemaExtractionOutput.model_validate(
+                self._parse_llm_response(llm_result.content)
+            )
+        except ValidationError as e:
+            raise SchemaExtractionError(
+                "LLM response does not conform to GraphSchemaExtractionOutput."
+            ) from e
 
-        # Validate and return (applies cross-reference filtering)
-        return self._validate_and_build_schema(extracted_schema)
+        return GraphSchema.from_extraction_output(dto)
 
     async def _run_with_prompt_based_extraction(self, prompt: str) -> GraphSchema:
         """Extract schema using prompt-based JSON extraction (V1).
@@ -1195,8 +1661,7 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         # Apply V1-specific filtering
         extracted_schema = self._apply_v1_filters(extracted_schema)
 
-        # Validate and return (applies cross-reference filtering)
-        return self._validate_and_build_schema(extracted_schema)
+        return validate_extraction_dict_to_graph_schema(extracted_schema)
 
     @validate_call
     async def run(self, text: str, examples: str = "", **kwargs: Any) -> GraphSchema:
@@ -1254,44 +1719,114 @@ class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
         self.additional_patterns = additional_patterns
 
     @staticmethod
-    def _extract_required_properties(
+    def _extract_graph_constraints_from_metadata(
         structured_schema: dict[str, Any],
-    ) -> list[tuple[str, str]]:
-        """Extract a list of (node label (or rel type), property name) for which
-         an "EXISTENCE" or "KEY" constraint is defined in the DB.
-
-         Args:
-
-             structured_schema (dict[str, Any]): the result of the `get_structured_schema()` function.
-
-        Returns:
-
-            list of tuples of (node label (or rel type), property name)
-
-        """
+    ) -> list[dict[str, Any]]:
+        """Build EXISTENCE / KEY / UNIQUENESS constraint dicts from Neo4j ``SHOW CONSTRAINTS`` metadata."""
         schema_metadata = structured_schema.get("metadata", {})
-        existence_constraint = []  # list of (node label, property name)
+        result: list[dict[str, Any]] = []
+        seen: set[tuple[str, ...]] = set()
+
         for constraint in schema_metadata.get("constraint", []):
-            if constraint["type"] in (
-                "NODE_PROPERTY_EXISTENCE",
-                "NODE_KEY",
-                "RELATIONSHIP_PROPERTY_EXISTENCE",
-                "RELATIONSHIP_KEY",
-            ):
-                properties = constraint["properties"]
-                labels = constraint["labelsOrTypes"]
-                # note: existence constraint only apply to a single property
-                # and a single label
-                prop = properties[0]
-                lab = labels[0]
-                existence_constraint.append((lab, prop))
-        return existence_constraint
+            ctype = constraint.get("type")
+            properties = constraint.get("properties") or []
+            labels = constraint.get("labelsOrTypes") or []
+            if not properties or not labels:
+                continue
+            props_tuple = tuple(properties)
+            lab = labels[0]
+
+            if ctype == "NODE_PROPERTY_EXISTENCE":
+                dedupe_key = ("EXISTENCE", "NODE", lab, "", *props_tuple)
+                if dedupe_key in seen:
+                    continue
+                seen.add(dedupe_key)
+                result.append(
+                    {
+                        "type": GraphConstraintType.EXISTENCE.value,
+                        "node_type": lab,
+                        "property_name": properties[0],
+                        "property_names": props_tuple,
+                        "relationship_type": None,
+                    }
+                )
+            elif ctype == "NODE_KEY":
+                dedupe_key = ("KEY", "NODE", lab, "", *props_tuple)
+                if dedupe_key in seen:
+                    continue
+                seen.add(dedupe_key)
+                result.append(
+                    {
+                        "type": GraphConstraintType.KEY.value,
+                        "node_type": lab,
+                        "property_name": properties[0],
+                        "property_names": props_tuple,
+                        "relationship_type": None,
+                    }
+                )
+            elif ctype == "RELATIONSHIP_PROPERTY_EXISTENCE":
+                dedupe_key = ("EXISTENCE", "REL", "", lab, *props_tuple)
+                if dedupe_key in seen:
+                    continue
+                seen.add(dedupe_key)
+                result.append(
+                    {
+                        "type": GraphConstraintType.EXISTENCE.value,
+                        "node_type": "",
+                        "property_name": properties[0],
+                        "property_names": props_tuple,
+                        "relationship_type": lab,
+                    }
+                )
+            elif ctype == "RELATIONSHIP_KEY":
+                dedupe_key = ("KEY", "REL", "", lab, *props_tuple)
+                if dedupe_key in seen:
+                    continue
+                seen.add(dedupe_key)
+                result.append(
+                    {
+                        "type": GraphConstraintType.KEY.value,
+                        "node_type": "",
+                        "property_name": properties[0],
+                        "property_names": props_tuple,
+                        "relationship_type": lab,
+                    }
+                )
+            elif ctype == "NODE_PROPERTY_UNIQUENESS":
+                dedupe_key = ("UNIQUENESS", "NODE", lab, "", *props_tuple)
+                if dedupe_key in seen:
+                    continue
+                seen.add(dedupe_key)
+                result.append(
+                    {
+                        "type": GraphConstraintType.UNIQUENESS.value,
+                        "node_type": lab,
+                        "property_name": properties[0],
+                        "property_names": props_tuple,
+                        "relationship_type": None,
+                    }
+                )
+            elif ctype == "RELATIONSHIP_PROPERTY_UNIQUENESS":
+                dedupe_key = ("UNIQUENESS", "REL", "", lab, *props_tuple)
+                if dedupe_key in seen:
+                    continue
+                seen.add(dedupe_key)
+                result.append(
+                    {
+                        "type": GraphConstraintType.UNIQUENESS.value,
+                        "node_type": "",
+                        "property_name": properties[0],
+                        "property_names": props_tuple,
+                        "relationship_type": lab,
+                    }
+                )
+
+        return result
 
     def _to_schema_entity_dict(
         self,
         key: str,
         property_dict: list[dict[str, Any]],
-        existence_constraint: list[tuple[str, str]],
     ) -> dict[str, Any]:
         entity_dict: dict[str, Any] = {
             "label": key,
@@ -1299,7 +1834,6 @@ class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
                 {
                     "name": p["property"],
                     "type": p["type"],
-                    "required": (key, p["property"]) in existence_constraint,
                 }
                 for p in property_dict
             ],
@@ -1310,19 +1844,21 @@ class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
 
     async def run(self, *args: Any, **kwargs: Any) -> GraphSchema:
         structured_schema = get_structured_schema(self.driver, database=self.database)
-        existence_constraint = self._extract_required_properties(structured_schema)
+        graph_constraints = self._extract_graph_constraints_from_metadata(
+            structured_schema
+        )
 
         # node label with properties
         node_labels = set(structured_schema["node_props"].keys())
         node_types = [
-            self._to_schema_entity_dict(key, properties, existence_constraint)
+            self._to_schema_entity_dict(key, properties)
             for key, properties in structured_schema["node_props"].items()
         ]
 
         # relationships with properties
         rel_labels = set(structured_schema["rel_props"].keys())
         relationship_types = [
-            self._to_schema_entity_dict(key, properties, existence_constraint)
+            self._to_schema_entity_dict(key, properties)
             for key, properties in structured_schema["rel_props"].items()
         ]
 
@@ -1366,6 +1902,7 @@ class SchemaFromExistingGraphExtractor(BaseSchemaBuilder):
             "node_types": node_types,
             "relationship_types": relationship_types,
             "patterns": patterns,
+            "constraints": graph_constraints,
         }
         if self.additional_node_types is not None:
             schema_dict["additional_node_types"] = self.additional_node_types

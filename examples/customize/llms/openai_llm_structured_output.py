@@ -49,89 +49,74 @@ print("=" * 60)
 print("V1 Legacy: Manual JSON extraction with prompt engineering")
 print("=" * 60)
 
-# V1: Use model_params with response_format for JSON object mode
-llm_v1 = OpenAILLM(
-    model_name="gpt-5-mini",
-    model_params={"response_format": {"type": "json_object"}, "temperature": 0},
-)
-
-# V1 requires string input and explicit JSON instructions in the prompt
-v1_prompt = """Extract movie information and respond in JSON format.
+with (
+    OpenAILLM(
+        model_name="gpt-5-mini",
+        model_params={"response_format": {"type": "json_object"}, "temperature": 0},
+    ) as llm_v1,
+    OpenAILLM(model_name="gpt-5-mini") as llm_v2,
+):
+    # V1 requires string input and explicit JSON instructions in the prompt
+    v1_prompt = """Extract movie information and respond in JSON format.
 Include: title, year, director, genre.
 
 Text: Inception was directed by Christopher Nolan in 2010. It's a science fiction thriller."""
 
-response_v1 = llm_v1.invoke(v1_prompt)
-print(f"Response: {response_v1.content}")
+    response_v1 = llm_v1.invoke(v1_prompt)
+    print(f"Response: {response_v1.content}")
 
+    # =============================================================================
+    # V2 (New): Structured output with Pydantic model
+    # =============================================================================
+    print("\n" + "=" * 60)
+    print("V2: Structured output with Pydantic model")
+    print("=" * 60)
 
-# =============================================================================
-# V2 (New): Structured output with Pydantic model
-# =============================================================================
-print("\n" + "=" * 60)
-print("V2: Structured output with Pydantic model")
-print("=" * 60)
+    # V2 uses list of LLMMessage for input
+    messages = [
+        LLMMessage(
+            role="user",
+            content="Inception was directed by Christopher Nolan in 2010. It's a science fiction thriller.",
+        )
+    ]
 
-# V2: Use clean LLM without constructor params
-llm_v2 = OpenAILLM(model_name="gpt-5-mini")
+    # Pass response_format and temperature directly to invoke()
+    response_v2 = llm_v2.invoke(messages, response_format=Movie, temperature=0)
 
-# V2 uses list of LLMMessage for input
-messages = [
-    LLMMessage(
-        role="user",
-        content="Inception was directed by Christopher Nolan in 2010. It's a science fiction thriller.",
-    )
-]
+    # Parse and validate in one step
+    movie = Movie.model_validate_json(response_v2.content)
+    print(f"Response: {response_v2.content}")
 
-# Pass response_format and temperature directly to invoke()
-response_v2 = llm_v2.invoke(messages, response_format=Movie, temperature=0)
+    # =============================================================================
+    # V2: Using JSON Schema instead of Pydantic
+    # =============================================================================
+    print("\n" + "=" * 60)
+    print("V2 Alternative: Structured output with JSON Schema")
+    print("=" * 60)
 
-# Parse and validate in one step
-movie = Movie.model_validate_json(response_v2.content)
-print(f"Response: {response_v2.content}")
-
-
-# =============================================================================
-# V2: Using JSON Schema instead of Pydantic
-# =============================================================================
-print("\n" + "=" * 60)
-print("V2 Alternative: Structured output with JSON Schema")
-print("=" * 60)
-
-# V2: Use clean LLM without constructor params
-llm_v2 = OpenAILLM(model_name="gpt-5-mini")
-
-# V2 uses list of LLMMessage for input
-messages = [
-    LLMMessage(
-        role="user",
-        content="Inception was directed by Christopher Nolan in 2010. It's a science fiction thriller.",
-    )
-]
-
-# Define a JSON schema (equivalent to the Movie Pydantic model)
-# Note: OpenAI requires JSON schemas to be wrapped in this specific format
-movie_schema = {
-    "type": "json_schema",
-    "json_schema": {
-        "name": "movie_info",
-        "schema": {
-            "type": "object",
-            "properties": {
-                "title": {"type": "string"},
-                "year": {"type": "integer"},
-                "director": {"type": "string"},
-                "genre": {"type": "string"},
+    # Define a JSON schema (equivalent to the Movie Pydantic model)
+    # Note: OpenAI requires JSON schemas to be wrapped in this specific format
+    movie_schema = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "movie_info",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string"},
+                    "year": {"type": "integer"},
+                    "director": {"type": "string"},
+                    "genre": {"type": "string"},
+                },
+                "required": ["title", "year", "director", "genre"],
+                "additionalProperties": False,
             },
-            "required": ["title", "year", "director", "genre"],
-            "additionalProperties": False,
         },
-    },
-}
+    }
 
-# Pass JSON schema as response_format
-response_v2_schema = llm_v2.invoke(
-    messages, response_format=movie_schema, temperature=0
-)
+    # Pass JSON schema as response_format
+    response_v2_schema = llm_v2.invoke(
+        messages, response_format=movie_schema, temperature=0
+    )
 
-print(f"Response: {response_v2_schema.content}")
+    print(f"Response: {response_v2_schema.content}")

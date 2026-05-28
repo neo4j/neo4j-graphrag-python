@@ -18,6 +18,7 @@ from unittest.mock import MagicMock, Mock, patch
 import neo4j
 import pytest
 from neo4j_graphrag.embeddings import Embedder
+from neo4j_graphrag.experimental.components.data_loader import PdfLoader
 from neo4j_graphrag.experimental.components.types import (
     LexicalGraphConfig,
 )
@@ -25,6 +26,67 @@ from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionEr
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.llm.base import LLMInterface
+
+
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    return_value=((5, 23, 0), False, False),
+)
+@pytest.mark.asyncio
+async def test_knowledge_graph_builder_from_pdf_deprecated_kwarg(_: Mock) -> None:
+    llm = MagicMock(spec=LLMInterface)
+    driver = MagicMock(spec=neo4j.Driver)
+    embedder = MagicMock(spec=Embedder)
+
+    with pytest.warns(DeprecationWarning, match="from_pdf"):
+        kg_builder = SimpleKGPipeline(
+            llm=llm,
+            driver=driver,
+            embedder=embedder,
+            from_pdf=True,
+        )
+
+    file_path = "path/to/test.pdf"
+    with patch.object(
+        kg_builder.runner.pipeline,
+        "run",
+        return_value=PipelineResult(run_id="test_run", result=None),
+    ) as mock_run:
+        await kg_builder.run_async(file_path=file_path)
+
+    pipe_inputs = mock_run.call_args[1]["data"]
+    assert "file_loader" in pipe_inputs
+
+
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    return_value=((5, 23, 0), False, False),
+)
+@pytest.mark.asyncio
+async def test_knowledge_graph_builder_pdf_loader_deprecated_kwarg(_: Mock) -> None:
+    llm = MagicMock(spec=LLMInterface)
+    driver = MagicMock(spec=neo4j.Driver)
+    embedder = MagicMock(spec=Embedder)
+    loader = PdfLoader()
+
+    with pytest.warns(DeprecationWarning, match="pdf_loader"):
+        kg_builder = SimpleKGPipeline(
+            llm=llm,
+            driver=driver,
+            embedder=embedder,
+            pdf_loader=loader,
+        )
+
+    file_path = "path/to/test.pdf"
+    with patch.object(
+        kg_builder.runner.pipeline,
+        "run",
+        return_value=PipelineResult(run_id="test_run", result=None),
+    ) as mock_run:
+        await kg_builder.run_async(file_path=file_path)
+
+    pipe_inputs = mock_run.call_args[1]["data"]
+    assert "file_loader" in pipe_inputs
 
 
 @mock.patch(
@@ -41,7 +103,7 @@ async def test_knowledge_graph_builder_document_info_with_file(_: Mock) -> None:
         llm=llm,
         driver=driver,
         embedder=embedder,
-        from_pdf=True,
+        from_file=True,
     )
 
     file_path = "path/to/test.pdf"
@@ -56,8 +118,8 @@ async def test_knowledge_graph_builder_document_info_with_file(_: Mock) -> None:
         )
 
         pipe_inputs = mock_run.call_args[1]["data"]
-        assert "pdf_loader" in pipe_inputs
-        assert pipe_inputs["pdf_loader"] == {
+        assert "file_loader" in pipe_inputs
+        assert pipe_inputs["file_loader"] == {
             "filepath": file_path,
             "metadata": {"source": "google drive"},
         }
@@ -78,7 +140,7 @@ async def test_knowledge_graph_builder_document_info_with_text(_: Mock) -> None:
         llm=llm,
         driver=driver,
         embedder=embedder,
-        from_pdf=False,
+        from_file=False,
     )
 
     text_input = "May thy knife chip and shatter."
@@ -124,7 +186,7 @@ async def test_knowledge_graph_builder_with_entities_and_file(_: Mock) -> None:
         entities=entities,
         relations=relations,
         potential_schema=potential_schema,
-        from_pdf=True,
+        from_file=True,
     )
 
     file_path = "path/to/test.pdf"
@@ -155,6 +217,21 @@ def test_simple_kg_pipeline_on_error_invalid_value() -> None:
         )
 
 
+def test_knowledge_graph_builder_pdf_loader_and_file_loader_conflict() -> None:
+    llm = MagicMock(spec=LLMInterface)
+    driver = MagicMock(spec=neo4j.Driver)
+    embedder = MagicMock(spec=Embedder)
+
+    with pytest.raises(ValueError, match="pdf_loader"):
+        SimpleKGPipeline(
+            llm=llm,
+            driver=driver,
+            embedder=embedder,
+            file_loader=PdfLoader(),
+            pdf_loader=PdfLoader(),
+        )
+
+
 @mock.patch(
     "neo4j_graphrag.experimental.components.kg_writer.get_version",
     return_value=((5, 23, 0), False, False),
@@ -175,7 +252,7 @@ async def test_knowledge_graph_builder_with_lexical_graph_config(_: Mock) -> Non
         llm=llm,
         driver=driver,
         embedder=embedder,
-        from_pdf=False,
+        from_file=False,
         lexical_graph_config=lexical_graph_config,
     )
 

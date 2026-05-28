@@ -13,7 +13,9 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from .base import Embedder
+from .bedrock import BedrockEmbeddings
 from .cohere import CohereEmbeddings
+from .google_genai import GeminiEmbedder
 from .mistral import MistralAIEmbeddings
 from .ollama import OllamaEmbeddings
 from .openai import AzureOpenAIEmbeddings, OpenAIEmbeddings
@@ -22,6 +24,7 @@ from .vertexai import VertexAIEmbeddings
 
 __all__ = [
     "Embedder",
+    "BedrockEmbeddings",
     "SentenceTransformerEmbeddings",
     "OllamaEmbeddings",
     "OpenAIEmbeddings",
@@ -29,4 +32,5 @@ __all__ = [
     "VertexAIEmbeddings",
     "MistralAIEmbeddings",
     "CohereEmbeddings",
+    "GeminiEmbedder",
 ]

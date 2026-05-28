@@ -35,11 +35,11 @@ jobs:
         run: uv sync --frozen --all-extras --group dev
       - name: Check format and linting
         run: |
-          uv run ruff check .
-          uv run ruff format --check .
+          uv run --frozen ruff check .
+          uv run --frozen ruff format --check .
       - name: Run strict mypy check
-        run: uv run mypy .
+        run: uv run --frozen mypy .
       - name: Run unit tests and check coverage
         run: |
-          uv run coverage run -m pytest tests/unit
-          uv run coverage report --fail-under=90
+          uv run --frozen coverage run -m pytest tests/unit
+          uv run --frozen coverage report --fail-under=90

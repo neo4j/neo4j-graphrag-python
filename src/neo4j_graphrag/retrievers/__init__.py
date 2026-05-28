@@ -32,7 +32,7 @@ try:
     from .external.pinecone.pinecone import PineconeNeo4jRetriever  # noqa: F401
 
     __all__.append("PineconeNeo4jRetriever")
-except ImportError:
+except ImportError:  # pragma: no cover
     pass
 
 
@@ -40,12 +40,12 @@ try:
     from .external.weaviate.weaviate import WeaviateNeo4jRetriever  # noqa: F401
 
     __all__.append("WeaviateNeo4jRetriever")
-except ImportError:
+except ImportError:  # pragma: no cover
     pass
 
 try:
     from .external.qdrant.qdrant import QdrantNeo4jRetriever  # noqa: F401
 
     __all__.append("QdrantNeo4jRetriever")
-except ImportError:
+except ImportError:  # pragma: no cover
     pass
