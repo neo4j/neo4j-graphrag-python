@@ -97,6 +97,7 @@ ENVIRONMENT MANAGEMENT:
 - `WeakKeyDictionary` works for caching per-driver since `neo4j.Driver` is hashable
 - Neo4j 2026 CREATE VECTOR INDEX syntax: WITH clause must come BEFORE OPTIONS, not after
 - E2E tests for SEARCH clause: use `docker compose -f tests/e2e/docker-compose.neo4j2026.yml up -d`
+- GraphSchema (experimental) validation tests live in `tests/unit/experimental/components/test_schema.py`; the root `tests/unit/test_schema.py` only covers `neo4j_graphrag.schema` DB introspection
 
 ---
 

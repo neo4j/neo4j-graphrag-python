@@ -381,6 +381,30 @@ def _validate_constraint_property_defined(
                 )
 
 
+def _format_duplicate_relationship_types_error(
+    duplicates: dict[str, list[RelationshipType]],
+) -> str:
+    """Build the SchemaValidationError message for duplicate relationship-type labels."""
+    parts: list[str] = []
+    for label, entries in duplicates.items():
+        property_sets = ", ".join(
+            "{" + ", ".join(sorted(p.name for p in rel.properties)) + "}"
+            for rel in entries
+        )
+        parts.append(
+            f"Duplicate relationship type '{label}' defined {len(entries)} times "
+            f"with property sets: {property_sets}."
+        )
+    parts.append(
+        "In Neo4j a relationship type is global per name: entries sharing a label "
+        "describe the same type, and any constraint on it applies to every instance "
+        "regardless of source/target nodes. Define the relationship type once and reuse it across patterns, "
+        "or use distinct relationship types when patterns need different properties "
+        "or constraints."
+    )
+    return " ".join(parts)
+
+
 class Pattern(BaseModel):
     """Represents a relationship pattern in the graph schema.
 
@@ -700,6 +724,28 @@ class GraphSchema(DataModel):
                         f"Node type '{entity2}' is not defined in the provided node_types."
                     )
 
+        return self
+
+    @model_validator(mode="after")
+    def validate_no_duplicate_relationship_types(self) -> Self:
+        """Reject duplicate ``relationship_types`` labels.
+
+        In Neo4j a relationship type is global per name, so two entries sharing
+        the same ``label`` describe the same type and are an invalid model. This
+        check runs before constraint validation so the resulting error is the
+        clear duplicate-label message rather than a misleading "undefined
+        property" constraint error produced by the last-write-wins index.
+        """
+        seen: dict[str, list[RelationshipType]] = {}
+        for rel in self.relationship_types:
+            seen.setdefault(rel.label, []).append(rel)
+        duplicates = {
+            label: entries for label, entries in seen.items() if len(entries) > 1
+        }
+        if duplicates:
+            raise SchemaValidationError(
+                _format_duplicate_relationship_types_error(duplicates)
+            )
         return self
 
     @model_validator(mode="after")
