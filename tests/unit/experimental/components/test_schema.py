@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Tuple, Any
 from unittest.mock import AsyncMock, patch, Mock
 
@@ -2367,3 +2368,224 @@ def test_validate_extraction_dict_to_graph_schema() -> None:
     gs = validate_extraction_dict_to_graph_schema(d)
     assert len(gs.node_types) == 1
     assert gs.node_types[0].label == "Person"
+
+
+def test_validate_extraction_dict_merges_duplicate_relationship_types() -> None:
+    """Duplicate same-label relationship types merge into one with unioned properties.
+
+    A KEY constraint referencing properties spread across both duplicates must
+    validate without error, instead of the previous "undefined property" failure.
+    """
+    from neo4j_graphrag.experimental.components.schema import (
+        validate_extraction_dict_to_graph_schema,
+    )
+
+    d = {
+        "node_types": [
+            {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]}
+        ],
+        "relationship_types": [
+            {"label": "KNOWS", "properties": [{"name": "since", "type": "INTEGER"}]},
+            {"label": "KNOWS", "properties": [{"name": "weight", "type": "FLOAT"}]},
+        ],
+        "patterns": [],
+        "constraints": [
+            {
+                "type": "KEY",
+                "node_type": "",
+                "relationship_type": "KNOWS",
+                "property_names": ["since", "weight"],
+            }
+        ],
+    }
+
+    gs = validate_extraction_dict_to_graph_schema(d)
+
+    assert len(gs.relationship_types) == 1
+    rel = gs.relationship_type_from_label("KNOWS")
+    assert rel is not None
+    assert [p.name for p in rel.properties] == ["since", "weight"]
+    # The KEY constraint spanning both duplicates' properties is preserved.
+    assert len(gs.constraints) == 1
+    assert gs.constraints[0].property_names == ("since", "weight")
+
+
+def test_validate_extraction_dict_merge_resolves_property_name_conflict_first_wins() -> (
+    None
+):
+    """On a property-name conflict the first definition's attributes are kept."""
+    from neo4j_graphrag.experimental.components.schema import (
+        validate_extraction_dict_to_graph_schema,
+    )
+
+    d = {
+        "node_types": [
+            {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]}
+        ],
+        "relationship_types": [
+            {
+                "label": "KNOWS",
+                "properties": [
+                    {
+                        "name": "since",
+                        "type": "INTEGER",
+                        "description": "first definition",
+                    }
+                ],
+            },
+            {
+                "label": "KNOWS",
+                "properties": [
+                    {
+                        "name": "since",
+                        "type": "STRING",
+                        "description": "second definition",
+                    }
+                ],
+            },
+        ],
+        "patterns": [],
+    }
+
+    gs = validate_extraction_dict_to_graph_schema(d)
+
+    rel = gs.relationship_type_from_label("KNOWS")
+    assert rel is not None
+    # Exactly one property per name; the first definition's attributes win.
+    assert len(rel.properties) == 1
+    assert rel.properties[0].name == "since"
+    assert rel.properties[0].type == "INTEGER"
+    assert rel.properties[0].description == "first definition"
+
+
+def test_validate_extraction_dict_merge_keeps_first_entry_non_property_fields() -> None:
+    """The merged entry's description/additional_properties match the first entry."""
+    from neo4j_graphrag.experimental.components.schema import (
+        validate_extraction_dict_to_graph_schema,
+    )
+
+    d = {
+        "node_types": [
+            {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]}
+        ],
+        "relationship_types": [
+            {
+                "label": "KNOWS",
+                "description": "first description",
+                "additional_properties": False,
+                "properties": [{"name": "since", "type": "INTEGER"}],
+            },
+            {
+                "label": "KNOWS",
+                "description": "second description",
+                "additional_properties": True,
+                "properties": [{"name": "weight", "type": "FLOAT"}],
+            },
+        ],
+        "patterns": [],
+    }
+
+    gs = validate_extraction_dict_to_graph_schema(d)
+
+    rel = gs.relationship_type_from_label("KNOWS")
+    assert rel is not None
+    assert rel.description == "first description"
+    assert rel.additional_properties is False
+
+
+def test_validate_extraction_dict_merge_emits_warning_per_label(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """One warning is logged for each label that had duplicates reconciled."""
+    from neo4j_graphrag.experimental.components.schema import (
+        validate_extraction_dict_to_graph_schema,
+    )
+
+    d = {
+        "node_types": [
+            {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]}
+        ],
+        "relationship_types": [
+            {"label": "KNOWS", "properties": [{"name": "since", "type": "INTEGER"}]},
+            {"label": "KNOWS", "properties": [{"name": "weight", "type": "FLOAT"}]},
+            {"label": "LIKES", "properties": [{"name": "rating", "type": "INTEGER"}]},
+            {"label": "LIKES", "properties": [{"name": "comment", "type": "STRING"}]},
+        ],
+        "patterns": [],
+    }
+
+    with caplog.at_level(logging.WARNING):
+        validate_extraction_dict_to_graph_schema(d)
+
+    warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+    knows_warnings = [w for w in warnings if "'KNOWS'" in w]
+    likes_warnings = [w for w in warnings if "'LIKES'" in w]
+    assert len(knows_warnings) == 1
+    assert len(likes_warnings) == 1
+    assert "global per name" in knows_warnings[0]
+
+
+def test_validate_extraction_dict_unique_relationship_labels_unchanged(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """All-unique relationship-type labels pass through with no merge and no warning."""
+    from neo4j_graphrag.experimental.components.schema import (
+        validate_extraction_dict_to_graph_schema,
+    )
+
+    d = {
+        "node_types": [
+            {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]}
+        ],
+        "relationship_types": [
+            {"label": "KNOWS", "properties": [{"name": "since", "type": "INTEGER"}]},
+            {"label": "LIKES", "properties": [{"name": "rating", "type": "INTEGER"}]},
+        ],
+        "patterns": [],
+    }
+
+    with caplog.at_level(logging.WARNING):
+        gs = validate_extraction_dict_to_graph_schema(d)
+
+    assert {r.label for r in gs.relationship_types} == {"KNOWS", "LIKES"}
+    assert not [
+        r
+        for r in caplog.records
+        if r.levelno == logging.WARNING and "global per name" in r.getMessage()
+    ]
+
+
+def test_from_extraction_output_merges_duplicate_relationship_types() -> None:
+    """The V2 structured-output path also merges duplicate relationship types."""
+    from neo4j_graphrag.experimental.components.graph_schema_extraction import (
+        ExtractedNodeType,
+        ExtractedPropertyType,
+        ExtractedRelationshipType,
+        GraphSchemaExtractionOutput,
+    )
+
+    dto = GraphSchemaExtractionOutput(
+        node_types=[
+            ExtractedNodeType(
+                label="Person",
+                properties=[ExtractedPropertyType(name="name", type="STRING")],
+            )
+        ],
+        relationship_types=[
+            ExtractedRelationshipType(
+                label="KNOWS",
+                properties=[ExtractedPropertyType(name="since", type="INTEGER")],
+            ),
+            ExtractedRelationshipType(
+                label="KNOWS",
+                properties=[ExtractedPropertyType(name="weight", type="FLOAT")],
+            ),
+        ],
+    )
+
+    gs = GraphSchema.from_extraction_output(dto)
+
+    assert len(gs.relationship_types) == 1
+    rel = gs.relationship_type_from_label("KNOWS")
+    assert rel is not None
+    assert [p.name for p in rel.properties] == ["since", "weight"]
