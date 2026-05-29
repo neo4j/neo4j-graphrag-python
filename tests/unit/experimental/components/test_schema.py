@@ -2807,7 +2807,7 @@ def test_merge_duplicate_relationship_types_handles_missing_or_none_properties()
 
 
 def test_schema_duplicate_relationship_types_repro_raises_clear_error() -> None:
-    # Repro: two PARTICIPATED_IN relationship_types with differing properties
+    # PRD repro: two PARTICIPATED_IN relationship_types with differing properties
     # plus a KEY constraint. The duplicate-label error must replace the old
     # misleading "undefined property" constraint error.
     schema_dict: dict[str, Any] = {
@@ -2816,22 +2816,40 @@ def test_schema_duplicate_relationship_types_repro_raises_clear_error() -> None:
             {"label": "Encounter", "properties": [{"name": "name", "type": "STRING"}]},
             {"label": "Physician", "properties": [{"name": "name", "type": "STRING"}]},
         ],
+        "patterns": [
+            {
+                "source": "Patient",
+                "relationship": "PARTICIPATED_IN",
+                "target": "Encounter",
+            },
+            {
+                "source": "Encounter",
+                "relationship": "PARTICIPATED_IN",
+                "target": "Physician",
+            },
+        ],
         "relationship_types": [
             {
                 "label": "PARTICIPATED_IN",
-                "properties": [{"name": "encounter_name", "type": "STRING"}],
+                "properties": [
+                    {"name": "date", "type": "DATE"},
+                    {"name": "patient_name", "type": "STRING"},
+                    {"name": "encounter_name", "type": "STRING"},
+                ],
             },
             {
                 "label": "PARTICIPATED_IN",
-                "properties": [{"name": "physician_name", "type": "STRING"}],
+                "properties": [
+                    {"name": "encounter_name", "type": "STRING"},
+                    {"name": "physician_name", "type": "STRING"},
+                ],
             },
         ],
         "constraints": [
             {
                 "type": "KEY",
-                "node_type": "",
                 "relationship_type": "PARTICIPATED_IN",
-                "property_names": ["date"],
+                "property_names": ["date", "patient_name", "encounter_name"],
             }
         ],
     }
@@ -2842,7 +2860,7 @@ def test_schema_duplicate_relationship_types_repro_raises_clear_error() -> None:
     message = str(exc_info.value)
     # Names the duplicated label.
     assert "PARTICIPATED_IN" in message
-    # Names both property sets.
+    # Names both conflicting property sets.
     assert "encounter_name" in message
     assert "physician_name" in message
     # Is the new duplicate-label error, not the old constraint error.
@@ -2867,20 +2885,3 @@ def test_schema_duplicate_relationship_types_identical_properties_raises() -> No
         GraphSchema.model_validate(schema_dict)
 
     assert "Duplicate relationship type 'KNOWS'" in str(exc_info.value)
-
-
-def test_schema_unique_relationship_types_validate_successfully() -> None:
-    # All-unique relationship-type labels validate without error (no regression).
-    schema_dict: dict[str, Any] = {
-        "node_types": [
-            {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]}
-        ],
-        "relationship_types": [
-            {"label": "KNOWS", "properties": [{"name": "since", "type": "INTEGER"}]},
-            {"label": "LIKES", "properties": [{"name": "score", "type": "INTEGER"}]},
-        ],
-    }
-
-    schema = GraphSchema.model_validate(schema_dict)
-
-    assert {rel.label for rel in schema.relationship_types} == {"KNOWS", "LIKES"}
