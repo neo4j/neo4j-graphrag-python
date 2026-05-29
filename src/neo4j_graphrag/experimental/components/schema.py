@@ -1344,6 +1344,66 @@ def _extraction_apply_cross_reference_filters(
     return extracted_patterns, extracted_constraints
 
 
+def _merge_duplicate_relationship_types(
+    rel_types: Optional[List[Dict[str, Any]]],
+) -> Optional[List[Dict[str, Any]]]:
+    """Merge relationship types that share the same label into a single entry.
+
+    Neo4j relationship types are global per name, so an LLM-extracted schema that
+    lists the same relationship type more than once must be reconciled into one
+    definition. Properties are unioned and de-duplicated by name in
+    first-occurrence order (the first definition wins on a name conflict);
+    non-property fields (e.g. ``description``, ``additional_properties``) keep the
+    first entry's values. Entries that are not dicts or have no usable label are
+    left in place untouched. Output ordering is deterministic.
+    """
+    if not rel_types:
+        return rel_types
+
+    merged: List[Dict[str, Any]] = []
+    index_by_label: Dict[str, int] = {}
+    merged_labels: set[str] = set()
+
+    for rel_dict in rel_types:
+        label = rel_dict.get("label") if isinstance(rel_dict, dict) else None
+        if not isinstance(rel_dict, dict) or not label:
+            merged.append(rel_dict)
+            continue
+
+        if label not in index_by_label:
+            new_entry = dict(rel_dict)
+            new_entry["properties"] = list(rel_dict.get("properties") or [])
+            index_by_label[label] = len(merged)
+            merged.append(new_entry)
+            continue
+
+        merged_labels.add(label)
+        existing = merged[index_by_label[label]]
+        existing_props: List[Dict[str, Any]] = existing["properties"]
+        existing_names = {
+            p.get("name")
+            for p in existing_props
+            if isinstance(p, dict) and p.get("name")
+        }
+        for prop in rel_dict.get("properties") or []:
+            name = prop.get("name") if isinstance(prop, dict) else None
+            if name and name in existing_names:
+                continue
+            existing_props.append(prop)
+            if name:
+                existing_names.add(name)
+
+    for label in sorted(merged_labels):
+        logger.warning(
+            f"Reconciled duplicate relationship type '{label}' from the "
+            f"extracted schema into a single definition (union of properties). "
+            f"Neo4j relationship types are global per name, so a type cannot be "
+            f"defined more than once."
+        )
+
+    return merged
+
+
 def validate_extraction_dict_to_graph_schema(
     extracted_schema: Dict[str, Any],
 ) -> GraphSchema:
@@ -1353,7 +1413,9 @@ def validate_extraction_dict_to_graph_schema(
     :class:`SchemaFromTextExtractor` (V1 and V2). Does not require a configured LLM.
     """
     node_types = extracted_schema.get("node_types") or []
-    rel_types = extracted_schema.get("relationship_types")
+    rel_types = _merge_duplicate_relationship_types(
+        extracted_schema.get("relationship_types")
+    )
     patterns = extracted_schema.get("patterns")
     constraints = extracted_schema.get("constraints")
 
