@@ -2,6 +2,10 @@
 
 ## Next
 
+### Changed
+
+- Experimental: the schema-from-text extraction prompt and `GraphSchemaExtractionOutput` now instruct the LLM to define each relationship type once and reuse it across patterns, using distinct type names only when patterns genuinely need different properties or constraints.
+
 ## 1.17.0
 
 ### Added
