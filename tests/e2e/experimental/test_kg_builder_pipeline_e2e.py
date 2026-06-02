@@ -37,6 +37,10 @@ from neo4j_graphrag.experimental.components.schema import (
     PropertyType,
     RelationshipType,
 )
+from neo4j_graphrag.experimental.components.types import (
+    Neo4jGraph,
+    Neo4jNode,
+)
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
     FixedSizeSplitter,
 )
@@ -598,3 +602,107 @@ async def test_pipeline_builder_two_documents(
         "MATCH (:__Entity__)-[r]->(:__Entity__) RETURN r"
     )
     assert len(created_rels.records) == 2
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
+async def test_pipeline_builder_with_existing_graph(
+    harry_potter_text: str,
+    llm: MagicMock,
+    embedder: MagicMock,
+    driver: neo4j.Driver,
+    kg_builder_pipeline: Pipeline,
+) -> None:
+    """Test that existing graph entities are forwarded to the LLM and that the
+    LLM can complement them with newly extracted nodes.
+
+    One existing node ("Alastor Mad-Eye Moody", id "existing-0") is provided as
+    an existing graph for the first chunk. The mocked LLM reuses that id and adds
+    a new node ("Harry Potter", id "0").  The test verifies:
+    - the prompt received by the LLM contained the existing node
+    - the final Neo4j graph contains both the pre-existing and new entities
+    """
+    driver.execute_query("MATCH (n) DETACH DELETE n")
+    embedder.async_embed_query.return_value = [1, 2, 3]
+
+    # The LLM reuses the existing node id "existing-0" for Mad-Eye Moody and
+    # introduces a new node "Harry Potter" with id "0".
+    llm.ainvoke.side_effect = [
+        LLMResponse(
+            content="""{
+                "nodes": [
+                    {
+                        "id": "existing-0",
+                        "label": "Person",
+                        "properties": {"name": "Alastor Mad-Eye Moody"}
+                    },
+                    {
+                        "id": "0",
+                        "label": "Person",
+                        "properties": {"name": "Harry Potter"}
+                    }
+                ],
+                "relationships": [
+                    {
+                        "type": "KNOWS",
+                        "start_node_id": "0",
+                        "end_node_id": "existing-0"
+                    }
+                ]
+            }"""
+        ),
+        LLMResponse(content='{"nodes": [], "relationships": []}'),
+    ]
+
+    # One existing subgraph per chunk. The first chunk gets the pre-existing node;
+    # the second chunk gets an empty graph.
+    existing_graphs = [
+        Neo4jGraph(
+            nodes=[
+                Neo4jNode(
+                    id="existing-0",
+                    label="Person",
+                    properties={"name": "Alastor Mad-Eye Moody"},
+                )
+            ],
+            relationships=[],
+        ),
+        Neo4jGraph(),
+    ]
+
+    pipe_inputs = {
+        "splitter": {"text": harry_potter_text},
+        "schema": {
+            "node_types": [
+                NodeType(
+                    label="Person",
+                    properties=[PropertyType(name="name", type="STRING")],
+                ),
+            ],
+            "relationship_types": [RelationshipType(label="KNOWS")],
+            "patterns": [("Person", "KNOWS", "Person")],
+        },
+        "extractor": {"existing_graphs": existing_graphs},
+    }
+
+    res = await kg_builder_pipeline.run(pipe_inputs)
+
+    assert isinstance(res, PipelineResult)
+    assert res.run_id is not None
+
+    # The LLM prompt for the first chunk must have contained the existing node.
+    first_call_prompt = llm.ainvoke.call_args_list[0][0][0]
+    assert "Alastor Mad-Eye Moody" in first_call_prompt
+    assert "existing-0" in first_call_prompt
+
+    # Both nodes must be present in the DB after writing.
+    created_nodes = driver.execute_query("MATCH (n:Person) RETURN n")
+    names = {r["n"]["name"] for r in created_nodes.records}
+    assert "Harry Potter" in names
+    assert "Alastor Mad-Eye Moody" in names
+
+    # The KNOWS relationship must have been written.
+    created_rels = driver.execute_query(
+        "MATCH (:Person)-[r:KNOWS]->(:Person) RETURN r"
+    )
+    assert len(created_rels.records) == 1
