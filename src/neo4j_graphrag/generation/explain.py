@@ -26,11 +26,14 @@ MOVIES_ACTORS_PATH_RETRIEVAL_QUERY = """
 MATCH path = (actor:Actor)-[:ACTED_IN]->(node)
 WITH node, score, collect(DISTINCT actor.name) AS actors, collect(path) AS actorPaths
 OPTIONAL MATCH directorPath = (director:Person)-[:DIRECTED]->(node)
+WITH node, score, actors, actorPaths,
+     [name IN collect(DISTINCT director.name) WHERE name IS NOT NULL] AS directors,
+     [path IN collect(directorPath) WHERE path IS NOT NULL] AS directorPaths
 RETURN node.title AS movieTitle,
        node.plot AS moviePlot,
        actors,
-       [name IN collect(DISTINCT director.name) WHERE name IS NOT NULL] AS directors,
-       actorPaths + [path IN collect(directorPath) WHERE path IS NOT NULL] AS paths,
+       directors,
+       actorPaths + directorPaths AS paths,
        score AS similarityScore
 """.strip()
 
@@ -84,6 +87,7 @@ class TraceStep(BaseModel):
     """Minimal execution trace for a GraphRAG search."""
 
     retriever: str
+    cypher: str | None = None
 
 
 class ExplainResult(BaseModel):
@@ -112,7 +116,11 @@ def trace_from_retriever(retriever_result: RetrieverResult) -> TraceStep:
         raise TypeError("retriever_result must be a RetrieverResult")
     metadata = retriever_result.metadata or {}
     retriever = metadata.get("__retriever", "unknown")
-    return TraceStep(retriever=str(retriever))
+    cypher = metadata.get("cypher")
+    return TraceStep(
+        retriever=str(retriever),
+        cypher=str(cypher) if cypher is not None else None,
+    )
 
 
 def sources_from_retriever(retriever_result: RetrieverResult) -> list[SourceRef]:
@@ -514,3 +522,16 @@ def movies_vector_cypher_explain_formatter(
         f"Actors: {actors_text}, Directors: {directors_text}"
     )
     return vector_cypher_explain_result_formatter(record, content=content)
+
+
+def text2cypher_explain_result_formatter(
+    record: neo4j.Record,
+) -> RetrieverResultItem:
+    from neo4j_graphrag.types import RetrieverResultItem
+
+    parts: list[str] = []
+    for key in record.keys():
+        value = record.get(key)
+        if value is not None:
+            parts.append(f"{key}: {value}")
+    return RetrieverResultItem(content=", ".join(parts) if parts else str(record))

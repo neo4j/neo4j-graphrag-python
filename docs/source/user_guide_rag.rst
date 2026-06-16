@@ -1459,11 +1459,39 @@ GraphRAG can attach structured provenance to a search result when ``explain`` is
 The payload includes numbered sources (aligned with LLM context), optional graph
 neighborhood and paths from the retriever, and a minimal retriever trace.
 
-Use a VectorCypher ``result_formatter`` that populates ``metadata.graph`` on each
-retrieved item. The package provides helpers such as
-``movies_vector_cypher_explain_formatter`` and ``MOVIES_ACTORS_PATH_RETRIEVAL_QUERY``
-for the public recommendations demo database. The query retrieves actors,
-directors, and graph paths for each matched movie.
+For ask-anything graph questions, pair explain with ``Text2CypherRetriever`` and
+``text2cypher_explain_result_formatter``. The generated Cypher query is available
+on ``result.explain.trace.cypher``.
+
+.. code:: python
+
+    from neo4j_graphrag.generation import (
+        ExplainConfig,
+        GraphRAG,
+        text2cypher_explain_result_formatter,
+    )
+    from neo4j_graphrag.retrievers import Text2CypherRetriever
+
+    retriever = Text2CypherRetriever(
+        driver,
+        llm=llm,
+        neo4j_schema=schema,
+        examples=examples,
+        result_formatter=text2cypher_explain_result_formatter,
+    )
+    rag = GraphRAG(retriever=retriever, llm=llm)
+    result = rag.search(
+        "Which movies did Joel Coen and Steve Buscemi work on together?",
+        explain=ExplainConfig(),
+    )
+    print(result.answer)
+    print(result.explain)
+
+For graph-path provenance from vector similarity hits, use a VectorCypher
+``result_formatter`` that populates ``metadata.graph`` on each retrieved item.
+The package provides helpers such as ``movies_vector_cypher_explain_formatter``
+and ``MOVIES_ACTORS_PATH_RETRIEVAL_QUERY`` for the public recommendations demo
+database.
 
 .. code:: python
 

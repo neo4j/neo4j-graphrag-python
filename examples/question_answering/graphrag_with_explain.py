@@ -1,7 +1,8 @@
 """GraphRAG with optional explainability output.
 
-Runs against the public Neo4j recommendations demo database and compares a
-standard GraphRAG answer with structured provenance (sources, graph paths).
+Uses Text2Cypher against the public Neo4j recommendations demo database so you
+can ask natural-language questions about the graph and inspect sources plus the
+generated Cypher query.
 
 Requires OPENAI_API_KEY in the environment and the ``openai`` optional dependency::
 
@@ -11,7 +12,8 @@ Examples::
 
     uv run examples/question_answering/graphrag_with_explain.py
     uv run examples/question_answering/graphrag_with_explain.py --no-explain
-    uv run examples/question_answering/graphrag_with_explain.py --format json
+    uv run examples/question_answering/graphrag_with_explain.py --format json \\
+        "Which movies did Joel Coen and Steve Buscemi work on together?"
 """
 
 from __future__ import annotations
@@ -22,26 +24,59 @@ import sys
 from typing import Any
 
 import neo4j
-from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
 from neo4j_graphrag.generation import (
     ExplainConfig,
     ExplainResult,
     GraphRAG,
-    MOVIES_ACTORS_PATH_RETRIEVAL_QUERY,
-    movies_vector_cypher_explain_formatter,
+    text2cypher_explain_result_formatter,
 )
 from neo4j_graphrag.llm import OpenAILLM
-from neo4j_graphrag.retrievers import VectorCypherRetriever
+from neo4j_graphrag.retrievers import Text2CypherRetriever
 
 URI = "neo4j+s://demo.neo4jlabs.com"
 AUTH = ("recommendations", "recommendations")
 DATABASE = "recommendations"
-INDEX = "moviePlotsEmbedding"
 DEFAULT_QUESTION = "Who were the actors in Avatar?"
 OPENAI_EXTRA_INSTALL_HINT = (
     "This example requires the openai optional dependency.\n"
     "Install it with: uv sync --extra openai"
 )
+
+RECOMMENDATIONS_NEO4J_SCHEMA = """
+Node properties:
+Actor {name: STRING}
+Director {name: STRING}
+Person {name: STRING, born: INTEGER}
+Movie {tagline: STRING, title: STRING, released: INTEGER}
+Relationship properties:
+ACTED_IN {roles: LIST}
+DIRECTED {}
+REVIEWED {summary: STRING, rating: INTEGER}
+The relationships:
+(:Actor)-[:ACTED_IN]->(:Movie)
+(:Person)-[:ACTED_IN]->(:Movie)
+(:Person)-[:DIRECTED]->(:Movie)
+(:Director)-[:DIRECTED]->(:Movie)
+(:Person)-[:REVIEWED]->(:Movie)
+""".strip()
+
+RECOMMENDATIONS_TEXT2CYPHER_EXAMPLES = [
+    (
+        "USER INPUT: 'Which actors starred in the Matrix?' "
+        "QUERY: MATCH (p:Person)-[:ACTED_IN]->(m:Movie) "
+        "WHERE m.title = 'The Matrix' RETURN p.name AS name"
+    ),
+    (
+        "USER INPUT: 'Who directed One Flew Over the Cuckoo\\'s Nest?' "
+        "QUERY: MATCH (p:Person)-[:DIRECTED]->(m:Movie) "
+        'WHERE m.title = "One Flew Over the Cuckoo\'s Nest" RETURN p.name AS name'
+    ),
+    (
+        "USER INPUT: 'Which movies did Joel Coen and Steve Buscemi work on together?' "
+        "QUERY: MATCH (d:Person)-[:DIRECTED]->(m:Movie)<-[:ACTED_IN]-(a:Actor) "
+        "WHERE d.name = 'Joel Coen' AND a.name = 'Steve Buscemi' RETURN m.title AS title"
+    ),
+]
 
 
 def ensure_openai_extra() -> None:
@@ -51,58 +86,28 @@ def ensure_openai_extra() -> None:
         raise SystemExit(OPENAI_EXTRA_INSTALL_HINT) from exc
 
 
-def build_rag(driver: neo4j.Driver) -> GraphRAG:
-    retriever = VectorCypherRetriever(
+def build_rag(driver: neo4j.Driver, llm: OpenAILLM) -> GraphRAG:
+    retriever = Text2CypherRetriever(
         driver,
-        index_name=INDEX,
-        retrieval_query=MOVIES_ACTORS_PATH_RETRIEVAL_QUERY,
-        result_formatter=movies_vector_cypher_explain_formatter,
-        embedder=OpenAIEmbeddings(),
+        llm=llm,
+        neo4j_schema=RECOMMENDATIONS_NEO4J_SCHEMA,
+        examples=RECOMMENDATIONS_TEXT2CYPHER_EXAMPLES,
+        result_formatter=text2cypher_explain_result_formatter,
         neo4j_database=DATABASE,
     )
-    llm = OpenAILLM(model_name="gpt-4o-mini", model_params={"temperature": 0})
     return GraphRAG(retriever=retriever, llm=llm)
 
 
-def _node_label(node: dict[str, Any]) -> str:
-    labels = node.get("labels") or []
-    name = (node.get("properties") or {}).get("name") or (
-        node.get("properties") or {}
-    ).get("title")
-    if labels and name:
-        return f"{labels[0]}({name})"
-    if labels:
-        return labels[0]
-    if name:
-        return str(name)
-    return "node"
-
-
-def _format_path(path: list[dict[str, Any]]) -> str:
-    parts: list[str] = []
-    for element in path:
-        if "type" in element:
-            parts.append(f"-[:{element['type']}]->")
-        else:
-            parts.append(_node_label(element))
-    return " ".join(parts)
-
-
 def format_explain_table(explain: ExplainResult) -> str:
-    lines = [f"Retriever: {explain.trace.retriever}", "", "Sources:"]
+    lines = [f"Retriever: {explain.trace.retriever}"]
+    if explain.trace.cypher:
+        lines.extend(["", "Generated Cypher:", f"  {explain.trace.cypher}"])
+    lines.extend(["", "Sources:"])
+    if not explain.sources:
+        lines.append("  (no rows returned)")
     for source in explain.sources:
         score = f" (score={source.score:.3f})" if source.score is not None else ""
         lines.append(f"  [{source.index}]{score} {source.content}")
-
-    if explain.graph:
-        lines.extend(["", "Graph context:"])
-        for index, context in enumerate(explain.graph, start=1):
-            lines.append(f"  Source {index}:")
-            if context.seed_node is not None:
-                lines.append(f"    seed: {_node_label(context.seed_node.model_dump())}")
-            for path_index, path in enumerate(context.paths, start=1):
-                serialized_path = [element.model_dump() for element in path]
-                lines.append(f"    path {path_index}: {_format_path(serialized_path)}")
     return "\n".join(lines)
 
 
@@ -133,24 +138,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="table",
         help="Output format (default: table)",
     )
-    parser.add_argument(
-        "--top-k",
-        type=int,
-        default=3,
-        help="Number of retrieval results to pass to the LLM (default: 3)",
-    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     ensure_openai_extra()
+    llm = OpenAILLM(model_name="gpt-4o-mini", model_params={"temperature": 0})
     with neo4j.GraphDatabase.driver(URI, auth=AUTH) as driver:
-        rag = build_rag(driver)
+        rag = build_rag(driver, llm)
         result = rag.search(
             args.question,
             explain=ExplainConfig() if args.explain else None,
-            retriever_config={"top_k": args.top_k},
         )
 
     if args.format == "json":

@@ -73,6 +73,22 @@ def test_trace_from_retriever_uses_retriever_metadata() -> None:
     trace = trace_from_retriever(result)
 
     assert trace.retriever == "VectorCypherRetriever"
+    assert trace.cypher is None
+
+
+def test_trace_from_retriever_includes_generated_cypher() -> None:
+    result = RetrieverResult(
+        items=[],
+        metadata={
+            "__retriever": "Text2CypherRetriever",
+            "cypher": "MATCH (m:Movie) RETURN m.title AS title",
+        },
+    )
+
+    trace = trace_from_retriever(result)
+
+    assert trace.retriever == "Text2CypherRetriever"
+    assert trace.cypher == "MATCH (m:Movie) RETURN m.title AS title"
 
 
 def test_trace_from_retriever_defaults_to_unknown() -> None:
@@ -220,6 +236,27 @@ def test_graphrag_search_without_explain_unchanged(
     assert result.retriever_result is None
     assert "chunk" in llm.invoke.call_args.kwargs["input"]
     assert "[1]" not in llm.invoke.call_args.kwargs["input"]
+
+
+def test_graphrag_search_with_explain_skips_llm_when_no_rows(
+    retriever_mock: MagicMock, llm: MagicMock
+) -> None:
+    rag = GraphRAG(retriever=retriever_mock, llm=llm)
+    retriever_mock.search.return_value = RetrieverResult(
+        items=[],
+        metadata={
+            "__retriever": "Text2CypherRetriever",
+            "cypher": "MATCH (m:Movie) RETURN m.title AS title",
+        },
+    )
+
+    result = rag.search("question", explain=ExplainConfig())
+
+    assert "could not find any matching results" in result.answer.lower()
+    assert result.explain is not None
+    assert result.explain.trace.cypher == "MATCH (m:Movie) RETURN m.title AS title"
+    assert result.explain.sources == []
+    llm.invoke.assert_not_called()
 
 
 def test_graph_and_paths_from_record_builds_seed_actors_and_directors() -> None:
@@ -393,3 +430,13 @@ def test_build_explain_result_from_movies_formatter_output() -> None:
     assert explain.graph is not None
     assert explain.graph[0].paths[0][1].type == "ACTED_IN"
     assert explain.sources[0].score == 0.91
+
+
+def test_text2cypher_explain_result_formatter_formats_record() -> None:
+    from neo4j_graphrag.generation.explain import text2cypher_explain_result_formatter
+
+    record = neo4j.Record({"title": "One Flew Over the Cuckoo's Nest"})
+
+    item = text2cypher_explain_result_formatter(record)
+
+    assert item.content == "title: One Flew Over the Cuckoo's Nest"

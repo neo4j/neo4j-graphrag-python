@@ -16,6 +16,7 @@ from .explain import (
     serialize_neo4j_path,
     serialize_paths,
     sources_from_retriever,
+    text2cypher_explain_result_formatter,
     trace_from_retriever,
     vector_cypher_explain_result_formatter,
 )
@@ -44,6 +45,7 @@ __all__ = [
     "serialize_neo4j_path",
     "serialize_paths",
     "sources_from_retriever",
+    "text2cypher_explain_result_formatter",
     "trace_from_retriever",
     "vector_cypher_explain_result_formatter",
 ]

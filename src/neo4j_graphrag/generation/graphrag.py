@@ -165,6 +165,14 @@ class GraphRAG:
         )
         if len(retriever_result.items) == 0 and response_fallback is not None:
             answer = response_fallback
+        elif (
+            len(retriever_result.items) == 0
+            and validated_data.explain is not None
+            and validated_data.explain.cite_sources
+        ):
+            answer = (
+                "I could not find any matching results in the graph for this question."
+            )
         else:
             cite_sources = (
                 validated_data.explain.cite_sources
