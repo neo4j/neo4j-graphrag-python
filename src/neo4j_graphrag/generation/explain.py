@@ -323,6 +323,11 @@ def _node_from_neo4j_graph_node(node: neo4j.graph.Node) -> GraphNodeRef:
     )
 
 
+def node_from_neo4j_graph_node(node: neo4j.graph.Node) -> GraphNodeRef:
+    """Serialize a Neo4j driver node for explainability metadata."""
+    return _node_from_neo4j_graph_node(node)
+
+
 def _relationship_from_neo4j_graph_rel(
     relationship: neo4j.graph.Relationship,
 ) -> GraphRelationshipRef:

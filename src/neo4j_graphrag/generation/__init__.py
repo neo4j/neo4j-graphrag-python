@@ -11,17 +11,13 @@ from .explain import (
     format_retrieval_context,
     graph_context_from_neo4j_record,
     graph_from_retriever,
+    node_from_neo4j_graph_node,
     serialize_neo4j_path,
     serialize_paths,
     sources_from_retriever,
     text2cypher_explain_result_formatter,
     trace_from_retriever,
     vector_cypher_explain_result_formatter,
-)
-from .explain_recommendations import (
-    MOVIES_ACTORS_PATH_RETRIEVAL_QUERY,
-    graph_and_paths_from_record,
-    movies_vector_cypher_explain_formatter,
 )
 from .graphrag import GraphRAG
 from .prompts import PromptTemplate, RagTemplate, SchemaExtractionTemplate
@@ -34,7 +30,6 @@ __all__ = [
     "GraphPath",
     "GraphRelationshipRef",
     "GraphRAG",
-    "MOVIES_ACTORS_PATH_RETRIEVAL_QUERY",
     "PromptTemplate",
     "RagTemplate",
     "SchemaExtractionTemplate",
@@ -42,10 +37,9 @@ __all__ = [
     "TraceStep",
     "build_explain_result",
     "format_retrieval_context",
-    "graph_and_paths_from_record",
     "graph_context_from_neo4j_record",
     "graph_from_retriever",
-    "movies_vector_cypher_explain_formatter",
+    "node_from_neo4j_graph_node",
     "serialize_neo4j_path",
     "serialize_paths",
     "sources_from_retriever",

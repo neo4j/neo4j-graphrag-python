@@ -36,7 +36,7 @@ from neo4j_graphrag.generation import (
     GraphRAG,
     text2cypher_explain_result_formatter,
 )
-from neo4j_graphrag.generation.explain_recommendations import (
+from recommendations_explain import (
     MOVIES_ACTORS_PATH_RETRIEVAL_QUERY,
     movies_vector_cypher_explain_formatter,
 )
