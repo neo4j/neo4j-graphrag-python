@@ -470,6 +470,17 @@ GraphRAG
 .. autoclass:: neo4j_graphrag.generation.graphrag.GraphRAG
     :members:
 
+Explainability
+==============
+
+.. autoclass:: neo4j_graphrag.generation.explain.ExplainConfig
+
+.. autoclass:: neo4j_graphrag.generation.explain.ExplainResult
+
+.. autoclass:: neo4j_graphrag.generation.explain.SourceRef
+
+.. autoclass:: neo4j_graphrag.generation.explain.GraphContext
+
 
 .. _database-interaction-section:
 
