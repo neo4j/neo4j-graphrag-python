@@ -38,6 +38,7 @@ from neo4j_graphrag.components.schema import (
     _merge_duplicate_node_types,
     _merge_duplicate_relationship_types,
 )
+from neo4j_graphrag.components.types import TextChunk
 import os
 import tempfile
 import yaml
@@ -1484,6 +1485,26 @@ async def test_schema_from_text_run_valid_response(
     assert schema_config.patterns is not None
     assert len(schema_config.patterns) == 1
     assert schema_config.patterns[0] == ("Person", "WORKS_FOR", "Organization")
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_run_uses_first_chunk(
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+    valid_schema_json: str,
+) -> None:
+    mock_llm.ainvoke.return_value = LLMResponse(content=valid_schema_json)
+
+    await schema_from_text.run(
+        text=[
+            TextChunk(text="first chunk for schema", index=0),
+            TextChunk(text="second chunk should not be used", index=1),
+        ]
+    )
+
+    prompt_arg = mock_llm.ainvoke.call_args[0][0]
+    assert "first chunk for schema" in prompt_arg
+    assert "second chunk should not be used" not in prompt_arg
 
 
 @pytest.mark.asyncio
