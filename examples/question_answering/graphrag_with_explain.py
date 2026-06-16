@@ -37,13 +37,7 @@ from neo4j_graphrag.generation import (
     text2cypher_explain_result_formatter,
     vector_cypher_explain_result_formatter,
 )
-from neo4j_graphrag.generation.explain import (
-    GraphContext,
-    GraphNodeRef,
-    GraphRelationshipRef,
-    node_from_neo4j_graph_node,
-    serialize_paths,
-)
+from neo4j_graphrag.generation.explain import GraphContext, serialize_paths
 from neo4j_graphrag.llm import OpenAILLM
 from neo4j_graphrag.retrievers import Text2CypherRetriever, VectorCypherRetriever
 from neo4j_graphrag.types import RetrieverResultItem
@@ -120,7 +114,6 @@ RECOMMENDATIONS_TEXT2CYPHER_EXAMPLES = [
     ),
 ]
 
-
 MOVIES_ACTORS_PATH_RETRIEVAL_QUERY = """
 MATCH path = (actor:Actor)-[:ACTED_IN]->(node)
 WITH node, score, collect(DISTINCT actor.name) AS actors, collect(path) AS actorPaths
@@ -137,128 +130,26 @@ RETURN node.title AS movieTitle,
 """.strip()
 
 
-def graph_and_paths_from_record(
-    record: neo4j.Record,
-    *,
-    node_key: str = "node",
-    title_key: str = "movieTitle",
-    plot_key: str = "moviePlot",
-    actors_key: str = "actors",
-    directors_key: str = "directors",
-    paths_key: str = "paths",
-    movie_labels: list[str] | None = None,
-    actor_labels: list[str] | None = None,
-    director_labels: list[str] | None = None,
-) -> dict[str, Any]:
-    """Build metadata.graph from a recommendations VectorCypher retrieval row."""
-    movie_label_list = movie_labels or ["Movie"]
-    actor_label_list = actor_labels or ["Actor"]
-    director_label_list = director_labels or ["Person"]
-
-    seed_node: GraphNodeRef | None = None
-    node = record.get(node_key)
-    if isinstance(node, neo4j.graph.Node):
-        seed_node = node_from_neo4j_graph_node(node)
-    else:
-        title = record.get(title_key)
-        plot = record.get(plot_key)
-        if title is not None or plot is not None:
-            properties: dict[str, Any] = {}
-            if title is not None:
-                properties["title"] = title
-            if plot is not None:
-                properties["plot"] = plot
-            seed_node = GraphNodeRef(labels=movie_label_list, properties=properties)
-
-    related_nodes: list[GraphNodeRef] = []
-    relationships: list[GraphRelationshipRef] = []
-    actors = record.get(actors_key) or []
-    if isinstance(actors, list):
-        for actor_name in actors:
-            if actor_name is None:
-                continue
-            actor_node = GraphNodeRef(
-                labels=actor_label_list,
-                properties={"name": str(actor_name)},
-            )
-            related_nodes.append(actor_node)
-            if seed_node is not None and seed_node.id is not None:
-                relationships.append(
-                    GraphRelationshipRef(
-                        type="ACTED_IN",
-                        start_id=None,
-                        end_id=seed_node.id,
-                    )
-                )
-
-    directors = record.get(directors_key) or []
-    if isinstance(directors, list):
-        for director_name in directors:
-            if director_name is None:
-                continue
-            director_node = GraphNodeRef(
-                labels=director_label_list,
-                properties={"name": str(director_name)},
-            )
-            related_nodes.append(director_node)
-            if seed_node is not None and seed_node.id is not None:
-                relationships.append(
-                    GraphRelationshipRef(
-                        type="DIRECTED",
-                        start_id=None,
-                        end_id=seed_node.id,
-                    )
-                )
-
-    paths = serialize_paths(record.get(paths_key))
-    if not paths and seed_node is not None and related_nodes:
-        for person_name, rel_type, labels in (
-            *(
-                (name, "ACTED_IN", actor_label_list)
-                for name in actors
-                if isinstance(actors, list) and name is not None
-            ),
-            *(
-                (name, "DIRECTED", director_label_list)
-                for name in directors
-                if isinstance(directors, list) and name is not None
-            ),
-        ):
-            person_node = GraphNodeRef(
-                labels=labels,
-                properties={"name": str(person_name)},
-            )
-            paths.append(
-                [
-                    person_node,
-                    GraphRelationshipRef(type=rel_type),
-                    seed_node,
-                ]
-            )
-
-    return GraphContext(
-        seed_node=seed_node,
-        related_nodes=related_nodes,
-        relationships=relationships,
-        paths=paths,
-    ).model_dump(exclude_none=True)
+def graph_paths_from_record(record: neo4j.Record) -> GraphContext | None:
+    paths = serialize_paths(record.get("paths"))
+    return GraphContext(paths=paths) if paths else None
 
 
 def movies_vector_cypher_explain_formatter(
     record: neo4j.Record,
 ) -> RetrieverResultItem:
     actors = record.get("actors") or []
-    if isinstance(actors, list):
-        actors_text = ", ".join(str(actor) for actor in actors if actor is not None)
-    else:
-        actors_text = str(actors)
+    actors_text = (
+        ", ".join(str(actor) for actor in actors if actor is not None)
+        if isinstance(actors, list)
+        else str(actors)
+    )
     directors = record.get("directors") or []
-    if isinstance(directors, list):
-        directors_text = ", ".join(
-            str(director) for director in directors if director is not None
-        )
-    else:
-        directors_text = str(directors)
+    directors_text = (
+        ", ".join(str(director) for director in directors if director is not None)
+        if isinstance(directors, list)
+        else str(directors)
+    )
     title = record.get("movieTitle")
     plot = record.get("moviePlot")
     content = (
@@ -268,7 +159,7 @@ def movies_vector_cypher_explain_formatter(
     return vector_cypher_explain_result_formatter(
         record,
         content=content,
-        graph_builder=graph_and_paths_from_record,
+        graph_builder=graph_paths_from_record,
     )
 
 
@@ -279,34 +170,6 @@ def ensure_openai_extra() -> None:
         raise SystemExit(OPENAI_EXTRA_INSTALL_HINT) from exc
 
 
-def build_text2cypher_rag(driver: neo4j.Driver, llm: OpenAILLM) -> GraphRAG:
-    retriever = Text2CypherRetriever(
-        driver,
-        llm=llm,
-        neo4j_schema=RECOMMENDATIONS_NEO4J_SCHEMA,
-        examples=RECOMMENDATIONS_TEXT2CYPHER_EXAMPLES,
-        result_formatter=text2cypher_explain_result_formatter,
-        neo4j_database=DATABASE,
-    )
-    return GraphRAG(retriever=retriever, llm=llm)
-
-
-def build_vector_cypher_rag(
-    driver: neo4j.Driver,
-    llm: OpenAILLM,
-    embedder: OpenAIEmbeddings,
-) -> GraphRAG:
-    retriever = VectorCypherRetriever(
-        driver,
-        index_name=INDEX_NAME,
-        retrieval_query=MOVIES_ACTORS_PATH_RETRIEVAL_QUERY,
-        result_formatter=movies_vector_cypher_explain_formatter,
-        embedder=embedder,
-        neo4j_database=DATABASE,
-    )
-    return GraphRAG(retriever=retriever, llm=llm)
-
-
 def build_rag(
     driver: neo4j.Driver,
     llm: OpenAILLM,
@@ -315,10 +178,25 @@ def build_rag(
     embedder: OpenAIEmbeddings | None = None,
 ) -> GraphRAG:
     if retriever == "vector-cypher":
-        if embedder is None:
-            embedder = OpenAIEmbeddings()
-        return build_vector_cypher_rag(driver, llm, embedder)
-    return build_text2cypher_rag(driver, llm)
+        embedder = embedder or OpenAIEmbeddings()
+        retriever_impl = VectorCypherRetriever(
+            driver,
+            index_name=INDEX_NAME,
+            retrieval_query=MOVIES_ACTORS_PATH_RETRIEVAL_QUERY,
+            result_formatter=movies_vector_cypher_explain_formatter,
+            embedder=embedder,
+            neo4j_database=DATABASE,
+        )
+    else:
+        retriever_impl = Text2CypherRetriever(
+            driver,
+            llm=llm,
+            neo4j_schema=RECOMMENDATIONS_NEO4J_SCHEMA,
+            examples=RECOMMENDATIONS_TEXT2CYPHER_EXAMPLES,
+            result_formatter=text2cypher_explain_result_formatter,
+            neo4j_database=DATABASE,
+        )
+    return GraphRAG(retriever=retriever_impl, llm=llm)
 
 
 def format_explain_table(explain: ExplainResult) -> str:
@@ -333,15 +211,11 @@ def format_explain_table(explain: ExplainResult) -> str:
         lines.append(f"  [{source.index}]{score} {source.content}")
 
     if explain.graph:
-        lines.extend(["", "Graph context:"])
+        lines.extend(["", "Graph paths:"])
         for index, context in enumerate(explain.graph, start=1):
+            if not context.paths:
+                continue
             lines.append(f"  Source {index}:")
-            if context.seed_node is not None:
-                seed = context.seed_node
-                label = seed.labels[0] if seed.labels else "node"
-                name = seed.properties.get("title") or seed.properties.get("name")
-                seed_text = f"{label}({name})" if name else label
-                lines.append(f"    seed: {seed_text}")
             for path_index, path in enumerate(context.paths, start=1):
                 parts: list[str] = []
                 for element in path:
@@ -355,13 +229,6 @@ def format_explain_table(explain: ExplainResult) -> str:
                         parts.append(f"{label}({name})" if name else label)
                 lines.append(f"    path {path_index}: {' '.join(parts)}")
     return "\n".join(lines)
-
-
-def result_to_json(answer: str, explain: ExplainResult | None) -> dict[str, Any]:
-    payload: dict[str, Any] = {"answer": answer}
-    if explain is not None:
-        payload["explain"] = explain.model_dump(mode="json")
-    return payload
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -397,9 +264,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Number of vector hits for vector-cypher mode (default: 3)",
     )
     args = parser.parse_args(argv)
-    retriever_name: RetrieverName = args.retriever
     if args.question is None:
-        args.question = DEFAULT_QUESTIONS[retriever_name]
+        args.question = DEFAULT_QUESTIONS[args.retriever]
     return args
 
 
@@ -425,7 +291,10 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     if args.format == "json":
-        print(json.dumps(result_to_json(result.answer, result.explain), indent=2))
+        payload: dict[str, Any] = {"answer": result.answer}
+        if result.explain is not None:
+            payload["explain"] = result.explain.model_dump(mode="json")
+        print(json.dumps(payload, indent=2))
         return 0
 
     print(f"Retriever: {args.retriever}")

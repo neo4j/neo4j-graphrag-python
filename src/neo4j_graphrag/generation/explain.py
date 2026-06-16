@@ -49,11 +49,8 @@ class GraphRelationshipRef(BaseModel):
 
 
 class GraphContext(BaseModel):
-    """Graph neighborhood for a single retrieved source."""
+    """Graph paths for a single retrieved source."""
 
-    seed_node: GraphNodeRef | None = None
-    related_nodes: list[GraphNodeRef] = Field(default_factory=list)
-    relationships: list[GraphRelationshipRef] = Field(default_factory=list)
     paths: list[GraphPath] = Field(default_factory=list)
 
 
@@ -199,103 +196,12 @@ def _graph_context_from_item_metadata(
     graph_data = metadata.get("graph")
     if isinstance(graph_data, GraphContext):
         return graph_data
-    if isinstance(graph_data, dict):
-        return _graph_context_from_dict(graph_data, metadata.get("paths"))
 
     paths_data = metadata.get("paths")
     if paths_data:
-        return GraphContext(paths=_parse_paths(paths_data))
+        paths = serialize_paths(paths_data)
+        return GraphContext(paths=paths) if paths else None
     return None
-
-
-def _graph_context_from_dict(
-    data: dict[str, Any],
-    extra_paths: Any = None,
-) -> GraphContext:
-    seed = data.get("seed_node")
-    paths_data = data.get("paths", extra_paths)
-    return GraphContext(
-        seed_node=_parse_node_ref(seed) if seed else None,
-        related_nodes=[
-            _parse_node_ref(node)
-            for node in data.get("related_nodes", [])
-            if node is not None
-        ],
-        relationships=[
-            _parse_relationship_ref(rel)
-            for rel in data.get("relationships", [])
-            if rel is not None
-        ],
-        paths=_parse_paths(paths_data),
-    )
-
-
-def _parse_paths(paths_data: Any) -> list[GraphPath]:
-    if not paths_data:
-        return []
-    if not isinstance(paths_data, list):
-        return []
-    paths: list[GraphPath] = []
-    for path in paths_data:
-        if not isinstance(path, list):
-            continue
-        elements = [_parse_path_element(element) for element in path]
-        paths.append(elements)
-    return paths
-
-
-def _parse_path_element(element: Any) -> GraphPathElement:
-    if isinstance(element, GraphNodeRef):
-        return element
-    if isinstance(element, GraphRelationshipRef):
-        return element
-    if not isinstance(element, dict):
-        raise ValueError("path element must be a mapping or graph ref model")
-    if _is_relationship_mapping(element):
-        return _parse_relationship_ref(element)
-    return _parse_node_ref(element)
-
-
-def _is_relationship_mapping(data: dict[str, Any]) -> bool:
-    return "type" in data and "labels" not in data and "properties" not in data
-
-
-def _parse_node_ref(data: Any) -> GraphNodeRef:
-    if isinstance(data, GraphNodeRef):
-        return data
-    if not isinstance(data, dict):
-        raise ValueError("node reference must be a mapping or GraphNodeRef")
-    labels = data.get("labels", [])
-    if not isinstance(labels, list):
-        labels = [str(labels)]
-    properties = data.get("properties", {})
-    if not isinstance(properties, dict):
-        properties = {}
-    node_id = data.get("id")
-    return GraphNodeRef(
-        id=str(node_id) if node_id is not None else None,
-        labels=labels,
-        properties=properties,
-    )
-
-
-def _parse_relationship_ref(data: Any) -> GraphRelationshipRef:
-    if isinstance(data, GraphRelationshipRef):
-        return data
-    if not isinstance(data, dict):
-        raise ValueError(
-            "relationship reference must be a mapping or GraphRelationshipRef"
-        )
-    rel_type = data.get("type")
-    if not rel_type:
-        raise ValueError("relationship reference requires a type")
-    start_id = data.get("start_id")
-    end_id = data.get("end_id")
-    return GraphRelationshipRef(
-        type=str(rel_type),
-        start_id=str(start_id) if start_id is not None else None,
-        end_id=str(end_id) if end_id is not None else None,
-    )
 
 
 def _json_safe_value(value: Any) -> Any:
@@ -352,19 +258,14 @@ def serialize_neo4j_path(path: neo4j.graph.Path) -> GraphPath:
 
 
 def serialize_paths(paths_value: Any) -> list[GraphPath]:
+    if isinstance(paths_value, neo4j.graph.Path):
+        return [serialize_neo4j_path(paths_value)]
     if not paths_value or not isinstance(paths_value, list):
-        if isinstance(paths_value, neo4j.graph.Path):
-            return [serialize_neo4j_path(paths_value)]
         return []
     paths: list[GraphPath] = []
     for path in paths_value:
         if isinstance(path, neo4j.graph.Path):
             paths.append(serialize_neo4j_path(path))
-            continue
-        if isinstance(path, list):
-            parsed = _parse_paths([path])
-            if parsed:
-                paths.append(parsed[0])
     return paths
 
 
@@ -386,110 +287,12 @@ def _collect_paths_from_record(record: neo4j.Record) -> list[GraphPath]:
     return paths
 
 
-def _relationship_degree_in_paths(paths: list[GraphPath]) -> dict[str, int]:
-    degree: dict[str, int] = {}
-    for path in paths:
-        for element in path:
-            if not isinstance(element, GraphRelationshipRef):
-                continue
-            for node_id in (element.start_id, element.end_id):
-                if node_id is not None:
-                    degree[node_id] = degree.get(node_id, 0) + 1
-    return degree
-
-
-def _seed_node_from_record_scalars(record: neo4j.Record) -> GraphNodeRef | None:
-    for value in record.values():
-        if isinstance(value, neo4j.graph.Node):
-            return node_from_neo4j_graph_node(value)
-
-    properties: dict[str, Any] = {}
-    for key in record.keys():
-        if key in _GRAPH_RECORD_KEYS or key.endswith("Path"):
-            continue
-        value = record.get(key)
-        if value is None:
-            continue
-        if isinstance(
-            value, (neo4j.graph.Path, neo4j.graph.Node, neo4j.graph.Relationship)
-        ):
-            continue
-        if (
-            isinstance(value, list)
-            and value
-            and isinstance(
-                value[0], (neo4j.graph.Path, neo4j.graph.Node, neo4j.graph.Relationship)
-            )
-        ):
-            continue
-        properties[key] = _json_safe_value(value)
-
-    if not properties:
-        return None
-    return GraphNodeRef(properties=properties)
-
-
-def _graph_elements_from_paths(
-    paths: list[GraphPath],
-) -> tuple[GraphNodeRef | None, list[GraphNodeRef], list[GraphRelationshipRef]]:
-    node_order: list[GraphNodeRef] = []
-    seen_node_keys: set[str] = set()
-    relationships: list[GraphRelationshipRef] = []
-    seen_rel_keys: set[tuple[str, str | None, str | None]] = set()
-
-    for path in paths:
-        for element in path:
-            if isinstance(element, GraphNodeRef):
-                node_key = element.id or str(element.properties)
-                if node_key not in seen_node_keys:
-                    node_order.append(element)
-                    seen_node_keys.add(node_key)
-                continue
-            rel_key = (element.type, element.start_id, element.end_id)
-            if rel_key not in seen_rel_keys:
-                relationships.append(element)
-                seen_rel_keys.add(rel_key)
-
-    seed_node: GraphNodeRef | None = None
-    if node_order:
-        degree = _relationship_degree_in_paths(paths)
-        seed_node = max(
-            node_order,
-            key=lambda node: (
-                degree.get(node.id or "", 0),
-                -node_order.index(node),
-            ),
-        )
-
-    if seed_node is None:
-        related_nodes = node_order
-    else:
-        seed_key = seed_node.id or str(seed_node.properties)
-        related_nodes = [
-            node for node in node_order if (node.id or str(node.properties)) != seed_key
-        ]
-
-    return seed_node, related_nodes, relationships
-
-
-def graph_context_from_neo4j_record(record: neo4j.Record) -> dict[str, Any] | None:
-    """Build metadata.graph from Neo4j paths or nodes returned by Text2Cypher."""
+def graph_context_from_neo4j_record(record: neo4j.Record) -> GraphContext | None:
+    """Build graph context from Neo4j paths returned by Text2Cypher."""
     paths = _collect_paths_from_record(record)
-    if paths:
-        seed_node, related_nodes, relationships = _graph_elements_from_paths(paths)
-        if seed_node is None:
-            seed_node = _seed_node_from_record_scalars(record)
-        return GraphContext(
-            seed_node=seed_node,
-            related_nodes=related_nodes,
-            relationships=relationships,
-            paths=paths,
-        ).model_dump(exclude_none=True)
-
-    seed_node = _seed_node_from_record_scalars(record)
-    if seed_node is None:
+    if not paths:
         return None
-    return GraphContext(seed_node=seed_node).model_dump(exclude_none=True)
+    return GraphContext(paths=paths)
 
 
 def vector_cypher_explain_result_formatter(
@@ -497,7 +300,7 @@ def vector_cypher_explain_result_formatter(
     *,
     content: str,
     score_key: str = "similarityScore",
-    graph_builder: Callable[[neo4j.Record], dict[str, Any] | None] | None = None,
+    graph_builder: Callable[[neo4j.Record], GraphContext | None] | None = None,
 ) -> RetrieverResultItem:
     from neo4j_graphrag.types import RetrieverResultItem
 
@@ -515,7 +318,7 @@ def vector_cypher_explain_result_formatter(
 def text2cypher_explain_result_formatter(
     record: neo4j.Record,
     *,
-    graph_builder: Callable[[neo4j.Record], dict[str, Any] | None] | None = None,
+    graph_builder: Callable[[neo4j.Record], GraphContext | None] | None = None,
 ) -> RetrieverResultItem:
     from neo4j_graphrag.types import RetrieverResultItem
 

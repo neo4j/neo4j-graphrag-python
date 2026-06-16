@@ -96,46 +96,23 @@ def test_trace_from_retriever_defaults_to_unknown() -> None:
     assert trace.retriever == "unknown"
 
 
-def test_graph_from_retriever_parses_graph_and_paths() -> None:
+def test_graph_from_retriever_reads_graph_context_objects() -> None:
+    actor = GraphNodeRef(labels=["Actor"], properties={"name": "Zoe Saldana"})
+    movie = GraphNodeRef(
+        id="4:movie",
+        labels=["Movie"],
+        properties={"title": "Avatar"},
+    )
+    acted_in = GraphRelationshipRef(
+        type="ACTED_IN", start_id="4:actor", end_id="4:movie"
+    )
+    graph_context = GraphContext(paths=[[actor, acted_in, movie]])
+
     result = RetrieverResult(
         items=[
             RetrieverResultItem(
                 content="Movie: Avatar",
-                metadata={
-                    "graph": {
-                        "seed_node": {
-                            "id": "4:movie",
-                            "labels": ["Movie"],
-                            "properties": {"title": "Avatar"},
-                        },
-                        "related_nodes": [
-                            {
-                                "labels": ["Actor"],
-                                "properties": {"name": "Zoe Saldana"},
-                            }
-                        ],
-                        "relationships": [
-                            {
-                                "type": "ACTED_IN",
-                                "start_id": "4:actor",
-                                "end_id": "4:movie",
-                            }
-                        ],
-                        "paths": [
-                            [
-                                {
-                                    "labels": ["Actor"],
-                                    "properties": {"name": "Zoe Saldana"},
-                                },
-                                {"type": "ACTED_IN"},
-                                {
-                                    "labels": ["Movie"],
-                                    "properties": {"title": "Avatar"},
-                                },
-                            ]
-                        ],
-                    }
-                },
+                metadata={"graph": graph_context},
             )
         ]
     )
@@ -144,11 +121,7 @@ def test_graph_from_retriever_parses_graph_and_paths() -> None:
 
     assert graph is not None
     assert len(graph) == 1
-    assert graph[0].seed_node is not None
-    assert graph[0].seed_node.properties["title"] == "Avatar"
-    assert graph[0].related_nodes[0].properties["name"] == "Zoe Saldana"
-    assert graph[0].relationships[0].type == "ACTED_IN"
-    assert len(graph[0].paths) == 1
+    assert graph[0].paths == graph_context.paths
     path_rel = graph[0].paths[0][1]
     assert isinstance(path_rel, GraphRelationshipRef)
     assert path_rel.type == "ACTED_IN"
@@ -163,19 +136,13 @@ def test_graph_from_retriever_returns_none_without_graph_metadata() -> None:
 
 
 def test_build_explain_result_combines_sources_trace_and_graph() -> None:
+    movie = GraphNodeRef(labels=["Movie"], properties={"title": "Avatar"})
+    graph_context = GraphContext(paths=[[movie]])
     result = RetrieverResult(
         items=[
             RetrieverResultItem(
                 content="Movie: Avatar",
-                metadata={
-                    "score": 0.89,
-                    "graph": {
-                        "seed_node": {
-                            "labels": ["Movie"],
-                            "properties": {"title": "Avatar"},
-                        }
-                    },
-                },
+                metadata={"score": 0.89, "graph": graph_context},
             )
         ],
         metadata={"__retriever": "VectorCypherRetriever"},
@@ -186,7 +153,9 @@ def test_build_explain_result_combines_sources_trace_and_graph() -> None:
     assert explain.trace.retriever == "VectorCypherRetriever"
     assert len(explain.sources) == 1
     assert explain.graph is not None
-    assert explain.graph[0].seed_node is not None
+    first_node = explain.graph[0].paths[0][0]
+    assert isinstance(first_node, GraphNodeRef)
+    assert first_node.properties["title"] == "Avatar"
 
 
 def test_format_retrieval_context_adds_source_indexes() -> None:
@@ -314,7 +283,6 @@ def test_node_from_neo4j_graph_node_serializes_temporal_properties() -> None:
         trace=TraceStep(retriever="VectorCypherRetriever"),
         graph=[
             GraphContext(
-                seed_node=node_ref,
                 paths=[[node_ref, GraphRelationshipRef(type="ACTED_IN"), node_ref]],
             )
         ],
@@ -330,9 +298,7 @@ def test_text2cypher_explain_result_formatter_formats_record() -> None:
 
     assert item.content == "title: One Flew Over the Cuckoo's Nest"
     assert item.metadata is not None
-    assert item.metadata["graph"]["seed_node"]["properties"]["title"] == (
-        "One Flew Over the Cuckoo's Nest"
-    )
+    assert item.metadata.get("graph") is None
 
 
 def test_text2cypher_explain_result_formatter_includes_graph_paths() -> None:
@@ -367,5 +333,9 @@ def test_text2cypher_explain_result_formatter_includes_graph_paths() -> None:
 
     assert item.content == "title: Fargo"
     assert item.metadata is not None
-    assert len(item.metadata["graph"]["paths"]) == 1
-    assert item.metadata["graph"]["paths"][0][1]["type"] == "DIRECTED"
+    graph = item.metadata["graph"]
+    assert isinstance(graph, GraphContext)
+    assert len(graph.paths) == 1
+    path_rel = graph.paths[0][1]
+    assert isinstance(path_rel, GraphRelationshipRef)
+    assert path_rel.type == "DIRECTED"
