@@ -17,7 +17,7 @@ from unittest.mock import MagicMock
 import neo4j
 from neo4j_graphrag.generation.explain import GraphRelationshipRef, build_explain_result
 from neo4j_graphrag.types import RetrieverResult
-from recommendations_explain import (
+from graphrag_with_explain import (
     graph_and_paths_from_record,
     movies_vector_cypher_explain_formatter,
 )
