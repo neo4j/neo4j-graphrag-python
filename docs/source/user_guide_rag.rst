@@ -1491,15 +1491,15 @@ available on ``result.explain.trace.cypher``.
 
 For graph-path provenance from vector similarity hits, use a VectorCypher
 ``result_formatter`` that populates ``metadata.graph`` on each retrieved item.
-The package provides helpers such as ``movies_vector_cypher_explain_formatter``
-and ``MOVIES_ACTORS_PATH_RETRIEVAL_QUERY`` for the public recommendations demo
-database.
+The recommendations demo database has helpers in
+``neo4j_graphrag.generation.explain_recommendations`` such as
+``movies_vector_cypher_explain_formatter`` and
+``MOVIES_ACTORS_PATH_RETRIEVAL_QUERY``.
 
 .. code:: python
 
-    from neo4j_graphrag.generation import (
-        ExplainConfig,
-        GraphRAG,
+    from neo4j_graphrag.generation import ExplainConfig, GraphRAG
+    from neo4j_graphrag.generation.explain_recommendations import (
         MOVIES_ACTORS_PATH_RETRIEVAL_QUERY,
         movies_vector_cypher_explain_formatter,
     )

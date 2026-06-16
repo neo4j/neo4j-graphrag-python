@@ -5,21 +5,23 @@ from .explain import (
     GraphNodeRef,
     GraphPath,
     GraphRelationshipRef,
-    MOVIES_ACTORS_PATH_RETRIEVAL_QUERY,
     SourceRef,
     TraceStep,
     build_explain_result,
     format_retrieval_context,
-    graph_and_paths_from_record,
     graph_context_from_neo4j_record,
     graph_from_retriever,
-    movies_vector_cypher_explain_formatter,
     serialize_neo4j_path,
     serialize_paths,
     sources_from_retriever,
     text2cypher_explain_result_formatter,
     trace_from_retriever,
     vector_cypher_explain_result_formatter,
+)
+from .explain_recommendations import (
+    MOVIES_ACTORS_PATH_RETRIEVAL_QUERY,
+    graph_and_paths_from_record,
+    movies_vector_cypher_explain_formatter,
 )
 from .graphrag import GraphRAG
 from .prompts import PromptTemplate, RagTemplate, SchemaExtractionTemplate
