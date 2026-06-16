@@ -3,10 +3,14 @@ from .explain import (
     ExplainResult,
     GraphContext,
     GraphNodeRef,
-    GraphRelationshipRef,
     GraphPath,
+    GraphRelationshipRef,
     SourceRef,
     TraceStep,
+    build_explain_result,
+    graph_from_retriever,
+    sources_from_retriever,
+    trace_from_retriever,
 )
 from .graphrag import GraphRAG
 from .prompts import PromptTemplate, RagTemplate, SchemaExtractionTemplate
@@ -24,4 +28,8 @@ __all__ = [
     "SchemaExtractionTemplate",
     "SourceRef",
     "TraceStep",
+    "build_explain_result",
+    "graph_from_retriever",
+    "sources_from_retriever",
+    "trace_from_retriever",
 ]
