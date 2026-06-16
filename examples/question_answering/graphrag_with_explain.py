@@ -1,8 +1,11 @@
 """GraphRAG with optional explainability output.
 
-Uses Text2Cypher against the public Neo4j recommendations demo database so you
-can ask natural-language questions about the graph and inspect sources plus the
-generated Cypher query.
+Demonstrates explain on the public Neo4j recommendations demo database with either:
+
+- **text2cypher** (default): natural-language questions translated to Cypher; shows
+  generated query, sources, and graph paths.
+- **vector-cypher**: plot-similarity search plus graph expansion; shows similarity
+  scores, sources, and actor/director paths for each hit.
 
 Requires OPENAI_API_KEY in the environment and the ``openai`` optional dependency::
 
@@ -13,7 +16,9 @@ Examples::
     uv run examples/question_answering/graphrag_with_explain.py
     uv run examples/question_answering/graphrag_with_explain.py --no-explain
     uv run examples/question_answering/graphrag_with_explain.py --format json \\
-        "Which movies did Joel Coen and Steve Buscemi work on together?"
+        "Which movies connect Tom Hanks and Kevin Bacon through Ron Howard?"
+    uv run examples/question_answering/graphrag_with_explain.py --retriever vector-cypher \\
+        "Find movies about a marine on an alien planet and list the cast and director."
 """
 
 from __future__ import annotations
@@ -21,22 +26,36 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from typing import Any
+from typing import Any, Literal
 
 import neo4j
+from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
 from neo4j_graphrag.generation import (
     ExplainConfig,
     ExplainResult,
     GraphRAG,
     text2cypher_explain_result_formatter,
 )
+from neo4j_graphrag.generation.explain_recommendations import (
+    MOVIES_ACTORS_PATH_RETRIEVAL_QUERY,
+    movies_vector_cypher_explain_formatter,
+)
 from neo4j_graphrag.llm import OpenAILLM
-from neo4j_graphrag.retrievers import Text2CypherRetriever
+from neo4j_graphrag.retrievers import Text2CypherRetriever, VectorCypherRetriever
 
 URI = "neo4j+s://demo.neo4jlabs.com"
 AUTH = ("recommendations", "recommendations")
 DATABASE = "recommendations"
-DEFAULT_QUESTION = "Who were the actors in Avatar?"
+INDEX_NAME = "moviePlotsEmbedding"
+RetrieverName = Literal["text2cypher", "vector-cypher"]
+DEFAULT_QUESTIONS: dict[RetrieverName, str] = {
+    "text2cypher": (
+        "Which movies connect Tom Hanks and Kevin Bacon through Ron Howard as director?"
+    ),
+    "vector-cypher": (
+        "Find movies about a marine on an alien planet and list the cast and director."
+    ),
+}
 OPENAI_EXTRA_INSTALL_HINT = (
     "This example requires the openai optional dependency.\n"
     "Install it with: uv sync --extra openai"
@@ -47,37 +66,52 @@ Node properties:
 Actor {name: STRING}
 Director {name: STRING}
 Person {name: STRING, born: INTEGER}
+User {name: STRING, userId: STRING}
+Genre {name: STRING}
 Movie {tagline: STRING, title: STRING, released: INTEGER}
 Relationship properties:
 ACTED_IN {roles: LIST}
 DIRECTED {}
-REVIEWED {summary: STRING, rating: INTEGER}
+RATED {rating: FLOAT, timestamp: INTEGER}
 The relationships:
 (:Actor)-[:ACTED_IN]->(:Movie)
 (:Person)-[:ACTED_IN]->(:Movie)
 (:Person)-[:DIRECTED]->(:Movie)
 (:Director)-[:DIRECTED]->(:Movie)
-(:Person)-[:REVIEWED]->(:Movie)
+(:User)-[:RATED]->(:Movie)
+(:Movie)-[:IN_GENRE]->(:Genre)
 """.strip()
 
 RECOMMENDATIONS_TEXT2CYPHER_EXAMPLES = [
-    (
-        "USER INPUT: 'Which actors starred in the Matrix?' "
-        "QUERY: MATCH path = (p:Person)-[:ACTED_IN]->(m:Movie) "
-        "WHERE m.title = 'The Matrix' "
-        "RETURN p.name AS name, path AS path"
-    ),
-    (
-        "USER INPUT: 'Who directed One Flew Over the Cuckoo\\'s Nest?' "
-        "QUERY: MATCH path = (p:Person)-[:DIRECTED]->(m:Movie) "
-        'WHERE m.title = "One Flew Over the Cuckoo\'s Nest" '
-        "RETURN p.name AS name, path AS path"
-    ),
     (
         "USER INPUT: 'Which movies did Joel Coen and Steve Buscemi work on together?' "
         "QUERY: MATCH path = (d:Person)-[:DIRECTED]->(m:Movie)<-[:ACTED_IN]-(a:Actor) "
         "WHERE d.name = 'Joel Coen' AND a.name = 'Steve Buscemi' "
         "RETURN m.title AS title, path AS path"
+    ),
+    (
+        "USER INPUT: 'Which movies connect Tom Hanks and Kevin Bacon through Ron Howard?' "
+        "QUERY: MATCH path = (hanks:Actor)-[:ACTED_IN]->(m1:Movie)<-[:DIRECTED]-"
+        "(d:Person)-[:DIRECTED]->(m2:Movie)<-[:ACTED_IN]-(bacon:Actor) "
+        "WHERE hanks.name = 'Tom Hanks' AND d.name = 'Ron Howard' "
+        "AND bacon.name = 'Kevin Bacon' "
+        "RETURN m1.title AS hanks_movie, m2.title AS bacon_movie, path AS path"
+    ),
+    (
+        "USER INPUT: 'Which other movies in the same genre as Avatar did Sam Worthington "
+        "also act in?' "
+        "QUERY: MATCH path = (a:Actor)-[:ACTED_IN]->(avatar:Movie)-[:IN_GENRE]->(g:Genre)"
+        "<-[:IN_GENRE]-(other:Movie)<-[:ACTED_IN]-(a) "
+        "WHERE a.name = 'Sam Worthington' AND avatar.title = 'Avatar' "
+        "AND other.title <> avatar.title "
+        "RETURN other.title AS movie, g.name AS genre, path AS path"
+    ),
+    (
+        "USER INPUT: 'Who co-starred with Keanu Reeves in The Matrix?' "
+        "QUERY: MATCH path = (k:Actor)-[:ACTED_IN]->(m:Movie)<-[:ACTED_IN]-(co:Actor) "
+        "WHERE k.name = 'Keanu Reeves' AND m.title = 'Matrix, The' "
+        "AND co.name <> k.name "
+        "RETURN co.name AS costar, path AS path"
     ),
 ]
 
@@ -89,7 +123,7 @@ def ensure_openai_extra() -> None:
         raise SystemExit(OPENAI_EXTRA_INSTALL_HINT) from exc
 
 
-def build_rag(driver: neo4j.Driver, llm: OpenAILLM) -> GraphRAG:
+def build_text2cypher_rag(driver: neo4j.Driver, llm: OpenAILLM) -> GraphRAG:
     retriever = Text2CypherRetriever(
         driver,
         llm=llm,
@@ -99,6 +133,36 @@ def build_rag(driver: neo4j.Driver, llm: OpenAILLM) -> GraphRAG:
         neo4j_database=DATABASE,
     )
     return GraphRAG(retriever=retriever, llm=llm)
+
+
+def build_vector_cypher_rag(
+    driver: neo4j.Driver,
+    llm: OpenAILLM,
+    embedder: OpenAIEmbeddings,
+) -> GraphRAG:
+    retriever = VectorCypherRetriever(
+        driver,
+        index_name=INDEX_NAME,
+        retrieval_query=MOVIES_ACTORS_PATH_RETRIEVAL_QUERY,
+        result_formatter=movies_vector_cypher_explain_formatter,
+        embedder=embedder,
+        neo4j_database=DATABASE,
+    )
+    return GraphRAG(retriever=retriever, llm=llm)
+
+
+def build_rag(
+    driver: neo4j.Driver,
+    llm: OpenAILLM,
+    *,
+    retriever: RetrieverName,
+    embedder: OpenAIEmbeddings | None = None,
+) -> GraphRAG:
+    if retriever == "vector-cypher":
+        if embedder is None:
+            embedder = OpenAIEmbeddings()
+        return build_vector_cypher_rag(driver, llm, embedder)
+    return build_text2cypher_rag(driver, llm)
 
 
 def format_explain_table(explain: ExplainResult) -> str:
@@ -147,10 +211,16 @@ def result_to_json(answer: str, explain: ExplainResult | None) -> dict[str, Any]
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
+        "--retriever",
+        choices=("text2cypher", "vector-cypher"),
+        default="text2cypher",
+        help="Retriever to use (default: text2cypher)",
+    )
+    parser.add_argument(
         "question",
         nargs="?",
-        default=DEFAULT_QUESTION,
-        help=f"Question to ask (default: {DEFAULT_QUESTION!r})",
+        default=None,
+        help="Question to ask (default depends on --retriever)",
     )
     parser.add_argument(
         "--explain",
@@ -164,24 +234,45 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="table",
         help="Output format (default: table)",
     )
-    return parser.parse_args(argv)
+    parser.add_argument(
+        "--top-k",
+        type=int,
+        default=3,
+        help="Number of vector hits for vector-cypher mode (default: 3)",
+    )
+    args = parser.parse_args(argv)
+    retriever_name: RetrieverName = args.retriever
+    if args.question is None:
+        args.question = DEFAULT_QUESTIONS[retriever_name]
+    return args
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     ensure_openai_extra()
     llm = OpenAILLM(model_name="gpt-4o-mini", model_params={"temperature": 0})
+    embedder = OpenAIEmbeddings() if args.retriever == "vector-cypher" else None
+    retriever_config = (
+        {"top_k": args.top_k} if args.retriever == "vector-cypher" else {}
+    )
     with neo4j.GraphDatabase.driver(URI, auth=AUTH) as driver:
-        rag = build_rag(driver, llm)
+        rag = build_rag(
+            driver,
+            llm,
+            retriever=args.retriever,
+            embedder=embedder,
+        )
         result = rag.search(
             args.question,
             explain=ExplainConfig() if args.explain else None,
+            retriever_config=retriever_config,
         )
 
     if args.format == "json":
         print(json.dumps(result_to_json(result.answer, result.explain), indent=2))
         return 0
 
+    print(f"Retriever: {args.retriever}")
     print(f"Question: {args.question}")
     print()
     print("Answer:")

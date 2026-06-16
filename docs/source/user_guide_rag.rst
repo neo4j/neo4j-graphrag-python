@@ -1523,7 +1523,9 @@ The recommendations demo database has helpers in
 When ``explain`` is set, ``return_context`` is enabled automatically and sources
 are numbered in the LLM prompt so answers can cite ``[1]``, ``[2]``, and so on.
 
-See also: ``examples/question_answering/graphrag_with_explain.py``.
+See also: ``examples/question_answering/graphrag_with_explain.py`` for a runnable
+demo with both Text2Cypher (``--retriever text2cypher``) and VectorCypher
+(``--retriever vector-cypher``).
 
 This example uses OpenAI for embeddings and generation. Install the optional
 dependency before running it::
