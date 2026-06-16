@@ -19,6 +19,7 @@ from neo4j_graphrag.generation.explain import (
     ExplainConfig,
     ExplainResult,
     GraphContext,
+    GraphNodeRef,
     GraphRelationshipRef,
     TraceStep,
     build_explain_result,
@@ -148,7 +149,9 @@ def test_graph_from_retriever_parses_graph_and_paths() -> None:
     assert graph[0].related_nodes[0].properties["name"] == "Zoe Saldana"
     assert graph[0].relationships[0].type == "ACTED_IN"
     assert len(graph[0].paths) == 1
-    assert graph[0].paths[0][1].type == "ACTED_IN"
+    path_rel = graph[0].paths[0][1]
+    assert isinstance(path_rel, GraphRelationshipRef)
+    assert path_rel.type == "ACTED_IN"
 
 
 def test_graph_from_retriever_returns_none_without_graph_metadata() -> None:
@@ -276,12 +279,18 @@ def test_serialize_neo4j_path_from_graph_objects() -> None:
 
     serialized = serialize_neo4j_path(path)
 
-    assert serialized[0].id == "4:actor"
-    assert serialized[0].properties["name"] == "Zoe Saldana"
-    assert serialized[1].type == "ACTED_IN"
-    assert serialized[1].start_id == "4:actor"
-    assert serialized[1].end_id == "4:movie"
-    assert serialized[2].properties["title"] == "Avatar"
+    actor_ref = serialized[0]
+    relationship_ref = serialized[1]
+    movie_ref = serialized[2]
+    assert isinstance(actor_ref, GraphNodeRef)
+    assert isinstance(relationship_ref, GraphRelationshipRef)
+    assert isinstance(movie_ref, GraphNodeRef)
+    assert actor_ref.id == "4:actor"
+    assert actor_ref.properties["name"] == "Zoe Saldana"
+    assert relationship_ref.type == "ACTED_IN"
+    assert relationship_ref.start_id == "4:actor"
+    assert relationship_ref.end_id == "4:movie"
+    assert movie_ref.properties["title"] == "Avatar"
 
 
 def test_node_from_neo4j_graph_node_serializes_temporal_properties() -> None:

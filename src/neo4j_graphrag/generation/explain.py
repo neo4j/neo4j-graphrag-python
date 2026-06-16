@@ -326,10 +326,12 @@ def _node_from_neo4j_graph_node(node: neo4j.graph.Node) -> GraphNodeRef:
 def _relationship_from_neo4j_graph_rel(
     relationship: neo4j.graph.Relationship,
 ) -> GraphRelationshipRef:
+    start_node = relationship.start_node
+    end_node = relationship.end_node
     return GraphRelationshipRef(
         type=relationship.type,
-        start_id=relationship.start_node.element_id,
-        end_id=relationship.end_node.element_id,
+        start_id=start_node.element_id if start_node is not None else None,
+        end_id=end_node.element_id if end_node is not None else None,
     )
 
 

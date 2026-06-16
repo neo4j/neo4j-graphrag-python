@@ -15,7 +15,7 @@
 from unittest.mock import MagicMock
 
 import neo4j
-from neo4j_graphrag.generation.explain import build_explain_result
+from neo4j_graphrag.generation.explain import GraphRelationshipRef, build_explain_result
 from neo4j_graphrag.generation.explain_recommendations import (
     graph_and_paths_from_record,
     movies_vector_cypher_explain_formatter,
@@ -137,5 +137,7 @@ def test_build_explain_result_from_movies_formatter_output() -> None:
     explain = build_explain_result(result)
 
     assert explain.graph is not None
-    assert explain.graph[0].paths[0][1].type == "ACTED_IN"
+    path_rel = explain.graph[0].paths[0][1]
+    assert isinstance(path_rel, GraphRelationshipRef)
+    assert path_rel.type == "ACTED_IN"
     assert explain.sources[0].score == 0.91
