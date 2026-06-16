@@ -14,12 +14,22 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, Callable, Union
 
+import neo4j
 from pydantic import BaseModel, Field, PositiveInt
 
 if TYPE_CHECKING:
-    from neo4j_graphrag.types import RetrieverResult
+    from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
+
+MOVIES_ACTORS_PATH_RETRIEVAL_QUERY = """
+MATCH path = (actor:Actor)-[:ACTED_IN]->(node)
+RETURN node.title AS movieTitle,
+       node.plot AS moviePlot,
+       collect(DISTINCT actor.name) AS actors,
+       collect(path) AS paths,
+       score AS similarityScore
+""".strip()
 
 GraphPathElement = Union["GraphNodeRef", "GraphRelationshipRef"]
 GraphPath = list[GraphPathElement]
@@ -290,3 +300,152 @@ def _parse_relationship_ref(data: Any) -> GraphRelationshipRef:
         start_id=str(start_id) if start_id is not None else None,
         end_id=str(end_id) if end_id is not None else None,
     )
+
+
+def _node_from_neo4j_graph_node(node: neo4j.graph.Node) -> GraphNodeRef:
+    labels = list(node.labels)
+    properties = dict(node.items())
+    return GraphNodeRef(
+        id=node.element_id,
+        labels=labels,
+        properties=properties,
+    )
+
+
+def _relationship_from_neo4j_graph_rel(
+    relationship: neo4j.graph.Relationship,
+) -> GraphRelationshipRef:
+    return GraphRelationshipRef(
+        type=relationship.type,
+        start_id=relationship.start_node.element_id,
+        end_id=relationship.end_node.element_id,
+    )
+
+
+def serialize_neo4j_path(path: neo4j.graph.Path) -> GraphPath:
+    elements: GraphPath = []
+    nodes = list(path.nodes)
+    relationships = list(path.relationships)
+    for index, node in enumerate(nodes):
+        elements.append(_node_from_neo4j_graph_node(node))
+        if index < len(relationships):
+            elements.append(_relationship_from_neo4j_graph_rel(relationships[index]))
+    return elements
+
+
+def serialize_paths(paths_value: Any) -> list[GraphPath]:
+    if not paths_value or not isinstance(paths_value, list):
+        return []
+    paths: list[GraphPath] = []
+    for path in paths_value:
+        if isinstance(path, neo4j.graph.Path):
+            paths.append(serialize_neo4j_path(path))
+            continue
+        if isinstance(path, list):
+            parsed = _parse_paths([path])
+            if parsed:
+                paths.append(parsed[0])
+    return paths
+
+
+def graph_and_paths_from_record(
+    record: neo4j.Record,
+    *,
+    node_key: str = "node",
+    title_key: str = "movieTitle",
+    plot_key: str = "moviePlot",
+    actors_key: str = "actors",
+    paths_key: str = "paths",
+    movie_labels: list[str] | None = None,
+    actor_labels: list[str] | None = None,
+) -> dict[str, Any]:
+    """Build a metadata.graph mapping from a VectorCypher retrieval row."""
+    movie_label_list = movie_labels or ["Movie"]
+    actor_label_list = actor_labels or ["Actor"]
+
+    seed_node: GraphNodeRef | None = None
+    node = record.get(node_key)
+    if isinstance(node, neo4j.graph.Node):
+        seed_node = _node_from_neo4j_graph_node(node)
+    else:
+        title = record.get(title_key)
+        plot = record.get(plot_key)
+        if title is not None or plot is not None:
+            properties: dict[str, Any] = {}
+            if title is not None:
+                properties["title"] = title
+            if plot is not None:
+                properties["plot"] = plot
+            seed_node = GraphNodeRef(labels=movie_label_list, properties=properties)
+
+    related_nodes: list[GraphNodeRef] = []
+    relationships: list[GraphRelationshipRef] = []
+    actors = record.get(actors_key) or []
+    if isinstance(actors, list):
+        for actor_name in actors:
+            if actor_name is None:
+                continue
+            actor_node = GraphNodeRef(
+                labels=actor_label_list,
+                properties={"name": str(actor_name)},
+            )
+            related_nodes.append(actor_node)
+            if seed_node is not None and seed_node.id is not None:
+                relationships.append(
+                    GraphRelationshipRef(
+                        type="ACTED_IN",
+                        start_id=None,
+                        end_id=seed_node.id,
+                    )
+                )
+
+    paths = serialize_paths(record.get(paths_key))
+    if not paths and seed_node is not None and related_nodes:
+        for actor_node in related_nodes:
+            paths.append(
+                [
+                    actor_node,
+                    GraphRelationshipRef(type="ACTED_IN"),
+                    seed_node,
+                ]
+            )
+
+    return GraphContext(
+        seed_node=seed_node,
+        related_nodes=related_nodes,
+        relationships=relationships,
+        paths=paths,
+    ).model_dump(exclude_none=True)
+
+
+def vector_cypher_explain_result_formatter(
+    record: neo4j.Record,
+    *,
+    content: str,
+    score_key: str = "similarityScore",
+    graph_builder: Callable[[neo4j.Record], dict[str, Any]] | None = None,
+) -> RetrieverResultItem:
+    from neo4j_graphrag.types import RetrieverResultItem
+
+    graph = (graph_builder or graph_and_paths_from_record)(record)
+    return RetrieverResultItem(
+        content=content,
+        metadata={
+            "score": record.get(score_key),
+            "graph": graph,
+        },
+    )
+
+
+def movies_vector_cypher_explain_formatter(
+    record: neo4j.Record,
+) -> RetrieverResultItem:
+    actors = record.get("actors") or []
+    if isinstance(actors, list):
+        actors_text = ", ".join(str(actor) for actor in actors if actor is not None)
+    else:
+        actors_text = str(actors)
+    title = record.get("movieTitle")
+    plot = record.get("moviePlot")
+    content = f"Movie title: {title}, Plot: {plot}, Actors: {actors_text}"
+    return vector_cypher_explain_result_formatter(record, content=content)
