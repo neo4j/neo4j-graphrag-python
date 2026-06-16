@@ -54,6 +54,7 @@ from neo4j_graphrag.exceptions import (
     SchemaExtractionError,
     SchemaValidationError,
 )
+from neo4j_graphrag.experimental.components.types import TextChunk
 from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
 from neo4j_graphrag.experimental.pipeline.types.schema import (
     EntityInputType,
@@ -1726,17 +1727,21 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         return validate_extraction_dict_to_graph_schema(extracted_schema)
 
     @validate_call
-    async def run(self, text: str, examples: str = "", **kwargs: Any) -> GraphSchema:
+    async def run(
+        self, text: Union[str, List[TextChunk]], examples: str = "", **kwargs: Any
+    ) -> GraphSchema:
         """
         Asynchronously extracts the schema from text and returns a GraphSchema object.
 
         Args:
-            text (str): the text from which the schema will be inferred.
+            text (str | List[TextChunk]): the text from which the schema will be inferred.
             examples (str): examples to guide schema extraction.
         Returns:
             GraphSchema: A configured schema object, extracted automatically and
             constructed asynchronously.
         """
+        if isinstance(text, list):
+            text = text[0].text if text else ""
         prompt: str = self._prompt_template.format(text=text, examples=examples)
 
         if self.use_structured_output:

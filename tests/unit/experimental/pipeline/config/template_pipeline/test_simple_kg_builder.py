@@ -313,7 +313,7 @@ def test_simple_kg_pipeline_config_connections_from_file() -> None:
     assert len(connections) == 7
     expected_connections = [
         ("file_loader", "splitter"),
-        ("file_loader", "schema"),
+        ("splitter", "schema"),
         ("schema", "extractor"),
         ("splitter", "chunk_embedder"),
         ("chunk_embedder", "extractor"),
@@ -324,14 +324,31 @@ def test_simple_kg_pipeline_config_connections_from_file() -> None:
         assert (actual.start, actual.end) == expected
 
 
+def test_simple_kg_pipeline_config_automatic_schema_uses_splitter_from_file() -> None:
+    config = SimpleKGPipelineConfig(
+        from_file=True,
+        text_splitter=FixedSizeSplitter(chunk_size=25, chunk_overlap=0),
+    )
+    connections = config._get_connections()
+    schema_edges = [
+        c
+        for c in connections
+        if c.end == "schema" and c.input_config.get("text") is not None
+    ]
+    assert len(schema_edges) == 1
+    assert schema_edges[0].start == "splitter"
+    assert schema_edges[0].input_config == {"text": "splitter.chunks"}
+
+
 def test_simple_kg_pipeline_config_connections_from_text() -> None:
     config = SimpleKGPipelineConfig(
         from_file=False,
         perform_entity_resolution=False,
     )
     connections = config._get_connections()
-    assert len(connections) == 5
+    assert len(connections) == 6
     expected_connections = [
+        ("splitter", "schema"),
         ("schema", "extractor"),
         ("splitter", "chunk_embedder"),
         ("chunk_embedder", "extractor"),
@@ -351,7 +368,7 @@ def test_simple_kg_pipeline_config_connections_with_er() -> None:
     assert len(connections) == 8
     expected_connections = [
         ("file_loader", "splitter"),
-        ("file_loader", "schema"),
+        ("splitter", "schema"),
         ("schema", "extractor"),
         ("splitter", "chunk_embedder"),
         ("chunk_embedder", "extractor"),
@@ -374,7 +391,7 @@ def test_simple_kg_pipeline_config_run_params_from_text_text() -> None:
     config = SimpleKGPipelineConfig(from_file=False)
     run_params = config.get_run_params({"text": "my text"})
     assert run_params["splitter"] == {"text": "my text"}
-    assert run_params["schema"] == {"text": "my text"}
+    assert "schema" not in run_params
     assert run_params["extractor"]["document_info"]["path"] == "document.txt"
 
 
