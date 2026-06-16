@@ -386,54 +386,88 @@ def _collect_paths_from_record(record: neo4j.Record) -> list[GraphPath]:
     return paths
 
 
+def _relationship_degree_in_paths(paths: list[GraphPath]) -> dict[str, int]:
+    degree: dict[str, int] = {}
+    for path in paths:
+        for element in path:
+            if not isinstance(element, GraphRelationshipRef):
+                continue
+            for node_id in (element.start_id, element.end_id):
+                if node_id is not None:
+                    degree[node_id] = degree.get(node_id, 0) + 1
+    return degree
+
+
 def _seed_node_from_record_scalars(record: neo4j.Record) -> GraphNodeRef | None:
-    for key in ("movie", "m", "node"):
-        value = record.get(key)
+    for value in record.values():
         if isinstance(value, neo4j.graph.Node):
-            return _node_from_neo4j_graph_node(value)
-    title = record.get("title") or record.get("movieTitle")
-    name = record.get("name")
-    if title is not None:
-        return GraphNodeRef(labels=["Movie"], properties={"title": str(title)})
-    if name is not None:
-        return GraphNodeRef(labels=["Person"], properties={"name": str(name)})
-    return None
+            return node_from_neo4j_graph_node(value)
+
+    properties: dict[str, Any] = {}
+    for key in record.keys():
+        if key in _GRAPH_RECORD_KEYS or key.endswith("Path"):
+            continue
+        value = record.get(key)
+        if value is None:
+            continue
+        if isinstance(
+            value, (neo4j.graph.Path, neo4j.graph.Node, neo4j.graph.Relationship)
+        ):
+            continue
+        if (
+            isinstance(value, list)
+            and value
+            and isinstance(
+                value[0], (neo4j.graph.Path, neo4j.graph.Node, neo4j.graph.Relationship)
+            )
+        ):
+            continue
+        properties[key] = _json_safe_value(value)
+
+    if not properties:
+        return None
+    return GraphNodeRef(properties=properties)
 
 
 def _graph_elements_from_paths(
     paths: list[GraphPath],
 ) -> tuple[GraphNodeRef | None, list[GraphNodeRef], list[GraphRelationshipRef]]:
-    seed_node: GraphNodeRef | None = None
-    related_nodes: list[GraphNodeRef] = []
+    node_order: list[GraphNodeRef] = []
+    seen_node_keys: set[str] = set()
     relationships: list[GraphRelationshipRef] = []
-    seen_node_ids: set[str] = set()
     seen_rel_keys: set[tuple[str, str | None, str | None]] = set()
 
     for path in paths:
         for element in path:
             if isinstance(element, GraphNodeRef):
                 node_key = element.id or str(element.properties)
-                if "Movie" in element.labels:
-                    if seed_node is None:
-                        seed_node = element
-                    continue
-                if node_key not in seen_node_ids:
-                    related_nodes.append(element)
-                    seen_node_ids.add(node_key)
+                if node_key not in seen_node_keys:
+                    node_order.append(element)
+                    seen_node_keys.add(node_key)
                 continue
             rel_key = (element.type, element.start_id, element.end_id)
             if rel_key not in seen_rel_keys:
                 relationships.append(element)
                 seen_rel_keys.add(rel_key)
 
+    seed_node: GraphNodeRef | None = None
+    if node_order:
+        degree = _relationship_degree_in_paths(paths)
+        seed_node = max(
+            node_order,
+            key=lambda node: (
+                degree.get(node.id or "", 0),
+                -node_order.index(node),
+            ),
+        )
+
     if seed_node is None:
-        for path in paths:
-            for element in path:
-                if isinstance(element, GraphNodeRef):
-                    seed_node = element
-                    break
-            if seed_node is not None:
-                break
+        related_nodes = node_order
+    else:
+        seed_key = seed_node.id or str(seed_node.properties)
+        related_nodes = [
+            node for node in node_order if (node.id or str(node.properties)) != seed_key
+        ]
 
     return seed_node, related_nodes, relationships
 
