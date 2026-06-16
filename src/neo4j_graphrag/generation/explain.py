@@ -81,6 +81,12 @@ class ExplainResult(BaseModel):
     graph: list[GraphContext] | None = None
 
 
+CITATION_SYSTEM_INSTRUCTIONS = (
+    "Answer the user question using only the provided context. "
+    "Cite sources inline using [1], [2], etc. matching the context numbering."
+)
+
+
 _SOURCE_METADATA_KEYS = frozenset(
     {"score", "id", "node_id", "element_id", "nodeLabels", "labels", "graph", "paths"}
 )
@@ -150,6 +156,22 @@ def build_explain_result(retriever_result: RetrieverResult) -> ExplainResult:
         sources=sources_from_retriever(retriever_result),
         trace=trace_from_retriever(retriever_result),
         graph=graph_from_retriever(retriever_result),
+    )
+
+
+def format_retrieval_context(
+    retriever_result: RetrieverResult,
+    cite_sources: bool,
+) -> str:
+    from neo4j_graphrag.types import RetrieverResult as RetrieverResultType
+
+    if not isinstance(retriever_result, RetrieverResultType):
+        raise TypeError("retriever_result must be a RetrieverResult")
+    if not cite_sources:
+        return "\n".join(str(item.content) for item in retriever_result.items)
+    return "\n".join(
+        f"[{index}] {item.content}"
+        for index, item in enumerate(retriever_result.items, start=1)
     )
 
 

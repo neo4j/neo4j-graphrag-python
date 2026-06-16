@@ -12,12 +12,18 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from unittest.mock import MagicMock
+
 from neo4j_graphrag.generation.explain import (
+    ExplainConfig,
     build_explain_result,
+    format_retrieval_context,
     graph_from_retriever,
     sources_from_retriever,
     trace_from_retriever,
 )
+from neo4j_graphrag.generation.graphrag import GraphRAG
+from neo4j_graphrag.llm import LLMResponse
 from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
 
 
@@ -156,3 +162,53 @@ def test_build_explain_result_combines_sources_trace_and_graph() -> None:
     assert len(explain.sources) == 1
     assert explain.graph is not None
     assert explain.graph[0].seed_node is not None
+
+
+def test_format_retrieval_context_adds_source_indexes() -> None:
+    result = RetrieverResult(
+        items=[
+            RetrieverResultItem(content="first"),
+            RetrieverResultItem(content="second"),
+        ]
+    )
+
+    context = format_retrieval_context(result, cite_sources=True)
+
+    assert context == "[1] first\n[2] second"
+
+
+def test_graphrag_search_attaches_explain(
+    retriever_mock: MagicMock, llm: MagicMock
+) -> None:
+    rag = GraphRAG(retriever=retriever_mock, llm=llm)
+    retriever_mock.search.return_value = RetrieverResult(
+        items=[RetrieverResultItem(content="Movie: Avatar", metadata={"score": 0.9})],
+        metadata={"__retriever": "VectorCypherRetriever"},
+    )
+    llm.invoke.return_value = LLMResponse(content="answer [1]")
+
+    result = rag.search("Who acted in Avatar?", explain=ExplainConfig())
+
+    assert result.explain is not None
+    assert result.explain.trace.retriever == "VectorCypherRetriever"
+    assert result.retriever_result is not None
+    llm.invoke.assert_called_once()
+    assert "[1] Movie: Avatar" in llm.invoke.call_args.kwargs["input"]
+    assert "Cite sources inline" in llm.invoke.call_args.kwargs["system_instruction"]
+
+
+def test_graphrag_search_without_explain_unchanged(
+    retriever_mock: MagicMock, llm: MagicMock
+) -> None:
+    rag = GraphRAG(retriever=retriever_mock, llm=llm)
+    retriever_mock.search.return_value = RetrieverResult(
+        items=[RetrieverResultItem(content="chunk")]
+    )
+    llm.invoke.return_value = LLMResponse(content="answer")
+
+    result = rag.search("question")
+
+    assert result.explain is None
+    assert result.retriever_result is None
+    assert "chunk" in llm.invoke.call_args.kwargs["input"]
+    assert "[1]" not in llm.invoke.call_args.kwargs["input"]
