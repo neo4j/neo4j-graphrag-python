@@ -361,6 +361,8 @@ def serialize_neo4j_path(path: neo4j.graph.Path) -> GraphPath:
 
 def serialize_paths(paths_value: Any) -> list[GraphPath]:
     if not paths_value or not isinstance(paths_value, list):
+        if isinstance(paths_value, neo4j.graph.Path):
+            return [serialize_neo4j_path(paths_value)]
         return []
     paths: list[GraphPath] = []
     for path in paths_value:
@@ -372,6 +374,96 @@ def serialize_paths(paths_value: Any) -> list[GraphPath]:
             if parsed:
                 paths.append(parsed[0])
     return paths
+
+
+_GRAPH_RECORD_KEYS = frozenset({"path", "paths", "graph"})
+
+
+def _collect_paths_from_record(record: neo4j.Record) -> list[GraphPath]:
+    paths: list[GraphPath] = []
+    for key in record.keys():
+        value = record.get(key)
+        if isinstance(value, neo4j.graph.Path):
+            paths.append(serialize_neo4j_path(value))
+            continue
+        if key in _GRAPH_RECORD_KEYS or key.endswith("Path"):
+            paths.extend(serialize_paths(value))
+            continue
+        if isinstance(value, list):
+            paths.extend(serialize_paths(value))
+    return paths
+
+
+def _seed_node_from_record_scalars(record: neo4j.Record) -> GraphNodeRef | None:
+    for key in ("movie", "m", "node"):
+        value = record.get(key)
+        if isinstance(value, neo4j.graph.Node):
+            return _node_from_neo4j_graph_node(value)
+    title = record.get("title") or record.get("movieTitle")
+    name = record.get("name")
+    if title is not None:
+        return GraphNodeRef(labels=["Movie"], properties={"title": str(title)})
+    if name is not None:
+        return GraphNodeRef(labels=["Person"], properties={"name": str(name)})
+    return None
+
+
+def _graph_elements_from_paths(
+    paths: list[GraphPath],
+) -> tuple[GraphNodeRef | None, list[GraphNodeRef], list[GraphRelationshipRef]]:
+    seed_node: GraphNodeRef | None = None
+    related_nodes: list[GraphNodeRef] = []
+    relationships: list[GraphRelationshipRef] = []
+    seen_node_ids: set[str] = set()
+    seen_rel_keys: set[tuple[str, str | None, str | None]] = set()
+
+    for path in paths:
+        for element in path:
+            if isinstance(element, GraphNodeRef):
+                node_key = element.id or str(element.properties)
+                if "Movie" in element.labels:
+                    if seed_node is None:
+                        seed_node = element
+                    continue
+                if node_key not in seen_node_ids:
+                    related_nodes.append(element)
+                    seen_node_ids.add(node_key)
+                continue
+            rel_key = (element.type, element.start_id, element.end_id)
+            if rel_key not in seen_rel_keys:
+                relationships.append(element)
+                seen_rel_keys.add(rel_key)
+
+    if seed_node is None:
+        for path in paths:
+            for element in path:
+                if isinstance(element, GraphNodeRef):
+                    seed_node = element
+                    break
+            if seed_node is not None:
+                break
+
+    return seed_node, related_nodes, relationships
+
+
+def graph_context_from_neo4j_record(record: neo4j.Record) -> dict[str, Any] | None:
+    """Build metadata.graph from Neo4j paths or nodes returned by Text2Cypher."""
+    paths = _collect_paths_from_record(record)
+    if paths:
+        seed_node, related_nodes, relationships = _graph_elements_from_paths(paths)
+        if seed_node is None:
+            seed_node = _seed_node_from_record_scalars(record)
+        return GraphContext(
+            seed_node=seed_node,
+            related_nodes=related_nodes,
+            relationships=relationships,
+            paths=paths,
+        ).model_dump(exclude_none=True)
+
+    seed_node = _seed_node_from_record_scalars(record)
+    if seed_node is None:
+        return None
+    return GraphContext(seed_node=seed_node).model_dump(exclude_none=True)
 
 
 def graph_and_paths_from_record(
@@ -526,12 +618,38 @@ def movies_vector_cypher_explain_formatter(
 
 def text2cypher_explain_result_formatter(
     record: neo4j.Record,
+    *,
+    graph_builder: Callable[[neo4j.Record], dict[str, Any] | None] | None = None,
 ) -> RetrieverResultItem:
     from neo4j_graphrag.types import RetrieverResultItem
 
     parts: list[str] = []
     for key in record.keys():
+        if key in _GRAPH_RECORD_KEYS:
+            continue
         value = record.get(key)
-        if value is not None:
-            parts.append(f"{key}: {value}")
-    return RetrieverResultItem(content=", ".join(parts) if parts else str(record))
+        if value is None:
+            continue
+        if isinstance(
+            value, (neo4j.graph.Path, neo4j.graph.Node, neo4j.graph.Relationship)
+        ):
+            continue
+        if (
+            isinstance(value, list)
+            and value
+            and isinstance(
+                value[0], (neo4j.graph.Path, neo4j.graph.Node, neo4j.graph.Relationship)
+            )
+        ):
+            continue
+        parts.append(f"{key}: {value}")
+
+    metadata: dict[str, Any] = {}
+    graph = (graph_builder or graph_context_from_neo4j_record)(record)
+    if graph:
+        metadata["graph"] = graph
+
+    return RetrieverResultItem(
+        content=", ".join(parts) if parts else str(record),
+        metadata=metadata,
+    )

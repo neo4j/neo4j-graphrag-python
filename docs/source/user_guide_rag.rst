@@ -1460,8 +1460,10 @@ The payload includes numbered sources (aligned with LLM context), optional graph
 neighborhood and paths from the retriever, and a minimal retriever trace.
 
 For ask-anything graph questions, pair explain with ``Text2CypherRetriever`` and
-``text2cypher_explain_result_formatter``. The generated Cypher query is available
-on ``result.explain.trace.cypher``.
+``text2cypher_explain_result_formatter``. Return Cypher paths or nodes in the
+query results (for example ``RETURN m.title AS title, path AS path``) so
+``result.explain.graph`` can be populated. The generated Cypher query is also
+available on ``result.explain.trace.cypher``.
 
 .. code:: python
 

@@ -63,18 +63,21 @@ The relationships:
 RECOMMENDATIONS_TEXT2CYPHER_EXAMPLES = [
     (
         "USER INPUT: 'Which actors starred in the Matrix?' "
-        "QUERY: MATCH (p:Person)-[:ACTED_IN]->(m:Movie) "
-        "WHERE m.title = 'The Matrix' RETURN p.name AS name"
+        "QUERY: MATCH path = (p:Person)-[:ACTED_IN]->(m:Movie) "
+        "WHERE m.title = 'The Matrix' "
+        "RETURN p.name AS name, path AS path"
     ),
     (
         "USER INPUT: 'Who directed One Flew Over the Cuckoo\\'s Nest?' "
-        "QUERY: MATCH (p:Person)-[:DIRECTED]->(m:Movie) "
-        'WHERE m.title = "One Flew Over the Cuckoo\'s Nest" RETURN p.name AS name'
+        "QUERY: MATCH path = (p:Person)-[:DIRECTED]->(m:Movie) "
+        'WHERE m.title = "One Flew Over the Cuckoo\'s Nest" '
+        "RETURN p.name AS name, path AS path"
     ),
     (
         "USER INPUT: 'Which movies did Joel Coen and Steve Buscemi work on together?' "
-        "QUERY: MATCH (d:Person)-[:DIRECTED]->(m:Movie)<-[:ACTED_IN]-(a:Actor) "
-        "WHERE d.name = 'Joel Coen' AND a.name = 'Steve Buscemi' RETURN m.title AS title"
+        "QUERY: MATCH path = (d:Person)-[:DIRECTED]->(m:Movie)<-[:ACTED_IN]-(a:Actor) "
+        "WHERE d.name = 'Joel Coen' AND a.name = 'Steve Buscemi' "
+        "RETURN m.title AS title, path AS path"
     ),
 ]
 
@@ -108,6 +111,29 @@ def format_explain_table(explain: ExplainResult) -> str:
     for source in explain.sources:
         score = f" (score={source.score:.3f})" if source.score is not None else ""
         lines.append(f"  [{source.index}]{score} {source.content}")
+
+    if explain.graph:
+        lines.extend(["", "Graph context:"])
+        for index, context in enumerate(explain.graph, start=1):
+            lines.append(f"  Source {index}:")
+            if context.seed_node is not None:
+                seed = context.seed_node
+                label = seed.labels[0] if seed.labels else "node"
+                name = seed.properties.get("title") or seed.properties.get("name")
+                seed_text = f"{label}({name})" if name else label
+                lines.append(f"    seed: {seed_text}")
+            for path_index, path in enumerate(context.paths, start=1):
+                parts: list[str] = []
+                for element in path:
+                    if hasattr(element, "type"):
+                        parts.append(f"-[:{element.type}]->")
+                    else:
+                        label = element.labels[0] if element.labels else "node"
+                        name = element.properties.get("name") or element.properties.get(
+                            "title"
+                        )
+                        parts.append(f"{label}({name})" if name else label)
+                lines.append(f"    path {path_index}: {' '.join(parts)}")
     return "\n".join(lines)
 
 

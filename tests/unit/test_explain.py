@@ -440,3 +440,43 @@ def test_text2cypher_explain_result_formatter_formats_record() -> None:
     item = text2cypher_explain_result_formatter(record)
 
     assert item.content == "title: One Flew Over the Cuckoo's Nest"
+    assert item.metadata is not None
+    assert item.metadata["graph"]["seed_node"]["properties"]["title"] == (
+        "One Flew Over the Cuckoo's Nest"
+    )
+
+
+def test_text2cypher_explain_result_formatter_includes_graph_paths() -> None:
+    from neo4j_graphrag.generation.explain import text2cypher_explain_result_formatter
+
+    director = MagicMock(spec=neo4j.graph.Node)
+    director.element_id = "4:director"
+    director.labels = ["Person"]
+    director.items.return_value = {"name": "Joel Coen"}.items()
+    actor = MagicMock(spec=neo4j.graph.Node)
+    actor.element_id = "4:actor"
+    actor.labels = ["Actor"]
+    actor.items.return_value = {"name": "Steve Buscemi"}.items()
+    movie = MagicMock(spec=neo4j.graph.Node)
+    movie.element_id = "4:movie"
+    movie.labels = ["Movie"]
+    movie.items.return_value = {"title": "Fargo"}.items()
+    directed = MagicMock(spec=neo4j.graph.Relationship)
+    directed.type = "DIRECTED"
+    directed.start_node = director
+    directed.end_node = movie
+    acted = MagicMock(spec=neo4j.graph.Relationship)
+    acted.type = "ACTED_IN"
+    acted.start_node = actor
+    acted.end_node = movie
+    path = MagicMock(spec=neo4j.graph.Path)
+    path.nodes = [director, movie, actor]
+    path.relationships = [directed, acted]
+    record = neo4j.Record({"title": "Fargo", "path": path})
+
+    item = text2cypher_explain_result_formatter(record)
+
+    assert item.content == "title: Fargo"
+    assert item.metadata is not None
+    assert len(item.metadata["graph"]["paths"]) == 1
+    assert item.metadata["graph"]["paths"][0][1]["type"] == "DIRECTED"
