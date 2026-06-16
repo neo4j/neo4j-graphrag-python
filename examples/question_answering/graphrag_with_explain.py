@@ -179,24 +179,28 @@ def build_rag(
 ) -> GraphRAG:
     if retriever == "vector-cypher":
         embedder = embedder or OpenAIEmbeddings()
-        retriever_impl = VectorCypherRetriever(
-            driver,
-            index_name=INDEX_NAME,
-            retrieval_query=MOVIES_ACTORS_PATH_RETRIEVAL_QUERY,
-            result_formatter=movies_vector_cypher_explain_formatter,
-            embedder=embedder,
-            neo4j_database=DATABASE,
+        return GraphRAG(
+            retriever=VectorCypherRetriever(
+                driver,
+                index_name=INDEX_NAME,
+                retrieval_query=MOVIES_ACTORS_PATH_RETRIEVAL_QUERY,
+                result_formatter=movies_vector_cypher_explain_formatter,
+                embedder=embedder,
+                neo4j_database=DATABASE,
+            ),
+            llm=llm,
         )
-    else:
-        retriever_impl = Text2CypherRetriever(
+    return GraphRAG(
+        retriever=Text2CypherRetriever(
             driver,
             llm=llm,
             neo4j_schema=RECOMMENDATIONS_NEO4J_SCHEMA,
             examples=RECOMMENDATIONS_TEXT2CYPHER_EXAMPLES,
             result_formatter=text2cypher_explain_result_formatter,
             neo4j_database=DATABASE,
-        )
-    return GraphRAG(retriever=retriever_impl, llm=llm)
+        ),
+        llm=llm,
+    )
 
 
 def format_explain_table(explain: ExplainResult) -> str:
