@@ -3,9 +3,11 @@
 Runs against the public Neo4j recommendations demo database and compares a
 standard GraphRAG answer with structured provenance (sources, graph paths).
 
-Requires OPENAI_API_KEY in the environment.
+Requires OPENAI_API_KEY in the environment and the ``openai`` optional dependency::
 
-Examples:
+    uv sync --extra openai
+
+Examples::
 
     uv run examples/question_answering/graphrag_with_explain.py
     uv run examples/question_answering/graphrag_with_explain.py --no-explain
@@ -36,6 +38,17 @@ AUTH = ("recommendations", "recommendations")
 DATABASE = "recommendations"
 INDEX = "moviePlotsEmbedding"
 DEFAULT_QUESTION = "Who were the actors in Avatar?"
+OPENAI_EXTRA_INSTALL_HINT = (
+    "This example requires the openai optional dependency.\n"
+    "Install it with: uv sync --extra openai"
+)
+
+
+def ensure_openai_extra() -> None:
+    try:
+        import openai  # noqa: F401
+    except ImportError as exc:
+        raise SystemExit(OPENAI_EXTRA_INSTALL_HINT) from exc
 
 
 def build_rag(driver: neo4j.Driver) -> GraphRAG:
@@ -96,7 +109,7 @@ def format_explain_table(explain: ExplainResult) -> str:
 def result_to_json(answer: str, explain: ExplainResult | None) -> dict[str, Any]:
     payload: dict[str, Any] = {"answer": answer}
     if explain is not None:
-        payload["explain"] = explain.model_dump()
+        payload["explain"] = explain.model_dump(mode="json")
     return payload
 
 
@@ -131,6 +144,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    ensure_openai_extra()
     with neo4j.GraphDatabase.driver(URI, auth=AUTH) as driver:
         rag = build_rag(driver)
         result = rag.search(

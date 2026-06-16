@@ -17,6 +17,10 @@ from unittest.mock import MagicMock
 import neo4j
 from neo4j_graphrag.generation.explain import (
     ExplainConfig,
+    ExplainResult,
+    GraphContext,
+    GraphRelationshipRef,
+    TraceStep,
     build_explain_result,
     format_retrieval_context,
     graph_and_paths_from_record,
@@ -218,6 +222,28 @@ def test_graphrag_search_without_explain_unchanged(
     assert "[1]" not in llm.invoke.call_args.kwargs["input"]
 
 
+def test_graph_and_paths_from_record_builds_seed_actors_and_directors() -> None:
+    record = neo4j.Record(
+        {
+            "movieTitle": "One Flew Over the Cuckoo's Nest",
+            "moviePlot": "A criminal pleads insanity.",
+            "actors": ["Michael Berryman"],
+            "directors": ["Milos Forman"],
+            "paths": None,
+        }
+    )
+
+    graph = graph_and_paths_from_record(record)
+
+    assert (
+        graph["seed_node"]["properties"]["title"] == "One Flew Over the Cuckoo's Nest"
+    )
+    assert len(graph["related_nodes"]) == 2
+    assert len(graph["paths"]) == 2
+    assert graph["paths"][0][1]["type"] == "ACTED_IN"
+    assert graph["paths"][1][1]["type"] == "DIRECTED"
+
+
 def test_graph_and_paths_from_record_builds_seed_and_actors() -> None:
     record = neo4j.Record(
         {
@@ -264,6 +290,34 @@ def test_serialize_neo4j_path_from_graph_objects() -> None:
     assert serialized[2].properties["title"] == "Avatar"
 
 
+def test_node_from_neo4j_graph_node_serializes_temporal_properties() -> None:
+    import neo4j.time
+
+    movie = MagicMock(spec=neo4j.graph.Node)
+    movie.element_id = "4:movie"
+    movie.labels = ["Movie"]
+    movie.items.return_value = {
+        "title": "One Flew Over the Cuckoo's Nest",
+        "released": neo4j.time.Date(1975, 11, 19),
+    }.items()
+
+    from neo4j_graphrag.generation.explain import _node_from_neo4j_graph_node
+
+    node_ref = _node_from_neo4j_graph_node(movie)
+
+    assert node_ref.properties["released"] == "1975-11-19"
+    assert ExplainResult(
+        sources=[],
+        trace=TraceStep(retriever="VectorCypherRetriever"),
+        graph=[
+            GraphContext(
+                seed_node=node_ref,
+                paths=[[node_ref, GraphRelationshipRef(type="ACTED_IN"), node_ref]],
+            )
+        ],
+    ).model_dump(mode="json")
+
+
 def test_graph_and_paths_from_record_uses_neo4j_paths() -> None:
     actor = MagicMock(spec=neo4j.graph.Node)
     actor.element_id = "4:actor"
@@ -304,6 +358,7 @@ def test_movies_vector_cypher_explain_formatter_attaches_graph() -> None:
             "movieTitle": "Avatar",
             "moviePlot": "A marine on an alien planet.",
             "actors": ["Zoe Saldana"],
+            "directors": ["James Cameron"],
             "similarityScore": 0.91,
             "paths": None,
         }
@@ -312,6 +367,7 @@ def test_movies_vector_cypher_explain_formatter_attaches_graph() -> None:
     item = movies_vector_cypher_explain_formatter(record)
 
     assert "Avatar" in item.content
+    assert "James Cameron" in item.content
     assert item.metadata is not None
     assert item.metadata["score"] == 0.91
     assert item.metadata["graph"]["seed_node"]["properties"]["title"] == "Avatar"

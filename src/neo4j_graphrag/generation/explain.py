@@ -24,10 +24,13 @@ if TYPE_CHECKING:
 
 MOVIES_ACTORS_PATH_RETRIEVAL_QUERY = """
 MATCH path = (actor:Actor)-[:ACTED_IN]->(node)
+WITH node, score, collect(DISTINCT actor.name) AS actors, collect(path) AS actorPaths
+OPTIONAL MATCH directorPath = (director:Person)-[:DIRECTED]->(node)
 RETURN node.title AS movieTitle,
        node.plot AS moviePlot,
-       collect(DISTINCT actor.name) AS actors,
-       collect(path) AS paths,
+       actors,
+       [name IN collect(DISTINCT director.name) WHERE name IS NOT NULL] AS directors,
+       actorPaths + [path IN collect(directorPath) WHERE path IS NOT NULL] AS paths,
        score AS similarityScore
 """.strip()
 
@@ -302,9 +305,24 @@ def _parse_relationship_ref(data: Any) -> GraphRelationshipRef:
     )
 
 
+def _json_safe_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(key): _json_safe_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe_value(item) for item in value]
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    iso_format = getattr(value, "iso_format", None)
+    if callable(iso_format):
+        return iso_format()
+    return str(value)
+
+
 def _node_from_neo4j_graph_node(node: neo4j.graph.Node) -> GraphNodeRef:
     labels = list(node.labels)
-    properties = dict(node.items())
+    properties = _json_safe_value(dict(node.items()))
+    if not isinstance(properties, dict):
+        properties = {}
     return GraphNodeRef(
         id=node.element_id,
         labels=labels,
@@ -355,13 +373,16 @@ def graph_and_paths_from_record(
     title_key: str = "movieTitle",
     plot_key: str = "moviePlot",
     actors_key: str = "actors",
+    directors_key: str = "directors",
     paths_key: str = "paths",
     movie_labels: list[str] | None = None,
     actor_labels: list[str] | None = None,
+    director_labels: list[str] | None = None,
 ) -> dict[str, Any]:
     """Build a metadata.graph mapping from a VectorCypher retrieval row."""
     movie_label_list = movie_labels or ["Movie"]
     actor_label_list = actor_labels or ["Actor"]
+    director_label_list = director_labels or ["Person"]
 
     seed_node: GraphNodeRef | None = None
     node = record.get(node_key)
@@ -399,13 +420,47 @@ def graph_and_paths_from_record(
                     )
                 )
 
+    directors = record.get(directors_key) or []
+    if isinstance(directors, list):
+        for director_name in directors:
+            if director_name is None:
+                continue
+            director_node = GraphNodeRef(
+                labels=director_label_list,
+                properties={"name": str(director_name)},
+            )
+            related_nodes.append(director_node)
+            if seed_node is not None and seed_node.id is not None:
+                relationships.append(
+                    GraphRelationshipRef(
+                        type="DIRECTED",
+                        start_id=None,
+                        end_id=seed_node.id,
+                    )
+                )
+
     paths = serialize_paths(record.get(paths_key))
     if not paths and seed_node is not None and related_nodes:
-        for actor_node in related_nodes:
+        for person_name, rel_type, labels in (
+            *(
+                (name, "ACTED_IN", actor_label_list)
+                for name in actors
+                if isinstance(actors, list) and name is not None
+            ),
+            *(
+                (name, "DIRECTED", director_label_list)
+                for name in directors
+                if isinstance(directors, list) and name is not None
+            ),
+        ):
+            person_node = GraphNodeRef(
+                labels=labels,
+                properties={"name": str(person_name)},
+            )
             paths.append(
                 [
-                    actor_node,
-                    GraphRelationshipRef(type="ACTED_IN"),
+                    person_node,
+                    GraphRelationshipRef(type=rel_type),
                     seed_node,
                 ]
             )
@@ -445,7 +500,17 @@ def movies_vector_cypher_explain_formatter(
         actors_text = ", ".join(str(actor) for actor in actors if actor is not None)
     else:
         actors_text = str(actors)
+    directors = record.get("directors") or []
+    if isinstance(directors, list):
+        directors_text = ", ".join(
+            str(director) for director in directors if director is not None
+        )
+    else:
+        directors_text = str(directors)
     title = record.get("movieTitle")
     plot = record.get("moviePlot")
-    content = f"Movie title: {title}, Plot: {plot}, Actors: {actors_text}"
+    content = (
+        f"Movie title: {title}, Plot: {plot}, "
+        f"Actors: {actors_text}, Directors: {directors_text}"
+    )
     return vector_cypher_explain_result_formatter(record, content=content)

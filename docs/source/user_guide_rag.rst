@@ -1462,7 +1462,8 @@ neighborhood and paths from the retriever, and a minimal retriever trace.
 Use a VectorCypher ``result_formatter`` that populates ``metadata.graph`` on each
 retrieved item. The package provides helpers such as
 ``movies_vector_cypher_explain_formatter`` and ``MOVIES_ACTORS_PATH_RETRIEVAL_QUERY``
-for the public recommendations demo database.
+for the public recommendations demo database. The query retrieves actors,
+directors, and graph paths for each matched movie.
 
 .. code:: python
 
@@ -1493,6 +1494,11 @@ When ``explain`` is set, ``return_context`` is enabled automatically and sources
 are numbered in the LLM prompt so answers can cite ``[1]``, ``[2]``, and so on.
 
 See also: ``examples/question_answering/graphrag_with_explain.py``.
+
+This example uses OpenAI for embeddings and generation. Install the optional
+dependency before running it::
+
+    uv sync --extra openai
 
 
 **************
