@@ -26,7 +26,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import neo4j
 from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
@@ -235,6 +235,26 @@ def format_explain_table(explain: ExplainResult) -> str:
     return "\n".join(lines)
 
 
+def _strip_embedding_properties(value: Any) -> Any:
+    """Drop vector properties from JSON output (recommendations Movie nodes)."""
+    if isinstance(value, dict):
+        return {
+            key: _strip_embedding_properties(item)
+            for key, item in value.items()
+            if not key.endswith("Embedding")
+        }
+    if isinstance(value, list):
+        return [_strip_embedding_properties(item) for item in value]
+    return value
+
+
+def explain_to_json(explain: ExplainResult) -> dict[str, Any]:
+    return cast(
+        dict[str, Any],
+        _strip_embedding_properties(explain.model_dump(mode="json")),
+    )
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -297,7 +317,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.format == "json":
         payload: dict[str, Any] = {"answer": result.answer}
         if result.explain is not None:
-            payload["explain"] = result.explain.model_dump(mode="json")
+            payload["explain"] = explain_to_json(result.explain)
         print(json.dumps(payload, indent=2))
         return 0
 
