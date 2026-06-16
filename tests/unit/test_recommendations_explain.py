@@ -14,12 +14,23 @@
 #  limitations under the License.
 from unittest.mock import MagicMock
 
+from pathlib import Path
+import importlib
+import sys
+
 import neo4j
 from neo4j_graphrag.generation.explain import GraphRelationshipRef, build_explain_result
 from neo4j_graphrag.types import RetrieverResult
-from graphrag_with_explain import (
-    graph_and_paths_from_record,
-    movies_vector_cypher_explain_formatter,
+
+EXAMPLES_QA_DIR = (
+    Path(__file__).resolve().parents[2] / "examples" / "question_answering"
+)
+if str(EXAMPLES_QA_DIR) not in sys.path:
+    sys.path.insert(0, str(EXAMPLES_QA_DIR))
+_demo_module = importlib.import_module("graphrag_with_explain")
+graph_and_paths_from_record = _demo_module.graph_and_paths_from_record
+movies_vector_cypher_explain_formatter = (
+    _demo_module.movies_vector_cypher_explain_formatter
 )
 
 

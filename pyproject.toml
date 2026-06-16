@@ -95,7 +95,6 @@ packages = ["src/neo4j_graphrag"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["examples/question_answering"]
 filterwarnings = [
     "",
 ]
