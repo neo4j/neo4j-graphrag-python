@@ -16,6 +16,7 @@ from .base import Embedder
 from .bedrock import BedrockEmbeddings
 from .cohere import CohereEmbeddings
 from .google_genai import GeminiEmbedder
+from .litellm import LiteLLMEmbeddings
 from .mistral import MistralAIEmbeddings
 from .ollama import OllamaEmbeddings
 from .openai import AzureOpenAIEmbeddings, OpenAIEmbeddings
@@ -33,4 +34,5 @@ __all__ = [
     "MistralAIEmbeddings",
     "CohereEmbeddings",
     "GeminiEmbedder",
+    "LiteLLMEmbeddings",
 ]
