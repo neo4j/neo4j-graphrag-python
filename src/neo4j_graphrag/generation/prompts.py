@@ -240,6 +240,7 @@ IMPORTANT RULES:
 10.3 Do not combine UNIQUENESS and KEY on the same node or relationship type with the same properties.
 10.4 Do not infer KEY from UNIQUENESS alone; KEY implies required presence, unlike UNIQUENESS alone.
 10.5 For composite key (multiple properties), list all properties in "property_names". All must exist and the combination must be unique.
+10.6 Do not add EXISTENCE on a property already covered by a KEY constraint (KEY already implies mandatory presence).
 11. Never use double underscores (__) as a prefix or suffix in node labels or relationship types (e.g. __Person__ or __KNOWS__ are forbidden).
 
 Accepted property types are: BOOLEAN, DATE, DURATION, FLOAT, INTEGER, LIST,
