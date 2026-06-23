@@ -101,7 +101,8 @@ class GraphConstraintType(str, enum.Enum):
     constraints are allowed.  ``EXISTENCE`` marks a mandatory (non-null) node or
     relationship property (single property only — Neo4j does not support composite
     existence).  ``KEY`` matches Neo4j NODE KEY / RELATIONSHIP KEY: mandatory and unique;
-    supports composite (multi-property) constraints.
+    supports composite (multi-property) constraints. KEY subsumes EXISTENCE for its
+    properties — do not combine KEY and EXISTENCE on the same property.
     """
 
     UNIQUENESS = "UNIQUENESS"
@@ -504,10 +505,36 @@ class GraphSchema(DataModel):
             return ("", "", "", "")
 
         seen_existence: set[tuple[str, str, str]] = set()
+        key_covered: set[tuple[str, str, str]] = set()
         for c in constraints:
             t, nt, rt, pn = _constraint_identity(c)
             if t in (GraphConstraintType.EXISTENCE.value, "EXISTENCE"):
                 seen_existence.add((nt or "", rt or "", pn))
+            if t not in (GraphConstraintType.KEY.value, "KEY"):
+                continue
+            if isinstance(c, ConstraintType):
+                pnames = c.property_names
+                nt = c.node_type or ""
+                rt = c.relationship_type or ""
+            elif isinstance(c, dict):
+                pnames = c.get("property_names") or ()
+                if isinstance(pnames, str):
+                    pnames = (pnames,)
+                else:
+                    pnames = tuple(pnames)
+                if not pnames:
+                    pn = c.get("property_name") or ""
+                    pnames = (pn,) if pn else ()
+                nt = str(c.get("node_type") or "")
+                rt = str(c.get("relationship_type") or "")
+            else:
+                continue
+            for key_prop_name in pnames:
+                if key_prop_name:
+                    key_covered.add((nt or "", rt or "", key_prop_name))
+
+        def _skip_required_migration(key: tuple[str, str, str]) -> bool:
+            return key in seen_existence or key in key_covered
 
         for node in data.get("node_types") or []:
             if not isinstance(node, dict):
@@ -524,7 +551,7 @@ class GraphSchema(DataModel):
                 if not pname:
                     continue
                 key = (label, "", pname)
-                if key in seen_existence:
+                if _skip_required_migration(key):
                     prop["required"] = False
                     continue
                 constraints.append(
@@ -557,7 +584,7 @@ class GraphSchema(DataModel):
                         new_props.append(prop)
                         continue
                     key = (label, "", pname)
-                    if key in seen_existence:
+                    if _skip_required_migration(key):
                         new_props.append(prop.model_copy(update={"required": False}))
                         continue
                     constraints.append(
@@ -588,7 +615,7 @@ class GraphSchema(DataModel):
                 if not pname:
                     continue
                 key = ("", rlabel, pname)
-                if key in seen_existence:
+                if _skip_required_migration(key):
                     prop["required"] = False
                     continue
                 constraints.append(
@@ -621,7 +648,7 @@ class GraphSchema(DataModel):
                         rel_new_props.append(prop)
                         continue
                     key = ("", rlabel, pname)
-                    if key in seen_existence:
+                    if _skip_required_migration(key):
                         rel_new_props.append(
                             prop.model_copy(update={"required": False})
                         )
@@ -754,6 +781,53 @@ class GraphSchema(DataModel):
                 f"UNIQUENESS and KEY constraints cannot apply to the same relationship type "
                 f"and properties ({rt!r}, {pns!r})."
             )
+        return self
+
+    @model_validator(mode="after")
+    def validate_constraints_key_existence_exclusivity(self) -> Self:
+        """KEY subsumes EXISTENCE: redundant EXISTENCE on KEY-covered properties is invalid."""
+        node_key_props: dict[str, set[str]] = {}
+        rel_key_props: dict[str, set[str]] = {}
+        for c in self.constraints:
+            ct = c.type
+            if isinstance(ct, str):
+                ct = GraphConstraintType(ct)
+            if ct != GraphConstraintType.KEY:
+                continue
+            has_node = bool(c.node_type and str(c.node_type).strip())
+            has_rel = bool(c.relationship_type and str(c.relationship_type).strip())
+            if has_node:
+                assert c.node_type is not None
+                node_key_props.setdefault(c.node_type, set()).update(c.property_names)
+            elif has_rel:
+                assert c.relationship_type is not None
+                rel_key_props.setdefault(c.relationship_type, set()).update(
+                    c.property_names
+                )
+        for c in self.constraints:
+            ct = c.type
+            if isinstance(ct, str):
+                ct = GraphConstraintType(ct)
+            if ct != GraphConstraintType.EXISTENCE:
+                continue
+            pname = c.property_names[0]
+            has_node = bool(c.node_type and str(c.node_type).strip())
+            has_rel = bool(c.relationship_type and str(c.relationship_type).strip())
+            if has_node:
+                assert c.node_type is not None
+                if pname in node_key_props.get(c.node_type, set()):
+                    raise SchemaValidationError(
+                        f"EXISTENCE and KEY constraints cannot apply to the same node type "
+                        f"and property ({c.node_type!r}, {pname!r})."
+                    )
+            elif has_rel:
+                assert c.relationship_type is not None
+                if pname in rel_key_props.get(c.relationship_type, set()):
+                    raise SchemaValidationError(
+                        f"EXISTENCE and KEY constraints cannot apply to the same "
+                        f"relationship type and property "
+                        f"({c.relationship_type!r}, {pname!r})."
+                    )
         return self
 
     def node_type_from_label(self, label: str) -> Optional[NodeType]:
