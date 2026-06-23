@@ -1,0 +1,4 @@
+## TASK-001 — 2026-06-24T08:00:00Z
+Created `spacy_utils.py` with `normalize()` (lowercases, NFC-normalises Unicode, collapses whitespace) and `WORD_FILTER` frozenset of ~90 common English stopwords; 21 unit tests all green.
+Files: +src/neo4j_graphrag/experimental/components/spacy_utils.py, +tests/unit/experimental/components/test_spacy_utils.py
+Decisions: Added `unicodedata.normalize("NFC", ...)` step per reviewer feedback to ensure visually identical Unicode strings compare equal as graph node keys.

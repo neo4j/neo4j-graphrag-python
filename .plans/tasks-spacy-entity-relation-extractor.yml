@@ -1,0 +1,201 @@
+feature: spacy-entity-relation-extractor
+prd: ./prd-spacy-entity-relation-extractor.md
+created_at: 2026-06-24T00:00:00Z
+updated_at: 2026-06-24T00:00:00Z
+
+tasks:
+  - id: task-001
+    title: "Implement normalize() helper and WORD_FILTER constant"
+    description: |
+      Create shared normalisation utilities used by both components.
+      Add a `normalize(text: str) -> str` function that lowercases and
+      collapses whitespace, and a `WORD_FILTER: frozenset[str]` of common
+      stopwords to exclude from entity positions. Place in
+      `src/neo4j_graphrag/experimental/components/spacy_utils.py`.
+    status: completed
+    completed_at: "2026-06-24T08:00:00Z"
+    dependencies: []
+    acceptance_criteria:
+      - "normalize('  Supply Chain  ') returns 'supply chain'"
+      - "normalize('') returns ''"
+      - "WORD_FILTER contains common English stopwords (e.g. 'the', 'a', 'is')"
+      - "Unit tests cover edge cases: empty string, leading/trailing spaces, multiple internal spaces"
+    completed_at: null
+
+  - id: task-002
+    title: "Implement dependency-based triple extractor function"
+    description: |
+      Implement `extract_dependency_triples(doc: spacy.tokens.Doc) -> set[tuple[str, str, str, float]]`
+      in `spacy_utils.py`. Walk the dependency tree for each sentence to find
+      nsubj/nsubjpass → root_verb → dobj/pobj patterns. Apply phrasal merging
+      (`merge_noun_chunks`, `merge_entities`) before extraction. Handle passive
+      constructions by swapping subject/object and appending `_BY` to the
+      relation. Yield `(head, relation_lemma, tail, confidence)` tuples.
+    status: pending
+    dependencies:
+      - task-001
+    acceptance_criteria:
+      - "Active SVO sentence yields (subject, verb_lemma, object, conf) triple"
+      - "Passive sentence yields (object, verb_lemma_BY, subject, conf) triple"
+      - "Prepositional phrase yields secondary (object, prep_label, pobj, conf) triple"
+      - "Multi-token noun phrases are collapsed into single entity strings"
+      - "Unit tests use spacy.blank + manually crafted Doc objects (no model download required)"
+    completed_at: null
+
+  - id: task-003
+    title: "Implement linear triple extractor function"
+    description: |
+      Implement `extract_linear_triples(doc: spacy.tokens.Doc) -> set[tuple[str, str, str, float]]`
+      in `spacy_utils.py`. Scan NER entity pairs within the same sentence that
+      appear within 10 tokens of each other with no other NER entity between
+      them. Emit `(entity_a, "RELATED_TO", entity_b, 0.3)` for each such pair.
+      This catches appositions, list items, and implicit associations not
+      surfaced by the dependency tree.
+    status: pending
+    dependencies:
+      - task-001
+    acceptance_criteria:
+      - "Two NER entities within 10 tokens in same sentence yield a RELATED_TO triple"
+      - "Two NER entities more than 10 tokens apart produce no triple"
+      - "Three NER entities A–B–C produce A-RELATED_TO-B and B-RELATED_TO-C but not A-RELATED_TO-C (intervening entity)"
+      - "Confidence on all linear triples is exactly 0.3"
+      - "Unit tests use synthetic spacy Doc with manually set ents"
+    completed_at: null
+
+  - id: task-004
+    title: "Implement SpacyEntityRelationExtractor component"
+    description: |
+      Create `src/neo4j_graphrag/experimental/components/spacy_entity_relation_extractor.py`
+      with class `SpacyEntityRelationExtractor(EntityRelationExtractor)`. The
+      constructor loads the SpaCy model once (raising ValueError with an install
+      hint if not found). The async `run()` method processes each chunk,
+      unions dependency and linear triples (when enabled), normalises and
+      filters them, maps results to Neo4jNode/Neo4jRelationship objects, and
+      delegates lexical graph construction to LexicalGraphBuilder when
+      `create_lexical_graph=True`.
+    status: pending
+    dependencies:
+      - task-002
+      - task-003
+    acceptance_criteria:
+      - "Class is importable from neo4j_graphrag.experimental.components.spacy_entity_relation_extractor"
+      - "Constructor with non-installed model name raises ValueError containing 'python -m spacy download'"
+      - "run() returns Neo4jGraph with nodes labelled 'Entity' and relationships with 'confidence' property"
+      - "use_linear_extractor=False produces no RELATED_TO relationships"
+      - "create_lexical_graph=True adds Chunk and Document nodes to the output graph"
+      - "on_error=OnError.IGNORE suppresses per-chunk exceptions; on_error=OnError.RAISE propagates them"
+    completed_at: null
+
+  - id: task-005
+    title: "Unit tests for SpacyEntityRelationExtractor"
+    description: |
+      Add `tests/unit/experimental/components/test_spacy_entity_relation_extractor.py`.
+      Mock `spacy.load` and the nlp pipeline so no model download is required.
+      Cover: successful extraction from two-chunk input, linear extractor toggle,
+      lexical graph nodes, invalid model error, and on_error behaviour.
+    status: pending
+    dependencies:
+      - task-004
+    acceptance_criteria:
+      - "All tests pass with pytest without a live Neo4j instance or network calls"
+      - "spacy.load is mocked; no en_core_web_sm download required"
+      - "Test covers use_linear_extractor=True and False"
+      - "Test covers create_lexical_graph=True producing Chunk/Document nodes"
+      - "Test covers ValueError raised for missing model"
+      - "Test covers on_error=OnError.IGNORE swallowing a per-chunk exception"
+    completed_at: null
+
+  - id: task-006
+    title: "Implement HierarchicalTextSplitter component"
+    description: |
+      Create `src/neo4j_graphrag/experimental/components/text_splitters/hierarchical_splitter.py`
+      with class `HierarchicalTextSplitter(TextSplitter)`. Split text at
+      section-header regex boundaries first; recursively split sections
+      exceeding `max_chunk_size` chars with `chunk_overlap`; optionally load a
+      SpaCy model to drop verb-free sentences before emitting each chunk.
+      Output `TextChunks` with sequential index values.
+    status: pending
+    dependencies:
+      - task-001
+    acceptance_criteria:
+      - "Class is importable from neo4j_graphrag.experimental.components.text_splitters.hierarchical_splitter"
+      - "Text with a section header produces two separate chunks (one per section)"
+      - "Section longer than max_chunk_size is split into multiple chunks with chunk_overlap character overlap"
+      - "Section shorter than max_chunk_size is emitted as a single chunk without splitting"
+      - "drop_verbless_sentences=True removes sentences containing no verb token (requires spacy model)"
+      - "Output TextChunks has sequential index 0, 1, 2, ..."
+    completed_at: null
+
+  - id: task-007
+    title: "Unit tests for HierarchicalTextSplitter"
+    description: |
+      Add `tests/unit/experimental/components/text_splitters/test_hierarchical_splitter.py`.
+      Test section splitting, recursive character splitting with overlap, and
+      index sequencing. For drop_verbless_sentences tests, mock the SpaCy
+      pipeline so no model download is needed.
+    status: pending
+    dependencies:
+      - task-006
+    acceptance_criteria:
+      - "All tests pass without network calls or model downloads"
+      - "Test verifies correct chunk_overlap: last N chars of chunk K equal first N chars of chunk K+1"
+      - "Test verifies section boundary respected: two Markdown-header sections produce separate chunks"
+      - "Test verifies verbless sentence dropped when drop_verbless_sentences=True (spacy mocked)"
+      - "Test verifies chunk indices are sequential starting from 0"
+    completed_at: null
+
+  - id: task-008
+    title: "Integration tests for both components against real SpaCy model"
+    description: |
+      Add integration tests in
+      `tests/unit/experimental/components/test_spacy_extractor_integration.py`
+      and `tests/unit/experimental/components/text_splitters/test_hierarchical_splitter_integration.py`.
+      Use pytest fixtures that skip the test if `en_core_web_sm` is not installed.
+      Verify that real SpaCy output produces a populated Neo4jGraph and correct
+      TextChunks respectively.
+    status: pending
+    dependencies:
+      - task-005
+      - task-007
+    acceptance_criteria:
+      - "Tests are skipped (not failed) when en_core_web_sm is not installed"
+      - "With model installed, SpacyEntityRelationExtractor.run() returns Neo4jGraph with at least one node and one relationship for a 2-sentence input"
+      - "With model installed, HierarchicalTextSplitter.run() returns correct chunks for a multi-section document"
+      - "Confidence values on relationships are floats in [0, 1]"
+    completed_at: null
+
+  - id: task-009
+    title: "Export new components from experimental __init__"
+    description: |
+      Add `SpacyEntityRelationExtractor` and `HierarchicalTextSplitter` to the
+      public exports in `src/neo4j_graphrag/experimental/components/__init__.py`
+      and the text_splitters sub-package `__init__.py`. Guard imports with a
+      try/except so the rest of the package still imports cleanly when SpaCy is
+      not installed.
+    status: pending
+    dependencies:
+      - task-004
+      - task-006
+    acceptance_criteria:
+      - "from neo4j_graphrag.experimental.components import SpacyEntityRelationExtractor works when spacy is installed"
+      - "from neo4j_graphrag.experimental.components.text_splitters import HierarchicalTextSplitter works when spacy is installed"
+      - "Importing neo4j_graphrag.experimental.components without spacy installed does not raise ImportError"
+    completed_at: null
+
+  - id: task-010
+    title: "Add example script for end-to-end spacy pipeline"
+    description: |
+      Create `examples/customize/build_graph/components/spacy_kg_pipeline.py`
+      demonstrating a full pipeline:
+      DataLoader → HierarchicalTextSplitter → SpacyEntityRelationExtractor → KGWriter.
+      Include a comment block explaining the nlp extra install step
+      (`pip install 'neo4j-graphrag[nlp]'` + `python -m spacy download en_core_web_sm`).
+    status: pending
+    dependencies:
+      - task-009
+    acceptance_criteria:
+      - "Script is syntactically valid Python"
+      - "Script includes install instructions in a comment block at the top"
+      - "Script constructs all four pipeline components and wires them together"
+      - "Script includes a __main__ guard and can be run standalone"
+    completed_at: null
