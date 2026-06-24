@@ -176,7 +176,7 @@ tasks:
       Use pytest fixtures that skip the test if `en_core_web_sm` is not installed.
       Verify that real SpaCy output produces a populated Neo4jGraph and correct
       TextChunks respectively.
-    status: in_progress
+    status: completed
     dependencies:
       - task-005
       - task-007
@@ -185,7 +185,7 @@ tasks:
       - "With model installed, SpacyEntityRelationExtractor.run() returns Neo4jGraph with at least one node and one relationship for a 2-sentence input"
       - "With model installed, HierarchicalTextSplitter.run() returns correct chunks for a multi-section document"
       - "Confidence values on relationships are floats in [0, 1]"
-    completed_at: null
+    completed_at: "2026-06-24T17:00:00Z"
 
   - id: task-009
     title: "Export new components from experimental __init__"

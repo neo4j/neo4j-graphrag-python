@@ -40,3 +40,7 @@ Files: ~src/neo4j_graphrag/experimental/components/__init__.py, ~src/neo4j_graph
 ## TASK-010 — 2026-06-24T17:00:00Z
 Example script for end-to-end spacy KG pipeline.
 Files: +examples/customize/build_graph/components/spacy_kg_pipeline.py
+
+## TASK-008 — 2026-06-24T17:00:00Z
+Integration tests for SpacyEntityRelationExtractor and HierarchicalTextSplitter (skip when en_core_web_sm absent).
+Files: +tests/unit/experimental/components/test_spacy_extractor_integration.py, +tests/unit/experimental/components/text_splitters/test_hierarchical_splitter_integration.py
