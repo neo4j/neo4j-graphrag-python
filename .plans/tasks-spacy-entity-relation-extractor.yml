@@ -81,7 +81,8 @@ tasks:
       objects, and delegates lexical graph construction to LexicalGraphBuilder
       when `create_lexical_graph=True`. Confidence scores go in relationship
       properties.
-    status: in_progress
+    status: completed
+    completed_at: "2026-06-24T15:00:00Z"
     dependencies:
       - task-002
       - task-003
@@ -95,7 +96,6 @@ tasks:
       - "use_linear_extractor=False produces no RELATED_TO relationships"
       - "create_lexical_graph=True adds Chunk and Document nodes to the output graph"
       - "on_error=OnError.IGNORE suppresses per-chunk exceptions; on_error=OnError.RAISE propagates them"
-    completed_at: null
 
   - id: task-005
     title: "Unit tests for SpacyEntityRelationExtractor"
@@ -104,7 +104,7 @@ tasks:
       Mock `spacy.load` and the nlp pipeline so no model download is required.
       Cover: successful extraction from two-chunk input, linear extractor toggle,
       lexical graph nodes, invalid model error, and on_error behaviour.
-    status: pending
+    status: completed
     dependencies:
       - task-004
     acceptance_criteria:
@@ -114,7 +114,7 @@ tasks:
       - "Test covers create_lexical_graph=True producing Chunk/Document nodes"
       - "Test covers ValueError raised for missing model"
       - "Test covers on_error=OnError.IGNORE swallowing a per-chunk exception"
-    completed_at: null
+    completed_at: "2026-06-24T16:00:00Z"
 
   - id: task-006
     title: "Implement HierarchicalTextSplitter component"
@@ -195,7 +195,8 @@ tasks:
       and the text_splitters sub-package `__init__.py`. Guard imports with a
       try/except so the rest of the package still imports cleanly when SpaCy is
       not installed.
-    status: pending
+    status: completed
+    completed_at: "2026-06-24T16:00:00Z"
     dependencies:
       - task-004
       - task-006
@@ -203,7 +204,6 @@ tasks:
       - "from neo4j_graphrag.experimental.components import SpacyEntityRelationExtractor works when spacy is installed"
       - "from neo4j_graphrag.experimental.components.text_splitters import HierarchicalTextSplitter works when spacy is installed"
       - "Importing neo4j_graphrag.experimental.components without spacy installed does not raise ImportError"
-    completed_at: null
 
   - id: task-010
     title: "Add example script for end-to-end spacy pipeline"

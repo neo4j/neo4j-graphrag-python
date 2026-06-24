@@ -21,3 +21,13 @@ Decisions: Reviewer flagged `Span.merge()` removed in spaCy 3.x (silently swallo
 ## TASK-007 — 2026-06-24T14:00:00Z
 Added 20 unit tests for `HierarchicalTextSplitter` covering all 4 header strategies (markdown, capitalization, blank_line, spacy_verbless), recursive overlap splitting with exact last-N==first-N invariant verification, drop_verbless_sentences filter (SpaCy fully mocked via patch("spacy.load")), chunk index sequencing across sections, and edge cases (empty/whitespace input, invalid constructor args). No network calls or model downloads required.
 Files: +tests/unit/experimental/components/text_splitters/test_hierarchical_splitter.py
+
+## TASK-004 — 2026-06-24T15:00:00Z
+Implemented `SpacyEntityRelationExtractor(EntityRelationExtractor)` in `src/neo4j_graphrag/experimental/components/spacy_entity_relation_extractor.py`.
+Key design decisions: SpaCy model loaded once at construction time with user-friendly ValueError (covering both missing model and missing package); NER→schema label mapping via `_SPACY_NER_TO_SCHEMA_LABEL` forward-lookup + direct-uppercase Strategy (removed dead reverse map); fail-open NER filtering with `logger.warning` when schema types don't map to SpaCy NER labels; dependency + linear triples unioned and filtered by word filter, relation type, and NER type; lexical graph built via `LexicalGraphBuilder` following the same pattern as `LLMEntityRelationExtractor`; `on_error=IGNORE` logs and skips per-chunk exceptions. All types use lowercase builtins (`set[...]`, `tuple[...]`). ruff, mypy, pytest all clean.
+Files: +src/neo4j_graphrag/experimental/components/spacy_entity_relation_extractor.py
+Review feedback applied: removed `_SCHEMA_LABEL_TO_SPACY_NER` dead code, added warning log for unmapped schema types, broadened `except (OSError, ImportError)` in constructor, switched to lowercase type builtins.
+
+## TASK-009 — 2026-06-24T16:00:00Z
+Exported SpacyEntityRelationExtractor and HierarchicalTextSplitter from __init__ files with ImportError guards.
+Files: ~src/neo4j_graphrag/experimental/components/__init__.py, ~src/neo4j_graphrag/experimental/components/text_splitters/__init__.py
