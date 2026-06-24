@@ -12,7 +12,13 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-"""Unit tests for spacy_utils.normalize() and WORD_FILTER."""
+"""Unit tests for spacy_utils.normalize() and WORD_FILTER.
+
+These tests cover only the spaCy-free parts of the module and are safe to run
+even when spaCy is not installed.  Tests for ``extract_dependency_triples``
+live in ``test_spacy_dependency_triples.py`` and are gated on spaCy being
+available.
+"""
 
 import pytest
 
@@ -52,8 +58,8 @@ class TestNormalize:
 
     def test_unicode_nfc_normalization(self) -> None:
         # "café" composed (U+00E9) vs decomposed (e + combining accent U+0301)
-        composed = "café"       # NFC form
-        decomposed = "café"    # NFD form — visually identical
+        composed = "café"  # NFC form
+        decomposed = "café"  # NFD form — visually identical
         assert normalize(composed) == normalize(decomposed)
 
     def test_unicode_lowercase_accent(self) -> None:

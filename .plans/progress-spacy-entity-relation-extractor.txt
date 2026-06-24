@@ -1,3 +1,8 @@
+## TASK-006 — 2026-06-24T12:00:00Z
+Created `HierarchicalTextSplitter(TextSplitter)` with four header strategies (markdown, capitalization, blank_line, spacy_verbless), recursive overlap splitting for large sections, and optional SpaCy-based verbless-sentence filtering. Ruff, mypy, and existing unit tests all pass.
+Files: +src/neo4j_graphrag/experimental/components/text_splitters/hierarchical_splitter.py
+Decisions: blank_line strategy uses ≤6-word cap to avoid treating body sentences as section headers; chunk index assigned with single-pass `len(chunks)` pattern; negative chunk_overlap validated; assert replaced with RuntimeError guard; docstring warns that default drop_verbless_sentences=True requires SpaCy.
+
 ## TASK-003 — 2026-06-24T10:00:00Z
 Implemented `extract_linear_triples(doc)` in a new file (task-002 was in_progress on spacy_utils.py) with 14 unit tests — all green.
 Files: +src/neo4j_graphrag/experimental/components/spacy_linear_extractor.py, +tests/unit/experimental/components/test_spacy_linear_extractor.py
@@ -7,3 +12,8 @@ Decisions: Separate file because task-002 owned spacy_utils.py concurrently; gra
 Created `spacy_utils.py` with `normalize()` (lowercases, NFC-normalises Unicode, collapses whitespace) and `WORD_FILTER` frozenset of ~90 common English stopwords; 21 unit tests all green.
 Files: +src/neo4j_graphrag/experimental/components/spacy_utils.py, +tests/unit/experimental/components/test_spacy_utils.py
 Decisions: Added `unicodedata.normalize("NFC", ...)` step per reviewer feedback to ensure visually identical Unicode strings compare equal as graph node keys.
+
+## TASK-002 — 2026-06-24T10:00:00Z
+Added `extract_dependency_triples(doc)` to `spacy_utils.py`: walks the dependency tree per sentence finding nsubj/nsubjpass → ROOT → dobj/pobj patterns, handles passive voice (_BY suffix, conf=0.9), prepositional triples (conf=0.7), and active SVO (conf=1.0). Uses spaCy 3.x retokenizer API (not deprecated `Span.merge()`) to collapse multi-word noun chunks and named entities. Falls back gracefully when sentence boundaries are unavailable. 18 unit tests in a new dedicated file; spaCy-free tests remain ungated.
+Files: ~src/neo4j_graphrag/experimental/components/spacy_utils.py, ~tests/unit/experimental/components/test_spacy_utils.py, +tests/unit/experimental/components/test_spacy_dependency_triples.py
+Decisions: Reviewer flagged `Span.merge()` removed in spaCy 3.x (silently swallowed); fixed to use `doc.retokenize()`. Moved spaCy-gated tests to separate file so normalize/WORD_FILTER tests stay runnable without spaCy installed.

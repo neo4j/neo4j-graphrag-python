@@ -31,7 +31,8 @@ tasks:
       (`merge_noun_chunks`, `merge_entities`) before extraction. Handle passive
       constructions by swapping subject/object and appending `_BY` to the
       relation. Yield `(head, relation_lemma, tail, confidence)` tuples.
-    status: in_progress
+    status: completed
+    completed_at: "2026-06-24T10:00:00Z"
     dependencies:
       - task-001
     acceptance_criteria:
@@ -40,7 +41,6 @@ tasks:
       - "Prepositional phrase yields secondary (object, prep_label, pobj, conf) triple"
       - "Multi-token noun phrases are collapsed into single entity strings"
       - "Unit tests use spacy.blank + manually crafted Doc objects (no model download required)"
-    completed_at: null
 
   - id: task-003
     title: "Implement linear triple extractor function"
@@ -134,7 +134,8 @@ tasks:
       (which returns plain text, not markdown). Recursively split sections
       exceeding max_chunk_size with chunk_overlap. Output TextChunks with
       sequential index values.
-    status: in_progress
+    status: completed
+    completed_at: "2026-06-24T12:00:00Z"
     dependencies:
       - task-001
     acceptance_criteria:
