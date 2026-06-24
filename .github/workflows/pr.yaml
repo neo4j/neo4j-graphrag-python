@@ -33,9 +33,6 @@ jobs:
       - name: Install dependencies
         if: steps.cached-venv.outputs.cache-hit != 'true'
         run: uv sync --frozen --all-extras --group dev
-      - name: Download SpaCy model
-        if: matrix.python-version != '3.14'
-        run: uv run --frozen python -m spacy download en_core_web_sm
       - name: Check format and linting
         run: |
           uv run --frozen ruff check .
