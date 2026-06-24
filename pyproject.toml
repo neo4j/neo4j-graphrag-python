@@ -71,7 +71,7 @@ examples = [
 # only advertise/install the `nlp` extra on Python <3.14.
 nlp = ["spacy==3.8.7; python_version < '3.14'"]
 fuzzy-matching = ["rapidfuzz>=3.12.2,<4.0.0"]
-liteparse = ["liteparse>=2.0.0,<3.0.0"]
+liteparse = ["liteparse>=2.1.0,<3.0.0"]
 
 [dependency-groups]
 dev = [

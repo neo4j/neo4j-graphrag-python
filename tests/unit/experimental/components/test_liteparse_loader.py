@@ -148,8 +148,20 @@ def test_constructor_kwargs_forwarded_to_liteparse(
     loader.load_file(SAMPLE_PDF, fs=LocalFileSystem())
     inject_liteparse_stub.LiteParse.assert_called_once_with(
         ocr_enabled=True,
+        output_format="text",
         ocr_language="fra",
         dpi=300,
         target_pages="1-3",
         password="s3cr3t",
+    )
+
+
+def test_output_format_markdown_forwarded_to_liteparse(
+    inject_liteparse_stub: ModuleType,
+) -> None:
+    loader = LiteParseLoader(output_format="markdown")
+    loader.load_file(SAMPLE_PDF, fs=LocalFileSystem())
+    inject_liteparse_stub.LiteParse.assert_called_once_with(
+        ocr_enabled=False,
+        output_format="markdown",
     )

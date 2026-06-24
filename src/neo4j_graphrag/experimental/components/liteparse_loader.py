@@ -58,6 +58,10 @@ class LiteParseLoader(DataLoader):
         dpi: Rendering resolution for OCR (default 300).
         target_pages: Page range string, e.g. ``"1-5,10,15-20"``.
         password: Password for encrypted PDFs.
+        output_format: Output format — ``"text"`` (default, plain text) or
+            ``"markdown"`` (requires LiteParse >=2.1). Markdown output preserves
+            ``#``/``##`` section headers, making it suitable for use with
+            ``HierarchicalTextSplitter(header_strategy="markdown")``.
     """
 
     def __init__(
@@ -68,6 +72,7 @@ class LiteParseLoader(DataLoader):
         dpi: Optional[int] = None,
         target_pages: Optional[str] = None,
         password: Optional[str] = None,
+        output_format: str = "text",
     ) -> None:
         optional = {
             "ocr_server_url": ocr_server_url,
@@ -78,6 +83,7 @@ class LiteParseLoader(DataLoader):
         }
         self._kwargs: Dict[str, Any] = {
             "ocr_enabled": ocr_enabled,
+            "output_format": output_format,
             **{k: v for k, v in optional.items() if v is not None},
         }
         self._parser: Any = None  # lazily initialised
