@@ -1,3 +1,8 @@
+## TASK-005 — 2026-06-24T16:00:00Z
+Unit tests for SpacyEntityRelationExtractor, spacy.load mocked.
+13 tests covering: two-chunk extraction with Entity nodes + confidence property, use_linear_extractor=True/False toggle, create_lexical_graph=True adding Chunk/Document nodes, ValueError for missing/non-installed model, on_error=OnError.IGNORE suppression, custom word_filter exclusion, schema fail-open behaviour (unmapped NER types pass through), known NER type filtering. All 13 tests pass with no model download.
+Files: +tests/unit/experimental/components/test_spacy_entity_relation_extractor.py
+
 ## TASK-006 — 2026-06-24T12:00:00Z
 Created `HierarchicalTextSplitter(TextSplitter)` with four header strategies (markdown, capitalization, blank_line, spacy_verbless), recursive overlap splitting for large sections, and optional SpaCy-based verbless-sentence filtering. Ruff, mypy, and existing unit tests all pass.
 Files: +src/neo4j_graphrag/experimental/components/text_splitters/hierarchical_splitter.py
