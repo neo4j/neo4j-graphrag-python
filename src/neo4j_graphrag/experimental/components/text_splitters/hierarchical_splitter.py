@@ -16,7 +16,7 @@
 
 Supported header strategies:
 
-* ``"markdown"`` — lines starting with ``#`` (ATX Markdown headers).
+* ``"markdown"`` — ATX Markdown header lines (``# H1``, ``## H2``, … up to ``###### H6``): one to six ``#`` characters followed by a space and header text.
 * ``"capitalization"`` — short Title Case or ALL_CAPS lines without terminal
   punctuation (appropriate for plain-text output from loaders like
   LiteParseLoader).
