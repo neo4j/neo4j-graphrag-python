@@ -1,11 +1,15 @@
 # Install: pip install 'neo4j-graphrag[nlp]'
 # Then:    python -m spacy download en_core_web_sm
+#
+# NOTE: HierarchicalTextSplitter is implemented in the companion PR #548.
+# Until that PR is merged, install it from the feat/hierarchical-splitter branch:
+#   pip install git+https://github.com/neo4j/neo4j-graphrag-python@feat/hierarchical-splitter
 """End-to-end SpaCy knowledge-graph pipeline example.
 
 Demonstrates how to wire four pipeline components together without an LLM:
 
     PdfLoader
-        → HierarchicalTextSplitter
+        → HierarchicalTextSplitter  (see PR #548)
         → SpacyEntityRelationExtractor
         → Neo4jWriter
 
