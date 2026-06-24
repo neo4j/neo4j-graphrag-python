@@ -176,7 +176,7 @@ tasks:
       Use pytest fixtures that skip the test if `en_core_web_sm` is not installed.
       Verify that real SpaCy output produces a populated Neo4jGraph and correct
       TextChunks respectively.
-    status: pending
+    status: in_progress
     dependencies:
       - task-005
       - task-007
@@ -213,7 +213,7 @@ tasks:
       DataLoader → HierarchicalTextSplitter → SpacyEntityRelationExtractor → KGWriter.
       Include a comment block explaining the nlp extra install step
       (`pip install 'neo4j-graphrag[nlp]'` + `python -m spacy download en_core_web_sm`).
-    status: pending
+    status: completed
     dependencies:
       - task-009
     acceptance_criteria:
@@ -221,4 +221,4 @@ tasks:
       - "Script includes install instructions in a comment block at the top"
       - "Script constructs all four pipeline components and wires them together"
       - "Script includes a __main__ guard and can be run standalone"
-    completed_at: null
+    completed_at: "2026-06-24T17:00:00Z"

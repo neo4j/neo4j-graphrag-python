@@ -36,3 +36,7 @@ Review feedback applied: removed `_SCHEMA_LABEL_TO_SPACY_NER` dead code, added w
 ## TASK-009 — 2026-06-24T16:00:00Z
 Exported SpacyEntityRelationExtractor and HierarchicalTextSplitter from __init__ files with ImportError guards.
 Files: ~src/neo4j_graphrag/experimental/components/__init__.py, ~src/neo4j_graphrag/experimental/components/text_splitters/__init__.py
+
+## TASK-010 — 2026-06-24T17:00:00Z
+Example script for end-to-end spacy KG pipeline.
+Files: +examples/customize/build_graph/components/spacy_kg_pipeline.py
