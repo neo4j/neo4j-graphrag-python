@@ -2,6 +2,10 @@
 
 ## Next
 
+### Added
+
+- Experimental: `LiteParseLoader` — an alternative PDF/document loader backed by [LiteParse](https://github.com/run-llama/liteparse), a local Rust-based parser with optional OCR support. Install with `pip install "neo4j-graphrag[liteparse]"` and pass it as `file_loader` to `SimpleKGPipeline`.
+
 ### Changed
 
 - Experimental: `GraphSchema` validation now rejects `KEY` and `EXISTENCE` constraints on the same node or relationship property (including composite KEY members), since KEY already implies mandatory presence. Legacy `PropertyType.required` migration no longer adds redundant EXISTENCE constraints for KEY-covered properties. The schema-from-text extraction prompt includes the same rule.
