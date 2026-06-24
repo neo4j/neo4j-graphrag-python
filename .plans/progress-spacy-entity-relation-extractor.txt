@@ -1,3 +1,8 @@
+## TASK-003 — 2026-06-24T10:00:00Z
+Implemented `extract_linear_triples(doc)` in a new file (task-002 was in_progress on spacy_utils.py) with 14 unit tests — all green.
+Files: +src/neo4j_graphrag/experimental/components/spacy_linear_extractor.py, +tests/unit/experimental/components/test_spacy_linear_extractor.py
+Decisions: Separate file because task-002 owned spacy_utils.py concurrently; graceful fallback when no sentence segmenter is present (treats whole doc as one sentence); distance measured start-to-start.
+
 ## TASK-001 — 2026-06-24T08:00:00Z
 Created `spacy_utils.py` with `normalize()` (lowercases, NFC-normalises Unicode, collapses whitespace) and `WORD_FILTER` frozenset of ~90 common English stopwords; 21 unit tests all green.
 Files: +src/neo4j_graphrag/experimental/components/spacy_utils.py, +tests/unit/experimental/components/test_spacy_utils.py

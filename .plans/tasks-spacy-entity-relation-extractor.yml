@@ -31,7 +31,7 @@ tasks:
       (`merge_noun_chunks`, `merge_entities`) before extraction. Handle passive
       constructions by swapping subject/object and appending `_BY` to the
       relation. Yield `(head, relation_lemma, tail, confidence)` tuples.
-    status: pending
+    status: in_progress
     dependencies:
       - task-001
     acceptance_criteria:
@@ -51,7 +51,8 @@ tasks:
       them. Emit `(entity_a, "RELATED_TO", entity_b, 0.3)` for each such pair.
       This catches appositions, list items, and implicit associations not
       surfaced by the dependency tree.
-    status: pending
+    status: completed
+    completed_at: "2026-06-24T10:00:00Z"
     dependencies:
       - task-001
     acceptance_criteria:
@@ -60,7 +61,7 @@ tasks:
       - "Three NER entities A–B–C produce A-RELATED_TO-B and B-RELATED_TO-C but not A-RELATED_TO-C (intervening entity)"
       - "Confidence on all linear triples is exactly 0.3"
       - "Unit tests use synthetic spacy Doc with manually set ents"
-    completed_at: null
+    note: "Implemented in spacy_linear_extractor.py (separate from spacy_utils.py because task-002 was in_progress on that file). task-004 should import from both spacy_utils and spacy_linear_extractor."
 
   - id: task-004
     title: "Implement SpacyEntityRelationExtractor component"
@@ -68,11 +69,18 @@ tasks:
       Create `src/neo4j_graphrag/experimental/components/spacy_entity_relation_extractor.py`
       with class `SpacyEntityRelationExtractor(EntityRelationExtractor)`. The
       constructor loads the SpaCy model once (raising ValueError with an install
-      hint if not found). The async `run()` method processes each chunk,
-      unions dependency and linear triples (when enabled), normalises and
-      filters them, maps results to Neo4jNode/Neo4jRelationship objects, and
-      delegates lexical graph construction to LexicalGraphBuilder when
-      `create_lexical_graph=True`.
+      hint if not found) and accepts `word_filter: Optional[list[str]] = None`
+      (uses WORD_FILTER constant if None). The async `run()` method accepts
+      `schema: Optional[GraphSchema] = None` (same as LLMEntityRelationExtractor).
+      When schema is provided, apply two filters: (1) type-level NER filter —
+      map schema node_type labels to SpaCy NER entity types and keep only
+      matching entities; (2) post-filter relations — only keep predicates that
+      match a schema relationship_type name. Without schema, all extracted
+      triples pass through. Unions dependency and linear triples (when enabled),
+      normalises and filters them, maps results to Neo4jNode/Neo4jRelationship
+      objects, and delegates lexical graph construction to LexicalGraphBuilder
+      when `create_lexical_graph=True`. Confidence scores go in relationship
+      properties.
     status: pending
     dependencies:
       - task-002
@@ -80,7 +88,10 @@ tasks:
     acceptance_criteria:
       - "Class is importable from neo4j_graphrag.experimental.components.spacy_entity_relation_extractor"
       - "Constructor with non-installed model name raises ValueError containing 'python -m spacy download'"
+      - "Constructor accepts word_filter list; custom list overrides WORD_FILTER default"
       - "run() returns Neo4jGraph with nodes labelled 'Entity' and relationships with 'confidence' property"
+      - "run() with schema filters out entities whose NER type has no matching schema node_type"
+      - "run() with schema filters out relationships whose predicate has no matching schema relationship_type"
       - "use_linear_extractor=False produces no RELATED_TO relationships"
       - "create_lexical_graph=True adds Chunk and Document nodes to the output graph"
       - "on_error=OnError.IGNORE suppresses per-chunk exceptions; on_error=OnError.RAISE propagates them"
@@ -109,20 +120,31 @@ tasks:
     title: "Implement HierarchicalTextSplitter component"
     description: |
       Create `src/neo4j_graphrag/experimental/components/text_splitters/hierarchical_splitter.py`
-      with class `HierarchicalTextSplitter(TextSplitter)`. Split text at
-      section-header regex boundaries first; recursively split sections
-      exceeding `max_chunk_size` chars with `chunk_overlap`; optionally load a
-      SpaCy model to drop verb-free sentences before emitting each chunk.
-      Output `TextChunks` with sequential index values.
-    status: pending
+      with class `HierarchicalTextSplitter(TextSplitter)`. Constructor params:
+      `max_chunk_size: int = 2048`, `chunk_overlap: int = 200`,
+      `header_strategy: str = "markdown"` (one of: "markdown" — lines starting
+      with `#`; "capitalization" — short Title Case or ALL_CAPS lines without
+      terminal punctuation; "blank_line" — short lines surrounded by blank
+      lines; "spacy_verbless" — SpaCy-detected verbless sentences that look
+      like headers), `model: str = "en_core_web_sm"` (only loaded when
+      header_strategy="spacy_verbless" or drop_verbless_sentences=True),
+      `drop_verbless_sentences: bool = True`. The "markdown" strategy is the
+      right default for MarkdownLoader output. Use "capitalization" or
+      "blank_line" for plain-text output from loaders like LiteParseLoader
+      (which returns plain text, not markdown). Recursively split sections
+      exceeding max_chunk_size with chunk_overlap. Output TextChunks with
+      sequential index values.
+    status: in_progress
     dependencies:
       - task-001
     acceptance_criteria:
       - "Class is importable from neo4j_graphrag.experimental.components.text_splitters.hierarchical_splitter"
-      - "Text with a section header produces two separate chunks (one per section)"
+      - "header_strategy='markdown' splits on # header lines"
+      - "header_strategy='capitalization' splits on short ALL_CAPS or Title Case lines without terminal punctuation"
+      - "header_strategy='blank_line' splits on short lines surrounded by blank lines"
       - "Section longer than max_chunk_size is split into multiple chunks with chunk_overlap character overlap"
       - "Section shorter than max_chunk_size is emitted as a single chunk without splitting"
-      - "drop_verbless_sentences=True removes sentences containing no verb token (requires spacy model)"
+      - "drop_verbless_sentences=True removes sentences containing no verb token (SpaCy mocked in unit tests)"
       - "Output TextChunks has sequential index 0, 1, 2, ..."
     completed_at: null
 
