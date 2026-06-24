@@ -81,7 +81,7 @@ tasks:
       objects, and delegates lexical graph construction to LexicalGraphBuilder
       when `create_lexical_graph=True`. Confidence scores go in relationship
       properties.
-    status: pending
+    status: in_progress
     dependencies:
       - task-002
       - task-003
@@ -156,7 +156,7 @@ tasks:
       Test section splitting, recursive character splitting with overlap, and
       index sequencing. For drop_verbless_sentences tests, mock the SpaCy
       pipeline so no model download is needed.
-    status: pending
+    status: completed
     dependencies:
       - task-006
     acceptance_criteria:
@@ -165,7 +165,7 @@ tasks:
       - "Test verifies section boundary respected: two Markdown-header sections produce separate chunks"
       - "Test verifies verbless sentence dropped when drop_verbless_sentences=True (spacy mocked)"
       - "Test verifies chunk indices are sequential starting from 0"
-    completed_at: null
+    completed_at: "2026-06-24T14:00:00Z"
 
   - id: task-008
     title: "Integration tests for both components against real SpaCy model"
