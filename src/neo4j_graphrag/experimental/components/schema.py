@@ -403,7 +403,7 @@ def _format_duplicate_relationship_types_error(
         "or use distinct relationship types when patterns need different properties "
         "or constraints."
     )
-    return " ".join(parts)
+    return "\n".join(parts)
 
 
 class Pattern(BaseModel):
