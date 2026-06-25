@@ -2804,3 +2804,84 @@ def test_merge_duplicate_relationship_types_handles_missing_or_none_properties()
     assert len(result) == 1
     assert result[0]["label"] == "KNOWS"
     assert [p["name"] for p in result[0]["properties"]] == ["since"]
+
+
+def test_schema_duplicate_relationship_types_repro_raises_clear_error() -> None:
+    # PRD repro: two PARTICIPATED_IN relationship_types with differing properties
+    # plus a KEY constraint. The duplicate-label error must replace the old
+    # misleading "undefined property" constraint error.
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {"label": "Patient", "properties": [{"name": "name", "type": "STRING"}]},
+            {"label": "Encounter", "properties": [{"name": "name", "type": "STRING"}]},
+            {"label": "Physician", "properties": [{"name": "name", "type": "STRING"}]},
+        ],
+        "patterns": [
+            {
+                "source": "Patient",
+                "relationship": "PARTICIPATED_IN",
+                "target": "Encounter",
+            },
+            {
+                "source": "Encounter",
+                "relationship": "PARTICIPATED_IN",
+                "target": "Physician",
+            },
+        ],
+        "relationship_types": [
+            {
+                "label": "PARTICIPATED_IN",
+                "properties": [
+                    {"name": "date", "type": "DATE"},
+                    {"name": "patient_name", "type": "STRING"},
+                    {"name": "encounter_name", "type": "STRING"},
+                ],
+            },
+            {
+                "label": "PARTICIPATED_IN",
+                "properties": [
+                    {"name": "encounter_name", "type": "STRING"},
+                    {"name": "physician_name", "type": "STRING"},
+                ],
+            },
+        ],
+        "constraints": [
+            {
+                "type": "KEY",
+                "relationship_type": "PARTICIPATED_IN",
+                "property_names": ["date", "patient_name", "encounter_name"],
+            }
+        ],
+    }
+
+    with pytest.raises(SchemaValidationError) as exc_info:
+        GraphSchema.model_validate(schema_dict)
+
+    message = str(exc_info.value)
+    # Names the duplicated label.
+    assert "PARTICIPATED_IN" in message
+    # Names both conflicting property sets.
+    assert "encounter_name" in message
+    assert "physician_name" in message
+    # Is the new duplicate-label error, not the old constraint error.
+    assert "Duplicate relationship type" in message
+    assert "undefined property" not in message
+    assert "Valid properties" not in message
+
+
+def test_schema_duplicate_relationship_types_identical_properties_raises() -> None:
+    # Any duplicate label triggers the error, even when properties are identical.
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]}
+        ],
+        "relationship_types": [
+            {"label": "KNOWS", "properties": [{"name": "since", "type": "INTEGER"}]},
+            {"label": "KNOWS", "properties": [{"name": "since", "type": "INTEGER"}]},
+        ],
+    }
+
+    with pytest.raises(SchemaValidationError) as exc_info:
+        GraphSchema.model_validate(schema_dict)
+
+    assert "Duplicate relationship type 'KNOWS'" in str(exc_info.value)
