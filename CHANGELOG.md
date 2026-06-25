@@ -2,6 +2,10 @@
 
 ## Next
 
+### Fixed
+
+- Vector and VectorCypher retrievers on Neo4j 2026+: prefix SEARCH queries with `CYPHER 25` and fall back to procedure-based vector search when SEARCH is unsupported or fails.
+
 ## 1.18.0
 
 ### Changed
