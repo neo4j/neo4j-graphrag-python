@@ -1,0 +1,46 @@
+## TASK-005 — 2026-06-24T16:00:00Z
+Unit tests for SpacyEntityRelationExtractor, spacy.load mocked.
+13 tests covering: two-chunk extraction with Entity nodes + confidence property, use_linear_extractor=True/False toggle, create_lexical_graph=True adding Chunk/Document nodes, ValueError for missing/non-installed model, on_error=OnError.IGNORE suppression, custom word_filter exclusion, schema fail-open behaviour (unmapped NER types pass through), known NER type filtering. All 13 tests pass with no model download.
+Files: +tests/unit/experimental/components/test_spacy_entity_relation_extractor.py
+
+## TASK-006 — 2026-06-24T12:00:00Z
+Created `HierarchicalTextSplitter(TextSplitter)` with four header strategies (markdown, capitalization, blank_line, spacy_verbless), recursive overlap splitting for large sections, and optional SpaCy-based verbless-sentence filtering. Ruff, mypy, and existing unit tests all pass.
+Files: +src/neo4j_graphrag/experimental/components/text_splitters/hierarchical_splitter.py
+Decisions: blank_line strategy uses ≤6-word cap to avoid treating body sentences as section headers; chunk index assigned with single-pass `len(chunks)` pattern; negative chunk_overlap validated; assert replaced with RuntimeError guard; docstring warns that default drop_verbless_sentences=True requires SpaCy.
+
+## TASK-003 — 2026-06-24T10:00:00Z
+Implemented `extract_linear_triples(doc)` in a new file (task-002 was in_progress on spacy_utils.py) with 14 unit tests — all green.
+Files: +src/neo4j_graphrag/experimental/components/spacy_linear_extractor.py, +tests/unit/experimental/components/test_spacy_linear_extractor.py
+Decisions: Separate file because task-002 owned spacy_utils.py concurrently; graceful fallback when no sentence segmenter is present (treats whole doc as one sentence); distance measured start-to-start.
+
+## TASK-001 — 2026-06-24T08:00:00Z
+Created `spacy_utils.py` with `normalize()` (lowercases, NFC-normalises Unicode, collapses whitespace) and `WORD_FILTER` frozenset of ~90 common English stopwords; 21 unit tests all green.
+Files: +src/neo4j_graphrag/experimental/components/spacy_utils.py, +tests/unit/experimental/components/test_spacy_utils.py
+Decisions: Added `unicodedata.normalize("NFC", ...)` step per reviewer feedback to ensure visually identical Unicode strings compare equal as graph node keys.
+
+## TASK-002 — 2026-06-24T10:00:00Z
+Added `extract_dependency_triples(doc)` to `spacy_utils.py`: walks the dependency tree per sentence finding nsubj/nsubjpass → ROOT → dobj/pobj patterns, handles passive voice (_BY suffix, conf=0.9), prepositional triples (conf=0.7), and active SVO (conf=1.0). Uses spaCy 3.x retokenizer API (not deprecated `Span.merge()`) to collapse multi-word noun chunks and named entities. Falls back gracefully when sentence boundaries are unavailable. 18 unit tests in a new dedicated file; spaCy-free tests remain ungated.
+Files: ~src/neo4j_graphrag/experimental/components/spacy_utils.py, ~tests/unit/experimental/components/test_spacy_utils.py, +tests/unit/experimental/components/test_spacy_dependency_triples.py
+Decisions: Reviewer flagged `Span.merge()` removed in spaCy 3.x (silently swallowed); fixed to use `doc.retokenize()`. Moved spaCy-gated tests to separate file so normalize/WORD_FILTER tests stay runnable without spaCy installed.
+
+## TASK-007 — 2026-06-24T14:00:00Z
+Added 20 unit tests for `HierarchicalTextSplitter` covering all 4 header strategies (markdown, capitalization, blank_line, spacy_verbless), recursive overlap splitting with exact last-N==first-N invariant verification, drop_verbless_sentences filter (SpaCy fully mocked via patch("spacy.load")), chunk index sequencing across sections, and edge cases (empty/whitespace input, invalid constructor args). No network calls or model downloads required.
+Files: +tests/unit/experimental/components/text_splitters/test_hierarchical_splitter.py
+
+## TASK-004 — 2026-06-24T15:00:00Z
+Implemented `SpacyEntityRelationExtractor(EntityRelationExtractor)` in `src/neo4j_graphrag/experimental/components/spacy_entity_relation_extractor.py`.
+Key design decisions: SpaCy model loaded once at construction time with user-friendly ValueError (covering both missing model and missing package); NER→schema label mapping via `_SPACY_NER_TO_SCHEMA_LABEL` forward-lookup + direct-uppercase Strategy (removed dead reverse map); fail-open NER filtering with `logger.warning` when schema types don't map to SpaCy NER labels; dependency + linear triples unioned and filtered by word filter, relation type, and NER type; lexical graph built via `LexicalGraphBuilder` following the same pattern as `LLMEntityRelationExtractor`; `on_error=IGNORE` logs and skips per-chunk exceptions. All types use lowercase builtins (`set[...]`, `tuple[...]`). ruff, mypy, pytest all clean.
+Files: +src/neo4j_graphrag/experimental/components/spacy_entity_relation_extractor.py
+Review feedback applied: removed `_SCHEMA_LABEL_TO_SPACY_NER` dead code, added warning log for unmapped schema types, broadened `except (OSError, ImportError)` in constructor, switched to lowercase type builtins.
+
+## TASK-009 — 2026-06-24T16:00:00Z
+Exported SpacyEntityRelationExtractor and HierarchicalTextSplitter from __init__ files with ImportError guards.
+Files: ~src/neo4j_graphrag/experimental/components/__init__.py, ~src/neo4j_graphrag/experimental/components/text_splitters/__init__.py
+
+## TASK-010 — 2026-06-24T17:00:00Z
+Example script for end-to-end spacy KG pipeline.
+Files: +examples/customize/build_graph/components/spacy_kg_pipeline.py
+
+## TASK-008 — 2026-06-24T17:00:00Z
+Integration tests for SpacyEntityRelationExtractor and HierarchicalTextSplitter (skip when en_core_web_sm absent).
+Files: +tests/unit/experimental/components/test_spacy_extractor_integration.py, +tests/unit/experimental/components/text_splitters/test_hierarchical_splitter_integration.py
