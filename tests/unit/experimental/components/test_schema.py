@@ -579,6 +579,178 @@ def test_schema_uniqueness_and_key_same_relationship_rejected() -> None:
         GraphSchema.model_validate(schema_dict)
 
 
+def test_schema_key_and_existence_same_node_property_rejected() -> None:
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {"label": "Person", "properties": [{"name": "id", "type": "STRING"}]}
+        ],
+        "constraints": [
+            {
+                "type": "KEY",
+                "node_type": "Person",
+                "property_name": "id",
+                "relationship_type": None,
+            },
+            {
+                "type": "EXISTENCE",
+                "node_type": "Person",
+                "property_name": "id",
+                "relationship_type": None,
+            },
+        ],
+    }
+    with pytest.raises(SchemaValidationError, match="EXISTENCE and KEY"):
+        GraphSchema.model_validate(schema_dict)
+
+
+def test_schema_key_and_existence_same_relationship_rejected() -> None:
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]}
+        ],
+        "relationship_types": [
+            {"label": "KNOWS", "properties": [{"name": "since", "type": "INTEGER"}]}
+        ],
+        "constraints": [
+            {
+                "type": "KEY",
+                "node_type": "",
+                "property_names": ["since"],
+                "relationship_type": "KNOWS",
+            },
+            {
+                "type": "EXISTENCE",
+                "node_type": "",
+                "property_names": ["since"],
+                "relationship_type": "KNOWS",
+            },
+        ],
+    }
+    with pytest.raises(SchemaValidationError, match="EXISTENCE and KEY"):
+        GraphSchema.model_validate(schema_dict)
+
+
+def test_schema_composite_key_and_existence_on_member_rejected() -> None:
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {
+                "label": "Actor",
+                "properties": [
+                    {"name": "firstname", "type": "STRING"},
+                    {"name": "surname", "type": "STRING"},
+                ],
+            }
+        ],
+        "constraints": [
+            {
+                "type": "KEY",
+                "node_type": "Actor",
+                "property_names": ["firstname", "surname"],
+            },
+            {
+                "type": "EXISTENCE",
+                "node_type": "Actor",
+                "property_names": ["firstname"],
+            },
+        ],
+    }
+    with pytest.raises(SchemaValidationError, match="EXISTENCE and KEY"):
+        GraphSchema.model_validate(schema_dict)
+
+
+def test_schema_key_and_existence_different_properties_allowed() -> None:
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {
+                "label": "Actor",
+                "properties": [
+                    {"name": "firstname", "type": "STRING"},
+                    {"name": "surname", "type": "STRING"},
+                    {"name": "birthdate", "type": "DATE"},
+                ],
+            }
+        ],
+        "constraints": [
+            {
+                "type": "KEY",
+                "node_type": "Actor",
+                "property_names": ["firstname", "surname"],
+            },
+            {
+                "type": "EXISTENCE",
+                "node_type": "Actor",
+                "property_names": ["birthdate"],
+            },
+        ],
+    }
+    schema = GraphSchema.model_validate(schema_dict)
+    assert schema.key_property_names_for_node("Actor") == {"firstname", "surname"}
+    assert schema.existence_property_names_for_node("Actor") == {"birthdate"}
+    assert schema.mandatory_property_names_for_node("Actor") == {
+        "firstname",
+        "surname",
+        "birthdate",
+    }
+
+
+def test_schema_uniqueness_and_existence_same_property_allowed() -> None:
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {
+                "label": "Person",
+                "properties": [
+                    {"name": "email", "type": "STRING"},
+                ],
+            }
+        ],
+        "constraints": [
+            {
+                "type": "UNIQUENESS",
+                "node_type": "Person",
+                "property_names": ["email"],
+            },
+            {
+                "type": "EXISTENCE",
+                "node_type": "Person",
+                "property_names": ["email"],
+            },
+        ],
+    }
+    schema = GraphSchema.model_validate(schema_dict)
+    assert schema.uniqueness_property_names_for_node("Person") == {"email"}
+    assert schema.existence_property_names_for_node("Person") == {"email"}
+
+
+def test_required_migration_skips_key_covered_node_property() -> None:
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {
+                "label": "Person",
+                "properties": [
+                    {"name": "id", "type": "STRING", "required": True},
+                    {"name": "name", "type": "STRING", "required": True},
+                ],
+            }
+        ],
+        "constraints": [
+            {
+                "type": "KEY",
+                "node_type": "Person",
+                "property_names": ["id"],
+            },
+        ],
+    }
+    schema = GraphSchema.model_validate(schema_dict)
+    person = schema.node_type_from_label("Person")
+    assert person is not None
+    assert all(not p.model_dump().get("required") for p in person.properties)
+    existence_constraints = [
+        c for c in schema.constraints if c.type == GraphConstraintType.EXISTENCE
+    ]
+    assert len(existence_constraints) == 1
+    assert existence_constraints[0].property_names == ("name",)
+
+
 # --- Composite (multi-property) constraint tests ---
 
 
