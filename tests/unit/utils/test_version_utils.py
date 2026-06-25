@@ -14,6 +14,7 @@
 #  limitations under the License.
 from unittest.mock import MagicMock
 
+import neo4j
 import pytest
 from neo4j_graphrag.utils.version_utils import (
     clear_version_cache,
@@ -22,6 +23,7 @@ from neo4j_graphrag.utils.version_utils import (
     has_vector_index_support,
     has_metadata_filtering_support,
     is_version_5_23_or_above,
+    should_fallback_from_search_clause,
     supports_search_clause,
 )
 
@@ -203,3 +205,25 @@ class TestSupportsSearchClause:
         supports_search_clause(driver)
         supports_search_clause(driver)
         assert driver.execute_query.call_count == 1
+
+
+@pytest.mark.parametrize(
+    ("message", "expected"),
+    [
+        ("PropertyNotFound: foo", True),
+        ("Invalid input 'SEARCH'", True),
+        ("parsable in `CYPHER 25`", True),
+        ("42I67: unsupported language feature", True),
+        ("Some other client error", False),
+    ],
+)
+def test_should_fallback_from_search_clause(message: str, expected: bool) -> None:
+    error = neo4j.exceptions.ClientError(message)
+    assert should_fallback_from_search_clause(error) is expected
+
+
+def test_should_fallback_from_search_clause_ignores_non_client_errors() -> None:
+    assert (
+        should_fallback_from_search_clause(ValueError("Invalid input 'SEARCH'"))
+        is False
+    )

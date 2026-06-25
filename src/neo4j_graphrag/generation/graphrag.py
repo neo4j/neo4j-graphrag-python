@@ -27,6 +27,12 @@ from neo4j_graphrag.exceptions import (
     RagInitializationError,
     SearchValidationError,
 )
+from neo4j_graphrag.generation.explain import (
+    ExplainConfig,
+    build_explain_result,
+    format_retrieval_context,
+    CITATION_SYSTEM_INSTRUCTIONS,
+)
 from neo4j_graphrag.generation.prompts import RagTemplate
 from neo4j_graphrag.generation.types import RagInitModel, RagResultModel, RagSearchModel
 from neo4j_graphrag.llm import LLMInterface, LLMInterfaceV2
@@ -98,6 +104,7 @@ class GraphRAG:
         retriever_config: Optional[dict[str, Any]] = None,
         return_context: Optional[bool] = None,
         response_fallback: Optional[str] = None,
+        explain: Optional[ExplainConfig] = None,
     ) -> RagResultModel:
         """
         .. warning::
@@ -122,12 +129,16 @@ class GraphRAG:
                 (default: False).
             response_fallback (Optional[str]): If not null, will return this message instead
                 of calling the LLM if context comes back empty.
+            explain (Optional[ExplainConfig]): When set, attach structured provenance to the
+                result and include retrieval context in the response.
 
         Returns:
             RagResultModel: The LLM-generated answer.
 
         """
-        if return_context is None:
+        if explain is not None:
+            return_context = True
+        elif return_context is None:
             warnings.warn(
                 "The default value of 'return_context' will change from 'False'"
                 " to 'True' in a future version.",
@@ -142,6 +153,7 @@ class GraphRAG:
                 retriever_config=retriever_config or {},
                 return_context=return_context,
                 response_fallback=response_fallback,
+                explain=explain,
             )
         except ValidationError as e:
             raise SearchValidationError(e.errors())
@@ -153,8 +165,23 @@ class GraphRAG:
         )
         if len(retriever_result.items) == 0 and response_fallback is not None:
             answer = response_fallback
+        elif (
+            len(retriever_result.items) == 0
+            and validated_data.explain is not None
+            and validated_data.explain.cite_sources
+        ):
+            answer = (
+                "I could not find any matching results in the graph for this question."
+            )
         else:
-            context = "\n".join(item.content for item in retriever_result.items)
+            cite_sources = (
+                validated_data.explain.cite_sources
+                if validated_data.explain is not None
+                else False
+            )
+            context = format_retrieval_context(
+                retriever_result, cite_sources=cite_sources
+            )
             prompt = self.prompt_template.format(
                 query_text=query_text, context=context, examples=validated_data.examples
             )
@@ -162,12 +189,16 @@ class GraphRAG:
             logger.debug("RAG: retriever_result=%s", prettify(retriever_result))
             logger.debug("RAG: prompt=%s", prompt)
 
+            system_instruction = self.prompt_template.system_instructions
+            if cite_sources:
+                system_instruction = CITATION_SYSTEM_INSTRUCTIONS
+
             if self.is_langchain_compatible():
                 # llm interface v2 or langchain chat model
                 messages = legacy_inputs_to_messages(
                     prompt=prompt,
                     message_history=message_history,
-                    system_instruction=self.prompt_template.system_instructions,
+                    system_instruction=system_instruction,
                 )
 
                 # langchain chat model compatible invoke
@@ -179,7 +210,7 @@ class GraphRAG:
                 llm_response = self.llm.invoke(
                     input=prompt,
                     message_history=message_history,
-                    system_instruction=self.prompt_template.system_instructions,
+                    system_instruction=system_instruction,
                 )
             else:
                 raise ValueError(f"Type {type(self.llm)} of LLM is not supported.")
@@ -187,6 +218,8 @@ class GraphRAG:
         result: dict[str, Any] = {"answer": answer}
         if return_context:
             result["retriever_result"] = retriever_result
+        if validated_data.explain is not None:
+            result["explain"] = build_explain_result(retriever_result)
         return RagResultModel(**result)
 
     def _build_query(

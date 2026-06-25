@@ -18,6 +18,7 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
+from neo4j_graphrag.generation.explain import ExplainConfig, ExplainResult
 from neo4j_graphrag.generation.prompts import RagTemplate
 from neo4j_graphrag.retrievers.base import Retriever
 from neo4j_graphrag.types import RetrieverResult
@@ -44,10 +45,12 @@ class RagSearchModel(BaseModel):
     retriever_config: dict[str, Any] = {}
     return_context: bool = False
     response_fallback: Optional[str] = None
+    explain: Optional[ExplainConfig] = None
 
 
 class RagResultModel(BaseModel):
     answer: str
     retriever_result: Optional[RetrieverResult] = None
+    explain: Optional[ExplainResult] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
