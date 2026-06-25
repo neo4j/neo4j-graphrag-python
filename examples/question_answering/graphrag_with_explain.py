@@ -19,6 +19,8 @@ Examples::
         "Which movies connect Tom Hanks and Kevin Bacon through Ron Howard?"
     uv run examples/question_answering/graphrag_with_explain.py --retriever vector-cypher \\
         "Find movies about a marine on an alien planet and list the cast and director."
+    uv run examples/question_answering/graphrag_with_explain.py --explain-narrative \\
+        "Which movies connect Tom Hanks and Kevin Bacon through Ron Howard?"
 """
 
 from __future__ import annotations
@@ -58,6 +60,15 @@ DEFAULT_QUESTIONS: dict[RetrieverName, str] = {
 OPENAI_EXTRA_INSTALL_HINT = (
     "This example requires the openai optional dependency.\n"
     "Install it with: uv sync --extra openai"
+)
+
+NARRATIVE_SYSTEM_INSTRUCTION = (
+    "You summarize how a GraphRAG answer was produced from retrieval provenance. "
+    "Use only the question, answer, and explain payload provided. "
+    "Describe how sources support the answer, and how graph "
+    "paths relate when present. Cite sources inline as [1], [2], etc. "
+    "Do not invent facts, nodes, or paths not present in the explain payload. "
+    "Keep the summary to 1-2 short sentences, the bare essentials."
 )
 
 RECOMMENDATIONS_NEO4J_SCHEMA = """
@@ -255,6 +266,32 @@ def explain_to_json(explain: ExplainResult) -> dict[str, Any]:
     )
 
 
+def build_narrative_prompt(
+    question: str,
+    answer: str,
+    explain: ExplainResult,
+) -> str:
+    explain_payload = json.dumps(explain_to_json(explain), indent=2)
+    return (
+        f"Question:\n{question}\n\n"
+        f"Answer:\n{answer}\n\n"
+        f"Explain payload:\n{explain_payload}"
+    )
+
+
+def generate_explain_narrative(
+    llm: OpenAILLM,
+    question: str,
+    answer: str,
+    explain: ExplainResult,
+) -> str:
+    response = llm.invoke(
+        input=build_narrative_prompt(question, answer, explain),
+        system_instruction=NARRATIVE_SYSTEM_INSTRUCTION,
+    )
+    return response.content or ""
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -287,7 +324,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=3,
         help="Number of vector hits for vector-cypher mode (default: 3)",
     )
+    parser.add_argument(
+        "--explain-narrative",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help=(
+            "Add a second LLM pass that summarizes how the answer follows from "
+            "explain provenance (demo only; requires --explain)"
+        ),
+    )
     args = parser.parse_args(argv)
+    if args.explain_narrative and not args.explain:
+        parser.error("--explain-narrative requires --explain")
     if args.question is None:
         args.question = DEFAULT_QUESTIONS[args.retriever]
     return args
@@ -314,8 +362,19 @@ def main(argv: list[str] | None = None) -> int:
             retriever_config=retriever_config,
         )
 
+    narrative: str | None = None
+    if args.explain_narrative and result.explain is not None:
+        narrative = generate_explain_narrative(
+            llm,
+            args.question,
+            result.answer,
+            result.explain,
+        )
+
     if args.format == "json":
         payload: dict[str, Any] = {"answer": result.answer}
+        if narrative is not None:
+            payload["narrative"] = narrative
         if result.explain is not None:
             payload["explain"] = explain_to_json(result.explain)
         print(json.dumps(payload, indent=2))
@@ -326,6 +385,10 @@ def main(argv: list[str] | None = None) -> int:
     print()
     print("Answer:")
     print(result.answer)
+    if narrative is not None:
+        print()
+        print("Narrative (AI summary, not provenance):")
+        print(narrative)
     if result.explain is not None:
         print()
         print(format_explain_table(result.explain))
