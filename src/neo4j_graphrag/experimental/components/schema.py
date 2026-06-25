@@ -390,11 +390,12 @@ def _format_duplicate_relationship_types_error(
         property_sets = ", ".join(
             "{" + ", ".join(sorted(p.name for p in rel.properties)) + "}"
             for rel in entries
+            if rel.properties
         )
-        parts.append(
-            f"Duplicate relationship type '{label}' defined {len(entries)} times "
-            f"with property sets: {property_sets}."
-        )
+        message = f"Duplicate relationship type '{label}' defined {len(entries)} times"
+        if property_sets:
+            message += f" with property sets: {property_sets}"
+        parts.append(f"{message}.")
     parts.append(
         "In Neo4j a relationship type is global per name: entries sharing a label "
         "describe the same type, and any constraint on it applies to every instance "
