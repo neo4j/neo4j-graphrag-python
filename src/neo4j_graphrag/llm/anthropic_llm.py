@@ -187,12 +187,10 @@ class AnthropicLLM(LLMBase):
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        if response_format is not None:
-            raise NotImplementedError(
-                "AnthropicLLM does not currently support structured output"
-            )
         try:
             system_instruction, messages = self.get_messages_v2(input)
+            if response_format is not None:
+                kwargs["output_config"] = self._build_output_config(response_format)
             response = self.client.messages.create(
                 model=self.model_name,
                 system=system_instruction,
@@ -267,17 +265,17 @@ class AnthropicLLM(LLMBase):
 
         Args:
             input (List[LLMMessage]): The messages to send to the LLM.
-            response_format: Not supported by AnthropicLLM.
+            response_format (Optional[Union[Type[BaseModel], dict[str, Any]]]): Optional
+                response format. Can be a Pydantic model class for structured output
+                or a dict matching Anthropic's output format schema.
 
         Returns:
             LLMResponse: The response from the LLM.
         """
-        if response_format is not None:
-            raise NotImplementedError(
-                "AnthropicLLM does not currently support structured output"
-            )
         try:
             system_instruction, messages = self.get_messages_v2(input)
+            if response_format is not None:
+                kwargs["output_config"] = self._build_output_config(response_format)
             response = await self.async_client.messages.create(
                 model=self.model_name,
                 system=system_instruction,
@@ -321,6 +319,16 @@ class AnthropicLLM(LLMBase):
             messages.extend(cast(Iterable[dict[str, Any]], message_history))
         messages.append(UserMessage(content=input).model_dump())
         return messages  # type: ignore
+
+    @staticmethod
+    def _build_output_config(
+        response_format: Union[Type[BaseModel], dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Builds the Anthropic output_config for structured output."""
+        if isinstance(response_format, type) and issubclass(response_format, BaseModel):
+            schema = response_format.model_json_schema()
+            return {"format": {"type": "json_schema", "schema": schema}}
+        return response_format
 
     def get_messages_v2(
         self,

@@ -413,24 +413,97 @@ def test_anthropic_llm_invoke_v2_empty_response_error(mock_anthropic: Mock) -> N
     assert "LLM returned empty response" in str(exc_info.value)
 
 
-def test_anthropic_invoke_v2_with_response_format_raises_error(
+class _TestModelForAnthropic(BaseModel):
+    """Test model for structured output tests."""
+
+    model_config = ConfigDict(extra="forbid")
+    value: str
+
+
+def test_anthropic_llm_invoke_v2_with_pydantic_response_format(
     mock_anthropic: Mock,
 ) -> None:
-    """Test V2 interface raises NotImplementedError when response_format is used."""
-
-    class TestModel(BaseModel):
-        model_config = ConfigDict(extra="forbid")
-        value: str
+    """Test V2 interface passes a Pydantic response_format as output_config."""
+    mock_anthropic.Anthropic.return_value.messages.create.return_value = MagicMock(
+        content=[MagicMock(text='{"value": "ok"}')]
+    )
+    mock_anthropic.types.MessageParam = MagicMock(side_effect=lambda **kwargs: kwargs)
 
     messages: List[LLMMessage] = [{"role": "user", "content": "Test"}]
-    llm = AnthropicLLM(api_key="test", model_name="claude-3-opus")
+    llm = AnthropicLLM(model_name="claude-3-opus-20240229")
+    response = llm.invoke(messages, response_format=_TestModelForAnthropic)
 
-    with pytest.raises(NotImplementedError) as exc_info:
-        llm.invoke(messages, response_format=TestModel)
+    assert isinstance(response, LLMResponse)
+    assert response.content == '{"value": "ok"}'
 
-    assert "AnthropicLLM does not currently support structured output" in str(
-        exc_info.value
+    call_args = _as_mock(llm.client.messages.create).call_args[1]
+    output_config = call_args["output_config"]
+    assert output_config["format"]["type"] == "json_schema"
+    assert (
+        output_config["format"]["schema"] == _TestModelForAnthropic.model_json_schema()
     )
+
+
+def test_anthropic_llm_invoke_v2_with_dict_response_format(
+    mock_anthropic: Mock,
+) -> None:
+    """Test V2 interface passes a dict response_format through as output_config."""
+    mock_anthropic.Anthropic.return_value.messages.create.return_value = MagicMock(
+        content=[MagicMock(text='{"value": "ok"}')]
+    )
+    mock_anthropic.types.MessageParam = MagicMock(side_effect=lambda **kwargs: kwargs)
+
+    output_config = {
+        "format": {
+            "type": "json_schema",
+            "schema": {"type": "object", "properties": {"value": {"type": "string"}}},
+        }
+    }
+    messages: List[LLMMessage] = [{"role": "user", "content": "Test"}]
+    llm = AnthropicLLM(model_name="claude-3-opus-20240229")
+    response = llm.invoke(messages, response_format=output_config)
+
+    assert response.content == '{"value": "ok"}'
+    call_args = _as_mock(llm.client.messages.create).call_args[1]
+    assert call_args["output_config"] == output_config
+
+
+def test_anthropic_llm_invoke_v2_without_response_format_omits_output_config(
+    mock_anthropic: Mock,
+) -> None:
+    """Test V2 interface does not pass output_config when no response_format is given."""
+    mock_anthropic.Anthropic.return_value.messages.create.return_value = MagicMock(
+        content=[MagicMock(text="plain response")]
+    )
+    mock_anthropic.types.MessageParam = MagicMock(side_effect=lambda **kwargs: kwargs)
+
+    messages: List[LLMMessage] = [{"role": "user", "content": "Test"}]
+    llm = AnthropicLLM(model_name="claude-3-opus-20240229")
+    response = llm.invoke(messages)
+
+    assert response.content == "plain response"
+    call_args = _as_mock(llm.client.messages.create).call_args[1]
+    assert "output_config" not in call_args
+
+
+@pytest.mark.asyncio
+async def test_anthropic_llm_ainvoke_v2_with_pydantic_response_format(
+    mock_anthropic: Mock,
+) -> None:
+    """Test V2 async interface passes a Pydantic response_format as output_config."""
+    mock_response = AsyncMock()
+    mock_response.content = [MagicMock(text='{"value": "ok"}')]
+    mock_model = mock_anthropic.AsyncAnthropic.return_value
+    mock_model.messages.create = AsyncMock(return_value=mock_response)
+    mock_anthropic.types.MessageParam = MagicMock(side_effect=lambda **kwargs: kwargs)
+
+    messages: List[LLMMessage] = [{"role": "user", "content": "Test"}]
+    llm = AnthropicLLM(model_name="claude-3-opus-20240229")
+    response = await llm.ainvoke(messages, response_format=_TestModelForAnthropic)
+
+    assert response.content == '{"value": "ok"}'
+    call_args = _as_async_mock(llm.async_client.messages.create).call_args[1]
+    assert call_args["output_config"]["format"]["type"] == "json_schema"
 
 
 def test_anthropic_llm_close(mock_anthropic: Mock) -> None:
