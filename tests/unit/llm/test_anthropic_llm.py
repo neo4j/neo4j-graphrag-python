@@ -413,24 +413,126 @@ def test_anthropic_llm_invoke_v2_empty_response_error(mock_anthropic: Mock) -> N
     assert "LLM returned empty response" in str(exc_info.value)
 
 
-def test_anthropic_invoke_v2_with_response_format_raises_error(
+def test_anthropic_invoke_v2_with_pydantic_response_format(
     mock_anthropic: Mock,
 ) -> None:
-    """Test V2 interface raises NotImplementedError when response_format is used."""
+    """Test V2 interface structured output with Pydantic model."""
+    import json
 
     class TestModel(BaseModel):
         model_config = ConfigDict(extra="forbid")
         value: str
 
+    tool_use_block = MagicMock()
+    tool_use_block.type = "tool_use"
+    tool_use_block.name = "TestModel"
+    tool_use_block.input = {"value": "structured result"}
+
+    mock_response = MagicMock()
+    mock_response.content = [tool_use_block]
+    mock_response.usage.input_tokens = 10
+    mock_response.usage.output_tokens = 20
+    mock_anthropic.Anthropic.return_value.messages.create.return_value = mock_response
+    mock_anthropic.types.MessageParam = MagicMock(side_effect=lambda **kwargs: kwargs)
+
+    messages: List[LLMMessage] = [{"role": "user", "content": "Test"}]
+    llm = AnthropicLLM(api_key="test", model_name="claude-3-opus")
+    response = llm.invoke(messages, response_format=TestModel)
+
+    assert response.content == json.dumps({"value": "structured result"})
+    call_kwargs = mock_anthropic.Anthropic.return_value.messages.create.call_args[1]
+    assert call_kwargs["tool_choice"] == {"type": "tool", "name": "TestModel"}
+    assert len(call_kwargs["tools"]) == 1
+    assert call_kwargs["tools"][0]["name"] == "TestModel"
+
+
+def test_anthropic_invoke_v2_with_dict_response_format(
+    mock_anthropic: Mock,
+) -> None:
+    """Test V2 interface structured output with raw dict schema."""
+    import json
+
+    schema = {"title": "MySchema", "type": "object", "properties": {"value": {"type": "string"}}}
+
+    tool_use_block = MagicMock()
+    tool_use_block.type = "tool_use"
+    tool_use_block.name = "MySchema"
+    tool_use_block.input = {"value": "dict result"}
+
+    mock_response = MagicMock()
+    mock_response.content = [tool_use_block]
+    mock_response.usage.input_tokens = 10
+    mock_response.usage.output_tokens = 20
+    mock_anthropic.Anthropic.return_value.messages.create.return_value = mock_response
+    mock_anthropic.types.MessageParam = MagicMock(side_effect=lambda **kwargs: kwargs)
+
+    messages: List[LLMMessage] = [{"role": "user", "content": "Test"}]
+    llm = AnthropicLLM(api_key="test", model_name="claude-3-opus")
+    response = llm.invoke(messages, response_format=schema)
+
+    assert response.content == json.dumps({"value": "dict result"})
+    call_kwargs = mock_anthropic.Anthropic.return_value.messages.create.call_args[1]
+    assert call_kwargs["tool_choice"] == {"type": "tool", "name": "MySchema"}
+
+
+def test_anthropic_invoke_v2_structured_output_no_tool_block_raises(
+    mock_anthropic: Mock,
+) -> None:
+    """Test structured output raises LLMGenerationError when no tool_use block returned."""
+
+    class TestModel(BaseModel):
+        value: str
+
+    mock_response = MagicMock()
+    mock_response.content = [MagicMock(type="text", text="not a tool")]
+    mock_anthropic.Anthropic.return_value.messages.create.return_value = mock_response
+    mock_anthropic.types.MessageParam = MagicMock(side_effect=lambda **kwargs: kwargs)
+
     messages: List[LLMMessage] = [{"role": "user", "content": "Test"}]
     llm = AnthropicLLM(api_key="test", model_name="claude-3-opus")
 
-    with pytest.raises(NotImplementedError) as exc_info:
+    with pytest.raises(LLMGenerationError) as exc_info:
         llm.invoke(messages, response_format=TestModel)
+    assert "no tool_use block" in str(exc_info.value)
 
-    assert "AnthropicLLM does not currently support structured output" in str(
-        exc_info.value
-    )
+
+@pytest.mark.asyncio
+async def test_anthropic_ainvoke_v2_with_pydantic_response_format(
+    mock_anthropic: Mock,
+) -> None:
+    """Test async V2 interface structured output with Pydantic model."""
+    import json
+
+    class TestModel(BaseModel):
+        model_config = ConfigDict(extra="forbid")
+        value: str
+
+    tool_use_block = MagicMock()
+    tool_use_block.type = "tool_use"
+    tool_use_block.name = "TestModel"
+    tool_use_block.input = {"value": "async structured result"}
+
+    mock_response = AsyncMock()
+    mock_response.content = [tool_use_block]
+    mock_response.usage.input_tokens = 10
+    mock_response.usage.output_tokens = 20
+    mock_model = mock_anthropic.AsyncAnthropic.return_value
+    mock_model.messages.create = AsyncMock(return_value=mock_response)
+    mock_anthropic.types.MessageParam = MagicMock(side_effect=lambda **kwargs: kwargs)
+
+    messages: List[LLMMessage] = [{"role": "user", "content": "Test"}]
+    llm = AnthropicLLM(api_key="test", model_name="claude-3-opus")
+    response = await llm.ainvoke(messages, response_format=TestModel)
+
+    assert response.content == json.dumps({"value": "async structured result"})
+    call_kwargs = mock_model.messages.create.call_args[1]
+    assert call_kwargs["tool_choice"] == {"type": "tool", "name": "TestModel"}
+
+
+def test_anthropic_llm_supports_structured_output(mock_anthropic: Mock) -> None:  # noqa: ARG001
+    """Test that AnthropicLLM advertises structured output support."""
+    llm = AnthropicLLM(model_name="claude-3-opus")
+    assert llm.supports_structured_output is True
 
 
 def test_anthropic_llm_close(mock_anthropic: Mock) -> None:
