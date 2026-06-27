@@ -443,6 +443,70 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
         )
 
 
+class AsyncRetriever(ABC):
+    """
+    Abstract base class for async Neo4j retrievers using neo4j.AsyncDriver.
+    """
+
+    index_name: str
+    VERIFY_NEO4J_VERSION = True
+
+    def __init__(self, driver: "neo4j.AsyncDriver", neo4j_database: Optional[str] = None):
+        from neo4j_graphrag.utils import driver_config
+        self.driver = driver_config.override_user_agent(driver)
+        self.neo4j_database = neo4j_database
+
+    async def _fetch_index_infos(self, vector_index_name: str) -> None:
+        """Fetch node label and embedding property from the index definition (async)."""
+        query = (
+            "SHOW VECTOR INDEXES "
+            "YIELD name, labelsOrTypes, properties, options "
+            "WHERE name = $index_name "
+            "RETURN labelsOrTypes as labels, properties, "
+            "options.indexConfig.`vector.dimensions` as dimensions, "
+            "options.indexConfig.`vector.filterable_properties` as filterable_properties"
+        )
+        query_result = await self.driver.execute_query(
+            query,
+            {"index_name": vector_index_name},
+            database_=self.neo4j_database,
+            routing_=neo4j.RoutingControl.READ,
+        )
+        try:
+            result = query_result.records[0]
+            self._node_label = result["labels"][0]
+            self._embedding_node_property = result["properties"][0]
+            self._embedding_dimension = result["dimensions"]
+            self._filterable_properties = result.get("filterable_properties") or []
+        except IndexError as e:
+            raise Exception(f"No index with name {self.index_name} found") from e
+
+    async def search(self, *args: Any, **kwargs: Any) -> "RetrieverResult":
+        """Async search method. Calls get_search_results and formats results."""
+        raw_result = await self.get_search_results(*args, **kwargs)
+        formatter = self.get_result_formatter()
+        search_items = [formatter(record) for record in raw_result.records]
+        metadata = raw_result.metadata or {}
+        metadata["__retriever"] = self.__class__.__name__
+        return RetrieverResult(
+            items=search_items,
+            metadata=metadata,
+        )
+
+    @abstractmethod
+    async def get_search_results(self, *args: Any, **kwargs: Any) -> "RawSearchResult":
+        """Must be implemented in subclasses. Returns RawSearchResult."""
+        pass
+
+    def get_result_formatter(self) -> Callable[[neo4j.Record], RetrieverResultItem]:
+        if hasattr(self, "result_formatter"):
+            return self.result_formatter or self.default_record_formatter
+        return self.default_record_formatter
+
+    def default_record_formatter(self, record: neo4j.Record) -> RetrieverResultItem:
+        return RetrieverResultItem(content=str(record), metadata=record.get("metadata"))
+
+
 class ExternalRetriever(Retriever, ABC):
     """
     Abstract class for External Vector Stores
