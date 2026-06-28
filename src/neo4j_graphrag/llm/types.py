@@ -27,11 +27,15 @@ class LLMUsage(BaseModel):
             ``None`` when not reported by the provider.
         total_tokens (Optional[int]): Total tokens consumed by the call.
             ``None`` when not reported by the provider.
+        cached_tokens (Optional[int]): Number of prompt tokens served from the
+            provider's context cache (e.g. Vertex AI implicit caching).
+            ``None`` when not reported by the provider.
     """
 
     request_tokens: Optional[int] = None
     response_tokens: Optional[int] = None
     total_tokens: Optional[int] = None
+    cached_tokens: Optional[int] = None
 
 
 class LLMResponse(BaseModel):

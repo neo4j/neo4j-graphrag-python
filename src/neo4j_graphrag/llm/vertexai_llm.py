@@ -593,9 +593,19 @@ class VertexAILLM(LLMBase):
         usage = None
         metadata = response.usage_metadata
         if metadata:
+            cached = metadata.cached_content_token_count or None
             usage = LLMUsage(
                 request_tokens=metadata.prompt_token_count,
                 response_tokens=metadata.candidates_token_count,
                 total_tokens=metadata.total_token_count,
+                cached_tokens=cached,
             )
+            if cached:
+                from openinference.semconv.trace import SpanAttributes
+                from opentelemetry import trace as otel_trace
+
+                otel_trace.get_current_span().set_attribute(
+                    SpanAttributes.LLM_TOKEN_COUNT_PROMPT_DETAILS_CACHE_READ,
+                    cached,
+                )
         return LLMResponse(content=response.text, usage=usage)
