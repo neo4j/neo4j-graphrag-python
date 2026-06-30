@@ -514,8 +514,8 @@ async def test_entity_to_chunk_rels_created_when_lexical_graph_disabled() -> Non
     llm = MagicMock(spec=LLMInterface)
     llm.ainvoke.return_value = LLMResponse(
         content='{"nodes": [{"id": "p1", "label": "Person", "properties": {"name": "Alice"}}, '
-                '{"id": "o1", "label": "Organization", "properties": {"name": "Acme"}}], '
-                '"relationships": [{"start_node_id": "p1", "end_node_id": "o1", "type": "WORKS_FOR"}]}'
+        '{"id": "o1", "label": "Organization", "properties": {"name": "Acme"}}], '
+        '"relationships": [{"start_node_id": "p1", "end_node_id": "o1", "type": "WORKS_FOR"}]}'
     )
     extractor = LLMEntityRelationExtractor(
         llm=llm,
@@ -552,8 +552,12 @@ async def test_no_chunk_nodes_when_lexical_graph_disabled() -> None:
 
     chunk_nodes = [n for n in res.nodes if n.label == "Chunk"]
     doc_nodes = [n for n in res.nodes if n.label == "Document"]
-    assert chunk_nodes == [], "Chunk nodes must not appear when create_lexical_graph=False"
-    assert doc_nodes == [], "Document nodes must not appear when create_lexical_graph=False"
+    assert (
+        chunk_nodes == []
+    ), "Chunk nodes must not appear when create_lexical_graph=False"
+    assert (
+        doc_nodes == []
+    ), "Document nodes must not appear when create_lexical_graph=False"
 
 
 @pytest.mark.asyncio
