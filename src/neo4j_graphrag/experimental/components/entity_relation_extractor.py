@@ -358,17 +358,14 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             schema (GraphSchema | None): Definition of the schema to guide the LLM in its extraction.
             examples (str): Examples for few-shot learning in the prompt.
         """
-        lexical_graph_builder = None
+        config = lexical_graph_config or LexicalGraphConfig()
+        lexical_graph_builder = LexicalGraphBuilder(config=config)
         lexical_graph = None
         if self.create_lexical_graph:
-            config = lexical_graph_config or LexicalGraphConfig()
-            lexical_graph_builder = LexicalGraphBuilder(config=config)
             lexical_graph_result = await lexical_graph_builder.run(
                 text_chunks=chunks, document_info=document_info
             )
             lexical_graph = lexical_graph_result.graph
-        elif lexical_graph_config:
-            lexical_graph_builder = LexicalGraphBuilder(config=lexical_graph_config)
         schema = schema or GraphSchema(
             node_types=(),
         )

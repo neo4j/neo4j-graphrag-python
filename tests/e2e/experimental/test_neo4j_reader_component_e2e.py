@@ -74,8 +74,11 @@ async def test_neo4j_reader_in_pipeline(driver: neo4j.Driver, llm: MagicMock) ->
     pipeline_output = await pipeline.run({})
     created_graph = pipeline_output.result["extractor"]
     assert len(created_graph["nodes"]) == 1
-    # no lexical graph, so no relationship to the chunk
-    assert len(created_graph["relationships"]) == 0
+    # no lexical graph nodes, but FROM_CHUNK relationship is still created
+    from_chunk_rels = [
+        r for r in created_graph["relationships"] if r["type"] == "FROM_CHUNK"
+    ]
+    assert len(from_chunk_rels) == 1
 
 
 @pytest.mark.asyncio
