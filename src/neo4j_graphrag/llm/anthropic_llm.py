@@ -54,7 +54,6 @@ if TYPE_CHECKING:
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
 class AnthropicLLM(LLMBase):
-    supports_structured_output: bool = True
     """Interface for large language models on Anthropic
 
     Args:
@@ -80,6 +79,8 @@ class AnthropicLLM(LLMBase):
         )
         llm.invoke("Who is the mother of Paul Atreides?")
     """
+
+    supports_structured_output: bool = True
 
     def __init__(
         self,
@@ -191,30 +192,19 @@ class AnthropicLLM(LLMBase):
         try:
             system_instruction, messages = self.get_messages_v2(input)
             if response_format is not None:
-                tool_name, tools, tool_choice = self._build_tool_choice(response_format)
-                response = self.client.messages.create(
-                    model=self.model_name,
-                    system=system_instruction,
-                    messages=messages,
-                    tools=tools,
-                    tool_choice=tool_choice,
-                    **self.model_params,
-                    **kwargs,
-                )
-                text = self._extract_tool_result(response, tool_name)
+                kwargs["output_config"] = self._build_output_config(response_format)
+            response = self.client.messages.create(
+                model=self.model_name,
+                system=system_instruction,
+                messages=messages,
+                **self.model_params,
+                **kwargs,
+            )
+            response_content = response.content
+            if response_content and len(response_content) > 0:
+                text = response_content[0].text
             else:
-                response = self.client.messages.create(
-                    model=self.model_name,
-                    system=system_instruction,
-                    messages=messages,
-                    **self.model_params,
-                    **kwargs,
-                )
-                response_content = response.content
-                if response_content and len(response_content) > 0:
-                    text = response_content[0].text
-                else:
-                    raise LLMGenerationError("LLM returned empty response.")
+                raise LLMGenerationError("LLM returned empty response.")
             usage = LLMUsage(
                 request_tokens=response.usage.input_tokens,
                 response_tokens=response.usage.output_tokens,
@@ -287,30 +277,19 @@ class AnthropicLLM(LLMBase):
         try:
             system_instruction, messages = self.get_messages_v2(input)
             if response_format is not None:
-                tool_name, tools, tool_choice = self._build_tool_choice(response_format)
-                response = await self.async_client.messages.create(
-                    model=self.model_name,
-                    system=system_instruction,
-                    messages=messages,
-                    tools=tools,
-                    tool_choice=tool_choice,
-                    **self.model_params,
-                    **kwargs,
-                )
-                text = self._extract_tool_result(response, tool_name)
+                kwargs["output_config"] = self._build_output_config(response_format)
+            response = await self.async_client.messages.create(
+                model=self.model_name,
+                system=system_instruction,
+                messages=messages,
+                **self.model_params,
+                **kwargs,
+            )
+            response_content = response.content
+            if response_content and len(response_content) > 0:
+                text = response_content[0].text
             else:
-                response = await self.async_client.messages.create(
-                    model=self.model_name,
-                    system=system_instruction,
-                    messages=messages,
-                    **self.model_params,
-                    **kwargs,
-                )
-                response_content = response.content
-                if response_content and len(response_content) > 0:
-                    text = response_content[0].text
-                else:
-                    raise LLMGenerationError("LLM returned empty response.")
+                raise LLMGenerationError("LLM returned empty response.")
             usage = LLMUsage(
                 request_tokens=response.usage.input_tokens,
                 response_tokens=response.usage.output_tokens,
@@ -325,58 +304,27 @@ class AnthropicLLM(LLMBase):
         await self.async_client.close()
 
     # subsidiary methods
-    def _build_tool_choice(
-        self,
+    @staticmethod
+    def _build_output_config(
         response_format: Union[Type[BaseModel], dict[str, Any]],
-    ) -> tuple[str, list[dict[str, Any]], dict[str, Any]]:
-        """Build Anthropic tool-forcing args for structured output.
+    ) -> dict[str, Any]:
+        """Builds the Anthropic output_config for structured output.
 
-        Anthropic implements structured output by defining a single tool whose
-        input_schema is the desired JSON schema, then forcing the model to call
-        it via tool_choice={"type": "tool", "name": <name>}.
+        Anthropic exposes a first-class structured-output API via output_config
+        with type "json_schema", which uses constrained decoding to guarantee
+        schema-conforming output.
 
         Args:
-            response_format: A Pydantic BaseModel subclass or a raw JSON schema dict.
+            response_format: A Pydantic BaseModel subclass, or a dict already
+                matching Anthropic's output_config schema.
 
         Returns:
-            A tuple of (tool_name, tools_list, tool_choice_dict).
+            A dict suitable for the `output_config` kwarg to `messages.create`.
         """
         if isinstance(response_format, type) and issubclass(response_format, BaseModel):
-            tool_name = response_format.__name__
             schema = response_format.model_json_schema()
-        else:
-            tool_name = response_format.get("title", "structured_output")
-            schema = response_format
-        tools = [
-            {
-                "name": tool_name,
-                "description": f"Return a {tool_name} object.",
-                "input_schema": schema,
-            }
-        ]
-        tool_choice: dict[str, Any] = {"type": "tool", "name": tool_name}
-        return tool_name, tools, tool_choice
-
-    def _extract_tool_result(self, response: Any, tool_name: str) -> str:
-        """Extract JSON string from a tool-use response block.
-
-        Args:
-            response: The raw Anthropic API response.
-            tool_name: The name of the forced tool.
-
-        Returns:
-            JSON string of the tool input.
-
-        Raises:
-            LLMGenerationError: If no tool_use block is found.
-        """
-        import json
-        for block in response.content:
-            if getattr(block, "type", None) == "tool_use" and block.name == tool_name:
-                return json.dumps(block.input)
-        raise LLMGenerationError(
-            f"AnthropicLLM structured output: no tool_use block for '{tool_name}' in response."
-        )
+            return {"format": {"type": "json_schema", "schema": schema}}
+        return response_format
 
     def get_messages(
         self,
