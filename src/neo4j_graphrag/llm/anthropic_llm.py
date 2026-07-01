@@ -80,6 +80,8 @@ class AnthropicLLM(LLMBase):
         llm.invoke("Who is the mother of Paul Atreides?")
     """
 
+    supports_structured_output: bool = True
+
     def __init__(
         self,
         model_name: str,
@@ -187,12 +189,10 @@ class AnthropicLLM(LLMBase):
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        if response_format is not None:
-            raise NotImplementedError(
-                "AnthropicLLM does not currently support structured output"
-            )
         try:
             system_instruction, messages = self.get_messages_v2(input)
+            if response_format is not None:
+                kwargs["output_config"] = self._build_output_config(response_format)
             response = self.client.messages.create(
                 model=self.model_name,
                 system=system_instruction,
@@ -267,17 +267,17 @@ class AnthropicLLM(LLMBase):
 
         Args:
             input (List[LLMMessage]): The messages to send to the LLM.
-            response_format: Not supported by AnthropicLLM.
+            response_format (Optional[Union[Type[BaseModel], dict[str, Any]]]): Optional
+                response format. Can be a Pydantic model class for structured output
+                or a dict containing a JSON schema.
 
         Returns:
             LLMResponse: The response from the LLM.
         """
-        if response_format is not None:
-            raise NotImplementedError(
-                "AnthropicLLM does not currently support structured output"
-            )
         try:
             system_instruction, messages = self.get_messages_v2(input)
+            if response_format is not None:
+                kwargs["output_config"] = self._build_output_config(response_format)
             response = await self.async_client.messages.create(
                 model=self.model_name,
                 system=system_instruction,
@@ -304,6 +304,28 @@ class AnthropicLLM(LLMBase):
         await self.async_client.close()
 
     # subsidiary methods
+    @staticmethod
+    def _build_output_config(
+        response_format: Union[Type[BaseModel], dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Builds the Anthropic output_config for structured output.
+
+        Anthropic exposes a first-class structured-output API via output_config
+        with type "json_schema", which uses constrained decoding to guarantee
+        schema-conforming output.
+
+        Args:
+            response_format: A Pydantic BaseModel subclass, or a dict already
+                matching Anthropic's output_config schema.
+
+        Returns:
+            A dict suitable for the `output_config` kwarg to `messages.create`.
+        """
+        if isinstance(response_format, type) and issubclass(response_format, BaseModel):
+            schema = response_format.model_json_schema()
+            return {"format": {"type": "json_schema", "schema": schema}}
+        return response_format
+
     def get_messages(
         self,
         input: str,
