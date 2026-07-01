@@ -214,6 +214,7 @@ IMPORTANT RULES:
 1. Return only abstract schema information, not concrete instances.
 2. Use singular PascalCase labels for node types (e.g., Person, Company, Product).
 3. Use UPPER_SNAKE_CASE labels for relationship types (e.g., WORKS_FOR, MANAGES).
+3.1 Define each relationship type once in "relationship_types". A relationship type name is global: the same type may be reused across multiple patterns (different source/target node pairs), sharing a single set of properties and constraints. Use distinct type names only when patterns genuinely need different properties or constraints.
 4. Include property definitions only when the type can be confidently inferred, otherwise omit them.
 5. When defining patterns, ensure that every node label and relationship label mentioned exists in your lists of node types and relationship types.
 6. Do not create node types that aren't clearly mentioned in the text.
@@ -239,6 +240,7 @@ IMPORTANT RULES:
 10.3 Do not combine UNIQUENESS and KEY on the same node or relationship type with the same properties.
 10.4 Do not infer KEY from UNIQUENESS alone; KEY implies required presence, unlike UNIQUENESS alone.
 10.5 For composite key (multiple properties), list all properties in "property_names". All must exist and the combination must be unique.
+10.6 Do not add EXISTENCE on a property already covered by a KEY constraint (KEY already implies mandatory presence).
 11. Never use double underscores (__) as a prefix or suffix in node labels or relationship types (e.g. __Person__ or __KNOWS__ are forbidden).
 
 Accepted property types are: BOOLEAN, DATE, DURATION, FLOAT, INTEGER, LIST,

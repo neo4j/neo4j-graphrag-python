@@ -101,7 +101,8 @@ class GraphConstraintType(str, enum.Enum):
     constraints are allowed.  ``EXISTENCE`` marks a mandatory (non-null) node or
     relationship property (single property only — Neo4j does not support composite
     existence).  ``KEY`` matches Neo4j NODE KEY / RELATIONSHIP KEY: mandatory and unique;
-    supports composite (multi-property) constraints.
+    supports composite (multi-property) constraints. KEY subsumes EXISTENCE for its
+    properties — do not combine KEY and EXISTENCE on the same property.
     """
 
     UNIQUENESS = "UNIQUENESS"
@@ -380,6 +381,31 @@ def _validate_constraint_property_defined(
                 )
 
 
+def _format_duplicate_relationship_types_error(
+    duplicates: dict[str, list[RelationshipType]],
+) -> str:
+    """Build the SchemaValidationError message for duplicate relationship-type labels."""
+    parts: list[str] = []
+    for label, entries in duplicates.items():
+        property_sets = ", ".join(
+            "{" + ", ".join(sorted(p.name for p in rel.properties)) + "}"
+            for rel in entries
+            if rel.properties
+        )
+        message = f"Duplicate relationship type '{label}' defined {len(entries)} times"
+        if property_sets:
+            message += f" with property sets: {property_sets}"
+        parts.append(f"{message}.")
+    parts.append(
+        "In Neo4j a relationship type is global per name: entries sharing a label "
+        "describe the same type, and any constraint on it applies to every instance "
+        "regardless of source/target nodes. Define the relationship type once and reuse it across patterns, "
+        "or use distinct relationship types when patterns need different properties "
+        "or constraints."
+    )
+    return "\n".join(parts)
+
+
 class Pattern(BaseModel):
     """Represents a relationship pattern in the graph schema.
 
@@ -504,10 +530,36 @@ class GraphSchema(DataModel):
             return ("", "", "", "")
 
         seen_existence: set[tuple[str, str, str]] = set()
+        key_covered: set[tuple[str, str, str]] = set()
         for c in constraints:
             t, nt, rt, pn = _constraint_identity(c)
             if t in (GraphConstraintType.EXISTENCE.value, "EXISTENCE"):
                 seen_existence.add((nt or "", rt or "", pn))
+            if t not in (GraphConstraintType.KEY.value, "KEY"):
+                continue
+            if isinstance(c, ConstraintType):
+                pnames = c.property_names
+                nt = c.node_type or ""
+                rt = c.relationship_type or ""
+            elif isinstance(c, dict):
+                pnames = c.get("property_names") or ()
+                if isinstance(pnames, str):
+                    pnames = (pnames,)
+                else:
+                    pnames = tuple(pnames)
+                if not pnames:
+                    pn = c.get("property_name") or ""
+                    pnames = (pn,) if pn else ()
+                nt = str(c.get("node_type") or "")
+                rt = str(c.get("relationship_type") or "")
+            else:
+                continue
+            for key_prop_name in pnames:
+                if key_prop_name:
+                    key_covered.add((nt or "", rt or "", key_prop_name))
+
+        def _skip_required_migration(key: tuple[str, str, str]) -> bool:
+            return key in seen_existence or key in key_covered
 
         for node in data.get("node_types") or []:
             if not isinstance(node, dict):
@@ -524,7 +576,7 @@ class GraphSchema(DataModel):
                 if not pname:
                     continue
                 key = (label, "", pname)
-                if key in seen_existence:
+                if _skip_required_migration(key):
                     prop["required"] = False
                     continue
                 constraints.append(
@@ -557,7 +609,7 @@ class GraphSchema(DataModel):
                         new_props.append(prop)
                         continue
                     key = (label, "", pname)
-                    if key in seen_existence:
+                    if _skip_required_migration(key):
                         new_props.append(prop.model_copy(update={"required": False}))
                         continue
                     constraints.append(
@@ -588,7 +640,7 @@ class GraphSchema(DataModel):
                 if not pname:
                     continue
                 key = ("", rlabel, pname)
-                if key in seen_existence:
+                if _skip_required_migration(key):
                     prop["required"] = False
                     continue
                 constraints.append(
@@ -621,7 +673,7 @@ class GraphSchema(DataModel):
                         rel_new_props.append(prop)
                         continue
                     key = ("", rlabel, pname)
-                    if key in seen_existence:
+                    if _skip_required_migration(key):
                         rel_new_props.append(
                             prop.model_copy(update={"required": False})
                         )
@@ -673,6 +725,28 @@ class GraphSchema(DataModel):
                         f"Node type '{entity2}' is not defined in the provided node_types."
                     )
 
+        return self
+
+    @model_validator(mode="after")
+    def validate_no_duplicate_relationship_types(self) -> Self:
+        """Reject duplicate ``relationship_types`` labels.
+
+        In Neo4j a relationship type is global per name, so two entries sharing
+        the same ``label`` describe the same type and are an invalid model. This
+        check runs before constraint validation so the resulting error is the
+        clear duplicate-label message rather than a misleading "undefined
+        property" constraint error produced by the last-write-wins index.
+        """
+        seen: dict[str, list[RelationshipType]] = {}
+        for rel in self.relationship_types:
+            seen.setdefault(rel.label, []).append(rel)
+        duplicates = {
+            label: entries for label, entries in seen.items() if len(entries) > 1
+        }
+        if duplicates:
+            raise SchemaValidationError(
+                _format_duplicate_relationship_types_error(duplicates)
+            )
         return self
 
     @model_validator(mode="after")
@@ -754,6 +828,53 @@ class GraphSchema(DataModel):
                 f"UNIQUENESS and KEY constraints cannot apply to the same relationship type "
                 f"and properties ({rt!r}, {pns!r})."
             )
+        return self
+
+    @model_validator(mode="after")
+    def validate_constraints_key_existence_exclusivity(self) -> Self:
+        """KEY subsumes EXISTENCE: redundant EXISTENCE on KEY-covered properties is invalid."""
+        node_key_props: dict[str, set[str]] = {}
+        rel_key_props: dict[str, set[str]] = {}
+        for c in self.constraints:
+            ct = c.type
+            if isinstance(ct, str):
+                ct = GraphConstraintType(ct)
+            if ct != GraphConstraintType.KEY:
+                continue
+            has_node = bool(c.node_type and str(c.node_type).strip())
+            has_rel = bool(c.relationship_type and str(c.relationship_type).strip())
+            if has_node:
+                assert c.node_type is not None
+                node_key_props.setdefault(c.node_type, set()).update(c.property_names)
+            elif has_rel:
+                assert c.relationship_type is not None
+                rel_key_props.setdefault(c.relationship_type, set()).update(
+                    c.property_names
+                )
+        for c in self.constraints:
+            ct = c.type
+            if isinstance(ct, str):
+                ct = GraphConstraintType(ct)
+            if ct != GraphConstraintType.EXISTENCE:
+                continue
+            pname = c.property_names[0]
+            has_node = bool(c.node_type and str(c.node_type).strip())
+            has_rel = bool(c.relationship_type and str(c.relationship_type).strip())
+            if has_node:
+                assert c.node_type is not None
+                if pname in node_key_props.get(c.node_type, set()):
+                    raise SchemaValidationError(
+                        f"EXISTENCE and KEY constraints cannot apply to the same node type "
+                        f"and property ({c.node_type!r}, {pname!r})."
+                    )
+            elif has_rel:
+                assert c.relationship_type is not None
+                if pname in rel_key_props.get(c.relationship_type, set()):
+                    raise SchemaValidationError(
+                        f"EXISTENCE and KEY constraints cannot apply to the same "
+                        f"relationship type and property "
+                        f"({c.relationship_type!r}, {pname!r})."
+                    )
         return self
 
     def node_type_from_label(self, label: str) -> Optional[NodeType]:
@@ -1344,6 +1465,66 @@ def _extraction_apply_cross_reference_filters(
     return extracted_patterns, extracted_constraints
 
 
+def _merge_duplicate_relationship_types(
+    rel_types: Optional[List[Dict[str, Any]]],
+) -> Optional[List[Dict[str, Any]]]:
+    """Merge relationship types that share the same label into a single entry.
+
+    Neo4j relationship types are global per name, so an LLM-extracted schema that
+    lists the same relationship type more than once must be reconciled into one
+    definition. Properties are unioned and de-duplicated by name in
+    first-occurrence order (the first definition wins on a name conflict);
+    non-property fields (e.g. ``description``, ``additional_properties``) keep the
+    first entry's values. Entries that are not dicts or have no usable label are
+    left in place untouched. Output ordering is deterministic.
+    """
+    if not rel_types:
+        return rel_types
+
+    merged: List[Dict[str, Any]] = []
+    index_by_label: Dict[str, int] = {}
+    merged_labels: set[str] = set()
+
+    for rel_dict in rel_types:
+        label = rel_dict.get("label") if isinstance(rel_dict, dict) else None
+        if not isinstance(rel_dict, dict) or not label:
+            merged.append(rel_dict)
+            continue
+
+        if label not in index_by_label:
+            new_entry = dict(rel_dict)
+            new_entry["properties"] = list(rel_dict.get("properties") or [])
+            index_by_label[label] = len(merged)
+            merged.append(new_entry)
+            continue
+
+        merged_labels.add(label)
+        existing = merged[index_by_label[label]]
+        existing_props: List[Dict[str, Any]] = existing["properties"]
+        existing_names = {
+            p.get("name")
+            for p in existing_props
+            if isinstance(p, dict) and p.get("name")
+        }
+        for prop in rel_dict.get("properties") or []:
+            name = prop.get("name") if isinstance(prop, dict) else None
+            if name and name in existing_names:
+                continue
+            existing_props.append(prop)
+            if name:
+                existing_names.add(name)
+
+    for label in sorted(merged_labels):
+        logger.warning(
+            f"Reconciled duplicate relationship type '{label}' from the "
+            f"extracted schema into a single definition (union of properties). "
+            f"Neo4j relationship types are global per name, so a type cannot be "
+            f"defined more than once."
+        )
+
+    return merged
+
+
 def validate_extraction_dict_to_graph_schema(
     extracted_schema: Dict[str, Any],
 ) -> GraphSchema:
@@ -1353,7 +1534,9 @@ def validate_extraction_dict_to_graph_schema(
     :class:`SchemaFromTextExtractor` (V1 and V2). Does not require a configured LLM.
     """
     node_types = extracted_schema.get("node_types") or []
-    rel_types = extracted_schema.get("relationship_types")
+    rel_types = _merge_duplicate_relationship_types(
+        extracted_schema.get("relationship_types")
+    )
     patterns = extracted_schema.get("patterns")
     constraints = extracted_schema.get("constraints")
 
