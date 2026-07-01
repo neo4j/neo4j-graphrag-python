@@ -79,6 +79,7 @@ If OpenAI cannot be used directly, there are a few available alternatives:
 - Use Anthropic LLM (Claude...).
 - Use Mistral LLM
 - Use Cohere.
+- Use LiteLLM (100+ providers via a unified interface).
 - Use a local Ollama model.
 - Implement a custom interface.
 - Utilize any LangChain chat model.
@@ -212,6 +213,47 @@ To use Cohere, instantiate the `CohereLLM` class:
 
 
 See :ref:`coherellm`.
+
+
+Using LiteLLM (100+ Providers)
+-------------------------------
+
+LiteLLM provides a unified interface to 100+ LLM providers (OpenAI, Anthropic,
+Google, Azure, AWS Bedrock, Ollama, and more) using the OpenAI completion format.
+To use LiteLLM, instantiate the `LiteLLMChat` class:
+
+.. code:: python
+
+    from neo4j_graphrag.llm import LiteLLMChat
+
+    # Use any LiteLLM-supported provider
+    llm = LiteLLMChat(model_name="gpt-4o", api_key="...")
+    llm.invoke("say something")
+
+    # Anthropic
+    llm = LiteLLMChat(model_name="anthropic/claude-sonnet-4-20250514", api_key="...")
+
+    # Ollama (local)
+    llm = LiteLLMChat(model_name="ollama/llama3")
+
+    # Azure OpenAI
+    llm = LiteLLMChat(
+        model_name="azure/my-deployment",
+        api_key="...",
+        api_base="https://my-endpoint.openai.azure.com/",
+    )
+
+    # AWS Bedrock
+    llm = LiteLLMChat(model_name="bedrock/anthropic.claude-v2")
+
+
+.. note::
+
+    In order to run this code, the `litellm` Python package needs to be installed:
+    `pip install "neo4j_graphrag[litellm]"`
+
+
+See :ref:`litellmchat`.
 
 
 Using a Local Model via Ollama
@@ -620,6 +662,7 @@ Currently, this package supports the following embedders:
 - :ref:`cohereembeddings`
 - :ref:`azureopenaiembeddings`
 - :ref:`ollamaembeddings`
+- :ref:`litellmembeddings`
 
 The `OpenAIEmbeddings` was illustrated previously. Here is how to use the `SentenceTransformerEmbeddings`:
 

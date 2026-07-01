@@ -88,7 +88,7 @@ class LiteLLMChat(LLMBase):
         llm = LiteLLMChat(model_name="ollama/llama3")
     """
 
-    supports_structured_output = True
+    supports_structured_output = False
 
     def __init__(
         self,
@@ -145,6 +145,7 @@ class LiteLLMChat(LLMBase):
         else:
             raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
 
+    @rate_limit_handler_decorator
     def invoke_with_tools(
         self,
         input: str,
@@ -193,6 +194,7 @@ class LiteLLMChat(LLMBase):
             content=res.choices[0].message.content,
         )
 
+    @async_rate_limit_handler_decorator
     async def ainvoke_with_tools(
         self,
         input: str,
@@ -284,6 +286,7 @@ class LiteLLMChat(LLMBase):
                         "type": "json_schema",
                         "json_schema": {
                             "name": response_format.__name__,
+                            "strict": True,
                             "schema": response_format.model_json_schema(),
                         },
                     }
@@ -340,6 +343,7 @@ class LiteLLMChat(LLMBase):
                         "type": "json_schema",
                         "json_schema": {
                             "name": response_format.__name__,
+                            "strict": True,
                             "schema": response_format.model_json_schema(),
                         },
                     }

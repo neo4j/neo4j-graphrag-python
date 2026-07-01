@@ -318,6 +318,12 @@ CohereEmbeddings
 .. autoclass:: neo4j_graphrag.embeddings.cohere.CohereEmbeddings
     :members:
 
+LiteLLMEmbeddings
+=================
+
+.. autoclass:: neo4j_graphrag.embeddings.litellm.LiteLLMEmbeddings
+    :members:
+
 **********
 Generation
 **********
@@ -399,6 +405,13 @@ MistralAILLM
 ------------
 
 .. autoclass:: neo4j_graphrag.llm.mistralai_llm.MistralAILLM
+    :members:
+
+
+LiteLLMChat
+-----------
+
+.. autoclass:: neo4j_graphrag.llm.litellm_llm.LiteLLMChat
     :members:
 
 
