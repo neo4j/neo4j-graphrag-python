@@ -1,0 +1,95 @@
+#  Copyright (c) "Neo4j"
+#  Neo4j Sweden AB [https://neo4j.com]
+#  #
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#  #
+#      https://www.apache.org/licenses/LICENSE-2.0
+#  #
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
+import sys
+from typing import Generator
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
+import pytest
+from neo4j_graphrag.embeddings.litellm import LiteLLMEmbeddings
+from neo4j_graphrag.exceptions import EmbeddingsGenerationError
+
+
+@pytest.fixture
+def mock_litellm() -> Generator[MagicMock, None, None]:
+    mock_litellm = MagicMock()
+    with patch.dict(sys.modules, {"litellm": mock_litellm}):
+        yield mock_litellm
+
+
+@patch("builtins.__import__", side_effect=ImportError)
+def test_litellm_embedder_missing_dependency(mock_import: Mock) -> None:
+    with pytest.raises(ImportError):
+        LiteLLMEmbeddings()
+
+
+def test_litellm_embedder_happy_path(mock_litellm: MagicMock) -> None:
+    mock_litellm.embedding.return_value = MagicMock(
+        data=[{"embedding": [1.0, 2.0, 3.0]}]
+    )
+    embedder = LiteLLMEmbeddings(model="text-embedding-ada-002", api_key="test-key")
+    result = embedder.embed_query("my text")
+    assert isinstance(result, list)
+    assert result == [1.0, 2.0, 3.0]
+    mock_litellm.embedding.assert_called_once_with(
+        model="text-embedding-ada-002",
+        input=["my text"],
+        api_key="test-key",
+    )
+
+
+@pytest.mark.asyncio
+async def test_litellm_embedder_async_happy_path(mock_litellm: MagicMock) -> None:
+    mock_litellm.aembedding = AsyncMock(
+        return_value=MagicMock(data=[{"embedding": [4.0, 5.0, 6.0]}])
+    )
+    embedder = LiteLLMEmbeddings(model="text-embedding-ada-002", api_key="test-key")
+    result = await embedder.async_embed_query("my text")
+    assert isinstance(result, list)
+    assert result == [4.0, 5.0, 6.0]
+
+
+def test_litellm_embedder_error_handling(mock_litellm: MagicMock) -> None:
+    mock_litellm.embedding.side_effect = Exception("API Error")
+    embedder = LiteLLMEmbeddings(model="text-embedding-ada-002")
+    with pytest.raises(
+        EmbeddingsGenerationError, match="Failed to generate embedding with LiteLLM"
+    ):
+        embedder.embed_query("my text")
+
+
+@pytest.mark.asyncio
+async def test_litellm_embedder_async_error_handling(
+    mock_litellm: MagicMock,
+) -> None:
+    mock_litellm.aembedding = AsyncMock(side_effect=Exception("API Error"))
+    embedder = LiteLLMEmbeddings(model="text-embedding-ada-002")
+    with pytest.raises(
+        EmbeddingsGenerationError, match="Failed to generate embedding with LiteLLM"
+    ):
+        await embedder.async_embed_query("my text")
+
+
+def test_litellm_embedder_kwargs_passed_through(mock_litellm: MagicMock) -> None:
+    mock_litellm.embedding.return_value = MagicMock(data=[{"embedding": [1.0, 2.0]}])
+    embedder = LiteLLMEmbeddings(
+        model="cohere/embed-english-v3.0",
+        api_key="test-key",
+        api_base="https://custom.endpoint.com",
+    )
+    embedder.embed_query("my text")
+    call_args = mock_litellm.embedding.call_args
+    assert call_args[1]["api_key"] == "test-key"
+    assert call_args[1]["api_base"] == "https://custom.endpoint.com"
