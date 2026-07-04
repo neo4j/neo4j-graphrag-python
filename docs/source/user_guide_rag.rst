@@ -621,7 +621,20 @@ Currently, this package supports the following embedders:
 - :ref:`azureopenaiembeddings`
 - :ref:`ollamaembeddings`
 
-The `OpenAIEmbeddings` was illustrated previously. Here is how to use the `SentenceTransformerEmbeddings`:
+The `OpenAIEmbeddings` was illustrated previously. If the selected OpenAI
+embedding model supports configurable output dimensions, set ``dimensions`` on
+the embedder to match the dimensions used when creating the Neo4j vector index:
+
+.. code:: python
+
+    from neo4j_graphrag.embeddings import OpenAIEmbeddings
+
+    embedder = OpenAIEmbeddings(
+        model="text-embedding-3-large",
+        dimensions=1536,
+    )
+
+Here is how to use the `SentenceTransformerEmbeddings`:
 
 .. code:: python
 
@@ -1470,7 +1483,7 @@ Create a Vector Index
     AUTH = ("neo4j", "password")
 
     INDEX_NAME = "chunk-index"
-    DIMENSION=1536
+    DIMENSION = 1536
 
     # Connect to Neo4j database
     driver = GraphDatabase.driver(URI, auth=AUTH)
