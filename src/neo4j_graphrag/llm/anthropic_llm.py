@@ -48,8 +48,9 @@ from neo4j_graphrag.utils.rate_limit import (
 )
 
 if TYPE_CHECKING:
-    from anthropic import NotGiven
+    from anthropic import NotGiven, Omit  # noqa: F401
     from anthropic.types.message_param import MessageParam
+
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
@@ -164,13 +165,18 @@ class AnthropicLLM(LLMBase):
             messages = self.get_messages(input, message_history)
             response = self.client.messages.create(
                 model=self.model_name,
-                system=system_instruction or self.anthropic.NOT_GIVEN,
+                system=system_instruction or self.anthropic.NOT_GIVEN,  # type: ignore[arg-type]
                 messages=messages,
                 **self.model_params,
             )
             response_content = response.content
             if response_content and len(response_content) > 0:
-                text = response_content[0].text
+                block = response_content[0]
+                text = getattr(block, "text", None)
+                if not isinstance(text, str):
+                    raise LLMGenerationError(
+                        f"Expected a text block in the response, got {type(block).__name__}."
+                    )
             else:
                 raise LLMGenerationError("LLM returned empty response.")
             usage = LLMUsage(
@@ -195,14 +201,19 @@ class AnthropicLLM(LLMBase):
                 kwargs["output_config"] = self._build_output_config(response_format)
             response = self.client.messages.create(
                 model=self.model_name,
-                system=system_instruction,
+                system=system_instruction,  # type: ignore[arg-type]
                 messages=messages,
                 **self.model_params,
                 **kwargs,
             )
             response_content = response.content
             if response_content and len(response_content) > 0:
-                text = response_content[0].text
+                block = response_content[0]
+                text = getattr(block, "text", None)
+                if not isinstance(text, str):
+                    raise LLMGenerationError(
+                        f"Expected a text block in the response, got {type(block).__name__}."
+                    )
             else:
                 raise LLMGenerationError("LLM returned empty response.")
             usage = LLMUsage(
@@ -238,13 +249,18 @@ class AnthropicLLM(LLMBase):
             messages = self.get_messages(input, message_history)
             response = await self.async_client.messages.create(
                 model=self.model_name,
-                system=system_instruction or self.anthropic.NOT_GIVEN,
+                system=system_instruction or self.anthropic.NOT_GIVEN,  # type: ignore[arg-type]
                 messages=messages,
                 **self.model_params,
             )
             response_content = response.content
             if response_content and len(response_content) > 0:
-                text = response_content[0].text
+                block = response_content[0]
+                text = getattr(block, "text", None)
+                if not isinstance(text, str):
+                    raise LLMGenerationError(
+                        f"Expected a text block in the response, got {type(block).__name__}."
+                    )
             else:
                 raise LLMGenerationError("LLM returned empty response.")
             usage = LLMUsage(
@@ -280,14 +296,19 @@ class AnthropicLLM(LLMBase):
                 kwargs["output_config"] = self._build_output_config(response_format)
             response = await self.async_client.messages.create(
                 model=self.model_name,
-                system=system_instruction,
+                system=system_instruction,  # type: ignore[arg-type]
                 messages=messages,
                 **self.model_params,
                 **kwargs,
             )
             response_content = response.content
             if response_content and len(response_content) > 0:
-                text = response_content[0].text
+                block = response_content[0]
+                text = getattr(block, "text", None)
+                if not isinstance(text, str):
+                    raise LLMGenerationError(
+                        f"Expected a text block in the response, got {type(block).__name__}."
+                    )
             else:
                 raise LLMGenerationError("LLM returned empty response.")
             usage = LLMUsage(
@@ -342,7 +363,7 @@ class AnthropicLLM(LLMBase):
                 raise LLMGenerationError(e.errors()) from e
             messages.extend(cast(Iterable[dict[str, Any]], message_history))
         messages.append(UserMessage(content=input).model_dump())
-        return messages  # type: ignore
+        return cast("Iterable[MessageParam]", messages)
 
     def get_messages_v2(
         self,
