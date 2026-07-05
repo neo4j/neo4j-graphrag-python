@@ -215,9 +215,18 @@ class Neo4jWriter(KGWriter):
         self.is_version_5_24_or_above = is_version_5_24_or_above(version_tuple)
 
     def _db_setup(self) -> None:
-        self.driver.execute_query("""
-        CREATE INDEX __entity__tmp_internal_id IF NOT EXISTS FOR (n:__KGBuilder__) ON (n.__tmp_internal_id)
-        """)
+        self.driver.execute_query(
+            "DROP INDEX __entity__tmp_internal_id IF EXISTS",
+            database_=self.neo4j_database,
+        )
+        self.driver.execute_query(
+            """
+            CREATE CONSTRAINT __entity__tmp_internal_id_unique IF NOT EXISTS
+            FOR (n:__KGBuilder__)
+            REQUIRE n.__tmp_internal_id IS UNIQUE
+            """,
+            database_=self.neo4j_database,
+        )
 
     @staticmethod
     def _nodes_to_rows(
