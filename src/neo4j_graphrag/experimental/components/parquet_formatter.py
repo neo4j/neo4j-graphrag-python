@@ -298,6 +298,43 @@ def get_relationship_join_key_property_name(
     return name if name is not None else INTERNAL_ID_PROPERTY
 
 
+def get_relationship_join_key_property_names(
+    schema: Optional[GraphSchema], node_label: str
+) -> list[str]:
+    """Property names used to join relationships to this node label's endpoints.
+
+    - single-property KEY -> ``[name]``
+    - composite KEY       -> its full property list, e.g. ``[name, dateOfBirth]``
+    - no semantic KEY     -> ``[__id__]``
+
+    Relationship rows carry one endpoint column per returned property (see
+    :func:`relationship_endpoint_column_names`). This generalizes
+    :func:`get_relationship_join_key_property_name`, which collapses composite keys
+    to ``__id__``; joining on the composite key instead lets relationships resolve
+    endpoints that MERGE on their semantic key across runs.
+    """
+    groups = get_key_constraints_for_node_type(schema, node_label)
+    single = _first_single_property_key_name_from_groups(groups)
+    if single is not None:
+        return [single]
+    if groups:
+        # composite-only key: join on its full property list (order preserved)
+        return list(groups[0])
+    return [INTERNAL_ID_PROPERTY]
+
+
+def relationship_endpoint_column_names(side: str, key_props: list[str]) -> list[str]:
+    """Relationship-row column name(s) carrying an endpoint's key value(s).
+
+    ``side`` is ``"from"`` or ``"to"``. A single-property or ``__id__`` key keeps the
+    bare ``from``/``to`` column (backward compatible); a composite key uses
+    ``<side>__<prop>`` (double underscore, a reserved prefix) per property.
+    """
+    if len(key_props) == 1:
+        return [side]
+    return [f"{side}__{prop}" for prop in key_props]
+
+
 def get_primary_key_column_names_for_node_type(
     schema: Optional[GraphSchema], node_label: str
 ) -> list[str]:
@@ -592,6 +629,29 @@ class Neo4jGraphParquetFormatter:
             raise ValueError(f"Key property {key_prop} on node {node.id} is null")
         return property_value
 
+    def _endpoint_key_values(self, node: Neo4jNode) -> dict[str, Any]:
+        """Ordered ``{property: value}`` for this node's relationship join key.
+
+        Single-property / ``__id__`` keys yield one entry; composite keys yield one
+        per property (order matches :func:`get_relationship_join_key_property_names`).
+
+        Raises:
+            ValueError: if a required key property is missing or null on the node.
+        """
+        key_props = get_relationship_join_key_property_names(self.schema, node.label)
+        values: dict[str, Any] = {}
+        for prop in key_props:
+            if prop == INTERNAL_ID_PROPERTY:
+                values[prop] = node.id
+                continue
+            if prop not in node.properties:
+                raise ValueError(f"Missing key property {prop} on node {node.id}")
+            value = node.properties[prop]
+            if value is None:
+                raise ValueError(f"Key property {prop} on node {node.id} is null")
+            values[prop] = value
+        return values
+
     def _relationships_to_rows(
         self,
         relationships: list[Neo4jRelationship],
@@ -624,8 +684,8 @@ class Neo4jGraphParquetFormatter:
                 )
 
             try:
-                from_id = self._get_node_key_property_value(start_node)
-                to_id = self._get_node_key_property_value(end_node)
+                start_key = self._endpoint_key_values(start_node)
+                end_key = self._endpoint_key_values(end_node)
             except ValueError as e:
                 logger.warning(
                     "Skipping relationship (%s)-[%s]->(%s) due to bad node key property: %s",
@@ -637,12 +697,22 @@ class Neo4jGraphParquetFormatter:
                 continue
 
             row: dict[str, Any] = {
-                "from": from_id,
-                "to": to_id,
                 "from_label": start_node.label,
                 "to_label": end_node.label,
                 "type": rel.type,
             }
+            # One endpoint column per key property: bare "from"/"to" for a single-property
+            # (or __id__) key, "from__<prop>"/"to__<prop>" for a composite key.
+            start_props = list(start_key.keys())
+            for col, prop in zip(
+                relationship_endpoint_column_names("from", start_props), start_props
+            ):
+                row[col] = start_key[prop]
+            end_props = list(end_key.keys())
+            for col, prop in zip(
+                relationship_endpoint_column_names("to", end_props), end_props
+            ):
+                row[col] = end_key[prop]
 
             if rel.properties:
                 row.update(rel.properties)
@@ -872,15 +942,15 @@ class Neo4jGraphParquetFormatter:
                     relationship_type=rtype,
                     relationship_head=head_label,
                     relationship_tail=tail_label,
-                    head_primary_key_property_names=[
-                        get_relationship_join_key_property_name(self.schema, head_label)
-                    ],
+                    head_primary_key_property_names=get_relationship_join_key_property_names(
+                        self.schema, head_label
+                    ),
                     head_uniqueness_property_names=get_uniqueness_property_names_for_node_type(
                         self.schema, head_label
                     ),
-                    tail_primary_key_property_names=[
-                        get_relationship_join_key_property_name(self.schema, tail_label)
-                    ],
+                    tail_primary_key_property_names=get_relationship_join_key_property_names(
+                        self.schema, tail_label
+                    ),
                     tail_uniqueness_property_names=get_uniqueness_property_names_for_node_type(
                         self.schema, tail_label
                     ),

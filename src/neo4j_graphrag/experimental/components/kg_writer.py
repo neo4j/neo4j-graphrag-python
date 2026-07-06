@@ -28,6 +28,7 @@ from neo4j_graphrag.experimental.components.filename_collision_handler import (
 from neo4j_graphrag.experimental.components.parquet_formatter import (
     INTERNAL_ID_PROPERTY,
     Neo4jGraphParquetFormatter,
+    relationship_endpoint_column_names,
 )
 from neo4j_graphrag.experimental.components.parquet_output import (
     ParquetOutputDestination,
@@ -465,9 +466,16 @@ class ParquetWriter(KGWriter):
                 end_node_source = node_label_to_source_name.get(
                     meta.relationship_tail or "", meta.relationship_tail or ""
                 )
+                # Endpoint columns are bare "from"/"to" for single-property (or __id__)
+                # keys, and "from__<prop>"/"to__<prop>" for composite keys.
+                endpoint_pk_cols = relationship_endpoint_column_names(
+                    "from", meta.head_primary_key_property_names or [INTERNAL_ID_PROPERTY]
+                ) + relationship_endpoint_column_names(
+                    "to", meta.tail_primary_key_property_names or [INTERNAL_ID_PROPERTY]
+                )
                 columns = _build_columns_from_schema(
                     meta.schema,
-                    ["from", "to"],
+                    endpoint_pk_cols,
                     [],
                 )
                 rel_name = (
