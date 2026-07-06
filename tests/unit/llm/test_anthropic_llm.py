@@ -30,7 +30,7 @@ from pydantic import BaseModel, ConfigDict
 def mock_anthropic() -> Generator[MagicMock, None, None]:
     mock = MagicMock()
     mock.APIError = anthropic.APIError
-    mock.NOT_GIVEN = anthropic.NOT_GIVEN
+    mock.omit = anthropic.omit
 
     with patch.dict(sys.modules, {"anthropic": mock}):
         yield mock
@@ -62,7 +62,7 @@ def test_anthropic_invoke_happy_path(mock_anthropic: Mock) -> None:
     _as_mock(llm.client.messages.create).assert_called_once_with(
         messages=[{"role": "user", "content": input_text}],
         model="claude-3-opus-20240229",
-        system=anthropic.NOT_GIVEN,
+        system=anthropic.omit,
         **model_params,
     )
 
@@ -88,7 +88,7 @@ def test_anthropic_invoke_with_message_history_happy_path(mock_anthropic: Mock) 
     _as_mock(llm.client.messages.create).assert_called_once_with(
         messages=message_history,
         model="claude-3-opus-20240229",
-        system=anthropic.NOT_GIVEN,
+        system=anthropic.omit,
         **model_params,
     )
 
@@ -190,7 +190,7 @@ async def test_anthropic_ainvoke_happy_path(mock_anthropic: Mock) -> None:
     assert response.content == "Return text"
     _as_async_mock(llm.async_client.messages.create).assert_awaited_once_with(
         model="claude-3-opus-20240229",
-        system=anthropic.NOT_GIVEN,
+        system=anthropic.omit,
         messages=[{"role": "user", "content": input_text}],
         **model_params,
     )
@@ -276,7 +276,7 @@ def test_anthropic_llm_invoke_v2_no_system_message(mock_anthropic: Mock) -> None
     # Verify only user message was passed and no system instruction
     _as_mock(llm.client.messages.create).assert_called_once()
     call_args = _as_mock(llm.client.messages.create).call_args[1]
-    assert call_args["system"] == anthropic.NOT_GIVEN
+    assert call_args["system"] == anthropic.omit
     assert len(call_args["messages"]) == 1
 
 
