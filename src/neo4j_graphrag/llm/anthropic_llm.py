@@ -13,6 +13,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import json
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -50,6 +51,119 @@ from neo4j_graphrag.utils.rate_limit import (
 if TYPE_CHECKING:
     from anthropic import Omit
     from anthropic.types.message_param import MessageParam
+
+
+# ---------------------------------------------------------------------------
+# TEMPORARY / INTERMEDIATE FIX -- REMOVE ONCE CROSS-PROVIDER STRICT JSON SCHEMA
+# HANDLING IS ADDED.
+#
+# Anthropic structured output uses constrained decoding and only accepts a
+# closed JSON Schema subset: every object must set ``additionalProperties: false``
+# and open-ended maps (Pydantic ``dict[str, X]`` -> ``additionalProperties`` as a
+# *schema*) are rejected with a 400 ("additionalProperties: object is not
+# supported"). Naively forcing ``additionalProperties: false`` would instead make
+# those maps un-fillable and silently drop every property value.
+#
+# To fix the 400 *without* dropping properties, and without touching the shared
+# components/other providers, we transform open maps into closed key/value-pair
+# arrays on the way out (:func:`_to_anthropic_schema`) and convert them back to
+# maps on the way in (:func:`_restore_open_maps`), so the returned content stays
+# byte-compatible with the caller's Pydantic model (e.g. ``Neo4jGraph``).
+#
+# When a proper, cross-provider strict-JSON-schema mechanism lands, delete this
+# whole block, the two ``_restore_open_maps`` call sites in ``__invoke_v2`` /
+# ``__ainvoke_v2``, and restore ``_build_output_config`` to passing the raw
+# ``model_json_schema()`` through.
+# ---------------------------------------------------------------------------
+
+
+def _is_open_map(schema: dict[str, Any]) -> bool:
+    """True if *schema* is an open-ended map (``dict[str, X]``) rather than a
+    fixed-property object."""
+    return (
+        schema.get("type") == "object"
+        and isinstance(schema.get("additionalProperties"), dict)
+        and not schema.get("properties")
+    )
+
+
+def _to_anthropic_schema(schema: dict[str, Any]) -> dict[str, Any]:
+    """Rewrite a JSON schema into Anthropic's constrained-decoding subset.
+
+    Open maps become closed ``[{"key": ..., "value": ...}]`` arrays, and every
+    fixed-property object gets ``additionalProperties: false`` plus a full
+    ``required`` list.
+    """
+    schema = dict(schema)
+    if _is_open_map(schema):
+        value_schema = _to_anthropic_schema(schema["additionalProperties"])
+        return {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {"key": {"type": "string"}, "value": value_schema},
+                "required": ["key", "value"],
+                "additionalProperties": False,
+            },
+        }
+    if schema.get("type") == "object" and "properties" in schema:
+        schema["properties"] = {
+            key: _to_anthropic_schema(prop)
+            for key, prop in schema["properties"].items()
+        }
+        schema["additionalProperties"] = False
+        schema["required"] = list(schema["properties"].keys())
+    if "items" in schema:
+        schema["items"] = _to_anthropic_schema(schema["items"])
+    for combinator in ("anyOf", "oneOf", "allOf"):
+        if combinator in schema:
+            schema[combinator] = [
+                _to_anthropic_schema(variant) for variant in schema[combinator]
+            ]
+    if "$defs" in schema:
+        schema["$defs"] = {
+            name: _to_anthropic_schema(def_schema)
+            for name, def_schema in schema["$defs"].items()
+        }
+    return schema
+
+
+def _resolve_ref(schema: dict[str, Any], defs: dict[str, Any]) -> dict[str, Any]:
+    """Resolve a local ``$ref`` against *defs*, if present."""
+    ref = schema.get("$ref")
+    if isinstance(ref, str):
+        return cast("dict[str, Any]", defs.get(ref.split("/")[-1], {}))
+    return schema
+
+
+def _restore_open_maps(value: Any, schema: dict[str, Any], defs: dict[str, Any]) -> Any:
+    """Convert key/value-pair arrays produced for Anthropic back into maps.
+
+    Walks *value* alongside the caller's *original* (untransformed) JSON schema,
+    so empty maps (``[]`` -> ``{}``) and genuine empty arrays are disambiguated
+    correctly.
+    """
+    schema = _resolve_ref(schema, defs)
+    if _is_open_map(schema) and isinstance(value, list):
+        value_schema = schema["additionalProperties"]
+        return {
+            item["key"]: _restore_open_maps(item["value"], value_schema, defs)
+            for item in value
+        }
+    if schema.get("type") == "object" and isinstance(value, dict):
+        properties = schema.get("properties", {})
+        return {
+            key: (
+                _restore_open_maps(val, properties[key], defs)
+                if key in properties
+                else val
+            )
+            for key, val in value.items()
+        }
+    if schema.get("type") == "array" and isinstance(value, list):
+        item_schema = schema.get("items", {})
+        return [_restore_open_maps(item, item_schema, defs) for item in value]
+    return value
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
@@ -197,6 +311,10 @@ class AnthropicLLM(LLMBase):
                 **kwargs,
             )
             text = self._extract_text(response)
+            # INTERMEDIATE FIX (see module-level note): remove with the rest of
+            # the open-map workaround once cross-provider strict schema handling
+            # is added.
+            text = self._restore_structured_output(text, response_format)
             usage = LLMUsage(
                 request_tokens=response.usage.input_tokens,
                 response_tokens=response.usage.output_tokens,
@@ -274,6 +392,10 @@ class AnthropicLLM(LLMBase):
                 **kwargs,
             )
             text = self._extract_text(response)
+            # INTERMEDIATE FIX (see module-level note): remove with the rest of
+            # the open-map workaround once cross-provider strict schema handling
+            # is added.
+            text = self._restore_structured_output(text, response_format)
             usage = LLMUsage(
                 request_tokens=response.usage.input_tokens,
                 response_tokens=response.usage.output_tokens,
@@ -335,9 +457,38 @@ class AnthropicLLM(LLMBase):
             A dict suitable for the `output_config` kwarg to `messages.create`.
         """
         if isinstance(response_format, type) and issubclass(response_format, BaseModel):
-            schema = response_format.model_json_schema()
+            # INTERMEDIATE FIX (see module-level note): transform open maps into
+            # Anthropic-compatible closed key/value schemas. Remove when
+            # cross-provider strict JSON schema handling is added and pass
+            # ``response_format.model_json_schema()`` through directly.
+            schema = _to_anthropic_schema(response_format.model_json_schema())
             return {"format": {"type": "json_schema", "schema": schema}}
         return response_format
+
+    @staticmethod
+    def _restore_structured_output(
+        text: str,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]],
+    ) -> str:
+        """Reverse :func:`_to_anthropic_schema` on the response text.
+
+        INTERMEDIATE FIX (see module-level note): converts the key/value-pair
+        arrays Anthropic was constrained to emit back into the open maps expected
+        by the caller's Pydantic model, so ``content`` round-trips unchanged.
+        Remove when cross-provider strict JSON schema handling is added.
+        """
+        if not (
+            isinstance(response_format, type) and issubclass(response_format, BaseModel)
+        ):
+            return text
+        original_schema = response_format.model_json_schema()
+        defs = original_schema.get("$defs", {})
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError:
+            return text
+        restored = _restore_open_maps(data, original_schema, defs)
+        return json.dumps(restored)
 
     def get_messages(
         self,

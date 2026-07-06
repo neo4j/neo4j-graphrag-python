@@ -12,6 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
+import json
 import warnings
 import sys
 from typing import Any, Generator, List, cast
@@ -20,7 +21,14 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 import anthropic
 import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.anthropic_llm import AnthropicLLM
+from neo4j_graphrag.experimental.components.types import Neo4jGraph
+from neo4j_graphrag.llm.anthropic_llm import (
+    AnthropicLLM,
+    _is_open_map,
+    _resolve_ref,
+    _restore_open_maps,
+    _to_anthropic_schema,
+)
 from neo4j_graphrag.llm.types import LLMResponse
 from neo4j_graphrag.types import LLMMessage
 from pydantic import BaseModel, ConfigDict
@@ -542,3 +550,124 @@ async def test_anthropic_llm_aclose(mock_anthropic: Mock) -> None:
 
     mock_anthropic.Anthropic.return_value.close.assert_called_once()
     mock_anthropic.AsyncAnthropic.return_value.close.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# INTERMEDIATE FIX: open-map <-> key/value schema transform.
+# Remove these tests together with the workaround in anthropic_llm.py once
+# cross-provider strict JSON schema handling is added.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "schema,expected",
+    [
+        ({"type": "object", "additionalProperties": {"type": "string"}}, True),
+        ({"type": "object", "properties": {"a": {"type": "string"}}}, False),
+        ({"type": "object", "additionalProperties": False}, False),
+        ({"type": "array", "items": {"type": "string"}}, False),
+    ],
+)
+def test_is_open_map(schema: dict[str, Any], expected: bool) -> None:
+    assert _is_open_map(schema) is expected
+
+
+@pytest.mark.parametrize(
+    "schema,defs,expected",
+    [
+        ({"$ref": "#/$defs/Foo"}, {"Foo": {"type": "object"}}, {"type": "object"}),
+        ({"$ref": "#/$defs/Missing"}, {}, {}),
+        ({"type": "string"}, {}, {"type": "string"}),
+    ],
+)
+def test_resolve_ref(
+    schema: dict[str, Any], defs: dict[str, Any], expected: dict[str, Any]
+) -> None:
+    assert _resolve_ref(schema, defs) == expected
+
+
+def test_to_anthropic_schema_rewrites_open_map_to_key_value_array() -> None:
+    result = _to_anthropic_schema(
+        {"type": "object", "additionalProperties": {"type": "integer"}}
+    )
+    assert result["type"] == "array"
+    item = result["items"]
+    assert item["type"] == "object"
+    assert item["properties"]["key"] == {"type": "string"}
+    assert item["properties"]["value"] == {"type": "integer"}
+    assert item["required"] == ["key", "value"]
+    assert item["additionalProperties"] is False
+
+
+def test_restore_open_maps_empty_list_becomes_empty_dict_for_map() -> None:
+    schema = {"type": "object", "additionalProperties": {"type": "integer"}}
+    assert _restore_open_maps([], schema, {}) == {}
+
+
+def test_restore_open_maps_keeps_genuine_array() -> None:
+    schema = {"type": "array", "items": {"type": "number"}}
+    assert _restore_open_maps([1.0, 2.0], schema, {}) == [1.0, 2.0]
+
+
+def test_neo4jgraph_transform_then_restore_round_trip() -> None:
+    original = Neo4jGraph.model_json_schema()
+    transformed = _to_anthropic_schema(original)
+    node = transformed["$defs"]["Neo4jNode"]["properties"]
+    assert node["properties"]["type"] == "array"
+    assert node["embedding_properties"]["type"] == "array"
+
+    payload = {
+        "nodes": [
+            {
+                "id": "1",
+                "label": "Person",
+                "properties": [{"key": "name", "value": "Alice"}],
+                "embedding_properties": [{"key": "vec", "value": [0.1, 0.2]}],
+            }
+        ],
+        "relationships": [
+            {
+                "start_node_id": "1",
+                "end_node_id": "1",
+                "type": "KNOWS",
+                "properties": [],
+                "embedding_properties": [],
+            }
+        ],
+    }
+    restored = _restore_open_maps(payload, original, original.get("$defs", {}))
+    graph = Neo4jGraph.model_validate(restored)
+    assert graph.nodes[0].properties == {"name": "Alice"}
+    assert graph.nodes[0].embedding_properties == {"vec": [0.1, 0.2]}
+    assert graph.relationships[0].properties == {}
+
+
+def test_anthropic_invoke_v2_restores_open_maps_in_response(
+    mock_anthropic: Mock,
+) -> None:
+    raw = json.dumps(
+        {
+            "nodes": [
+                {
+                    "id": "1",
+                    "label": "Person",
+                    "properties": [{"key": "name", "value": "Alice"}],
+                    "embedding_properties": [],
+                }
+            ],
+            "relationships": [],
+        }
+    )
+    mock_response = MagicMock()
+    mock_response.content = [MagicMock(text=raw)]
+    mock_response.usage.input_tokens = 1
+    mock_response.usage.output_tokens = 1
+    mock_anthropic.Anthropic.return_value.messages.create.return_value = mock_response
+    mock_anthropic.types.MessageParam = MagicMock(side_effect=lambda **kwargs: kwargs)
+
+    llm = AnthropicLLM(api_key="test", model_name="claude-3-opus")
+    messages: List[LLMMessage] = [{"role": "user", "content": "x"}]
+    response = llm.invoke(messages, response_format=Neo4jGraph)
+
+    graph = Neo4jGraph.model_validate_json(response.content)
+    assert graph.nodes[0].properties == {"name": "Alice"}
