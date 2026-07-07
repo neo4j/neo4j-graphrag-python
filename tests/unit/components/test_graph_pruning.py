@@ -794,9 +794,7 @@ async def test_graph_pruning_run_no_schema() -> None:
     assert pruner_result.graph == initial_graph
 
 
-@patch(
-    "neo4j_graphrag.components.graph_pruning.GraphPruning._enforce_nodes"
-)
+@patch("neo4j_graphrag.components.graph_pruning.GraphPruning._enforce_nodes")
 def test_graph_pruning_clean_graph(
     mock_enforce_nodes: Mock,
     lexical_graph_config: LexicalGraphConfig,

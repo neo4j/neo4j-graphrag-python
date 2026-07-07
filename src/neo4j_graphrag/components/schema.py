@@ -1784,7 +1784,9 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
             RuntimeError: If LLM is not OpenAILLM or VertexAILLM
             SchemaExtractionError: If LLM generation or validation fails
         """
-        from neo4j_graphrag.components.graph_schema_extraction import GraphSchemaExtractionOutput
+        from neo4j_graphrag.components.graph_schema_extraction import (
+            GraphSchemaExtractionOutput,
+        )
 
         # Capability check
         # This should never happen due to __init__ validation

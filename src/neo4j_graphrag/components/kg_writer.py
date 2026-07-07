@@ -22,7 +22,9 @@ from typing import Any, Generator, Literal, Optional
 import neo4j
 from pydantic import validate_call
 
-from neo4j_graphrag.components.filename_collision_handler import FilenameCollisionHandler
+from neo4j_graphrag.components.filename_collision_handler import (
+    FilenameCollisionHandler,
+)
 from neo4j_graphrag.components.parquet_formatter import (
     INTERNAL_ID_PROPERTY,
     Neo4jGraphParquetFormatter,

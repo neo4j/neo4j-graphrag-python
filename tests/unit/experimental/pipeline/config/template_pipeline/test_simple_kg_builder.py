@@ -33,7 +33,9 @@ from neo4j_graphrag.components.schema import (
     SchemaFromTextExtractor,
     GraphSchema,
 )
-from neo4j_graphrag.components.text_splitters.fixed_size_splitter import FixedSizeSplitter
+from neo4j_graphrag.components.text_splitters.fixed_size_splitter import (
+    FixedSizeSplitter,
+)
 from neo4j_graphrag.experimental.pipeline.config.object_config import (
     ComponentConfig,
     ComponentType,
@@ -68,9 +70,7 @@ async def test_simple_kg_pipeline_config_default_file_loader_supports_markdown()
     config = SimpleKGPipelineConfig(from_file=True)
     loader = config._get_file_loader()
     assert loader is not None
-    doc = await loader.run(
-        filepath="tests/unit/components/sample_data/hello.md"
-    )
+    doc = await loader.run(filepath="tests/unit/components/sample_data/hello.md")
     assert doc.document_info.document_type == DocumentType.MARKDOWN
 
 

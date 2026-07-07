@@ -22,7 +22,9 @@ from unittest import mock
 from unittest.mock import MagicMock, Mock
 
 import pytest
-from neo4j_graphrag.components.filename_collision_handler import FilenameCollisionHandler
+from neo4j_graphrag.components.filename_collision_handler import (
+    FilenameCollisionHandler,
+)
 from neo4j_graphrag.components.parquet_formatter import (
     INTERNAL_ID_PROPERTY,
     Neo4jGraphParquetFormatter,

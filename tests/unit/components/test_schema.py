@@ -2455,7 +2455,9 @@ def test_extract_graph_constraints_from_metadata_relationship_uniqueness_maps_to
 
 def test_graph_schema_extraction_output_json_schema_lean_root() -> None:
     """Structured-output schema must not include pipeline-only GraphSchema flags."""
-    from neo4j_graphrag.components.graph_schema_extraction import GraphSchemaExtractionOutput
+    from neo4j_graphrag.components.graph_schema_extraction import (
+        GraphSchemaExtractionOutput,
+    )
 
     raw = GraphSchemaExtractionOutput.model_json_schema()
     dumped = json.dumps(raw)
@@ -2468,7 +2470,9 @@ def test_graph_schema_extraction_constraint_schema_avoids_null_type_for_vertex()
     None
 ):
     """Vertex AI maps JSON Schema to protobuf and rejects ``type: \"null\"`` (e.g. ``Optional``)."""
-    from neo4j_graphrag.components.graph_schema_extraction import GraphSchemaExtractionOutput
+    from neo4j_graphrag.components.graph_schema_extraction import (
+        GraphSchemaExtractionOutput,
+    )
 
     raw = GraphSchemaExtractionOutput.model_json_schema()
     ect = (raw.get("$defs") or {}).get("ExtractedConstraintType")

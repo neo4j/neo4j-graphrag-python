@@ -14,7 +14,9 @@
 #  limitations under the License.
 import pytest
 from llama_index.core.node_parser.text.sentence import SentenceSplitter
-from neo4j_graphrag.components.text_splitters.llamaindex import LlamaIndexTextSplitterAdapter
+from neo4j_graphrag.components.text_splitters.llamaindex import (
+    LlamaIndexTextSplitterAdapter,
+)
 from neo4j_graphrag.components.types import (
     TextChunk,
     TextChunks,

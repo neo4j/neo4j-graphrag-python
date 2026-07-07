@@ -16,7 +16,9 @@ from unittest.mock import MagicMock
 
 import neo4j
 import pytest
-from neo4j_graphrag.components.entity_relation_extractor import LLMEntityRelationExtractor
+from neo4j_graphrag.components.entity_relation_extractor import (
+    LLMEntityRelationExtractor,
+)
 from neo4j_graphrag.components.neo4j_reader import Neo4jChunkReader
 from neo4j_graphrag.components.types import LexicalGraphConfig, TextChunk
 from neo4j_graphrag.experimental.pipeline import Pipeline
