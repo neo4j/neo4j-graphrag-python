@@ -17,20 +17,18 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from neo4j_graphrag.experimental.components.entity_relation_extractor import (
+from neo4j_graphrag.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
     OnError,
 )
-from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
-from neo4j_graphrag.experimental.components.data_loader import PdfLoader
-from neo4j_graphrag.experimental.components.schema import (
+from neo4j_graphrag.components.kg_writer import Neo4jWriter
+from neo4j_graphrag.components.data_loader import PdfLoader
+from neo4j_graphrag.components.schema import (
     SchemaBuilder,
     NodeType,
     RelationshipType,
 )
-from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
-    FixedSizeSplitter,
-)
+from neo4j_graphrag.components.text_splitters.fixed_size_splitter import FixedSizeSplitter
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.llm import LLMInterface, OpenAILLM
 

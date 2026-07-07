@@ -14,7 +14,7 @@
 #  limitations under the License.
 import neo4j
 import pytest
-from neo4j_graphrag.experimental.components.resolver import (
+from neo4j_graphrag.components.resolver import (
     SinglePropertyExactMatchResolver,
 )
 

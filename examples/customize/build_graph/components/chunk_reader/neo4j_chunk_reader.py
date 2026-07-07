@@ -1,8 +1,11 @@
 import asyncio
 
 import neo4j
-from neo4j_graphrag.experimental.components.neo4j_reader import Neo4jChunkReader
-from neo4j_graphrag.experimental.components.types import LexicalGraphConfig, TextChunks
+from neo4j_graphrag.components.neo4j_reader import Neo4jChunkReader
+from neo4j_graphrag.components.types import (
+    LexicalGraphConfig,
+    TextChunks,
+)
 
 
 async def main(driver: neo4j.Driver) -> TextChunks:

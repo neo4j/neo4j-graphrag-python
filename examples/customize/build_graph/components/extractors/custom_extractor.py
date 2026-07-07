@@ -1,10 +1,10 @@
 from typing import Any, Optional
 
-from neo4j_graphrag.experimental.components.entity_relation_extractor import (
+from neo4j_graphrag.components.entity_relation_extractor import (
     EntityRelationExtractor,
     OnError,
 )
-from neo4j_graphrag.experimental.components.types import (
+from neo4j_graphrag.components.types import (
     DocumentInfo,
     LexicalGraphConfig,
     Neo4jGraph,

@@ -21,7 +21,7 @@ Prerequisites:
 import asyncio
 from dotenv import load_dotenv
 
-from neo4j_graphrag.experimental.components.schema import (
+from neo4j_graphrag.components.schema import (
     SchemaFromTextExtractor,
     GraphSchema,
 )

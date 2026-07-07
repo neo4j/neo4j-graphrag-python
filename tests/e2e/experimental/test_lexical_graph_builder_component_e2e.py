@@ -14,9 +14,9 @@
 #  limitations under the License.
 import neo4j
 import pytest
-from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
-from neo4j_graphrag.experimental.components.lexical_graph import LexicalGraphBuilder
-from neo4j_graphrag.experimental.components.types import (
+from neo4j_graphrag.components.kg_writer import Neo4jWriter
+from neo4j_graphrag.components.lexical_graph import LexicalGraphBuilder
+from neo4j_graphrag.components.types import (
     LexicalGraphConfig,
     TextChunk,
     TextChunks,

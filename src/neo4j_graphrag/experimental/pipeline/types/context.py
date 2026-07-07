@@ -12,32 +12,6 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from pydantic import BaseModel, ConfigDict
-from collections.abc import Awaitable
+from neo4j_graphrag.components.base import RunContext, TaskProgressNotifierProtocol
 
-from typing import Any, Optional, Protocol, runtime_checkable
-
-
-@runtime_checkable
-class TaskProgressNotifierProtocol(Protocol):
-    """This protocol is used to send events from the component to the
-    Pipeline callback protocol.
-    The event sent to the callback will be of type :ref:`TaskEvent`,
-    with `event_type=TASK_PROGRESS`.
-    """
-
-    def __call__(self, message: str, data: dict[str, Any]) -> Awaitable[None]: ...
-
-
-class RunContext(BaseModel):
-    """Context passed to the component"""
-
-    run_id: str
-    task_name: str
-    notifier: Optional[TaskProgressNotifierProtocol] = None
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    async def notify(self, message: str, data: dict[str, Any]) -> None:
-        if self.notifier:
-            await self.notifier(message=message, data=data)
+__all__ = ["RunContext", "TaskProgressNotifierProtocol"]

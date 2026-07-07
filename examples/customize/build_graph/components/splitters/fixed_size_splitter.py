@@ -1,7 +1,5 @@
-from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
-    FixedSizeSplitter,
-)
-from neo4j_graphrag.experimental.components.types import TextChunks
+from neo4j_graphrag.components.text_splitters.fixed_size_splitter import FixedSizeSplitter
+from neo4j_graphrag.components.types import TextChunks
 
 
 async def main() -> TextChunks:

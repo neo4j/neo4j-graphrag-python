@@ -19,14 +19,14 @@ from pathlib import Path
 import neo4j
 import pytest
 
-from neo4j_graphrag.experimental.components.filename_collision_handler import (
+from neo4j_graphrag.components.filename_collision_handler import (
     FilenameCollisionHandler,
 )
-from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter, ParquetWriter
-from neo4j_graphrag.experimental.components.parquet_formatter import (
+from neo4j_graphrag.components.kg_writer import Neo4jWriter, ParquetWriter
+from neo4j_graphrag.components.parquet_formatter import (
     INTERNAL_ID_PROPERTY,
 )
-from neo4j_graphrag.experimental.components.types import (
+from neo4j_graphrag.components.types import (
     LexicalGraphConfig,
     Neo4jGraph,
     Neo4jNode,

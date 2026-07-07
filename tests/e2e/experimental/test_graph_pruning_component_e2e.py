@@ -16,12 +16,12 @@ from typing import Any
 
 import pytest
 
-from neo4j_graphrag.experimental.components.graph_pruning import (
+from neo4j_graphrag.components.graph_pruning import (
     GraphPruning,
     PruningReason,
 )
-from neo4j_graphrag.experimental.components.schema import GraphSchema
-from neo4j_graphrag.experimental.components.types import (
+from neo4j_graphrag.components.schema import GraphSchema
+from neo4j_graphrag.components.types import (
     Neo4jGraph,
     Neo4jNode,
     Neo4jRelationship,

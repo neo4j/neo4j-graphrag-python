@@ -10,6 +10,16 @@
 
 - (**breaking**) `AnthropicLLM.supports_structured_output` is now `True`. As a result, `SchemaFromTextExtractor` and `LLMEntityRelationExtractor` (and `SimpleKGPipeline`, which enables structured output automatically when the LLM supports it) now use structured output by default with `AnthropicLLM`. This requires a Claude 4.5+ model (e.g. `claude-sonnet-4-5`); using `AnthropicLLM` with an older Claude model in these components will now raise an error where it previously worked. To keep the previous behavior, use a Claude 4.5+ model, or construct `LLMEntityRelationExtractor` / `SchemaFromTextExtractor` directly with `use_structured_output=False`.
 
+- Preparation for 2.0:
+  - All `Components` have been moved out of the `experimental` namespace
+  - Import `from neo4j_graphrag.experimental.components... ` still work but raises a deprecation warning
+  - Import from the experimental namespace will be removed in 2.0
+  - Update to use `from neo4j_graphrag.components... ` instead
+  - Improperly defined components now raise a `ComponentDefinitionError` instead of `PipelineDefinitionError`
+  - `TaskProgressNotifier` and `RunContext` have been moved to `neo4j_graphrag.components.base`
+  - The `Component` base class has been moved to `neo4j_graphrag.components.base`
+
+
 ## 1.18.0
 
 ### Changed
@@ -17,7 +27,7 @@
 - Experimental: `GraphSchema` validation now rejects `KEY` and `EXISTENCE` constraints on the same node or relationship property (including composite KEY members), since KEY already implies mandatory presence. Legacy `PropertyType.required` migration no longer adds redundant EXISTENCE constraints for KEY-covered properties. The schema-from-text extraction prompt includes the same rule.
 - Experimental: the schema-from-text extraction prompt now instructs the LLM to define each relationship type once and reuse it across patterns, using distinct type names only when patterns genuinely need different properties or constraints.
 - Experimental: LLM-auto-generated schemas now reconcile duplicate `relationship_types` (entries sharing the same label) by merging them into a single type that carries the union of their properties, emitting a warning log. This reflects that Neo4j relationship types are global per name.
-- Experimental (**breaking**): `GraphSchema` now raises `SchemaValidationError` when the same label appears more than once in `relationship_types`. Because Neo4j relationship types are global per name (every relationship of a given type shares the same properties and constraints regardless of its endpoints), a label cannot have two conflicting definitions. 
+- Experimental (**breaking**): `GraphSchema` now raises `SchemaValidationError` when the same label appears more than once in `relationship_types`. Because Neo4j relationship types are global per name (every relationship of a given type shares the same properties and constraints regardless of its endpoints), a label cannot have two conflicting definitions.
 
 ## 1.17.0
 
