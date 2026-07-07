@@ -319,7 +319,7 @@ Structured Output with LLMs
 
 Structured output enables LLMs to return responses conforming to a predefined schema (Pydantic model or JSON schema), ensuring type-safe and consistent data structures. This is useful for extracting entities, relationships, or any structured data with automatic validation.
 
-**V2 Interface (Recommended)**: For :ref:`OpenAILLM <openaillm>` and :ref:`VertexAILLM <vertexaillm>`, pass `response_format` as a parameter to the `invoke()` method when using the V2 interface (list of `LLMMessage`). The `response_format` accepts either a Pydantic model class or a JSON schema dictionary. Other LLM providers will raise `NotImplementedError` if `response_format` is used.
+**V2 Interface (Recommended)**: For :ref:`OpenAILLM <openaillm>`, :ref:`VertexAILLM <vertexaillm>` and :ref:`AnthropicLLM <anthropicllm>`, pass `response_format` as a parameter to the `invoke()` method when using the V2 interface (list of `LLMMessage`). The `response_format` accepts either a Pydantic model class or a JSON schema dictionary. Other LLM providers will raise `NotImplementedError` if `response_format` is used.
 
 **V1 Interface (Legacy)**: With the V1 interface (string input), standard JSON mode is supported for both OpenAI and VertexAI via constructor parameters only (`model_params` for OpenAI, `generation_config` for VertexAI). The `response_format` parameter in `invoke()` is not permitted with V1.
 
@@ -390,6 +390,30 @@ VertexAI uses `GenerationConfig` with `response_mime_type` and `response_schema`
         age: int
 
     llm = VertexAILLM(model_name="gemini-1.5-pro")
+    messages = [LLMMessage(role="user", content="Extract: John is 30.")]
+    response = llm.invoke(messages, response_format=Person, temperature=0)
+    person = Person.model_validate_json(response.content)
+
+
+Anthropic Structured Output
+---------------------------
+
+Anthropic uses its native ``output_config`` API internally when `response_format` is passed to `invoke()`. Both Pydantic models and JSON schemas are supported. **Important**: Structured output relies on Anthropic's ``output_config`` feature, which requires ``anthropic>=0.77.0`` and a recent Claude model (Claude Sonnet 4.5 / Opus 4.5 and newer). Older Claude models can still be used with ``AnthropicLLM`` for regular generation (without ``response_format``).
+
+.. code:: python
+
+    from pydantic import BaseModel
+    from neo4j_graphrag.llm import AnthropicLLM
+    from neo4j_graphrag.types import LLMMessage
+
+    class Person(BaseModel):
+        name: str
+        age: int
+
+    llm = AnthropicLLM(
+        model_name="claude-sonnet-4-5",
+        model_params={"max_tokens": 1000},  # max_tokens must be specified
+    )
     messages = [LLMMessage(role="user", content="Extract: John is 30.")]
     response = llm.invoke(messages, response_format=Person, temperature=0)
     person = Person.model_validate_json(response.content)

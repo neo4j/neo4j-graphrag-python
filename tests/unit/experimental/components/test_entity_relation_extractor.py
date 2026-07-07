@@ -33,7 +33,7 @@ from neo4j_graphrag.experimental.components.types import (
 )
 from neo4j_graphrag.experimental.pipeline.exceptions import InvalidJSONError
 from neo4j_graphrag.llm import LLMInterface, LLMResponse
-from neo4j_graphrag.llm import AnthropicLLM, OpenAILLM, VertexAILLM
+from neo4j_graphrag.llm import OpenAILLM, VertexAILLM
 from unittest.mock import patch
 
 
@@ -461,7 +461,8 @@ async def test_extractor_structured_output_with_vertexai() -> None:
 
 def test_extractor_structured_output_unsupported_llm() -> None:
     """Test that use_structured_output=True raises error with unsupported LLMs."""
-    llm = AnthropicLLM(api_key="test", model_name="claude-3-opus")
+    llm = MagicMock(spec=LLMInterface)
+    llm.supports_structured_output = False
 
     with pytest.raises(ValueError) as exc_info:
         LLMEntityRelationExtractor(
