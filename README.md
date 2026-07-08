@@ -73,6 +73,14 @@ Install package with optional dependencies with (for instance):
 pip install "neo4j-graphrag[openai]"
 ```
 
+## 🧪 Experimental namespace
+
+The experimental package contains features that are under active development and intended for evaluation and testing.
+These features may be incomplete, change without notice, or be removed in future releases. As such, they are not recommended
+for production use. Support for experimental features is provided on a best-effort basis, and breaking changes or deprecations
+should be expected.
+
+
 ## 💻 Example Usage
 
 The scripts below demonstrate how to get started with the package and make use of its key features.
