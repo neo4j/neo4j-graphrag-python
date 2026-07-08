@@ -1043,7 +1043,8 @@ class GraphSchema(DataModel):
         self, file_path: Union[str, Path], overwrite: bool = False
     ) -> None:
         warnings.warn(
-            "Use .save(..., format=FileFormat.JSON) instead.", DeprecationWarning
+            "Use .save(..., format=FileFormat.JSON) instead. This method will be removed in version 2.0.",
+            DeprecationWarning,
         )
         return self.save(file_path, overwrite=overwrite, format=FileFormat.JSON)
 
@@ -1051,7 +1052,8 @@ class GraphSchema(DataModel):
         self, file_path: Union[str, Path], overwrite: bool = False
     ) -> None:
         warnings.warn(
-            "Use .save(..., format=FileFormat.YAML) instead.", DeprecationWarning
+            "Use .save(..., format=FileFormat.YAML) instead. This method will be removed in version 2.0.",
+            DeprecationWarning,
         )
         return self.save(file_path, overwrite=overwrite, format=FileFormat.YAML)
 

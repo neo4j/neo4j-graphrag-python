@@ -473,7 +473,7 @@ def get_search_query(
         ValueError: If an unsupported search type is provided.
     """
     warnings.warn(
-        "The default returned 'id' field in the search results will be removed. Please switch to using 'elementId' instead.",
+        "The default returned 'id' field in the search results will be removed in version 2.0. Please switch to using 'elementId' instead.",
         DeprecationWarning,
         stacklevel=2,
     )

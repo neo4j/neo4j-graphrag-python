@@ -108,7 +108,7 @@ def __getattr__(name: str) -> Any:
     """Lazy export of deprecated ``PdfDocument`` alias with a deprecation warning."""
     if name == "PdfDocument":
         warnings.warn(
-            "PdfDocument is deprecated and will be removed in a future version. "
+            "PdfDocument is deprecated and will be removed in version 2.0. "
             "Use LoadedDocument instead.",
             DeprecationWarning,
             stacklevel=2,

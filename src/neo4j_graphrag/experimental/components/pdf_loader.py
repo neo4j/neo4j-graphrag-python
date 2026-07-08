@@ -23,7 +23,7 @@ from .data_loader import PdfLoader, DataLoader
 
 warnings.warn(
     "Importing from `neo4j_graphrag.experimental.components.pdf_loader` is "
-    "deprecated and will be removed in a future version. "
+    "deprecated and will be removed in a version 2.0. "
     "Import `PdfLoader` and `DataLoader` from "
     "`neo4j_graphrag.experimental.components.data_loader` instead.",
     DeprecationWarning,

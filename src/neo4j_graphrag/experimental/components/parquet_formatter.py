@@ -322,7 +322,8 @@ def get_unique_properties_for_node_type(
         f"changed: it now mirrors get_primary_key_column_names_for_node_type (KEY / "
         f"{INTERNAL_ID_PROPERTY}), not UNIQUENESS-only lists. Use "
         "get_uniqueness_property_names_for_node_type or "
-        "get_primary_key_column_names_for_node_type.",
+        "get_primary_key_column_names_for_node_type. "
+        "This function will be removed in version 2.0.",
         DeprecationWarning,
         stacklevel=2,
     )
