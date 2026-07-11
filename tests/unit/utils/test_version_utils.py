@@ -16,10 +16,13 @@ from unittest.mock import MagicMock
 
 import pytest
 from neo4j_graphrag.utils.version_utils import (
+    clear_version_cache,
     get_version,
+    get_version_cached,
     has_vector_index_support,
     has_metadata_filtering_support,
     is_version_5_23_or_above,
+    supports_search_clause,
 )
 
 
@@ -113,3 +116,90 @@ def test_has_metadata_filtering_support(
     assert (
         has_metadata_filtering_support(version_tuple, is_aura) == expected_result
     ), f"Failed test case: {version_tuple}, is_aura: {is_aura}"
+
+
+class TestGetVersionCached:
+    def setup_method(self) -> None:
+        clear_version_cache()
+
+    def test_caches_per_driver(self, driver: MagicMock) -> None:
+        driver.execute_query.return_value = [
+            [{"versions": ["2026.01.0"], "edition": "enterprise"}],
+            None,
+            None,
+        ]
+        result1 = get_version_cached(driver)
+        result2 = get_version_cached(driver)
+        assert result1 == result2
+        # Only one actual query should have been made
+        assert driver.execute_query.call_count == 1
+
+    def test_different_drivers_not_shared(self) -> None:
+        driver1 = MagicMock()
+        driver1.execute_query.return_value = [
+            [{"versions": ["2026.01.0"], "edition": "enterprise"}],
+            None,
+            None,
+        ]
+        driver2 = MagicMock()
+        driver2.execute_query.return_value = [
+            [{"versions": ["5.23.0"], "edition": "community"}],
+            None,
+            None,
+        ]
+        r1 = get_version_cached(driver1)
+        r2 = get_version_cached(driver2)
+        assert r1 == ((2026, 1, 0), False, True)
+        assert r2 == ((5, 23, 0), False, False)
+
+    def test_clear_cache(self, driver: MagicMock) -> None:
+        driver.execute_query.return_value = [
+            [{"versions": ["2026.01.0"], "edition": "enterprise"}],
+            None,
+            None,
+        ]
+        get_version_cached(driver)
+        clear_version_cache()
+        get_version_cached(driver)
+        assert driver.execute_query.call_count == 2
+
+
+class TestSupportsSearchClause:
+    def setup_method(self) -> None:
+        clear_version_cache()
+
+    @pytest.mark.parametrize(
+        "version_str,expected",
+        [
+            ("2026.01.0", True),
+            ("2026.02.0", True),
+            ("2027.01.0", True),
+            ("2025.12.0", False),
+            ("5.23.0", False),
+            ("5.26.0", False),
+        ],
+    )
+    def test_version_check(
+        self, driver: MagicMock, version_str: str, expected: bool
+    ) -> None:
+        driver.execute_query.return_value = [
+            [{"versions": [version_str], "edition": "enterprise"}],
+            None,
+            None,
+        ]
+        clear_version_cache()
+        assert supports_search_clause(driver) is expected
+
+    def test_connection_error_returns_false(self, driver: MagicMock) -> None:
+        driver.execute_query.side_effect = Exception("connection refused")
+        assert supports_search_clause(driver) is False
+
+    def test_uses_cache(self, driver: MagicMock) -> None:
+        driver.execute_query.return_value = [
+            [{"versions": ["2026.01.0"], "edition": "enterprise"}],
+            None,
+            None,
+        ]
+        supports_search_clause(driver)
+        supports_search_clause(driver)
+        assert driver.execute_query.call_count == 1

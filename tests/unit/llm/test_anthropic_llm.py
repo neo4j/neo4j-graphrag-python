@@ -12,15 +12,23 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from __future__ import annotations
-from typing import List
+import json
+import warnings
 import sys
-from typing import Generator
+from typing import Any, Generator, List, cast
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import anthropic
 import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.anthropic_llm import AnthropicLLM
+from neo4j_graphrag.experimental.components.types import Neo4jGraph
+from neo4j_graphrag.llm.anthropic_llm import (
+    AnthropicLLM,
+    _is_open_map,
+    _resolve_ref,
+    _restore_open_maps,
+    _to_anthropic_schema,
+)
 from neo4j_graphrag.llm.types import LLMResponse
 from neo4j_graphrag.types import LLMMessage
 from pydantic import BaseModel, ConfigDict
@@ -30,10 +38,18 @@ from pydantic import BaseModel, ConfigDict
 def mock_anthropic() -> Generator[MagicMock, None, None]:
     mock = MagicMock()
     mock.APIError = anthropic.APIError
-    mock.NOT_GIVEN = anthropic.NOT_GIVEN
+    mock.omit = anthropic.omit
 
     with patch.dict(sys.modules, {"anthropic": mock}):
         yield mock
+
+
+def _as_mock(value: Any) -> MagicMock:
+    return cast(MagicMock, value)
+
+
+def _as_async_mock(value: Any) -> AsyncMock:
+    return cast(AsyncMock, value)
 
 
 @patch("builtins.__import__", side_effect=ImportError)
@@ -51,10 +67,10 @@ def test_anthropic_invoke_happy_path(mock_anthropic: Mock) -> None:
     input_text = "may thy knife chip and shatter"
     response = llm.invoke(input_text)
     assert response.content == "generated text"
-    llm.client.messages.create.assert_called_once_with(  # type: ignore
+    _as_mock(llm.client.messages.create).assert_called_once_with(
         messages=[{"role": "user", "content": input_text}],
         model="claude-3-opus-20240229",
-        system=anthropic.NOT_GIVEN,
+        system=anthropic.omit,
         **model_params,
     )
 
@@ -77,10 +93,10 @@ def test_anthropic_invoke_with_message_history_happy_path(mock_anthropic: Mock) 
     response = llm.invoke(question, message_history)  # type: ignore
     assert response.content == "generated text"
     message_history.append({"role": "user", "content": question})
-    llm.client.messages.create.assert_called_once_with(  # type: ignore[attr-defined]
+    _as_mock(llm.client.messages.create).assert_called_once_with(
         messages=message_history,
         model="claude-3-opus-20240229",
-        system=anthropic.NOT_GIVEN,
+        system=anthropic.omit,
         **model_params,
     )
 
@@ -103,14 +119,14 @@ def test_anthropic_invoke_with_system_instruction(
     assert isinstance(response, LLMResponse)
     assert response.content == "generated text"
     messages: List[LLMMessage] = [{"role": "user", "content": question}]
-    llm.client.messages.create.assert_called_with(  # type: ignore[attr-defined]
+    _as_mock(llm.client.messages.create).assert_called_with(
         model="claude-3-opus-20240229",
         system=system_instruction,
         messages=messages,
         **model_params,
     )
 
-    assert llm.client.messages.create.call_count == 1  # type: ignore
+    assert _as_mock(llm.client.messages.create).call_count == 1
 
 
 def test_anthropic_invoke_with_message_history_and_system_instruction(
@@ -135,14 +151,14 @@ def test_anthropic_invoke_with_message_history_and_system_instruction(
     assert isinstance(response, LLMResponse)
     assert response.content == "generated text"
     message_history.append({"role": "user", "content": question})
-    llm.client.messages.create.assert_called_with(  # type: ignore[attr-defined]
+    _as_mock(llm.client.messages.create).assert_called_with(
         model="claude-3-opus-20240229",
         system=system_instruction,
         messages=message_history,
         **model_params,
     )
 
-    assert llm.client.messages.create.call_count == 1  # type: ignore
+    assert _as_mock(llm.client.messages.create).call_count == 1
 
 
 def test_anthropic_invoke_with_message_history_validation_error(
@@ -180,9 +196,9 @@ async def test_anthropic_ainvoke_happy_path(mock_anthropic: Mock) -> None:
     input_text = "may thy knife chip and shatter"
     response = await llm.ainvoke(input_text)
     assert response.content == "Return text"
-    llm.async_client.messages.create.assert_awaited_once_with(  # type: ignore
+    _as_async_mock(llm.async_client.messages.create).assert_awaited_once_with(
         model="claude-3-opus-20240229",
-        system=anthropic.NOT_GIVEN,
+        system=anthropic.omit,
         messages=[{"role": "user", "content": input_text}],
         **model_params,
     )
@@ -211,7 +227,7 @@ def test_anthropic_llm_invoke_v2_happy_path(mock_anthropic: Mock) -> None:
     assert response.content == "anthropic v2 response"
 
     # Verify the correct method was called with system instruction and messages
-    llm.client.messages.create.assert_called_once_with(  # type: ignore
+    _as_mock(llm.client.messages.create).assert_called_once_with(
         model="claude-3-opus-20240229",
         system="You are a helpful assistant.",
         messages=[{"role": "user", "content": "What is machine learning?"}],
@@ -242,8 +258,8 @@ def test_anthropic_llm_invoke_v2_with_conversation_history(
     assert response.content == "anthropic conversation response"
 
     # Verify the correct number of messages were passed (excluding system)
-    llm.client.messages.create.assert_called_once()  # type: ignore
-    call_args = llm.client.messages.create.call_args[1]  # type: ignore
+    _as_mock(llm.client.messages.create).assert_called_once()
+    call_args = _as_mock(llm.client.messages.create).call_args[1]
     assert call_args["system"] == "You are a helpful assistant."
     assert len(call_args["messages"]) == 3
 
@@ -266,9 +282,9 @@ def test_anthropic_llm_invoke_v2_no_system_message(mock_anthropic: Mock) -> None
     assert response.content == "anthropic no system response"
 
     # Verify only user message was passed and no system instruction
-    llm.client.messages.create.assert_called_once()  # type: ignore
-    call_args = llm.client.messages.create.call_args[1]  # type: ignore
-    assert call_args["system"] == anthropic.NOT_GIVEN
+    _as_mock(llm.client.messages.create).assert_called_once()
+    call_args = _as_mock(llm.client.messages.create).call_args[1]
+    assert call_args["system"] == anthropic.omit
     assert len(call_args["messages"]) == 1
 
 
@@ -294,7 +310,7 @@ async def test_anthropic_llm_ainvoke_v2_happy_path(mock_anthropic: Mock) -> None
     assert response.content == "async anthropic v2 response"
 
     # Verify the async client was called correctly
-    llm.async_client.messages.create.assert_awaited_once_with(  # type: ignore
+    _as_async_mock(llm.async_client.messages.create).assert_awaited_once_with(
         model="claude-3-opus-20240229",
         system="You are a helpful assistant.",
         messages=[{"role": "user", "content": "What is async programming?"}],
@@ -361,15 +377,15 @@ def test_anthropic_llm_get_brand_new_messages_all_roles(mock_anthropic: Mock) ->
     # Verify system instruction is extracted
     assert system_instruction == "You are a helpful assistant."
 
-    result_messages = list(result_messages)
+    result_messages = cast(list[MagicMock], list(result_messages))
 
     # Verify the correct number of non-system messages are returned
     assert len(result_messages) == 3
 
     # Verify message content is preserved
-    assert result_messages[0].content == "Hello"  # type: ignore[attr-defined]
-    assert result_messages[1].content == "Hi there!"  # type: ignore[attr-defined]
-    assert result_messages[2].content == "How are you?"  # type: ignore[attr-defined]
+    assert result_messages[0].content == "Hello"
+    assert result_messages[1].content == "Hi there!"
+    assert result_messages[2].content == "How are you?"
 
 
 def test_anthropic_llm_get_brand_new_messages_unknown_role(
@@ -405,10 +421,16 @@ def test_anthropic_llm_invoke_v2_empty_response_error(mock_anthropic: Mock) -> N
     assert "LLM returned empty response" in str(exc_info.value)
 
 
-def test_anthropic_invoke_v2_with_response_format_raises_error(
+def test_anthropic_invoke_v2_with_pydantic_response_format(
     mock_anthropic: Mock,
 ) -> None:
-    """Test V2 interface raises NotImplementedError when response_format is used."""
+    """Test V2 interface passes a Pydantic response_format as output_config."""
+    mock_response = MagicMock()
+    mock_response.content = [MagicMock(text='{"value": "structured result"}')]
+    mock_response.usage.input_tokens = 10
+    mock_response.usage.output_tokens = 20
+    mock_anthropic.Anthropic.return_value.messages.create.return_value = mock_response
+    mock_anthropic.types.MessageParam = MagicMock(side_effect=lambda **kwargs: kwargs)
 
     class TestModel(BaseModel):
         model_config = ConfigDict(extra="forbid")
@@ -416,10 +438,236 @@ def test_anthropic_invoke_v2_with_response_format_raises_error(
 
     messages: List[LLMMessage] = [{"role": "user", "content": "Test"}]
     llm = AnthropicLLM(api_key="test", model_name="claude-3-opus")
+    response = llm.invoke(messages, response_format=TestModel)
 
-    with pytest.raises(NotImplementedError) as exc_info:
-        llm.invoke(messages, response_format=TestModel)
+    assert response.content == '{"value": "structured result"}'
+    call_kwargs = mock_anthropic.Anthropic.return_value.messages.create.call_args[1]
+    output_config = call_kwargs["output_config"]
+    assert output_config["format"]["type"] == "json_schema"
+    assert output_config["format"]["schema"] == TestModel.model_json_schema()
 
-    assert "AnthropicLLM does not currently support structured output" in str(
-        exc_info.value
+
+def test_anthropic_invoke_v2_with_dict_response_format(
+    mock_anthropic: Mock,
+) -> None:
+    """Test V2 interface passes a dict response_format through as output_config."""
+    mock_response = MagicMock()
+    mock_response.content = [MagicMock(text='{"value": "dict result"}')]
+    mock_response.usage.input_tokens = 10
+    mock_response.usage.output_tokens = 20
+    mock_anthropic.Anthropic.return_value.messages.create.return_value = mock_response
+    mock_anthropic.types.MessageParam = MagicMock(side_effect=lambda **kwargs: kwargs)
+
+    output_config = {
+        "format": {
+            "type": "json_schema",
+            "schema": {"type": "object", "properties": {"value": {"type": "string"}}},
+        }
+    }
+    messages: List[LLMMessage] = [{"role": "user", "content": "Test"}]
+    llm = AnthropicLLM(api_key="test", model_name="claude-3-opus")
+    response = llm.invoke(messages, response_format=output_config)
+
+    assert response.content == '{"value": "dict result"}'
+    call_kwargs = mock_anthropic.Anthropic.return_value.messages.create.call_args[1]
+    assert call_kwargs["output_config"] == output_config
+
+
+def test_anthropic_invoke_v2_without_response_format_omits_output_config(
+    mock_anthropic: Mock,
+) -> None:
+    """Test V2 interface does not pass output_config when no response_format is given."""
+    mock_response = MagicMock()
+    mock_response.content = [MagicMock(text="plain response")]
+    mock_response.usage.input_tokens = 10
+    mock_response.usage.output_tokens = 20
+    mock_anthropic.Anthropic.return_value.messages.create.return_value = mock_response
+    mock_anthropic.types.MessageParam = MagicMock(side_effect=lambda **kwargs: kwargs)
+
+    messages: List[LLMMessage] = [{"role": "user", "content": "Test"}]
+    llm = AnthropicLLM(api_key="test", model_name="claude-3-opus")
+    response = llm.invoke(messages)
+
+    assert response.content == "plain response"
+    call_kwargs = mock_anthropic.Anthropic.return_value.messages.create.call_args[1]
+    assert "output_config" not in call_kwargs
+
+
+@pytest.mark.asyncio
+async def test_anthropic_ainvoke_v2_with_pydantic_response_format(
+    mock_anthropic: Mock,
+) -> None:
+    """Test async V2 interface passes a Pydantic response_format as output_config."""
+    mock_response = AsyncMock()
+    mock_response.content = [MagicMock(text='{"value": "async structured result"}')]
+    mock_response.usage.input_tokens = 10
+    mock_response.usage.output_tokens = 20
+    mock_model = mock_anthropic.AsyncAnthropic.return_value
+    mock_model.messages.create = AsyncMock(return_value=mock_response)
+    mock_anthropic.types.MessageParam = MagicMock(side_effect=lambda **kwargs: kwargs)
+
+    class TestModel(BaseModel):
+        model_config = ConfigDict(extra="forbid")
+        value: str
+
+    messages: List[LLMMessage] = [{"role": "user", "content": "Test"}]
+    llm = AnthropicLLM(api_key="test", model_name="claude-3-opus")
+    response = await llm.ainvoke(messages, response_format=TestModel)
+
+    assert response.content == '{"value": "async structured result"}'
+    call_kwargs = mock_model.messages.create.call_args[1]
+    assert call_kwargs["output_config"]["format"]["type"] == "json_schema"
+
+
+def test_anthropic_llm_supports_structured_output(mock_anthropic: Mock) -> None:  # noqa: ARG001
+    """Test that AnthropicLLM advertises structured output support."""
+    llm = AnthropicLLM(model_name="claude-3-opus")
+    assert llm.supports_structured_output is True
+
+
+def test_anthropic_llm_close(mock_anthropic: Mock) -> None:
+    mock_anthropic.AsyncAnthropic.return_value.close = AsyncMock()
+
+    llm = AnthropicLLM("claude-3-opus-20240229")
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        llm.close()
+
+    mock_anthropic.Anthropic.return_value.close.assert_called_once()
+    mock_anthropic.AsyncAnthropic.return_value.close.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_anthropic_llm_aclose(mock_anthropic: Mock) -> None:
+    mock_anthropic.AsyncAnthropic.return_value.close = AsyncMock()
+
+    llm = AnthropicLLM("claude-3-opus-20240229")
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        await llm.aclose()
+
+    mock_anthropic.Anthropic.return_value.close.assert_called_once()
+    mock_anthropic.AsyncAnthropic.return_value.close.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# INTERMEDIATE FIX: open-map <-> key/value schema transform.
+# Remove these tests together with the workaround in anthropic_llm.py once
+# cross-provider strict JSON schema handling is added.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "schema,expected",
+    [
+        ({"type": "object", "additionalProperties": {"type": "string"}}, True),
+        ({"type": "object", "properties": {"a": {"type": "string"}}}, False),
+        ({"type": "object", "additionalProperties": False}, False),
+        ({"type": "array", "items": {"type": "string"}}, False),
+    ],
+)
+def test_is_open_map(schema: dict[str, Any], expected: bool) -> None:
+    assert _is_open_map(schema) is expected
+
+
+@pytest.mark.parametrize(
+    "schema,defs,expected",
+    [
+        ({"$ref": "#/$defs/Foo"}, {"Foo": {"type": "object"}}, {"type": "object"}),
+        ({"$ref": "#/$defs/Missing"}, {}, {}),
+        ({"type": "string"}, {}, {"type": "string"}),
+    ],
+)
+def test_resolve_ref(
+    schema: dict[str, Any], defs: dict[str, Any], expected: dict[str, Any]
+) -> None:
+    assert _resolve_ref(schema, defs) == expected
+
+
+def test_to_anthropic_schema_rewrites_open_map_to_key_value_array() -> None:
+    result = _to_anthropic_schema(
+        {"type": "object", "additionalProperties": {"type": "integer"}}
     )
+    assert result["type"] == "array"
+    item = result["items"]
+    assert item["type"] == "object"
+    assert item["properties"]["key"] == {"type": "string"}
+    assert item["properties"]["value"] == {"type": "integer"}
+    assert item["required"] == ["key", "value"]
+    assert item["additionalProperties"] is False
+
+
+def test_restore_open_maps_empty_list_becomes_empty_dict_for_map() -> None:
+    schema = {"type": "object", "additionalProperties": {"type": "integer"}}
+    assert _restore_open_maps([], schema, {}) == {}
+
+
+def test_restore_open_maps_keeps_genuine_array() -> None:
+    schema = {"type": "array", "items": {"type": "number"}}
+    assert _restore_open_maps([1.0, 2.0], schema, {}) == [1.0, 2.0]
+
+
+def test_neo4jgraph_transform_then_restore_round_trip() -> None:
+    original = Neo4jGraph.model_json_schema()
+    transformed = _to_anthropic_schema(original)
+    node = transformed["$defs"]["Neo4jNode"]["properties"]
+    assert node["properties"]["type"] == "array"
+    assert node["embedding_properties"]["type"] == "array"
+
+    payload = {
+        "nodes": [
+            {
+                "id": "1",
+                "label": "Person",
+                "properties": [{"key": "name", "value": "Alice"}],
+                "embedding_properties": [{"key": "vec", "value": [0.1, 0.2]}],
+            }
+        ],
+        "relationships": [
+            {
+                "start_node_id": "1",
+                "end_node_id": "1",
+                "type": "KNOWS",
+                "properties": [],
+                "embedding_properties": [],
+            }
+        ],
+    }
+    restored = _restore_open_maps(payload, original, original.get("$defs", {}))
+    graph = Neo4jGraph.model_validate(restored)
+    assert graph.nodes[0].properties == {"name": "Alice"}
+    assert graph.nodes[0].embedding_properties == {"vec": [0.1, 0.2]}
+    assert graph.relationships[0].properties == {}
+
+
+def test_anthropic_invoke_v2_restores_open_maps_in_response(
+    mock_anthropic: Mock,
+) -> None:
+    raw = json.dumps(
+        {
+            "nodes": [
+                {
+                    "id": "1",
+                    "label": "Person",
+                    "properties": [{"key": "name", "value": "Alice"}],
+                    "embedding_properties": [],
+                }
+            ],
+            "relationships": [],
+        }
+    )
+    mock_response = MagicMock()
+    mock_response.content = [MagicMock(text=raw)]
+    mock_response.usage.input_tokens = 1
+    mock_response.usage.output_tokens = 1
+    mock_anthropic.Anthropic.return_value.messages.create.return_value = mock_response
+    mock_anthropic.types.MessageParam = MagicMock(side_effect=lambda **kwargs: kwargs)
+
+    llm = AnthropicLLM(api_key="test", model_name="claude-3-opus")
+    messages: List[LLMMessage] = [{"role": "user", "content": "x"}]
+    response = llm.invoke(messages, response_format=Neo4jGraph)
+
+    graph = Neo4jGraph.model_validate_json(response.content)
+    assert graph.nodes[0].properties == {"name": "Alice"}

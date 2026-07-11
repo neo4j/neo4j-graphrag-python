@@ -12,202 +12,137 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from __future__ import annotations
+
 import io
 import json
-from unittest.mock import MagicMock, Mock, patch
+from typing import Any, Generator
+from unittest.mock import MagicMock, patch
 
 import pytest
-from tenacity import RetryError
 
 from neo4j_graphrag.embeddings.bedrock import BedrockEmbeddings
 from neo4j_graphrag.exceptions import EmbeddingsGenerationError
 
 
+@pytest.fixture
+def mock_boto3() -> Generator[MagicMock, None, None]:
+    with patch("neo4j_graphrag.embeddings.bedrock.boto3") as mock_boto:
+        mock_client = MagicMock()
+        mock_boto.client.return_value = mock_client
+        yield mock_boto
+
+
+def _make_invoke_response(embedding: list[float]) -> dict[str, Any]:
+    body_bytes = json.dumps({"embedding": embedding}).encode()
+    return {"body": io.BytesIO(body_bytes)}
+
+
 @patch("neo4j_graphrag.embeddings.bedrock.boto3", None)
 def test_bedrock_embedder_missing_dependency() -> None:
-    with pytest.raises(ImportError):
+    with pytest.raises(ImportError) as exc:
         BedrockEmbeddings()
+    assert "Could not import boto3 python client" in str(exc.value)
 
 
-@patch("neo4j_graphrag.embeddings.bedrock.boto3")
-def test_bedrock_embedder_happy_path(mock_boto3: Mock) -> None:
-    mock_client = MagicMock()
-    mock_boto3.client.return_value = mock_client
+def test_bedrock_embedder_default_model_from_env(mock_boto3: MagicMock) -> None:
+    with patch.dict(
+        "os.environ",
+        {"BEDROCK_EMBED_MODEL_ID": "custom-model", "BEDROCK_EMBED_DIMENSIONS": "256"},
+    ):
+        import importlib
+        import sys
 
-    # Mock the response body
-    response_body = {"embedding": [1.0, 2.0, 3.0]}
-    mock_client.invoke_model.return_value = {
-        "body": io.BytesIO(json.dumps(response_body).encode("utf-8"))
-    }
+        # Ensure reload picks up the mock instead of real boto3
+        original_boto3 = sys.modules.get("boto3")
+        sys.modules["boto3"] = mock_boto3
 
-    embedder = BedrockEmbeddings(region_name="us-east-1")
-    res = embedder.embed_query("my text")
+        try:
+            import neo4j_graphrag.embeddings.bedrock as bedrock_mod
 
-    assert isinstance(res, list)
-    assert res == [1.0, 2.0, 3.0]
+            importlib.reload(bedrock_mod)
 
-    # Verify boto3.client was called with correct parameters
-    mock_boto3.client.assert_called_once_with(
-        "bedrock-runtime",
-        region_name="us-east-1",
-    )
+            assert bedrock_mod.DEFAULT_MODEL_ID == "custom-model"
+            assert bedrock_mod.DEFAULT_DIMENSIONS == 256
 
-
-@patch("neo4j_graphrag.embeddings.bedrock.boto3")
-def test_bedrock_embedder_default_model(mock_boto3: Mock) -> None:
-    mock_client = MagicMock()
-    mock_boto3.client.return_value = mock_client
-
-    response_body = {"embedding": [1.0, 2.0]}
-    mock_client.invoke_model.return_value = {
-        "body": io.BytesIO(json.dumps(response_body).encode("utf-8"))
-    }
-
-    embedder = BedrockEmbeddings()
-    embedder.embed_query("test")
-
-    # Verify the default model was used
-    call_args = mock_client.invoke_model.call_args
-    assert call_args.kwargs["modelId"] == "amazon.titan-embed-text-v2:0"
+            embedder = bedrock_mod.BedrockEmbeddings()
+            assert embedder.model_id == "custom-model"
+            assert embedder.dimensions == 256
+        finally:
+            # Restore real boto3 and reload to reset defaults
+            if original_boto3 is not None:
+                sys.modules["boto3"] = original_boto3
+            importlib.reload(bedrock_mod)
 
 
-@patch("neo4j_graphrag.embeddings.bedrock.boto3")
-def test_bedrock_embedder_custom_model(mock_boto3: Mock) -> None:
-    mock_client = MagicMock()
-    mock_boto3.client.return_value = mock_client
-
-    response_body = {"embedding": [1.0, 2.0]}
-    mock_client.invoke_model.return_value = {
-        "body": io.BytesIO(json.dumps(response_body).encode("utf-8"))
-    }
-
-    embedder = BedrockEmbeddings(model_id="amazon.titan-embed-text-v1")
-    embedder.embed_query("test")
-
-    call_args = mock_client.invoke_model.call_args
-    assert call_args.kwargs["modelId"] == "amazon.titan-embed-text-v1"
-
-
-@patch("neo4j_graphrag.embeddings.bedrock.boto3")
-def test_bedrock_embedder_inference_profile(mock_boto3: Mock) -> None:
-    mock_client = MagicMock()
-    mock_boto3.client.return_value = mock_client
-
-    response_body = {"embedding": [1.0, 2.0]}
-    mock_client.invoke_model.return_value = {
-        "body": io.BytesIO(json.dumps(response_body).encode("utf-8"))
-    }
-
-    inference_profile_arn = (
-        "arn:aws:bedrock:us-east-1:123456789:inference-profile/my-profile"
-    )
-    embedder = BedrockEmbeddings(inference_profile_id=inference_profile_arn)
-    embedder.embed_query("test")
-
-    # Verify inference profile was used instead of model_id
-    call_args = mock_client.invoke_model.call_args
-    assert call_args.kwargs["modelId"] == inference_profile_arn
-
-
-@patch("neo4j_graphrag.embeddings.bedrock.boto3")
-def test_bedrock_embedder_with_preconfigured_client(mock_boto3: Mock) -> None:
-    # Create a mock pre-configured client
-    mock_client = MagicMock()
-    response_body = {"embedding": [1.0, 2.0]}
-    mock_client.invoke_model.return_value = {
-        "body": io.BytesIO(json.dumps(response_body).encode("utf-8"))
-    }
-
-    embedder = BedrockEmbeddings(client=mock_client)
-    res = embedder.embed_query("test")
-
-    assert res == [1.0, 2.0]
-    # Verify boto3.client was NOT called since we provided a client
-    mock_boto3.client.assert_not_called()
-
-
-@patch("neo4j_graphrag.embeddings.bedrock.boto3")
-def test_bedrock_embedder_request_body_format(mock_boto3: Mock) -> None:
-    mock_client = MagicMock()
-    mock_boto3.client.return_value = mock_client
-
-    response_body = {"embedding": [1.0, 2.0]}
-    mock_client.invoke_model.return_value = {
-        "body": io.BytesIO(json.dumps(response_body).encode("utf-8"))
-    }
+def test_bedrock_embed_query_happy_path(mock_boto3: MagicMock) -> None:
+    mock_client = mock_boto3.client.return_value
+    mock_client.invoke_model.return_value = _make_invoke_response([0.1, 0.2, 0.3])
 
     embedder = BedrockEmbeddings()
-    embedder.embed_query("Hello, world!")
+    res = embedder.embed_query("hello")
 
-    call_args = mock_client.invoke_model.call_args
-    request_body = json.loads(call_args.kwargs["body"])
+    assert res == [0.1, 0.2, 0.3]
+    mock_client.invoke_model.assert_called_once()
+    call_kwargs = mock_client.invoke_model.call_args[1]
+    body = json.loads(call_kwargs["body"])
+    assert body["inputText"] == "hello"
+    assert body["dimensions"] == 1024
+    assert body["normalize"] is True
 
-    assert request_body["inputText"] == "Hello, world!"
-    assert call_args.kwargs["contentType"] == "application/json"
-    assert call_args.kwargs["accept"] == "application/json"
 
-
-@patch("neo4j_graphrag.embeddings.bedrock.boto3")
-def test_bedrock_embedder_non_retryable_error(mock_boto3: Mock) -> None:
-    """Test that non-retryable errors fail immediately without retries."""
-    mock_client = MagicMock()
-    mock_boto3.client.return_value = mock_client
-    mock_client.invoke_model.side_effect = Exception("ValidationException: Invalid input")
+@pytest.mark.asyncio
+async def test_bedrock_async_embed_query_happy_path(mock_boto3: MagicMock) -> None:
+    mock_client = mock_boto3.client.return_value
+    mock_client.invoke_model.return_value = _make_invoke_response([0.4, 0.5, 0.6])
 
     embedder = BedrockEmbeddings()
+    res = await embedder.async_embed_query("hello")
 
+    assert res == [0.4, 0.5, 0.6]
+    mock_client.invoke_model.assert_called_once()
+
+
+def test_bedrock_embed_query_error(mock_boto3: MagicMock) -> None:
+    mock_client = mock_boto3.client.return_value
+    mock_client.invoke_model.side_effect = Exception("API error")
+
+    embedder = BedrockEmbeddings()
     with pytest.raises(
         EmbeddingsGenerationError, match="Failed to generate embedding with Bedrock"
     ):
-        embedder.embed_query("my text")
+        embedder.embed_query("hello")
 
-    # Verify the API was called only once (no retries for non-rate-limit errors)
     assert mock_client.invoke_model.call_count == 1
 
 
-@patch("neo4j_graphrag.embeddings.bedrock.boto3")
-def test_bedrock_embedder_rate_limit_error_retries(mock_boto3: Mock) -> None:
-    """Test that rate limit errors are retried the expected number of times."""
-    mock_client = MagicMock()
-    mock_boto3.client.return_value = mock_client
+def test_bedrock_embed_query_custom_params(mock_boto3: MagicMock) -> None:
+    mock_client = mock_boto3.client.return_value
+    mock_client.invoke_model.return_value = _make_invoke_response([1.0, 2.0])
 
-    # Use "rate limit" pattern which is detected by is_rate_limit_error()
-    mock_client.invoke_model.side_effect = [
-        Exception("rate limit exceeded"),
-        Exception("rate limit exceeded"),
-        Exception("rate limit exceeded"),
-    ]
+    embedder = BedrockEmbeddings(
+        model_id="amazon.titan-embed-text-v1",
+        dimensions=512,
+        normalize=False,
+        region_name="eu-west-1",
+    )
+    res = embedder.embed_query("test")
 
-    embedder = BedrockEmbeddings()
-
-    # After exhausting retries, tenacity raises RetryError
-    with pytest.raises(RetryError):
-        embedder.embed_query("my text")
-
-    # Verify the API was called 3 times (default max_attempts for RetryRateLimitHandler)
-    assert mock_client.invoke_model.call_count == 3
+    assert res == [1.0, 2.0]
+    call_kwargs = mock_client.invoke_model.call_args[1]
+    assert call_kwargs["modelId"] == "amazon.titan-embed-text-v1"
+    body = json.loads(call_kwargs["body"])
+    assert body["dimensions"] == 512
+    assert body["normalize"] is False
 
 
-@patch("neo4j_graphrag.embeddings.bedrock.boto3")
-def test_bedrock_embedder_rate_limit_eventual_success(mock_boto3: Mock) -> None:
-    """Test that rate limit errors eventually succeed after retries."""
-    mock_client = MagicMock()
-    mock_boto3.client.return_value = mock_client
-
-    # First two calls fail with rate limit, third succeeds
-    response_body = {"embedding": [1.0, 2.0, 3.0]}
-    mock_response = {"body": io.BytesIO(json.dumps(response_body).encode("utf-8"))}
-
-    mock_client.invoke_model.side_effect = [
-        Exception("rate limit exceeded"),
-        Exception("rate limit exceeded"),
-        mock_response,
-    ]
+def test_bedrock_embed_query_empty_response(mock_boto3: MagicMock) -> None:
+    mock_client = mock_boto3.client.return_value
+    body_bytes = json.dumps({"embedding": None}).encode()
+    mock_client.invoke_model.return_value = {"body": io.BytesIO(body_bytes)}
 
     embedder = BedrockEmbeddings()
-    result = embedder.embed_query("my text")
-
-    # Verify successful result
-    assert result == [1.0, 2.0, 3.0]
-    # Verify the API was called 3 times before succeeding
-    assert mock_client.invoke_model.call_count == 3
+    with pytest.raises(
+        EmbeddingsGenerationError, match="Failed to generate embedding with Bedrock"
+    ):
+        embedder.embed_query("hello")

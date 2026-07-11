@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import sys
+import warnings
 from typing import Generator, List
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
@@ -283,3 +284,20 @@ def test_cohere_invoke_v2_with_response_format_raises_error(mock_cohere: Mock) -
     assert "CohereLLM does not currently support structured output" in str(
         exc_info.value
     )
+
+
+def test_cohere_llm_close(mock_cohere: Mock) -> None:
+    llm = CohereLLM(model_name="something")
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        llm.close()
+
+
+@pytest.mark.asyncio
+async def test_cohere_llm_aclose(mock_cohere: Mock) -> None:
+    llm = CohereLLM(model_name="something")
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        await llm.aclose()

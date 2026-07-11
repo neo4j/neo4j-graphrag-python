@@ -28,7 +28,7 @@ BUNDLING: Hatchling (wheel builder)
 TESTING FRAMEWORKS: pytest, coverage
 
 TEST COMMANDS:
-- Unit tests: `poetry run pytest tests/unit/` (per project instructions) or `uv run pytest tests/unit`
+- Unit tests: `uv run pytest tests/unit/` (per project instructions) or `uv run pytest tests/unit`
 - E2E tests: `uv run pytest tests/e2e`
 - Coverage check: `uv run coverage run -m pytest tests/unit && uv run coverage report --fail-under=90`
 
@@ -88,6 +88,15 @@ ENVIRONMENT MANAGEMENT:
 - Optional LLM provider integrations (OpenAI, Anthropic, Ollama, Cohere, Google, MistralAI)
 - Vector DB support (Weaviate, Pinecone, Qdrant)
 - Documentation via Sphinx; published separately
+
+## Gotchas
+
+- Version utils in `src/neo4j_graphrag/utils/version_utils.py` — new version checks go here
+- Unit test conftest provides `driver` fixture as MagicMock (see `tests/unit/conftest.py`)
+- Neo4j versions after 5.x use year-based format (2025.01, 2026.01) — tuple comparison still works
+- `WeakKeyDictionary` works for caching per-driver since `neo4j.Driver` is hashable
+- Neo4j 2026 CREATE VECTOR INDEX syntax: WITH clause must come BEFORE OPTIONS, not after
+- E2E tests for SEARCH clause: use `docker compose -f tests/e2e/docker-compose.neo4j2026.yml up -d`
 
 ---
 

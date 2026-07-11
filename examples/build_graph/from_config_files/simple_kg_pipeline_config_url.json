@@ -36,7 +36,7 @@
             }
         }
     },
-    "from_pdf": true,
+    "from_file": true,
     "schema": {
         "node_types": [
             "Person",
@@ -105,8 +105,8 @@
             "chunk_overlap": 10
         }
     },
-    "pdf_loader": {
-        "class_": "pdf_loader.PdfLoader",
+    "file_loader": {
+        "class_": "data_loader.PdfLoader",
         "run_params_": {
             "fs": "http"
         }

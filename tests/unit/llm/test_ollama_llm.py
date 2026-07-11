@@ -12,7 +12,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Any, List
+import warnings
+from typing import Any, List, cast
 from unittest.mock import MagicMock, Mock, patch
 
 import ollama
@@ -20,9 +21,9 @@ import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm import LLMResponse
 from neo4j_graphrag.llm.ollama_llm import OllamaLLM
-from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.llm.types import ToolCallResponse
 from neo4j_graphrag.tool import Tool
+from neo4j_graphrag.types import LLMMessage
 from pydantic import BaseModel, ConfigDict
 
 
@@ -30,6 +31,10 @@ def get_mock_ollama() -> MagicMock:
     mock = MagicMock()
     mock.ResponseError = ollama.ResponseError
     return mock
+
+
+def _as_mock(value: Any) -> MagicMock:
+    return cast(MagicMock, value)
 
 
 @patch("builtins.__import__", side_effect=ImportError)
@@ -66,7 +71,7 @@ def test_ollama_llm_happy_path_deprecated_options(mock_import: Mock) -> None:
     messages = [
         {"role": "user", "content": question},
     ]
-    llm.client.chat.assert_called_once_with(  # type: ignore[attr-defined]
+    _as_mock(llm.client.chat).assert_called_once_with(
         model=model, messages=messages, options={"temperature": 0.3}
     )
 
@@ -108,7 +113,7 @@ def test_ollama_llm_happy_path(mock_import: Mock) -> None:
     messages = [
         {"role": "user", "content": question},
     ]
-    llm.client.chat.assert_called_once_with(  # type: ignore[attr-defined]
+    _as_mock(llm.client.chat).assert_called_once_with(
         model=model,
         messages=messages,
         options=options,
@@ -137,7 +142,7 @@ def test_ollama_invoke_with_system_instruction_happy_path(mock_import: Mock) -> 
     assert response.content == "ollama chat response"
     messages = [{"role": "system", "content": system_instruction}]
     messages.append({"role": "user", "content": question})
-    llm.client.chat.assert_called_once_with(  # type: ignore[attr-defined]
+    _as_mock(llm.client.chat).assert_called_once_with(
         model=model,
         messages=messages,
         options=options,
@@ -169,7 +174,7 @@ def test_ollama_invoke_with_message_history_happy_path(mock_import: Mock) -> Non
     assert response.content == "ollama chat response"
     messages = [m for m in message_history]
     messages.append({"role": "user", "content": question})
-    llm.client.chat.assert_called_once_with(  # type: ignore[attr-defined]
+    _as_mock(llm.client.chat).assert_called_once_with(
         model=model, messages=messages, options=options
     )
 
@@ -206,10 +211,10 @@ def test_ollama_invoke_with_message_history_and_system_instruction(
     messages = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
-    llm.client.chat.assert_called_once_with(  # type: ignore[attr-defined]
+    _as_mock(llm.client.chat).assert_called_once_with(
         model=model, messages=messages, options=options
     )
-    assert llm.client.chat.call_count == 1  # type: ignore
+    assert _as_mock(llm.client.chat).call_count == 1
 
 
 @patch("builtins.__import__")
@@ -298,7 +303,7 @@ def test_ollama_llm_invoke_v2_happy_path(mock_import: Mock) -> None:
     mock_ollama.Message.assert_any_call(**messages[1])
 
     # Verify the client was called with correct parameters
-    llm.client.chat.assert_called_once_with(  # type: ignore[attr-defined]
+    _as_mock(llm.client.chat).assert_called_once_with(
         model=model,
         messages=[mock_ollama.Message.return_value, mock_ollama.Message.return_value],
         options=options,
@@ -409,8 +414,8 @@ def test_ollama_llm_input_type_switching_string(mock_import: Mock) -> None:
     assert res.content == "legacy response"
 
     # Verify legacy method was used (messages should be built via get_messages)
-    llm.client.chat.assert_called_once()  # type: ignore[attr-defined]
-    call_args = llm.client.chat.call_args[1]  # type: ignore[attr-defined]
+    _as_mock(llm.client.chat).assert_called_once()
+    call_args = _as_mock(llm.client.chat).call_args[1]
     assert call_args["model"] == model
     assert len(call_args["messages"]) == 1
     assert call_args["messages"][0]["role"] == "user"
@@ -569,11 +574,9 @@ def test_ollama_llm_invoke_with_tools_with_message_history(
     # Verify the correct messages were passed
     message_history.append({"role": "user", "content": question})
     # Use assert_called_once() instead of assert_called_once_with() to avoid issues with overloaded functions
-    llm.client.chat.assert_called_once()  # type: ignore
+    _as_mock(llm.client.chat).assert_called_once()
     # Check call arguments individually
-    call_args = llm.client.chat.call_args[  # type: ignore
-        1
-    ]  # Get the keyword arguments
+    call_args = _as_mock(llm.client.chat).call_args[1]  # Get the keyword arguments
     assert call_args["messages"] == message_history
     assert call_args["model"] == "gpt"
     # Check tools content rather than direct equality
@@ -617,11 +620,9 @@ def test_ollama_llm_invoke_with_tools_with_system_instruction(
     messages = [{"role": "system", "content": system_instruction}]
     messages.append({"role": "user", "content": "my text"})
     # Use assert_called_once() instead of assert_called_once_with() to avoid issues with overloaded functions
-    llm.client.chat.assert_called_once()  # type: ignore
+    _as_mock(llm.client.chat).assert_called_once()
     # Check call arguments individually
-    call_args = llm.client.chat.call_args[  # type: ignore
-        1
-    ]  # Get the keyword arguments
+    call_args = _as_mock(llm.client.chat).call_args[1]  # Get the keyword arguments
     assert call_args["messages"] == messages
     assert call_args["model"] == "gpt"
     # Check tools content rather than direct equality
@@ -650,6 +651,81 @@ def test_ollama_llm_invoke_with_tools_error(mock_import: Mock, test_tool: Tool) 
         llm.invoke_with_tools("my text", tools)
 
 
+@pytest.mark.asyncio
+@patch("builtins.__import__")
+async def test_ollama_llm_ainvoke_with_tools_happy_path(
+    mock_import: Mock, test_tool: Tool
+) -> None:
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+
+    mock_function = MagicMock()
+    mock_function.name = "test_tool"
+    mock_function.arguments = {"param1": "value1"}
+
+    mock_tool_call = MagicMock()
+    mock_tool_call.function = mock_function
+
+    async def mock_chat_async(*_args: Any, **_kwargs: Any) -> MagicMock:
+        return MagicMock(
+            message=MagicMock(
+                content="ollama tool response", tool_calls=[mock_tool_call]
+            )
+        )
+
+    mock_ollama.AsyncClient.return_value.chat = mock_chat_async
+
+    llm = OllamaLLM(model_name="gpt", model_params={"options": {"temperature": 0}})
+    res = await llm.ainvoke_with_tools("my text", [test_tool])
+
+    assert isinstance(res, ToolCallResponse)
+    assert len(res.tool_calls) == 1
+    assert res.tool_calls[0].name == "test_tool"
+    assert res.tool_calls[0].arguments == {"param1": "value1"}
+    assert res.content == "ollama tool response"
+
+
+@pytest.mark.asyncio
+@patch("builtins.__import__")
+async def test_ollama_llm_ainvoke_with_tools_no_tool_calls(
+    mock_import: Mock, test_tool: Tool
+) -> None:
+    """When the model returns no tool_calls, content is returned with empty tool_calls."""
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+
+    async def mock_chat_async(*_args: Any, **_kwargs: Any) -> MagicMock:
+        return MagicMock(message=MagicMock(content="plain content", tool_calls=[]))
+
+    mock_ollama.AsyncClient.return_value.chat = mock_chat_async
+
+    llm = OllamaLLM(model_name="gpt", model_params={"options": {"temperature": 0}})
+    res = await llm.ainvoke_with_tools("my text", [test_tool])
+
+    assert isinstance(res, ToolCallResponse)
+    assert res.tool_calls == []
+    assert res.content == "plain content"
+
+
+@pytest.mark.asyncio
+@patch("builtins.__import__")
+async def test_ollama_llm_ainvoke_with_tools_error(
+    mock_import: Mock, test_tool: Tool
+) -> None:
+    """ResponseError from the async client surfaces as LLMGenerationError."""
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+
+    async def mock_chat_async_error(*_args: Any, **_kwargs: Any) -> None:
+        raise ollama.ResponseError("async tool error")
+
+    mock_ollama.AsyncClient.return_value.chat = mock_chat_async_error
+
+    llm = OllamaLLM(model_name="gpt", model_params={"options": {"temperature": 0}})
+    with pytest.raises(LLMGenerationError):
+        await llm.ainvoke_with_tools("my text", [test_tool])
+
+
 class _TestModelForOllama(BaseModel):
     """Test model for structured output tests."""
 
@@ -672,3 +748,28 @@ def test_ollama_invoke_v2_with_response_format_raises_error(mock_import: Mock) -
     assert "OllamaLLM does not currently support structured output" in str(
         exc_info.value
     )
+
+
+@patch("builtins.__import__")
+def test_ollama_llm_close(mock_import: Mock) -> None:
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+
+    llm = OllamaLLM(model_name="llama3.2", model_params={"options": {}})
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        llm.close()
+
+
+@pytest.mark.asyncio
+@patch("builtins.__import__")
+async def test_ollama_llm_aclose(mock_import: Mock) -> None:
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+
+    llm = OllamaLLM(model_name="llama3.2", model_params={"options": {}})
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        await llm.aclose()

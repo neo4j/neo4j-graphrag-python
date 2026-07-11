@@ -47,7 +47,7 @@
             }
         }
     },
-    "from_pdf": true,
+    "from_file": true,
     "entities": [
         "Person",
         "Organization",

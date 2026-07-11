@@ -294,35 +294,54 @@ Using a Custom Model
 --------------------
 
 If the provided implementations do not match their needs, developers can create a
-custom LLM class by subclassing the `LLMInterface`.
-Here's an example using the Python Ollama client:
+custom LLM class by subclassing :class:`neo4j_graphrag.llm.LLMBase`.
+``LLMBase`` combines ``LLMInterface`` (str input, v1 API) and ``LLMInterfaceV2``
+(``List[LLMMessage]`` input, structured output) into a single abstract base class.
+Subclasses implement one ``invoke`` and one ``ainvoke`` dispatcher that branches on
+the type of *input*.
 
+Here's an example using the Python Ollama client:
 
 .. code:: python
 
+    from typing import Any, List, Optional, Type, Union
     import ollama
-    from neo4j_graphrag.llm import LLMInterface, LLMResponse
+    from pydantic import BaseModel
+    from neo4j_graphrag.llm import LLMBase, LLMResponse
+    from neo4j_graphrag.message_history import MessageHistory
+    from neo4j_graphrag.types import LLMMessage
 
-    class OllamaLLM(LLMInterface):
+    class MyOllamaLLM(LLMBase):
 
-        def invoke(self, input: str) -> LLMResponse:
-            response = ollama.chat(model=self.model_name, messages=[
-              {
-                'role': 'user',
-                'content': input,
-              },
-            ])
-            return LLMResponse(
-                content=response["message"]["content"]
-            )
+        def invoke(
+            self,
+            input: Union[str, List[LLMMessage]],
+            message_history=None,
+            system_instruction=None,
+            response_format=None,
+            **kwargs: Any,
+        ) -> LLMResponse:
+            if isinstance(input, str):
+                messages = [{"role": "user", "content": input}]
+            else:
+                messages = list(input)
+            response = ollama.chat(model=self.model_name, messages=messages)
+            return LLMResponse(content=response["message"]["content"])
 
-        async def ainvoke(self, input: str) -> LLMResponse:
-            return self.invoke(input)  # TODO: implement async with ollama.AsyncClient
+        async def ainvoke(
+            self,
+            input: Union[str, List[LLMMessage]],
+            message_history=None,
+            system_instruction=None,
+            response_format=None,
+            **kwargs: Any,
+        ) -> LLMResponse:
+            return self.invoke(input)  # TODO: implement with ollama.AsyncClient
 
 
     # retriever = ...
 
-    llm = OllamaLLM("llama3:8b")
+    llm = MyOllamaLLM("llama3:8b")
 
     rag = GraphRAG(retriever=retriever, llm=llm)
     query_text = "How do I do similarity search in Neo4j?"
@@ -337,7 +356,7 @@ Structured Output with LLMs
 
 Structured output enables LLMs to return responses conforming to a predefined schema (Pydantic model or JSON schema), ensuring type-safe and consistent data structures. This is useful for extracting entities, relationships, or any structured data with automatic validation.
 
-**V2 Interface (Recommended)**: For :ref:`OpenAILLM <openaillm>` and :ref:`VertexAILLM <vertexaillm>`, pass `response_format` as a parameter to the `invoke()` method when using the V2 interface (list of `LLMMessage`). The `response_format` accepts either a Pydantic model class or a JSON schema dictionary. Other LLM providers will raise `NotImplementedError` if `response_format` is used.
+**V2 Interface (Recommended)**: For :ref:`OpenAILLM <openaillm>`, :ref:`VertexAILLM <vertexaillm>` and :ref:`AnthropicLLM <anthropicllm>`, pass `response_format` as a parameter to the `invoke()` method when using the V2 interface (list of `LLMMessage`). The `response_format` accepts either a Pydantic model class or a JSON schema dictionary. Other LLM providers will raise `NotImplementedError` if `response_format` is used.
 
 **V1 Interface (Legacy)**: With the V1 interface (string input), standard JSON mode is supported for both OpenAI and VertexAI via constructor parameters only (`model_params` for OpenAI, `generation_config` for VertexAI). The `response_format` parameter in `invoke()` is not permitted with V1.
 
@@ -349,7 +368,6 @@ Structured output enables LLMs to return responses conforming to a predefined sc
 
     class Person(BaseModel):
         model_config = ConfigDict(extra="forbid")  # Required for OpenAI structured output
-        
         name: str
         age: int
         occupation: str
@@ -371,7 +389,7 @@ Structured output enables LLMs to return responses conforming to a predefined sc
 OpenAI Structured Output
 -------------------------
 
-OpenAI supports Pydantic models, JSON schemas, and JSON object mode. **Important**: Pydantic models must include `ConfigDict(extra="forbid")` to generate schemas with `additionalProperties: false`, which is required by OpenAI's strict mode. 
+OpenAI supports Pydantic models, JSON schemas, and JSON object mode. **Important**: Pydantic models must include `ConfigDict(extra="forbid")` to generate schemas with `additionalProperties: false`, which is required by OpenAI's strict mode.
 
 .. code:: python
 
@@ -396,6 +414,7 @@ VertexAI Structured Output
 ---------------------------
 
 VertexAI uses `GenerationConfig` with `response_mime_type` and `response_schema` internally when `response_format` is passed to `invoke()`. Both Pydantic models and JSON schemas are supported. **Important**: Additional `GenerationConfig` parameters (e.g., `temperature`, `max_output_tokens`) can be passed as kwargs to `invoke()`.
+
 .. code:: python
 
     from pydantic import BaseModel, ConfigDict
@@ -404,7 +423,6 @@ VertexAI uses `GenerationConfig` with `response_mime_type` and `response_schema`
 
     class Person(BaseModel):
         model_config = ConfigDict(extra="forbid")
-        
         name: str
         age: int
 
@@ -412,6 +430,31 @@ VertexAI uses `GenerationConfig` with `response_mime_type` and `response_schema`
     messages = [LLMMessage(role="user", content="Extract: John is 30.")]
     response = llm.invoke(messages, response_format=Person, temperature=0)
     person = Person.model_validate_json(response.content)
+
+
+Anthropic Structured Output
+---------------------------
+
+Anthropic uses its native ``output_config`` API internally when `response_format` is passed to `invoke()`. Both Pydantic models and JSON schemas are supported. **Important**: Structured output relies on Anthropic's ``output_config`` feature, which requires ``anthropic>=0.77.0`` and a recent Claude model (Claude Sonnet 4.5 / Opus 4.5 and newer). Older Claude models can still be used with ``AnthropicLLM`` for regular generation (without ``response_format``).
+
+.. code:: python
+
+    from pydantic import BaseModel
+    from neo4j_graphrag.llm import AnthropicLLM
+    from neo4j_graphrag.types import LLMMessage
+
+    class Person(BaseModel):
+        name: str
+        age: int
+
+    llm = AnthropicLLM(
+        model_name="claude-sonnet-4-5",
+        model_params={"max_tokens": 1000},  # max_tokens must be specified
+    )
+    messages = [LLMMessage(role="user", content="Extract: John is 30.")]
+    response = llm.invoke(messages, response_format=Person, temperature=0)
+    person = Person.model_validate_json(response.content)
+
 
 Rate Limit Handling
 ===================
@@ -470,7 +513,7 @@ You can customize the rate limiting behavior by creating your own rate limit han
 
     class CustomRateLimitHandler(RateLimitHandler):
         """Implement your custom rate limiting strategy."""
-        # Implement required methods: handle_sync, handle_async 
+        # Implement required methods: handle_sync, handle_async
         # and optionally override is_retryable_exception and to_retryable_error
         # to classify additional exception types as retryable or convert them to retryable errors
         pass
@@ -736,9 +779,13 @@ using `filters`.
 
 .. warning::
 
-    When using filters, the similarity search bypasses the vector index and instead utilizes
-    an exact match algorithm
-    Ensure that the pre-filtering is stringent enough to prevent query overload.
+    On Neo4j versions prior to 2026.01, filters cause the similarity search to bypass the
+    vector index and use a brute-force exact match algorithm. Ensure that the pre-filtering
+    is stringent enough to prevent query overload.
+
+    On Neo4j 2026.01+, simple filters (see below) are automatically routed to use the
+    SEARCH clause with in-index filtering, which is significantly faster. See
+    :ref:`search-clause-filtering` for details.
 
 The currently supported operators are:
 
@@ -753,6 +800,47 @@ The currently supported operators are:
 - `$nin`: not in.
 - `$like`: LIKE operator case-sensitive.
 - `$ilike`: LIKE operator case-insensitive.
+
+.. _search-clause-filtering:
+
+In-Index Filtering with the SEARCH Clause (Neo4j 2026.01+)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+On Neo4j 2026.01 and later, the library automatically detects the server version and
+uses the Cypher ``SEARCH`` clause for vector queries. This enables in-index filtering,
+where compatible filter predicates are evaluated inside the vector index itself rather
+than via post-hoc brute-force scanning.
+
+**Requirements:**
+
+1. Neo4j server version 2026.01 or later.
+2. To filter, the vector index must declare every filtered property in
+   ``filterable_properties`` (see :ref:`filterable-index-creation`). If any filtered
+   property is missing, the library falls back to the procedure path and logs
+   a warning. Unfiltered queries do not require ``filterable_properties``.
+3. The filter must use only SEARCH-compatible operators.
+
+**SEARCH-compatible operators** (use in-index filtering):
+
+- ``$eq``, ``$ne``
+- ``$lt``, ``$lte``, ``$gt``, ``$gte``
+- ``$between``
+- Multiple filters combined with implicit ``$and``
+
+**Operators that fall back to brute-force filtering:**
+
+- ``$or``
+- ``$in``, ``$nin``
+- ``$like``, ``$ilike``
+
+When a filter uses incompatible operators on a SEARCH-capable server, the library
+automatically falls back to the procedure-based search path and logs a warning.
+
+.. note::
+
+    The SEARCH clause routing is fully automatic. No code changes are needed beyond
+    creating the index with ``filterable_properties``. The same ``filters`` parameter
+    works on all Neo4j versions.
 
 
 Here are examples of valid filter syntaxes and their meaning:
@@ -1095,8 +1183,8 @@ See :ref:`text2cypherretriever`.
 
 .. _tools-retriever-user-guide:
 
-ToolsRetriever
---------------
+Tools Retriever
+---------------
 
 The ToolsRetriever uses an LLM to intelligently select and execute appropriate tools based on user queries. This retriever analyzes the user's question using an LLM to determine which tools from a provided set would be most helpful for retrieving relevant information. It can select multiple tools if necessary or none if no tools are appropriate for the query, then combines results from the executed tools with proper attribution. This is particularly useful when different types of information retrieval might be needed for complex queries.
 
@@ -1458,6 +1546,49 @@ Create a Vector Index
         dimensions=DIMENSION,
         similarity_fn="euclidean",
     )
+
+.. _filterable-index-creation:
+
+Create a Vector Index with Filterable Properties
+=================================================
+
+On Neo4j 2026.01+, you can create a vector index with filterable properties to enable
+in-index filtering via the ``SEARCH`` clause. This avoids brute-force scanning and
+provides significantly better performance for filtered vector searches.
+
+.. code:: python
+
+    from neo4j import GraphDatabase
+    from neo4j_graphrag.indexes import create_vector_index
+
+    URI = "neo4j://localhost:7687"
+    AUTH = ("neo4j", "password")
+
+    INDEX_NAME = "chunk-index"
+    DIMENSION = 1536
+
+    driver = GraphDatabase.driver(URI, auth=AUTH)
+
+    # Create index with filterable properties for in-index filtering
+    create_vector_index(
+        driver,
+        INDEX_NAME,
+        label="Document",
+        embedding_property="vectorProperty",
+        dimensions=DIMENSION,
+        similarity_fn="cosine",
+        filterable_properties=["year", "category"],
+    )
+
+The ``filterable_properties`` parameter accepts a list of node property names. These
+properties will be indexed alongside the vector embeddings, enabling the ``SEARCH`` clause
+to filter results within the index itself.
+
+.. note::
+
+    The ``filterable_properties`` parameter requires Neo4j 2026.01+. On older versions,
+    the parameter is accepted but the generated ``WITH`` clause may cause an error if the
+    server does not support it.
 
 
 Populate a Vector Index

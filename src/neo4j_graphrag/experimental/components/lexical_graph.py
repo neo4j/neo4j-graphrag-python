@@ -115,7 +115,7 @@ class LexicalGraphBuilder(Component):
         }
         # Only add document_type if it's not None
         if document_info.document_type is not None:
-            properties["document_type"] = document_info.document_type
+            properties["document_type"] = document_info.document_type.value
 
         return Neo4jNode(
             id=document_info.document_id,

@@ -15,15 +15,16 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Iterable, List, Optional, Type, Union, cast, overload
+from typing import Any, Iterable, List, Optional, Type, Union, cast
 
 from pydantic import BaseModel, ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.base import LLMInterface, LLMInterfaceV2
+from neo4j_graphrag.llm.base import LLMBase
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
+    LLMUsage,
     MessageList,
     SystemMessage,
     UserMessage,
@@ -54,12 +55,11 @@ try:
     )
     from mistralai.models.sdkerror import SDKError
 except ImportError:
-    Mistral = None  # type: ignore
-    SDKError = None  # type: ignore
+    pass
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return
-class MistralAILLM(LLMInterface, LLMInterfaceV2):
+class MistralAILLM(LLMBase):
     def __init__(
         self,
         model_name: str,
@@ -82,7 +82,7 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):
                 """Could not import Mistral Python client.
                 Please install it with `pip install "neo4j-graphrag[mistralai]"`."""
             )
-        LLMInterfaceV2.__init__(
+        LLMBase.__init__(
             self,
             model_name=model_name,
             model_params=model_params or {},
@@ -94,41 +94,7 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):
             api_key = os.getenv("MISTRAL_API_KEY", "")
         self.client = Mistral(api_key=api_key, **kwargs)
 
-    # overloads for LLMInterface and LLMInterfaceV2 methods
-    @overload  # type: ignore[no-overload-impl]
     def invoke(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse: ...
-
-    @overload
-    def invoke(
-        self,
-        input: List[LLMMessage],
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse: ...
-
-    @overload  # type: ignore[no-overload-impl]
-    async def ainvoke(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse: ...
-
-    @overload
-    async def ainvoke(
-        self,
-        input: List[LLMMessage],
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse: ...
-
-    # switching logics to LLMInterface or LLMInterfaceV2
-    def invoke(  # type: ignore[no-redef]
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -143,7 +109,7 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 
-    async def ainvoke(  # type: ignore[no-redef]
+    async def ainvoke(
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -192,14 +158,22 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):
                 **self.model_params,
             )
             content: str = ""
+            usage = None
             if response and response.choices:
                 possible_content = response.choices[0].message.content
                 if isinstance(possible_content, str):
                     content = possible_content
-            return LLMResponse(content=content)
+            if response and response.usage:
+                usage = LLMUsage(
+                    request_tokens=response.usage.prompt_tokens,
+                    response_tokens=response.usage.completion_tokens,
+                    total_tokens=response.usage.total_tokens,
+                )
+            return LLMResponse(content=content, usage=usage)
         except SDKError as e:
             raise LLMGenerationError(e)
 
+    @rate_limit_handler_decorator
     def __invoke_v2(
         self,
         input: List[LLMMessage],
@@ -229,11 +203,18 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):
                 model=self.model_name, messages=messages, **self.model_params, **kwargs
             )
             content: str = ""
+            usage = None
             if response and response.choices:
                 possible_content = response.choices[0].message.content
                 if isinstance(possible_content, str):
                     content = possible_content
-            return LLMResponse(content=content)
+            if response and response.usage:
+                usage = LLMUsage(
+                    request_tokens=response.usage.prompt_tokens,
+                    response_tokens=response.usage.completion_tokens,
+                    total_tokens=response.usage.total_tokens,
+                )
+            return LLMResponse(content=content, usage=usage)
         except SDKError as e:
             raise LLMGenerationError(e)
 
@@ -269,14 +250,22 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):
                 **self.model_params,
             )
             content: str = ""
+            usage = None
             if response and response.choices:
                 possible_content = response.choices[0].message.content
                 if isinstance(possible_content, str):
                     content = possible_content
-            return LLMResponse(content=content)
+            if response and response.usage:
+                usage = LLMUsage(
+                    request_tokens=response.usage.prompt_tokens,
+                    response_tokens=response.usage.completion_tokens,
+                    total_tokens=response.usage.total_tokens,
+                )
+            return LLMResponse(content=content, usage=usage)
         except SDKError as e:
             raise LLMGenerationError(e)
 
+    @async_rate_limit_handler_decorator
     async def __ainvoke_v2(
         self,
         input: List[LLMMessage],
@@ -309,13 +298,24 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):
                 **kwargs,
             )
             content: str = ""
+            usage = None
             if response and response.choices:
                 possible_content = response.choices[0].message.content
                 if isinstance(possible_content, str):
                     content = possible_content
-            return LLMResponse(content=content)
+            if response and response.usage:
+                usage = LLMUsage(
+                    request_tokens=response.usage.prompt_tokens,
+                    response_tokens=response.usage.completion_tokens,
+                    total_tokens=response.usage.total_tokens,
+                )
+            return LLMResponse(content=content, usage=usage)
         except SDKError as e:
             raise LLMGenerationError(e)
+
+    async def aclose(self) -> None:
+        self.client.close()
+        await self.client.aclose()
 
     # subsidiary methods
     def get_messages(
@@ -337,7 +337,7 @@ class MistralAILLM(LLMInterface, LLMInterfaceV2):
                 raise LLMGenerationError(e.errors()) from e
             messages.extend(cast(Iterable[dict[str, Any]], message_history))
         messages.append(UserMessage(content=input).model_dump())
-        return cast(list[Messages], messages)
+        return messages  # type: ignore
 
     def get_messages_v2(
         self,

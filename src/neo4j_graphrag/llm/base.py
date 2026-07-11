@@ -14,9 +14,10 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import asyncio
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional, Sequence, Type, Union
+from typing import Any, List, Optional, Sequence, Type, Union, overload
 
 from pydantic import BaseModel
 
@@ -194,6 +195,7 @@ class LLMInterfaceV2(ABC):
     def invoke(
         self,
         input: List[LLMMessage],
+        *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
@@ -217,6 +219,7 @@ class LLMInterfaceV2(ABC):
     async def ainvoke(
         self,
         input: List[LLMMessage],
+        *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
@@ -235,3 +238,126 @@ class LLMInterfaceV2(ABC):
             LLMGenerationError: If anything goes wrong.
             NotImplementedError: If the LLM provider does not support structured output.
         """
+
+
+class LLMBase(LLMInterface, LLMInterfaceV2, ABC):
+    """Abstract base for LLMs that implement both the v1 (str input) and v2
+    (List[LLMMessage] input) call signatures.
+
+    Subclasses must implement ``invoke`` and ``ainvoke`` as a single dispatcher
+    that branches on the type of *input*.  The overloads declared here give
+    type-checkers accurate return-type information at each call site without
+    requiring every concrete class to repeat the same boilerplate.
+    """
+
+    def __init__(
+        self,
+        model_name: str,
+        model_params: Optional[dict[str, Any]] = None,
+        rate_limit_handler: Optional[RateLimitHandler] = None,
+        **kwargs: Any,
+    ) -> None:
+        LLMInterfaceV2.__init__(
+            self,
+            model_name=model_name,
+            model_params=model_params,
+            rate_limit_handler=rate_limit_handler,
+            **kwargs,
+        )
+
+    # --- invoke overloads ---
+
+    @overload
+    def invoke(
+        self,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> LLMResponse: ...
+
+    @overload
+    def invoke(
+        self,
+        input: List[LLMMessage],
+        *,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> LLMResponse: ...
+
+    @abstractmethod
+    def invoke(
+        self,
+        input: Union[str, List[LLMMessage]],
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> LLMResponse: ...
+
+    # --- ainvoke overloads ---
+
+    @overload
+    async def ainvoke(
+        self,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> LLMResponse: ...
+
+    @overload
+    async def ainvoke(
+        self,
+        input: List[LLMMessage],
+        *,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> LLMResponse: ...
+
+    @abstractmethod
+    async def ainvoke(
+        self,
+        input: Union[str, List[LLMMessage]],
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> LLMResponse: ...
+
+    def close(self) -> None:
+        """Close both clients and release any resources.
+
+        Must not be called from a running async context — use ``await aclose()`` instead.
+        """
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            # No running loop: safe to block
+            loop = asyncio.new_event_loop()
+            try:
+                loop.run_until_complete(self.aclose())
+            finally:
+                loop.close()
+        else:
+            raise RuntimeError(
+                "Cannot call close() from a running async context. "
+                "Use 'async with' or 'await aclose()' instead."
+            )
+
+    async def aclose(self) -> None:
+        """Close both clients and release any resources.
+
+        Override in subclasses that hold HTTP clients.
+        """
+        pass
+
+    def __enter__(self) -> "LLMBase":
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        self.close()
+
+    async def __aenter__(self) -> "LLMBase":
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        await self.aclose()

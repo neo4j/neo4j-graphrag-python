@@ -130,7 +130,8 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
             "YIELD name, labelsOrTypes, properties, options "
             "WHERE name = $index_name "
             "RETURN labelsOrTypes as labels, properties, "
-            "options.indexConfig.`vector.dimensions` as dimensions"
+            "options.indexConfig.`vector.dimensions` as dimensions, "
+            "options.indexConfig.`vector.filterable_properties` as filterable_properties"
         )
         query_result = self.driver.execute_query(
             query,
@@ -143,6 +144,7 @@ class Retriever(ABC, metaclass=RetrieverMetaclass):
             self._node_label = result["labels"][0]
             self._embedding_node_property = result["properties"][0]
             self._embedding_dimension = result["dimensions"]
+            self._filterable_properties = result.get("filterable_properties") or []
         except IndexError as e:
             raise Exception(f"No index with name {self.index_name} found") from e
 

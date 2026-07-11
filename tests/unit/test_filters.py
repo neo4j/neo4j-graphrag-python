@@ -35,6 +35,7 @@ from neo4j_graphrag.filters import (
     _construct_metadata_filter,
     _handle_field_filter,
     _single_condition_cypher,
+    classify_filter_for_search,
     get_metadata_filter,
 )
 
@@ -639,3 +640,137 @@ def test_get_metadata_filter_unsupported_operator() -> None:
     filters = {"field": {"$unsupported": "value"}}
     with pytest.raises(FilterValidationError):
         get_metadata_filter(filters)
+
+
+# --- classify_filter_for_search tests ---
+
+
+def test_classify_filter_none() -> None:
+    result = classify_filter_for_search(None)
+    assert result.is_compatible is True
+    assert result.cypher_where_clause is None
+    assert result.params is None
+
+
+def test_classify_filter_empty_dict() -> None:
+    result = classify_filter_for_search({})
+    assert result.is_compatible is True
+    assert result.cypher_where_clause is None
+    assert result.params is None
+
+
+def test_classify_filter_simple_eq() -> None:
+    result = classify_filter_for_search({"age": 30})
+    assert result.is_compatible is True
+    assert result.cypher_where_clause == "node.age = $param_0"
+    assert result.params == {"param_0": 30}
+
+
+def test_classify_filter_explicit_eq() -> None:
+    result = classify_filter_for_search({"age": {"$eq": 30}})
+    assert result.is_compatible is True
+    assert result.cypher_where_clause == "node.age = $param_0"
+    assert result.params == {"param_0": 30}
+
+
+def test_classify_filter_ne() -> None:
+    result = classify_filter_for_search({"status": {"$ne": "inactive"}})
+    assert result.is_compatible is True
+    assert result.cypher_where_clause == "node.status <> $param_0"
+    assert result.params == {"param_0": "inactive"}
+
+
+def test_classify_filter_lt() -> None:
+    result = classify_filter_for_search({"price": {"$lt": 100}})
+    assert result.is_compatible is True
+    assert result.cypher_where_clause == "node.price < $param_0"
+    assert result.params == {"param_0": 100}
+
+
+def test_classify_filter_gt() -> None:
+    result = classify_filter_for_search({"price": {"$gt": 10}})
+    assert result.is_compatible is True
+
+
+def test_classify_filter_lte() -> None:
+    result = classify_filter_for_search({"price": {"$lte": 100}})
+    assert result.is_compatible is True
+
+
+def test_classify_filter_gte() -> None:
+    result = classify_filter_for_search({"price": {"$gte": 10}})
+    assert result.is_compatible is True
+
+
+def test_classify_filter_between() -> None:
+    result = classify_filter_for_search({"price": {"$between": [10, 100]}})
+    assert result.is_compatible is True
+    assert result.cypher_where_clause == "$param_0 <= node.price <= $param_1"
+    assert result.params == {"param_0": 10, "param_1": 100}
+
+
+def test_classify_filter_implicit_and_compatible() -> None:
+    result = classify_filter_for_search({"age": {"$gte": 18}, "status": "active"})
+    assert result.is_compatible is True
+    assert "AND" in (result.cypher_where_clause or "")
+    assert result.params is not None
+    assert len(result.params) == 2
+
+
+def test_classify_filter_explicit_and_compatible() -> None:
+    result = classify_filter_for_search(
+        {"$and": [{"age": {"$gte": 18}}, {"status": "active"}]}
+    )
+    assert result.is_compatible is True
+    assert "AND" in (result.cypher_where_clause or "")
+
+
+def test_classify_filter_or_incompatible() -> None:
+    result = classify_filter_for_search(
+        {"$or": [{"field_1": "value_1"}, {"field_2": "value_2"}]}
+    )
+    assert result.is_compatible is False
+    assert result.cypher_where_clause is None
+    assert result.params is None
+
+
+def test_classify_filter_in_incompatible() -> None:
+    result = classify_filter_for_search({"field": {"$in": [1, 2, 3]}})
+    assert result.is_compatible is False
+
+
+def test_classify_filter_nin_incompatible() -> None:
+    result = classify_filter_for_search({"field": {"$nin": [1, 2]}})
+    assert result.is_compatible is False
+
+
+def test_classify_filter_like_incompatible() -> None:
+    result = classify_filter_for_search({"field": {"$like": "value"}})
+    assert result.is_compatible is False
+
+
+def test_classify_filter_ilike_incompatible() -> None:
+    result = classify_filter_for_search({"field": {"$ilike": "value"}})
+    assert result.is_compatible is False
+
+
+def test_classify_filter_nested_or_in_and_incompatible() -> None:
+    """AND at top level but OR nested inside => incompatible."""
+    result = classify_filter_for_search(
+        {"$and": [{"$or": [{"a": 1}, {"b": 2}]}, {"c": 3}]}
+    )
+    assert result.is_compatible is False
+
+
+def test_classify_filter_and_with_in_incompatible() -> None:
+    """AND with an $in operator nested => incompatible."""
+    result = classify_filter_for_search(
+        {"$and": [{"field": {"$in": [1, 2]}}, {"other": 3}]}
+    )
+    assert result.is_compatible is False
+
+
+def test_classify_filter_custom_node_alias() -> None:
+    result = classify_filter_for_search({"age": 30}, node_alias="n")
+    assert result.is_compatible is True
+    assert result.cypher_where_clause == "n.age = $param_0"

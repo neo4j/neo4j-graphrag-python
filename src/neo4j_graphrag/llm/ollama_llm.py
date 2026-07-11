@@ -20,6 +20,7 @@ import warnings
 from typing import (
     TYPE_CHECKING,
     Any,
+    Dict,
     Iterable,
     List,
     Optional,
@@ -27,8 +28,6 @@ from typing import (
     Type,
     Union,
     cast,
-    Dict,
-    overload,
 )
 
 # 3rd-party dependencies
@@ -37,6 +36,7 @@ from pydantic import BaseModel, ValidationError
 # project dependencies
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.message_history import MessageHistory
+from neo4j_graphrag.tool import Tool
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.rate_limit import (
     RateLimitHandler,
@@ -48,17 +48,17 @@ from neo4j_graphrag.utils.rate_limit import (
     rate_limit_handler as rate_limit_handler_decorator,
 )
 
-from .base import LLMInterface, LLMInterfaceV2
+from .base import LLMBase
 from .types import (
     BaseMessage,
     LLMResponse,
+    LLMUsage,
     MessageList,
+    SystemMessage,
     ToolCall,
     ToolCallResponse,
-    SystemMessage,
     UserMessage,
 )
-from neo4j_graphrag.tool import Tool
 
 if TYPE_CHECKING:
     from ollama import Message
@@ -66,7 +66,7 @@ if TYPE_CHECKING:
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
 
 
-class OllamaLLM(LLMInterface, LLMInterfaceV2):
+class OllamaLLM(LLMBase):
     """LLM wrapper for Ollama models."""
 
     def __init__(
@@ -83,7 +83,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
                 "Could not import ollama Python client. "
                 "Please install it with `pip install ollama`."
             )
-        LLMInterfaceV2.__init__(
+        LLMBase.__init__(
             self,
             model_name=model_name,
             model_params=model_params or {},
@@ -111,41 +111,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
             )
             self.model_params = {"options": self.model_params}
 
-    # overloads for LLMInterface and LLMInterfaceV2 methods
-    @overload  # type: ignore[no-overload-impl]
     def invoke(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse: ...
-
-    @overload
-    def invoke(
-        self,
-        input: List[LLMMessage],
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse: ...
-
-    @overload  # type: ignore[no-overload-impl]
-    async def ainvoke(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse: ...
-
-    @overload
-    async def ainvoke(
-        self,
-        input: List[LLMMessage],
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse: ...
-
-    # switching logics to LLMInterface or LLMInterfaceV2
-    def invoke(  # type: ignore[no-redef]
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -160,7 +126,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 
-    async def ainvoke(  # type: ignore[no-redef]
+    async def ainvoke(
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -204,7 +170,21 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
                 **self.model_params,
             )
             content = response.message.content or ""
-            return LLMResponse(content=content)
+            usage = None
+            if (
+                response.prompt_eval_count is not None
+                or response.eval_count is not None
+            ):
+                request_tokens = response.prompt_eval_count
+                response_tokens = response.eval_count
+                usage = LLMUsage(
+                    request_tokens=request_tokens,
+                    response_tokens=response_tokens,
+                    total_tokens=(request_tokens + response_tokens)
+                    if (request_tokens is not None and response_tokens is not None)
+                    else None,
+                )
+            return LLMResponse(content=content, usage=usage)
         except self.ollama.ResponseError as e:
             raise LLMGenerationError(e)
 
@@ -236,7 +216,21 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
                 **kwargs,
             )
             content = response.message.content or ""
-            return LLMResponse(content=content)
+            usage = None
+            if (
+                response.prompt_eval_count is not None
+                or response.eval_count is not None
+            ):
+                request_tokens = response.prompt_eval_count
+                response_tokens = response.eval_count
+                usage = LLMUsage(
+                    request_tokens=request_tokens,
+                    response_tokens=response_tokens,
+                    total_tokens=(request_tokens + response_tokens)
+                    if (request_tokens is not None and response_tokens is not None)
+                    else None,
+                )
+            return LLMResponse(content=content, usage=usage)
         except self.ollama.ResponseError as e:
             raise LLMGenerationError(e)
 
@@ -247,7 +241,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
-        """Asynchronously sends a text input to the OpenAI chat
+        """Asynchronously sends a text input to the Ollama chat
         completion model and returns the response's content.
 
         Args:
@@ -257,7 +251,7 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
             system_instruction (Optional[str]): An option to override the llm system message for this invocation.
 
         Returns:
-            LLMResponse: The response from OpenAI.
+            LLMResponse: The response from Ollama.
 
         Raises:
             LLMGenerationError: If anything goes wrong.
@@ -271,7 +265,21 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
                 options=self.model_params,
             )
             content = response.message.content or ""
-            return LLMResponse(content=content)
+            usage = None
+            if (
+                response.prompt_eval_count is not None
+                or response.eval_count is not None
+            ):
+                request_tokens = response.prompt_eval_count
+                response_tokens = response.eval_count
+                usage = LLMUsage(
+                    request_tokens=request_tokens,
+                    response_tokens=response_tokens,
+                    total_tokens=(request_tokens + response_tokens)
+                    if (request_tokens is not None and response_tokens is not None)
+                    else None,
+                )
+            return LLMResponse(content=content, usage=usage)
         except self.ollama.ResponseError as e:
             raise LLMGenerationError(e)
 
@@ -307,7 +315,21 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
                 options=params,
             )
             content = response.message.content or ""
-            return LLMResponse(content=content)
+            usage = None
+            if (
+                response.prompt_eval_count is not None
+                or response.eval_count is not None
+            ):
+                request_tokens = response.prompt_eval_count
+                response_tokens = response.eval_count
+                usage = LLMUsage(
+                    request_tokens=request_tokens,
+                    response_tokens=response_tokens,
+                    total_tokens=(request_tokens + response_tokens)
+                    if (request_tokens is not None and response_tokens is not None)
+                    else None,
+                )
+            return LLMResponse(content=content, usage=usage)
         except self.ollama.ResponseError as e:
             raise LLMGenerationError(e)
 
@@ -350,16 +372,20 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
     ) -> ToolCallResponse:
         """Sends a text input to the LLM with tool definitions
         and retrieves a tool call response.
+
         Args:
             input (str): Text sent to the LLM.
             tools (List[Tool]): List of Tools for the LLM to choose from.
             message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
                 with each message having a specific role assigned.
             system_instruction (Optional[str]): An option to override the llm system message for this invocation.
+
         Returns:
             ToolCallResponse: The response from the LLM containing a tool call.
+
         Raises:
             LLMGenerationError: If anything goes wrong.
+
         """
         try:
             if isinstance(message_history, MessageHistory):
@@ -407,14 +433,17 @@ class OllamaLLM(LLMInterface, LLMInterfaceV2):
     ) -> ToolCallResponse:
         """Sends a text input to the LLM with tool definitions
         and retrieves a tool call response.
+
         Args:
             input (str): Text sent to the LLM.
             tools (List[Tool]): List of Tools for the LLM to choose from.
             message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
                 with each message having a specific role assigned.
             system_instruction (Optional[str]): An option to override the llm system message for this invocation.
+
         Returns:
             ToolCallResponse: The response from the LLM containing a tool call.
+
         Raises:
             LLMGenerationError: If anything goes wrong.
         """

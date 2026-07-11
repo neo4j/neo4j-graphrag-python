@@ -12,46 +12,71 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
 from __future__ import annotations
 
+import asyncio
 import json
+import os
 from typing import Any, Optional
 
 from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.exceptions import EmbeddingsGenerationError
-from neo4j_graphrag.utils.rate_limit import RateLimitHandler, rate_limit_handler
+from neo4j_graphrag.utils.rate_limit import (
+    RateLimitHandler,
+    async_rate_limit_handler,
+    rate_limit_handler,
+)
 
 try:
     import boto3
 except ImportError:
     boto3 = None
 
+DEFAULT_MODEL_ID = os.getenv("BEDROCK_EMBED_MODEL_ID", "amazon.titan-embed-text-v2:0")
+try:
+    DEFAULT_DIMENSIONS = int(os.getenv("BEDROCK_EMBED_DIMENSIONS", "1024"))
+except ValueError:
+    DEFAULT_DIMENSIONS = 1024
+
 
 class BedrockEmbeddings(Embedder):
-    """
-    AWS Bedrock embeddings class.
-    This class uses the AWS Bedrock Runtime to generate vector embeddings for text data
-    using Amazon Titan Text Embeddings V2.
+    """Embedder that uses Amazon Bedrock's embedding models via the boto3 SDK.
+
+    Supports Amazon Titan Embed models available through Bedrock.
 
     Args:
-        model_id (str): The Bedrock model identifier. Defaults to "amazon.titan-embed-text-v2:0".
-        region_name (str, optional): AWS region name. Falls back to AWS_REGION or AWS_DEFAULT_REGION env var.
-        inference_profile_id (str, optional): Inference profile ARN for cross-region inference.
-            When provided, this is used instead of model_id for the invoke_model call.
-        client: A pre-configured boto3 bedrock-runtime client. If provided, region_name is ignored.
-        rate_limit_handler (RateLimitHandler, optional): Handler for rate limiting.
-        **kwargs: Additional arguments passed to boto3.client() if client is not provided.
+        model_id: Bedrock model ID. Defaults to the ``BEDROCK_EMBED_MODEL_ID``
+            environment variable, or "amazon.titan-embed-text-v2:0" if not set.
+        dimensions: Output embedding dimensionality. Defaults to the
+            ``BEDROCK_EMBED_DIMENSIONS`` environment variable, or 1024 if not set.
+        normalize: Whether to normalize the embedding vector. Defaults to True.
+        region_name: AWS region. Defaults to boto3 session default.
+        inference_profile_id: Inference profile ID/ARN for cross-region inference.
+            When provided, it is used as the ``modelId`` instead of ``model_id``.
+        client: A pre-configured boto3 ``bedrock-runtime`` client. If provided,
+            ``region_name`` and ``**kwargs`` are ignored.
+        rate_limit_handler: Optional rate limit handler.
+        **kwargs: Arguments passed to ``boto3.client("bedrock-runtime", ...)``.
 
     Example:
-        >>> from neo4j_graphrag.embeddings import BedrockEmbeddings
-        >>> embedder = BedrockEmbeddings(region_name="us-east-1")
-        >>> embedding = embedder.embed_query("Hello, world!")
+
+    .. code-block:: python
+
+        from neo4j_graphrag.embeddings import BedrockEmbeddings
+
+        embedder = BedrockEmbeddings(
+            model_id="amazon.titan-embed-text-v2:0",
+            dimensions=1024,
+            region_name="us-east-1",
+        )
+        vector = embedder.embed_query("my question")
     """
 
     def __init__(
         self,
-        model_id: str = "amazon.titan-embed-text-v2:0",
+        model_id: str = DEFAULT_MODEL_ID,
+        dimensions: int = DEFAULT_DIMENSIONS,
+        normalize: bool = True,
         region_name: Optional[str] = None,
         inference_profile_id: Optional[str] = None,
         client: Optional[Any] = None,
@@ -60,63 +85,64 @@ class BedrockEmbeddings(Embedder):
     ) -> None:
         if boto3 is None:
             raise ImportError(
-                """Could not import boto3 python client.
-                Please install it with `pip install "neo4j-graphrag[bedrock]"`."""
+                "Could not import boto3 python client. "
+                'Please install it with `pip install "neo4j-graphrag[bedrock]"`.'
             )
         super().__init__(rate_limit_handler)
         self.model_id = model_id
+        self.dimensions = dimensions
+        self.normalize = normalize
         self.inference_profile_id = inference_profile_id
-
         if client is not None:
             self.client = client
         else:
-            self.client = boto3.client(
-                "bedrock-runtime",
-                region_name=region_name,
+            client_kwargs: dict[str, Any] = {**kwargs}
+            if region_name:
+                client_kwargs["region_name"] = region_name
+            self.client = boto3.client("bedrock-runtime", **client_kwargs)
+
+    def _invoke_embedding(self, text: str, **kwargs: Any) -> list[float]:
+        """Invoke the Bedrock embedding model and return the embedding vector."""
+        body = json.dumps(
+            {
+                "inputText": text,
+                "dimensions": self.dimensions,
+                "normalize": self.normalize,
                 **kwargs,
-            )
+            }
+        )
+        response = self.client.invoke_model(
+            body=body,
+            modelId=self.inference_profile_id or self.model_id,
+            accept="application/json",
+            contentType="application/json",
+        )
+        response_body_stream = response.get("body")
+        if response_body_stream is None:
+            raise ValueError("No body in Bedrock API response")
+        response_body = json.loads(response_body_stream.read())
+        embedding = response_body.get("embedding")
+        if not embedding:
+            raise ValueError("No embedding returned from Bedrock API")
+        return list(embedding)
 
     @rate_limit_handler
     def embed_query(self, text: str, **kwargs: Any) -> list[float]:
-        """
-        Generate embeddings for a given query using Amazon Titan Text Embeddings V2.
-
-        Args:
-            text (str): The text to generate an embedding for.
-            **kwargs (Any): Additional arguments passed to the Titan embedding request body.
-
-        Returns:
-            list[float]: The embedding vector.
-
-        Raises:
-            EmbeddingsGenerationError: If embedding generation fails.
-        """
-        # Use inference profile if provided, otherwise use model_id
-        model_identifier = self.inference_profile_id or self.model_id
-
-        # Build request body for Titan Text Embeddings V2
-        request_body = {
-            "inputText": text,
-            **kwargs,
-        }
-
         try:
-            response = self.client.invoke_model(
-                modelId=model_identifier,
-                body=json.dumps(request_body),
-                contentType="application/json",
-                accept="application/json",
-            )
-
-            response_body = json.loads(response["body"].read())
-            embedding: list[float] = response_body["embedding"]
-            return embedding
-
+            return self._invoke_embedding(text, **kwargs)
         except Exception as e:
-            # Wrap all errors in EmbeddingsGenerationError
-            # The rate_limit_handler will detect rate limit patterns in the message
-            # and convert to RateLimitError for retry
-            # Patterns like "throttling", "rate", "429" are detected by is_rate_limit_error()
+            raise EmbeddingsGenerationError(
+                f"Failed to generate embedding with Bedrock: {e}"
+            ) from e
+
+    @async_rate_limit_handler
+    async def async_embed_query(self, text: str, **kwargs: Any) -> list[float]:
+        try:
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(
+                None, lambda: self._invoke_embedding(text, **kwargs)
+            )
+        except Exception as e:
             raise EmbeddingsGenerationError(
                 f"Failed to generate embedding with Bedrock: {e}"
             ) from e

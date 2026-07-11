@@ -54,7 +54,7 @@ async def run_kg_pipeline_with_auto_schema() -> None:
             llm=llm,
             driver=driver,
             embedder=embedder,
-            from_pdf=True,
+            from_file=True,
         )
 
         print(f"Processing PDF file: {PDF_FILE}")
@@ -63,7 +63,7 @@ async def run_kg_pipeline_with_auto_schema() -> None:
 
     finally:
         # Close connections
-        await llm.async_client.close()
+        await llm.aclose()
         driver.close()
 
 

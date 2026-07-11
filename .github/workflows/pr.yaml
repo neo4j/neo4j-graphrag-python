@@ -33,13 +33,16 @@ jobs:
       - name: Install dependencies
         if: steps.cached-venv.outputs.cache-hit != 'true'
         run: uv sync --frozen --all-extras --group dev
+      - name: Download SpaCy model
+        if: matrix.python-version != '3.14'
+        run: uv pip install "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
       - name: Check format and linting
         run: |
-          uv run ruff check .
-          uv run ruff format --check .
+          uv run --frozen ruff check .
+          uv run --frozen ruff format --check .
       - name: Run strict mypy check
-        run: uv run mypy .
+        run: uv run --frozen mypy .
       - name: Run unit tests and check coverage
         run: |
-          uv run coverage run -m pytest tests/unit
-          uv run coverage report --fail-under=90
+          uv run --frozen coverage run -m pytest tests/unit
+          uv run --frozen coverage report --fail-under=90

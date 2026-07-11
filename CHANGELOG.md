@@ -4,17 +4,114 @@
 
 ### Added
 
+- `AnthropicLLM` now supports structured output via the `response_format` argument, accepting a Pydantic model or an Anthropic `output_config` dict, alongside `OpenAILLM` and `VertexAILLM`.
+
+### Changed
+
+- (**breaking**) `AnthropicLLM.supports_structured_output` is now `True`. As a result, `SchemaFromTextExtractor` and `LLMEntityRelationExtractor` (and `SimpleKGPipeline`, which enables structured output automatically when the LLM supports it) now use structured output by default with `AnthropicLLM`. This requires a Claude 4.5+ model (e.g. `claude-sonnet-4-5`); using `AnthropicLLM` with an older Claude model in these components will now raise an error where it previously worked. To keep the previous behavior, use a Claude 4.5+ model, or construct `LLMEntityRelationExtractor` / `SchemaFromTextExtractor` directly with `use_structured_output=False`.
+
+## 1.18.0
+
+### Changed
+
+- Experimental: `GraphSchema` validation now rejects `KEY` and `EXISTENCE` constraints on the same node or relationship property (including composite KEY members), since KEY already implies mandatory presence. Legacy `PropertyType.required` migration no longer adds redundant EXISTENCE constraints for KEY-covered properties. The schema-from-text extraction prompt includes the same rule.
+- Experimental: the schema-from-text extraction prompt now instructs the LLM to define each relationship type once and reuse it across patterns, using distinct type names only when patterns genuinely need different properties or constraints.
+- Experimental: LLM-auto-generated schemas now reconcile duplicate `relationship_types` (entries sharing the same label) by merging them into a single type that carries the union of their properties, emitting a warning log. This reflects that Neo4j relationship types are global per name.
+- Experimental (**breaking**): `GraphSchema` now raises `SchemaValidationError` when the same label appears more than once in `relationship_types`. Because Neo4j relationship types are global per name (every relationship of a given type shares the same properties and constraints regardless of its endpoints), a label cannot have two conflicting definitions. 
+
+## 1.17.0
+
+### Added
+
+- Vector index for all nodes embedding properties in the ParquetWriter result metadata.
+- Added `GeminiEmbedder` and `GeminiLLM` to replace the to be deprecated `VertexAIEmbedder` and `VertexAILLM`.
+
+### Fixed
+
+- Fixed a bug in `FixedSizeSplitter` that was stuck into an infinite loop with texts containing long whitespaces.
+
+
+## 1.16.1
+
+### Added
+
+- Experimental: `EXISTENCE`, `KEY`, and `UNIQUENESS` constraints can now be scoped to relationship types in `GraphSchema`. `ConstraintType` accepts a `relationship_type` field (mutually exclusive with `node_type`); validation rejects schemas where both `UNIQUENESS` and `KEY` target the same relationship type and property set. `ParquetWriter` relationship file entries now include a `constraints` list when the schema defines any for that relationship type.
+- Experimental: `SchemaFromExistingGraphExtractor._extract_graph_constraints_from_metadata` now maps `NODE_PROPERTY_UNIQUENESS` and `RELATIONSHIP_PROPERTY_UNIQUENESS` rows from `SHOW CONSTRAINTS` to the corresponding node-scoped and relationship-scoped `UNIQUENESS` constraints in `GraphSchema`.
+
+### Fixed
+
+- Experimental: `GraphPruning` now drops relationships whose `KEY`- or `EXISTENCE`-constrained properties are null, matching the existing behaviour for nodes. Previously such relationships were logged as pruned but still passed through with empty properties.
+
+## 1.16.0
+
+### Added
+
+- Added `close` and `aclose` methods to `LLMBase` to gracefully close resources.
+- Added GoogleGenAI (via `google-genai` SDK): includes `GeminiLLM` (generation/tool calling), `GeminiEmbedder` (embeddings), and integration examples/docs.
+- Experimental: `ParquetWriter` node file `constraints` metadata now includes `EXISTENCE` constraints from `GraphSchema` (alongside existing `KEY` and `UNIQUENESS` entries).
+
+### Changed
+
+- Make clear in documentation that `upsert_vectors` is not for production.
+- Use typed `GraphSchema` instead of `dict[str, Any]` for improved type safety in `ParquetWriter` and `KGWriter`.
+
+### Fixed
+
+- The `http_client` in `OpenAILLM` and `AzureOpenAILLM` is now properly passed to the `sync` or `async` opena client depending on its type.
+- `Text2CypherRetriever` now runs `EXPLAIN` on the LLM-generated Cypher and refuses to execute anything that is not read-only, raising `Text2CypherRetrievalError`. This prevents prompt-injection attacks from coercing the LLM into running destructive statements such as `MATCH (n) DETACH DELETE n`.
+
+
+## 1.15.0
+
+### Added
+
+- `LLMUsage` model (`request_tokens`, `response_tokens`, `total_tokens`) added to `neo4j_graphrag.llm`; `LLMResponse` now carries an optional `usage: LLMUsage` field populated by all built-in LLM implementations (OpenAI, AzureOpenAI, Anthropic, Bedrock, Cohere, MistralAI, Ollama, VertexAI).
+- Experimental: `GraphSchemaExtractionOutput`, `ExtractedNodeType`, `ExtractedRelationshipType`, and `ExtractedPropertyType` in `neo4j_graphrag.experimental.components.graph_schema_extraction` for schema-from-text LLM structured output; `Neo4jPropertyTypeName` type alias on `PropertyType`; `GraphSchema.from_extraction_output` and `validate_extraction_dict_to_graph_schema`; `make_strict_json_schema_for_structured_output` in `neo4j_graphrag.utils.json_schema_structured_output`.
+- Experimental KG schemas: `GraphConstraintType` (`UNIQUENESS`, `EXISTENCE`) and extended `ConstraintType` so `EXISTENCE` can target a node property or a relationship property; graph pruning and schema visualization respect `EXISTENCE` constraints.
+- Experimental: `GraphConstraintType.KEY` (Neo4j NODE KEY / RELATIONSHIP KEY, single property) on `GraphSchema.constraints`; pruning treats KEY like EXISTENCE for mandatory (non-null) properties. UNIQUENESS and KEY cannot target the same node property. Helpers: `key_property_names_for_node`, `key_property_names_for_relationship`, `uniqueness_property_names_for_node`, `mandatory_property_names_for_node`, `mandatory_property_names_for_relationship`.
+- Experimental: `SchemaFromExistingGraphExtractor` maps Neo4j `NODE_KEY` / `RELATIONSHIP_KEY` metadata to `GraphConstraintType.KEY` (existence-only constraints still map to `EXISTENCE`).
+- Experimental: composite (multi-property) UNIQUENESS and KEY constraints via `ConstraintType.property_names: Tuple[str, ...]`. EXISTENCE remains single-property only. The old `property_name: str` field is deprecated but still accepted and migrated automatically. Parquet metadata now includes a structured `constraints` list preserving composite grouping. LLM extraction prompt uses `property_names` (list) format.
+- `LLMBase`: new abstract base class (`neo4j_graphrag.llm.LLMBase`) that combines `LLMInterface` and `LLMInterfaceV2`. Concrete LLM subclasses can extend `LLMBase` instead of both interfaces to avoid repeating overload boilerplate and to suppress mypy `[no-overload-impl]` / `[no-redef]` errors.
+- MarkdownLoader (experimental): added a Markdown loader to support `.md` and `.markdown` files.
+- Added Amazon Bedrock support: `BedrockLLM` (generation/tool calling) via the boto3 Converse API, and `BedrockEmbeddings` (embeddings) via the boto3 InvokeModel API.
+
+### Fixed
+
+- `NodeType`: a node type defined without a `properties` key (e.g. `{"label": "Person"}` or `{"label": "Person", "description": "..."}`) now automatically gets a default `name: STRING` property and `additional_properties=True`, preventing a `ValidationError` from the `min_length=1` constraint. This matches the existing behaviour for string input. Auto-addition is skipped when `properties` is explicitly provided (including as an empty list) or when `additional_properties` is explicitly set to `False`.
+- Fixed `Neo4jGraphParquetFormatter` uses an explicit PyArrow schema (with embeddings typed as `float32`) derived from the union of all row keys. Integer embedding vectors (e.g. all-zero or one-hot) are now also cast to `float32`. Note: columns where only empty lists were observed are typed as `list<null>`, which may not be supported by all downstream consumers (e.g. DuckDB, Spark).
+
+### Changed
+
+- **Breaking (experimental):** Parquet export ensures every node label has at least one **single-property** `KEY` in `files[].constraints` for node Parquet files: if the schema defines no such KEY (including composite-only `KEY` or no `KEY` at all), a synthetic `KEY` on `__id__` is appended. Composite schema `KEY`s are preserved; the synthetic `__id__` `KEY` is added in addition when needed. Relationship Parquet `from`/`to` cell values and `start_node_primary_keys` / `end_node_primary_keys` now follow the first **single-property** schema `KEY` for that label, or `__id__` (internal node id) when none exists—**UNIQUENESS** is no longer used to pick relationship endpoint values. Helpers: `enrich_key_constraints_for_node_type`, `get_relationship_join_key_property_name`, `flatten_key_constraint_property_names`. `get_primary_key_column_names_for_node_type` now reflects enriched `KEY` columns (including synthetic `__id__` when injected).
+- **Breaking (experimental):** `ParquetWriter` success metadata `files[].columns` entries now include `is_unique` (bool) alongside `is_primary_key`. UNIQUENESS constraints set `is_unique: true` only; KEY constraints set `is_primary_key: true` (and `is_unique: false`). Synthetic `__id__` / relationship `from`/`to` columns keep `is_primary_key: true` where applicable. Consumers that assumed uniqueness constraints mapped to `is_primary_key` must use `is_unique` instead.
+- Experimental Parquet helpers: `get_unique_properties_for_node_type` is deprecated (emits `DeprecationWarning`). It now mirrors `get_primary_key_column_names_for_node_type` (KEY / `__id__`), not UNIQUENESS-only property lists; use `get_uniqueness_property_names_for_node_type` or `get_primary_key_column_names_for_node_type` instead.
+- Schema-from-text structured output (experimental): `SchemaFromTextExtractor` with `use_structured_output=True` now uses `GraphSchemaExtractionOutput` as `response_format` instead of `GraphSchema`, then converts to `GraphSchema` via `GraphSchema.from_extraction_output`. This keeps provider JSON schemas smaller while preserving the same runtime `GraphSchema` behavior.
+- Experimental `GraphSchema`: `PropertyType.required` is deprecated in favor of `EXISTENCE` constraints on `GraphSchema.constraints`; legacy `required` flags are migrated on load. Uniqueness constraints no longer imply property existence—model mandatory properties with `EXISTENCE` explicitly (aligned with Neo4j-style constraint semantics).
+- SimpleKG pipeline (experimental): the `from_pdf` parameter is deprecated in favor of `from_file` (PDF and Markdown inputs). `from_pdf` still works but emits a deprecation warning and will be removed in a future version.
+- Data loaders (experimental): the `PdfDocument` type name is deprecated in favor of `LoadedDocument`; `PdfDocument` remains available as a backward-compatible alias with a deprecation warning.
+
+
+## 1.14.1
+
+### Added
+
 - `NodeType` and `RelationshipType` now reject labels and types that start or end with double underscores (`__`), e.g. `__Person__`. This convention is reserved for internal Neo4j GraphRAG labels. A `ValidationError` is raised on construction.
+- SimpleKG pipeline (experimental): Markdown inputs (`.md` / `.markdown`) are supported alongside PDF via the default extension-based file loader when building from a file path.
 
 ### Changed
 
 - `SchemaExtractionTemplate` prompt updated to explicitly instruct the LLM not to use `__` as a prefix or suffix in node labels or relationship types.
 
+### Fixed
+
+- Fixed `ValueError` in `Neo4jGraphParquetFormatter` when nodes of the same label have mixed property types (e.g. `str` and `int` for the same property), which caused `pa.Table.from_pylist()` to fail. Mixed-type columns are now coerced to a consistent type before Parquet table creation.
+- Fixed a bug where the rate limit handler was not being called on the `VertexAILLM` and `MistralAILLM` `__invoke_v2` and `__ainvoke_v2` methods.
+
 ## 1.14.0
 
 ### Added
 
-- Parquet export (experimental): `ParquetWriter` (extends `KGWriter`), `Neo4jGraphParquetFormatter`, and `FilenameCollisionHandler` for writing knowledge graphs to Parquet (one file per node label and per relationship type). 
+- Parquet export (experimental): `ParquetWriter` (extends `KGWriter`), `Neo4jGraphParquetFormatter`, and `FilenameCollisionHandler` for writing knowledge graphs to Parquet (one file per node label and per relationship type).
 
 ### Changed
 

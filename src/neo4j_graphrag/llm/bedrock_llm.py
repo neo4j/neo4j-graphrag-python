@@ -13,142 +13,125 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+# built-in dependencies
 from __future__ import annotations
 
 import asyncio
+import os
 from typing import (
-    TYPE_CHECKING,
     Any,
-    Dict,
     List,
     Optional,
     Sequence,
+    Type,
     Union,
     cast,
     overload,
 )
 
-from pydantic import ValidationError
+# 3rd party dependencies
+from pydantic import BaseModel, ValidationError
 
+# project dependencies
 from neo4j_graphrag.exceptions import LLMGenerationError
+from neo4j_graphrag.llm.base import LLMInterface, LLMInterfaceV2
+from neo4j_graphrag.llm.types import (
+    BaseMessage,
+    LLMResponse,
+    LLMUsage,
+    MessageList,
+    ToolCall,
+    ToolCallResponse,
+)
 from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.tool import Tool
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.rate_limit import (
     RateLimitHandler,
+)
+from neo4j_graphrag.utils.rate_limit import (
     async_rate_limit_handler as async_rate_limit_handler_decorator,
+)
+from neo4j_graphrag.utils.rate_limit import (
     rate_limit_handler as rate_limit_handler_decorator,
 )
-
-from .base import LLMInterface, LLMInterfaceV2
-from .types import (
-    BaseMessage,
-    LLMResponse,
-    MessageList,
-    ToolCall,
-    ToolCallResponse,
-)
-
-if TYPE_CHECKING:
-    from mypy_boto3_bedrock_runtime import BedrockRuntimeClient
-    from mypy_boto3_bedrock_runtime.type_defs import (
-        MessageTypeDef,
-        SystemContentBlockTypeDef,
-    )
 
 try:
     import boto3
 except ImportError:
     boto3 = None
 
+DEFAULT_BEDROCK_LLM_MODEL = os.getenv(
+    "BEDROCK_LLM_MODEL", "us.anthropic.claude-sonnet-4-20250514-v1:0"
+)
 
+
+# pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
 class BedrockLLM(LLMInterface, LLMInterfaceV2):
-    """AWS Bedrock LLM provider using the Converse API.
-
-    This class provides access to foundation models on AWS Bedrock through
-    the unified Converse API. It supports Claude 4.x models and other
-    Bedrock-hosted models with a consistent interface.
-
-    Note:
-        Newer models (Claude Sonnet 4.5, Claude 3.5, etc.) require inference
-        profile IDs instead of direct model IDs. The format is
-        ``{region}.{provider}.{model}``, e.g., ``us.anthropic.claude-sonnet-4-5-20250929-v1:0``.
-        See https://docs.aws.amazon.com/bedrock/latest/userguide/inference-profiles-support.html
+    """LLM interface for Amazon Bedrock via the boto3 Converse API.
 
     Args:
-        model_id (str): The Bedrock model or inference profile identifier.
-            Defaults to Claude Sonnet 4.5 (US inference profile).
-        region_name (str, optional): AWS region name. Falls back to
-            AWS_REGION or AWS_DEFAULT_REGION environment variable.
-        inference_profile_id (str, optional): Inference profile ARN for
-            cross-region inference. When provided, used instead of model_id.
-        client: A pre-configured boto3 bedrock-runtime client.
-            If provided, region_name is ignored.
-        model_params (dict, optional): Additional parameters passed to the
-            Converse API (temperature, maxTokens, topP, etc.).
-        rate_limit_handler (RateLimitHandler, optional): Handler for rate limiting.
-        **kwargs: Additional arguments passed to boto3.client() if client
-            is not provided.
+        model_name (str): Bedrock model ID. Defaults to the ``BEDROCK_LLM_MODEL``
+            environment variable, or "us.anthropic.claude-sonnet-4-20250514-v1:0" if not set.
+        model_params (Optional[dict]): Additional parameters passed to the model
+            (e.g. ``{"temperature": 0.7, "maxTokens": 1024}``).
+        region_name (Optional[str]): AWS region. Defaults to boto3 session default.
+        inference_profile_id (Optional[str]): Inference profile ID/ARN for
+            cross-region inference. When provided, it is used as the ``modelId``
+            for Converse calls instead of ``model_name``.
+        client (Optional[Any]): A pre-configured boto3 ``bedrock-runtime`` client.
+            If provided, ``region_name`` and ``**kwargs`` are ignored.
+        rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting.
+        **kwargs (Any): Arguments passed to ``boto3.client("bedrock-runtime", ...)``.
+
+    Raises:
+        LLMGenerationError: If there's an error generating the response from the model.
 
     Example:
-        >>> from neo4j_graphrag.llm import BedrockLLM
-        >>> llm = BedrockLLM(region_name="us-east-1")
-        >>> response = llm.invoke("What is the capital of France?")
-        >>> print(response.content)
 
-    Example with inference profile:
-        >>> llm = BedrockLLM(
-        ...     inference_profile_id="arn:aws:bedrock:us-east-1:123456789:inference-profile/my-profile"
-        ... )
+    .. code-block:: python
 
-    Example with custom model:
-        >>> llm = BedrockLLM(
-        ...     model_id="us.anthropic.claude-3-5-haiku-20241022-v1:0",
-        ...     model_params={"temperature": 0.7, "maxTokens": 1000}
-        ... )
+        from neo4j_graphrag.llm import BedrockLLM
+
+        llm = BedrockLLM(
+            model_name="us.anthropic.claude-sonnet-4-20250514-v1:0",
+            model_params={"temperature": 0.7, "maxTokens": 1024},
+            region_name="us-east-1",
+        )
+        llm.invoke("Who is the mother of Paul Atreides?")
     """
 
     def __init__(
         self,
-        model_id: str = "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+        model_name: str = DEFAULT_BEDROCK_LLM_MODEL,
+        model_params: Optional[dict[str, Any]] = None,
         region_name: Optional[str] = None,
         inference_profile_id: Optional[str] = None,
         client: Optional[Any] = None,
-        model_params: Optional[dict[str, Any]] = None,
         rate_limit_handler: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ) -> None:
         if boto3 is None:
             raise ImportError(
-                """Could not import boto3 python client.
-                Please install it with `pip install "neo4j-graphrag[bedrock]"`."""
+                "Could not import boto3 python client. "
+                'Please install it with `pip install "neo4j-graphrag[bedrock]"`.'
             )
-
         LLMInterfaceV2.__init__(
             self,
-            model_name=model_id,
+            model_name=model_name,
             model_params=model_params or {},
             rate_limit_handler=rate_limit_handler,
-            **kwargs,
         )
-
-        self.model_id = model_id
         self.inference_profile_id = inference_profile_id
-
         if client is not None:
-            self.client: BedrockRuntimeClient = client
+            self.client = client
         else:
-            self.client = boto3.client(
-                "bedrock-runtime",
-                region_name=region_name,
-                **kwargs,
-            )
+            client_kwargs: dict[str, Any] = {**kwargs}
+            if region_name:
+                client_kwargs["region_name"] = region_name
+            self.client = boto3.client("bedrock-runtime", **client_kwargs)
 
-    def _get_model_identifier(self) -> str:
-        """Get the model identifier to use for API calls."""
-        return self.inference_profile_id or self.model_id
-
-    # Overloads for LLMInterface and LLMInterfaceV2 methods
+    # overloads for LLMInterface and LLMInterfaceV2 methods
     @overload  # type: ignore[no-overload-impl]
     def invoke(
         self,
@@ -161,6 +144,7 @@ class BedrockLLM(LLMInterface, LLMInterfaceV2):
     def invoke(
         self,
         input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse: ...
 
@@ -176,38 +160,36 @@ class BedrockLLM(LLMInterface, LLMInterfaceV2):
     async def ainvoke(
         self,
         input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse: ...
 
-    # Switching logic for LLMInterface or LLMInterfaceV2
+    # switching logic
     def invoke(  # type: ignore[no-redef]
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
         if isinstance(input, str):
             return self.__invoke_v1(input, message_history, system_instruction)
-        elif isinstance(input, list):
-            return self.__invoke_v2(input, **kwargs)
-        else:
-            raise ValueError(f"Invalid input type for invoke method - {type(input)}")
+        return self.__invoke_v2(input, response_format=response_format, **kwargs)
 
     async def ainvoke(  # type: ignore[no-redef]
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
         if isinstance(input, str):
             return await self.__ainvoke_v1(input, message_history, system_instruction)
-        elif isinstance(input, list):
-            return await self.__ainvoke_v2(input, **kwargs)
-        else:
-            raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
+        return await self.__ainvoke_v2(input, response_format=response_format, **kwargs)
 
+    # implementations
     @rate_limit_handler_decorator
     def __invoke_v1(
         self,
@@ -215,82 +197,36 @@ class BedrockLLM(LLMInterface, LLMInterfaceV2):
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
-        """Sends text to the LLM and returns a response (V1 interface).
-
-        Args:
-            input: The text to send to the LLM.
-            message_history: A collection of previous messages.
-            system_instruction: Optional system message override.
-
-        Returns:
-            LLMResponse: The response from the LLM.
-
-        Raises:
-            LLMGenerationError: If text generation fails.
-        """
         try:
-            if isinstance(message_history, MessageHistory):
-                message_history = message_history.messages
-
             messages = self.get_messages(input, message_history)
-            system = self.get_system(system_instruction)
-
-            converse_params: Dict[str, Any] = {
-                "modelId": self._get_model_identifier(),
-                "messages": messages,
-            }
-            if system:
-                converse_params["system"] = system
-            if self.model_params:
-                converse_params["inferenceConfig"] = self.model_params
-
-            response = self.client.converse(**converse_params)
+            converse_kwargs = self._build_converse_kwargs(
+                messages, system_instruction=system_instruction
+            )
+            response = self.client.converse(**converse_kwargs)
             return self._parse_response(response)
-
         except Exception as e:
-            raise LLMGenerationError(
-                f"Failed to generate text with Bedrock: {e}"
-            ) from e
+            raise LLMGenerationError(f"Error calling BedrockLLM: {e}") from e
 
     @rate_limit_handler_decorator
     def __invoke_v2(
         self,
         input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        """Sends messages to the LLM and returns a response (V2 interface).
-
-        Args:
-            input: List of LLMMessage objects.
-            **kwargs: Additional parameters for the API call.
-
-        Returns:
-            LLMResponse: The response from the LLM.
-
-        Raises:
-            LLMGenerationError: If text generation fails.
-        """
+        if response_format is not None:
+            raise NotImplementedError(
+                "BedrockLLM does not currently support structured output"
+            )
         try:
-            messages, system = self.get_messages_v2(input)
-
-            converse_params: Dict[str, Any] = {
-                "modelId": self._get_model_identifier(),
-                "messages": messages,
-            }
-            if system:
-                converse_params["system"] = system
-
-            merged_params = {**self.model_params, **kwargs}
-            if merged_params:
-                converse_params["inferenceConfig"] = merged_params
-
-            response = self.client.converse(**converse_params)
+            system_instruction, messages = self.get_messages_v2(input)
+            converse_kwargs = self._build_converse_kwargs(
+                messages, system_instruction=system_instruction, **kwargs
+            )
+            response = self.client.converse(**converse_kwargs)
             return self._parse_response(response)
-
         except Exception as e:
-            raise LLMGenerationError(
-                f"Failed to generate text with Bedrock: {e}"
-            ) from e
+            raise LLMGenerationError(f"Error calling BedrockLLM: {e}") from e
 
     @async_rate_limit_handler_decorator
     async def __ainvoke_v1(
@@ -299,112 +235,37 @@ class BedrockLLM(LLMInterface, LLMInterfaceV2):
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> LLMResponse:
-        """Asynchronously sends text to the LLM (V1 interface).
-
-        boto3 is synchronous, so this runs the sync method in an executor.
-        """
-        loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(
-            None,
-            lambda: self.__invoke_v1(input, message_history, system_instruction),
-        )
+        try:
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(
+                None, self.__invoke_v1, input, message_history, system_instruction
+            )
+        except LLMGenerationError:
+            raise
+        except Exception as e:
+            raise LLMGenerationError(f"Error calling BedrockLLM: {e}") from e
 
     @async_rate_limit_handler_decorator
     async def __ainvoke_v2(
         self,
         input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        """Asynchronously sends messages to the LLM (V2 interface).
+        if response_format is not None:
+            raise NotImplementedError(
+                "BedrockLLM does not currently support structured output"
+            )
+        try:
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(
+                None, self.__invoke_v2, input, response_format
+            )
+        except LLMGenerationError:
+            raise
+        except Exception as e:
+            raise LLMGenerationError(f"Error calling BedrockLLM: {e}") from e
 
-        boto3 is synchronous, so this runs the sync method in an executor.
-        """
-        loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(
-            None, lambda: self.__invoke_v2(input, **kwargs)
-        )
-
-    def _parse_response(self, response: Dict[str, Any]) -> LLMResponse:
-        """Parse the Converse API response into an LLMResponse."""
-        output = response.get("output", {})
-        message = output.get("message", {})
-        content_blocks = message.get("content", [])
-
-        if not content_blocks:
-            raise LLMGenerationError("LLM returned empty response.")
-
-        # Extract text from content blocks
-        text_parts = []
-        for block in content_blocks:
-            if "text" in block:
-                text_parts.append(block["text"])
-
-        if not text_parts:
-            raise LLMGenerationError("LLM returned no text content.")
-
-        return LLMResponse(content="".join(text_parts))
-
-    def get_messages(
-        self,
-        input: str,
-        message_history: Optional[List[LLMMessage]] = None,
-    ) -> List[MessageTypeDef]:
-        """Construct messages for Converse API (V1 interface)."""
-        messages: List[MessageTypeDef] = []
-
-        if message_history:
-            try:
-                MessageList(messages=cast(list[BaseMessage], message_history))
-            except ValidationError as e:
-                raise LLMGenerationError(e.errors()) from e
-
-            for msg in message_history:
-                if msg["role"] in ("user", "assistant"):
-                    messages.append({
-                        "role": msg["role"],
-                        "content": [{"text": msg["content"]}],
-                    })
-
-        # Add the current user input
-        messages.append({
-            "role": "user",
-            "content": [{"text": input}],
-        })
-
-        return messages
-
-    def get_system(
-        self,
-        system_instruction: Optional[str] = None,
-    ) -> Optional[List[SystemContentBlockTypeDef]]:
-        """Construct system message for Converse API."""
-        if system_instruction:
-            return [{"text": system_instruction}]
-        return None
-
-    def get_messages_v2(
-        self,
-        input: List[LLMMessage],
-    ) -> tuple[List[MessageTypeDef], Optional[List[SystemContentBlockTypeDef]]]:
-        """Construct messages for Converse API (V2 interface)."""
-        messages: List[MessageTypeDef] = []
-        system: Optional[List[SystemContentBlockTypeDef]] = None
-
-        for msg in input:
-            if msg["role"] == "system":
-                system = [{"text": msg["content"]}]
-            elif msg["role"] in ("user", "assistant"):
-                messages.append({
-                    "role": msg["role"],
-                    "content": [{"text": msg["content"]}],
-                })
-            else:
-                raise ValueError(f"Unknown role: {msg['role']}")
-
-        return messages, system
-
-    # Tool calling methods
-    @rate_limit_handler_decorator
     def invoke_with_tools(
         self,
         input: str,
@@ -413,127 +274,173 @@ class BedrockLLM(LLMInterface, LLMInterfaceV2):
         system_instruction: Optional[str] = None,
         tool_choice: Optional[str] = None,
     ) -> ToolCallResponse:
-        """Sends text to the LLM with tool definitions.
-
-        Args:
-            input: Text sent to the LLM.
-            tools: Sequence of Tools for the LLM to choose from.
-            message_history: A collection of previous messages.
-            system_instruction: Optional system message override.
-            tool_choice: Optional tool choice mode. "any" forces the model
-                to call at least one tool. "auto" lets the model decide.
-                A specific tool name forces that tool.
-
-        Returns:
-            ToolCallResponse: The response containing tool calls.
-
-        Raises:
-            LLMGenerationError: If anything goes wrong.
-        """
         try:
-            if isinstance(message_history, MessageHistory):
-                message_history = message_history.messages
-
             messages = self.get_messages(input, message_history)
-            system = self.get_system(system_instruction)
-            tool_config = self._convert_tools_to_bedrock_format(
-                tools, tool_choice=tool_choice
+            tool_config = self._get_tool_config(tools, tool_choice=tool_choice)
+            converse_kwargs = self._build_converse_kwargs(
+                messages,
+                system_instruction=system_instruction,
+                toolConfig=tool_config,
             )
-
-            converse_params: Dict[str, Any] = {
-                "modelId": self._get_model_identifier(),
-                "messages": messages,
-                "toolConfig": tool_config,
-            }
-            if system:
-                converse_params["system"] = system
-            if self.model_params:
-                converse_params["inferenceConfig"] = self.model_params
-
-            response = self.client.converse(**converse_params)
+            response = self.client.converse(**converse_kwargs)
             return self._parse_tool_response(response)
-
         except Exception as e:
-            raise LLMGenerationError(
-                f"Failed to invoke with tools on Bedrock: {e}"
-            ) from e
+            raise LLMGenerationError(f"Error calling BedrockLLM with tools: {e}") from e
 
-    @async_rate_limit_handler_decorator
     async def ainvoke_with_tools(
         self,
         input: str,
         tools: Sequence[Tool],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
-    ) -> ToolCallResponse:
-        """Asynchronously sends text to the LLM with tool definitions.
-
-        boto3 is synchronous, so this runs the sync method in an executor.
-        """
-        loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(
-            None,
-            lambda: self.invoke_with_tools(
-                input, tools, message_history, system_instruction
-            ),
-        )
-
-    def _convert_tools_to_bedrock_format(
-        self,
-        tools: Sequence[Tool],
         tool_choice: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        """Convert Tool objects to Bedrock's toolConfig format.
+    ) -> ToolCallResponse:
+        try:
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(
+                None,
+                self.invoke_with_tools,
+                input,
+                tools,
+                message_history,
+                system_instruction,
+                tool_choice,
+            )
+        except LLMGenerationError:
+            raise
+        except Exception as e:
+            raise LLMGenerationError(f"Error calling BedrockLLM with tools: {e}") from e
+
+    # subsidiary methods
+    def get_messages(
+        self,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+    ) -> list[dict[str, Any]]:
+        """Constructs the message list for the Bedrock Converse API."""
+        messages: list[dict[str, Any]] = []
+        if message_history:
+            if isinstance(message_history, MessageHistory):
+                message_history = message_history.messages
+            try:
+                MessageList(messages=cast(list[BaseMessage], message_history))
+            except ValidationError as e:
+                raise LLMGenerationError(e.errors()) from e
+
+            for message in message_history:
+                role = message.get("role")
+                content = message.get("content", "")
+                if role in ("user", "assistant"):
+                    messages.append({"role": role, "content": [{"text": content}]})
+
+        messages.append({"role": "user", "content": [{"text": input}]})
+        return messages
+
+    def get_messages_v2(
+        self,
+        input: list[LLMMessage],
+    ) -> tuple[Optional[str], list[dict[str, Any]]]:
+        """Constructs the message list for the Bedrock Converse API from V2 input."""
+        messages: list[dict[str, Any]] = []
+        system_instruction: Optional[str] = None
+        for message in input:
+            role = message.get("role")
+            content = message.get("content", "")
+            if role == "system":
+                system_instruction = content
+            elif role in ("user", "assistant"):
+                messages.append({"role": role, "content": [{"text": content}]})
+        return system_instruction, messages
+
+    def _build_converse_kwargs(
+        self,
+        messages: list[dict[str, Any]],
+        system_instruction: Optional[str] = None,
+        **extra: Any,
+    ) -> dict[str, Any]:
+        """Builds the kwargs dict for the Bedrock converse() call."""
+        kwargs: dict[str, Any] = {
+            "modelId": self.inference_profile_id or self.model_name,
+            "messages": messages,
+        }
+        if system_instruction:
+            kwargs["system"] = [{"text": system_instruction}]
+
+        # merge model_params into inferenceConfig
+        if self.model_params:
+            kwargs["inferenceConfig"] = {**self.model_params}
+
+        kwargs.update(extra)
+        return kwargs
+
+    def _parse_response(self, response: dict[str, Any]) -> LLMResponse:
+        """Extracts text content from a Bedrock converse() response."""
+        output = response.get("output", {})
+        message = output.get("message", {})
+        content_blocks = message.get("content", [])
+        text_parts = [block["text"] for block in content_blocks if "text" in block]
+        if not text_parts:
+            raise LLMGenerationError("LLM returned empty response.")
+        usage = None
+        raw_usage = response.get("usage", {})
+        if raw_usage:
+            usage = LLMUsage(
+                request_tokens=raw_usage.get("inputTokens"),
+                response_tokens=raw_usage.get("outputTokens"),
+                total_tokens=raw_usage.get("totalTokens"),
+            )
+        return LLMResponse(content="".join(text_parts), usage=usage)
+
+    def _get_tool_config(
+        self, tools: Optional[Sequence[Tool]], tool_choice: Optional[str] = None
+    ) -> Optional[dict[str, Any]]:
+        """Converts Tool objects to Bedrock toolConfig format.
 
         Args:
-            tools: Sequence of Tool objects.
-            tool_choice: Optional tool choice mode. "any" forces the model to
-                call at least one tool. "auto" (default) lets the model decide.
-                A specific tool name forces that tool to be called.
+            tools: Tools to expose to the model.
+            tool_choice: Optional tool-choice mode. "any" forces the model to
+                call at least one tool, "auto" lets the model decide, and any
+                other non-None value forces the tool with that name.
         """
-        bedrock_tools = []
+        if not tools:
+            return None
+        tool_defs = []
         for tool in tools:
-            tool_spec = {
-                "toolSpec": {
-                    "name": tool.get_name(),
-                    "description": tool.get_description(),
-                    "inputSchema": {
-                        "json": tool.get_parameters(),
-                    },
+            tool_defs.append(
+                {
+                    "toolSpec": {
+                        "name": tool.get_name(),
+                        "description": tool.get_description(),
+                        "inputSchema": {
+                            "json": tool.get_parameters(
+                                exclude=["additional_properties"]
+                            )
+                        },
+                    }
                 }
-            }
-            bedrock_tools.append(tool_spec)
-
-        config: Dict[str, Any] = {"tools": bedrock_tools}
-
+            )
+        config: dict[str, Any] = {"tools": tool_defs}
         if tool_choice == "any":
             config["toolChoice"] = {"any": {}}
         elif tool_choice == "auto":
             config["toolChoice"] = {"auto": {}}
         elif tool_choice is not None:
             config["toolChoice"] = {"tool": {"name": tool_choice}}
-
         return config
 
-    def _parse_tool_response(self, response: Dict[str, Any]) -> ToolCallResponse:
-        """Parse the Converse API response for tool calls."""
+    def _parse_tool_response(self, response: dict[str, Any]) -> ToolCallResponse:
+        """Extracts tool calls from a Bedrock converse() response."""
+        tool_calls: list[ToolCall] = []
         output = response.get("output", {})
         message = output.get("message", {})
         content_blocks = message.get("content", [])
-
-        tool_calls = []
-        text_content = None
-
         for block in content_blocks:
             if "toolUse" in block:
                 tool_use = block["toolUse"]
                 tool_calls.append(
                     ToolCall(
-                        name=tool_use["name"],
+                        name=tool_use.get("name", ""),
                         arguments=tool_use.get("input", {}),
                     )
                 )
-            elif "text" in block:
-                text_content = block["text"]
-
-        return ToolCallResponse(tool_calls=tool_calls, content=text_content)
+        return ToolCallResponse(tool_calls=tool_calls, content=None)

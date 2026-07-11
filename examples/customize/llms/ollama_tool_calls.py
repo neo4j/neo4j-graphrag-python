@@ -62,34 +62,32 @@ def process_tool_calls(response: ToolCallResponse) -> Dict[str, Any]:
 
 
 async def main() -> None:
-    # Initialize the Ollama LLM
-    llm = OllamaLLM(
+    async with OllamaLLM(
         model_name="mistral:latest", model_params={"options": {"temperature": 0}}
-    )
+    ) as llm:
+        # Example text containing information about a person
+        text = "Stella Hane is a 35-year-old software engineer who loves coding."
 
-    # Example text containing information about a person
-    text = "Stella Hane is a 35-year-old software engineer who loves coding."
+        print("\n=== Synchronous Tool Call ===")
+        # Make a synchronous tool call
+        sync_response = llm.invoke_with_tools(
+            input=f"Extract information about the person from this text: {text}",
+            tools=TOOLS,
+        )
+        sync_result = process_tool_calls(sync_response)
+        print("\n=== Synchronous Tool Call Result ===")
+        print(json.dumps(sync_result, indent=2))
 
-    print("\n=== Synchronous Tool Call ===")
-    # Make a synchronous tool call
-    sync_response = llm.invoke_with_tools(
-        input=f"Extract information about the person from this text: {text}",
-        tools=TOOLS,
-    )
-    sync_result = process_tool_calls(sync_response)
-    print("\n=== Synchronous Tool Call Result ===")
-    print(json.dumps(sync_result, indent=2))
-
-    print("\n=== Asynchronous Tool Call ===")
-    # Make an asynchronous tool call with a different text
-    text2 = "Molly Hane, 32, works as a data scientist and enjoys machine learning."
-    async_response = await llm.ainvoke_with_tools(
-        input=f"Extract information about the person from this text: {text2}",
-        tools=TOOLS,
-    )
-    async_result = process_tool_calls(async_response)
-    print("\n=== Asynchronous Tool Call Result ===")
-    print(json.dumps(async_result, indent=2))
+        print("\n=== Asynchronous Tool Call ===")
+        # Make an asynchronous tool call with a different text
+        text2 = "Molly Hane, 32, works as a data scientist and enjoys machine learning."
+        async_response = await llm.ainvoke_with_tools(
+            input=f"Extract information about the person from this text: {text2}",
+            tools=TOOLS,
+        )
+        async_result = process_tool_calls(async_response)
+        print("\n=== Asynchronous Tool Call Result ===")
+        print(json.dumps(async_result, indent=2))
 
 
 if __name__ == "__main__":

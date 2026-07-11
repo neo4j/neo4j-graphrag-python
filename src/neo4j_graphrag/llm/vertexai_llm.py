@@ -17,17 +17,18 @@ from __future__ import annotations
 
 import inspect
 import logging
-from typing import Any, List, Optional, Sequence, Type, Union, cast, overload
+from typing import Any, List, Optional, Sequence, Type, Union, cast
 
 # 3rd party dependencies
 from pydantic import BaseModel, ValidationError
 
 # project dependencies
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.base import LLMInterface, LLMInterfaceV2
+from neo4j_graphrag.llm.base import LLMBase
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
+    LLMUsage,
     MessageList,
     ToolCall,
     ToolCallResponse,
@@ -60,8 +61,7 @@ try:
         Tool as VertexAITool,
     )
 except ImportError:
-    GenerativeModel = None  # type: ignore[misc, assignment]
-    ResponseValidationError = None  # type: ignore[misc, assignment]
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +113,7 @@ def _extract_generation_config_params(
 
 
 # pylint: disable=arguments-differ, redefined-builtin, no-else-return
-class VertexAILLM(LLMInterface, LLMInterfaceV2):
+class VertexAILLM(LLMBase):
     """Interface for large language models on Vertex AI
 
     Args:
@@ -155,7 +155,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
                 """Could not import Vertex AI Python client.
                 Please install it with `pip install "neo4j-graphrag[google]"`."""
             )
-        LLMInterfaceV2.__init__(
+        LLMBase.__init__(
             self,
             model_name=model_name,
             model_params=model_params or {},
@@ -165,42 +165,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         self.system_instruction = system_instruction
         self.options = kwargs
 
-    # overloads for LLMInterface and LLMInterfaceV2 methods
-    @overload  # type: ignore[no-overload-impl]
     def invoke(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse: ...
-
-    @overload
-    def invoke(
-        self,
-        input: List[LLMMessage],
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse: ...
-
-    @overload  # type: ignore[no-overload-impl]
-    async def ainvoke(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse: ...
-
-    @overload
-    async def ainvoke(
-        self,
-        input: List[LLMMessage],
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse: ...
-
-    # switching logics to LLMInterface or LLMInterfaceV2
-
-    def invoke(  # type: ignore[no-redef]
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -215,7 +180,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         else:
             raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 
-    async def ainvoke(  # type: ignore[no-redef]
+    async def ainvoke(
         self,
         input: Union[str, List[LLMMessage]],
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
@@ -286,6 +251,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         except ResponseValidationError as e:
             raise LLMGenerationError("Error calling VertexAILLM") from e
 
+    @rate_limit_handler_decorator
     def __invoke_v2(
         self,
         input: List[LLMMessage],
@@ -348,6 +314,7 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         except ResponseValidationError as e:
             raise LLMGenerationError("Error calling VertexAILLM") from e
 
+    @async_rate_limit_handler_decorator
     async def __ainvoke_v2(
         self,
         input: list[LLMMessage],
@@ -623,6 +590,12 @@ class VertexAILLM(LLMInterface, LLMInterfaceV2):
         )
 
     def _parse_content_response(self, response: GenerationResponse) -> LLMResponse:
-        return LLMResponse(
-            content=response.text,
-        )
+        usage = None
+        metadata = response.usage_metadata
+        if metadata:
+            usage = LLMUsage(
+                request_tokens=metadata.prompt_token_count,
+                response_tokens=metadata.candidates_token_count,
+                total_tokens=metadata.total_token_count,
+            )
+        return LLMResponse(content=response.text, usage=usage)
