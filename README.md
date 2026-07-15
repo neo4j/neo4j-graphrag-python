@@ -158,6 +158,35 @@ text = (
 )
 asyncio.run(kg_builder.run_async(text=text))
 driver.close()
+
+### OpenAI-compatible multi-model gateways
+
+`OpenAILLM` and `OpenAIEmbeddings` accept OpenAI Python client kwargs such as `base_url` and `api_key`. Point them at any OpenAI-compatible Chat Completions / embeddings host. Example with [DaoXE](https://daoxe.com) (`https://daoxe.com/v1`):
+
+```python
+from neo4j_graphrag.embeddings import OpenAIEmbeddings
+from neo4j_graphrag.llm import OpenAILLM
+
+llm = OpenAILLM(
+    model_name="your-account-model-id",  # exact ID from GET /v1/models or dashboard
+    api_key="your_daoxe_api_key",
+    base_url="https://daoxe.com/v1",
+)
+
+embedder = OpenAIEmbeddings(
+    model="your-account-embedding-model-id",
+    api_key="your_daoxe_api_key",
+    base_url="https://daoxe.com/v1",
+)
+```
+
+Notes:
+
+- Model IDs are account-scoped; do not hardcode a static public catalog.
+- Chat Completions / embeddings paths only for this snippet.
+- DaoXE is not available in mainland China.
+- Contributor disclosure: this example was contributed by a DaoXE affiliate.
+
 ```
 
 > Warning: In order to run this code, the `openai` Python package needs to be installed: `pip install "neo4j_graphrag[openai]"`
