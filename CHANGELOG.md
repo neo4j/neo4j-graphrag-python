@@ -16,7 +16,7 @@
   - Import from the experimental namespace will be removed in 2.0
   - Update to use `from neo4j_graphrag.components... ` instead
   - Improperly defined components now raise a `ComponentDefinitionError` instead of `PipelineDefinitionError`
-  - `TaskProgressNotifier` and `RunContext` have been moved to `neo4j_graphrag.components.base`
+  - `TaskProgressNotifierProtocol` and `RunContext` have been moved to `neo4j_graphrag.components.base`
   - The `Component` base class has been moved to `neo4j_graphrag.components.base`
 
 
