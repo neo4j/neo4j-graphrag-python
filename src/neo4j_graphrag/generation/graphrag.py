@@ -130,7 +130,7 @@ class GraphRAG:
         if return_context is None:
             warnings.warn(
                 "The default value of 'return_context' will change from 'False'"
-                " to 'True' in a future version.",
+                " to 'True' in version 2.0.",
                 DeprecationWarning,
             )
             return_context = False

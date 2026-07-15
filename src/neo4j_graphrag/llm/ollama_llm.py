@@ -106,7 +106,7 @@ class OllamaLLM(LLMBase):
             key in self.model_params for key in ("options", "format", "keep_alive")
         ):
             warnings.warn(
-                """Passing options directly without including them in an 'options' key is deprecated. Ie you must use model_params={"options": {"temperature": 0}}""",
+                """Passing options directly without including them in an 'options' key is deprecated and will be removed in version 2.0. Ie you must use model_params={"options": {"temperature": 0}}""",
                 DeprecationWarning,
             )
             self.model_params = {"options": self.model_params}
