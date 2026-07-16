@@ -10,6 +10,10 @@
 
 - (**breaking**) `AnthropicLLM.supports_structured_output` is now `True`. As a result, `SchemaFromTextExtractor` and `LLMEntityRelationExtractor` (and `SimpleKGPipeline`, which enables structured output automatically when the LLM supports it) now use structured output by default with `AnthropicLLM`. This requires a Claude 4.5+ model (e.g. `claude-sonnet-4-5`); using `AnthropicLLM` with an older Claude model in these components will now raise an error where it previously worked. To keep the previous behavior, use a Claude 4.5+ model, or construct `LLMEntityRelationExtractor` / `SchemaFromTextExtractor` directly with `use_structured_output=False`.
 
+### Fixed
+
+- Fixed a bug in `AnthropicLLM` where an `http_client` passed via kwargs (whether an `httpx.Client` or `httpx.AsyncClient`) was forwarded to both the sync `anthropic.Anthropic` and async `anthropic.AsyncAnthropic` clients, causing a type mismatch. `http_client` is now routed to the matching sync/async client only; other kwargs remain shared. An `http_client` of an unrecognized type now emits a warning and is ignored instead of raising, matching `OpenAILLM`'s existing behavior.
+
 ## 1.18.0
 
 ### Changed
