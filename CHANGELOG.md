@@ -19,6 +19,9 @@
   - `TaskProgressNotifierProtocol` and `RunContext` have been moved to `neo4j_graphrag.components.base`
   - The `Component` base class has been moved to `neo4j_graphrag.components.base`
 
+### Fixed
+
+- Fixed a bug in `AnthropicLLM` where an `http_client` passed via kwargs (whether an `httpx.Client` or `httpx.AsyncClient`) was forwarded to both the sync `anthropic.Anthropic` and async `anthropic.AsyncAnthropic` clients, causing a type mismatch. `http_client` is now routed to the matching sync/async client only; other kwargs remain shared. An `http_client` of an unrecognized type now emits a warning and is ignored instead of raising, matching `OpenAILLM`'s existing behavior.
 
 ## 1.18.0
 
