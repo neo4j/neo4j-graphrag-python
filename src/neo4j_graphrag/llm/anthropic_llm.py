@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import json
+import warnings
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -231,6 +232,11 @@ class AnthropicLLM(LLMBase):
             sync_params["http_client"] = http_client
         elif httpx is not None and isinstance(http_client, httpx.AsyncClient):
             async_params["http_client"] = http_client
+        elif http_client is not None:
+            warnings.warn(
+                f"Invalid http_client type (got {type(http_client)}, expected httpx.Client or httpx.AsyncClient). Using default client.",
+                stacklevel=2,
+            )
         self.client = anthropic.Anthropic(**sync_params)
         self.async_client = anthropic.AsyncAnthropic(**async_params)
 
