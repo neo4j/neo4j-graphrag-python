@@ -19,6 +19,7 @@ Components moved from ``neo4j_graphrag.experimental.components`` to
 ``DeprecationWarning``) via the meta path finder in
 ``neo4j_graphrag/experimental/components/__init__.py``.
 """
+
 import importlib
 import warnings
 

@@ -30,6 +30,7 @@ so components that only ever live in the experimental namespace keep loading fro
 here. Use ``_EXPERIMENTAL_ONLY`` to additionally force a component to load from
 the experimental namespace even when a same-named module exists outside it.
 """
+
 import importlib
 import importlib.abc
 import importlib.util
@@ -47,7 +48,7 @@ _PKG = __name__  # "neo4j_graphrag.experimental.components"
 _EXPERIMENTAL_ONLY: set[str] = set()
 
 
-class I (importlib.abc.Loader):
+class I(importlib.abc.Loader):
     """Aliases the module from its new location under the old (experimental) name.
 
     The exact same module object is shared under both names, so it is neither
