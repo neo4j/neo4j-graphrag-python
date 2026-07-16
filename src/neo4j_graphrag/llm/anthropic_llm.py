@@ -25,6 +25,12 @@ from typing import (
     cast,
 )
 
+# 3rd party dependencies
+try:
+    import httpx
+except ImportError:
+    httpx = None  # type: ignore[assignment]
+
 from pydantic import BaseModel, ValidationError
 
 from neo4j_graphrag.exceptions import LLMGenerationError
@@ -218,8 +224,15 @@ class AnthropicLLM(LLMBase):
             **kwargs,
         )
         self.anthropic = anthropic
-        self.client = anthropic.Anthropic(**kwargs)
-        self.async_client = anthropic.AsyncAnthropic(**kwargs)
+        http_client = kwargs.pop("http_client", None)
+        sync_params = kwargs.copy()
+        async_params = kwargs.copy()
+        if httpx is not None and isinstance(http_client, httpx.Client):
+            sync_params["http_client"] = http_client
+        elif httpx is not None and isinstance(http_client, httpx.AsyncClient):
+            async_params["http_client"] = http_client
+        self.client = anthropic.Anthropic(**sync_params)
+        self.async_client = anthropic.AsyncAnthropic(**async_params)
 
     def invoke(
         self,
