@@ -525,6 +525,9 @@ class AnthropicLLM(BaseAnthropicLLM):
         model_params (Optional[dict], optional): Additional parameters for LLMInterface(V1) passed to the model when text is sent to it. Defaults to None.
         system_instruction: Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
         rate_limit_handler (Optional[RateLimitHandler], optional): Handler for managing rate limits for LLMInterface(V1). Defaults to None.
+        base_url (Optional[str], optional): Base URL to use instead of Anthropic's default API
+            endpoint, e.g. to reach a custom Anthropic-compatible endpoint. Passed through to
+            both the sync and async SDK clients. Defaults to None.
         **kwargs (Any): Arguments passed to the model when for the class is initialised. Defaults to None.
 
     Raises:
@@ -549,6 +552,7 @@ class AnthropicLLM(BaseAnthropicLLM):
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
         rate_limit_handler: Optional[RateLimitHandler] = None,
+        base_url: Optional[str] = None,
         **kwargs: Any,
     ):
         super().__init__(
@@ -558,5 +562,8 @@ class AnthropicLLM(BaseAnthropicLLM):
             **kwargs,
         )
         sync_params, async_params = split_http_client_kwargs(kwargs)
+        if base_url is not None:
+            sync_params["base_url"] = base_url
+            async_params["base_url"] = base_url
         self.client = self.anthropic.Anthropic(**sync_params)
         self.async_client = self.anthropic.AsyncAnthropic(**async_params)
