@@ -339,6 +339,16 @@ LLMBase
     :members:
 
 
+BaseOpenAILLM
+-------------
+
+See :ref:`llm-extensibility` for the ``http_client``/``base_url`` extension
+contract.
+
+.. autoclass:: neo4j_graphrag.llm.openai_llm.BaseOpenAILLM
+    :members:
+
+
 OpenAILLM
 ---------
 
@@ -373,6 +383,16 @@ VertexAILLM
 
 .. autoclass:: neo4j_graphrag.llm.vertexai_llm.VertexAILLM
     :members:
+
+BaseAnthropicLLM
+----------------
+
+See :ref:`llm-extensibility` for the ``http_client``/``base_url`` extension
+contract.
+
+.. autoclass:: neo4j_graphrag.llm.anthropic_llm.BaseAnthropicLLM
+    :members:
+
 
 AnthropicLLM
 ------------
