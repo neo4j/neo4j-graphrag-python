@@ -5,6 +5,9 @@
 ### Added
 
 - `AnthropicLLM` now supports structured output via the `response_format` argument, accepting a Pydantic model or an Anthropic `output_config` dict, alongside `OpenAILLM` and `VertexAILLM`.
+- Added `BaseAnthropicLLM`, a new base class holding all of `AnthropicLLM`'s shared message-building, schema-conversion, and response-parsing logic, mirroring `BaseOpenAILLM`. Both `BaseAnthropicLLM` and `BaseOpenAILLM` are now exported from `neo4j_graphrag.llm` as documented, supported extension points for subclassing to reach custom Anthropic/OpenAI-compatible endpoints.
+- Added an explicit `base_url` keyword parameter to `AnthropicLLM`, passed through to both the sync `anthropic.Anthropic` and async `anthropic.AsyncAnthropic` clients.
+- Added a new docs page, `docs/source/llm_extensibility.rst`, describing the `http_client`/`base_url` injection contract shared by `AnthropicLLM` and `OpenAILLM`, with a worked example of subclassing `BaseAnthropicLLM` to reach a custom endpoint.
 
 ### Changed
 
