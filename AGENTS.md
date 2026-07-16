@@ -97,6 +97,7 @@ ENVIRONMENT MANAGEMENT:
 - `WeakKeyDictionary` works for caching per-driver since `neo4j.Driver` is hashable
 - Neo4j 2026 CREATE VECTOR INDEX syntax: WITH clause must come BEFORE OPTIONS, not after
 - E2E tests for SEARCH clause: use `docker compose -f tests/e2e/docker-compose.neo4j2026.yml up -d`
+- If `tests/unit/llm/test_anthropic_llm.py` fails with `AttributeError: module 'anthropic' has no attribute 'omit'`, or other unit test files error on missing optional-dependency imports (openai, cohere, etc.) at collection time, the local `.venv` is stale relative to `pyproject.toml` extras. Run `uv sync --all-extras` to fix.
 
 ---
 
