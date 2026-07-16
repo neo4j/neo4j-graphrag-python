@@ -13,6 +13,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import abc
 import json
 from typing import (
     TYPE_CHECKING,
@@ -50,8 +51,11 @@ from neo4j_graphrag.utils.rate_limit import (
 )
 
 if TYPE_CHECKING:
-    from anthropic import Omit
+    from anthropic import AsyncAnthropic, Anthropic, Omit
     from anthropic.types.message_param import MessageParam
+else:
+    Anthropic = Any
+    AsyncAnthropic = Any
 
 
 # ---------------------------------------------------------------------------
@@ -168,34 +172,18 @@ def _restore_open_maps(value: Any, schema: dict[str, Any], defs: dict[str, Any])
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
-class AnthropicLLM(LLMBase):
-    """Interface for large language models on Anthropic
+class BaseAnthropicLLM(LLMBase, abc.ABC):
+    """Base class for Anthropic LLMs.
 
-    Args:
-        model_name (str): Name of the LLM to use.
-        model_params (Optional[dict], optional): Additional parameters for LLMInterface(V1) passed to the model when text is sent to it. Defaults to None.
-        system_instruction: Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
-        rate_limit_handler (Optional[RateLimitHandler], optional): Handler for managing rate limits for LLMInterface(V1). Defaults to None.
-        **kwargs (Any): Arguments passed to the model when for the class is initialised. Defaults to None.
-
-    Raises:
-        LLMGenerationError: If there's an error generating the response from the model.
-
-    Example:
-
-    .. code-block:: python
-
-        from neo4j_graphrag.llm import AnthropicLLM
-
-        llm = AnthropicLLM(
-            model_name="claude-3-opus-20240229",
-            model_params={"max_tokens": 1000},
-            api_key="sk...",   # can also be read from env vars
-        )
-        llm.invoke("Who is the mother of Paul Atreides?")
+    Holds all the shared message-building, schema-conversion, and
+    response-parsing logic. Subclasses are only responsible for
+    constructing the ``client``/``async_client`` SDK instances.
     """
 
     supports_structured_output: bool = True
+
+    client: Anthropic
+    async_client: AsyncAnthropic
 
     def __init__(
         self,
@@ -211,6 +199,7 @@ class AnthropicLLM(LLMBase):
                 """Could not import Anthropic Python client.
                 Please install it with `pip install "neo4j-graphrag[anthropic]"`."""
             )
+        self.anthropic = anthropic
         LLMBase.__init__(
             self,
             model_name=model_name,
@@ -218,10 +207,6 @@ class AnthropicLLM(LLMBase):
             rate_limit_handler=rate_limit_handler,
             **kwargs,
         )
-        self.anthropic = anthropic
-        sync_params, async_params = split_http_client_kwargs(kwargs)
-        self.client = anthropic.Anthropic(**sync_params)
-        self.async_client = anthropic.AsyncAnthropic(**async_params)
 
     def invoke(
         self,
@@ -530,3 +515,48 @@ class AnthropicLLM(LLMBase):
                     )
                 )
         return system_instruction, messages
+
+
+class AnthropicLLM(BaseAnthropicLLM):
+    """Interface for large language models on Anthropic
+
+    Args:
+        model_name (str): Name of the LLM to use.
+        model_params (Optional[dict], optional): Additional parameters for LLMInterface(V1) passed to the model when text is sent to it. Defaults to None.
+        system_instruction: Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
+        rate_limit_handler (Optional[RateLimitHandler], optional): Handler for managing rate limits for LLMInterface(V1). Defaults to None.
+        **kwargs (Any): Arguments passed to the model when for the class is initialised. Defaults to None.
+
+    Raises:
+        LLMGenerationError: If there's an error generating the response from the model.
+
+    Example:
+
+    .. code-block:: python
+
+        from neo4j_graphrag.llm import AnthropicLLM
+
+        llm = AnthropicLLM(
+            model_name="claude-3-opus-20240229",
+            model_params={"max_tokens": 1000},
+            api_key="sk...",   # can also be read from env vars
+        )
+        llm.invoke("Who is the mother of Paul Atreides?")
+    """
+
+    def __init__(
+        self,
+        model_name: str,
+        model_params: Optional[dict[str, Any]] = None,
+        rate_limit_handler: Optional[RateLimitHandler] = None,
+        **kwargs: Any,
+    ):
+        super().__init__(
+            model_name=model_name,
+            model_params=model_params,
+            rate_limit_handler=rate_limit_handler,
+            **kwargs,
+        )
+        sync_params, async_params = split_http_client_kwargs(kwargs)
+        self.client = self.anthropic.Anthropic(**sync_params)
+        self.async_client = self.anthropic.AsyncAnthropic(**async_params)
