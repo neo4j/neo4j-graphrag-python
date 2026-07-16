@@ -19,6 +19,7 @@ from typing import Any, Generator, List, cast
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import anthropic
+import httpx
 import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.experimental.components.types import Neo4jGraph
@@ -536,6 +537,66 @@ def test_anthropic_llm_close(mock_anthropic: Mock) -> None:
 
     mock_anthropic.Anthropic.return_value.close.assert_called_once()
     mock_anthropic.AsyncAnthropic.return_value.close.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# http_client sync/async routing tests
+# ---------------------------------------------------------------------------
+
+
+def test_anthropic_llm_with_httpx_client(mock_anthropic: Mock) -> None:
+    """Test that httpx.Client is forwarded only to the sync Anthropic client."""
+    http_client = httpx.Client()
+    try:
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            AnthropicLLM(model_name="claude-3-opus-20240229", http_client=http_client)
+
+        assert not any("Invalid http_client" in str(w.message) for w in caught)
+        _, sync_kwargs = mock_anthropic.Anthropic.call_args
+        assert sync_kwargs.get("http_client") is http_client
+        _, async_kwargs = mock_anthropic.AsyncAnthropic.call_args
+        assert "http_client" not in async_kwargs
+    finally:
+        http_client.close()
+
+
+@pytest.mark.asyncio
+async def test_anthropic_llm_with_httpx_async_client(mock_anthropic: Mock) -> None:
+    """Test that httpx.AsyncClient is forwarded only to the async Anthropic client."""
+    async_http_client = httpx.AsyncClient()
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        AnthropicLLM(model_name="claude-3-opus-20240229", http_client=async_http_client)
+
+    assert not any("Invalid http_client" in str(w.message) for w in caught)
+    _, sync_kwargs = mock_anthropic.Anthropic.call_args
+    assert "http_client" not in sync_kwargs
+    _, async_kwargs = mock_anthropic.AsyncAnthropic.call_args
+    assert async_kwargs.get("http_client") is async_http_client
+
+    await async_http_client.aclose()
+
+
+def test_anthropic_llm_no_http_client_no_warning(mock_anthropic: Mock) -> None:
+    """Test that omitting http_client does not emit a warning."""
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        AnthropicLLM(model_name="claude-3-opus-20240229")
+
+    assert not any("Invalid http_client" in str(w.message) for w in caught)
+
+
+def test_anthropic_llm_with_invalid_http_client_warns(mock_anthropic: Mock) -> None:
+    """Test that an invalid http_client type emits a warning and falls back to
+    default construction for both clients."""
+    with pytest.warns(UserWarning, match="Invalid http_client type"):
+        AnthropicLLM(model_name="claude-3-opus-20240229", http_client="not-a-client")
+
+    _, sync_kwargs = mock_anthropic.Anthropic.call_args
+    _, async_kwargs = mock_anthropic.AsyncAnthropic.call_args
+    assert "http_client" not in sync_kwargs
+    assert "http_client" not in async_kwargs
 
 
 @pytest.mark.asyncio
