@@ -14,12 +14,17 @@
 #  limitations under the License.
 from __future__ import annotations
 import warnings
-from typing import Union, Optional
+from typing import Any, Union, Optional
 
 from pydantic import TypeAdapter
 
 from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
+
+try:
+    import httpx
+except ImportError:
+    httpx = None  # type: ignore[assignment]
 
 
 def system_instruction_from_messages(messages: list[LLMMessage]) -> str | None:
@@ -70,3 +75,46 @@ def legacy_inputs_to_messages(
     # prompt is a MessageHistory instance
     messages.extend(prompt.messages)
     return messages
+
+
+def split_http_client_kwargs(
+    kwargs: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Splits a shared ``kwargs`` dict into separate sync/async constructor kwargs,
+    routing an optional ``http_client`` to whichever SDK client it matches the type of.
+
+    Several provider integrations (``AnthropicLLM``, ``OpenAILLM``, ``AzureOpenAILLM``)
+    build both a sync and an async SDK client from a single constructor ``**kwargs``
+    dict. Most kwargs (``api_key``, ``max_retries``, ``default_headers``, ...) are safe
+    to share as-is, but ``http_client`` is not: the sync client needs an
+    ``httpx.Client``, the async client needs an ``httpx.AsyncClient``, and passing the
+    wrong type to either raises or silently misbehaves depending on SDK version.
+
+    This pops ``http_client`` out of *kwargs* and returns two independent copies of the
+    remaining kwargs, with ``http_client`` added back to only the copy whose SDK client
+    it matches. If ``http_client`` doesn't match either expected type, a warning is
+    emitted and it is dropped from both, falling back to each SDK's default transport.
+
+    Args:
+        kwargs: The shared constructor kwargs, as passed by a caller to e.g.
+            ``AnthropicLLM(...)``. Not mutated.
+
+    Returns:
+        A ``(sync_kwargs, async_kwargs)`` tuple, each a shallow copy of *kwargs* minus
+        ``http_client``, with ``http_client`` reinstated in whichever of the two it
+        belongs to.
+    """
+    kwargs = dict(kwargs)
+    http_client = kwargs.pop("http_client", None)
+    sync_kwargs = kwargs.copy()
+    async_kwargs = kwargs.copy()
+    if httpx is not None and isinstance(http_client, httpx.Client):
+        sync_kwargs["http_client"] = http_client
+    elif httpx is not None and isinstance(http_client, httpx.AsyncClient):
+        async_kwargs["http_client"] = http_client
+    elif http_client is not None:
+        warnings.warn(
+            f"Invalid http_client type (got {type(http_client)}, expected httpx.Client or httpx.AsyncClient). Using default client.",
+            stacklevel=2,
+        )
+    return sync_kwargs, async_kwargs
