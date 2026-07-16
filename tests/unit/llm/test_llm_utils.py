@@ -12,10 +12,12 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import httpx
 import pytest
 
 from neo4j_graphrag.llm.utils import (
     legacy_inputs_to_messages,
+    split_http_client_kwargs,
     system_instruction_from_messages,
 )
 from neo4j_graphrag.message_history import InMemoryMessageHistory
@@ -63,3 +65,58 @@ def test_legacy_inputs_prompt_as_message_history() -> None:
     result = legacy_inputs_to_messages(history)
     assert len(result) == 1
     assert result[0]["content"] == "from history"
+
+
+def test_split_http_client_kwargs_no_http_client() -> None:
+    sync_kwargs, async_kwargs = split_http_client_kwargs({"api_key": "sk-test"})
+    assert sync_kwargs == {"api_key": "sk-test"}
+    assert async_kwargs == {"api_key": "sk-test"}
+    assert "http_client" not in sync_kwargs
+    assert "http_client" not in async_kwargs
+
+
+def test_split_http_client_kwargs_routes_sync_client() -> None:
+    client = httpx.Client()
+    try:
+        sync_kwargs, async_kwargs = split_http_client_kwargs(
+            {"api_key": "sk-test", "http_client": client}
+        )
+        assert sync_kwargs["http_client"] is client
+        assert sync_kwargs["api_key"] == "sk-test"
+        assert "http_client" not in async_kwargs
+        assert async_kwargs["api_key"] == "sk-test"
+    finally:
+        client.close()
+
+
+def test_split_http_client_kwargs_routes_async_client() -> None:
+    client = httpx.AsyncClient()
+    sync_kwargs, async_kwargs = split_http_client_kwargs(
+        {"api_key": "sk-test", "http_client": client}
+    )
+    assert async_kwargs["http_client"] is client
+    assert async_kwargs["api_key"] == "sk-test"
+    assert "http_client" not in sync_kwargs
+    assert sync_kwargs["api_key"] == "sk-test"
+
+
+def test_split_http_client_kwargs_invalid_type_warns_and_drops() -> None:
+    with pytest.warns(UserWarning, match="Invalid http_client type"):
+        sync_kwargs, async_kwargs = split_http_client_kwargs(
+            {"api_key": "sk-test", "http_client": object()}
+        )
+    assert "http_client" not in sync_kwargs
+    assert "http_client" not in async_kwargs
+    assert sync_kwargs["api_key"] == "sk-test"
+    assert async_kwargs["api_key"] == "sk-test"
+
+
+def test_split_http_client_kwargs_does_not_mutate_input() -> None:
+    client = httpx.Client()
+    try:
+        original: dict[str, object] = {"api_key": "sk-test", "http_client": client}
+        original_copy = dict(original)
+        split_http_client_kwargs(original)
+        assert original == original_copy
+    finally:
+        client.close()
