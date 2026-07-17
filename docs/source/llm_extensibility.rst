@@ -14,21 +14,32 @@ injection contract they expose, so you can point either provider at a custom
 or self-hosted, API-compatible endpoint.
 
 Both ``AnthropicLLM`` and ``OpenAILLM`` accept two related, independent
-constructor arguments:
+settings:
 
 - ``base_url`` (``Optional[str]``): overrides the default API endpoint. Passed
   through to both the sync and async SDK clients (``anthropic.Anthropic`` /
   ``anthropic.AsyncAnthropic`` for Anthropic, and the equivalent OpenAI SDK
-  clients for OpenAI).
+  clients for OpenAI). ``AnthropicLLM`` declares it as an explicit constructor
+  parameter; ``OpenAILLM`` accepts it through ``**kwargs``, from where it is
+  forwarded to both SDK clients (any string kwarg is safe to share between
+  them).
 - ``http_client`` (``Optional[httpx.Client | httpx.AsyncClient]``): an
   already-configured ``httpx`` client to use for requests, e.g. to add custom
-  TLS settings, proxies, or timeouts. The concrete class inspects the type of
-  the object you pass: an ``httpx.Client`` is routed to the sync SDK client,
-  and an ``httpx.AsyncClient`` is routed to the async SDK client. Passing
-  something else logs a warning and falls back to the SDK's default client.
+  TLS settings, proxies, or timeouts. Accepted through ``**kwargs`` by both
+  classes. The concrete class inspects the type of the object you pass: an
+  ``httpx.Client`` is routed to the sync SDK client, and an
+  ``httpx.AsyncClient`` is routed to the async SDK client. Passing something
+  else emits a ``UserWarning`` (via ``warnings.warn``) and falls back to the
+  SDK's default client.
 
-Both arguments can be used together: ``base_url`` changes where requests go,
+Both settings can be used together: ``base_url`` changes where requests go,
 while ``http_client`` changes how they're sent.
+
+The sync/async routing is implemented by
+:func:`neo4j_graphrag.llm.utils.split_http_client_kwargs`, which is exported
+for exactly one reason: a custom subclass that constructs its own SDK clients
+should call it too, so it preserves the same routing contract instead of
+reintroducing the type-mismatch bug the helper fixes.
 
 Subclassing example
 ====================
@@ -45,10 +56,13 @@ different defaults or credential handling than the built-in ``AnthropicLLM``:
     import anthropic
 
     from neo4j_graphrag.llm import BaseAnthropicLLM
+    from neo4j_graphrag.llm.utils import split_http_client_kwargs
 
 
     class MyCustomAnthropicLLM(BaseAnthropicLLM):
         """Talks to a self-hosted, Anthropic-compatible endpoint."""
+
+        DEFAULT_ENDPOINT = "https://my-custom-endpoint.example.com"
 
         def __init__(
             self,
@@ -57,14 +71,13 @@ different defaults or credential handling than the built-in ``AnthropicLLM``:
             **kwargs: Any,
         ):
             super().__init__(model_name=model_name, model_params=model_params, **kwargs)
-            self.client = anthropic.Anthropic(
-                base_url="https://my-custom-endpoint.example.com",
-                api_key="my-custom-api-key",
-            )
-            self.async_client = anthropic.AsyncAnthropic(
-                base_url="https://my-custom-endpoint.example.com",
-                api_key="my-custom-api-key",
-            )
+            # Route an optional http_client kwarg to the matching sync/async
+            # client, exactly as the built-in AnthropicLLM does.
+            sync_params, async_params = split_http_client_kwargs(kwargs)
+            sync_params.setdefault("base_url", self.DEFAULT_ENDPOINT)
+            async_params.setdefault("base_url", self.DEFAULT_ENDPOINT)
+            self.client = anthropic.Anthropic(**sync_params)
+            self.async_client = anthropic.AsyncAnthropic(**async_params)
 
 
     llm = MyCustomAnthropicLLM(model_name="claude-3-opus-20240229")

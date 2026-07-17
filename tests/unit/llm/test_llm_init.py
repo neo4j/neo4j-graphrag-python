@@ -28,3 +28,10 @@ def test_base_openai_llm_is_exported() -> None:
 
     assert BaseOpenAILLM is not None
     assert "BaseOpenAILLM" in llm_module.__all__
+
+
+def test_split_http_client_kwargs_is_exported() -> None:
+    from neo4j_graphrag.llm import split_http_client_kwargs
+
+    assert callable(split_http_client_kwargs)
+    assert "split_http_client_kwargs" in llm_module.__all__

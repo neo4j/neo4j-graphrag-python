@@ -24,6 +24,7 @@ from .mistralai_llm import MistralAILLM
 from .ollama_llm import OllamaLLM
 from .openai_llm import AzureOpenAILLM, BaseOpenAILLM, OpenAILLM
 from .types import LLMResponse, LLMUsage
+from .utils import split_http_client_kwargs
 from .vertexai_llm import VertexAILLM
 
 __all__ = [
@@ -43,6 +44,7 @@ __all__ = [
     "VertexAILLM",
     "AzureOpenAILLM",
     "MistralAILLM",
+    "split_http_client_kwargs",
 ]
 
 
