@@ -357,6 +357,13 @@ OpenAILLM
     :undoc-members: get_messages, client_class, async_client_class
 
 
+BaseGeminiLLM
+-------------
+
+.. autoclass:: neo4j_graphrag.llm.google_genai_llm.BaseGeminiLLM
+    :members:
+
+
 GeminiLLM
 ---------
 

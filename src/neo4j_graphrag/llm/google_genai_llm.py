@@ -16,6 +16,7 @@
 # built-in dependencies
 from __future__ import annotations
 
+import abc
 from typing import (
     Any,
     List,
@@ -32,7 +33,7 @@ from pydantic import BaseModel, ValidationError
 
 # project dependencies
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.base import LLMInterface, LLMInterfaceV2
+from neo4j_graphrag.llm.base import LLMBase
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
@@ -62,15 +63,17 @@ except ImportError:
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
-class GeminiLLM(LLMInterface, LLMInterfaceV2):
-    """LLM interface for Google Gemini via the google.genai SDK.
+class BaseGeminiLLM(LLMBase, abc.ABC):
+    """Base class for Google Gemini LLMs (google.genai SDK).
 
-    Args:
-        model_name (str): Model name. Defaults to "gemini-2.0-flash".
-        model_params (Optional[dict]): Additional parameters passed to the model.
-        rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting.
-        **kwargs (Any): Arguments passed to the genai.Client.
+    Holds all the shared message-building, config/schema-building, and
+    response-parsing logic. Subclasses are only responsible for
+    constructing the ``client`` SDK instance.
     """
+
+    supports_structured_output: bool = True
+
+    client: "genai.Client"
 
     def __init__(
         self,
@@ -84,14 +87,13 @@ class GeminiLLM(LLMInterface, LLMInterfaceV2):
                 "Could not import google-genai python client. "
                 'Please install it with `pip install "neo4j-graphrag[google-genai]"`.'
             )
-        LLMInterfaceV2.__init__(
+        LLMBase.__init__(
             self,
             model_name=model_name,
             model_params=model_params or {},
             rate_limit_handler=rate_limit_handler,
             **kwargs,
         )
-        self.client = genai.Client(**kwargs)
 
     @overload  # type: ignore[no-overload-impl]
     def invoke(
@@ -406,3 +408,29 @@ class GeminiLLM(LLMInterface, LLMInterfaceV2):
                         )
                     )
         return ToolCallResponse(tool_calls=tool_calls, content=None)
+
+
+class GeminiLLM(BaseGeminiLLM):
+    """LLM interface for Google Gemini via the google.genai SDK.
+
+    Args:
+        model_name (str): Model name. Defaults to "gemini-2.0-flash".
+        model_params (Optional[dict]): Additional parameters passed to the model.
+        rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting.
+        **kwargs (Any): Arguments passed to the genai.Client.
+    """
+
+    def __init__(
+        self,
+        model_name: str = "gemini-2.0-flash",
+        model_params: Optional[dict[str, Any]] = None,
+        rate_limit_handler: Optional[RateLimitHandler] = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(
+            model_name=model_name,
+            model_params=model_params,
+            rate_limit_handler=rate_limit_handler,
+            **kwargs,
+        )
+        self.client = genai.Client(**kwargs)

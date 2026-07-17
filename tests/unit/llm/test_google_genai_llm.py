@@ -20,7 +20,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm import GeminiLLM
+from neo4j_graphrag.llm import BaseGeminiLLM, GeminiLLM
 from neo4j_graphrag.types import LLMMessage
 
 
@@ -134,3 +134,32 @@ def test_gemini_invoke_error(mock_genai: Tuple[MagicMock, MagicMock]) -> None:
     llm = GeminiLLM("gemini-2.0-flash")
     with pytest.raises(LLMGenerationError):
         llm.invoke("hello")
+
+
+def test_gemini_llm_is_base_gemini_llm_subclass() -> None:
+    assert issubclass(GeminiLLM, BaseGeminiLLM)
+
+
+def test_gemini_llm_supports_structured_output(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    llm = GeminiLLM("gemini-2.0-flash")
+    assert llm.supports_structured_output is True
+    assert BaseGeminiLLM.supports_structured_output is True
+
+
+def test_gemini_llm_init_only_constructs_client(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    """GeminiLLM's __init__ should only be responsible for client construction;
+    everything else (message building, config building, parsing) is inherited
+    from BaseGeminiLLM unchanged."""
+    mock_gen, _ = mock_genai
+    llm = GeminiLLM("gemini-2.0-flash", api_key="my-key")
+
+    mock_gen.Client.assert_called_once_with(api_key="my-key")
+    assert llm.client is mock_gen.Client.return_value
+    # inherited behavior, not reimplemented on GeminiLLM
+    assert llm.get_messages.__func__ is BaseGeminiLLM.get_messages
+    assert llm.get_messages_v2.__func__ is BaseGeminiLLM.get_messages_v2
+    assert llm._build_config.__func__ is BaseGeminiLLM._build_config

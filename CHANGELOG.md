@@ -10,6 +10,7 @@
 - Added an explicit `base_url` keyword parameter to `AnthropicLLM` and `OpenAILLM`, passed through to both the sync and async SDK clients of each.
 - `split_http_client_kwargs` now emits a `UserWarning` when the provided `http_client` has a `base_url` configured, since the SDKs ignore it — the LLM constructor's `base_url` parameter is the supported way to change the endpoint.
 - Added a new docs page, `docs/source/llm.rst`, describing the `http_client`/`base_url` injection contract shared by `AnthropicLLM` and `OpenAILLM`, with a worked example of subclassing `BaseAnthropicLLM` to reach a custom endpoint.
+- Added `BaseGeminiLLM`, a new base class holding all of `GeminiLLM`'s shared message-building, config/schema-building, and response-parsing logic. `GeminiLLM` is now a thin subclass responsible only for constructing the `genai.Client`. `BaseGeminiLLM` is exported from `neo4j_graphrag.llm` as a documented, supported extension point for subclassing to reach a custom Gemini-compatible endpoint.
 
 ### Changed
 
@@ -27,6 +28,7 @@
 ### Fixed
 
 - Fixed a bug in `AnthropicLLM` where an `http_client` passed via kwargs (whether an `httpx.Client` or `httpx.AsyncClient`) was forwarded to both the sync `anthropic.Anthropic` and async `anthropic.AsyncAnthropic` clients, causing a type mismatch. `http_client` is now routed to the matching sync/async client only; other kwargs remain shared. An `http_client` of an unrecognized type now emits a warning and is ignored instead of raising, matching `OpenAILLM`'s existing behavior.
+- `GeminiLLM` now correctly declares `supports_structured_output = True`. It already implemented structured-output handling via `response_schema`/`response_mime_type`, but never set the capability flag, so callers gating behavior on it saw `False` and had to work around it manually.
 
 ## 1.18.0
 
