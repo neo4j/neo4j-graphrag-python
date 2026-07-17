@@ -21,7 +21,6 @@ Components moved from ``neo4j_graphrag.experimental.components`` to
 """
 
 import importlib
-import warnings
 
 import pytest
 
