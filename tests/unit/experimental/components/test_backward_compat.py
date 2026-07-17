@@ -70,7 +70,7 @@ def test_experimental_only_module_loads_without_redirect() -> None:
     pkg_dir = exp_components.__path__[0]
     marker_file = os.path.join(pkg_dir, "_only_here_test_module.py")
     with open(marker_file, "w") as f:
-        f.write("MARKER = 'from experimental'\n")
+        f.write("MARKER = 'from experimental' # pragma: no cover\n")
 
     try:
         with warnings.catch_warnings():
