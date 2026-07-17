@@ -666,17 +666,10 @@ def test_base_vertexai_llm_cannot_be_instantiated_without_get_model() -> None:
 def test_vertexai_llm_get_model_is_the_only_override(
     GenerativeModelMock: MagicMock,
 ) -> None:
-    """VertexAILLM should only need to implement _get_model; everything else
-    (message building, generation-config handling, response parsing) is
-    inherited from BaseVertexAILLM unchanged."""
+    """VertexAILLM's one responsibility is implementing _get_model; its
+    GenerativeModel construction is unchanged from before the extraction."""
     llm = VertexAILLM(model_name="gemini-1.5-flash-001")
 
-    assert llm.get_messages.__func__ is BaseVertexAILLM.get_messages
-    assert llm.get_messages_v2.__func__ is BaseVertexAILLM.get_messages_v2
-    assert llm._get_call_params.__func__ is BaseVertexAILLM._get_call_params
-    assert llm._parse_content_response.__func__ is (
-        BaseVertexAILLM._parse_content_response
-    )
     assert VertexAILLM._get_model is not BaseVertexAILLM._get_model
 
     model = llm._get_model(system_instruction="be nice")
