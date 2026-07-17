@@ -31,7 +31,7 @@ from .ollama_llm import OllamaLLM
 from .openai_llm import AzureOpenAILLM, BaseOpenAILLM, OpenAILLM
 from .types import LLMResponse, LLMUsage
 from .utils import split_http_client_kwargs
-from .vertexai_llm import VertexAILLM
+from .vertexai_llm import BaseVertexAILLM, VertexAILLM
 
 __all__ = [
     "GEMINI_DEFAULT_IMAGE_MIME_TYPE",
@@ -39,6 +39,7 @@ __all__ = [
     "AnthropicLLM",
     "BaseAnthropicLLM",
     "BaseGeminiLLM",
+    "BaseVertexAILLM",
     "BedrockLLM",
     "CohereLLM",
     "GeminiImageMimeType",
