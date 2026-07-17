@@ -24,10 +24,11 @@ from .mistralai_llm import MistralAILLM
 from .ollama_llm import OllamaLLM
 from .openai_llm import AzureOpenAILLM, OpenAILLM
 from .types import LLMResponse, LLMUsage
-from .vertexai_llm import VertexAILLM
+from .vertexai_llm import BaseVertexAILLM, VertexAILLM
 
 __all__ = [
     "AnthropicLLM",
+    "BaseVertexAILLM",
     "BedrockLLM",
     "CohereLLM",
     "GeminiLLM",

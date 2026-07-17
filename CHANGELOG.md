@@ -6,6 +6,7 @@
 
 - `AnthropicLLM` now supports structured output via the `response_format` argument, accepting a Pydantic model or an Anthropic `output_config` dict, alongside `OpenAILLM` and `VertexAILLM`.
 - Added `neo4j_graphrag.llm.utils.split_http_client_kwargs`, a shared helper that routes a constructor's `http_client` kwarg to whichever of the sync/async SDK clients it matches. `AnthropicLLM`, `OpenAILLM`, and `AzureOpenAILLM` now all use this single implementation instead of three separately maintained copies of the same logic. Custom subclasses that construct their own SDK clients can call it to get the same behavior.
+- Added `BaseVertexAILLM`, a new base class holding all of `VertexAILLM`'s shared message-building, generation-config/schema-handling, and response-parsing logic. Unlike `BaseAnthropicLLM`/`BaseOpenAILLM` (which hold a persistent SDK client for subclasses to construct), `VertexAILLM` has no per-instance client — it relies on a global `vertexai.init(...)` plus a fresh `GenerativeModel` per call — so `BaseVertexAILLM` instead declares a single abstract `_get_model(...)` hook, which `VertexAILLM` implements exactly as before. `BaseVertexAILLM` is exported from `neo4j_graphrag.llm` as a documented extension point.
 
 ### Changed
 

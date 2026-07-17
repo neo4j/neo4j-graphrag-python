@@ -13,7 +13,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import cast
+from typing import Optional, cast
 from typing import List
 
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
@@ -21,12 +21,13 @@ import pytest
 from vertexai.generative_models import (
     Content,
     GenerationResponse,
+    GenerativeModel,
     Part,
 )
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.types import ToolCallResponse
-from neo4j_graphrag.llm.vertexai_llm import VertexAILLM
+from neo4j_graphrag.llm.vertexai_llm import BaseVertexAILLM, VertexAILLM
 from neo4j_graphrag.tool import Tool
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.rate_limit import NoOpRateLimitHandler
@@ -647,3 +648,57 @@ async def test_vertexai_ainvoke_v2_rate_limit_handler_called(
 
     assert response.content == "Hi there!"
     spy_handler.handle_async.assert_called_once()
+
+
+def test_vertexai_llm_is_base_vertexai_llm_subclass() -> None:
+    assert issubclass(VertexAILLM, BaseVertexAILLM)
+
+
+def test_base_vertexai_llm_cannot_be_instantiated_without_get_model() -> None:
+    """BaseVertexAILLM declares _get_model as abstract; unlike the other base
+    classes (which have no remaining abstract methods once invoke/ainvoke are
+    implemented), this one genuinely cannot be instantiated directly."""
+    with pytest.raises(TypeError):
+        BaseVertexAILLM(model_name="gemini-1.5-flash-001")  # type: ignore[abstract]
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_llm_get_model_is_the_only_override(
+    GenerativeModelMock: MagicMock,
+) -> None:
+    """VertexAILLM's one responsibility is implementing _get_model; its
+    GenerativeModel construction is unchanged from before the extraction."""
+    llm = VertexAILLM(model_name="gemini-1.5-flash-001")
+
+    assert VertexAILLM._get_model is not BaseVertexAILLM._get_model
+
+    model = llm._get_model(system_instruction="be nice")
+    GenerativeModelMock.assert_called_once_with(
+        model_name="gemini-1.5-flash-001", system_instruction="be nice"
+    )
+    assert model is GenerativeModelMock.return_value
+
+
+def test_minimal_base_vertexai_llm_subclass_exercises_invoke() -> None:
+    """The exported extension contract: a subclass that only implements
+    _get_model should get message building, generation-config handling, and
+    response parsing from BaseVertexAILLM, and its custom model must be the
+    one invoke() actually calls."""
+    custom_model = MagicMock()
+    mock_response = Mock()
+    mock_response.text = "custom model response"
+    mock_response.usage_metadata = None
+    custom_model.generate_content.return_value = mock_response
+
+    class MinimalVertexAILLM(BaseVertexAILLM):
+        def _get_model(
+            self,
+            system_instruction: Optional[str] = None,
+        ) -> GenerativeModel:
+            return cast(GenerativeModel, custom_model)
+
+    llm = MinimalVertexAILLM(model_name="gemini-1.5-flash-001")
+    response = llm.invoke("hello")
+
+    assert response.content == "custom model response"
+    custom_model.generate_content.assert_called_once()
