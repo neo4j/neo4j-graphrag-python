@@ -14,15 +14,13 @@ injection contract they expose, so you can point either provider at a custom
 or self-hosted, API-compatible endpoint.
 
 Both ``AnthropicLLM`` and ``OpenAILLM`` accept two related, independent
-settings:
+constructor settings:
 
-- ``base_url`` (``Optional[str]``): overrides the default API endpoint. Passed
-  through to both the sync and async SDK clients (``anthropic.Anthropic`` /
+- ``base_url`` (``Optional[str]``): an explicit constructor parameter on both
+  classes that overrides the default API endpoint. Passed through to both the
+  sync and async SDK clients (``anthropic.Anthropic`` /
   ``anthropic.AsyncAnthropic`` for Anthropic, and the equivalent OpenAI SDK
-  clients for OpenAI). ``AnthropicLLM`` declares it as an explicit constructor
-  parameter; ``OpenAILLM`` accepts it through ``**kwargs``, from where it is
-  forwarded to both SDK clients (any string kwarg is safe to share between
-  them).
+  clients for OpenAI).
 - ``http_client`` (``Optional[httpx.Client | httpx.AsyncClient]``): an
   already-configured ``httpx`` client to use for requests, e.g. to add custom
   TLS settings, proxies, or timeouts. Accepted through ``**kwargs`` by both
