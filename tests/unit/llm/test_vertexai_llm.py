@@ -13,7 +13,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import cast
+from typing import Optional, cast
 from typing import List
 
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
@@ -21,6 +21,7 @@ import pytest
 from vertexai.generative_models import (
     Content,
     GenerationResponse,
+    GenerativeModel,
     Part,
 )
 
@@ -683,3 +684,28 @@ def test_vertexai_llm_get_model_is_the_only_override(
         model_name="gemini-1.5-flash-001", system_instruction="be nice"
     )
     assert model is GenerativeModelMock.return_value
+
+
+def test_minimal_base_vertexai_llm_subclass_exercises_invoke() -> None:
+    """The exported extension contract: a subclass that only implements
+    _get_model should get message building, generation-config handling, and
+    response parsing from BaseVertexAILLM, and its custom model must be the
+    one invoke() actually calls."""
+    custom_model = MagicMock()
+    mock_response = Mock()
+    mock_response.text = "custom model response"
+    mock_response.usage_metadata = None
+    custom_model.generate_content.return_value = mock_response
+
+    class MinimalVertexAILLM(BaseVertexAILLM):
+        def _get_model(
+            self,
+            system_instruction: Optional[str] = None,
+        ) -> GenerativeModel:
+            return cast(GenerativeModel, custom_model)
+
+    llm = MinimalVertexAILLM(model_name="gemini-1.5-flash-001")
+    response = llm.invoke("hello")
+
+    assert response.content == "custom model response"
+    custom_model.generate_content.assert_called_once()
