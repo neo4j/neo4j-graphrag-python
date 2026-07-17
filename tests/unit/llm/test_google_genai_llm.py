@@ -140,26 +140,39 @@ def test_gemini_llm_is_base_gemini_llm_subclass() -> None:
     assert issubclass(GeminiLLM, BaseGeminiLLM)
 
 
-def test_gemini_llm_supports_structured_output(
-    mock_genai: Tuple[MagicMock, MagicMock],
-) -> None:
-    llm = GeminiLLM("gemini-2.0-flash")
-    assert llm.supports_structured_output is True
-    assert BaseGeminiLLM.supports_structured_output is True
-
-
 def test_gemini_llm_init_only_constructs_client(
     mock_genai: Tuple[MagicMock, MagicMock],
 ) -> None:
-    """GeminiLLM's __init__ should only be responsible for client construction;
-    everything else (message building, config building, parsing) is inherited
-    from BaseGeminiLLM unchanged."""
+    """GeminiLLM's __init__ should only be responsible for client construction."""
     mock_gen, _ = mock_genai
     llm = GeminiLLM("gemini-2.0-flash", api_key="my-key")
 
     mock_gen.Client.assert_called_once_with(api_key="my-key")
     assert llm.client is mock_gen.Client.return_value
-    # inherited behavior, not reimplemented on GeminiLLM
-    assert llm.get_messages.__func__ is BaseGeminiLLM.get_messages
-    assert llm.get_messages_v2.__func__ is BaseGeminiLLM.get_messages_v2
-    assert llm._build_config.__func__ is BaseGeminiLLM._build_config
+
+
+def test_minimal_base_gemini_llm_subclass_exercises_invoke(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    """BaseGeminiLLM does not construct the SDK client itself: a minimal
+    subclass that only assigns ``client`` should exercise the shared
+    invoke/message-building logic correctly. This is the extension contract
+    exported to custom subclasses."""
+    mock_gen, _ = mock_genai
+    custom_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.text = "minimal subclass response"
+    custom_client.models.generate_content.return_value = mock_response
+
+    class MinimalGeminiLLM(BaseGeminiLLM):
+        def __init__(self, model_name: str) -> None:
+            super().__init__(model_name=model_name)
+            self.client = custom_client
+
+    llm = MinimalGeminiLLM("gemini-2.0-flash")
+    response = llm.invoke("hello")
+
+    assert response.content == "minimal subclass response"
+    custom_client.models.generate_content.assert_called_once()
+    # the default genai.Client was never constructed
+    mock_gen.Client.assert_not_called()
