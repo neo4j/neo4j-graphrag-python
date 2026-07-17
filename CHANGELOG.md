@@ -9,6 +9,7 @@
 ### Changed
 
 - (**breaking**) `AnthropicLLM.supports_structured_output` is now `True`. As a result, `SchemaFromTextExtractor` and `LLMEntityRelationExtractor` (and `SimpleKGPipeline`, which enables structured output automatically when the LLM supports it) now use structured output by default with `AnthropicLLM`. This requires a Claude 4.5+ model (e.g. `claude-sonnet-4-5`); using `AnthropicLLM` with an older Claude model in these components will now raise an error where it previously worked. To keep the previous behavior, use a Claude 4.5+ model, or construct `LLMEntityRelationExtractor` / `SchemaFromTextExtractor` directly with `use_structured_output=False`.
+- (**breaking**) `GeminiLLM.supports_structured_output` is now `True`. `GeminiLLM` already implemented structured-output handling via `response_schema`/`response_mime_type` but never declared the capability flag, so components gating on it saw `False`. As a result, `SchemaFromTextExtractor` and `LLMEntityRelationExtractor` (and `SimpleKGPipeline`, which enables structured output automatically when the LLM supports it) now use structured output by default with `GeminiLLM`. To keep the previous behavior, construct `LLMEntityRelationExtractor` / `SchemaFromTextExtractor` directly with `use_structured_output=False`.
 
 ## 1.18.0
 

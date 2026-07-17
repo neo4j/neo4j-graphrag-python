@@ -72,6 +72,8 @@ class GeminiLLM(LLMInterface, LLMInterfaceV2):
         **kwargs (Any): Arguments passed to the genai.Client.
     """
 
+    supports_structured_output: bool = True
+
     def __init__(
         self,
         model_name: str = "gemini-2.0-flash",

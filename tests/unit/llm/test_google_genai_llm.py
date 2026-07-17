@@ -134,3 +134,12 @@ def test_gemini_invoke_error(mock_genai: Tuple[MagicMock, MagicMock]) -> None:
     llm = GeminiLLM("gemini-2.0-flash")
     with pytest.raises(LLMGenerationError):
         llm.invoke("hello")
+
+
+def test_gemini_llm_supports_structured_output(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    """GeminiLLM implements structured output (response_schema/response_mime_type),
+    so it must declare the capability flag components gate on."""
+    llm = GeminiLLM("gemini-2.0-flash")
+    assert llm.supports_structured_output is True
