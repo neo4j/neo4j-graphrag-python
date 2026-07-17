@@ -113,8 +113,10 @@ def split_http_client_kwargs(
     elif httpx is not None and isinstance(http_client, httpx.AsyncClient):
         async_kwargs["http_client"] = http_client
     elif http_client is not None:
+        # stacklevel=3 attributes the warning to the caller of the LLM
+        # constructor, not to the constructor's own call into this helper.
         warnings.warn(
             f"Invalid http_client type (got {type(http_client)}, expected httpx.Client or httpx.AsyncClient). Using default client.",
-            stacklevel=2,
+            stacklevel=3,
         )
     return sync_kwargs, async_kwargs
