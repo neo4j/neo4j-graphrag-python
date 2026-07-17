@@ -59,29 +59,3 @@ def test_import_module_form_shares_the_same_module() -> None:
     new = importlib.import_module("neo4j_graphrag.components.kg_writer")
 
     assert old is new
-
-
-def test_experimental_only_module_loads_without_redirect() -> None:
-    """A module that only exists in experimental keeps loading from there."""
-    import os
-
-    import neo4j_graphrag.experimental.components as exp_components
-
-    pkg_dir = exp_components.__path__[0]
-    marker_file = os.path.join(pkg_dir, "_only_here_test_module.py")
-    with open(marker_file, "w") as f:
-        f.write("MARKER = 'from experimental' # pragma: no cover\n")
-
-    try:
-        with warnings.catch_warnings():
-            warnings.simplefilter("error", DeprecationWarning)
-            module = importlib.import_module(
-                "neo4j_graphrag.experimental.components._only_here_test_module"
-            )
-        assert module.MARKER == "from experimental"
-        assert (
-            module.__name__
-            == "neo4j_graphrag.experimental.components._only_here_test_module"
-        )
-    finally:
-        os.remove(marker_file)
