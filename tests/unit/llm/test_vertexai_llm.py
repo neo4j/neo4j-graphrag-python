@@ -26,7 +26,7 @@ from vertexai.generative_models import (
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.types import ToolCallResponse
-from neo4j_graphrag.llm.vertexai_llm import VertexAILLM
+from neo4j_graphrag.llm.vertexai_llm import BaseVertexAILLM, VertexAILLM
 from neo4j_graphrag.tool import Tool
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.rate_limit import NoOpRateLimitHandler
@@ -647,3 +647,39 @@ async def test_vertexai_ainvoke_v2_rate_limit_handler_called(
 
     assert response.content == "Hi there!"
     spy_handler.handle_async.assert_called_once()
+
+
+def test_vertexai_llm_is_base_vertexai_llm_subclass() -> None:
+    assert issubclass(VertexAILLM, BaseVertexAILLM)
+
+
+def test_base_vertexai_llm_cannot_be_instantiated_without_get_model() -> None:
+    """BaseVertexAILLM declares _get_model as abstract; unlike the other base
+    classes (which have no remaining abstract methods once invoke/ainvoke are
+    implemented), this one genuinely cannot be instantiated directly."""
+    with pytest.raises(TypeError):
+        BaseVertexAILLM(model_name="gemini-1.5-flash-001")  # type: ignore[abstract]
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_llm_get_model_is_the_only_override(
+    GenerativeModelMock: MagicMock,
+) -> None:
+    """VertexAILLM should only need to implement _get_model; everything else
+    (message building, generation-config handling, response parsing) is
+    inherited from BaseVertexAILLM unchanged."""
+    llm = VertexAILLM(model_name="gemini-1.5-flash-001")
+
+    assert llm.get_messages.__func__ is BaseVertexAILLM.get_messages
+    assert llm.get_messages_v2.__func__ is BaseVertexAILLM.get_messages_v2
+    assert llm._get_call_params.__func__ is BaseVertexAILLM._get_call_params
+    assert llm._parse_content_response.__func__ is (
+        BaseVertexAILLM._parse_content_response
+    )
+    assert VertexAILLM._get_model is not BaseVertexAILLM._get_model
+
+    model = llm._get_model(system_instruction="be nice")
+    GenerativeModelMock.assert_called_once_with(
+        model_name="gemini-1.5-flash-001", system_instruction="be nice"
+    )
+    assert model is GenerativeModelMock.return_value

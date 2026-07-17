@@ -368,6 +368,13 @@ OllamaLLM
     :members:
 
 
+BaseVertexAILLM
+---------------
+
+.. autoclass:: neo4j_graphrag.llm.vertexai_llm.BaseVertexAILLM
+    :members:
+
+
 VertexAILLM
 -----------
 

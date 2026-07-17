@@ -15,6 +15,7 @@
 # built-in dependencies
 from __future__ import annotations
 
+import abc
 import inspect
 import logging
 from typing import Any, List, Optional, Sequence, Type, Union, cast
@@ -113,31 +114,16 @@ def _extract_generation_config_params(
 
 
 # pylint: disable=arguments-differ, redefined-builtin, no-else-return
-class VertexAILLM(LLMBase):
-    """Interface for large language models on Vertex AI
+class BaseVertexAILLM(LLMBase, abc.ABC):
+    """Base class for Vertex AI LLMs.
 
-    Args:
-        model_name (str, optional): Name of the LLM to use. Defaults to "gemini-1.5-flash-001".
-        model_params (Optional[dict], optional): Additional parameters for LLMInterface(V1) passed to the model when text is sent to it. Defaults to None.
-        system_instruction: Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
-        rate_limit_handler (Optional[RateLimitHandler], optional): Rate limit handler for LLMInterface(V1). Defaults to None.
-        **kwargs (Any): Arguments passed to the model when for the class is initialised. Defaults to None.
-
-    Raises:
-        LLMGenerationError: If there's an error generating the response from the model.
-
-    Example:
-
-    .. code-block:: python
-
-        from neo4j_graphrag.llm import VertexAILLM
-        from vertexai.generative_models import GenerationConfig
-
-        generation_config = GenerationConfig(temperature=0.0)
-        llm = VertexAILLM(
-            model_name="gemini-1.5-flash-001", generation_config=generation_config
-        )
-        llm.invoke("Who is the mother of Paul Atreides?")
+    Holds all the shared message-building, generation-config/schema-handling,
+    and response-parsing logic. Unlike the Anthropic/OpenAI/Gemini base
+    classes, there is no persistent per-instance SDK client to construct here
+    (Vertex AI relies on a global ``vertexai.init(...)`` plus a fresh
+    ``GenerativeModel`` per call) — subclasses are only responsible for
+    implementing :meth:`_get_model`, which controls how that model object is
+    constructed.
     """
 
     supports_structured_output: bool = True
@@ -399,16 +385,19 @@ class VertexAILLM(LLMBase):
             )
         ]
 
+    @abc.abstractmethod
     def _get_model(
         self,
         system_instruction: Optional[str] = None,
     ) -> GenerativeModel:
-        # system_message = [system_instruction] if system_instruction is not None else []
-        model = GenerativeModel(
-            model_name=self.model_name,
-            system_instruction=system_instruction,
-        )
-        return model
+        """Construct the ``GenerativeModel`` used for a single call.
+
+        This is the one thing a subclass is responsible for — everything
+        else (input building, generation-config/schema handling, response
+        parsing) is inherited unchanged. A subclass reaching a different
+        endpoint or hosting configuration (e.g. via ``vertexai.init(...)``
+        called with different arguments) only needs to override this method.
+        """
 
     def get_messages(
         self,
@@ -599,3 +588,41 @@ class VertexAILLM(LLMBase):
                 total_tokens=metadata.total_token_count,
             )
         return LLMResponse(content=response.text, usage=usage)
+
+
+class VertexAILLM(BaseVertexAILLM):
+    """Interface for large language models on Vertex AI
+
+    Args:
+        model_name (str, optional): Name of the LLM to use. Defaults to "gemini-1.5-flash-001".
+        model_params (Optional[dict], optional): Additional parameters for LLMInterface(V1) passed to the model when text is sent to it. Defaults to None.
+        system_instruction: Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
+        rate_limit_handler (Optional[RateLimitHandler], optional): Rate limit handler for LLMInterface(V1). Defaults to None.
+        **kwargs (Any): Arguments passed to the model when for the class is initialised. Defaults to None.
+
+    Raises:
+        LLMGenerationError: If there's an error generating the response from the model.
+
+    Example:
+
+    .. code-block:: python
+
+        from neo4j_graphrag.llm import VertexAILLM
+        from vertexai.generative_models import GenerationConfig
+
+        generation_config = GenerationConfig(temperature=0.0)
+        llm = VertexAILLM(
+            model_name="gemini-1.5-flash-001", generation_config=generation_config
+        )
+        llm.invoke("Who is the mother of Paul Atreides?")
+    """
+
+    def _get_model(
+        self,
+        system_instruction: Optional[str] = None,
+    ) -> GenerativeModel:
+        model = GenerativeModel(
+            model_name=self.model_name,
+            system_instruction=system_instruction,
+        )
+        return model
