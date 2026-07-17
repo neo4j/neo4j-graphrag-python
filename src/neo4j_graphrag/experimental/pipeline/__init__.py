@@ -36,7 +36,7 @@ def __getattr__(name: str) -> Any:
             DeprecationWarning,
             stacklevel=2,
         )
-        from neo4j_graphrag.components.base import Component, DataModel
+        from neo4j_graphrag.components.base import Component, DataModel  # noqa
 
         return locals()[name]
     raise AttributeError(f"module {__name__} has no attribute {name}")

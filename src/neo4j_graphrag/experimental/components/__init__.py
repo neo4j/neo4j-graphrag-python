@@ -48,7 +48,7 @@ _PKG = __name__  # "neo4j_graphrag.experimental.components"
 _EXPERIMENTAL_ONLY: set[str] = set()
 
 
-class I(importlib.abc.Loader):
+class AliasLoader(importlib.abc.Loader):
     """Aliases the module from its new location under the old (experimental) name.
 
     The exact same module object is shared under both names, so it is neither
@@ -106,7 +106,7 @@ class _ComponentsRedirectFinder(importlib.abc.MetaPathFinder):
             DeprecationWarning,
             stacklevel=2,
         )
-        return importlib.util.spec_from_loader(fullname, I(new_name))
+        return importlib.util.spec_from_loader(fullname, AliasLoader(new_name))
 
 
 # Register the finder ahead of the default path-based finders, but only once.
