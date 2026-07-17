@@ -337,9 +337,9 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
             if not self.has_user_provided_schema():
                 connections.append(
                     ConnectionDefinition(
-                        start="file_loader",
+                        start="splitter",
                         end="schema",
-                        input_config={"text": "file_loader.text"},
+                        input_config={"text": "splitter.chunks"},
                     )
                 )
 
@@ -354,6 +354,14 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
                 )
             )
         else:
+            if not self.has_user_provided_schema():
+                connections.append(
+                    ConnectionDefinition(
+                        start="splitter",
+                        end="schema",
+                        input_config={"text": "splitter.chunks"},
+                    )
+                )
             connections.append(
                 ConnectionDefinition(
                     start="schema",
@@ -436,9 +444,6 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
                     "Expected 'text' argument when 'from_file' is False."
                 )
             run_params["splitter"]["text"] = text
-            # Add full text to schema component for automatic schema extraction
-            if not self.has_user_provided_schema():
-                run_params["schema"]["text"] = text
             run_params["extractor"]["document_info"] = dict(
                 path=user_input.get(
                     "file_path",

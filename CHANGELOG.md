@@ -19,6 +19,10 @@
 - Experimental: LLM-auto-generated schemas now reconcile duplicate `relationship_types` (entries sharing the same label) by merging them into a single type that carries the union of their properties, emitting a warning log. This reflects that Neo4j relationship types are global per name.
 - Experimental (**breaking**): `GraphSchema` now raises `SchemaValidationError` when the same label appears more than once in `relationship_types`. Because Neo4j relationship types are global per name (every relationship of a given type shares the same properties and constraints regardless of its endpoints), a label cannot have two conflicting definitions. 
 
+### Fixed
+
+- Experimental: `SimpleKGPipeline` automatic schema extraction now uses splitter chunks instead of passing the full file or inline text directly to the schema LLM prompt.
+
 ## 1.17.0
 
 ### Added
