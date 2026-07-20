@@ -194,7 +194,7 @@ Structured Output
 -----------------
 
 When the configured LLM declares support for structured output (i.e., ``supports_structured_output = True``,
-which is the case for :ref:`OpenAILLM <openaillm>`, :ref:`VertexAILLM <vertexaillm>` and :ref:`AnthropicLLM <anthropicllm>`),
+which is the case for :ref:`OpenAILLM <openaillm>`, :ref:`VertexAILLM <vertexaillm>`, :ref:`AnthropicLLM <anthropicllm>` and :ref:`MistralAILLM <mistralaillm>`),
 ``SimpleKGPipeline`` automatically enables structured output for both entity extraction and
 (when auto-extracting) schema generation. This enforces schema conformance at the API level,
 improving reliability over prompt-based JSON parsing.
@@ -889,7 +889,7 @@ You can also save and reload the extracted schema:
 Using Structured Output with Schema Extraction
 -----------------------------------------------
 
-For improved reliability with :ref:`OpenAILLM <openaillm>`, :ref:`VertexAILLM <vertexaillm>` or :ref:`AnthropicLLM <anthropicllm>`, enable structured output mode. When ``use_structured_output=True``, the extractor passes the lean ``GraphSchemaExtractionOutput`` Pydantic model as ``response_format`` to the LLM; the response is validated and converted to a :class:`~neo4j_graphrag.components.schema.GraphSchema` for the rest of the pipeline:
+For improved reliability with :ref:`OpenAILLM <openaillm>`, :ref:`VertexAILLM <vertexaillm>`, :ref:`AnthropicLLM <anthropicllm>` or :ref:`MistralAILLM <mistralaillm>`, enable structured output mode. When ``use_structured_output=True``, the extractor passes the lean ``GraphSchemaExtractionOutput`` Pydantic model as ``response_format`` to the LLM; the response is validated and converted to a :class:`~neo4j_graphrag.components.schema.GraphSchema` for the rest of the pipeline:
 
 .. code:: python
 
@@ -1002,7 +1002,7 @@ It can be used in this way:
 
 .. note::
 
-    For :ref:`OpenAILLM <openaillm>`, :ref:`VertexAILLM <vertexaillm>` and :ref:`AnthropicLLM <anthropicllm>`, structured output is recommended over ``"response_format": {"type": "json_object"}`` for improved reliability. See :ref:`Using Structured Output <using-structured-output>` below.
+    For :ref:`OpenAILLM <openaillm>`, :ref:`VertexAILLM <vertexaillm>`, :ref:`AnthropicLLM <anthropicllm>` and :ref:`MistralAILLM <mistralaillm>`, structured output is recommended over ``"response_format": {"type": "json_object"}`` for improved reliability. See :ref:`Using Structured Output <using-structured-output>` below.
 
 The LLM to use can be customized, the only constraint is that it obeys the :ref:`LLMInterface <llminterface>`.
 
@@ -1012,7 +1012,7 @@ The LLM to use can be customized, the only constraint is that it obeys the :ref:
 Using Structured Output
 -----------------------
 
-For improved reliability and type safety with :ref:`OpenAILLM <openaillm>`, :ref:`VertexAILLM <vertexaillm>` or :ref:`AnthropicLLM <anthropicllm>`, enable structured output mode. When `use_structured_output=True`, the extractor uses the LLMInterfaceV2, passing the `Neo4jGraph` Pydantic model as `response_format` to `invoke()`. This ensures the LLM response conforms to the expected graph structure with automatic type validation, reducing the need for JSON repair and error handling.
+For improved reliability and type safety with :ref:`OpenAILLM <openaillm>`, :ref:`VertexAILLM <vertexaillm>`, :ref:`AnthropicLLM <anthropicllm>` or :ref:`MistralAILLM <mistralaillm>`, enable structured output mode. When `use_structured_output=True`, the extractor uses the LLMInterfaceV2, passing the `Neo4jGraph` Pydantic model as `response_format` to `invoke()`. This ensures the LLM response conforms to the expected graph structure with automatic type validation, reducing the need for JSON repair and error handling.
 
 .. code:: python
 
@@ -1026,7 +1026,7 @@ For improved reliability and type safety with :ref:`OpenAILLM <openaillm>`, :ref
 
 .. note::
 
-    Structured output is only available for LLMs with ``supports_structured_output=True`` (currently :ref:`OpenAILLM <openaillm>`, :ref:`VertexAILLM <vertexaillm>` and :ref:`AnthropicLLM <anthropicllm>`). Using ``use_structured_output=True`` with other providers will raise a ``ValueError``. Do not pass ``response_format`` in constructor parameters (``model_params`` or ``generation_config``); the extractor automatically sets it when calling ``invoke()``.
+    Structured output is only available for LLMs with ``supports_structured_output=True`` (currently :ref:`OpenAILLM <openaillm>`, :ref:`VertexAILLM <vertexaillm>`, :ref:`AnthropicLLM <anthropicllm>` and :ref:`MistralAILLM <mistralaillm>`). Using ``use_structured_output=True`` with other providers will raise a ``ValueError``. Do not pass ``response_format`` in constructor parameters (``model_params`` or ``generation_config``); the extractor automatically sets it when calling ``invoke()``.
 
 
 Error Behaviour

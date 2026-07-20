@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import logging
 import os
 from typing import Any, Iterable, List, Optional, Type, Union, cast
 
@@ -57,9 +58,15 @@ try:
 except ImportError:
     pass
 
+logger = logging.getLogger(__name__)
+
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return
 class MistralAILLM(LLMBase):
+    """Interface for Mistral AI chat models."""
+
+    supports_structured_output: bool = True
+
     def __init__(
         self,
         model_name: str,
@@ -185,7 +192,8 @@ class MistralAILLM(LLMBase):
 
         Args:
             input (List[LLMMessage]): Messages sent to the LLM.
-            response_format: Not supported by MistralAILLM.
+            response_format: A Pydantic model class or Mistral-specific response
+                format dictionary used to constrain the response.
 
         Returns:
             LLMResponse: The response from MistralAI.
@@ -193,15 +201,38 @@ class MistralAILLM(LLMBase):
         Raises:
             LLMGenerationError: If anything goes wrong.
         """
-        if response_format is not None:
-            raise NotImplementedError(
-                "MistralAILLM does not currently support structured output"
-            )
         try:
             messages = self.get_messages_v2(input)
-            response = self.client.chat.complete(
-                model=self.model_name, messages=messages, **self.model_params, **kwargs
-            )
+            params = self.model_params.copy() if self.model_params else {}
+            if (
+                params.pop("response_format", None) is not None
+                and response_format is None
+            ):
+                logger.warning(
+                    "response_format in model_params is ignored. "
+                    "Pass response_format to invoke() instead."
+                )
+
+            response: Any
+            if isinstance(response_format, type) and issubclass(
+                response_format, BaseModel
+            ):
+                response = self.client.chat.parse(
+                    model=self.model_name,
+                    messages=messages,
+                    response_format=response_format,
+                    **params,
+                    **kwargs,
+                )
+            else:
+                if response_format is not None:
+                    kwargs["response_format"] = response_format
+                response = self.client.chat.complete(
+                    model=self.model_name,
+                    messages=messages,
+                    **params,
+                    **kwargs,
+                )
             content: str = ""
             usage = None
             if response and response.choices:
@@ -215,7 +246,7 @@ class MistralAILLM(LLMBase):
                     total_tokens=response.usage.total_tokens,
                 )
             return LLMResponse(content=content, usage=usage)
-        except SDKError as e:
+        except (SDKError, ValidationError) as e:
             raise LLMGenerationError(e)
 
     @async_rate_limit_handler_decorator
@@ -277,7 +308,8 @@ class MistralAILLM(LLMBase):
 
         Args:
             input (List[LLMMessage]): Messages sent to the LLM.
-            response_format: Not supported by MistralAILLM.
+            response_format: A Pydantic model class or Mistral-specific response
+                format dictionary used to constrain the response.
 
         Returns:
             LLMResponse: The response from MistralAI.
@@ -285,18 +317,38 @@ class MistralAILLM(LLMBase):
         Raises:
             LLMGenerationError: If anything goes wrong.
         """
-        if response_format is not None:
-            raise NotImplementedError(
-                "MistralAILLM does not currently support structured output"
-            )
         try:
             messages = self.get_messages_v2(input)
-            response = await self.client.chat.complete_async(
-                model=self.model_name,
-                messages=messages,
-                **self.model_params,
-                **kwargs,
-            )
+            params = self.model_params.copy() if self.model_params else {}
+            if (
+                params.pop("response_format", None) is not None
+                and response_format is None
+            ):
+                logger.warning(
+                    "response_format in model_params is ignored. "
+                    "Pass response_format to invoke() instead."
+                )
+
+            response: Any
+            if isinstance(response_format, type) and issubclass(
+                response_format, BaseModel
+            ):
+                response = await self.client.chat.parse_async(
+                    model=self.model_name,
+                    messages=messages,
+                    response_format=response_format,
+                    **params,
+                    **kwargs,
+                )
+            else:
+                if response_format is not None:
+                    kwargs["response_format"] = response_format
+                response = await self.client.chat.complete_async(
+                    model=self.model_name,
+                    messages=messages,
+                    **params,
+                    **kwargs,
+                )
             content: str = ""
             usage = None
             if response and response.choices:
@@ -310,7 +362,7 @@ class MistralAILLM(LLMBase):
                     total_tokens=response.usage.total_tokens,
                 )
             return LLMResponse(content=content, usage=usage)
-        except SDKError as e:
+        except (SDKError, ValidationError) as e:
             raise LLMGenerationError(e)
 
     async def aclose(self) -> None:
