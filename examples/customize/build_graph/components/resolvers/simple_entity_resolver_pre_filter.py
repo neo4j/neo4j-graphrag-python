@@ -11,10 +11,8 @@ See apoc.refactor.mergeNodes documentation for more details.
 """
 
 import neo4j
-from neo4j_graphrag.experimental.components.resolver import (
-    SinglePropertyExactMatchResolver,
-)
-from neo4j_graphrag.experimental.components.types import ResolutionStats
+from neo4j_graphrag.components.resolver import SinglePropertyExactMatchResolver
+from neo4j_graphrag.components.types import ResolutionStats
 
 
 async def main(driver: neo4j.Driver) -> None:

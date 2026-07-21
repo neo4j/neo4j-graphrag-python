@@ -7,7 +7,7 @@ from pprint import pprint
 
 import neo4j
 
-from neo4j_graphrag.experimental.components.schema import (
+from neo4j_graphrag.components.schema import (
     SchemaFromExistingGraphExtractor,
     GraphSchema,
 )

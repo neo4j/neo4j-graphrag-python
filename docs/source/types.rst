@@ -48,88 +48,88 @@ RagResultModel
 DocumentInfo
 ============
 
-.. autoclass:: neo4j_graphrag.experimental.components.types.DocumentInfo
+.. autoclass:: neo4j_graphrag.components.types.DocumentInfo
 
 LoadedDocument
 ==============
 
-.. autoclass:: neo4j_graphrag.experimental.components.types.LoadedDocument
+.. autoclass:: neo4j_graphrag.components.types.LoadedDocument
 
 
 TextChunk
 =========
 
-.. autoclass:: neo4j_graphrag.experimental.components.types.TextChunk
+.. autoclass:: neo4j_graphrag.components.types.TextChunk
 
 TextChunks
 ==========
 
-.. autoclass:: neo4j_graphrag.experimental.components.types.TextChunks
+.. autoclass:: neo4j_graphrag.components.types.TextChunks
 
 Neo4jNode
 =========
 
-.. autoclass:: neo4j_graphrag.experimental.components.types.Neo4jNode
+.. autoclass:: neo4j_graphrag.components.types.Neo4jNode
 
 Neo4jRelationship
 =================
 
-.. autoclass:: neo4j_graphrag.experimental.components.types.Neo4jRelationship
+.. autoclass:: neo4j_graphrag.components.types.Neo4jRelationship
 
 Neo4jGraph
 ==========
 
-.. autoclass:: neo4j_graphrag.experimental.components.types.Neo4jGraph
+.. autoclass:: neo4j_graphrag.components.types.Neo4jGraph
 
 GeoPoint
 ========
 
-.. autoclass:: neo4j_graphrag.experimental.components.types.GeoPoint
+.. autoclass:: neo4j_graphrag.components.types.GeoPoint
 
 KGWriterModel
 =============
 
-.. autoclass:: neo4j_graphrag.experimental.components.kg_writer.KGWriterModel
+.. autoclass:: neo4j_graphrag.components.kg_writer.KGWriterModel
 
 PropertyType
 ============
 
-.. autoclass:: neo4j_graphrag.experimental.components.schema.PropertyType
+.. autoclass:: neo4j_graphrag.components.schema.PropertyType
 
 NodeType
 ========
 
-.. autoclass:: neo4j_graphrag.experimental.components.schema.NodeType
+.. autoclass:: neo4j_graphrag.components.schema.NodeType
 
 RelationshipType
 ================
 
-.. autoclass:: neo4j_graphrag.experimental.components.schema.RelationshipType
+.. autoclass:: neo4j_graphrag.components.schema.RelationshipType
 
 Pattern
 =======
 
-.. autoclass:: neo4j_graphrag.experimental.components.schema.Pattern
+.. autoclass:: neo4j_graphrag.components.schema.Pattern
 
 GraphConstraintType
 =====================
 
-.. autoclass:: neo4j_graphrag.experimental.components.schema.GraphConstraintType
+.. autoclass:: neo4j_graphrag.components.schema.GraphConstraintType
 
 ConstraintType
 ================
 
-.. autoclass:: neo4j_graphrag.experimental.components.schema.ConstraintType
+.. autoclass:: neo4j_graphrag.components.schema.ConstraintType
 
 GraphSchema
 ===========
 
-.. autoclass:: neo4j_graphrag.experimental.components.schema.GraphSchema
+.. autoclass:: neo4j_graphrag.components.schema.GraphSchema
 
 LexicalGraphConfig
 ===================
 
-.. autoclass:: neo4j_graphrag.experimental.components.types.LexicalGraphConfig
+.. autoclass:: neo4j_graphrag.components.types.LexicalGraphConfig
 
 
 Neo4jDriverType

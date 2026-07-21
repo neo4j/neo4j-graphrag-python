@@ -227,7 +227,7 @@ chunk overlap in the text splitter component:
 
 .. code:: python
 
-    from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
+    from neo4j_graphrag.components.text_splitters.fixed_size_splitter import (
         FixedSizeSplitter,
     )
 
@@ -566,7 +566,7 @@ The YAML equivalent:
         chunk_size: 100
         chunk_overlap: 10
 
-The `neo4j_graphrag.experimental.components` prefix will be appended automatically
+The `neo4j_graphrag.components` prefix will be appended automatically
 if needed.
 
 
@@ -581,7 +581,7 @@ Each of these components can be run individually:
 .. code:: python
 
     import asyncio
-    from neo4j_graphrag.experimental.components.data_loader import PdfLoader
+    from neo4j_graphrag.components.data_loader import PdfLoader
     my_component = PdfLoader()
     asyncio.run(my_component.run("my_file.pdf"))
 
@@ -591,7 +591,7 @@ They can also be used within a pipeline:
 .. code:: python
 
     from neo4j_graphrag.experimental.pipeline import Pipeline
-    from neo4j_graphrag.experimental.components.data_loader import PdfLoader
+    from neo4j_graphrag.components.data_loader import PdfLoader
     pipeline = Pipeline()
     my_component = PdfLoader()
     pipeline.add_component(my_component, "component_name")
@@ -607,7 +607,7 @@ This package currently supports text extraction from PDFs:
 .. code:: python
 
     from pathlib import Path
-    from neo4j_graphrag.experimental.components.data_loader import PdfLoader
+    from neo4j_graphrag.components.data_loader import PdfLoader
 
     loader = PdfLoader()
     await loader.run(filepath=Path("my_file.pdf"))
@@ -617,8 +617,8 @@ To implement your own loader, use the `DataLoader` interface:
 .. code:: python
 
     from pathlib import Path
-    from neo4j_graphrag.experimental.components.data_loader import DataLoader
-    from neo4j_graphrag.experimental.components.types import LoadedDocument
+    from neo4j_graphrag.components.data_loader import DataLoader
+    from neo4j_graphrag.components.types import LoadedDocument
 
     class MyDataLoader(DataLoader):
         async def run(self, filepath: Path, metadata: Optional[Dict[str, str]] = None) -> LoadedDocument:
@@ -641,7 +641,7 @@ that can be processed within the LLM token limits:
 
 .. code:: python
 
-    from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import FixedSizeSplitter
+    from neo4j_graphrag.components.text_splitters.fixed_size_splitter import FixedSizeSplitter
 
     splitter = FixedSizeSplitter(chunk_size=4000, chunk_overlap=200, approximate=False)
     splitter.run(text="Hello World. Life is beautiful.")
@@ -655,7 +655,7 @@ Wrappers for LangChain and LlamaIndex text splitters are included in this packag
 .. code:: python
 
     from langchain_text_splitters import CharacterTextSplitter
-    from neo4j_graphrag.experimental.components.text_splitters.langchain import LangChainTextSplitterAdapter
+    from neo4j_graphrag.components.text_splitters.langchain import LangChainTextSplitterAdapter
     splitter = LangChainTextSplitterAdapter(
         CharacterTextSplitter(chunk_size=4000, chunk_overlap=200, separator=".")
     )
@@ -668,8 +668,8 @@ To implement a custom text splitter, the `TextSplitter` interface can be used:
 
 .. code:: python
 
-    from neo4j_graphrag.experimental.components.text_splitters.base import TextSplitter
-    from neo4j_graphrag.experimental.components.types import TextChunks, TextChunk
+    from neo4j_graphrag.components.text_splitters.base import TextSplitter
+    from neo4j_graphrag.components.types import TextChunks, TextChunk
 
 
     class MyTextSplitter(TextSplitter):
@@ -696,7 +696,7 @@ Example usage:
 
 .. code:: python
 
-    from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
+    from neo4j_graphrag.components.embedder import TextChunkEmbedder
     from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
     text_chunk_embedder = TextChunkEmbedder(embedder=OpenAIEmbeddings())
     await text_chunk_embedder.run(text_chunks=TextChunks(chunks=[TextChunk(text="my_text")]))
@@ -734,8 +734,8 @@ Example usage:
 
 .. code:: python
 
-    from neo4j_graphrag.experimental.pipeline.components.lexical_graph_builder import LexicalGraphBuilder
-    from neo4j_graphrag.experimental.pipeline.components.types import LexicalGraphConfig
+    from neo4j_graphrag.components.lexical_graph_builder import LexicalGraphBuilder
+    from neo4j_graphrag.components.types import LexicalGraphConfig
 
     lexical_graph_builder = LexicalGraphBuilder(config=LexicalGraphConfig())
     graph = await lexical_graph_builder.run(
@@ -758,8 +758,8 @@ by the lexical graph builder or another process.
 .. code:: python
 
     import neo4j
-    from neo4j_graphrag.experimental.components.neo4j_reader import Neo4jChunkReader
-    from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
+    from neo4j_graphrag.components.neo4j_reader import Neo4jChunkReader
+    from neo4j_graphrag.components.types import LexicalGraphConfig
 
     reader = Neo4jChunkReader(driver)
     result = await reader.run()
@@ -772,8 +772,8 @@ Optionally, the document and chunk node labels can be configured using a `Lexica
 
 .. code:: python
 
-    from neo4j_graphrag.experimental.components.neo4j_reader import Neo4jChunkReader
-    from neo4j_graphrag.experimental.components.types import LexicalGraphConfig, TextChunks
+    from neo4j_graphrag.components.neo4j_reader import Neo4jChunkReader
+    from neo4j_graphrag.components.types import LexicalGraphConfig, TextChunks
 
     # optionally, define a LexicalGraphConfig object
     # shown below with the default values
@@ -803,7 +803,7 @@ Here is a code block illustrating these concepts:
 
 .. code:: python
 
-    from neo4j_graphrag.experimental.components.schema import (
+    from neo4j_graphrag.components.schema import (
         SchemaBuilder,
         NodeType,
         PropertyType,
@@ -854,7 +854,7 @@ Instead of manually defining the schema, you can use the `SchemaFromTextExtracto
 
 .. code:: python
 
-    from neo4j_graphrag.experimental.components.schema import SchemaFromTextExtractor
+    from neo4j_graphrag.components.schema import SchemaFromTextExtractor
     from neo4j_graphrag.llm import OpenAILLM
 
     # Instantiate the automatic schema extractor component
@@ -882,18 +882,18 @@ You can also save and reload the extracted schema:
     extracted_schema.save("my_schema.yaml")
 
     # Later, reload the schema from file
-    from neo4j_graphrag.experimental.components.schema import GraphSchema
+    from neo4j_graphrag.components.schema import GraphSchema
     restored_schema = GraphSchema.from_file("my_schema.json")  # or my_schema.yaml
 
 
 Using Structured Output with Schema Extraction
 -----------------------------------------------
 
-For improved reliability with :ref:`OpenAILLM <openaillm>`, :ref:`VertexAILLM <vertexaillm>` or :ref:`AnthropicLLM <anthropicllm>`, enable structured output mode. When ``use_structured_output=True``, the extractor passes the lean ``GraphSchemaExtractionOutput`` Pydantic model as ``response_format`` to the LLM; the response is validated and converted to a :class:`~neo4j_graphrag.experimental.components.schema.GraphSchema` for the rest of the pipeline:
+For improved reliability with :ref:`OpenAILLM <openaillm>`, :ref:`VertexAILLM <vertexaillm>` or :ref:`AnthropicLLM <anthropicllm>`, enable structured output mode. When ``use_structured_output=True``, the extractor passes the lean ``GraphSchemaExtractionOutput`` Pydantic model as ``response_format`` to the LLM; the response is validated and converted to a :class:`~neo4j_graphrag.components.schema.GraphSchema` for the rest of the pipeline:
 
 .. code:: python
 
-    from neo4j_graphrag.experimental.components.schema import SchemaFromTextExtractor
+    from neo4j_graphrag.components.schema import SchemaFromTextExtractor
     from neo4j_graphrag.llm import OpenAILLM
 
     llm = OpenAILLM(model_name="gpt-5-mini", model_params={"temperature": 0})
@@ -901,7 +901,7 @@ For improved reliability with :ref:`OpenAILLM <openaillm>`, :ref:`VertexAILLM <v
         llm=llm,
         use_structured_output=True
     )
-    
+
     extracted_schema = await schema_extractor.run(text="Some text")
 
 .. note::
@@ -975,10 +975,10 @@ It can be used in this way:
 
 .. code:: python
 
-    from neo4j_graphrag.experimental.components.entity_relation_extractor import (
+    from neo4j_graphrag.components.entity_relation_extractor import (
         LLMEntityRelationExtractor,
     )
-    from neo4j_graphrag.experimental.components.types import (
+    from neo4j_graphrag.components.types import (
         TextChunks,
         TextChunk
     )
@@ -1016,7 +1016,7 @@ For improved reliability and type safety with :ref:`OpenAILLM <openaillm>`, :ref
 
 .. code:: python
 
-    from neo4j_graphrag.experimental.components.entity_relation_extractor import (
+    from neo4j_graphrag.components.entity_relation_extractor import (
         LLMEntityRelationExtractor,
     )
     from neo4j_graphrag.llm import OpenAILLM
@@ -1037,7 +1037,7 @@ This behaviour can be changed by using the `on_error` flag in the `LLMEntityRela
 
 .. code:: python
 
-    from neo4j_graphrag.experimental.components.entity_relation_extractor import (
+    from neo4j_graphrag.components.entity_relation_extractor import (
         LLMEntityRelationExtractor,
         OnError,
     )
@@ -1109,8 +1109,8 @@ If more customization is needed, it is possible to subclass the `EntityRelationE
 .. code:: python
 
     from pydantic import validate_call
-    from neo4j_graphrag.experimental.components.entity_relation_extractor import EntityRelationExtractor
-    from neo4j_graphrag.experimental.components.types import (
+    from neo4j_graphrag.components.entity_relation_extractor import EntityRelationExtractor
+    from neo4j_graphrag.components.types import (
         Neo4jGraph,
         Neo4jNode,
         Neo4jRelationship,
@@ -1216,8 +1216,8 @@ to a Neo4j database:
 .. code:: python
 
     import neo4j
-    from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
-    from neo4j_graphrag.experimental.components.types import Neo4jGraph
+    from neo4j_graphrag.components.kg_writer import Neo4jWriter
+    from neo4j_graphrag.components.types import Neo4jGraph
 
     with neo4j.GraphDatabase.driver(
         "bolt://localhost:7687", auth=("neo4j", "password")
@@ -1243,7 +1243,7 @@ It is possible to create a custom writer using the `KGWriter` interface:
 
     import json
     from pydantic import validate_call
-    from neo4j_graphrag.experimental.components.kg_writer import KGWriter
+    from neo4j_graphrag.components.kg_writer import KGWriter
 
     class JsonWriter(KGWriter):
 
@@ -1295,7 +1295,7 @@ The resolvers can be used like this:
 
 .. code:: python
 
-    from neo4j_graphrag.experimental.components.resolver import (
+    from neo4j_graphrag.components.resolver import (
         SinglePropertyExactMatchResolver,
         # SpaCySemanticMatchResolver,
         # FuzzyMatchResolver,
@@ -1319,7 +1319,7 @@ in the graph, these entities can be excluded with the following approach:
 
 .. code:: python
 
-    from neo4j_graphrag.experimental.components.resolver import (
+    from neo4j_graphrag.components.resolver import (
         SinglePropertyExactMatchResolver,
     )
     filter_query = "WHERE NOT entity:Resolved"

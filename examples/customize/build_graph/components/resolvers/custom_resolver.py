@@ -5,8 +5,8 @@ a specific signature for the run method, which makes it very flexible.
 from typing import Any, Optional
 
 import neo4j
-from neo4j_graphrag.experimental.components.resolver import EntityResolver
-from neo4j_graphrag.experimental.components.types import ResolutionStats
+from neo4j_graphrag.components.resolver import EntityResolver
+from neo4j_graphrag.components.types import ResolutionStats
 
 
 class MyEntityResolver(EntityResolver):

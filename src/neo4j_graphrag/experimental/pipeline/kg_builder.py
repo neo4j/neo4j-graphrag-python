@@ -23,13 +23,11 @@ import neo4j
 from pydantic import ValidationError
 
 from neo4j_graphrag.embeddings import Embedder
-from neo4j_graphrag.experimental.components.entity_relation_extractor import OnError
-from neo4j_graphrag.experimental.components.kg_writer import KGWriter
-from neo4j_graphrag.experimental.components.data_loader import DataLoader
-from neo4j_graphrag.experimental.components.text_splitters.base import TextSplitter
-from neo4j_graphrag.experimental.components.types import (
-    LexicalGraphConfig,
-)
+from neo4j_graphrag.components.entity_relation_extractor import OnError
+from neo4j_graphrag.components.types import LexicalGraphConfig
+from neo4j_graphrag.components.kg_writer import KGWriter
+from neo4j_graphrag.components.data_loader import DataLoader
+from neo4j_graphrag.components.text_splitters.base import TextSplitter
 from neo4j_graphrag.experimental.pipeline.config.object_config import ComponentType
 from neo4j_graphrag.experimental.pipeline.config.runner import PipelineRunner
 from neo4j_graphrag.experimental.pipeline.config.template_pipeline import (
@@ -43,7 +41,7 @@ from neo4j_graphrag.experimental.pipeline.types.schema import (
 )
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 from neo4j_graphrag.llm.base import LLMInterface
-from neo4j_graphrag.experimental.components.schema import GraphSchema
+from neo4j_graphrag.components.schema import GraphSchema
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +86,7 @@ class SimpleKGPipeline:
         text_splitter (Optional[TextSplitter]): A text splitter component. Defaults to FixedSizeSplitter().
         file_loader (Optional[DataLoader]): A document loader component. Defaults to an
             internal extension-based loader that supports ``.pdf``, ``.md``, and ``.markdown``.
-            Use :class:`~neo4j_graphrag.experimental.components.data_loader.PdfLoader` for PDF-only paths.
+            Use :class:`~neo4j_graphrag.components.data_loader.PdfLoader` for PDF-only paths.
         pdf_loader (Optional[DataLoader]): Deprecated. If set, it is used as ``file_loader`` and emits a
             warning. Do not pass both ``file_loader`` and ``pdf_loader``. Prefer ``file_loader``.
         kg_writer (Optional[KGWriter]): A knowledge graph writer component. Defaults to Neo4jWriter().

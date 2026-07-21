@@ -3,13 +3,13 @@ from __future__ import annotations
 import asyncio
 
 from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
-from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
-from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
-from neo4j_graphrag.experimental.components.lexical_graph import LexicalGraphBuilder
-from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
+from neo4j_graphrag.components.embedder import TextChunkEmbedder
+from neo4j_graphrag.components.kg_writer import Neo4jWriter
+from neo4j_graphrag.components.lexical_graph import LexicalGraphBuilder
+from neo4j_graphrag.components.text_splitters.fixed_size_splitter import (
     FixedSizeSplitter,
 )
-from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
+from neo4j_graphrag.components.types import LexicalGraphConfig
 from neo4j_graphrag.experimental.pipeline import Pipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 
