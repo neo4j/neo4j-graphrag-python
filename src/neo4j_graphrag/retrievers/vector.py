@@ -389,7 +389,7 @@ class VectorCypherRetriever(Retriever):
         )
         self.result_formatter = validated_data.result_formatter
         self._node_label = None
-        self._node_embedding_property = None
+        self._embedding_node_property = None
         self._embedding_dimension = None
         self._filterable_properties: list[str] = []
         self._fetch_index_infos(self.index_name)
@@ -503,7 +503,7 @@ class VectorCypherRetriever(Retriever):
                 search_type=SearchType.VECTOR,
                 retrieval_query=self.retrieval_query,
                 node_label=self._node_label,
-                embedding_node_property=self._node_embedding_property,
+                embedding_node_property=self._embedding_node_property,
                 embedding_dimension=self._embedding_dimension,
                 filters=filters,
             )
@@ -534,7 +534,7 @@ class VectorCypherRetriever(Retriever):
                     search_type=SearchType.VECTOR,
                     retrieval_query=self.retrieval_query,
                     node_label=self._node_label,
-                    embedding_node_property=self._node_embedding_property,
+                    embedding_node_property=self._embedding_node_property,
                     embedding_dimension=self._embedding_dimension,
                     filters=filters,
                 )
