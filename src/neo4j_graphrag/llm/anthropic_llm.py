@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import json
+import warnings
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -24,6 +25,12 @@ from typing import (
     Union,
     cast,
 )
+
+# 3rd party dependencies
+try:
+    import httpx
+except ImportError:
+    httpx = None  # type: ignore[assignment]
 
 from pydantic import BaseModel, ValidationError
 
@@ -218,8 +225,20 @@ class AnthropicLLM(LLMBase):
             **kwargs,
         )
         self.anthropic = anthropic
-        self.client = anthropic.Anthropic(**kwargs)
-        self.async_client = anthropic.AsyncAnthropic(**kwargs)
+        http_client = kwargs.pop("http_client", None)
+        sync_params = kwargs.copy()
+        async_params = kwargs.copy()
+        if httpx is not None and isinstance(http_client, httpx.Client):
+            sync_params["http_client"] = http_client
+        elif httpx is not None and isinstance(http_client, httpx.AsyncClient):
+            async_params["http_client"] = http_client
+        elif http_client is not None:
+            warnings.warn(
+                f"Invalid http_client type (got {type(http_client)}, expected httpx.Client or httpx.AsyncClient). Using default client.",
+                stacklevel=2,
+            )
+        self.client = anthropic.Anthropic(**sync_params)
+        self.async_client = anthropic.AsyncAnthropic(**async_params)
 
     def invoke(
         self,
