@@ -53,9 +53,6 @@ from neo4j_graphrag.utils.rate_limit import (
 if TYPE_CHECKING:
     from anthropic import AsyncAnthropic, Anthropic, Omit
     from anthropic.types.message_param import MessageParam
-else:
-    Anthropic = Any
-    AsyncAnthropic = Any
 
 
 # ---------------------------------------------------------------------------
@@ -527,7 +524,10 @@ class AnthropicLLM(BaseAnthropicLLM):
         rate_limit_handler (Optional[RateLimitHandler], optional): Handler for managing rate limits for LLMInterface(V1). Defaults to None.
         base_url (Optional[str], optional): Base URL to use instead of Anthropic's default API
             endpoint, e.g. to reach a custom Anthropic-compatible endpoint. Passed through to
-            both the sync and async SDK clients. Defaults to None.
+            both the sync and async SDK clients. Can be combined with an ``http_client``
+            passed via kwargs (``base_url`` sets where requests go, ``http_client`` how they
+            are sent); a base URL configured on the httpx client itself is ignored by the
+            SDK — use this parameter instead. Defaults to None.
         **kwargs (Any): Arguments passed to the model when for the class is initialised. Defaults to None.
 
     Raises:

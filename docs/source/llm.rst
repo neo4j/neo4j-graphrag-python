@@ -1,8 +1,16 @@
-.. _llm-extensibility:
+.. _llm-page:
 
 ***********************************************
-Extending LLMs: BaseAnthropicLLM/BaseOpenAILLM
+LLMs
 ***********************************************
+
+This page gathers LLM-related documentation: configuring the built-in
+providers and extending them to reach custom endpoints.
+
+.. _llm-extensibility:
+
+Extending LLMs: BaseAnthropicLLM/BaseOpenAILLM
+==============================================
 
 ``BaseAnthropicLLM`` and ``BaseOpenAILLM`` are the shared base classes behind
 :class:`~neo4j_graphrag.llm.anthropic_llm.AnthropicLLM` and
@@ -31,7 +39,34 @@ constructor settings:
   SDK's default client.
 
 Both settings can be used together: ``base_url`` changes where requests go,
-while ``http_client`` changes how they're sent.
+while ``http_client`` changes how they're sent. Note that a single
+``http_client`` only customizes one direction: calling the other one (e.g.
+``ainvoke`` after passing a sync ``httpx.Client``) still works and targets
+``base_url``, but through the SDK's default transport.
+
+.. note::
+
+   A ``base_url`` configured on the ``httpx`` client itself is ignored (a
+   ``UserWarning`` is emitted when one is detected): both
+   SDKs build absolute request URLs from their own ``base_url`` and only use
+   the ``httpx`` client as transport. To change the endpoint, always use the
+   ``base_url`` constructor parameter:
+
+   .. code-block:: python
+
+      # IGNORED -- the httpx base_url is never used; requests still go to
+      # the SDK's default endpoint
+      AnthropicLLM(
+          model_name="...",
+          http_client=httpx.Client(base_url="https://my-endpoint"),
+      )
+
+      # WORKS -- requests go to the custom endpoint, with the custom transport
+      AnthropicLLM(
+          model_name="...",
+          base_url="https://my-endpoint",
+          http_client=httpx.Client(proxy="http://my-proxy:8080"),
+      )
 
 The sync/async routing is implemented by
 :func:`neo4j_graphrag.llm.utils.split_http_client_kwargs`, which is exported
@@ -40,7 +75,7 @@ should call it too, so it preserves the same routing contract instead of
 reintroducing the type-mismatch bug the helper fixes.
 
 Subclassing example
-====================
+-------------------
 
 Because ``BaseAnthropicLLM``/``BaseOpenAILLM`` only require the concrete
 subclass to assign ``self.client``/``self.async_client``, you can build your

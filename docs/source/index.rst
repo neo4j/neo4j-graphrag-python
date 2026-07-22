@@ -51,7 +51,7 @@ Topics
     user_guide_rag.rst
     user_guide_kg_builder.rst
     user_guide_pipeline.rst
-    llm_extensibility.rst
+    llm.rst
     api.rst
     types.rst
 

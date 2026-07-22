@@ -650,7 +650,10 @@ class OpenAILLM(BaseOpenAILLM):
             rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting for LLMInterface(V1). Defaults to retry with exponential backoff.
             base_url (Optional[str], optional): Base URL to use instead of OpenAI's default API
                 endpoint, e.g. to reach an OpenAI-compatible server. Passed through to both the
-                sync and async SDK clients. Defaults to None.
+                sync and async SDK clients. Can be combined with an ``http_client`` passed via
+                kwargs (``base_url`` sets where requests go, ``http_client`` how they are
+                sent); a base URL configured on the httpx client itself is ignored by the
+                SDK — use this parameter instead. Defaults to None.
             kwargs: All other parameters will be passed to the openai.OpenAI init.
         """
         super().__init__(

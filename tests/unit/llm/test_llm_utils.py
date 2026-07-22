@@ -14,6 +14,8 @@
 #  limitations under the License.
 from typing import AsyncGenerator, Generator
 
+import warnings
+
 import httpx
 import pytest
 import pytest_asyncio
@@ -115,6 +117,36 @@ async def test_split_http_client_kwargs_routes_async_client(
     assert async_kwargs["api_key"] == "sk-test"
     assert "http_client" not in sync_kwargs
     assert sync_kwargs["api_key"] == "sk-test"
+
+
+def test_split_http_client_kwargs_warns_on_client_with_base_url() -> None:
+    client = httpx.Client(base_url="https://my-endpoint.example.com")
+    try:
+        with pytest.warns(UserWarning, match="base_url configured on the provided"):
+            sync_kwargs, _ = split_http_client_kwargs({"http_client": client})
+        # the client is still routed; only the base_url is flagged
+        assert sync_kwargs["http_client"] is client
+    finally:
+        client.close()
+
+
+@pytest.mark.asyncio
+async def test_split_http_client_kwargs_warns_on_async_client_with_base_url() -> None:
+    client = httpx.AsyncClient(base_url="https://my-endpoint.example.com")
+    try:
+        with pytest.warns(UserWarning, match="base_url configured on the provided"):
+            _, async_kwargs = split_http_client_kwargs({"http_client": client})
+        assert async_kwargs["http_client"] is client
+    finally:
+        await client.aclose()
+
+
+def test_split_http_client_kwargs_no_warning_without_base_url(
+    httpx_sync_client: httpx.Client,
+) -> None:
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        split_http_client_kwargs({"http_client": httpx_sync_client})
 
 
 def test_split_http_client_kwargs_invalid_type_warns_and_drops() -> None:
