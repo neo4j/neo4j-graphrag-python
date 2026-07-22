@@ -420,7 +420,7 @@ The same principles apply to `embedder_config`:
         "embedder_config": {
             "class_": "OpenAIEmbeddings",
             "params_": {
-                "mode": "text-embedding-ada-002",
+                "model": "text-embedding-ada-002",
                 "api_key": {
                     "resolver_": "ENV",
                     "var_": "OPENAI_API_KEY",
