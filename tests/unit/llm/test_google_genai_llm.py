@@ -242,3 +242,19 @@ def test_gemini_llm_no_base_url_not_passed_to_client(
     _, client_kwargs = mock_gen.Client.call_args
     assert "http_options" not in client_kwargs
     assert "base_url" not in client_kwargs
+
+
+@pytest.mark.asyncio
+async def test_gemini_llm_aclose_closes_sync_and_async_clients(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    """aclose must release both the sync client and its async (aio) surface."""
+    mock_gen, _ = mock_genai
+    mock_client = mock_gen.Client.return_value
+    mock_client.aio.aclose = AsyncMock()
+
+    llm = GeminiLLM(model_name="gemini-2.0-flash")
+    await llm.aclose()
+
+    mock_client.close.assert_called_once()
+    mock_client.aio.aclose.assert_awaited_once()

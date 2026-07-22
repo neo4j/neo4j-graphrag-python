@@ -24,7 +24,7 @@ construction to their subclasses. This page documents the
 ``http_client``/``base_url`` injection contract they expose, so you can point
 each provider at a custom or self-hosted, API-compatible endpoint.
 
-Both ``AnthropicLLM`` and ``OpenAILLM`` accept two related, independent
+``AnthropicLLM`` and ``OpenAILLM`` accept two related, independent
 constructor settings:
 
 - ``base_url`` (``Optional[str]``): an explicit constructor parameter on both

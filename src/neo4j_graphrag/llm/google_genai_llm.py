@@ -275,6 +275,10 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
         except Exception as e:
             raise LLMGenerationError(f"Error calling GeminiLLM with tools: {e}") from e
 
+    async def aclose(self) -> None:
+        self.client.close()
+        await self.client.aio.aclose()
+
     def get_messages(
         self,
         input: str,
