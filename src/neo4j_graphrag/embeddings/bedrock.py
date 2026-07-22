@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import warnings
 from typing import Any, Optional
 
 from neo4j_graphrag.embeddings.base import Embedder
@@ -82,14 +83,20 @@ class BedrockEmbeddings(Embedder):
                 "Could not import boto3 python client. "
                 'Please install it with `pip install "neo4j-graphrag[bedrock]"`.'
             )
-        super().__init__(rate_limit_handler)
-        self.model_id = model_id
-        self.dimensions = dimensions
+        super().__init__(model_id, dimensions, rate_limit_handler)
         self.normalize = normalize
         client_kwargs: dict[str, Any] = {**kwargs}
         if region_name:
             client_kwargs["region_name"] = region_name
         self.client = boto3.client("bedrock-runtime", **client_kwargs)
+
+    @property
+    def model_id(self) -> str | None:
+        warnings.warn(
+            "model_id is deprecated. Use model instead.",
+            DeprecationWarning,
+        )
+        return self.model
 
     def _invoke_embedding(self, text: str) -> list[float]:
         """Invoke the Bedrock embedding model and return the embedding vector."""
@@ -102,7 +109,7 @@ class BedrockEmbeddings(Embedder):
         )
         response = self.client.invoke_model(
             body=body,
-            modelId=self.model_id,
+            modelId=self.model,
             accept="application/json",
             contentType="application/json",
         )

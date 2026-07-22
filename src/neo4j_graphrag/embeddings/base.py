@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import warnings
 from abc import ABC, abstractmethod
 from typing import Optional
 
@@ -29,10 +30,32 @@ class Embedder(ABC):
     An embedder passed into a retriever must implement this interface.
 
     Args:
+        model (str): The model name. Subclasses must pass this to super().__init__(); omitting it is deprecated and will be required in 2.0.
+        dimensions (Optional[int]): The number of dimensions of the embeddings. Defaults to None.
         rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting. Defaults to retry with exponential backoff.
     """
 
-    def __init__(self, rate_limit_handler: Optional[RateLimitHandler] = None):
+    def __init__(
+        self,
+        model: str = "",
+        dimensions: int | None = None,
+        rate_limit_handler: Optional[RateLimitHandler] = None,
+    ):
+        if not isinstance(model, str):
+            raise TypeError(
+                f"Embedder.__init__() 'model' must be a str, got {type(model).__name__}. "
+                "If you are passing a rate_limit_handler, use the keyword argument: "
+                "super().__init__(model='my-model', rate_limit_handler=handler)."
+            )
+        if not model:
+            warnings.warn(
+                "Embedder subclasses should pass 'model' to super().__init__(). "
+                "This will be required in 2.0.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        self.model = model
+        self.dimensions = dimensions
         if rate_limit_handler is not None:
             self._rate_limit_handler = rate_limit_handler
         else:

@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import warnings
 from typing import Any, Optional
 
 from neo4j_graphrag.embeddings.base import Embedder
@@ -30,6 +31,7 @@ class CohereEmbeddings(Embedder):
     def __init__(
         self,
         model: str = "",
+        dimensions: int | None = None,
         rate_limit_handler: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ) -> None:
@@ -38,8 +40,11 @@ class CohereEmbeddings(Embedder):
                 """Could not import cohere python client.
                 Please install it with `pip install "neo4j-graphrag[cohere]"`."""
             )
-        super().__init__(rate_limit_handler)
-        self.model = model
+        super().__init__(model, dimensions, rate_limit_handler)
+        if self.dimensions:
+            warnings.warn(
+                "Dimension parameter is ignored in CohereEmbeddings.", UserWarning
+            )
         self.client = cohere.Client(**kwargs)
 
     @rate_limit_handler

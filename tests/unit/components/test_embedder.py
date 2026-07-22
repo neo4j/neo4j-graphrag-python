@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from neo4j_graphrag.components.embedder import TextChunkEmbedder
@@ -25,6 +25,8 @@ from neo4j_graphrag.components.types import (
 @pytest.mark.asyncio
 async def test_text_chunk_embedder_run(embedder: MagicMock) -> None:
     embedder.async_embed_query.return_value = [1.0, 2.0, 3.0]
+    embedder.model = "test-model"
+    embedder.dimensions = 3
     text_chunk_embedder = TextChunkEmbedder(embedder=embedder)
     text_chunks = TextChunks(
         chunks=[TextChunk(text="may thy knife chip and shatter", index=0)]
@@ -39,3 +41,22 @@ async def test_text_chunk_embedder_run(embedder: MagicMock) -> None:
         assert isinstance(chunk.metadata["embedding"], list)
         for i in chunk.metadata["embedding"]:
             assert isinstance(i, float)
+        assert chunk.metadata["embedding_model_name"] == "test-model"
+        assert chunk.metadata["embedding_model_dimensions"] == 3
+
+
+@pytest.mark.asyncio
+async def test_text_chunk_embedder_run_custom_embedder_without_model_attrs() -> None:
+    """Custom embedders without .model/.dimensions should not raise AttributeError."""
+    embedder = MagicMock(spec=["async_embed_query"])
+    embedder.async_embed_query = AsyncMock(return_value=[1.0])
+
+    text_chunk_embedder = TextChunkEmbedder(embedder=embedder)
+    text_chunks = TextChunks(chunks=[TextChunk(text="hello", index=0)])
+    embedded_chunks = await text_chunk_embedder.run(text_chunks)
+
+    chunk = embedded_chunks.chunks[0]
+    assert chunk.metadata is not None
+    assert chunk.metadata["embedding"] == [1.0]
+    assert chunk.metadata["embedding_model_name"] is None
+    assert chunk.metadata["embedding_model_dimensions"] is None
