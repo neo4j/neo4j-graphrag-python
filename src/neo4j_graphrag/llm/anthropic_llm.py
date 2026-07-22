@@ -14,7 +14,6 @@
 from __future__ import annotations
 
 import json
-import warnings
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -25,12 +24,6 @@ from typing import (
     Union,
     cast,
 )
-
-# 3rd party dependencies
-try:
-    import httpx
-except ImportError:
-    httpx = None  # type: ignore[assignment]
 
 from pydantic import BaseModel, ValidationError
 
@@ -43,6 +36,7 @@ from neo4j_graphrag.llm.types import (
     MessageList,
     UserMessage,
 )
+from neo4j_graphrag.llm.utils import split_http_client_kwargs
 from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.rate_limit import (
@@ -225,18 +219,7 @@ class AnthropicLLM(LLMBase):
             **kwargs,
         )
         self.anthropic = anthropic
-        http_client = kwargs.pop("http_client", None)
-        sync_params = kwargs.copy()
-        async_params = kwargs.copy()
-        if httpx is not None and isinstance(http_client, httpx.Client):
-            sync_params["http_client"] = http_client
-        elif httpx is not None and isinstance(http_client, httpx.AsyncClient):
-            async_params["http_client"] = http_client
-        elif http_client is not None:
-            warnings.warn(
-                f"Invalid http_client type (got {type(http_client)}, expected httpx.Client or httpx.AsyncClient). Using default client.",
-                stacklevel=2,
-            )
+        sync_params, async_params = split_http_client_kwargs(kwargs)
         self.client = anthropic.Anthropic(**sync_params)
         self.async_client = anthropic.AsyncAnthropic(**async_params)
 
