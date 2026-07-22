@@ -12,7 +12,8 @@ providers and extending them to reach custom endpoints.
 Extending LLMs: BaseAnthropicLLM/BaseOpenAILLM
 ==============================================
 
-``BaseAnthropicLLM`` and ``BaseOpenAILLM`` are the shared base classes behind
+:class:`~neo4j_graphrag.llm.anthropic_llm.BaseAnthropicLLM` and
+:class:`~neo4j_graphrag.llm.openai_llm.BaseOpenAILLM` are the shared base classes behind
 :class:`~neo4j_graphrag.llm.anthropic_llm.AnthropicLLM` and
 :class:`~neo4j_graphrag.llm.openai_llm.OpenAILLM` respectively. They hold all
 the provider-agnostic logic (message building, schema conversion, response
@@ -77,7 +78,8 @@ reintroducing the type-mismatch bug the helper fixes.
 Subclassing example
 -------------------
 
-Because ``BaseAnthropicLLM``/``BaseOpenAILLM`` only require the concrete
+Because :class:`~neo4j_graphrag.llm.anthropic_llm.BaseAnthropicLLM` /
+:class:`~neo4j_graphrag.llm.openai_llm.BaseOpenAILLM` only require the concrete
 subclass to assign ``self.client``/``self.async_client``, you can build your
 own thin subclass to reach a custom Anthropic-compatible endpoint with
 different defaults or credential handling than the built-in ``AnthropicLLM``:
@@ -117,7 +119,7 @@ different defaults or credential handling than the built-in ``AnthropicLLM``:
     llm.invoke("Who is the mother of Paul Atreides?")
 
 All of ``invoke``/``ainvoke``, structured-output handling, and message
-building are inherited from ``BaseAnthropicLLM`` unchanged; the subclass only
+building are inherited from :class:`~neo4j_graphrag.llm.anthropic_llm.BaseAnthropicLLM` unchanged; the subclass only
 needs to decide how ``client``/``async_client`` get constructed.
 
 The same pattern applies to :class:`~neo4j_graphrag.llm.openai_llm.BaseOpenAILLM`
