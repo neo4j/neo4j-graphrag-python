@@ -415,6 +415,13 @@ class GeminiLLM(BaseGeminiLLM):
         model_name (str): Model name. Defaults to "gemini-2.0-flash".
         model_params (Optional[dict]): Additional parameters passed to the model.
         rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting.
+        base_url (Optional[str], optional): Base URL to use instead of Google's default
+            API endpoint, e.g. to reach a custom Gemini-compatible endpoint. Unlike the
+            Anthropic/OpenAI SDKs, ``genai.Client`` has no top-level ``base_url``
+            argument: the value is applied through ``http_options``. If ``http_options``
+            is also passed via kwargs (as a dict or ``types.HttpOptions``), this
+            parameter overrides its ``base_url`` field and leaves the rest untouched.
+            Defaults to None.
         **kwargs (Any): Arguments passed to the genai.Client.
     """
 
@@ -423,6 +430,7 @@ class GeminiLLM(BaseGeminiLLM):
         model_name: str = "gemini-2.0-flash",
         model_params: Optional[dict[str, Any]] = None,
         rate_limit_handler: Optional[RateLimitHandler] = None,
+        base_url: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(
@@ -431,4 +439,14 @@ class GeminiLLM(BaseGeminiLLM):
             rate_limit_handler=rate_limit_handler,
             **kwargs,
         )
+        if base_url is not None:
+            http_options = kwargs.get("http_options")
+            if http_options is None:
+                kwargs["http_options"] = types.HttpOptions(base_url=base_url)
+            elif isinstance(http_options, dict):
+                kwargs["http_options"] = {**http_options, "base_url": base_url}
+            else:  # types.HttpOptions
+                kwargs["http_options"] = http_options.model_copy(
+                    update={"base_url": base_url}
+                )
         self.client = genai.Client(**kwargs)

@@ -360,6 +360,9 @@ OpenAILLM
 BaseGeminiLLM
 -------------
 
+See :ref:`llm-extensibility` for the ``http_client``/``base_url`` extension
+contract.
+
 .. autoclass:: neo4j_graphrag.llm.google_genai_llm.BaseGeminiLLM
     :members:
 

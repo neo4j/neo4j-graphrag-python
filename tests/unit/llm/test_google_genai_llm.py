@@ -176,3 +176,69 @@ def test_minimal_base_gemini_llm_subclass_exercises_invoke(
     custom_client.models.generate_content.assert_called_once()
     # the default genai.Client was never constructed
     mock_gen.Client.assert_not_called()
+
+
+def test_gemini_llm_base_url_builds_http_options(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    """base_url alone must be applied through a new types.HttpOptions."""
+    mock_gen, mock_types = mock_genai
+    base_url = "https://custom-gemini-endpoint.example.com"
+
+    GeminiLLM(model_name="gemini-2.0-flash", base_url=base_url)
+
+    mock_types.HttpOptions.assert_called_once_with(base_url=base_url)
+    _, client_kwargs = mock_gen.Client.call_args
+    assert client_kwargs["http_options"] is mock_types.HttpOptions.return_value
+
+
+def test_gemini_llm_base_url_merges_into_http_options_dict(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    """base_url must override the base_url field of a dict http_options,
+    preserving the other fields."""
+    mock_gen, _ = mock_genai
+    base_url = "https://custom-gemini-endpoint.example.com"
+
+    GeminiLLM(
+        model_name="gemini-2.0-flash",
+        base_url=base_url,
+        http_options={"api_version": "v1", "base_url": "https://overridden"},
+    )
+
+    _, client_kwargs = mock_gen.Client.call_args
+    assert client_kwargs["http_options"] == {
+        "api_version": "v1",
+        "base_url": base_url,
+    }
+
+
+def test_gemini_llm_base_url_updates_http_options_object(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    """base_url must override the base_url field of a types.HttpOptions object
+    via model_copy, preserving the other fields."""
+    mock_gen, _ = mock_genai
+    base_url = "https://custom-gemini-endpoint.example.com"
+    http_options = MagicMock()  # stands in for a types.HttpOptions instance
+
+    GeminiLLM(
+        model_name="gemini-2.0-flash", base_url=base_url, http_options=http_options
+    )
+
+    http_options.model_copy.assert_called_once_with(update={"base_url": base_url})
+    _, client_kwargs = mock_gen.Client.call_args
+    assert client_kwargs["http_options"] is http_options.model_copy.return_value
+
+
+def test_gemini_llm_no_base_url_not_passed_to_client(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    """Omitting base_url should not pass http_options (or None) to the client."""
+    mock_gen, _ = mock_genai
+
+    GeminiLLM(model_name="gemini-2.0-flash")
+
+    _, client_kwargs = mock_gen.Client.call_args
+    assert "http_options" not in client_kwargs
+    assert "base_url" not in client_kwargs

@@ -9,18 +9,20 @@ providers and extending them to reach custom endpoints.
 
 .. _llm-extensibility:
 
-Extending LLMs: BaseAnthropicLLM/BaseOpenAILLM
-==============================================
+Extending LLMs: the Base* classes
+=================================
 
-:class:`~neo4j_graphrag.llm.anthropic_llm.BaseAnthropicLLM` and
-:class:`~neo4j_graphrag.llm.openai_llm.BaseOpenAILLM` are the shared base classes behind
-:class:`~neo4j_graphrag.llm.anthropic_llm.AnthropicLLM` and
-:class:`~neo4j_graphrag.llm.openai_llm.OpenAILLM` respectively. They hold all
-the provider-agnostic logic (message building, schema conversion, response
-parsing, structured output handling) and leave SDK client construction to
-their subclasses. This page documents the ``http_client``/``base_url``
-injection contract they expose, so you can point either provider at a custom
-or self-hosted, API-compatible endpoint.
+:class:`~neo4j_graphrag.llm.anthropic_llm.BaseAnthropicLLM`,
+:class:`~neo4j_graphrag.llm.openai_llm.BaseOpenAILLM`, and
+:class:`~neo4j_graphrag.llm.google_genai_llm.BaseGeminiLLM` are the shared
+base classes behind :class:`~neo4j_graphrag.llm.anthropic_llm.AnthropicLLM`,
+:class:`~neo4j_graphrag.llm.openai_llm.OpenAILLM`, and
+:class:`~neo4j_graphrag.llm.google_genai_llm.GeminiLLM` respectively. They
+hold all the provider-agnostic logic (message building, schema conversion,
+response parsing, structured output handling) and leave SDK client
+construction to their subclasses. This page documents the
+``http_client``/``base_url`` injection contract they expose, so you can point
+each provider at a custom or self-hosted, API-compatible endpoint.
 
 Both ``AnthropicLLM`` and ``OpenAILLM`` accept two related, independent
 constructor settings:
@@ -124,3 +126,33 @@ needs to decide how ``client``/``async_client`` get constructed.
 
 The same pattern applies to :class:`~neo4j_graphrag.llm.openai_llm.BaseOpenAILLM`
 for OpenAI-compatible endpoints.
+
+Gemini: single client, ``http_options`` instead of ``http_client``
+------------------------------------------------------------------
+
+:class:`~neo4j_graphrag.llm.google_genai_llm.GeminiLLM` follows the same
+contract with two SDK-specific differences:
+
+- The ``google.genai`` SDK uses a **single** ``genai.Client`` for both
+  directions (async calls go through ``client.aio``), so there is no
+  ``http_client`` sync/async routing and ``split_http_client_kwargs`` does
+  not apply.
+- ``genai.Client`` has no top-level ``base_url`` argument: the endpoint lives
+  in ``http_options``. ``GeminiLLM`` still accepts the same explicit
+  ``base_url`` constructor parameter and applies it through ``http_options``
+  for you — if you also pass ``http_options`` (as a dict or
+  ``types.HttpOptions``), only its ``base_url`` field is overridden.
+
+.. code-block:: python
+
+    from neo4j_graphrag.llm import GeminiLLM
+
+    llm = GeminiLLM(
+        model_name="gemini-2.0-flash",
+        base_url="https://my-gemini-endpoint.example.com",
+    )
+
+A custom subclass of
+:class:`~neo4j_graphrag.llm.google_genai_llm.BaseGeminiLLM` only needs to
+assign ``self.client`` (a ``genai.Client``); all message building, config
+handling, and response parsing are inherited.
