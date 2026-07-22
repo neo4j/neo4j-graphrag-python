@@ -36,6 +36,7 @@ class BaseOpenAIEmbeddings(Embedder, abc.ABC):
     def __init__(
         self,
         model: str = "text-embedding-ada-002",
+        dimensions: int | None = None,
         rate_limit_handler: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ) -> None:
@@ -46,9 +47,8 @@ class BaseOpenAIEmbeddings(Embedder, abc.ABC):
                 """Could not import openai python client.
                 Please install it with `pip install "neo4j-graphrag[openai]"`."""
             )
-        super().__init__(rate_limit_handler)
+        super().__init__(model, dimensions, rate_limit_handler)
         self.openai = openai
-        self.model = model
         self.client = self._initialize_client(**kwargs)
 
     @abc.abstractmethod
@@ -68,9 +68,13 @@ class BaseOpenAIEmbeddings(Embedder, abc.ABC):
             text (str): The text to generate an embedding for.
             **kwargs (Any): Additional arguments to pass to the OpenAI embedding generation function.
         """
+        params = {**kwargs}
+        if "dimensions" not in params:
+            params["dimensions"] = self.dimensions
+
         try:
             response = self.client.embeddings.create(
-                input=text, model=self.model, **kwargs
+                input=text, model=self.model, **params
             )
             embedding: list[float] = response.data[0].embedding
             return embedding

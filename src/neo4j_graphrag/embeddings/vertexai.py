@@ -49,8 +49,8 @@ class VertexAIEmbeddings(Embedder):
                 """Could not import Vertex AI Python client.
                 Please install it with `pip install "neo4j-graphrag[google]"`."""
             )
-        super().__init__(rate_limit_handler)
-        self.model = TextEmbeddingModel.from_pretrained(model)
+        super().__init__(model, rate_limit_handler=rate_limit_handler)
+        self._vertex_model = TextEmbeddingModel.from_pretrained(model)
 
     @rate_limit_handler
     def embed_query(
@@ -69,7 +69,7 @@ class VertexAIEmbeddings(Embedder):
             inputs: list[str | TextEmbeddingInput] = [
                 TextEmbeddingInput(text, task_type)
             ]
-            embeddings = self.model.get_embeddings(inputs, **kwargs)
+            embeddings = self._vertex_model.get_embeddings(inputs, **kwargs)
             return list(embeddings[0].values)
         except Exception as e:
             raise EmbeddingsGenerationError(

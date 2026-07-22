@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
+import warnings
 from typing import Any, Optional
 
 from neo4j_graphrag.embeddings.base import Embedder
@@ -24,6 +24,7 @@ class SentenceTransformerEmbeddings(Embedder):
     def __init__(
         self,
         model: str = "all-MiniLM-L6-v2",
+        dimensions: int | None = None,
         rate_limit_handler: Optional[RateLimitHandler] = None,
         *args: Any,
         **kwargs: Any,
@@ -37,14 +38,21 @@ class SentenceTransformerEmbeddings(Embedder):
                 """Could not import sentence_transformers python package.
                 Please install it with `pip install "neo4j-graphrag[sentence-transformers]"`."""
             )
-        super().__init__(rate_limit_handler)
+        super().__init__(model, dimensions, rate_limit_handler)
+        if self.dimensions:
+            warnings.warn(
+                "Dimension parameter is ignored in SentenceTransformerEmbeddings.",
+                UserWarning,
+            )
         self.torch = torch
         self.np = np
-        self.model = sentence_transformers.SentenceTransformer(model, *args, **kwargs)
+        self._st_model = sentence_transformers.SentenceTransformer(
+            self.model, *args, **kwargs
+        )
 
     def embed_query(self, text: str) -> Any:
         try:
-            result = self.model.encode([text])
+            result = self._st_model.encode([text])
 
             if isinstance(result, self.torch.Tensor) or isinstance(
                 result, self.np.ndarray

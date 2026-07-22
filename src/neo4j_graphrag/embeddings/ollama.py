@@ -38,6 +38,7 @@ class OllamaEmbeddings(Embedder):
     def __init__(
         self,
         model: str,
+        dimensions: int | None = None,
         rate_limit_handler: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ) -> None:
@@ -48,8 +49,7 @@ class OllamaEmbeddings(Embedder):
                 """Could not import ollama python client.
                 Please install it with `pip install "neo4j_graphrag[ollama]"`."""
             )
-        super().__init__(rate_limit_handler)
-        self.model = model
+        super().__init__(model, dimensions, rate_limit_handler)
         self.client = ollama.Client(**kwargs)
         self.async_client = ollama.AsyncClient(**kwargs)
 
@@ -62,10 +62,14 @@ class OllamaEmbeddings(Embedder):
             text (str): The text to generate an embedding for.
             **kwargs (Any): Additional keyword arguments to pass to the Ollama client.
         """
+        params = {**kwargs}
+        if "dimensions" not in params:
+            params["dimensions"] = self.dimensions
+
         embeddings_response = self.client.embed(
             model=self.model,
             input=text,
-            **kwargs,
+            **params,
         )
 
         if embeddings_response is None or not embeddings_response.embeddings:
@@ -88,10 +92,13 @@ class OllamaEmbeddings(Embedder):
             text (str): The text to generate an embedding for.
             **kwargs (Any): Additional keyword arguments to pass to the Ollama client.
         """
+        params = {**kwargs}
+        if "dimensions" not in params:
+            params["dimensions"] = self.dimensions
         embeddings_response = await self.async_client.embed(
             model=self.model,
             input=text,
-            **kwargs,
+            **params,
         )
 
         if embeddings_response is None or not embeddings_response.embeddings:

@@ -66,7 +66,7 @@ def test_bedrock_embedder_default_model_from_env(mock_boto3: MagicMock) -> None:
             assert bedrock_mod.DEFAULT_DIMENSIONS == 256
 
             embedder = bedrock_mod.BedrockEmbeddings()
-            assert embedder.model_id == "custom-model"
+            assert embedder.model == "custom-model"
             assert embedder.dimensions == 256
         finally:
             # Restore real boto3 and reload to reset defaults

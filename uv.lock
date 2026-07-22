@@ -3199,7 +3199,7 @@ requires-dist = [
     { name = "neo4j-viz", marker = "extra == 'kg-creation-tools'", specifier = ">=0.4.2,<0.5.0" },
     { name = "numpy", marker = "python_full_version >= '3.9' and python_full_version < '3.13'", specifier = ">=2.0.0,<3.0.0" },
     { name = "numpy", marker = "python_full_version >= '3.13' and python_full_version < '3.15'", specifier = ">=2.1.0,<3.0.0" },
-    { name = "ollama", marker = "extra == 'ollama'", specifier = ">=0.4.4,<0.5.0" },
+    { name = "ollama", marker = "extra == 'ollama'", specifier = ">=0.6.0,<0.10.0" },
     { name = "openai", marker = "extra == 'openai'", specifier = ">=1.51.1,<2.0.0" },
     { name = "pinecone-client", marker = "extra == 'pinecone'", specifier = ">=4.1.0,<5.0.0" },
     { name = "pyarrow", marker = "extra == 'experimental'", specifier = ">=20.0.0" },
@@ -3593,15 +3593,15 @@ wheels = [
 
 [[package]]
 name = "ollama"
-version = "0.4.9"
+version = "0.6.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6f/4d/f46ff3d124ce0805cf728a443cfb0227beb025256cb9276a6f71521c19bd/ollama-0.4.9.tar.gz", hash = "sha256:5266d4d29b5089a01489872b8e8f980f018bccbdd1082b3903448af1d5615ce7", size = 40875, upload-time = "2025-05-27T18:09:27.538Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fc/72/5f12423b6b39ca8430fbe56f77fcf4ef60f63067c7c4a2e30e200ed9ec16/ollama-0.6.2.tar.gz", hash = "sha256:936d55daa684f474364c098611c933626f8d6c7d67065c5b7ae0c477b508b07f", size = 53145, upload-time = "2026-04-29T21:21:15.018Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ee/b6/0c40493c0505652d3da58ad048be19f00c4bdf587140cc578a770d2029d4/ollama-0.4.9-py3-none-any.whl", hash = "sha256:18c8c85358c54d7f73d6a66cda495b0e3ba99fdb88f824ae470d740fbb211a50", size = 13303, upload-time = "2025-05-27T18:09:26.147Z" },
+    { url = "https://files.pythonhosted.org/packages/c4/ab/d6722beeb2d10f7a3b9ff49375708904fde18f82b5609a0bc4aeb5996a4d/ollama-0.6.2-py3-none-any.whl", hash = "sha256:3ad7daab28e5a973445c36a73882a3ef698c2ebb00e21e308652741577509f7d", size = 15115, upload-time = "2026-04-29T21:21:13.794Z" },
 ]
 
 [[package]]

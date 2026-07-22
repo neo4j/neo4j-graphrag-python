@@ -16,6 +16,7 @@ from __future__ import annotations
 
 # built-in dependencies
 import os
+import warnings
 from typing import Any, Optional
 
 # project dependencies
@@ -60,10 +61,16 @@ class GeminiEmbedder(Embedder):
                 "Could not import google-genai python client. "
                 'Please install it with `pip install "neo4j-graphrag[google-genai]"`.'
             )
-        super().__init__(rate_limit_handler)
-        self.model = model
-        self.embedding_dim = embedding_dim
+        super().__init__(model, embedding_dim, rate_limit_handler)
         self.client = genai.Client(**kwargs)
+
+    @property
+    def embedding_dim(self) -> int | None:
+        warnings.warn(
+            "embedding_dim is deprecated. Use dimensions instead",
+            DeprecationWarning,
+        )
+        return self.dimensions
 
     @rate_limit_handler
     def embed_query(self, text: str, **kwargs: Any) -> list[float]:
@@ -71,9 +78,7 @@ class GeminiEmbedder(Embedder):
             result = self.client.models.embed_content(
                 model=self.model,
                 contents=[text],  # type: ignore[arg-type]
-                config=types.EmbedContentConfig(
-                    output_dimensionality=self.embedding_dim
-                ),
+                config=types.EmbedContentConfig(output_dimensionality=self.dimensions),
                 **kwargs,
             )
             if not result or not result.embeddings or not result.embeddings[0].values:
@@ -90,9 +95,7 @@ class GeminiEmbedder(Embedder):
             result = await self.client.aio.models.embed_content(
                 model=self.model,
                 contents=[text],  # type: ignore[arg-type]
-                config=types.EmbedContentConfig(
-                    output_dimensionality=self.embedding_dim
-                ),
+                config=types.EmbedContentConfig(output_dimensionality=self.dimensions),
                 **kwargs,
             )
             if not result or not result.embeddings or not result.embeddings[0].values:

@@ -40,6 +40,7 @@ class MistralAIEmbeddings(Embedder):
     def __init__(
         self,
         model: str = "mistral-embed",
+        dimensions: int | None = None,
         rate_limit_handler: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ) -> None:
@@ -48,11 +49,10 @@ class MistralAIEmbeddings(Embedder):
                 """Could not import mistralai.
                 Please install it with `pip install "neo4j-graphrag[mistralai]"`."""
             )
-        super().__init__(rate_limit_handler)
+        super().__init__(model, dimensions, rate_limit_handler)
         api_key = kwargs.pop("api_key", None)
         if api_key is None:
             api_key = os.getenv("MISTRAL_API_KEY", "")
-        self.model = model
         self.mistral_client = Mistral(api_key=api_key, **kwargs)
 
     @rate_limit_handler
@@ -64,9 +64,13 @@ class MistralAIEmbeddings(Embedder):
             text (str): The text to generate an embedding for.
             **kwargs (Any): Additional keyword arguments to pass to the Mistral AI client.
         """
+        params = {**kwargs}
+        if "output_dimension" not in params:
+            params["output_dimension"] = self.dimensions
+
         try:
             embeddings_batch_response = self.mistral_client.embeddings.create(
-                model=self.model, inputs=[text], **kwargs
+                model=self.model, inputs=[text], **params
             )
         except Exception as e:
             raise EmbeddingsGenerationError(

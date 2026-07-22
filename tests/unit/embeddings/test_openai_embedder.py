@@ -141,6 +141,42 @@ def test_openai_embedder_rate_limit_error_retries(mock_import: Mock) -> None:
 
 
 @patch("builtins.__import__")
+def test_openai_embedder_passes_dimensions_to_api(mock_import: Mock) -> None:
+    """dimensions set on the embedder must be forwarded to the API call."""
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    mock_create = mock_openai.OpenAI.return_value.embeddings.create
+    mock_create.return_value = MagicMock(data=[MagicMock(embedding=[1.0, 2.0])])
+
+    embedder = OpenAIEmbeddings(
+        model="text-embedding-3-small", dimensions=256, api_key="key"
+    )
+    embedder.embed_query("hello")
+
+    _, call_kwargs = mock_create.call_args
+    assert call_kwargs.get("dimensions") == 256
+
+
+@patch("builtins.__import__")
+def test_openai_embedder_caller_dimensions_takes_precedence(mock_import: Mock) -> None:
+    """dimensions passed as kwarg at call time must override the constructor value."""
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    mock_create = mock_openai.OpenAI.return_value.embeddings.create
+    mock_create.return_value = MagicMock(data=[MagicMock(embedding=[1.0, 2.0])])
+
+    embedder = OpenAIEmbeddings(
+        model="text-embedding-3-small", dimensions=256, api_key="key"
+    )
+    embedder.embed_query("hello", dimensions=512)
+
+    _, call_kwargs = mock_create.call_args
+    assert call_kwargs.get("dimensions") == 512
+
+
+@patch("builtins.__import__")
 def test_openai_embedder_rate_limit_error_eventual_success(mock_import: Mock) -> None:
     """Test that rate limit errors eventually succeed after retries."""
     mock_openai = get_mock_openai()
