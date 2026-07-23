@@ -5,7 +5,11 @@
 ### Added
 
 - `AnthropicLLM` now supports structured output via the `response_format` argument, accepting a Pydantic model or an Anthropic `output_config` dict, alongside `OpenAILLM` and `VertexAILLM`.
-- Added `neo4j_graphrag.llm.utils.split_http_client_kwargs`, a shared helper that routes a constructor's `http_client` kwarg to whichever of the sync/async SDK clients it matches. `AnthropicLLM`, `OpenAILLM`, and `AzureOpenAILLM` now all use this single implementation instead of three separately maintained copies of the same logic. Custom subclasses that construct their own SDK clients can call it to get the same behavior.
+- Added `neo4j_graphrag.llm.utils.split_http_client_kwargs`, a shared helper that routes a constructor's `http_client` kwarg to whichever of the sync/async SDK clients it matches. `AnthropicLLM`, `OpenAILLM`, and `AzureOpenAILLM` now all use this single implementation instead of three separately maintained copies of the same logic. Custom subclasses that construct their own SDK clients can call it to get the same behavior; it is exported from `neo4j_graphrag.llm` for that purpose.
+- Added `BaseAnthropicLLM`, a new base class holding all of `AnthropicLLM`'s shared message-building, schema-conversion, and response-parsing logic, mirroring `BaseOpenAILLM`. Both `BaseAnthropicLLM` and `BaseOpenAILLM` are now exported from `neo4j_graphrag.llm` as documented, supported extension points for subclassing to reach custom Anthropic/OpenAI-compatible endpoints.
+- Added an explicit `base_url` keyword parameter to `AnthropicLLM` and `OpenAILLM`, passed through to both the sync and async SDK clients of each.
+- `split_http_client_kwargs` now emits a `UserWarning` when the provided `http_client` has a `base_url` configured, since the SDKs ignore it — the LLM constructor's `base_url` parameter is the supported way to change the endpoint.
+- Added a new docs page, `docs/source/llm.rst`, describing the `http_client`/`base_url` injection contract shared by `AnthropicLLM` and `OpenAILLM`, with a worked example of subclassing `BaseAnthropicLLM` to reach a custom endpoint.
 
 ### Changed
 

@@ -15,19 +15,21 @@
 import warnings
 from typing import Any
 
-from .anthropic_llm import AnthropicLLM
+from .anthropic_llm import AnthropicLLM, BaseAnthropicLLM
 from .base import LLMBase, LLMInterface, LLMInterfaceV2
 from .bedrock_llm import BedrockLLM
 from .cohere_llm import CohereLLM
 from .google_genai_llm import GeminiLLM
 from .mistralai_llm import MistralAILLM
 from .ollama_llm import OllamaLLM
-from .openai_llm import AzureOpenAILLM, OpenAILLM
+from .openai_llm import AzureOpenAILLM, BaseOpenAILLM, OpenAILLM
 from .types import LLMResponse, LLMUsage
+from .utils import split_http_client_kwargs
 from .vertexai_llm import VertexAILLM
 
 __all__ = [
     "AnthropicLLM",
+    "BaseAnthropicLLM",
     "BedrockLLM",
     "CohereLLM",
     "GeminiLLM",
@@ -38,9 +40,11 @@ __all__ = [
     "LLMInterfaceV2",
     "OllamaLLM",
     "OpenAILLM",
+    "BaseOpenAILLM",
     "VertexAILLM",
     "AzureOpenAILLM",
     "MistralAILLM",
+    "split_http_client_kwargs",
 ]
 
 

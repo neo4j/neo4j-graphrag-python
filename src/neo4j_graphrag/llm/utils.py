@@ -108,10 +108,21 @@ def split_http_client_kwargs(
     http_client = kwargs.pop("http_client", None)
     sync_kwargs = kwargs.copy()
     async_kwargs = kwargs.copy()
-    if httpx is not None and isinstance(http_client, httpx.Client):
-        sync_kwargs["http_client"] = http_client
-    elif httpx is not None and isinstance(http_client, httpx.AsyncClient):
-        async_kwargs["http_client"] = http_client
+    if httpx is not None and isinstance(http_client, (httpx.Client, httpx.AsyncClient)):
+        if str(http_client.base_url):
+            # stacklevel=3 attributes the warning to the caller of the LLM
+            # constructor, not to the constructor's own call into this helper.
+            warnings.warn(
+                "The base_url configured on the provided http_client is ignored: "
+                "the SDK builds request URLs from its own base_url and uses the "
+                "http_client as transport only. Pass base_url to the LLM "
+                "constructor instead.",
+                stacklevel=3,
+            )
+        if isinstance(http_client, httpx.Client):
+            sync_kwargs["http_client"] = http_client
+        else:
+            async_kwargs["http_client"] = http_client
     elif http_client is not None:
         # stacklevel=3 attributes the warning to the caller of the LLM
         # constructor, not to the constructor's own call into this helper.
