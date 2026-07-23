@@ -148,7 +148,7 @@ Cypher query:
                 )
             elif isinstance(query, str):
                 warnings.warn(
-                    "'query' is deprecated and will be removed in a future version, please use 'query_text' instead.",
+                    "'query' is deprecated and will be removed in a version 2.0, please use 'query_text' instead.",
                     DeprecationWarning,
                     stacklevel=2,
                 )

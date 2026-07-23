@@ -12,81 +12,81 @@ Components
 Component
 =========
 
-.. autoclass:: neo4j_graphrag.experimental.pipeline.component.Component
+.. autoclass:: neo4j_graphrag.components.base.Component
   :members: run, run_with_context
 
 DataLoader
 ==========
 
-.. autoclass:: neo4j_graphrag.experimental.components.data_loader.DataLoader
+.. autoclass:: neo4j_graphrag.components.data_loader.DataLoader
     :members: run, get_document_metadata
 
 PdfLoader
 =========
 
-.. autoclass:: neo4j_graphrag.experimental.components.data_loader.PdfLoader
+.. autoclass:: neo4j_graphrag.components.data_loader.PdfLoader
     :members: run, load_file
 
 MarkdownLoader
 ==============
 
-.. autoclass:: neo4j_graphrag.experimental.components.data_loader.MarkdownLoader
+.. autoclass:: neo4j_graphrag.components.data_loader.MarkdownLoader
     :members: run, load_file
 
 TextSplitter
 ============
 
-.. autoclass:: neo4j_graphrag.experimental.components.text_splitters.base.TextSplitter
+.. autoclass:: neo4j_graphrag.components.text_splitters.base.TextSplitter
     :members: run
 
 FixedSizeSplitter
 =================
 
-.. autoclass:: neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter.FixedSizeSplitter
+.. autoclass:: neo4j_graphrag.components.text_splitters.fixed_size_splitter.FixedSizeSplitter
     :members: run
 
 LangChainTextSplitterAdapter
 ============================
 
-.. autoclass:: neo4j_graphrag.experimental.components.text_splitters.langchain.LangChainTextSplitterAdapter
+.. autoclass:: neo4j_graphrag.components.text_splitters.langchain.LangChainTextSplitterAdapter
     :members: run
 
 LlamaIndexTextSplitterAdapter
 =============================
 
-.. autoclass:: neo4j_graphrag.experimental.components.text_splitters.llamaindex.LlamaIndexTextSplitterAdapter
+.. autoclass:: neo4j_graphrag.components.text_splitters.llamaindex.LlamaIndexTextSplitterAdapter
     :members: run
 
 TextChunkEmbedder
 =================
 
-.. autoclass:: neo4j_graphrag.experimental.components.embedder.TextChunkEmbedder
+.. autoclass:: neo4j_graphrag.components.embedder.TextChunkEmbedder
     :members: run
 
 LexicalGraphBuilder
 ===================
 
-.. autoclass:: neo4j_graphrag.experimental.components.lexical_graph.LexicalGraphBuilder
+.. autoclass:: neo4j_graphrag.components.lexical_graph.LexicalGraphBuilder
     :members:
     :exclude-members: component_inputs, component_outputs
 
 Neo4jChunkReader
 ================
 
-.. autoclass:: neo4j_graphrag.experimental.components.neo4j_reader.Neo4jChunkReader
+.. autoclass:: neo4j_graphrag.components.neo4j_reader.Neo4jChunkReader
     :members:
     :exclude-members: component_inputs, component_outputs
 
 SchemaBuilder
 =============
 
-.. autoclass:: neo4j_graphrag.experimental.components.schema.SchemaBuilder
+.. autoclass:: neo4j_graphrag.components.schema.SchemaBuilder
     :members: run
 
 SchemaFromTextExtractor
 -----------------------
 
-.. autoclass:: neo4j_graphrag.experimental.components.schema.SchemaFromTextExtractor
+.. autoclass:: neo4j_graphrag.components.schema.SchemaFromTextExtractor
     :members: run
 
 schema_visualization
@@ -98,44 +98,44 @@ schema_visualization
 EntityRelationExtractor
 =======================
 
-.. autoclass:: neo4j_graphrag.experimental.components.entity_relation_extractor.EntityRelationExtractor
+.. autoclass:: neo4j_graphrag.components.entity_relation_extractor.EntityRelationExtractor
     :members:
     :exclude-members: component_inputs, component_outputs
 
 LLMEntityRelationExtractor
 ==========================
 
-.. autoclass:: neo4j_graphrag.experimental.components.entity_relation_extractor.LLMEntityRelationExtractor
+.. autoclass:: neo4j_graphrag.components.entity_relation_extractor.LLMEntityRelationExtractor
     :members: run
 
 KGWriter
 ========
 
-.. autoclass:: neo4j_graphrag.experimental.components.kg_writer.KGWriter
+.. autoclass:: neo4j_graphrag.components.kg_writer.KGWriter
     :members: run
 
 Neo4jWriter
 ===========
 
-.. autoclass:: neo4j_graphrag.experimental.components.kg_writer.Neo4jWriter
+.. autoclass:: neo4j_graphrag.components.kg_writer.Neo4jWriter
     :members: run
 
 SinglePropertyExactMatchResolver
 ================================
 
-.. autoclass:: neo4j_graphrag.experimental.components.resolver.SinglePropertyExactMatchResolver
+.. autoclass:: neo4j_graphrag.components.resolver.SinglePropertyExactMatchResolver
     :members: run
 
 SpaCySemanticMatchResolver
 ==========================
 
-.. autoclass:: neo4j_graphrag.experimental.components.resolver.SpaCySemanticMatchResolver
+.. autoclass:: neo4j_graphrag.components.resolver.SpaCySemanticMatchResolver
     :members: run
 
 FuzzyMatchResolver
 ==================
 
-.. autoclass:: neo4j_graphrag.experimental.components.resolver.FuzzyMatchResolver
+.. autoclass:: neo4j_graphrag.components.resolver.FuzzyMatchResolver
     :members: run
 
 .. _pipeline-section:

@@ -52,7 +52,8 @@ def __getattr__(name: str) -> Any:
     if name in deprecated_items:
         warnings.warn(
             f"{name} has been moved to neo4j_graphrag.utils.rate_limit. "
-            f"Please update your imports to use 'from neo4j_graphrag.utils.rate_limit import {name}'.",
+            f"Please update your imports to use 'from neo4j_graphrag.utils.rate_limit import {name}'. "
+            "This import will be removed in version 2.0.",
             DeprecationWarning,
             stacklevel=2,
         )

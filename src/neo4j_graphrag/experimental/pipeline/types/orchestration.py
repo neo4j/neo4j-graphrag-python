@@ -20,7 +20,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, SerializeAsAny
 
-from neo4j_graphrag.experimental.pipeline.component import DataModel
+from neo4j_graphrag.components.base import DataModel
 
 
 class RunStatus(enum.Enum):

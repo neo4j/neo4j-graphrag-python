@@ -2,6 +2,28 @@
 
 ## Next
 
+### Added
+
+- `AnthropicLLM` now supports structured output via the `response_format` argument, accepting a Pydantic model or an Anthropic `output_config` dict, alongside `OpenAILLM` and `VertexAILLM`.
+- Added `neo4j_graphrag.llm.utils.split_http_client_kwargs`, a shared helper that routes a constructor's `http_client` kwarg to whichever of the sync/async SDK clients it matches. `AnthropicLLM`, `OpenAILLM`, and `AzureOpenAILLM` now all use this single implementation instead of three separately maintained copies of the same logic. Custom subclasses that construct their own SDK clients can call it to get the same behavior.
+
+### Changed
+
+- (**breaking**) `AnthropicLLM.supports_structured_output` is now `True`. As a result, `SchemaFromTextExtractor` and `LLMEntityRelationExtractor` (and `SimpleKGPipeline`, which enables structured output automatically when the LLM supports it) now use structured output by default with `AnthropicLLM`. This requires a Claude 4.5+ model (e.g. `claude-sonnet-4-5`); using `AnthropicLLM` with an older Claude model in these components will now raise an error where it previously worked. To keep the previous behavior, use a Claude 4.5+ model, or construct `LLMEntityRelationExtractor` / `SchemaFromTextExtractor` directly with `use_structured_output=False`.
+
+- Preparation for 2.0:
+  - All `Components` have been moved out of the `experimental` namespace
+  - Import `from neo4j_graphrag.experimental.components... ` still work but raises a deprecation warning
+  - Import from the experimental namespace will be removed in 2.0
+  - Update to use `from neo4j_graphrag.components... ` instead
+  - Improperly defined components now raise a `ComponentDefinitionError` instead of `PipelineDefinitionError`
+  - `TaskProgressNotifierProtocol` and `RunContext` have been moved to `neo4j_graphrag.components.base`
+  - The `Component` base class has been moved to `neo4j_graphrag.components.base`
+
+### Fixed
+
+- Fixed a bug in `AnthropicLLM` where an `http_client` passed via kwargs (whether an `httpx.Client` or `httpx.AsyncClient`) was forwarded to both the sync `anthropic.Anthropic` and async `anthropic.AsyncAnthropic` clients, causing a type mismatch. `http_client` is now routed to the matching sync/async client only; other kwargs remain shared. An `http_client` of an unrecognized type now emits a warning and is ignored instead of raising, matching `OpenAILLM`'s existing behavior.
+
 ## 1.18.0
 
 ### Changed
@@ -9,6 +31,7 @@
 - Experimental: `GraphSchema` validation now rejects `KEY` and `EXISTENCE` constraints on the same node or relationship property (including composite KEY members), since KEY already implies mandatory presence. Legacy `PropertyType.required` migration no longer adds redundant EXISTENCE constraints for KEY-covered properties. The schema-from-text extraction prompt includes the same rule.
 - Experimental: the schema-from-text extraction prompt now instructs the LLM to define each relationship type once and reuse it across patterns, using distinct type names only when patterns genuinely need different properties or constraints.
 - Experimental: LLM-auto-generated schemas now reconcile duplicate `relationship_types` (entries sharing the same label) by merging them into a single type that carries the union of their properties, emitting a warning log. This reflects that Neo4j relationship types are global per name.
+- Experimental (**breaking**): `GraphSchema` now raises `SchemaValidationError` when the same label appears more than once in `relationship_types`. Because Neo4j relationship types are global per name (every relationship of a given type shares the same properties and constraints regardless of its endpoints), a label cannot have two conflicting definitions.
 
 ## 1.17.0
 

@@ -19,7 +19,7 @@ import pytest
 from pydantic import ValidationError
 
 from neo4j_viz import VisualizationGraph
-from neo4j_graphrag.experimental.components.schema import GraphSchema
+from neo4j_graphrag.components.schema import GraphSchema
 from neo4j_graphrag.experimental.utils.schema import schema_visualization
 
 

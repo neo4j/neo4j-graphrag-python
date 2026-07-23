@@ -20,10 +20,10 @@ from unittest.mock import MagicMock
 import neo4j
 import pytest
 from neo4j import Driver
-from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
+from neo4j_graphrag.components.text_splitters.fixed_size_splitter import (
     FixedSizeSplitter,
 )
-from neo4j_graphrag.experimental.components.types import LexicalGraphConfig
+from neo4j_graphrag.components.types import LexicalGraphConfig
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.llm import LLMResponse
 

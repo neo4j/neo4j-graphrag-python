@@ -8,9 +8,9 @@ import asyncio
 import logging
 
 import neo4j
-from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
-from neo4j_graphrag.experimental.components.lexical_graph import LexicalGraphBuilder
-from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
+from neo4j_graphrag.components.kg_writer import Neo4jWriter
+from neo4j_graphrag.components.lexical_graph import LexicalGraphBuilder
+from neo4j_graphrag.components.text_splitters.fixed_size_splitter import (
     FixedSizeSplitter,
 )
 from neo4j_graphrag.experimental.pipeline import Pipeline

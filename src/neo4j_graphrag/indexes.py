@@ -400,7 +400,7 @@ def upsert_vector(
         Neo4jInsertionError: If upserting of the vector fails.
     """
     warnings.warn(
-        "'upsert_vector' is deprecated and will be removed in a future version, please use 'upsert_vectors' instead.",
+        "'upsert_vector' is deprecated and will be removed in version 2.0, please use 'upsert_vectors' instead.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -464,7 +464,7 @@ def upsert_vector_on_relationship(
         Neo4jInsertionError: If upserting of the vector fails.
     """
     warnings.warn(
-        "'upsert_vector_on_relationship' is deprecated and will be removed in a future version, please use 'upsert_vectors' instead.",
+        "'upsert_vector_on_relationship' is deprecated and will be removed in version 2.0, please use 'upsert_vectors' instead.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -529,7 +529,7 @@ async def async_upsert_vector(
         Neo4jInsertionError: If upserting of the vector fails.
     """
     warnings.warn(
-        "'async_upsert_vector' is deprecated and will be removed in a future version.",
+        "'async_upsert_vector' is deprecated and will be removed in version 2.0.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -594,7 +594,7 @@ async def async_upsert_vector_on_relationship(
         Neo4jInsertionError: If upserting of the vector fails.
     """
     warnings.warn(
-        "'async_upsert_vector_on_relationship' is deprecated and will be removed in a future version.",
+        "'async_upsert_vector_on_relationship' is deprecated and will be removed in version 2.0.",
         DeprecationWarning,
         stacklevel=2,
     )
