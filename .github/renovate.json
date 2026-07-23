@@ -3,7 +3,7 @@
   "extends": [
     "config:recommended"
   ],
-  "enabledManagers": ["github-actions"],
+  "enabledManagers": ["github-actions", "uv"],
   "schedule": ["before 9am on monday"],
   "lockFileMaintenance": {
     "enabled": true,
@@ -16,6 +16,10 @@
       "automerge": true,
       "minimumReleaseAge": "3 days",
       "labels": ["dependencies", "github-actions"]
+    },
+    {
+      "matchManagers": ["uv"],
+      "labels": ["dependencies", "python"]
     }
   ]
 }
