@@ -5,6 +5,7 @@
   ],
   "enabledManagers": ["github-actions", "uv"],
   "schedule": ["before 9am on monday"],
+  "minimumReleaseAge": "3 days",
   "lockFileMaintenance": {
     "enabled": true,
     "schedule": ["before 9am on monday"]
@@ -14,7 +15,6 @@
       "matchManagers": ["github-actions"],
       "pinDigests": true,
       "automerge": true,
-      "minimumReleaseAge": "3 days",
       "labels": ["dependencies", "github-actions"]
     },
     {
