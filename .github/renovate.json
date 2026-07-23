@@ -19,6 +19,15 @@
     },
     {
       "matchManagers": ["uv"],
+      "matchDepTypes": ["dev"],
+      "rangeStrategy": "bump",
+      "groupName": "dev dependencies",
+      "labels": ["dependencies", "python"]
+    },
+    {
+      "matchManagers": ["uv"],
+      "matchDepTypes": ["runtime"],
+      "rangeStrategy": "bump",
       "labels": ["dependencies", "python"]
     }
   ]
