@@ -84,9 +84,6 @@ class TextChunkEmbedder(Component):
             metadata = text_chunk.metadata if text_chunk.metadata else {}
             metadata["embedding"] = embedding
             metadata["embedding_model_name"] = getattr(self._embedder, "model", None)
-            metadata["embedding_model_dimensions"] = getattr(
-                self._embedder, "dimensions", None
-            )
             return TextChunk(
                 text=text_chunk.text,
                 index=text_chunk.index,

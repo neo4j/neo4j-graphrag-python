@@ -42,7 +42,6 @@ async def test_text_chunk_embedder_run(embedder: MagicMock) -> None:
         for i in chunk.metadata["embedding"]:
             assert isinstance(i, float)
         assert chunk.metadata["embedding_model_name"] == "test-model"
-        assert chunk.metadata["embedding_model_dimensions"] == 3
 
 
 @pytest.mark.asyncio
@@ -59,4 +58,3 @@ async def test_text_chunk_embedder_run_custom_embedder_without_model_attrs() -> 
     assert chunk.metadata is not None
     assert chunk.metadata["embedding"] == [1.0]
     assert chunk.metadata["embedding_model_name"] is None
-    assert chunk.metadata["embedding_model_dimensions"] is None
