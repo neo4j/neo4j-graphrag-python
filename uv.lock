@@ -3193,7 +3193,7 @@ requires-dist = [
     { name = "langchain-text-splitters", marker = "extra == 'experimental'", specifier = ">=0.3.0,<2.0.0" },
     { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.0.0,<2.0.0" },
     { name = "llama-index", marker = "extra == 'experimental'", specifier = ">=0.13.0,<0.14.0" },
-    { name = "mistralai", marker = "extra == 'mistralai'", specifier = ">=1.0.3,<2.0.0" },
+    { name = "mistralai", marker = "extra == 'mistralai'", specifier = ">=1.5.0,<2.0.0" },
     { name = "neo4j", specifier = ">=5.17.0,<7.0.0" },
     { name = "neo4j-viz", marker = "extra == 'experimental'", specifier = ">=0.4.2,<0.5.0" },
     { name = "neo4j-viz", marker = "extra == 'kg-creation-tools'", specifier = ">=0.4.2,<0.5.0" },

@@ -5,6 +5,7 @@
 ### Added
 
 - `AnthropicLLM` now supports structured output via the `response_format` argument, accepting a Pydantic model or an Anthropic `output_config` dict, alongside `OpenAILLM` and `VertexAILLM`.
+- `MistralAILLM` now supports structured output via the `response_format` argument, accepting a Pydantic model or a Mistral response format dictionary. Pydantic models use Mistral's native `chat.parse` API.
 - Added `neo4j_graphrag.llm.utils.split_http_client_kwargs`, a shared helper that routes a constructor's `http_client` kwarg to whichever of the sync/async SDK clients it matches. `AnthropicLLM`, `OpenAILLM`, and `AzureOpenAILLM` now all use this single implementation instead of three separately maintained copies of the same logic. Custom subclasses that construct their own SDK clients can call it to get the same behavior; it is exported from `neo4j_graphrag.llm` for that purpose.
 - Added `BaseAnthropicLLM`, a new base class holding all of `AnthropicLLM`'s shared message-building, schema-conversion, and response-parsing logic, mirroring `BaseOpenAILLM`. Both `BaseAnthropicLLM` and `BaseOpenAILLM` are now exported from `neo4j_graphrag.llm` as documented, supported extension points for subclassing to reach custom Anthropic/OpenAI-compatible endpoints.
 - Added an explicit `base_url` keyword parameter to `AnthropicLLM` and `OpenAILLM`, passed through to both the sync and async SDK clients of each.
@@ -17,6 +18,7 @@
 ### Changed
 
 - (**breaking**) `AnthropicLLM.supports_structured_output` is now `True`. As a result, `SchemaFromTextExtractor` and `LLMEntityRelationExtractor` (and `SimpleKGPipeline`, which enables structured output automatically when the LLM supports it) now use structured output by default with `AnthropicLLM`. This requires a Claude 4.5+ model (e.g. `claude-sonnet-4-5`); using `AnthropicLLM` with an older Claude model in these components will now raise an error where it previously worked. To keep the previous behavior, use a Claude 4.5+ model, or construct `LLMEntityRelationExtractor` / `SchemaFromTextExtractor` directly with `use_structured_output=False`.
+- (**breaking**) `MistralAILLM.supports_structured_output` is now `True`. As a result, `SchemaFromTextExtractor` and `LLMEntityRelationExtractor` (and `SimpleKGPipeline`, which enables structured output automatically when the LLM supports it) now use structured output by default with `MistralAILLM`. Use a Mistral model that supports custom structured output, or construct `LLMEntityRelationExtractor` / `SchemaFromTextExtractor` directly with `use_structured_output=False` to keep the previous behavior.
 
 - Preparation for 2.0:
   - All `Components` have been moved out of the `experimental` namespace

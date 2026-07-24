@@ -22,7 +22,7 @@ from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm import LLMResponse, MistralAILLM
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.rate_limit import NoOpRateLimitHandler
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 
 # Mock SDKError for testing
@@ -426,24 +426,189 @@ def test_mistralai_llm_get_messages_v2_unknown_role(_mock_mistral: Mock) -> None
 
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
-def test_mistralai_invoke_v2_with_response_format_raises_error(
+def test_mistralai_invoke_v2_with_pydantic_response_format(
     mock_mistral: Mock,
 ) -> None:
-    """Test V2 interface raises NotImplementedError when response_format is used."""
+    """Test V2 interface uses parse for a Pydantic response format."""
 
     class TestModel(BaseModel):
         model_config = ConfigDict(extra="forbid")
         value: str
 
+    mock_mistral_instance = mock_mistral.return_value
+    chat_response_mock = MagicMock()
+    chat_response_mock.choices = [
+        MagicMock(message=MagicMock(content='{"value":"structured"}'))
+    ]
+    chat_response_mock.usage = MagicMock(
+        prompt_tokens=8, completion_tokens=4, total_tokens=12
+    )
+    mock_mistral_instance.chat.parse.return_value = chat_response_mock
+
+    messages: List[LLMMessage] = [{"role": "user", "content": "Test"}]
+    llm = MistralAILLM(
+        api_key="test",
+        model_name="mistral-model",
+        model_params={"max_tokens": 128},
+    )
+
+    response = llm.invoke(messages, response_format=TestModel, temperature=0)
+
+    assert response.content == '{"value":"structured"}'
+    assert response.usage is not None
+    assert response.usage.request_tokens == 8
+    assert response.usage.response_tokens == 4
+    assert response.usage.total_tokens == 12
+    _as_mock(llm.client.chat.parse).assert_called_once_with(
+        model="mistral-model",
+        messages=llm.get_messages_v2(messages),
+        response_format=TestModel,
+        max_tokens=128,
+        temperature=0,
+    )
+    _as_mock(llm.client.chat.complete).assert_not_called()
+
+
+@patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
+def test_mistralai_invoke_v2_with_dict_response_format(mock_mistral: Mock) -> None:
+    """Test V2 interface passes a provider-specific dict to complete."""
+    mock_mistral_instance = mock_mistral.return_value
+    chat_response_mock = MagicMock()
+    chat_response_mock.choices = [
+        MagicMock(message=MagicMock(content='{"value":"structured"}'))
+    ]
+    chat_response_mock.usage = None
+    mock_mistral_instance.chat.complete.return_value = chat_response_mock
+
+    response_format = {"type": "json_object"}
     messages: List[LLMMessage] = [{"role": "user", "content": "Test"}]
     llm = MistralAILLM(api_key="test", model_name="mistral-model")
 
-    with pytest.raises(NotImplementedError) as exc_info:
-        llm.invoke(messages, response_format=TestModel)
+    response = llm.invoke(messages, response_format=response_format)
 
-    assert "MistralAILLM does not currently support structured output" in str(
-        exc_info.value
+    assert response.content == '{"value":"structured"}'
+    _as_mock(llm.client.chat.complete).assert_called_once_with(
+        model="mistral-model",
+        messages=llm.get_messages_v2(messages),
+        response_format=response_format,
     )
+    _as_mock(llm.client.chat.parse).assert_not_called()
+
+
+@pytest.mark.asyncio
+@patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
+async def test_mistralai_ainvoke_v2_with_pydantic_response_format(
+    mock_mistral: Mock,
+) -> None:
+    """Test async V2 interface uses parse_async for a Pydantic model."""
+
+    class TestModel(BaseModel):
+        value: str
+
+    chat_response_mock = MagicMock()
+    chat_response_mock.choices = [
+        MagicMock(message=MagicMock(content='{"value":"structured"}'))
+    ]
+    chat_response_mock.usage = None
+    mock_mistral.return_value.chat.parse_async = AsyncMock(
+        return_value=chat_response_mock
+    )
+
+    messages: List[LLMMessage] = [{"role": "user", "content": "Test"}]
+    llm = MistralAILLM(api_key="test", model_name="mistral-model")
+
+    response = await llm.ainvoke(messages, response_format=TestModel, temperature=0)
+
+    assert response.content == '{"value":"structured"}'
+    _as_mock(llm.client.chat.parse_async).assert_awaited_once_with(
+        model="mistral-model",
+        messages=llm.get_messages_v2(messages),
+        response_format=TestModel,
+        temperature=0,
+    )
+    _as_mock(llm.client.chat.complete_async).assert_not_called()
+
+
+@pytest.mark.asyncio
+@patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
+async def test_mistralai_ainvoke_v2_with_dict_response_format(
+    mock_mistral: Mock,
+) -> None:
+    """Test async V2 interface passes a dict to complete_async."""
+    chat_response_mock = MagicMock()
+    chat_response_mock.choices = [
+        MagicMock(message=MagicMock(content='{"value":"structured"}'))
+    ]
+    chat_response_mock.usage = None
+    mock_mistral.return_value.chat.complete_async = AsyncMock(
+        return_value=chat_response_mock
+    )
+
+    response_format = {"type": "json_object"}
+    messages: List[LLMMessage] = [{"role": "user", "content": "Test"}]
+    llm = MistralAILLM(api_key="test", model_name="mistral-model")
+
+    response = await llm.ainvoke(messages, response_format=response_format)
+
+    assert response.content == '{"value":"structured"}'
+    _as_mock(llm.client.chat.complete_async).assert_awaited_once_with(
+        model="mistral-model",
+        messages=llm.get_messages_v2(messages),
+        response_format=response_format,
+    )
+    _as_mock(llm.client.chat.parse_async).assert_not_called()
+
+
+@patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
+def test_mistralai_v2_ignores_response_format_in_model_params(
+    mock_mistral: Mock, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The V2 response format must be supplied to invoke, not the constructor."""
+    chat_response_mock = MagicMock()
+    chat_response_mock.choices = [MagicMock(message=MagicMock(content="response"))]
+    chat_response_mock.usage = None
+    mock_mistral.return_value.chat.complete.return_value = chat_response_mock
+
+    messages: List[LLMMessage] = [{"role": "user", "content": "Test"}]
+    llm = MistralAILLM(
+        api_key="test",
+        model_name="mistral-model",
+        model_params={"response_format": {"type": "json_object"}},
+    )
+
+    response = llm.invoke(messages)
+
+    assert response.content == "response"
+    call_kwargs = _as_mock(llm.client.chat.complete).call_args.kwargs
+    assert "response_format" not in call_kwargs
+    assert "response_format in model_params is ignored" in caplog.text
+
+
+@patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
+def test_mistralai_llm_supports_structured_output(_mock_mistral: Mock) -> None:
+    llm = MistralAILLM(api_key="test", model_name="mistral-model")
+
+    assert llm.supports_structured_output is True
+
+
+@patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
+def test_mistralai_invoke_v2_wraps_structured_output_validation_error(
+    mock_mistral: Mock,
+) -> None:
+    """Pydantic parse failures are exposed as LLM generation errors."""
+
+    class TestModel(BaseModel):
+        value: str
+
+    with pytest.raises(ValidationError) as exc_info:
+        TestModel.model_validate({})
+    mock_mistral.return_value.chat.parse.side_effect = exc_info.value
+
+    messages: List[LLMMessage] = [{"role": "user", "content": "Test"}]
+    llm = MistralAILLM(api_key="test", model_name="mistral-model")
+
+    with pytest.raises(LLMGenerationError):
+        llm.invoke(messages, response_format=TestModel)
 
 
 @patch("neo4j_graphrag.llm.mistralai_llm.SDKError", MockSDKError)
