@@ -339,12 +339,32 @@ LLMBase
     :members:
 
 
+BaseOpenAILLM
+-------------
+
+See :ref:`llm-extensibility` for the ``http_client``/``base_url`` extension
+contract.
+
+.. autoclass:: neo4j_graphrag.llm.openai_llm.BaseOpenAILLM
+    :members:
+
+
 OpenAILLM
 ---------
 
 .. autoclass:: neo4j_graphrag.llm.openai_llm.OpenAILLM
     :members:
     :undoc-members: get_messages, client_class, async_client_class
+
+
+BaseGeminiLLM
+-------------
+
+See :ref:`llm-extensibility` for the ``http_client``/``base_url`` extension
+contract.
+
+.. autoclass:: neo4j_graphrag.llm.google_genai_llm.BaseGeminiLLM
+    :members:
 
 
 GeminiLLM
@@ -373,6 +393,16 @@ VertexAILLM
 
 .. autoclass:: neo4j_graphrag.llm.vertexai_llm.VertexAILLM
     :members:
+
+BaseAnthropicLLM
+----------------
+
+See :ref:`llm-extensibility` for the ``http_client``/``base_url`` extension
+contract.
+
+.. autoclass:: neo4j_graphrag.llm.anthropic_llm.BaseAnthropicLLM
+    :members:
+
 
 AnthropicLLM
 ------------
