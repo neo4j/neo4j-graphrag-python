@@ -24,6 +24,17 @@ from neo4j_graphrag.filters import (
 )
 from neo4j_graphrag.types import EntityType, SearchType, HybridSearchRanker
 
+CYPHER_25_PREFIX = "CYPHER 25 "
+
+
+def prefix_cypher_25(query: str) -> str:
+    """Prefix a query so Cypher 25 features work on Cypher 5 default databases."""
+    normalized = query.lstrip()
+    if normalized.upper().startswith("CYPHER 25"):
+        return query
+    return f"{CYPHER_25_PREFIX}{query}"
+
+
 NODE_VECTOR_INDEX_QUERY = (
     "CALL db.index.vector.queryNodes"
     "($vector_index_name, $top_k * $effective_search_ratio, $query_vector) "
@@ -336,7 +347,7 @@ def _build_search_clause_vector_query(
         f"SCORE AS score "
         "WITH node, score ORDER BY score DESC LIMIT $top_k"
     )
-    return query, params
+    return prefix_cypher_25(query), params
 
 
 def _build_hybrid_search_clause_query(
@@ -376,7 +387,7 @@ def _build_hybrid_search_clause_query(
         "UNWIND nodes AS n "
         "RETURN n.node AS node, (n.score / ft_index_max_score) AS score"
     )
-    return (
+    return prefix_cypher_25(
         f"CALL () {{ {vector_part} UNION {fulltext_part} }} "
         "WITH node, max(score) AS score ORDER BY score DESC LIMIT $top_k"
     )
@@ -421,7 +432,7 @@ def _build_hybrid_search_clause_query_linear(
         "WITH n.node AS node, (n.score / ft_index_max_score) AS rawScore "
         "RETURN node, rawScore * (1 - $alpha) AS score"
     )
-    return (
+    return prefix_cypher_25(
         f"CALL () {{ {vector_part} UNION {fulltext_part} }} "
         "WITH node, sum(score) AS score ORDER BY score DESC LIMIT $top_k"
     )

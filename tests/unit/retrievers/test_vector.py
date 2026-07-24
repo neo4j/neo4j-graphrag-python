@@ -875,3 +875,37 @@ class TestVectorCypherRetrieverSearchClausePath:
         executed_query = call_args[0][0]
         assert "SEARCH node IN (VECTOR INDEX" in executed_query
         assert "WHERE" in executed_query
+
+    @patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=True)
+    @patch("neo4j_graphrag.retrievers.VectorCypherRetriever._fetch_index_infos")
+    @patch("neo4j_graphrag.retrievers.base.get_version")
+    def test_falls_back_when_search_clause_unsupported_by_database(
+        self,
+        mock_get_version: MagicMock,
+        _fetch_index_infos: MagicMock,
+        _mock_supports_search: MagicMock,
+        driver: MagicMock,
+    ) -> None:
+        mock_get_version.return_value = ((2026, 1, 0), False, True)
+        retrieval_query = "RETURN node.title AS title, score"
+
+        retriever = VectorCypherRetriever(
+            driver=driver,
+            index_name="my-index",
+            retrieval_query=retrieval_query,
+        )
+        retriever._node_label = "Movie"
+
+        driver.execute_query.side_effect = [
+            neo4j.exceptions.ClientError(
+                "Invalid input 'SEARCH': expected a graph pattern"
+            ),
+            ([], None, None),
+        ]
+
+        retriever.search(query_vector=[1.0, 2.0, 3.0], top_k=5)
+
+        assert driver.execute_query.call_count == 2
+        fallback_query = driver.execute_query.call_args_list[1][0][0]
+        assert "db.index.vector.queryNodes" in fallback_query
+        assert "RETURN node.title AS title, score" in fallback_query

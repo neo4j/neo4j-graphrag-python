@@ -37,7 +37,10 @@ from neo4j_graphrag.neo4j_queries import (
     get_search_query,
 )
 from neo4j_graphrag.retrievers.base import Retriever
-from neo4j_graphrag.utils.version_utils import supports_search_clause
+from neo4j_graphrag.utils.version_utils import (
+    should_fallback_from_search_clause,
+    supports_search_clause,
+)
 from neo4j_graphrag.types import (
     EmbedderModel,
     Neo4jDriverModel,
@@ -285,12 +288,10 @@ class VectorRetriever(Retriever):
                 routing_=neo4j.RoutingControl.READ,
             )
         except neo4j.exceptions.ClientError as e:
-            if use_search_clause and "PropertyNotFound" in str(e):
+            if use_search_clause and should_fallback_from_search_clause(e):
                 logger.warning(
-                    "SEARCH clause failed (filtered property not declared as "
-                    "filterable on the index); falling back to procedure-based "
-                    "vector search. To use in-index filtering, recreate the "
-                    "index with filterable_properties. Error: %s",
+                    "SEARCH clause failed; falling back to procedure-based "
+                    "vector search. Error: %s",
                     e,
                 )
                 search_query, search_params = get_search_query(
@@ -522,12 +523,10 @@ class VectorCypherRetriever(Retriever):
                 routing_=neo4j.RoutingControl.READ,
             )
         except neo4j.exceptions.ClientError as e:
-            if use_search_clause and "PropertyNotFound" in str(e):
+            if use_search_clause and should_fallback_from_search_clause(e):
                 logger.warning(
-                    "SEARCH clause failed (filtered property not declared as "
-                    "filterable on the index); falling back to procedure-based "
-                    "vector search. To use in-index filtering, recreate the "
-                    "index with filterable_properties. Error: %s",
+                    "SEARCH clause failed; falling back to procedure-based "
+                    "vector search. Error: %s",
                     e,
                 )
                 search_query, search_params = get_search_query(

@@ -1476,6 +1476,86 @@ parameter for the retriever:
     )
 
 
+Explainability
+==============
+
+GraphRAG can attach structured provenance to a search result when ``explain`` is set.
+The payload includes numbered sources (aligned with LLM context), optional graph
+paths from the retriever, and a minimal retriever trace.
+
+For ask-anything graph questions, pair explain with ``Text2CypherRetriever`` and
+``text2cypher_explain_result_formatter``. Return Cypher paths in the query results
+(for example ``RETURN m.title AS title, path AS path``) so ``result.explain.graph``
+can be populated. The generated Cypher query is also available on
+``result.explain.trace.cypher``.
+
+.. code:: python
+
+    from neo4j_graphrag.generation import (
+        ExplainConfig,
+        GraphRAG,
+        text2cypher_explain_result_formatter,
+    )
+    from neo4j_graphrag.retrievers import Text2CypherRetriever
+
+    retriever = Text2CypherRetriever(
+        driver,
+        llm=llm,
+        neo4j_schema=schema,
+        examples=examples,
+        result_formatter=text2cypher_explain_result_formatter,
+    )
+    rag = GraphRAG(retriever=retriever, llm=llm)
+    result = rag.search(
+        "Which movies did Joel Coen and Steve Buscemi work on together?",
+        explain=ExplainConfig(),
+    )
+    print(result.answer)
+    print(result.explain)
+
+For graph-path provenance from vector similarity hits, use a VectorCypher
+``result_formatter`` that populates ``metadata.graph`` on each retrieved item.
+See ``examples/question_answering/graphrag_with_explain.py`` for a full example
+with ``movies_vector_cypher_explain_formatter`` and
+``MOVIES_ACTORS_PATH_RETRIEVAL_QUERY``. Copy or adapt those helpers for your schema.
+
+.. code:: python
+
+    from neo4j_graphrag.generation import ExplainConfig, GraphRAG
+    from neo4j_graphrag.retrievers import VectorCypherRetriever
+    from graphrag_with_explain import (
+        MOVIES_ACTORS_PATH_RETRIEVAL_QUERY,
+        movies_vector_cypher_explain_formatter,
+    )
+
+    retriever = VectorCypherRetriever(
+        driver,
+        index_name="moviePlotsEmbedding",
+        retrieval_query=MOVIES_ACTORS_PATH_RETRIEVAL_QUERY,
+        result_formatter=movies_vector_cypher_explain_formatter,
+        embedder=embedder,
+    )
+    rag = GraphRAG(retriever=retriever, llm=llm)
+    result = rag.search(
+        "Who were the actors in Avatar?",
+        explain=ExplainConfig(),
+    )
+    print(result.answer)
+    print(result.explain)
+
+When ``explain`` is set, ``return_context`` is enabled automatically and sources
+are numbered in the LLM prompt so answers can cite ``[1]``, ``[2]``, and so on.
+
+See also: ``examples/question_answering/graphrag_with_explain.py`` for a runnable
+demo with both Text2Cypher (``--retriever text2cypher``) and VectorCypher
+(``--retriever vector-cypher``).
+
+This example uses OpenAI for embeddings and generation. Install the optional
+dependency before running it::
+
+    uv sync --extra openai
+
+
 **************
 DB Operations
 **************

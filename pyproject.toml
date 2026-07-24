@@ -64,6 +64,7 @@ experimental = [
     "pyarrow>=20.0.0",  # ParquetWriter, Neo4jGraphParquetFormatter
 ]
 examples = [
+    "openai>=1.51.1,<2.0.0",
     "langchain-openai>=0.2.2,<2.0.0",
     "langchain-huggingface>=0.1.0,<2.0.0",
 ]
