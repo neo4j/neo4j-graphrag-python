@@ -1,0 +1,34 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "enabledManagers": ["github-actions", "uv"],
+  "schedule": ["before 9am on monday"],
+  "minimumReleaseAge": "3 days",
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 9am on monday"]
+  },
+  "packageRules": [
+    {
+      "matchManagers": ["github-actions"],
+      "pinDigests": true,
+      "automerge": true,
+      "labels": ["dependencies", "github-actions"]
+    },
+    {
+      "matchManagers": ["uv"],
+      "matchDepTypes": ["dev"],
+      "rangeStrategy": "bump",
+      "groupName": "dev dependencies",
+      "labels": ["dependencies", "python"]
+    },
+    {
+      "matchManagers": ["uv"],
+      "matchDepTypes": ["runtime"],
+      "rangeStrategy": "bump",
+      "labels": ["dependencies", "python"]
+    }
+  ]
+}

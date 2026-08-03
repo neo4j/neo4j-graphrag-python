@@ -19,7 +19,7 @@ from .anthropic_llm import AnthropicLLM, BaseAnthropicLLM
 from .base import LLMBase, LLMInterface, LLMInterfaceV2
 from .bedrock_llm import BedrockLLM
 from .cohere_llm import CohereLLM
-from .google_genai_llm import GeminiLLM
+from .google_genai_llm import BaseGeminiLLM, GeminiLLM
 from .mistralai_llm import MistralAILLM
 from .ollama_llm import OllamaLLM
 from .openai_llm import AzureOpenAILLM, BaseOpenAILLM, OpenAILLM
@@ -30,6 +30,7 @@ from .vertexai_llm import VertexAILLM
 __all__ = [
     "AnthropicLLM",
     "BaseAnthropicLLM",
+    "BaseGeminiLLM",
     "BedrockLLM",
     "CohereLLM",
     "GeminiLLM",
