@@ -225,7 +225,8 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
             image_bytes = kwargs.pop("image_bytes", None)
             image_mime_type = kwargs.pop("image_mime_type", "image/png")
             system_instruction, contents = self.get_messages_v2(
-                input, image_bytes=image_bytes, image_mime_type=image_mime_type)
+                input, image_bytes=image_bytes, image_mime_type=image_mime_type
+            )
             config = self._build_config(
                 system_instruction=system_instruction,
                 response_format=response_format,
@@ -349,9 +350,11 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
         if image_bytes is not None:
             if not messages or messages[-1].role != "user":
                 messages.append(types.Content(role="user", parts=[]))
-            messages[-1].parts.append(
-                types.Part.from_bytes(data=image_bytes, mime_type=image_mime_type)
-            )
+            parts = messages[-1].parts
+            if parts is not None:
+                parts.append(
+                    types.Part.from_bytes(data=image_bytes, mime_type=image_mime_type)
+                )
         return system_instruction, messages
 
     def _build_config(
