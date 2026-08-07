@@ -4,7 +4,7 @@ from neo4j_graphrag.llm import AnthropicLLM, LLMResponse
 api_key = None
 
 with AnthropicLLM(
-    model_name="claude-3-opus-20240229",
+    model_name="claude-sonnet-4-5",
     model_params={"max_tokens": 1000},  # max_tokens must be specified
     api_key=api_key,
 ) as llm:
@@ -15,7 +15,7 @@ with AnthropicLLM(
 # Anthropic's default API, pass `base_url`. It's forwarded to both the sync
 # and async SDK clients.
 with AnthropicLLM(
-    model_name="claude-3-opus-20240229",
+    model_name="claude-sonnet-4-5",
     model_params={"max_tokens": 1000},
     api_key=api_key,
     base_url="https://my-custom-endpoint.example.com",
