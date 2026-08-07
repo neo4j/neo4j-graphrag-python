@@ -3149,6 +3149,7 @@ cohere = [
 examples = [
     { name = "langchain-huggingface" },
     { name = "langchain-openai" },
+    { name = "python-dotenv" },
 ]
 experimental = [
     { name = "langchain-text-splitters" },
@@ -3235,6 +3236,7 @@ requires-dist = [
     { name = "pyarrow", marker = "extra == 'experimental'", specifier = ">=20.0.0" },
     { name = "pydantic", specifier = ">=2.6.3,<3.0.0" },
     { name = "pypdf", specifier = ">=6.0.0,<7.0.0" },
+    { name = "python-dotenv", marker = "extra == 'examples'", specifier = ">=1.0.0,<2.0.0" },
     { name = "pyyaml", specifier = ">=6.0.2,<7.0.0" },
     { name = "qdrant-client", marker = "extra == 'qdrant'", specifier = ">=1.11.3,<2.0.0" },
     { name = "rapidfuzz", marker = "extra == 'fuzzy-matching'", specifier = ">=3.12.2,<4.0.0" },

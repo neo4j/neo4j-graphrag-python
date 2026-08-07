@@ -66,6 +66,9 @@ experimental = [
 examples = [
     "langchain-openai>=0.2.2,<2.0.0",
     "langchain-huggingface>=0.1.0,<2.0.0",
+    # 14 examples call load_dotenv(); without this it resolves only by accident,
+    # transitively through another extra.
+    "python-dotenv>=1.0.0,<2.0.0",
 ]
 # NOTE: spaCy currently has a Python 3.14 import-time failure via its pydantic v1 path
 # (see https://github.com/explosion/spaCy/issues/13895). Until upstream resolves this,
