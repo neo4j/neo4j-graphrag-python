@@ -1,0 +1,105 @@
+# Services for running the examples.
+#
+#   docker compose -f examples/docker-compose.yml up -d                    # Neo4j only
+#   docker compose -f examples/docker-compose.yml --profile vectordb up -d # + vector stores
+#   docker compose -f examples/docker-compose.yml --profile ollama up -d   # + local LLM
+#
+# This binds the same ports as tests/e2e/docker-compose.yml, so the two stacks
+# are mutually exclusive. Bring one down before starting the other.
+#
+# Unlike the e2e stack, every service here declares a healthcheck, so
+# `up --wait` blocks until they are actually ready rather than merely started.
+
+services:
+  neo4j:
+    image: neo4j:5-enterprise
+    ports:
+      - 7687:7687
+      - 7474:7474
+    environment:
+      NEO4J_AUTH: neo4j/password
+      NEO4J_ACCEPT_LICENSE_AGREEMENT: "eval"
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_server_memory_heap_max__size: 2G
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  # Vector stores. Only the examples under
+  # examples/customize/retrievers/external/ need these.
+  weaviate:
+    profiles: [vectordb]
+    image: cr.weaviate.io/semitechnologies/weaviate:1.27.0
+    command: --host 0.0.0.0 --port 8080 --scheme http
+    ports:
+      - 8080:8080
+      - 50051:50051
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+      PERSISTENCE_DATA_PATH: /var/lib/weaviate
+      DEFAULT_VECTORIZER_MODULE: text2vec-transformers
+      ENABLE_MODULES: text2vec-transformers
+      TRANSFORMERS_INFERENCE_API: http://t2v-transformers:8080
+      CLUSTER_HOSTNAME: node1
+    depends_on:
+      - t2v-transformers
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget -qO- http://localhost:8080/v1/.well-known/ready || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  # Weaviate's server-side vectorizer, used by
+  # weaviate_text_search_remote_embedder.py.
+  t2v-transformers:
+    profiles: [vectordb]
+    image: cr.weaviate.io/semitechnologies/transformers-inference:sentence-transformers-all-MiniLM-L6-v2
+    environment:
+      ENABLE_CUDA: 0
+
+  qdrant:
+    profiles: [vectordb]
+    image: qdrant/qdrant
+    ports:
+      - 6333:6333
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  # An in-memory emulator, so the Pinecone examples run without an account.
+  # It ignores API keys entirely and keeps nothing after it stops.
+  pinecone-local:
+    profiles: [vectordb]
+    image: ghcr.io/pinecone-io/pinecone-local:latest
+    environment:
+      PORT: 5080
+      PINECONE_HOST: localhost
+    ports:
+      - 5080-5090:5080-5090
+    platform: linux/amd64
+
+  # Optional: a containerised Ollama. Installing it natively (brew install
+  # ollama) is usually faster, and on macOS the container has no GPU access.
+  ollama:
+    profiles: [ollama]
+    image: ollama/ollama
+    ports:
+      - 11434:11434
+    volumes:
+      - ollama:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  ollama:
