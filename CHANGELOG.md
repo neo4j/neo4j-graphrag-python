@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added `examples/SETUP.md`, `examples/.env.example` and `examples/docker-compose.yml`, plus `scripts/setup_examples.py`, a doctor and interactive installer that reports what each example needs in order to run and walks through providing it. Credentials are validated before being written, and only ever to a gitignored `.env`.
 - `AnthropicLLM` now supports structured output via the `response_format` argument, accepting a Pydantic model or an Anthropic `output_config` dict, alongside `OpenAILLM` and `VertexAILLM`.
 - Added `neo4j_graphrag.llm.utils.split_http_client_kwargs`, a shared helper that routes a constructor's `http_client` kwarg to whichever of the sync/async SDK clients it matches. `AnthropicLLM`, `OpenAILLM`, and `AzureOpenAILLM` now all use this single implementation instead of three separately maintained copies of the same logic. Custom subclasses that construct their own SDK clients can call it to get the same behavior; it is exported from `neo4j_graphrag.llm` for that purpose.
 - Added `BaseAnthropicLLM`, a new base class holding all of `AnthropicLLM`'s shared message-building, schema-conversion, and response-parsing logic, mirroring `BaseOpenAILLM`. Both `BaseAnthropicLLM` and `BaseOpenAILLM` are now exported from `neo4j_graphrag.llm` as documented, supported extension points for subclassing to reach custom Anthropic/OpenAI-compatible endpoints.
