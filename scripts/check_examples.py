@@ -50,6 +50,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import example_requirements  # noqa: E402
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES_DIR = REPO_ROOT / "examples"
 
@@ -397,25 +401,28 @@ def run_static_checks() -> list[FileReport]:
     return reports
 
 
-def providers_used(source: str) -> set[str]:
-    """Provider names an example imports, used to decide if we can run it."""
-    markers = {
-        "anthropic": ("AnthropicLLM", "anthropic"),
-        "bedrock": ("BedrockLLM", "BedrockEmbeddings", "boto3"),
-        "cohere": ("CohereLLM", "CohereEmbeddings"),
-        "google": ("VertexAI", "GeminiLLM", "GeminiEmbedder", "google"),
-        "mistral": ("MistralAI",),
-        "ollama": ("Ollama",),
-        "azure": ("AzureOpenAI",),
-        "weaviate": ("Weaviate", "weaviate"),
-        "pinecone": ("Pinecone", "pinecone"),
-        "qdrant": ("Qdrant", "qdrant"),
-    }
-    found: set[str] = set()
-    for provider, needles in markers.items():
-        if any(needle in source for needle in needles):
-            found.add(provider)
-    return found
+# Providers --live can satisfy from an OPENAI_API_KEY alone. Anything else is a
+# reason to skip, not to run.
+RUNNABLE_PROVIDERS = {"openai"}
+
+
+def _service_available(service: str) -> bool:
+    """Whether a service an example needs is reachable right now.
+
+    Without this a stopped Neo4j reported every local example as FAIL, which
+    reads as "the examples are broken" when the truth is "nothing was running".
+    """
+    return example_requirements.service_available(service)
+
+
+def providers_used(path: Path) -> set[str]:
+    """Providers an example depends on, used to decide if we can run it.
+
+    Delegates to the shared requirement model rather than scanning for
+    substrings. The substring version matched any file containing the word
+    "google" and could not tell ``OpenAIEmbeddings`` from ``AzureOpenAIEmbeddings``.
+    """
+    return example_requirements.providers_for_source(path)
 
 
 def run_live_checks(timeout: int) -> int:
@@ -433,13 +440,24 @@ def run_live_checks(timeout: int) -> int:
     skipped: list[tuple[Path, str]] = []
 
     for path in iter_example_files():
-        source = path.read_text()
-        blockers = providers_used(source)
+        requirements = example_requirements.analyse(path)
+        if not requirements.runnable:
+            skipped.append((path, "snippet, nothing to run"))
+            continue
+        blockers = requirements.providers - RUNNABLE_PROVIDERS
         if blockers:
             skipped.append((path, f"needs {', '.join(sorted(blockers))}"))
             continue
-        if "<model_name>" in source:
+        if requirements.uses_placeholder_model:
             skipped.append((path, "placeholder model name"))
+            continue
+        unavailable = sorted(
+            example_requirements.SERVICE_LABELS.get(service, service)
+            for service in requirements.services
+            if not _service_available(service)
+        )
+        if unavailable:
+            skipped.append((path, f"needs {', '.join(unavailable)}"))
             continue
         try:
             result = subprocess.run(
