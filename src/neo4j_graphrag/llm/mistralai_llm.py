@@ -42,20 +42,25 @@ from neo4j_graphrag.utils.rate_limit import (
 )
 
 try:
-    from mistralai import (
+    # mistralai 2.x turned the top-level package into a namespace and moved
+    # everything under mistralai.client; there are no top-level exports left.
+    from mistralai.client import Mistral
+    from mistralai.client.errors import SDKError
+    from mistralai.client.models import (
         AssistantMessage,
-        Messages,
-        Mistral,
     )
-    from mistralai import (
+    from mistralai.client.models import (
+        # v1's `Messages` union; renamed, same meaning.
+        ChatCompletionRequestMessage as Messages,
+    )
+    from mistralai.client.models import (
         SystemMessage as MistralSystemMessage,
     )
-    from mistralai import (
+    from mistralai.client.models import (
         UserMessage as MistralUserMessage,
     )
-    from mistralai.models.sdkerror import SDKError
 except ImportError:
-    pass
+    Mistral = None  # type: ignore[assignment, misc]
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return
@@ -160,7 +165,10 @@ class MistralAILLM(LLMBase):
             content: str = ""
             usage = None
             if response and response.choices:
-                possible_content = response.choices[0].message.content
+                # mistralai 2.x types `message` as optional, so a choice can
+                # arrive without one - a filtered or truncated completion.
+                message = response.choices[0].message
+                possible_content = message.content if message else None
                 if isinstance(possible_content, str):
                     content = possible_content
             if response and response.usage:
@@ -205,7 +213,10 @@ class MistralAILLM(LLMBase):
             content: str = ""
             usage = None
             if response and response.choices:
-                possible_content = response.choices[0].message.content
+                # mistralai 2.x types `message` as optional, so a choice can
+                # arrive without one - a filtered or truncated completion.
+                message = response.choices[0].message
+                possible_content = message.content if message else None
                 if isinstance(possible_content, str):
                     content = possible_content
             if response and response.usage:
@@ -252,7 +263,10 @@ class MistralAILLM(LLMBase):
             content: str = ""
             usage = None
             if response and response.choices:
-                possible_content = response.choices[0].message.content
+                # mistralai 2.x types `message` as optional, so a choice can
+                # arrive without one - a filtered or truncated completion.
+                message = response.choices[0].message
+                possible_content = message.content if message else None
                 if isinstance(possible_content, str):
                     content = possible_content
             if response and response.usage:
@@ -300,7 +314,10 @@ class MistralAILLM(LLMBase):
             content: str = ""
             usage = None
             if response and response.choices:
-                possible_content = response.choices[0].message.content
+                # mistralai 2.x types `message` as optional, so a choice can
+                # arrive without one - a filtered or truncated completion.
+                message = response.choices[0].message
+                possible_content = message.content if message else None
                 if isinstance(possible_content, str):
                     content = possible_content
             if response and response.usage:
@@ -314,8 +331,11 @@ class MistralAILLM(LLMBase):
             raise LLMGenerationError(e)
 
     async def aclose(self) -> None:
-        self.client.close()
-        await self.client.aclose()
+        # mistralai 2.x dropped close()/aclose() in favour of the context
+        # manager protocol, so drive that directly. Both are safe on a client
+        # that was never entered, and safe to call twice.
+        self.client.__exit__(None, None, None)
+        await self.client.__aexit__(None, None, None)
 
     # subsidiary methods
     def get_messages(

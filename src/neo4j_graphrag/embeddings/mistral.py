@@ -23,7 +23,9 @@ from neo4j_graphrag.exceptions import EmbeddingsGenerationError
 from neo4j_graphrag.utils.rate_limit import RateLimitHandler, rate_limit_handler
 
 try:
-    from mistralai import Mistral
+    # mistralai 2.x turned the top-level package into a namespace and moved
+    # everything under mistralai.client; there are no top-level exports left.
+    from mistralai.client import Mistral
 except ImportError:
     Mistral = None  # type: ignore
 
