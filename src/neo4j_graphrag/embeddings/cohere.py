@@ -30,9 +30,23 @@ class CohereEmbeddings(Embedder):
     def __init__(
         self,
         model: str = "",
+        input_type: str = "search_document",
         rate_limit_handler: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ) -> None:
+        """
+        Args:
+            model (str): The name of the Cohere embedding model to use.
+            input_type (str): How Cohere should interpret the text. Its embeddings
+                are asymmetric, so this affects retrieval quality: use
+                ``search_document`` for text being indexed and ``search_query``
+                for a search query. Current Cohere models reject a request that
+                omits it. Defaults to ``search_document``, which is what
+                ``TextChunkEmbedder`` needs; retrievers embedding a user's query
+                should pass ``search_query``, either here or per call.
+            rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting.
+            kwargs: All other parameters are passed to the Cohere client.
+        """
         if cohere is None:
             raise ImportError(
                 """Could not import cohere python client.
@@ -40,11 +54,15 @@ class CohereEmbeddings(Embedder):
             )
         super().__init__(rate_limit_handler)
         self.model = model
+        self.input_type = input_type
         self.client = cohere.Client(**kwargs)
 
     @rate_limit_handler
     def embed_query(self, text: str, **kwargs: Any) -> list[float]:
         try:
+            # setdefault so an explicit per-call input_type still wins, and so
+            # passing one does not collide with the constructor's.
+            kwargs.setdefault("input_type", self.input_type)
             response = self.client.embed(
                 texts=[text],
                 model=self.model,

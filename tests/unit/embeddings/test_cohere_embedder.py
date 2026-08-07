@@ -90,3 +90,41 @@ def test_cohere_embedder_rate_limit_error_eventual_success(mock_cohere: Mock) ->
     assert result == [1.0, 2.0]
     # Verify the API was called 3 times before succeeding
     assert mock_embeddings.call_count == 3
+
+
+@patch("neo4j_graphrag.embeddings.cohere.cohere")
+def test_cohere_embedder_sends_input_type(mock_cohere: Mock) -> None:
+    """Current Cohere models reject a request that omits input_type."""
+    mock_cohere.Client.return_value.embed.return_value = MagicMock(
+        embeddings=[[1.0, 2.0]]
+    )
+    embedder = CohereEmbeddings(model="embed-english-v3.0")
+    embedder.embed_query("my text")
+
+    _, kwargs = mock_cohere.Client.return_value.embed.call_args
+    assert kwargs["input_type"] == "search_document"
+
+
+@patch("neo4j_graphrag.embeddings.cohere.cohere")
+def test_cohere_embedder_input_type_from_constructor(mock_cohere: Mock) -> None:
+    mock_cohere.Client.return_value.embed.return_value = MagicMock(
+        embeddings=[[1.0, 2.0]]
+    )
+    embedder = CohereEmbeddings(model="embed-english-v3.0", input_type="search_query")
+    embedder.embed_query("my text")
+
+    _, kwargs = mock_cohere.Client.return_value.embed.call_args
+    assert kwargs["input_type"] == "search_query"
+
+
+@patch("neo4j_graphrag.embeddings.cohere.cohere")
+def test_cohere_embedder_per_call_input_type_wins(mock_cohere: Mock) -> None:
+    """A per-call value overrides the constructor's without colliding with it."""
+    mock_cohere.Client.return_value.embed.return_value = MagicMock(
+        embeddings=[[1.0, 2.0]]
+    )
+    embedder = CohereEmbeddings(model="embed-english-v3.0")
+    embedder.embed_query("my text", input_type="classification")
+
+    _, kwargs = mock_cohere.Client.return_value.embed.call_args
+    assert kwargs["input_type"] == "classification"
