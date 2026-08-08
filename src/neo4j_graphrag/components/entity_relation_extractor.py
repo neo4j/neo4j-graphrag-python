@@ -135,6 +135,7 @@ class EntityRelationExtractor(Component):
         chunks: TextChunks,
         document_info: Optional[DocumentInfo] = None,
         lexical_graph_config: Optional[LexicalGraphConfig] = None,
+        entity_metadata: Optional[dict[str, Any]] = None,
         **kwargs: Any,
     ) -> Neo4jGraph:
         raise NotImplementedError()
@@ -290,12 +291,23 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         chunk_graph: Neo4jGraph,
         chunk: TextChunk,
         lexical_graph_builder: Optional[LexicalGraphBuilder] = None,
+        entity_metadata: Optional[dict[str, Any]] = None,
     ) -> None:
         """Perform post-processing after entity and relation extraction:
         - Update node IDs to make them unique across chunks
+        - Merge entity_metadata into node and relationship properties
         - Build the lexical graph if requested
         """
         self.update_ids(chunk_graph, chunk)
+        if entity_metadata:
+            for node in chunk_graph.nodes:
+                if node.properties is None:
+                    node.properties = {}
+                node.properties.update(entity_metadata)
+            for rel in chunk_graph.relationships:
+                if rel.properties is None:
+                    rel.properties = {}
+                rel.properties.update(entity_metadata)
         if lexical_graph_builder:
             await lexical_graph_builder.process_chunk_extracted_entities(
                 chunk_graph,
@@ -322,6 +334,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         schema: GraphSchema,
         examples: str,
         lexical_graph_builder: Optional[LexicalGraphBuilder] = None,
+        entity_metadata: Optional[dict[str, Any]] = None,
     ) -> Neo4jGraph:
         """Run extraction, validation and post processing for a single chunk"""
         async with sem:
@@ -331,6 +344,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                 chunk_graph,
                 chunk,
                 lexical_graph_builder,
+                entity_metadata,
             )
             return chunk_graph
 
@@ -340,6 +354,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         chunks: TextChunks,
         document_info: Optional[DocumentInfo] = None,
         lexical_graph_config: Optional[LexicalGraphConfig] = None,
+        entity_metadata: Optional[dict[str, Any]] = None,
         schema: Optional[GraphSchema] = None,
         examples: str = "",
         **kwargs: Any,
@@ -357,6 +372,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             lexical_graph_config (Optional[LexicalGraphConfig], optional): Lexical graph configuration to customize node labels and relationship types in the lexical graph.
             schema (GraphSchema | None): Definition of the schema to guide the LLM in its extraction.
             examples (str): Examples for few-shot learning in the prompt.
+            entity_metadata (Optional[dict[str, Any]], optional): Metadata to attach to extracted entity nodes and relationships. Keys supplied by the caller take precedence over any keys produced by the LLM.
         """
         lexical_graph_builder = None
         lexical_graph = None
@@ -381,6 +397,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                 schema,
                 examples,
                 lexical_graph_builder,
+                entity_metadata,
             )
             for chunk in chunks.chunks
         ]

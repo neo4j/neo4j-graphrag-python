@@ -447,4 +447,8 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
                 metadata=user_input.get("document_metadata"),
                 document_type=DocumentType.INLINE_TEXT,
             )
+        if user_input.get("entity_metadata") is not None:
+            run_params["extractor"]["entity_metadata"] = user_input.get(
+                "entity_metadata"
+            )
         return run_params

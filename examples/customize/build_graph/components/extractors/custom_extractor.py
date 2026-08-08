@@ -32,6 +32,7 @@ class MyExtractor(EntityRelationExtractor):
         chunks: TextChunks,
         document_info: Optional[DocumentInfo] = None,
         lexical_graph_config: Optional[LexicalGraphConfig] = None,
+        entity_metadata: Optional[dict[str, Any]] = None,
         **kwargs: Any,
     ) -> Neo4jGraph:
         # Implement your logic here
