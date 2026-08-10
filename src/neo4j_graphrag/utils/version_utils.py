@@ -178,3 +178,16 @@ def supports_search_clause(
         )
         return False
     return version_tuple >= (2026, 1, 0)
+
+
+def should_fallback_from_search_clause(error: BaseException) -> bool:
+    """Return True when a SEARCH-clause query should retry with procedures."""
+    if not isinstance(error, neo4j.exceptions.ClientError):
+        return False
+    message = str(error)
+    return (
+        "PropertyNotFound" in message
+        or "Invalid input 'SEARCH'" in message
+        or "CYPHER 25" in message
+        or "42I67" in message
+    )
