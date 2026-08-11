@@ -34,7 +34,7 @@ from neo4j_graphrag.indexes import (
 )
 from neo4j_graphrag.llm import LLMInterface
 from neo4j_graphrag.retrievers import VectorRetriever
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 from ..e2e.utils import EMBEDDING_BIOLOGY
 
@@ -42,8 +42,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 @retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=2, max=10),
+    stop=stop_after_attempt(5),
+    wait=wait_random_exponential(multiplier=2, min=5, max=60),
 )
 def load_sentence_transformer_with_retry(
     model_name: str,
