@@ -101,6 +101,9 @@ packages = ["src/neo4j_graphrag"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# scripts/ is not a package and is not installed. Put it on the path under the
+# same top-level module names mypy already resolves it under.
+pythonpath = ["scripts"]
 filterwarnings = [
     "",
 ]
