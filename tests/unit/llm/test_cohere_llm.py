@@ -30,7 +30,6 @@ from pydantic import BaseModel, ConfigDict
 @pytest.fixture
 def mock_cohere() -> Generator[MagicMock, None, None]:
     mock_cohere = MagicMock()
-    mock_cohere.core.api_error.ApiError = cohere.core.ApiError
     with patch.dict(sys.modules, {"cohere": mock_cohere}):
         yield mock_cohere
 
@@ -323,7 +322,7 @@ def test_cohere_llm_constructs_against_the_real_sdk() -> None:
         "print('ok')\n"
     )
     result = subprocess.run(
-        [sys.executable, "-c", source], capture_output=True, text=True
+        [sys.executable, "-c", source], capture_output=True, text=True, timeout=60
     )
     assert result.returncode == 0, result.stderr
     assert "ok" in result.stdout

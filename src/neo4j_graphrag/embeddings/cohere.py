@@ -30,21 +30,35 @@ class CohereEmbeddings(Embedder):
     def __init__(
         self,
         model: str = "",
-        input_type: str = "search_document",
         rate_limit_handler: Optional[RateLimitHandler] = None,
+        *,
+        input_type: str = "search_document",
         **kwargs: Any,
     ) -> None:
         """
         Args:
             model (str): The name of the Cohere embedding model to use.
-            input_type (str): How Cohere should interpret the text. Its embeddings
-                are asymmetric, so this affects retrieval quality: use
-                ``search_document`` for text being indexed and ``search_query``
-                for a search query. Current Cohere models reject a request that
-                omits it. Defaults to ``search_document``, which is what
-                ``TextChunkEmbedder`` needs; retrievers embedding a user's query
-                should pass ``search_query``, either here or per call.
             rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting.
+            input_type (str): How Cohere should interpret the text. Current Cohere
+                models reject a request that omits it. Keyword-only, so that the
+                positional order of the arguments above is unchanged.
+
+                Cohere's embeddings are asymmetric, so this affects retrieval
+                quality: ``search_document`` for text being indexed,
+                ``search_query`` for a search query. It defaults to
+                ``search_document``, which is what ``TextChunkEmbedder`` needs and
+                the expensive side to get wrong - a mismatch while indexing means
+                re-embedding the corpus.
+
+                ``Embedder.embed_query()`` takes no per-call arguments, so
+                retrievers cannot override this. Give the retrieval side its own
+                instance::
+
+                    indexer = CohereEmbeddings(model="embed-english-v3.0")
+                    retriever_embedder = CohereEmbeddings(
+                        model="embed-english-v3.0", input_type="search_query"
+                    )
+
             kwargs: All other parameters are passed to the Cohere client.
         """
         if cohere is None:

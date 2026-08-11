@@ -118,6 +118,32 @@ def test_cohere_embedder_input_type_from_constructor(mock_cohere: Mock) -> None:
 
 
 @patch("neo4j_graphrag.embeddings.cohere.cohere")
+def test_cohere_embedder_second_positional_arg_is_still_the_rate_limit_handler(
+    mock_cohere: Mock,
+) -> None:
+    """input_type must not displace rate_limit_handler.
+
+    Adding it as the second positional parameter would silently rebind an
+    existing ``CohereEmbeddings(model, handler)`` call: the handler would be
+    dropped and passed to the API as input_type. It is keyword-only for that
+    reason, matching (model, rate_limit_handler, **kwargs) on the other embedders.
+    """
+    handler = MagicMock()
+    embedder = CohereEmbeddings("embed-english-v3.0", handler)
+
+    assert embedder._rate_limit_handler is handler
+    assert embedder.input_type == "search_document"
+
+
+@patch("neo4j_graphrag.embeddings.cohere.cohere")
+def test_cohere_embedder_input_type_cannot_be_passed_positionally(
+    mock_cohere: Mock,
+) -> None:
+    with pytest.raises(TypeError):
+        CohereEmbeddings("embed-english-v3.0", None, "search_query")  # type: ignore[misc]
+
+
+@patch("neo4j_graphrag.embeddings.cohere.cohere")
 def test_cohere_embedder_per_call_input_type_wins(mock_cohere: Mock) -> None:
     """A per-call value overrides the constructor's without colliding with it."""
     mock_cohere.Client.return_value.embed.return_value = MagicMock(
