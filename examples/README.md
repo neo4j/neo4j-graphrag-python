@@ -1,5 +1,8 @@
 # Examples Index
 
+> **New here?** [SETUP.md](SETUP.md) covers what you need in order to run these -
+> extras, API keys and services - and which providers are free.
+
 This folder contains examples usage for the different features
 supported by the `neo4j-graphrag` package:
 

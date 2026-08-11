@@ -6,6 +6,8 @@ dist/
 htmlcov/
 .idea/
 .env
+.env.*
+!.env.example
 docs/build/
 .vscode/
 .python-version
