@@ -45,7 +45,7 @@ from tenacity import (
     wait_random_exponential,
 )
 
-from ..e2e.utils import EMBEDDING_BIOLOGY
+from ..e2e.utils import EMBEDDING_BIOLOGY, await_index_online
 
 logger = logging.getLogger(__name__)
 
@@ -179,6 +179,9 @@ def setup_neo4j_for_retrieval(driver: Driver) -> None:
         node_properties=["short_text_property"],
     )
 
+    await_index_online(driver, vector_index_name)
+    await_index_online(driver, fulltext_index_name)
+
     # Insert 10 vectors and authors
     vector = [random.random() for _ in range(1536)]
 
@@ -251,6 +254,7 @@ def setup_neo4j_for_kg_construction(driver: Driver) -> None:
         dimensions=3,
         similarity_fn="euclidean",
     )
+    await_index_online(driver, vector_index_name)
 
 
 @pytest.fixture(scope="module")

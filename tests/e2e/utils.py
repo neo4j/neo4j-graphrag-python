@@ -17,12 +17,39 @@ from __future__ import annotations
 import hashlib
 import json
 import os.path
+import time
 from typing import Any, Literal
 
 import neo4j
 from neo4j_graphrag.indexes import create_vector_index, drop_index_if_exists
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def await_index_online(
+    neo4j_driver: neo4j.Driver, index_name: str, timeout: int = 60
+) -> None:
+    """Block until ``index_name`` reaches the ONLINE state.
+
+    Index population is asynchronous: creating an index over existing data
+    returns before the index is queryable, and querying it while it is still
+    POPULATING fails with ``Neo.ClientError.Schema.IndexNotFound`` (51N63).
+    Any fixture that creates an index must wait for it before running queries.
+    """
+    deadline = time.monotonic() + timeout
+    while True:
+        records, _, _ = neo4j_driver.execute_query(
+            "SHOW INDEXES YIELD name, state WHERE name = $name RETURN state",
+            {"name": index_name},
+        )
+        if records and records[0]["state"] == "ONLINE":
+            return
+        if time.monotonic() >= deadline:
+            raise RuntimeError(
+                f"Index {index_name} did not come online within {timeout}s"
+            )
+        time.sleep(0.5)
+
 
 # biology
 EMBEDDING_BIOLOGY = [
@@ -460,6 +487,9 @@ def populate_neo4j(
             dimensions=384,
             similarity_fn="cosine",
         )
+        # the index is created over the nodes inserted above, so it starts out
+        # POPULATING and is not queryable yet
+        await_index_online(neo4j_driver, vector_index_name)
 
     return res
 
