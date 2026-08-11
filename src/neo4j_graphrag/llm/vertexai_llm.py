@@ -74,8 +74,8 @@ def _extract_generation_config_params(
 ) -> dict[str, Any]:
     """Extract valid parameters from a GenerationConfig object.
 
-    This function extracts parameters from the internal _raw_generation_config
-    protobuf and returns them as a dict that can be passed to GenerationConfig().
+    Prefer ``GenerationConfig.to_dict()`` so fields only available via
+    ``from_dict`` (e.g. ``thinking_config``) and zero-valued numerics are kept.
 
     Args:
         config: A GenerationConfig object
@@ -86,12 +86,22 @@ def _extract_generation_config_params(
     """
     from vertexai.generative_models import GenerationConfig
 
+    if config is None:
+        return {}
+
+    if hasattr(config, "to_dict"):
+        params = dict(config.to_dict())
+        if exclude_schema:
+            for key in _GENERATION_CONFIG_SCHEMA_PARAMS:
+                params.pop(key, None)
+        return params
+
     if not hasattr(config, "_raw_generation_config"):
         return {}
 
     raw = config._raw_generation_config
 
-    # Get valid params from GenerationConfig signature
+    # Fallback for test doubles without to_dict().
     sig = inspect.signature(GenerationConfig.__init__)
     valid_params = {
         name
@@ -100,14 +110,24 @@ def _extract_generation_config_params(
         and (not exclude_schema or name not in _GENERATION_CONFIG_SCHEMA_PARAMS)
     }
 
-    preserved = {}
+    preserved: dict[str, Any] = {}
     for param in valid_params:
         val = getattr(raw, param, None)
-        if val:  # Only include non-empty values
-            # Convert repeated fields (like stop_sequences) to lists
-            if hasattr(val, "__iter__") and not isinstance(val, (str, bytes, dict)):
-                val = list(val)
-            preserved[param] = val
+        if val is None:
+            continue
+        if isinstance(val, (str, bytes)) and not val:
+            continue
+        if hasattr(val, "__iter__") and not isinstance(val, (str, bytes, dict)):
+            val = list(val)
+            if not val:
+                continue
+        preserved[param] = val
+
+    thinking_config = getattr(raw, "thinking_config", None)
+    if thinking_config is not None and str(thinking_config).strip():
+        preserved["thinking_config"] = {
+            "thinking_budget": thinking_config.thinking_budget
+        }
 
     return preserved
 
@@ -548,7 +568,10 @@ class VertexAILLM(LLMBase):
                 # Apply kwargs (they override constructor values but preserve schema)
                 params.update(kwargs)
 
-                options["generation_config"] = GenerationConfig(**params)
+                if "thinking_config" in params:
+                    options["generation_config"] = GenerationConfig.from_dict(params)
+                else:
+                    options["generation_config"] = GenerationConfig(**params)
         options["contents"] = contents
         return options
 
