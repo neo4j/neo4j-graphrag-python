@@ -71,6 +71,7 @@ are listed in [the last section of this file](#customize).
 - [Azure OpenAI]()
 - [VertexAI (Gemini)](./customize/llms/vertexai_llm.py)
 - [MistralAI](./customize/llms/mistalai_llm.py)
+- [MistralAI structured output](./customize/llms/mistralai_llm_structured_output.py)
 - [Cohere](./customize/llms/cohere_llm.py)
 - [Anthropic (Claude)](./customize/llms/anthropic_llm.py)
 - [Ollama](./customize/llms/ollama_llm.py)

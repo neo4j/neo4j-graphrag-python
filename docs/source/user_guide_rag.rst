@@ -319,7 +319,7 @@ Structured Output with LLMs
 
 Structured output enables LLMs to return responses conforming to a predefined schema (Pydantic model or JSON schema), ensuring type-safe and consistent data structures. This is useful for extracting entities, relationships, or any structured data with automatic validation.
 
-**V2 Interface (Recommended)**: For :ref:`OpenAILLM <openaillm>`, :ref:`VertexAILLM <vertexaillm>` and :ref:`AnthropicLLM <anthropicllm>`, pass `response_format` as a parameter to the `invoke()` method when using the V2 interface (list of `LLMMessage`). The `response_format` accepts either a Pydantic model class or a JSON schema dictionary. Other LLM providers will raise `NotImplementedError` if `response_format` is used.
+**V2 Interface (Recommended)**: For :ref:`OpenAILLM <openaillm>`, :ref:`VertexAILLM <vertexaillm>`, :ref:`AnthropicLLM <anthropicllm>` and :ref:`MistralAILLM <mistralaillm>`, pass `response_format` as a parameter to the `invoke()` method when using the V2 interface (list of `LLMMessage`). The `response_format` accepts either a Pydantic model class or a provider-specific response format dictionary. Other LLM providers will raise `NotImplementedError` if `response_format` is used.
 
 **V1 Interface (Legacy)**: With the V1 interface (string input), standard JSON mode is supported for both OpenAI and VertexAI via constructor parameters only (`model_params` for OpenAI, `generation_config` for VertexAI). The `response_format` parameter in `invoke()` is not permitted with V1.
 
@@ -414,6 +414,27 @@ Anthropic uses its native ``output_config`` API internally when `response_format
         model_name="claude-sonnet-4-5",
         model_params={"max_tokens": 1000},  # max_tokens must be specified
     )
+    messages = [LLMMessage(role="user", content="Extract: John is 30.")]
+    response = llm.invoke(messages, response_format=Person, temperature=0)
+    person = Person.model_validate_json(response.content)
+
+
+MistralAI Structured Output
+---------------------------
+
+MistralAI uses its native ``chat.parse`` API internally when a Pydantic model is passed to `invoke()`. Provider-specific response format dictionaries are passed to ``chat.complete`` unchanged. Both paths return the generated JSON string in ``LLMResponse.content``. This feature requires ``mistralai>=1.5.0`` and a Mistral model that supports custom structured output.
+
+.. code:: python
+
+    from pydantic import BaseModel
+    from neo4j_graphrag.llm import MistralAILLM
+    from neo4j_graphrag.types import LLMMessage
+
+    class Person(BaseModel):
+        name: str
+        age: int
+
+    llm = MistralAILLM(model_name="ministral-8b-latest")
     messages = [LLMMessage(role="user", content="Extract: John is 30.")]
     response = llm.invoke(messages, response_format=Person, temperature=0)
     person = Person.model_validate_json(response.content)
