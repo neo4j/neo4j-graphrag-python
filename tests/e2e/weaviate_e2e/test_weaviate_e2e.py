@@ -27,6 +27,7 @@ from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
 from weaviate.client import WeaviateClient
 from weaviate.connect.helpers import connect_to_local
 
+from ..conftest import load_sentence_transformer_with_retry
 from ..utils import EMBEDDING_BIOLOGY
 from .populate_dbs import populate_dbs
 
@@ -35,7 +36,7 @@ from .populate_dbs import populate_dbs
 def sentence_transformer_embedder() -> (
     Generator[SentenceTransformerEmbeddings, Any, Any]
 ):
-    embedder = SentenceTransformerEmbeddings(model="all-MiniLM-L6-v2")
+    embedder = load_sentence_transformer_with_retry("all-MiniLM-L6-v2")
     yield embedder
 
 
