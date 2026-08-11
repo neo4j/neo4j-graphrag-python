@@ -45,7 +45,9 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
 )
-def load_sentence_transformer_with_retry(model_name: str) -> SentenceTransformerEmbeddings:
+def load_sentence_transformer_with_retry(
+    model_name: str,
+) -> SentenceTransformerEmbeddings:
     """Load sentence transformer with retry logic to handle Hugging Face rate limits."""
     return SentenceTransformerEmbeddings(model=model_name)
 
