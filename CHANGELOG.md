@@ -31,6 +31,7 @@
 
 - Fixed a bug in `AnthropicLLM` where an `http_client` passed via kwargs (whether an `httpx.Client` or `httpx.AsyncClient`) was forwarded to both the sync `anthropic.Anthropic` and async `anthropic.AsyncAnthropic` clients, causing a type mismatch. `http_client` is now routed to the matching sync/async client only; other kwargs remain shared. An `http_client` of an unrecognized type now emits a warning and is ignored instead of raising, matching `OpenAILLM`'s existing behavior.
 - Vector and VectorCypher retrievers on Neo4j 2026+: prefix SEARCH queries with `CYPHER 25` and fall back to procedure-based vector search when SEARCH is unsupported or fails.
+- E2E tests: added retry logic with exponential backoff to embedding model downloads to handle Hugging Face rate limits, improving test reliability in CI environments.
 
 ## 1.18.0
 
