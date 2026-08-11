@@ -24,6 +24,9 @@ from unittest.mock import MagicMock
 import pytest
 from neo4j import Driver, GraphDatabase
 from neo4j_graphrag.embeddings.base import Embedder
+from neo4j_graphrag.embeddings.sentence_transformers import (
+    SentenceTransformerEmbeddings,
+)
 from neo4j_graphrag.indexes import (
     create_fulltext_index,
     create_vector_index,
@@ -31,10 +34,20 @@ from neo4j_graphrag.indexes import (
 )
 from neo4j_graphrag.llm import LLMInterface
 from neo4j_graphrag.retrievers import VectorRetriever
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 from ..e2e.utils import EMBEDDING_BIOLOGY
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+)
+def load_sentence_transformer_with_retry(model_name: str) -> SentenceTransformerEmbeddings:
+    """Load sentence transformer with retry logic to handle Hugging Face rate limits."""
+    return SentenceTransformerEmbeddings(model=model_name)
 
 
 @pytest.fixture(scope="module")
