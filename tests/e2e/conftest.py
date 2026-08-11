@@ -179,6 +179,9 @@ def setup_neo4j_for_retrieval(driver: Driver) -> None:
         node_properties=["short_text_property"],
     )
 
+    # Index creation returns as soon as the schema change commits, but
+    # population runs in the background; querying while still POPULATING
+    # fails, so wait for ONLINE before inserting data or running queries.
     await_index_online(driver, vector_index_name)
     await_index_online(driver, fulltext_index_name)
 
@@ -254,6 +257,7 @@ def setup_neo4j_for_kg_construction(driver: Driver) -> None:
         dimensions=3,
         similarity_fn="euclidean",
     )
+    # wait for ONLINE before the pipeline under test writes to and queries the index
     await_index_online(driver, vector_index_name)
 
 

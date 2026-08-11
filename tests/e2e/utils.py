@@ -29,13 +29,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 def await_index_online(
     neo4j_driver: neo4j.Driver, index_name: str, timeout: int = 60
 ) -> None:
-    """Block until ``index_name`` reaches the ONLINE state.
-
-    Index population is asynchronous: creating an index over existing data
-    returns before the index is queryable, and querying it while it is still
-    POPULATING fails with ``Neo.ClientError.Schema.IndexNotFound`` (51N63).
-    Any fixture that creates an index must wait for it before running queries.
-    """
+    """Wait until ``index_name`` reaches the ONLINE state."""
     deadline = time.monotonic() + timeout
     while True:
         records, _, _ = neo4j_driver.execute_query(

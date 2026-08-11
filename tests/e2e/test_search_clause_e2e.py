@@ -113,7 +113,8 @@ def setup_search_clause_data(driver: Driver) -> None:
             },
         )
 
-    # Wait for the index to come online
+    # index was created before these nodes existed, so it started out
+    # POPULATING; wait for ONLINE before the tests below query it
     await_index_online(driver, INDEX_NAME)
 
 
