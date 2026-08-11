@@ -323,7 +323,7 @@ The easiest way to get it up and running is via Docker compose. The vector store
 
 .. note::
 
-    If you suspect something in the databases are cached, run `docker compose -f tests/e2e/docker-compose.yml --profile vectordb down` to remove them completely
+    If you suspect something in the databases are cached, run `docker compose -f tests/e2e/docker-compose.yml --profile '*' down` to remove them completely. The `--profile '*'` matches every profile, so it tears down whatever you started.
 
 Once the services are running, execute the following command to run the e2e tests.
 

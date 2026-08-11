@@ -414,12 +414,12 @@ docker compose -f tests/e2e/docker-compose.yml --profile vectordb up -d --wait
 
 `--wait` blocks until the services report healthy, rather than merely started.
 
-_(tip: If you encounter any caching issues within the databases, you can completely remove them by running `docker compose -f tests/e2e/docker-compose.yml --profile vectordb down`)_
+_(tip: If you encounter any caching issues within the databases, you can completely remove them by running `docker compose -f tests/e2e/docker-compose.yml --profile '*' down`. The `--profile '*'` matches every profile, so it tears down whatever you started.)_
 
 For SEARCH-clause e2e tests (`tests/e2e/test_search_clause_e2e.py`), use the Neo4j 2026 compose file instead. It pins Neo4j 2026.02.2 (required for the Cypher 25 `SEARCH` clause) and binds the same `7687`/`7474` ports — stop the default stack first:
 
 ```bash
-docker compose -f tests/e2e/docker-compose.yml down
+docker compose -f tests/e2e/docker-compose.yml --profile '*' down
 docker compose -f tests/e2e/docker-compose.neo4j2026.yml up -d
 ```
 
