@@ -19,7 +19,13 @@ from .anthropic_llm import AnthropicLLM, BaseAnthropicLLM
 from .base import LLMBase, LLMInterface, LLMInterfaceV2
 from .bedrock_llm import BedrockLLM
 from .cohere_llm import CohereLLM
-from .google_genai_llm import BaseGeminiLLM, GeminiLLM
+from .google_genai_llm import (
+    GEMINI_DEFAULT_IMAGE_MIME_TYPE,
+    GEMINI_SUPPORTED_IMAGE_MIME_TYPES,
+    BaseGeminiLLM,
+    GeminiImageMimeType,
+    GeminiLLM,
+)
 from .mistralai_llm import MistralAILLM
 from .ollama_llm import OllamaLLM
 from .openai_llm import AzureOpenAILLM, BaseOpenAILLM, OpenAILLM
@@ -28,11 +34,14 @@ from .utils import split_http_client_kwargs
 from .vertexai_llm import VertexAILLM
 
 __all__ = [
+    "GEMINI_DEFAULT_IMAGE_MIME_TYPE",
+    "GEMINI_SUPPORTED_IMAGE_MIME_TYPES",
     "AnthropicLLM",
     "BaseAnthropicLLM",
     "BaseGeminiLLM",
     "BedrockLLM",
     "CohereLLM",
+    "GeminiImageMimeType",
     "GeminiLLM",
     "LLMResponse",
     "LLMUsage",
