@@ -4,8 +4,10 @@ This is a manual task you need to do in the terminal.
 
 This spins up Neo4j and Weaviate containers and is configuring Weaviate to use embeddings from Hugging Face's Sentence Transformers using the "all-MiniLM-L6-v2" model, which has 384 dimensions.
 
+Weaviate is behind the `vectordb` profile, so it needs the flag.
+
 ```bash
-docker compose -f tests/e2e/docker-compose.yml up
+docker compose -f tests/e2e/docker-compose.yml --profile vectordb up -d --wait
 ```
 
 ### Write data (once)
