@@ -75,7 +75,7 @@ fuzzy-matching = ["rapidfuzz>=3.12.2,<4.0.0"]
 
 [dependency-groups]
 dev = [
-    "urllib3<2",
+    "urllib3<3",
     "ruff>=0.3.0,<0.4.0",
     "mypy>=1.10.0,<2.0.0",
     "pytest>=8.0.2,<9.0.0",

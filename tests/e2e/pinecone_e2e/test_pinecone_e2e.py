@@ -26,6 +26,7 @@ from neo4j_graphrag.retrievers import PineconeNeo4jRetriever
 from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
 from pinecone import Pinecone
 
+from ..conftest import load_sentence_transformer_with_retry
 from ..utils import EMBEDDING_BIOLOGY, build_data_objects, populate_neo4j
 
 
@@ -33,7 +34,7 @@ from ..utils import EMBEDDING_BIOLOGY, build_data_objects, populate_neo4j
 def sentence_transformer_embedder() -> (
     Generator[SentenceTransformerEmbeddings, Any, Any]
 ):
-    embedder = SentenceTransformerEmbeddings(model="all-MiniLM-L6-v2")
+    embedder = load_sentence_transformer_with_retry("all-MiniLM-L6-v2")
     yield embedder
 
 
