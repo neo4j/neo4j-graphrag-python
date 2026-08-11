@@ -249,9 +249,12 @@ def main() -> None:
     weather_tool = WeatherTool()
 
     # Create an OpenAI LLM
+    # gpt-4.1 rather than gpt-5: the example asserts which of the three tools gets
+    # picked for each query, so selection needs to be stable, and gpt-5 only
+    # accepts the default temperature (1).
     llm = OpenAILLM(
         api_key=os.getenv("OPENAI_API_KEY"),
-        model_name="gpt-5",
+        model_name="gpt-4.1",
         model_params={
             "temperature": 0.2,
         },

@@ -45,7 +45,7 @@ In practice, it's done with only a few lines of code:
 
     # 3. LLM
     # Note: the OPENAI_API_KEY must be in the env vars
-    llm = OpenAILLM(model_name="gpt-5", model_params={"temperature": 0})
+    llm = OpenAILLM(model_name="gpt-5")
 
     # Initialize the RAG pipeline
     rag = GraphRAG(retriever=retriever, llm=llm)
@@ -59,6 +59,22 @@ In practice, it's done with only a few lines of code:
 .. warning::
 
     Using `OpenAILLM` requires the `openai` Python client. You can install it with `pip install "neo4j_graphrag[openai]"`.
+
+.. note::
+
+    OpenAI's reasoning models (the `gpt-5` family, `o1`, `o3`, `o4`) constrain some
+    `model_params`:
+
+    - `max_tokens` is rejected; use `max_completion_tokens` instead.
+    - `temperature` only accepts its default value of 1, whether passed in
+      `model_params` or as a keyword argument to `invoke()`.
+    - Reasoning tokens count against `max_completion_tokens`. If the budget is too
+      small it is consumed entirely by reasoning and the response comes back empty,
+      so leave generous headroom. `reasoning_effort="low"` reduces both the token
+      spend and the risk of truncation.
+
+    Examples in this guide that need a fixed `temperature` therefore use a
+    non-reasoning model such as `gpt-4.1-mini`.
 
 
 The following sections provide more details about how to customize this code.
@@ -335,7 +351,7 @@ Structured output enables LLMs to return responses conforming to a predefined sc
         age: int
         occupation: str
 
-    llm = OpenAILLM(model_name="gpt-5-mini")
+    llm = OpenAILLM(model_name="gpt-4.1-mini")
 
     # V2: Pass response_format to invoke()
     messages = [LLMMessage(role="user", content="Extract: John is a 30 year old engineer.")]
@@ -344,7 +360,7 @@ Structured output enables LLMs to return responses conforming to a predefined sc
 
     # V1: Use constructor parameters for standard JSON mode
     llm_v1 = OpenAILLM(
-        model_name="gpt-5-mini",
+        model_name="gpt-4.1-mini",
         model_params={"response_format": {"type": "json_object"}, "temperature": 0}
     )
     response_v1 = llm_v1.invoke("Extract person in JSON format: John is 30 years old.")
@@ -359,7 +375,7 @@ OpenAI supports Pydantic models, JSON schemas, and JSON object mode. **Important
     from neo4j_graphrag.llm import OpenAILLM
     from neo4j_graphrag.types import LLMMessage
 
-    llm = OpenAILLM(model_name="gpt-5-mini")
+    llm = OpenAILLM(model_name="gpt-4.1-mini")
 
     # JSON schema
     json_schema = {
@@ -1350,7 +1366,7 @@ The ToolsRetriever integrates seamlessly with the GraphRAG pipeline for automate
     driver = GraphDatabase.driver(URI, auth=AUTH)
 
     # Create LLM and embedder
-    llm = OpenAILLM(model_name="gpt-5", model_params={"temperature": 0})
+    llm = OpenAILLM(model_name="gpt-5")
     embedder = OpenAIEmbeddings(model="text-embedding-3-large")
 
     # Create retrievers to use as tools

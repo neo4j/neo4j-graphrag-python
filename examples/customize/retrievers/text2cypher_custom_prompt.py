@@ -15,7 +15,9 @@ AUTH = ("recommendations", "recommendations")
 DATABASE = "recommendations"
 
 # Create LLM object
-llm = OpenAILLM(model_name="gpt-5", model_params={"temperature": 0})
+# gpt-4.1 rather than gpt-5: the generated Cypher is executed directly, so low
+# output variance matters here, and gpt-5 only accepts the default temperature (1).
+llm = OpenAILLM(model_name="gpt-4.1", model_params={"temperature": 0})
 
 # (Optional) Specify your own Neo4j schema
 # (also see get_structured_schema and get_schema functions)
