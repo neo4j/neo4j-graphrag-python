@@ -44,6 +44,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 @retry(
     stop=stop_after_attempt(5),
     wait=wait_random_exponential(multiplier=2, min=5, max=60),
+    reraise=True,
 )
 def load_sentence_transformer_with_retry(
     model_name: str,
