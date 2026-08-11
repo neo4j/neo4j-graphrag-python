@@ -14,13 +14,19 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Generator, Tuple
+from typing import Generator, Tuple, get_args
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm import BaseGeminiLLM, GeminiLLM
+from neo4j_graphrag.llm import (
+    GEMINI_DEFAULT_IMAGE_MIME_TYPE,
+    GEMINI_SUPPORTED_IMAGE_MIME_TYPES,
+    BaseGeminiLLM,
+    GeminiImageMimeType,
+    GeminiLLM,
+)
 from neo4j_graphrag.types import LLMMessage
 
 
@@ -360,3 +366,58 @@ async def test_ainvoke_v2_image_bytes_not_forwarded_to_config(
     config_kwargs = mock_types.GenerateContentConfig.call_args.kwargs
     assert "image_bytes" not in config_kwargs
     assert "image_mime_type" not in config_kwargs
+
+
+def test_get_messages_v2_rejects_unsupported_image_mime_type(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    """An image_mime_type outside GEMINI_SUPPORTED_IMAGE_MIME_TYPES is rejected."""
+    llm = GeminiLLM("gemini-2.0-flash")
+
+    with pytest.raises(ValueError, match="Unsupported image_mime_type"):
+        llm.get_messages_v2(
+            [{"role": "user", "content": "describe this"}],
+            image_bytes=b"fake-gif",
+            image_mime_type="image/gif",  # type: ignore[arg-type]
+        )
+
+
+def test_get_messages_v2_ignores_mime_type_without_image_bytes(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    """image_mime_type is only validated when image_bytes is provided."""
+    llm = GeminiLLM("gemini-2.0-flash")
+
+    _, contents = llm.get_messages_v2(
+        [{"role": "user", "content": "hello"}],
+        image_mime_type="image/gif",  # type: ignore[arg-type]
+    )
+
+    assert len(contents) == 1
+
+
+def test_invoke_v1_rejects_image_bytes(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    """The v1 (str input) path does not support images."""
+    llm = GeminiLLM("gemini-2.0-flash")
+
+    with pytest.raises(ValueError, match="only supported with a list of messages"):
+        llm.invoke("describe this", image_bytes=b"fake-png")  # type: ignore[call-overload]
+
+
+@pytest.mark.asyncio
+async def test_ainvoke_v1_rejects_image_bytes(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    """Same as sync: the v1 path does not support images."""
+    llm = GeminiLLM("gemini-2.0-flash")
+
+    with pytest.raises(ValueError, match="only supported with a list of messages"):
+        await llm.ainvoke("describe this", image_bytes=b"fake-png")  # type: ignore[call-overload]
+
+
+def test_gemini_image_mime_type_constants() -> None:
+    """The supported set is derived from the Literal and the default is a member."""
+    assert GEMINI_SUPPORTED_IMAGE_MIME_TYPES == frozenset(get_args(GeminiImageMimeType))
+    assert GEMINI_DEFAULT_IMAGE_MIME_TYPE in GEMINI_SUPPORTED_IMAGE_MIME_TYPES
