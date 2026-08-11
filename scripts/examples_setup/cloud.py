@@ -89,6 +89,12 @@ def _tier_3_aura(assume_yes: bool) -> None:
         _tier_3_own(assume_yes)
         return
 
+    if assume_yes:
+        # --non-interactive promises never to prompt, and there is no sensible
+        # default for an environment name.
+        print(colour("   skipping: --non-interactive cannot pick an Aura env", YELLOW))
+        return
+
     try:
         env_name = input("   Aura dev environment name: ").strip()
     except EOFError:

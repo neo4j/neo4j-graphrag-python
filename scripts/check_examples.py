@@ -448,9 +448,6 @@ def run_live_checks(timeout: int) -> int:
         if blockers:
             skipped.append((path, f"needs {', '.join(sorted(blockers))}"))
             continue
-        if requirements.uses_placeholder_model:
-            skipped.append((path, "placeholder model name"))
-            continue
         unavailable = sorted(
             example_requirements.SERVICE_LABELS.get(service, service)
             for service in requirements.services

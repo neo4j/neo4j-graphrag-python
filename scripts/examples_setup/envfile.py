@@ -75,7 +75,9 @@ def write_env_var(name: str, value: str, path: Path = ENV_FILE) -> None:
     replaced = False
     for index, line in enumerate(lines):
         stripped = line.strip()
-        commented = stripped.lstrip("#").strip()
+        # One leading '#' is the template's own placeholder. More than one is a
+        # deliberate comment, so leave it alone rather than overwrite it.
+        commented = stripped[1:].strip() if stripped.startswith("#") else stripped
         if stripped.startswith(f"{name}=") or commented.startswith(f"{name}="):
             lines[index] = f"{name}={value}"
             replaced = True
@@ -85,5 +87,23 @@ def write_env_var(name: str, value: str, path: Path = ENV_FILE) -> None:
             lines.append("")
         lines.append(f"{name}={value}")
 
-    path.write_text("\n".join(lines) + "\n")
-    path.chmod(0o600)
+    _write_private(path, "\n".join(lines) + "\n")
+
+
+def _write_private(path: Path, content: str) -> None:
+    """Replace path's contents, never leaving a secret readable by anyone else.
+
+    Written through a temp file in the same directory so an interrupted write
+    cannot truncate the credentials already in place, and created at 0600 up
+    front - creating first and chmod-ing after leaves the secret world-readable
+    for the window in between.
+    """
+    tmp = path.with_name(f".{path.name}.tmp")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        with os.fdopen(fd, "w") as handle:
+            handle.write(content)
+        os.replace(tmp, path)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise

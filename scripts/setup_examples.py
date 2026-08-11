@@ -21,8 +21,9 @@ Two modes over one model of what each example needs (see
 ``example_requirements.py``):
 
 **Doctor** (``--check``) probes packages, env vars, databases and containers and
-reports, per example, the single thing standing in the way. It writes nothing,
-touches no network beyond a TCP connect, and exits 0 unless ``--strict``.
+reports, per example, the single thing standing in the way. It writes nothing and
+exits 0 unless ``--strict``. Network use is limited to TCP connects, except that
+resolving Google credentials shells out to ``gcloud`` to mint an access token.
 
 **Installer** (default) walks the same ground interactively, in tiers, so the
 free and local providers work before any cloud account is involved:

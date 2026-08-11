@@ -116,19 +116,6 @@ def blockers_for(
             )
         )
 
-    if requirement.uses_placeholder_model:
-        if "ollama" in requirement.providers:
-            found.append(
-                Blocker(
-                    "model name is the literal placeholder <model_name>",
-                    f"edit the file to use e.g. {OLLAMA_CHAT_MODEL}",
-                )
-            )
-        else:
-            found.append(
-                Blocker("model name is the literal placeholder <model_name>", "edit it")
-            )
-
     if reqs.OLLAMA_SERVER in requirement.services and reqs.service_available(
         reqs.OLLAMA_SERVER
     ):
@@ -215,13 +202,15 @@ def run_doctor(strict: bool, verbose: bool) -> int:
 
     print()
     print(colour("Python extras", BOLD))
-    used_extras = sorted({e for r in reqs.analyse_all() for e in r.extras})
+    # Parses all 104 examples, so do it once and reuse it below.
+    everything = reqs.analyse_all()
+    used_extras = sorted({e for r in everything for e in r.extras})
     for extra in used_extras:
         installed = extra_installed(extra)
         mark = colour("installed", GREEN) if installed else colour("missing", RED)
         print(f"  {extra:<24} {mark}")
 
-    requirements = [r for r in reqs.analyse_all() if r.runnable]
+    requirements = [r for r in everything if r.runnable]
     results: list[tuple[reqs.ExampleRequirements, list[Blocker]]] = [
         (r, blockers_for(r, env_file, neo4j_state)) for r in requirements
     ]
@@ -233,7 +222,7 @@ def run_doctor(strict: bool, verbose: bool) -> int:
     print(
         f"  {colour(str(len(ready)), GREEN)} runnable, "
         f"{colour(str(len(blocked)), YELLOW)} blocked, "
-        f"{len(reqs.analyse_all()) - len(requirements)} snippets with nothing to run"
+        f"{len(everything) - len(requirements)} snippets with nothing to run"
     )
 
     if blocked:
@@ -252,7 +241,7 @@ def run_doctor(strict: bool, verbose: bool) -> int:
             if len(paths) > len(shown):
                 print("      " + colour(f"... and {len(paths) - len(shown)} more", DIM))
 
-    notes = [(r.rel, note) for r in reqs.analyse_all() for note in r.notes]
+    notes = [(r.rel, note) for r in everything for note in r.notes]
     if notes and verbose:
         print()
         print(colour("Known issues in the examples themselves", BOLD))

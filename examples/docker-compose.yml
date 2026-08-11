@@ -7,8 +7,11 @@
 # This binds the same ports as tests/e2e/docker-compose.yml, so the two stacks
 # are mutually exclusive. Bring one down before starting the other.
 #
-# Unlike the e2e stack, every service here declares a healthcheck, so
-# `up --wait` blocks until they are actually ready rather than merely started.
+# Unlike the e2e stack, these services declare healthchecks, so `up --wait`
+# blocks until they are actually ready rather than merely started. The one
+# exception is pinecone-local, whose image ships no shell and no binary a
+# healthcheck could run; `--wait` returns as soon as it is up, so give it a
+# moment before the Pinecone examples. setup_examples.py polls the port instead.
 
 services:
   neo4j:
@@ -62,6 +65,20 @@ services:
     image: cr.weaviate.io/semitechnologies/transformers-inference:sentence-transformers-all-MiniLM-L6-v2
     environment:
       ENABLE_CUDA: 0
+    # No wget or curl in this image, but it does ship python3. The endpoint
+    # answers 204, which urlopen treats as success.
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python3",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8080/.well-known/ready')",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
 
   qdrant:
     profiles: [vectordb]

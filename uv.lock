@@ -3150,6 +3150,7 @@ examples = [
     { name = "langchain-huggingface" },
     { name = "langchain-openai" },
     { name = "python-dotenv" },
+    { name = "requests" },
 ]
 experimental = [
     { name = "langchain-text-splitters" },
@@ -3240,6 +3241,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.2,<7.0.0" },
     { name = "qdrant-client", marker = "extra == 'qdrant'", specifier = ">=1.11.3,<2.0.0" },
     { name = "rapidfuzz", marker = "extra == 'fuzzy-matching'", specifier = ">=3.12.2,<4.0.0" },
+    { name = "requests", marker = "extra == 'examples'", specifier = ">=2.31.0,<3.0.0" },
     { name = "scipy", marker = "python_full_version >= '3.9' and python_full_version < '3.13'", specifier = ">=1.13.0,<2.0.0" },
     { name = "scipy", marker = "python_full_version >= '3.13' and python_full_version < '3.15'", specifier = ">=1.15.0,<2.0.0" },
     { name = "sentence-transformers", marker = "extra == 'sentence-transformers'", specifier = ">=3.0.0,<4.0.0" },

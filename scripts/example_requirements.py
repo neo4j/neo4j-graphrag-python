@@ -39,6 +39,7 @@ from __future__ import annotations
 import ast
 import fnmatch
 import re
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -135,6 +136,7 @@ MODULE_EXTRAS: dict[str, str] = {
     "pyarrow": "experimental",
     "litellm": "litellm",
     "dotenv": "examples",
+    "requests": "examples",
 }
 
 # Providers reached by importing the module directly rather than via a symbol.
@@ -147,6 +149,22 @@ MODULE_PROVIDERS: dict[str, str] = {
     "spacy": "spacy",
     "langchain_openai": "openai",
     "langchain_huggingface": "sentence-transformers",
+}
+
+# The library itself, plus the import names of its core dependencies in
+# pyproject.toml. Present in any environment that has neo4j-graphrag at all, so
+# never worth an install hint.
+ALWAYS_INSTALLED = {
+    "neo4j_graphrag",
+    "neo4j",
+    "pydantic",
+    "fsspec",
+    "pypdf",
+    "json_repair",
+    "yaml",
+    "numpy",
+    "scipy",
+    "tenacity",
 }
 
 # Import name -> distribution name, where they differ. Used to build install
@@ -185,7 +203,9 @@ SERVICE_LABELS: dict[str, str] = {
 # Requirements that leave no reliable trace in the source. Keyed by a glob
 # relative to examples/; every matching glob contributes.
 #
-# `indexes` names a Neo4j index the example expects to already exist. `notes` is
+# `indexes` names a Neo4j index the example expects to already exist. `extras`,
+# `providers` and `env_vars` add to what the import scan found, for examples whose
+# real dependencies live in a config file rather than in their imports. `notes` is
 # surfaced verbatim by the doctor - use it for things a user cannot otherwise
 # discover without reading the file and failing.
 SERVICE_RULES: list[tuple[str, dict[str, object]]] = [
@@ -313,11 +333,28 @@ SERVICE_RULES: list[tuple[str, dict[str, object]]] = [
             ]
         },
     ),
+    # Their LLM and embedder are named in the YAML/JSON config they load, as
+    # `class_: OpenAILLM` and `var_: OPENAI_API_KEY`. Nothing of that reaches the
+    # example's own imports, so it has to be declared here.
+    (
+        "build_graph/from_config_files/simple_kg_pipeline_from_config_file*.py",
+        {
+            "extras": ["openai"],
+            "providers": ["openai"],
+            "env_vars": ["OPENAI_API_KEY"],
+            "notes": ["its LLM and embedder are configured in the config file"],
+        },
+    ),
+    (
+        "customize/build_graph/pipeline/from_config_files/pipeline_from_config_file.py",
+        {
+            "extras": ["openai"],
+            "providers": ["openai"],
+            "env_vars": ["OPENAI_API_KEY"],
+            "notes": ["its LLM is configured in the config file"],
+        },
+    ),
 ]
-
-# Ollama examples ship a literal placeholder model name; running them needs a
-# real model pulled first.
-MODEL_PLACEHOLDER = "<model_name>"
 
 _LOCAL_URI = re.compile(r"^(bolt|neo4j)(\+s|\+ssc)?://(localhost|127\.0\.0\.1)")
 _DEMO_HOST = "demo.neo4jlabs.com"
@@ -336,7 +373,6 @@ class ExampleRequirements:
     indexes: set[str] = field(default_factory=set)
     notes: list[str] = field(default_factory=list)
     runnable: bool = True
-    uses_placeholder_model: bool = False
     # Sibling modules under examples/data/ that are importable only if that
     # directory is on sys.path.
     sibling_modules: set[str] = field(default_factory=set)
@@ -350,7 +386,7 @@ class ExampleRequirements:
         return sorted(
             DISTRIBUTIONS.get(module, module)
             for module in self.modules
-            if module not in MODULE_EXTRAS
+            if module not in MODULE_EXTRAS and module not in ALWAYS_INSTALLED
         )
 
 
@@ -488,12 +524,16 @@ def _apply_rules(path: Path, requirements: ExampleRequirements) -> None:
     for pattern, spec in SERVICE_RULES:
         if not fnmatch.fnmatch(rel, pattern):
             continue
-        services = spec.get("services")
-        if isinstance(services, list):
-            requirements.services.update(str(s) for s in services)
-        indexes = spec.get("indexes")
-        if isinstance(indexes, list):
-            requirements.indexes.update(str(i) for i in indexes)
+        for key, target in (
+            ("services", requirements.services),
+            ("indexes", requirements.indexes),
+            ("extras", requirements.extras),
+            ("providers", requirements.providers),
+            ("env_vars", requirements.env_vars),
+        ):
+            values = spec.get(key)
+            if isinstance(values, list):
+                target.update(str(v) for v in values)
         notes = spec.get("notes")
         if isinstance(notes, list):
             requirements.notes.extend(str(n) for n in notes)
@@ -511,8 +551,17 @@ def analyse(path: Path) -> ExampleRequirements:
         return requirements
 
     modules, symbols = _imported_names(tree)
-    requirements.modules = {m for m in modules if m in MODULE_EXTRAS} | {
-        m for m in modules if m in DISTRIBUTIONS
+    requirements.sibling_modules = _sibling_modules(modules)
+    # Everything the example imports that it will not already have. Narrowing this
+    # to the modules we happen to know about would hide the interesting case: a
+    # third-party import that no extra declares, which is exactly what
+    # install_hints() exists to report.
+    requirements.modules = {
+        m
+        for m in modules
+        if m not in sys.stdlib_module_names
+        and m not in ALWAYS_INSTALLED
+        and m not in requirements.sibling_modules
     }
 
     for symbol in symbols:
@@ -528,7 +577,6 @@ def analyse(path: Path) -> ExampleRequirements:
 
     requirements.env_vars = _env_vars(tree)
     requirements.runnable = _is_runnable(tree)
-    requirements.uses_placeholder_model = MODEL_PLACEHOLDER in source
     requirements.sibling_modules = _sibling_modules(modules)
 
     literals = _string_constants(tree)

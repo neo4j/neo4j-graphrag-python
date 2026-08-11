@@ -292,14 +292,6 @@ def _setup_ollama(assume_yes: bool) -> None:
         if confirm(f"   Pull {model}?", True, assume_yes):
             run_command(["ollama", "pull", model])
 
-    print(
-        colour(
-            "   note: ollama_llm.py and ollama_embeddings.py ship a literal "
-            f"<model_name> placeholder - edit them to '{OLLAMA_CHAT_MODEL}'.",
-            YELLOW,
-        )
-    )
-
 
 def _warm_sentence_transformers() -> None:
     code = (

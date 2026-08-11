@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import subprocess
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from typing import Callable, Optional
@@ -50,7 +51,23 @@ class Provider:
     credential_probe: Optional[Callable[[], tuple[bool, str]]] = None
 
 
+# Credential resolution is the same answer every time within one run, and the
+# gcloud probe shells out to mint a token. The doctor asks once per example that
+# uses the provider, so without this a single --check spawns it seven times.
+_CREDENTIAL_CACHE: dict[str, tuple[bool, str]] = {}
+
+
+def _cached(key: str, probe: Callable[[], tuple[bool, str]]) -> tuple[bool, str]:
+    if key not in _CREDENTIAL_CACHE:
+        _CREDENTIAL_CACHE[key] = probe()
+    return _CREDENTIAL_CACHE[key]
+
+
 def _probe_aws() -> tuple[bool, str]:
+    return _cached("aws", _probe_aws_uncached)
+
+
+def _probe_aws_uncached() -> tuple[bool, str]:
     """Whether boto3 can resolve credentials at all.
 
     A successful SSO login often writes a *named profile*, which boto3 ignores
@@ -66,6 +83,10 @@ def _probe_aws() -> tuple[bool, str]:
 
 
 def _probe_gcloud_adc() -> tuple[bool, str]:
+    return _cached("gcloud-adc", _probe_gcloud_adc_uncached)
+
+
+def _probe_gcloud_adc_uncached() -> tuple[bool, str]:
     """Whether Vertex can authenticate. The project alone is not enough."""
     if not command_exists("gcloud"):
         return False, "install the gcloud CLI"
@@ -94,7 +115,10 @@ def _http_check(
         # A rate limit still proves the key authenticates.
         return exc.code == 429, hint
     except urllib.error.URLError as exc:
-        return False, f"could not reach {url}: {exc.reason}"
+        # Host only, never the full URL: these strings are printed, and a URL can
+        # carry a credential in its query string.
+        host = urllib.parse.urlsplit(url).netloc
+        return False, f"could not reach {host}: {exc.reason}"
     except OSError as exc:  # pragma: no cover - network shapes vary
         return False, str(exc)
 
@@ -113,8 +137,11 @@ def _validate_anthropic(key: str) -> tuple[bool, str]:
 
 
 def _validate_gemini(key: str) -> tuple[bool, str]:
+    # Header, not ?key=: a query string is logged by every proxy in the path and
+    # by Google's own front end.
     return _http_check(
-        f"https://generativelanguage.googleapis.com/v1beta/models?key={key}", {}
+        "https://generativelanguage.googleapis.com/v1beta/models",
+        {"x-goog-api-key": key},
     )
 
 
@@ -308,7 +335,9 @@ TIER_NAMES = {
 
 # Models pulled for the Ollama examples. qwen3 is currently the most reliable
 # small local model for tool calling, which ollama_tool_calls.py needs.
-OLLAMA_CHAT_MODEL = "qwen3:8b"
+# The models the Ollama examples default to, so a completed setup run leaves
+# them runnable with no arguments. Keep in step with examples/SETUP.md.
+OLLAMA_CHAT_MODEL = "llama3.2"
 OLLAMA_EMBED_MODEL = "nomic-embed-text"
 
 # Indexes the examples expect to already exist on the local database.

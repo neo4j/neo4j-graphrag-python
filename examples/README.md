@@ -1,5 +1,14 @@
 # Examples Index
 
+> **New here?** [SETUP.md](SETUP.md) covers what each example needs in order to
+> run - extras, API keys and services - and which providers are free. To find out
+> what is missing on your machine, and be walked through fixing it:
+>
+> ```bash
+> python scripts/setup_examples.py --check   # report only, changes nothing
+> python scripts/setup_examples.py           # walk through fixing it
+> ```
+
 This folder contains examples usage for the different features
 supported by the `neo4j-graphrag` package:
 
