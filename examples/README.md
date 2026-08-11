@@ -55,6 +55,7 @@ are listed in [the last section of this file](#customize).
 - [End to end GraphRAG](./answer/graphrag.py)
 - [GraphRAG with message history](./question_answering/graphrag_with_message_history.py)
 - [GraphRAG with Neo4j message history](./question_answering/graphrag_with_neo4j_message_history.py)
+- [GraphRAG with explainability](./question_answering/graphrag_with_explain.py)
 
 ## Customize
 
