@@ -132,6 +132,30 @@ class MistralAILLM(LLMBase):
             raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
 
     # implementations
+    @staticmethod
+    def _parse_response(response: Any) -> tuple[str, Optional[LLMUsage]]:
+        """Pull the content and token usage out of a chat completion.
+
+        Shared by the four invoke paths, which differ only in how they call the
+        SDK.
+        """
+        content = ""
+        usage = None
+        if response and response.choices:
+            # mistralai 2.x types `message` as optional, so a choice can arrive
+            # without one - a filtered or truncated completion.
+            message = response.choices[0].message
+            possible_content = message.content if message else None
+            if isinstance(possible_content, str):
+                content = possible_content
+        if response and response.usage:
+            usage = LLMUsage(
+                request_tokens=response.usage.prompt_tokens,
+                response_tokens=response.usage.completion_tokens,
+                total_tokens=response.usage.total_tokens,
+            )
+        return content, usage
+
     @rate_limit_handler_decorator
     def __invoke_v1(
         self,
@@ -162,21 +186,7 @@ class MistralAILLM(LLMBase):
                 messages=messages,
                 **self.model_params,
             )
-            content: str = ""
-            usage = None
-            if response and response.choices:
-                # mistralai 2.x types `message` as optional, so a choice can
-                # arrive without one - a filtered or truncated completion.
-                message = response.choices[0].message
-                possible_content = message.content if message else None
-                if isinstance(possible_content, str):
-                    content = possible_content
-            if response and response.usage:
-                usage = LLMUsage(
-                    request_tokens=response.usage.prompt_tokens,
-                    response_tokens=response.usage.completion_tokens,
-                    total_tokens=response.usage.total_tokens,
-                )
+            content, usage = self._parse_response(response)
             return LLMResponse(content=content, usage=usage)
         except SDKError as e:
             raise LLMGenerationError(e)
@@ -210,21 +220,7 @@ class MistralAILLM(LLMBase):
             response = self.client.chat.complete(
                 model=self.model_name, messages=messages, **self.model_params, **kwargs
             )
-            content: str = ""
-            usage = None
-            if response and response.choices:
-                # mistralai 2.x types `message` as optional, so a choice can
-                # arrive without one - a filtered or truncated completion.
-                message = response.choices[0].message
-                possible_content = message.content if message else None
-                if isinstance(possible_content, str):
-                    content = possible_content
-            if response and response.usage:
-                usage = LLMUsage(
-                    request_tokens=response.usage.prompt_tokens,
-                    response_tokens=response.usage.completion_tokens,
-                    total_tokens=response.usage.total_tokens,
-                )
+            content, usage = self._parse_response(response)
             return LLMResponse(content=content, usage=usage)
         except SDKError as e:
             raise LLMGenerationError(e)
@@ -260,21 +256,7 @@ class MistralAILLM(LLMBase):
                 messages=messages,
                 **self.model_params,
             )
-            content: str = ""
-            usage = None
-            if response and response.choices:
-                # mistralai 2.x types `message` as optional, so a choice can
-                # arrive without one - a filtered or truncated completion.
-                message = response.choices[0].message
-                possible_content = message.content if message else None
-                if isinstance(possible_content, str):
-                    content = possible_content
-            if response and response.usage:
-                usage = LLMUsage(
-                    request_tokens=response.usage.prompt_tokens,
-                    response_tokens=response.usage.completion_tokens,
-                    total_tokens=response.usage.total_tokens,
-                )
+            content, usage = self._parse_response(response)
             return LLMResponse(content=content, usage=usage)
         except SDKError as e:
             raise LLMGenerationError(e)
@@ -311,21 +293,7 @@ class MistralAILLM(LLMBase):
                 **self.model_params,
                 **kwargs,
             )
-            content: str = ""
-            usage = None
-            if response and response.choices:
-                # mistralai 2.x types `message` as optional, so a choice can
-                # arrive without one - a filtered or truncated completion.
-                message = response.choices[0].message
-                possible_content = message.content if message else None
-                if isinstance(possible_content, str):
-                    content = possible_content
-            if response and response.usage:
-                usage = LLMUsage(
-                    request_tokens=response.usage.prompt_tokens,
-                    response_tokens=response.usage.completion_tokens,
-                    total_tokens=response.usage.total_tokens,
-                )
+            content, usage = self._parse_response(response)
             return LLMResponse(content=content, usage=usage)
         except SDKError as e:
             raise LLMGenerationError(e)
