@@ -66,7 +66,7 @@ def blockers_for(
                 found.append(
                     Blocker(
                         f"{name} not set",
-                        f"export {name}=..., or add it to .env",
+                        f"setup_examples.py --provider {provider_key}",
                     )
                 )
         if provider.credential_probe is not None:

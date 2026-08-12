@@ -56,3 +56,54 @@ def apply_env_file(env_file: dict[str, str]) -> None:
     for name, value in env_file.items():
         if value and name not in os.environ:
             os.environ[name] = value
+
+
+def mask(value: str) -> str:
+    """Show just enough to recognise a key, never enough to use it."""
+    if len(value) <= 8:
+        return "*" * len(value)
+    return f"{'*' * 8}{value[-4:]}"
+
+
+def write_env_var(name: str, value: str, path: Path = ENV_FILE) -> None:
+    """Set one variable in .env, preserving everything else. Mode 0600.
+
+    Also matches the commented-out placeholder the template ships, so setting a
+    key replaces its placeholder in place rather than appending a duplicate.
+    """
+    lines = path.read_text().splitlines() if path.exists() else []
+    replaced = False
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        # One leading '#' is the template's own placeholder. More than one is a
+        # deliberate comment, so leave it alone rather than overwrite it.
+        commented = stripped[1:].strip() if stripped.startswith("#") else stripped
+        if stripped.startswith(f"{name}=") or commented.startswith(f"{name}="):
+            lines[index] = f"{name}={value}"
+            replaced = True
+            break
+    if not replaced:
+        if lines and lines[-1].strip():
+            lines.append("")
+        lines.append(f"{name}={value}")
+
+    _write_private(path, "\n".join(lines) + "\n")
+
+
+def _write_private(path: Path, content: str) -> None:
+    """Replace path's contents, never leaving a secret readable by anyone else.
+
+    Written through a temp file in the same directory so an interrupted write
+    cannot truncate the credentials already in place, and created at 0600 up
+    front - creating first and chmod-ing after leaves the secret world-readable
+    for the window in between.
+    """
+    tmp = path.with_name(f".{path.name}.tmp")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        with os.fdopen(fd, "w") as handle:
+            handle.write(content)
+        os.replace(tmp, path)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise

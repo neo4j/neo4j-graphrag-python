@@ -34,3 +34,5 @@ import example_requirements as reqs  # noqa: E402
 
 REPO_ROOT = reqs.REPO_ROOT
 ENV_FILE = REPO_ROOT / ".env"
+ENV_TEMPLATE = REPO_ROOT / "examples" / ".env.example"
+COMPOSE_FILE = REPO_ROOT / "tests" / "e2e" / "docker-compose.yml"

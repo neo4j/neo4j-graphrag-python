@@ -16,6 +16,11 @@
 
 from __future__ import annotations
 
+import subprocess
+from typing import Sequence
+
+from . import REPO_ROOT
+
 import sys
 
 
@@ -31,3 +36,29 @@ def colour(text: str, code: str) -> str:
     if not sys.stdout.isatty():
         return text
     return f"{code}{text}{RESET}"
+
+
+def confirm(question: str, default: bool = True, assume_yes: bool = False) -> bool:
+    if assume_yes:
+        return default
+    suffix = "[Y/n]" if default else "[y/N]"
+    try:
+        answer = input(f"{question} {suffix} ").strip().lower()
+    except EOFError:
+        return default
+    if not answer:
+        return default
+    return answer.startswith("y")
+
+
+def run_command(command: Sequence[str], check: bool = False) -> int:
+    print(colour(f"  $ {' '.join(command)}", DIM))
+    result = subprocess.run(list(command), cwd=REPO_ROOT)
+    if check and result.returncode != 0:
+        print(colour(f"  command failed ({result.returncode})", RED))
+    return result.returncode
+
+
+def heading(text: str) -> None:
+    print()
+    print(colour(f"== {text}", BOLD))

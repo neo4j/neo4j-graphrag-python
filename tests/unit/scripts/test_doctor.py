@@ -83,14 +83,18 @@ def test_an_unset_env_var_is_reported(monkeypatch: pytest.MonkeyPatch) -> None:
     assert found == ["OPENAI_API_KEY not set"]
 
 
-def test_the_env_var_fix_does_not_name_a_command_that_does_not_exist(
+def test_the_env_var_fix_points_at_the_installer(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The installer is a separate tool; do not advise a flag we do not ship."""
+    """Now that the installer ships, the doctor can hand the user straight to it.
+
+    Every fix string must name a command that exists - before the installer
+    landed this advised `--provider`, which nothing implemented.
+    """
     monkeypatch.setattr(doctor, "env_value", lambda name, env_file: None)
     requirement = reqs.ExampleRequirements(path=FAKE, providers={"openai"})
     fixes = [b.fix for b in doctor.blockers_for(requirement, {}, healthy_neo4j())]
-    assert "--provider" not in " ".join(fixes)
+    assert "setup_examples.py --provider openai" in " ".join(fixes)
 
 
 def test_an_unreachable_service_is_reported(monkeypatch: pytest.MonkeyPatch) -> None:
