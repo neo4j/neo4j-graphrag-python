@@ -165,7 +165,7 @@ To use Anthropic, instantiate the `AnthropicLLM` class:
     from neo4j_graphrag.llm import AnthropicLLM
 
     llm = AnthropicLLM(
-        model_name="claude-3-opus-20240229",
+        model_name="claude-sonnet-4-5",
         model_params={"max_tokens": 1000},  # max_tokens must be specified
         api_key=api_key,  # can also set `ANTHROPIC_API_KEY` in env vars
     )
@@ -215,7 +215,7 @@ To use Cohere, instantiate the `CohereLLM` class:
     from neo4j_graphrag.llm import CohereLLM
 
     llm = CohereLLM(
-        model_name="command-r",
+        model_name="command-a-03-2025",
         api_key=api_key,  # can also set `CO_API_KEY` in env vars
     )
     llm.invoke("say something")
@@ -405,7 +405,7 @@ VertexAI uses `GenerationConfig` with `response_mime_type` and `response_schema`
         name: str
         age: int
 
-    llm = VertexAILLM(model_name="gemini-1.5-pro")
+    llm = VertexAILLM(model_name="gemini-2.5-flash")
     messages = [LLMMessage(role="user", content="Extract: John is 30.")]
     response = llm.invoke(messages, response_format=Person, temperature=0)
     person = Person.model_validate_json(response.content)
@@ -501,7 +501,7 @@ You can customize the rate limiting behavior by creating your own rate limit han
     custom_handler = CustomRateLimitHandler()
 
     llm = AnthropicLLM(
-        model_name="claude-3-sonnet-20240229",
+        model_name="claude-sonnet-4-5",
         rate_limit_handler=custom_handler,
     )
 
@@ -516,7 +516,7 @@ For high-throughput applications or when you handle rate limiting externally, yo
 
     # Disable rate limiting completely
     llm = CohereLLM(
-        model_name="command-r-plus",
+        model_name="command-a-03-2025",
         rate_limit_handler=NoOpRateLimitHandler(),
     )
     llm.invoke("Hello, world!")

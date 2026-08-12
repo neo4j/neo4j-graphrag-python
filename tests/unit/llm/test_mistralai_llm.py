@@ -491,7 +491,9 @@ async def test_mistralai_ainvoke_v2_rate_limit_handler_called(
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
 def test_mistralai_llm_close(mock_mistral: Mock) -> None:
-    mock_mistral.return_value.aclose = AsyncMock()
+    # mistralai 2.x has no close()/aclose(); releasing the client means driving
+    # the context manager protocol.
+    mock_mistral.return_value.__aexit__ = AsyncMock()
 
     llm = MistralAILLM(model_name="mistral-model")
 
@@ -499,14 +501,14 @@ def test_mistralai_llm_close(mock_mistral: Mock) -> None:
         warnings.simplefilter("error")
         llm.close()
 
-    mock_mistral.return_value.close.assert_called_once()
-    mock_mistral.return_value.aclose.assert_called_once()
+    mock_mistral.return_value.__exit__.assert_called_once_with(None, None, None)
+    mock_mistral.return_value.__aexit__.assert_called_once_with(None, None, None)
 
 
 @pytest.mark.asyncio
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
 async def test_mistralai_llm_aclose(mock_mistral: Mock) -> None:
-    mock_mistral.return_value.aclose = AsyncMock()
+    mock_mistral.return_value.__aexit__ = AsyncMock()
 
     llm = MistralAILLM(model_name="mistral-model")
 
@@ -514,5 +516,5 @@ async def test_mistralai_llm_aclose(mock_mistral: Mock) -> None:
         warnings.simplefilter("error")
         await llm.aclose()
 
-    mock_mistral.return_value.close.assert_called_once()
-    mock_mistral.return_value.aclose.assert_called_once()
+    mock_mistral.return_value.__exit__.assert_called_once_with(None, None, None)
+    mock_mistral.return_value.__aexit__.assert_called_once_with(None, None, None)
