@@ -150,9 +150,12 @@ def main() -> None:
             },
         )
 
+        # gpt-4.1 rather than gpt-5: tool selection and the query_params the LLM
+        # fills in need to be stable, and gpt-5 only accepts the default
+        # temperature (1).
         llm = OpenAILLM(
             api_key=os.getenv("OPENAI_API_KEY"),
-            model_name="gpt-5",
+            model_name="gpt-4.1",
             model_params={"temperature": 0.2},
         )
 

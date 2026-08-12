@@ -69,9 +69,12 @@ def process_tool_calls(response: ToolCallResponse) -> Dict[str, Any]:
 
 
 async def main() -> None:
+    # gpt-4.1 rather than gpt-5: the extracted tool arguments are asserted against
+    # the input text, so low output variance matters here, and gpt-5 only accepts
+    # the default temperature (1).
     async with OpenAILLM(
         api_key=os.getenv("OPENAI_API_KEY"),
-        model_name="gpt-5",
+        model_name="gpt-4.1",
         model_params={"temperature": 0},
     ) as llm:
         # Example text containing information about a person
