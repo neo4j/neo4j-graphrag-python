@@ -32,3 +32,17 @@ repos:
           --allow-subclassing-any,
           --exclude='./docs/'
         ]
+      # Opt-in: actually runs the examples we have credentials for, against the
+      # live provider APIs. Costs money and hits the network, so it never fires
+      # on a commit, a push, or in CI. Run it deliberately, before a release or
+      # after touching the examples:
+      #   uv run pre-commit run --hook-stage manual examples-live
+      - id: examples-live
+        name: Examples Live Run (opt-in, costs money)
+        entry: uv run python scripts/check_examples.py --live
+        language: system
+        stages: [ manual ]
+        # Not file-driven: without always_run, pre-commit skips the hook whenever
+        # no matching file is staged, and the command above silently does nothing.
+        always_run: true
+        pass_filenames: false
