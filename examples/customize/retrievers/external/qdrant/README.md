@@ -1,9 +1,10 @@
 ### Start services locally
 
-Run the following command to spin up Neo4j and Qdrant containers.
+Run the following command to spin up Neo4j and Qdrant containers. Qdrant is behind the
+`vectordb` profile, so it needs the flag.
 
 ```bash
-docker compose -f tests/e2e/docker-compose.yml up
+docker compose -f tests/e2e/docker-compose.yml --profile vectordb up -d --wait
 ```
 
 ### Write data (once)
