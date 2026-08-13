@@ -122,8 +122,6 @@ are listed in [the last section of this file](#customize).
   - [Custom](./customize/build_graph/components/loaders/custom_loader.py)
 - Text Splitter:
   - [Fixed size splitter](./customize/build_graph/components/splitters/fixed_size_splitter.py)
-  - [Splitter from LangChain](./customize/build_graph/components/splitters/langhchain_splitter.py)
-  - [Splitter from LLamaIndex](./customize/build_graph/components/splitters/llamaindex_splitter.py)
   - [Custom](./customize/build_graph/components/splitters/custom_splitter.py)
 - [Chunk embedder]()
 - Schema Builder:

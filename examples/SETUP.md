@@ -129,6 +129,6 @@ These are properties of the examples, not of your setup.
 - `customize/llms/llm_with_neo4j_message_history.py` and
   `question_answering/graphrag_with_neo4j_message_history.py` write message history to the
   **read-only** demo database, so they fail with `Forbidden` as written.
-- `customize/build_graph/components/splitters/langhchain_splitter.py` and `llamaindex_splitter.py`
-  are empty files, though `README.md` links to them.
-- `customize/embeddings/azure_openai_embeddings.py` reads no environment variables at all.
+- `customize/embeddings/azure_openai_embeddings.py` reads no environment variables. Its endpoint,
+  key and API version are placeholders in the file itself (`api_key="<my key>"`), so it has to be
+  edited before it will run — and that edit must not be committed.
