@@ -30,8 +30,12 @@ jobs:
         with:
           path: .venv
           key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/uv.lock') }}
+      # The install is deliberately not conditional on the cache. A restored .venv
+      # that is missing packages - from a cache saved by an interrupted install,
+      # say - would otherwise be used as-is, and the failure surfaces much later
+      # as an ImportError inside a test. uv sync takes a few seconds when the
+      # environment is already correct, and repairs it when it is not.
       - name: Install dependencies
-        if: steps.cached-venv.outputs.cache-hit != 'true'
         run: uv sync --frozen --all-extras --group dev
       - name: Download SpaCy model
         if: matrix.python-version != '3.14'
