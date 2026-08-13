@@ -42,6 +42,7 @@ import sys
 from functools import cache
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TypedDict
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES_DIR = REPO_ROOT / "examples"
@@ -191,6 +192,7 @@ SERVICE_LABELS: dict[str, str] = {
     PINECONE_SERVER: "a running Pinecone (or Pinecone Local on :5080)",
 }
 
+
 # Requirements that leave no reliable trace in the source. Keyed by a glob
 # relative to examples/; every matching glob contributes.
 #
@@ -200,7 +202,19 @@ SERVICE_LABELS: dict[str, str] = {
 #
 # Keep this to what an example *needs*, not to what is wrong with it: known defects
 # belong in examples/SETUP.md, where they can be read without running anything.
-SERVICE_RULES: list[tuple[str, dict[str, object]]] = [
+class RuleSpec(TypedDict, total=False):
+    """What a rule may declare. Typed so mypy rejects the two ways a rule can
+    silently do nothing: a mistyped key, and a bare string where a list belongs.
+    """
+
+    services: list[str]
+    indexes: list[str]
+    extras: list[str]
+    providers: list[str]
+    env_vars: list[str]
+
+
+SERVICE_RULES: list[tuple[str, RuleSpec]] = [
     ("kg_builder.py", {"services": [APOC]}),
     ("build_graph/**", {"services": [APOC]}),
     ("customize/build_graph/pipeline/kg_builder_*.py", {"services": [APOC]}),
@@ -407,26 +421,26 @@ def _datastore_services(
 
 
 def _apply_rules(path: Path, requirements: ExampleRequirements) -> None:
+    if EXAMPLES_DIR not in path.parents:
+        # Nothing outside examples/ can match a rule, and analyse() promises not
+        # to raise. Returning here is also what lets analyse() be tested against
+        # a synthetic file rather than only against the real corpus.
+        return
     rel = path.relative_to(EXAMPLES_DIR).as_posix()
     for pattern, spec in SERVICE_RULES:
         if not fnmatch.fnmatch(rel, pattern):
             continue
-        for key, target in (
-            ("services", requirements.services),
-            ("indexes", requirements.indexes),
-            ("extras", requirements.extras),
-            ("providers", requirements.providers),
-            ("env_vars", requirements.env_vars),
-        ):
-            values = spec.get(key)
-            if isinstance(values, list):
-                target.update(str(v) for v in values)
+        requirements.services.update(spec.get("services", ()))
+        requirements.indexes.update(spec.get("indexes", ()))
+        requirements.extras.update(spec.get("extras", ()))
+        requirements.providers.update(spec.get("providers", ()))
+        requirements.env_vars.update(spec.get("env_vars", ()))
 
 
 def analyse(path: Path) -> ExampleRequirements:
     """Work out what one example needs. Never raises on a broken file."""
     requirements = ExampleRequirements(path=path)
-    source = path.read_text()
+    source = path.read_text(encoding="utf-8")
     try:
         tree = ast.parse(source, filename=str(path))
     except SyntaxError:
@@ -461,7 +475,6 @@ def analyse(path: Path) -> ExampleRequirements:
 
     requirements.env_vars = _env_vars(tree)
     requirements.runnable = _is_runnable(tree)
-    requirements.sibling_modules = _sibling_modules(modules)
 
     literals = _string_constants(tree)
     mocked = _uses_mock_driver(modules, symbols)
@@ -496,6 +509,9 @@ SERVICE_ENDPOINTS: dict[str, tuple[str, int]] = {
 
 
 def port_open(host: str, port: int, timeout: float = 1.0) -> bool:
+    # Imported here rather than at module scope: everything above this point is
+    # pure static analysis, and a caller that only wants that should not pay for
+    # the networking stack.
     import socket
 
     try:
