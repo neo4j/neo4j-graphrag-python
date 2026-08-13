@@ -15,7 +15,7 @@ docker compose -f tests/e2e/docker-compose.yml --profile vectordb up -d --wait
 Run this from the project root to write data to both dbs.
 
 ```
-uv run python -m tests/e2e/weaviate_e2e/populate_dbs.py
+uv run python -m tests.e2e.weaviate_e2e.populate_dbs
 ```
 
 ### Install Weaviate client

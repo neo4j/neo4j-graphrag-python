@@ -4,6 +4,8 @@
 
 ### Added
 
+- Added `examples/SETUP.md` and `examples/.env.example`, documenting what the examples need in order to run — extras, API keys and services — and which providers are free or have a local equivalent.
+- The `examples` extra now declares `python-dotenv` and `requests`. Fourteen examples call `load_dotenv()` and `tools_retriever_example.py` calls a web API with `requests`, but neither package was declared, so both resolved only transitively.
 - `AnthropicLLM` now supports structured output via the `response_format` argument, accepting a Pydantic model or an Anthropic `output_config` dict, alongside `OpenAILLM` and `VertexAILLM`.
 - Added `neo4j_graphrag.llm.utils.split_http_client_kwargs`, a shared helper that routes a constructor's `http_client` kwarg to whichever of the sync/async SDK clients it matches. `AnthropicLLM`, `OpenAILLM`, and `AzureOpenAILLM` now all use this single implementation instead of three separately maintained copies of the same logic. Custom subclasses that construct their own SDK clients can call it to get the same behavior; it is exported from `neo4j_graphrag.llm` for that purpose.
 - Added `BaseAnthropicLLM`, a new base class holding all of `AnthropicLLM`'s shared message-building, schema-conversion, and response-parsing logic, mirroring `BaseOpenAILLM`. Both `BaseAnthropicLLM` and `BaseOpenAILLM` are now exported from `neo4j_graphrag.llm` as documented, supported extension points for subclassing to reach custom Anthropic/OpenAI-compatible endpoints.
