@@ -92,19 +92,29 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Set up uv
         uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
-      - name: Load cached venv
+      # restore/save rather than the combined cache action, so the save can be
+      # made conditional. The combined action saves in a post step that also runs
+      # when the job was cancelled or failed, which publishes a half-installed
+      # .venv under a key derived from uv.lock alone. Every later run with that
+      # lock then restores it, and an exact key hit suppresses the save, so the
+      # bad entry is never replaced - it has to be deleted by hand.
+      - name: Restore cached venv
         id: cached-venv
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .venv
           key: ${{ runner.os }}-venv-${{ matrix.python-version }}-${{ hashFiles('**/uv.lock') }}
-      # The install is deliberately not conditional on the cache. A restored .venv
-      # that is missing packages - from a cache saved by an interrupted install,
-      # say - would otherwise be used as-is, and the failure surfaces much later
-      # as an ImportError inside a test. uv sync takes a few seconds when the
-      # environment is already correct, and repairs it when it is not.
+      # Unconditional: a restored .venv that is missing packages would otherwise
+      # be trusted, and the failure surfaces much later as an ImportError inside
+      # a test. uv sync is quick when the environment is already correct.
       - name: Install dependencies
         run: uv sync --frozen --all-extras --group dev
+      - name: Save cached venv
+        if: steps.cached-venv.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .venv
+          key: ${{ runner.os }}-venv-${{ matrix.python-version }}-${{ hashFiles('**/uv.lock') }}
       - name: Show disk usage after dependency installation
         run: |
           df -h
