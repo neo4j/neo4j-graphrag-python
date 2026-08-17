@@ -24,15 +24,27 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Set up uv
         uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
-      - name: Load cached venv
+      # Split the combined cache action into restore here and a gated save
+      # below: the combined action's post step also ran when the job failed or
+      # was cancelled, publishing a half-installed .venv under an exact key
+      # derived from uv.lock alone that every later run restored.
+      - name: Restore cached venv
         id: cached-venv
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .venv
           key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/uv.lock') }}
+      # Unconditional: a restored .venv that is missing packages would otherwise
+      # be trusted, and the failure surfaces much later as an ImportError inside
+      # a test. uv sync is quick when the environment is already correct.
       - name: Install dependencies
-        if: steps.cached-venv.outputs.cache-hit != 'true'
         run: uv sync --frozen --all-extras --group dev
+      - name: Save cached venv
+        if: steps.cached-venv.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/uv.lock') }}
       - name: Download SpaCy model
         if: matrix.python-version != '3.14'
         run: uv pip install "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
