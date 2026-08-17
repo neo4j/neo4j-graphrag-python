@@ -117,7 +117,7 @@ different defaults or credential handling than the built-in ``AnthropicLLM``:
             self.async_client = anthropic.AsyncAnthropic(**async_params)
 
 
-    llm = MyCustomAnthropicLLM(model_name="claude-3-opus-20240229")
+    llm = MyCustomAnthropicLLM(model_name="claude-sonnet-4-5")
     llm.invoke("Who is the mother of Paul Atreides?")
 
 All of ``invoke``/``ainvoke``, structured-output handling, and message

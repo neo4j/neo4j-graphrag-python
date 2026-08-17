@@ -374,8 +374,8 @@ Below is an example of configuring an LLM in a JSON configuration file:
                     "var_": "OPENAI_API_KEY",
                 },
                 "model_params": {
-                    "temperature": 0,
-                    "max_tokens": 2000
+                    "max_completion_tokens": 16000,
+                    "reasoning_effort": "low"
                 }
             }
         }
@@ -393,8 +393,8 @@ And the equivalent YAML:
           resolver_: ENV
           var_: OPENAI_API_KEY
         model_params:
-          temperature: 0
-          max_tokens: 2000
+          max_completion_tokens: 16000
+          reasoning_effort: low
 
 - The `class_` key specifies the path to the class to be instantiated.
 - The `params_` key contains the parameters to be passed to the class constructor.
@@ -862,7 +862,8 @@ Instead of manually defining the schema, you can use the `SchemaFromTextExtracto
         llm=OpenAILLM(
             model_name="gpt-5",
             model_params={
-                "max_tokens": 2000,
+                "max_completion_tokens": 16000,
+                "reasoning_effort": "low",
                 "response_format": {"type": "json_object"},
             },
         )
@@ -896,7 +897,7 @@ For improved reliability with :ref:`OpenAILLM <openaillm>`, :ref:`VertexAILLM <v
     from neo4j_graphrag.components.schema import SchemaFromTextExtractor
     from neo4j_graphrag.llm import OpenAILLM
 
-    llm = OpenAILLM(model_name="gpt-5-mini", model_params={"temperature": 0})
+    llm = OpenAILLM(model_name="gpt-4.1-mini", model_params={"temperature": 0})
     schema_extractor = SchemaFromTextExtractor(
         llm=llm,
         use_structured_output=True
@@ -988,7 +989,8 @@ It can be used in this way:
         llm=OpenAILLM(
             model_name="gpt-5",
             model_params={
-                "max_tokens": 1000,
+                "max_completion_tokens": 16000,
+                "reasoning_effort": "low",
                 "response_format": {"type": "json_object"},
             },
         )
@@ -1021,7 +1023,7 @@ For improved reliability and type safety with :ref:`OpenAILLM <openaillm>`, :ref
     )
     from neo4j_graphrag.llm import OpenAILLM
 
-    llm = OpenAILLM(model_name="gpt-5-mini", model_params={"temperature": 0})
+    llm = OpenAILLM(model_name="gpt-4.1-mini", model_params={"temperature": 0})
     extractor = LLMEntityRelationExtractor(llm=llm, use_structured_output=True)
 
 .. note::

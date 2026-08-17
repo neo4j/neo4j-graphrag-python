@@ -4,7 +4,7 @@ from neo4j_graphrag.llm import CohereLLM, LLMResponse
 api_key = None
 
 with CohereLLM(
-    model_name="command-r",
+    model_name="command-a-03-2025",
     api_key=api_key,
 ) as llm:
     res: LLMResponse = llm.invoke("say something")

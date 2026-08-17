@@ -193,10 +193,14 @@ async def main(driver: neo4j.Driver) -> PipelineResult:
             wrote many groundbreaking papers especially about general relativity
             and quantum mechanics. He worked for many different institutions, including
             the University of Bern in Switzerland and the University of Oxford."""
+    # gpt-5 needs max_completion_tokens (not max_tokens) and counts reasoning tokens
+    # against it, so too small a budget returns empty content. reasoning_effort="low"
+    # roughly halves the cost with no measurable difference in extraction quality.
     llm = OpenAILLM(
         model_name="gpt-5",
         model_params={
-            "max_tokens": 1000,
+            "max_completion_tokens": 16000,
+            "reasoning_effort": "low",
             "response_format": {"type": "json_object"},
         },
     )

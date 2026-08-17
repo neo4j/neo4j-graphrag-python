@@ -13,6 +13,6 @@ class CustomEmbeddings(Embedder):
         return [random.random() for _ in range(self.dimension)]
 
 
-llm = CustomEmbeddings(dimensions=1024)
+llm = CustomEmbeddings(dimension=1024)
 res = llm.embed_query("text")
 print(res[:10])

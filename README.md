@@ -131,9 +131,9 @@ embedder = OpenAIEmbeddings(model="text-embedding-3-large")
 llm = OpenAILLM(
     model_name="gpt-5",
     model_params={
-        "max_tokens": 2000,
+        "max_completion_tokens": 16000,
+        "reasoning_effort": "low",
         "response_format": {"type": "json_object"},
-        "temperature": 0,
     },
 )
 
@@ -270,7 +270,7 @@ embedder = OpenAIEmbeddings(model="text-embedding-3-large")
 retriever = VectorRetriever(driver, INDEX_NAME, embedder)
 
 # Instantiate the LLM
-llm = OpenAILLM(model_name="gpt-5", model_params={"temperature": 0})
+llm = OpenAILLM(model_name="gpt-5")
 
 # Instantiate the RAG pipeline
 rag = GraphRAG(retriever=retriever, llm=llm)
@@ -405,18 +405,21 @@ To execute end-to-end (e2e) tests, you need the following services to be running
 - weaviate
 - weaviate-text2vec-transformers
 
-The simplest way to set these up is by using Docker Compose:
+The simplest way to set these up is by using Docker Compose. The vector stores sit behind a
+`vectordb` profile, so the full e2e suite needs it; omit the profile to start Neo4j alone.
 
 ```bash
-docker compose -f tests/e2e/docker-compose.yml up
+docker compose -f tests/e2e/docker-compose.yml --profile vectordb up -d --wait
 ```
 
-_(tip: If you encounter any caching issues within the databases, you can completely remove them by running `docker compose -f tests/e2e/docker-compose.yml down`)_
+`--wait` blocks until the services report healthy, rather than merely started.
+
+_(tip: If you encounter any caching issues within the databases, you can completely remove them by running `docker compose -f tests/e2e/docker-compose.yml --profile '*' down`. The `--profile '*'` matches every profile, so it tears down whatever you started.)_
 
 For SEARCH-clause e2e tests (`tests/e2e/test_search_clause_e2e.py`), use the Neo4j 2026 compose file instead. It pins Neo4j 2026.02.2 (required for the Cypher 25 `SEARCH` clause) and binds the same `7687`/`7474` ports — stop the default stack first:
 
 ```bash
-docker compose -f tests/e2e/docker-compose.yml down
+docker compose -f tests/e2e/docker-compose.yml --profile '*' down
 docker compose -f tests/e2e/docker-compose.neo4j2026.yml up -d
 ```
 
