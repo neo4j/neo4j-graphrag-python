@@ -24,12 +24,10 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Set up uv
         uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
-      # restore/save rather than the combined cache action, so the save can be
-      # made conditional. The combined action saves in a post step that also runs
-      # when the job was cancelled or failed, which publishes a half-installed
-      # .venv under a key derived from uv.lock alone. Every later run with that
-      # lock then restores it, and an exact key hit suppresses the save, so the
-      # bad entry is never replaced - it has to be deleted by hand.
+      # Split the combined cache action into restore here and a gated save
+      # below: the combined action's post step also ran when the job failed or
+      # was cancelled, publishing a half-installed .venv under an exact key
+      # derived from uv.lock alone that every later run restored.
       - name: Restore cached venv
         id: cached-venv
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
