@@ -289,7 +289,7 @@ class Neo4jWriter(KGWriter):
             support_variable_scope_clause=self.is_version_5_23_or_above,
             batch_size=self.batch_size,
         )
-        with self.driver.session() as session:
+        with self.driver.session(database=self.neo4j_database) as session:
             session.run(query)
 
     @validate_call
