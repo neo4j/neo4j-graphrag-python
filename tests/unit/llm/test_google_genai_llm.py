@@ -14,13 +14,19 @@
 #  limitations under the License.
 from __future__ import annotations
 
-from typing import Generator, Tuple
+from typing import Generator, Tuple, get_args
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm import BaseGeminiLLM, GeminiLLM
+from neo4j_graphrag.llm import (
+    GEMINI_DEFAULT_IMAGE_MIME_TYPE,
+    GEMINI_SUPPORTED_IMAGE_MIME_TYPES,
+    BaseGeminiLLM,
+    GeminiImageMimeType,
+    GeminiLLM,
+)
 from neo4j_graphrag.types import LLMMessage
 
 
@@ -258,3 +264,160 @@ async def test_gemini_llm_aclose_closes_sync_and_async_clients(
 
     mock_client.close.assert_called_once()
     mock_client.aio.aclose.assert_awaited_once()
+
+
+# ---------------------------------------------------------------------------
+# image_bytes support
+# ---------------------------------------------------------------------------
+
+
+def _content_factory(**kwargs):  # type: ignore[no-untyped-def]
+    """Return a MagicMock that mimics types.Content attribute access."""
+    obj = MagicMock()
+    obj.role = kwargs.get("role")
+    obj.parts = list(kwargs.get("parts", []))
+    return obj
+
+
+def test_get_messages_v2_with_image_bytes_appends_part(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    """get_messages_v2 appends a from_bytes Part to the last user Content."""
+    _, mock_types = mock_genai
+    mock_types.Content = MagicMock(side_effect=_content_factory)
+    mock_types.Part.from_text = MagicMock(return_value=MagicMock())
+    mock_image_part = MagicMock()
+    mock_types.Part.from_bytes = MagicMock(return_value=mock_image_part)
+
+    llm = GeminiLLM("gemini-2.0-flash")
+    _, contents = llm.get_messages_v2(
+        [{"role": "user", "content": "describe this"}],
+        image_bytes=b"fake-png",
+        image_mime_type="image/png",
+    )
+
+    mock_types.Part.from_bytes.assert_called_once_with(
+        data=b"fake-png", mime_type="image/png"
+    )
+    assert contents[-1].parts is not None
+    assert mock_image_part in contents[-1].parts
+
+
+def test_get_messages_v2_without_image_bytes_unchanged(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    """get_messages_v2 without image_bytes does not call Part.from_bytes (regression)."""
+    _, mock_types = mock_genai
+    mock_types.Part.from_bytes = MagicMock()
+
+    llm = GeminiLLM("gemini-2.0-flash")
+    _, contents = llm.get_messages_v2([{"role": "user", "content": "hello"}])
+
+    mock_types.Part.from_bytes.assert_not_called()
+    assert len(contents) == 1
+
+
+def test_invoke_v2_image_bytes_not_forwarded_to_config(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    """image_bytes must be popped before _build_config — unknown fields raise in GenerateContentConfig."""
+    mock_gen, mock_types = mock_genai
+    mock_types.Content = MagicMock(side_effect=_content_factory)
+    mock_types.Part.from_text = MagicMock(return_value=MagicMock())
+    mock_types.Part.from_bytes = MagicMock(return_value=MagicMock())
+    mock_gen.Client.return_value.models.generate_content.return_value.text = "ok"
+
+    llm = GeminiLLM("gemini-2.0-flash")
+    response = llm.invoke(
+        [{"role": "user", "content": "describe this"}],
+        image_bytes=b"fake-png",
+        image_mime_type="image/png",
+    )
+
+    assert response.content == "ok"
+    config_kwargs = mock_types.GenerateContentConfig.call_args.kwargs
+    assert "image_bytes" not in config_kwargs
+    assert "image_mime_type" not in config_kwargs
+
+
+@pytest.mark.asyncio
+async def test_ainvoke_v2_image_bytes_not_forwarded_to_config(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    """Same as sync: image_bytes must not reach GenerateContentConfig in the async path."""
+    mock_gen, mock_types = mock_genai
+    mock_types.Content = MagicMock(side_effect=_content_factory)
+    mock_types.Part.from_text = MagicMock(return_value=MagicMock())
+    mock_types.Part.from_bytes = MagicMock(return_value=MagicMock())
+    mock_response = MagicMock()
+    mock_response.text = "async ok"
+    mock_gen.Client.return_value.aio.models.generate_content = AsyncMock(
+        return_value=mock_response
+    )
+
+    llm = GeminiLLM("gemini-2.0-flash")
+    response = await llm.ainvoke(
+        [{"role": "user", "content": "describe this"}],
+        image_bytes=b"fake-png",
+        image_mime_type="image/png",
+    )
+
+    assert response.content == "async ok"
+    config_kwargs = mock_types.GenerateContentConfig.call_args.kwargs
+    assert "image_bytes" not in config_kwargs
+    assert "image_mime_type" not in config_kwargs
+
+
+def test_get_messages_v2_rejects_unsupported_image_mime_type(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    """An image_mime_type outside GEMINI_SUPPORTED_IMAGE_MIME_TYPES is rejected."""
+    llm = GeminiLLM("gemini-2.0-flash")
+
+    with pytest.raises(ValueError, match="Unsupported image_mime_type"):
+        llm.get_messages_v2(
+            [{"role": "user", "content": "describe this"}],
+            image_bytes=b"fake-gif",
+            image_mime_type="image/gif",  # type: ignore[arg-type]
+        )
+
+
+def test_get_messages_v2_ignores_mime_type_without_image_bytes(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    """image_mime_type is only validated when image_bytes is provided."""
+    llm = GeminiLLM("gemini-2.0-flash")
+
+    _, contents = llm.get_messages_v2(
+        [{"role": "user", "content": "hello"}],
+        image_mime_type="image/gif",  # type: ignore[arg-type]
+    )
+
+    assert len(contents) == 1
+
+
+def test_invoke_v1_rejects_image_bytes(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    """The v1 (str input) path does not support images."""
+    llm = GeminiLLM("gemini-2.0-flash")
+
+    with pytest.raises(ValueError, match="only supported with a list of messages"):
+        llm.invoke("describe this", image_bytes=b"fake-png")  # type: ignore[call-overload]
+
+
+@pytest.mark.asyncio
+async def test_ainvoke_v1_rejects_image_bytes(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    """Same as sync: the v1 path does not support images."""
+    llm = GeminiLLM("gemini-2.0-flash")
+
+    with pytest.raises(ValueError, match="only supported with a list of messages"):
+        await llm.ainvoke("describe this", image_bytes=b"fake-png")  # type: ignore[call-overload]
+
+
+def test_gemini_image_mime_type_constants() -> None:
+    """The supported set is derived from the Literal and the default is a member."""
+    assert GEMINI_SUPPORTED_IMAGE_MIME_TYPES == frozenset(get_args(GeminiImageMimeType))
+    assert GEMINI_DEFAULT_IMAGE_MIME_TYPE in GEMINI_SUPPORTED_IMAGE_MIME_TYPES

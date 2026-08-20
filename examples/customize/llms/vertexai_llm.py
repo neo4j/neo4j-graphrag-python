@@ -3,7 +3,7 @@ from vertexai.generative_models import GenerationConfig
 
 generation_config = GenerationConfig(temperature=1.0)
 llm = VertexAILLM(
-    model_name="gemini-2.0-flash-001",
+    model_name="gemini-2.5-flash",
     generation_config=generation_config,
     # add here any argument that will be passed to the
     # vertexai.generative_models.GenerativeModel client

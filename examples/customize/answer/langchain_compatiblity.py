@@ -33,7 +33,11 @@ retriever = VectorCypherRetriever(
     neo4j_database=DATABASE,
 )
 
-llm = ChatOpenAI(model="gpt-5", temperature=0)
+# gpt-4.1 rather than gpt-5: LangChain's ChatOpenAI always sends a temperature
+# (it defaults to 0.7), and gpt-5 only accepts the default (1) - so a gpt-5 model
+# fails here even if this argument is omitted. Setting it explicitly also keeps
+# the example working regardless of what ChatOpenAI defaults to.
+llm = ChatOpenAI(model="gpt-4.1", temperature=0)
 
 rag = GraphRAG(
     retriever=retriever,

@@ -12,6 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import subprocess
 import sys
 import warnings
 from typing import Generator, List
@@ -29,7 +30,6 @@ from pydantic import BaseModel, ConfigDict
 @pytest.fixture
 def mock_cohere() -> Generator[MagicMock, None, None]:
     mock_cohere = MagicMock()
-    mock_cohere.core.api_error.ApiError = cohere.core.ApiError
     with patch.dict(sys.modules, {"cohere": mock_cohere}):
         yield mock_cohere
 
@@ -301,3 +301,28 @@ async def test_cohere_llm_aclose(mock_cohere: Mock) -> None:
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         await llm.aclose()
+
+
+def test_cohere_llm_constructs_against_the_real_sdk() -> None:
+    """CohereLLM must be constructible with the real cohere package installed.
+
+    Every other test here mocks `cohere`, and this module imports `cohere.core`
+    at the top - which populates `core` as an attribute of the `cohere` package
+    and hid a real defect: `cohere.core.api_error.ApiError` resolved in the test
+    suite while failing for users with `AttributeError: No core found in
+    _dynamic_imports`, because the top-level package resolves attributes lazily
+    and does not list `core`.
+
+    So this runs in a subprocess, where nothing has pre-imported the submodule.
+    """
+    source = (
+        "from neo4j_graphrag.llm import CohereLLM\n"
+        "llm = CohereLLM(model_name='command-a-03-2025', api_key='not-used')\n"
+        "assert llm.cohere_api_error.__name__ == 'ApiError'\n"
+        "print('ok')\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", source], capture_output=True, text=True, timeout=60
+    )
+    assert result.returncode == 0, result.stderr
+    assert "ok" in result.stdout

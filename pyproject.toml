@@ -27,7 +27,7 @@ dependencies = [
     "neo4j>=5.17.0,<7.0.0",
     "pydantic>=2.6.3,<3.0.0",
     "fsspec>=2024.9.0",
-    "pypdf>=6.0.0,<7.0.0",
+    "pypdf>=6.14.2,<7.0.0",
     "json-repair>=0.44.1,<1.0.0",
     "pyyaml>=6.0.2,<7.0.0",
     "types-pyyaml>=6.0.12.20240917,<7.0.0",
@@ -52,7 +52,7 @@ anthropic = ["anthropic>=0.77.0,<1.0.0"]
 bedrock = ["boto3>=1.35.0,<2.0.0"]
 ollama = ["ollama>=0.4.4,<0.5.0"]
 openai = ["openai>=1.51.1,<2.0.0"]
-mistralai = ["mistralai>=1.0.3,<2.0.0"]
+mistralai = ["mistralai>=2.7.1,<3.0.0"]
 litellm = ["litellm>=1.0.0,<2.0.0"]
 qdrant = ["qdrant-client>=1.11.3,<2.0.0"]
 kg_creation_tools = ["neo4j-viz>=0.4.2,<0.5.0"]
@@ -66,6 +66,11 @@ experimental = [
 examples = [
     "langchain-openai>=0.2.2,<2.0.0",
     "langchain-huggingface>=0.1.0,<2.0.0",
+    # 14 examples call load_dotenv(); without this it resolves only by accident,
+    # transitively through another extra.
+    "python-dotenv>=1.0.0,<2.0.0",
+    # tools_retriever_example.py calls the open-meteo API with it.
+    "requests>=2.31.0,<3.0.0",
 ]
 # NOTE: spaCy currently has a Python 3.14 import-time failure via its pydantic v1 path
 # (see https://github.com/explosion/spaCy/issues/13895). Until upstream resolves this,
