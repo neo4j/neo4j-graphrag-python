@@ -24,7 +24,7 @@ license = {text = "Apache License, Version 2.0"}
 readme = "README.md"
 requires-python = ">=3.10.0,<3.15"
 dependencies = [
-    "neo4j>=5.17.0,<7.0.0",
+    "neo4j>=5.28.4,<7.0.0",
     "pydantic>=2.6.3,<3.0.0",
     "fsspec>=2024.9.0",
     "pypdf>=6.14.2,<7.0.0",
