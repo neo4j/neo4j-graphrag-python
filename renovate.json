@@ -38,6 +38,9 @@
       ],
       "rangeStrategy": "bump",
       "groupName": "dev dependencies",
+      "automerge": true,
+      "automergeType": "branch",
+      "matchUpdateTypes": ["minor", "patch"],
       "labels": [
         "dependencies",
         "python"
@@ -51,6 +54,9 @@
         "project.dependencies"
       ],
       "rangeStrategy": "bump",
+      "automerge": true,
+      "automergeType": "branch",
+      "matchUpdateTypes": ["minor", "patch"],
       "labels": [
         "dependencies",
         "python"
