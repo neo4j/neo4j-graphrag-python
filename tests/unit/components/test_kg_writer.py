@@ -102,6 +102,34 @@ def test_get_unique_properties_for_node_type_deprecation_warning() -> None:
         ]
 
 
+@mock.patch(
+    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    return_value=((5, 22, 0), False, False),
+)
+def test_neo4j_writer_db_setup_uses_unique_constraint(
+    _: Mock, driver: MagicMock
+) -> None:
+    neo4j_writer = Neo4jWriter(driver=driver, neo4j_database="my_db")
+    driver.execute_query.reset_mock()
+
+    neo4j_writer._db_setup()
+
+    assert driver.execute_query.call_count == 2
+    drop_call = driver.execute_query.call_args_list[0]
+    assert drop_call.args == ("DROP INDEX __entity__tmp_internal_id IF EXISTS",)
+    assert drop_call.kwargs == {"database_": "my_db"}
+
+    constraint_call = driver.execute_query.call_args_list[1]
+    constraint_query = constraint_call.args[0]
+    assert (
+        "CREATE CONSTRAINT __entity__tmp_internal_id_unique IF NOT EXISTS"
+        in constraint_query
+    )
+    assert "FOR (n:__KGBuilder__)" in constraint_query
+    assert "REQUIRE n.__tmp_internal_id IS UNIQUE" in constraint_query
+    assert constraint_call.kwargs == {"database_": "my_db"}
+
+
 # --- FilenameCollisionHandler tests ---
 
 
