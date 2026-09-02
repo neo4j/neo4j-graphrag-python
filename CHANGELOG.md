@@ -2,6 +2,10 @@
 
 ## Next
 
+### Added
+
+- Added `BaseVertexAILLM`, a new base class holding all of `VertexAILLM`'s shared message-building, generation-config/schema-handling, and response-parsing logic. Unlike `BaseAnthropicLLM`/`BaseOpenAILLM` (which hold a persistent SDK client for subclasses to construct), `VertexAILLM` has no per-instance client — it relies on a global `vertexai.init(...)` plus a fresh `GenerativeModel` per call — so `BaseVertexAILLM` instead declares a single abstract `_get_model(...)` hook, which `VertexAILLM` implements exactly as before. `BaseVertexAILLM` is exported from `neo4j_graphrag.llm` as a documented extension point.
+
 ## 1.19.0
 
 ### Added
