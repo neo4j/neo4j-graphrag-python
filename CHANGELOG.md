@@ -2,9 +2,14 @@
 
 ## Next
 
+
 ### Fixed
 
 - Fixed `BaseGeminiLLM`/`GeminiLLM` silently dropping token usage on every call: `invoke`/`ainvoke` (both the string and message-list paths, sync and async) built `LLMResponse` from `response.text` alone, ignoring `response.usage_metadata` entirely. `LLMResponse.usage` is now populated from it, matching `AnthropicLLM`/`OpenAILLM`/`VertexAILLM`.
+
+### Changed
+
+- (**breaking**) `BaseGeminiLLM`/`GeminiLLM.supports_structured_output` is now `True` — it already supported structured output via `response_schema`/`response_mime_type`, but never declared the capability flag, so pipeline components checking it fell back to prompt-based JSON. `SimpleKGPipeline`, `SchemaFromTextExtractor`, and `LLMEntityRelationExtractor` now enable structured output by default with `GeminiLLM`. To keep the previous behavior, construct the extractors with `use_structured_output=False`.
 
 ## 1.19.0
 

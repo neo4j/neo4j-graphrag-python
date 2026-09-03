@@ -208,6 +208,16 @@ def test_gemini_llm_is_base_gemini_llm_subclass() -> None:
     assert issubclass(GeminiLLM, BaseGeminiLLM)
 
 
+def test_gemini_llm_supports_structured_output(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    """GeminiLLM already supports response_schema/response_mime_type; the
+    capability flag must say so, or SimpleKGPipeline/SchemaFromTextExtractor/
+    LLMEntityRelationExtractor silently fall back to prompt-based JSON."""
+    llm = GeminiLLM("gemini-2.0-flash")
+    assert llm.supports_structured_output is True
+
+
 def test_gemini_llm_init_only_constructs_client(
     mock_genai: Tuple[MagicMock, MagicMock],
 ) -> None:

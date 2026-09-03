@@ -87,6 +87,8 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
     constructing the ``client`` SDK instance.
     """
 
+    supports_structured_output: bool = True
+
     client: "genai.Client"
 
     def __init__(
