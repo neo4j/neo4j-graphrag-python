@@ -39,6 +39,7 @@ from neo4j_graphrag.llm.base import LLMBase
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
+    LLMUsage,
     MessageList,
     ToolCall,
     ToolCallResponse,
@@ -222,7 +223,7 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
                 contents=contents,  # type: ignore[arg-type]
                 config=config,
             )
-            return LLMResponse(content=response.text or "")
+            return self._parse_content_response(response)
         except Exception as e:
             raise LLMGenerationError(f"Error calling GeminiLLM: {e}") from e
 
@@ -241,7 +242,7 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
                 contents=contents,  # type: ignore[arg-type]
                 config=config,
             )
-            return LLMResponse(content=response.text or "")
+            return self._parse_content_response(response)
         except Exception as e:
             raise LLMGenerationError(f"Error calling GeminiLLM: {e}") from e
 
@@ -268,7 +269,7 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
                 contents=contents,  # type: ignore[arg-type]
                 config=config,
             )
-            return LLMResponse(content=response.text or "")
+            return self._parse_content_response(response)
         except Exception as e:
             raise LLMGenerationError(f"Error calling GeminiLLM: {e}") from e
 
@@ -295,7 +296,7 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
                 contents=contents,  # type: ignore[arg-type]
                 config=config,
             )
-            return LLMResponse(content=response.text or "")
+            return self._parse_content_response(response)
         except Exception as e:
             raise LLMGenerationError(f"Error calling GeminiLLM: {e}") from e
 
@@ -494,6 +495,24 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
                         )
                     )
         return ToolCallResponse(tool_calls=tool_calls, content=None)
+
+    def _parse_content_response(
+        self, response: types.GenerateContentResponse
+    ) -> LLMResponse:
+        """Build an ``LLMResponse`` from a ``generate_content`` response.
+
+        Includes ``usage`` from ``response.usage_metadata`` when the API
+        reports it (``None`` fields when it does not — see ``LLMUsage``).
+        """
+        usage = None
+        metadata = response.usage_metadata
+        if metadata is not None:
+            usage = LLMUsage(
+                request_tokens=metadata.prompt_token_count,
+                response_tokens=metadata.candidates_token_count,
+                total_tokens=metadata.total_token_count,
+            )
+        return LLMResponse(content=response.text or "", usage=usage)
 
 
 class GeminiLLM(BaseGeminiLLM):
