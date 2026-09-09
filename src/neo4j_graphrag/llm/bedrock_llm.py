@@ -26,7 +26,6 @@ from typing import (
     Type,
     Union,
     cast,
-    overload,
 )
 
 # 3rd party dependencies
@@ -34,7 +33,7 @@ from pydantic import BaseModel, ValidationError
 
 # project dependencies
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.base import LLMInterface, LLMInterfaceV2
+from neo4j_graphrag.llm.base import LLMBase
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
@@ -67,7 +66,7 @@ DEFAULT_BEDROCK_LLM_MODEL = os.getenv(
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
-class BedrockLLM(LLMInterface, LLMInterfaceV2):
+class BedrockLLM(LLMBase):
     """LLM interface for Amazon Bedrock via the boto3 Converse API.
 
     Args:
@@ -109,7 +108,7 @@ class BedrockLLM(LLMInterface, LLMInterfaceV2):
                 "Could not import boto3 python client. "
                 'Please install it with `pip install "neo4j-graphrag[bedrock]"`.'
             )
-        LLMInterfaceV2.__init__(
+        LLMBase.__init__(
             self,
             model_name=model_name,
             model_params=model_params or {},
@@ -120,140 +119,106 @@ class BedrockLLM(LLMInterface, LLMInterfaceV2):
             client_kwargs["region_name"] = region_name
         self.client = boto3.client("bedrock-runtime", **client_kwargs)
 
-    # overloads for LLMInterface and LLMInterfaceV2 methods
-    @overload  # type: ignore[no-overload-impl]
-    def invoke(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse: ...
-
-    @overload
-    def invoke(
-        self,
-        input: List[LLMMessage],
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse: ...
-
-    @overload  # type: ignore[no-overload-impl]
-    async def ainvoke(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse: ...
-
-    @overload
-    async def ainvoke(
-        self,
-        input: List[LLMMessage],
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse: ...
-
-    # switching logic
-    def invoke(  # type: ignore[no-redef]
-        self,
-        input: Union[str, List[LLMMessage]],
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        if isinstance(input, str):
-            return self.__invoke_v1(input, message_history, system_instruction)
-        return self.__invoke_v2(input, response_format=response_format, **kwargs)
-
-    async def ainvoke(  # type: ignore[no-redef]
-        self,
-        input: Union[str, List[LLMMessage]],
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        if isinstance(input, str):
-            return await self.__ainvoke_v1(input, message_history, system_instruction)
-        return await self.__ainvoke_v2(input, response_format=response_format, **kwargs)
-
     # implementations
-    @rate_limit_handler_decorator
-    def __invoke_v1(
+    def _build_v1_request(
         self,
         input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
-    ) -> LLMResponse:
-        try:
-            messages = self.get_messages(input, message_history)
-            converse_kwargs = self._build_converse_kwargs(
-                messages, system_instruction=system_instruction
+    ) -> dict[str, Any]:
+        """Build the ``client.converse`` kwargs for a v1 (str-input) call."""
+        messages = self.get_messages(input, message_history)
+        return self._build_converse_kwargs(
+            messages, system_instruction=system_instruction
+        )
+
+    def _build_v2_request(
+        self,
+        input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        """Build the ``client.converse`` kwargs for a v2 (message-list) call."""
+        if response_format is not None:
+            raise NotImplementedError(
+                "BedrockLLM does not currently support structured output"
             )
+        system_instruction, messages = self.get_messages_v2(input)
+        return self._build_converse_kwargs(
+            messages, system_instruction=system_instruction, **kwargs
+        )
+
+    def _call_sync(self, converse_kwargs: dict[str, Any]) -> LLMResponse:
+        """Sync transport hook: the only place ``client.converse`` is called."""
+        try:
             response = self.client.converse(**converse_kwargs)
             return self._parse_response(response)
         except Exception as e:
             raise LLMGenerationError(f"Error calling BedrockLLM: {e}") from e
 
-    @rate_limit_handler_decorator
-    def __invoke_v2(
-        self,
-        input: List[LLMMessage],
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        if response_format is not None:
-            raise NotImplementedError(
-                "BedrockLLM does not currently support structured output"
-            )
+    async def _call_async(self, converse_kwargs: dict[str, Any]) -> LLMResponse:
+        """Async transport hook: boto3 is sync-only, so the same
+        ``client.converse`` call runs in a thread-pool executor.
+
+        Only this method carries the async retry layer (via
+        :func:`async_rate_limit_handler` on ``_ainvoke_v1``/``_ainvoke_v2``);
+        it dispatches to :meth:`_call_sync` directly rather than to a
+        rate-limited sync entry point, so a single call never gets retried
+        by both the sync and async decorators at once.
+        """
         try:
-            system_instruction, messages = self.get_messages_v2(input)
-            converse_kwargs = self._build_converse_kwargs(
-                messages, system_instruction=system_instruction, **kwargs
-            )
-            response = self.client.converse(**converse_kwargs)
-            return self._parse_response(response)
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(None, self._call_sync, converse_kwargs)
+        except LLMGenerationError:
+            raise
         except Exception as e:
             raise LLMGenerationError(f"Error calling BedrockLLM: {e}") from e
 
-    @async_rate_limit_handler_decorator
-    async def __ainvoke_v1(
+    @rate_limit_handler_decorator
+    def _invoke_v1(
         self,
         input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+        **kwargs: Any,
     ) -> LLMResponse:
-        try:
-            loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(
-                None, self.__invoke_v1, input, message_history, system_instruction
-            )
-        except LLMGenerationError:
-            raise
-        except Exception as e:
-            raise LLMGenerationError(f"Error calling BedrockLLM: {e}") from e
+        request = self._build_v1_request(input, message_history, system_instruction)
+        return self._call_sync(request)
 
-    @async_rate_limit_handler_decorator
-    async def __ainvoke_v2(
+    @rate_limit_handler_decorator
+    def _invoke_v2(
         self,
         input: List[LLMMessage],
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        if response_format is not None:
-            raise NotImplementedError(
-                "BedrockLLM does not currently support structured output"
-            )
-        try:
-            loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(
-                None, self.__invoke_v2, input, response_format
-            )
-        except LLMGenerationError:
-            raise
-        except Exception as e:
-            raise LLMGenerationError(f"Error calling BedrockLLM: {e}") from e
+        request = self._build_v2_request(
+            input, response_format=response_format, **kwargs
+        )
+        return self._call_sync(request)
+
+    @async_rate_limit_handler_decorator
+    async def _ainvoke_v1(
+        self,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        request = self._build_v1_request(input, message_history, system_instruction)
+        return await self._call_async(request)
+
+    @async_rate_limit_handler_decorator
+    async def _ainvoke_v2(
+        self,
+        input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        request = self._build_v2_request(
+            input, response_format=response_format, **kwargs
+        )
+        return await self._call_async(request)
 
     def invoke_with_tools(
         self,

@@ -27,7 +27,6 @@ from typing import (
     Union,
     cast,
     get_args,
-    overload,
 )
 
 # 3rd party dependencies
@@ -82,9 +81,14 @@ GEMINI_DEFAULT_IMAGE_MIME_TYPE: GeminiImageMimeType = "image/png"
 class BaseGeminiLLM(LLMBase, abc.ABC):
     """Base class for Google Gemini LLMs (google.genai SDK).
 
-    Holds all the shared message-building, config/schema-building, and
-    response-parsing logic. Subclasses are only responsible for
-    constructing the ``client`` SDK instance.
+    Holds the shared message-building, config/schema-building, and
+    response-parsing logic. Subclasses only construct the ``client`` SDK
+    instance.
+
+    ``invoke``/``ainvoke`` dispatch to v1/v2 request builders
+    (``_build_v1_request``/``_build_v2_request``) and then to one of two
+    transport hooks (``_call_sync``/``_call_async``), which differ only in
+    whether the SDK call is awaited.
     """
 
     client: "genai.Client"
@@ -109,115 +113,50 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
             **kwargs,
         )
 
-    @overload  # type: ignore[no-overload-impl]
-    def invoke(
+    def _build_v1_request(
         self,
         input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
-    ) -> LLMResponse: ...
+    ) -> tuple[list[types.Content], types.GenerateContentConfig]:
+        """Build the (contents, config) pair for a v1 (str-input) call."""
+        contents = self.get_messages(input, message_history)
+        config = self._build_config(system_instruction=system_instruction)
+        return contents, config
 
-    @overload
-    def invoke(
+    def _build_v2_request(
         self,
         input: List[LLMMessage],
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         image_bytes: Optional[bytes] = None,
         image_mime_type: GeminiImageMimeType = GEMINI_DEFAULT_IMAGE_MIME_TYPE,
         **kwargs: Any,
-    ) -> LLMResponse: ...
+    ) -> tuple[list[types.Content], types.GenerateContentConfig]:
+        """Build the (contents, config) pair for a v2 (message-list) call."""
+        system_instruction, contents = self.get_messages_v2(
+            input, image_bytes=image_bytes, image_mime_type=image_mime_type
+        )
+        config = self._build_config(
+            system_instruction=system_instruction,
+            response_format=response_format,
+            **kwargs,
+        )
+        return contents, config
 
-    @overload  # type: ignore[no-overload-impl]
-    async def ainvoke(
+    def _call_sync(
         self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse: ...
-
-    @overload
-    async def ainvoke(
-        self,
-        input: List[LLMMessage],
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        image_bytes: Optional[bytes] = None,
-        image_mime_type: GeminiImageMimeType = GEMINI_DEFAULT_IMAGE_MIME_TYPE,
-        **kwargs: Any,
-    ) -> LLMResponse: ...
-
-    def invoke(  # type: ignore[no-redef]
-        self,
-        input: Union[str, List[LLMMessage]],
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        image_bytes: Optional[bytes] = None,
-        image_mime_type: GeminiImageMimeType = GEMINI_DEFAULT_IMAGE_MIME_TYPE,
-        **kwargs: Any,
+        contents: list[types.Content],
+        config: types.GenerateContentConfig,
     ) -> LLMResponse:
-        """Sends input to the LLM and returns a response.
+        """Sync transport hook: the only place ``client.models`` is called.
 
-        Args:
-            input (Union[str, List[LLMMessage]]): Text (v1) or list of messages (v2)
-                sent to the LLM.
-            message_history: v1 only. Previous messages, each with a role assigned.
-            system_instruction: v1 only. Overrides the LLM system message for this call.
-            response_format: v2 only. A Pydantic model class or a JSON schema dict.
-            image_bytes (Optional[bytes]): v2 only. Raw image data appended as an inline
-                image part to the last user message. Defaults to None.
-            image_mime_type (GeminiImageMimeType): MIME type of ``image_bytes``. Must be
-                one of ``GEMINI_SUPPORTED_IMAGE_MIME_TYPES``. Ignored when
-                ``image_bytes`` is None. Defaults to "image/png".
+        Everything else (request building, response parsing) is shared with
+        :meth:`_call_async` via :meth:`_build_v1_request`/:meth:`_build_v2_request`
+        and :meth:`_parse_content_response` — a fix to response parsing
+        (e.g. usage extraction) applies to both sync and async by
+        construction, instead of needing to be duplicated in a twin method.
         """
-        if isinstance(input, str):
-            if image_bytes is not None:
-                raise ValueError(
-                    "image_bytes is only supported with a list of messages as input."
-                )
-            return self.__invoke_v1(input, message_history, system_instruction)
-        return self.__invoke_v2(
-            input,
-            response_format=response_format,
-            image_bytes=image_bytes,
-            image_mime_type=image_mime_type,
-            **kwargs,
-        )
-
-    async def ainvoke(  # type: ignore[no-redef]
-        self,
-        input: Union[str, List[LLMMessage]],
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        image_bytes: Optional[bytes] = None,
-        image_mime_type: GeminiImageMimeType = GEMINI_DEFAULT_IMAGE_MIME_TYPE,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        """Asynchronous version of :meth:`invoke`."""
-        if isinstance(input, str):
-            if image_bytes is not None:
-                raise ValueError(
-                    "image_bytes is only supported with a list of messages as input."
-                )
-            return await self.__ainvoke_v1(input, message_history, system_instruction)
-        return await self.__ainvoke_v2(
-            input,
-            response_format=response_format,
-            image_bytes=image_bytes,
-            image_mime_type=image_mime_type,
-            **kwargs,
-        )
-
-    @rate_limit_handler_decorator
-    def __invoke_v1(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse:
         try:
-            contents = self.get_messages(input, message_history)
-            config = self._build_config(system_instruction=system_instruction)
             response = self.client.models.generate_content(
                 model=self.model_name,
                 contents=contents,  # type: ignore[arg-type]
@@ -227,16 +166,13 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
         except Exception as e:
             raise LLMGenerationError(f"Error calling GeminiLLM: {e}") from e
 
-    @async_rate_limit_handler_decorator
-    async def __ainvoke_v1(
+    async def _call_async(
         self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
+        contents: list[types.Content],
+        config: types.GenerateContentConfig,
     ) -> LLMResponse:
+        """Async transport hook — see :meth:`_call_sync`."""
         try:
-            contents = self.get_messages(input, message_history)
-            config = self._build_config(system_instruction=system_instruction)
             response = await self.client.aio.models.generate_content(
                 model=self.model_name,
                 contents=contents,  # type: ignore[arg-type]
@@ -247,34 +183,43 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
             raise LLMGenerationError(f"Error calling GeminiLLM: {e}") from e
 
     @rate_limit_handler_decorator
-    def __invoke_v2(
+    def _invoke_v1(
         self,
-        input: List[LLMMessage],
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
         image_bytes: Optional[bytes] = None,
-        image_mime_type: GeminiImageMimeType = GEMINI_DEFAULT_IMAGE_MIME_TYPE,
         **kwargs: Any,
     ) -> LLMResponse:
-        try:
-            system_instruction, contents = self.get_messages_v2(
-                input, image_bytes=image_bytes, image_mime_type=image_mime_type
+        if image_bytes is not None:
+            raise ValueError(
+                "image_bytes is only supported with a list of messages as input."
             )
-            config = self._build_config(
-                system_instruction=system_instruction,
-                response_format=response_format,
-                **kwargs,
-            )
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                contents=contents,  # type: ignore[arg-type]
-                config=config,
-            )
-            return self._parse_content_response(response)
-        except Exception as e:
-            raise LLMGenerationError(f"Error calling GeminiLLM: {e}") from e
+        contents, config = self._build_v1_request(
+            input, message_history, system_instruction
+        )
+        return self._call_sync(contents, config)
 
     @async_rate_limit_handler_decorator
-    async def __ainvoke_v2(
+    async def _ainvoke_v1(
+        self,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+        image_bytes: Optional[bytes] = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        if image_bytes is not None:
+            raise ValueError(
+                "image_bytes is only supported with a list of messages as input."
+            )
+        contents, config = self._build_v1_request(
+            input, message_history, system_instruction
+        )
+        return await self._call_async(contents, config)
+
+    @rate_limit_handler_decorator
+    def _invoke_v2(
         self,
         input: List[LLMMessage],
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
@@ -282,23 +227,32 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
         image_mime_type: GeminiImageMimeType = GEMINI_DEFAULT_IMAGE_MIME_TYPE,
         **kwargs: Any,
     ) -> LLMResponse:
-        try:
-            system_instruction, contents = self.get_messages_v2(
-                input, image_bytes=image_bytes, image_mime_type=image_mime_type
-            )
-            config = self._build_config(
-                system_instruction=system_instruction,
-                response_format=response_format,
-                **kwargs,
-            )
-            response = await self.client.aio.models.generate_content(
-                model=self.model_name,
-                contents=contents,  # type: ignore[arg-type]
-                config=config,
-            )
-            return self._parse_content_response(response)
-        except Exception as e:
-            raise LLMGenerationError(f"Error calling GeminiLLM: {e}") from e
+        contents, config = self._build_v2_request(
+            input,
+            response_format=response_format,
+            image_bytes=image_bytes,
+            image_mime_type=image_mime_type,
+            **kwargs,
+        )
+        return self._call_sync(contents, config)
+
+    @async_rate_limit_handler_decorator
+    async def _ainvoke_v2(
+        self,
+        input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        image_bytes: Optional[bytes] = None,
+        image_mime_type: GeminiImageMimeType = GEMINI_DEFAULT_IMAGE_MIME_TYPE,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        contents, config = self._build_v2_request(
+            input,
+            response_format=response_format,
+            image_bytes=image_bytes,
+            image_mime_type=image_mime_type,
+            **kwargs,
+        )
+        return await self._call_async(contents, config)
 
     def invoke_with_tools(
         self,

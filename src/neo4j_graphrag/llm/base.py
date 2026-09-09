@@ -244,10 +244,13 @@ class LLMBase(LLMInterface, LLMInterfaceV2, ABC):
     """Abstract base for LLMs that implement both the v1 (str input) and v2
     (List[LLMMessage] input) call signatures.
 
-    Subclasses must implement ``invoke`` and ``ainvoke`` as a single dispatcher
-    that branches on the type of *input*.  The overloads declared here give
-    type-checkers accurate return-type information at each call site without
-    requiring every concrete class to repeat the same boilerplate.
+    ``invoke``/``ainvoke`` are concrete: they branch on the type of *input*
+    and delegate to one of four abstract hooks (``_invoke_v1``/
+    ``_invoke_v2``/``_ainvoke_v1``/``_ainvoke_v2``). Concrete providers
+    implement only those four hooks, not ``invoke``/``ainvoke`` themselves.
+
+    The overloads declared here give type-checkers accurate return types at
+    each call site without every provider repeating them.
     """
 
     def __init__(
@@ -284,7 +287,6 @@ class LLMBase(LLMInterface, LLMInterfaceV2, ABC):
         **kwargs: Any,
     ) -> LLMResponse: ...
 
-    @abstractmethod
     def invoke(
         self,
         input: Union[str, List[LLMMessage]],
@@ -292,7 +294,13 @@ class LLMBase(LLMInterface, LLMInterfaceV2, ABC):
         system_instruction: Optional[str] = None,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
-    ) -> LLMResponse: ...
+    ) -> LLMResponse:
+        if isinstance(input, str):
+            return self._invoke_v1(input, message_history, system_instruction, **kwargs)
+        elif isinstance(input, list):
+            return self._invoke_v2(input, response_format=response_format, **kwargs)
+        else:
+            raise ValueError(f"Invalid input type for invoke method - {type(input)}")
 
     # --- ainvoke overloads ---
 
@@ -313,7 +321,6 @@ class LLMBase(LLMInterface, LLMInterfaceV2, ABC):
         **kwargs: Any,
     ) -> LLMResponse: ...
 
-    @abstractmethod
     async def ainvoke(
         self,
         input: Union[str, List[LLMMessage]],
@@ -321,7 +328,69 @@ class LLMBase(LLMInterface, LLMInterfaceV2, ABC):
         system_instruction: Optional[str] = None,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
-    ) -> LLMResponse: ...
+    ) -> LLMResponse:
+        if isinstance(input, str):
+            return await self._ainvoke_v1(
+                input, message_history, system_instruction, **kwargs
+            )
+        elif isinstance(input, list):
+            return await self._ainvoke_v2(
+                input, response_format=response_format, **kwargs
+            )
+        else:
+            raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
+
+    # --- hooks every concrete provider implements ---
+
+    @abstractmethod
+    def _invoke_v1(
+        self,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        """Provider implementation of the v1 (str-input) sync call.
+
+        ``**kwargs`` carries any v2-only keyword a caller passed alongside a
+        str *input* (e.g. Gemini's ``image_bytes``) — the provider decides
+        whether to ignore, use, or reject it; the dispatcher in
+        :meth:`invoke` does not interpret it. Note ``response_format`` is
+        never forwarded here: it is a named parameter of :meth:`invoke`
+        that only applies to the v2 (message-list) path.
+        """
+
+    @abstractmethod
+    def _invoke_v2(
+        self,
+        input: List[LLMMessage],
+        *,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        """Provider implementation of the v2 (message-list) sync call."""
+
+    @abstractmethod
+    async def _ainvoke_v1(
+        self,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        """Provider implementation of the v1 (str-input) async call. See
+        :meth:`_invoke_v1` for ``**kwargs``.
+        """
+
+    @abstractmethod
+    async def _ainvoke_v2(
+        self,
+        input: List[LLMMessage],
+        *,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        """Provider implementation of the v2 (message-list) async call."""
 
     def close(self) -> None:
         """Close both clients and release any resources.

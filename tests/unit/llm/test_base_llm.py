@@ -75,30 +75,47 @@ def test_llm_response_carries_usage() -> None:
 
 
 class _ConcreteLLM(LLMBase):
-    """Minimal LLMBase subclass for unit testing."""
+    """Minimal LLMBase subclass for unit testing.
 
-    def invoke(
+    Implements the four hooks (``_invoke_v1``/``_invoke_v2``/``_ainvoke_v1``/
+    ``_ainvoke_v2``) rather than overriding ``invoke``/``ainvoke`` directly,
+    since those are concrete on ``LLMBase`` and dispatch to these hooks.
+    """
+
+    def _invoke_v1(
         self,
-        input: Union[str, List[LLMMessage]],
+        input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        return LLMResponse(content=f"v1:{input}")
+
+    def _invoke_v2(
+        self,
+        input: List[LLMMessage],
+        *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        if isinstance(input, str):
-            return LLMResponse(content=f"v1:{input}")
         return LLMResponse(content="v2:list")
 
-    async def ainvoke(
+    async def _ainvoke_v1(
         self,
-        input: Union[str, List[LLMMessage]],
+        input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        return LLMResponse(content=f"async_v1:{input}")
+
+    async def _ainvoke_v2(
+        self,
+        input: List[LLMMessage],
+        *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        if isinstance(input, str):
-            return LLMResponse(content=f"async_v1:{input}")
         return LLMResponse(content="async_v2:list")
 
 
@@ -109,7 +126,7 @@ class _ConcreteLLM(LLMBase):
 
 def test_llmbase_cannot_be_instantiated_directly() -> None:
     with pytest.raises(TypeError):
-        LLMBase(model_name="m")
+        LLMBase(model_name="m")  # type: ignore[abstract]
 
 
 def test_llmbase_sets_model_name() -> None:

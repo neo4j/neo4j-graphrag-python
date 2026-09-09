@@ -2,6 +2,13 @@
 
 ## Next
 
+### Changed
+
+- (**breaking**, targets 2.0) `LLMBase.invoke`/`ainvoke` are now concrete: they dispatch on input type (`str` vs `list[LLMMessage]`) and delegate to four narrow abstract hooks — `_invoke_v1`, `_invoke_v2`, `_ainvoke_v1`, `_ainvoke_v2` — instead of requiring every subclass to reimplement the same dispatch and duplicate the same sync/async request-building and response-parsing logic. `AnthropicLLM`, `OpenAILLM`, `GeminiLLM`, `CohereLLM`, `MistralAILLM`, `OllamaLLM`, `BedrockLLM`, and `VertexAILLM` all migrated onto this contract: each now implements a single shared request builder and response parser per input version, plus a pair of minimal transport hooks (`_call_sync`/`_call_async`) that differ only in whether the SDK call is awaited. A subclass that previously overrode `invoke`/`ainvoke` directly (a supported extension point for `BaseAnthropicLLM`/`BaseOpenAILLM`/`BaseGeminiLLM` — see `docs/source/llm.rst`) must migrate to overriding these four hooks instead; the public `invoke`/`ainvoke` calling contract for callers is unchanged.
+- (**breaking**, targets 2.0) `BedrockLLM` now inherits from `LLMBase` (previously `LLMInterface`/`LLMInterfaceV2` directly), aligning it with every other provider's class hierarchy. Its async path no longer stacks a sync-side rate-limit retry inside the thread-pool-executed call on top of its own async retry layer — only the async layer applies, removing a latent compounding-retry risk. Both changes are internal-hierarchy/behavior fixes; the public `invoke`/`ainvoke`/`invoke_with_tools`/`ainvoke_with_tools` contract is unchanged.
+- (**breaking**, targets 2.0) `OllamaLLM`'s async path (`ainvoke`/`_ainvoke_v1`/`_ainvoke_v2`) now spreads `model_params` into the `client.chat` call the same way the sync path always did, instead of passing it verbatim as the `options` value. This fixes a bug where `model_params` containing a sibling key alongside `options` (e.g. `{"options": {...}, "format": "json"}`) produced a double-nested `options` on the async path only.
+- `CohereLLM`'s sync and async error paths now raise `LLMGenerationError(e) from e` consistently (previously the v2 paths raised a generic `"Error calling cohere"` message instead of preserving the original SDK exception, differing from the v1 paths).
+
 ### Fixed
 
 - Fixed `BaseGeminiLLM`/`GeminiLLM` silently dropping token usage on every call: `invoke`/`ainvoke` (both the string and message-list paths, sync and async) built `LLMResponse` from `response.text` alone, ignoring `response.usage_metadata` entirely. `LLMResponse.usage` is now populated from it, matching `AnthropicLLM`/`OpenAILLM`/`VertexAILLM`.
