@@ -20,6 +20,7 @@ from typing import Any, Optional, Union
 from neo4j_graphrag.exceptions import InvalidHybridSearchRankerError
 from neo4j_graphrag.filters import (
     FilterClassification,
+    Operator,
     get_metadata_filter,
 )
 from neo4j_graphrag.types import EntityType, SearchType, HybridSearchRanker
@@ -129,6 +130,38 @@ def upsert_relationship_query(support_variable_scope_clause: bool) -> str:
         "UNWIND $rows as row "
         "MATCH (start:__KGBuilder__ {__tmp_internal_id: row.start_node_id}), "
         "      (end:__KGBuilder__ {__tmp_internal_id: row.end_node_id}) "
+        "WITH start, end, row "
+        "CALL apoc.merge.relationship(start, row.type, {}, row.properties, end, row.properties) YIELD rel  "
+        "WITH rel, row "
+        f"{call_prefix} "
+        "WITH rel, row WHERE row.embedding_properties IS NOT NULL "
+        "UNWIND keys(row.embedding_properties) as emb "
+        "CALL db.create.setRelationshipVectorProperty(rel, emb, row.embedding_properties[emb]) "
+        "} "
+        "RETURN elementId(rel)"
+    )
+
+
+def upsert_relationship_to_existing_chunk_query(
+    support_variable_scope_clause: bool,
+    chunk_node_label: str,
+    chunk_id_property: str,
+) -> str:
+    """Build a query for a node-to-chunk relationship whose chunk already exists.
+
+    The start node is a node written in the current batch and is resolved by its
+    temporary internal ID. The chunk endpoint is resolved by the configured
+    lexical-graph label and persistent chunk ID property.
+    """
+    call_prefix = _call_subquery_syntax(
+        support_variable_scope_clause, variable_list=["rel", "row"]
+    )
+    safe_chunk_label = Operator.safe_field_cypher(chunk_node_label)
+    safe_chunk_id_property = Operator.safe_field_cypher(chunk_id_property)
+    return (
+        "UNWIND $rows as row "
+        "MATCH (start:__KGBuilder__ {__tmp_internal_id: row.start_node_id}), "
+        f"      (end:{safe_chunk_label}) WHERE end.{safe_chunk_id_property} = row.end_node_id "
         "WITH start, end, row "
         "CALL apoc.merge.relationship(start, row.type, {}, row.properties, end, row.properties) YIELD rel  "
         "WITH rel, row "
