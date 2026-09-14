@@ -21,6 +21,7 @@ sanitized for filesystem and Neo4j import compatibility (safe characters:
 
 from __future__ import annotations
 
+import json
 import logging
 import unicodedata
 import warnings
@@ -35,6 +36,7 @@ from neo4j_graphrag.components.schema import (
     GraphSchema,
 )
 from neo4j_graphrag.components.types import (
+    GeoPoint,
     LexicalGraphConfig,
     Neo4jGraph,
     Neo4jNode,
@@ -46,7 +48,24 @@ logger = logging.getLogger(__name__)
 INTERNAL_ID_PROPERTY = "__id__"
 """Parquet column name for the graph-internal node identifier (not a user property)."""
 
+PARQUET_NEO4J_TYPE_METADATA_KEY = b"neo4j_type"
+"""Arrow field metadata key for the Neo4j / import-spec target property type."""
+
 _FALLBACK_FILESTEM = "unnamed"
+
+
+def _geopoint_like_to_wkt(value: Any) -> Optional[str]:
+    """Return WKT for a ``GeoPoint`` or a dumped ``{latitude, longitude, height?}`` dict."""
+    if isinstance(value, GeoPoint):
+        return value.to_wkt()
+    if isinstance(value, dict) and "latitude" in value and "longitude" in value:
+        height = value.get("height", 0.0)
+        return GeoPoint(
+            latitude=float(value["latitude"]),
+            longitude=float(value["longitude"]),
+            height=float(height if height is not None else 0.0),
+        ).to_wkt()
+    return None
 
 
 def _is_allowed_filestem_char(c: str) -> bool:
@@ -696,6 +715,39 @@ class Neo4jGraphParquetFormatter:
                     except (ValueError, TypeError):
                         row[col] = str(row[col])
 
+    @staticmethod
+    def _serialize_geopoint_values(rows: list[dict[str, Any]]) -> set[str]:
+        """Replace GeoPoint (and dumped dict) values with WKT; return POINT column names.
+
+        A column is treated as POINT when every non-null value was GeoPoint-like.
+        Mixed GeoPoint / non-point columns are not tagged POINT; leftover dicts
+        are JSON-serialized so they do not stringify as Python reprs.
+        """
+        saw_geopoint: set[str] = set()
+        saw_other: set[str] = set()
+        for row in rows:
+            for key, value in row.items():
+                if value is None:
+                    continue
+                wkt = _geopoint_like_to_wkt(value)
+                if wkt is not None:
+                    row[key] = wkt
+                    saw_geopoint.add(key)
+                else:
+                    saw_other.add(key)
+        mixed = saw_geopoint & saw_other
+        for col in sorted(mixed):
+            logger.warning(
+                "Mixed GeoPoint and non-point values for property '%s' — "
+                "not tagging as POINT; remaining dicts serialized as JSON",
+                col,
+            )
+            for row in rows:
+                value = row.get(col)
+                if isinstance(value, dict):
+                    row[col] = json.dumps(value, default=str)
+        return saw_geopoint - saw_other
+
     def format_parquet(
         self,
         rows: list[dict[str, Any]],
@@ -717,6 +769,7 @@ class Neo4jGraphParquetFormatter:
             import pyarrow as pa
             import pyarrow.parquet as pq
 
+            point_columns = self._serialize_geopoint_values(rows)
             self._normalize_column_types(rows)
 
             # Build an explicit schema from the union of all keys to avoid
@@ -752,7 +805,10 @@ class Neo4jGraphParquetFormatter:
                     t = pa.list_(pa.null())
                 else:
                     t = pa.null()
-                fields.append(pa.field(k, t))
+                field_metadata = None
+                if k in point_columns:
+                    field_metadata = {PARQUET_NEO4J_TYPE_METADATA_KEY: b"POINT"}
+                fields.append(pa.field(k, t, metadata=field_metadata))
 
             schema = pa.schema(fields) if fields else None
             table = pa.Table.from_pylist(rows, schema=schema)
