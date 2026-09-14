@@ -783,6 +783,60 @@ class TestVectorRetrieverSearchClausePath:
 class TestVectorCypherRetrieverSearchClausePath:
     """Tests for VectorCypherRetriever routing to SEARCH clause."""
 
+    @patch(
+        "neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=False
+    )
+    @patch("neo4j_graphrag.retrievers.VectorCypherRetriever._fetch_index_infos")
+    @patch("neo4j_graphrag.retrievers.base.get_version")
+    def test_filtered_fallback_uses_fetched_embedding_property(
+        self,
+        mock_get_version: MagicMock,
+        _fetch_index_infos: MagicMock,
+        _mock_supports_search: MagicMock,
+        driver: MagicMock,
+    ) -> None:
+        mock_get_version.return_value = ((5, 23, 0), False, False)
+        retrieval_query = "RETURN node.id AS node_id, score"
+        retriever = VectorCypherRetriever(
+            driver=driver,
+            index_name="my-index",
+            retrieval_query=retrieval_query,
+        )
+        retriever._node_label = "Document"
+        retriever._embedding_node_property = "embedding"
+        retriever._embedding_dimension = 3
+
+        query_vector = [1.0, 2.0, 3.0]
+        driver.execute_query.return_value = [[], None, None]
+
+        retriever.search(
+            query_vector=query_vector,
+            top_k=5,
+            filters={"organization": {"$eq": "neo4j"}},
+        )
+
+        expected_query, search_params = get_search_query(
+            SearchType.VECTOR,
+            retrieval_query=retrieval_query,
+            node_label="Document",
+            embedding_node_property="embedding",
+            embedding_dimension=3,
+            filters={"organization": {"$eq": "neo4j"}},
+        )
+        expected_params = {
+            "vector_index_name": "my-index",
+            "top_k": 5,
+            "effective_search_ratio": 1,
+            "query_vector": query_vector,
+        }
+        expected_params.update(search_params)
+        driver.execute_query.assert_called_once_with(
+            expected_query,
+            expected_params,
+            database_=None,
+            routing_=neo4j.RoutingControl.READ,
+        )
+
     @patch("neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=True)
     @patch("neo4j_graphrag.retrievers.VectorCypherRetriever._fetch_index_infos")
     @patch("neo4j_graphrag.retrievers.base.get_version")
