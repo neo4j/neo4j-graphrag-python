@@ -20,6 +20,7 @@ import asyncio
 import os
 from typing import (
     Any,
+    Callable,
     List,
     Optional,
     Sequence,
@@ -138,25 +139,37 @@ class BedrockLLM(LLMBase):
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> dict[str, Any]:
-        """Build the ``client.converse`` kwargs for a v2 (message-list) call."""
-        if response_format is not None:
-            raise NotImplementedError(
-                "BedrockLLM does not currently support structured output"
-            )
+        """Build the ``client.converse`` kwargs for a v2 (message-list) call.
+
+        Callers must reject an unsupported ``response_format`` before
+        invoking this (see :meth:`_invoke_v2`/:meth:`_ainvoke_v2`): that is
+        an unsupported-call-shape error, raised unwrapped like every other
+        provider's, not a message/transport failure to wrap into
+        :class:`LLMGenerationError`.
+        """
         system_instruction, messages = self.get_messages_v2(input)
         return self._build_converse_kwargs(
             messages, system_instruction=system_instruction, **kwargs
         )
 
-    def _call_sync(self, converse_kwargs: dict[str, Any]) -> LLMResponse:
-        """Sync transport hook: the only place ``client.converse`` is called."""
+    def _call_sync(self, build_request: Callable[[], dict[str, Any]]) -> LLMResponse:
+        """Sync transport hook: the only place ``client.converse`` is called.
+
+        ``build_request`` runs inside this method's ``try`` so that request
+        construction (message/schema validation, unsupported-feature checks)
+        is wrapped into :class:`LLMGenerationError` exactly like transport
+        errors, keeping one error contract for the whole call.
+        """
         try:
+            converse_kwargs = build_request()
             response = self.client.converse(**converse_kwargs)
             return self._parse_response(response)
         except Exception as e:
             raise LLMGenerationError(f"Error calling BedrockLLM: {e}") from e
 
-    async def _call_async(self, converse_kwargs: dict[str, Any]) -> LLMResponse:
+    async def _call_async(
+        self, build_request: Callable[[], dict[str, Any]]
+    ) -> LLMResponse:
         """Async transport hook: boto3 is sync-only, so the same
         ``client.converse`` call runs in a thread-pool executor.
 
@@ -168,7 +181,7 @@ class BedrockLLM(LLMBase):
         """
         try:
             loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(None, self._call_sync, converse_kwargs)
+            return await loop.run_in_executor(None, self._call_sync, build_request)
         except LLMGenerationError:
             raise
         except Exception as e:
@@ -182,8 +195,9 @@ class BedrockLLM(LLMBase):
         system_instruction: Optional[str] = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        request = self._build_v1_request(input, message_history, system_instruction)
-        return self._call_sync(request)
+        return self._call_sync(
+            lambda: self._build_v1_request(input, message_history, system_instruction)
+        )
 
     @rate_limit_handler_decorator
     def _invoke_v2(
@@ -192,10 +206,15 @@ class BedrockLLM(LLMBase):
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        request = self._build_v2_request(
-            input, response_format=response_format, **kwargs
+        if response_format is not None:
+            raise NotImplementedError(
+                "BedrockLLM does not currently support structured output"
+            )
+        return self._call_sync(
+            lambda: self._build_v2_request(
+                input, response_format=response_format, **kwargs
+            )
         )
-        return self._call_sync(request)
 
     @async_rate_limit_handler_decorator
     async def _ainvoke_v1(
@@ -205,8 +224,9 @@ class BedrockLLM(LLMBase):
         system_instruction: Optional[str] = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        request = self._build_v1_request(input, message_history, system_instruction)
-        return await self._call_async(request)
+        return await self._call_async(
+            lambda: self._build_v1_request(input, message_history, system_instruction)
+        )
 
     @async_rate_limit_handler_decorator
     async def _ainvoke_v2(
@@ -215,10 +235,15 @@ class BedrockLLM(LLMBase):
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        request = self._build_v2_request(
-            input, response_format=response_format, **kwargs
+        if response_format is not None:
+            raise NotImplementedError(
+                "BedrockLLM does not currently support structured output"
+            )
+        return await self._call_async(
+            lambda: self._build_v2_request(
+                input, response_format=response_format, **kwargs
+            )
         )
-        return await self._call_async(request)
 
     def invoke_with_tools(
         self,

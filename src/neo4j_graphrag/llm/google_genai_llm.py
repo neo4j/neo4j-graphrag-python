@@ -19,6 +19,7 @@ from __future__ import annotations
 import abc
 from typing import (
     Any,
+    Callable,
     List,
     Literal,
     Optional,
@@ -145,18 +146,23 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
 
     def _call_sync(
         self,
-        contents: list[types.Content],
-        config: types.GenerateContentConfig,
+        build_request: Callable[
+            [], tuple[list[types.Content], types.GenerateContentConfig]
+        ],
     ) -> LLMResponse:
         """Sync transport hook: the only place ``client.models`` is called.
 
-        Everything else (request building, response parsing) is shared with
-        :meth:`_call_async` via :meth:`_build_v1_request`/:meth:`_build_v2_request`
-        and :meth:`_parse_content_response` — a fix to response parsing
-        (e.g. usage extraction) applies to both sync and async by
-        construction, instead of needing to be duplicated in a twin method.
+        ``build_request`` runs inside this method's ``try`` so that request
+        construction (message/schema validation, unsupported-feature checks)
+        is wrapped into :class:`LLMGenerationError` exactly like transport
+        errors, keeping one error contract for the whole call. Response
+        parsing is shared with :meth:`_call_async` via
+        :meth:`_parse_content_response` — a fix to it (e.g. usage extraction)
+        applies to both sync and async by construction, instead of needing
+        to be duplicated in a twin method.
         """
         try:
+            contents, config = build_request()
             response = self.client.models.generate_content(
                 model=self.model_name,
                 contents=contents,  # type: ignore[arg-type]
@@ -168,11 +174,13 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
 
     async def _call_async(
         self,
-        contents: list[types.Content],
-        config: types.GenerateContentConfig,
+        build_request: Callable[
+            [], tuple[list[types.Content], types.GenerateContentConfig]
+        ],
     ) -> LLMResponse:
         """Async transport hook — see :meth:`_call_sync`."""
         try:
+            contents, config = build_request()
             response = await self.client.aio.models.generate_content(
                 model=self.model_name,
                 contents=contents,  # type: ignore[arg-type]
@@ -195,10 +203,9 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
             raise ValueError(
                 "image_bytes is only supported with a list of messages as input."
             )
-        contents, config = self._build_v1_request(
-            input, message_history, system_instruction
+        return self._call_sync(
+            lambda: self._build_v1_request(input, message_history, system_instruction)
         )
-        return self._call_sync(contents, config)
 
     @async_rate_limit_handler_decorator
     async def _ainvoke_v1(
@@ -213,10 +220,9 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
             raise ValueError(
                 "image_bytes is only supported with a list of messages as input."
             )
-        contents, config = self._build_v1_request(
-            input, message_history, system_instruction
+        return await self._call_async(
+            lambda: self._build_v1_request(input, message_history, system_instruction)
         )
-        return await self._call_async(contents, config)
 
     @rate_limit_handler_decorator
     def _invoke_v2(
@@ -227,14 +233,15 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
         image_mime_type: GeminiImageMimeType = GEMINI_DEFAULT_IMAGE_MIME_TYPE,
         **kwargs: Any,
     ) -> LLMResponse:
-        contents, config = self._build_v2_request(
-            input,
-            response_format=response_format,
-            image_bytes=image_bytes,
-            image_mime_type=image_mime_type,
-            **kwargs,
+        return self._call_sync(
+            lambda: self._build_v2_request(
+                input,
+                response_format=response_format,
+                image_bytes=image_bytes,
+                image_mime_type=image_mime_type,
+                **kwargs,
+            )
         )
-        return self._call_sync(contents, config)
 
     @async_rate_limit_handler_decorator
     async def _ainvoke_v2(
@@ -245,14 +252,15 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
         image_mime_type: GeminiImageMimeType = GEMINI_DEFAULT_IMAGE_MIME_TYPE,
         **kwargs: Any,
     ) -> LLMResponse:
-        contents, config = self._build_v2_request(
-            input,
-            response_format=response_format,
-            image_bytes=image_bytes,
-            image_mime_type=image_mime_type,
-            **kwargs,
+        return await self._call_async(
+            lambda: self._build_v2_request(
+                input,
+                response_format=response_format,
+                image_bytes=image_bytes,
+                image_mime_type=image_mime_type,
+                **kwargs,
+            )
         )
-        return await self._call_async(contents, config)
 
     def invoke_with_tools(
         self,
