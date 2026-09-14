@@ -21,6 +21,7 @@ sanitized for filesystem and Neo4j import compatibility (safe characters:
 
 from __future__ import annotations
 
+import json
 import logging
 import unicodedata
 import warnings
@@ -719,6 +720,8 @@ class Neo4jGraphParquetFormatter:
         """Replace GeoPoint (and dumped dict) values with WKT; return POINT column names.
 
         A column is treated as POINT when every non-null value was GeoPoint-like.
+        Mixed GeoPoint / non-point columns are not tagged POINT; leftover dicts
+        are JSON-serialized so they do not stringify as Python reprs.
         """
         saw_geopoint: set[str] = set()
         saw_other: set[str] = set()
@@ -732,6 +735,17 @@ class Neo4jGraphParquetFormatter:
                     saw_geopoint.add(key)
                 else:
                     saw_other.add(key)
+        mixed = saw_geopoint & saw_other
+        for col in sorted(mixed):
+            logger.warning(
+                "Mixed GeoPoint and non-point values for property '%s' — "
+                "not tagging as POINT; remaining dicts serialized as JSON",
+                col,
+            )
+            for row in rows:
+                value = row.get(col)
+                if isinstance(value, dict):
+                    row[col] = json.dumps(value, default=str)
         return saw_geopoint - saw_other
 
     def format_parquet(

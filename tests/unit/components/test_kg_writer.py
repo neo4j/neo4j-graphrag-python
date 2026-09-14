@@ -1973,6 +1973,40 @@ def test_format_parquet_geopoint_mixed_with_none() -> None:
     assert values[1] == point.to_wkt()
 
 
+def test_format_parquet_geopoint_mixed_with_unrelated_dict(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Mixed GeoPoint / unrelated dict is not tagged POINT; dicts become JSON."""
+    pytest.importorskip("pyarrow")
+    import json
+
+    import pyarrow.parquet as pq
+
+    formatter = Neo4jGraphParquetFormatter()
+    point = GeoPoint(latitude=1.0, longitude=2.0, height=3.0)
+    other = {"note": "not a point"}
+    rows: list[dict[str, Any]] = [
+        {INTERNAL_ID_PROPERTY: "n1", "location": point},
+        {INTERNAL_ID_PROPERTY: "n2", "location": other},
+    ]
+
+    with caplog.at_level(
+        "WARNING", logger="neo4j_graphrag.components.parquet_formatter"
+    ):
+        parquet_bytes, schema = formatter.format_parquet(rows, "node label 'Person'")
+
+    location_field = schema.field("location")
+    assert location_field.metadata is None or b"neo4j_type" not in (
+        location_field.metadata or {}
+    )
+    assert "not tagging as POINT" in caplog.text
+
+    table = pq.read_table(BytesIO(parquet_bytes))
+    values = table.column("location").to_pylist()
+    assert point.to_wkt() in values
+    assert json.dumps(other) in values
+
+
 @pytest.mark.asyncio
 async def test_parquet_writer_geopoint_column_metadata_target_type_point() -> None:
     """ParquetWriter files metadata: GeoPoint columns are STRING source, POINT target."""
