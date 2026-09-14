@@ -57,11 +57,11 @@ def test_geopoint_to_wkt_includes_lon_lat_height() -> None:
     from neo4j_graphrag.components.types import GeoPoint
 
     point = GeoPoint(latitude=1.5, longitude=2.25, height=10.0)
-    assert point.to_wkt() == "POINT(2.25 1.5 10.0)"
+    assert point.to_wkt() == "POINT Z(2.25 1.5 10.0)"
 
 
 def test_geopoint_to_wkt_zero_origin() -> None:
     from neo4j_graphrag.components.types import GeoPoint
 
     point = GeoPoint(latitude=0.0, longitude=0.0, height=0.0)
-    assert point.to_wkt() == "POINT(0.0 0.0 0.0)"
+    assert point.to_wkt() == "POINT Z(0.0 0.0 0.0)"

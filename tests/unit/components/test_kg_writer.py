@@ -1916,7 +1916,7 @@ def test_format_parquet_geopoint_node_property_writes_wkt() -> None:
     assert location_field.metadata.get(b"neo4j_type") == b"POINT"
 
     table = pq.read_table(BytesIO(parquet_bytes))
-    assert table.column("location")[0].as_py() == "POINT(0.0 0.0 0.0)"
+    assert table.column("location")[0].as_py() == "POINT Z(0.0 0.0 0.0)"
 
 
 def test_format_parquet_geopoint_relationship_property_writes_wkt() -> None:

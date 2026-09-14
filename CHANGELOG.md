@@ -5,7 +5,7 @@
 ### Fixed
 
 - Fixed `BaseGeminiLLM`/`GeminiLLM` silently dropping token usage on every call: `invoke`/`ainvoke` (both the string and message-list paths, sync and async) built `LLMResponse` from `response.text` alone, ignoring `response.usage_metadata` entirely. `LLMResponse.usage` is now populated from it, matching `AnthropicLLM`/`OpenAILLM`/`VertexAILLM`.
-- Fixed Parquet writes aborting with `ArrowInvalid` when a node or relationship property was a GraphRAG `GeoPoint`. `Neo4jGraphParquetFormatter` now serializes those values as WKT `POINT(longitude latitude height)` before Arrow type inference, and writer file metadata reports `target_type: POINT` (Parquet source type remains `STRING`).
+- Fixed Parquet writes aborting with `ArrowInvalid` when a node or relationship property was a GraphRAG `GeoPoint`. `Neo4jGraphParquetFormatter` now serializes those values as WKT `POINT Z(longitude latitude height)` before Arrow type inference, and writer file metadata reports `target_type: POINT` (Parquet source type remains `STRING`).
 
 ## 1.19.0
 
