@@ -238,13 +238,18 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         self.prompt_template = template
 
     async def extract_for_chunk(
-        self, schema: GraphSchema, examples: str, chunk: TextChunk
+        self,
+        schema: GraphSchema,
+        examples: str,
+        chunk: TextChunk,
+        user_instructions: str = "",
     ) -> Neo4jGraph:
         """Run entity extraction for a given text chunk."""
         prompt = self.prompt_template.format(
             text=chunk.text,
             schema=schema.model_dump(exclude_none=True),
             examples=examples,
+            user_instructions=user_instructions,
         )
 
         # Use structured output (V2) if enabled
@@ -332,10 +337,13 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         schema: GraphSchema,
         examples: str,
         lexical_graph_builder: Optional[LexicalGraphBuilder] = None,
+        user_instructions: str = "",
     ) -> Neo4jGraph:
         """Run extraction, validation and post processing for a single chunk"""
         async with sem:
-            chunk_graph = await self.extract_for_chunk(schema, examples, chunk)
+            chunk_graph = await self.extract_for_chunk(
+                schema, examples, chunk, user_instructions
+            )
             # final_chunk_graph = self.validate_chunk(chunk_graph, schema)
             await self.post_process_chunk(
                 chunk_graph,
@@ -352,6 +360,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         lexical_graph_config: Optional[LexicalGraphConfig] = None,
         schema: Optional[GraphSchema] = None,
         examples: str = "",
+        user_instructions: str = "",
         **kwargs: Any,
     ) -> Neo4jGraph:
         """Perform entity and relation extraction for all chunks in a list.
@@ -367,6 +376,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             lexical_graph_config (Optional[LexicalGraphConfig], optional): Lexical graph configuration to customize node labels and relationship types in the lexical graph.
             schema (GraphSchema | None): Definition of the schema to guide the LLM in its extraction.
             examples (str): Examples for few-shot learning in the prompt.
+            user_instructions (str): More instructions from user.
         """
         lexical_graph_builder = None
         lexical_graph = None
@@ -391,6 +401,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                 schema,
                 examples,
                 lexical_graph_builder,
+                user_instructions,
             )
             for chunk in chunks.chunks
         ]

@@ -229,6 +229,17 @@ async def test_extractor_custom_prompt() -> None:
     llm.ainvoke.assert_called_once_with("this is my prompt")
 
 
+@pytest.mark.asyncio
+async def test_extractor_user_instructions() -> None:
+    llm = MagicMock(spec=LLMInterface)
+    llm.ainvoke.return_value = LLMResponse(content='{"nodes": [], "relationships": []}')
+
+    extractor = LLMEntityRelationExtractor(llm=llm)
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
+    await extractor.run(chunks=chunks, user_instructions="do stuffs")
+    assert "do stuffs" in llm.ainvoke.call_args[0][0]
+
+
 def test_fix_invalid_json_empty_result() -> None:
     json_string = "invalid json"
 

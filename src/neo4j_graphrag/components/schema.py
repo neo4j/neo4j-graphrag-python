@@ -59,7 +59,7 @@ from neo4j_graphrag.experimental.pipeline.types.schema import (
     EntityInputType,
     RelationInputType,
 )
-from neo4j_graphrag.generation import PromptTemplate, SchemaExtractionTemplate
+from neo4j_graphrag.generation import SchemaExtractionTemplate
 from neo4j_graphrag.llm import LLMInterface
 from neo4j_graphrag.schema import get_structured_schema
 from neo4j_graphrag.types import LLMMessage
@@ -1603,12 +1603,12 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
     def __init__(
         self,
         llm: LLMInterface,
-        prompt_template: Optional[PromptTemplate] = None,
+        prompt_template: Optional[SchemaExtractionTemplate] = None,
         llm_params: Optional[Dict[str, Any]] = None,
         use_structured_output: bool = False,
     ) -> None:
         self._llm: LLMInterface = llm
-        self._prompt_template: PromptTemplate = (
+        self._prompt_template: SchemaExtractionTemplate = (
             prompt_template or SchemaExtractionTemplate()
         )
         self._llm_params: dict[str, Any] = llm_params or {}
@@ -1852,18 +1852,25 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         return validate_extraction_dict_to_graph_schema(extracted_schema)
 
     @validate_call
-    async def run(self, text: str, examples: str = "", **kwargs: Any) -> GraphSchema:
+    async def run(
+        self, text: str, examples: str = "", user_instructions: str = "", **kwargs: Any
+    ) -> GraphSchema:
         """
         Asynchronously extracts the schema from text and returns a GraphSchema object.
 
         Args:
             text (str): the text from which the schema will be inferred.
             examples (str): examples to guide schema extraction.
+            user_instructions (str): user provided context.
         Returns:
             GraphSchema: A configured schema object, extracted automatically and
             constructed asynchronously.
         """
-        prompt: str = self._prompt_template.format(text=text, examples=examples)
+        prompt: str = self._prompt_template.format(
+            text=text,
+            examples=examples,
+            user_instructions=user_instructions,
+        )
 
         if self.use_structured_output:
             return await self._run_with_structured_output(prompt)
