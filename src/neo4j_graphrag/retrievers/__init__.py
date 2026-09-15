@@ -13,6 +13,9 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+from .async_hybrid import AsyncHybridCypherRetriever, AsyncHybridRetriever
+from .async_text2cypher import AsyncText2CypherRetriever
+from .async_vector import AsyncVectorCypherRetriever, AsyncVectorRetriever
 from .hybrid import HybridCypherRetriever, HybridRetriever
 from .text2cypher import Text2CypherRetriever
 from .tools_retriever import ToolsRetriever
@@ -25,6 +28,11 @@ __all__ = [
     "HybridCypherRetriever",
     "Text2CypherRetriever",
     "ToolsRetriever",
+    "AsyncVectorRetriever",
+    "AsyncVectorCypherRetriever",
+    "AsyncHybridRetriever",
+    "AsyncHybridCypherRetriever",
+    "AsyncText2CypherRetriever",
 ]
 
 
