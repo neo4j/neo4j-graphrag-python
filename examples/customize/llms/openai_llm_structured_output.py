@@ -49,12 +49,15 @@ print("=" * 60)
 print("V1 Legacy: Manual JSON extraction with prompt engineering")
 print("=" * 60)
 
+# gpt-4.1-mini rather than gpt-5-mini: this example pins temperature=0 so the
+# extracted fields are reproducible, and gpt-5 models only accept the default
+# temperature (1). llm_v2 needs it too - it takes temperature at invoke() below.
 with (
     OpenAILLM(
-        model_name="gpt-5-mini",
+        model_name="gpt-4.1-mini",
         model_params={"response_format": {"type": "json_object"}, "temperature": 0},
     ) as llm_v1,
-    OpenAILLM(model_name="gpt-5-mini") as llm_v2,
+    OpenAILLM(model_name="gpt-4.1-mini") as llm_v2,
 ):
     # V1 requires string input and explicit JSON instructions in the prompt
     v1_prompt = """Extract movie information and respond in JSON format.

@@ -1,5 +1,8 @@
 # Examples Index
 
+> **New here?** [SETUP.md](SETUP.md) covers what you need in order to run these -
+> extras, API keys and services - and which providers are free.
+
 This folder contains examples usage for the different features
 supported by the `neo4j-graphrag` package:
 
@@ -119,8 +122,6 @@ are listed in [the last section of this file](#customize).
   - [Custom](./customize/build_graph/components/loaders/custom_loader.py)
 - Text Splitter:
   - [Fixed size splitter](./customize/build_graph/components/splitters/fixed_size_splitter.py)
-  - [Splitter from LangChain](./customize/build_graph/components/splitters/langhchain_splitter.py)
-  - [Splitter from LLamaIndex](./customize/build_graph/components/splitters/llamaindex_splitter.py)
   - [Custom](./customize/build_graph/components/splitters/custom_splitter.py)
 - [Chunk embedder]()
 - Schema Builder:

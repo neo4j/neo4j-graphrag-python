@@ -37,7 +37,7 @@ from pydantic import BaseModel, ConfigDict
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel", None)
 def test_vertexai_llm_missing_dependency() -> None:
     with pytest.raises(ImportError):
-        VertexAILLM(model_name="gemini-1.5-flash-001")
+        VertexAILLM(model_name="gemini-2.5-flash")
 
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
@@ -45,9 +45,7 @@ def test_vertexai_llm_rate_limit_handler_is_set(
     _GenerativeModelMock: MagicMock,
 ) -> None:
     custom_handler = MagicMock()
-    llm = VertexAILLM(
-        model_name="gemini-1.5-flash-001", rate_limit_handler=custom_handler
-    )
+    llm = VertexAILLM(model_name="gemini-2.5-flash", rate_limit_handler=custom_handler)
     assert llm._rate_limit_handler is custom_handler
 
 
@@ -55,13 +53,13 @@ def test_vertexai_llm_rate_limit_handler_is_set(
 def test_vertexai_llm_default_rate_limit_handler_is_set(
     _GenerativeModelMock: MagicMock,
 ) -> None:
-    llm = VertexAILLM(model_name="gemini-1.5-flash-001")
+    llm = VertexAILLM(model_name="gemini-2.5-flash")
     assert hasattr(llm, "_rate_limit_handler")
 
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
 def test_vertexai_invoke_happy_path(GenerativeModelMock: MagicMock) -> None:
-    model_name = "gemini-1.5-flash-001"
+    model_name = "gemini-2.5-flash"
     input_text = "may thy knife chip and shatter"
     mock_response = Mock()
     mock_response.text = "Return text"
@@ -91,7 +89,7 @@ def test_vertexai_invoke_with_system_instruction(
     GenerativeModelMock: MagicMock,
 ) -> None:
     system_instruction = "You are a helpful assistant."
-    model_name = "gemini-1.5-flash-001"
+    model_name = "gemini-2.5-flash"
     input_text = "may thy knife chip and shatter"
     mock_response = Mock()
     mock_response.text = "Return text"
@@ -120,7 +118,7 @@ def test_vertexai_invoke_with_message_history_and_system_instruction(
     GenerativeModelMock: MagicMock,
 ) -> None:
     system_instruction = "You are a helpful assistant."
-    model_name = "gemini-1.5-flash-001"
+    model_name = "gemini-2.5-flash"
     mock_response = Mock()
     mock_response.text = "Return text"
     mock_response.usage_metadata = None
@@ -152,7 +150,7 @@ def test_vertexai_invoke_with_message_history_and_system_instruction(
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
 def test_vertexai_get_messages(GenerativeModelMock: MagicMock) -> None:
-    model_name = "gemini-1.5-flash-001"
+    model_name = "gemini-2.5-flash"
     question = "When does it set?"
     message_history: list[LLMMessage] = [
         {"role": "user", "content": "When does the sun come up in the summer?"},
@@ -186,7 +184,7 @@ def test_vertexai_get_messages_validation_error(
     _GenerativeModelMock: MagicMock,
 ) -> None:
     system_instruction = "You are a helpful assistant."
-    model_name = "gemini-1.5-flash-001"
+    model_name = "gemini-2.5-flash"
     question = "hi!"
     message_history = [
         {"role": "model", "content": "hello!"},
@@ -210,7 +208,7 @@ async def test_vertexai_ainvoke_happy_path(
     mock_model.generate_content_async = AsyncMock(return_value=mock_response)
     mock_get_messages.return_value = [{"text": "Return text"}]
     model_params = {"temperature": 0.5}
-    llm = VertexAILLM("gemini-1.5-flash-001", model_params)
+    llm = VertexAILLM("gemini-2.5-flash", model_params)
     input_text = "may thy knife chip and shatter"
     response = await llm.ainvoke(input_text)
     print(f"Response: {response}")
@@ -344,7 +342,7 @@ async def test_vertexai_acall_llm_with_tools(mock_model: Mock, test_tool: Tool) 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
 def test_vertexai_invoke_v2_happy_path(GenerativeModelMock: MagicMock) -> None:
     """Test V2 interface invoke method with List[LLMMessage] input."""
-    model_name = "gemini-1.5-flash-001"
+    model_name = "gemini-2.5-flash"
     messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "What is the capital of France?"},
@@ -376,7 +374,7 @@ def test_vertexai_invoke_v2_with_conversation_history(
     GenerativeModelMock: MagicMock,
 ) -> None:
     """Test V2 interface invoke with conversation history."""
-    model_name = "gemini-1.5-flash-001"
+    model_name = "gemini-2.5-flash"
     messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "What is the capital of France?"},
@@ -411,7 +409,7 @@ def test_vertexai_invoke_v2_with_conversation_history(
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
 def test_vertexai_invoke_v2_no_system_message(GenerativeModelMock: MagicMock) -> None:
     """Test V2 interface invoke without system message."""
-    model_name = "gemini-1.5-flash-001"
+    model_name = "gemini-2.5-flash"
     messages: List[LLMMessage] = [
         {"role": "user", "content": "Hello, how are you?"},
     ]
@@ -435,7 +433,7 @@ def test_vertexai_invoke_v2_no_system_message(GenerativeModelMock: MagicMock) ->
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
 async def test_vertexai_ainvoke_v2_happy_path(GenerativeModelMock: MagicMock) -> None:
     """Test V2 interface async invoke method with List[LLMMessage] input."""
-    model_name = "gemini-1.5-flash-001"
+    model_name = "gemini-2.5-flash"
     messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "What is 2+2?"},
@@ -459,7 +457,7 @@ async def test_vertexai_ainvoke_v2_happy_path(GenerativeModelMock: MagicMock) ->
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
 def test_vertexai_invoke_v2_validation_error(_GenerativeModelMock: MagicMock) -> None:
     """Test V2 interface invoke with invalid role raises error."""
-    model_name = "gemini-1.5-flash-001"
+    model_name = "gemini-2.5-flash"
     messages: List[LLMMessage] = [
         {"role": "invalid_role", "content": "This should fail."},  # type: ignore[typeddict-item]
     ]
@@ -476,7 +474,7 @@ def test_vertexai_get_brand_new_messages_system_instruction_override(
     _GenerativeModelMock: MagicMock,
 ) -> None:
     """Test that system instruction in messages overrides class-level system instruction."""
-    model_name = "gemini-1.5-flash-001"
+    model_name = "gemini-2.5-flash"
     class_system_instruction = "You are a class-level assistant."
     messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a message-level assistant."},
@@ -622,7 +620,7 @@ def test_vertexai_invoke_v2_rate_limit_handler_called(
     mock_model.generate_content.return_value = mock_response
 
     spy_handler = MagicMock(wraps=NoOpRateLimitHandler())
-    llm = VertexAILLM(model_name="gemini-1.5-flash-001", rate_limit_handler=spy_handler)
+    llm = VertexAILLM(model_name="gemini-2.5-flash", rate_limit_handler=spy_handler)
     response = llm.invoke(messages)
 
     assert response.content == "Hi there!"
@@ -642,8 +640,23 @@ async def test_vertexai_ainvoke_v2_rate_limit_handler_called(
     mock_model.generate_content_async = AsyncMock(return_value=mock_response)
 
     spy_handler = MagicMock(wraps=NoOpRateLimitHandler())
-    llm = VertexAILLM(model_name="gemini-1.5-flash-001", rate_limit_handler=spy_handler)
+    llm = VertexAILLM(model_name="gemini-2.5-flash", rate_limit_handler=spy_handler)
     response = await llm.ainvoke(messages)
 
     assert response.content == "Hi there!"
     spy_handler.handle_async.assert_called_once()
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
+def test_vertexai_llm_default_model_matches_docstring(
+    GenerativeModelMock: MagicMock,
+) -> None:
+    """The default must be a model Vertex still serves.
+
+    The previous default, gemini-1.5-flash-001, was retired, so VertexAILLM()
+    with no explicit model failed with a 404 for everyone. Pinning it here keeps
+    the signature and the documented default from drifting apart again.
+    """
+    llm = VertexAILLM()
+    assert llm.model_name == "gemini-2.5-flash"
+    assert 'Defaults to "gemini-2.5-flash"' in (VertexAILLM.__doc__ or "")

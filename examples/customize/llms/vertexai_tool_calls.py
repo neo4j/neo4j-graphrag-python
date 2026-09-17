@@ -102,7 +102,7 @@ async def main() -> None:
     # Initialize the VertexAI LLM
     generation_config = GenerationConfig(temperature=0.0)
     llm = VertexAILLM(
-        model_name="gemini-2.0-flash-001",
+        model_name="gemini-2.5-flash",
         generation_config=generation_config,
         # tool_config=ToolConfig(
         #     function_calling_config=ToolConfig.FunctionCallingConfig(

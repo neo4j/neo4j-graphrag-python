@@ -28,6 +28,7 @@ from neo4j_graphrag.components.filename_collision_handler import (
 from neo4j_graphrag.components.parquet_formatter import (
     INTERNAL_ID_PROPERTY,
     Neo4jGraphParquetFormatter,
+    PARQUET_NEO4J_TYPE_METADATA_KEY,
 )
 from neo4j_graphrag.components.parquet_output import (
     ParquetOutputDestination,
@@ -66,14 +67,24 @@ def _build_columns_from_schema(
         field = schema.field(i)
         type_info = Neo4jGraphParquetFormatter.pyarrow_type_to_type_info(field.type)
         name = field.name
-        columns.append(
-            {
-                "name": name,
-                "type": type_info.source_type,
-                "is_primary_key": name in primary_key_names,
-                "is_unique": name in uniqueness_names,
-            }
-        )
+        column: dict[str, Any] = {
+            "name": name,
+            "type": type_info.source_type,
+            "is_primary_key": name in primary_key_names,
+            "is_unique": name in uniqueness_names,
+        }
+        field_meta = field.metadata or {}
+        raw_neo4j_type = field_meta.get(PARQUET_NEO4J_TYPE_METADATA_KEY)
+        if raw_neo4j_type is not None:
+            neo4j_type = (
+                raw_neo4j_type.decode()
+                if isinstance(raw_neo4j_type, bytes)
+                else str(raw_neo4j_type)
+            )
+            column["target_type"] = neo4j_type.upper()
+        elif type_info.target_type != type_info.source_type:
+            column["target_type"] = type_info.target_type
+        columns.append(column)
     return columns
 
 
