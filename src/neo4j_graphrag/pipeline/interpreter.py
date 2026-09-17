@@ -85,6 +85,66 @@ __all__ = ["Interpreter", "LocalInterpreter"]
 _T = TypeVar("_T")
 _U = TypeVar("_U")
 
+#: Reports an exception a ``Try*`` stage captured as an ``Err``, so that
+#: observers hear about per-item failures that never propagate.
+ReportError = Callable[[Exception], None]
+
+
+def _ignore_error(error: Exception) -> None:
+    """Default :data:`ReportError`: captured failures go unannounced."""
+
+
+class _ObserverErrors:
+    """Routes stage failures to observers, reporting each one once.
+
+    Two kinds of failure reach :meth:`StageObserver.on_error`:
+
+    * **Captured** — a ``Try*`` stage turned a per-item exception into an
+      ``Err``.  It never propagates, so it is reported as it arises.
+    * **Fatal** — a stage raised.  The exception then travels out through
+      every stage above it, each of which would otherwise report a failure
+      that was not its own, so only the first sighting of a given
+      exception object is reported: the stage that actually raised.
+    """
+
+    __slots__ = ("_observers", "_last_fatal")
+
+    def __init__(self, observers: tuple[StageObserver[Any], ...]) -> None:
+        self._observers = observers
+        self._last_fatal: Exception | None = None
+
+    def fatal(self, op: Operator, error: Exception) -> None:
+        if error is self._last_fatal:
+            return
+        self._last_fatal = error
+        for observer in self._observers:
+            observer.on_error(op, error)
+
+    def captured(self, op: Operator) -> ReportError:
+        """A :data:`ReportError` for the failures *op* captures as ``Err``."""
+
+        def report(error: Exception) -> None:
+            for observer in self._observers:
+                observer.on_error(op, error)
+
+        return report
+
+
+def _attribute_errors(
+    stream: Iterator[Any], op: Operator, errors: _ObserverErrors
+) -> Iterator[Any]:
+    """Report a failure of *op* to observers, then let it propagate."""
+    iterator = iter(stream)
+    while True:
+        try:
+            item = next(iterator)
+        except StopIteration:
+            return
+        except Exception as e:
+            errors.fatal(op, e)
+            raise
+        yield item
+
 
 class Interpreter(ABC):
     """Base class for pipeline interpreters.
@@ -149,6 +209,7 @@ def _make_map_chunk_coro(
 
 def _make_try_chunk_coro(
     func: Callable[[_T], Awaitable[_U]],
+    report_error: ReportError = _ignore_error,
 ) -> Callable[[list[_T]], Coroutine[None, None, list[Ok[_U] | Err]]]:
     async def _run_chunk(chunk: list[_T]) -> list[Ok[_U] | Err]:
         raw = await asyncio.gather(
@@ -157,6 +218,7 @@ def _make_try_chunk_coro(
         results: list[Ok[_U] | Err] = []
         for r in raw:
             if isinstance(r, Exception):
+                report_error(r)
                 results.append(Err(exception=r))
             elif isinstance(r, BaseException):
                 # SystemExit, KeyboardInterrupt, CancelledError: fatal, re-raise.
@@ -170,6 +232,7 @@ def _make_try_chunk_coro(
 
 def _make_try_ok_chunk_coro(
     func: Callable[[Any], Awaitable[Any]],
+    report_error: ReportError = _ignore_error,
 ) -> Callable[[list[Any]], Coroutine[None, None, list[Any]]]:
     async def _process(item: Ok[Any] | Err) -> Ok[Any] | Err:
         if isinstance(item, Err):
@@ -177,6 +240,7 @@ def _make_try_ok_chunk_coro(
         try:
             return Ok(value=await func(item.value))
         except Exception as e:
+            report_error(e)
             return Err(exception=e)
 
     async def _run_chunk(chunk: list[Any]) -> list[Any]:
@@ -185,12 +249,19 @@ def _make_try_ok_chunk_coro(
     return _run_chunk
 
 
-def _try_map(stream: Iterator[Any], func: Callable[[Any], Any]) -> Iterator[Any]:
+def _try_map(
+    stream: Iterator[Any],
+    func: Callable[[Any], Any],
+    report_error: ReportError = _ignore_error,
+) -> Iterator[Any]:
     for item in stream:
         try:
-            yield Ok(value=func(item))
+            value = func(item)
         except Exception as e:
+            report_error(e)
             yield Err(exception=e)
+        else:
+            yield Ok(value=value)
 
 
 def _map_ok(stream: Iterator[Any], func: Callable[[Any], Any]) -> Iterator[Any]:
@@ -201,15 +272,22 @@ def _map_ok(stream: Iterator[Any], func: Callable[[Any], Any]) -> Iterator[Any]:
             yield Ok(value=func(item.value))
 
 
-def _try_map_ok(stream: Iterator[Any], func: Callable[[Any], Any]) -> Iterator[Any]:
+def _try_map_ok(
+    stream: Iterator[Any],
+    func: Callable[[Any], Any],
+    report_error: ReportError = _ignore_error,
+) -> Iterator[Any]:
     for item in stream:
         if isinstance(item, Err):
-            yield item
+            yield item  # an upstream failure, already reported where it arose
         else:
             try:
-                yield Ok(value=func(item.value))
+                value = func(item.value)
             except Exception as e:
+                report_error(e)
                 yield Err(exception=e)
+            else:
+                yield Ok(value=value)
 
 
 def _read_source(source: Source[Any]) -> Iterator[Any]:
@@ -233,10 +311,27 @@ def _reduce_lazy(
     yield _reduce(combine, stream, zero)
 
 
-def _to_sink(stream: Iterator[Any], sink: Sink[Any]) -> Iterator[Any]:
-    """Write every element of *stream* to *sink*, yielding nothing."""
+def _write_through(stream: Iterator[Any], sink: Sink[Any]) -> Iterator[Any]:
+    """Write every element of *stream* to *sink* and pass it through.
+
+    The write happens *inside* the generator, before the item is yielded,
+    so that an observer wrapped around this stream both sees every item
+    written and receives a failing ``sink.write`` in ``on_error`` — the
+    exception surfaces from the ``next()`` call the observer makes.
+    """
     for item in stream:
         sink.write(item)
+        yield item
+
+
+def _drain(stream: Iterator[Any]) -> Iterator[Any]:
+    """Consume *stream* for its side effects, yielding nothing.
+
+    Deferred like every other stage: the upstream is drained on the first
+    ``next()``, not when the chain is built.
+    """
+    for _ in stream:
+        pass
     yield from ()
 
 
@@ -276,8 +371,15 @@ class LocalInterpreter(Interpreter):
             instances.  Each operator's output stream is wrapped with
             every observer (in order), so hooks fire per item per stage
             boundary as the stream is consumed — never at build time.
-            A ``SinkOp`` is the exception: its output is empty, so its
-            *input* is wrapped and the hooks bracket each ``sink.write``.
+            A ``SinkOp`` is the exception: its output is empty, so the
+            writes themselves are observed — each item the sink writes is
+            reported by ``before``/``after``, and a ``sink.write`` that
+            raises reaches ``on_error`` — while the stream the caller sees
+            still yields nothing.
+
+            ``on_error`` also fires for per-item failures a ``Try*`` stage
+            captures as an ``Err``, once, at the stage that captured it.
+            An ``Err`` passing through later stages is not re-reported.
     """
 
     def __init__(self, observers: Iterable[StageObserver[Any]] = ()) -> None:
@@ -291,13 +393,21 @@ class LocalInterpreter(Interpreter):
 
     def evaluate(self, pipeline: Pipeline[Any] | ResultPipeline[Any]) -> Iterator[Any]:
         stream: Iterator[Any] = iter(())
+        errors = _ObserverErrors(self._observers)
         for op in pipeline.pipeline_operators:
             if isinstance(op, SinkOp):
-                # A sink emits nothing, so wrapping its *output* would show
-                # the stage producing zero items.  Wrap its input instead:
-                # hooks then fire around each `sink.write`, and the stage
-                # reports the number of items written.
-                stream = _to_sink(self._observe(op, stream), op.sink)
+                # A sink emits nothing, so wrapping its output would show
+                # the stage producing zero items.  Observe the writes
+                # themselves instead — `_write_through` writes and then
+                # yields each item, so the stage reports what it wrote and
+                # a failing write reaches `on_error` — and hide the
+                # passed-through items from the caller again with `_drain`.
+                stream = _drain(
+                    self._observe(
+                        op,
+                        self._attribute(op, _write_through(stream, op.sink), errors),
+                    )
+                )
                 continue
             match op:
                 case SourceOp(source=source):
@@ -323,20 +433,24 @@ class LocalInterpreter(Interpreter):
                         stream, batch_size, _make_map_chunk_coro(func)
                     )
                 case TryMap(func=func):
-                    stream = _try_map(stream, func)
+                    stream = _try_map(stream, func, errors.captured(op))
                 case TryMapAsyncChunked(func=func, map_batch_size=batch_size):
                     stream = _iter_chunked_async(
-                        stream, batch_size, _make_try_chunk_coro(func)
+                        stream,
+                        batch_size,
+                        _make_try_chunk_coro(func, errors.captured(op)),
                     )
                 case MapOk(func=func):
                     stream = _map_ok(stream, func)
                 case FlattenOk():
                     stream = _flatten_ok(stream)
                 case TryMapOk(func=func):
-                    stream = _try_map_ok(stream, func)
+                    stream = _try_map_ok(stream, func, errors.captured(op))
                 case TryMapOkAsyncChunked(func=func, map_batch_size=batch_size):
                     stream = _iter_chunked_async(
-                        stream, batch_size, _make_try_ok_chunk_coro(func)
+                        stream,
+                        batch_size,
+                        _make_try_ok_chunk_coro(func, errors.captured(op)),
                     )
                 case FilterOk():
                     stream = (item.value for item in stream if isinstance(item, Ok))
@@ -344,5 +458,13 @@ class LocalInterpreter(Interpreter):
                     stream = _on_error(stream, handler)
                 case _:  # pragma: no cover
                     raise TypeError(f"Unknown operator: {op!r}")
-            stream = self._observe(op, stream)
+            stream = self._observe(op, self._attribute(op, stream, errors))
         return stream
+
+    def _attribute(
+        self, op: Operator, stream: Iterator[Any], errors: _ObserverErrors
+    ) -> Iterator[Any]:
+        """Report *op*'s fatal failures, when anyone is listening."""
+        if not self._observers:
+            return stream
+        return _attribute_errors(stream, op, errors)

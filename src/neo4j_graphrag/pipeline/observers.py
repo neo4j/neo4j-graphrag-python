@@ -85,18 +85,28 @@ class StageObserver(Generic[_T]):
     * :meth:`after` — downstream has requested the next item, meaning
       *item* has been fully processed by every later stage.  The time
       between ``before`` and ``after`` measures downstream cost.
-    * :meth:`on_error` — *op* (or a stage upstream of it) raised;
-      *error* propagates once this hook returns.  The item that caused
-      the failure is not visible at this level — to observe per-item
-      failures, use a ``Try*`` stage (e.g. :meth:`Pipeline.map_safe`) and
-      watch the ``Err`` values flow through ``before``/``after``.
+    * :meth:`on_error` — *op* failed.  Called by the interpreter rather
+      than by :meth:`wrap`, so that a failure is reported once, against
+      the stage it came from, instead of once per stage it propagates
+      through.  Both kinds of failure arrive here:
+
+      - **Captured**: a ``Try*`` stage (e.g. :meth:`Pipeline.map_safe`)
+        turned a per-item exception into an
+        :class:`~neo4j_graphrag.pipeline.result.Err`.  The stream carries
+        on, and that same ``Err`` also reaches ``before``/``after`` as an
+        ordinary item — which is where the failing value is visible.  The
+        hook fires once, at the stage that captured the exception; an
+        ``Err`` passing through later stages is not reported again.
+      - **Fatal**: *op* raised without capture.  *error* propagates once
+        this hook returns, and the stream is over.
 
     Because the hooks sit *between* stages, an observer attached to a
     pipeline of N operators sees each item N times — once per stage
     boundary — keyed by :attr:`Operator.name`.  A sink is the exception in
-    one respect only: because it emits nothing, the interpreter observes
-    the items flowing *into* it, so ``before``/``after`` bracket each
-    ``sink.write``.
+    one respect only: because it emits nothing of its own, the interpreter
+    observes the writes instead — every item the sink writes is reported by
+    ``before``/``after``, and a ``sink.write`` that raises reaches
+    :meth:`on_error`.
 
     .. important::
         Hooks receive the **live item**, not a copy — the same object that
@@ -113,19 +123,23 @@ class StageObserver(Generic[_T]):
         """Called when *item* has been consumed by every downstream stage."""
 
     def on_error(self, op: Operator, error: Exception) -> None:
-        """Called when evaluating *op* raises *error* (which then propagates)."""
+        """Called when *op* fails with *error*.
+
+        Either because a ``Try*`` stage captured it as an ``Err`` and the
+        stream continues, or because it is about to propagate and end the
+        stream — see the class docstring.
+        """
 
     def wrap(self, op: Operator, stream: Iterator[_T]) -> Iterator[_T]:
-        """Wrap *op*'s output stream, invoking the hooks around each item."""
-        iterator = iter(stream)
-        while True:
-            try:
-                item = next(iterator)
-            except StopIteration:
-                return
-            except Exception as e:
-                self.on_error(op, e)
-                raise
+        """Wrap *op*'s output stream, invoking the hooks around each item.
+
+        Failures are not this method's concern — an exception here is one
+        merely passing through, not a failure of this stage.  The
+        interpreter reports failures to :meth:`on_error` instead, against
+        the stage they came from, so an override of this method does not
+        have to handle them.
+        """
+        for item in stream:
             self.before(op, item)
             yield item
             self.after(op, item)
@@ -136,7 +150,9 @@ class LoggingStageObserver(StageObserver[Any]):
 
     * Stage start and finish (with the emitted item count) at ``INFO``.
     * Every emitted item at ``DEBUG``.
-    * Stage failures at ``ERROR``.
+    * Stage failures at ``ERROR`` — including per-item failures a ``Try*``
+      stage captures as an ``Err``, so a partial-failure pipeline logs one
+      ``ERROR`` per failed item.
 
     A stage whose stream is abandoned early (e.g. downstream of
     ``take``) never logs "finished".

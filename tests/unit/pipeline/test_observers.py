@@ -27,9 +27,11 @@ from neo4j_graphrag.pipeline import (
     LoggingStageObserver,
     Ok,
     Pipeline,
+    ResultPipeline,
     Sink,
     StageObserver,
 )
+from neo4j_graphrag.pipeline import operators as ops
 from neo4j_graphrag.pipeline.operators import Operator
 
 
@@ -49,6 +51,13 @@ class _RecordingObserver(StageObserver[Any]):
         self.events.append(("error", op.name, error))
 
 
+async def _afail(x: int) -> int:
+    """Fails for a single item, so a chunk yields one ``Err``."""
+    if x == 2:
+        raise ValueError("boom")
+    return x
+
+
 class _CaptureSink(Sink[Any]):
     def __init__(self) -> None:
         self.received: list[Any] = []
@@ -57,7 +66,27 @@ class _CaptureSink(Sink[Any]):
         self.received.append(element)
 
 
-def _evaluate(pipeline: Pipeline[Any], observer: StageObserver[Any]) -> list[Any]:
+class _FailingSink(Sink[Any]):
+    """Records writes until it sees *fail_on*, then raises."""
+
+    def __init__(self, fail_on: Any) -> None:
+        self.received: list[Any] = []
+        self._fail_on = fail_on
+
+    def write(self, element: Any) -> None:
+        if element == self._fail_on:
+            raise RuntimeError(f"write failed: {element}")
+        self.received.append(element)
+
+
+def _pipe_tail(pipe: Pipeline[Any]) -> ops.Operator:
+    """The tail operator of *pipe*, for building a sink graph by hand."""
+    return pipe.pipeline_operators[-1]
+
+
+def _evaluate(
+    pipeline: Pipeline[Any] | ResultPipeline[Any], observer: StageObserver[Any]
+) -> list[Any]:
     return list(LocalInterpreter(observers=[observer]).evaluate(pipeline))
 
 
@@ -122,6 +151,113 @@ class TestStageObserverHooks:
         _, stage, error = error_events[0]
         assert stage == "Map[1](explode)"
         assert isinstance(error, ValueError)
+
+    def test_fatal_error_reported_once_by_the_stage_that_raised(self) -> None:
+        """A propagating exception is not re-reported by the stages it
+        travels through — they did not fail."""
+
+        def explode(x: int) -> int:
+            if x == 3:
+                raise ValueError("boom")
+            return x
+
+        observer = _RecordingObserver()
+        stream = LocalInterpreter(observers=[observer]).evaluate(
+            Pipeline(range(5)).map(explode).map(lambda v: v + 1).filter(lambda v: True)
+        )
+
+        with pytest.raises(ValueError, match="boom"):
+            list(stream)
+
+        errors = [
+            (stage, item) for hook, stage, item in observer.events if hook == "error"
+        ]
+        assert len(errors) == 1
+        assert errors[0][0] == "Map[1](explode)"
+
+    def test_captured_err_reaches_on_error_once_at_the_capturing_stage(
+        self,
+    ) -> None:
+        def fail_on_two(x: int) -> int:
+            if x == 2:
+                raise ValueError("boom")
+            return x
+
+        observer = _RecordingObserver()
+        collected = list(
+            LocalInterpreter(observers=[observer]).evaluate(
+                Pipeline([1, 2, 3])
+                .map_safe(fail_on_two)
+                .map_ok(lambda v: v * 10)
+                .map_safe(lambda v: v + 1)
+            )
+        )
+
+        assert [type(item).__name__ for item in collected] == ["Ok", "Err", "Ok"]
+        # Reported once, by the stage that captured it — the Err passing
+        # through the two later stages is not reported again.
+        errors = [
+            (stage, item) for hook, stage, item in observer.events if hook == "error"
+        ]
+        assert len(errors) == 1
+        stage, error = errors[0]
+        assert stage == "TryMap[1](fail_on_two)"
+        assert isinstance(error, ValueError)
+
+    def test_on_error_fires_before_the_err_item_flows(self) -> None:
+        def explode(x: int) -> int:
+            raise ValueError("boom")
+
+        observer = _RecordingObserver()
+        _evaluate(Pipeline([1]).map_safe(explode), observer)
+
+        hooks = [
+            hook for hook, stage, _ in observer.events if stage == "TryMap[1](explode)"
+        ]
+        assert hooks == ["error", "before", "after"]
+
+    @pytest.mark.parametrize(
+        ("build", "stage"),
+        [
+            (
+                lambda p: p.map_async_chunked_safe(_afail, map_batch_size=2),
+                "TryMapAsyncChunked[1](_afail)",
+            ),
+            (
+                lambda p: p.map_safe(lambda x: x).map_async_chunked_safe(
+                    _afail, map_batch_size=2
+                ),
+                "TryMapOkAsyncChunked[2](_afail)",
+            ),
+        ],
+    )
+    def test_async_try_stages_report_captured_errors(
+        self, build: Any, stage: str
+    ) -> None:
+        observer = _RecordingObserver()
+        list(
+            LocalInterpreter(observers=[observer]).evaluate(build(Pipeline([1, 2, 3])))
+        )
+
+        errors = [(s, item) for hook, s, item in observer.events if hook == "error"]
+        assert len(errors) == 1
+        assert errors[0][0] == stage
+        assert isinstance(errors[0][1], ValueError)
+
+    def test_filter_ok_and_on_error_stages_do_not_re_report(self) -> None:
+        def fail_on_two(x: int) -> int:
+            if x == 2:
+                raise ValueError("boom")
+            return x
+
+        handled: list[Err] = []
+        observer = _RecordingObserver()
+        _evaluate(
+            Pipeline([1, 2]).map_safe(fail_on_two).on_error(handled.append), observer
+        )
+
+        assert len(handled) == 1
+        assert len([e for e in observer.events if e[0] == "error"]) == 1
 
     def test_err_values_flow_through_hooks_as_items(self) -> None:
         def fail_on_two(x: int) -> int:
@@ -235,8 +371,8 @@ class TestSinkObservation:
         )
 
         assert sink.received == [10, 20]
-        # The sink's own output stream is empty; the items flowing *into*
-        # it are what gets observed, so each write is bracketed.
+        # The sink's own output stream is empty, so the writes are what
+        # gets observed — one before/after pair per item written.
         assert [
             (hook, item) for hook, stage, item in observer.events if stage == "capture"
         ] == [
@@ -258,6 +394,40 @@ class TestSinkObservation:
         assert "Stage SinkOp[1]: finished, 3 item(s)" in [
             r.getMessage() for r in caplog.records
         ]
+
+    def test_observed_sink_pipeline_still_yields_nothing(self) -> None:
+        observer = _RecordingObserver()
+        sink = _CaptureSink()
+        graph = Pipeline._wrap(
+            ops.SinkOp(prev=_pipe_tail(Pipeline([1, 2])), sink=sink, label="capture")
+        )
+
+        stream = LocalInterpreter(observers=[observer]).evaluate(graph)
+        assert sink.received == []  # evaluate() alone writes nothing
+        assert list(stream) == []  # the writes are not passed on to the caller
+        assert sink.received == [1, 2]
+
+    def test_a_failing_sink_write_reaches_on_error(self) -> None:
+        """The write happens inside the observed stream, so it is attributed."""
+        observer = _RecordingObserver()
+        sink = _FailingSink(fail_on=2)
+
+        with pytest.raises(RuntimeError, match="write failed: 2"):
+            Pipeline([1, 2, 3]).to_sink(
+                sink,
+                label="capture",
+                interpreter=LocalInterpreter(observers=[observer]),
+            )
+
+        assert sink.received == [1]
+        events = [
+            (hook, item) for hook, stage, item in observer.events if stage == "capture"
+        ]
+        assert events[:2] == [("before", 1), ("after", 1)]
+        hook, error = events[2]
+        assert hook == "error"
+        assert isinstance(error, RuntimeError)
+        assert len(events) == 3  # the failed item never reaches before/after
 
 
 class TestStageObserverBase:
