@@ -62,7 +62,7 @@ except ImportError:
     boto3 = None
 
 DEFAULT_BEDROCK_LLM_MODEL = os.getenv(
-    "BEDROCK_LLM_MODEL", "us.anthropic.claude-sonnet-4-20250514-v1:0"
+    "BEDROCK_LLM_MODEL", "us.anthropic.claude-haiku-4-5-20251001-v1:0"
 )
 
 
@@ -72,7 +72,7 @@ class BedrockLLM(LLMInterface, LLMInterfaceV2):
 
     Args:
         model_name (str): Bedrock model ID. Defaults to the ``BEDROCK_LLM_MODEL``
-            environment variable, or "us.anthropic.claude-sonnet-4-20250514-v1:0" if not set.
+            environment variable, or "us.anthropic.claude-haiku-4-5-20251001-v1:0" if not set.
         model_params (Optional[dict]): Additional parameters passed to the model
             (e.g. ``{"temperature": 0.7, "maxTokens": 1024}``).
         region_name (Optional[str]): AWS region. Defaults to boto3 session default.
@@ -89,7 +89,7 @@ class BedrockLLM(LLMInterface, LLMInterfaceV2):
         from neo4j_graphrag.llm import BedrockLLM
 
         llm = BedrockLLM(
-            model_name="us.anthropic.claude-sonnet-4-20250514-v1:0",
+            model_name="us.anthropic.claude-haiku-4-5-20251001-v1:0",
             model_params={"temperature": 0.7, "maxTokens": 1024},
             region_name="us-east-1",
         )

@@ -19,7 +19,7 @@ from unittest.mock import MagicMock, patch
 import neo4j
 import pytest
 from neo4j_graphrag.embeddings.base import Embedder
-from neo4j_graphrag.experimental.pipeline import Component
+from neo4j_graphrag.components.base import Component
 from neo4j_graphrag.llm import LLMInterface
 from neo4j_graphrag.retrievers import (
     HybridRetriever,

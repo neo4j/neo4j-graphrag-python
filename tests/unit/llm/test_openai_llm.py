@@ -981,6 +981,35 @@ def test_openai_llm_with_httpx_client(mock_import: Mock) -> None:
 
 
 @patch("builtins.__import__")
+def test_openai_llm_base_url_reaches_both_clients(mock_import: Mock) -> None:
+    """base_url must be forwarded to both the sync and async OpenAI clients."""
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    base_url = "https://custom-openai-endpoint.example.com/v1"
+    OpenAILLM(model_name="gpt", api_key="my key", base_url=base_url)
+
+    _, sync_kwargs = mock_openai.OpenAI.call_args
+    assert sync_kwargs.get("base_url") == base_url
+    _, async_kwargs = mock_openai.AsyncOpenAI.call_args
+    assert async_kwargs.get("base_url") == base_url
+
+
+@patch("builtins.__import__")
+def test_openai_llm_no_base_url_not_passed_to_clients(mock_import: Mock) -> None:
+    """Omitting base_url should not pass it (or None) to either client."""
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    OpenAILLM(model_name="gpt", api_key="my key")
+
+    _, sync_kwargs = mock_openai.OpenAI.call_args
+    assert "base_url" not in sync_kwargs
+    _, async_kwargs = mock_openai.AsyncOpenAI.call_args
+    assert "base_url" not in async_kwargs
+
+
+@patch("builtins.__import__")
 def test_openai_llm_with_httpx_async_client(mock_import: Mock) -> None:
     """Test that httpx.AsyncClient is forwarded only to the async OpenAI client without warning."""
     mock_openai = get_mock_openai()

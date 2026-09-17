@@ -18,10 +18,8 @@ from unittest.mock import MagicMock, Mock, patch
 import neo4j
 import pytest
 from neo4j_graphrag.embeddings import Embedder
-from neo4j_graphrag.experimental.components.data_loader import PdfLoader
-from neo4j_graphrag.experimental.components.types import (
-    LexicalGraphConfig,
-)
+from neo4j_graphrag.components.data_loader import PdfLoader
+from neo4j_graphrag.components.types import LexicalGraphConfig
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
@@ -29,7 +27,7 @@ from neo4j_graphrag.llm.base import LLMInterface
 
 
 @mock.patch(
-    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    "neo4j_graphrag.components.kg_writer.get_version",
     return_value=((5, 23, 0), False, False),
 )
 @pytest.mark.asyncio
@@ -59,7 +57,7 @@ async def test_knowledge_graph_builder_from_pdf_deprecated_kwarg(_: Mock) -> Non
 
 
 @mock.patch(
-    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    "neo4j_graphrag.components.kg_writer.get_version",
     return_value=((5, 23, 0), False, False),
 )
 @pytest.mark.asyncio
@@ -90,7 +88,7 @@ async def test_knowledge_graph_builder_pdf_loader_deprecated_kwarg(_: Mock) -> N
 
 
 @mock.patch(
-    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    "neo4j_graphrag.components.kg_writer.get_version",
     return_value=((5, 23, 0), False, False),
 )
 @pytest.mark.asyncio
@@ -127,7 +125,7 @@ async def test_knowledge_graph_builder_document_info_with_file(_: Mock) -> None:
 
 
 @mock.patch(
-    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    "neo4j_graphrag.components.kg_writer.get_version",
     return_value=((5, 23, 0), False, False),
 )
 @pytest.mark.asyncio
@@ -166,7 +164,7 @@ async def test_knowledge_graph_builder_document_info_with_text(_: Mock) -> None:
 
 
 @mock.patch(
-    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    "neo4j_graphrag.components.kg_writer.get_version",
     return_value=((5, 23, 0), False, False),
 )
 @pytest.mark.asyncio
@@ -233,7 +231,7 @@ def test_knowledge_graph_builder_pdf_loader_and_file_loader_conflict() -> None:
 
 
 @mock.patch(
-    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    "neo4j_graphrag.components.kg_writer.get_version",
     return_value=((5, 23, 0), False, False),
 )
 @pytest.mark.asyncio

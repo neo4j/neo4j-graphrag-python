@@ -5,8 +5,11 @@ from typing import Dict, Optional, Union
 
 from fsspec import AbstractFileSystem
 
-from neo4j_graphrag.experimental.components.data_loader import DataLoader
-from neo4j_graphrag.experimental.components.types import DocumentInfo, LoadedDocument
+from neo4j_graphrag.components.data_loader import DataLoader
+from neo4j_graphrag.components.types import (
+    DocumentInfo,
+    LoadedDocument,
+)
 
 
 class MyLoader(DataLoader):

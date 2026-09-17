@@ -12,7 +12,7 @@ import logging
 from pathlib import Path
 from dotenv import load_dotenv
 
-from neo4j_graphrag.experimental.components.schema import (
+from neo4j_graphrag.components.schema import (
     SchemaFromTextExtractor,
     GraphSchema,
 )
@@ -60,10 +60,14 @@ async def extract_and_save_schema() -> None:
     """Extract schema from text and save it to JSON and YAML files."""
 
     # Define LLM parameters
+    # gpt-5 needs max_completion_tokens (not max_tokens) and counts reasoning tokens
+    # against it, so too small a budget returns empty content. It also rejects any
+    # temperature other than the default. reasoning_effort="low" halves the cost with
+    # no measurable difference in extraction quality.
     llm_model_params = {
-        "max_completion_tokens": 2000,
+        "max_completion_tokens": 16000,
+        "reasoning_effort": "low",
         "response_format": {"type": "json_object"},
-        "temperature": 0,  # Lower temperature for more consistent output
     }
 
     # Create the LLM instance

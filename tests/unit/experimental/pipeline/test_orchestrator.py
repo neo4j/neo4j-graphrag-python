@@ -15,8 +15,8 @@
 from unittest.mock import Mock, patch
 
 import pytest
+from neo4j_graphrag.components.base import Component
 from neo4j_graphrag.experimental.pipeline import (
-    Component,
     Pipeline,
 )
 from neo4j_graphrag.experimental.pipeline.exceptions import (

@@ -19,7 +19,7 @@ try:
 except ImportError:
     VisualizationGraph = Node = Relationship = None  # type: ignore[misc,assignment]
 
-from neo4j_graphrag.experimental.components.schema import (
+from neo4j_graphrag.components.schema import (
     GraphSchema,
     NodeType,
     PropertyType,

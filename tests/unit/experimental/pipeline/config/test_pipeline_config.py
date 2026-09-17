@@ -16,7 +16,7 @@ from unittest.mock import Mock, patch
 
 import neo4j
 from neo4j_graphrag.embeddings import Embedder
-from neo4j_graphrag.experimental.pipeline import Component
+from neo4j_graphrag.components.base import Component
 from neo4j_graphrag.experimental.pipeline.config.object_config import (
     ComponentConfig,
     ComponentType,

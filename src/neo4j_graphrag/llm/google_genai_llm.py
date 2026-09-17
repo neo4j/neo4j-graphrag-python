@@ -16,14 +16,17 @@
 # built-in dependencies
 from __future__ import annotations
 
+import abc
 from typing import (
     Any,
     List,
+    Literal,
     Optional,
     Sequence,
     Type,
     Union,
     cast,
+    get_args,
     overload,
 )
 
@@ -32,10 +35,11 @@ from pydantic import BaseModel, ValidationError
 
 # project dependencies
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.base import LLMInterface, LLMInterfaceV2
+from neo4j_graphrag.llm.base import LLMBase
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
+    LLMUsage,
     MessageList,
     ToolCall,
     ToolCallResponse,
@@ -61,16 +65,29 @@ except ImportError:
     types = None  # type: ignore[assignment]
 
 
-# pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
-class GeminiLLM(LLMInterface, LLMInterfaceV2):
-    """LLM interface for Google Gemini via the google.genai SDK.
+# Image MIME types Gemini's inlineData part accepts. See
+# https://ai.google.dev/gemini-api/docs/image-understanding
+GeminiImageMimeType = Literal[
+    "image/png", "image/jpeg", "image/webp", "image/heic", "image/heif"
+]
+GEMINI_SUPPORTED_IMAGE_MIME_TYPES: frozenset[str] = frozenset(
+    get_args(GeminiImageMimeType)
+)
 
-    Args:
-        model_name (str): Model name. Defaults to "gemini-2.0-flash".
-        model_params (Optional[dict]): Additional parameters passed to the model.
-        rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting.
-        **kwargs (Any): Arguments passed to the genai.Client.
+# Default image_mime_type for invoke/ainvoke's image_bytes parameter.
+GEMINI_DEFAULT_IMAGE_MIME_TYPE: GeminiImageMimeType = "image/png"
+
+
+# pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
+class BaseGeminiLLM(LLMBase, abc.ABC):
+    """Base class for Google Gemini LLMs (google.genai SDK).
+
+    Holds all the shared message-building, config/schema-building, and
+    response-parsing logic. Subclasses are only responsible for
+    constructing the ``client`` SDK instance.
     """
+
+    client: "genai.Client"
 
     def __init__(
         self,
@@ -84,14 +101,13 @@ class GeminiLLM(LLMInterface, LLMInterfaceV2):
                 "Could not import google-genai python client. "
                 'Please install it with `pip install "neo4j-graphrag[google-genai]"`.'
             )
-        LLMInterfaceV2.__init__(
+        LLMBase.__init__(
             self,
             model_name=model_name,
             model_params=model_params or {},
             rate_limit_handler=rate_limit_handler,
             **kwargs,
         )
-        self.client = genai.Client(**kwargs)
 
     @overload  # type: ignore[no-overload-impl]
     def invoke(
@@ -106,6 +122,8 @@ class GeminiLLM(LLMInterface, LLMInterfaceV2):
         self,
         input: List[LLMMessage],
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        image_bytes: Optional[bytes] = None,
+        image_mime_type: GeminiImageMimeType = GEMINI_DEFAULT_IMAGE_MIME_TYPE,
         **kwargs: Any,
     ) -> LLMResponse: ...
 
@@ -122,6 +140,8 @@ class GeminiLLM(LLMInterface, LLMInterfaceV2):
         self,
         input: List[LLMMessage],
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        image_bytes: Optional[bytes] = None,
+        image_mime_type: GeminiImageMimeType = GEMINI_DEFAULT_IMAGE_MIME_TYPE,
         **kwargs: Any,
     ) -> LLMResponse: ...
 
@@ -131,11 +151,37 @@ class GeminiLLM(LLMInterface, LLMInterfaceV2):
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        image_bytes: Optional[bytes] = None,
+        image_mime_type: GeminiImageMimeType = GEMINI_DEFAULT_IMAGE_MIME_TYPE,
         **kwargs: Any,
     ) -> LLMResponse:
+        """Sends input to the LLM and returns a response.
+
+        Args:
+            input (Union[str, List[LLMMessage]]): Text (v1) or list of messages (v2)
+                sent to the LLM.
+            message_history: v1 only. Previous messages, each with a role assigned.
+            system_instruction: v1 only. Overrides the LLM system message for this call.
+            response_format: v2 only. A Pydantic model class or a JSON schema dict.
+            image_bytes (Optional[bytes]): v2 only. Raw image data appended as an inline
+                image part to the last user message. Defaults to None.
+            image_mime_type (GeminiImageMimeType): MIME type of ``image_bytes``. Must be
+                one of ``GEMINI_SUPPORTED_IMAGE_MIME_TYPES``. Ignored when
+                ``image_bytes`` is None. Defaults to "image/png".
+        """
         if isinstance(input, str):
+            if image_bytes is not None:
+                raise ValueError(
+                    "image_bytes is only supported with a list of messages as input."
+                )
             return self.__invoke_v1(input, message_history, system_instruction)
-        return self.__invoke_v2(input, response_format=response_format, **kwargs)
+        return self.__invoke_v2(
+            input,
+            response_format=response_format,
+            image_bytes=image_bytes,
+            image_mime_type=image_mime_type,
+            **kwargs,
+        )
 
     async def ainvoke(  # type: ignore[no-redef]
         self,
@@ -143,11 +189,24 @@ class GeminiLLM(LLMInterface, LLMInterfaceV2):
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        image_bytes: Optional[bytes] = None,
+        image_mime_type: GeminiImageMimeType = GEMINI_DEFAULT_IMAGE_MIME_TYPE,
         **kwargs: Any,
     ) -> LLMResponse:
+        """Asynchronous version of :meth:`invoke`."""
         if isinstance(input, str):
+            if image_bytes is not None:
+                raise ValueError(
+                    "image_bytes is only supported with a list of messages as input."
+                )
             return await self.__ainvoke_v1(input, message_history, system_instruction)
-        return await self.__ainvoke_v2(input, response_format=response_format, **kwargs)
+        return await self.__ainvoke_v2(
+            input,
+            response_format=response_format,
+            image_bytes=image_bytes,
+            image_mime_type=image_mime_type,
+            **kwargs,
+        )
 
     @rate_limit_handler_decorator
     def __invoke_v1(
@@ -164,7 +223,7 @@ class GeminiLLM(LLMInterface, LLMInterfaceV2):
                 contents=contents,  # type: ignore[arg-type]
                 config=config,
             )
-            return LLMResponse(content=response.text or "")
+            return self._parse_content_response(response)
         except Exception as e:
             raise LLMGenerationError(f"Error calling GeminiLLM: {e}") from e
 
@@ -183,7 +242,7 @@ class GeminiLLM(LLMInterface, LLMInterfaceV2):
                 contents=contents,  # type: ignore[arg-type]
                 config=config,
             )
-            return LLMResponse(content=response.text or "")
+            return self._parse_content_response(response)
         except Exception as e:
             raise LLMGenerationError(f"Error calling GeminiLLM: {e}") from e
 
@@ -192,10 +251,14 @@ class GeminiLLM(LLMInterface, LLMInterfaceV2):
         self,
         input: List[LLMMessage],
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        image_bytes: Optional[bytes] = None,
+        image_mime_type: GeminiImageMimeType = GEMINI_DEFAULT_IMAGE_MIME_TYPE,
         **kwargs: Any,
     ) -> LLMResponse:
         try:
-            system_instruction, contents = self.get_messages_v2(input)
+            system_instruction, contents = self.get_messages_v2(
+                input, image_bytes=image_bytes, image_mime_type=image_mime_type
+            )
             config = self._build_config(
                 system_instruction=system_instruction,
                 response_format=response_format,
@@ -206,7 +269,7 @@ class GeminiLLM(LLMInterface, LLMInterfaceV2):
                 contents=contents,  # type: ignore[arg-type]
                 config=config,
             )
-            return LLMResponse(content=response.text or "")
+            return self._parse_content_response(response)
         except Exception as e:
             raise LLMGenerationError(f"Error calling GeminiLLM: {e}") from e
 
@@ -215,10 +278,14 @@ class GeminiLLM(LLMInterface, LLMInterfaceV2):
         self,
         input: List[LLMMessage],
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        image_bytes: Optional[bytes] = None,
+        image_mime_type: GeminiImageMimeType = GEMINI_DEFAULT_IMAGE_MIME_TYPE,
         **kwargs: Any,
     ) -> LLMResponse:
         try:
-            system_instruction, contents = self.get_messages_v2(input)
+            system_instruction, contents = self.get_messages_v2(
+                input, image_bytes=image_bytes, image_mime_type=image_mime_type
+            )
             config = self._build_config(
                 system_instruction=system_instruction,
                 response_format=response_format,
@@ -229,7 +296,7 @@ class GeminiLLM(LLMInterface, LLMInterfaceV2):
                 contents=contents,  # type: ignore[arg-type]
                 config=config,
             )
-            return LLMResponse(content=response.text or "")
+            return self._parse_content_response(response)
         except Exception as e:
             raise LLMGenerationError(f"Error calling GeminiLLM: {e}") from e
 
@@ -275,6 +342,10 @@ class GeminiLLM(LLMInterface, LLMInterfaceV2):
         except Exception as e:
             raise LLMGenerationError(f"Error calling GeminiLLM with tools: {e}") from e
 
+    async def aclose(self) -> None:
+        self.client.close()
+        await self.client.aio.aclose()
+
     def get_messages(
         self,
         input: str,
@@ -313,7 +384,17 @@ class GeminiLLM(LLMInterface, LLMInterfaceV2):
     def get_messages_v2(
         self,
         input: List[LLMMessage],
+        image_bytes: Optional[bytes] = None,
+        image_mime_type: GeminiImageMimeType = GEMINI_DEFAULT_IMAGE_MIME_TYPE,
     ) -> tuple[str | None, list[types.Content]]:
+        if (
+            image_bytes is not None
+            and image_mime_type not in GEMINI_SUPPORTED_IMAGE_MIME_TYPES
+        ):
+            raise ValueError(
+                f"Unsupported image_mime_type '{image_mime_type}'. Supported types: "
+                f"{sorted(GEMINI_SUPPORTED_IMAGE_MIME_TYPES)}."
+            )
         messages: list[types.Content] = []
         system_instruction = None
         for message in input:
@@ -332,6 +413,14 @@ class GeminiLLM(LLMInterface, LLMInterfaceV2):
                     types.Content(
                         role="model", parts=[types.Part.from_text(text=content)]
                     )
+                )
+        if image_bytes is not None:
+            if not messages or messages[-1].role != "user":
+                messages.append(types.Content(role="user", parts=[]))
+            parts = messages[-1].parts
+            if parts is not None:
+                parts.append(
+                    types.Part.from_bytes(data=image_bytes, mime_type=image_mime_type)
                 )
         return system_instruction, messages
 
@@ -406,3 +495,65 @@ class GeminiLLM(LLMInterface, LLMInterfaceV2):
                         )
                     )
         return ToolCallResponse(tool_calls=tool_calls, content=None)
+
+    def _parse_content_response(
+        self, response: types.GenerateContentResponse
+    ) -> LLMResponse:
+        """Build an ``LLMResponse`` from a ``generate_content`` response.
+
+        Includes ``usage`` from ``response.usage_metadata`` when the API
+        reports it (``None`` fields when it does not — see ``LLMUsage``).
+        """
+        usage = None
+        metadata = response.usage_metadata
+        if metadata is not None:
+            usage = LLMUsage(
+                request_tokens=metadata.prompt_token_count,
+                response_tokens=metadata.candidates_token_count,
+                total_tokens=metadata.total_token_count,
+            )
+        return LLMResponse(content=response.text or "", usage=usage)
+
+
+class GeminiLLM(BaseGeminiLLM):
+    """LLM interface for Google Gemini via the google.genai SDK.
+
+    Args:
+        model_name (str): Model name. Defaults to "gemini-2.0-flash".
+        model_params (Optional[dict]): Additional parameters passed to the model.
+        rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting.
+        base_url (Optional[str], optional): Base URL to use instead of Google's default
+            API endpoint, e.g. to reach a custom Gemini-compatible endpoint. Unlike the
+            Anthropic/OpenAI SDKs, ``genai.Client`` has no top-level ``base_url``
+            argument: the value is applied through ``http_options``. If ``http_options``
+            is also passed via kwargs (as a dict or ``types.HttpOptions``), this
+            parameter overrides its ``base_url`` field and leaves the rest untouched.
+            Defaults to None.
+        **kwargs (Any): Arguments passed to the genai.Client.
+    """
+
+    def __init__(
+        self,
+        model_name: str = "gemini-2.0-flash",
+        model_params: Optional[dict[str, Any]] = None,
+        rate_limit_handler: Optional[RateLimitHandler] = None,
+        base_url: Optional[str] = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(
+            model_name=model_name,
+            model_params=model_params,
+            rate_limit_handler=rate_limit_handler,
+            **kwargs,
+        )
+        if base_url is not None:
+            http_options = kwargs.get("http_options")
+            if http_options is None:
+                kwargs["http_options"] = types.HttpOptions(base_url=base_url)
+            elif isinstance(http_options, dict):
+                kwargs["http_options"] = {**http_options, "base_url": base_url}
+            else:  # types.HttpOptions
+                kwargs["http_options"] = http_options.model_copy(
+                    update={"base_url": base_url}
+                )
+        self.client = genai.Client(**kwargs)

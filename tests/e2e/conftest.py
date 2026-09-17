@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import logging
 import os
 import random
 import string
@@ -24,6 +25,11 @@ from unittest.mock import MagicMock
 import pytest
 from neo4j import Driver, GraphDatabase
 from neo4j_graphrag.embeddings.base import Embedder
+from requests.exceptions import ConnectionError as RequestsConnectionError
+from requests.exceptions import Timeout as RequestsTimeout
+from neo4j_graphrag.embeddings.sentence_transformers import (
+    SentenceTransformerEmbeddings,
+)
 from neo4j_graphrag.indexes import (
     create_fulltext_index,
     create_vector_index,
@@ -31,10 +37,44 @@ from neo4j_graphrag.indexes import (
 )
 from neo4j_graphrag.llm import LLMInterface
 from neo4j_graphrag.retrievers import VectorRetriever
+from tenacity import (
+    before_sleep_log,
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_random_exponential,
+)
 
-from ..e2e.utils import EMBEDDING_BIOLOGY
+from ..e2e.utils import EMBEDDING_BIOLOGY, await_index_online
+
+logger = logging.getLogger(__name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Transient exceptions that should be retried (network/rate limit errors)
+_TRANSIENT_EXCEPTIONS = (
+    RequestsConnectionError,
+    RequestsTimeout,
+)
+
+
+@retry(
+    retry=retry_if_exception_type(_TRANSIENT_EXCEPTIONS),
+    stop=stop_after_attempt(5),
+    wait=wait_random_exponential(multiplier=2, min=5, max=60),
+    before_sleep=before_sleep_log(logger, logging.WARNING),
+    reraise=True,
+)
+def load_sentence_transformer_with_retry(
+    model_name: str,
+) -> SentenceTransformerEmbeddings:
+    """Load sentence transformer with retry logic to handle Hugging Face rate limits.
+
+    Retries on transient network errors (requests connection errors, timeouts) with
+    exponential backoff and jitter. Immediately fails on unrecoverable errors like
+    missing dependencies or permission issues.
+    """
+    return SentenceTransformerEmbeddings(model=model_name)
 
 
 @pytest.fixture(scope="module")
@@ -139,6 +179,12 @@ def setup_neo4j_for_retrieval(driver: Driver) -> None:
         node_properties=["short_text_property"],
     )
 
+    # Index creation returns as soon as the schema change commits, but
+    # population runs in the background; querying while still POPULATING
+    # fails, so wait for ONLINE before inserting data or running queries.
+    await_index_online(driver, vector_index_name)
+    await_index_online(driver, fulltext_index_name)
+
     # Insert 10 vectors and authors
     vector = [random.random() for _ in range(1536)]
 
@@ -211,6 +257,8 @@ def setup_neo4j_for_kg_construction(driver: Driver) -> None:
         dimensions=3,
         similarity_fn="euclidean",
     )
+    # wait for ONLINE before the pipeline under test writes to and queries the index
+    await_index_online(driver, vector_index_name)
 
 
 @pytest.fixture(scope="module")

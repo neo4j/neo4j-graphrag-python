@@ -17,22 +17,22 @@ from __future__ import annotations
 import asyncio
 
 import neo4j
-from neo4j_graphrag.experimental.components.entity_relation_extractor import (
+from neo4j_graphrag.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
     OnError,
 )
-from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
-from neo4j_graphrag.experimental.components.data_loader import PdfLoader
-from neo4j_graphrag.experimental.components.resolver import (
+from neo4j_graphrag.components.kg_writer import Neo4jWriter
+from neo4j_graphrag.components.data_loader import PdfLoader
+from neo4j_graphrag.components.resolver import (
     SinglePropertyExactMatchResolver,
 )
-from neo4j_graphrag.experimental.components.schema import (
+from neo4j_graphrag.components.schema import (
     SchemaBuilder,
     NodeType,
     PropertyType,
     RelationshipType,
 )
-from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
+from neo4j_graphrag.components.text_splitters.fixed_size_splitter import (
     FixedSizeSplitter,
 )
 from neo4j_graphrag.experimental.pipeline import Pipeline
@@ -138,10 +138,14 @@ async def define_and_run_pipeline(
 
 
 async def main() -> None:
+    # gpt-5 counts reasoning tokens against max_completion_tokens, so too small a
+    # budget returns empty content. reasoning_effort="low" roughly halves the cost
+    # with no measurable difference in extraction quality.
     llm = OpenAILLM(
         model_name="gpt-5",
         model_params={
-            "max_completion_tokens": 1000,
+            "max_completion_tokens": 16000,
+            "reasoning_effort": "low",
         },
     )
     driver = neo4j.GraphDatabase.driver(

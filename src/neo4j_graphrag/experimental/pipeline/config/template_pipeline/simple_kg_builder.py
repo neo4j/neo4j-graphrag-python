@@ -30,35 +30,35 @@ from fsspec import AbstractFileSystem
 from pydantic import ConfigDict, Field, field_validator, model_validator
 from typing_extensions import Self
 
-from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
-from neo4j_graphrag.experimental.components.entity_relation_extractor import (
+from neo4j_graphrag.components.embedder import TextChunkEmbedder
+from neo4j_graphrag.components.entity_relation_extractor import (
     EntityRelationExtractor,
     LLMEntityRelationExtractor,
     OnError,
 )
-from neo4j_graphrag.experimental.components.graph_pruning import GraphPruning
-from neo4j_graphrag.experimental.components.kg_writer import KGWriter, Neo4jWriter
+from neo4j_graphrag.components.graph_pruning import GraphPruning
+from neo4j_graphrag.components.kg_writer import KGWriter, Neo4jWriter
 from neo4j_graphrag.exceptions import UnsupportedDocumentFormatError
-from neo4j_graphrag.experimental.components.data_loader import (
+from neo4j_graphrag.components.data_loader import (
     DataLoader,
     MarkdownLoader,
     PdfLoader,
 )
-from neo4j_graphrag.experimental.components.resolver import (
+from neo4j_graphrag.components.resolver import (
     EntityResolver,
     SinglePropertyExactMatchResolver,
 )
-from neo4j_graphrag.experimental.components.schema import (
+from neo4j_graphrag.components.schema import (
     SchemaBuilder,
     GraphSchema,
     SchemaFromTextExtractor,
     BaseSchemaBuilder,
 )
-from neo4j_graphrag.experimental.components.text_splitters.base import TextSplitter
-from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
+from neo4j_graphrag.components.text_splitters.base import TextSplitter
+from neo4j_graphrag.components.text_splitters.fixed_size_splitter import (
     FixedSizeSplitter,
 )
-from neo4j_graphrag.experimental.components.types import (
+from neo4j_graphrag.components.types import (
     DocumentType,
     LexicalGraphConfig,
     LoadedDocument,

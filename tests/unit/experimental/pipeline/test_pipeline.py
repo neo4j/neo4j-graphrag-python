@@ -22,7 +22,8 @@ from unittest import mock
 from unittest.mock import AsyncMock, call, patch
 
 import pytest
-from neo4j_graphrag.experimental.pipeline import Component, Pipeline
+from neo4j_graphrag.components.base import Component
+from neo4j_graphrag.experimental.pipeline import Pipeline
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
 from neo4j_graphrag.experimental.pipeline.notification import (
     EventCallbackProtocol,

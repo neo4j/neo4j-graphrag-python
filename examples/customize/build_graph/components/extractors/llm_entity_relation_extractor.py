@@ -1,7 +1,7 @@
-from neo4j_graphrag.experimental.components.entity_relation_extractor import (
+from neo4j_graphrag.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
 )
-from neo4j_graphrag.experimental.components.types import (
+from neo4j_graphrag.components.types import (
     Neo4jGraph,
     TextChunk,
     TextChunks,

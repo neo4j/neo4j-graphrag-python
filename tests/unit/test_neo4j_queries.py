@@ -278,7 +278,7 @@ class TestBuildSearchClauseVectorQuery:
             node_label="Document",
         )
         expected = (
-            "MATCH (node:`Document`) "
+            "CYPHER 25 MATCH (node:`Document`) "
             "SEARCH node IN (VECTOR INDEX `my_index` "
             "FOR $query_vector "
             "LIMIT $top_k * $effective_search_ratio) "
@@ -294,6 +294,7 @@ class TestBuildSearchClauseVectorQuery:
             node_label="Document",
             filter_classification=None,
         )
+        assert query.startswith("CYPHER 25 ")
         assert "WHERE" not in query
         assert params == {}
 
@@ -304,6 +305,7 @@ class TestBuildSearchClauseVectorQuery:
             node_label="Document",
             filter_classification=classification,
         )
+        assert query.startswith("CYPHER 25 ")
         assert "WHERE" not in query
         assert params == {}
 
@@ -319,7 +321,7 @@ class TestBuildSearchClauseVectorQuery:
             filter_classification=classification,
         )
         expected = (
-            "MATCH (node:`Document`) "
+            "CYPHER 25 MATCH (node:`Document`) "
             "SEARCH node IN (VECTOR INDEX `my_index` "
             "FOR $query_vector "
             "WHERE node.`year` = $_e_year "
@@ -394,6 +396,7 @@ class TestBuildHybridSearchClauseQuery:
             fulltext_index_name="ft_idx",
             node_label="Document",
         )
+        assert query.startswith("CYPHER 25 ")
         assert "CALL () {" in query
         assert "UNION" in query
         assert "VECTOR INDEX `vec_idx`" in query

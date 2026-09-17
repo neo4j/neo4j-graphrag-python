@@ -14,7 +14,7 @@
 #  limitations under the License.
 import asyncio
 
-from neo4j_graphrag.experimental.pipeline import Component, DataModel
+from neo4j_graphrag.components.base import Component, DataModel
 from neo4j_graphrag.experimental.pipeline.types.context import RunContext
 
 

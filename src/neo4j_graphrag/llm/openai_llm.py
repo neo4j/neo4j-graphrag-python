@@ -19,7 +19,6 @@ from __future__ import annotations
 import abc
 import json
 import logging
-import warnings
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -34,10 +33,6 @@ from typing import (
 )
 
 # 3rd party dependencies
-try:
-    import httpx
-except ImportError:
-    httpx = None  # type: ignore[assignment]
 from pydantic import BaseModel, ValidationError
 
 # project dependencies
@@ -66,6 +61,7 @@ from .types import (
     ToolCallResponse,
     UserMessage,
 )
+from .utils import split_http_client_kwargs
 
 if TYPE_CHECKING:
     from openai import AsyncOpenAI, OpenAI
@@ -641,6 +637,7 @@ class OpenAILLM(BaseOpenAILLM):
         model_name: str,
         model_params: Optional[dict[str, Any]] = None,
         rate_limit_handler: Optional[RateLimitHandler] = None,
+        base_url: Optional[str] = None,
         **kwargs: Any,
     ):
         """OpenAI LLM
@@ -651,6 +648,12 @@ class OpenAILLM(BaseOpenAILLM):
             model_name (str):
             model_params (str): Parameters for LLMInterface(V1) like temperature that will be passed to the model when text is sent to it. Defaults to None.
             rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting for LLMInterface(V1). Defaults to retry with exponential backoff.
+            base_url (Optional[str], optional): Base URL to use instead of OpenAI's default API
+                endpoint, e.g. to reach an OpenAI-compatible server. Passed through to both the
+                sync and async SDK clients. Can be combined with an ``http_client`` passed via
+                kwargs (``base_url`` sets where requests go, ``http_client`` how they are
+                sent); a base URL configured on the httpx client itself is ignored by the
+                SDK — use this parameter instead. Defaults to None.
             kwargs: All other parameters will be passed to the openai.OpenAI init.
         """
         super().__init__(
@@ -658,19 +661,10 @@ class OpenAILLM(BaseOpenAILLM):
             model_params=model_params,
             rate_limit_handler=rate_limit_handler,
         )
-        http_client = kwargs.pop("http_client", None)
-        params = kwargs.copy()
-        sync_params = params.copy()
-        async_params = params.copy()
-        if httpx is not None and isinstance(http_client, httpx.Client):
-            sync_params["http_client"] = http_client
-        elif httpx is not None and isinstance(http_client, httpx.AsyncClient):
-            async_params["http_client"] = http_client
-        elif http_client is not None:
-            warnings.warn(
-                f"Invalid http_client type (got {type(http_client)}, expected httpx.Client or httpx.AsyncClient). Using default client.",
-                stacklevel=2,
-            )
+        sync_params, async_params = split_http_client_kwargs(kwargs)
+        if base_url is not None:
+            sync_params["base_url"] = base_url
+            async_params["base_url"] = base_url
         self.client = self.openai.OpenAI(**sync_params)
         self.async_client = self.openai.AsyncOpenAI(**async_params)
 
@@ -700,18 +694,6 @@ class AzureOpenAILLM(BaseOpenAILLM):
             model_params=model_params,
             rate_limit_handler=rate_limit_handler,
         )
-        http_client = kwargs.pop("http_client", None)
-        params = kwargs.copy()
-        sync_params = params.copy()
-        async_params = params.copy()
-        if httpx is not None and isinstance(http_client, httpx.Client):
-            sync_params["http_client"] = http_client
-        elif httpx is not None and isinstance(http_client, httpx.AsyncClient):
-            async_params["http_client"] = http_client
-        elif http_client is not None:
-            warnings.warn(
-                f"Invalid http_client type (got {type(http_client)}, expected httpx.Client or httpx.AsyncClient). Using default client.",
-                stacklevel=2,
-            )
+        sync_params, async_params = split_http_client_kwargs(kwargs)
         self.client = self.openai.AzureOpenAI(**sync_params)
         self.async_client = self.openai.AsyncAzureOpenAI(**async_params)

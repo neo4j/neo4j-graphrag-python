@@ -4,9 +4,14 @@ Both synchronous and asynchronous examples are provided.
 
 To run this example:
 1. Make sure you have `ollama serve` running
-2. Run: python examples/tool_calls/ollama_tool_calls.py
+2. Pull a model that supports tool calling: `ollama pull llama3.2`
+3. Run: python examples/customize/llms/ollama_tool_calls.py llama3.2
+
+The model is a command-line argument because not every local model supports
+tool calling - check the model's page in the Ollama library before using it.
 """
 
+import argparse
 import asyncio
 import json
 from typing import Dict, Any
@@ -61,9 +66,9 @@ def process_tool_calls(response: ToolCallResponse) -> Dict[str, Any]:
     return results[0] if results else {}
 
 
-async def main() -> None:
+async def main(model: str) -> None:
     async with OllamaLLM(
-        model_name="mistral:latest", model_params={"options": {"temperature": 0}}
+        model_name=model, model_params={"options": {"temperature": 0}}
     ) as llm:
         # Example text containing information about a person
         text = "Stella Hane is a 35-year-old software engineer who loves coding."
@@ -91,5 +96,14 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "model",
+        nargs="?",
+        default="llama3.2",
+        help="a tool-calling model you have pulled with `ollama pull` "
+        "(default: %(default)s)",
+    )
+    args = parser.parse_args()
     # Run the async main function
-    asyncio.run(main())
+    asyncio.run(main(args.model))

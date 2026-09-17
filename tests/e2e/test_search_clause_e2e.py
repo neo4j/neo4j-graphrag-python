@@ -20,7 +20,6 @@ Requires Neo4j 2026.02+ running via:
 
 from __future__ import annotations
 
-import time
 from typing import Any, Generator
 
 import pytest
@@ -30,6 +29,8 @@ from neo4j_graphrag.indexes import create_vector_index, drop_index_if_exists
 from neo4j_graphrag.retrievers import VectorRetriever
 from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
 from neo4j_graphrag.utils.version_utils import clear_version_cache
+
+from tests.e2e.utils import await_index_online
 
 DIMENSIONS = 5
 INDEX_NAME = "search-clause-e2e-index"
@@ -112,17 +113,9 @@ def setup_search_clause_data(driver: Driver) -> None:
             },
         )
 
-    # Wait for the index to come online
-    for _ in range(60):
-        result = driver.execute_query(
-            "SHOW INDEXES YIELD name, state WHERE name = $name RETURN state",
-            {"name": INDEX_NAME},
-        )
-        if result.records and result.records[0]["state"] == "ONLINE":
-            break
-        time.sleep(1)
-    else:
-        raise RuntimeError(f"Index {INDEX_NAME} did not come online within 60s")
+    # index was created before these nodes existed, so it started out
+    # POPULATING; wait for ONLINE before the tests below query it
+    await_index_online(driver, INDEX_NAME)
 
 
 # -- Tests --

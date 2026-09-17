@@ -2,13 +2,53 @@
 
 ## Next
 
+### Fixed
+
+- Fixed `BaseGeminiLLM`/`GeminiLLM` silently dropping token usage on every call: `invoke`/`ainvoke` (both the string and message-list paths, sync and async) built `LLMResponse` from `response.text` alone, ignoring `response.usage_metadata` entirely. `LLMResponse.usage` is now populated from it, matching `AnthropicLLM`/`OpenAILLM`/`VertexAILLM`.
+- Fixed Parquet writes aborting with `ArrowInvalid` when a node or relationship property was a GraphRAG `GeoPoint`. `Neo4jGraphParquetFormatter` now serializes those values as WKT `POINT Z(longitude latitude height)` before Arrow type inference, and writer file metadata reports `target_type: POINT` (Parquet source type remains `STRING`).
+
+## 1.19.0
+
 ### Added
 
+- Added `examples/SETUP.md` and `examples/.env.example`, documenting what the examples need in order to run — extras, API keys and services — and which providers are free or have a local equivalent.
+- The `examples` extra now declares `python-dotenv` and `requests`. Fourteen examples call `load_dotenv()` and `tools_retriever_example.py` calls a web API with `requests`, but neither package was declared, so both resolved only transitively.
 - `AnthropicLLM` now supports structured output via the `response_format` argument, accepting a Pydantic model or an Anthropic `output_config` dict, alongside `OpenAILLM` and `VertexAILLM`.
+- Added `neo4j_graphrag.llm.utils.split_http_client_kwargs`, a shared helper that routes a constructor's `http_client` kwarg to whichever of the sync/async SDK clients it matches. `AnthropicLLM`, `OpenAILLM`, and `AzureOpenAILLM` now all use this single implementation instead of three separately maintained copies of the same logic. Custom subclasses that construct their own SDK clients can call it to get the same behavior; it is exported from `neo4j_graphrag.llm` for that purpose.
+- Added `BaseAnthropicLLM`, a new base class holding all of `AnthropicLLM`'s shared message-building, schema-conversion, and response-parsing logic, mirroring `BaseOpenAILLM`. Both `BaseAnthropicLLM` and `BaseOpenAILLM` are now exported from `neo4j_graphrag.llm` as documented, supported extension points for subclassing to reach custom Anthropic/OpenAI-compatible endpoints.
+- Added an explicit `base_url` keyword parameter to `AnthropicLLM` and `OpenAILLM`, passed through to both the sync and async SDK clients of each.
+- Added an explicit `base_url` keyword parameter to `GeminiLLM`. The `google-genai` SDK has no top-level `base_url` argument, so the value is applied through `http_options`; if `http_options` is also provided, only its `base_url` field is overridden.
+- `BaseGeminiLLM` now implements `aclose()`, closing the underlying `genai.Client` (sync and `aio` surfaces), so `with GeminiLLM(...)` / `async with` actually release resources like the other providers.
+- `split_http_client_kwargs` now emits a `UserWarning` when the provided `http_client` has a `base_url` configured, since the SDKs ignore it — the LLM constructor's `base_url` parameter is the supported way to change the endpoint.
+- Added a new docs page, `docs/source/llm.rst`, describing the `http_client`/`base_url` injection contract shared by `AnthropicLLM` and `OpenAILLM`, with a worked example of subclassing `BaseAnthropicLLM` to reach a custom endpoint.
+- Added `BaseGeminiLLM`, a new base class holding all of `GeminiLLM`'s shared message-building, config/schema-building, and response-parsing logic. `GeminiLLM` is now a thin subclass responsible only for constructing the `genai.Client`. `BaseGeminiLLM` is exported from `neo4j_graphrag.llm` as a documented, supported extension point for subclassing to reach a custom Gemini-compatible endpoint.
 
 ### Changed
 
+- (**breaking**) The `mistralai` extra now requires `mistralai>=2.7.1`. Version 2 turned the top-level package into a namespace with no exports, so `MistralAILLM` and `MistralAIEmbeddings` were migrated to the `mistralai.client` layout. Users pinning `mistralai` 1.x must upgrade.
+- (**breaking**) `VertexAILLM`'s default model is now `gemini-2.5-flash`. The previous default, `gemini-1.5-flash-001`, has been retired by Google, so `VertexAILLM()` with no explicit model failed with a 404. Callers relying on the old default will now reach a different model; pass `model_name` explicitly to pin one.
+- (**breaking**) `BedrockLLM`'s default model is now `us.anthropic.claude-haiku-4-5-20251001-v1:0`. The previous default, `us.anthropic.claude-sonnet-4-20250514-v1:0`, is marked Legacy by the provider and Bedrock refuses it, so `BedrockLLM()` with no explicit model failed. Callers relying on the old default will now reach a different model; pass `model_name` explicitly to pin one.
 - (**breaking**) `AnthropicLLM.supports_structured_output` is now `True`. As a result, `SchemaFromTextExtractor` and `LLMEntityRelationExtractor` (and `SimpleKGPipeline`, which enables structured output automatically when the LLM supports it) now use structured output by default with `AnthropicLLM`. This requires a Claude 4.5+ model (e.g. `claude-sonnet-4-5`); using `AnthropicLLM` with an older Claude model in these components will now raise an error where it previously worked. To keep the previous behavior, use a Claude 4.5+ model, or construct `LLMEntityRelationExtractor` / `SchemaFromTextExtractor` directly with `use_structured_output=False`.
+
+- Preparation for 2.0:
+  - All `Components` have been moved out of the `experimental` namespace
+  - Import `from neo4j_graphrag.experimental.components... ` still work but raises a deprecation warning
+  - Import from the experimental namespace will be removed in 2.0
+  - Update to use `from neo4j_graphrag.components... ` instead
+  - Improperly defined components now raise a `ComponentDefinitionError` instead of `PipelineDefinitionError`
+  - `TaskProgressNotifierProtocol` and `RunContext` have been moved to `neo4j_graphrag.components.base`
+  - The `Component` base class has been moved to `neo4j_graphrag.components.base`
+
+### Fixed
+
+- Fixed the examples and user guide snippets that stopped working when their model references moved from `gpt-4o` to `gpt-5`. gpt-5 rejects `max_tokens` (requiring `max_completion_tokens`), accepts only the default `temperature` of 1 — whether set in `model_params` or passed to `invoke()` — and counts reasoning tokens against `max_completion_tokens`, so a budget that is too small returns empty content. Examples that need reproducible output now use a non-reasoning model (`gpt-4.1`/`gpt-4.1-mini`) and keep `temperature=0`; examples generating free-text answers stay on `gpt-5` without `temperature`; extraction pipelines use a larger `max_completion_tokens` together with `reasoning_effort="low"`.
+- Fixed `CohereLLM`, which could not be constructed at all: it read `cohere.core.api_error.ApiError` as an attribute chain, but the top-level `cohere` package resolves attributes lazily and does not expose `core`, raising `AttributeError: No core found in _dynamic_imports`.
+- `CohereEmbeddings` now sends `input_type`, which current Cohere embedding models require; without it every call failed. It is a new keyword-only constructor argument defaulting to `search_document`, what `TextChunkEmbedder` needs when indexing. Cohere's embeddings are asymmetric, and `Embedder.embed_query()` takes no per-call arguments, so a retriever cannot override the value: give the retrieval side its own `CohereEmbeddings(input_type="search_query")` instance.
+- Fixed `MistralAILLM` raising `AttributeError: 'Mistral' object has no attribute 'close'` when used as a context manager. The `mistralai` SDK replaced `close()`/`aclose()` with the context manager protocol.
+- Replaced model references in the Anthropic, Cohere, Gemini, Bedrock and Vertex AI examples that the providers have since retired, each verified against the live API.
+- Fixed a bug in `AnthropicLLM` where an `http_client` passed via kwargs (whether an `httpx.Client` or `httpx.AsyncClient`) was forwarded to both the sync `anthropic.Anthropic` and async `anthropic.AsyncAnthropic` clients, causing a type mismatch. `http_client` is now routed to the matching sync/async client only; other kwargs remain shared. An `http_client` of an unrecognized type now emits a warning and is ignored instead of raising, matching `OpenAILLM`'s existing behavior.
+- Vector and VectorCypher retrievers on Neo4j 2026+: prefix SEARCH queries with `CYPHER 25` and fall back to procedure-based vector search when SEARCH is unsupported or fails.
+- E2E tests: added exponential backoff retry logic with jitter (5 attempts, 5–60 second waits) to embedding model downloads to handle Hugging Face rate limits. Retries only on transient network errors (connection, timeout) and immediately fails on unrecoverable errors (missing packages, permissions), improving test reliability in parallel CI runs.
 
 ## 1.18.0
 
@@ -17,7 +57,7 @@
 - Experimental: `GraphSchema` validation now rejects `KEY` and `EXISTENCE` constraints on the same node or relationship property (including composite KEY members), since KEY already implies mandatory presence. Legacy `PropertyType.required` migration no longer adds redundant EXISTENCE constraints for KEY-covered properties. The schema-from-text extraction prompt includes the same rule.
 - Experimental: the schema-from-text extraction prompt now instructs the LLM to define each relationship type once and reuse it across patterns, using distinct type names only when patterns genuinely need different properties or constraints.
 - Experimental: LLM-auto-generated schemas now reconcile duplicate `relationship_types` (entries sharing the same label) by merging them into a single type that carries the union of their properties, emitting a warning log. This reflects that Neo4j relationship types are global per name.
-- Experimental (**breaking**): `GraphSchema` now raises `SchemaValidationError` when the same label appears more than once in `relationship_types`. Because Neo4j relationship types are global per name (every relationship of a given type shares the same properties and constraints regardless of its endpoints), a label cannot have two conflicting definitions. 
+- Experimental (**breaking**): `GraphSchema` now raises `SchemaValidationError` when the same label appears more than once in `relationship_types`. Because Neo4j relationship types are global per name (every relationship of a given type shares the same properties and constraints regardless of its endpoints), a label cannot have two conflicting definitions.
 
 ## 1.17.0
 

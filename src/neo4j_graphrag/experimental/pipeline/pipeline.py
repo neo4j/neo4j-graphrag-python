@@ -34,7 +34,7 @@ except ImportError:
 
 from pydantic import BaseModel
 
-from neo4j_graphrag.experimental.pipeline.component import Component
+from neo4j_graphrag.components.base import Component
 from neo4j_graphrag.experimental.pipeline.exceptions import (
     PipelineDefinitionError,
 )

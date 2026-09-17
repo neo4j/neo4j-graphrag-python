@@ -2,8 +2,8 @@
 
 import asyncio
 
-from neo4j_graphrag.experimental.components.graph_pruning import GraphPruning
-from neo4j_graphrag.experimental.components.schema import (
+from neo4j_graphrag.components.graph_pruning import GraphPruning
+from neo4j_graphrag.components.schema import (
     ConstraintType,
     GraphConstraintType,
     GraphSchema,
@@ -12,7 +12,7 @@ from neo4j_graphrag.experimental.components.schema import (
     PropertyType,
     RelationshipType,
 )
-from neo4j_graphrag.experimental.components.types import (
+from neo4j_graphrag.components.types import (
     Neo4jGraph,
     Neo4jNode,
     Neo4jRelationship,

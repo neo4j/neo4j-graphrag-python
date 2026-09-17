@@ -8,7 +8,7 @@ pipe.add_component(c, name="my_component")
 
 import random
 
-from neo4j_graphrag.experimental.pipeline import Component, DataModel
+from neo4j_graphrag.components.base import Component, DataModel
 from pydantic import BaseModel, validate_call
 
 

@@ -90,6 +90,12 @@ class CohereLLM(LLMBase):
     ) -> None:
         try:
             import cohere
+
+            # Import the submodule rather than reaching for `cohere.core`: the
+            # top-level package resolves attributes lazily and does not list
+            # `core`, so the attribute chain raises AttributeError even though
+            # the module is present and importable.
+            from cohere.core.api_error import ApiError
         except ImportError:
             raise ImportError(
                 """Could not import cohere python client.
@@ -103,7 +109,7 @@ class CohereLLM(LLMBase):
             **kwargs,
         )
         self.cohere = cohere
-        self.cohere_api_error = cohere.core.api_error.ApiError
+        self.cohere_api_error = ApiError
 
         self.client = cohere.ClientV2(**kwargs)
         self.async_client = cohere.AsyncClientV2(**kwargs)

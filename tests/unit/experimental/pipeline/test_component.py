@@ -16,7 +16,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from neo4j_graphrag.experimental.pipeline import Component
+from neo4j_graphrag.components.base import Component
 from neo4j_graphrag.experimental.pipeline.types.context import RunContext
 from .components import ComponentMultiply, ComponentMultiplyWithContext, IntResultModel
 

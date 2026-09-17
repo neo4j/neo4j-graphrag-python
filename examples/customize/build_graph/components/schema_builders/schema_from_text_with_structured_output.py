@@ -21,7 +21,7 @@ Prerequisites:
 import asyncio
 from dotenv import load_dotenv
 
-from neo4j_graphrag.experimental.components.schema import (
+from neo4j_graphrag.components.schema import (
     SchemaFromTextExtractor,
     GraphSchema,
 )
@@ -101,8 +101,11 @@ async def test_v1_without_structured_output() -> GraphSchema:
     print("=" * 60)
 
     # Initialize LLM with response_format for JSON mode (V1 approach)
+    # gpt-4.1-mini rather than gpt-5-mini: this example pins temperature=0 so the
+    # extracted schema is reproducible, and gpt-5 models only accept the default
+    # temperature (1).
     llm = OpenAILLM(
-        model_name="gpt-5-mini",
+        model_name="gpt-4.1-mini",
         model_params={
             "temperature": 0,
             "response_format": {"type": "json_object"},  # JSON mode for V1
@@ -147,7 +150,9 @@ async def test_v2_with_structured_output() -> GraphSchema:
     print("=" * 60)
 
     # Initialize LLM - NO response_format in constructor for V2!
-    llm = OpenAILLM(model_name="gpt-5-mini", model_params={"temperature": 0})
+    # gpt-4.1-mini for the same reason as V1 above: temperature=0 is unsupported
+    # on gpt-5 models.
+    llm = OpenAILLM(model_name="gpt-4.1-mini", model_params={"temperature": 0})
 
     # For VertexAI V2, use:
     # llm = VertexAILLM(

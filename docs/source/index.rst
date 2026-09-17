@@ -38,6 +38,7 @@ Topics
 + :ref:`user-guide-rag`
 + :ref:`user-guide-kg-builder`
 + :ref:`user-guide-pipeline`
++ :ref:`llm-extensibility`
 + :ref:`api-documentation`
 + :ref:`types-documentation`
 
@@ -50,6 +51,7 @@ Topics
     user_guide_rag.rst
     user_guide_kg_builder.rst
     user_guide_pipeline.rst
+    llm.rst
     api.rst
     types.rst
 
@@ -311,16 +313,17 @@ To run e2e tests you'd need to have some services running locally:
 -   weaviate
 -   weaviate-text2vec-transformers
 
-The easiest way to get it up and running is via Docker compose:
+The easiest way to get it up and running is via Docker compose. The vector stores sit behind a
+`vectordb` profile, so the full e2e suite needs it; omit the profile to start Neo4j alone.
 
 .. code:: bash
 
-    docker compose -f tests/e2e/docker-compose.yml up
+    docker compose -f tests/e2e/docker-compose.yml --profile vectordb up -d --wait
 
 
 .. note::
 
-    If you suspect something in the databases are cached, run `docker compose -f tests/e2e/docker-compose.yml down` to remove them completely
+    If you suspect something in the databases are cached, run `docker compose -f tests/e2e/docker-compose.yml --profile '*' down` to remove them completely. The `--profile '*'` matches every profile, so it tears down whatever you started.
 
 Once the services are running, execute the following command to run the e2e tests.
 

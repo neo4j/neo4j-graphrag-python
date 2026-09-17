@@ -20,8 +20,8 @@ such as chunking documents or saving results to Neo4j.
 This package includes a few default components, but developers can create
 their own by following these steps:
 
-1. Create a subclass of the Pydantic `neo4j_graphrag.experimental.pipeline.DataModel` to represent the data being returned by the component
-2. Create a subclass of `neo4j_graphrag.experimental.pipeline.Component`
+1. Create a subclass of the Pydantic `neo4j_graphrag.components.base.DataModel` to represent the data being returned by the component
+2. Create a subclass of `neo4j_graphrag.components.base.Component`
 3. Create a `run` method in this new class and specify the required inputs and output model using the just created `DataModel`
 4. Implement the run method: it's an `async` method, allowing tasks to be parallelized and awaited within this method.
 
@@ -30,7 +30,7 @@ the resulting sum:
 
 .. code:: python
 
-    from neo4j_graphrag.experimental.pipeline import Component, DataModel
+    from neo4j_graphrag.components.base import Component, DataModel
 
     class IntResultModel(DataModel):
         result: int
@@ -127,7 +127,7 @@ can be added to the visualization by setting `hide_unused_outputs` to `False`:
 .. code:: python
 
     pipe.draw("pipeline_full.html", hide_unused_outputs=False)
-    
+
     # To view the full visualization in a browser
     import webbrowser
     webbrowser.open("pipeline_full.html")

@@ -1,6 +1,6 @@
 import asyncio
 
-from neo4j_graphrag.experimental.pipeline.component import Component, DataModel
+from neo4j_graphrag.components.base import Component, DataModel
 from neo4j_graphrag.experimental.pipeline.pipeline import Pipeline
 from neo4j_graphrag.experimental.pipeline.notification import EventType, Event
 from neo4j_graphrag.experimental.pipeline.types.context import RunContext

@@ -19,7 +19,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
-from neo4j_graphrag.experimental.pipeline.component import Component
+from neo4j_graphrag.components.base import Component
 
 
 class ComponentDefinition(BaseModel):

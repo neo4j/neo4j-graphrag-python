@@ -18,19 +18,22 @@ from unittest.mock import Mock, patch
 import neo4j
 import pytest
 from neo4j_graphrag.embeddings import Embedder
-from neo4j_graphrag.experimental.components.embedder import TextChunkEmbedder
-from neo4j_graphrag.experimental.components.entity_relation_extractor import (
+from neo4j_graphrag.components.embedder import TextChunkEmbedder
+from neo4j_graphrag.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
     OnError,
 )
-from neo4j_graphrag.experimental.components.kg_writer import Neo4jWriter
-from neo4j_graphrag.experimental.components.data_loader import MarkdownLoader, PdfLoader
-from neo4j_graphrag.experimental.components.schema import (
+from neo4j_graphrag.components.kg_writer import Neo4jWriter
+from neo4j_graphrag.components.data_loader import (
+    MarkdownLoader,
+    PdfLoader,
+)
+from neo4j_graphrag.components.schema import (
     SchemaBuilder,
     SchemaFromTextExtractor,
     GraphSchema,
 )
-from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import (
+from neo4j_graphrag.components.text_splitters.fixed_size_splitter import (
     FixedSizeSplitter,
 )
 from neo4j_graphrag.experimental.pipeline.config.object_config import (
@@ -45,7 +48,7 @@ from neo4j_graphrag.experimental.pipeline.types.schema import (
     EntityInputType,
     RelationInputType,
 )
-from neo4j_graphrag.experimental.components.types import DocumentType
+from neo4j_graphrag.components.types import DocumentType
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate
 from neo4j_graphrag.llm import LLMInterface
 
@@ -67,9 +70,7 @@ async def test_simple_kg_pipeline_config_default_file_loader_supports_markdown()
     config = SimpleKGPipelineConfig(from_file=True)
     loader = config._get_file_loader()
     assert loader is not None
-    doc = await loader.run(
-        filepath="tests/unit/experimental/components/sample_data/hello.md"
-    )
+    doc = await loader.run(filepath="tests/unit/components/sample_data/hello.md")
     assert doc.document_info.document_type == DocumentType.MARKDOWN
 
 
@@ -258,7 +259,7 @@ def test_simple_kg_pipeline_config_extractor_structured_output(
 
 
 @patch(
-    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    "neo4j_graphrag.components.kg_writer.get_version",
     return_value=((5, 23, 0), False, False),
 )
 @patch(
@@ -280,7 +281,7 @@ def test_simple_kg_pipeline_config_writer(
 
 
 @patch(
-    "neo4j_graphrag.experimental.components.kg_writer.get_version",
+    "neo4j_graphrag.components.kg_writer.get_version",
     return_value=((5, 23, 0), False, False),
 )
 @patch("neo4j_graphrag.experimental.pipeline.config.object_config.ComponentType.parse")

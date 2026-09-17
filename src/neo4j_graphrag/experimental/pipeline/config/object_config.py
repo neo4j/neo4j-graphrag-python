@@ -42,7 +42,7 @@ from pydantic import (
 )
 
 from neo4j_graphrag.embeddings import Embedder
-from neo4j_graphrag.experimental.pipeline import Component
+from neo4j_graphrag.components.base import Component
 from neo4j_graphrag.experimental.pipeline.config.base import AbstractConfig
 from neo4j_graphrag.experimental.pipeline.config.param_resolver import (
     ParamConfig,
@@ -244,7 +244,7 @@ class ComponentConfig(ObjectConfig[Component]):
 
     run_params_: dict[str, ParamConfig] = {}
 
-    DEFAULT_MODULE = "neo4j_graphrag.experimental.components"
+    DEFAULT_MODULE = "neo4j_graphrag.components"
     INTERFACE = Component
 
     def get_run_params(self, resolved_data: dict[str, Any]) -> dict[str, Any]:
