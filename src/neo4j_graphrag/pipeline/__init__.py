@@ -44,6 +44,7 @@ Nothing executes until the definition is evaluated by an
 """
 
 from neo4j_graphrag.pipeline.interpreter import Interpreter, LocalInterpreter
+from neo4j_graphrag.pipeline.observers import LoggingStageObserver, StageObserver
 from neo4j_graphrag.pipeline.pipeline import Pipeline, ResultPipeline
 from neo4j_graphrag.pipeline.result import Err, Ok, Result
 from neo4j_graphrag.pipeline.sink import Sink
@@ -52,6 +53,8 @@ from neo4j_graphrag.pipeline.source import Source
 __all__ = [
     "Interpreter",
     "LocalInterpreter",
+    "LoggingStageObserver",
+    "StageObserver",
     "Pipeline",
     "ResultPipeline",
     "Err",
