@@ -294,6 +294,10 @@ Here's an example using the Python Ollama client:
 
     class MyOllamaLLM(LLMBase):
 
+        def __init__(self, model_name: str, **kwargs: Any) -> None:
+            super().__init__(model_name=model_name, **kwargs)
+            self.async_client = ollama.AsyncClient()
+
         def _invoke_v1(
             self,
             input: str,
@@ -322,7 +326,11 @@ Here's an example using the Python Ollama client:
             system_instruction=None,
             **kwargs: Any,
         ) -> LLMResponse:
-            return self._invoke_v1(input)  # TODO: implement with ollama.AsyncClient
+            messages = [{"role": "user", "content": input}]
+            response = await self.async_client.chat(
+                model=self.model_name, messages=messages
+            )
+            return LLMResponse(content=response["message"]["content"])
 
         async def _ainvoke_v2(
             self,
@@ -331,7 +339,10 @@ Here's an example using the Python Ollama client:
             response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
             **kwargs: Any,
         ) -> LLMResponse:
-            return self._invoke_v2(input)  # TODO: implement with ollama.AsyncClient
+            response = await self.async_client.chat(
+                model=self.model_name, messages=list(input)
+            )
+            return LLMResponse(content=response["message"]["content"])
 
 
     # retriever = ...
