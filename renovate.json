@@ -36,7 +36,15 @@
       "matchDepTypes": [
         "dependency-groups"
       ],
-      "rangeStrategy": "bump",
+      "rangeStrategy": "bump"
+    },
+    {
+      "matchManagers": [
+        "pep621"
+      ],
+      "matchDepTypes": [
+        "dependency-groups"
+      ],
       "groupName": "dev dependencies",
       "automerge": true,
       "automergeType": "pr",
@@ -56,7 +64,15 @@
       "matchDepTypes": [
         "project.dependencies"
       ],
-      "rangeStrategy": "bump",
+      "rangeStrategy": "bump"
+    },
+    {
+      "matchManagers": [
+        "pep621"
+      ],
+      "matchDepTypes": [
+        "project.dependencies"
+      ],
       "automerge": true,
       "automergeType": "pr",
       "matchUpdateTypes": [
