@@ -276,8 +276,10 @@ If the provided implementations do not match their needs, developers can create 
 custom LLM class by subclassing :class:`neo4j_graphrag.llm.LLMBase`.
 ``LLMBase`` combines ``LLMInterface`` (str input, v1 API) and ``LLMInterfaceV2``
 (``List[LLMMessage]`` input, structured output) into a single abstract base class.
-Subclasses implement one ``invoke`` and one ``ainvoke`` dispatcher that branches on
-the type of *input*.
+``invoke`` and ``ainvoke`` are concrete dispatchers provided by ``LLMBase``;
+subclasses implement four hooks instead: ``_invoke_v1``/``_invoke_v2`` for the
+synchronous ``str`` and ``List[LLMMessage]`` call shapes, and
+``_ainvoke_v1``/``_ainvoke_v2`` for their asynchronous counterparts.
 
 Here's an example using the Python Ollama client:
 
@@ -292,30 +294,55 @@ Here's an example using the Python Ollama client:
 
     class MyOllamaLLM(LLMBase):
 
-        def invoke(
+        def __init__(self, model_name: str, **kwargs: Any) -> None:
+            super().__init__(model_name=model_name, **kwargs)
+            self.async_client = ollama.AsyncClient()
+
+        def _invoke_v1(
             self,
-            input: Union[str, List[LLMMessage]],
+            input: str,
             message_history=None,
             system_instruction=None,
-            response_format=None,
             **kwargs: Any,
         ) -> LLMResponse:
-            if isinstance(input, str):
-                messages = [{"role": "user", "content": input}]
-            else:
-                messages = list(input)
+            messages = [{"role": "user", "content": input}]
             response = ollama.chat(model=self.model_name, messages=messages)
             return LLMResponse(content=response["message"]["content"])
 
-        async def ainvoke(
+        def _invoke_v2(
             self,
-            input: Union[str, List[LLMMessage]],
-            message_history=None,
-            system_instruction=None,
-            response_format=None,
+            input: List[LLMMessage],
+            *,
+            response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
             **kwargs: Any,
         ) -> LLMResponse:
-            return self.invoke(input)  # TODO: implement with ollama.AsyncClient
+            response = ollama.chat(model=self.model_name, messages=list(input))
+            return LLMResponse(content=response["message"]["content"])
+
+        async def _ainvoke_v1(
+            self,
+            input: str,
+            message_history=None,
+            system_instruction=None,
+            **kwargs: Any,
+        ) -> LLMResponse:
+            messages = [{"role": "user", "content": input}]
+            response = await self.async_client.chat(
+                model=self.model_name, messages=messages
+            )
+            return LLMResponse(content=response["message"]["content"])
+
+        async def _ainvoke_v2(
+            self,
+            input: List[LLMMessage],
+            *,
+            response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+            **kwargs: Any,
+        ) -> LLMResponse:
+            response = await self.async_client.chat(
+                model=self.model_name, messages=list(input)
+            )
+            return LLMResponse(content=response["message"]["content"])
 
 
     # retriever = ...

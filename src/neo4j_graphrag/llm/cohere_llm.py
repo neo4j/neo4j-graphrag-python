@@ -120,67 +120,38 @@ class CohereLLM(LLMBase):
         text = getattr(content_items[0], "text", None)
         return text if isinstance(text, str) else ""
 
-    def invoke(
-        self,
-        input: Union[str, List[LLMMessage]],
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        if isinstance(input, str):
-            return self.__invoke_v1(input, message_history, system_instruction)
-        elif isinstance(input, list):
-            return self.__invoke_v2(input, response_format=response_format, **kwargs)
-        else:
-            raise ValueError(f"Invalid input type for invoke method - {type(input)}")
-
-    async def ainvoke(
-        self,
-        input: Union[str, List[LLMMessage]],
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        if isinstance(input, str):
-            return await self.__ainvoke_v1(input, message_history, system_instruction)
-        elif isinstance(input, list):
-            return await self.__ainvoke_v2(
-                input, response_format=response_format, **kwargs
-            )
-        else:
-            raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
-
-    # implementations
-    @rate_limit_handler_decorator
-    def __invoke_v1(
+    def _build_v1_request(
         self,
         input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
-    ) -> LLMResponse:
-        """Sends text to the LLM and returns a response.
+    ) -> dict[str, Any]:
+        """Build the ``client.chat`` kwargs for a v1 (str-input) call."""
+        if isinstance(message_history, MessageHistory):
+            message_history = message_history.messages
+        return {
+            "messages": self.get_messages(input, message_history, system_instruction),
+            "model": self.model_name,
+        }
 
-        Args:
-            input (str): The text to send to the LLM.
-            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
-                with each message having a specific role assigned.
-            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
-
-        Returns:
-            LLMResponse: The response from the LLM.
-        """
-        try:
-            if isinstance(message_history, MessageHistory):
-                message_history = message_history.messages
-            messages = self.get_messages(input, message_history, system_instruction)
-            res = self.client.chat(
-                messages=messages,
-                model=self.model_name,
+    def _build_v2_request(
+        self,
+        input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        """Build the ``client.chat`` kwargs for a v2 (message-list) call."""
+        if response_format is not None:
+            raise NotImplementedError(
+                "CohereLLM does not currently support structured output"
             )
-        except self.cohere_api_error as e:
-            raise LLMGenerationError(e)
+        return {
+            "messages": self.get_messages_v2(input),
+            "model": self.model_name,
+        }
+
+    def _parse_response(self, res: Any) -> LLMResponse:
+        """Build an ``LLMResponse`` from a Cohere chat response."""
         usage = None
         if res.usage and res.usage.tokens:
             input_tokens = (
@@ -204,160 +175,67 @@ class CohereLLM(LLMBase):
             content=self._extract_text_content(res.message.content), usage=usage
         )
 
-    @rate_limit_handler_decorator
-    def __invoke_v2(
-        self,
-        input: List[LLMMessage],
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        """Sends text to the LLM and returns a response.
-
-        Args:
-            input (List[LLMMessage]): The messages to send to the LLM.
-            response_format: Not supported by CohereLLM.
-
-        Returns:
-            LLMResponse: The response from the LLM.
-        """
-        if response_format is not None:
-            raise NotImplementedError(
-                "CohereLLM does not currently support structured output"
-            )
+    def _call_sync(self, request: dict[str, Any]) -> LLMResponse:
+        """Sync transport hook: the only place ``client.chat`` is called."""
         try:
-            messages = self.get_messages_v2(input)
-            res = self.client.chat(
-                messages=messages,
-                model=self.model_name,
-            )
+            res = self.client.chat(**request)
         except self.cohere_api_error as e:
-            raise LLMGenerationError("Error calling cohere") from e
+            raise LLMGenerationError(e) from e
+        return self._parse_response(res)
 
-        usage = None
-        if res.usage and res.usage.tokens:
-            input_tokens = (
-                int(res.usage.tokens.input_tokens)
-                if res.usage.tokens.input_tokens is not None
-                else None
-            )
-            output_tokens = (
-                int(res.usage.tokens.output_tokens)
-                if res.usage.tokens.output_tokens is not None
-                else None
-            )
-            usage = LLMUsage(
-                request_tokens=input_tokens,
-                response_tokens=output_tokens,
-                total_tokens=(input_tokens + output_tokens)
-                if (input_tokens is not None and output_tokens is not None)
-                else None,
-            )
-        return LLMResponse(
-            content=(
-                res.message.content[0].text
-                if res.message.content and hasattr(res.message.content[0], "text")
-                else ""
-            ),
-            usage=usage,
-        )
+    async def _call_async(self, request: dict[str, Any]) -> LLMResponse:
+        """Async transport hook — see :meth:`_call_sync`."""
+        try:
+            res = await self.async_client.chat(**request)
+        except self.cohere_api_error as e:
+            raise LLMGenerationError(e) from e
+        return self._parse_response(res)
 
-    @async_rate_limit_handler_decorator
-    async def __ainvoke_v1(
+    @rate_limit_handler_decorator
+    def _invoke_v1(
         self,
         input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+        **kwargs: Any,
     ) -> LLMResponse:
-        """Asynchronously sends text to the LLM and returns a response.
+        request = self._build_v1_request(input, message_history, system_instruction)
+        return self._call_sync(request)
 
-        Args:
-            input (str): The text to send to the LLM.
-            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
-                with each message having a specific role assigned.
-            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
-
-        Returns:
-            LLMResponse: The response from the LLM.
-        """
-        try:
-            if isinstance(message_history, MessageHistory):
-                message_history = message_history.messages
-            messages = self.get_messages(input, message_history, system_instruction)
-            res = await self.async_client.chat(
-                messages=messages,
-                model=self.model_name,
-            )
-        except self.cohere_api_error as e:
-            raise LLMGenerationError(e)
-        usage = None
-        if res.usage and res.usage.tokens:
-            input_tokens = (
-                int(res.usage.tokens.input_tokens)
-                if res.usage.tokens.input_tokens is not None
-                else None
-            )
-            output_tokens = (
-                int(res.usage.tokens.output_tokens)
-                if res.usage.tokens.output_tokens is not None
-                else None
-            )
-            usage = LLMUsage(
-                request_tokens=input_tokens,
-                response_tokens=output_tokens,
-                total_tokens=(input_tokens + output_tokens)
-                if (input_tokens is not None and output_tokens is not None)
-                else None,
-            )
-        return LLMResponse(
-            content=self._extract_text_content(res.message.content), usage=usage
-        )
-
-    @async_rate_limit_handler_decorator
-    async def __ainvoke_v2(
+    @rate_limit_handler_decorator
+    def _invoke_v2(
         self,
         input: List[LLMMessage],
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        if response_format is not None:
-            raise NotImplementedError(
-                "CohereLLM does not currently support structured output"
-            )
-        try:
-            messages = self.get_messages_v2(input)
-            res = await self.async_client.chat(
-                messages=messages,
-                model=self.model_name,
-            )
-        except self.cohere_api_error as e:
-            raise LLMGenerationError("Error calling cohere") from e
-        usage = None
-        if res.usage and res.usage.tokens:
-            input_tokens = (
-                int(res.usage.tokens.input_tokens)
-                if res.usage.tokens.input_tokens is not None
-                else None
-            )
-            output_tokens = (
-                int(res.usage.tokens.output_tokens)
-                if res.usage.tokens.output_tokens is not None
-                else None
-            )
-            usage = LLMUsage(
-                request_tokens=input_tokens,
-                response_tokens=output_tokens,
-                total_tokens=(input_tokens + output_tokens)
-                if (input_tokens is not None and output_tokens is not None)
-                else None,
-            )
-        return LLMResponse(
-            content=(
-                res.message.content[0].text
-                if res.message.content and hasattr(res.message.content[0], "text")
-                else ""
-            ),
-            usage=usage,
+        request = self._build_v2_request(
+            input, response_format=response_format, **kwargs
         )
+        return self._call_sync(request)
+
+    @async_rate_limit_handler_decorator
+    async def _ainvoke_v1(
+        self,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        request = self._build_v1_request(input, message_history, system_instruction)
+        return await self._call_async(request)
+
+    @async_rate_limit_handler_decorator
+    async def _ainvoke_v2(
+        self,
+        input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        request = self._build_v2_request(
+            input, response_format=response_format, **kwargs
+        )
+        return await self._call_async(request)
 
     # subsdiary methods
     def get_messages(

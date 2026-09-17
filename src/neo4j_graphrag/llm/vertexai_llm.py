@@ -167,38 +167,6 @@ class VertexAILLM(LLMBase):
         self.system_instruction = system_instruction
         self.options = kwargs
 
-    def invoke(
-        self,
-        input: Union[str, List[LLMMessage]],
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        if isinstance(input, str):
-            return self.__invoke_v1(input, message_history, system_instruction)
-        elif isinstance(input, list):
-            return self.__invoke_v2(input, response_format=response_format, **kwargs)
-        else:
-            raise ValueError(f"Invalid input type for invoke method - {type(input)}")
-
-    async def ainvoke(
-        self,
-        input: Union[str, List[LLMMessage]],
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        if isinstance(input, str):
-            return await self.__ainvoke_v1(input, message_history, system_instruction)
-        elif isinstance(input, list):
-            return await self.__ainvoke_v2(
-                input, response_format=response_format, **kwargs
-            )
-        else:
-            raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
-
     def invoke_with_tools(
         self,
         input: str,
@@ -221,133 +189,102 @@ class VertexAILLM(LLMBase):
             input, tools, message_history, system_instruction
         )
 
-    # legacy and brand new implementations
-
-    @rate_limit_handler_decorator
-    def __invoke_v1(
+    def _build_v1_request(
         self,
         input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
-    ) -> LLMResponse:
-        """Sends text to the LLM and returns a response.
+    ) -> tuple[GenerativeModel, dict[str, Any]]:
+        """Build the ``(model, generate_content kwargs)`` pair for a v1 call."""
+        if isinstance(message_history, MessageHistory):
+            message_history = message_history.messages
+        model = self._get_model(system_instruction=system_instruction)
+        options = self._get_call_params(input, message_history, tools=None)
+        return model, options
 
-        Args:
-            input (str): The text to send to the LLM.
-            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
-                with each message having a specific role assigned.
-            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
-
-        Returns:
-            LLMResponse: The response from the LLM.
-        """
-        model = self._get_model(
-            system_instruction=system_instruction,
+    def _build_v2_request(
+        self,
+        input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> tuple[GenerativeModel, dict[str, Any]]:
+        """Build the ``(model, generate_content kwargs)`` pair for a v2 call."""
+        system_instruction, messages = self.get_messages_v2(input)
+        model = self._get_model(system_instruction=system_instruction)
+        options = self._get_call_params_v2(
+            messages, tools=None, response_format=response_format, **kwargs
         )
+        return model, options
+
+    def _call_sync(
+        self, model: GenerativeModel, options: dict[str, Any]
+    ) -> LLMResponse:
+        """Sync transport hook: the only place ``model.generate_content`` is called."""
         try:
-            if isinstance(message_history, MessageHistory):
-                message_history = message_history.messages
-            options = self._get_call_params(input, message_history, tools=None)
             response = model.generate_content(**options)
             return self._parse_content_response(response)
         except ResponseValidationError as e:
             raise LLMGenerationError("Error calling VertexAILLM") from e
 
+    async def _call_async(
+        self, model: GenerativeModel, options: dict[str, Any]
+    ) -> LLMResponse:
+        """Async transport hook — see :meth:`_call_sync`."""
+        try:
+            response = await model.generate_content_async(**options)
+            return self._parse_content_response(response)
+        except ResponseValidationError as e:
+            raise LLMGenerationError("Error calling VertexAILLM") from e
+
     @rate_limit_handler_decorator
-    def __invoke_v2(
+    def _invoke_v1(
+        self,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        model, options = self._build_v1_request(
+            input, message_history, system_instruction
+        )
+        return self._call_sync(model, options)
+
+    @rate_limit_handler_decorator
+    def _invoke_v2(
         self,
         input: List[LLMMessage],
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        """New invoke method for LLMInterfaceV2.
-
-        Args:
-            input (List[LLMMessage]): Input to the LLM.
-            response_format (Optional[Union[Type[BaseModel], dict[str, Any]]]): Optional
-                response format. Can be a Pydantic model class for structured output
-                or a JSON schema dict.
-            **kwargs: Additional parameters to pass to GenerationConfig (e.g., temperature,
-                max_output_tokens, top_p, top_k). These override constructor values.
-
-        Returns:
-            LLMResponse: The response from the LLM.
-        """
-        system_instruction, messages = self.get_messages_v2(input)
-        model = self._get_model(
-            system_instruction=system_instruction,
+        model, options = self._build_v2_request(
+            input, response_format=response_format, **kwargs
         )
-        try:
-            options = self._get_call_params_v2(
-                messages, tools=None, response_format=response_format, **kwargs
-            )
-            response = model.generate_content(**options)
-            return self._parse_content_response(response)
-        except ResponseValidationError as e:
-            raise LLMGenerationError("Error calling VertexAILLM") from e
+        return self._call_sync(model, options)
 
     @async_rate_limit_handler_decorator
-    async def __ainvoke_v1(
+    async def _ainvoke_v1(
         self,
         input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+        **kwargs: Any,
     ) -> LLMResponse:
-        """Asynchronously sends text to the LLM and returns a response.
-
-        Args:
-            input (str): The text to send to the LLM.
-            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
-                with each message having a specific role assigned.
-            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
-
-        Returns:
-            LLMResponse: The response from the LLM.
-        """
-        try:
-            if isinstance(message_history, MessageHistory):
-                message_history = message_history.messages
-            model = self._get_model(
-                system_instruction=system_instruction,
-            )
-            options = self._get_call_params(input, message_history, tools=None)
-            response = await model.generate_content_async(**options)
-            return self._parse_content_response(response)
-        except ResponseValidationError as e:
-            raise LLMGenerationError("Error calling VertexAILLM") from e
+        model, options = self._build_v1_request(
+            input, message_history, system_instruction
+        )
+        return await self._call_async(model, options)
 
     @async_rate_limit_handler_decorator
-    async def __ainvoke_v2(
+    async def _ainvoke_v2(
         self,
         input: list[LLMMessage],
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        """Asynchronously sends text to the LLM and returns a response.
-
-        Args:
-            input (List[LLMMessage]): Input to the LLM.
-            response_format (Optional[Union[Type[BaseModel], dict[str, Any]]]): Optional
-                response format. Can be a Pydantic model class for structured output
-                or a JSON schema dict.
-            **kwargs: Additional parameters to pass to GenerationConfig (e.g., temperature,
-                max_output_tokens, top_p, top_k). These override constructor values.
-
-        Returns:
-            LLMResponse: The response from the LLM.
-        """
-        try:
-            system_instruction, messages = self.get_messages_v2(input)
-            model = self._get_model(
-                system_instruction=system_instruction,
-            )
-            options = self._get_call_params_v2(
-                messages, tools=None, response_format=response_format, **kwargs
-            )
-            response = await model.generate_content_async(**options)
-            return self._parse_content_response(response)
-        except ResponseValidationError as e:
-            raise LLMGenerationError("Error calling VertexAILLM") from e
+        model, options = self._build_v2_request(
+            input, response_format=response_format, **kwargs
+        )
+        return await self._call_async(model, options)
 
     def __invoke_v1_with_tools(
         self,

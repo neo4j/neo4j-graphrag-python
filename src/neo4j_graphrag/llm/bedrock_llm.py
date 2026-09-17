@@ -20,13 +20,13 @@ import asyncio
 import os
 from typing import (
     Any,
+    Callable,
     List,
     Optional,
     Sequence,
     Type,
     Union,
     cast,
-    overload,
 )
 
 # 3rd party dependencies
@@ -34,7 +34,7 @@ from pydantic import BaseModel, ValidationError
 
 # project dependencies
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.base import LLMInterface, LLMInterfaceV2
+from neo4j_graphrag.llm.base import LLMBase
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
@@ -67,7 +67,7 @@ DEFAULT_BEDROCK_LLM_MODEL = os.getenv(
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
-class BedrockLLM(LLMInterface, LLMInterfaceV2):
+class BedrockLLM(LLMBase):
     """LLM interface for Amazon Bedrock via the boto3 Converse API.
 
     Args:
@@ -109,7 +109,7 @@ class BedrockLLM(LLMInterface, LLMInterfaceV2):
                 "Could not import boto3 python client. "
                 'Please install it with `pip install "neo4j-graphrag[bedrock]"`.'
             )
-        LLMInterfaceV2.__init__(
+        LLMBase.__init__(
             self,
             model_name=model_name,
             model_params=model_params or {},
@@ -120,84 +120,87 @@ class BedrockLLM(LLMInterface, LLMInterfaceV2):
             client_kwargs["region_name"] = region_name
         self.client = boto3.client("bedrock-runtime", **client_kwargs)
 
-    # overloads for LLMInterface and LLMInterfaceV2 methods
-    @overload  # type: ignore[no-overload-impl]
-    def invoke(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse: ...
-
-    @overload
-    def invoke(
-        self,
-        input: List[LLMMessage],
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse: ...
-
-    @overload  # type: ignore[no-overload-impl]
-    async def ainvoke(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse: ...
-
-    @overload
-    async def ainvoke(
-        self,
-        input: List[LLMMessage],
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse: ...
-
-    # switching logic
-    def invoke(  # type: ignore[no-redef]
-        self,
-        input: Union[str, List[LLMMessage]],
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        if isinstance(input, str):
-            return self.__invoke_v1(input, message_history, system_instruction)
-        return self.__invoke_v2(input, response_format=response_format, **kwargs)
-
-    async def ainvoke(  # type: ignore[no-redef]
-        self,
-        input: Union[str, List[LLMMessage]],
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        if isinstance(input, str):
-            return await self.__ainvoke_v1(input, message_history, system_instruction)
-        return await self.__ainvoke_v2(input, response_format=response_format, **kwargs)
-
     # implementations
-    @rate_limit_handler_decorator
-    def __invoke_v1(
+    def _build_v1_request(
         self,
         input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
-    ) -> LLMResponse:
+    ) -> dict[str, Any]:
+        """Build the ``client.converse`` kwargs for a v1 (str-input) call."""
+        messages = self.get_messages(input, message_history)
+        return self._build_converse_kwargs(
+            messages, system_instruction=system_instruction
+        )
+
+    def _build_v2_request(
+        self,
+        input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        """Build the ``client.converse`` kwargs for a v2 (message-list) call.
+
+        Callers must reject an unsupported ``response_format`` before
+        invoking this (see :meth:`_invoke_v2`/:meth:`_ainvoke_v2`): that is
+        an unsupported-call-shape error, raised unwrapped like every other
+        provider's, not a message/transport failure to wrap into
+        :class:`LLMGenerationError`.
+        """
+        system_instruction, messages = self.get_messages_v2(input)
+        return self._build_converse_kwargs(
+            messages, system_instruction=system_instruction, **kwargs
+        )
+
+    def _call_sync(self, build_request: Callable[[], dict[str, Any]]) -> LLMResponse:
+        """Sync transport hook: the only place ``client.converse`` is called.
+
+        ``build_request`` runs inside this method's ``try`` so that request
+        construction (message/schema validation, unsupported-feature checks)
+        is wrapped into :class:`LLMGenerationError` exactly like transport
+        errors, keeping one error contract for the whole call.
+        """
         try:
-            messages = self.get_messages(input, message_history)
-            converse_kwargs = self._build_converse_kwargs(
-                messages, system_instruction=system_instruction
-            )
+            converse_kwargs = build_request()
             response = self.client.converse(**converse_kwargs)
             return self._parse_response(response)
         except Exception as e:
             raise LLMGenerationError(f"Error calling BedrockLLM: {e}") from e
 
+    async def _call_async(
+        self, build_request: Callable[[], dict[str, Any]]
+    ) -> LLMResponse:
+        """Async transport hook: boto3 is sync-only, so the same
+        ``client.converse`` call runs in a thread-pool executor.
+
+        Only this method carries the async retry layer (via
+        :func:`async_rate_limit_handler` on ``_ainvoke_v1``/``_ainvoke_v2``);
+        it dispatches to :meth:`_call_sync` directly rather than to a
+        rate-limited sync entry point, so a single call never gets retried
+        by both the sync and async decorators at once.
+        """
+        try:
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(None, self._call_sync, build_request)
+        except LLMGenerationError:
+            raise
+        except Exception as e:
+            raise LLMGenerationError(f"Error calling BedrockLLM: {e}") from e
+
     @rate_limit_handler_decorator
-    def __invoke_v2(
+    def _invoke_v1(
+        self,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        return self._call_sync(
+            lambda: self._build_v1_request(input, message_history, system_instruction)
+        )
+
+    @rate_limit_handler_decorator
+    def _invoke_v2(
         self,
         input: List[LLMMessage],
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
@@ -207,35 +210,26 @@ class BedrockLLM(LLMInterface, LLMInterfaceV2):
             raise NotImplementedError(
                 "BedrockLLM does not currently support structured output"
             )
-        try:
-            system_instruction, messages = self.get_messages_v2(input)
-            converse_kwargs = self._build_converse_kwargs(
-                messages, system_instruction=system_instruction, **kwargs
+        return self._call_sync(
+            lambda: self._build_v2_request(
+                input, response_format=response_format, **kwargs
             )
-            response = self.client.converse(**converse_kwargs)
-            return self._parse_response(response)
-        except Exception as e:
-            raise LLMGenerationError(f"Error calling BedrockLLM: {e}") from e
+        )
 
     @async_rate_limit_handler_decorator
-    async def __ainvoke_v1(
+    async def _ainvoke_v1(
         self,
         input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+        **kwargs: Any,
     ) -> LLMResponse:
-        try:
-            loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(
-                None, self.__invoke_v1, input, message_history, system_instruction
-            )
-        except LLMGenerationError:
-            raise
-        except Exception as e:
-            raise LLMGenerationError(f"Error calling BedrockLLM: {e}") from e
+        return await self._call_async(
+            lambda: self._build_v1_request(input, message_history, system_instruction)
+        )
 
     @async_rate_limit_handler_decorator
-    async def __ainvoke_v2(
+    async def _ainvoke_v2(
         self,
         input: List[LLMMessage],
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
@@ -245,15 +239,11 @@ class BedrockLLM(LLMInterface, LLMInterfaceV2):
             raise NotImplementedError(
                 "BedrockLLM does not currently support structured output"
             )
-        try:
-            loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(
-                None, self.__invoke_v2, input, response_format
+        return await self._call_async(
+            lambda: self._build_v2_request(
+                input, response_format=response_format, **kwargs
             )
-        except LLMGenerationError:
-            raise
-        except Exception as e:
-            raise LLMGenerationError(f"Error calling BedrockLLM: {e}") from e
+        )
 
     def invoke_with_tools(
         self,

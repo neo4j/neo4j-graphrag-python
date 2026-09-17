@@ -119,38 +119,6 @@ class BaseOpenAILLM(LLMBase, abc.ABC):
             **kwargs,
         )
 
-    def invoke(
-        self,
-        input: Union[str, List[LLMMessage]],
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        if isinstance(input, str):
-            return self.__invoke_v1(input, message_history, system_instruction)
-        elif isinstance(input, list):
-            return self.__invoke_v2(input, response_format=response_format, **kwargs)
-        else:
-            raise ValueError(f"Invalid input type for invoke method - {type(input)}")
-
-    async def ainvoke(
-        self,
-        input: Union[str, List[LLMMessage]],
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        if isinstance(input, str):
-            return await self.__ainvoke_v1(input, message_history, system_instruction)
-        elif isinstance(input, list):
-            return await self.__ainvoke_v2(
-                input, response_format=response_format, **kwargs
-            )
-        else:
-            raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
-
     def invoke_with_tools(
         self,
         input: str,
@@ -246,120 +214,113 @@ class BaseOpenAILLM(LLMBase, abc.ABC):
         except AttributeError:
             raise LLMGenerationError(f"Tool {tool} is not a valid Tool object")
 
+    def _build_v1_request(
+        self,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """Build the ``chat.completions.create`` kwargs for a v1 (str-input) call."""
+        if isinstance(message_history, MessageHistory):
+            message_history = message_history.messages
+        return {
+            "messages": self.get_messages(input, message_history, system_instruction),
+            "model": self.model_name,
+            **self.model_params,
+        }
+
+    def _build_v2_request(
+        self,
+        input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        """Build the ``chat.completions.create`` kwargs for a v2 (message-list) call."""
+        kwargs = dict(kwargs)
+        messages = self.get_messages_v2(input)
+        params = self.model_params.copy() if self.model_params else {}
+
+        if params.pop("response_format", None) is not None and response_format is None:
+            logger.warning(
+                "response_format in model_params is ignored. "
+                "Pass response_format to invoke() instead."
+            )
+
+        if response_format is not None:
+            if isinstance(response_format, type) and issubclass(
+                response_format, BaseModel
+            ):
+                # beta.parse() has strict limitations, so convert to JSON schema instead
+                schema = response_format.model_json_schema()
+                kwargs["response_format"] = {
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": response_format.__name__,
+                        "strict": True,
+                        "schema": schema,
+                    },
+                }
+            else:
+                kwargs["response_format"] = response_format
+
+        return {
+            "messages": messages,
+            "model": self.model_name,
+            **params,
+            **kwargs,
+        }
+
+    def _parse_response(self, response: Any) -> LLMResponse:
+        """Build an ``LLMResponse`` from a Chat Completions response."""
+        content = response.choices[0].message.content or ""
+        usage = None
+        if response.usage:
+            usage = LLMUsage(
+                request_tokens=response.usage.prompt_tokens,
+                response_tokens=response.usage.completion_tokens,
+                total_tokens=response.usage.total_tokens,
+            )
+        return LLMResponse(content=content, usage=usage)
+
+    def _call_sync(self, request: dict[str, Any]) -> LLMResponse:
+        """Sync transport hook: the only place ``client.chat.completions.create``
+        is called."""
+        try:
+            response = self.client.chat.completions.create(**request)
+            return self._parse_response(response)
+        except self.openai.OpenAIError as e:
+            raise LLMGenerationError(e)
+
+    async def _call_async(self, request: dict[str, Any]) -> LLMResponse:
+        """Async transport hook — see :meth:`_call_sync`."""
+        try:
+            response = await self.async_client.chat.completions.create(**request)
+            return self._parse_response(response)
+        except self.openai.OpenAIError as e:
+            raise LLMGenerationError(e)
+
     @rate_limit_handler_decorator
-    def __invoke_v2(
+    def _invoke_v1(
+        self,
+        input: str,
+        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
+        system_instruction: Optional[str] = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        request = self._build_v1_request(input, message_history, system_instruction)
+        return self._call_sync(request)
+
+    @rate_limit_handler_decorator
+    def _invoke_v2(
         self,
         input: List[LLMMessage],
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        """New invoke method for LLMInterfaceV2.
-
-        Args:
-            input (List[LLMMessage]): Input to the LLM.
-            response_format (Optional[Union[Type[BaseModel], dict[str, Any]]]): Optional
-                response format. Can be a Pydantic model class for structured output
-                or a dict like {"type": "json_object"}.
-
-        Returns:
-            LLMResponse: The response from the LLM.
-        """
-        try:
-            messages = self.get_messages_v2(input)
-            params = self.model_params.copy() if self.model_params else {}
-
-            # Remove response_format from params to avoid conflicts
-            # In V2, response_format should be passed via invoke(), not constructor
-            if (
-                params.pop("response_format", None) is not None
-                and response_format is None
-            ):
-                logger.warning(
-                    "response_format in model_params is ignored. "
-                    "Pass response_format to invoke() instead."
-                )
-
-            # Pre-process response_format if it's a Pydantic model
-            if response_format is not None:
-                if isinstance(response_format, type) and issubclass(
-                    response_format, BaseModel
-                ):
-                    # Convert Pydantic model to JSON schema for better compatibility
-                    # Using beta.parse() has strict limitations, so we convert to JSON schema
-                    schema = response_format.model_json_schema()
-                    kwargs["response_format"] = {
-                        "type": "json_schema",
-                        "json_schema": {
-                            "name": response_format.__name__,
-                            "strict": True,
-                            "schema": schema,
-                        },
-                    }
-                else:
-                    # Dict format (e.g., {"type": "json_object"})
-                    kwargs["response_format"] = response_format
-
-            # Make single API call
-            response = self.client.chat.completions.create(
-                messages=messages,
-                model=self.model_name,
-                **params,
-                **kwargs,
-            )
-
-            content = response.choices[0].message.content or ""
-            usage = None
-            if response.usage:
-                usage = LLMUsage(
-                    request_tokens=response.usage.prompt_tokens,
-                    response_tokens=response.usage.completion_tokens,
-                    total_tokens=response.usage.total_tokens,
-                )
-            return LLMResponse(content=content, usage=usage)
-        except self.openai.OpenAIError as e:
-            raise LLMGenerationError(e)
-
-    @rate_limit_handler_decorator
-    def __invoke_v1(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse:
-        """Sends a text input to the OpenAI chat completion model
-        and returns the response's content.
-
-        Args:
-            input (str): Text sent to the LLM.
-            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
-                with each message having a specific role assigned.
-            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
-
-        Returns:
-            LLMResponse: The response from OpenAI.
-
-        Raises:
-            LLMGenerationError: If anything goes wrong.
-        """
-        try:
-            if isinstance(message_history, MessageHistory):
-                message_history = message_history.messages
-            response = self.client.chat.completions.create(
-                messages=self.get_messages(input, message_history, system_instruction),
-                model=self.model_name,
-                **self.model_params,
-            )
-            content = response.choices[0].message.content or ""
-            usage = None
-            if response.usage:
-                usage = LLMUsage(
-                    request_tokens=response.usage.prompt_tokens,
-                    response_tokens=response.usage.completion_tokens,
-                    total_tokens=response.usage.total_tokens,
-                )
-            return LLMResponse(content=content, usage=usage)
-        except self.openai.OpenAIError as e:
-            raise LLMGenerationError(e)
+        request = self._build_v2_request(
+            input, response_format=response_format, **kwargs
+        )
+        return self._call_sync(request)
 
     @rate_limit_handler_decorator
     def __invoke_v1_with_tools(
@@ -437,119 +398,27 @@ class BaseOpenAILLM(LLMBase, abc.ABC):
             raise LLMGenerationError(e)
 
     @async_rate_limit_handler_decorator
-    async def __ainvoke_v1(
+    async def _ainvoke_v1(
         self,
         input: str,
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
+        **kwargs: Any,
     ) -> LLMResponse:
-        """Asynchronously sends a text input to the OpenAI chat
-        completion model and returns the response's content.
-
-        Args:
-            input (str): Text sent to the LLM.
-            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
-                with each message having a specific role assigned.
-            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
-
-        Returns:
-            LLMResponse: The response from OpenAI.
-
-        Raises:
-            LLMGenerationError: If anything goes wrong.
-        """
-        try:
-            if isinstance(message_history, MessageHistory):
-                message_history = message_history.messages
-            response = await self.async_client.chat.completions.create(
-                messages=self.get_messages(input, message_history, system_instruction),
-                model=self.model_name,
-                **self.model_params,
-            )
-            content = response.choices[0].message.content or ""
-            usage = None
-            if response.usage:
-                usage = LLMUsage(
-                    request_tokens=response.usage.prompt_tokens,
-                    response_tokens=response.usage.completion_tokens,
-                    total_tokens=response.usage.total_tokens,
-                )
-            return LLMResponse(content=content, usage=usage)
-        except self.openai.OpenAIError as e:
-            raise LLMGenerationError(e)
+        request = self._build_v1_request(input, message_history, system_instruction)
+        return await self._call_async(request)
 
     @async_rate_limit_handler_decorator
-    async def __ainvoke_v2(
+    async def _ainvoke_v2(
         self,
         input: List[LLMMessage],
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        """Asynchronous new invoke method for LLMInterfaceV2.
-
-        Args:
-            input (List[LLMMessage]): Input to the LLM.
-            response_format (Optional[Union[Type[BaseModel], dict[str, Any]]]): Optional
-                response format. Can be a Pydantic model class for structured output
-                or a dict like {"type": "json_object"}.
-
-        Returns:
-            LLMResponse: The response from the LLM.
-        """
-        try:
-            messages = self.get_messages_v2(input)
-            params = self.model_params.copy() if self.model_params else {}
-
-            # Remove response_format from params to avoid conflicts
-            # In V2, response_format should be passed via invoke(), not constructor
-            if (
-                params.pop("response_format", None) is not None
-                and response_format is None
-            ):
-                logger.warning(
-                    "response_format in model_params is ignored. "
-                    "Pass response_format to invoke() instead."
-                )
-
-            # Pre-process response_format if it's a Pydantic model
-            if response_format is not None:
-                if isinstance(response_format, type) and issubclass(
-                    response_format, BaseModel
-                ):
-                    # Convert Pydantic model to JSON schema for better compatibility
-                    # Using beta.parse() has strict limitations, so we convert to JSON schema
-                    schema = response_format.model_json_schema()
-                    kwargs["response_format"] = {
-                        "type": "json_schema",
-                        "json_schema": {
-                            "name": response_format.__name__,
-                            "strict": True,
-                            "schema": schema,
-                        },
-                    }
-                else:
-                    # Dict format (e.g., {"type": "json_object"})
-                    kwargs["response_format"] = response_format
-
-            # Make single API call
-            response = await self.async_client.chat.completions.create(
-                messages=messages,
-                model=self.model_name,
-                **params,
-                **kwargs,
-            )
-
-            content = response.choices[0].message.content or ""
-            usage = None
-            if response.usage:
-                usage = LLMUsage(
-                    request_tokens=response.usage.prompt_tokens,
-                    response_tokens=response.usage.completion_tokens,
-                    total_tokens=response.usage.total_tokens,
-                )
-            return LLMResponse(content=content, usage=usage)
-        except self.openai.OpenAIError as e:
-            raise LLMGenerationError(e)
+        request = self._build_v2_request(
+            input, response_format=response_format, **kwargs
+        )
+        return await self._call_async(request)
 
     @async_rate_limit_handler_decorator
     async def __ainvoke_v1_with_tools(
