@@ -84,6 +84,11 @@ class Operator:
 
     prev: Operator | None
 
+    @property
+    def name(self) -> str:
+        """Human-readable stage name for logs and observers (the class name)."""
+        return type(self).__name__
+
 
 @dataclass
 class SourceOp(Operator):

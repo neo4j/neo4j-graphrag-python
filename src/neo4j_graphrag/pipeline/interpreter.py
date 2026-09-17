@@ -50,6 +50,7 @@ from collections.abc import Awaitable, Callable, Coroutine, Iterable, Iterator
 from functools import reduce as _reduce
 from typing import TYPE_CHECKING, Any, TypeVar
 
+from neo4j_graphrag.pipeline.observers import StageObserver
 from neo4j_graphrag.pipeline.operators import (
     Filter,
     FilterOk,
@@ -268,7 +269,16 @@ class LocalInterpreter(Interpreter):
     returned stream is consumed.  The chunked-async operators are the one
     exception to incremental evaluation: each chunk blocks in
     ``asyncio.run`` while it is being produced.
+
+    Args:
+        observers: Optional :class:`~neo4j_graphrag.pipeline.observers.StageObserver`
+            instances.  Each operator's output stream is wrapped with
+            every observer (in order), so hooks fire per item per stage
+            boundary as the stream is consumed — never at build time.
     """
+
+    def __init__(self, observers: Iterable[StageObserver[Any]] = ()) -> None:
+        self._observers = tuple(observers)
 
     def evaluate(self, pipeline: Pipeline[Any] | ResultPipeline[Any]) -> Iterator[Any]:
         stream: Iterator[Any] = iter(())
@@ -320,4 +330,6 @@ class LocalInterpreter(Interpreter):
                     stream = _to_sink(stream, sink)
                 case _:  # pragma: no cover
                     raise TypeError(f"Unknown operator: {op!r}")
+            for observer in self._observers:
+                stream = observer.wrap(op, stream)
         return stream
