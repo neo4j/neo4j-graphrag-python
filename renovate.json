@@ -34,7 +34,8 @@
         "pep621"
       ],
       "matchDepTypes": [
-        "dependency-groups"
+        "dependency-groups",
+        "project.dependencies"
       ],
       "rangeStrategy": "bump"
     },
@@ -56,15 +57,6 @@
         "dependencies",
         "python"
       ]
-    },
-    {
-      "matchManagers": [
-        "pep621"
-      ],
-      "matchDepTypes": [
-        "project.dependencies"
-      ],
-      "rangeStrategy": "bump"
     },
     {
       "matchManagers": [
