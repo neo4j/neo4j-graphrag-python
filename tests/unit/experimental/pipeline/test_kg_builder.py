@@ -17,9 +17,10 @@ from unittest.mock import MagicMock, Mock, patch
 
 import neo4j
 import pytest
-from neo4j_graphrag.embeddings import Embedder
+
 from neo4j_graphrag.components.data_loader import PdfLoader
 from neo4j_graphrag.components.types import LexicalGraphConfig
+from neo4j_graphrag.embeddings import Embedder
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
@@ -268,3 +269,38 @@ async def test_knowledge_graph_builder_with_lexical_graph_config(_: Mock) -> Non
         assert pipe_inputs["extractor"]["lexical_graph_config"] == lexical_graph_config
         assert pipe_inputs["extractor"]["document_info"] is not None
         assert pipe_inputs["extractor"]["document_info"]["path"] == "document.txt"
+
+
+@mock.patch(
+    "neo4j_graphrag.components.kg_writer.get_version",
+    return_value=((5, 23, 0), False, False),
+)
+@pytest.mark.asyncio
+async def test_run_async_passes_entity_metadata_to_the_pipeline(_: Mock) -> None:
+    llm = MagicMock(spec=LLMInterface)
+    driver = MagicMock(spec=neo4j.Driver)
+    embedder = MagicMock(spec=Embedder)
+
+    kg_builder = SimpleKGPipeline(
+        llm=llm,
+        driver=driver,
+        embedder=embedder,
+        from_file=False,
+    )
+
+    text_input = "May thy knife chip and shatter."
+    entity_metadata = {"created_by": "unit_test", "version": 1}
+
+    with patch.object(
+        kg_builder.runner.pipeline,
+        "run",
+        return_value=PipelineResult(run_id="test_run", result=None),
+    ) as mock_run:
+        await kg_builder.run_async(
+            text=text_input,
+            entity_metadata=entity_metadata,
+        )
+
+        pipe_inputs = mock_run.call_args[1]["data"]
+        assert "extractor" in pipe_inputs
+        assert pipe_inputs["extractor"]["entity_metadata"] == entity_metadata
