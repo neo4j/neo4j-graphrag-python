@@ -37,12 +37,17 @@ Node naming conventions:
   stream, passing ``Err`` items through unchanged.
 - ``*AsyncChunked`` nodes apply an async function concurrently in chunks
   of ``map_batch_size`` items.
+
+Every node also carries a :attr:`Operator.name` used by observers and logs,
+derived from the class name, the node's position in the chain, and the
+function it applies, or set explicitly with ``label=``.
 """
 
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from functools import cached_property
 from typing import Any
 
 from neo4j_graphrag.pipeline.result import Err
@@ -80,14 +85,40 @@ class Operator:
     Attributes:
         prev: The previous operator in the chain, or ``None`` for the
             :class:`SourceOp` root.
+        label: Optional caller-supplied stage name, passed as ``label=`` to
+            any :class:`~neo4j_graphrag.pipeline.pipeline.Pipeline` operator
+            method.  When set it is used verbatim as :attr:`name`.
     """
 
     prev: Operator | None
+    label: str | None = field(default=None, kw_only=True)
 
-    @property
+    @cached_property
     def name(self) -> str:
-        """Human-readable stage name for logs and observers (the class name)."""
-        return type(self).__name__
+        """Human-readable stage name for logs and observers.
+
+        :attr:`label` when one was supplied, otherwise the class name
+        qualified by the stage's position in the chain and, for operators
+        that carry one, the name of the function being applied —
+        ``Map[2](chunk_text)``.  The position keeps repeated stages of the
+        same kind (three ``map`` calls, say) distinguishable; the function
+        name is omitted for lambdas, where it carries no information.
+
+        Cached, because observers read it once per item per stage.
+        """
+        if self.label is not None:
+            return self.label
+        position = 0
+        current = self.prev
+        while current is not None:
+            position += 1
+            current = current.prev
+        func = getattr(self, "func", None)
+        if func is None:
+            func = getattr(self, "predicate", None)
+        func_name = getattr(func, "__name__", None)
+        suffix = f"({func_name})" if func_name and func_name != "<lambda>" else ""
+        return f"{type(self).__name__}[{position}]{suffix}"
 
 
 @dataclass

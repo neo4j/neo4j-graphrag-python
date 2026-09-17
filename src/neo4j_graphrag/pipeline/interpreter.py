@@ -61,6 +61,7 @@ from neo4j_graphrag.pipeline.operators import (
     MapAsyncChunked,
     MapOk,
     OnError,
+    Operator,
     ReduceOp,
     SinkOp,
     Skip,
@@ -275,14 +276,29 @@ class LocalInterpreter(Interpreter):
             instances.  Each operator's output stream is wrapped with
             every observer (in order), so hooks fire per item per stage
             boundary as the stream is consumed — never at build time.
+            A ``SinkOp`` is the exception: its output is empty, so its
+            *input* is wrapped and the hooks bracket each ``sink.write``.
     """
 
     def __init__(self, observers: Iterable[StageObserver[Any]] = ()) -> None:
         self._observers = tuple(observers)
 
+    def _observe(self, op: Operator, stream: Iterator[Any]) -> Iterator[Any]:
+        """Wrap *stream* with every observer, in order."""
+        for observer in self._observers:
+            stream = observer.wrap(op, stream)
+        return stream
+
     def evaluate(self, pipeline: Pipeline[Any] | ResultPipeline[Any]) -> Iterator[Any]:
         stream: Iterator[Any] = iter(())
         for op in pipeline.pipeline_operators:
+            if isinstance(op, SinkOp):
+                # A sink emits nothing, so wrapping its *output* would show
+                # the stage producing zero items.  Wrap its input instead:
+                # hooks then fire around each `sink.write`, and the stage
+                # reports the number of items written.
+                stream = _to_sink(self._observe(op, stream), op.sink)
+                continue
             match op:
                 case SourceOp(source=source):
                     stream = _read_source(source)
@@ -326,10 +342,7 @@ class LocalInterpreter(Interpreter):
                     stream = (item.value for item in stream if isinstance(item, Ok))
                 case OnError(handler=handler):
                     stream = _on_error(stream, handler)
-                case SinkOp(sink=sink):
-                    stream = _to_sink(stream, sink)
                 case _:  # pragma: no cover
                     raise TypeError(f"Unknown operator: {op!r}")
-            for observer in self._observers:
-                stream = observer.wrap(op, stream)
+            stream = self._observe(op, stream)
         return stream

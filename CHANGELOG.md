@@ -2,6 +2,10 @@
 
 ## Next
 
+### Added
+
+- Added `StageObserver` and `LoggingStageObserver` to `neo4j_graphrag.pipeline`: hooks for watching items flow through a pipeline without adding logging, metrics or tracing to the transformation functions themselves. `LocalInterpreter(observers=[...])` wraps every operator's output stream, firing `before`/`after`/`on_error` per item per stage boundary as the stream is consumed, and observing a sink reports each `sink.write`. Stages are named by `Operator.name` — the operator class, its position in the chain and the function it applies, e.g. `Map[1](embed)` — or explicitly via the `label` argument now accepted by every `Pipeline`/`ResultPipeline` operator method. `Pipeline.to_sink` also takes an optional `interpreter`, since it drains its own stream and would otherwise give no way to attach observers to a sink-terminated pipeline.
+
 ### Fixed
 
 - Fixed `BaseGeminiLLM`/`GeminiLLM` silently dropping token usage on every call: `invoke`/`ainvoke` (both the string and message-list paths, sync and async) built `LLMResponse` from `response.text` alone, ignoring `response.usage_metadata` entirely. `LLMResponse.usage` is now populated from it, matching `AnthropicLLM`/`OpenAILLM`/`VertexAILLM`.

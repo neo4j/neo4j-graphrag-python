@@ -27,12 +27,14 @@ The interpreter wraps every operator's output stream with
 :meth:`StageObserver.wrap`, which invokes the hooks around each item.
 Observation is lazy: no hook runs until the stream is consumed, and a
 partially consumed stream triggers hooks only for the items seen.
+
+Hooks see items, never modify them — see :class:`StageObserver` for the
+read-only contract they are expected to honour.
 """
 
 from __future__ import annotations
 
 import logging
-from abc import ABC
 from collections.abc import Iterator
 from typing import Any, Generic, TypeVar
 
@@ -42,10 +44,35 @@ __all__ = ["StageObserver", "LoggingStageObserver"]
 
 logger = logging.getLogger(__name__)
 
+#: Characters of an item's ``repr`` that :class:`LoggingStageObserver` logs
+#: before clipping.
+DEFAULT_MAX_REPR = 200
+
 _T = TypeVar("_T")
 
 
-class StageObserver(ABC, Generic[_T]):
+class _ClippedRepr:
+    """Lazily renders ``repr(item)``, clipped to *limit* characters.
+
+    Passed to the logger instead of the item itself so that the ``repr`` of
+    a large payload — an embedded chunk, a batch from ``grouped`` — is only
+    built if the record is actually emitted, and never in full.
+    """
+
+    __slots__ = ("_item", "_limit")
+
+    def __init__(self, item: Any, limit: int | None) -> None:
+        self._item = item
+        self._limit = limit
+
+    def __repr__(self) -> str:
+        text = repr(self._item)
+        if self._limit is not None and len(text) > self._limit:
+            return f"{text[: self._limit]}… [{len(text)} chars]"
+        return text
+
+
+class StageObserver(Generic[_T]):
     """Observes items as they leave each stage of a pipeline.
 
     Subclass and override whichever hooks you need; the defaults are
@@ -66,7 +93,17 @@ class StageObserver(ABC, Generic[_T]):
 
     Because the hooks sit *between* stages, an observer attached to a
     pipeline of N operators sees each item N times — once per stage
-    boundary — keyed by :attr:`Operator.name`.
+    boundary — keyed by :attr:`Operator.name`.  A sink is the exception in
+    one respect only: because it emits nothing, the interpreter observes
+    the items flowing *into* it, so ``before``/``after`` bracket each
+    ``sink.write``.
+
+    .. important::
+        Hooks receive the **live item**, not a copy — the same object that
+        continues downstream.  Treat it as read-only: mutating it changes
+        what later stages see, and retaining it past the hook keeps it
+        alive, defeating the streaming evaluation the DSL exists for.
+        Derive what you need (a length, a type, an id) and let the item go.
     """
 
     def before(self, op: Operator, item: _T) -> None:
@@ -103,10 +140,22 @@ class LoggingStageObserver(StageObserver[Any]):
 
     A stage whose stream is abandoned early (e.g. downstream of
     ``take``) never logs "finished".
+
+    Args:
+        log: Logger to write to.  Defaults to this module's logger,
+            ``neo4j_graphrag.pipeline.observers``.
+        max_repr: Characters of each item's ``repr`` to log at ``DEBUG``
+            before clipping, so that one large payload cannot flood the
+            log.  ``None`` logs the full ``repr``.
     """
 
-    def __init__(self, log: logging.Logger | None = None) -> None:
+    def __init__(
+        self,
+        log: logging.Logger | None = None,
+        max_repr: int | None = DEFAULT_MAX_REPR,
+    ) -> None:
         self._log = log if log is not None else logger
+        self._max_repr = max_repr
 
     def wrap(self, op: Operator, stream: Iterator[Any]) -> Iterator[Any]:
         self._log.info("Stage %s: starting", op.name)
@@ -117,7 +166,14 @@ class LoggingStageObserver(StageObserver[Any]):
         self._log.info("Stage %s: finished, %d item(s)", op.name, count)
 
     def before(self, op: Operator, item: Any) -> None:
-        self._log.debug("Stage %s: emitting %r", op.name, item)
+        self._log.debug(
+            "Stage %s: emitting %r", op.name, _ClippedRepr(item, self._max_repr)
+        )
+
+    def after(self, op: Operator, item: Any) -> None:
+        self._log.debug(
+            "Stage %s: consumed %r", op.name, _ClippedRepr(item, self._max_repr)
+        )
 
     def on_error(self, op: Operator, error: Exception) -> None:
         self._log.error("Stage %s: failed with %r", op.name, error)
