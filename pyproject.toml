@@ -46,21 +46,21 @@ Repository = "https://github.com/neo4j/neo4j-graphrag-python"
 weaviate = ["weaviate-client>=4.6.1,<5.0.0"]
 pinecone = ["pinecone-client>=4.1.0,<5.0.0"]
 google = ["google-cloud-aiplatform>=1.66.0,<2.0.0"]
-google-genai = ["google-genai>=1.62.0,<2.0.0"]
+google-genai = ["google-genai>=1.62.0,<3.0.0"]
 cohere = ["cohere>=5.9.0,<6.0.0"]
-anthropic = ["anthropic>=0.77.0,<1.0.0"]
+anthropic = ["anthropic>=0.77.0,<2.0.0"]
 bedrock = ["boto3>=1.35.0,<2.0.0"]
 ollama = ["ollama>=0.4.4,<0.5.0"]
-openai = ["openai>=1.51.1,<2.0.0"]
+openai = ["openai>=1.51.1,<4.0.0"]
 mistralai = ["mistralai>=2.7.1,<3.0.0"]
-litellm = ["litellm>=1.0.0,<2.0.0"]
+litellm = ["litellm>=1.101.0,<2.0.0"]
 qdrant = ["qdrant-client>=1.11.3,<2.0.0"]
 kg_creation_tools = ["neo4j-viz>=0.4.2,<0.5.0"]
-sentence-transformers = ["sentence-transformers>=3.0.0,<4.0.0"]
+sentence-transformers = ["sentence-transformers>=3.0.0,<7.0.0"]
 experimental = [
     "langchain-text-splitters>=0.3.0,<2.0.0",
     "neo4j-viz>=0.4.2,<0.5.0",
-    "llama-index>=0.13.0,<0.14.0",
+    "llama-index>=0.14.24,<0.15.0",
     "pyarrow>=20.0.0",  # ParquetWriter, Neo4jGraphParquetFormatter
 ]
 examples = [
@@ -85,14 +85,14 @@ dev = [
     "mypy>=1.10.0,<2.0.0",
     "pytest>=9.0.3,<9.1.0",
     "coverage>=7.4.3,<8.0.0",
-    "pytest-asyncio>=0.23.8,<0.24.0",
+    "pytest-asyncio>=1.0.0,<2.0.0",
     "pre-commit>=3.6.2,<4.0.0; python_version >= '3.9'",
     "sphinx>=7.2.6,<8.0.0; python_version >= '3.9'",
     "enum-tools[sphinx]>=0.12.0,<0.13.0",
 ]
 
 [tool.uv]
-exclude-newer = "2026-07-23T00:00:00Z"
+exclude-newer = "2026-09-18T00:00:00Z"
 
 [build-system]
 requires = ["hatchling"]
