@@ -49,10 +49,6 @@
       "groupName": "dev dependencies",
       "automerge": true,
       "automergeType": "pr",
-      "matchUpdateTypes": [
-        "minor",
-        "patch"
-      ],
       "labels": [
         "dependencies",
         "python"
@@ -67,10 +63,6 @@
       ],
       "automerge": true,
       "automergeType": "pr",
-      "matchUpdateTypes": [
-        "minor",
-        "patch"
-      ],
       "labels": [
         "dependencies",
         "python"
