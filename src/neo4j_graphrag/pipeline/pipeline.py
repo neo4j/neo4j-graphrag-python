@@ -74,7 +74,7 @@ from collections.abc import Awaitable, Callable, Iterable, Iterator
 from typing import Any, Generic, TypeVar
 
 from neo4j_graphrag.pipeline import operators as ops
-from neo4j_graphrag.pipeline.interpreter import LocalInterpreter
+from neo4j_graphrag.pipeline.interpreter import Interpreter, LocalInterpreter
 from neo4j_graphrag.pipeline.result import Err, Ok
 from neo4j_graphrag.pipeline.sink import Sink
 from neo4j_graphrag.pipeline.source import Source
@@ -115,25 +115,34 @@ class Pipeline(Generic[T]):
     ``Pipeline`` — nothing runs until the pipeline is consumed via
     :meth:`collect`, :meth:`to_sink`, iteration, or an explicit
     :class:`~neo4j_graphrag.pipeline.interpreter.Interpreter`.
+
+    Every operator method takes an optional ``label``, naming that stage in
+    observer output and logs::
+
+        Pipeline(paths).map(load, label="load").map(embed, label="embed")
+
+    Without one, a stage is named after its operator class, its position in
+    the chain, and the function it applies — ``Map[1](load)``.
     """
 
-    def __init__(self, stream: Iterable[T]) -> None:
+    def __init__(self, stream: Iterable[T], label: str | None = None) -> None:
         self._tail: ops.Operator = ops.SourceOp(
-            prev=None, source=_IterableSource(stream)
+            prev=None, source=_IterableSource(stream), label=label
         )
 
     @classmethod
-    def from_source(cls, source: Source[S]) -> Pipeline[S]:
+    def from_source(cls, source: Source[S], label: str | None = None) -> Pipeline[S]:
         """Create a pipeline whose elements come from *source*.
 
         Args:
             source: A :class:`~neo4j_graphrag.pipeline.source.Source`
                 implementation.
+            label: Optional stage name for observers and logs.
 
         Returns:
             A new :class:`Pipeline` typed to the element type of *source*.
         """
-        return cls._wrap(ops.SourceOp(prev=None, source=source))
+        return cls._wrap(ops.SourceOp(prev=None, source=source, label=label))
 
     @staticmethod
     def _wrap(tail: ops.Operator) -> Pipeline[Any]:
@@ -156,66 +165,99 @@ class Pipeline(Generic[T]):
     # Synchronous operators
     # ------------------------------------------------------------------
 
-    def map(self, func: Callable[[T], U]) -> Pipeline[U]:
+    def map(self, func: Callable[[T], U], label: str | None = None) -> Pipeline[U]:
         """Apply *func* to every element (1-to-1).
 
         Args:
             func: A callable ``T → U``.
+            label: Optional stage name for observers and logs.
         """
-        return self._wrap(ops.Map(prev=self._tail, func=func))
+        return self._wrap(ops.Map(prev=self._tail, func=func, label=label))
 
-    def flat_map(self, func: Callable[[T], Iterable[U]]) -> Pipeline[U]:
+    def flat_map(
+        self, func: Callable[[T], Iterable[U]], label: str | None = None
+    ) -> Pipeline[U]:
         """Apply *func* and flatten one level (1-to-many).
 
         Args:
             func: A callable ``T → Iterable[U]``.
+            label: Optional stage name for observers and logs.
         """
-        return self._wrap(ops.FlatMap(prev=self._tail, func=func))
+        return self._wrap(ops.FlatMap(prev=self._tail, func=func, label=label))
 
-    def take(self, n: int) -> Pipeline[T]:
+    def take(self, n: int, label: str | None = None) -> Pipeline[T]:
         """Take the first *n* elements from the stream.
+
+        Args:
+            n: Number of elements to take.
+            label: Optional stage name for observers and logs.
 
         Raises:
             ValueError: If *n* < 0.
         """
         if n < 0:
             raise ValueError(f"n must be >= 0, got {n!r}")
-        return self._wrap(ops.Take(prev=self._tail, n=n))
+        return self._wrap(ops.Take(prev=self._tail, n=n, label=label))
 
-    def take_while(self, predicate: Callable[[T], bool]) -> Pipeline[T]:
+    def take_while(
+        self, predicate: Callable[[T], bool], label: str | None = None
+    ) -> Pipeline[T]:
         """Take elements while *predicate* is ``True``.
 
         Stops consuming the stream as soon as *predicate* returns ``False``
         for the first time — unlike :meth:`filter`, which skips non-matching
         elements and continues.
-        """
-        return self._wrap(ops.TakeWhile(prev=self._tail, predicate=predicate))
 
-    def skip(self, n: int) -> Pipeline[T]:
+        Args:
+            predicate: A callable ``T → bool``.
+            label: Optional stage name for observers and logs.
+        """
+        return self._wrap(
+            ops.TakeWhile(prev=self._tail, predicate=predicate, label=label)
+        )
+
+    def skip(self, n: int, label: str | None = None) -> Pipeline[T]:
         """Skip the first *n* elements from the stream.
+
+        Args:
+            n: Number of elements to skip.
+            label: Optional stage name for observers and logs.
 
         Raises:
             ValueError: If *n* < 0.
         """
         if n < 0:
             raise ValueError(f"n must be >= 0, got {n!r}")
-        return self._wrap(ops.Skip(prev=self._tail, n=n))
+        return self._wrap(ops.Skip(prev=self._tail, n=n, label=label))
 
-    def filter(self, predicate: Callable[[T], bool]) -> Pipeline[T]:
-        """Keep only elements for which *predicate* is ``True``."""
-        return self._wrap(ops.Filter(prev=self._tail, predicate=predicate))
+    def filter(
+        self, predicate: Callable[[T], bool], label: str | None = None
+    ) -> Pipeline[T]:
+        """Keep only elements for which *predicate* is ``True``.
 
-    def grouped(self, size: int) -> Pipeline[list[T]]:
+        Args:
+            predicate: A callable ``T → bool``.
+            label: Optional stage name for observers and logs.
+        """
+        return self._wrap(ops.Filter(prev=self._tail, predicate=predicate, label=label))
+
+    def grouped(self, size: int, label: str | None = None) -> Pipeline[list[T]]:
         """Collect elements into batches of up to *size* items.
+
+        Args:
+            size: Maximum number of items per batch.
+            label: Optional stage name for observers and logs.
 
         Raises:
             ValueError: If *size* < 1.
         """
         if size < 1:
             raise ValueError(f"grouped size must be >= 1, got {size!r}")
-        return self._wrap(ops.Grouped(prev=self._tail, size=size))
+        return self._wrap(ops.Grouped(prev=self._tail, size=size, label=label))
 
-    def reduce(self, zero: A, combine: Callable[[A, T], A]) -> Pipeline[A]:
+    def reduce(
+        self, zero: A, combine: Callable[[A, T], A], label: str | None = None
+    ) -> Pipeline[A]:
         """Fold all elements into a single value, emitted as a one-element stream.
 
         The *zero* / *combine* pair should form a Monoid: *combine* must be
@@ -224,8 +266,11 @@ class Pipeline(Generic[T]):
         Args:
             zero: The identity / initial accumulator value.
             combine: An associative binary callable ``(A, T) → A``.
+            label: Optional stage name for observers and logs.
         """
-        return self._wrap(ops.ReduceOp(prev=self._tail, zero=zero, combine=combine))
+        return self._wrap(
+            ops.ReduceOp(prev=self._tail, zero=zero, combine=combine, label=label)
+        )
 
     # ------------------------------------------------------------------
     # Async operators (blocking under LocalInterpreter)
@@ -235,6 +280,7 @@ class Pipeline(Generic[T]):
         self,
         func: Callable[[T], Awaitable[U]],
         map_batch_size: int = 100,
+        label: str | None = None,
     ) -> Pipeline[U]:
         """Apply async *func* concurrently to elements in chunks.
 
@@ -249,6 +295,7 @@ class Pipeline(Generic[T]):
             func: An async callable ``T → Awaitable[U]``.
             map_batch_size: Items to process concurrently per chunk.
                 Must be >= 1.
+            label: Optional stage name for observers and logs.
 
         Raises:
             ValueError: If *map_batch_size* < 1.
@@ -256,7 +303,10 @@ class Pipeline(Generic[T]):
         _validate_batch_size(map_batch_size)
         return self._wrap(
             ops.MapAsyncChunked(
-                prev=self._tail, func=func, map_batch_size=map_batch_size
+                prev=self._tail,
+                func=func,
+                map_batch_size=map_batch_size,
+                label=label,
             )
         )
 
@@ -264,20 +314,27 @@ class Pipeline(Generic[T]):
     # Partial-failure safe operators (Pipeline -> ResultPipeline)
     # ------------------------------------------------------------------
 
-    def map_safe(self, func: Callable[[T], U]) -> ResultPipeline[U]:
+    def map_safe(
+        self, func: Callable[[T], U], label: str | None = None
+    ) -> ResultPipeline[U]:
         """Apply *func* to every element, capturing exceptions as ``Err``.
 
         Each item is individually wrapped in
         :class:`~neo4j_graphrag.pipeline.result.Ok` on success or
         :class:`~neo4j_graphrag.pipeline.result.Err` on failure.  Unlike
         :meth:`map`, an exception raised by *func* does not abort the stream.
+
+        Args:
+            func: A callable ``T → U``.
+            label: Optional stage name for observers and logs.
         """
-        return ResultPipeline._wrap(ops.TryMap(prev=self._tail, func=func))
+        return ResultPipeline._wrap(ops.TryMap(prev=self._tail, func=func, label=label))
 
     def map_async_chunked_safe(
         self,
         func: Callable[[T], Awaitable[U]],
         map_batch_size: int = 100,
+        label: str | None = None,
     ) -> ResultPipeline[U]:
         """Like :meth:`map_async_chunked` but captures per-item exceptions as ``Err``.
 
@@ -285,13 +342,21 @@ class Pipeline(Generic[T]):
         ``return_exceptions=True`` so one failing item does not abort the
         chunk.
 
+        Args:
+            func: An async callable ``T → Awaitable[U]``.
+            map_batch_size: Items to process concurrently per chunk.
+            label: Optional stage name for observers and logs.
+
         Raises:
             ValueError: If *map_batch_size* < 1.
         """
         _validate_batch_size(map_batch_size)
         return ResultPipeline._wrap(
             ops.TryMapAsyncChunked(
-                prev=self._tail, func=func, map_batch_size=map_batch_size
+                prev=self._tail,
+                func=func,
+                map_batch_size=map_batch_size,
+                label=label,
             )
         )
 
@@ -308,9 +373,13 @@ class Pipeline(Generic[T]):
         """
         return list(LocalInterpreter().evaluate(self))
 
-    def to_sink(self, sink: Sink[T]) -> None:
-        """Evaluate the pipeline with the default interpreter, writing each
-        element to *sink*.
+    def to_sink(
+        self,
+        sink: Sink[T],
+        label: str | None = None,
+        interpreter: Interpreter | None = None,
+    ) -> None:
+        """Evaluate the pipeline, writing each element to *sink*.
 
         An exception raised by ``sink.write`` propagates and aborts the run;
         elements already written are not rolled back.  See
@@ -319,9 +388,15 @@ class Pipeline(Generic[T]):
         Args:
             sink: A :class:`~neo4j_graphrag.pipeline.sink.Sink`
                 implementation.
+            label: Optional stage name for observers and logs.
+            interpreter: Interpreter to evaluate with.  Defaults to a plain
+                :class:`~neo4j_graphrag.pipeline.interpreter.LocalInterpreter`;
+                pass a configured one (with observers, say) to watch the
+                writes, since the stream a sink pipeline returns has to be
+                drained here rather than by the caller.
         """
-        stream = LocalInterpreter().evaluate(
-            self._wrap(ops.SinkOp(prev=self._tail, sink=sink))
+        stream = (interpreter or LocalInterpreter()).evaluate(
+            self._wrap(ops.SinkOp(prev=self._tail, sink=sink, label=label))
         )
         deque(stream, maxlen=0)  # drain: the writes happen as the stream is consumed
 
@@ -345,9 +420,11 @@ class ResultPipeline(Generic[ResI]):
         clean: Pipeline[int] = result_stream.on_error(counter.record)
     """
 
-    def __init__(self, stream: Iterable[Ok[ResI] | Err]) -> None:
+    def __init__(
+        self, stream: Iterable[Ok[ResI] | Err], label: str | None = None
+    ) -> None:
         self._tail: ops.Operator = ops.SourceOp(
-            prev=None, source=_IterableSource(stream)
+            prev=None, source=_IterableSource(stream), label=label
         )
 
     @staticmethod
@@ -371,15 +448,23 @@ class ResultPipeline(Generic[ResI]):
     # Result-aware combinators
     # ------------------------------------------------------------------
 
-    def map_ok(self, func: Callable[[ResI], OutO]) -> ResultPipeline[OutO]:
+    def map_ok(
+        self, func: Callable[[ResI], OutO], label: str | None = None
+    ) -> ResultPipeline[OutO]:
         """Apply *func* to the value inside each ``Ok``; ``Err`` passes through.
 
         Exceptions raised by *func* propagate and abort the stream — use
         :meth:`map_safe` to capture them as ``Err`` instead.
-        """
-        return self._wrap(ops.MapOk(prev=self._tail, func=func))
 
-    def flatten_ok(self: ResultPipeline[Iterable[OutO]]) -> ResultPipeline[OutO]:
+        Args:
+            func: A callable ``ResI → OutO``.
+            label: Optional stage name for observers and logs.
+        """
+        return self._wrap(ops.MapOk(prev=self._tail, func=func, label=label))
+
+    def flatten_ok(
+        self: ResultPipeline[Iterable[OutO]], label: str | None = None
+    ) -> ResultPipeline[OutO]:
         """Expand each ``Ok`` holding an iterable into one ``Ok`` per item;
         ``Err`` passes through unchanged.
 
@@ -395,27 +480,42 @@ class ResultPipeline(Generic[ResI]):
         not to be iterable, or a lazy iterable raises while being consumed,
         that exception propagates.  Return a materialised sequence from the
         preceding ``map_safe`` if you need those failures as ``Err``.
-        """
-        return self._wrap(ops.FlattenOk(prev=self._tail))
 
-    def map_safe(self, func: Callable[[ResI], OutO]) -> ResultPipeline[OutO]:
+        Args:
+            label: Optional stage name for observers and logs.
+        """
+        return self._wrap(ops.FlattenOk(prev=self._tail, label=label))
+
+    def map_safe(
+        self, func: Callable[[ResI], OutO], label: str | None = None
+    ) -> ResultPipeline[OutO]:
         """Apply *func* to each ``Ok`` value, capturing exceptions as ``Err``;
         existing ``Err`` values pass through unchanged.
 
         Unlike :meth:`map_ok`, an exception raised by *func* does not
         propagate — it is captured as a new ``Err`` so the stream continues
         processing remaining items.
+
+        Args:
+            func: A callable ``ResI → OutO``.
+            label: Optional stage name for observers and logs.
         """
-        return self._wrap(ops.TryMapOk(prev=self._tail, func=func))
+        return self._wrap(ops.TryMapOk(prev=self._tail, func=func, label=label))
 
     def map_async_chunked_safe(
         self,
         func: Callable[[ResI], Awaitable[OutO]],
         map_batch_size: int = 100,
+        label: str | None = None,
     ) -> ResultPipeline[OutO]:
         """Apply async *func* to each ``Ok`` value in concurrent chunks;
         ``Err`` values pass through unchanged and new exceptions are
         captured as ``Err``.
+
+        Args:
+            func: An async callable ``ResI → Awaitable[OutO]``.
+            map_batch_size: Items to process concurrently per chunk.
+            label: Optional stage name for observers and logs.
 
         Raises:
             ValueError: If *map_batch_size* < 1.
@@ -423,7 +523,10 @@ class ResultPipeline(Generic[ResI]):
         _validate_batch_size(map_batch_size)
         return self._wrap(
             ops.TryMapOkAsyncChunked(
-                prev=self._tail, func=func, map_batch_size=map_batch_size
+                prev=self._tail,
+                func=func,
+                map_batch_size=map_batch_size,
+                label=label,
             )
         )
 
@@ -431,15 +534,20 @@ class ResultPipeline(Generic[ResI]):
     # Result terminals
     # ------------------------------------------------------------------
 
-    def filter_ok(self) -> Pipeline[ResI]:
+    def filter_ok(self, label: str | None = None) -> Pipeline[ResI]:
         """Drop all ``Err`` values silently and unwrap the ``Ok`` values.
 
         No handler is called for dropped errors.  Use :meth:`on_error`
         instead when failures should be logged or counted.
-        """
-        return Pipeline._wrap(ops.FilterOk(prev=self._tail))
 
-    def on_error(self, handler: Callable[[Err], None]) -> Pipeline[ResI]:
+        Args:
+            label: Optional stage name for observers and logs.
+        """
+        return Pipeline._wrap(ops.FilterOk(prev=self._tail, label=label))
+
+    def on_error(
+        self, handler: Callable[[Err], None], label: str | None = None
+    ) -> Pipeline[ResI]:
         """Call *handler* for each ``Err``, drop it from the stream, and
         unwrap ``Ok`` values.
 
@@ -449,8 +557,11 @@ class ResultPipeline(Generic[ResI]):
         Args:
             handler: A callable ``Err → None`` invoked for every failed
                 item, e.g. a logging callback or a failure counter.
+            label: Optional stage name for observers and logs.
         """
-        return Pipeline._wrap(ops.OnError(prev=self._tail, handler=handler))
+        return Pipeline._wrap(
+            ops.OnError(prev=self._tail, handler=handler, label=label)
+        )
 
     def collect(self) -> list[Ok[ResI] | Err]:
         """Evaluate the pipeline and materialise the raw ``Ok``/``Err``
