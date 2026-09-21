@@ -38,6 +38,7 @@ from neo4j_graphrag.components.kg_writer import (
 )
 from neo4j_graphrag.components.schema import GraphSchema
 from neo4j_graphrag.components.types import (
+    GeoPoint,
     LexicalGraphConfig,
     Neo4jGraph,
     Neo4jNode,
@@ -1886,3 +1887,166 @@ def test_formatter_embedding_keys_unioned_across_nodes_of_same_label() -> None:
             "similarity": "cosine",
         }
     ]
+
+
+# ---------------------------------------------------------------------------
+# GeoPoint / POINT Parquet serialization
+# ---------------------------------------------------------------------------
+
+
+def test_format_parquet_geopoint_node_property_writes_wkt() -> None:
+    """GeoPoint on a node property writes as WKT and is typed as POINT."""
+    pytest.importorskip("pyarrow")
+    import pyarrow.parquet as pq
+
+    formatter = Neo4jGraphParquetFormatter()
+    point = GeoPoint(latitude=0.0, longitude=0.0, height=0.0)
+    rows: list[dict[str, Any]] = [
+        {
+            INTERNAL_ID_PROPERTY: "n1",
+            "name": "Alice",
+            "location": point,
+        }
+    ]
+
+    parquet_bytes, schema = formatter.format_parquet(rows, "node label 'Person'")
+
+    location_field = schema.field("location")
+    assert location_field.metadata is not None
+    assert location_field.metadata.get(b"neo4j_type") == b"POINT"
+
+    table = pq.read_table(BytesIO(parquet_bytes))
+    assert table.column("location")[0].as_py() == "POINT Z(0.0 0.0 0.0)"
+
+
+def test_format_parquet_geopoint_relationship_property_writes_wkt() -> None:
+    """GeoPoint on a relationship property writes as WKT (Person_KILLS_Creature)."""
+    pytest.importorskip("pyarrow")
+    import pyarrow.parquet as pq
+
+    formatter = Neo4jGraphParquetFormatter()
+    point = GeoPoint(latitude=12.5, longitude=-3.25, height=4.0)
+    rows: list[dict[str, Any]] = [
+        {
+            "from": "p1",
+            "to": "c1",
+            "from_label": "Person",
+            "to_label": "Creature",
+            "type": "KILLS",
+            "where": point,
+        }
+    ]
+
+    parquet_bytes, schema = formatter.format_parquet(
+        rows, "relationship 'Person_KILLS_Creature'"
+    )
+
+    where_field = schema.field("where")
+    assert where_field.metadata is not None
+    assert where_field.metadata.get(b"neo4j_type") == b"POINT"
+
+    table = pq.read_table(BytesIO(parquet_bytes))
+    assert table.column("where")[0].as_py() == point.to_wkt()
+
+
+def test_format_parquet_geopoint_mixed_with_none() -> None:
+    """Nulls alongside GeoPoint do not break type inference or WKT conversion."""
+    pytest.importorskip("pyarrow")
+    import pyarrow.parquet as pq
+
+    formatter = Neo4jGraphParquetFormatter()
+    point = GeoPoint(latitude=1.0, longitude=2.0, height=3.0)
+    rows: list[dict[str, Any]] = [
+        {INTERNAL_ID_PROPERTY: "n1", "location": None},
+        {INTERNAL_ID_PROPERTY: "n2", "location": point},
+    ]
+
+    parquet_bytes, schema = formatter.format_parquet(rows, "node label 'Person'")
+
+    location_field = schema.field("location")
+    assert location_field.metadata is not None
+    assert location_field.metadata.get(b"neo4j_type") == b"POINT"
+
+    table = pq.read_table(BytesIO(parquet_bytes))
+    values = table.column("location").to_pylist()
+    assert values[0] is None
+    assert values[1] == point.to_wkt()
+
+
+def test_format_parquet_geopoint_mixed_with_unrelated_dict(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Mixed GeoPoint / unrelated dict is not tagged POINT; dicts become JSON."""
+    pytest.importorskip("pyarrow")
+    import json
+
+    import pyarrow.parquet as pq
+
+    formatter = Neo4jGraphParquetFormatter()
+    point = GeoPoint(latitude=1.0, longitude=2.0, height=3.0)
+    other = {"note": "not a point"}
+    rows: list[dict[str, Any]] = [
+        {INTERNAL_ID_PROPERTY: "n1", "location": point},
+        {INTERNAL_ID_PROPERTY: "n2", "location": other},
+    ]
+
+    with caplog.at_level(
+        "WARNING", logger="neo4j_graphrag.components.parquet_formatter"
+    ):
+        parquet_bytes, schema = formatter.format_parquet(rows, "node label 'Person'")
+
+    location_field = schema.field("location")
+    assert location_field.metadata is None or b"neo4j_type" not in (
+        location_field.metadata or {}
+    )
+    assert "not tagging as POINT" in caplog.text
+
+    table = pq.read_table(BytesIO(parquet_bytes))
+    values = table.column("location").to_pylist()
+    assert point.to_wkt() in values
+    assert json.dumps(other) in values
+
+
+@pytest.mark.asyncio
+async def test_parquet_writer_geopoint_column_metadata_target_type_point() -> None:
+    """ParquetWriter files metadata: GeoPoint columns are STRING source, POINT target."""
+    pytest.importorskip("pyarrow")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out = Path(tmpdir)
+        dest = _LocalParquetDestination(out)
+        writer = ParquetWriter(
+            nodes_dest=dest,
+            relationships_dest=dest,
+            collision_handler=FilenameCollisionHandler(),
+        )
+        location = GeoPoint(latitude=0.0, longitude=0.0, height=0.0)
+        node1 = Neo4jNode(
+            id="p1",
+            label="Person",
+            properties={"name": "Alice", "location": location},
+        )
+        node2 = Neo4jNode(id="c1", label="Creature", properties={"name": "Beast"})
+        rel = Neo4jRelationship(
+            start_node_id="p1",
+            end_node_id="c1",
+            type="KILLS",
+            properties={"where": location},
+        )
+        graph = Neo4jGraph(nodes=[node1, node2], relationships=[rel])
+
+        result = await writer.run(graph=graph)
+
+    assert result.status == "SUCCESS"
+    assert result.metadata is not None
+    files = result.metadata["files"]
+    node_file = next(f for f in files if f.get("name") == "Person")
+    rel_file = next(f for f in files if not f["is_node"])
+
+    node_cols = {c["name"]: c for c in node_file["columns"]}
+    assert node_cols["location"]["type"] == "STRING"
+    assert node_cols["location"]["target_type"] == "POINT"
+
+    rel_cols = {c["name"]: c for c in rel_file["columns"]}
+    assert rel_cols["where"]["type"] == "STRING"
+    assert rel_cols["where"]["target_type"] == "POINT"

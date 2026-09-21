@@ -15,7 +15,7 @@
 
 [project]
 name = "neo4j-graphrag"
-version = "1.18.0"
+version = "1.19.0"
 description = "Python package to allow easy integration to Neo4j's GraphRAG features"
 authors = [
     {name = "Neo4j, Inc", email = "team-gen-ai@neo4j.com"}
@@ -24,18 +24,18 @@ license = {text = "Apache License, Version 2.0"}
 readme = "README.md"
 requires-python = ">=3.10.0,<3.15"
 dependencies = [
-    "neo4j>=5.17.0,<7.0.0",
+    "neo4j>=5.28.4,<7.0.0",
     "pydantic>=2.6.3,<3.0.0",
-    "fsspec>=2024.9.0",
-    "pypdf>=6.14.2,<7.0.0",
+    "fsspec>=2024.12.0",
+    "pypdf>=6.19.0,<7.0.0",
     "json-repair>=0.44.1,<1.0.0",
-    "pyyaml>=6.0.2,<7.0.0",
-    "types-pyyaml>=6.0.12.20240917,<7.0.0",
+    "pyyaml>=6.0.3,<7.0.0",
+    "types-pyyaml>=6.0.12.20260906,<7.0.0",
     "numpy>=2.0.0,<3.0.0; python_version >= '3.9' and python_version < '3.13'",
     "numpy>=2.1.0,<3.0.0; python_version >= '3.13' and python_version < '3.15'",
     "scipy>=1.13.0,<2.0.0; python_version >= '3.9' and python_version < '3.13'",
     "scipy>=1.15.0,<2.0.0; python_version >= '3.13' and python_version < '3.15'",
-    "tenacity>=9.1.2,<10.0.0",
+    "tenacity>=9.1.4,<10.0.0",
 ]
 
 [project.urls]
@@ -46,21 +46,21 @@ Repository = "https://github.com/neo4j/neo4j-graphrag-python"
 weaviate = ["weaviate-client>=4.6.1,<5.0.0"]
 pinecone = ["pinecone-client>=4.1.0,<5.0.0"]
 google = ["google-cloud-aiplatform>=1.66.0,<2.0.0"]
-google-genai = ["google-genai>=1.62.0,<2.0.0"]
+google-genai = ["google-genai>=1.62.0,<3.0.0"]
 cohere = ["cohere>=5.9.0,<6.0.0"]
-anthropic = ["anthropic>=0.77.0,<1.0.0"]
+anthropic = ["anthropic>=0.77.0,<2.0.0"]
 bedrock = ["boto3>=1.35.0,<2.0.0"]
 ollama = ["ollama>=0.4.4,<0.5.0"]
-openai = ["openai>=1.51.1,<2.0.0"]
+openai = ["openai>=1.51.1,<4.0.0"]
 mistralai = ["mistralai>=2.7.1,<3.0.0"]
-litellm = ["litellm>=1.0.0,<2.0.0"]
+litellm = ["litellm>=1.101.0,<2.0.0"]
 qdrant = ["qdrant-client>=1.11.3,<2.0.0"]
 kg_creation_tools = ["neo4j-viz>=0.4.2,<0.5.0"]
-sentence-transformers = ["sentence-transformers>=3.0.0,<4.0.0"]
+sentence-transformers = ["sentence-transformers>=3.0.0,<7.0.0"]
 experimental = [
     "langchain-text-splitters>=0.3.0,<2.0.0",
     "neo4j-viz>=0.4.2,<0.5.0",
-    "llama-index>=0.13.0,<0.14.0",
+    "llama-index>=0.14.24,<0.15.0",
     "pyarrow>=20.0.0",  # ParquetWriter, Neo4jGraphParquetFormatter
 ]
 examples = [
@@ -75,7 +75,7 @@ examples = [
 # NOTE: spaCy currently has a Python 3.14 import-time failure via its pydantic v1 path
 # (see https://github.com/explosion/spaCy/issues/13895). Until upstream resolves this,
 # only advertise/install the `nlp` extra on Python <3.14.
-nlp = ["spacy==3.8.7; python_version < '3.14'"]
+nlp = ["spacy==3.8.16; python_version < '3.14'"]
 fuzzy-matching = ["rapidfuzz>=3.12.2,<4.0.0"]
 
 [dependency-groups]
@@ -83,16 +83,16 @@ dev = [
     "urllib3<3",
     "ruff>=0.3.0,<0.4.0",
     "mypy>=1.10.0,<2.0.0",
-    "pytest>=8.0.2,<9.0.0",
+    "pytest>=9.0.3,<9.1.0",
     "coverage>=7.4.3,<8.0.0",
-    "pytest-asyncio>=0.23.8,<0.24.0",
+    "pytest-asyncio>=1.0.0,<2.0.0",
     "pre-commit>=3.6.2,<4.0.0; python_version >= '3.9'",
     "sphinx>=7.2.6,<8.0.0; python_version >= '3.9'",
     "enum-tools[sphinx]>=0.12.0,<0.13.0",
 ]
 
 [tool.uv]
-exclude-newer = "2026-07-23T00:00:00Z"
+exclude-newer = "2026-09-18T00:00:00Z"
 
 [build-system]
 requires = ["hatchling"]

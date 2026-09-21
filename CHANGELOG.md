@@ -4,6 +4,17 @@
 
 ### Added
 
+- Added `StageObserver` and `LoggingStageObserver` to `neo4j_graphrag.pipeline`: hooks for watching items flow through a pipeline without adding logging, metrics or tracing to the transformation functions themselves. `LocalInterpreter(observers=[...])` wraps every operator's output stream, firing `before`/`after` per item per stage boundary as the stream is consumed. `on_error` is reported once, against the stage the failure came from — whether the stage raised fatally or a `Try*` stage (`map_safe` and friends) captured the exception as an `Err`; a failure is not re-reported by the later stages it passes through. Observing a sink reports each `sink.write`, including one that raises. Stages are named by `Operator.name` — the operator class, its position in the chain and the function it applies, e.g. `Map[1](embed)` — or explicitly via the `label` argument now accepted by every `Pipeline`/`ResultPipeline` operator method. `Pipeline.to_sink` also takes an optional `interpreter`, since it drains its own stream and would otherwise give no way to attach observers to a sink-terminated pipeline.
+
+### Fixed
+
+- Fixed `BaseGeminiLLM`/`GeminiLLM` silently dropping token usage on every call: `invoke`/`ainvoke` (both the string and message-list paths, sync and async) built `LLMResponse` from `response.text` alone, ignoring `response.usage_metadata` entirely. `LLMResponse.usage` is now populated from it, matching `AnthropicLLM`/`OpenAILLM`/`VertexAILLM`.
+- Fixed Parquet writes aborting with `ArrowInvalid` when a node or relationship property was a GraphRAG `GeoPoint`. `Neo4jGraphParquetFormatter` now serializes those values as WKT `POINT Z(longitude latitude height)` before Arrow type inference, and writer file metadata reports `target_type: POINT` (Parquet source type remains `STRING`).
+
+## 1.19.0
+
+### Added
+
 - Added `examples/SETUP.md` and `examples/.env.example`, documenting what the examples need in order to run — extras, API keys and services — and which providers are free or have a local equivalent.
 - The `examples` extra now declares `python-dotenv` and `requests`. Fourteen examples call `load_dotenv()` and `tools_retriever_example.py` calls a web API with `requests`, but neither package was declared, so both resolved only transitively.
 - `AnthropicLLM` now supports structured output via the `response_format` argument, accepting a Pydantic model or an Anthropic `output_config` dict, alongside `OpenAILLM` and `VertexAILLM`.

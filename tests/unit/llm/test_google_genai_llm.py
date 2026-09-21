@@ -76,6 +76,68 @@ def test_gemini_invoke_happy_path(mock_genai: Tuple[MagicMock, MagicMock]) -> No
     mock_client.models.generate_content.assert_called_once()
 
 
+def test_gemini_invoke_returns_usage_from_usage_metadata(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    """response.usage_metadata must populate LLMResponse.usage.
+
+    Regression test: __invoke_v1/__invoke_v2 (sync and async) previously
+    built LLMResponse from response.text alone, silently discarding
+    usage_metadata on every call.
+    """
+    mock_gen, _ = mock_genai
+    mock_client = mock_gen.Client.return_value
+    mock_response = MagicMock()
+    mock_response.text = "generated text"
+    mock_response.usage_metadata.prompt_token_count = 10
+    mock_response.usage_metadata.candidates_token_count = 5
+    mock_response.usage_metadata.total_token_count = 15
+    mock_client.models.generate_content.return_value = mock_response
+
+    llm = GeminiLLM("gemini-2.0-flash")
+    response = llm.invoke("hello")
+
+    assert response.usage is not None
+    assert response.usage.request_tokens == 10
+    assert response.usage.response_tokens == 5
+    assert response.usage.total_tokens == 15
+
+
+def test_gemini_invoke_v2_returns_usage_from_usage_metadata(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    mock_gen, _ = mock_genai
+    mock_client = mock_gen.Client.return_value
+    mock_response = MagicMock()
+    mock_response.text = "v2 generated text"
+    mock_response.usage_metadata.prompt_token_count = 20
+    mock_response.usage_metadata.candidates_token_count = 8
+    mock_response.usage_metadata.total_token_count = 28
+    mock_client.models.generate_content.return_value = mock_response
+
+    llm = GeminiLLM("gemini-2.0-flash")
+    response = llm.invoke([{"role": "user", "content": "hello"}])
+
+    assert response.usage is not None
+    assert response.usage.total_tokens == 28
+
+
+def test_gemini_invoke_usage_is_none_when_usage_metadata_absent(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    mock_gen, _ = mock_genai
+    mock_client = mock_gen.Client.return_value
+    mock_response = MagicMock()
+    mock_response.text = "generated text"
+    mock_response.usage_metadata = None
+    mock_client.models.generate_content.return_value = mock_response
+
+    llm = GeminiLLM("gemini-2.0-flash")
+    response = llm.invoke("hello")
+
+    assert response.usage is None
+
+
 @pytest.mark.asyncio
 async def test_gemini_ainvoke_happy_path(
     mock_genai: Tuple[MagicMock, MagicMock],
