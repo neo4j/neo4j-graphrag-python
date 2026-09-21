@@ -8,6 +8,7 @@
 - (**breaking**) `BedrockLLM` now inherits from `LLMBase` (previously `LLMInterface`/`LLMInterfaceV2` directly), aligning it with every other provider's class hierarchy. Its async path no longer stacks a sync-side rate-limit retry inside the thread-pool-executed call on top of its own async retry layer, so only the async layer applies. The public `invoke`/`ainvoke`/`invoke_with_tools`/`ainvoke_with_tools` contract is unchanged.
 - (**breaking**) `OllamaLLM`'s async path (`ainvoke`/`_ainvoke_v1`/`_ainvoke_v2`) now spreads `model_params` into the `client.chat` call the same way the sync path always did, instead of passing it verbatim as the `options` value. This fixes a bug where `model_params` containing a sibling key alongside `options` (e.g. `{"options": {...}, "format": "json"}`) produced a double-nested `options` on the async path only.
 - `CohereLLM`'s sync and async error paths now raise `LLMGenerationError(e) from e` consistently (previously the v2 paths raised a generic `"Error calling cohere"` message instead of preserving the original SDK exception, differing from the v1 paths).
+- `BedrockLLM`/`GeminiLLM` now wrap errors raised while building the request (message/schema validation) into `LLMGenerationError`, same as transport errors, instead of letting them propagate raw.
 
 ### Fixed
 
