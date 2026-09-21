@@ -35,7 +35,7 @@ dependencies = [
     "numpy>=2.1.0,<3.0.0; python_version >= '3.13' and python_version < '3.15'",
     "scipy>=1.13.0,<2.0.0; python_version >= '3.9' and python_version < '3.13'",
     "scipy>=1.15.0,<2.0.0; python_version >= '3.13' and python_version < '3.15'",
-    "tenacity>=9.1.2,<10.0.0",
+    "tenacity>=9.1.4,<10.0.0",
 ]
 
 [project.urls]
