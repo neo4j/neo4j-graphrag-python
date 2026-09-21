@@ -75,7 +75,7 @@ examples = [
 # NOTE: spaCy currently has a Python 3.14 import-time failure via its pydantic v1 path
 # (see https://github.com/explosion/spaCy/issues/13895). Until upstream resolves this,
 # only advertise/install the `nlp` extra on Python <3.14.
-nlp = ["spacy==3.8.7; python_version < '3.14'"]
+nlp = ["spacy==3.8.16; python_version < '3.14'"]
 fuzzy-matching = ["rapidfuzz>=3.12.2,<4.0.0"]
 
 [dependency-groups]
