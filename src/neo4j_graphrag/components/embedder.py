@@ -64,6 +64,7 @@ class TextChunkEmbedder(Component):
             index=text_chunk.index,
             metadata=metadata,
             uid=text_chunk.uid,
+            prev_chunk_id=text_chunk.prev_chunk_id,
         )
 
     async def _async_embed_chunk(
@@ -88,6 +89,7 @@ class TextChunkEmbedder(Component):
                 index=text_chunk.index,
                 metadata=metadata,
                 uid=text_chunk.uid,
+                prev_chunk_id=text_chunk.prev_chunk_id,
             )
 
     @validate_call

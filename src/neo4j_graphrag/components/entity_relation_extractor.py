@@ -52,56 +52,7 @@ class OnError(enum.Enum):
         return [e.value for e in cls]
 
 
-def balance_curly_braces(json_string: str) -> str:
-    """
-    Balances curly braces `{}` in a JSON string. This function ensures that every opening brace has a corresponding
-    closing brace, but only when they are not part of a string value. If there are unbalanced closing braces,
-    they are ignored. If there are missing closing braces, they are appended at the end of the string.
-
-    Args:
-        json_string (str): A potentially malformed JSON string with unbalanced curly braces.
-
-    Returns:
-        str: A JSON string with balanced curly braces.
-    """
-    stack = []
-    fixed_json = []
-    in_string = False
-    escape = False
-
-    for char in json_string:
-        if char == '"' and not escape:
-            in_string = not in_string
-        elif char == "\\" and in_string:
-            escape = not escape
-            fixed_json.append(char)
-            continue
-        else:
-            escape = False
-
-        if not in_string:
-            if char == "{":
-                stack.append(char)
-                fixed_json.append(char)
-            elif char == "}" and stack and stack[-1] == "{":
-                stack.pop()
-                fixed_json.append(char)
-            elif char == "}" and (not stack or stack[-1] != "{"):
-                continue
-            else:
-                fixed_json.append(char)
-        else:
-            fixed_json.append(char)
-
-    # If stack is not empty, add missing closing braces
-    while stack:
-        stack.pop()
-        fixed_json.append("}")
-
-    return "".join(fixed_json)
-
-
-def fix_invalid_json(raw_json: str) -> str:
+def _fix_invalid_json(raw_json: str) -> str:
     repaired_json = json_repair.repair_json(raw_json)
     repaired_json = repaired_json.strip()
 
@@ -116,7 +67,7 @@ class EntityRelationExtractor(Component):
     """Abstract class for entity relation extraction components.
 
     Args:
-        on_error (OnError): What to do when an error occurs during extraction. Defaults to raising an error.
+        on_error (OnError): What to do when an error occurs during extraction. Defaults to ignoring the error.
         create_lexical_graph (bool): Whether to include the text chunks in the graph in addition to the extracted entities and relations. Defaults to True.
     """
 
@@ -237,43 +188,33 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             template = prompt_template
         self.prompt_template = template
 
-    async def extract_for_chunk(
-        self, schema: GraphSchema, examples: str, chunk: TextChunk
+    async def _extract_with_structured_output(
+        self, prompt: str, chunk: TextChunk
     ) -> Neo4jGraph:
-        """Run entity extraction for a given text chunk."""
-        prompt = self.prompt_template.format(
-            text=chunk.text,
-            schema=schema.model_dump(exclude_none=True),
-            examples=examples,
-        )
+        if not self.llm.supports_structured_output:
+            raise RuntimeError(
+                f"Structured output is not supported by {type(self.llm).__name__}"
+            )
 
-        # Use structured output if enabled
-        if self.use_structured_output:
-            # Capability check
-            # This should never happen due to __init__ validation
-            if not self.llm.supports_structured_output:
-                raise RuntimeError(
-                    f"Structured output is not supported by {type(self.llm).__name__}"
-                )
-
-            messages = [LLMMessage(role="user", content=prompt)]
-            llm_result = await self.llm.ainvoke(messages, response_format=Neo4jGraph)
-            try:
-                chunk_graph = Neo4jGraph.model_validate_json(llm_result.content)
-            except ValidationError as e:
-                if self.on_error == OnError.RAISE:
-                    raise LLMGenerationError("LLM response has improper format") from e
-                logger.error(
-                    f"LLM response has improper format for chunk_index={chunk.index}"
-                )
-                logger.debug(f"Invalid response: {llm_result.content}")
-                chunk_graph = Neo4jGraph()
-            return chunk_graph
-
-        # Use prompt-based JSON extraction (default)
-        llm_result = await self.llm.ainvoke([LLMMessage(role="user", content=prompt)])
+        messages = [LLMMessage(role="user", content=prompt)]
+        llm_result = await self.llm.ainvoke(messages, response_format=Neo4jGraph)
         try:
-            llm_generated_json = fix_invalid_json(llm_result.content)
+            chunk_graph = Neo4jGraph.model_validate_json(llm_result.content)
+        except ValidationError as e:
+            if self.on_error == OnError.RAISE:
+                raise LLMGenerationError("LLM response has improper format") from e
+            logger.error(
+                f"LLM response has improper format for chunk_index={chunk.index}"
+            )
+            logger.debug(f"Invalid response: {llm_result.content}")
+            chunk_graph = Neo4jGraph()
+        return chunk_graph
+
+    async def _extract_with_prompt(self, prompt: str, chunk: TextChunk) -> Neo4jGraph:
+        messages = [LLMMessage(role="user", content=prompt)]
+        llm_result = await self.llm.ainvoke(messages)
+        try:
+            llm_generated_json = _fix_invalid_json(llm_result.content)
             result = json.loads(llm_generated_json)
         except (json.JSONDecodeError, InvalidJSONError) as e:
             if self.on_error == OnError.RAISE:
@@ -294,6 +235,29 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             logger.debug(f"Invalid JSON format: {result}")
             chunk_graph = Neo4jGraph()
         return chunk_graph
+
+    async def extract_for_chunk(
+        self, schema: GraphSchema, examples: str, chunk: TextChunk
+    ) -> Neo4jGraph:
+        """Run entity extraction for a given text chunk.
+
+        Args:
+            schema (GraphSchema): The schema to guide the LLM in its extraction.
+            examples (str): Examples for few-shot learning in the prompt.
+            chunk (TextChunk): The text chunk to extract entities and relations from.
+
+        Returns:
+            Neo4jGraph: The extracted graph for the chunk.
+        """
+        prompt = self.prompt_template.format(
+            text=chunk.text,
+            schema=schema.model_dump(exclude_none=True),
+            examples=examples,
+        )
+
+        if self.use_structured_output:
+            return await self._extract_with_structured_output(prompt, chunk)
+        return await self._extract_with_prompt(prompt, chunk)
 
     async def post_process_chunk(
         self,
@@ -343,6 +307,49 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                 lexical_graph_builder,
             )
             return chunk_graph
+
+    async def extract_chunk(
+        self,
+        chunk: TextChunk,
+        schema: Optional[GraphSchema] = None,
+        examples: str = "",
+        document_info: Optional[DocumentInfo] = None,
+        lexical_graph_config: Optional[LexicalGraphConfig] = None,
+    ) -> Neo4jGraph:
+        """Extract the graph for a single chunk, independently of any other chunk.
+
+        Intended for streaming use (e.g. ``Pipeline.map_async_chunked``): each
+        chunk yields a self-contained graph which can be merged with
+        ``LexicalGraphBuilder.combine_graphs``. When `create_lexical_graph` is
+        enabled, the returned graph also contains the chunk node, the document
+        node (if `document_info` is given) and the chunk's FROM_DOCUMENT and
+        NEXT_CHUNK (from `chunk.prev_chunk_id`) relationships.
+
+        Args:
+            chunk (TextChunk): The chunk to extract entities and relations from.
+            schema (GraphSchema | None): Definition of the schema to guide the LLM in its extraction.
+            examples (str): Examples for few-shot learning in the prompt.
+            document_info (Optional[DocumentInfo]): Document the chunk is coming from. Used in the lexical graph creation step.
+            lexical_graph_config (Optional[LexicalGraphConfig]): Lexical graph configuration to customize node labels and relationship types.
+
+        Returns:
+            Neo4jGraph: The graph extracted from the chunk.
+        """
+        lexical_graph_builder = None
+        if self.create_lexical_graph or lexical_graph_config:
+            lexical_graph_builder = LexicalGraphBuilder(
+                config=lexical_graph_config or LexicalGraphConfig()
+            )
+        chunk_graph = await self.extract_for_chunk(
+            schema or GraphSchema(node_types=()), examples or "", chunk
+        )
+        await self.post_process_chunk(chunk_graph, chunk, lexical_graph_builder)
+        if self.create_lexical_graph and lexical_graph_builder:
+            chunk_graph = lexical_graph_builder.combine_graphs(
+                lexical_graph_builder.run_for_chunk(chunk, document_info),
+                chunk_graph,
+            )
+        return chunk_graph
 
     @validate_call
     async def run(

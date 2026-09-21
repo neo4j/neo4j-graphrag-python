@@ -22,8 +22,7 @@ from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
     OnError,
-    balance_curly_braces,
-    fix_invalid_json,
+    _fix_invalid_json,
 )
 from neo4j_graphrag.components.types import (
     DocumentInfo,
@@ -236,14 +235,14 @@ def test_fix_invalid_json_empty_result() -> None:
 
     with patch("json_repair.repair_json", return_value=""):
         with pytest.raises(InvalidJSONError):
-            fix_invalid_json(json_string)
+            _fix_invalid_json(json_string)
 
 
 def test_fix_unquoted_keys() -> None:
     json_string = '{name: "John", age: "30"}'
     expected_result = '{"name": "John", "age": "30"}'
 
-    fixed_json = fix_invalid_json(json_string)
+    fixed_json = _fix_invalid_json(json_string)
 
     assert json.loads(fixed_json)
     assert fixed_json == expected_result
@@ -253,7 +252,7 @@ def test_fix_unquoted_string_values() -> None:
     json_string = '{"name": John, "age": 30}'
     expected_result = '{"name": "John", "age": 30}'
 
-    fixed_json = fix_invalid_json(json_string)
+    fixed_json = _fix_invalid_json(json_string)
 
     assert json.loads(fixed_json)
     assert fixed_json == expected_result
@@ -263,7 +262,7 @@ def test_remove_trailing_commas() -> None:
     json_string = '{"name": "John", "age": 30,}'
     expected_result = '{"name": "John", "age": 30}'
 
-    fixed_json = fix_invalid_json(json_string)
+    fixed_json = _fix_invalid_json(json_string)
 
     assert json.loads(fixed_json)
     assert fixed_json == expected_result
@@ -273,7 +272,7 @@ def test_fix_excessive_braces() -> None:
     json_string = '{{"name": "John"}}'
     expected_result = '{"name": "John"}'
 
-    fixed_json = fix_invalid_json(json_string)
+    fixed_json = _fix_invalid_json(json_string)
 
     assert json.loads(fixed_json)
     assert fixed_json == expected_result
@@ -283,7 +282,7 @@ def test_fix_multiple_issues() -> None:
     json_string = '{name: John, "hobbies": ["reading", "swimming",], "age": 30}'
     expected_result = '{"name": "John", "hobbies": ["reading", "swimming"], "age": 30}'
 
-    fixed_json = fix_invalid_json(json_string)
+    fixed_json = _fix_invalid_json(json_string)
 
     assert json.loads(fixed_json)
     assert fixed_json == expected_result
@@ -293,7 +292,7 @@ def test_fix_null_values() -> None:
     json_string = '{"name": John, "nickname": null}'
     expected_result = '{"name": "John", "nickname": null}'
 
-    fixed_json = fix_invalid_json(json_string)
+    fixed_json = _fix_invalid_json(json_string)
 
     assert json.loads(fixed_json)
     assert fixed_json == expected_result
@@ -303,121 +302,7 @@ def test_fix_numeric_values() -> None:
     json_string = '{"age": 30, "score": 95.5}'
     expected_result = '{"age": 30, "score": 95.5}'
 
-    fixed_json = fix_invalid_json(json_string)
-
-    assert json.loads(fixed_json)
-    assert fixed_json == expected_result
-
-
-def test_balance_curly_braces_missing_closing() -> None:
-    json_string = '{"name": "John", "hobbies": {"reading": "yes"'
-    expected_result = '{"name": "John", "hobbies": {"reading": "yes"}}'
-
-    fixed_json = balance_curly_braces(json_string)
-
-    assert json.loads(fixed_json)
-    assert fixed_json == expected_result
-
-
-def test_balance_curly_braces_extra_closing() -> None:
-    json_string = '{"name": "John", "hobbies": {"reading": "yes"}}}'
-    expected_result = '{"name": "John", "hobbies": {"reading": "yes"}}'
-
-    fixed_json = balance_curly_braces(json_string)
-
-    assert json.loads(fixed_json)
-    assert fixed_json == expected_result
-
-
-def test_balance_curly_braces_balanced_input() -> None:
-    json_string = '{"name": "John", "hobbies": {"reading": "yes"}, "age": 30}'
-    expected_result = json_string
-
-    fixed_json = balance_curly_braces(json_string)
-
-    assert json.loads(fixed_json)
-    assert fixed_json == expected_result
-
-
-def test_balance_curly_braces_nested_structure() -> None:
-    json_string = '{"person": {"name": "John", "hobbies": {"reading": "yes"}}}'
-    expected_result = json_string
-
-    fixed_json = balance_curly_braces(json_string)
-
-    assert json.loads(fixed_json)
-    assert fixed_json == expected_result
-
-
-def test_balance_curly_braces_unbalanced_nested() -> None:
-    json_string = '{"person": {"name": "John", "hobbies": {"reading": "yes"}}'
-    expected_result = '{"person": {"name": "John", "hobbies": {"reading": "yes"}}}'
-
-    fixed_json = balance_curly_braces(json_string)
-
-    assert json.loads(fixed_json)
-    assert fixed_json == expected_result
-
-
-def test_balance_curly_braces_unmatched_openings() -> None:
-    json_string = '{"name": "John", "hobbies": {"reading": "yes"'
-    expected_result = '{"name": "John", "hobbies": {"reading": "yes"}}'
-
-    fixed_json = balance_curly_braces(json_string)
-
-    assert json.loads(fixed_json)
-    assert fixed_json == expected_result
-
-
-def test_balance_curly_braces_unmatched_closings() -> None:
-    json_string = '{"name": "John", "hobbies": {"reading": "yes"}}}'
-    expected_result = '{"name": "John", "hobbies": {"reading": "yes"}}'
-
-    fixed_json = balance_curly_braces(json_string)
-
-    assert json.loads(fixed_json)
-    assert fixed_json == expected_result
-
-
-def test_balance_curly_braces_complex_structure() -> None:
-    json_string = (
-        '{"name": "John", "details": {"age": 30, "hobbies": {"reading": "yes"}}}'
-    )
-    expected_result = json_string
-
-    fixed_json = balance_curly_braces(json_string)
-
-    assert json.loads(fixed_json)
-    assert fixed_json == expected_result
-
-
-def test_balance_curly_braces_incorrect_nested_closings() -> None:
-    json_string = '{"key1": {"key2": {"reading": "yes"}}, "key3": {"age": 30}}}'
-    expected_result = '{"key1": {"key2": {"reading": "yes"}}, "key3": {"age": 30}}'
-
-    fixed_json = balance_curly_braces(json_string)
-
-    assert json.loads(fixed_json)
-    assert fixed_json == expected_result
-
-
-def test_balance_curly_braces_braces_inside_string() -> None:
-    json_string = '{"name": "John", "example": "a{b}c", "age": 30}'
-    expected_result = json_string
-
-    fixed_json = balance_curly_braces(json_string)
-
-    assert json.loads(fixed_json)
-    assert fixed_json == expected_result
-
-
-def test_balance_curly_braces_unbalanced_with_string() -> None:
-    json_string = '{"name": "John", "example": "a{b}c", "hobbies": {"reading": "yes"'
-    expected_result = (
-        '{"name": "John", "example": "a{b}c", "hobbies": {"reading": "yes"}}'
-    )
-
-    fixed_json = balance_curly_braces(json_string)
+    fixed_json = _fix_invalid_json(json_string)
 
     assert json.loads(fixed_json)
     assert fixed_json == expected_result
@@ -496,3 +381,42 @@ async def test_extractor_structured_output_false_uses_prompt_based_extraction() 
     assert len(messages) == 1
     assert messages[0]["role"] == "user"
     assert "response_format" not in call_args[1]  # No response_format kwarg
+
+
+@pytest.mark.asyncio
+async def test_extract_chunk_matches_run_for_single_chunk() -> None:
+    llm = MagicMock(spec=BaseLLM)
+    llm.ainvoke.return_value = LLMResponse(
+        content='{"nodes": [{"id": "0", "label": "Person", "properties": {"name": "A"}}], "relationships": []}'
+    )
+    extractor = LLMEntityRelationExtractor(llm=llm)
+    doc = DocumentInfo(path="p", uid="doc-1")
+    chunk = TextChunk(text="some text", index=0, uid="c0")
+
+    single = await extractor.extract_chunk(chunk, document_info=doc)
+    whole = await extractor.run(chunks=TextChunks(chunks=[chunk]), document_info=doc)
+
+    def key(g: Neo4jGraph) -> tuple[set[str], set[tuple[str, str, str]]]:
+        return (
+            {n.id for n in g.nodes},
+            {(r.start_node_id, r.end_node_id, r.type) for r in g.relationships},
+        )
+
+    assert key(single) == key(whole)
+
+
+@pytest.mark.asyncio
+async def test_extract_chunk_links_to_previous_chunk_and_skips_lexical_graph() -> None:
+    llm = MagicMock(spec=BaseLLM)
+    llm.ainvoke.return_value = LLMResponse(content='{"nodes": [], "relationships": []}')
+
+    chunk = TextChunk(text="t", index=1, uid="c1", prev_chunk_id="c0")
+    with_lexical = await LLMEntityRelationExtractor(llm=llm).extract_chunk(chunk)
+    assert [
+        (r.start_node_id, r.end_node_id, r.type) for r in with_lexical.relationships
+    ] == [("c0", "c1", "NEXT_CHUNK")]
+
+    without = await LLMEntityRelationExtractor(
+        llm=llm, create_lexical_graph=False
+    ).extract_chunk(chunk)
+    assert without.nodes == [] and without.relationships == []

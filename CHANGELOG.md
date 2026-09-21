@@ -7,8 +7,13 @@
 - **Breaking:** `BaseLLM.invoke` and `BaseLLM.ainvoke` accept a list of `LLMMessage` (`{"role": "system" | "user" | "assistant", "content": str}`) only, with a keyword-only `response_format` parameter and `**kwargs`. Plain string input and the `message_history` and `system_instruction` invoke parameters are no longer accepted: wrap prompts as `[{"role": "user", "content": ...}]`, prepend `[{"role": "system", "content": ...}]` for system instructions, and pass prior turns as earlier entries in the list. `LLMInterface` and `LLMInterfaceV2` are replaced by the single `BaseLLM` abstract class. Calling `invoke`/`ainvoke` with anything other than a list of `LLMMessage` (e.g. a plain string) now raises `TypeError` immediately, instead of failing later inside message-building code. `invoke_with_tools`/`ainvoke_with_tools` are unchanged and still take a string prompt.
 - `SchemaFromTextExtractor` now forwards `llm_params` to `llm.ainvoke` on the prompt-based extraction path. Previously these parameters were silently ignored there, so values such as `temperature` or `max_tokens` set through `llm_params` now take effect.
 
+### Removed
+
+- **Breaking:** the public helpers `balance_curly_braces` and `fix_invalid_json` were removed from `neo4j_graphrag.components.entity_relation_extractor` (`fix_invalid_json` is now the private `_fix_invalid_json`). `LexicalGraphBuilder.process_chunk` was removed, and `create_document_node`, `create_chunk_node`, `create_chunk_to_document_rel`, `create_next_chunk_relationship` and `create_node_to_chunk_rel` are now private (underscore-prefixed); use `run_for_chunk` for single-chunk graphs.
+
 ### Added
 
+- Added single-chunk building blocks for streaming pipelines: `TextChunk.prev_chunk_id` (set by `FixedSizeSplitter`, `LangChainTextSplitterAdapter` and `LlamaIndexTextSplitterAdapter`, and preserved by `TextChunkEmbedder`), `LexicalGraphBuilder.run_for_chunk` and `LexicalGraphBuilder.combine_graphs` (deduplicating, associative merge usable with `Pipeline.reduce`), and `LLMEntityRelationExtractor.extract_chunk`, which returns the full graph (entities, relationships and lexical graph) for one chunk. `LexicalGraphBuilder.run` now derives `NEXT_CHUNK` relationships from `prev_chunk_id` without modifying the chunks it is given.
 - Added `neo4j_graphrag.llm.batch` module: batch inference for Google Cloud Platform Vertex AI via the `google-cloud-aiplatform` SDK.
 
 ## 1.22.0
