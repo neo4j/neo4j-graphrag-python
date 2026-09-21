@@ -1,6 +1,42 @@
 ---
+# Local services for the e2e tests and for running the examples.
+#
+#   docker compose -f tests/e2e/docker-compose.yml up -d --wait
+#       Neo4j with APOC. Enough for the e2e suite's Neo4j tests and for most
+#       examples.
+#
+#   docker compose -f tests/e2e/docker-compose.yml --profile vectordb up -d --wait
+#       Adds Weaviate, Qdrant and Pinecone Local. Needed by the external
+#       retriever tests and the examples under
+#       examples/customize/retrievers/external/.
+#
+# Every service except pinecone-local declares a healthcheck, so `up --wait`
+# blocks until they actually answer rather than merely start. Pinecone Local
+# ships no shell and no binary a healthcheck could run, so `--wait` returns as
+# soon as its container is up; give it a moment before using it.
 services:
+  neo4j:
+    image: neo4j:enterprise
+    ports:
+      - 7687:7687
+      - 7474:7474
+    environment:
+      NEO4J_AUTH: neo4j/password
+      NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
+      NEO4J_PLUGINS: "[\"apoc\"]"
+      NEO4J_server_memory_heap_max__size: 6G
+    # The e2e suite talks to Neo4j over bolt (7687), not the HTTP console
+    # (7474), so check bolt directly with cypher-shell, which ships in this
+    # image.
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p password 'RETURN 1' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
   weaviate:
+    profiles: [vectordb]
     command:
       - --host
       - 0.0.0.0
@@ -21,21 +57,64 @@ services:
       DEFAULT_VECTORIZER_MODULE: "text2vec-transformers"
       ENABLE_MODULES: "text2vec-transformers"
       CLUSTER_HOSTNAME: "node1"
+    depends_on:
+      - t2v-transformers
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget -qO- http://localhost:8080/v1/.well-known/ready || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  # Weaviate's server-side vectorizer.
   t2v-transformers:
+    profiles: [vectordb]
     image: cr.weaviate.io/semitechnologies/transformers-inference:sentence-transformers-all-MiniLM-L6-v2
     environment:
       ENABLE_CUDA: "0"
-  neo4j:
-    image: neo4j:enterprise
-    ports:
-      - 7687:7687
-      - 7474:7474
-    environment:
-      NEO4J_AUTH: neo4j/password
-      NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
-      NEO4J_PLUGINS: "[\"apoc\"]"
-      NEO4J_server_memory_heap_max__size: 6G
+    # No wget or curl in this image, but it does ship python3. The endpoint
+    # answers 204, which urlopen treats as success.
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python3",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8080/.well-known/ready')",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
+
   qdrant:
+    profiles: [vectordb]
     image: qdrant/qdrant
     ports:
       - 6333:6333
+    # No wget or curl in this image (qdrant/qdrant#3491), so hit /healthz with
+    # a raw HTTP request over /dev/tcp instead of shelling out to a binary
+    # that isn't there. bash -c is required - CMD-SHELL runs via /bin/sh,
+    # which is dash in this image and can't do /dev/tcp redirection.
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "bash -c \"exec 3<>/dev/tcp/127.0.0.1/6333 && printf 'GET /healthz HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q '200 OK' <&3\"",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  # An in-memory emulator, so the Pinecone examples run without an account. It
+  # ignores API keys entirely and keeps nothing after it stops.
+  pinecone-local:
+    profiles: [vectordb]
+    image: ghcr.io/pinecone-io/pinecone-local:latest
+    environment:
+      PORT: 5080
+      PINECONE_HOST: localhost
+    ports:
+      - 5080-5090:5080-5090
+    platform: linux/amd64

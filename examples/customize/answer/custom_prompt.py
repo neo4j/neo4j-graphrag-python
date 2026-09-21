@@ -35,7 +35,9 @@ retriever = VectorCypherRetriever(
     neo4j_database=DATABASE,
 )
 
-llm = OpenAILLM(model_name="gpt-5", model_params={"temperature": 0})
+# No temperature is set: gpt-5 only accepts the default (1). Answers here are
+# free text, so sampling variation is fine.
+llm = OpenAILLM(model_name="gpt-5")
 
 template = RagTemplate(
     template="""You are an expert at movies and actors. Your task is to

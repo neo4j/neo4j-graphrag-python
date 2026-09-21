@@ -1583,7 +1583,10 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         from neo4j_graphrag.components.schema import SchemaFromTextExtractor
         from neo4j_graphrag.llm import OpenAILLM
 
-        llm = OpenAILLM(model_name="gpt-5", model_params={"temperature": 0})
+        llm = OpenAILLM(
+            model_name="gpt-5",
+            model_params={"max_completion_tokens": 16000, "reasoning_effort": "low"},
+        )
         extractor = SchemaFromTextExtractor(llm=llm)
 
     Example with V2 (structured output):

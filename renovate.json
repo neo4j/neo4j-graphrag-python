@@ -34,10 +34,21 @@
         "pep621"
       ],
       "matchDepTypes": [
+        "dependency-groups",
+        "project.dependencies"
+      ],
+      "rangeStrategy": "bump"
+    },
+    {
+      "matchManagers": [
+        "pep621"
+      ],
+      "matchDepTypes": [
         "dependency-groups"
       ],
-      "rangeStrategy": "bump",
       "groupName": "dev dependencies",
+      "automerge": true,
+      "automergeType": "pr",
       "labels": [
         "dependencies",
         "python"
@@ -50,7 +61,8 @@
       "matchDepTypes": [
         "project.dependencies"
       ],
-      "rangeStrategy": "bump",
+      "automerge": true,
+      "automergeType": "pr",
       "labels": [
         "dependencies",
         "python"

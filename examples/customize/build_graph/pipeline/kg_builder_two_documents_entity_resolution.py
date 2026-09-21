@@ -138,10 +138,14 @@ async def define_and_run_pipeline(
 
 
 async def main() -> None:
+    # gpt-5 counts reasoning tokens against max_completion_tokens, so too small a
+    # budget returns empty content. reasoning_effort="low" roughly halves the cost
+    # with no measurable difference in extraction quality.
     llm = OpenAILLM(
         model_name="gpt-5",
         model_params={
-            "max_completion_tokens": 1000,
+            "max_completion_tokens": 16000,
+            "reasoning_effort": "low",
         },
     )
     driver = neo4j.GraphDatabase.driver(

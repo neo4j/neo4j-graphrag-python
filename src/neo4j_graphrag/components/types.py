@@ -44,6 +44,14 @@ class GeoPoint(BaseModel):
     longitude: float
     height: float
 
+    def to_wkt(self) -> str:
+        """Serialize as WKT ``POINT Z(longitude latitude height)``.
+
+        Axis order is longitude then latitude (x then y), then height.
+        Height is always included so 3D values round-trip losslessly.
+        """
+        return f"POINT Z({self.longitude} {self.latitude} {self.height})"
+
 
 # Define primitive value types
 PrimitiveValue = Union[bool, int, float, str]

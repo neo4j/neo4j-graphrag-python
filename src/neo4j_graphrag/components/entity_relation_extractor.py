@@ -179,7 +179,14 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         from neo4j_graphrag.llm import OpenAILLM
         from neo4j_graphrag.experimental.pipeline import Pipeline
 
-        llm = OpenAILLM(model_name="gpt-5", model_params={"temperature": 0, "response_format": {"type": "object"}})
+        llm = OpenAILLM(
+            model_name="gpt-5",
+            model_params={
+                "max_completion_tokens": 16000,
+                "reasoning_effort": "low",
+                "response_format": {"type": "json_object"},
+            },
+        )
 
         extractor = LLMEntityRelationExtractor(llm=llm)
         pipe = Pipeline()
@@ -193,7 +200,10 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         from neo4j_graphrag.llm import OpenAILLM
         from neo4j_graphrag.experimental.pipeline import Pipeline
 
-        llm = OpenAILLM(model_name="gpt-5", model_params={"temperature": 0})
+        llm = OpenAILLM(
+            model_name="gpt-5",
+            model_params={"max_completion_tokens": 16000, "reasoning_effort": "low"},
+        )
         extractor = LLMEntityRelationExtractor(llm=llm, use_structured_output=True)
         pipe = Pipeline()
         pipe.add_component(extractor, "extractor")
