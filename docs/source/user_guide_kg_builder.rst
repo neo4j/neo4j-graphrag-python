@@ -633,6 +633,8 @@ To implement your own loader, use the `DataLoader` interface:
 
 
 
+.. _text-splitter-section:
+
 Text Splitter
 ==============
 
@@ -680,8 +682,21 @@ To implement a custom text splitter, the `TextSplitter` interface can be used:
             self.separator = separator
 
         def iter_chunks(self, text: str) -> Iterator[TextChunk]:
+            prev_chunk_id = None
             for index, text_chunk in enumerate(text.split(self.separator)):
-                yield TextChunk(text=text_chunk, index=index)
+                chunk = TextChunk(
+                    text=text_chunk, index=index, prev_chunk_id=prev_chunk_id
+                )
+                prev_chunk_id = chunk.chunk_id
+                yield chunk
+
+.. note::
+
+    Setting `prev_chunk_id` is what lets the :ref:`lexical graph builder
+    <lexical-graph-builder>` create the `NEXT_CHUNK` relationship from a single
+    chunk. It is optional if the chunks are only ever passed to
+    `LexicalGraphBuilder.run`, which infers it from the order of the chunks, but
+    required to build the graph one chunk at a time with `run_for_chunk`.
 
 
 Chunk Embedder
@@ -725,14 +740,14 @@ The **lexical graph** contains:
 
 - `Document` node: represent the processed document and have a `path` property.
 - `Chunk` nodes: represent the text chunks. They have a `text` property and, if computed, an `embedding` property.
-- `NEXT_CHUNK` relationships between one chunk node and the next one in the document. It can be used to enhance the context in a RAG application.
+- `NEXT_CHUNK` relationships between one chunk node and the next one in the document. It can be used to enhance the context in a RAG application. It is created from each chunk's `prev_chunk_id` (see :ref:`textchunk`), which the built-in text splitters set as they split.
 - `FROM_DOCUMENT` relationship between each chunk and the document it was built from.
 
 Example usage:
 
 .. code:: python
 
-    from neo4j_graphrag.components.lexical_graph_builder import LexicalGraphBuilder
+    from neo4j_graphrag.components.lexical_graph import LexicalGraphBuilder
     from neo4j_graphrag.components.types import LexicalGraphConfig
 
     lexical_graph_builder = LexicalGraphBuilder(config=LexicalGraphConfig())
@@ -745,6 +760,43 @@ Example usage:
     )
 
 See :ref:`kg-writer-section` to learn how to write the resulting nodes and relationships to Neo4j.
+
+
+Building the graph one chunk at a time
+--------------------------------------
+
+`run` needs all the chunks up front. To build the lexical graph incrementally -
+for instance while streaming chunks out of a text splitter, so that the whole
+document is never held in memory - use `run_for_chunk`, which returns the
+`Neo4jGraph` for a single chunk, and `combine_graphs` to merge the results:
+
+.. code:: python
+
+    from neo4j_graphrag.components.lexical_graph import LexicalGraphBuilder
+    from neo4j_graphrag.components.text_splitters.fixed_size_splitter import FixedSizeSplitter
+    from neo4j_graphrag.components.types import DocumentInfo, LexicalGraphConfig, Neo4jGraph
+
+    lexical_graph_builder = LexicalGraphBuilder(config=LexicalGraphConfig())
+    splitter = FixedSizeSplitter(chunk_size=4000, chunk_overlap=200)
+    document_info = DocumentInfo(path="my_document.pdf")
+
+    graph = Neo4jGraph()
+    for chunk in splitter.iter_chunks(text):
+        chunk_graph = lexical_graph_builder.run_for_chunk(chunk, document_info)
+        # ... or write `chunk_graph` to Neo4j here instead of accumulating it
+        graph = lexical_graph_builder.combine_graphs(graph, chunk_graph)
+
+`run_for_chunk` is synchronous and returns the chunk node, the `Document` node
+(when `document_info` is provided), the `FROM_DOCUMENT` relationship and the
+`NEXT_CHUNK` relationship from the previous chunk. That last one is created from
+`chunk.prev_chunk_id`, so a chunk whose `prev_chunk_id` is unset produces no
+`NEXT_CHUNK` relationship - the built-in splitters set it, and a custom splitter
+must do the same (see :ref:`text-splitter-section`). `run` is more forgiving: it fills
+in any missing `prev_chunk_id` from the order of the chunks it was given.
+
+`combine_graphs` returns a new graph, leaving its arguments untouched. Nodes are
+deduplicated by id and relationships by `(start_node_id, end_node_id, type)`, so
+the `Document` node repeated by every chunk is only kept once.
 
 
 Neo4j Chunk Reader

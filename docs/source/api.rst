@@ -67,8 +67,7 @@ LexicalGraphBuilder
 ===================
 
 .. autoclass:: neo4j_graphrag.components.lexical_graph.LexicalGraphBuilder
-    :members:
-    :exclude-members: component_inputs, component_outputs
+    :members: run, run_for_chunk, combine_graphs, process_chunk_extracted_entities
 
 Neo4jChunkReader
 ================
