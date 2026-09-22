@@ -43,7 +43,7 @@ async def test_split_text_no_overlap() -> None:
     for actual, expected in zip_longest(chunks.chunks, expected_chunks):
         assert actual.text == expected.text
         assert actual.index == expected.index
-        assert expected.uid is not None
+        assert actual.uid is not None
 
 
 @pytest.mark.asyncio
@@ -63,7 +63,18 @@ async def test_split_text_with_overlap() -> None:
     for actual, expected in zip_longest(chunks.chunks, expected_chunks):
         assert actual.text == expected.text
         assert actual.index == expected.index
-        assert expected.uid is not None
+        assert actual.uid is not None
+
+
+@pytest.mark.asyncio
+async def test_split_text_assigns_prev_chunk_id() -> None:
+    text = "may thy knife chip and shatter"
+    splitter = FixedSizeSplitter(chunk_size=5, chunk_overlap=0)
+    chunks = await splitter.run(text)
+    assert len(chunks.chunks) > 1
+    assert chunks.chunks[0].prev_chunk_id is None
+    for previous, current in zip(chunks.chunks, chunks.chunks[1:]):
+        assert current.prev_chunk_id == previous.uid
 
 
 @pytest.mark.asyncio
@@ -223,6 +234,11 @@ async def test_fixed_size_splitter_run(
         assert text_chunks.chunks[i].text == expected_text
         assert isinstance(text_chunks.chunks[i], TextChunk)
         assert text_chunks.chunks[i].index == i
+
+    # Verify chunks are linked via prev_chunk_id
+    assert text_chunks.chunks[0].prev_chunk_id is None
+    for previous, current in zip(text_chunks.chunks, text_chunks.chunks[1:]):
+        assert current.prev_chunk_id == previous.uid
 
 
 @pytest.mark.asyncio

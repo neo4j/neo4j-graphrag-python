@@ -41,3 +41,6 @@ async def test_llamaindex_adapter() -> None:
     for text_chunk in text_chunks.chunks:
         assert isinstance(text_chunk, TextChunk)
         assert text_chunk.text in text
+    assert text_chunks.chunks[0].prev_chunk_id is None
+    for previous, current in zip(text_chunks.chunks, text_chunks.chunks[1:]):
+        assert current.prev_chunk_id == previous.uid
