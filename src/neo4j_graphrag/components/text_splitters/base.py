@@ -15,15 +15,32 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+from collections.abc import Iterator
 
-from neo4j_graphrag.components.types import TextChunks
 from neo4j_graphrag.components.base import Component
+from neo4j_graphrag.components.types import TextChunk, TextChunks
 
 
 class TextSplitter(Component):
-    """Interface for a text splitter."""
+    """Interface for a text splitter.
+
+    Implementations must override :meth:`iter_chunks`. The default
+    :meth:`run` implementation collects the chunks into a
+    :class:`~neo4j_graphrag.components.types.TextChunks` object.
+    """
 
     @abstractmethod
+    def iter_chunks(self, text: str) -> Iterator[TextChunk]:
+        """Splits a piece of text into chunks, yielding them one at a time.
+
+        Args:
+            text (str): The text to be split.
+
+        Returns:
+            Iterator[TextChunk]: The chunks, in document order.
+        """
+        raise NotImplementedError
+
     async def run(self, text: str) -> TextChunks:
         """Splits a piece of text into chunks.
 
@@ -33,4 +50,4 @@ class TextSplitter(Component):
         Returns:
             TextChunks: A list of chunks.
         """
-        pass
+        return TextChunks(chunks=list(self.iter_chunks(text)))
