@@ -23,7 +23,9 @@ from unittest import mock
 import pytest
 from neo4j_graphrag.components.lexical_graph import LexicalGraphBuilder
 from neo4j_graphrag.components.types import (
+    DEFAULT_CHUNK_INDEX_PROPERTY,
     DEFAULT_CHUNK_NODE_LABEL,
+    DEFAULT_CHUNK_TEXT_PROPERTY,
     DEFAULT_CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE,
     DEFAULT_DOCUMENT_NODE_LABEL,
     DEFAULT_NEXT_CHUNK_RELATIONSHIP_TYPE,
@@ -337,6 +339,92 @@ async def test_lexical_graph_builder_run_custom_labels() -> None:
 
 
 @pytest.mark.asyncio
+async def test_lexical_graph_builder_run_multi_chunk_document() -> None:
+    """All nodes and relationships of a multi-chunk document: one Document
+    node, one Chunk node per chunk, one FROM_DOCUMENT relationship per chunk
+    and a NEXT_CHUNK chain linking the chunks in order."""
+    lexical_graph_builder = LexicalGraphBuilder()
+    doc_uid = str(uuid.uuid4())
+    chunks = [
+        TextChunk(text="text chunk 1", index=0),
+        TextChunk(text="text chunk 2", index=1),
+        TextChunk(text="text chunk 3", index=2),
+    ]
+    result = await lexical_graph_builder.run(
+        text_chunks=TextChunks(chunks=chunks),
+        document_info=DocumentInfo(path="test_lexical_graph", uid=doc_uid),
+    )
+    graph = result.graph
+
+    # 1 Document node + 3 Chunk nodes
+    assert len(graph.nodes) == 4
+    document_nodes = [
+        node for node in graph.nodes if node.label == DEFAULT_DOCUMENT_NODE_LABEL
+    ]
+    assert len(document_nodes) == 1
+    assert document_nodes[0].id == doc_uid
+    chunk_nodes = [
+        node for node in graph.nodes if node.label == DEFAULT_CHUNK_NODE_LABEL
+    ]
+    assert {node.id for node in chunk_nodes} == {chunk.chunk_id for chunk in chunks}
+    # Chunk nodes expose text and index under the default property names
+    for node, chunk in zip(chunk_nodes, chunks):
+        assert node.id == chunk.chunk_id
+        assert node.properties[DEFAULT_CHUNK_TEXT_PROPERTY] == chunk.text
+        assert node.properties[DEFAULT_CHUNK_INDEX_PROPERTY] == chunk.index
+
+    # 3 FROM_DOCUMENT + 2 NEXT_CHUNK relationships
+    assert len(graph.relationships) == 5
+    from_document_rels = [
+        rel
+        for rel in graph.relationships
+        if rel.type == DEFAULT_CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE
+    ]
+    assert {(rel.start_node_id, rel.end_node_id) for rel in from_document_rels} == {
+        (chunk.chunk_id, doc_uid) for chunk in chunks
+    }
+    next_chunk_rels = [
+        rel
+        for rel in graph.relationships
+        if rel.type == DEFAULT_NEXT_CHUNK_RELATIONSHIP_TYPE
+    ]
+    assert {(rel.start_node_id, rel.end_node_id) for rel in next_chunk_rels} == {
+        (chunks[0].chunk_id, chunks[1].chunk_id),
+        (chunks[1].chunk_id, chunks[2].chunk_id),
+    }
+    # No FROM_CHUNK relationships without extracted entities
+    assert not any(
+        rel.type == DEFAULT_NODE_TO_CHUNK_RELATIONSHIP_TYPE
+        for rel in graph.relationships
+    )
+
+
+@pytest.mark.asyncio
+async def test_lexical_graph_builder_run_custom_chunk_property_names() -> None:
+    """Chunk text, index and embedding are stored under the property names
+    from the LexicalGraphConfig."""
+    lexical_graph_builder = LexicalGraphBuilder(
+        config=LexicalGraphConfig(
+            chunk_text_property="content",
+            chunk_index_property="position",
+            chunk_embedding_property="vector",
+        ),
+    )
+    chunk = TextChunk(
+        text="text chunk",
+        index=0,
+        metadata={"embedding": [1.0, 2.0, 3.0], "source": "test"},
+    )
+    result = await lexical_graph_builder.run(
+        text_chunks=TextChunks(chunks=[chunk]),
+    )
+    assert len(result.graph.nodes) == 1
+    node = result.graph.nodes[0]
+    assert node.properties == {"content": "text chunk", "position": 0, "source": "test"}
+    assert node.embedding_properties == {"vector": [1.0, 2.0, 3.0]}
+
+
+@pytest.mark.asyncio
 async def test_lexical_graph_builder_run_equivalent_to_process_chunk_and_combine_graphs() -> (
     None
 ):
@@ -366,6 +454,156 @@ async def test_lexical_graph_builder_run_equivalent_to_process_chunk_and_combine
     assert result.graph == combined
     # Sanity check that the frozen timestamp was actually used
     assert result.graph.nodes[0].properties["createdAt"] == FIXED_NOW.isoformat()
+
+
+@pytest.mark.asyncio
+async def test_lexical_graph_builder_run_empty_chunks() -> None:
+    lexical_graph_builder = LexicalGraphBuilder()
+    doc_uid = str(uuid.uuid4())
+    result = await lexical_graph_builder.run(
+        text_chunks=TextChunks(chunks=[]),
+        document_info=DocumentInfo(path="test_lexical_graph", uid=doc_uid),
+    )
+    assert len(result.graph.nodes) == 1
+    assert result.graph.nodes[0].id == doc_uid
+    assert result.graph.nodes[0].label == DEFAULT_DOCUMENT_NODE_LABEL
+    assert result.graph.relationships == []
+
+
+@pytest.mark.asyncio
+async def test_lexical_graph_builder_run_empty_chunks_no_document() -> None:
+    lexical_graph_builder = LexicalGraphBuilder()
+    result = await lexical_graph_builder.run(text_chunks=TextChunks(chunks=[]))
+    assert result.graph.nodes == []
+    assert result.graph.relationships == []
+
+
+@pytest.mark.asyncio
+async def test_lexical_graph_builder_run_preserves_prev_chunk_id() -> None:
+    """Chunks arriving with prev_chunk_id already set (e.g. from a text
+    splitter) must keep it: it is not overwritten by the backfill, and the
+    NEXT_CHUNK relationships are built from it."""
+    lexical_graph_builder = LexicalGraphBuilder()
+    chunks = [
+        TextChunk(text="text chunk 1", index=0),
+        TextChunk(text="text chunk 2", index=1),
+        TextChunk(text="text chunk 3", index=2),
+    ]
+    # Pre-link the chunks as a text splitter would
+    chunks[1].prev_chunk_id = chunks[0].chunk_id
+    chunks[2].prev_chunk_id = chunks[1].chunk_id
+    result = await lexical_graph_builder.run(text_chunks=TextChunks(chunks=chunks))
+    assert chunks[0].prev_chunk_id is None
+    assert chunks[1].prev_chunk_id == chunks[0].chunk_id
+    assert chunks[2].prev_chunk_id == chunks[1].chunk_id
+    next_chunk_rels = [
+        rel
+        for rel in result.graph.relationships
+        if rel.type == DEFAULT_NEXT_CHUNK_RELATIONSHIP_TYPE
+    ]
+    assert len(next_chunk_rels) == 2
+    assert {(rel.start_node_id, rel.end_node_id) for rel in next_chunk_rels} == {
+        (chunks[0].chunk_id, chunks[1].chunk_id),
+        (chunks[1].chunk_id, chunks[2].chunk_id),
+    }
+
+
+@pytest.mark.asyncio
+async def test_lexical_graph_builder_run_respects_foreign_prev_chunk_id() -> None:
+    """A prev_chunk_id pointing outside the given chunks (e.g. the last chunk
+    of a previous document) is used as-is for the NEXT_CHUNK relationship."""
+    lexical_graph_builder = LexicalGraphBuilder()
+    chunk = TextChunk(text="text chunk", index=0, prev_chunk_id="external-chunk-id")
+    result = await lexical_graph_builder.run(
+        text_chunks=TextChunks(chunks=[chunk]),
+    )
+    assert chunk.prev_chunk_id == "external-chunk-id"
+    assert len(result.graph.relationships) == 1
+    rel = result.graph.relationships[0]
+    assert rel.type == DEFAULT_NEXT_CHUNK_RELATIONSHIP_TYPE
+    assert rel.start_node_id == "external-chunk-id"
+    assert rel.end_node_id == chunk.chunk_id
+
+
+def test_lexical_graph_builder_run_for_chunk_no_document() -> None:
+    lexical_graph_builder = LexicalGraphBuilder()
+    chunk = TextChunk(text="text chunk", index=1, prev_chunk_id="prev-chunk-id")
+    graph = lexical_graph_builder.run_for_chunk(chunk)
+    assert len(graph.nodes) == 1
+    assert graph.nodes[0].id == chunk.chunk_id
+    assert graph.nodes[0].label == DEFAULT_CHUNK_NODE_LABEL
+    assert len(graph.relationships) == 1
+    rel = graph.relationships[0]
+    assert rel.type == DEFAULT_NEXT_CHUNK_RELATIONSHIP_TYPE
+    assert rel.start_node_id == "prev-chunk-id"
+    assert rel.end_node_id == chunk.chunk_id
+
+
+def test_lexical_graph_builder_run_for_chunk_first_chunk() -> None:
+    """A chunk without prev_chunk_id (e.g. the first in a document) has no
+    NEXT_CHUNK relationship."""
+    lexical_graph_builder = LexicalGraphBuilder()
+    chunk = TextChunk(text="text chunk", index=0)
+    graph = lexical_graph_builder.run_for_chunk(
+        chunk, DocumentInfo(path="test_lexical_graph", uid="doc-1")
+    )
+    assert len(graph.nodes) == 2
+    assert len(graph.relationships) == 1
+    rel = graph.relationships[0]
+    assert rel.type == DEFAULT_CHUNK_TO_DOCUMENT_RELATIONSHIP_TYPE
+    assert rel.start_node_id == chunk.chunk_id
+    assert rel.end_node_id == "doc-1"
+
+
+@pytest.mark.asyncio
+async def test_lexical_graph_builder_process_chunk_extracted_entities() -> None:
+    lexical_graph_builder = LexicalGraphBuilder()
+    chunk = TextChunk(text="text chunk", index=0)
+    chunk_graph = Neo4jGraph(
+        nodes=[
+            Neo4jNode(id=chunk.chunk_id, label=DEFAULT_CHUNK_NODE_LABEL),
+            Neo4jNode(id="doc-1", label=DEFAULT_DOCUMENT_NODE_LABEL),
+            Neo4jNode(id="entity-1", label="Person"),
+            Neo4jNode(id="entity-2", label="Organization"),
+        ],
+    )
+    await lexical_graph_builder.process_chunk_extracted_entities(chunk_graph, chunk)
+    # Chunk and Document nodes are skipped; entities are linked to the chunk
+    assert len(chunk_graph.relationships) == 2
+    for rel in chunk_graph.relationships:
+        assert rel.type == DEFAULT_NODE_TO_CHUNK_RELATIONSHIP_TYPE
+        assert rel.end_node_id == chunk.chunk_id
+    assert {rel.start_node_id for rel in chunk_graph.relationships} == {
+        "entity-1",
+        "entity-2",
+    }
+
+
+@pytest.mark.asyncio
+async def test_lexical_graph_builder_process_chunk_extracted_entities_custom_labels() -> (
+    None
+):
+    lexical_graph_builder = LexicalGraphBuilder(
+        config=LexicalGraphConfig(
+            document_node_label="Report",
+            chunk_node_label="Page",
+            node_to_chunk_relationship_type="MENTIONED_IN",
+        ),
+    )
+    chunk = TextChunk(text="text chunk", index=0)
+    chunk_graph = Neo4jGraph(
+        nodes=[
+            Neo4jNode(id=chunk.chunk_id, label="Page"),
+            Neo4jNode(id="doc-1", label="Report"),
+            Neo4jNode(id="entity-1", label="Person"),
+        ],
+    )
+    await lexical_graph_builder.process_chunk_extracted_entities(chunk_graph, chunk)
+    assert len(chunk_graph.relationships) == 1
+    rel = chunk_graph.relationships[0]
+    assert rel.type == "MENTIONED_IN"
+    assert rel.start_node_id == "entity-1"
+    assert rel.end_node_id == chunk.chunk_id
 
 
 def test_lexical_graph_builder_combine_graphs_deduplicates() -> None:
