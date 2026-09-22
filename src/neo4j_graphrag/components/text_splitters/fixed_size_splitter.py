@@ -12,10 +12,12 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from collections.abc import Iterator
+
 from pydantic import validate_call
 
 from neo4j_graphrag.components.text_splitters.base import TextSplitter
-from neo4j_graphrag.components.types import TextChunk, TextChunks
+from neo4j_graphrag.components.types import TextChunk
 
 
 def _adjust_chunk_start(text: str, approximate_start: int) -> int:
@@ -104,16 +106,15 @@ class FixedSizeSplitter(TextSplitter):
         self.approximate = approximate
 
     @validate_call
-    async def run(self, text: str) -> TextChunks:
-        """Splits a piece of text into chunks.
+    def iter_chunks(self, text: str) -> Iterator[TextChunk]:
+        """Splits a piece of text into chunks, yielding them one at a time.
 
         Args:
             text (str): The text to be split.
 
         Returns:
-            TextChunks: A list of chunks.
+            Iterator[TextChunk]: The chunks, in document order.
         """
-        chunks = []
         index = 0
         step = self.chunk_size - self.chunk_overlap
         text_length = len(text)
@@ -141,7 +142,7 @@ class FixedSizeSplitter(TextSplitter):
                 end = min(start + self.chunk_size, text_length)
 
             chunk_text = text[start:end]
-            chunks.append(TextChunk(text=chunk_text, index=index))
+            yield TextChunk(text=chunk_text, index=index)
             index += 1
 
             # Normal advancement is `start + step`, which lets the next iteration
@@ -155,5 +156,3 @@ class FixedSizeSplitter(TextSplitter):
             if next_start <= approximate_start:
                 next_start = approximate_start + step
             approximate_start = next_start
-
-        return TextChunks(chunks=chunks)
