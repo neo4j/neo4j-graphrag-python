@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from collections.abc import Iterator
+from typing import Optional
 
 from pydantic import validate_call
 
@@ -121,6 +122,7 @@ class FixedSizeSplitter(TextSplitter):
         approximate_start = 0
         skip_adjust_chunk_start = False
         end = 0
+        prev_chunk_id: Optional[str] = None
 
         while end < text_length:
             if self.approximate:
@@ -142,7 +144,9 @@ class FixedSizeSplitter(TextSplitter):
                 end = min(start + self.chunk_size, text_length)
 
             chunk_text = text[start:end]
-            yield TextChunk(text=chunk_text, index=index)
+            chunk = TextChunk(text=chunk_text, index=index, prev_chunk_id=prev_chunk_id)
+            prev_chunk_id = chunk.chunk_id
+            yield chunk
             index += 1
 
             # Normal advancement is `start + step`, which lets the next iteration
