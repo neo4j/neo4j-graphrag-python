@@ -2,6 +2,8 @@
 
 ## Next
 
+## 1.20.0
+
 ### Added
 
 - Added `StageObserver` and `LoggingStageObserver` to `neo4j_graphrag.pipeline`: hooks for watching items flow through a pipeline without adding logging, metrics or tracing to the transformation functions themselves. `LocalInterpreter(observers=[...])` wraps every operator's output stream, firing `before`/`after` per item per stage boundary as the stream is consumed. `on_error` is reported once, against the stage the failure came from — whether the stage raised fatally or a `Try*` stage (`map_safe` and friends) captured the exception as an `Err`; a failure is not re-reported by the later stages it passes through. Observing a sink reports each `sink.write`, including one that raises. Stages are named by `Operator.name` — the operator class, its position in the chain and the function it applies, e.g. `Map[1](embed)` — or explicitly via the `label` argument now accepted by every `Pipeline`/`ResultPipeline` operator method. `Pipeline.to_sink` also takes an optional `interpreter`, since it drains its own stream and would otherwise give no way to attach observers to a sink-terminated pipeline.
