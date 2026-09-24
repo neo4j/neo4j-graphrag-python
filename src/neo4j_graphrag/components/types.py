@@ -138,12 +138,16 @@ class TextChunk(BaseModel):
         index (int): The position of this chunk in the original document.
         metadata (Optional[dict[str, Any]]): Metadata associated with this chunk.
         uid (str): Unique identifier for this chunk.
+        prev_chunk_id (Optional[str]): Unique identifier of the previous chunk in
+            the document, if known. Allows building NEXT_CHUNK relationships
+            without access to all chunks simultaneously.
     """
 
     text: str
     index: int
     metadata: Optional[dict[str, Any]] = None
     uid: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    prev_chunk_id: Optional[str] = None
 
     @property
     def chunk_id(self) -> str:

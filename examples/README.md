@@ -124,6 +124,9 @@ are listed in [the last section of this file](#customize).
   - [Fixed size splitter](./customize/build_graph/components/splitters/fixed_size_splitter.py)
   - [Custom](./customize/build_graph/components/splitters/custom_splitter.py)
 - [Chunk embedder]()
+- Lexical Graph Builder:
+  - [From a list of chunks](./customize/build_graph/components/lexical_graph_builder/lexical_graph_builder.py)
+  - [One chunk at a time](./customize/build_graph/components/lexical_graph_builder/lexical_graph_builder_per_chunk.py)
 - Schema Builder:
   - [User-defined](./customize/build_graph/components/schema_builders/schema.py)
   - [Automatic schema extraction](./automatic_schema_extraction/schema_from_text.py)
