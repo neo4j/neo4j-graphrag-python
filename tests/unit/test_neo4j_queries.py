@@ -26,8 +26,18 @@ from neo4j_graphrag.neo4j_queries import (
     get_query_tail,
     get_search_query,
     _get_hybrid_query_linear,
+    upsert_relationship_to_existing_chunk_query,
 )
 from neo4j_graphrag.types import EntityType, SearchType
+
+
+def test_upsert_relationship_to_existing_chunk_uses_identifier_escaping() -> None:
+    query = upsert_relationship_to_existing_chunk_query(
+        support_variable_scope_clause=False,
+        chunk_node_label="Chunk Label",
+        chunk_id_property="chunk`id",
+    )
+    assert "(end:`Chunk Label`) WHERE end.`chunk``id` = row.end_node_id" in query
 
 
 def test_vector_search_basic() -> None:

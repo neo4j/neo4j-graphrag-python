@@ -47,6 +47,7 @@ from neo4j_graphrag.components.types import (
 from neo4j_graphrag.neo4j_queries import (
     upsert_node_query,
     upsert_relationship_query,
+    upsert_relationship_to_existing_chunk_query,
 )
 
 
@@ -346,6 +347,63 @@ async def test_run(_: Mock, driver: MagicMock) -> None:
         upsert_relationship_query(False),
         parameters_=parameters_,
         database_=None,
+    )
+
+
+@mock.patch(
+    "neo4j_graphrag.components.kg_writer.get_version",
+    return_value=((5, 22, 0), False, False),
+)
+@mock.patch(
+    "neo4j_graphrag.components.kg_writer.Neo4jWriter._db_setup",
+    return_value=None,
+)
+@pytest.mark.asyncio
+async def test_run_routes_node_to_existing_chunk_relationship(
+    _: Mock, driver: MagicMock
+) -> None:
+    writer = Neo4jWriter(driver=driver)
+    config = LexicalGraphConfig(
+        chunk_node_label="__CustomChunk__",
+        chunk_id_property="chunk_uid",
+        node_to_chunk_relationship_type="__CUSTOM_FROM_CHUNK__",
+    )
+    graph = Neo4jGraph(
+        nodes=[Neo4jNode(id="person-1", label="Person")],
+        relationships=[
+            Neo4jRelationship(
+                start_node_id="person-1",
+                end_node_id="persisted-chunk-1",
+                type=config.node_to_chunk_relationship_type,
+            )
+        ],
+    )
+
+    await writer.run(graph=graph, lexical_graph_config=config)
+
+    driver.execute_query.assert_any_call(
+        upsert_relationship_to_existing_chunk_query(
+            False,
+            chunk_node_label=config.chunk_node_label,
+            chunk_id_property=config.chunk_id_property,
+        ),
+        parameters_={
+            "rows": [
+                {
+                    "type": config.node_to_chunk_relationship_type,
+                    "start_node_id": "person-1",
+                    "end_node_id": "persisted-chunk-1",
+                    "properties": {},
+                    "embedding_properties": {},
+                }
+            ]
+        },
+        database_=None,
+    )
+    assert not any(
+        call.args
+        and call.args[0] == upsert_relationship_query(False)
+        for call in driver.execute_query.call_args_list
     )
 
 
