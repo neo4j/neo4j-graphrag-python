@@ -298,6 +298,65 @@ class Text2CypherRetrieverModel(BaseModel):
     neo4j_database: Optional[str] = None
 
 
+class AsyncNeo4jDriverModel(BaseModel):
+    driver: neo4j.AsyncDriver
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_validator("driver")
+    def check_driver(cls, value: neo4j.AsyncDriver) -> neo4j.AsyncDriver:
+        if not isinstance(value, neo4j.AsyncDriver):
+            raise ValueError("Provided driver needs to be of type neo4j.AsyncDriver")
+        return value
+
+
+class AsyncVectorRetrieverModel(BaseModel):
+    driver_model: AsyncNeo4jDriverModel
+    index_name: str
+    embedder_model: Optional[EmbedderModel] = None
+    return_properties: Optional[list[str]] = None
+    result_formatter: Optional[Callable[[neo4j.Record], RetrieverResultItem]] = None
+    neo4j_database: Optional[str] = None
+
+
+class AsyncVectorCypherRetrieverModel(BaseModel):
+    driver_model: AsyncNeo4jDriverModel
+    index_name: str
+    retrieval_query: str
+    embedder_model: Optional[EmbedderModel] = None
+    result_formatter: Optional[Callable[[neo4j.Record], RetrieverResultItem]] = None
+    neo4j_database: Optional[str] = None
+
+
+class AsyncHybridRetrieverModel(BaseModel):
+    driver_model: AsyncNeo4jDriverModel
+    vector_index_name: str
+    fulltext_index_name: str
+    embedder_model: Optional[EmbedderModel] = None
+    return_properties: Optional[list[str]] = None
+    result_formatter: Optional[Callable[[neo4j.Record], RetrieverResultItem]] = None
+    neo4j_database: Optional[str] = None
+
+
+class AsyncHybridCypherRetrieverModel(BaseModel):
+    driver_model: AsyncNeo4jDriverModel
+    vector_index_name: str
+    fulltext_index_name: str
+    retrieval_query: str
+    embedder_model: Optional[EmbedderModel] = None
+    result_formatter: Optional[Callable[[neo4j.Record], RetrieverResultItem]] = None
+    neo4j_database: Optional[str] = None
+
+
+class AsyncText2CypherRetrieverModel(BaseModel):
+    driver_model: AsyncNeo4jDriverModel
+    llm_model: LLMModel
+    neo4j_schema_model: Optional[Neo4jSchemaModel] = None
+    examples: Optional[list[str]] = None
+    result_formatter: Optional[Callable[[neo4j.Record], RetrieverResultItem]] = None
+    custom_prompt: Optional[str] = None
+    neo4j_database: Optional[str] = None
+
+
 class Neo4jMessageHistoryModel(BaseModel):
     session_id: Union[str, int]
     driver_model: Neo4jDriverModel
