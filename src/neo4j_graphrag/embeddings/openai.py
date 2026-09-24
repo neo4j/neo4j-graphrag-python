@@ -36,6 +36,7 @@ class BaseOpenAIEmbeddings(Embedder, abc.ABC):
     def __init__(
         self,
         model: str = "text-embedding-ada-002",
+        dimensions: Optional[int] = None,
         rate_limit_handler: Optional[RateLimitHandler] = None,
         **kwargs: Any,
     ) -> None:
@@ -49,6 +50,7 @@ class BaseOpenAIEmbeddings(Embedder, abc.ABC):
         super().__init__(rate_limit_handler)
         self.openai = openai
         self.model = model
+        self.dimensions = dimensions
         self.client = self._initialize_client(**kwargs)
 
     @abc.abstractmethod
@@ -66,11 +68,15 @@ class BaseOpenAIEmbeddings(Embedder, abc.ABC):
 
         Args:
             text (str): The text to generate an embedding for.
-            **kwargs (Any): Additional arguments to pass to the OpenAI embedding generation function.
+            **kwargs (Any): Additional arguments to pass to the OpenAI
+                embedding generation function.
         """
         try:
+            embedding_params = kwargs.copy()
+            if self.dimensions is not None and "dimensions" not in embedding_params:
+                embedding_params["dimensions"] = self.dimensions
             response = self.client.embeddings.create(
-                input=text, model=self.model, **kwargs
+                input=text, model=self.model, **embedding_params
             )
             embedding: list[float] = response.data[0].embedding
             return embedding
@@ -86,7 +92,11 @@ class OpenAIEmbeddings(BaseOpenAIEmbeddings):
     This class uses the OpenAI python client to generate embeddings for text data.
 
     Args:
-        model (str): The name of the OpenAI embedding model to use. Defaults to "text-embedding-ada-002".
+        model (str): The name of the OpenAI embedding model to use. Defaults to
+            "text-embedding-ada-002".
+        dimensions (Optional[int]): The number of dimensions the resulting
+            output embeddings should have. Only supported by OpenAI embedding
+            models that allow shortening embeddings.
         kwargs: All other parameters will be passed to the openai.OpenAI init.
     """
 
@@ -100,8 +110,13 @@ class AzureOpenAIEmbeddings(BaseOpenAIEmbeddings):
     This class uses the Azure OpenAI python client to generate embeddings for text data.
 
     Args:
-        model (str): The name of the Azure OpenAI embedding model to use. Defaults to "text-embedding-ada-002".
-        kwargs: All other parameters will be passed to the openai.AzureOpenAI init.
+        model (str): The name of the Azure OpenAI embedding model to use.
+            Defaults to "text-embedding-ada-002".
+        dimensions (Optional[int]): The number of dimensions the resulting
+            output embeddings should have. Only supported by Azure OpenAI
+            embedding models that allow shortening embeddings.
+        kwargs: All other parameters will be passed to the openai.AzureOpenAI
+            init.
     """
 
     def _initialize_client(self, **kwargs: Any) -> Any:
