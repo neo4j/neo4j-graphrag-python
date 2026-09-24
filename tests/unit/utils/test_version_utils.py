@@ -179,6 +179,16 @@ class TestSupportsSearchClause:
             ("2025.12.0", False),
             ("5.23.0", False),
             ("5.26.0", False),
+            # Aura does not keep a version scheme that tracks its engine:
+            # since the March 2025 release every Aura instance reports
+            # 5.27.0 via dbms.components() (a frozen constant for SemVer
+            # parsers), so only that exact version is SEARCH-capable.
+            # A >= comparison would also match year-based Aura strings such
+            # as 2025.x-aura, which are not SEARCH-capable.
+            ("5.27-aura", True),
+            ("5.26.0-aura", False),
+            ("2025.01-aura", False),
+            ("5.27.0", False),
         ],
     )
     def test_version_check(
