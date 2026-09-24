@@ -15,7 +15,7 @@
 
 [project]
 name = "neo4j-graphrag"
-version = "1.19.0"
+version = "1.21.0"
 description = "Python package to allow easy integration to Neo4j's GraphRAG features"
 authors = [
     {name = "Neo4j, Inc", email = "team-gen-ai@neo4j.com"}
@@ -27,15 +27,15 @@ dependencies = [
     "neo4j>=5.28.4,<7.0.0",
     "pydantic>=2.6.3,<3.0.0",
     "fsspec>=2024.12.0",
-    "pypdf>=6.14.2,<7.0.0",
+    "pypdf>=6.19.0,<7.0.0",
     "json-repair>=0.44.1,<1.0.0",
-    "pyyaml>=6.0.2,<7.0.0",
-    "types-pyyaml>=6.0.12.20240917,<7.0.0",
+    "pyyaml>=6.0.3,<7.0.0",
+    "types-pyyaml>=6.0.12.20260906,<7.0.0",
     "numpy>=2.0.0,<3.0.0; python_version >= '3.9' and python_version < '3.13'",
     "numpy>=2.1.0,<3.0.0; python_version >= '3.13' and python_version < '3.15'",
     "scipy>=1.13.0,<2.0.0; python_version >= '3.9' and python_version < '3.13'",
     "scipy>=1.15.0,<2.0.0; python_version >= '3.13' and python_version < '3.15'",
-    "tenacity>=9.1.2,<10.0.0",
+    "tenacity>=9.1.4,<10.0.0",
 ]
 
 [project.urls]
@@ -75,7 +75,7 @@ examples = [
 # NOTE: spaCy currently has a Python 3.14 import-time failure via its pydantic v1 path
 # (see https://github.com/explosion/spaCy/issues/13895). Until upstream resolves this,
 # only advertise/install the `nlp` extra on Python <3.14.
-nlp = ["spacy==3.8.7; python_version < '3.14'"]
+nlp = ["spacy==3.8.16; python_version < '3.14'"]
 fuzzy-matching = ["rapidfuzz>=3.12.2,<4.0.0"]
 
 [dependency-groups]

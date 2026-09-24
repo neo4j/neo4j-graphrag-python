@@ -67,6 +67,19 @@ class ComponentMeta(type):
         run_context_method = attrs.get("run_with_context")
         run = run_context_method if run_context_method is not None else run_method
         if run is None:
+            # no run method defined here: fall back to a concrete implementation
+            # inherited from a base class (Component's placeholders don't count)
+            for base in bases:
+                for attr in ("run_with_context", "run"):
+                    candidate = getattr(base, attr, None)
+                    if candidate is not None and candidate is not getattr(
+                        Component, attr
+                    ):
+                        run = candidate
+                        break
+                if run is not None:
+                    break
+        if run is None:
             raise RuntimeError(
                 f"You must implement either `run` or `run_with_context` in Component '{name}'"
             )

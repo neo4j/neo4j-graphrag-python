@@ -668,8 +668,10 @@ To implement a custom text splitter, the `TextSplitter` interface can be used:
 
 .. code:: python
 
+    from collections.abc import Iterator
+
     from neo4j_graphrag.components.text_splitters.base import TextSplitter
-    from neo4j_graphrag.components.types import TextChunks, TextChunk
+    from neo4j_graphrag.components.types import TextChunk
 
 
     class MyTextSplitter(TextSplitter):
@@ -677,13 +679,9 @@ To implement a custom text splitter, the `TextSplitter` interface can be used:
         def __init__(self, separator: str = ".") -> None:
             self.separator = separator
 
-        async def run(self, text: str) -> TextChunks:
-             return TextChunks(
-                 chunks=[
-                     TextChunk(text=text_chunk)
-                     for text_chunk in text.split(self.separator)
-                 ]
-             )
+        def iter_chunks(self, text: str) -> Iterator[TextChunk]:
+            for index, text_chunk in enumerate(text.split(self.separator)):
+                yield TextChunk(text=text_chunk, index=index)
 
 
 Chunk Embedder
