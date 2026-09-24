@@ -419,8 +419,9 @@ class ParquetWriter(KGWriter):
                     if unique_filename.endswith(".parquet")
                     else unique_filename
                 )
+                # Keep the raw label here so relationship endpoints match this node's "name".
                 if meta.node_label is not None:
-                    node_label_to_source_name[meta.node_label] = resolved_stem
+                    node_label_to_source_name[meta.node_label] = meta.node_label
 
                 pk_names = (
                     meta.primary_key_property_names

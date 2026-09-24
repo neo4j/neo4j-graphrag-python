@@ -697,6 +697,40 @@ async def test_parquet_writer_run_success() -> None:
 
 
 @pytest.mark.asyncio
+async def test_parquet_writer_relationship_source_name_matches_node_name() -> None:
+    """Relationship start/end source names must match the node's own "name", not its sanitized filename stem."""
+    pytest.importorskip("pyarrow")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out = Path(tmpdir)
+        dest = _LocalParquetDestination(out)
+        writer = ParquetWriter(
+            nodes_dest=dest,
+            relationships_dest=dest,
+            collision_handler=FilenameCollisionHandler(),
+        )
+
+        node1 = Neo4jNode(id="n1", label="Café", properties={})
+        node2 = Neo4jNode(id="n2", label="Office", properties={})
+        rel = Neo4jRelationship(
+            start_node_id="n1", end_node_id="n2", type="LOCATED_IN", properties={}
+        )
+        graph = Neo4jGraph(nodes=[node1, node2], relationships=[rel])
+
+        result = await writer.run(graph=graph)
+
+        assert result.status == "SUCCESS"
+        assert result.metadata is not None
+        files = result.metadata["files"]
+        cafe_file_info = next(f for f in files if f["is_node"] and f["name"] == "Café")
+        rel_file_info = next(f for f in files if not f["is_node"])
+
+        assert "Cafe.parquet" in cafe_file_info["file_path"]
+        assert rel_file_info["start_node_source"] == "Café"
+        assert rel_file_info["end_node_source"] == "Office"
+
+
+@pytest.mark.asyncio
 async def test_parquet_writer_relationship_joins_on_single_property_key() -> None:
     """With a single-property KEY in schema, rel from/to use that property and metadata matches."""
     pytest.importorskip("pyarrow")
