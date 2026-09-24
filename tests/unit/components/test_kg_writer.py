@@ -45,9 +45,39 @@ from neo4j_graphrag.components.types import (
     Neo4jRelationship,
 )
 from neo4j_graphrag.neo4j_queries import (
+    db_cleaning_query,
     upsert_node_query,
     upsert_relationship_query,
 )
+
+
+@pytest.mark.parametrize("database", [None, "custom_database"])
+@mock.patch(
+    "neo4j_graphrag.components.kg_writer.get_version",
+    return_value=((5, 24, 0), False, False),
+)
+def test_db_setup_database(_: Mock, driver: MagicMock, database: str | None) -> None:
+    writer = Neo4jWriter(driver=driver, neo4j_database=database)
+    writer._db_setup()
+    driver.execute_query.assert_called_once_with(mock.ANY, database_=database)
+    assert (
+        "CREATE INDEX __entity__tmp_internal_id"
+        in driver.execute_query.call_args.args[0]
+    )
+
+
+@pytest.mark.parametrize("database", [None, "custom_database"])
+@mock.patch(
+    "neo4j_graphrag.components.kg_writer.get_version",
+    return_value=((5, 24, 0), False, False),
+)
+def test_db_cleaning_database(_: Mock, driver: MagicMock, database: str | None) -> None:
+    writer = Neo4jWriter(driver=driver, neo4j_database=database, batch_size=42)
+    writer._db_cleaning()
+    driver.session.assert_called_once_with(database=database)
+    driver.session.return_value.__enter__.return_value.run.assert_called_once_with(
+        db_cleaning_query(support_variable_scope_clause=True, batch_size=42)
+    )
 
 
 def test_batched() -> None:
