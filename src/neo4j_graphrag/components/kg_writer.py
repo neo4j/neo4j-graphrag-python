@@ -403,7 +403,6 @@ class ParquetWriter(KGWriter):
 
             meta_by_filename: dict[str, Any] = {m.filename: m for m in file_metadata}
             files: list[dict[str, Any]] = []
-            node_label_to_source_name: dict[str, str] = {}
 
             base_nodes = self.nodes_dest.output_path.rstrip("/")
             for filename, content in data["nodes"].items():
@@ -419,9 +418,6 @@ class ParquetWriter(KGWriter):
                     if unique_filename.endswith(".parquet")
                     else unique_filename
                 )
-                # Keep the raw label here so relationship endpoints match this node's "name".
-                if meta.node_label is not None:
-                    node_label_to_source_name[meta.node_label] = meta.node_label
 
                 pk_names = (
                     meta.primary_key_property_names
@@ -471,12 +467,8 @@ class ParquetWriter(KGWriter):
                 await self.relationships_dest.write(content, unique_filename)
                 file_path = os.path.join(base_rel, unique_filename)
 
-                start_node_source = node_label_to_source_name.get(
-                    meta.relationship_head or "", meta.relationship_head or ""
-                )
-                end_node_source = node_label_to_source_name.get(
-                    meta.relationship_tail or "", meta.relationship_tail or ""
-                )
+                start_node_source = meta.relationship_head or ""
+                end_node_source = meta.relationship_tail or ""
                 columns = _build_columns_from_schema(
                     meta.schema,
                     ["from", "to"],
