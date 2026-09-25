@@ -28,6 +28,7 @@ from neo4j_graphrag.components.filename_collision_handler import (
 from neo4j_graphrag.components.parquet_formatter import (
     INTERNAL_ID_PROPERTY,
     Neo4jGraphParquetFormatter,
+    _disambiguate_filestem,
     get_unique_properties_for_node_type,
     sanitize_parquet_filestem,
 )
@@ -94,6 +95,34 @@ def test_sanitize_parquet_filestem_all_disallowed_replaced() -> None:
     # All disallowed chars become underscores (result non-empty, so no fallback)
     assert sanitize_parquet_filestem("...") == "___"
     assert sanitize_parquet_filestem("  ") == "__"
+
+
+# --- _disambiguate_filestem tests ---
+
+
+def test_disambiguate_filestem_free_stem_returned_unchanged() -> None:
+    used: set[str] = set()
+    assert _disambiguate_filestem("Person", used) == "Person"
+    assert used == {"Person"}
+
+
+def test_disambiguate_filestem_repeated_stem_gets_double_underscore_suffix() -> None:
+    used: set[str] = set()
+    assert _disambiguate_filestem("unnamed", used) == "unnamed"
+    assert _disambiguate_filestem("unnamed", used) == "unnamed__2"
+    assert _disambiguate_filestem("unnamed", used) == "unnamed__3"
+    assert used == {"unnamed", "unnamed__2", "unnamed__3"}
+
+
+def test_disambiguate_filestem_skips_suffix_already_taken() -> None:
+    used = {"unnamed", "unnamed__2"}
+    assert _disambiguate_filestem("unnamed", used) == "unnamed__3"
+
+
+def test_disambiguate_filestem_distinct_stems_do_not_interact() -> None:
+    used: set[str] = set()
+    assert _disambiguate_filestem("Person", used) == "Person"
+    assert _disambiguate_filestem("Company", used) == "Company"
 
 
 def test_get_unique_properties_for_node_type_deprecation_warning() -> None:
@@ -694,6 +723,128 @@ async def test_parquet_writer_run_success() -> None:
         assert rel_cols["from"]["is_unique"] is False
         assert rel_cols["to"]["is_primary_key"] is True
         assert rel_cols["to"]["is_unique"] is False
+
+
+@pytest.mark.asyncio
+async def test_parquet_writer_relationship_source_name_matches_node_name() -> None:
+    """Relationship start/end source names must match the node's own "name", not its sanitized filename stem."""
+    pytest.importorskip("pyarrow")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out = Path(tmpdir)
+        dest = _LocalParquetDestination(out)
+        writer = ParquetWriter(
+            nodes_dest=dest,
+            relationships_dest=dest,
+            collision_handler=FilenameCollisionHandler(),
+        )
+
+        node1 = Neo4jNode(id="n1", label="Café", properties={})
+        node2 = Neo4jNode(id="n2", label="Office", properties={})
+        rel = Neo4jRelationship(
+            start_node_id="n1", end_node_id="n2", type="LOCATED_IN", properties={}
+        )
+        graph = Neo4jGraph(nodes=[node1, node2], relationships=[rel])
+
+        result = await writer.run(graph=graph)
+
+        assert result.status == "SUCCESS"
+        assert result.metadata is not None
+        files = result.metadata["files"]
+        cafe_file_info = next(f for f in files if f["is_node"] and f["name"] == "Café")
+        rel_file_info = next(f for f in files if not f["is_node"])
+
+        assert "Cafe.parquet" in cafe_file_info["file_path"]
+        assert rel_file_info["start_node_source"] == "Café"
+        assert rel_file_info["end_node_source"] == "Office"
+
+
+@pytest.mark.asyncio
+async def test_parquet_writer_labels_sharing_a_sanitized_stem_get_separate_files() -> (
+    None
+):
+    """Labels that sanitize to the same stem each get their own file, and endpoints still resolve."""
+    pytest.importorskip("pyarrow")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out = Path(tmpdir)
+        dest = _LocalParquetDestination(out)
+        writer = ParquetWriter(
+            nodes_dest=dest,
+            relationships_dest=dest,
+            collision_handler=FilenameCollisionHandler(),
+        )
+
+        # "Café" transliterates to "Cafe", so both labels want the same filename.
+        node1 = Neo4jNode(id="n1", label="Café", properties={})
+        node2 = Neo4jNode(id="n2", label="Cafe", properties={})
+        rel = Neo4jRelationship(
+            start_node_id="n1", end_node_id="n2", type="RENAMED_TO", properties={}
+        )
+        graph = Neo4jGraph(nodes=[node1, node2], relationships=[rel])
+
+        result = await writer.run(graph=graph)
+
+        assert result.status == "SUCCESS"
+        assert result.metadata is not None
+        files = result.metadata["files"]
+
+        node_files = [f for f in files if f["is_node"]]
+        node_names = {f["name"] for f in node_files}
+        assert node_names == {"Café", "Cafe"}
+        # Neither label may overwrite the other's file.
+        assert {Path(f["file_path"]).name for f in node_files} == {
+            "Cafe.parquet",
+            "Cafe__2.parquet",
+        }
+
+        for rel_file in (f for f in files if not f["is_node"]):
+            assert rel_file["start_node_source"] in node_names
+            assert rel_file["end_node_source"] in node_names
+
+
+@pytest.mark.asyncio
+async def test_parquet_writer_relationships_sharing_a_sanitized_stem_get_separate_files() -> (
+    None
+):
+    """Relationship triples that sanitize to the same stem each get their own file."""
+    pytest.importorskip("pyarrow")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out = Path(tmpdir)
+        dest = _LocalParquetDestination(out)
+        writer = ParquetWriter(
+            nodes_dest=dest,
+            relationships_dest=dest,
+            collision_handler=FilenameCollisionHandler(),
+        )
+
+        # Both triples sanitize to "Cafe_LOCATED_IN_Office".
+        cafe_accented = Neo4jNode(id="n1", label="Café", properties={})
+        cafe = Neo4jNode(id="n2", label="Cafe", properties={})
+        office = Neo4jNode(id="n3", label="Office", properties={})
+        rel1 = Neo4jRelationship(
+            start_node_id="n1", end_node_id="n3", type="LOCATED_IN", properties={}
+        )
+        rel2 = Neo4jRelationship(
+            start_node_id="n2", end_node_id="n3", type="LOCATED_IN", properties={}
+        )
+        graph = Neo4jGraph(
+            nodes=[cafe_accented, cafe, office], relationships=[rel1, rel2]
+        )
+
+        result = await writer.run(graph=graph)
+
+        assert result.status == "SUCCESS"
+        assert result.metadata is not None
+        rel_files = [f for f in result.metadata["files"] if not f["is_node"]]
+
+        assert {Path(f["file_path"]).name for f in rel_files} == {
+            "Cafe_LOCATED_IN_Office.parquet",
+            "Cafe_LOCATED_IN_Office__2.parquet",
+        }
+        assert {f["start_node_source"] for f in rel_files} == {"Café", "Cafe"}
+        assert all(Path(f["file_path"]).exists() for f in rel_files)
 
 
 @pytest.mark.asyncio
