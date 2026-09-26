@@ -2,6 +2,10 @@
 
 ## Next
 
+### Added
+
+- Added `neo4j_graphrag.llm.batch` module: batch inference for Google Cloud Platform Vertex AI via the `google-cloud-aiplatform` SDK.
+
 ## 1.21.0
 
 ## 1.20.0
