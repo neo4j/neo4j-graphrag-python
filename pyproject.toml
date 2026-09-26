@@ -71,6 +71,8 @@ examples = [
     "python-dotenv>=1.0.0,<2.0.0",
     # tools_retriever_example.py calls the open-meteo API with it.
     "requests>=2.31.0,<3.0.0",
+    # vertexai_batch_inference.py uploads the batch request file to GCS with it.
+    "google-cloud-storage>=2.0.0,<4.0.0",
 ]
 # NOTE: spaCy currently has a Python 3.14 import-time failure via its pydantic v1 path
 # (see https://github.com/explosion/spaCy/issues/13895). Until upstream resolves this,
