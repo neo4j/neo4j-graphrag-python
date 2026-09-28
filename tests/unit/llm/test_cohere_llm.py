@@ -126,21 +126,37 @@ async def test_cohere_llm_happy_path_async(mock_cohere: Mock) -> None:
 
 
 def test_cohere_llm_failed(mock_cohere: Mock) -> None:
-    mock_cohere.ClientV2.return_value.chat.side_effect = cohere.core.ApiError
+    original_error = cohere.core.ApiError(status_code=500, body="boom")
+    mock_cohere.ClientV2.return_value.chat.side_effect = original_error
     llm = CohereLLM(model_name="something")
     with pytest.raises(LLMGenerationError) as excinfo:
         llm.invoke([{"role": "user", "content": "my text"}])
-    assert "Error calling cohere" in str(excinfo.value)
+    assert excinfo.value.__cause__ is original_error
 
 
 @pytest.mark.asyncio
 async def test_cohere_llm_failed_async(mock_cohere: Mock) -> None:
-    mock_cohere.AsyncClientV2.return_value.chat.side_effect = cohere.core.ApiError
+    original_error = cohere.core.ApiError(status_code=500, body="boom")
+    mock_cohere.AsyncClientV2.return_value.chat.side_effect = original_error
     llm = CohereLLM(model_name="something")
 
     with pytest.raises(LLMGenerationError) as excinfo:
         await llm.ainvoke([{"role": "user", "content": "my text"}])
-    assert "Error calling cohere" in str(excinfo.value)
+    assert excinfo.value.__cause__ is original_error
+
+
+def test_cohere_llm_parse_error_preserves_cause(mock_cohere: Mock) -> None:
+    """_parse_response wraps any parsing failure into LLMGenerationError too,
+    preserving the original exception as __cause__ -- not just the sync/async
+    transport paths."""
+    chat_response_mock = MagicMock()
+    chat_response_mock.usage.tokens.input_tokens = "not-an-int"
+    mock_cohere.ClientV2.return_value.chat.return_value = chat_response_mock
+
+    llm = CohereLLM(model_name="something")
+    with pytest.raises(LLMGenerationError) as excinfo:
+        llm.invoke([{"role": "user", "content": "my text"}])
+    assert isinstance(excinfo.value.__cause__, ValueError)
 
 
 def test_cohere_llm_invoke_happy_path(mock_cohere: Mock) -> None:
