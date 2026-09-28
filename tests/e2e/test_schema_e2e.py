@@ -199,14 +199,14 @@ def test_enhanced_schema_exception(driver: Driver) -> None:
     node_props = result["node_props"]
     assert list(node_props.keys()) == ["Node"]
     assert len(node_props["Node"]) == 1
-    assert {"property", "type"}.issubset(node_props["Node"][0].keys())
+    assert list(node_props["Node"][0].keys()) == ["property", "type"]
     assert node_props["Node"][0]["property"] == "foo"
     assert node_props["Node"][0]["type"] in ["STRING", "INTEGER", "LIST"]
 
     rel_props = result["rel_props"]
     assert list(rel_props.keys()) == ["REL"]
     assert len(rel_props["REL"]) == 1
-    assert {"property", "type"}.issubset(rel_props["REL"][0].keys())
+    assert list(rel_props["REL"][0].keys()) == ["property", "type"]
     assert rel_props["REL"][0]["property"] == "foo"
     assert rel_props["REL"][0]["type"] in ["STRING", "INTEGER", "LIST"]
 
