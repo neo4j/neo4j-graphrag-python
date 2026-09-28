@@ -37,25 +37,25 @@ TextSplitter
 ============
 
 .. autoclass:: neo4j_graphrag.components.text_splitters.base.TextSplitter
-    :members: run
+    :members: run, iter_chunks
 
 FixedSizeSplitter
 =================
 
 .. autoclass:: neo4j_graphrag.components.text_splitters.fixed_size_splitter.FixedSizeSplitter
-    :members: run
+    :members: run, iter_chunks
 
 LangChainTextSplitterAdapter
 ============================
 
 .. autoclass:: neo4j_graphrag.components.text_splitters.langchain.LangChainTextSplitterAdapter
-    :members: run
+    :members: run, iter_chunks
 
 LlamaIndexTextSplitterAdapter
 =============================
 
 .. autoclass:: neo4j_graphrag.components.text_splitters.llamaindex.LlamaIndexTextSplitterAdapter
-    :members: run
+    :members: run, iter_chunks
 
 TextChunkEmbedder
 =================
