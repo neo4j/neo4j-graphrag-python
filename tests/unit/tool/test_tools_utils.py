@@ -17,7 +17,7 @@
 from unittest.mock import MagicMock, patch
 import neo4j
 from neo4j_graphrag.embeddings.base import Embedder
-from neo4j_graphrag.llm.base import LLMInterface
+from neo4j_graphrag.llm.base import LLMBase
 from neo4j_graphrag.retrievers import (
     HybridCypherRetriever,
     HybridRetriever,
@@ -44,7 +44,7 @@ def create_mock_embedder() -> Embedder:
     return embedder
 
 
-def create_mock_llm() -> LLMInterface:
+def create_mock_llm() -> LLMBase:
     llm = MagicMock()
     llm.invoke.return_value = "MATCH (n) RETURN n"
     return llm

@@ -26,19 +26,15 @@ from typing import (
     cast,
 )
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import LLMBase
 from neo4j_graphrag.llm.types import (
-    BaseMessage,
     LLMResponse,
     LLMUsage,
-    MessageList,
-    UserMessage,
 )
 from neo4j_graphrag.llm.utils import split_http_client_kwargs
-from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.rate_limit import (
     RateLimitHandler,
@@ -73,8 +69,8 @@ if TYPE_CHECKING:
 # byte-compatible with the caller's Pydantic model (e.g. ``Neo4jGraph``).
 #
 # When a proper, cross-provider strict-JSON-schema mechanism lands, delete this
-# whole block, the two ``_restore_open_maps`` call sites in ``__invoke_v2`` /
-# ``__ainvoke_v2``, and restore ``_build_output_config`` to passing the raw
+# whole block, the two ``_restore_open_maps`` call sites in ``invoke`` /
+# ``ainvoke``, and restore ``_build_output_config`` to passing the raw
 # ``model_json_schema()`` through.
 # ---------------------------------------------------------------------------
 
@@ -205,86 +201,15 @@ class BaseAnthropicLLM(LLMBase, abc.ABC):
             **kwargs,
         )
 
+    @rate_limit_handler_decorator
     def invoke(
-        self,
-        input: Union[str, List[LLMMessage]],
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        if isinstance(input, str):
-            return self.__invoke_v1(input, message_history, system_instruction)
-        elif isinstance(input, list):
-            return self.__invoke_v2(input, response_format=response_format, **kwargs)
-        else:
-            raise ValueError(f"Invalid input type for invoke method - {type(input)}")
-
-    async def ainvoke(
-        self,
-        input: Union[str, List[LLMMessage]],
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        if isinstance(input, str):
-            return await self.__ainvoke_v1(input, message_history, system_instruction)
-        elif isinstance(input, list):
-            return await self.__ainvoke_v2(
-                input, response_format=response_format, **kwargs
-            )
-        else:
-            raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
-
-    # implementaions
-    @rate_limit_handler_decorator
-    def __invoke_v1(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse:
-        """Sends text to the LLM and returns a response.
-
-        Args:
-            input (str): The text to send to the LLM.
-            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
-                with each message having a specific role assigned.
-            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
-
-        Returns:
-            LLMResponse: The response from the LLM.
-        """
-        try:
-            if isinstance(message_history, MessageHistory):
-                message_history = message_history.messages
-            messages = self.get_messages(input, message_history)
-            response = self.client.messages.create(
-                model=self.model_name,
-                system=system_instruction or self.anthropic.omit,
-                messages=messages,
-                **self.model_params,
-            )
-            text = self._extract_text(response)
-            usage = LLMUsage(
-                request_tokens=response.usage.input_tokens,
-                response_tokens=response.usage.output_tokens,
-                total_tokens=response.usage.input_tokens + response.usage.output_tokens,
-            )
-            return LLMResponse(content=text, usage=usage)
-        except self.anthropic.APIError as e:
-            raise LLMGenerationError(e)
-
-    @rate_limit_handler_decorator
-    def __invoke_v2(
         self,
         input: List[LLMMessage],
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
         try:
-            system_instruction, messages = self.get_messages_v2(input)
+            system_instruction, messages = self.get_messages(input)
             if response_format is not None:
                 kwargs["output_config"] = self._build_output_config(response_format)
             response = self.client.messages.create(
@@ -309,45 +234,7 @@ class BaseAnthropicLLM(LLMBase, abc.ABC):
             raise LLMGenerationError(e)
 
     @async_rate_limit_handler_decorator
-    async def __ainvoke_v1(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse:
-        """Asynchronously sends text to the LLM and returns a response.
-
-        Args:
-            input (str): The text to send to the LLM.
-            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
-                with each message having a specific role assigned.
-            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
-
-        Returns:
-            LLMResponse: The response from the LLM.
-        """
-        try:
-            if isinstance(message_history, MessageHistory):
-                message_history = message_history.messages
-            messages = self.get_messages(input, message_history)
-            response = await self.async_client.messages.create(
-                model=self.model_name,
-                system=system_instruction or self.anthropic.omit,
-                messages=messages,
-                **self.model_params,
-            )
-            text = self._extract_text(response)
-            usage = LLMUsage(
-                request_tokens=response.usage.input_tokens,
-                response_tokens=response.usage.output_tokens,
-                total_tokens=response.usage.input_tokens + response.usage.output_tokens,
-            )
-            return LLMResponse(content=text, usage=usage)
-        except self.anthropic.APIError as e:
-            raise LLMGenerationError(e)
-
-    @async_rate_limit_handler_decorator
-    async def __ainvoke_v2(
+    async def ainvoke(
         self,
         input: List[LLMMessage],
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
@@ -365,7 +252,7 @@ class BaseAnthropicLLM(LLMBase, abc.ABC):
             LLMResponse: The response from the LLM.
         """
         try:
-            system_instruction, messages = self.get_messages_v2(input)
+            system_instruction, messages = self.get_messages(input)
             if response_format is not None:
                 kwargs["output_config"] = self._build_output_config(response_format)
             response = await self.async_client.messages.create(
@@ -476,24 +363,6 @@ class BaseAnthropicLLM(LLMBase, abc.ABC):
 
     def get_messages(
         self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-    ) -> Iterable[MessageParam]:
-        """Constructs the message list for the LLM from the input and message history."""
-        messages: list[dict[str, str]] = []
-        if message_history:
-            if isinstance(message_history, MessageHistory):
-                message_history = message_history.messages
-            try:
-                MessageList(messages=cast(list[BaseMessage], message_history))
-            except ValidationError as e:
-                raise LLMGenerationError(e.errors()) from e
-            messages.extend(cast(Iterable[dict[str, Any]], message_history))
-        messages.append(UserMessage(content=input).model_dump())
-        return cast("Iterable[MessageParam]", messages)
-
-    def get_messages_v2(
-        self,
         input: list[LLMMessage],
     ) -> tuple[Union[str, Omit], Iterable[MessageParam]]:
         """Constructs the message list for the LLM from the input."""
@@ -519,9 +388,9 @@ class AnthropicLLM(BaseAnthropicLLM):
 
     Args:
         model_name (str): Name of the LLM to use.
-        model_params (Optional[dict], optional): Additional parameters for LLMInterface(V1) passed to the model when text is sent to it. Defaults to None.
+        model_params (Optional[dict], optional): Additional parameters passed to the model when text is sent to it. Defaults to None.
         system_instruction: Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
-        rate_limit_handler (Optional[RateLimitHandler], optional): Handler for managing rate limits for LLMInterface(V1). Defaults to None.
+        rate_limit_handler (Optional[RateLimitHandler], optional): Handler for managing rate limits. Defaults to None.
         base_url (Optional[str], optional): Base URL to use instead of Anthropic's default API
             endpoint, e.g. to reach a custom Anthropic-compatible endpoint. Passed through to
             both the sync and async SDK clients. Can be combined with an ``http_client``
@@ -544,7 +413,7 @@ class AnthropicLLM(BaseAnthropicLLM):
             model_params={"max_tokens": 1000},
             api_key="sk...",   # can also be read from env vars
         )
-        llm.invoke("Who is the mother of Paul Atreides?")
+        llm.invoke([{"role": "user", "content": "Who is the mother of Paul Atreides?"}])
     """
 
     def __init__(

@@ -20,7 +20,6 @@ from pydantic import BaseModel, ValidationError
 
 from neo4j_graphrag.llm.base import LLMBase
 from neo4j_graphrag.llm.types import LLMResponse, LLMUsage
-from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.rate_limit import NoOpRateLimitHandler
 
@@ -79,27 +78,21 @@ class _ConcreteLLM(LLMBase):
 
     def invoke(
         self,
-        input: Union[str, List[LLMMessage]],
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
+        input: List[LLMMessage],
+        *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        if isinstance(input, str):
-            return LLMResponse(content=f"v1:{input}")
-        return LLMResponse(content="v2:list")
+        return LLMResponse(content=f"sync:{input[-1]['content']}")
 
     async def ainvoke(
         self,
-        input: Union[str, List[LLMMessage]],
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
+        input: List[LLMMessage],
+        *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        if isinstance(input, str):
-            return LLMResponse(content=f"async_v1:{input}")
-        return LLMResponse(content="async_v2:list")
+        return LLMResponse(content=f"async:{input[-1]['content']}")
 
 
 # ---------------------------------------------------------------------------
@@ -109,7 +102,7 @@ class _ConcreteLLM(LLMBase):
 
 def test_llmbase_cannot_be_instantiated_directly() -> None:
     with pytest.raises(TypeError):
-        LLMBase(model_name="m")
+        LLMBase(model_name="m")  # type: ignore[abstract]
 
 
 def test_llmbase_sets_model_name() -> None:
@@ -134,7 +127,7 @@ def test_llmbase_accepts_custom_rate_limit_handler() -> None:
 
 
 def test_llmbase_init_does_not_emit_deprecation_warning() -> None:
-    """LLMBase.__init__ delegates to LLMInterfaceV2, which has no deprecation warning."""
+    """LLMBase.__init__ emits no deprecation warning."""
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         _ConcreteLLM(model_name="m")
@@ -145,24 +138,18 @@ def test_llmbase_init_does_not_emit_deprecation_warning() -> None:
 
 
 # ---------------------------------------------------------------------------
-# invoke routing
+# invoke / ainvoke
 # ---------------------------------------------------------------------------
 
 
-def test_invoke_with_str_routes_to_v1() -> None:
-    llm = _ConcreteLLM(model_name="m")
-    result = llm.invoke("hello")
-    assert result.content == "v1:hello"
-
-
-def test_invoke_with_list_routes_to_v2() -> None:
+def test_invoke_accepts_message_list() -> None:
     llm = _ConcreteLLM(model_name="m")
     messages: List[LLMMessage] = [{"role": "user", "content": "hi"}]
     result = llm.invoke(messages)
-    assert result.content == "v2:list"
+    assert result.content == "sync:hi"
 
 
-def test_invoke_v2_accepts_response_format_kwarg() -> None:
+def test_invoke_accepts_response_format_kwarg() -> None:
     class MyModel(BaseModel):
         answer: str
 
@@ -170,31 +157,19 @@ def test_invoke_v2_accepts_response_format_kwarg() -> None:
     messages: List[LLMMessage] = [{"role": "user", "content": "hi"}]
     # response_format must be keyword-only; this should not raise
     result = llm.invoke(messages, response_format=MyModel)
-    assert result.content == "v2:list"
-
-
-# ---------------------------------------------------------------------------
-# ainvoke routing
-# ---------------------------------------------------------------------------
+    assert result.content == "sync:hi"
 
 
 @pytest.mark.asyncio
-async def test_ainvoke_with_str_routes_to_v1() -> None:
-    llm = _ConcreteLLM(model_name="m")
-    result = await llm.ainvoke("hello")
-    assert result.content == "async_v1:hello"
-
-
-@pytest.mark.asyncio
-async def test_ainvoke_with_list_routes_to_v2() -> None:
+async def test_ainvoke_accepts_message_list() -> None:
     llm = _ConcreteLLM(model_name="m")
     messages: List[LLMMessage] = [{"role": "user", "content": "hi"}]
     result = await llm.ainvoke(messages)
-    assert result.content == "async_v2:list"
+    assert result.content == "async:hi"
 
 
 # ---------------------------------------------------------------------------
-# Tool calling defaults (inherited from LLMInterface)
+# Tool calling defaults (inherited from LLMBase)
 # ---------------------------------------------------------------------------
 
 

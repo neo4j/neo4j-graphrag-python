@@ -42,14 +42,14 @@ from neo4j_graphrag.components.text_splitters.fixed_size_splitter import (
 )
 from neo4j_graphrag.experimental.pipeline import Pipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
-from neo4j_graphrag.llm import LLMInterface, LLMResponse
+from neo4j_graphrag.llm import LLMBase, LLMResponse
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 @pytest.fixture
-def llm() -> LLMInterface:
-    llm = MagicMock(spec=LLMInterface)
+def llm() -> LLMBase:
+    llm = MagicMock(spec=LLMBase)
     return llm
 
 
@@ -75,7 +75,7 @@ def chunk_embedder(embedder: Embedder) -> TextChunkEmbedder:
 
 
 @pytest.fixture
-def entity_relation_extractor(llm: LLMInterface) -> LLMEntityRelationExtractor:
+def entity_relation_extractor(llm: LLMBase) -> LLMEntityRelationExtractor:
     return LLMEntityRelationExtractor(
         llm=llm,
         on_error=OnError.RAISE,

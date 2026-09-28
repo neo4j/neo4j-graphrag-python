@@ -59,7 +59,7 @@ def test_mistralai_llm_invoke(mock_mistral: Mock) -> None:
 
     llm = MistralAILLM(model_name="mistral-model")
 
-    res = llm.invoke("some input")
+    res = llm.invoke([{"role": "user", "content": "some input"}])
 
     assert isinstance(res, LLMResponse)
     assert res.content == "mistral response"
@@ -83,17 +83,19 @@ def test_mistralai_llm_invoke_with_message_history(mock_mistral: Mock) -> None:
         {"role": "assistant", "content": "Usually around 6am."},
     ]
     question = "What about next season?"
-    res = llm.invoke(question, message_history, system_instruction=system_instruction)
-
-    assert isinstance(res, LLMResponse)
-    assert res.content == "mistral response"
     messages: List[LLMMessage] = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
-    _as_mock(llm.client.chat.complete).assert_called_once_with(
-        messages=messages,
-        model=model,
-    )
+    res = llm.invoke(messages)
+
+    assert isinstance(res, LLMResponse)
+    assert res.content == "mistral response"
+    _as_mock(llm.client.chat.complete).assert_called_once()
+    call_args = _as_mock(llm.client.chat.complete).call_args[1]
+    assert call_args["model"] == model
+    assert [m.content for m in call_args["messages"]] == [
+        m["content"] for m in messages
+    ]
 
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
@@ -116,44 +118,18 @@ def test_mistralai_llm_invoke_with_message_history_and_system_instruction(
     question = "What about next season?"
 
     # first invocation - initial instructions
-    res = llm.invoke(question, message_history, system_instruction=system_instruction)
-    assert isinstance(res, LLMResponse)
-    assert res.content == "mistral response"
     messages: List[LLMMessage] = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
-    _as_mock(llm.client.chat.complete).assert_called_once_with(
-        messages=messages,
-        model=model,
-    )
-
-    assert _as_mock(llm.client.chat.complete).call_count == 1
-
-
-@patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
-def test_mistralai_llm_invoke_with_message_history_validation_error(
-    mock_mistral: Mock,
-) -> None:
-    mock_mistral_instance = mock_mistral.return_value
-    chat_response_mock = MagicMock()
-    chat_response_mock.choices = [
-        MagicMock(message=MagicMock(content="mistral response"))
+    res = llm.invoke(messages)
+    assert isinstance(res, LLMResponse)
+    assert res.content == "mistral response"
+    _as_mock(llm.client.chat.complete).assert_called_once()
+    call_args = _as_mock(llm.client.chat.complete).call_args[1]
+    assert call_args["model"] == model
+    assert [m.content for m in call_args["messages"]] == [
+        m["content"] for m in messages
     ]
-    mock_mistral_instance.chat.complete.return_value = chat_response_mock
-    model = "mistral-model"
-    system_instruction = "You are a helpful assistant."
-
-    llm = MistralAILLM(model_name=model, system_instruction=system_instruction)
-
-    message_history = [
-        {"role": "user", "content": "When does the sun come up in the summer?"},
-        {"role": "monkey", "content": "Usually around 6am."},
-    ]
-    question = "What about next season?"
-
-    with pytest.raises(LLMGenerationError) as exc_info:
-        llm.invoke(question, message_history)  # type: ignore
-    assert "Input should be 'user', 'assistant' or 'system" in str(exc_info.value)
 
 
 @pytest.mark.asyncio
@@ -172,7 +148,7 @@ async def test_mistralai_llm_ainvoke(mock_mistral: Mock) -> None:
 
     llm = MistralAILLM(model_name="mistral-model")
 
-    res = await llm.ainvoke("some input")
+    res = await llm.ainvoke([{"role": "user", "content": "some input"}])
 
     assert isinstance(res, LLMResponse)
     assert res.content == "async mistral response"
@@ -190,7 +166,7 @@ def test_mistralai_llm_invoke_sdkerror(mock_mistral: Mock) -> None:
     llm = MistralAILLM(model_name="mistral-model")
 
     with pytest.raises(LLMGenerationError):
-        llm.invoke("some input")
+        llm.invoke([{"role": "user", "content": "some input"}])
 
 
 @pytest.mark.asyncio
@@ -208,15 +184,12 @@ async def test_mistralai_llm_ainvoke_sdkerror(mock_mistral: Mock) -> None:
     llm = MistralAILLM(model_name="mistral-model")
 
     with pytest.raises(LLMGenerationError):
-        await llm.ainvoke("some input")
-
-
-# V2 Interface Tests (List[LLMMessage] input)
+        await llm.ainvoke([{"role": "user", "content": "some input"}])
 
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
-def test_mistralai_llm_invoke_v2_happy_path(mock_mistral: Mock) -> None:
-    """Test V2 interface invoke method with List[LLMMessage] input."""
+def test_mistralai_llm_invoke_happy_path(mock_mistral: Mock) -> None:
+    """Test invoke method with List[LLMMessage] input."""
     mock_mistral_instance = mock_mistral.return_value
     chat_response_mock = MagicMock()
     chat_response_mock.choices = [
@@ -243,8 +216,8 @@ def test_mistralai_llm_invoke_v2_happy_path(mock_mistral: Mock) -> None:
 
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
-def test_mistralai_llm_invoke_v2_with_conversation_history(mock_mistral: Mock) -> None:
-    """Test V2 interface invoke method with complex conversation history."""
+def test_mistralai_llm_invoke_with_conversation_history(mock_mistral: Mock) -> None:
+    """Test invoke method with complex conversation history."""
     mock_mistral_instance = mock_mistral.return_value
     chat_response_mock = MagicMock()
     chat_response_mock.choices = [
@@ -272,8 +245,8 @@ def test_mistralai_llm_invoke_v2_with_conversation_history(mock_mistral: Mock) -
 
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
-def test_mistralai_llm_invoke_v2_no_system_message(mock_mistral: Mock) -> None:
-    """Test V2 interface invoke method without system message."""
+def test_mistralai_llm_invoke_no_system_message(mock_mistral: Mock) -> None:
+    """Test invoke method without system message."""
     mock_mistral_instance = mock_mistral.return_value
     chat_response_mock = MagicMock()
     chat_response_mock.choices = [
@@ -299,8 +272,8 @@ def test_mistralai_llm_invoke_v2_no_system_message(mock_mistral: Mock) -> None:
 
 @pytest.mark.asyncio
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
-async def test_mistralai_llm_ainvoke_v2_happy_path(mock_mistral: Mock) -> None:
-    """Test V2 interface async invoke method with List[LLMMessage] input."""
+async def test_mistralai_llm_ainvoke_happy_path(mock_mistral: Mock) -> None:
+    """Test async invoke method with List[LLMMessage] input."""
     mock_mistral_instance = mock_mistral.return_value
 
     async def mock_complete_async(*_args: Any, **_kwargs: Any) -> MagicMock:
@@ -327,8 +300,8 @@ async def test_mistralai_llm_ainvoke_v2_happy_path(mock_mistral: Mock) -> None:
 @pytest.mark.asyncio
 @patch("neo4j_graphrag.llm.mistralai_llm.SDKError", MockSDKError)
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
-async def test_mistralai_llm_ainvoke_v2_error_handling(mock_mistral: Mock) -> None:
-    """Test V2 interface async invoke method error handling."""
+async def test_mistralai_llm_ainvoke_error_handling(mock_mistral: Mock) -> None:
+    """Test async invoke method error handling."""
     mock_mistral_instance = mock_mistral.return_value
 
     async def mock_complete_async(*args: Any, **kwargs: Any) -> None:
@@ -347,8 +320,8 @@ async def test_mistralai_llm_ainvoke_v2_error_handling(mock_mistral: Mock) -> No
 
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
-def test_mistralai_llm_invoke_v2_validation_error(mock_mistral: Mock) -> None:
-    """Test V2 interface invoke with invalid message role raises error."""
+def test_mistralai_llm_invoke_validation_error(mock_mistral: Mock) -> None:
+    """Test invoke with invalid message role raises error."""
     mock_mistral_instance = mock_mistral.return_value
     chat_response_mock = MagicMock()
     chat_response_mock.choices = [
@@ -368,29 +341,8 @@ def test_mistralai_llm_invoke_v2_validation_error(mock_mistral: Mock) -> None:
 
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
-def test_mistralai_llm_invoke_invalid_input_type(_mock_mistral: Mock) -> None:
-    """Test that invalid input type raises appropriate error."""
-    llm = MistralAILLM(model_name="mistral-model")
-
-    with pytest.raises(ValueError) as exc_info:
-        llm.invoke(123)  # type: ignore
-    assert "Invalid input type for invoke method" in str(exc_info.value)
-
-
-@pytest.mark.asyncio
-@patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
-async def test_mistralai_llm_ainvoke_invalid_input_type(_mock_mistral: Mock) -> None:
-    """Test that invalid input type raises appropriate error for async invoke."""
-    llm = MistralAILLM(model_name="mistral-model")
-
-    with pytest.raises(ValueError) as exc_info:
-        await llm.ainvoke(123)  # type: ignore
-    assert "Invalid input type for ainvoke method" in str(exc_info.value)
-
-
-@patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
-def test_mistralai_llm_get_messages_v2_all_roles(_mock_mistral: Mock) -> None:
-    """Test get_messages_v2 method handles all message roles correctly."""
+def test_mistralai_llm_get_messages_all_roles(_mock_mistral: Mock) -> None:
+    """Test get_messages method handles all message roles correctly."""
     messages: List[LLMMessage] = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Hello"},
@@ -399,7 +351,7 @@ def test_mistralai_llm_get_messages_v2_all_roles(_mock_mistral: Mock) -> None:
     ]
 
     llm = MistralAILLM(model_name="mistral-model")
-    result_messages = llm.get_messages_v2(messages)
+    result_messages = llm.get_messages(messages)
 
     # Verify the correct number of messages are returned
     assert len(result_messages) == 4
@@ -412,8 +364,8 @@ def test_mistralai_llm_get_messages_v2_all_roles(_mock_mistral: Mock) -> None:
 
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
-def test_mistralai_llm_get_messages_v2_unknown_role(_mock_mistral: Mock) -> None:
-    """Test get_messages_v2 method raises error for unknown role."""
+def test_mistralai_llm_get_messages_unknown_role(_mock_mistral: Mock) -> None:
+    """Test get_messages method raises error for unknown role."""
     messages: List[LLMMessage] = [
         {"role": "unknown_role", "content": "This should fail."},  # type: ignore[typeddict-item]
     ]
@@ -421,15 +373,15 @@ def test_mistralai_llm_get_messages_v2_unknown_role(_mock_mistral: Mock) -> None
     llm = MistralAILLM(model_name="mistral-model")
 
     with pytest.raises(ValueError) as exc_info:
-        llm.get_messages_v2(messages)
+        llm.get_messages(messages)
     assert "Unknown role: unknown_role" in str(exc_info.value)
 
 
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
-def test_mistralai_invoke_v2_with_response_format_raises_error(
+def test_mistralai_invoke_with_response_format_raises_error(
     mock_mistral: Mock,
 ) -> None:
-    """Test V2 interface raises NotImplementedError when response_format is used."""
+    """Test raises NotImplementedError when response_format is used."""
 
     class TestModel(BaseModel):
         model_config = ConfigDict(extra="forbid")
@@ -448,7 +400,7 @@ def test_mistralai_invoke_v2_with_response_format_raises_error(
 
 @patch("neo4j_graphrag.llm.mistralai_llm.SDKError", MockSDKError)
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
-def test_mistralai_invoke_v2_rate_limit_handler_called(
+def test_mistralai_invoke_rate_limit_handler_called(
     mock_mistral: Mock,
 ) -> None:
     """Test that the rate limit handler is invoked on the V2 (List[LLMMessage]) path."""
@@ -469,7 +421,7 @@ def test_mistralai_invoke_v2_rate_limit_handler_called(
 @pytest.mark.asyncio
 @patch("neo4j_graphrag.llm.mistralai_llm.SDKError", MockSDKError)
 @patch("neo4j_graphrag.llm.mistralai_llm.Mistral")
-async def test_mistralai_ainvoke_v2_rate_limit_handler_called(
+async def test_mistralai_ainvoke_rate_limit_handler_called(
     mock_mistral: Mock,
 ) -> None:
     """Test that the rate limit handler is invoked on the async V2 (List[LLMMessage]) path."""

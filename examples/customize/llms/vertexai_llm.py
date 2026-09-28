@@ -9,7 +9,12 @@ llm = VertexAILLM(
     # vertexai.generative_models.GenerativeModel client
 )
 res: LLMResponse = llm.invoke(
-    "say something",
-    system_instruction="You are living in 3000 where AI rules the world",
+    [
+        {
+            "role": "system",
+            "content": "You are living in 3000 where AI rules the world",
+        },
+        {"role": "user", "content": "say something"},
+    ]
 )
 print(res.content)

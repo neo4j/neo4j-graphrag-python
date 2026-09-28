@@ -32,7 +32,7 @@ async def main() -> Neo4jGraph:
     Demonstrates entity and relation extraction with structured output.
 
     With use_structured_output=True:
-    - Uses LLMInterfaceV2 (list of messages)
+    - Uses structured output (list of messages)
     - Passes Neo4jGraph Pydantic model as response_format to invoke()
     - Ensures response conforms to expected graph structure
     - Provides automatic type validation

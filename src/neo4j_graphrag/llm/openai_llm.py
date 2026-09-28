@@ -119,38 +119,6 @@ class BaseOpenAILLM(LLMBase, abc.ABC):
             **kwargs,
         )
 
-    def invoke(
-        self,
-        input: Union[str, List[LLMMessage]],
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        if isinstance(input, str):
-            return self.__invoke_v1(input, message_history, system_instruction)
-        elif isinstance(input, list):
-            return self.__invoke_v2(input, response_format=response_format, **kwargs)
-        else:
-            raise ValueError(f"Invalid input type for invoke method - {type(input)}")
-
-    async def ainvoke(
-        self,
-        input: Union[str, List[LLMMessage]],
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        if isinstance(input, str):
-            return await self.__ainvoke_v1(input, message_history, system_instruction)
-        elif isinstance(input, list):
-            return await self.__ainvoke_v2(
-                input, response_format=response_format, **kwargs
-            )
-        else:
-            raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
-
     def invoke_with_tools(
         self,
         input: str,
@@ -184,7 +152,7 @@ class BaseOpenAILLM(LLMBase, abc.ABC):
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> Iterable[ChatCompletionMessageParam]:
-        """Constructs the message list for OpenAI chat completion for legacy LLMInterface."""
+        """Constructs the message list for the OpenAI chat completion tool-calling API."""
         messages = []
         if system_instruction:
             messages.append(SystemMessage(content=system_instruction).model_dump())
@@ -199,11 +167,11 @@ class BaseOpenAILLM(LLMBase, abc.ABC):
         messages.append(UserMessage(content=input).model_dump())
         return messages  # type: ignore
 
-    def get_messages_v2(
+    def build_llm_messages(
         self,
         messages: list[LLMMessage],
     ) -> Iterable[ChatCompletionMessageParam]:
-        """Constructs the message list for OpenAI chat completion for LLMInterfaceV2."""
+        """Constructs the message list for OpenAI chat completion."""
         chat_messages = []
         for m in messages:
             message_type: Type[ChatCompletionMessageParam]
@@ -247,13 +215,13 @@ class BaseOpenAILLM(LLMBase, abc.ABC):
             raise LLMGenerationError(f"Tool {tool} is not a valid Tool object")
 
     @rate_limit_handler_decorator
-    def __invoke_v2(
+    def invoke(
         self,
         input: List[LLMMessage],
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        """New invoke method for LLMInterfaceV2.
+        """Sends a list of messages to the LLM and retrieves a response.
 
         Args:
             input (List[LLMMessage]): Input to the LLM.
@@ -265,7 +233,7 @@ class BaseOpenAILLM(LLMBase, abc.ABC):
             LLMResponse: The response from the LLM.
         """
         try:
-            messages = self.get_messages_v2(input)
+            messages = self.build_llm_messages(input)
             params = self.model_params.copy() if self.model_params else {}
 
             # Remove response_format from params to avoid conflicts
@@ -307,48 +275,6 @@ class BaseOpenAILLM(LLMBase, abc.ABC):
                 **kwargs,
             )
 
-            content = response.choices[0].message.content or ""
-            usage = None
-            if response.usage:
-                usage = LLMUsage(
-                    request_tokens=response.usage.prompt_tokens,
-                    response_tokens=response.usage.completion_tokens,
-                    total_tokens=response.usage.total_tokens,
-                )
-            return LLMResponse(content=content, usage=usage)
-        except self.openai.OpenAIError as e:
-            raise LLMGenerationError(e)
-
-    @rate_limit_handler_decorator
-    def __invoke_v1(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse:
-        """Sends a text input to the OpenAI chat completion model
-        and returns the response's content.
-
-        Args:
-            input (str): Text sent to the LLM.
-            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
-                with each message having a specific role assigned.
-            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
-
-        Returns:
-            LLMResponse: The response from OpenAI.
-
-        Raises:
-            LLMGenerationError: If anything goes wrong.
-        """
-        try:
-            if isinstance(message_history, MessageHistory):
-                message_history = message_history.messages
-            response = self.client.chat.completions.create(
-                messages=self.get_messages(input, message_history, system_instruction),
-                model=self.model_name,
-                **self.model_params,
-            )
             content = response.choices[0].message.content or ""
             usage = None
             if response.usage:
@@ -437,55 +363,13 @@ class BaseOpenAILLM(LLMBase, abc.ABC):
             raise LLMGenerationError(e)
 
     @async_rate_limit_handler_decorator
-    async def __ainvoke_v1(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse:
-        """Asynchronously sends a text input to the OpenAI chat
-        completion model and returns the response's content.
-
-        Args:
-            input (str): Text sent to the LLM.
-            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
-                with each message having a specific role assigned.
-            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
-
-        Returns:
-            LLMResponse: The response from OpenAI.
-
-        Raises:
-            LLMGenerationError: If anything goes wrong.
-        """
-        try:
-            if isinstance(message_history, MessageHistory):
-                message_history = message_history.messages
-            response = await self.async_client.chat.completions.create(
-                messages=self.get_messages(input, message_history, system_instruction),
-                model=self.model_name,
-                **self.model_params,
-            )
-            content = response.choices[0].message.content or ""
-            usage = None
-            if response.usage:
-                usage = LLMUsage(
-                    request_tokens=response.usage.prompt_tokens,
-                    response_tokens=response.usage.completion_tokens,
-                    total_tokens=response.usage.total_tokens,
-                )
-            return LLMResponse(content=content, usage=usage)
-        except self.openai.OpenAIError as e:
-            raise LLMGenerationError(e)
-
-    @async_rate_limit_handler_decorator
-    async def __ainvoke_v2(
+    async def ainvoke(
         self,
         input: List[LLMMessage],
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        """Asynchronous new invoke method for LLMInterfaceV2.
+        """Asynchronously sends a list of messages to the LLM and retrieves a response.
 
         Args:
             input (List[LLMMessage]): Input to the LLM.
@@ -497,7 +381,7 @@ class BaseOpenAILLM(LLMBase, abc.ABC):
             LLMResponse: The response from the LLM.
         """
         try:
-            messages = self.get_messages_v2(input)
+            messages = self.build_llm_messages(input)
             params = self.model_params.copy() if self.model_params else {}
 
             # Remove response_format from params to avoid conflicts
@@ -646,8 +530,8 @@ class OpenAILLM(BaseOpenAILLM):
 
         Args:
             model_name (str):
-            model_params (str): Parameters for LLMInterface(V1) like temperature that will be passed to the model when text is sent to it. Defaults to None.
-            rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting for LLMInterface(V1). Defaults to retry with exponential backoff.
+            model_params (str): Parameters like temperature that will be passed to the model when text is sent to it. Defaults to None.
+            rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting. Defaults to retry with exponential backoff.
             base_url (Optional[str], optional): Base URL to use instead of OpenAI's default API
                 endpoint, e.g. to reach an OpenAI-compatible server. Passed through to both the
                 sync and async SDK clients. Can be combined with an ``http_client`` passed via
@@ -685,8 +569,8 @@ class AzureOpenAILLM(BaseOpenAILLM):
 
         Args:
             model_name (str):
-            model_params (str): Parameters for LLMInterface(V1) like temperature that will be passed to the model when text is sent to it. Defaults to None.
-            rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting for LLMInterface(V1). Defaults to retry with exponential backoff.
+            model_params (str): Parameters like temperature that will be passed to the model when text is sent to it. Defaults to None.
+            rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting. Defaults to retry with exponential backoff.
             kwargs: All other parameters will be passed to the openai.OpenAI init.
         """
         super().__init__(

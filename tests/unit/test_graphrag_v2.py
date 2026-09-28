@@ -20,14 +20,14 @@ from neo4j_graphrag.exceptions import RagInitializationError, SearchValidationEr
 from neo4j_graphrag.generation.graphrag import GraphRAG
 from neo4j_graphrag.generation.prompts import RagTemplate
 from neo4j_graphrag.generation.types import RagResultModel
-from neo4j_graphrag.llm import LLMResponse, LLMInterfaceV2
+from neo4j_graphrag.llm import LLMResponse, LLMBase
 from neo4j_graphrag.message_history import InMemoryMessageHistory
 from neo4j_graphrag.types import LLMMessage, RetrieverResult, RetrieverResultItem
 
 
 @pytest.fixture(scope="function")
 def llm_v2() -> MagicMock:
-    return MagicMock(spec=LLMInterfaceV2)
+    return MagicMock(spec=LLMBase)
 
 
 def test_graphrag_prompt_template() -> None:

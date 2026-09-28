@@ -32,14 +32,14 @@ from neo4j_graphrag.components.types import (
     TextChunks,
 )
 from neo4j_graphrag.experimental.pipeline.exceptions import InvalidJSONError
-from neo4j_graphrag.llm import LLMInterface, LLMResponse
+from neo4j_graphrag.llm import LLMBase, LLMResponse
 from neo4j_graphrag.llm import OpenAILLM, VertexAILLM
 from unittest.mock import patch
 
 
 @pytest.mark.asyncio
 async def test_extractor_happy_path_no_entities_no_document() -> None:
-    llm = MagicMock(spec=LLMInterface)
+    llm = MagicMock(spec=LLMBase)
     llm.ainvoke.return_value = LLMResponse(content='{"nodes": [], "relationships": []}')
 
     extractor = LLMEntityRelationExtractor(
@@ -56,7 +56,7 @@ async def test_extractor_happy_path_no_entities_no_document() -> None:
 
 @pytest.mark.asyncio
 async def test_extractor_happy_path_no_entities() -> None:
-    llm = MagicMock(spec=LLMInterface)
+    llm = MagicMock(spec=LLMBase)
     llm.ainvoke.return_value = LLMResponse(content='{"nodes": [], "relationships": []}')
 
     extractor = LLMEntityRelationExtractor(
@@ -75,7 +75,7 @@ async def test_extractor_happy_path_no_entities() -> None:
 
 @pytest.mark.asyncio
 async def test_extractor_happy_path_no_entities_no_lexical_graph() -> None:
-    llm = MagicMock(spec=LLMInterface)
+    llm = MagicMock(spec=LLMBase)
     llm.ainvoke.return_value = LLMResponse(content='{"nodes": [], "relationships": []}')
 
     extractor = LLMEntityRelationExtractor(
@@ -91,7 +91,7 @@ async def test_extractor_happy_path_no_entities_no_lexical_graph() -> None:
 
 @pytest.mark.asyncio
 async def test_extractor_happy_path_non_empty_result() -> None:
-    llm = MagicMock(spec=LLMInterface)
+    llm = MagicMock(spec=LLMBase)
     llm.ainvoke.return_value = LLMResponse(
         content='{"nodes": [{"id": "0", "label": "Person", "properties": {}}], "relationships": []}'
     )
@@ -120,7 +120,7 @@ async def test_extractor_happy_path_non_empty_result() -> None:
 
 @pytest.mark.asyncio
 async def test_extractor_missing_entity_id() -> None:
-    llm = MagicMock(spec=LLMInterface)
+    llm = MagicMock(spec=LLMBase)
     llm.ainvoke.return_value = LLMResponse(
         content='{"nodes": [{"label": "Person", "properties": {}}], "relationships": []}'
     )
@@ -134,7 +134,7 @@ async def test_extractor_missing_entity_id() -> None:
 
 @pytest.mark.asyncio
 async def test_extractor_llm_ainvoke_failed() -> None:
-    llm = MagicMock(spec=LLMInterface)
+    llm = MagicMock(spec=LLMBase)
     llm.ainvoke.side_effect = LLMGenerationError()
 
     extractor = LLMEntityRelationExtractor(
@@ -147,7 +147,7 @@ async def test_extractor_llm_ainvoke_failed() -> None:
 
 @pytest.mark.asyncio
 async def test_extractor_llm_unfixable_json() -> None:
-    llm = MagicMock(spec=LLMInterface)
+    llm = MagicMock(spec=LLMBase)
     llm.ainvoke.return_value = LLMResponse(
         content='{"nodes": [{"id": "0", "label": "Person", "properties": {}}], "relationships": }'
     )
@@ -165,7 +165,7 @@ async def test_extractor_llm_unfixable_json() -> None:
 async def test_extractor_llm_invalid_json() -> None:
     """Test what happens when the returned JSON is valid JSON but
     does not match the expected Pydantic model"""
-    llm = MagicMock(spec=LLMInterface)
+    llm = MagicMock(spec=LLMBase)
     llm.ainvoke.return_value = LLMResponse(
         # missing "label" for entity
         content='{"nodes": [{"id": 0, "entity_type": "Person", "properties": {}}], "relationships": []}'
@@ -183,7 +183,7 @@ async def test_extractor_llm_invalid_json() -> None:
 async def test_extractor_llm_invalid_json_is_a_list() -> None:
     """Test what happens when the returned JSON is a valid JSON list,
     but it does not match the expected Pydantic model"""
-    llm = MagicMock(spec=LLMInterface)
+    llm = MagicMock(spec=LLMBase)
     llm.ainvoke.return_value = LLMResponse(
         # missing "label" for entity
         content='[{"nodes": [{"id": 0, "entity_type": "Person", "properties": {}}], "relationships": []}]'
@@ -199,7 +199,7 @@ async def test_extractor_llm_invalid_json_is_a_list() -> None:
 
 @pytest.mark.asyncio
 async def test_extractor_llm_badly_formatted_json_gets_fixed() -> None:
-    llm = MagicMock(spec=LLMInterface)
+    llm = MagicMock(spec=LLMBase)
     llm.ainvoke.return_value = LLMResponse(
         content='{"nodes": [{"id": "0", "label": "Person", "properties": {}}], "relationships": [}'
     )
@@ -220,13 +220,15 @@ async def test_extractor_llm_badly_formatted_json_gets_fixed() -> None:
 
 @pytest.mark.asyncio
 async def test_extractor_custom_prompt() -> None:
-    llm = MagicMock(spec=LLMInterface)
+    llm = MagicMock(spec=LLMBase)
     llm.ainvoke.return_value = LLMResponse(content='{"nodes": [], "relationships": []}')
 
     extractor = LLMEntityRelationExtractor(llm=llm, prompt_template="this is my prompt")
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
     await extractor.run(chunks=chunks)
-    llm.ainvoke.assert_called_once_with("this is my prompt")
+    llm.ainvoke.assert_called_once_with(
+        [{"role": "user", "content": "this is my prompt"}]
+    )
 
 
 def test_fix_invalid_json_empty_result() -> None:
@@ -461,7 +463,7 @@ async def test_extractor_structured_output_with_vertexai() -> None:
 
 def test_extractor_structured_output_unsupported_llm() -> None:
     """Test that use_structured_output=True raises error with unsupported LLMs."""
-    llm = MagicMock(spec=LLMInterface)
+    llm = MagicMock(spec=LLMBase)
     llm.supports_structured_output = False
 
     with pytest.raises(ValueError) as exc_info:
@@ -474,9 +476,9 @@ def test_extractor_structured_output_unsupported_llm() -> None:
 
 
 @pytest.mark.asyncio
-async def test_extractor_structured_output_false_uses_v1() -> None:
-    """Test that use_structured_output=False uses V1 interface (prompt-based)."""
-    llm = MagicMock(spec=LLMInterface)
+async def test_extractor_structured_output_false_uses_prompt_based_extraction() -> None:
+    """Test that use_structured_output=False uses prompt-based extraction."""
+    llm = MagicMock(spec=LLMBase)
     llm.ainvoke.return_value = LLMResponse(content='{"nodes": [], "relationships": []}')
 
     extractor = LLMEntityRelationExtractor(
@@ -486,8 +488,11 @@ async def test_extractor_structured_output_false_uses_v1() -> None:
     chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
     await extractor.run(chunks=chunks)
 
-    # Verify ainvoke was called with just a string prompt (V1), not response_format
+    # Verify ainvoke was called with a single user message and no response_format
     llm.ainvoke.assert_called_once()
     call_args = llm.ainvoke.call_args
-    assert isinstance(call_args[0][0], str)  # First arg is string prompt
+    messages = call_args[0][0]
+    assert isinstance(messages, list)
+    assert len(messages) == 1
+    assert messages[0]["role"] == "user"
     assert "response_format" not in call_args[1]  # No response_format kwarg

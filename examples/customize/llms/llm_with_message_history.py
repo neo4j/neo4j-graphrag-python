@@ -1,5 +1,5 @@
-"""This example illustrates the message_history feature
-of the LLMInterface by mocking a conversation between a user
+"""This example illustrates multi-turn conversations
+by mocking a conversation between a user
 and an LLM about Tom Hanks.
 
 OpenAILLM can be replaced by any supported LLM from this package.
@@ -19,10 +19,8 @@ questions = [
 history: list[dict[str, str]] = []
 with OpenAILLM(model_name="gpt-5", api_key=api_key) as llm:
     for question in questions:
-        res: LLMResponse = llm.invoke(
-            question,
-            message_history=history,  # type: ignore
-        )
+        messages = [*history, {"role": "user", "content": question}]
+        res: LLMResponse = llm.invoke(messages)  # type: ignore[arg-type]
         history.append({"role": "user", "content": question})
         history.append({"role": "assistant", "content": res.content})
 

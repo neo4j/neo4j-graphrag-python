@@ -26,7 +26,7 @@ llm = GeminiLLM(
     model_name="gemini-flash-latest",
     api_key=api_key,
 )
-res = llm.invoke("say something")
+res = llm.invoke([{"role": "user", "content": "say something"}])
 print(res.content)
 
 # The genai SDK has no top-level base_url argument, so GeminiLLM applies it
@@ -38,5 +38,5 @@ if args.base_url:
         api_key=api_key,
         base_url=args.base_url,
     )
-    res = custom_llm.invoke("say something")
+    res = custom_llm.invoke([{"role": "user", "content": "say something"}])
     print(res.content)

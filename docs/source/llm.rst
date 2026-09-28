@@ -118,7 +118,7 @@ different defaults or credential handling than the built-in ``AnthropicLLM``:
 
 
     llm = MyCustomAnthropicLLM(model_name="claude-sonnet-4-5")
-    llm.invoke("Who is the mother of Paul Atreides?")
+    llm.invoke([{"role": "user", "content": "Who is the mother of Paul Atreides?"}])
 
 All of ``invoke``/``ainvoke``, structured-output handling, and message
 building are inherited from :class:`~neo4j_graphrag.llm.anthropic_llm.BaseAnthropicLLM` unchanged; the subclass only
