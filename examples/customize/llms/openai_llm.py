@@ -4,5 +4,5 @@ from neo4j_graphrag.llm import LLMResponse, OpenAILLM
 api_key = None
 
 with OpenAILLM(model_name="gpt-5", api_key=api_key) as llm:
-    res: LLMResponse = llm.invoke("say something")
+    res: LLMResponse = llm.invoke([{"role": "user", "content": "say something"}])
     print(res.content)

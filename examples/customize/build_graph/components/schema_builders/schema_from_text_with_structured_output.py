@@ -6,7 +6,7 @@ with automatic validation against the GraphSchema Pydantic model.
 
 The GraphSchema is now compatible with both OpenAI and VertexAI structured output APIs,
 with strict validation and proper field definitions. With structured output enabled:
-- Uses LLMInterfaceV2 (list of messages)
+- Uses structured output (list of messages)
 - Passes GraphSchema Pydantic model as response_format to ainvoke()
 - Ensures response conforms to expected schema structure
 - Provides automatic type validation
@@ -85,22 +85,22 @@ def print_schema_summary(schema: GraphSchema, title: str) -> None:
             )
 
 
-async def test_v1_without_structured_output() -> GraphSchema:
+async def test_prompt_based_extraction() -> GraphSchema:
     """
-    Test V1 approach (default): Prompt-based JSON extraction with manual cleanup.
+    Test the prompt-based approach (default): JSON extraction with manual cleanup.
 
     With use_structured_output=False (default):
-    - Uses LLMInterface V1 (plain string prompts)
+    - Uses plain prompting (single user message)
     - LLM returns JSON string that needs parsing and cleanup
     - Extensive filtering and validation applied manually
     - More forgiving of LLM errors
     - Works with all LLM providers
     """
     print("\n" + "=" * 60)
-    print("Testing V1: Prompt-based JSON extraction (default)")
+    print("Testing prompt-based JSON extraction (default)")
     print("=" * 60)
 
-    # Initialize LLM with response_format for JSON mode (V1 approach)
+    # Initialize LLM with response_format for JSON mode
     # gpt-4.1-mini rather than gpt-5-mini: this example pins temperature=0 so the
     # extracted schema is reproducible, and gpt-5 models only accept the default
     # temperature (1).
@@ -108,17 +108,17 @@ async def test_v1_without_structured_output() -> GraphSchema:
         model_name="gpt-4.1-mini",
         model_params={
             "temperature": 0,
-            "response_format": {"type": "json_object"},  # JSON mode for V1
+            "response_format": {"type": "json_object"},
         },
     )
 
-    # For VertexAI V1, use:
+    # For VertexAI, use:
     # llm = VertexAILLM(
     #     model_name="gemini-2.5-flash",
     #     model_params={"temperature": 0}
     # )
 
-    # Create extractor WITHOUT structured output (V1 default)
+    # Create extractor WITHOUT structured output (the default)
     extractor = SchemaFromTextExtractor(
         llm=llm,
         use_structured_output=False,  # Default, can be omitted
@@ -127,17 +127,17 @@ async def test_v1_without_structured_output() -> GraphSchema:
     # Extract schema
     schema = await extractor.run(text=SAMPLE_TEXT)
 
-    print_schema_summary(schema, "V1 Result (Prompt-based)")
+    print_schema_summary(schema, "Prompt-based Result")
 
     return schema
 
 
-async def test_v2_with_structured_output() -> GraphSchema:
+async def test_structured_output() -> GraphSchema:
     """
-    Test V2 approach: Structured output with GraphSchema validation.
+    Test the structured output approach with GraphSchema validation.
 
     With use_structured_output=True:
-    - Uses LLMInterfaceV2 (list of messages)
+    - Uses structured output (list of messages)
     - Passes GraphSchema as response_format to ainvoke()
     - LLM returns properly structured data conforming to GraphSchema
     - Automatic validation via Pydantic
@@ -146,21 +146,21 @@ async def test_v2_with_structured_output() -> GraphSchema:
     - Enforces min_length=1 on node properties
     """
     print("\n" + "=" * 60)
-    print("Testing V2: Structured output with GraphSchema")
+    print("Testing structured output with GraphSchema")
     print("=" * 60)
 
-    # Initialize LLM - NO response_format in constructor for V2!
-    # gpt-4.1-mini for the same reason as V1 above: temperature=0 is unsupported
+    # Initialize LLM - NO response_format in constructor for structured output!
+    # gpt-4.1-mini for the same reason as above: temperature=0 is unsupported
     # on gpt-5 models.
     llm = OpenAILLM(model_name="gpt-4.1-mini", model_params={"temperature": 0})
 
-    # For VertexAI V2, use:
+    # For VertexAI, use:
     # llm = VertexAILLM(
     #     model_name="gemini-2.5-flash",
     #     model_params={"temperature": 0}
     # )
 
-    # Create extractor WITH structured output (V2)
+    # Create extractor WITH structured output
     extractor = SchemaFromTextExtractor(
         llm=llm,
         use_structured_output=True,  # This is the key parameter!
@@ -169,7 +169,7 @@ async def test_v2_with_structured_output() -> GraphSchema:
     # Extract schema
     schema = await extractor.run(text=SAMPLE_TEXT)
 
-    print_schema_summary(schema, "V2 Result (Structured Output)")
+    print_schema_summary(schema, "Structured Output Result")
 
     return schema
 
@@ -178,33 +178,33 @@ async def compare_approaches() -> None:
     """Run both approaches and compare results."""
     load_dotenv()
 
-    # Test V1 (default)
-    schema_v1 = await test_v1_without_structured_output()
+    # Test prompt-based extraction (default)
+    schema_prompt_based = await test_prompt_based_extraction()
 
-    # Test V2 (structured output)
-    schema_v2 = await test_v2_with_structured_output()
+    # Test structured output
+    schema_structured = await test_structured_output()
 
     # Comparison
     print("\n" + "=" * 60)
     print("COMPARISON")
     print("=" * 60)
-    print("V1 (Prompt-based):")
-    print(f"  - Node types: {len(schema_v1.node_types)}")
-    print(f"  - Relationship types: {len(schema_v1.relationship_types)}")
-    print(f"  - Patterns: {len(schema_v1.patterns)}")
+    print("Prompt-based:")
+    print(f"  - Node types: {len(schema_prompt_based.node_types)}")
+    print(f"  - Relationship types: {len(schema_prompt_based.relationship_types)}")
+    print(f"  - Patterns: {len(schema_prompt_based.patterns)}")
     print(
-        f"  - Total properties: {sum(len(n.properties) for n in schema_v1.node_types)}"
+        f"  - Total properties: {sum(len(n.properties) for n in schema_prompt_based.node_types)}"
     )
 
-    print("\nV2 (Structured Output):")
-    print(f"  - Node types: {len(schema_v2.node_types)}")
-    print(f"  - Relationship types: {len(schema_v2.relationship_types)}")
-    print(f"  - Patterns: {len(schema_v2.patterns)}")
+    print("\nStructured Output:")
+    print(f"  - Node types: {len(schema_structured.node_types)}")
+    print(f"  - Relationship types: {len(schema_structured.relationship_types)}")
+    print(f"  - Patterns: {len(schema_structured.patterns)}")
     print(
-        f"  - Total properties: {sum(len(n.properties) for n in schema_v2.node_types)}"
+        f"  - Total properties: {sum(len(n.properties) for n in schema_structured.node_types)}"
     )
 
 
 if __name__ == "__main__":
-    # Run comparison between V1 and V2
+    # Run comparison between prompt-based and structured output extraction
     asyncio.run(compare_approaches())

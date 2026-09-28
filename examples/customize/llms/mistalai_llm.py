@@ -7,4 +7,4 @@ with MistralAILLM(
     model_name="mistral-small-latest",
     api_key=api_key,
 ) as llm:
-    llm.invoke("say something")
+    llm.invoke([{"role": "user", "content": "say something"}])

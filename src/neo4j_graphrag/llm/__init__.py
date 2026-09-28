@@ -16,7 +16,7 @@ import warnings
 from typing import Any
 
 from .anthropic_llm import AnthropicLLM, BaseAnthropicLLM
-from .base import LLMBase, LLMInterface, LLMInterfaceV2
+from .base import LLMBase
 from .bedrock_llm import BedrockLLM
 from .cohere_llm import CohereLLM
 from .google_genai_llm import (
@@ -46,8 +46,6 @@ __all__ = [
     "LLMResponse",
     "LLMUsage",
     "LLMBase",
-    "LLMInterface",
-    "LLMInterfaceV2",
     "OllamaLLM",
     "OpenAILLM",
     "BaseOpenAILLM",

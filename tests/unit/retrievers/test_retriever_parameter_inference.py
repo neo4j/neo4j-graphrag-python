@@ -35,7 +35,7 @@ from neo4j_graphrag.retrievers.tools_retriever import ToolsRetriever
 from neo4j_graphrag.tool import Tool, ParameterType
 from neo4j_graphrag.types import RawSearchResult
 from neo4j_graphrag.embeddings.base import Embedder
-from neo4j_graphrag.llm.base import LLMInterface
+from neo4j_graphrag.llm.base import LLMBase
 
 
 # Helper functions for creating mock objects
@@ -53,8 +53,8 @@ def create_mock_embedder() -> Embedder:
     return embedder
 
 
-def create_mock_llm() -> LLMInterface:
-    llm = MagicMock(spec=LLMInterface)
+def create_mock_llm() -> LLMBase:
+    llm = MagicMock(spec=LLMBase)
     llm.invoke.return_value = MagicMock(content="MATCH (n) RETURN n")
     return llm
 

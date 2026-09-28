@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional, Sequence, Type, Union, overload
+from typing import Any, List, Optional, Sequence, Type, Union
 
 from pydantic import BaseModel
 
@@ -36,8 +36,8 @@ from .types import LLMResponse, ToolCallResponse
 logger = logging.getLogger(__name__)
 
 
-class LLMInterface(ABC):
-    """Interface for large language models.
+class LLMBase(ABC):
+    """Abstract base for LLMs.
 
     Args:
         model_name (str): The name of the language model.
@@ -55,10 +55,7 @@ class LLMInterface(ABC):
         model_params: Optional[dict[str, Any]] = None,
         rate_limit_handler: Optional[RateLimitHandler] = None,
         **kwargs: Any,
-    ):
-        logger.warning(
-            "LLMInterface is deprecated and will be removed in future versions. Please use LLMInterfaceV2 instead."
-        )
+    ) -> None:
         self.model_name = model_name
         self.model_params = model_params or {}
 
@@ -70,45 +67,49 @@ class LLMInterface(ABC):
     @abstractmethod
     def invoke(
         self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
+        input: List[LLMMessage],
+        *,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
     ) -> LLMResponse:
-        """Sends a text input to the LLM and retrieves a response.
+        """Sends a list of messages to the LLM and retrieves a response.
 
         Args:
-            input (str): Text sent to the LLM.
-            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
-                with each message having a specific role assigned.
-            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
+            input (List[LLMMessage]): Messages sent to the LLM.
+            response_format (Optional[Union[Type[BaseModel], dict[str, Any]]]): Optional
+                response format specification. Can be a Pydantic model class for structured
+                output or a dict for provider-specific formats. Defaults to None.
 
         Returns:
             LLMResponse: The response from the LLM.
 
         Raises:
             LLMGenerationError: If anything goes wrong.
+            NotImplementedError: If the LLM provider does not support structured output.
         """
 
     @abstractmethod
     async def ainvoke(
         self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
+        input: List[LLMMessage],
+        *,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
     ) -> LLMResponse:
-        """Asynchronously sends a text input to the LLM and retrieves a response.
+        """Asynchronously sends a list of messages to the LLM and retrieves a response.
 
         Args:
-            input (str): Text sent to the LLM.
-            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
-                with each message having a specific role assigned.
-            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
+            input (List[LLMMessage]): Messages sent to the LLM.
+            response_format (Optional[Union[Type[BaseModel], dict[str, Any]]]): Optional
+                response format specification. Can be a Pydantic model class for structured
+                output or a dict for provider-specific formats. Defaults to None.
 
         Returns:
             LLMResponse: The response from the LLM.
 
         Raises:
             LLMGenerationError: If anything goes wrong.
+            NotImplementedError: If the LLM provider does not support structured output.
         """
 
     def invoke_with_tools(
@@ -164,164 +165,6 @@ class LLMInterface(ABC):
             NotImplementedError: If the LLM provider does not support tool calling.
         """
         raise NotImplementedError("This LLM provider does not support tool calling.")
-
-
-class LLMInterfaceV2(ABC):
-    """Interface for large language models compatible with LangChain.
-
-    Args:
-        model_name (str): The name of the language model.
-        model_params (Optional[dict]): Additional parameters passed to the model when text is sent to it. Defaults to None.
-        rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting. Defaults to retry with exponential backoff.
-        **kwargs (Any): Arguments passed to the model when for the class is initialised. Defaults to None.
-    """
-
-    def __init__(
-        self,
-        model_name: str,
-        model_params: Optional[dict[str, Any]] = None,
-        rate_limit_handler: Optional[RateLimitHandler] = None,
-        **kwargs: Any,
-    ):
-        self.model_name = model_name
-        self.model_params = model_params or {}
-
-        if rate_limit_handler is not None:
-            self._rate_limit_handler = rate_limit_handler
-        else:
-            self._rate_limit_handler = DEFAULT_RATE_LIMIT_HANDLER
-
-    @abstractmethod
-    def invoke(
-        self,
-        input: List[LLMMessage],
-        *,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        """Sends a list of messages to the LLM and retrieves a response.
-
-        Args:
-            input (List[LLMMessage]): Text sent to the LLM as a list of LLMMessage objects.
-            response_format (Optional[Union[Type[BaseModel], dict[str, Any]]]): Optional
-                response format specification. Can be a Pydantic model class for structured
-                output or a dict for provider-specific formats. Defaults to None.
-
-        Returns:
-            LLMResponse: The response from the LLM.
-
-        Raises:
-            LLMGenerationError: If anything goes wrong.
-            NotImplementedError: If the LLM provider does not support structured output.
-        """
-
-    @abstractmethod
-    async def ainvoke(
-        self,
-        input: List[LLMMessage],
-        *,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        """Asynchronously sends a list of messages to the LLM and retrieves a response.
-
-        Args:
-            input (List[LLMMessage]): List of messages sent to the LLM.
-            response_format (Optional[Union[Type[BaseModel], dict[str, Any]]]): Optional
-                response format specification. Can be a Pydantic model class for structured
-                output or a dict for provider-specific formats. Defaults to None.
-
-        Returns:
-            LLMResponse: The response from the LLM.
-
-        Raises:
-            LLMGenerationError: If anything goes wrong.
-            NotImplementedError: If the LLM provider does not support structured output.
-        """
-
-
-class LLMBase(LLMInterface, LLMInterfaceV2, ABC):
-    """Abstract base for LLMs that implement both the v1 (str input) and v2
-    (List[LLMMessage] input) call signatures.
-
-    Subclasses must implement ``invoke`` and ``ainvoke`` as a single dispatcher
-    that branches on the type of *input*.  The overloads declared here give
-    type-checkers accurate return-type information at each call site without
-    requiring every concrete class to repeat the same boilerplate.
-    """
-
-    def __init__(
-        self,
-        model_name: str,
-        model_params: Optional[dict[str, Any]] = None,
-        rate_limit_handler: Optional[RateLimitHandler] = None,
-        **kwargs: Any,
-    ) -> None:
-        LLMInterfaceV2.__init__(
-            self,
-            model_name=model_name,
-            model_params=model_params,
-            rate_limit_handler=rate_limit_handler,
-            **kwargs,
-        )
-
-    # --- invoke overloads ---
-
-    @overload
-    def invoke(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse: ...
-
-    @overload
-    def invoke(
-        self,
-        input: List[LLMMessage],
-        *,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse: ...
-
-    @abstractmethod
-    def invoke(
-        self,
-        input: Union[str, List[LLMMessage]],
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse: ...
-
-    # --- ainvoke overloads ---
-
-    @overload
-    async def ainvoke(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse: ...
-
-    @overload
-    async def ainvoke(
-        self,
-        input: List[LLMMessage],
-        *,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse: ...
-
-    @abstractmethod
-    async def ainvoke(
-        self,
-        input: Union[str, List[LLMMessage]],
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse: ...
 
     def close(self) -> None:
         """Close both clients and release any resources.

@@ -115,7 +115,7 @@ It is possible to use Azure OpenAI switching to the `AzureOpenAILLM` class:
         api_version="2024-06-01",  # update appropriate version
         api_key="...",  # api_key is optional and can also be set with OPENAI_API_KEY env var
     )
-    llm.invoke("say something")
+    llm.invoke([{"role": "user", "content": "say something"}])
 
 Check the OpenAI Python client `documentation <https://github.com/openai/openai-python?tab=readme-ov-file#microsoft-azure-openai>`_.
 to learn more about the configuration.
@@ -143,7 +143,7 @@ To use VertexAI, instantiate the `VertexAILLM` class:
     llm = VertexAILLM(
         model_name="gemini-2.5-flash", generation_config=generation_config
     )
-    llm.invoke("say something")
+    llm.invoke([{"role": "user", "content": "say something"}])
 
 
 .. note::
@@ -169,7 +169,7 @@ To use Anthropic, instantiate the `AnthropicLLM` class:
         model_params={"max_tokens": 1000},  # max_tokens must be specified
         api_key=api_key,  # can also set `ANTHROPIC_API_KEY` in env vars
     )
-    llm.invoke("say something")
+    llm.invoke([{"role": "user", "content": "say something"}])
 
 
 .. note::
@@ -193,7 +193,7 @@ To use MistralAI, instantiate the `MistralAILLM` class:
         model_name="mistral-small-latest",
         api_key=api_key,  # can also set `MISTRAL_API_KEY` in env vars
     )
-    llm.invoke("say something")
+    llm.invoke([{"role": "user", "content": "say something"}])
 
 
 .. note::
@@ -218,7 +218,7 @@ To use Cohere, instantiate the `CohereLLM` class:
         model_name="command-a-03-2025",
         api_key=api_key,  # can also set `CO_API_KEY` in env vars
     )
-    llm.invoke("say something")
+    llm.invoke([{"role": "user", "content": "say something"}])
 
 
 .. note::
@@ -244,7 +244,7 @@ it can be queried using the following:
         # model_params={"options": {"temperature": 0}, "format": "json"},
         # host="...",  # when using a remote server
     )
-    llm.invoke("say something")
+    llm.invoke([{"role": "user", "content": "say something"}])
 
 
 Using a Model from LangChain
@@ -274,10 +274,9 @@ Using a Custom Model
 
 If the provided implementations do not match their needs, developers can create a
 custom LLM class by subclassing :class:`neo4j_graphrag.llm.LLMBase`.
-``LLMBase`` combines ``LLMInterface`` (str input, v1 API) and ``LLMInterfaceV2``
-(``List[LLMMessage]`` input, structured output) into a single abstract base class.
-Subclasses implement one ``invoke`` and one ``ainvoke`` dispatcher that branches on
-the type of *input*.
+Subclasses implement ``invoke`` and ``ainvoke``, both taking a list of
+``LLMMessage`` (dicts with ``role`` and ``content`` keys) and an optional
+keyword-only ``response_format`` for structured output.
 
 Here's an example using the Python Ollama client:
 
@@ -287,32 +286,26 @@ Here's an example using the Python Ollama client:
     import ollama
     from pydantic import BaseModel
     from neo4j_graphrag.llm import LLMBase, LLMResponse
-    from neo4j_graphrag.message_history import MessageHistory
     from neo4j_graphrag.types import LLMMessage
 
     class MyOllamaLLM(LLMBase):
 
         def invoke(
             self,
-            input: Union[str, List[LLMMessage]],
-            message_history=None,
-            system_instruction=None,
-            response_format=None,
+            input: List[LLMMessage],
+            *,
+            response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
             **kwargs: Any,
         ) -> LLMResponse:
-            if isinstance(input, str):
-                messages = [{"role": "user", "content": input}]
-            else:
-                messages = list(input)
+            messages = list(input)
             response = ollama.chat(model=self.model_name, messages=messages)
             return LLMResponse(content=response["message"]["content"])
 
         async def ainvoke(
             self,
-            input: Union[str, List[LLMMessage]],
-            message_history=None,
-            system_instruction=None,
-            response_format=None,
+            input: List[LLMMessage],
+            *,
+            response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
             **kwargs: Any,
         ) -> LLMResponse:
             return self.invoke(input)  # TODO: implement with ollama.AsyncClient
@@ -327,7 +320,7 @@ Here's an example using the Python Ollama client:
     response = rag.search(query_text=query_text, retriever_config={"top_k": 5})
     print(response.answer)
 
-See :ref:`llminterface`.
+See :ref:`llmbase`.
 
 
 Structured Output with LLMs
@@ -335,9 +328,7 @@ Structured Output with LLMs
 
 Structured output enables LLMs to return responses conforming to a predefined schema (Pydantic model or JSON schema), ensuring type-safe and consistent data structures. This is useful for extracting entities, relationships, or any structured data with automatic validation.
 
-**V2 Interface (Recommended)**: For :ref:`OpenAILLM <openaillm>`, :ref:`VertexAILLM <vertexaillm>` and :ref:`AnthropicLLM <anthropicllm>`, pass `response_format` as a parameter to the `invoke()` method when using the V2 interface (list of `LLMMessage`). The `response_format` accepts either a Pydantic model class or a JSON schema dictionary. Other LLM providers will raise `NotImplementedError` if `response_format` is used.
-
-**V1 Interface (Legacy)**: With the V1 interface (string input), standard JSON mode is supported for both OpenAI and VertexAI via constructor parameters only (`model_params` for OpenAI, `generation_config` for VertexAI). The `response_format` parameter in `invoke()` is not permitted with V1.
+For :ref:`OpenAILLM <openaillm>`, :ref:`VertexAILLM <vertexaillm>` and :ref:`AnthropicLLM <anthropicllm>`, pass `response_format` as a keyword parameter to the `invoke()` method. The `response_format` accepts either a Pydantic model class or a JSON schema dictionary. Other LLM providers will raise `NotImplementedError` if `response_format` is used.
 
 .. code:: python
 
@@ -353,17 +344,10 @@ Structured output enables LLMs to return responses conforming to a predefined sc
 
     llm = OpenAILLM(model_name="gpt-4.1-mini")
 
-    # V2: Pass response_format to invoke()
+    # Pass response_format to invoke()
     messages = [LLMMessage(role="user", content="Extract: John is a 30 year old engineer.")]
     response = llm.invoke(messages, response_format=Person, temperature=0)
     person = Person.model_validate_json(response.content)  # {"name": "John", "age": 30, ...}
-
-    # V1: Use constructor parameters for standard JSON mode
-    llm_v1 = OpenAILLM(
-        model_name="gpt-4.1-mini",
-        model_params={"response_format": {"type": "json_object"}, "temperature": 0}
-    )
-    response_v1 = llm_v1.invoke("Extract person in JSON format: John is 30 years old.")
 
 OpenAI Structured Output
 -------------------------
@@ -458,7 +442,7 @@ Rate limiting is enabled by default for all LLM instances with the following con
     llm = OpenAILLM(model_name="gpt-5")
 
     # The LLM will automatically retry on rate limit errors
-    response = llm.invoke("Hello, world!")
+    response = llm.invoke([{"role": "user", "content": "Hello, world!"}])
 
 .. note::
 
@@ -519,7 +503,7 @@ For high-throughput applications or when you handle rate limiting externally, yo
         model_name="command-a-03-2025",
         rate_limit_handler=NoOpRateLimitHandler(),
     )
-    llm.invoke("Hello, world!")
+    llm.invoke([{"role": "user", "content": "Hello, world!"}])
 
 
 Configuring the Prompt

@@ -31,7 +31,7 @@ from neo4j_graphrag.experimental.pipeline.config.object_config import (
     Neo4jDriverType,
     ObjectConfig,
 )
-from neo4j_graphrag.llm import LLMInterface, OpenAILLM
+from neo4j_graphrag.llm import LLMBase, OpenAILLM
 
 
 def test_get_class_no_optional_module() -> None:
@@ -139,13 +139,13 @@ def test_llm_config() -> None:
     )
     assert config.class_ == "OpenAILLM"
     assert config.get_module() == "neo4j_graphrag.llm"
-    assert config.get_interface() == LLMInterface
+    assert config.get_interface() == LLMBase
     assert config.params_ == {"model_name": "gpt-5", "api_key": "my-api-key"}
     d = config.parse()
     assert isinstance(d, OpenAILLM)
 
 
-def test_llm_type_with_driver(llm: LLMInterface) -> None:
+def test_llm_type_with_driver(llm: LLMBase) -> None:
     llm_type = LLMType(llm)
     assert llm_type.parse() == llm
 

@@ -60,7 +60,7 @@ from neo4j_graphrag.experimental.pipeline.types.schema import (
     RelationInputType,
 )
 from neo4j_graphrag.generation import PromptTemplate, SchemaExtractionTemplate
-from neo4j_graphrag.llm import LLMInterface
+from neo4j_graphrag.llm import LLMBase
 from neo4j_graphrag.schema import get_structured_schema
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.file_handler import FileFormat, FileHandler
@@ -1569,10 +1569,10 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
     automatic schema extraction from text.
 
     Args:
-        llm (LLMInterface): The language model to use for schema extraction.
+        llm (LLMBase): The language model to use for schema extraction.
         prompt_template (Optional[PromptTemplate]): A custom prompt template to use for extraction.
         llm_params (Optional[Dict[str, Any]]): Additional parameters passed to the LLM.
-        use_structured_output (bool): Whether to use structured output (LLMInterfaceV2) with
+        use_structured_output (bool): Whether to use structured output with
             :class:`~neo4j_graphrag.components.graph_schema_extraction.GraphSchemaExtractionOutput`.
             Only supported for OpenAILLM and VertexAILLM. Defaults to False (uses V1 prompt-based JSON extraction).
 
@@ -1602,12 +1602,12 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
 
     def __init__(
         self,
-        llm: LLMInterface,
+        llm: LLMBase,
         prompt_template: Optional[PromptTemplate] = None,
         llm_params: Optional[Dict[str, Any]] = None,
         use_structured_output: bool = False,
     ) -> None:
-        self._llm: LLMInterface = llm
+        self._llm: LLMBase = llm
         self._prompt_template: PromptTemplate = (
             prompt_template or SchemaExtractionTemplate()
         )
@@ -1771,11 +1771,12 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         return extracted_schema
 
     async def _run_with_structured_output(self, prompt: str) -> GraphSchema:
-        """Extract schema using structured output (V2).
+        """Extract schema using structured output.
 
-        V2 uses LLMInterfaceV2 with
+        Uses
         :class:`~neo4j_graphrag.components.graph_schema_extraction.GraphSchemaExtractionOutput`
-        as ``response_format``, then converts to :class:`GraphSchema`. Requires OpenAI or VertexAI.
+        as ``response_format``, then converts to :class:`GraphSchema`. Requires an LLM
+        with structured output support.
 
         Args:
             prompt: Formatted prompt for schema extraction
@@ -1802,8 +1803,8 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         messages = [LLMMessage(role="user", content=prompt)]
         try:
             llm_result = await self._llm.ainvoke(
-                messages,  # type: ignore[arg-type]
-                response_format=GraphSchemaExtractionOutput,  # type: ignore[call-arg]
+                messages,
+                response_format=GraphSchemaExtractionOutput,
             )
         except LLMGenerationError as e:
             raise SchemaExtractionError("Failed to generate schema from text") from e
@@ -1820,10 +1821,10 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         return GraphSchema.from_extraction_output(dto)
 
     async def _run_with_prompt_based_extraction(self, prompt: str) -> GraphSchema:
-        """Extract schema using prompt-based JSON extraction (V1).
+        """Extract schema using prompt-based JSON extraction.
 
-        V1 uses standard LLM prompting with JSON output. This requires additional
-        filtering and cleanup compared to V2 structured output.
+        Uses standard LLM prompting with JSON output. This requires additional
+        filtering and cleanup compared to structured output.
 
         Args:
             prompt: Formatted prompt for schema extraction
@@ -1837,7 +1838,9 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         """
         # Invoke LLM
         try:
-            response = await self._llm.ainvoke(prompt, **self._llm_params)
+            response = await self._llm.ainvoke(
+                [LLMMessage(role="user", content=prompt)], **self._llm_params
+            )
             content = response.content
         except LLMGenerationError as e:
             raise LLMGenerationError("Failed to generate schema from text") from e
@@ -1846,7 +1849,7 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         content = self._clean_json_content(content)
         extracted_schema = self._parse_and_normalize_schema(content)
 
-        # Apply V1-specific filtering
+        # Apply prompt-based filtering
         extracted_schema = self._apply_v1_filters(extracted_schema)
 
         return validate_extraction_dict_to_graph_schema(extracted_schema)

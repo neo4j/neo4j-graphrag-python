@@ -36,7 +36,7 @@ from neo4j_graphrag.experimental.pipeline.types.definitions import (
     ConnectionDefinition,
     PipelineDefinition,
 )
-from neo4j_graphrag.llm import LLMInterface
+from neo4j_graphrag.llm import LLMBase
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +117,7 @@ class AbstractPipelineConfig(AbstractConfig):
             driver_name: driver_config.parse(extra_data)
             for driver_name, driver_config in self.neo4j_config.items()
         }
-        llms: dict[str, LLMInterface] = {
+        llms: dict[str, LLMBase] = {
             llm_name: llm_config.parse(extra_data)
             for llm_name, llm_config in self.llm_config.items()
         }
@@ -175,11 +175,11 @@ class AbstractPipelineConfig(AbstractConfig):
     def get_default_neo4j_driver(self) -> neo4j.Driver:
         return self.get_neo4j_driver_by_name(self.DEFAULT_NAME)
 
-    def get_llm_by_name(self, name: str) -> LLMInterface:
-        llms: dict[str, LLMInterface] = self._global_data.get("llm_config", {})
+    def get_llm_by_name(self, name: str) -> LLMBase:
+        llms: dict[str, LLMBase] = self._global_data.get("llm_config", {})
         return llms[name]
 
-    def get_default_llm(self) -> LLMInterface:
+    def get_default_llm(self) -> LLMBase:
         return self.get_llm_by_name(self.DEFAULT_NAME)
 
     def get_embedder_by_name(self, name: str) -> Embedder:

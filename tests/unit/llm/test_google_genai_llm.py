@@ -70,7 +70,7 @@ def test_gemini_invoke_happy_path(mock_genai: Tuple[MagicMock, MagicMock]) -> No
 
     llm = GeminiLLM("gemini-2.0-flash")
     input_text = "hello"
-    response = llm.invoke(input_text)
+    response = llm.invoke([{"role": "user", "content": input_text}])
 
     assert response.content == "generated text"
     mock_client.models.generate_content.assert_called_once()
@@ -81,9 +81,9 @@ def test_gemini_invoke_returns_usage_from_usage_metadata(
 ) -> None:
     """response.usage_metadata must populate LLMResponse.usage.
 
-    Regression test: __invoke_v1/__invoke_v2 (sync and async) previously
-    built LLMResponse from response.text alone, silently discarding
-    usage_metadata on every call.
+    Regression test: invoke/ainvoke (sync and async) previously built
+    LLMResponse from response.text alone, silently discarding usage_metadata
+    on every call.
     """
     mock_gen, _ = mock_genai
     mock_client = mock_gen.Client.return_value
@@ -95,7 +95,7 @@ def test_gemini_invoke_returns_usage_from_usage_metadata(
     mock_client.models.generate_content.return_value = mock_response
 
     llm = GeminiLLM("gemini-2.0-flash")
-    response = llm.invoke("hello")
+    response = llm.invoke([{"role": "user", "content": "hello"}])
 
     assert response.usage is not None
     assert response.usage.request_tokens == 10
@@ -103,7 +103,7 @@ def test_gemini_invoke_returns_usage_from_usage_metadata(
     assert response.usage.total_tokens == 15
 
 
-def test_gemini_invoke_v2_returns_usage_from_usage_metadata(
+def test_gemini_invoke_messages_returns_usage_from_usage_metadata(
     mock_genai: Tuple[MagicMock, MagicMock],
 ) -> None:
     mock_gen, _ = mock_genai
@@ -133,7 +133,7 @@ def test_gemini_invoke_usage_is_none_when_usage_metadata_absent(
     mock_client.models.generate_content.return_value = mock_response
 
     llm = GeminiLLM("gemini-2.0-flash")
-    response = llm.invoke("hello")
+    response = llm.invoke([{"role": "user", "content": "hello"}])
 
     assert response.usage is None
 
@@ -150,13 +150,15 @@ async def test_gemini_ainvoke_happy_path(
 
     llm = GeminiLLM("gemini-2.0-flash")
     input_text = "hello"
-    response = await llm.ainvoke(input_text)
+    response = await llm.ainvoke([{"role": "user", "content": input_text}])
 
     assert response.content == "async generated text"
     mock_client.aio.models.generate_content.assert_awaited_once()
 
 
-def test_gemini_invoke_v2_happy_path(mock_genai: Tuple[MagicMock, MagicMock]) -> None:
+def test_gemini_invoke_messages_happy_path(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
     mock_gen, _ = mock_genai
     mock_client = mock_gen.Client.return_value
     mock_response = MagicMock()
@@ -176,7 +178,7 @@ def test_gemini_invoke_v2_happy_path(mock_genai: Tuple[MagicMock, MagicMock]) ->
 
 
 @pytest.mark.asyncio
-async def test_gemini_ainvoke_v2_happy_path(
+async def test_gemini_ainvoke_messages_happy_path(
     mock_genai: Tuple[MagicMock, MagicMock],
 ) -> None:
     mock_gen, _ = mock_genai
@@ -201,7 +203,7 @@ def test_gemini_invoke_error(mock_genai: Tuple[MagicMock, MagicMock]) -> None:
 
     llm = GeminiLLM("gemini-2.0-flash")
     with pytest.raises(LLMGenerationError):
-        llm.invoke("hello")
+        llm.invoke([{"role": "user", "content": "hello"}])
 
 
 def test_gemini_llm_is_base_gemini_llm_subclass() -> None:
@@ -238,7 +240,7 @@ def test_minimal_base_gemini_llm_subclass_exercises_invoke(
             self.client = custom_client
 
     llm = MinimalGeminiLLM("gemini-2.0-flash")
-    response = llm.invoke("hello")
+    response = llm.invoke([{"role": "user", "content": "hello"}])
 
     assert response.content == "minimal subclass response"
     custom_client.models.generate_content.assert_called_once()
@@ -341,10 +343,10 @@ def _content_factory(**kwargs):  # type: ignore[no-untyped-def]
     return obj
 
 
-def test_get_messages_v2_with_image_bytes_appends_part(
+def test_get_messages_with_image_bytes_appends_part(
     mock_genai: Tuple[MagicMock, MagicMock],
 ) -> None:
-    """get_messages_v2 appends a from_bytes Part to the last user Content."""
+    """build_llm_messages appends a from_bytes Part to the last user Content."""
     _, mock_types = mock_genai
     mock_types.Content = MagicMock(side_effect=_content_factory)
     mock_types.Part.from_text = MagicMock(return_value=MagicMock())
@@ -352,7 +354,7 @@ def test_get_messages_v2_with_image_bytes_appends_part(
     mock_types.Part.from_bytes = MagicMock(return_value=mock_image_part)
 
     llm = GeminiLLM("gemini-2.0-flash")
-    _, contents = llm.get_messages_v2(
+    _, contents = llm.build_llm_messages(
         [{"role": "user", "content": "describe this"}],
         image_bytes=b"fake-png",
         image_mime_type="image/png",
@@ -365,21 +367,21 @@ def test_get_messages_v2_with_image_bytes_appends_part(
     assert mock_image_part in contents[-1].parts
 
 
-def test_get_messages_v2_without_image_bytes_unchanged(
+def test_get_messages_without_image_bytes_unchanged(
     mock_genai: Tuple[MagicMock, MagicMock],
 ) -> None:
-    """get_messages_v2 without image_bytes does not call Part.from_bytes (regression)."""
+    """build_llm_messages without image_bytes does not call Part.from_bytes (regression)."""
     _, mock_types = mock_genai
     mock_types.Part.from_bytes = MagicMock()
 
     llm = GeminiLLM("gemini-2.0-flash")
-    _, contents = llm.get_messages_v2([{"role": "user", "content": "hello"}])
+    _, contents = llm.build_llm_messages([{"role": "user", "content": "hello"}])
 
     mock_types.Part.from_bytes.assert_not_called()
     assert len(contents) == 1
 
 
-def test_invoke_v2_image_bytes_not_forwarded_to_config(
+def test_invoke_image_bytes_not_forwarded_to_config(
     mock_genai: Tuple[MagicMock, MagicMock],
 ) -> None:
     """image_bytes must be popped before _build_config — unknown fields raise in GenerateContentConfig."""
@@ -400,83 +402,6 @@ def test_invoke_v2_image_bytes_not_forwarded_to_config(
     config_kwargs = mock_types.GenerateContentConfig.call_args.kwargs
     assert "image_bytes" not in config_kwargs
     assert "image_mime_type" not in config_kwargs
-
-
-@pytest.mark.asyncio
-async def test_ainvoke_v2_image_bytes_not_forwarded_to_config(
-    mock_genai: Tuple[MagicMock, MagicMock],
-) -> None:
-    """Same as sync: image_bytes must not reach GenerateContentConfig in the async path."""
-    mock_gen, mock_types = mock_genai
-    mock_types.Content = MagicMock(side_effect=_content_factory)
-    mock_types.Part.from_text = MagicMock(return_value=MagicMock())
-    mock_types.Part.from_bytes = MagicMock(return_value=MagicMock())
-    mock_response = MagicMock()
-    mock_response.text = "async ok"
-    mock_gen.Client.return_value.aio.models.generate_content = AsyncMock(
-        return_value=mock_response
-    )
-
-    llm = GeminiLLM("gemini-2.0-flash")
-    response = await llm.ainvoke(
-        [{"role": "user", "content": "describe this"}],
-        image_bytes=b"fake-png",
-        image_mime_type="image/png",
-    )
-
-    assert response.content == "async ok"
-    config_kwargs = mock_types.GenerateContentConfig.call_args.kwargs
-    assert "image_bytes" not in config_kwargs
-    assert "image_mime_type" not in config_kwargs
-
-
-def test_get_messages_v2_rejects_unsupported_image_mime_type(
-    mock_genai: Tuple[MagicMock, MagicMock],
-) -> None:
-    """An image_mime_type outside GEMINI_SUPPORTED_IMAGE_MIME_TYPES is rejected."""
-    llm = GeminiLLM("gemini-2.0-flash")
-
-    with pytest.raises(ValueError, match="Unsupported image_mime_type"):
-        llm.get_messages_v2(
-            [{"role": "user", "content": "describe this"}],
-            image_bytes=b"fake-gif",
-            image_mime_type="image/gif",  # type: ignore[arg-type]
-        )
-
-
-def test_get_messages_v2_ignores_mime_type_without_image_bytes(
-    mock_genai: Tuple[MagicMock, MagicMock],
-) -> None:
-    """image_mime_type is only validated when image_bytes is provided."""
-    llm = GeminiLLM("gemini-2.0-flash")
-
-    _, contents = llm.get_messages_v2(
-        [{"role": "user", "content": "hello"}],
-        image_mime_type="image/gif",  # type: ignore[arg-type]
-    )
-
-    assert len(contents) == 1
-
-
-def test_invoke_v1_rejects_image_bytes(
-    mock_genai: Tuple[MagicMock, MagicMock],
-) -> None:
-    """The v1 (str input) path does not support images."""
-    llm = GeminiLLM("gemini-2.0-flash")
-
-    with pytest.raises(ValueError, match="only supported with a list of messages"):
-        llm.invoke("describe this", image_bytes=b"fake-png")  # type: ignore[call-overload]
-
-
-@pytest.mark.asyncio
-async def test_ainvoke_v1_rejects_image_bytes(
-    mock_genai: Tuple[MagicMock, MagicMock],
-) -> None:
-    """Same as sync: the v1 path does not support images."""
-    llm = GeminiLLM("gemini-2.0-flash")
-
-    with pytest.raises(ValueError, match="only supported with a list of messages"):
-        await llm.ainvoke("describe this", image_bytes=b"fake-png")  # type: ignore[call-overload]
 
 
 def test_gemini_image_mime_type_constants() -> None:
