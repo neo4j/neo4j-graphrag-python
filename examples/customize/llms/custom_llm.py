@@ -5,11 +5,7 @@ from typing import Any, Awaitable, Callable, List, Optional, Type, TypeVar, Unio
 from pydantic import BaseModel
 
 from neo4j_graphrag.llm import LLMBase, LLMResponse
-from neo4j_graphrag.utils.rate_limit import (
-    RateLimitHandler,
-    # rate_limit_handler,
-    # async_rate_limit_handler,
-)
+from neo4j_graphrag.utils.rate_limit import RateLimitHandler
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.exceptions import RetryableError
 
@@ -20,29 +16,29 @@ class CustomLLM(LLMBase):
     ):
         super().__init__(model_name, **kwargs)
 
-    # Optional: Apply rate limit handling to synchronous invoke method
-    # @rate_limit_handler
-    def invoke(
+    # Build a provider-specific request from the common message/response-format input.
+    # Raise LLMGenerationError here for build-time failures (validation, schema errors).
+    def _build_request(
         self,
-        input: List[LLMMessage],
+        messages: List[LLMMessage],
         *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
-    ) -> LLMResponse:
-        content: str = (
+    ) -> str:
+        return messages[-1]["content"]
+
+    # Parse the raw response from _call_sync/_call_async into the common LLMResponse shape.
+    def _parse_response(self, raw_response: Any) -> LLMResponse:
+        return LLMResponse(content=raw_response)
+
+    # Rate limiting (self._rate_limit_handler) is applied automatically by LLMBase
+    # around _call_sync/_call_async, so no decorator is needed here.
+    def _call_sync(self, request: str) -> str:
+        return (
             self.model_name + ": " + "".join(random.choices(string.ascii_letters, k=30))
         )
-        return LLMResponse(content=content)
 
-    # Optional: Apply rate limit handling to asynchronous ainvoke method
-    # @async_rate_limit_handler
-    async def ainvoke(
-        self,
-        input: List[LLMMessage],
-        *,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
+    async def _call_async(self, request: str) -> str:
         raise NotImplementedError()
 
 
