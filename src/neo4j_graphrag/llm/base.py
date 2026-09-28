@@ -42,13 +42,16 @@ from .types import LLMResponse, ToolCallResponse
 logger = logging.getLogger(__name__)
 
 
-class _LLMConfigMixin:
-    """Shared configuration state for both the sync and async LLM interfaces.
+class _LLMContractBase(ABC):
+    """Shared configuration state and request/response contract for both the
+    sync and async LLM interfaces.
 
     Owning __init__ here (rather than on SyncLLMInterface or AsyncLLMInterface
     individually) means either interface is fully self-sufficient standalone,
     with no reliance on MRO order to pick up model_name/model_params/
-    rate_limit_handler setup.
+    rate_limit_handler setup. _build_request/_parse_response live here too
+    since they are transport-agnostic and identical for both halves; only
+    _call_sync/_call_async actually differ between them.
 
     Args:
         model_name (str): The name of the language model.
@@ -75,8 +78,27 @@ class _LLMConfigMixin:
         else:
             self._rate_limit_handler = DEFAULT_RATE_LIMIT_HANDLER
 
+    @abstractmethod
+    def _build_request(
+        self,
+        messages: List[LLMMessage],
+        *,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> Any:
+        """Build a provider-specific request from the common message/response-format input.
 
-class SyncLLMInterface(_LLMConfigMixin, ABC):
+        Implementations must raise LLMGenerationError for any build-time failure
+        (message validation, unsupported response_format, schema conversion errors)
+        so callers see one consistent exception type for the whole invoke/ainvoke call.
+        """
+
+    @abstractmethod
+    def _parse_response(self, raw_response: Any) -> LLMResponse:
+        """Parse a provider-specific raw response into the common LLMResponse shape."""
+
+
+class SyncLLMInterface(_LLMContractBase, ABC):
     """Synchronous half of the LLM contract: invoke() plus the hooks it needs."""
 
     def invoke(
@@ -108,25 +130,6 @@ class SyncLLMInterface(_LLMConfigMixin, ABC):
     @rate_limit_handler_decorator
     def _call_sync_with_rate_limit(self, request: Any) -> Any:
         return self._call_sync(request)
-
-    @abstractmethod
-    def _build_request(
-        self,
-        messages: List[LLMMessage],
-        *,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> Any:
-        """Build a provider-specific request from the common message/response-format input.
-
-        Implementations must raise LLMGenerationError for any build-time failure
-        (message validation, unsupported response_format, schema conversion errors)
-        so callers see one consistent exception type for the whole invoke/ainvoke call.
-        """
-
-    @abstractmethod
-    def _parse_response(self, raw_response: Any) -> LLMResponse:
-        """Parse a provider-specific raw response into the common LLMResponse shape."""
 
     @abstractmethod
     def _call_sync(self, request: Any) -> Any:
@@ -163,7 +166,7 @@ class SyncLLMInterface(_LLMConfigMixin, ABC):
         raise NotImplementedError("This LLM provider does not support tool calling.")
 
 
-class AsyncLLMInterface(_LLMConfigMixin, ABC):
+class AsyncLLMInterface(_LLMContractBase, ABC):
     """Asynchronous half of the LLM contract: ainvoke() plus the hooks it needs."""
 
     async def ainvoke(
@@ -195,25 +198,6 @@ class AsyncLLMInterface(_LLMConfigMixin, ABC):
     @async_rate_limit_handler_decorator
     async def _call_async_with_rate_limit(self, request: Any) -> Any:
         return await self._call_async(request)
-
-    @abstractmethod
-    def _build_request(
-        self,
-        messages: List[LLMMessage],
-        *,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> Any:
-        """Build a provider-specific request from the common message/response-format input.
-
-        Implementations must raise LLMGenerationError for any build-time failure
-        (message validation, unsupported response_format, schema conversion errors)
-        so callers see one consistent exception type for the whole invoke/ainvoke call.
-        """
-
-    @abstractmethod
-    def _parse_response(self, raw_response: Any) -> LLMResponse:
-        """Parse a provider-specific raw response into the common LLMResponse shape."""
 
     @abstractmethod
     async def _call_async(self, request: Any) -> Any:
@@ -253,7 +237,7 @@ class AsyncLLMInterface(_LLMConfigMixin, ABC):
 class LLMBase(SyncLLMInterface, AsyncLLMInterface, ABC):
     """Combined sync+async LLM contract every provider implements.
 
-    _LLMConfigMixin.__init__ is resolved exactly once via C3 linearization
+    _LLMContractBase.__init__ is resolved exactly once via C3 linearization
     (it is the shared leaf ancestor of both SyncLLMInterface and
     AsyncLLMInterface), so this combination does not double-initialize.
     """

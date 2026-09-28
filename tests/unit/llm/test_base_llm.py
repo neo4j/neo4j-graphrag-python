@@ -190,11 +190,9 @@ async def test_ainvoke_with_tools_raises_not_implemented() -> None:
 # SyncLLMInterface / AsyncLLMInterface segregation
 #
 # Proves the two interfaces are independently usable, not just combined via
-# LLMBase. This is the exact case the PRD's rejected design broke: an
-# earlier draft had AsyncLLMInterface rely on MRO to inherit __init__ from
-# SyncLLMInterface, which silently failed for an async-only subclass.
-# _LLMConfigMixin fixes this by being the direct, sole owner of __init__ for
-# both interfaces.
+# LLMBase: _LLMContractBase is the direct, sole owner of __init__ for both
+# interfaces, so an async-only (or sync-only) subclass does not rely on MRO
+# to pick up model_name/model_params/rate_limit_handler setup.
 # ---------------------------------------------------------------------------
 
 
