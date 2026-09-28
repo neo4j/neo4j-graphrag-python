@@ -18,7 +18,7 @@ from typing import Any, List, Optional, Type, Union
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from neo4j_graphrag.llm.base import LLMBase
+from neo4j_graphrag.llm.base import AsyncLLMInterface, LLMBase, SyncLLMInterface
 from neo4j_graphrag.llm.types import LLMResponse, LLMUsage
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.rate_limit import NoOpRateLimitHandler
@@ -184,3 +184,84 @@ async def test_ainvoke_with_tools_raises_not_implemented() -> None:
     llm = _ConcreteLLM(model_name="m")
     with pytest.raises(NotImplementedError):
         await llm.ainvoke_with_tools("hello", tools=[])
+
+
+# ---------------------------------------------------------------------------
+# SyncLLMInterface / AsyncLLMInterface segregation
+#
+# Proves the two interfaces are independently usable, not just combined via
+# LLMBase: _LLMContractBase is the direct, sole owner of __init__ for both
+# interfaces, so an async-only (or sync-only) subclass does not rely on MRO
+# to pick up model_name/model_params/rate_limit_handler setup.
+# ---------------------------------------------------------------------------
+
+
+class _SyncOnlyLLM(SyncLLMInterface):
+    """Implements ONLY SyncLLMInterface's abstract hooks. No AsyncLLMInterface anywhere."""
+
+    def _build_request(
+        self,
+        messages: List[LLMMessage],
+        *,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> str:
+        return messages[-1]["content"]
+
+    def _parse_response(self, raw_response: Any) -> LLMResponse:
+        return LLMResponse(content=raw_response)
+
+    def _call_sync(self, request: str) -> str:
+        return f"sync-only:{request}"
+
+
+class _AsyncOnlyLLM(AsyncLLMInterface):
+    """Implements ONLY AsyncLLMInterface's abstract hooks. No SyncLLMInterface anywhere."""
+
+    def _build_request(
+        self,
+        messages: List[LLMMessage],
+        *,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> str:
+        return messages[-1]["content"]
+
+    def _parse_response(self, raw_response: Any) -> LLMResponse:
+        return LLMResponse(content=raw_response)
+
+    async def _call_async(self, request: str) -> str:
+        return f"async-only:{request}"
+
+
+def test_sync_only_interface_is_standalone_and_functional() -> None:
+    handler = NoOpRateLimitHandler()
+    llm = _SyncOnlyLLM(
+        model_name="sync-model",
+        model_params={"temperature": 0.1},
+        rate_limit_handler=handler,
+    )
+    assert llm.model_name == "sync-model"
+    assert llm.model_params == {"temperature": 0.1}
+    assert llm._rate_limit_handler is handler
+
+    messages: List[LLMMessage] = [{"role": "user", "content": "hi"}]
+    result = llm.invoke(messages)
+    assert result.content == "sync-only:hi"
+
+
+@pytest.mark.asyncio
+async def test_async_only_interface_is_standalone_and_functional() -> None:
+    handler = NoOpRateLimitHandler()
+    llm = _AsyncOnlyLLM(
+        model_name="async-model",
+        model_params={"temperature": 0.2},
+        rate_limit_handler=handler,
+    )
+    assert llm.model_name == "async-model"
+    assert llm.model_params == {"temperature": 0.2}
+    assert llm._rate_limit_handler is handler
+
+    messages: List[LLMMessage] = [{"role": "user", "content": "hi"}]
+    result = await llm.ainvoke(messages)
+    assert result.content == "async-only:hi"

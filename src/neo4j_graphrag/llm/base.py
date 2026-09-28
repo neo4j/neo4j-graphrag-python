@@ -42,8 +42,16 @@ from .types import LLMResponse, ToolCallResponse
 logger = logging.getLogger(__name__)
 
 
-class LLMBase(ABC):
-    """Abstract base for LLMs.
+class _LLMContractBase(ABC):
+    """Shared configuration state and request/response contract for both the
+    sync and async LLM interfaces.
+
+    Owning __init__ here (rather than on SyncLLMInterface or AsyncLLMInterface
+    individually) means either interface is fully self-sufficient standalone,
+    with no reliance on MRO order to pick up model_name/model_params/
+    rate_limit_handler setup. _build_request/_parse_response live here too
+    since they are transport-agnostic and identical for both halves; only
+    _call_sync/_call_async actually differ between them.
 
     Args:
         model_name (str): The name of the language model.
@@ -69,6 +77,29 @@ class LLMBase(ABC):
             self._rate_limit_handler = rate_limit_handler
         else:
             self._rate_limit_handler = DEFAULT_RATE_LIMIT_HANDLER
+
+    @abstractmethod
+    def _build_request(
+        self,
+        messages: List[LLMMessage],
+        *,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> Any:
+        """Build a provider-specific request from the common message/response-format input.
+
+        Implementations must raise LLMGenerationError for any build-time failure
+        (message validation, unsupported response_format, schema conversion errors)
+        so callers see one consistent exception type for the whole invoke/ainvoke call.
+        """
+
+    @abstractmethod
+    def _parse_response(self, raw_response: Any) -> LLMResponse:
+        """Parse a provider-specific raw response into the common LLMResponse shape."""
+
+
+class SyncLLMInterface(_LLMContractBase, ABC):
+    """Synchronous half of the LLM contract: invoke() plus the hooks it needs."""
 
     def invoke(
         self,
@@ -96,69 +127,13 @@ class LLMBase(ABC):
         raw_response = self._call_sync_with_rate_limit(request)
         return self._parse_response(raw_response)
 
-    async def ainvoke(
-        self,
-        input: List[LLMMessage],
-        *,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        """Asynchronously sends a list of messages to the LLM and retrieves a response.
-
-        Args:
-            input (List[LLMMessage]): Messages sent to the LLM.
-            response_format (Optional[Union[Type[BaseModel], dict[str, Any]]]): Optional
-                response format specification. Can be a Pydantic model class for structured
-                output or a dict for provider-specific formats. Defaults to None.
-
-        Returns:
-            LLMResponse: The response from the LLM.
-
-        Raises:
-            LLMGenerationError: If anything goes wrong.
-            NotImplementedError: If the LLM provider does not support structured output.
-        """
-        request = self._build_request(input, response_format=response_format, **kwargs)
-        raw_response = await self._call_async_with_rate_limit(request)
-        return self._parse_response(raw_response)
-
     @rate_limit_handler_decorator
     def _call_sync_with_rate_limit(self, request: Any) -> Any:
         return self._call_sync(request)
 
-    @async_rate_limit_handler_decorator
-    async def _call_async_with_rate_limit(self, request: Any) -> Any:
-        return await self._call_async(request)
-
-    @abstractmethod
-    def _build_request(
-        self,
-        messages: List[LLMMessage],
-        *,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> Any:
-        """Build a provider-specific request from the common message/response-format input.
-
-        Implementations must raise LLMGenerationError for any build-time failure
-        (message validation, unsupported response_format, schema conversion errors)
-        so callers see one consistent exception type for the whole invoke/ainvoke call.
-        """
-
-    @abstractmethod
-    def _parse_response(self, raw_response: Any) -> LLMResponse:
-        """Parse a provider-specific raw response into the common LLMResponse shape."""
-
     @abstractmethod
     def _call_sync(self, request: Any) -> Any:
         """Send the built request to the LLM synchronously and return the raw response.
-
-        Implementations must wrap SDK/transport exceptions into LLMGenerationError.
-        """
-
-    @abstractmethod
-    async def _call_async(self, request: Any) -> Any:
-        """Send the built request to the LLM asynchronously and return the raw response.
 
         Implementations must wrap SDK/transport exceptions into LLMGenerationError.
         """
@@ -190,6 +165,47 @@ class LLMBase(ABC):
         """
         raise NotImplementedError("This LLM provider does not support tool calling.")
 
+
+class AsyncLLMInterface(_LLMContractBase, ABC):
+    """Asynchronous half of the LLM contract: ainvoke() plus the hooks it needs."""
+
+    async def ainvoke(
+        self,
+        input: List[LLMMessage],
+        *,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        """Asynchronously sends a list of messages to the LLM and retrieves a response.
+
+        Args:
+            input (List[LLMMessage]): Messages sent to the LLM.
+            response_format (Optional[Union[Type[BaseModel], dict[str, Any]]]): Optional
+                response format specification. Can be a Pydantic model class for structured
+                output or a dict for provider-specific formats. Defaults to None.
+
+        Returns:
+            LLMResponse: The response from the LLM.
+
+        Raises:
+            LLMGenerationError: If anything goes wrong.
+            NotImplementedError: If the LLM provider does not support structured output.
+        """
+        request = self._build_request(input, response_format=response_format, **kwargs)
+        raw_response = await self._call_async_with_rate_limit(request)
+        return self._parse_response(raw_response)
+
+    @async_rate_limit_handler_decorator
+    async def _call_async_with_rate_limit(self, request: Any) -> Any:
+        return await self._call_async(request)
+
+    @abstractmethod
+    async def _call_async(self, request: Any) -> Any:
+        """Send the built request to the LLM asynchronously and return the raw response.
+
+        Implementations must wrap SDK/transport exceptions into LLMGenerationError.
+        """
+
     async def ainvoke_with_tools(
         self,
         input: str,
@@ -216,6 +232,15 @@ class LLMBase(ABC):
             NotImplementedError: If the LLM provider does not support tool calling.
         """
         raise NotImplementedError("This LLM provider does not support tool calling.")
+
+
+class LLMBase(SyncLLMInterface, AsyncLLMInterface, ABC):
+    """Combined sync+async LLM contract every provider implements.
+
+    _LLMContractBase.__init__ is resolved exactly once via C3 linearization
+    (it is the shared leaf ancestor of both SyncLLMInterface and
+    AsyncLLMInterface), so this combination does not double-initialize.
+    """
 
     def close(self) -> None:
         """Close both clients and release any resources.
