@@ -22,6 +22,7 @@ import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm import BedrockLLM
 from neo4j_graphrag.types import LLMMessage
+from neo4j_graphrag.utils.rate_limit import NoOpRateLimitHandler
 
 
 @pytest.fixture
@@ -187,6 +188,38 @@ def test_bedrock_invoke_with_response_format_raises_error(
     llm = BedrockLLM("us.anthropic.claude-sonnet-4-20250514-v1:0")
     with pytest.raises(NotImplementedError):
         llm.invoke(messages, response_format={"type": "json_object"})
+
+
+@pytest.mark.asyncio
+async def test_bedrock_ainvoke_applies_rate_limit_handler_exactly_once(
+    mock_boto3: MagicMock,
+) -> None:
+    """Regression test: the async path must retry through a single rate-limit
+    layer (LLMBase._call_async_with_rate_limit), not double up with an
+    additional sync-side retry inside the executor-run call."""
+    mock_client = mock_boto3.client.return_value
+    mock_client.converse.return_value = _make_converse_response("async response")
+
+    spy_handler = MagicMock(wraps=NoOpRateLimitHandler())
+    llm = BedrockLLM(
+        "us.anthropic.claude-sonnet-4-20250514-v1:0",
+        rate_limit_handler=spy_handler,
+    )
+    response = await llm.ainvoke([{"role": "user", "content": "hello"}])
+
+    assert response.content == "async response"
+    spy_handler.handle_async.assert_called_once()
+    spy_handler.handle_sync.assert_not_called()
+
+
+def test_bedrock_invoke_build_error_wrapped(mock_boto3: MagicMock) -> None:
+    """Request-build-time errors must be wrapped into LLMGenerationError,
+    consistent with transport-error wrapping."""
+    llm = BedrockLLM("us.anthropic.claude-sonnet-4-20250514-v1:0")
+
+    with patch.object(llm, "build_llm_messages", side_effect=ValueError("bad input")):
+        with pytest.raises(LLMGenerationError, match="Error building BedrockLLM"):
+            llm.invoke([{"role": "user", "content": "hello"}])
 
 
 def test_bedrock_invoke_with_model_params(mock_boto3: MagicMock) -> None:
