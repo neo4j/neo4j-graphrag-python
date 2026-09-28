@@ -39,12 +39,6 @@ from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.rate_limit import (
     RateLimitHandler,
 )
-from neo4j_graphrag.utils.rate_limit import (
-    async_rate_limit_handler as async_rate_limit_handler_decorator,
-)
-from neo4j_graphrag.utils.rate_limit import (
-    rate_limit_handler as rate_limit_handler_decorator,
-)
 
 try:
     from vertexai.generative_models import (
@@ -189,69 +183,48 @@ class VertexAILLM(LLMBase):
             input, tools, message_history, system_instruction
         )
 
-    @rate_limit_handler_decorator
-    def invoke(
+    def _build_request(
         self,
-        input: List[LLMMessage],
+        messages: List[LLMMessage],
+        *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
-    ) -> LLMResponse:
-        """Sends a list of messages to the LLM and retrieves a response.
+    ) -> tuple[GenerativeModel, dict[str, Any]]:
+        """Build the Vertex AI model + generate_content(**options) call params.
 
         Args:
-            input (List[LLMMessage]): Input to the LLM.
+            messages (List[LLMMessage]): Input to the LLM.
             response_format (Optional[Union[Type[BaseModel], dict[str, Any]]]): Optional
                 response format. Can be a Pydantic model class for structured output
                 or a JSON schema dict.
             **kwargs: Additional parameters to pass to GenerationConfig (e.g., temperature,
                 max_output_tokens, top_p, top_k). These override constructor values.
-
-        Returns:
-            LLMResponse: The response from the LLM.
         """
-        system_instruction, messages = self.build_llm_messages(input)
-        model = self._get_model(
-            system_instruction=system_instruction,
+        system_instruction, contents = self.build_llm_messages(messages)
+        model = self._get_model(system_instruction=system_instruction)
+        options = self._get_call_params_v2(
+            contents, tools=None, response_format=response_format, **kwargs
         )
+        return model, options
+
+    def _parse_response(self, raw_response: GenerationResponse) -> LLMResponse:
+        return self._parse_content_response(raw_response)
+
+    def _call_sync(
+        self, request: tuple[GenerativeModel, dict[str, Any]]
+    ) -> GenerationResponse:
+        model, options = request
         try:
-            options = self._get_call_params_v2(
-                messages, tools=None, response_format=response_format, **kwargs
-            )
-            response = model.generate_content(**options)
-            return self._parse_content_response(response)
+            return model.generate_content(**options)  # type: ignore[no-any-return]
         except ResponseValidationError as e:
             raise LLMGenerationError("Error calling VertexAILLM") from e
 
-    @async_rate_limit_handler_decorator
-    async def ainvoke(
-        self,
-        input: list[LLMMessage],
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        """Asynchronously sends text to the LLM and returns a response.
-
-        Args:
-            input (List[LLMMessage]): Input to the LLM.
-            response_format (Optional[Union[Type[BaseModel], dict[str, Any]]]): Optional
-                response format. Can be a Pydantic model class for structured output
-                or a JSON schema dict.
-            **kwargs: Additional parameters to pass to GenerationConfig (e.g., temperature,
-                max_output_tokens, top_p, top_k). These override constructor values.
-
-        Returns:
-            LLMResponse: The response from the LLM.
-        """
+    async def _call_async(
+        self, request: tuple[GenerativeModel, dict[str, Any]]
+    ) -> GenerationResponse:
+        model, options = request
         try:
-            system_instruction, messages = self.build_llm_messages(input)
-            model = self._get_model(
-                system_instruction=system_instruction,
-            )
-            options = self._get_call_params_v2(
-                messages, tools=None, response_format=response_format, **kwargs
-            )
-            response = await model.generate_content_async(**options)
-            return self._parse_content_response(response)
+            return await model.generate_content_async(**options)  # type: ignore[no-any-return]
         except ResponseValidationError as e:
             raise LLMGenerationError("Error calling VertexAILLM") from e
 

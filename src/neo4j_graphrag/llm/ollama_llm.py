@@ -111,99 +111,61 @@ class OllamaLLM(LLMBase):
             )
             self.model_params = {"options": self.model_params}
 
-    @rate_limit_handler_decorator
-    def invoke(
+    def _build_request(
         self,
-        input: List[LLMMessage],
+        messages: List[LLMMessage],
+        *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
-    ) -> LLMResponse:
-        """Sends text to the LLM and returns a response.
+    ) -> dict[str, Any]:
+        """Build the Ollama chat request payload.
 
-        Args:
-            input (List[LLMMessage]): The messages to send to the LLM.
-            response_format: Not supported by OllamaLLM.
-
-        Returns:
-            LLMResponse: The response from the LLM.
+        Not currently supported by OllamaLLM.
         """
         if response_format is not None:
             raise NotImplementedError(
                 "OllamaLLM does not currently support structured output"
             )
-        try:
-            response = self.client.chat(
-                model=self.model_name,
-                messages=self.build_llm_messages(input),
-                **self.model_params,
-                **kwargs,
+        return {
+            "messages": self.build_llm_messages(messages),
+            "params": {**self.model_params, **kwargs},
+        }
+
+    def _parse_response(self, raw_response: Any) -> LLMResponse:
+        content = raw_response.message.content or ""
+        usage = None
+        if (
+            raw_response.prompt_eval_count is not None
+            or raw_response.eval_count is not None
+        ):
+            request_tokens = raw_response.prompt_eval_count
+            response_tokens = raw_response.eval_count
+            usage = LLMUsage(
+                request_tokens=request_tokens,
+                response_tokens=response_tokens,
+                total_tokens=(request_tokens + response_tokens)
+                if (request_tokens is not None and response_tokens is not None)
+                else None,
             )
-            content = response.message.content or ""
-            usage = None
-            if (
-                response.prompt_eval_count is not None
-                or response.eval_count is not None
-            ):
-                request_tokens = response.prompt_eval_count
-                response_tokens = response.eval_count
-                usage = LLMUsage(
-                    request_tokens=request_tokens,
-                    response_tokens=response_tokens,
-                    total_tokens=(request_tokens + response_tokens)
-                    if (request_tokens is not None and response_tokens is not None)
-                    else None,
-                )
-            return LLMResponse(content=content, usage=usage)
+        return LLMResponse(content=content, usage=usage)
+
+    def _call_sync(self, request: dict[str, Any]) -> Any:
+        try:
+            return self.client.chat(
+                model=self.model_name,
+                messages=request["messages"],
+                **request["params"],
+            )
         except self.ollama.ResponseError as e:
             raise LLMGenerationError(e)
 
-    @async_rate_limit_handler_decorator
-    async def ainvoke(
-        self,
-        input: List[LLMMessage],
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        """Asynchronously sends a text input to the Ollama chat
-        completion model and returns the response's content.
-
-        Args:
-            input (List[LLMMessage]): Messages sent to the LLM.
-            response_format: Not supported by OllamaLLM.
-
-        Returns:
-            LLMResponse: The response from Ollama.
-
-        Raises:
-            LLMGenerationError: If anything goes wrong.
-        """
-        if response_format is not None:
-            raise NotImplementedError(
-                "OllamaLLM does not currently support structured output"
-            )
+    async def _call_async(self, request: dict[str, Any]) -> Any:
         try:
-            params = {**self.model_params, **kwargs}
-            response = await self.async_client.chat(
+            return await self.async_client.chat(
                 model=self.model_name,
-                messages=self.build_llm_messages(input),
-                options=params,
+                messages=request["messages"],
+                **request["params"],
             )
-            content = response.message.content or ""
-            usage = None
-            if (
-                response.prompt_eval_count is not None
-                or response.eval_count is not None
-            ):
-                request_tokens = response.prompt_eval_count
-                response_tokens = response.eval_count
-                usage = LLMUsage(
-                    request_tokens=request_tokens,
-                    response_tokens=response_tokens,
-                    total_tokens=(request_tokens + response_tokens)
-                    if (request_tokens is not None and response_tokens is not None)
-                    else None,
-                )
-            return LLMResponse(content=content, usage=usage)
         except self.ollama.ResponseError as e:
             raise LLMGenerationError(e)
 

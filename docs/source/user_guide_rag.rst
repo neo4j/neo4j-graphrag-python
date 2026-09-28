@@ -274,9 +274,13 @@ Using a Custom Model
 
 If the provided implementations do not match their needs, developers can create a
 custom LLM class by subclassing :class:`neo4j_graphrag.llm.LLMBase`.
-Subclasses implement ``invoke`` and ``ainvoke``, both taking a list of
-``LLMMessage`` (dicts with ``role`` and ``content`` keys) and an optional
-keyword-only ``response_format`` for structured output.
+Subclasses implement four hooks: ``_build_request`` (turn a list of
+``LLMMessage`` and an optional keyword-only ``response_format`` into a
+provider-specific request), ``_call_sync``/``_call_async`` (send that request
+to the provider), and ``_parse_response`` (turn the raw provider response into
+an ``LLMResponse``). ``invoke``/``ainvoke`` are implemented by ``LLMBase`` and
+call these hooks in order, applying rate-limit handling around the transport
+call.
 
 Here's an example using the Python Ollama client:
 
@@ -290,25 +294,23 @@ Here's an example using the Python Ollama client:
 
     class MyOllamaLLM(LLMBase):
 
-        def invoke(
+        def _build_request(
             self,
-            input: List[LLMMessage],
+            messages: List[LLMMessage],
             *,
             response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
             **kwargs: Any,
-        ) -> LLMResponse:
-            messages = list(input)
-            response = ollama.chat(model=self.model_name, messages=messages)
-            return LLMResponse(content=response["message"]["content"])
+        ) -> list[LLMMessage]:
+            return list(messages)
 
-        async def ainvoke(
-            self,
-            input: List[LLMMessage],
-            *,
-            response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-            **kwargs: Any,
-        ) -> LLMResponse:
-            return self.invoke(input)  # TODO: implement with ollama.AsyncClient
+        def _call_sync(self, request: list[LLMMessage]) -> Any:
+            return ollama.chat(model=self.model_name, messages=request)
+
+        async def _call_async(self, request: list[LLMMessage]) -> Any:
+            return self._call_sync(request)  # TODO: implement with ollama.AsyncClient
+
+        def _parse_response(self, raw_response: Any) -> LLMResponse:
+            return LLMResponse(content=raw_response["message"]["content"])
 
 
     # retriever = ...

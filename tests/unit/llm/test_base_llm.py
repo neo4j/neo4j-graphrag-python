@@ -76,23 +76,23 @@ def test_llm_response_carries_usage() -> None:
 class _ConcreteLLM(LLMBase):
     """Minimal LLMBase subclass for unit testing."""
 
-    def invoke(
+    def _build_request(
         self,
-        input: List[LLMMessage],
+        messages: List[LLMMessage],
         *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
-    ) -> LLMResponse:
-        return LLMResponse(content=f"sync:{input[-1]['content']}")
+    ) -> str:
+        return messages[-1]["content"]
 
-    async def ainvoke(
-        self,
-        input: List[LLMMessage],
-        *,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        return LLMResponse(content=f"async:{input[-1]['content']}")
+    def _parse_response(self, raw: Any) -> LLMResponse:
+        return LLMResponse(content=raw)
+
+    def _call_sync(self, request: str) -> str:
+        return f"sync:{request}"
+
+    async def _call_async(self, request: str) -> str:
+        return f"async:{request}"
 
 
 # ---------------------------------------------------------------------------
