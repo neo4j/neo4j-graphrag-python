@@ -206,6 +206,21 @@ def test_gemini_invoke_error(mock_genai: Tuple[MagicMock, MagicMock]) -> None:
         llm.invoke([{"role": "user", "content": "hello"}])
 
 
+def test_gemini_invoke_build_error_wrapped(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    """A request-build-time validation error (unsupported image_mime_type) must
+    raise LLMGenerationError, not the raw ValueError -- callers get one
+    consistent exception type for the whole invoke/ainvoke call."""
+    llm = GeminiLLM("gemini-2.0-flash")
+    with pytest.raises(LLMGenerationError):
+        llm.invoke(
+            [{"role": "user", "content": "hello"}],
+            image_bytes=b"fake-png",
+            image_mime_type="image/bogus",
+        )
+
+
 def test_gemini_llm_is_base_gemini_llm_subclass() -> None:
     assert issubclass(GeminiLLM, BaseGeminiLLM)
 
