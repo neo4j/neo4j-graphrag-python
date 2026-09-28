@@ -16,7 +16,7 @@ import warnings
 from typing import Any
 
 from .anthropic_llm import AnthropicLLM, BaseAnthropicLLM
-from .base import LLMBase
+from .base import AsyncLLMInterface, LLMBase, SyncLLMInterface
 from .bedrock_llm import BedrockLLM
 from .cohere_llm import CohereLLM
 from .google_genai_llm import (
@@ -37,6 +37,7 @@ __all__ = [
     "GEMINI_DEFAULT_IMAGE_MIME_TYPE",
     "GEMINI_SUPPORTED_IMAGE_MIME_TYPES",
     "AnthropicLLM",
+    "AsyncLLMInterface",
     "BaseAnthropicLLM",
     "BaseGeminiLLM",
     "BedrockLLM",
@@ -47,6 +48,7 @@ __all__ = [
     "LLMUsage",
     "LLMBase",
     "OllamaLLM",
+    "SyncLLMInterface",
     "OpenAILLM",
     "BaseOpenAILLM",
     "VertexAILLM",
