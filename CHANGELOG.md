@@ -2,6 +2,10 @@
 
 ## Next
 
+### Fixed
+
+- Fixed Parquet output describing relationships whose endpoints referenced nodes that no target existed for, in both cases because a label's sanitized filename stem was treated as the label's identity. Labels sharing a stem — most visibly labels with no ASCII characters at all, which all fall back to `unnamed` — silently overwrote each other in `Neo4jGraphParquetFormatter.format_graph`, and `ParquetWriter` named relationship endpoints after the stem rather than the raw label. Colliding stems now receive a `__2`, `__3`, … suffix and endpoints use the raw label; filenames for labels that do not collide are unchanged.
+
 ## 1.21.0
 
 ## 1.20.0
