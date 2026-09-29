@@ -4,7 +4,7 @@ from typing import Any, Awaitable, Callable, List, Optional, Type, TypeVar, Unio
 
 from pydantic import BaseModel
 
-from neo4j_graphrag.llm import BaseLLM, LLMResponse
+from neo4j_graphrag.llm import BaseLLM, LLMResponse, validate_invoke_input
 from neo4j_graphrag.utils.rate_limit import (
     RateLimitHandler,
     # rate_limit_handler,
@@ -29,6 +29,7 @@ class CustomLLM(BaseLLM):
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
+        validate_invoke_input(input)
         content: str = (
             self.model_name + ": " + "".join(random.choices(string.ascii_letters, k=30))
         )
@@ -43,6 +44,7 @@ class CustomLLM(BaseLLM):
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
+        validate_invoke_input(input)
         raise NotImplementedError()
 
 

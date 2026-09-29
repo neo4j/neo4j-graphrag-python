@@ -16,7 +16,7 @@ import warnings
 from typing import Any
 
 from .anthropic_llm import AnthropicLLM, BaseAnthropicLLM
-from .base import BaseLLM
+from .base import BaseLLM, validate_invoke_input
 from .bedrock_llm import BedrockLLM
 from .cohere_llm import CohereLLM
 from .google_genai_llm import (
@@ -53,6 +53,7 @@ __all__ = [
     "AzureOpenAILLM",
     "MistralAILLM",
     "split_http_client_kwargs",
+    "validate_invoke_input",
 ]
 
 
