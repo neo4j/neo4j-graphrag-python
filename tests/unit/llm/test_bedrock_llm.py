@@ -78,7 +78,7 @@ def test_bedrock_invoke_happy_path(mock_boto3: MagicMock) -> None:
     mock_client.converse.return_value = _make_converse_response("hello world")
 
     llm = BedrockLLM("us.anthropic.claude-sonnet-4-20250514-v1:0")
-    response = llm.invoke("hello")
+    response = llm.invoke([{"role": "user", "content": "hello"}])
 
     assert response.content == "hello world"
     mock_client.converse.assert_called_once()
@@ -93,7 +93,7 @@ def test_bedrock_invoke_with_message_history(mock_boto3: MagicMock) -> None:
         {"role": "user", "content": "previous question"},
         {"role": "assistant", "content": "previous answer"},
     ]
-    response = llm.invoke("follow up", message_history=history)
+    response = llm.invoke([*history, {"role": "user", "content": "follow up"}])
 
     assert response.content == "response"
     call_kwargs = mock_client.converse.call_args[1]
@@ -106,7 +106,12 @@ def test_bedrock_invoke_with_system_instruction(mock_boto3: MagicMock) -> None:
     mock_client.converse.return_value = _make_converse_response("response")
 
     llm = BedrockLLM("us.anthropic.claude-sonnet-4-20250514-v1:0")
-    response = llm.invoke("hello", system_instruction="You are a bot")
+    response = llm.invoke(
+        [
+            {"role": "system", "content": "You are a bot"},
+            {"role": "user", "content": "hello"},
+        ]
+    )
 
     assert response.content == "response"
     call_kwargs = mock_client.converse.call_args[1]
@@ -119,13 +124,13 @@ async def test_bedrock_ainvoke_happy_path(mock_boto3: MagicMock) -> None:
     mock_client.converse.return_value = _make_converse_response("async response")
 
     llm = BedrockLLM("us.anthropic.claude-sonnet-4-20250514-v1:0")
-    response = await llm.ainvoke("hello")
+    response = await llm.ainvoke([{"role": "user", "content": "hello"}])
 
     assert response.content == "async response"
     mock_client.converse.assert_called_once()
 
 
-def test_bedrock_invoke_v2_happy_path(mock_boto3: MagicMock) -> None:
+def test_bedrock_invoke_messages_happy_path(mock_boto3: MagicMock) -> None:
     mock_client = mock_boto3.client.return_value
     mock_client.converse.return_value = _make_converse_response("v2 response")
 
@@ -145,7 +150,7 @@ def test_bedrock_invoke_v2_happy_path(mock_boto3: MagicMock) -> None:
 
 
 @pytest.mark.asyncio
-async def test_bedrock_ainvoke_v2_happy_path(mock_boto3: MagicMock) -> None:
+async def test_bedrock_ainvoke_messages_happy_path(mock_boto3: MagicMock) -> None:
     mock_client = mock_boto3.client.return_value
     mock_client.converse.return_value = _make_converse_response("async v2")
 
@@ -163,7 +168,7 @@ def test_bedrock_invoke_error(mock_boto3: MagicMock) -> None:
 
     llm = BedrockLLM("us.anthropic.claude-sonnet-4-20250514-v1:0")
     with pytest.raises(LLMGenerationError):
-        llm.invoke("hello")
+        llm.invoke([{"role": "user", "content": "hello"}])
 
 
 def test_bedrock_invoke_empty_response(mock_boto3: MagicMock) -> None:
@@ -172,10 +177,10 @@ def test_bedrock_invoke_empty_response(mock_boto3: MagicMock) -> None:
 
     llm = BedrockLLM("us.anthropic.claude-sonnet-4-20250514-v1:0")
     with pytest.raises(LLMGenerationError, match="LLM returned empty response"):
-        llm.invoke("hello")
+        llm.invoke([{"role": "user", "content": "hello"}])
 
 
-def test_bedrock_invoke_v2_with_response_format_raises_error(
+def test_bedrock_invoke_with_response_format_raises_error(
     mock_boto3: MagicMock,
 ) -> None:
     messages: list[LLMMessage] = [{"role": "user", "content": "hello"}]
@@ -192,7 +197,7 @@ def test_bedrock_invoke_with_model_params(mock_boto3: MagicMock) -> None:
         "us.anthropic.claude-sonnet-4-20250514-v1:0",
         model_params={"temperature": 0.5, "maxTokens": 512},
     )
-    llm.invoke("hello")
+    llm.invoke([{"role": "user", "content": "hello"}])
 
     call_kwargs = mock_client.converse.call_args[1]
     assert call_kwargs["inferenceConfig"] == {"temperature": 0.5, "maxTokens": 512}

@@ -14,7 +14,7 @@ import neo4j
 from neo4j_graphrag.embeddings import OpenAIEmbeddings
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
-from neo4j_graphrag.llm import LLMInterface
+from neo4j_graphrag.llm import BaseLLM
 from neo4j_graphrag.llm import OpenAILLM
 
 # Neo4j db infos
@@ -40,7 +40,7 @@ PATTERNS = [
 
 async def define_and_run_pipeline(
     neo4j_driver: neo4j.Driver,
-    llm: LLMInterface,
+    llm: BaseLLM,
 ) -> PipelineResult:
     # Create an instance of the SimpleKGPipeline
     kg_builder = SimpleKGPipeline(

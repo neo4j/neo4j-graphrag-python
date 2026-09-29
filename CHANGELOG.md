@@ -2,6 +2,10 @@
 
 ## Next
 
+### Changed
+
+- **Breaking:** `BaseLLM.invoke` and `BaseLLM.ainvoke` accept a list of `LLMMessage` (`{"role": "system" | "user" | "assistant", "content": str}`) only, with a keyword-only `response_format` parameter and `**kwargs`. Plain string input and the `message_history` and `system_instruction` invoke parameters are no longer accepted: wrap prompts as `[{"role": "user", "content": ...}]`, prepend `[{"role": "system", "content": ...}]` for system instructions, and pass prior turns as earlier entries in the list. `LLMInterface` and `LLMInterfaceV2` are replaced by the single `BaseLLM` abstract class. Calling `invoke`/`ainvoke` with anything other than a list of `LLMMessage` (e.g. a plain string) now raises `TypeError` immediately, instead of failing later inside message-building code. `invoke_with_tools`/`ainvoke_with_tools` are unchanged and still take a string prompt.
+
 ### Fixed
 
 - Fixed Parquet output describing relationships whose endpoints referenced nodes that no target existed for, in both cases because a label's sanitized filename stem was treated as the label's identity. Labels sharing a stem — most visibly labels with no ASCII characters at all, which all fall back to `unnamed` — silently overwrote each other in `Neo4jGraphParquetFormatter.format_graph`, and `ParquetWriter` named relationship endpoints after the stem rather than the raw label. Colliding stems now receive a `__2`, `__3`, … suffix and endpoints use the raw label; filenames for labels that do not collide are unchanged.

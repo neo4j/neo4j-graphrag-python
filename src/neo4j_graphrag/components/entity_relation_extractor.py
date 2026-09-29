@@ -36,7 +36,7 @@ from neo4j_graphrag.components.types import (
 from neo4j_graphrag.components.base import Component
 from neo4j_graphrag.experimental.pipeline.exceptions import InvalidJSONError
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate, PromptTemplate
-from neo4j_graphrag.llm import LLMInterface
+from neo4j_graphrag.llm import BaseLLM
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.logging import prettify
 
@@ -163,12 +163,12 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
     Extracts a knowledge graph from a series of text chunks using a large language model.
 
     Args:
-        llm (LLMInterface): The language model to use for extraction.
+        llm (BaseLLM): The language model to use for extraction.
         prompt_template (ERExtractionTemplate | str): A custom prompt template to use for extraction.
         create_lexical_graph (bool): Whether to include the text chunks in the graph in addition to the extracted entities and relations. Defaults to True.
         on_error (OnError): What to do when an error occurs during extraction. Defaults to raising an error.
         max_concurrency (int): The maximum number of concurrent tasks which can be used to make requests to the LLM.
-        use_structured_output (bool): Whether to use structured output (LLMInterfaceV2) with the Neo4jGraph Pydantic model.
+        use_structured_output (bool): Whether to use structured output with the Neo4jGraph Pydantic model.
             Only supported for OpenAILLM and VertexAILLM. Defaults to False (uses V1 prompt-based JSON extraction).
 
     Example with V1 (default, prompt-based JSON):
@@ -192,7 +192,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         pipe = Pipeline()
         pipe.add_component(extractor, "extractor")
 
-    Example with V2 (structured output):
+    Example with structured output:
 
     .. code-block:: python
 
@@ -212,7 +212,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
 
     def __init__(
         self,
-        llm: LLMInterface,
+        llm: BaseLLM,
         prompt_template: Union[ERExtractionTemplate, str] = ERExtractionTemplate(),
         create_lexical_graph: bool = True,
         on_error: OnError = OnError.RAISE,
@@ -247,7 +247,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
             examples=examples,
         )
 
-        # Use structured output (V2) if enabled
+        # Use structured output if enabled
         if self.use_structured_output:
             # Capability check
             # This should never happen due to __init__ validation
@@ -257,7 +257,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                 )
 
             messages = [LLMMessage(role="user", content=prompt)]
-            llm_result = await self.llm.ainvoke(messages, response_format=Neo4jGraph)  # type: ignore[call-arg, arg-type]
+            llm_result = await self.llm.ainvoke(messages, response_format=Neo4jGraph)
             try:
                 chunk_graph = Neo4jGraph.model_validate_json(llm_result.content)
             except ValidationError as e:
@@ -270,8 +270,8 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
                 chunk_graph = Neo4jGraph()
             return chunk_graph
 
-        # Use V1 prompt-based JSON extraction (default)
-        llm_result = await self.llm.ainvoke(prompt)
+        # Use prompt-based JSON extraction (default)
+        llm_result = await self.llm.ainvoke([LLMMessage(role="user", content=prompt)])
         try:
             llm_generated_json = fix_invalid_json(llm_result.content)
             result = json.loads(llm_generated_json)

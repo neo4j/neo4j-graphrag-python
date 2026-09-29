@@ -24,7 +24,6 @@ from vertexai.generative_models import (
     Part,
 )
 
-from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.types import ToolCallResponse
 from neo4j_graphrag.llm.vertexai_llm import VertexAILLM
 from neo4j_graphrag.tool import Tool
@@ -69,7 +68,7 @@ def test_vertexai_invoke_happy_path(GenerativeModelMock: MagicMock) -> None:
     model_params = {"temperature": 0.5}
     llm = VertexAILLM(model_name, model_params)
 
-    response = llm.invoke(input_text)
+    response = llm.invoke([{"role": "user", "content": input_text}])
     assert response.content == "Return text"
     GenerativeModelMock.assert_called_once_with(
         model_name=model_name,
@@ -83,7 +82,7 @@ def test_vertexai_invoke_happy_path(GenerativeModelMock: MagicMock) -> None:
 
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
-@patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM.get_messages")
+@patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM.build_llm_messages")
 def test_vertexai_invoke_with_system_instruction(
     mock_get_messages: MagicMock,
     GenerativeModelMock: MagicMock,
@@ -97,12 +96,12 @@ def test_vertexai_invoke_with_system_instruction(
     mock_model = GenerativeModelMock.return_value
     mock_model.generate_content.return_value = mock_response
 
-    mock_get_messages.return_value = [{"text": "some text"}]
+    mock_get_messages.return_value = (system_instruction, [{"text": "some text"}])
 
     model_params = {"temperature": 0.5}
     llm = VertexAILLM(model_name, model_params)
 
-    response = llm.invoke(input_text, system_instruction=system_instruction)
+    response = llm.invoke([{"role": "user", "content": input_text}])
     assert response.content == "Return text"
     GenerativeModelMock.assert_called_once_with(
         model_name=model_name,
@@ -133,11 +132,12 @@ def test_vertexai_invoke_with_message_history_and_system_instruction(
     ]
     question = "What about next season?"
 
-    response = llm.invoke(
-        question,
-        message_history,  # type: ignore
-        system_instruction=system_instruction,
-    )
+    messages: list[LLMMessage] = [
+        {"role": "system", "content": system_instruction},
+        *cast(list[LLMMessage], message_history),
+        {"role": "user", "content": question},
+    ]
+    response = llm.invoke(messages)
     assert response.content == "Return text"
     GenerativeModelMock.assert_called_once_with(
         model_name=model_name,
@@ -191,14 +191,19 @@ def test_vertexai_get_messages_validation_error(
     ]
 
     llm = VertexAILLM(model_name=model_name, system_instruction=system_instruction)
-    with pytest.raises(LLMGenerationError) as exc_info:
-        llm.invoke(question, cast(list[LLMMessage], message_history))
-    assert "Input should be 'user', 'assistant' or 'system" in str(exc_info.value)
+    with pytest.raises(ValueError) as exc_info:
+        llm.invoke(
+            [
+                {"role": "user", "content": question},
+                *cast(list[LLMMessage], message_history),
+            ]
+        )
+    assert "Unknown role: model" in str(exc_info.value)
 
 
 @pytest.mark.asyncio
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
-@patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM.get_messages")
+@patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM.build_llm_messages")
 async def test_vertexai_ainvoke_happy_path(
     mock_get_messages: Mock, GenerativeModelMock: MagicMock
 ) -> None:
@@ -206,11 +211,11 @@ async def test_vertexai_ainvoke_happy_path(
     mock_response.text = "Return text"
     mock_model = GenerativeModelMock.return_value
     mock_model.generate_content_async = AsyncMock(return_value=mock_response)
-    mock_get_messages.return_value = [{"text": "Return text"}]
+    mock_get_messages.return_value = (None, [{"text": "Return text"}])
     model_params = {"temperature": 0.5}
     llm = VertexAILLM("gemini-2.5-flash", model_params)
     input_text = "may thy knife chip and shatter"
-    response = await llm.ainvoke(input_text)
+    response = await llm.ainvoke([{"role": "user", "content": input_text}])
     print(f"Response: {response}")
     assert response.content == "Return text"
     mock_model.generate_content_async.assert_awaited_once_with(
@@ -340,7 +345,7 @@ async def test_vertexai_acall_llm_with_tools(mock_model: Mock, test_tool: Tool) 
 
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
-def test_vertexai_invoke_v2_happy_path(GenerativeModelMock: MagicMock) -> None:
+def test_vertexai_invoke_messages_happy_path(GenerativeModelMock: MagicMock) -> None:
     """Test V2 interface invoke method with List[LLMMessage] input."""
     model_name = "gemini-2.5-flash"
     messages: List[LLMMessage] = [
@@ -370,7 +375,7 @@ def test_vertexai_invoke_v2_happy_path(GenerativeModelMock: MagicMock) -> None:
 
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
-def test_vertexai_invoke_v2_with_conversation_history(
+def test_vertexai_invoke_with_conversation_history(
     GenerativeModelMock: MagicMock,
 ) -> None:
     """Test V2 interface invoke with conversation history."""
@@ -407,7 +412,7 @@ def test_vertexai_invoke_v2_with_conversation_history(
 
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
-def test_vertexai_invoke_v2_no_system_message(GenerativeModelMock: MagicMock) -> None:
+def test_vertexai_invoke_no_system_message(GenerativeModelMock: MagicMock) -> None:
     """Test V2 interface invoke without system message."""
     model_name = "gemini-2.5-flash"
     messages: List[LLMMessage] = [
@@ -431,7 +436,9 @@ def test_vertexai_invoke_v2_no_system_message(GenerativeModelMock: MagicMock) ->
 
 @pytest.mark.asyncio
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
-async def test_vertexai_ainvoke_v2_happy_path(GenerativeModelMock: MagicMock) -> None:
+async def test_vertexai_ainvoke_messages_happy_path(
+    GenerativeModelMock: MagicMock,
+) -> None:
     """Test V2 interface async invoke method with List[LLMMessage] input."""
     model_name = "gemini-2.5-flash"
     messages: List[LLMMessage] = [
@@ -455,7 +462,7 @@ async def test_vertexai_ainvoke_v2_happy_path(GenerativeModelMock: MagicMock) ->
 
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
-def test_vertexai_invoke_v2_validation_error(_GenerativeModelMock: MagicMock) -> None:
+def test_vertexai_invoke_validation_error(_GenerativeModelMock: MagicMock) -> None:
     """Test V2 interface invoke with invalid role raises error."""
     model_name = "gemini-2.5-flash"
     messages: List[LLMMessage] = [
@@ -470,7 +477,7 @@ def test_vertexai_invoke_v2_validation_error(_GenerativeModelMock: MagicMock) ->
 
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
-def test_vertexai_get_brand_new_messages_system_instruction_override(
+def test_vertexai_get_messages_system_instruction_override(
     _GenerativeModelMock: MagicMock,
 ) -> None:
     """Test that system instruction in messages overrides class-level system instruction."""
@@ -484,7 +491,7 @@ def test_vertexai_get_brand_new_messages_system_instruction_override(
     llm = VertexAILLM(
         model_name=model_name, system_instruction=class_system_instruction
     )
-    system_instruction, contents = llm.get_messages_v2(messages)
+    system_instruction, contents = llm.build_llm_messages(messages)
 
     assert system_instruction == "You are a message-level assistant."
     assert len(contents) == 1  # Only user message should remain
@@ -508,7 +515,7 @@ _TEST_JSON_SCHEMA = {
 
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
-def test_vertexai_invoke_v2_with_pydantic_response_format(
+def test_vertexai_invoke_with_pydantic_response_format(
     GenerativeModelMock: MagicMock,
 ) -> None:
     """Test V2 interface with Pydantic model as response_format."""
@@ -535,7 +542,7 @@ def test_vertexai_invoke_v2_with_pydantic_response_format(
 
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
-def test_vertexai_invoke_v2_with_json_schema_response_format(
+def test_vertexai_invoke_with_json_schema_response_format(
     GenerativeModelMock: MagicMock,
 ) -> None:
     """Test V2 interface with JSON schema dict as response_format."""
@@ -562,7 +569,7 @@ def test_vertexai_invoke_v2_with_json_schema_response_format(
 
 @pytest.mark.asyncio
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
-async def test_vertexai_ainvoke_v2_with_pydantic_response_format(
+async def test_vertexai_ainvoke_with_pydantic_response_format(
     GenerativeModelMock: MagicMock,
 ) -> None:
     """Test V2 interface async invoke with Pydantic response_format."""
@@ -586,7 +593,7 @@ async def test_vertexai_ainvoke_v2_with_pydantic_response_format(
 
 @pytest.mark.asyncio
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
-async def test_vertexai_ainvoke_v2_with_json_schema_response_format(
+async def test_vertexai_ainvoke_with_json_schema_response_format(
     GenerativeModelMock: MagicMock,
 ) -> None:
     """Test V2 interface async invoke with JSON schema response_format."""
@@ -608,7 +615,7 @@ async def test_vertexai_ainvoke_v2_with_json_schema_response_format(
 
 
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
-def test_vertexai_invoke_v2_rate_limit_handler_called(
+def test_vertexai_invoke_rate_limit_handler_called(
     GenerativeModelMock: MagicMock,
 ) -> None:
     """Test that the rate limit handler is invoked on the V2 (List[LLMMessage]) path."""
@@ -629,7 +636,7 @@ def test_vertexai_invoke_v2_rate_limit_handler_called(
 
 @pytest.mark.asyncio
 @patch("neo4j_graphrag.llm.vertexai_llm.GenerativeModel")
-async def test_vertexai_ainvoke_v2_rate_limit_handler_called(
+async def test_vertexai_ainvoke_rate_limit_handler_called(
     GenerativeModelMock: MagicMock,
 ) -> None:
     """Test that the rate limit handler is invoked on the async V2 (List[LLMMessage]) path."""

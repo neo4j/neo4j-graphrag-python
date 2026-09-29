@@ -1466,11 +1466,13 @@ async def test_schema_from_text_run_valid_response(
     # run the schema extraction
     schema_config = await schema_from_text.run(text="Sample text for extraction")
 
-    # verify the LLM was called with a prompt
+    # verify the LLM was called with a single user message containing the prompt
     mock_llm.ainvoke.assert_called_once()
-    prompt_arg = mock_llm.ainvoke.call_args[0][0]
-    assert isinstance(prompt_arg, str)
-    assert "Sample text for extraction" in prompt_arg
+    messages_arg = mock_llm.ainvoke.call_args[0][0]
+    assert isinstance(messages_arg, list)
+    assert len(messages_arg) == 1
+    assert messages_arg[0]["role"] == "user"
+    assert "Sample text for extraction" in messages_arg[0]["content"]
 
     # verify the schema was correctly extracted
     assert len(schema_config.node_types) == 2
@@ -1521,8 +1523,8 @@ async def test_schema_from_text_custom_template(
     await schema_from_text.run(text="Sample text")
 
     # verify the custom prompt was passed to the LLM
-    prompt_sent_to_llm = mock_llm.ainvoke.call_args[0][0]
-    assert "This is a custom prompt with text" in prompt_sent_to_llm
+    messages_sent_to_llm = mock_llm.ainvoke.call_args[0][0]
+    assert "This is a custom prompt with text" in messages_sent_to_llm[0]["content"]
 
 
 @pytest.mark.asyncio

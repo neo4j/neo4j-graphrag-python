@@ -1,5 +1,5 @@
-"""This example illustrates the message_history feature
-of the LLMInterface by mocking a conversation between a user
+"""This example illustrates multi-turn conversations
+by mocking a conversation between a user
 and an LLM about Tom Hanks.
 
 Neo4j is used as the database for storing the message history.
@@ -37,8 +37,7 @@ history = Neo4jMessageHistory(session_id="123", driver=driver, window=10)
 with OpenAILLM(model_name="gpt-5", api_key=api_key) as llm:
     for question in questions:
         res: LLMResponse = llm.invoke(
-            question,
-            message_history=history,
+            [*history.messages, {"role": "user", "content": question}]
         )
         history.add_message({"role": "user", "content": question})
         history.add_message({"role": "assistant", "content": res.content})

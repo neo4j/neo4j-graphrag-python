@@ -36,12 +36,10 @@ from neo4j_graphrag.components.text_splitters.fixed_size_splitter import (
     FixedSizeSplitter,
 )
 from neo4j_graphrag.experimental.pipeline import Pipeline
-from neo4j_graphrag.llm import LLMInterface, OpenAILLM
+from neo4j_graphrag.llm import BaseLLM, OpenAILLM
 
 
-async def define_and_run_pipeline(
-    neo4j_driver: neo4j.Driver, llm: LLMInterface
-) -> None:
+async def define_and_run_pipeline(neo4j_driver: neo4j.Driver, llm: BaseLLM) -> None:
     """This is where we define and run the KG builder pipeline, instantiating a few
     components:
     - Text Splitter: in this example we use the fixed size text splitter

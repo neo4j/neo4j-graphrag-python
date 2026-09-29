@@ -18,7 +18,7 @@ from typing import Any, List, Optional, Sequence
 
 import neo4j
 
-from neo4j_graphrag.llm.base import LLMInterface
+from neo4j_graphrag.llm.base import BaseLLM
 from neo4j_graphrag.retrievers.base import Retriever
 from neo4j_graphrag.types import RawSearchResult
 from neo4j_graphrag.tool import Tool
@@ -70,7 +70,7 @@ class ToolsRetriever(Retriever):
 
     Args:
         driver (neo4j.Driver): The Neo4j Python driver.
-        llm (LLMInterface): LLM instance used to select and coordinate tool execution.
+        llm (BaseLLM): LLM instance used to select and coordinate tool execution.
         tools (Sequence[Tool]): List of tools available for selection. All tools must have unique names.
         neo4j_database (Optional[str]): The name of the Neo4j database. If not provided, this defaults to the server's default database ("neo4j" by default).
         system_instruction (Optional[str]): Custom system instruction for the LLM to guide tool selection. If not provided, a default instruction is used.
@@ -85,7 +85,7 @@ class ToolsRetriever(Retriever):
     def __init__(
         self,
         driver: neo4j.Driver,
-        llm: LLMInterface,
+        llm: BaseLLM,
         tools: Sequence[Tool],
         neo4j_database: Optional[str] = None,
         system_instruction: Optional[str] = None,

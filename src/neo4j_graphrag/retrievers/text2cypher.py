@@ -29,10 +29,11 @@ from neo4j_graphrag.exceptions import (
     Text2CypherRetrievalError,
 )
 from neo4j_graphrag.generation.prompts import Text2CypherTemplate
-from neo4j_graphrag.llm import LLMInterface
+from neo4j_graphrag.llm import BaseLLM
 from neo4j_graphrag.retrievers.base import Retriever
 from neo4j_graphrag.schema import get_schema
 from neo4j_graphrag.types import (
+    LLMMessage,
     LLMModel,
     Neo4jDriverModel,
     Neo4jSchemaModel,
@@ -100,7 +101,7 @@ class Text2CypherRetriever(Retriever):
 
     Args:
         driver (neo4j.Driver): The Neo4j Python driver.
-        llm (neo4j_graphrag.generation.llm.LLMInterface): LLM object to generate the Cypher query.
+        llm (neo4j_graphrag.llm.BaseLLM): LLM object to generate the Cypher query.
         neo4j_schema (Optional[str]): Neo4j schema used to generate the Cypher query.
         examples (Optional[list[str], optional): Optional user input/query pairs for the LLM to use as examples.
         custom_prompt (Optional[str]): Optional custom prompt to use instead of auto generated prompt. Will include the neo4j_schema for schema and examples for examples prompt parameters, if they are provided.
@@ -112,7 +113,7 @@ class Text2CypherRetriever(Retriever):
     def __init__(
         self,
         driver: neo4j.Driver,
-        llm: LLMInterface,
+        llm: BaseLLM,
         neo4j_schema: Optional[str] = None,
         examples: Optional[list[str]] = None,
         result_formatter: Optional[
@@ -215,7 +216,7 @@ class Text2CypherRetriever(Retriever):
         logger.debug("Text2CypherRetriever prompt: %s", prompt)
 
         try:
-            llm_result = self.llm.invoke(prompt)
+            llm_result = self.llm.invoke([LLMMessage(role="user", content=prompt)])
             t2c_query = extract_cypher(llm_result.content)
             logger.debug("Text2CypherRetriever Cypher query: %s", t2c_query)
             # EXPLAIN plans the query without executing it, so we can inspect

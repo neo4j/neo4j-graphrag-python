@@ -29,7 +29,7 @@ from neo4j_graphrag.exceptions import (
 )
 from neo4j_graphrag.generation.prompts import RagTemplate
 from neo4j_graphrag.generation.types import RagInitModel, RagResultModel, RagSearchModel
-from neo4j_graphrag.llm import LLMInterface, LLMInterfaceV2
+from neo4j_graphrag.llm import BaseLLM
 from neo4j_graphrag.llm.utils import legacy_inputs_to_messages
 from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.retrievers.base import Retriever
@@ -63,7 +63,7 @@ class GraphRAG:
 
     Args:
         retriever (Retriever): The retriever used to find relevant context to pass to the LLM.
-        llm (LLMInterface, LLMInterfaceV2 or LangChain Chat Model): The LLM used to generate
+        llm (BaseLLM or LangChain Chat Model): The LLM used to generate
             the answer.
         prompt_template (RagTemplate): The prompt template that will be formatted with context and
             user question and passed to the LLM.
@@ -75,7 +75,7 @@ class GraphRAG:
     def __init__(
         self,
         retriever: Retriever,
-        llm: Union[LLMInterface, LLMInterfaceV2, Any],
+        llm: Union[BaseLLM, Any],
         prompt_template: RagTemplate = RagTemplate(),
     ):
         try:
@@ -162,27 +162,12 @@ class GraphRAG:
             logger.debug("RAG: retriever_result=%s", prettify(retriever_result))
             logger.debug("RAG: prompt=%s", prompt)
 
-            if self.is_langchain_compatible():
-                # llm interface v2 or langchain chat model
-                messages = legacy_inputs_to_messages(
-                    prompt=prompt,
-                    message_history=message_history,
-                    system_instruction=self.prompt_template.system_instructions,
-                )
-
-                # langchain chat model compatible invoke
-                llm_response = self.llm.invoke(
-                    input=messages,
-                )
-            elif isinstance(self.llm, LLMInterface):
-                # may have custom LLMs inherited from V1, keep it for backward compatibility
-                llm_response = self.llm.invoke(
-                    input=prompt,
-                    message_history=message_history,
-                    system_instruction=self.prompt_template.system_instructions,
-                )
-            else:
-                raise ValueError(f"Type {type(self.llm)} of LLM is not supported.")
+            messages = legacy_inputs_to_messages(
+                prompt=prompt,
+                message_history=message_history,
+                system_instruction=self.prompt_template.system_instructions,
+            )
+            llm_response = self.llm.invoke(input=messages)
             answer = llm_response.content
         result: dict[str, Any] = {"answer": answer}
         if return_context:
@@ -203,37 +188,14 @@ class GraphRAG:
             summarization_prompt = self._chat_summary_prompt(
                 message_history=message_history
             )
-            if self.is_langchain_compatible():
-                messages = legacy_inputs_to_messages(
-                    summarization_prompt,
-                    system_instruction=summary_system_message,
-                )
-                summary = self.llm.invoke(
-                    input=messages,
-                ).content
-            elif isinstance(self.llm, LLMInterface):
-                summary = self.llm.invoke(
-                    input=summarization_prompt,
-                    system_instruction=summary_system_message,
-                ).content
-            else:
-                raise ValueError(f"Type {type(self.llm)} of LLM is not supported.")
+            messages = legacy_inputs_to_messages(
+                summarization_prompt,
+                system_instruction=summary_system_message,
+            )
+            summary = self.llm.invoke(input=messages).content
 
             return self.conversation_prompt(summary=summary, current_query=query_text)
         return query_text
-
-    def is_langchain_compatible(self) -> bool:
-        """Checks if the LLM is compatible with LangChain."""
-        if isinstance(self.llm, LLMInterfaceV2):
-            return True
-
-        try:
-            # langchain-core is an optional dependency
-            from langchain_core.language_models import BaseChatModel
-
-            return isinstance(self.llm, BaseChatModel)
-        except ImportError:
-            return False
 
     def _chat_summary_prompt(self, message_history: List[LLMMessage]) -> str:
         message_list = [
