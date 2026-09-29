@@ -100,33 +100,33 @@ class _ConcreteLLM(BaseLLM):
 # ---------------------------------------------------------------------------
 
 
-def test_llmbase_cannot_be_instantiated_directly() -> None:
+def test_basellm_cannot_be_instantiated_directly() -> None:
     with pytest.raises(TypeError):
         BaseLLM(model_name="m")  # type: ignore[abstract]
 
 
-def test_llmbase_sets_model_name() -> None:
+def test_basellm_sets_model_name() -> None:
     llm = _ConcreteLLM(model_name="my-model")
     assert llm.model_name == "my-model"
 
 
-def test_llmbase_default_model_params_is_empty_dict() -> None:
+def test_basellm_default_model_params_is_empty_dict() -> None:
     llm = _ConcreteLLM(model_name="m")
     assert llm.model_params == {}
 
 
-def test_llmbase_accepts_model_params() -> None:
+def test_basellm_accepts_model_params() -> None:
     llm = _ConcreteLLM(model_name="m", model_params={"temperature": 0.5})
     assert llm.model_params == {"temperature": 0.5}
 
 
-def test_llmbase_accepts_custom_rate_limit_handler() -> None:
+def test_basellm_accepts_custom_rate_limit_handler() -> None:
     handler = NoOpRateLimitHandler()
     llm = _ConcreteLLM(model_name="m", rate_limit_handler=handler)
     assert llm._rate_limit_handler is handler
 
 
-def test_llmbase_init_does_not_emit_deprecation_warning() -> None:
+def test_basellm_init_does_not_emit_deprecation_warning() -> None:
     """BaseLLM.__init__ emits no deprecation warning."""
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")

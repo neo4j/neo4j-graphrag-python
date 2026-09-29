@@ -320,7 +320,7 @@ Here's an example using the Python Ollama client:
     response = rag.search(query_text=query_text, retriever_config={"top_k": 5})
     print(response.answer)
 
-See :ref:`llmbase`.
+See :ref:`basellm`.
 
 
 Structured Output with LLMs

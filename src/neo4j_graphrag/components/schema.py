@@ -1732,7 +1732,7 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
     def _apply_prompt_based_extraction_filters(
         self, extracted_schema: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Apply prompt-based-extraction filters before cross-reference filtering.
+        """Apply prompt-based extraction filters before cross-reference filtering.
 
         Prompt-based extraction requires additional filtering:
         - Remove nodes/relationships without labels
