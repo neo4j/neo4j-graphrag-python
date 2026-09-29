@@ -12,6 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import sys
 import warnings
 from typing import TYPE_CHECKING, Any
 
@@ -24,6 +25,8 @@ from typing import TYPE_CHECKING, Any
 # Provider classes are therefore resolved lazily via :func:`__getattr__`, which
 # keeps ``from neo4j_graphrag.llm import LLMInterfaceV2`` cheap while preserving
 # the public ``from neo4j_graphrag.llm import <Provider>LLM`` API.
+from neo4j_graphrag.utils.lazy_import import lazy_dir, lazy_getattr
+
 from .base import LLMBase, LLMInterface, LLMInterfaceV2
 from .types import LLMResponse, LLMUsage
 from .utils import split_http_client_kwargs
@@ -100,15 +103,10 @@ def __getattr__(name: str) -> Any:
     importing ``neo4j_graphrag.llm`` does not pull in every provider SDK
     (see the module docstring).
     """
-    # Lazy, per-provider exports first: cache on the module so repeated access
-    # is a plain dict lookup, not a re-import.
-    module_name = _LAZY_EXPORTS.get(name)
-    if module_name is not None:
-        from importlib import import_module
-
-        value = getattr(import_module(module_name, __package__), name)
-        globals()[name] = value  # future lookups bypass __getattr__
-        return value
+    # Lazy, per-provider exports first; anything else falls through to the
+    # deprecated rate-limit names below.
+    if name in _LAZY_EXPORTS:
+        return lazy_getattr(name, _LAZY_EXPORTS, sys.modules[__name__])
 
     from neo4j_graphrag.utils.rate_limit import (
         DEFAULT_RATE_LIMIT_HANDLER,
@@ -143,3 +141,8 @@ def __getattr__(name: str) -> Any:
         return deprecated_items[name]
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__() -> list[str]:
+    """Include the lazily-exported names in ``dir(neo4j_graphrag.llm)``."""
+    return lazy_dir(_LAZY_EXPORTS, sys.modules[__name__])
