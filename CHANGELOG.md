@@ -2,6 +2,10 @@
 
 ## Next
 
+### Changed
+
+- `neo4j_graphrag.llm` and `neo4j_graphrag.embeddings` now resolve their per-provider classes lazily instead of importing every provider module eagerly. Importing either package no longer pulls in the whole provider-SDK closure — `google.cloud.aiplatform` (via `VertexAILLM`/`VertexAIEmbeddings`), `anthropic`, `boto3` (via Bedrock), `google.genai`, `mistralai`, `cohere`, `openai` and `torch` (via `SentenceTransformerEmbeddings`) — which cost seconds of import time and hundreds of MB of memory for consumers that only use the provider-agnostic base classes. The public import surface is unchanged: `from neo4j_graphrag.llm import OpenAILLM` works exactly as before, `dir()` still lists every export, and a `TYPE_CHECKING` mirror keeps static type checking intact.
+
 ### Fixed
 
 - Fixed Parquet output describing relationships whose endpoints referenced nodes that no target existed for, in both cases because a label's sanitized filename stem was treated as the label's identity. Labels sharing a stem — most visibly labels with no ASCII characters at all, which all fall back to `unnamed` — silently overwrote each other in `Neo4jGraphParquetFormatter.format_graph`, and `ParquetWriter` named relationship endpoints after the stem rather than the raw label. Colliding stems now receive a `__2`, `__3`, … suffix and endpoints use the raw label; filenames for labels that do not collide are unchanged.
