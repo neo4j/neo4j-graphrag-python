@@ -48,7 +48,7 @@ from neo4j_graphrag.utils.rate_limit import (
     rate_limit_handler as rate_limit_handler_decorator,
 )
 
-from .base import BaseLLM
+from .base import BaseLLM, validate_invoke_input
 from .types import (
     BaseMessage,
     LLMResponse,
@@ -115,6 +115,7 @@ class OllamaLLM(BaseLLM):
     def invoke(
         self,
         input: List[LLMMessage],
+        *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
@@ -127,6 +128,7 @@ class OllamaLLM(BaseLLM):
         Returns:
             LLMResponse: The response from the LLM.
         """
+        validate_invoke_input(input)
         if response_format is not None:
             raise NotImplementedError(
                 "OllamaLLM does not currently support structured output"
@@ -161,6 +163,7 @@ class OllamaLLM(BaseLLM):
     async def ainvoke(
         self,
         input: List[LLMMessage],
+        *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
@@ -177,6 +180,7 @@ class OllamaLLM(BaseLLM):
         Raises:
             LLMGenerationError: If anything goes wrong.
         """
+        validate_invoke_input(input)
         if response_format is not None:
             raise NotImplementedError(
                 "OllamaLLM does not currently support structured output"

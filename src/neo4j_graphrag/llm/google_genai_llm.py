@@ -34,7 +34,7 @@ from pydantic import BaseModel, ValidationError
 
 # project dependencies
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.base import BaseLLM
+from neo4j_graphrag.llm.base import BaseLLM, validate_invoke_input
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
@@ -112,11 +112,13 @@ class BaseGeminiLLM(BaseLLM, abc.ABC):
     def invoke(
         self,
         input: List[LLMMessage],
+        *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         image_bytes: Optional[bytes] = None,
         image_mime_type: GeminiImageMimeType = GEMINI_DEFAULT_IMAGE_MIME_TYPE,
         **kwargs: Any,
     ) -> LLMResponse:
+        validate_invoke_input(input)
         try:
             system_instruction, contents = self.build_llm_messages(
                 input, image_bytes=image_bytes, image_mime_type=image_mime_type
@@ -139,11 +141,13 @@ class BaseGeminiLLM(BaseLLM, abc.ABC):
     async def ainvoke(
         self,
         input: List[LLMMessage],
+        *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         image_bytes: Optional[bytes] = None,
         image_mime_type: GeminiImageMimeType = GEMINI_DEFAULT_IMAGE_MIME_TYPE,
         **kwargs: Any,
     ) -> LLMResponse:
+        validate_invoke_input(input)
         try:
             system_instruction, contents = self.build_llm_messages(
                 input, image_bytes=image_bytes, image_mime_type=image_mime_type

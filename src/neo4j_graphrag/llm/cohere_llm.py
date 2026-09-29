@@ -30,7 +30,7 @@ from pydantic import BaseModel
 
 # project dependencies
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.base import BaseLLM
+from neo4j_graphrag.llm.base import BaseLLM, validate_invoke_input
 from neo4j_graphrag.llm.types import (
     LLMResponse,
     LLMUsage,
@@ -118,6 +118,7 @@ class CohereLLM(BaseLLM):
     def invoke(
         self,
         input: List[LLMMessage],
+        *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
@@ -130,6 +131,7 @@ class CohereLLM(BaseLLM):
         Returns:
             LLMResponse: The response from the LLM.
         """
+        validate_invoke_input(input)
         if response_format is not None:
             raise NotImplementedError(
                 "CohereLLM does not currently support structured output"
@@ -175,9 +177,11 @@ class CohereLLM(BaseLLM):
     async def ainvoke(
         self,
         input: List[LLMMessage],
+        *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
+        validate_invoke_input(input)
         if response_format is not None:
             raise NotImplementedError(
                 "CohereLLM does not currently support structured output"

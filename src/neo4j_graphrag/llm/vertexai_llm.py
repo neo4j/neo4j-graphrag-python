@@ -24,7 +24,7 @@ from pydantic import BaseModel, ValidationError
 
 # project dependencies
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.base import BaseLLM
+from neo4j_graphrag.llm.base import BaseLLM, validate_invoke_input
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
@@ -193,6 +193,7 @@ class VertexAILLM(BaseLLM):
     def invoke(
         self,
         input: List[LLMMessage],
+        *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
@@ -209,6 +210,7 @@ class VertexAILLM(BaseLLM):
         Returns:
             LLMResponse: The response from the LLM.
         """
+        validate_invoke_input(input)
         system_instruction, messages = self.build_llm_messages(input)
         model = self._get_model(
             system_instruction=system_instruction,
@@ -226,6 +228,7 @@ class VertexAILLM(BaseLLM):
     async def ainvoke(
         self,
         input: list[LLMMessage],
+        *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
@@ -242,6 +245,7 @@ class VertexAILLM(BaseLLM):
         Returns:
             LLMResponse: The response from the LLM.
         """
+        validate_invoke_input(input)
         try:
             system_instruction, messages = self.build_llm_messages(input)
             model = self._get_model(

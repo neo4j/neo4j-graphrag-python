@@ -33,7 +33,7 @@ from pydantic import BaseModel, ValidationError
 
 # project dependencies
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.base import BaseLLM
+from neo4j_graphrag.llm.base import BaseLLM, validate_invoke_input
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
@@ -123,9 +123,11 @@ class BedrockLLM(BaseLLM):
     def invoke(
         self,
         input: List[LLMMessage],
+        *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
+        validate_invoke_input(input)
         if response_format is not None:
             raise NotImplementedError(
                 "BedrockLLM does not currently support structured output"
@@ -144,16 +146,18 @@ class BedrockLLM(BaseLLM):
     async def ainvoke(
         self,
         input: List[LLMMessage],
+        *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
+        validate_invoke_input(input)
         if response_format is not None:
             raise NotImplementedError(
                 "BedrockLLM does not currently support structured output"
             )
         try:
             loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(None, self.invoke, input, response_format)
+            return await loop.run_in_executor(None, self.invoke, input)
         except LLMGenerationError:
             raise
         except Exception as e:

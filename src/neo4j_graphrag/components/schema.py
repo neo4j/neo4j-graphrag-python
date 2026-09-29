@@ -1729,10 +1729,12 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
                 f"Unexpected schema format returned from LLM: {type(extracted_schema)}. Expected a dictionary or list of dictionaries."
             )
 
-    def _apply_v1_filters(self, extracted_schema: Dict[str, Any]) -> Dict[str, Any]:
-        """Apply V1-specific filters before cross-reference filtering.
+    def _apply_prompt_based_extraction_filters(
+        self, extracted_schema: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Apply prompt-based-extraction filters before cross-reference filtering.
 
-        V1 (prompt-based) extraction requires additional filtering:
+        Prompt-based extraction requires additional filtering:
         - Remove nodes/relationships without labels
         - Remove nodes with no properties (after property filtering)
 
@@ -1850,7 +1852,7 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         extracted_schema = self._parse_and_normalize_schema(content)
 
         # Apply prompt-based filtering
-        extracted_schema = self._apply_v1_filters(extracted_schema)
+        extracted_schema = self._apply_prompt_based_extraction_filters(extracted_schema)
 
         return validate_extraction_dict_to_graph_schema(extracted_schema)
 

@@ -50,7 +50,7 @@ from neo4j_graphrag.utils.rate_limit import (
 )
 
 from ..exceptions import LLMGenerationError
-from .base import BaseLLM
+from .base import BaseLLM, validate_invoke_input
 from .types import (
     BaseMessage,
     LLMResponse,
@@ -218,6 +218,7 @@ class BaseOpenAILLM(BaseLLM, abc.ABC):
     def invoke(
         self,
         input: List[LLMMessage],
+        *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
@@ -232,6 +233,7 @@ class BaseOpenAILLM(BaseLLM, abc.ABC):
         Returns:
             LLMResponse: The response from the LLM.
         """
+        validate_invoke_input(input)
         try:
             messages = self.build_llm_messages(input)
             params = self.model_params.copy() if self.model_params else {}
@@ -366,6 +368,7 @@ class BaseOpenAILLM(BaseLLM, abc.ABC):
     async def ainvoke(
         self,
         input: List[LLMMessage],
+        *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
@@ -380,6 +383,7 @@ class BaseOpenAILLM(BaseLLM, abc.ABC):
         Returns:
             LLMResponse: The response from the LLM.
         """
+        validate_invoke_input(input)
         try:
             messages = self.build_llm_messages(input)
             params = self.model_params.copy() if self.model_params else {}

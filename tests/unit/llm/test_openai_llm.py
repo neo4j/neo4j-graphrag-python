@@ -71,6 +71,25 @@ def test_openai_llm_happy_path(mock_import: Mock) -> None:
 
 
 @patch("builtins.__import__")
+def test_openai_llm_invoke_rejects_string_input(mock_import: Mock) -> None:
+    mock_import.return_value = get_mock_openai()
+    llm = OpenAILLM(api_key="my key", model_name="gpt")
+
+    with pytest.raises(TypeError, match="list of LLMMessage"):
+        llm.invoke("my text")  # type: ignore[arg-type]
+
+
+@patch("builtins.__import__")
+@pytest.mark.asyncio
+async def test_openai_llm_ainvoke_rejects_string_input(mock_import: Mock) -> None:
+    mock_import.return_value = get_mock_openai()
+    llm = OpenAILLM(api_key="my key", model_name="gpt")
+
+    with pytest.raises(TypeError, match="list of LLMMessage"):
+        await llm.ainvoke("my text")  # type: ignore[arg-type]
+
+
+@patch("builtins.__import__")
 def test_openai_llm_with_message_history_happy_path(mock_import: Mock) -> None:
     mock_openai = get_mock_openai()
     mock_import.return_value = mock_openai

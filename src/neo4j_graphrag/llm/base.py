@@ -36,6 +36,21 @@ from .types import LLMResponse, ToolCallResponse
 logger = logging.getLogger(__name__)
 
 
+def validate_invoke_input(input: Any) -> None:
+    """Guard against passing a raw string where a list of LLMMessage is required.
+
+    invoke/ainvoke only accept List[LLMMessage]; a plain string is silently
+    subscriptable in Python, so a caller's mistake would otherwise surface as an
+    obscure TypeError deep inside message-building code instead of at the boundary.
+    """
+    if not isinstance(input, list):
+        raise TypeError(
+            "invoke/ainvoke expect a list of LLMMessage dicts, e.g. "
+            '[{"role": "user", "content": "..."}], '
+            f"got {type(input).__name__}."
+        )
+
+
 class BaseLLM(ABC):
     """Abstract base for LLMs.
 
@@ -84,6 +99,7 @@ class BaseLLM(ABC):
             LLMResponse: The response from the LLM.
 
         Raises:
+            TypeError: If input is not a list of LLMMessage.
             LLMGenerationError: If anything goes wrong.
             NotImplementedError: If the LLM provider does not support structured output.
         """
@@ -108,6 +124,7 @@ class BaseLLM(ABC):
             LLMResponse: The response from the LLM.
 
         Raises:
+            TypeError: If input is not a list of LLMMessage.
             LLMGenerationError: If anything goes wrong.
             NotImplementedError: If the LLM provider does not support structured output.
         """

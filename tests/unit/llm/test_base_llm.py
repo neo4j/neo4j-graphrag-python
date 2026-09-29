@@ -18,7 +18,7 @@ from typing import Any, List, Optional, Type, Union
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from neo4j_graphrag.llm.base import BaseLLM
+from neo4j_graphrag.llm.base import BaseLLM, validate_invoke_input
 from neo4j_graphrag.llm.types import LLMResponse, LLMUsage
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.rate_limit import NoOpRateLimitHandler
@@ -184,3 +184,17 @@ async def test_ainvoke_with_tools_raises_not_implemented() -> None:
     llm = _ConcreteLLM(model_name="m")
     with pytest.raises(NotImplementedError):
         await llm.ainvoke_with_tools("hello", tools=[])
+
+
+# ---------------------------------------------------------------------------
+# validate_invoke_input
+# ---------------------------------------------------------------------------
+
+
+def test_validate_invoke_input_rejects_string() -> None:
+    with pytest.raises(TypeError, match="list of LLMMessage"):
+        validate_invoke_input("hello")
+
+
+def test_validate_invoke_input_accepts_message_list() -> None:
+    validate_invoke_input([{"role": "user", "content": "hi"}])
