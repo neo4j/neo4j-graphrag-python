@@ -48,7 +48,7 @@ from neo4j_graphrag.utils.rate_limit import (
     rate_limit_handler as rate_limit_handler_decorator,
 )
 
-from .base import LLMBase
+from .base import BaseLLM
 from .types import (
     BaseMessage,
     LLMResponse,
@@ -66,7 +66,7 @@ if TYPE_CHECKING:
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
 
 
-class OllamaLLM(LLMBase):
+class OllamaLLM(BaseLLM):
     """LLM wrapper for Ollama models."""
 
     def __init__(
@@ -83,7 +83,7 @@ class OllamaLLM(LLMBase):
                 "Could not import ollama Python client. "
                 "Please install it with `pip install ollama`."
             )
-        LLMBase.__init__(
+        BaseLLM.__init__(
             self,
             model_name=model_name,
             model_params=model_params or {},

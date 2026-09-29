@@ -29,7 +29,7 @@ from typing import (
 from pydantic import BaseModel
 
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.base import LLMBase
+from neo4j_graphrag.llm.base import BaseLLM
 from neo4j_graphrag.llm.types import (
     LLMResponse,
     LLMUsage,
@@ -165,7 +165,7 @@ def _restore_open_maps(value: Any, schema: dict[str, Any], defs: dict[str, Any])
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
-class BaseAnthropicLLM(LLMBase, abc.ABC):
+class BaseAnthropicLLM(BaseLLM, abc.ABC):
     """Base class for Anthropic LLMs.
 
     Holds all the shared message-building, schema-conversion, and
@@ -193,7 +193,7 @@ class BaseAnthropicLLM(LLMBase, abc.ABC):
                 Please install it with `pip install "neo4j-graphrag[anthropic]"`."""
             )
         self.anthropic = anthropic
-        LLMBase.__init__(
+        BaseLLM.__init__(
             self,
             model_name=model_name,
             model_params=model_params or {},

@@ -23,7 +23,7 @@ from neo4j_graphrag.components.types import LexicalGraphConfig
 from neo4j_graphrag.experimental.pipeline.exceptions import PipelineDefinitionError
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
-from neo4j_graphrag.llm.base import LLMBase
+from neo4j_graphrag.llm.base import BaseLLM
 
 
 @mock.patch(
@@ -32,7 +32,7 @@ from neo4j_graphrag.llm.base import LLMBase
 )
 @pytest.mark.asyncio
 async def test_knowledge_graph_builder_from_pdf_deprecated_kwarg(_: Mock) -> None:
-    llm = MagicMock(spec=LLMBase)
+    llm = MagicMock(spec=BaseLLM)
     driver = MagicMock(spec=neo4j.Driver)
     embedder = MagicMock(spec=Embedder)
 
@@ -62,7 +62,7 @@ async def test_knowledge_graph_builder_from_pdf_deprecated_kwarg(_: Mock) -> Non
 )
 @pytest.mark.asyncio
 async def test_knowledge_graph_builder_pdf_loader_deprecated_kwarg(_: Mock) -> None:
-    llm = MagicMock(spec=LLMBase)
+    llm = MagicMock(spec=BaseLLM)
     driver = MagicMock(spec=neo4j.Driver)
     embedder = MagicMock(spec=Embedder)
     loader = PdfLoader()
@@ -93,7 +93,7 @@ async def test_knowledge_graph_builder_pdf_loader_deprecated_kwarg(_: Mock) -> N
 )
 @pytest.mark.asyncio
 async def test_knowledge_graph_builder_document_info_with_file(_: Mock) -> None:
-    llm = MagicMock(spec=LLMBase)
+    llm = MagicMock(spec=BaseLLM)
     driver = MagicMock(spec=neo4j.Driver)
     embedder = MagicMock(spec=Embedder)
 
@@ -130,7 +130,7 @@ async def test_knowledge_graph_builder_document_info_with_file(_: Mock) -> None:
 )
 @pytest.mark.asyncio
 async def test_knowledge_graph_builder_document_info_with_text(_: Mock) -> None:
-    llm = MagicMock(spec=LLMBase)
+    llm = MagicMock(spec=BaseLLM)
     driver = MagicMock(spec=neo4j.Driver)
     embedder = MagicMock(spec=Embedder)
 
@@ -169,7 +169,7 @@ async def test_knowledge_graph_builder_document_info_with_text(_: Mock) -> None:
 )
 @pytest.mark.asyncio
 async def test_knowledge_graph_builder_with_entities_and_file(_: Mock) -> None:
-    llm = MagicMock(spec=LLMBase)
+    llm = MagicMock(spec=BaseLLM)
     driver = MagicMock(spec=neo4j.Driver)
     embedder = MagicMock(spec=Embedder)
 
@@ -202,7 +202,7 @@ async def test_knowledge_graph_builder_with_entities_and_file(_: Mock) -> None:
 
 
 def test_simple_kg_pipeline_on_error_invalid_value() -> None:
-    llm = MagicMock(spec=LLMBase)
+    llm = MagicMock(spec=BaseLLM)
     driver = MagicMock(spec=neo4j.Driver)
     embedder = MagicMock(spec=Embedder)
 
@@ -216,7 +216,7 @@ def test_simple_kg_pipeline_on_error_invalid_value() -> None:
 
 
 def test_knowledge_graph_builder_pdf_loader_and_file_loader_conflict() -> None:
-    llm = MagicMock(spec=LLMBase)
+    llm = MagicMock(spec=BaseLLM)
     driver = MagicMock(spec=neo4j.Driver)
     embedder = MagicMock(spec=Embedder)
 
@@ -236,7 +236,7 @@ def test_knowledge_graph_builder_pdf_loader_and_file_loader_conflict() -> None:
 )
 @pytest.mark.asyncio
 async def test_knowledge_graph_builder_with_lexical_graph_config(_: Mock) -> None:
-    llm = MagicMock(spec=LLMBase)
+    llm = MagicMock(spec=BaseLLM)
     driver = MagicMock(spec=neo4j.Driver)
     embedder = MagicMock(spec=Embedder)
 

@@ -18,7 +18,7 @@ from typing import Any, List, Optional, Type, Union
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from neo4j_graphrag.llm.base import LLMBase
+from neo4j_graphrag.llm.base import BaseLLM
 from neo4j_graphrag.llm.types import LLMResponse, LLMUsage
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.rate_limit import NoOpRateLimitHandler
@@ -73,8 +73,8 @@ def test_llm_response_carries_usage() -> None:
 # ---------------------------------------------------------------------------
 
 
-class _ConcreteLLM(LLMBase):
-    """Minimal LLMBase subclass for unit testing."""
+class _ConcreteLLM(BaseLLM):
+    """Minimal BaseLLM subclass for unit testing."""
 
     def invoke(
         self,
@@ -102,7 +102,7 @@ class _ConcreteLLM(LLMBase):
 
 def test_llmbase_cannot_be_instantiated_directly() -> None:
     with pytest.raises(TypeError):
-        LLMBase(model_name="m")  # type: ignore[abstract]
+        BaseLLM(model_name="m")  # type: ignore[abstract]
 
 
 def test_llmbase_sets_model_name() -> None:
@@ -127,7 +127,7 @@ def test_llmbase_accepts_custom_rate_limit_handler() -> None:
 
 
 def test_llmbase_init_does_not_emit_deprecation_warning() -> None:
-    """LLMBase.__init__ emits no deprecation warning."""
+    """BaseLLM.__init__ emits no deprecation warning."""
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         _ConcreteLLM(model_name="m")
@@ -169,7 +169,7 @@ async def test_ainvoke_accepts_message_list() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Tool calling defaults (inherited from LLMBase)
+# Tool calling defaults (inherited from BaseLLM)
 # ---------------------------------------------------------------------------
 
 

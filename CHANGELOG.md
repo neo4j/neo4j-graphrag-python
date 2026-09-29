@@ -4,7 +4,7 @@
 
 ### Changed
 
-- **Breaking:** `LLMBase.invoke` and `LLMBase.ainvoke` accept a list of `LLMMessage` (`{"role": "system" | "user" | "assistant", "content": str}`) only, with a keyword-only `response_format` parameter and `**kwargs`. Plain string input and the `message_history` and `system_instruction` invoke parameters are no longer accepted: wrap prompts as `[{"role": "user", "content": ...}]`, prepend `[{"role": "system", "content": ...}]` for system instructions, and pass prior turns as earlier entries in the list. `LLMInterface` and `LLMInterfaceV2` are replaced by the single `LLMBase` abstract class. `invoke_with_tools`/`ainvoke_with_tools` are unchanged and still take a string prompt.
+- **Breaking:** `BaseLLM.invoke` and `BaseLLM.ainvoke` accept a list of `LLMMessage` (`{"role": "system" | "user" | "assistant", "content": str}`) only, with a keyword-only `response_format` parameter and `**kwargs`. Plain string input and the `message_history` and `system_instruction` invoke parameters are no longer accepted: wrap prompts as `[{"role": "user", "content": ...}]`, prepend `[{"role": "system", "content": ...}]` for system instructions, and pass prior turns as earlier entries in the list. `LLMInterface` and `LLMInterfaceV2` are replaced by the single `BaseLLM` abstract class (formerly `LLMBase`, renamed to match the `BaseException`/`BaseModel`-style Python convention). `invoke_with_tools`/`ainvoke_with_tools` are unchanged and still take a string prompt.
 
 ### Fixed
 

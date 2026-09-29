@@ -50,7 +50,7 @@ from neo4j_graphrag.utils.rate_limit import (
 )
 
 from ..exceptions import LLMGenerationError
-from .base import LLMBase
+from .base import BaseLLM
 from .types import (
     BaseMessage,
     LLMResponse,
@@ -79,7 +79,7 @@ logger = logging.getLogger(__name__)
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel, line-too-long
-class BaseOpenAILLM(LLMBase, abc.ABC):
+class BaseOpenAILLM(BaseLLM, abc.ABC):
     """Base class for OpenAI LLMs."""
 
     client: OpenAI
@@ -111,7 +111,7 @@ class BaseOpenAILLM(LLMBase, abc.ABC):
             )
         self.openai = openai
 
-        LLMBase.__init__(
+        BaseLLM.__init__(
             self,
             model_name=model_name,
             model_params=model_params or {},

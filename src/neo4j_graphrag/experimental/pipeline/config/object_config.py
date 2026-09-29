@@ -20,7 +20,7 @@ Nomenclature in this file:
 - `*Config` models are used to represent "things" as dict to be used in a config file.
     e.g.:
     - neo4j.Driver => {"uri": "", "user": "", "password": ""}
-    - LLMBase => {"class_": "OpenAI", "params_": {"model_name": "gpt-5"}}
+    - BaseLLM => {"class_": "OpenAI", "params_": {"model_name": "gpt-5"}}
 - `*Type` models are wrappers around an object and a 'Config' the object can be created
     from. They are used to allow the instantiation of "PipelineConfig" either from
     instantiated objects (when used in code) and from a config dict (when used to
@@ -47,7 +47,7 @@ from neo4j_graphrag.experimental.pipeline.config.base import AbstractConfig
 from neo4j_graphrag.experimental.pipeline.config.param_resolver import (
     ParamConfig,
 )
-from neo4j_graphrag.llm import LLMBase
+from neo4j_graphrag.llm import BaseLLM
 from neo4j_graphrag.utils.validation import issubclass_safe
 
 logger = logging.getLogger(__name__)
@@ -183,28 +183,28 @@ class Neo4jDriverType(RootModel):  # type: ignore[type-arg]
         return self.root.parse(resolved_data)
 
 
-class LLMConfig(ObjectConfig[LLMBase]):
-    """Configuration for any LLMBase object.
+class LLMConfig(ObjectConfig[BaseLLM]):
+    """Configuration for any BaseLLM object.
 
     By default, will try to import from `neo4j_graphrag.llm`.
     """
 
     DEFAULT_MODULE = "neo4j_graphrag.llm"
-    INTERFACE = LLMBase
+    INTERFACE = BaseLLM
 
 
 class LLMType(RootModel):  # type: ignore[type-arg]
-    """A model to wrap LLMBase and LLMConfig objects.
+    """A model to wrap BaseLLM and LLMConfig objects.
 
-    The `parse` method always returns an object inheriting from LLMBase.
+    The `parse` method always returns an object inheriting from BaseLLM.
     """
 
-    root: Union[LLMBase, LLMConfig]
+    root: Union[BaseLLM, LLMConfig]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def parse(self, resolved_data: Optional[dict[str, Any]] = None) -> LLMBase:
-        if isinstance(self.root, LLMBase):
+    def parse(self, resolved_data: Optional[dict[str, Any]] = None) -> BaseLLM:
+        if isinstance(self.root, BaseLLM):
             return self.root
         return self.root.parse(resolved_data)
 

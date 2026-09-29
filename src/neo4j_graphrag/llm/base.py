@@ -36,7 +36,7 @@ from .types import LLMResponse, ToolCallResponse
 logger = logging.getLogger(__name__)
 
 
-class LLMBase(ABC):
+class BaseLLM(ABC):
     """Abstract base for LLMs.
 
     Args:
@@ -193,13 +193,13 @@ class LLMBase(ABC):
         """
         pass
 
-    def __enter__(self) -> "LLMBase":
+    def __enter__(self) -> "BaseLLM":
         return self
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         self.close()
 
-    async def __aenter__(self) -> "LLMBase":
+    async def __aenter__(self) -> "BaseLLM":
         return self
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:

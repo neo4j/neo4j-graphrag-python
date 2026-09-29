@@ -40,7 +40,7 @@ from neo4j_graphrag.experimental.pipeline.types.schema import (
     RelationInputType,
 )
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate
-from neo4j_graphrag.llm.base import LLMBase
+from neo4j_graphrag.llm.base import BaseLLM
 from neo4j_graphrag.components.schema import GraphSchema
 
 logger = logging.getLogger(__name__)
@@ -52,7 +52,7 @@ class SimpleKGPipeline:
     It abstracts away the complexity of setting up the pipeline and its components.
 
     Args:
-        llm (LLMBase): An instance of an LLM to use for entity and relation extraction.
+        llm (BaseLLM): An instance of an LLM to use for entity and relation extraction.
         driver (neo4j.Driver): A Neo4j driver instance for database connection.
         embedder (Embedder): An instance of an embedder used to generate chunk embeddings from text chunks.
         schema (Optional[Union[GraphSchema, dict[str, list]]]): A schema configuration defining node types,
@@ -98,7 +98,7 @@ class SimpleKGPipeline:
 
     def __init__(
         self,
-        llm: LLMBase,
+        llm: BaseLLM,
         driver: neo4j.Driver,
         embedder: Embedder,
         entities: Optional[Sequence[EntityInputType]] = None,

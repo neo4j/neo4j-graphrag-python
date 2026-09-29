@@ -20,7 +20,7 @@ import pytest
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.generation.graphrag import GraphRAG
 from neo4j_graphrag.generation.types import RagResultModel
-from neo4j_graphrag.llm import LLMResponse, LLMBase
+from neo4j_graphrag.llm import LLMResponse, BaseLLM
 from neo4j_graphrag.message_history import Neo4jMessageHistory
 from neo4j_graphrag.retrievers import VectorCypherRetriever
 from neo4j_graphrag.types import LLMMessage, RetrieverResult, RetrieverResultItem
@@ -38,7 +38,7 @@ def populate_neo4j_db(driver: neo4j.Driver) -> None:
 
 @pytest.fixture(scope="function")
 def llm_v2_fixture() -> MagicMock:
-    return MagicMock(spec=LLMBase)
+    return MagicMock(spec=BaseLLM)
 
 
 @pytest.mark.usefixtures("populate_neo4j_db")

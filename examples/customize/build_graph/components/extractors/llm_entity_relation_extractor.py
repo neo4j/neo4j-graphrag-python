@@ -6,14 +6,14 @@ from neo4j_graphrag.components.types import (
     TextChunk,
     TextChunks,
 )
-from neo4j_graphrag.llm import LLMBase
+from neo4j_graphrag.llm import BaseLLM
 
 
-async def main(llm: LLMBase) -> Neo4jGraph:
+async def main(llm: BaseLLM) -> Neo4jGraph:
     """
 
     Args:
-        llm (LLMBase): Any LLM implemented in neo4j_graphrag.llm or from LangChain chat models.
+        llm (BaseLLM): Any LLM implemented in neo4j_graphrag.llm or from LangChain chat models.
     """
     extractor = LLMEntityRelationExtractor(
         llm=llm,

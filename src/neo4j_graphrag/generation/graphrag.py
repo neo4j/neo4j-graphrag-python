@@ -29,7 +29,7 @@ from neo4j_graphrag.exceptions import (
 )
 from neo4j_graphrag.generation.prompts import RagTemplate
 from neo4j_graphrag.generation.types import RagInitModel, RagResultModel, RagSearchModel
-from neo4j_graphrag.llm import LLMBase
+from neo4j_graphrag.llm import BaseLLM
 from neo4j_graphrag.llm.utils import legacy_inputs_to_messages
 from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.retrievers.base import Retriever
@@ -63,7 +63,7 @@ class GraphRAG:
 
     Args:
         retriever (Retriever): The retriever used to find relevant context to pass to the LLM.
-        llm (LLMBase or LangChain Chat Model): The LLM used to generate
+        llm (BaseLLM or LangChain Chat Model): The LLM used to generate
             the answer.
         prompt_template (RagTemplate): The prompt template that will be formatted with context and
             user question and passed to the LLM.
@@ -75,7 +75,7 @@ class GraphRAG:
     def __init__(
         self,
         retriever: Retriever,
-        llm: Union[LLMBase, Any],
+        llm: Union[BaseLLM, Any],
         prompt_template: RagTemplate = RagTemplate(),
     ):
         try:

@@ -20,7 +20,7 @@ from typing import Any, List, Optional, Type, Union
 from pydantic import BaseModel
 
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.base import LLMBase
+from neo4j_graphrag.llm.base import BaseLLM
 from neo4j_graphrag.llm.types import (
     LLMResponse,
     LLMUsage,
@@ -59,7 +59,7 @@ except ImportError:
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return
-class MistralAILLM(LLMBase):
+class MistralAILLM(BaseLLM):
     def __init__(
         self,
         model_name: str,
@@ -82,7 +82,7 @@ class MistralAILLM(LLMBase):
                 """Could not import Mistral Python client.
                 Please install it with `pip install "neo4j-graphrag[mistralai]"`."""
             )
-        LLMBase.__init__(
+        BaseLLM.__init__(
             self,
             model_name=model_name,
             model_params=model_params or {},

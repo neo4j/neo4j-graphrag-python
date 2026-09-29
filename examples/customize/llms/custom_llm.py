@@ -4,7 +4,7 @@ from typing import Any, Awaitable, Callable, List, Optional, Type, TypeVar, Unio
 
 from pydantic import BaseModel
 
-from neo4j_graphrag.llm import LLMBase, LLMResponse
+from neo4j_graphrag.llm import BaseLLM, LLMResponse
 from neo4j_graphrag.utils.rate_limit import (
     RateLimitHandler,
     # rate_limit_handler,
@@ -14,7 +14,7 @@ from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.exceptions import RetryableError
 
 
-class CustomLLM(LLMBase):
+class CustomLLM(BaseLLM):
     def __init__(
         self, model_name: str, system_instruction: Optional[str] = None, **kwargs: Any
     ):

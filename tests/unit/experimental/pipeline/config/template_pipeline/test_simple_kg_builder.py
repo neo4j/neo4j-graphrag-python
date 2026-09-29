@@ -50,7 +50,7 @@ from neo4j_graphrag.experimental.pipeline.types.schema import (
 )
 from neo4j_graphrag.components.types import DocumentType
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate
-from neo4j_graphrag.llm import LLMBase
+from neo4j_graphrag.llm import BaseLLM
 
 
 def test_simple_kg_pipeline_config_file_loader_from_file_is_false() -> None:
@@ -175,7 +175,7 @@ def test_simple_kg_pipeline_config_chunk_embedder(
     "neo4j_graphrag.experimental.pipeline.config.template_pipeline.simple_kg_builder.SimpleKGPipelineConfig.get_default_llm"
 )
 def test_simple_kg_pipeline_config_automatic_schema(
-    mock_llm: Mock, llm: LLMBase
+    mock_llm: Mock, llm: BaseLLM
 ) -> None:
     mock_llm.return_value = llm
     config = SimpleKGPipelineConfig()
@@ -189,7 +189,7 @@ def test_simple_kg_pipeline_config_automatic_schema(
     "neo4j_graphrag.experimental.pipeline.config.template_pipeline.simple_kg_builder.SimpleKGPipelineConfig.get_default_llm"
 )
 def test_simple_kg_pipeline_config_automatic_schema_structured_output(
-    mock_llm: Mock, llm: LLMBase
+    mock_llm: Mock, llm: BaseLLM
 ) -> None:
     llm.supports_structured_output = True
     mock_llm.return_value = llm
@@ -230,7 +230,7 @@ def test_simple_kg_pipeline_config_schema_run_params() -> None:
 @patch(
     "neo4j_graphrag.experimental.pipeline.config.template_pipeline.simple_kg_builder.SimpleKGPipelineConfig.get_default_llm"
 )
-def test_simple_kg_pipeline_config_extractor(mock_llm: Mock, llm: LLMBase) -> None:
+def test_simple_kg_pipeline_config_extractor(mock_llm: Mock, llm: BaseLLM) -> None:
     mock_llm.return_value = llm
     config = SimpleKGPipelineConfig(
         on_error="IGNORE",  # type: ignore
@@ -248,7 +248,7 @@ def test_simple_kg_pipeline_config_extractor(mock_llm: Mock, llm: LLMBase) -> No
     "neo4j_graphrag.experimental.pipeline.config.template_pipeline.simple_kg_builder.SimpleKGPipelineConfig.get_default_llm"
 )
 def test_simple_kg_pipeline_config_extractor_structured_output(
-    mock_llm: Mock, llm: LLMBase
+    mock_llm: Mock, llm: BaseLLM
 ) -> None:
     llm.supports_structured_output = True
     mock_llm.return_value = llm

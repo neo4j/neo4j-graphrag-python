@@ -273,7 +273,7 @@ Using a Custom Model
 --------------------
 
 If the provided implementations do not match their needs, developers can create a
-custom LLM class by subclassing :class:`neo4j_graphrag.llm.LLMBase`.
+custom LLM class by subclassing :class:`neo4j_graphrag.llm.BaseLLM`.
 Subclasses implement ``invoke`` and ``ainvoke``, both taking a list of
 ``LLMMessage`` (dicts with ``role`` and ``content`` keys) and an optional
 keyword-only ``response_format`` for structured output.
@@ -285,10 +285,10 @@ Here's an example using the Python Ollama client:
     from typing import Any, List, Optional, Type, Union
     import ollama
     from pydantic import BaseModel
-    from neo4j_graphrag.llm import LLMBase, LLMResponse
+    from neo4j_graphrag.llm import BaseLLM, LLMResponse
     from neo4j_graphrag.types import LLMMessage
 
-    class MyOllamaLLM(LLMBase):
+    class MyOllamaLLM(BaseLLM):
 
         def invoke(
             self,

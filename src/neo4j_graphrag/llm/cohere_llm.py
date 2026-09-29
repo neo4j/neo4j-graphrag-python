@@ -30,7 +30,7 @@ from pydantic import BaseModel
 
 # project dependencies
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.base import LLMBase
+from neo4j_graphrag.llm.base import BaseLLM
 from neo4j_graphrag.llm.types import (
     LLMResponse,
     LLMUsage,
@@ -51,7 +51,7 @@ if TYPE_CHECKING:
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
-class CohereLLM(LLMBase):
+class CohereLLM(BaseLLM):
     """Interface for large language models on the Cohere platform
 
     Args:
@@ -94,7 +94,7 @@ class CohereLLM(LLMBase):
                 """Could not import cohere python client.
                 Please install it with `pip install "neo4j-graphrag[cohere]"`."""
             )
-        LLMBase.__init__(
+        BaseLLM.__init__(
             self,
             model_name=model_name,
             model_params=model_params or {},

@@ -33,7 +33,7 @@ from pydantic import BaseModel, ValidationError
 
 # project dependencies
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.base import LLMBase
+from neo4j_graphrag.llm.base import BaseLLM
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
@@ -66,7 +66,7 @@ DEFAULT_BEDROCK_LLM_MODEL = os.getenv(
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
-class BedrockLLM(LLMBase):
+class BedrockLLM(BaseLLM):
     """LLM interface for Amazon Bedrock via the boto3 Converse API.
 
     Args:
@@ -108,7 +108,7 @@ class BedrockLLM(LLMBase):
                 "Could not import boto3 python client. "
                 'Please install it with `pip install "neo4j-graphrag[bedrock]"`.'
             )
-        LLMBase.__init__(
+        BaseLLM.__init__(
             self,
             model_name=model_name,
             model_params=model_params or {},

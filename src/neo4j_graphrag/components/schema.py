@@ -60,7 +60,7 @@ from neo4j_graphrag.experimental.pipeline.types.schema import (
     RelationInputType,
 )
 from neo4j_graphrag.generation import PromptTemplate, SchemaExtractionTemplate
-from neo4j_graphrag.llm import LLMBase
+from neo4j_graphrag.llm import BaseLLM
 from neo4j_graphrag.schema import get_structured_schema
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.file_handler import FileFormat, FileHandler
@@ -1569,7 +1569,7 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
     automatic schema extraction from text.
 
     Args:
-        llm (LLMBase): The language model to use for schema extraction.
+        llm (BaseLLM): The language model to use for schema extraction.
         prompt_template (Optional[PromptTemplate]): A custom prompt template to use for extraction.
         llm_params (Optional[Dict[str, Any]]): Additional parameters passed to the LLM.
         use_structured_output (bool): Whether to use structured output with
@@ -1602,12 +1602,12 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
 
     def __init__(
         self,
-        llm: LLMBase,
+        llm: BaseLLM,
         prompt_template: Optional[PromptTemplate] = None,
         llm_params: Optional[Dict[str, Any]] = None,
         use_structured_output: bool = False,
     ) -> None:
-        self._llm: LLMBase = llm
+        self._llm: BaseLLM = llm
         self._prompt_template: PromptTemplate = (
             prompt_template or SchemaExtractionTemplate()
         )

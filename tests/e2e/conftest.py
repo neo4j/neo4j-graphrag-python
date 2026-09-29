@@ -35,7 +35,7 @@ from neo4j_graphrag.indexes import (
     create_vector_index,
     drop_index_if_exists,
 )
-from neo4j_graphrag.llm import LLMBase
+from neo4j_graphrag.llm import BaseLLM
 from neo4j_graphrag.retrievers import VectorRetriever
 from tenacity import (
     before_sleep_log,
@@ -88,7 +88,7 @@ def driver() -> Generator[Any, Any, Any]:
 
 @pytest.fixture(scope="function")
 def llm() -> MagicMock:
-    mock = MagicMock(spec=LLMBase)
+    mock = MagicMock(spec=BaseLLM)
     mock.supports_structured_output = False
     return mock
 

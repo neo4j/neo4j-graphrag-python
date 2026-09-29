@@ -36,7 +36,7 @@ from neo4j_graphrag.components.types import (
 from neo4j_graphrag.components.base import Component
 from neo4j_graphrag.experimental.pipeline.exceptions import InvalidJSONError
 from neo4j_graphrag.generation.prompts import ERExtractionTemplate, PromptTemplate
-from neo4j_graphrag.llm import LLMBase
+from neo4j_graphrag.llm import BaseLLM
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.logging import prettify
 
@@ -163,7 +163,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
     Extracts a knowledge graph from a series of text chunks using a large language model.
 
     Args:
-        llm (LLMBase): The language model to use for extraction.
+        llm (BaseLLM): The language model to use for extraction.
         prompt_template (ERExtractionTemplate | str): A custom prompt template to use for extraction.
         create_lexical_graph (bool): Whether to include the text chunks in the graph in addition to the extracted entities and relations. Defaults to True.
         on_error (OnError): What to do when an error occurs during extraction. Defaults to raising an error.
@@ -212,7 +212,7 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
 
     def __init__(
         self,
-        llm: LLMBase,
+        llm: BaseLLM,
         prompt_template: Union[ERExtractionTemplate, str] = ERExtractionTemplate(),
         create_lexical_graph: bool = True,
         on_error: OnError = OnError.RAISE,

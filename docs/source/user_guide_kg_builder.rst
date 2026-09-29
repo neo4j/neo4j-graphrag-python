@@ -51,7 +51,7 @@ is utilizing the `SimpleKGPipeline` interface:
     from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 
     kg_builder = SimpleKGPipeline(
-        llm=llm, # an LLMBase for Entity and Relation extraction
+        llm=llm, # an BaseLLM for Entity and Relation extraction
         driver=neo4j_driver,  # a neo4j driver to write results to graph
         embedder=embedder,  # an Embedder for chunks
         from_file=True,   # set to False if parsing an already extracted text
@@ -1004,7 +1004,7 @@ It can be used in this way:
 
     For :ref:`OpenAILLM <openaillm>`, :ref:`VertexAILLM <vertexaillm>` and :ref:`AnthropicLLM <anthropicllm>`, structured output is recommended over ``"response_format": {"type": "json_object"}`` for improved reliability. See :ref:`Using Structured Output <using-structured-output>` below.
 
-The LLM to use can be customized, the only constraint is that it obeys the :ref:`LLMBase <llmbase>`.
+The LLM to use can be customized, the only constraint is that it obeys the :ref:`BaseLLM <llmbase>`.
 
 
 .. _using-structured-output:

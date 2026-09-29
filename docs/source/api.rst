@@ -325,10 +325,10 @@ Generation
 LLM
 ===
 
-LLMBase
+BaseLLM
 -------
 
-.. autoclass:: neo4j_graphrag.llm.LLMBase
+.. autoclass:: neo4j_graphrag.llm.BaseLLM
     :members:
 
 

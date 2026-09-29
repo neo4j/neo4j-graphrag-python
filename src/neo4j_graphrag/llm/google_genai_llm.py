@@ -34,7 +34,7 @@ from pydantic import BaseModel, ValidationError
 
 # project dependencies
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.base import LLMBase
+from neo4j_graphrag.llm.base import BaseLLM
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
@@ -78,7 +78,7 @@ GEMINI_DEFAULT_IMAGE_MIME_TYPE: GeminiImageMimeType = "image/png"
 
 
 # pylint: disable=redefined-builtin, arguments-differ, raise-missing-from, no-else-return, import-outside-toplevel
-class BaseGeminiLLM(LLMBase, abc.ABC):
+class BaseGeminiLLM(BaseLLM, abc.ABC):
     """Base class for Google Gemini LLMs (google.genai SDK).
 
     Holds all the shared message-building, config/schema-building, and
@@ -100,7 +100,7 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
                 "Could not import google-genai python client. "
                 'Please install it with `pip install "neo4j-graphrag[google-genai]"`.'
             )
-        LLMBase.__init__(
+        BaseLLM.__init__(
             self,
             model_name=model_name,
             model_params=model_params or {},

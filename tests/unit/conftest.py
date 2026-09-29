@@ -20,7 +20,7 @@ import neo4j
 import pytest
 from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.components.base import Component
-from neo4j_graphrag.llm import LLMBase
+from neo4j_graphrag.llm import BaseLLM
 from neo4j_graphrag.retrievers import (
     HybridRetriever,
     Text2CypherRetriever,
@@ -42,7 +42,7 @@ def embedder() -> MagicMock:
 
 @pytest.fixture(scope="function")
 def llm() -> MagicMock:
-    mock = MagicMock(spec=LLMBase)
+    mock = MagicMock(spec=BaseLLM)
     mock.supports_structured_output = False
     return mock
 
