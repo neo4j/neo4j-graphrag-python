@@ -353,6 +353,31 @@ def test_format_keeps_explicit_mime_type_when_response_format_given() -> None:
     assert config["responseMimeType"] == "text/x.enum"
 
 
+def test_format_preserves_open_additional_properties_in_response_schema() -> None:
+    formatter = VertexBatchRequestFormatter(
+        response_format={
+            "type": "object",
+            "properties": {
+                "tags": {
+                    "type": "object",
+                    "additionalProperties": {"type": "string"},
+                },
+            },
+            "additionalProperties": False,
+        }
+    )
+
+    schema = _generation_config(
+        formatter.format("k", [{"role": "user", "content": "x"}]).line
+    )["responseSchema"]
+
+    assert "additionalProperties" not in schema
+    assert schema["properties"]["tags"] == {
+        "type": "OBJECT",
+        "additionalProperties": {"type": "STRING"},
+    }
+
+
 def test_format_adapts_pydantic_response_format_for_batch_proto() -> None:
     formatter = VertexBatchRequestFormatter(response_format=_Movie)
 
