@@ -103,6 +103,32 @@ def sanitize_parquet_filestem(name: str) -> str:
     return result
 
 
+def _disambiguate_filestem(stem: str, used: set[str]) -> str:
+    """Reserve a stem that is not already in ``used``.
+
+    Different labels can sanitize to the same stem — any two labels with no
+    ASCII characters both fall back to ``unnamed`` — and without
+    disambiguation one Parquet file would silently overwrite the other. The
+    double underscore keeps these names clear of the single underscore space
+    ``FilenameCollisionHandler`` assigns, so a later run cannot overwrite a
+    file an earlier run wrote.
+
+    Args:
+        stem: A sanitized stem, as returned by ``sanitize_parquet_filestem``.
+        used: Stems already handed out; the returned stem is added to it.
+
+    Returns:
+        ``stem`` itself when free, otherwise ``stem__2``, ``stem__3``, ….
+    """
+    candidate = stem
+    suffix = 2
+    while candidate in used:
+        candidate = f"{stem}__{suffix}"
+        suffix += 1
+    used.add(candidate)
+    return candidate
+
+
 def _constraint_relationship_type_unset(constraint: ConstraintType) -> bool:
     rt = constraint.relationship_type
     return rt is None or (isinstance(rt, str) and rt.strip() == "")
@@ -858,10 +884,13 @@ class Neo4jGraphParquetFormatter:
         # Format node Parquet files
         nodes_data: dict[str, bytes] = {}
         file_metadata: list[FileMetadata] = []
+        used_node_stems: set[str] = set()
 
         for label, rows in label_to_rows.items():
             current_label: str = f"{prefix}_{label}" if prefix else label
-            safe_stem = sanitize_parquet_filestem(current_label)
+            safe_stem = _disambiguate_filestem(
+                sanitize_parquet_filestem(current_label), used_node_stems
+            )
             filename = f"{safe_stem}.parquet"
             parquet_bytes, schema = self.format_parquet(
                 rows, f"node label '{current_label}'"
@@ -910,11 +939,14 @@ class Neo4jGraphParquetFormatter:
         # Format relationship Parquet files
         # Key is (rel_type, head_label, tail_label) for consistent key properties per file
         relationships_data: dict[str, bytes] = {}
+        used_rel_stems: set[str] = set()
         for (rtype, head_label, tail_label), rows in type_to_rows.items():
             # Filename pattern: {head_label}_{rel_type}_{tail_label}.parquet (sanitized)
             base_name = f"{head_label}_{rtype}_{tail_label}"
             current_name: str = f"{prefix}_{base_name}" if prefix else base_name
-            safe_stem = sanitize_parquet_filestem(current_name)
+            safe_stem = _disambiguate_filestem(
+                sanitize_parquet_filestem(current_name), used_rel_stems
+            )
             filename = f"{safe_stem}.parquet"
             parquet_bytes, schema = self.format_parquet(
                 rows, f"relationship '{current_name}'"
