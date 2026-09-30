@@ -316,8 +316,6 @@ def _adapt_schema_for_vertex_ai(schema_dict: dict[str, Any]) -> dict[str, Any]:
 
     result = deepcopy(schema_dict)
     _fix(result)
-    for def_schema in result.get("$defs", {}).values():
-        _fix(def_schema)
     return result
 
 
