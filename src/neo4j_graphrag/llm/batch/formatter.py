@@ -187,11 +187,11 @@ class BatchModelParams(BaseModel, ABC):
 class VertexModelParams(BatchModelParams):
     """Gemini generation parameters, rendered as a ``generationConfig`` body.
 
-    ``response_mime_type`` defaults to JSON: the batch path is only used for
-    structured extraction, and Gemini otherwise returns prose.
+    ``response_mime_type`` is omitted unless set; :class:`VertexBatchRequestFormatter`
+    defaults it to JSON whenever a response schema is supplied.
     """
 
-    response_mime_type: str = "application/json"
+    response_mime_type: str | None = None
     candidate_count: int | None = Field(default=None, gt=0)
     seed: int | None = None
 
@@ -468,6 +468,7 @@ class VertexBatchRequestFormatter(BatchRequestFormatter):
         config = self._model_params.to_request_fields()
         if self._response_schema is not None:
             config["responseSchema"] = self._response_schema
+            config.setdefault("responseMimeType", "application/json")
         return config
 
     @classmethod

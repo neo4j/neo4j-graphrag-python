@@ -226,9 +226,7 @@ def test_from_llm_params_rejects_values_the_provider_cannot_use() -> None:
 
 
 def test_to_request_fields_omits_unset_params() -> None:
-    assert VertexModelParams().to_request_fields() == {
-        "responseMimeType": "application/json"
-    }
+    assert VertexModelParams().to_request_fields() == {}
 
 
 def test_to_request_fields_renders_provider_field_names() -> None:
@@ -240,6 +238,7 @@ def test_to_request_fields_renders_provider_field_names() -> None:
         stop_sequences=("END",),
         candidate_count=1,
         seed=7,
+        response_mime_type="text/plain",
     ).to_request_fields()
 
     assert fields == {
@@ -249,7 +248,7 @@ def test_to_request_fields_renders_provider_field_names() -> None:
         "topK": 5,
         "candidateCount": 1,
         "seed": 7,
-        "responseMimeType": "application/json",
+        "responseMimeType": "text/plain",
         "stopSequences": ["END"],
     }
 
@@ -314,7 +313,7 @@ def test_format_applies_model_params_to_generation_config() -> None:
 
     assert config["temperature"] == 0.0
     assert config["maxOutputTokens"] == 16
-    assert config["responseMimeType"] == "application/json"
+    assert "responseMimeType" not in config
     assert "responseSchema" not in config
 
 
@@ -329,6 +328,29 @@ class _Movie(BaseModel):
     genre: _Genre
     media_type: Literal["movie"]
     tagline: str | None = None
+
+
+def test_format_defaults_mime_type_to_json_when_response_format_given() -> None:
+    formatter = VertexBatchRequestFormatter(response_format=_Movie)
+
+    config = _generation_config(
+        formatter.format("k", [{"role": "user", "content": "x"}]).line
+    )
+
+    assert config["responseMimeType"] == "application/json"
+
+
+def test_format_keeps_explicit_mime_type_when_response_format_given() -> None:
+    formatter = VertexBatchRequestFormatter(
+        model_params=VertexModelParams(response_mime_type="text/x.enum"),
+        response_format=_Movie,
+    )
+
+    config = _generation_config(
+        formatter.format("k", [{"role": "user", "content": "x"}]).line
+    )
+
+    assert config["responseMimeType"] == "text/x.enum"
 
 
 def test_format_adapts_pydantic_response_format_for_batch_proto() -> None:
