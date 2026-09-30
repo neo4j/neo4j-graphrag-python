@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+from collections.abc import Iterator
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -53,55 +54,63 @@ class StubBatchClient(BaseBatchClient[str]):
 # ---------------------------------------------------------------------------
 
 
-def test_wait_for_returns_terminal_state_without_sleeping() -> None:
-    client = StubBatchClient([BATCH_JOB_SUCCEEDED_STATE])
-    sleep = MagicMock()
+@pytest.fixture
+def sleep() -> Iterator[MagicMock]:
+    with patch("neo4j_graphrag.llm.batch.client.time.sleep") as mock_sleep:
+        yield mock_sleep
 
-    state = client.wait_for("stub-job", sleep=sleep)
+
+def test_wait_for_returns_terminal_state_without_sleeping(sleep: MagicMock) -> None:
+    client = StubBatchClient([BATCH_JOB_SUCCEEDED_STATE])
+
+    state = client.wait_for("stub-job")
 
     assert state == BATCH_JOB_SUCCEEDED_STATE
     sleep.assert_not_called()
 
 
-def test_wait_for_polls_through_non_terminal_states() -> None:
+def test_wait_for_polls_through_non_terminal_states(sleep: MagicMock) -> None:
     client = StubBatchClient(
         ["JOB_STATE_PENDING", "JOB_STATE_RUNNING", "JOB_STATE_SUCCEEDED"]
     )
-    sleep = MagicMock()
 
-    state = client.wait_for("stub-job", poll_interval_seconds=5, sleep=sleep)
+    state = client.wait_for("stub-job", poll_interval_seconds=5)
 
     assert state == "JOB_STATE_SUCCEEDED"
     assert [call.args[0] for call in sleep.call_args_list] == [5, 5]
 
 
-def test_wait_for_treats_unrecognised_states_as_still_running() -> None:
+def test_wait_for_treats_unrecognised_states_as_still_running(
+    sleep: MagicMock,
+) -> None:
     # An older SDK's BATCH_STATE_* naming degrades to "keep polling" rather
     # than raising.
     client = StubBatchClient(["BATCH_STATE_RUNNING", "JOB_STATE_CANCELLED"])
 
-    state = client.wait_for("stub-job", sleep=MagicMock())
+    state = client.wait_for("stub-job")
 
     assert state == "JOB_STATE_CANCELLED"
 
 
-def test_wait_for_returns_terminal_failure_state_without_raising() -> None:
+def test_wait_for_returns_terminal_failure_state_without_raising(
+    sleep: MagicMock,
+) -> None:
     client = StubBatchClient(["JOB_STATE_FAILED"])
 
-    assert client.wait_for("stub-job", sleep=MagicMock()) == "JOB_STATE_FAILED"
+    assert client.wait_for("stub-job") == "JOB_STATE_FAILED"
 
 
-def test_wait_for_times_out_when_never_terminal() -> None:
+def test_wait_for_times_out_when_never_terminal(sleep: MagicMock) -> None:
     client = StubBatchClient(["JOB_STATE_RUNNING"])
-    monotonic = MagicMock(side_effect=[0.0, 100.0])
 
-    with pytest.raises(TimeoutError, match="stub-job"):
-        client.wait_for(
-            "stub-job",
-            max_wait_seconds=10,
-            sleep=MagicMock(),
-            monotonic=monotonic,
-        )
+    with (
+        patch(
+            "neo4j_graphrag.llm.batch.client.time.monotonic",
+            side_effect=[0.0, 100.0],
+        ),
+        pytest.raises(TimeoutError, match="stub-job"),
+    ):
+        client.wait_for("stub-job", max_wait_seconds=10)
 
 
 def test_base_job_failure_reason_defaults_to_none() -> None:

@@ -42,7 +42,6 @@ from __future__ import annotations
 import logging
 import time
 from abc import ABC, abstractmethod
-from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Generic, TypeVar
 
@@ -198,9 +197,6 @@ class BaseBatchClient(ABC, Generic[JobT]):
         job_name: str,
         poll_interval_seconds: float = 60,
         max_wait_seconds: float = DEFAULT_MAX_WAIT_SECONDS,
-        sleep: Callable[[float], None] = time.sleep,
-        monotonic: Callable[[], float] = time.monotonic,
-        fetch: Callable[[], JobT] | None = None,
     ) -> str:
         """Poll *job_name* until it reaches a terminal state and return that state.
 
@@ -221,11 +217,6 @@ class BaseBatchClient(ABC, Generic[JobT]):
             poll_interval_seconds: Seconds to wait between polls.  Defaults to 60.
             max_wait_seconds: Upper bound on total wall-time spent polling before
                 raising :class:`TimeoutError`.  Defaults to 24 hours.
-            sleep: Sleep function; injected in tests to avoid real waiting.
-            monotonic: Monotonic clock used to measure elapsed time; injected in
-                tests.  Defaults to :func:`time.monotonic`.
-            fetch: Zero-arg fetch returning the current job; injected in tests.
-                Defaults to calling :meth:`get` with *job_name*.
 
         Returns:
             The terminal state name, e.g. ``"JOB_STATE_SUCCEEDED"`` (compare against
@@ -235,19 +226,18 @@ class BaseBatchClient(ABC, Generic[JobT]):
             TimeoutError: If the job has not reached a terminal state within
                 *max_wait_seconds*.
         """
-        fetch_job = fetch or (lambda: self.get(job_name))
-        start = monotonic()
+        start = time.monotonic()
         while True:
-            state = self._job_state_name(fetch_job())
+            state = self._job_state_name(self.get(job_name))
             logger.info("Batch job %s state=%s", job_name, state)
             if state in TERMINAL_BATCH_JOB_STATES:
                 return state
-            if monotonic() - start >= max_wait_seconds:
+            if time.monotonic() - start >= max_wait_seconds:
                 raise TimeoutError(
                     f"Batch job {job_name} did not reach a terminal state within "
                     f"{max_wait_seconds:g}s (last state={state})"
                 )
-            sleep(poll_interval_seconds)
+            time.sleep(poll_interval_seconds)
 
 
 # ---------------------------------------------------------------------------
