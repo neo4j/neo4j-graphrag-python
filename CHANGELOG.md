@@ -4,6 +4,7 @@
 
 ### Changed
 
+- `SchemaExtractionTemplate` prompt now steers the LLM towards schemas that yield connected graphs: every node type should take part in at least one pattern, patterns should link the node types together, and entities that are only attributes of another entity should become properties rather than standalone node types. The prompt explicitly forbids inventing relationships to force connectivity, so genuinely unrelated subjects may still end up in separate groups. The JSON example in the prompt now also lists the `Company` node type referenced by its `WORKS_FOR` pattern.
 - `neo4j_graphrag.llm` and `neo4j_graphrag.embeddings` now resolve their per-provider classes lazily instead of importing every provider module eagerly. Importing either package no longer pulls in the whole provider-SDK closure — `google.cloud.aiplatform` (via `VertexAILLM`/`VertexAIEmbeddings`), `anthropic`, `boto3` (via Bedrock), `google.genai`, `mistralai`, `cohere`, `openai` and `torch` (via `SentenceTransformerEmbeddings`) — which cost seconds of import time and hundreds of MB of memory for consumers that only use the provider-agnostic base classes. The public import surface is unchanged: `from neo4j_graphrag.llm import OpenAILLM` works exactly as before, `dir()` still lists every export, and a `TYPE_CHECKING` mirror keeps static type checking intact.
 
 ### Fixed
