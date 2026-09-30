@@ -272,6 +272,15 @@ Return a valid JSON object that follows this precise structure:
           "type": "STRING"
         }}
       ]
+    }},
+    {{
+      "label": "Company",
+      "properties": [
+        {{
+          "name": "name",
+          "type": "STRING"
+        }}
+      ]
     }}
     ...
   ],
