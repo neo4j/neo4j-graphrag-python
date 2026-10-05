@@ -2,6 +2,8 @@
 
 ## Next
 
+## 1.22.0
+
 ### Changed
 
 - `SchemaExtractionTemplate` prompt now steers the LLM towards schemas that yield connected graphs: every node type should take part in at least one pattern, patterns should link the node types together, and entities that are only attributes of another entity should become properties rather than standalone node types. The prompt explicitly forbids inventing relationships to force connectivity, so genuinely unrelated subjects may still end up in separate groups. The JSON example in the prompt now also lists the `Company` node type referenced by its `WORKS_FOR` pattern.
