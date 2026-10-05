@@ -30,7 +30,7 @@ from pydantic import BaseModel
 
 # project dependencies
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.base import BaseLLM, validate_invoke_input
+from neo4j_graphrag.llm.base import BaseLLM
 from neo4j_graphrag.llm.types import (
     LLMResponse,
     LLMUsage,
@@ -38,12 +38,6 @@ from neo4j_graphrag.llm.types import (
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.rate_limit import (
     RateLimitHandler,
-)
-from neo4j_graphrag.utils.rate_limit import (
-    async_rate_limit_handler as async_rate_limit_handler_decorator,
-)
-from neo4j_graphrag.utils.rate_limit import (
-    rate_limit_handler as rate_limit_handler_decorator,
 )
 
 if TYPE_CHECKING:
@@ -114,113 +108,72 @@ class CohereLLM(BaseLLM):
         return text if isinstance(text, str) else ""
 
     # implementations
-    @rate_limit_handler_decorator
-    def invoke(
+    def _build_request(
         self,
-        input: List[LLMMessage],
+        messages: List[LLMMessage],
         *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
-    ) -> LLMResponse:
-        """Sends text to the LLM and returns a response.
+    ) -> dict[str, Any]:
+        """Build the Cohere chat request.
 
-        Args:
-            input (List[LLMMessage]): The messages to send to the LLM.
-            response_format: Not supported by CohereLLM.
-
-        Returns:
-            LLMResponse: The response from the LLM.
+        response_format/unknown-role validation raise NotImplementedError/ValueError
+        directly (not LLMGenerationError): these are caller usage errors, not SDK
+        failures, and callers may want to catch them distinctly.
         """
-        validate_invoke_input(input)
         if response_format is not None:
             raise NotImplementedError(
                 "CohereLLM does not currently support structured output"
             )
-        try:
-            messages = self.get_messages(input)
-            res = self.client.chat(
-                messages=messages,
-                model=self.model_name,
-            )
-        except self.cohere_api_error as e:
-            raise LLMGenerationError("Error calling cohere") from e
+        return {
+            "messages": self.get_messages(messages),
+            "model": self.model_name,
+        }
 
-        usage = None
-        if res.usage and res.usage.tokens:
-            input_tokens = (
-                int(res.usage.tokens.input_tokens)
-                if res.usage.tokens.input_tokens is not None
-                else None
-            )
-            output_tokens = (
-                int(res.usage.tokens.output_tokens)
-                if res.usage.tokens.output_tokens is not None
-                else None
-            )
-            usage = LLMUsage(
-                request_tokens=input_tokens,
-                response_tokens=output_tokens,
-                total_tokens=(input_tokens + output_tokens)
-                if (input_tokens is not None and output_tokens is not None)
-                else None,
-            )
-        return LLMResponse(
-            content=(
-                res.message.content[0].text
-                if res.message.content and hasattr(res.message.content[0], "text")
-                else ""
-            ),
-            usage=usage,
-        )
-
-    @async_rate_limit_handler_decorator
-    async def ainvoke(
-        self,
-        input: List[LLMMessage],
-        *,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        validate_invoke_input(input)
-        if response_format is not None:
-            raise NotImplementedError(
-                "CohereLLM does not currently support structured output"
-            )
+    def _call_sync(self, request: dict[str, Any]) -> Any:
         try:
-            messages = self.get_messages(input)
-            res = await self.async_client.chat(
-                messages=messages,
-                model=self.model_name,
-            )
+            return self.client.chat(**request)
         except self.cohere_api_error as e:
-            raise LLMGenerationError("Error calling cohere") from e
-        usage = None
-        if res.usage and res.usage.tokens:
-            input_tokens = (
-                int(res.usage.tokens.input_tokens)
-                if res.usage.tokens.input_tokens is not None
-                else None
+            raise LLMGenerationError(e) from e
+
+    async def _call_async(self, request: dict[str, Any]) -> Any:
+        try:
+            return await self.async_client.chat(**request)
+        except self.cohere_api_error as e:
+            raise LLMGenerationError(e) from e
+
+    def _parse_response(self, raw_response: Any) -> LLMResponse:
+        try:
+            usage = None
+            if raw_response.usage and raw_response.usage.tokens:
+                input_tokens = (
+                    int(raw_response.usage.tokens.input_tokens)
+                    if raw_response.usage.tokens.input_tokens is not None
+                    else None
+                )
+                output_tokens = (
+                    int(raw_response.usage.tokens.output_tokens)
+                    if raw_response.usage.tokens.output_tokens is not None
+                    else None
+                )
+                usage = LLMUsage(
+                    request_tokens=input_tokens,
+                    response_tokens=output_tokens,
+                    total_tokens=(input_tokens + output_tokens)
+                    if (input_tokens is not None and output_tokens is not None)
+                    else None,
+                )
+            return LLMResponse(
+                content=(
+                    raw_response.message.content[0].text
+                    if raw_response.message.content
+                    and hasattr(raw_response.message.content[0], "text")
+                    else ""
+                ),
+                usage=usage,
             )
-            output_tokens = (
-                int(res.usage.tokens.output_tokens)
-                if res.usage.tokens.output_tokens is not None
-                else None
-            )
-            usage = LLMUsage(
-                request_tokens=input_tokens,
-                response_tokens=output_tokens,
-                total_tokens=(input_tokens + output_tokens)
-                if (input_tokens is not None and output_tokens is not None)
-                else None,
-            )
-        return LLMResponse(
-            content=(
-                res.message.content[0].text
-                if res.message.content and hasattr(res.message.content[0], "text")
-                else ""
-            ),
-            usage=usage,
-        )
+        except Exception as e:
+            raise LLMGenerationError(e) from e
 
     def get_messages(
         self,

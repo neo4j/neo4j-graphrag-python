@@ -246,6 +246,42 @@ async def test_ollama_ainvoke_happy_path(mock_import: Mock) -> None:
     assert res.content == "ollama chat response"
 
 
+@pytest.mark.asyncio
+@patch("builtins.__import__")
+async def test_ollama_ainvoke_spreads_model_params_like_sync(
+    mock_import: Mock,
+) -> None:
+    """Regression test: async path must spread model_params the same way
+    sync does, not pass it verbatim as the `options` value -- otherwise a
+    model_params carrying a sibling key alongside "options" (e.g. "format")
+    gets double-nested under `options=` instead of reaching the SDK call
+    as its own top-level kwarg.
+    """
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+
+    captured_kwargs: dict[str, Any] = {}
+
+    async def mock_chat_async(*_args: Any, **kwargs: Any) -> MagicMock:
+        captured_kwargs.update(kwargs)
+        return MagicMock(
+            message=MagicMock(content="ollama chat response"),
+        )
+
+    mock_ollama.AsyncClient.return_value.chat = mock_chat_async
+    options = {"temperature": 0.3}
+    model_params = {"options": options, "format": "json"}
+    llm = OllamaLLM(
+        "gpt",
+        model_params=model_params,
+    )
+
+    await llm.ainvoke([{"role": "user", "content": "What is graph RAG?"}])
+
+    assert captured_kwargs["options"] == options
+    assert captured_kwargs["format"] == "json"
+
+
 @patch("builtins.__import__")
 def test_ollama_llm_invoke_happy_path(mock_import: Mock) -> None:
     """Test invoke method with List[LLMMessage] input."""
