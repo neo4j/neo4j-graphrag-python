@@ -23,6 +23,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GIT_PUSH_PAT }}
           GH_REPO: ${{ github.repository }}
+          SYNC_BRANCH: sync/main-to-v2
         run: |
           # 1. Skip if v2 already contains everything on main
           ahead_by=$(gh api "repos/$GH_REPO/compare/v2...main" --jq .ahead_by)
@@ -32,15 +33,36 @@ jobs:
           fi
 
           # 2. Skip if a sync PR is already open
-          existing_pr=$(gh pr list --base v2 --head main --state open --json number --jq '.[0].number')
+          existing_pr=$(gh pr list --base v2 --head "$SYNC_BRANCH" --state open --json number --jq '.[0].number')
           if [ -n "$existing_pr" ]; then
             echo "A PR already exists: #$existing_pr. Skipping creation."
             exit 0
           fi
 
-          # 3. Create the PR; any failure here should fail the job
+          # 3. Point the sync branch at the tip of main. The PR comes from this
+          #    throwaway branch rather than from main itself, so conflicts can be
+          #    resolved on it without ever committing to main.
+          main_sha=$(gh api "repos/$GH_REPO/git/ref/heads/main" --jq .object.sha)
+          if gh api "repos/$GH_REPO/git/ref/heads/$SYNC_BRANCH" --silent 2>/dev/null; then
+            gh api -X PATCH "repos/$GH_REPO/git/refs/heads/$SYNC_BRANCH" \
+              -f sha="$main_sha" -F force=true --silent
+          else
+            gh api -X POST "repos/$GH_REPO/git/refs" \
+              -f ref="refs/heads/$SYNC_BRANCH" -f sha="$main_sha" --silent
+          fi
+
+          # 4. Create the PR; any failure here should fail the job
           gh pr create \
             --base v2 \
-            --head main \
+            --head "$SYNC_BRANCH" \
             --title "🔄 Auto-sync: Merge main into v2" \
-            --body "Automated weekly PR (requires manual review and merge) to bring bug fixes and current release updates from \`main\` into \`v2\`. Please merge with a merge commit (not squash or rebase) so the branches do not diverge again."
+            --body "Automated weekly PR (requires manual review and merge) to bring bug fixes and current release updates from \`main\` into \`v2\`. Please merge with a merge commit (not squash or rebase) so the branches do not diverge again.
+
+          If this PR has conflicts, resolve them on this branch (never on \`main\`):
+
+          \`\`\`
+          git fetch origin
+          git switch $SYNC_BRANCH
+          git merge origin/v2   # resolve conflicts, commit
+          git push
+          \`\`\`"
