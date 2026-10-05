@@ -28,6 +28,12 @@ from neo4j_graphrag.utils.rate_limit import (
     DEFAULT_RATE_LIMIT_HANDLER,
     RateLimitHandler,
 )
+from neo4j_graphrag.utils.rate_limit import (
+    async_rate_limit_handler as async_rate_limit_handler_decorator,
+)
+from neo4j_graphrag.utils.rate_limit import (
+    rate_limit_handler as rate_limit_handler_decorator,
+)
 
 from .types import LLMResponse, ToolCallResponse
 
@@ -79,7 +85,6 @@ class BaseLLM(ABC):
         else:
             self._rate_limit_handler = DEFAULT_RATE_LIMIT_HANDLER
 
-    @abstractmethod
     def invoke(
         self,
         input: List[LLMMessage],
@@ -103,8 +108,11 @@ class BaseLLM(ABC):
             LLMGenerationError: If anything goes wrong.
             NotImplementedError: If the LLM provider does not support structured output.
         """
+        validate_invoke_input(input)
+        request = self._build_request(input, response_format=response_format, **kwargs)
+        raw_response = self._call_sync_with_rate_limit(request)
+        return self._parse_response(raw_response)
 
-    @abstractmethod
     async def ainvoke(
         self,
         input: List[LLMMessage],
@@ -127,6 +135,54 @@ class BaseLLM(ABC):
             TypeError: If input is not a list of LLMMessage.
             LLMGenerationError: If anything goes wrong.
             NotImplementedError: If the LLM provider does not support structured output.
+        """
+        validate_invoke_input(input)
+        request = self._build_request(input, response_format=response_format, **kwargs)
+        raw_response = await self._call_async_with_rate_limit(request)
+        return self._parse_response(raw_response)
+
+    @rate_limit_handler_decorator
+    def _call_sync_with_rate_limit(self, request: Any) -> Any:
+        return self._call_sync(request)
+
+    @async_rate_limit_handler_decorator
+    async def _call_async_with_rate_limit(self, request: Any) -> Any:
+        return await self._call_async(request)
+
+    @abstractmethod
+    def _build_request(
+        self,
+        messages: List[LLMMessage],
+        *,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> Any:
+        """Build a provider-specific request from the common message/response-format input.
+
+        Build-time failures are not retried. Providers raise LLMGenerationError for
+        SDK-level failures (e.g. schema conversion); invalid caller input may surface as
+        ValueError (e.g. unknown message role) and unsupported options as
+        NotImplementedError.
+        """
+
+    @abstractmethod
+    def _parse_response(self, raw_response: Any) -> LLMResponse:
+        """Parse a provider-specific raw response into the common LLMResponse shape."""
+
+    @abstractmethod
+    def _call_sync(self, request: Any) -> Any:
+        """Send the built request to the LLM synchronously and return the raw response.
+
+        Implementations should wrap SDK/transport exceptions into LLMGenerationError.
+        This hook runs under the rate-limit handler, so it is the only step retried.
+        """
+
+    @abstractmethod
+    async def _call_async(self, request: Any) -> Any:
+        """Send the built request to the LLM asynchronously and return the raw response.
+
+        Implementations should wrap SDK/transport exceptions into LLMGenerationError.
+        This hook runs under the rate-limit handler, so it is the only step retried.
         """
 
     def invoke_with_tools(

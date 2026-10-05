@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import os
 from typing import (
     Any,
@@ -33,7 +34,7 @@ from pydantic import BaseModel, ValidationError
 
 # project dependencies
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.base import BaseLLM, validate_invoke_input
+from neo4j_graphrag.llm.base import BaseLLM
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
@@ -47,12 +48,6 @@ from neo4j_graphrag.tool import Tool
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.rate_limit import (
     RateLimitHandler,
-)
-from neo4j_graphrag.utils.rate_limit import (
-    async_rate_limit_handler as async_rate_limit_handler_decorator,
-)
-from neo4j_graphrag.utils.rate_limit import (
-    rate_limit_handler as rate_limit_handler_decorator,
 )
 
 try:
@@ -119,47 +114,39 @@ class BedrockLLM(BaseLLM):
             client_kwargs["region_name"] = region_name
         self.client = boto3.client("bedrock-runtime", **client_kwargs)
 
-    @rate_limit_handler_decorator
-    def invoke(
+    def _build_request(
         self,
-        input: List[LLMMessage],
+        messages: List[LLMMessage],
         *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
-    ) -> LLMResponse:
-        validate_invoke_input(input)
+    ) -> dict[str, Any]:
         if response_format is not None:
             raise NotImplementedError(
                 "BedrockLLM does not currently support structured output"
             )
         try:
-            system_instruction, messages = self.build_llm_messages(input)
-            converse_kwargs = self._build_converse_kwargs(
-                messages, system_instruction=system_instruction, **kwargs
+            system_instruction, converse_messages = self.build_llm_messages(messages)
+            return self._build_converse_kwargs(
+                converse_messages, system_instruction=system_instruction, **kwargs
             )
-            response = self.client.converse(**converse_kwargs)
-            return self._parse_response(response)
+        except NotImplementedError:
+            raise
+        except Exception as e:
+            raise LLMGenerationError(f"Error building BedrockLLM request: {e}") from e
+
+    def _call_sync(self, request: dict[str, Any]) -> dict[str, Any]:
+        try:
+            return cast(dict[str, Any], self.client.converse(**request))
         except Exception as e:
             raise LLMGenerationError(f"Error calling BedrockLLM: {e}") from e
 
-    @async_rate_limit_handler_decorator
-    async def ainvoke(
-        self,
-        input: List[LLMMessage],
-        *,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        validate_invoke_input(input)
-        if response_format is not None:
-            raise NotImplementedError(
-                "BedrockLLM does not currently support structured output"
-            )
+    async def _call_async(self, request: dict[str, Any]) -> dict[str, Any]:
         try:
             loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(None, self.invoke, input)
-        except LLMGenerationError:
-            raise
+            return await loop.run_in_executor(
+                None, functools.partial(self.client.converse, **request)
+            )
         except Exception as e:
             raise LLMGenerationError(f"Error calling BedrockLLM: {e}") from e
 

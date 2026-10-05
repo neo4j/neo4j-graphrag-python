@@ -20,6 +20,7 @@ from typing import (
     Any,
     Iterable,
     List,
+    NamedTuple,
     Optional,
     Type,
     Union,
@@ -29,7 +30,7 @@ from typing import (
 from pydantic import BaseModel
 
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.base import BaseLLM, validate_invoke_input
+from neo4j_graphrag.llm.base import BaseLLM
 from neo4j_graphrag.llm.types import (
     LLMResponse,
     LLMUsage,
@@ -39,16 +40,24 @@ from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.rate_limit import (
     RateLimitHandler,
 )
-from neo4j_graphrag.utils.rate_limit import (
-    async_rate_limit_handler as async_rate_limit_handler_decorator,
-)
-from neo4j_graphrag.utils.rate_limit import (
-    rate_limit_handler as rate_limit_handler_decorator,
-)
 
 if TYPE_CHECKING:
     from anthropic import AsyncAnthropic, Anthropic, Omit
     from anthropic.types.message_param import MessageParam
+
+
+class _AnthropicRequest(NamedTuple):
+    """Everything needed to make the Anthropic SDK call and parse its response."""
+
+    create_kwargs: dict[str, Any]
+    response_format: Optional[Union[Type[BaseModel], dict[str, Any]]]
+
+
+class _AnthropicRawResponse(NamedTuple):
+    """The raw SDK response plus the response_format needed to parse it."""
+
+    api_response: Any
+    response_format: Optional[Union[Type[BaseModel], dict[str, Any]]]
 
 
 # ---------------------------------------------------------------------------
@@ -201,84 +210,58 @@ class BaseAnthropicLLM(BaseLLM, abc.ABC):
             **kwargs,
         )
 
-    @rate_limit_handler_decorator
-    def invoke(
+    def _build_request(
         self,
-        input: List[LLMMessage],
+        messages: List[LLMMessage],
         *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
-    ) -> LLMResponse:
-        validate_invoke_input(input)
+    ) -> _AnthropicRequest:
+        system_instruction, anthropic_messages = self.get_messages(messages)
+        if response_format is not None:
+            kwargs["output_config"] = self._build_output_config(response_format)
+        create_kwargs: dict[str, Any] = dict(
+            model=self.model_name,
+            system=system_instruction,
+            messages=anthropic_messages,
+            **self.model_params,
+            **kwargs,
+        )
+        return _AnthropicRequest(
+            create_kwargs=create_kwargs, response_format=response_format
+        )
+
+    def _call_sync(self, request: _AnthropicRequest) -> _AnthropicRawResponse:
         try:
-            system_instruction, messages = self.get_messages(input)
-            if response_format is not None:
-                kwargs["output_config"] = self._build_output_config(response_format)
-            response = self.client.messages.create(
-                model=self.model_name,
-                system=system_instruction,
-                messages=messages,
-                **self.model_params,
-                **kwargs,
-            )
-            text = self._extract_text(response)
-            # INTERMEDIATE FIX (see module-level note): remove with the rest of
-            # the open-map workaround once cross-provider strict schema handling
-            # is added.
-            text = self._restore_structured_output(text, response_format)
-            usage = LLMUsage(
-                request_tokens=response.usage.input_tokens,
-                response_tokens=response.usage.output_tokens,
-                total_tokens=response.usage.input_tokens + response.usage.output_tokens,
-            )
-            return LLMResponse(content=text, usage=usage)
+            response = self.client.messages.create(**request.create_kwargs)
         except self.anthropic.APIError as e:
-            raise LLMGenerationError(e)
+            raise LLMGenerationError(e) from e
+        return _AnthropicRawResponse(
+            api_response=response, response_format=request.response_format
+        )
 
-    @async_rate_limit_handler_decorator
-    async def ainvoke(
-        self,
-        input: List[LLMMessage],
-        *,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        """Asynchronously sends text to the LLM and returns a response.
-
-        Args:
-            input (List[LLMMessage]): The messages to send to the LLM.
-            response_format (Optional[Union[Type[BaseModel], dict[str, Any]]]): Optional
-                response format. Can be a Pydantic model class for structured output
-                or a dict containing a JSON schema.
-
-        Returns:
-            LLMResponse: The response from the LLM.
-        """
-        validate_invoke_input(input)
+    async def _call_async(self, request: _AnthropicRequest) -> _AnthropicRawResponse:
         try:
-            system_instruction, messages = self.get_messages(input)
-            if response_format is not None:
-                kwargs["output_config"] = self._build_output_config(response_format)
-            response = await self.async_client.messages.create(
-                model=self.model_name,
-                system=system_instruction,
-                messages=messages,
-                **self.model_params,
-                **kwargs,
-            )
-            text = self._extract_text(response)
-            # INTERMEDIATE FIX (see module-level note): remove with the rest of
-            # the open-map workaround once cross-provider strict schema handling
-            # is added.
-            text = self._restore_structured_output(text, response_format)
-            usage = LLMUsage(
-                request_tokens=response.usage.input_tokens,
-                response_tokens=response.usage.output_tokens,
-                total_tokens=response.usage.input_tokens + response.usage.output_tokens,
-            )
-            return LLMResponse(content=text, usage=usage)
+            response = await self.async_client.messages.create(**request.create_kwargs)
         except self.anthropic.APIError as e:
-            raise LLMGenerationError(e)
+            raise LLMGenerationError(e) from e
+        return _AnthropicRawResponse(
+            api_response=response, response_format=request.response_format
+        )
+
+    def _parse_response(self, raw_response: _AnthropicRawResponse) -> LLMResponse:
+        response = raw_response.api_response
+        text = self._extract_text(response)
+        # INTERMEDIATE FIX (see module-level note): remove with the rest of
+        # the open-map workaround once cross-provider strict schema handling
+        # is added.
+        text = self._restore_structured_output(text, raw_response.response_format)
+        usage = LLMUsage(
+            request_tokens=response.usage.input_tokens,
+            response_tokens=response.usage.output_tokens,
+            total_tokens=response.usage.input_tokens + response.usage.output_tokens,
+        )
+        return LLMResponse(content=text, usage=usage)
 
     async def aclose(self) -> None:
         self.client.close()

@@ -20,7 +20,7 @@ from typing import Any, List, Optional, Type, Union
 from pydantic import BaseModel
 
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.base import BaseLLM, validate_invoke_input
+from neo4j_graphrag.llm.base import BaseLLM
 from neo4j_graphrag.llm.types import (
     LLMResponse,
     LLMUsage,
@@ -28,12 +28,6 @@ from neo4j_graphrag.llm.types import (
 from neo4j_graphrag.types import LLMMessage
 from neo4j_graphrag.utils.rate_limit import (
     RateLimitHandler,
-)
-from neo4j_graphrag.utils.rate_limit import (
-    async_rate_limit_handler as async_rate_limit_handler_decorator,
-)
-from neo4j_graphrag.utils.rate_limit import (
-    rate_limit_handler as rate_limit_handler_decorator,
 )
 
 try:
@@ -95,13 +89,32 @@ class MistralAILLM(BaseLLM):
         self.client = Mistral(api_key=api_key, **kwargs)
 
     # implementations
-    @staticmethod
-    def _parse_response(response: Any) -> tuple[str, Optional[LLMUsage]]:
-        """Pull the content and token usage out of a chat completion.
+    def _build_request(
+        self,
+        messages: List[LLMMessage],
+        *,
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        """Build the kwargs for the Mistral chat completion endpoint.
 
         Shared by the sync and async invoke paths, which differ only in how they
         call the SDK.
         """
+        if response_format is not None:
+            raise NotImplementedError(
+                "MistralAILLM does not currently support structured output"
+            )
+        return {
+            "model": self.model_name,
+            "messages": self.get_messages(messages),
+            **self.model_params,
+            **kwargs,
+        }
+
+    @staticmethod
+    def _parse_response_content(response: Any) -> tuple[str, Optional[LLMUsage]]:
+        """Pull the content and token usage out of a chat completion."""
         content = ""
         usage = None
         if response and response.choices:
@@ -119,80 +132,21 @@ class MistralAILLM(BaseLLM):
             )
         return content, usage
 
-    @rate_limit_handler_decorator
-    def invoke(
-        self,
-        input: List[LLMMessage],
-        *,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        """Sends a text input to the Mistral chat completion model
-        and returns the response's content.
+    def _parse_response(self, raw_response: Any) -> LLMResponse:
+        content, usage = self._parse_response_content(raw_response)
+        return LLMResponse(content=content, usage=usage)
 
-        Args:
-            input (List[LLMMessage]): Messages sent to the LLM.
-            response_format: Not supported by MistralAILLM.
-
-        Returns:
-            LLMResponse: The response from MistralAI.
-
-        Raises:
-            LLMGenerationError: If anything goes wrong.
-        """
-        validate_invoke_input(input)
-        if response_format is not None:
-            raise NotImplementedError(
-                "MistralAILLM does not currently support structured output"
-            )
+    def _call_sync(self, request: dict[str, Any]) -> Any:
         try:
-            messages = self.get_messages(input)
-            response = self.client.chat.complete(
-                model=self.model_name, messages=messages, **self.model_params, **kwargs
-            )
-            content, usage = self._parse_response(response)
-            return LLMResponse(content=content, usage=usage)
+            return self.client.chat.complete(**request)
         except SDKError as e:
-            raise LLMGenerationError(e)
+            raise LLMGenerationError(e) from e
 
-    @async_rate_limit_handler_decorator
-    async def ainvoke(
-        self,
-        input: List[LLMMessage],
-        *,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        """Asynchronously sends a text input to the MistralAI chat
-        completion model and returns the response's content.
-
-        Args:
-            input (List[LLMMessage]): Messages sent to the LLM.
-            response_format: Not supported by MistralAILLM.
-
-        Returns:
-            LLMResponse: The response from MistralAI.
-
-        Raises:
-            LLMGenerationError: If anything goes wrong.
-        """
-        validate_invoke_input(input)
-        if response_format is not None:
-            raise NotImplementedError(
-                "MistralAILLM does not currently support structured output"
-            )
+    async def _call_async(self, request: dict[str, Any]) -> Any:
         try:
-            messages = self.get_messages(input)
-            response = await self.client.chat.complete_async(
-                model=self.model_name,
-                messages=messages,
-                **self.model_params,
-                **kwargs,
-            )
-            content, usage = self._parse_response(response)
-            return LLMResponse(content=content, usage=usage)
+            return await self.client.chat.complete_async(**request)
         except SDKError as e:
-            raise LLMGenerationError(e)
+            raise LLMGenerationError(e) from e
 
     async def aclose(self) -> None:
         # mistralai 2.x dropped close()/aclose() in favour of the context

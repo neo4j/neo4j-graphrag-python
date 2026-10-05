@@ -98,6 +98,7 @@ ENVIRONMENT MANAGEMENT:
 - Neo4j 2026 CREATE VECTOR INDEX syntax: WITH clause must come BEFORE OPTIONS, not after
 - E2E tests for SEARCH clause: use `docker compose -f tests/e2e/docker-compose.neo4j2026.yml up -d`
 - If `tests/unit/llm/test_anthropic_llm.py` fails with `AttributeError: module 'anthropic' has no attribute 'omit'`, or other unit test files error on missing optional-dependency imports (openai, cohere, etc.) at collection time, the local `.venv` is stale relative to `pyproject.toml` extras. Run `uv sync --all-extras` to fix.
+- `BaseLLM.invoke`/`ainvoke` (`src/neo4j_graphrag/llm/base.py`) are concrete dispatchers built from four provider hooks: `_build_request`, `_parse_response`, `_call_sync`, `_call_async`. Rate-limit retry wraps only `_call_sync`/`_call_async` (via `_call_sync_with_rate_limit`/`_call_async_with_rate_limit`), not the whole `invoke` call — build/parse errors are never retried, only transport failures are. A provider not yet migrated to these hooks (mid-refactor) will fail to instantiate since `BaseLLM` is an ABC.
 
 ---
 

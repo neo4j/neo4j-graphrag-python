@@ -34,7 +34,7 @@ from pydantic import BaseModel, ValidationError
 
 # project dependencies
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.base import BaseLLM, validate_invoke_input
+from neo4j_graphrag.llm.base import BaseLLM
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
@@ -46,15 +46,7 @@ from neo4j_graphrag.llm.types import (
 from neo4j_graphrag.message_history import MessageHistory
 from neo4j_graphrag.tool import Tool
 from neo4j_graphrag.types import LLMMessage
-from neo4j_graphrag.utils.rate_limit import (
-    RateLimitHandler,
-)
-from neo4j_graphrag.utils.rate_limit import (
-    async_rate_limit_handler as async_rate_limit_handler_decorator,
-)
-from neo4j_graphrag.utils.rate_limit import (
-    rate_limit_handler as rate_limit_handler_decorator,
-)
+from neo4j_graphrag.utils.rate_limit import RateLimitHandler
 
 try:
     from google import genai
@@ -108,63 +100,57 @@ class BaseGeminiLLM(BaseLLM, abc.ABC):
             **kwargs,
         )
 
-    @rate_limit_handler_decorator
-    def invoke(
+    def _build_request(
         self,
-        input: List[LLMMessage],
+        messages: List[LLMMessage],
         *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        image_bytes: Optional[bytes] = None,
-        image_mime_type: GeminiImageMimeType = GEMINI_DEFAULT_IMAGE_MIME_TYPE,
         **kwargs: Any,
-    ) -> LLMResponse:
-        validate_invoke_input(input)
+    ) -> dict[str, Any]:
+        image_bytes = kwargs.pop("image_bytes", None)
+        image_mime_type = kwargs.pop("image_mime_type", GEMINI_DEFAULT_IMAGE_MIME_TYPE)
         try:
             system_instruction, contents = self.build_llm_messages(
-                input, image_bytes=image_bytes, image_mime_type=image_mime_type
+                messages, image_bytes=image_bytes, image_mime_type=image_mime_type
             )
             config = self._build_config(
                 system_instruction=system_instruction,
                 response_format=response_format,
                 **kwargs,
             )
-            response = self.client.models.generate_content(
+        except Exception as e:
+            raise LLMGenerationError(f"Error building GeminiLLM request: {e}") from e
+        return {"contents": contents, "config": config}
+
+    def _call_sync(self, request: dict[str, Any]) -> types.GenerateContentResponse:
+        try:
+            return self.client.models.generate_content(
                 model=self.model_name,
-                contents=contents,  # type: ignore[arg-type]
-                config=config,
+                contents=request["contents"],
+                config=request["config"],
             )
-            return self._parse_content_response(response)
         except Exception as e:
             raise LLMGenerationError(f"Error calling GeminiLLM: {e}") from e
 
-    @async_rate_limit_handler_decorator
-    async def ainvoke(
-        self,
-        input: List[LLMMessage],
-        *,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        image_bytes: Optional[bytes] = None,
-        image_mime_type: GeminiImageMimeType = GEMINI_DEFAULT_IMAGE_MIME_TYPE,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        validate_invoke_input(input)
+    async def _call_async(
+        self, request: dict[str, Any]
+    ) -> types.GenerateContentResponse:
         try:
-            system_instruction, contents = self.build_llm_messages(
-                input, image_bytes=image_bytes, image_mime_type=image_mime_type
-            )
-            config = self._build_config(
-                system_instruction=system_instruction,
-                response_format=response_format,
-                **kwargs,
-            )
-            response = await self.client.aio.models.generate_content(
+            return await self.client.aio.models.generate_content(
                 model=self.model_name,
-                contents=contents,  # type: ignore[arg-type]
-                config=config,
+                contents=request["contents"],
+                config=request["config"],
             )
-            return self._parse_content_response(response)
         except Exception as e:
             raise LLMGenerationError(f"Error calling GeminiLLM: {e}") from e
+
+    def _parse_response(
+        self, raw_response: types.GenerateContentResponse
+    ) -> LLMResponse:
+        try:
+            return self._parse_content_response(raw_response)
+        except Exception as e:
+            raise LLMGenerationError(f"Error parsing GeminiLLM response: {e}") from e
 
     def invoke_with_tools(
         self,
