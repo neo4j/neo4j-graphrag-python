@@ -18,10 +18,11 @@ from typing import Any, List, Optional, Type, Union
 import pytest
 from pydantic import BaseModel, ValidationError
 
+from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm.base import BaseLLM, validate_invoke_input
 from neo4j_graphrag.llm.types import LLMResponse, LLMUsage
 from neo4j_graphrag.types import LLMMessage
-from neo4j_graphrag.utils.rate_limit import NoOpRateLimitHandler
+from neo4j_graphrag.utils.rate_limit import NoOpRateLimitHandler, RetryRateLimitHandler
 
 # ---------------------------------------------------------------------------
 # LLMUsage
@@ -198,3 +199,87 @@ def test_validate_invoke_input_rejects_string() -> None:
 
 def test_validate_invoke_input_accepts_message_list() -> None:
     validate_invoke_input([{"role": "user", "content": "hi"}])
+
+
+# ---------------------------------------------------------------------------
+# Rate-limit retry applies to the transport hooks only
+# ---------------------------------------------------------------------------
+
+
+class _CountingLLM(_ConcreteLLM):
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(
+            "m",
+            rate_limit_handler=RetryRateLimitHandler(
+                max_attempts=3, min_wait=0, max_wait=0, jitter=False
+            ),
+            **kwargs,
+        )
+        self.build_calls = 0
+        self.call_calls = 0
+        self.parse_calls = 0
+        self.fail_build = False
+        self.fail_parse = False
+
+    def _build_request(self, messages: List[LLMMessage], **kwargs: Any) -> str:
+        self.build_calls += 1
+        if self.fail_build:
+            raise LLMGenerationError("429 too many requests")
+        return super()._build_request(messages)
+
+    def _parse_response(self, raw: Any) -> LLMResponse:
+        self.parse_calls += 1
+        if self.fail_parse:
+            raise LLMGenerationError("429 too many requests")
+        return super()._parse_response(raw)
+
+    def _call_sync(self, request: str) -> str:
+        self.call_calls += 1
+        raise LLMGenerationError("429 too many requests")
+
+    async def _call_async(self, request: str) -> str:
+        self.call_calls += 1
+        raise LLMGenerationError("429 too many requests")
+
+
+_MSGS: List[LLMMessage] = [{"role": "user", "content": "hi"}]
+
+
+def test_invoke_retries_transport_hook_only() -> None:
+    llm = _CountingLLM()
+    with pytest.raises(Exception):
+        llm.invoke(_MSGS)
+    assert llm.call_calls == 3
+    assert llm.build_calls == 1
+    assert llm.parse_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_ainvoke_retries_transport_hook_only() -> None:
+    llm = _CountingLLM()
+    with pytest.raises(Exception):
+        await llm.ainvoke(_MSGS)
+    assert llm.call_calls == 3
+    assert llm.build_calls == 1
+    assert llm.parse_calls == 0
+
+
+def test_invoke_does_not_retry_build_or_parse_errors() -> None:
+    build_llm = _CountingLLM()
+    build_llm.fail_build = True
+    with pytest.raises(LLMGenerationError):
+        build_llm.invoke(_MSGS)
+    assert build_llm.build_calls == 1
+    assert build_llm.call_calls == 0
+
+    class _OkTransport(_CountingLLM):
+        def _call_sync(self, request: str) -> str:
+            self.call_calls += 1
+            return request
+
+    parse_llm = _OkTransport()
+    parse_llm.fail_parse = True
+    with pytest.raises(LLMGenerationError):
+        parse_llm.invoke(_MSGS)
+    assert parse_llm.call_calls == 1
+    assert parse_llm.parse_calls == 1

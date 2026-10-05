@@ -159,9 +159,10 @@ class BaseLLM(ABC):
     ) -> Any:
         """Build a provider-specific request from the common message/response-format input.
 
-        Implementations must raise LLMGenerationError for any build-time failure
-        (message validation, unsupported response_format, schema conversion errors)
-        so callers see one consistent exception type for the whole invoke/ainvoke call.
+        Build-time failures are not retried. Providers raise LLMGenerationError for
+        SDK-level failures (e.g. schema conversion); invalid caller input may surface as
+        ValueError (e.g. unknown message role) and unsupported options as
+        NotImplementedError.
         """
 
     @abstractmethod
@@ -172,14 +173,16 @@ class BaseLLM(ABC):
     def _call_sync(self, request: Any) -> Any:
         """Send the built request to the LLM synchronously and return the raw response.
 
-        Implementations must wrap SDK/transport exceptions into LLMGenerationError.
+        Implementations should wrap SDK/transport exceptions into LLMGenerationError.
+        This hook runs under the rate-limit handler, so it is the only step retried.
         """
 
     @abstractmethod
     async def _call_async(self, request: Any) -> Any:
         """Send the built request to the LLM asynchronously and return the raw response.
 
-        Implementations must wrap SDK/transport exceptions into LLMGenerationError.
+        Implementations should wrap SDK/transport exceptions into LLMGenerationError.
+        This hook runs under the rate-limit handler, so it is the only step retried.
         """
 
     def invoke_with_tools(

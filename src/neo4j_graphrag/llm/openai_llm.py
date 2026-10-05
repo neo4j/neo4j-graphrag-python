@@ -236,7 +236,7 @@ class BaseOpenAILLM(BaseLLM, abc.ABC):
         params = self.model_params.copy() if self.model_params else {}
 
         # Remove response_format from params to avoid conflicts
-        # In V2, response_format should be passed via invoke(), not constructor
+        # response_format should be passed via invoke(), not constructor
         if params.pop("response_format", None) is not None and response_format is None:
             logger.warning(
                 "response_format in model_params is ignored. "

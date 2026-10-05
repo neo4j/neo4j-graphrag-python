@@ -147,7 +147,10 @@ class BaseGeminiLLM(BaseLLM, abc.ABC):
     def _parse_response(
         self, raw_response: types.GenerateContentResponse
     ) -> LLMResponse:
-        return self._parse_content_response(raw_response)
+        try:
+            return self._parse_content_response(raw_response)
+        except Exception as e:
+            raise LLMGenerationError(f"Error parsing GeminiLLM response: {e}") from e
 
     def invoke_with_tools(
         self,

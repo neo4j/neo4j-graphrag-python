@@ -206,6 +206,23 @@ def test_gemini_invoke_error(mock_genai: Tuple[MagicMock, MagicMock]) -> None:
         llm.invoke([{"role": "user", "content": "hello"}])
 
 
+def test_gemini_invoke_parse_error_wrapped(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    """A failure while parsing the response (here: malformed usage_metadata) must
+    raise LLMGenerationError, like every other failure of the call."""
+    mock_gen, _ = mock_genai
+    mock_client = mock_gen.Client.return_value
+    mock_response = MagicMock()
+    mock_response.text = "ok"
+    mock_response.usage_metadata.prompt_token_count = "not-an-int"
+    mock_client.models.generate_content.return_value = mock_response
+
+    llm = GeminiLLM("gemini-2.0-flash")
+    with pytest.raises(LLMGenerationError):
+        llm.invoke([{"role": "user", "content": "hello"}])
+
+
 def test_gemini_invoke_build_error_wrapped(
     mock_genai: Tuple[MagicMock, MagicMock],
 ) -> None:
