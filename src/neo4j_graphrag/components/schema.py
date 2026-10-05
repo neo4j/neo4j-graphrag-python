@@ -1533,7 +1533,7 @@ def validate_extraction_dict_to_graph_schema(
     """Cross-reference filter and build :class:`GraphSchema` from an extraction dict.
 
     Used by :meth:`GraphSchema.from_extraction_output` and
-    :class:`SchemaFromTextExtractor` (V1 and V2). Does not require a configured LLM.
+    :class:`SchemaFromTextExtractor` (prompt-based and structured output). Does not require a configured LLM.
     """
     node_types = extracted_schema.get("node_types") or []
     rel_types = _merge_duplicate_relationship_types(
@@ -1574,9 +1574,9 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         llm_params (Optional[Dict[str, Any]]): Additional parameters passed to the LLM.
         use_structured_output (bool): Whether to use structured output with
             :class:`~neo4j_graphrag.components.graph_schema_extraction.GraphSchemaExtractionOutput`.
-            Only supported for OpenAILLM and VertexAILLM. Defaults to False (uses V1 prompt-based JSON extraction).
+            Only supported for OpenAILLM and VertexAILLM. Defaults to False (uses prompt-based JSON extraction).
 
-    Example with V1 (default, prompt-based JSON):
+    Example with prompt-based JSON (default):
 
     .. code-block:: python
 
@@ -1589,7 +1589,7 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         )
         extractor = SchemaFromTextExtractor(llm=llm)
 
-    Example with V2 (structured output):
+    Example with structured output:
 
     .. code-block:: python
 
@@ -1693,9 +1693,9 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
             raise SchemaExtractionError("LLM response is not valid JSON.") from exc
 
     def _parse_and_normalize_schema(self, content: str) -> Dict[str, Any]:
-        """Parse and normalize V1 schema response (handles lists/dicts).
+        """Parse and normalize a prompt-based schema response (handles lists/dicts).
 
-        V1 (prompt-based) extraction sometimes returns lists instead of dicts.
+        Prompt-based extraction sometimes returns lists instead of dicts.
         This method normalizes the response to always return a dict.
 
         Args:

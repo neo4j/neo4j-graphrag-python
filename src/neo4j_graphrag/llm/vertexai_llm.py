@@ -174,7 +174,7 @@ class VertexAILLM(BaseLLM):
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> ToolCallResponse:
-        return self.__invoke_v1_with_tools(
+        return self.__invoke_with_tools(
             input, tools, message_history, system_instruction
         )
 
@@ -185,7 +185,7 @@ class VertexAILLM(BaseLLM):
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> ToolCallResponse:
-        return await self.__ainvoke_v1_with_tools(
+        return await self.__ainvoke_with_tools(
             input, tools, message_history, system_instruction
         )
 
@@ -216,7 +216,7 @@ class VertexAILLM(BaseLLM):
             system_instruction=system_instruction,
         )
         try:
-            options = self._get_call_params_v2(
+            options = self._get_invoke_call_params(
                 messages, tools=None, response_format=response_format, **kwargs
             )
             response = model.generate_content(**options)
@@ -251,7 +251,7 @@ class VertexAILLM(BaseLLM):
             model = self._get_model(
                 system_instruction=system_instruction,
             )
-            options = self._get_call_params_v2(
+            options = self._get_invoke_call_params(
                 messages, tools=None, response_format=response_format, **kwargs
             )
             response = await model.generate_content_async(**options)
@@ -259,7 +259,7 @@ class VertexAILLM(BaseLLM):
         except ResponseValidationError as e:
             raise LLMGenerationError("Error calling VertexAILLM") from e
 
-    def __invoke_v1_with_tools(
+    def __invoke_with_tools(
         self,
         input: str,
         tools: Sequence[Tool],
@@ -274,7 +274,7 @@ class VertexAILLM(BaseLLM):
         )
         return self._parse_tool_response(response)
 
-    async def __ainvoke_v1_with_tools(
+    async def __ainvoke_with_tools(
         self,
         input: str,
         tools: Sequence[Tool],
@@ -412,7 +412,7 @@ class VertexAILLM(BaseLLM):
         options["contents"] = messages
         return options
 
-    def _get_call_params_v2(
+    def _get_invoke_call_params(
         self,
         contents: list[Content],
         tools: Optional[Sequence[Tool]],

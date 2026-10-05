@@ -234,7 +234,7 @@ class BedrockLLM(BaseLLM):
         self,
         input: list[LLMMessage],
     ) -> tuple[Optional[str], list[dict[str, Any]]]:
-        """Constructs the message list for the Bedrock Converse API from V2 input."""
+        """Constructs the message list for the Bedrock Converse API from a list of LLMMessage."""
         messages: list[dict[str, Any]] = []
         system_instruction: Optional[str] = None
         for message in input:

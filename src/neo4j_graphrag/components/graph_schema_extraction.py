@@ -108,7 +108,7 @@ def wire_extraction_constraints_for_graph_schema(
 
 
 class GraphSchemaExtractionOutput(BaseModel):
-    """JSON shape for LLM schema-from-text structured output (V2).
+    """JSON shape for LLM schema-from-text structured output.
 
     Convert to :class:`~neo4j_graphrag.components.schema.GraphSchema` with
     :meth:`~neo4j_graphrag.components.schema.GraphSchema.from_extraction_output`.

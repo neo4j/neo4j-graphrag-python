@@ -126,7 +126,7 @@ class BaseOpenAILLM(BaseLLM, abc.ABC):
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> ToolCallResponse:
-        return self.__invoke_v1_with_tools(
+        return self.__invoke_with_tools(
             input, tools, message_history, system_instruction
         )
 
@@ -137,7 +137,7 @@ class BaseOpenAILLM(BaseLLM, abc.ABC):
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> ToolCallResponse:
-        return await self.__ainvoke_v1_with_tools(
+        return await self.__ainvoke_with_tools(
             input, tools, message_history, system_instruction
         )
 
@@ -239,7 +239,7 @@ class BaseOpenAILLM(BaseLLM, abc.ABC):
             params = self.model_params.copy() if self.model_params else {}
 
             # Remove response_format from params to avoid conflicts
-            # In V2, response_format should be passed via invoke(), not constructor
+            # response_format should be passed via invoke(), not constructor
             if (
                 params.pop("response_format", None) is not None
                 and response_format is None
@@ -290,7 +290,7 @@ class BaseOpenAILLM(BaseLLM, abc.ABC):
             raise LLMGenerationError(e)
 
     @rate_limit_handler_decorator
-    def __invoke_v1_with_tools(
+    def __invoke_with_tools(
         self,
         input: str,
         tools: Sequence[Tool],  # Tools definition as a sequence of Tool objects
@@ -389,7 +389,7 @@ class BaseOpenAILLM(BaseLLM, abc.ABC):
             params = self.model_params.copy() if self.model_params else {}
 
             # Remove response_format from params to avoid conflicts
-            # In V2, response_format should be passed via invoke(), not constructor
+            # response_format should be passed via invoke(), not constructor
             if (
                 params.pop("response_format", None) is not None
                 and response_format is None
@@ -440,7 +440,7 @@ class BaseOpenAILLM(BaseLLM, abc.ABC):
             raise LLMGenerationError(e)
 
     @async_rate_limit_handler_decorator
-    async def __ainvoke_v1_with_tools(
+    async def __ainvoke_with_tools(
         self,
         input: str,
         tools: Sequence[Tool],  # Tools definition as a sequence of Tool objects

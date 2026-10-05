@@ -169,9 +169,9 @@ class LLMEntityRelationExtractor(EntityRelationExtractor):
         on_error (OnError): What to do when an error occurs during extraction. Defaults to raising an error.
         max_concurrency (int): The maximum number of concurrent tasks which can be used to make requests to the LLM.
         use_structured_output (bool): Whether to use structured output with the Neo4jGraph Pydantic model.
-            Only supported for OpenAILLM and VertexAILLM. Defaults to False (uses V1 prompt-based JSON extraction).
+            Only supported for OpenAILLM and VertexAILLM. Defaults to False (uses prompt-based JSON extraction).
 
-    Example with V1 (default, prompt-based JSON):
+    Example with prompt-based JSON (default):
 
     .. code-block:: python
 
