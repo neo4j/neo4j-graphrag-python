@@ -24,7 +24,7 @@ from pydantic import BaseModel, ValidationError
 
 # project dependencies
 from neo4j_graphrag.exceptions import LLMGenerationError
-from neo4j_graphrag.llm.base import LLMBase
+from neo4j_graphrag.llm.base import BaseLLM, validate_invoke_input
 from neo4j_graphrag.llm.types import (
     BaseMessage,
     LLMResponse,
@@ -113,16 +113,16 @@ def _extract_generation_config_params(
 
 
 # pylint: disable=arguments-differ, redefined-builtin, no-else-return
-class VertexAILLM(LLMBase):
+class VertexAILLM(BaseLLM):
     """Interface for large language models on Vertex AI
 
     Args:
         model_name (str, optional): Name of the LLM to use. Defaults to "gemini-2.5-flash".
             Model availability is scoped to your project and region, so a model that
             works elsewhere may 404 for you; pass an explicit name if so.
-        model_params (Optional[dict], optional): Additional parameters for LLMInterface(V1) passed to the model when text is sent to it. Defaults to None.
+        model_params (Optional[dict], optional): Additional parameters passed to the model when text is sent to it. Defaults to None.
         system_instruction: Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
-        rate_limit_handler (Optional[RateLimitHandler], optional): Rate limit handler for LLMInterface(V1). Defaults to None.
+        rate_limit_handler (Optional[RateLimitHandler], optional): Handler for rate limiting. Defaults to None.
         **kwargs (Any): Arguments passed to the model when for the class is initialised. Defaults to None.
 
     Raises:
@@ -139,7 +139,7 @@ class VertexAILLM(LLMBase):
         llm = VertexAILLM(
             model_name="gemini-2.5-flash", generation_config=generation_config
         )
-        llm.invoke("Who is the mother of Paul Atreides?")
+        llm.invoke([{"role": "user", "content": "Who is the mother of Paul Atreides?"}])
     """
 
     supports_structured_output: bool = True
@@ -157,7 +157,7 @@ class VertexAILLM(LLMBase):
                 """Could not import Vertex AI Python client.
                 Please install it with `pip install "neo4j-graphrag[google]"`."""
             )
-        LLMBase.__init__(
+        BaseLLM.__init__(
             self,
             model_name=model_name,
             model_params=model_params or {},
@@ -167,38 +167,6 @@ class VertexAILLM(LLMBase):
         self.system_instruction = system_instruction
         self.options = kwargs
 
-    def invoke(
-        self,
-        input: Union[str, List[LLMMessage]],
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        if isinstance(input, str):
-            return self.__invoke_v1(input, message_history, system_instruction)
-        elif isinstance(input, list):
-            return self.__invoke_v2(input, response_format=response_format, **kwargs)
-        else:
-            raise ValueError(f"Invalid input type for invoke method - {type(input)}")
-
-    async def ainvoke(
-        self,
-        input: Union[str, List[LLMMessage]],
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
-        **kwargs: Any,
-    ) -> LLMResponse:
-        if isinstance(input, str):
-            return await self.__ainvoke_v1(input, message_history, system_instruction)
-        elif isinstance(input, list):
-            return await self.__ainvoke_v2(
-                input, response_format=response_format, **kwargs
-            )
-        else:
-            raise ValueError(f"Invalid input type for ainvoke method - {type(input)}")
-
     def invoke_with_tools(
         self,
         input: str,
@@ -206,7 +174,7 @@ class VertexAILLM(LLMBase):
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> ToolCallResponse:
-        return self.__invoke_v1_with_tools(
+        return self.__invoke_with_tools(
             input, tools, message_history, system_instruction
         )
 
@@ -217,50 +185,19 @@ class VertexAILLM(LLMBase):
         message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
         system_instruction: Optional[str] = None,
     ) -> ToolCallResponse:
-        return await self.__ainvoke_v1_with_tools(
+        return await self.__ainvoke_with_tools(
             input, tools, message_history, system_instruction
         )
 
-    # legacy and brand new implementations
-
     @rate_limit_handler_decorator
-    def __invoke_v1(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse:
-        """Sends text to the LLM and returns a response.
-
-        Args:
-            input (str): The text to send to the LLM.
-            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
-                with each message having a specific role assigned.
-            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
-
-        Returns:
-            LLMResponse: The response from the LLM.
-        """
-        model = self._get_model(
-            system_instruction=system_instruction,
-        )
-        try:
-            if isinstance(message_history, MessageHistory):
-                message_history = message_history.messages
-            options = self._get_call_params(input, message_history, tools=None)
-            response = model.generate_content(**options)
-            return self._parse_content_response(response)
-        except ResponseValidationError as e:
-            raise LLMGenerationError("Error calling VertexAILLM") from e
-
-    @rate_limit_handler_decorator
-    def __invoke_v2(
+    def invoke(
         self,
         input: List[LLMMessage],
+        *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        """New invoke method for LLMInterfaceV2.
+        """Sends a list of messages to the LLM and retrieves a response.
 
         Args:
             input (List[LLMMessage]): Input to the LLM.
@@ -273,12 +210,13 @@ class VertexAILLM(LLMBase):
         Returns:
             LLMResponse: The response from the LLM.
         """
-        system_instruction, messages = self.get_messages_v2(input)
+        validate_invoke_input(input)
+        system_instruction, messages = self.build_llm_messages(input)
         model = self._get_model(
             system_instruction=system_instruction,
         )
         try:
-            options = self._get_call_params_v2(
+            options = self._get_invoke_call_params(
                 messages, tools=None, response_format=response_format, **kwargs
             )
             response = model.generate_content(**options)
@@ -287,39 +225,10 @@ class VertexAILLM(LLMBase):
             raise LLMGenerationError("Error calling VertexAILLM") from e
 
     @async_rate_limit_handler_decorator
-    async def __ainvoke_v1(
-        self,
-        input: str,
-        message_history: Optional[Union[List[LLMMessage], MessageHistory]] = None,
-        system_instruction: Optional[str] = None,
-    ) -> LLMResponse:
-        """Asynchronously sends text to the LLM and returns a response.
-
-        Args:
-            input (str): The text to send to the LLM.
-            message_history (Optional[Union[List[LLMMessage], MessageHistory]]): A collection previous messages,
-                with each message having a specific role assigned.
-            system_instruction (Optional[str]): An option to override the llm system message for this invocation.
-
-        Returns:
-            LLMResponse: The response from the LLM.
-        """
-        try:
-            if isinstance(message_history, MessageHistory):
-                message_history = message_history.messages
-            model = self._get_model(
-                system_instruction=system_instruction,
-            )
-            options = self._get_call_params(input, message_history, tools=None)
-            response = await model.generate_content_async(**options)
-            return self._parse_content_response(response)
-        except ResponseValidationError as e:
-            raise LLMGenerationError("Error calling VertexAILLM") from e
-
-    @async_rate_limit_handler_decorator
-    async def __ainvoke_v2(
+    async def ainvoke(
         self,
         input: list[LLMMessage],
+        *,
         response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> LLMResponse:
@@ -336,12 +245,13 @@ class VertexAILLM(LLMBase):
         Returns:
             LLMResponse: The response from the LLM.
         """
+        validate_invoke_input(input)
         try:
-            system_instruction, messages = self.get_messages_v2(input)
+            system_instruction, messages = self.build_llm_messages(input)
             model = self._get_model(
                 system_instruction=system_instruction,
             )
-            options = self._get_call_params_v2(
+            options = self._get_invoke_call_params(
                 messages, tools=None, response_format=response_format, **kwargs
             )
             response = await model.generate_content_async(**options)
@@ -349,7 +259,7 @@ class VertexAILLM(LLMBase):
         except ResponseValidationError as e:
             raise LLMGenerationError("Error calling VertexAILLM") from e
 
-    def __invoke_v1_with_tools(
+    def __invoke_with_tools(
         self,
         input: str,
         tools: Sequence[Tool],
@@ -364,7 +274,7 @@ class VertexAILLM(LLMBase):
         )
         return self._parse_tool_response(response)
 
-    async def __ainvoke_v1_with_tools(
+    async def __ainvoke_with_tools(
         self,
         input: str,
         tools: Sequence[Tool],
@@ -446,7 +356,7 @@ class VertexAILLM(LLMBase):
         messages.append(Content(role="user", parts=[Part.from_text(input)]))
         return messages
 
-    def get_messages_v2(
+    def build_llm_messages(
         self,
         input: list[LLMMessage],
     ) -> tuple[str | None, list[Content]]:
@@ -502,7 +412,7 @@ class VertexAILLM(LLMBase):
         options["contents"] = messages
         return options
 
-    def _get_call_params_v2(
+    def _get_invoke_call_params(
         self,
         contents: list[Content],
         tools: Optional[Sequence[Tool]],

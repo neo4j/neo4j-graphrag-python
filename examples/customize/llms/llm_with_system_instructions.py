@@ -12,7 +12,9 @@ question = "How fast is Santa Claus during the Christmas eve?"
 
 with OpenAILLM(model_name="gpt-5", api_key=api_key) as llm:
     res: LLMResponse = llm.invoke(
-        question,
-        system_instruction="Answer with a serious tone",
+        [
+            {"role": "system", "content": "Answer with a serious tone"},
+            {"role": "user", "content": question},
+        ]
     )
     print(res.content)

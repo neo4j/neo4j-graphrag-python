@@ -18,7 +18,7 @@ from neo4j_graphrag.experimental.pipeline.types.schema import (
     EntityInputType,
     RelationInputType,
 )
-from neo4j_graphrag.llm import LLMInterface
+from neo4j_graphrag.llm import BaseLLM
 from neo4j_graphrag.llm import OpenAILLM
 
 logging.basicConfig()
@@ -67,7 +67,7 @@ PATTERNS = [
 
 async def define_and_run_pipeline(
     neo4j_driver: neo4j.Driver,
-    llm: LLMInterface,
+    llm: BaseLLM,
 ) -> PipelineResult:
     # Create an instance of the SimpleKGPipeline
     kg_builder = SimpleKGPipeline(

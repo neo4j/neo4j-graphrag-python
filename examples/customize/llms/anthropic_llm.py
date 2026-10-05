@@ -26,7 +26,7 @@ with AnthropicLLM(
     model_params={"max_tokens": 1000},  # max_tokens must be specified
     api_key=api_key,
 ) as llm:
-    res: LLMResponse = llm.invoke("say something")
+    res: LLMResponse = llm.invoke([{"role": "user", "content": "say something"}])
     print(res.content)
 
 # `base_url` is forwarded to both the sync and async SDK clients. It is only
@@ -39,5 +39,5 @@ if args.base_url:
         api_key=api_key,
         base_url=args.base_url,
     ) as custom_llm:
-        res = custom_llm.invoke("say something")
+        res = custom_llm.invoke([{"role": "user", "content": "say something"}])
         print(res.content)

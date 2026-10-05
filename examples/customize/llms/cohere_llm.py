@@ -7,5 +7,5 @@ with CohereLLM(
     model_name="command-a-03-2025",
     api_key=api_key,
 ) as llm:
-    res: LLMResponse = llm.invoke("say something")
+    res: LLMResponse = llm.invoke([{"role": "user", "content": "say something"}])
     print(res.content)

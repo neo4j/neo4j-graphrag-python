@@ -144,7 +144,7 @@ def test_t2c_retriever_happy_path(
         query_text=query_text,
     )
     retriever.search(query_text=query_text)
-    llm.invoke.assert_called_once_with(prompt)
+    llm.invoke.assert_called_once_with([{"role": "user", "content": prompt}])
     assert driver.execute_query.call_count == 2
     driver.execute_query.assert_any_call(
         query_=f"EXPLAIN {t2c_query}",
@@ -261,7 +261,9 @@ def test_t2c_retriever_initialization_with_custom_prompt(
     )
     retriever.search(query_text="test")
 
-    llm.invoke.assert_called_once_with("This is a custom prompt. test")
+    llm.invoke.assert_called_once_with(
+        [{"role": "user", "content": "This is a custom prompt. test"}]
+    )
 
 
 @patch("neo4j_graphrag.retrievers.text2cypher.extract_cypher")
@@ -293,7 +295,9 @@ def test_t2c_retriever_initialization_with_custom_prompt_and_schema_and_examples
     )
     retriever.search(query_text="test")
 
-    llm.invoke.assert_called_once_with("This is a custom prompt. test")
+    llm.invoke.assert_called_once_with(
+        [{"role": "user", "content": "This is a custom prompt. test"}]
+    )
 
 
 @patch("neo4j_graphrag.retrievers.text2cypher.extract_cypher")
@@ -326,7 +330,12 @@ def test_t2c_retriever_initialization_with_custom_prompt_and_schema_and_examples
     retriever.search(query_text="test")
 
     llm.invoke.assert_called_once_with(
-        "This is a custom prompt. test dummy-schema example-1\nexample-2"
+        [
+            {
+                "role": "user",
+                "content": "This is a custom prompt. test dummy-schema example-1\nexample-2",
+            }
+        ]
     )
 
 
@@ -363,7 +372,12 @@ def test_t2c_retriever_initialization_with_custom_prompt_and_unused_schema_and_e
     )
 
     llm.invoke.assert_called_once_with(
-        "This is a custom prompt. test another-dummy-schema another-example"
+        [
+            {
+                "role": "user",
+                "content": "This is a custom prompt. test another-dummy-schema another-example",
+            }
+        ]
     )
 
 
@@ -409,7 +423,12 @@ def test_t2c_retriever_with_custom_prompt_prompt_params(
     retriever.search(query_text=query, prompt_params={"examples_custom": examples})
 
     llm.invoke.assert_called_once_with(
-        """This is a custom prompt. test ['example A', 'example B']"""
+        [
+            {
+                "role": "user",
+                "content": """This is a custom prompt. test ['example A', 'example B']""",
+            }
+        ]
     )
 
 
@@ -442,7 +461,12 @@ def test_t2c_retriever_with_custom_prompt_bad_prompt_params(
     )
 
     llm.invoke.assert_called_once_with(
-        """This is a custom prompt. test ['example A', 'example B']"""
+        [
+            {
+                "role": "user",
+                "content": """This is a custom prompt. test ['example A', 'example B']""",
+            }
+        ]
     )
 
 
@@ -474,7 +498,9 @@ def test_t2c_retriever_with_custom_prompt_and_schema(
     )
 
     get_schema_mock.assert_not_called()
-    llm.invoke.assert_called_once_with("""This is a custom prompt. test """)
+    llm.invoke.assert_called_once_with(
+        [{"role": "user", "content": """This is a custom prompt. test """}]
+    )
 
 
 @pytest.mark.parametrize(

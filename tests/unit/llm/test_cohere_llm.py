@@ -45,7 +45,7 @@ def test_cohere_llm_happy_path(mock_cohere: Mock) -> None:
     chat_response_mock.message.content = [MagicMock(text="cohere response text")]
     mock_cohere.ClientV2.return_value.chat.return_value = chat_response_mock
     llm = CohereLLM(model_name="something")
-    res = llm.invoke("my text")
+    res = llm.invoke([{"role": "user", "content": "my text"}])
     assert isinstance(res, LLMResponse)
     assert res.content == "cohere response text"
 
@@ -58,20 +58,23 @@ def test_cohere_llm_invoke_with_message_history_happy_path(mock_cohere: Mock) ->
 
     system_instruction = "You are a helpful assistant."
     llm = CohereLLM(model_name="something")
+    mock_cohere.SystemChatMessageV2 = MagicMock(side_effect=lambda **kw: kw)
+    mock_cohere.UserChatMessageV2 = MagicMock(side_effect=lambda **kw: kw)
+    mock_cohere.AssistantChatMessageV2 = MagicMock(side_effect=lambda **kw: kw)
     message_history: List[LLMMessage] = [
         {"role": "user", "content": "When does the sun come up in the summer?"},
         {"role": "assistant", "content": "Usually around 6am."},
     ]
     question = "What about next season?"
 
-    res = llm.invoke(question, message_history, system_instruction=system_instruction)
-    assert isinstance(res, LLMResponse)
-    assert res.content == "cohere response text"
     messages: List[LLMMessage] = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
+    res = llm.invoke(messages)
+    assert isinstance(res, LLMResponse)
+    assert res.content == "cohere response text"
     mock_cohere_client_chat.assert_called_once_with(
-        messages=messages,
+        messages=[{"content": m["content"]} for m in messages],
         model="something",
     )
 
@@ -86,42 +89,25 @@ def test_cohere_llm_invoke_with_message_history_and_system_instruction(
 
     system_instruction = "You are a helpful assistant."
     llm = CohereLLM(model_name="gpt")
+    mock_cohere.SystemChatMessageV2 = MagicMock(side_effect=lambda **kw: kw)
+    mock_cohere.UserChatMessageV2 = MagicMock(side_effect=lambda **kw: kw)
+    mock_cohere.AssistantChatMessageV2 = MagicMock(side_effect=lambda **kw: kw)
     message_history: List[LLMMessage] = [
         {"role": "user", "content": "When does the sun come up in the summer?"},
         {"role": "assistant", "content": "Usually around 6am."},
     ]
     question = "What about next season?"
 
-    res = llm.invoke(question, message_history, system_instruction=system_instruction)
-    assert isinstance(res, LLMResponse)
-    assert res.content == "cohere response text"
     messages: List[LLMMessage] = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
+    res = llm.invoke(messages)
+    assert isinstance(res, LLMResponse)
+    assert res.content == "cohere response text"
     mock_cohere_client_chat.assert_called_once_with(
-        messages=messages,
+        messages=[{"content": m["content"]} for m in messages],
         model="gpt",
     )
-
-
-def test_cohere_llm_invoke_with_message_history_validation_error(
-    mock_cohere: Mock,
-) -> None:
-    chat_response_mock = MagicMock()
-    chat_response_mock.message.content = [MagicMock(text="cohere response text")]
-    mock_cohere.ClientV2.return_value.chat.return_value = chat_response_mock
-
-    system_instruction = "You are a helpful assistant."
-    llm = CohereLLM(model_name="something", system_instruction=system_instruction)
-    message_history = [
-        {"role": "robot", "content": "When does the sun come up in the summer?"},
-        {"role": "assistant", "content": "Usually around 6am."},
-    ]
-    question = "What about next season?"
-
-    with pytest.raises(LLMGenerationError) as exc_info:
-        llm.invoke(question, message_history)  # type: ignore
-    assert "Input should be 'user', 'assistant' or 'system" in str(exc_info.value)
 
 
 @pytest.mark.asyncio
@@ -134,7 +120,7 @@ async def test_cohere_llm_happy_path_async(mock_cohere: Mock) -> None:
     )
 
     llm = CohereLLM(model_name="something")
-    res = await llm.ainvoke("my text")
+    res = await llm.ainvoke([{"role": "user", "content": "my text"}])
     assert isinstance(res, LLMResponse)
     assert res.content == "cohere response text"
 
@@ -143,8 +129,8 @@ def test_cohere_llm_failed(mock_cohere: Mock) -> None:
     mock_cohere.ClientV2.return_value.chat.side_effect = cohere.core.ApiError
     llm = CohereLLM(model_name="something")
     with pytest.raises(LLMGenerationError) as excinfo:
-        llm.invoke("my text")
-    assert "ApiError" in str(excinfo)
+        llm.invoke([{"role": "user", "content": "my text"}])
+    assert "Error calling cohere" in str(excinfo.value)
 
 
 @pytest.mark.asyncio
@@ -153,15 +139,12 @@ async def test_cohere_llm_failed_async(mock_cohere: Mock) -> None:
     llm = CohereLLM(model_name="something")
 
     with pytest.raises(LLMGenerationError) as excinfo:
-        await llm.ainvoke("my text")
-    assert "ApiError" in str(excinfo)
+        await llm.ainvoke([{"role": "user", "content": "my text"}])
+    assert "Error calling cohere" in str(excinfo.value)
 
 
-# V2 Interface Tests
-
-
-def test_cohere_llm_invoke_v2_happy_path(mock_cohere: Mock) -> None:
-    """Test V2 interface invoke method with List[LLMMessage] input."""
+def test_cohere_llm_invoke_happy_path(mock_cohere: Mock) -> None:
+    """Test invoke method with List[LLMMessage] input."""
     chat_response_mock = MagicMock()
     chat_response_mock.message.content = [MagicMock(text="cohere v2 response text")]
     mock_cohere.ClientV2.return_value.chat.return_value = chat_response_mock
@@ -189,8 +172,8 @@ def test_cohere_llm_invoke_v2_happy_path(mock_cohere: Mock) -> None:
 
 
 @pytest.mark.asyncio
-async def test_cohere_llm_ainvoke_v2_happy_path(mock_cohere: Mock) -> None:
-    """Test V2 interface async invoke method with List[LLMMessage] input."""
+async def test_cohere_llm_ainvoke_happy_path(mock_cohere: Mock) -> None:
+    """Test async invoke method with List[LLMMessage] input."""
     chat_response_mock = MagicMock()
     chat_response_mock.message.content = [
         MagicMock(text="cohere v2 async response text")
@@ -219,8 +202,8 @@ async def test_cohere_llm_ainvoke_v2_happy_path(mock_cohere: Mock) -> None:
     mock_cohere.AsyncClientV2.return_value.chat.assert_awaited_once()
 
 
-def test_cohere_llm_invoke_v2_validation_error(mock_cohere: Mock) -> None:
-    """Test V2 interface invoke with invalid message role raises error."""
+def test_cohere_llm_invoke_validation_error(mock_cohere: Mock) -> None:
+    """Test invoke with invalid message role raises error."""
     chat_response_mock = MagicMock()
     chat_response_mock.message.content = [MagicMock(text="should not get here")]
     mock_cohere.ClientV2.return_value.chat.return_value = chat_response_mock
@@ -236,8 +219,8 @@ def test_cohere_llm_invoke_v2_validation_error(mock_cohere: Mock) -> None:
     assert "Unknown role: invalid_role" in str(exc_info.value)
 
 
-def test_cohere_llm_get_messages_v2_all_roles(mock_cohere: Mock) -> None:
-    """Test get_messages_v2 method handles all message roles correctly."""
+def test_cohere_llm_get_messages_all_roles(mock_cohere: Mock) -> None:
+    """Test get_messages method handles all message roles correctly."""
     # Mock Cohere message types
     mock_system_msg = MagicMock()
     mock_user_msg = MagicMock()
@@ -255,7 +238,7 @@ def test_cohere_llm_get_messages_v2_all_roles(mock_cohere: Mock) -> None:
     ]
 
     llm = CohereLLM(model_name="something")
-    result_messages = llm.get_messages_v2(messages)
+    result_messages = llm.get_messages(messages)
 
     # Verify the correct number of messages are returned
     assert len(result_messages) == 4
@@ -268,8 +251,8 @@ def test_cohere_llm_get_messages_v2_all_roles(mock_cohere: Mock) -> None:
     mock_cohere.AssistantChatMessageV2.assert_called_once_with(content="Hi there!")
 
 
-def test_cohere_invoke_v2_with_response_format_raises_error(mock_cohere: Mock) -> None:
-    """Test V2 interface raises NotImplementedError when response_format is used."""
+def test_cohere_invoke_with_response_format_raises_error(mock_cohere: Mock) -> None:
+    """Test raises NotImplementedError when response_format is used."""
 
     class TestModel(BaseModel):
         model_config = ConfigDict(extra="forbid")

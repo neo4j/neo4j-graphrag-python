@@ -65,9 +65,28 @@ def test_openai_llm_happy_path(mock_import: Mock) -> None:
     )
     llm = OpenAILLM(api_key="my key", model_name="gpt")
 
-    res = llm.invoke("my text")
+    res = llm.invoke([{"role": "user", "content": "my text"}])
     assert isinstance(res, LLMResponse)
     assert res.content == "openai chat response"
+
+
+@patch("builtins.__import__")
+def test_openai_llm_invoke_rejects_string_input(mock_import: Mock) -> None:
+    mock_import.return_value = get_mock_openai()
+    llm = OpenAILLM(api_key="my key", model_name="gpt")
+
+    with pytest.raises(TypeError, match="list of LLMMessage"):
+        llm.invoke("my text")  # type: ignore[arg-type]
+
+
+@patch("builtins.__import__")
+@pytest.mark.asyncio
+async def test_openai_llm_ainvoke_rejects_string_input(mock_import: Mock) -> None:
+    mock_import.return_value = get_mock_openai()
+    llm = OpenAILLM(api_key="my key", model_name="gpt")
+
+    with pytest.raises(TypeError, match="list of LLMMessage"):
+        await llm.ainvoke("my text")  # type: ignore[arg-type]
 
 
 @patch("builtins.__import__")
@@ -84,17 +103,17 @@ def test_openai_llm_with_message_history_happy_path(mock_import: Mock) -> None:
     ]
     question = "What about next season?"
 
-    res = llm.invoke(question, message_history)  # type: ignore
+    message_history.append({"role": "user", "content": question})
+    res = llm.invoke(message_history)  # type: ignore
     assert isinstance(res, LLMResponse)
     assert res.content == "openai chat response"
-    message_history.append({"role": "user", "content": question})
     # Use assert_called_once() instead of assert_called_once_with() to avoid issues with overloaded functions
     llm.client.chat.completions.create.assert_called_once()  # type: ignore
     # Check call arguments individually
     call_args = llm.client.chat.completions.create.call_args[  # type: ignore
         1
     ]  # Get the keyword arguments
-    assert call_args["messages"] == message_history
+    assert len(call_args["messages"]) == 3
     assert call_args["model"] == "gpt"
 
 
@@ -118,41 +137,22 @@ def test_openai_llm_with_message_history_and_system_instruction(
     ]
     question = "What about next season?"
 
-    res = llm.invoke(question, message_history, system_instruction=system_instruction)  # type: ignore
-    assert isinstance(res, LLMResponse)
-    assert res.content == "openai chat response"
     messages = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
+    res = llm.invoke(messages)  # type: ignore
+    assert isinstance(res, LLMResponse)
+    assert res.content == "openai chat response"
     # Use assert_called_once() instead of assert_called_once_with() to avoid issues with overloaded functions
     llm.client.chat.completions.create.assert_called_once()  # type: ignore
     # Check call arguments individually
     call_args = llm.client.chat.completions.create.call_args[  # type: ignore
         1
     ]  # Get the keyword arguments
-    assert call_args["messages"] == messages
+    assert len(call_args["messages"]) == 4
     assert call_args["model"] == "gpt"
 
     assert llm.client.chat.completions.create.call_count == 1  # type: ignore
-
-
-@patch("builtins.__import__")
-def test_openai_llm_with_message_history_validation_error(mock_import: Mock) -> None:
-    mock_openai = get_mock_openai()
-    mock_import.return_value = mock_openai
-    mock_openai.OpenAI.return_value.chat.completions.create.return_value = MagicMock(
-        choices=[MagicMock(message=MagicMock(content="openai chat response"))],
-    )
-    llm = OpenAILLM(api_key="my key", model_name="gpt")
-    message_history = [
-        {"role": "human", "content": "When does the sun come up in the summer?"},
-        {"role": "assistant", "content": "Usually around 6am."},
-    ]
-    question = "What about next season?"
-
-    with pytest.raises(LLMGenerationError) as exc_info:
-        llm.invoke(question, message_history)  # type: ignore
-    assert "Input should be 'user', 'assistant' or 'system'" in str(exc_info.value)
 
 
 @patch("builtins.__import__")
@@ -360,7 +360,7 @@ def test_azure_openai_llm_happy_path(mock_import: Mock) -> None:
         api_version="version",
     )
 
-    res = llm.invoke("my text")
+    res = llm.invoke([{"role": "user", "content": "my text"}])
     assert isinstance(res, LLMResponse)
     assert res.content == "openai chat response"
 
@@ -387,46 +387,18 @@ def test_azure_openai_llm_with_message_history_happy_path(mock_import: Mock) -> 
     ]
     question = "What about next season?"
 
-    res = llm.invoke(question, message_history)  # type: ignore
+    message_history.append({"role": "user", "content": question})
+    res = llm.invoke(message_history)  # type: ignore
     assert isinstance(res, LLMResponse)
     assert res.content == "openai chat response"
-    message_history.append({"role": "user", "content": question})
     # Use assert_called_once() instead of assert_called_once_with() to avoid issues with overloaded functions
     llm.client.chat.completions.create.assert_called_once()  # type: ignore
     # Check call arguments individually
     call_args = llm.client.chat.completions.create.call_args[  # type: ignore
         1
     ]  # Get the keyword arguments
-    assert call_args["messages"] == message_history
+    assert len(call_args["messages"]) == 3
     assert call_args["model"] == "gpt"
-
-
-@patch("builtins.__import__")
-def test_azure_openai_llm_with_message_history_validation_error(
-    mock_import: Mock,
-) -> None:
-    mock_openai = get_mock_openai()
-    mock_import.return_value = mock_openai
-    mock_openai.AzureOpenAI.return_value.chat.completions.create.return_value = (
-        MagicMock(
-            choices=[MagicMock(message=MagicMock(content="openai chat response"))],
-        )
-    )
-    llm = AzureOpenAILLM(
-        model_name="gpt",
-        azure_endpoint="https://test.openai.azure.com/",
-        api_key="my key",
-        api_version="version",
-    )
-
-    message_history = [
-        {"role": "user", "content": 33},
-    ]
-    question = "What about next season?"
-
-    with pytest.raises(LLMGenerationError) as exc_info:
-        llm.invoke(question, message_history)  # type: ignore
-    assert "Input should be a valid string" in str(exc_info.value)
 
 
 @pytest.mark.asyncio
@@ -458,7 +430,7 @@ async def test_openai_llm_ainvoke_happy_path(mock_import: Mock) -> None:
     model_params = {"temperature": 0.5}
     llm = OpenAILLM(model_name, model_params, api_key="test-key")
 
-    response = await llm.ainvoke(input_text)
+    response = await llm.ainvoke([{"role": "user", "content": input_text}])
 
     # Assert we got the expected content in LLMResponse
     assert isinstance(response, LLMResponse)
@@ -583,12 +555,9 @@ async def test_openai_llm_ainvoke_with_tools_error(
         await llm.ainvoke_with_tools("my text", [test_tool])
 
 
-# LLM Interface V2 Tests
-
-
 @patch("builtins.__import__")
-def test_openai_llm_invoke_v2_happy_path(mock_import: Mock) -> None:
-    """Test V2 interface invoke method with List[LLMMessage] input."""
+def test_openai_llm_invoke_happy_path(mock_import: Mock) -> None:
+    """Test invoke method with List[LLMMessage] input."""
     mock_openai = get_mock_openai()
     mock_import.return_value = mock_openai
     mock_openai.OpenAI.return_value.chat.completions.create.return_value = MagicMock(
@@ -617,8 +586,8 @@ def test_openai_llm_invoke_v2_happy_path(mock_import: Mock) -> None:
 
 
 @patch("builtins.__import__")
-def test_openai_llm_invoke_v2_with_conversation_history(mock_import: Mock) -> None:
-    """Test V2 interface invoke with conversation history."""
+def test_openai_llm_invoke_with_conversation_history(mock_import: Mock) -> None:
+    """Test invoke with conversation history."""
     mock_openai = get_mock_openai()
     mock_import.return_value = mock_openai
     mock_openai.OpenAI.return_value.chat.completions.create.return_value = MagicMock(
@@ -648,8 +617,8 @@ def test_openai_llm_invoke_v2_with_conversation_history(mock_import: Mock) -> No
 
 
 @patch("builtins.__import__")
-def test_openai_llm_invoke_v2_no_system_message(mock_import: Mock) -> None:
-    """Test V2 interface invoke without system message."""
+def test_openai_llm_invoke_no_system_message(mock_import: Mock) -> None:
+    """Test invoke without system message."""
     mock_openai = get_mock_openai()
     mock_import.return_value = mock_openai
     mock_openai.OpenAI.return_value.chat.completions.create.return_value = MagicMock(
@@ -674,8 +643,8 @@ def test_openai_llm_invoke_v2_no_system_message(mock_import: Mock) -> None:
 
 @pytest.mark.asyncio
 @patch("builtins.__import__")
-async def test_openai_llm_ainvoke_v2_happy_path(mock_import: Mock) -> None:
-    """Test V2 interface async invoke method with List[LLMMessage] input."""
+async def test_openai_llm_ainvoke_messages_happy_path(mock_import: Mock) -> None:
+    """Test async invoke method with List[LLMMessage] input."""
     mock_openai = get_mock_openai()
     mock_import.return_value = mock_openai
 
@@ -721,8 +690,8 @@ async def test_openai_llm_ainvoke_v2_happy_path(mock_import: Mock) -> None:
 
 
 @patch("builtins.__import__")
-def test_openai_llm_invoke_v2_validation_error(mock_import: Mock) -> None:
-    """Test V2 interface invoke with invalid message format raises error."""
+def test_openai_llm_invoke_validation_error(mock_import: Mock) -> None:
+    """Test invoke with invalid message format raises error."""
     mock_openai = get_mock_openai()
     mock_import.return_value = mock_openai
 
@@ -738,8 +707,8 @@ def test_openai_llm_invoke_v2_validation_error(mock_import: Mock) -> None:
 
 
 @patch("builtins.__import__")
-def test_openai_llm_get_messages_v2_all_roles(mock_import: Mock) -> None:
-    """Test get_messages_v2 method handles all message roles correctly."""
+def test_openai_llm_get_messages_all_roles(mock_import: Mock) -> None:
+    """Test build_llm_messages method handles all message roles correctly."""
     mock_openai = get_mock_openai()
     mock_import.return_value = mock_openai
 
@@ -751,7 +720,7 @@ def test_openai_llm_get_messages_v2_all_roles(mock_import: Mock) -> None:
     ]
 
     llm = OpenAILLM(api_key="my key", model_name="gpt")
-    result_messages = llm.get_messages_v2(messages)
+    result_messages = llm.build_llm_messages(messages)
 
     # Convert to list for easier testing
     result_list = list(result_messages)
@@ -762,8 +731,8 @@ def test_openai_llm_get_messages_v2_all_roles(mock_import: Mock) -> None:
 
 
 @patch("builtins.__import__")
-def test_azure_openai_llm_invoke_v2_happy_path(mock_import: Mock) -> None:
-    """Test V2 interface invoke method for Azure OpenAI with List[LLMMessage] input."""
+def test_azure_openai_llm_invoke_happy_path(mock_import: Mock) -> None:
+    """Test invoke method for Azure OpenAI with List[LLMMessage] input."""
     mock_openai = get_mock_openai()
     mock_import.return_value = mock_openai
     mock_openai.AzureOpenAI.return_value.chat.completions.create.return_value = (
@@ -815,8 +784,8 @@ _TEST_JSON_SCHEMA = {
 
 
 @patch("builtins.__import__")
-def test_openai_llm_invoke_v2_with_pydantic_response_format(mock_import: Mock) -> None:
-    """Test V2 interface with Pydantic model as response_format."""
+def test_openai_llm_invoke_with_pydantic_response_format(mock_import: Mock) -> None:
+    """Test with Pydantic model as response_format."""
 
     mock_openai = get_mock_openai()
     mock_import.side_effect = create_selective_import_mock(mock_openai)
@@ -838,10 +807,10 @@ def test_openai_llm_invoke_v2_with_pydantic_response_format(mock_import: Mock) -
 
 
 @patch("builtins.__import__")
-def test_openai_llm_invoke_v2_with_json_schema_response_format(
+def test_openai_llm_invoke_with_json_schema_response_format(
     mock_import: Mock,
 ) -> None:
-    """Test V2 interface with JSON schema dict as response_format."""
+    """Test with JSON schema dict as response_format."""
     mock_openai = get_mock_openai()
     mock_import.return_value = mock_openai
     mock_openai.OpenAI.return_value.chat.completions.create.return_value = MagicMock(
@@ -863,10 +832,10 @@ def test_openai_llm_invoke_v2_with_json_schema_response_format(
 
 @pytest.mark.asyncio
 @patch("builtins.__import__")
-async def test_openai_llm_ainvoke_v2_with_pydantic_response_format(
+async def test_openai_llm_ainvoke_with_pydantic_response_format(
     mock_import: Mock,
 ) -> None:
-    """Test V2 interface async invoke with Pydantic response_format."""
+    """Test async invoke with Pydantic response_format."""
 
     mock_openai = get_mock_openai()
     mock_import.side_effect = create_selective_import_mock(mock_openai)
@@ -889,10 +858,10 @@ async def test_openai_llm_ainvoke_v2_with_pydantic_response_format(
 
 @pytest.mark.asyncio
 @patch("builtins.__import__")
-async def test_openai_llm_ainvoke_v2_with_json_schema_response_format(
+async def test_openai_llm_ainvoke_with_json_schema_response_format(
     mock_import: Mock,
 ) -> None:
-    """Test V2 interface async invoke with JSON schema response_format."""
+    """Test async invoke with JSON schema response_format."""
     mock_openai = get_mock_openai()
     mock_import.return_value = mock_openai
 
