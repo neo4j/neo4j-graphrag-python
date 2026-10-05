@@ -383,11 +383,16 @@ When you're finished with your changes, create a pull request (PR) using the fol
 ## 🧪 Tests
 
 To be able to run all tests, all extra packages needs to be installed.
-This is achieved by:
+The `gpu` extra is mutually exclusive with the torch-carrying extras (it
+resolves CUDA torch where they resolve CPU torch), so exclude it:
 
 ```bash
-uv sync --all-extras
+uv sync --all-extras --no-extra gpu
 ```
+
+On a machine where you want `SentenceTransformerEmbeddings` on GPU instead,
+sync with `--extra gpu` (plus any non-torch extras you need) — note there are
+no CUDA builds of torch for macOS.
 
 ### Unit Tests
 

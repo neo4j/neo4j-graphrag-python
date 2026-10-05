@@ -234,9 +234,16 @@ Development
 Install dependencies
 ********************
 
+The ``gpu`` extra is mutually exclusive with the torch-carrying extras (it
+resolves CUDA torch where they resolve CPU torch), so exclude it:
+
 .. code:: bash
 
-    uv sync --all-extras
+    uv sync --all-extras --no-extra gpu
+
+For ``SentenceTransformerEmbeddings`` on GPU instead, sync with ``--extra
+gpu`` (plus any non-torch extras you need); note there are no CUDA builds of
+torch for macOS.
 
 ***************
 Getting started

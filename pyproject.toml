@@ -58,8 +58,18 @@ qdrant = ["qdrant-client>=1.11.3,<2.0.0"]
 kg_creation_tools = ["neo4j-viz>=0.4.2,<0.5.0"]
 sentence-transformers = [
     "sentence-transformers>=3.0.0,<7.0.0",
-    # Declared directly (not just transitively) so the CPU-index source pin
-    # below applies: tool.uv.sources only reaches direct dependencies.
+    # Declared directly (not just transitively) so the source pins below
+    # apply: tool.uv.sources only reaches direct dependencies.
+    "torch>=2.5.0,<3.0.0",
+]
+# CUDA torch for users who need SentenceTransformerEmbeddings on GPU. Mutually
+# exclusive with the torch-carrying extras above via [tool.uv] conflicts, so
+# the lockfile records both CPU and CUDA resolutions side by side and the
+# extra you sync with picks the one you get. No CUDA builds exist for macOS,
+# so `--extra gpu` there fails at install time with a clear wheel error (same
+# caveat as uv's own PyTorch guide).
+gpu = [
+    "sentence-transformers>=3.0.0,<7.0.0",
     "torch>=2.5.0,<3.0.0",
 ]
 experimental = [
@@ -71,6 +81,9 @@ experimental = [
 examples = [
     "langchain-openai>=0.2.2,<2.0.0",
     "langchain-huggingface>=0.1.0,<2.0.0",
+    # Declared directly for the same reason as in sentence-transformers
+    # above: gives the CPU source pin a direct dependency to attach to.
+    "torch>=2.5.0,<3.0.0",
     # 14 examples call load_dotenv(); without this it resolves only by accident,
     # transitively through another extra.
     "python-dotenv>=1.0.0,<2.0.0",
@@ -98,25 +111,43 @@ dev = [
 
 [tool.uv]
 exclude-newer = "2026-09-18T00:00:00Z"
+# `gpu` provides CUDA torch where the torch-carrying extras provide CPU
+# torch; the two must never be resolved into the same environment, so the
+# extras are declared mutually exclusive. This is what lets the lockfile
+# record both resolutions side by side (see the torch source pins below).
+conflicts = [
+    [{ extra = "gpu" }, { extra = "sentence-transformers" }],
+    [{ extra = "gpu" }, { extra = "examples" }],
+]
 
 # torch arrives via the `sentence-transformers` and `examples` extras (for
-# SentenceTransformerEmbeddings) and nothing in this repo needs GPU, so pin
-# resolution to PyTorch's CPU-only wheel index. On linux x86_64 the PyPI build
-# hard-requires the ~15-package nvidia-*-cu12 closure plus a ~900MB CUDA
-# wheel; the CPU build (~200MB) needs none of it. `tool.uv.sources` only
-# reaches direct dependencies, hence the explicit `torch` entry in the
-# `sentence-transformers` extra above. `examples` pulls torch in via
-# langchain-huggingface -> sentence-transformers and reuses the same
-# resolved torch, so both extras stay CUDA-free. Consumers who need GPU torch
-# can point their own resolution at the cu-index of their choice; this pin
-# only affects this repo's lockfile, not the published wheel metadata.
+# SentenceTransformerEmbeddings), and this repo's own workloads (CI included)
+# never need GPU, so those extras resolve torch from PyTorch's CPU-only wheel
+# index. On linux x86_64 the PyPI build hard-requires the ~15-package
+# nvidia-*-cu12 closure plus a ~900MB CUDA wheel; the CPU build needs none of
+# it. Users who DO need GPU sync with `--extra gpu` instead, which resolves
+# the same torch specifier from the cu130 index (CUDA 13.0; point it at
+# whichever cu-index matches your driver).
+#
+# `tool.uv.sources` only reaches direct dependencies, hence the explicit
+# `torch` entries in the torch-carrying extras above. The pin affects this
+# repo's lockfile only, not the published wheel metadata.
 [[tool.uv.index]]
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
 
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
+
 [tool.uv.sources]
-torch = [{ index = "pytorch-cpu" }]
+torch = [
+    { index = "pytorch-cpu", extra = "sentence-transformers" },
+    { index = "pytorch-cpu", extra = "examples" },
+    { index = "pytorch-cu130", extra = "gpu" },
+]
 
 [build-system]
 requires = ["hatchling"]
