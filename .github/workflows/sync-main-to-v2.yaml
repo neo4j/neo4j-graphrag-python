@@ -1,0 +1,46 @@
+name: Weekly Sync main to v2
+
+on:
+  schedule:
+    # Runs at 02:00 UTC every Monday
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
+    # Allows you to trigger this manually from the Actions tab
+
+permissions:
+  pull-requests: write
+  contents: read
+
+concurrency:
+  group: sync-main-to-v2
+  cancel-in-progress: false
+
+jobs:
+  sync-branches:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.GIT_PUSH_PAT }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          # 1. Skip if v2 already contains everything on main
+          ahead_by=$(gh api "repos/$GH_REPO/compare/v2...main" --jq .ahead_by)
+          if [ "$ahead_by" -eq 0 ]; then
+            echo "v2 is up to date with main. Nothing to sync."
+            exit 0
+          fi
+
+          # 2. Skip if a sync PR is already open
+          existing_pr=$(gh pr list --base v2 --head main --state open --json number --jq '.[0].number')
+          if [ -n "$existing_pr" ]; then
+            echo "A PR already exists: #$existing_pr. Skipping creation."
+            exit 0
+          fi
+
+          # 3. Create the PR; any failure here should fail the job
+          gh pr create \
+            --base v2 \
+            --head main \
+            --title "🔄 Auto-sync: Merge main into v2" \
+            --body "Automated weekly PR (requires manual review and merge) to bring bug fixes and current release updates from \`main\` into \`v2\`. Please merge with a merge commit (not squash or rebase) so the branches do not diverge again."
