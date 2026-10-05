@@ -56,7 +56,12 @@ mistralai = ["mistralai>=2.7.1,<3.0.0"]
 litellm = ["litellm>=1.101.0,<2.0.0"]
 qdrant = ["qdrant-client>=1.11.3,<2.0.0"]
 kg_creation_tools = ["neo4j-viz>=0.4.2,<0.5.0"]
-sentence-transformers = ["sentence-transformers>=3.0.0,<7.0.0"]
+sentence-transformers = [
+    "sentence-transformers>=3.0.0,<7.0.0",
+    # Declared directly (not just transitively) so the CPU-index source pin
+    # below applies: tool.uv.sources only reaches direct dependencies.
+    "torch>=2.5.0,<3.0.0",
+]
 experimental = [
     "langchain-text-splitters>=0.3.0,<2.0.0",
     "neo4j-viz>=0.4.2,<0.5.0",
@@ -93,6 +98,25 @@ dev = [
 
 [tool.uv]
 exclude-newer = "2026-09-18T00:00:00Z"
+
+# torch arrives via the `sentence-transformers` and `examples` extras (for
+# SentenceTransformerEmbeddings) and nothing in this repo needs GPU, so pin
+# resolution to PyTorch's CPU-only wheel index. On linux x86_64 the PyPI build
+# hard-requires the ~15-package nvidia-*-cu12 closure plus a ~900MB CUDA
+# wheel; the CPU build (~200MB) needs none of it. `tool.uv.sources` only
+# reaches direct dependencies, hence the explicit `torch` entry in the
+# `sentence-transformers` extra above. `examples` pulls torch in via
+# langchain-huggingface -> sentence-transformers and reuses the same
+# resolved torch, so both extras stay CUDA-free. Consumers who need GPU torch
+# can point their own resolution at the cu-index of their choice; this pin
+# only affects this repo's lockfile, not the published wheel metadata.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
 
 [build-system]
 requires = ["hatchling"]

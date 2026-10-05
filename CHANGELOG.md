@@ -5,6 +5,7 @@
 ### Changed
 
 - `SchemaExtractionTemplate` now tells the model to define each node type once. A node label is global and carries one property and constraint set.
+- Lockfile now resolves `torch` (pulled in by the `sentence-transformers` and `examples` extras) from PyTorch's CPU-only wheel index instead of PyPI. On linux x86_64 the PyPI build hard-requires the `nvidia-*-cu12` closure (~15 packages) plus a ~900MB CUDA wheel the repo never uses; the CPU build needs none of it. `torch` is now declared directly in the `sentence-transformers` extra so the `tool.uv.sources` index pin applies (it only reaches direct dependencies). Consumers who need GPU torch can point their own resolution at a CUDA index; this affects the repo lockfile only, not published wheel metadata.
 
 ### Fixed
 
