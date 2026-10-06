@@ -38,7 +38,7 @@ jobs:
       # be trusted, and the failure surfaces much later as an ImportError inside
       # a test. uv sync is quick when the environment is already correct.
       - name: Install dependencies
-        run: uv sync --frozen --all-extras --group dev
+        run: uv sync --frozen --all-extras --no-extra gpu --group dev
       - name: Save cached venv
         if: steps.cached-venv.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
