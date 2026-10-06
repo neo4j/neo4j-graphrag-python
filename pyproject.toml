@@ -129,6 +129,11 @@ conflicts = [
 # the same torch specifier from the cu130 index (CUDA 13.0; point it at
 # whichever cu-index matches your driver).
 #
+# Sources are selected by extra AND platform marker: darwin always gets the
+# CPU index (PyTorch publishes no CUDA builds for macOS, so the gpu extra
+# there degrades to CPU instead of failing at install time); non-darwin
+# defaults to the CPU index too, and only the gpu extra flips to CUDA.
+#
 # `tool.uv.sources` only reaches direct dependencies, hence the explicit
 # `torch` entries in the torch-carrying extras above. The pin affects this
 # repo's lockfile only, not the published wheel metadata.
@@ -144,9 +149,10 @@ explicit = true
 
 [tool.uv.sources]
 torch = [
+    { index = "pytorch-cpu", marker = "sys_platform == 'darwin'" },
+    { index = "pytorch-cu130", extra = "gpu", marker = "sys_platform != 'darwin'" },
     { index = "pytorch-cpu", extra = "sentence-transformers" },
     { index = "pytorch-cpu", extra = "examples" },
-    { index = "pytorch-cu130", extra = "gpu" },
 ]
 
 [build-system]

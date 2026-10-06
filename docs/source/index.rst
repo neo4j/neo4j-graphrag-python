@@ -242,8 +242,9 @@ resolves CUDA torch where they resolve CPU torch), so exclude it:
     uv sync --all-extras --no-extra gpu
 
 For ``SentenceTransformerEmbeddings`` on GPU instead, sync with ``--extra
-gpu`` (plus any non-torch extras you need); note there are no CUDA builds of
-torch for macOS.
+gpu`` (plus any non-torch extras you need). On Linux/Windows this resolves
+torch from the CUDA index; on macOS, where no CUDA builds of torch exist, it
+falls back to the CPU build.
 
 ***************
 Getting started
