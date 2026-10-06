@@ -2,6 +2,14 @@
 
 ## Next
 
+### Changed
+
+- `SchemaExtractionTemplate` now tells the model to define each node type once. A node label is global and carries one property and constraint set.
+
+### Fixed
+
+- Experimental: LLM-auto-generated schemas now reconcile duplicate `node_types` (entries sharing the same label) by merging them into a single type that carries the union of their properties, emitting a warning log. Direct `GraphSchema` construction rejects remaining duplicate node labels with a clear error instead of a last-write-wins index that could report an undefined constraint property. This reflects that Neo4j node labels are global per name.
+
 ## 1.22.0
 
 ### Changed

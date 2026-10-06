@@ -35,6 +35,7 @@ from neo4j_graphrag.components.schema import (
     SchemaFromExistingGraphExtractor,
     Pattern,
     validate_extraction_dict_to_graph_schema,
+    _merge_duplicate_node_types,
     _merge_duplicate_relationship_types,
 )
 import os
@@ -2885,3 +2886,287 @@ def test_schema_duplicate_relationship_types_identical_properties_raises() -> No
         GraphSchema.model_validate(schema_dict)
 
     assert "Duplicate relationship type 'KNOWS'" in str(exc_info.value)
+
+
+def test_validate_extraction_dict_merges_duplicate_node_types() -> None:
+    """Duplicate same-label node types merge into one with unioned properties.
+
+    A KEY constraint referencing properties spread across both duplicates must
+    validate without error, instead of an "undefined property" failure.
+    """
+
+    d = {
+        "node_types": [
+            {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]},
+            {"label": "Person", "properties": [{"name": "email", "type": "STRING"}]},
+        ],
+        "relationship_types": [],
+        "patterns": [],
+        "constraints": [
+            {
+                "type": "KEY",
+                "node_type": "Person",
+                "property_names": ["name", "email"],
+            }
+        ],
+    }
+
+    gs = validate_extraction_dict_to_graph_schema(d)
+
+    assert len(gs.node_types) == 1
+    node = gs.node_type_from_label("Person")
+    assert node is not None
+    assert [p.name for p in node.properties] == ["name", "email"]
+    assert len(gs.constraints) == 1
+    assert gs.constraints[0].property_names == ("name", "email")
+
+
+def test_validate_extraction_dict_node_merge_resolves_property_name_conflict_first_wins() -> (
+    None
+):
+    """On a node property-name conflict the first definition's attributes are kept."""
+
+    d = {
+        "node_types": [
+            {
+                "label": "Person",
+                "properties": [
+                    {
+                        "name": "name",
+                        "type": "STRING",
+                        "description": "first definition",
+                    }
+                ],
+            },
+            {
+                "label": "Person",
+                "properties": [
+                    {
+                        "name": "name",
+                        "type": "INTEGER",
+                        "description": "second definition",
+                    }
+                ],
+            },
+        ],
+        "relationship_types": [],
+        "patterns": [],
+    }
+
+    gs = validate_extraction_dict_to_graph_schema(d)
+
+    node = gs.node_type_from_label("Person")
+    assert node is not None
+    assert len(node.properties) == 1
+    assert node.properties[0].name == "name"
+    assert node.properties[0].type == "STRING"
+    assert node.properties[0].description == "first definition"
+
+
+def test_validate_extraction_dict_node_merge_keeps_first_entry_non_property_fields() -> (
+    None
+):
+    """The merged node entry's description/additional_properties match the first entry."""
+
+    d = {
+        "node_types": [
+            {
+                "label": "Person",
+                "description": "first description",
+                "additional_properties": False,
+                "properties": [{"name": "name", "type": "STRING"}],
+            },
+            {
+                "label": "Person",
+                "description": "second description",
+                "additional_properties": True,
+                "properties": [{"name": "email", "type": "STRING"}],
+            },
+        ],
+        "relationship_types": [],
+        "patterns": [],
+    }
+
+    gs = validate_extraction_dict_to_graph_schema(d)
+
+    node = gs.node_type_from_label("Person")
+    assert node is not None
+    assert node.description == "first description"
+    assert node.additional_properties is False
+
+
+def test_validate_extraction_dict_node_merge_emits_warning_per_label(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """One warning is logged for each node label that had duplicates reconciled."""
+
+    d = {
+        "node_types": [
+            {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]},
+            {"label": "Person", "properties": [{"name": "email", "type": "STRING"}]},
+            {"label": "Company", "properties": [{"name": "name", "type": "STRING"}]},
+            {
+                "label": "Company",
+                "properties": [{"name": "industry", "type": "STRING"}],
+            },
+        ],
+        "relationship_types": [],
+        "patterns": [],
+    }
+
+    with caplog.at_level(logging.WARNING):
+        validate_extraction_dict_to_graph_schema(d)
+
+    warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+    person_warnings = [w for w in warnings if "'Person'" in w]
+    company_warnings = [w for w in warnings if "'Company'" in w]
+    assert len(person_warnings) == 1
+    assert len(company_warnings) == 1
+    assert "global per name" in person_warnings[0]
+
+
+def test_validate_extraction_dict_unique_node_labels_unchanged(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """All-unique node-type labels pass through with no merge and no warning."""
+
+    d = {
+        "node_types": [
+            {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]},
+            {"label": "Company", "properties": [{"name": "name", "type": "STRING"}]},
+        ],
+        "relationship_types": [],
+        "patterns": [],
+    }
+
+    with caplog.at_level(logging.WARNING):
+        gs = validate_extraction_dict_to_graph_schema(d)
+
+    assert [n.label for n in gs.node_types] == ["Person", "Company"]
+    assert not [
+        r
+        for r in caplog.records
+        if r.levelno == logging.WARNING and "node labels are global" in r.getMessage()
+    ]
+
+
+def test_from_extraction_output_merges_duplicate_node_types() -> None:
+    """The V2 structured-output path also merges duplicate node types."""
+    from neo4j_graphrag.components.graph_schema_extraction import (
+        ExtractedNodeType,
+        ExtractedPropertyType,
+        GraphSchemaExtractionOutput,
+    )
+
+    dto = GraphSchemaExtractionOutput(
+        node_types=[
+            ExtractedNodeType(
+                label="Person",
+                properties=[ExtractedPropertyType(name="name", type="STRING")],
+            ),
+            ExtractedNodeType(
+                label="Person",
+                properties=[ExtractedPropertyType(name="email", type="STRING")],
+            ),
+        ],
+    )
+
+    gs = GraphSchema.from_extraction_output(dto)
+
+    assert len(gs.node_types) == 1
+    node = gs.node_type_from_label("Person")
+    assert node is not None
+    assert [p.name for p in node.properties] == ["name", "email"]
+
+
+def test_validate_extraction_dict_does_not_mutate_input_node_types() -> None:
+    """Merging must not mutate the caller's input node_types in place."""
+    node_types: list[dict[str, Any]] = [
+        {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]},
+        {"label": "Person", "properties": [{"name": "email", "type": "STRING"}]},
+    ]
+    d = {
+        "node_types": node_types,
+        "relationship_types": [],
+        "patterns": [],
+    }
+
+    validate_extraction_dict_to_graph_schema(d)
+
+    assert len(node_types) == 2
+    assert len(node_types[0]["properties"]) == 1
+    assert node_types[0]["properties"][0]["name"] == "name"
+    assert node_types[1]["properties"][0]["name"] == "email"
+
+
+def test_merge_duplicate_node_types_handles_missing_or_none_properties() -> None:
+    """Node entries with a missing or None properties field are treated as empty."""
+    node_types: list[dict[str, Any]] = [
+        {"label": "Person"},
+        {"label": "Person", "properties": None},
+        {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]},
+    ]
+
+    result = _merge_duplicate_node_types(node_types)
+
+    assert result is not None
+    assert len(result) == 1
+    assert result[0]["label"] == "Person"
+    assert [p["name"] for p in result[0]["properties"]] == ["name"]
+
+
+def test_schema_duplicate_node_types_repro_raises_clear_error() -> None:
+    # Two Person node_types with differing properties plus a KEY constraint.
+    # The duplicate-label error must replace a misleading "undefined property"
+    # constraint error from the last-write-wins index.
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {
+                "label": "Person",
+                "properties": [
+                    {"name": "name", "type": "STRING"},
+                    {"name": "email", "type": "STRING"},
+                ],
+            },
+            {
+                "label": "Person",
+                "properties": [{"name": "employee_id", "type": "STRING"}],
+            },
+        ],
+        "relationship_types": [],
+        "patterns": [],
+        "constraints": [
+            {
+                "type": "KEY",
+                "node_type": "Person",
+                "property_names": ["name", "email"],
+            }
+        ],
+    }
+
+    with pytest.raises(SchemaValidationError) as exc_info:
+        GraphSchema.model_validate(schema_dict)
+
+    message = str(exc_info.value)
+    assert "Person" in message
+    assert "email" in message
+    assert "employee_id" in message
+    assert "Duplicate node type" in message
+    assert "undefined property" not in message
+    assert "Valid properties" not in message
+
+
+def test_schema_duplicate_node_types_identical_properties_raises() -> None:
+    # Any duplicate label triggers the error, even when properties are identical.
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]},
+            {"label": "Person", "properties": [{"name": "name", "type": "STRING"}]},
+        ],
+        "relationship_types": [],
+    }
+
+    with pytest.raises(SchemaValidationError) as exc_info:
+        GraphSchema.model_validate(schema_dict)
+
+    assert "Duplicate node type 'Person'" in str(exc_info.value)
