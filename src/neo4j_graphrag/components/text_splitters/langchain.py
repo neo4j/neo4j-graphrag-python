@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from typing import Optional
 
 from langchain_text_splitters import TextSplitter as LangChainTextSplitter
 
@@ -56,5 +57,8 @@ class LangChainTextSplitterAdapter(TextSplitter):
         Returns:
             Iterator[TextChunk]: The chunks, in document order.
         """
-        for index, chunk in enumerate(self.text_splitter.split_text(text)):
-            yield TextChunk(text=chunk, index=index)
+        prev_chunk_id: Optional[str] = None
+        for index, chunk_text in enumerate(self.text_splitter.split_text(text)):
+            chunk = TextChunk(text=chunk_text, index=index, prev_chunk_id=prev_chunk_id)
+            prev_chunk_id = chunk.chunk_id
+            yield chunk
