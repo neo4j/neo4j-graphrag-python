@@ -58,16 +58,11 @@ qdrant = ["qdrant-client>=1.11.3,<2.0.0"]
 kg_creation_tools = ["neo4j-viz>=0.4.2,<0.5.0"]
 sentence-transformers = [
     "sentence-transformers>=3.0.0,<7.0.0",
-    # Declared directly (not just transitively) so the source pins below
-    # apply: tool.uv.sources only reaches direct dependencies.
+    # Declared directly: tool.uv.sources only reaches direct dependencies.
     "torch>=2.5.0,<3.0.0",
 ]
-# CUDA torch for users who need SentenceTransformerEmbeddings on GPU. Mutually
-# exclusive with the torch-carrying extras above via [tool.uv] conflicts, so
-# the lockfile records both CPU and CUDA resolutions side by side and the
-# extra you sync with picks the one you get. No CUDA builds exist for macOS,
-# so `--extra gpu` there fails at install time with a clear wheel error (same
-# caveat as uv's own PyTorch guide).
+# CUDA torch (cu126) for GPU users; mutually exclusive with the
+# torch-carrying extras via [tool.uv] conflicts below.
 gpu = [
     "sentence-transformers>=3.0.0,<7.0.0",
     "torch>=2.5.0,<3.0.0",
@@ -120,24 +115,10 @@ conflicts = [
     [{ extra = "gpu" }, { extra = "examples" }],
 ]
 
-# torch arrives via the `sentence-transformers` and `examples` extras (for
-# SentenceTransformerEmbeddings), and this repo's own workloads (CI included)
-# never need GPU, so those extras resolve torch from PyTorch's CPU-only wheel
-# index. On linux x86_64 the PyPI build hard-requires the ~15-package
-# nvidia-*-cu12 closure plus a ~900MB CUDA wheel; the CPU build needs none of
-# it. Users who DO need GPU sync with `--extra gpu` instead, which resolves
-# the same torch specifier from the cu126 index — CUDA 12.6, matching the
-# CUDA-12 lineage torch previously resolved from PyPI (point it at whichever
-# cu-index matches your driver; 2.14.0 also ships for cu130/cu132).
-#
-# Sources are selected by extra AND platform marker: darwin always gets the
-# CPU index (PyTorch publishes no CUDA builds for macOS, so the gpu extra
-# there degrades to CPU instead of failing at install time); non-darwin
-# defaults to the CPU index too, and only the gpu extra flips to CUDA.
-#
-# `tool.uv.sources` only reaches direct dependencies, hence the explicit
-# `torch` entries in the torch-carrying extras above. The pin affects this
-# repo's lockfile only, not the published wheel metadata.
+# torch resolves CPU-only by default (repo workloads, CI included, never
+# need GPU); the gpu extra flips non-darwin platforms to the cu126 CUDA
+# index, and darwin always stays CPU (PyTorch publishes no CUDA builds for
+# macOS). Lockfile-only: published wheel metadata is unaffected.
 [[tool.uv.index]]
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
