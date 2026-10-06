@@ -389,8 +389,8 @@ class VertexBatchRequestFormatter(BatchRequestFormatter):
             ``generationConfig.responseSchema`` to constrain the model to
             structured output, either as a Pydantic model class (its
             ``model_json_schema()`` is used) or an already-built JSON schema
-            dict — the same two shapes :meth:`LLMInterfaceV2.invoke
-            <neo4j_graphrag.llm.base.LLMInterfaceV2.invoke>` accepts as
+            dict — the same two shapes :meth:`BaseLLM.invoke
+            <neo4j_graphrag.llm.base.BaseLLM.invoke>` accepts as
             ``response_format``, so a formatter can be built from the same
             value a caller would otherwise pass to the interactive path.
             Either shape is adapted for Vertex's batch-prediction proto parser
