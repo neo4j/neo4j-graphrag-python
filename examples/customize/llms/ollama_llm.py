@@ -26,5 +26,7 @@ with OllamaLLM(
     # model_params={"options": {"temperature": 0}, "format": "json"},
     # host="...",  # if using a remote server
 ) as llm:
-    res: LLMResponse = llm.invoke("What is the additive color model?")
+    res: LLMResponse = llm.invoke(
+        [{"role": "user", "content": "What is the additive color model?"}]
+    )
     print(res.content)

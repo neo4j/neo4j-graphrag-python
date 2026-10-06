@@ -10,7 +10,7 @@ llm = BedrockLLM(
 )
 
 try:
-    res = llm.invoke("say something")
+    res = llm.invoke([{"role": "user", "content": "say something"}])
     print(res.content)
 except NoCredentialsError:
     print(

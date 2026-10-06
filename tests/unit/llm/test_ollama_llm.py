@@ -50,6 +50,7 @@ def test_ollama_llm_happy_path_deprecated_options(mock_import: Mock) -> None:
     mock_ollama.Client.return_value.chat.return_value = MagicMock(
         message=MagicMock(content="ollama chat response"),
     )
+    mock_ollama.Message = MagicMock(side_effect=lambda **kw: kw)
     model = "gpt"
     model_params = {"temperature": 0.3}
     with pytest.warns(DeprecationWarning) as record:
@@ -65,7 +66,7 @@ def test_ollama_llm_happy_path_deprecated_options(mock_import: Mock) -> None:
     )
 
     question = "What is graph RAG?"
-    res = llm.invoke(question)
+    res = llm.invoke([{"role": "user", "content": question}])
     assert isinstance(res, LLMResponse)
     assert res.content == "ollama chat response"
     messages = [
@@ -103,11 +104,12 @@ def test_ollama_llm_happy_path(mock_import: Mock) -> None:
     options = {"temperature": 0.3}
     model_params = {"options": options, "format": "json"}
     question = "What is graph RAG?"
+    mock_ollama.Message = MagicMock(side_effect=lambda **kw: kw)
     llm = OllamaLLM(
         model_name=model,
         model_params=model_params,
     )
-    res = llm.invoke(question)
+    res = llm.invoke([{"role": "user", "content": question}])
     assert isinstance(res, LLMResponse)
     assert res.content == "ollama chat response"
     messages = [
@@ -137,11 +139,14 @@ def test_ollama_invoke_with_system_instruction_happy_path(mock_import: Mock) -> 
     )
     system_instruction = "You are a helpful assistant."
     question = "What about next season?"
+    mock_ollama.Message = MagicMock(side_effect=lambda **kw: kw)
 
-    response = llm.invoke(question, system_instruction=system_instruction)
+    messages = [
+        {"role": "system", "content": system_instruction},
+        {"role": "user", "content": question},
+    ]
+    response = llm.invoke(messages)  # type: ignore[arg-type]
     assert response.content == "ollama chat response"
-    messages = [{"role": "system", "content": system_instruction}]
-    messages.append({"role": "user", "content": question})
     _as_mock(llm.client.chat).assert_called_once_with(
         model=model,
         messages=messages,
@@ -169,11 +174,12 @@ def test_ollama_invoke_with_message_history_happy_path(mock_import: Mock) -> Non
         {"role": "assistant", "content": "Usually around 6am."},
     ]
     question = "What about next season?"
+    mock_ollama.Message = MagicMock(side_effect=lambda **kw: kw)
 
-    response = llm.invoke(question, message_history)  # type: ignore
-    assert response.content == "ollama chat response"
     messages = [m for m in message_history]
     messages.append({"role": "user", "content": question})
+    response = llm.invoke(messages)  # type: ignore[arg-type]
+    assert response.content == "ollama chat response"
     _as_mock(llm.client.chat).assert_called_once_with(
         model=model, messages=messages, options=options
     )
@@ -201,45 +207,17 @@ def test_ollama_invoke_with_message_history_and_system_instruction(
         {"role": "assistant", "content": "Usually around 6am."},
     ]
     question = "What about next season?"
+    mock_ollama.Message = MagicMock(side_effect=lambda **kw: kw)
 
-    response = llm.invoke(
-        question,
-        message_history,  # type: ignore
-        system_instruction=system_instruction,
-    )
-    assert response.content == "ollama chat response"
     messages = [{"role": "system", "content": system_instruction}]
     messages.extend(message_history)
     messages.append({"role": "user", "content": question})
+    response = llm.invoke(messages)  # type: ignore[arg-type]
+    assert response.content == "ollama chat response"
     _as_mock(llm.client.chat).assert_called_once_with(
         model=model, messages=messages, options=options
     )
     assert _as_mock(llm.client.chat).call_count == 1
-
-
-@patch("builtins.__import__")
-def test_ollama_invoke_with_message_history_validation_error(mock_import: Mock) -> None:
-    mock_ollama = get_mock_ollama()
-    mock_import.return_value = mock_ollama
-    mock_ollama.ResponseError = ollama.ResponseError
-    model = "gpt"
-    options = {"temperature": 0.3}
-    model_params = {"options": options}
-    system_instruction = "You are a helpful assistant."
-    llm = OllamaLLM(
-        model,
-        model_params=model_params,
-        system_instruction=system_instruction,
-    )
-    message_history = [
-        {"role": "human", "content": "When does the sun come up in the summer?"},
-        {"role": "assistant", "content": "Usually around 6am."},
-    ]
-    question = "What about next season?"
-
-    with pytest.raises(LLMGenerationError) as exc_info:
-        llm.invoke(question, message_history)  # type: ignore
-    assert "Input should be 'user', 'assistant' or 'system" in str(exc_info.value)
 
 
 @pytest.mark.asyncio
@@ -263,15 +241,14 @@ async def test_ollama_ainvoke_happy_path(mock_import: Mock) -> None:
         model_params=model_params,
     )
 
-    res = await llm.ainvoke(question)
+    res = await llm.ainvoke([{"role": "user", "content": question}])
     assert isinstance(res, LLMResponse)
     assert res.content == "ollama chat response"
 
 
-# V2 Interface Tests
 @patch("builtins.__import__")
-def test_ollama_llm_invoke_v2_happy_path(mock_import: Mock) -> None:
-    """Test V2 interface invoke method with List[LLMMessage] input."""
+def test_ollama_llm_invoke_happy_path(mock_import: Mock) -> None:
+    """Test invoke method with List[LLMMessage] input."""
     mock_ollama = get_mock_ollama()
     mock_import.return_value = mock_ollama
     mock_ollama.Client.return_value.chat.return_value = MagicMock(
@@ -297,7 +274,7 @@ def test_ollama_llm_invoke_v2_happy_path(mock_import: Mock) -> None:
     assert isinstance(res, LLMResponse)
     assert res.content == "ollama v2 response"
 
-    # Verify get_brand_new_messages was called correctly
+    # Verify messages were built correctly
     assert mock_ollama.Message.call_count == 2
     mock_ollama.Message.assert_any_call(**messages[0])
     mock_ollama.Message.assert_any_call(**messages[1])
@@ -310,175 +287,9 @@ def test_ollama_llm_invoke_v2_happy_path(mock_import: Mock) -> None:
     )
 
 
-@pytest.mark.asyncio
 @patch("builtins.__import__")
-async def test_ollama_llm_ainvoke_v2_happy_path(mock_import: Mock) -> None:
-    """Test V2 interface ainvoke method with List[LLMMessage] input."""
-    mock_ollama = get_mock_ollama()
-    mock_import.return_value = mock_ollama
-    mock_ollama.Message = MagicMock()
-
-    async def mock_chat_async(*_args: Any, **_kwargs: Any) -> MagicMock:
-        return MagicMock(
-            message=MagicMock(content="ollama async v2 response"),
-        )
-
-    mock_ollama.AsyncClient.return_value.chat = mock_chat_async
-
-    model = "llama2"
-    options = {"temperature": 0.5}
-    model_params = {"options": options}
-
-    messages: list[LLMMessage] = [
-        {"role": "user", "content": "What is Neo4j?"},
-        {"role": "assistant", "content": "Neo4j is a graph database."},
-        {"role": "user", "content": "How does it work?"},
-    ]
-
-    llm = OllamaLLM(
-        model_name=model,
-        model_params=model_params,
-    )
-    res = await llm.ainvoke(messages)
-
-    assert isinstance(res, LLMResponse)
-    assert res.content == "ollama async v2 response"
-
-    # Verify get_brand_new_messages was called correctly
-    assert mock_ollama.Message.call_count == 3
-    for message in messages:
-        mock_ollama.Message.assert_any_call(**message)
-
-
-@patch("builtins.__import__")
-def test_ollama_llm_invoke_v2_error_handling(mock_import: Mock) -> None:
-    """Test V2 interface error handling when OllamaResponseError occurs."""
-    mock_ollama = get_mock_ollama()
-    mock_import.return_value = mock_ollama
-    mock_ollama.Client.return_value.chat.side_effect = ollama.ResponseError(
-        "Ollama error"
-    )
-    mock_ollama.Message = MagicMock()
-
-    model = "llama2"
-    messages: list[LLMMessage] = [
-        {"role": "user", "content": "This will cause an error."},
-    ]
-
-    llm = OllamaLLM(model_name=model)
-
-    with pytest.raises(LLMGenerationError):
-        llm.invoke(messages)
-
-
-@pytest.mark.asyncio
-@patch("builtins.__import__")
-async def test_ollama_llm_ainvoke_v2_error_handling(mock_import: Mock) -> None:
-    """Test V2 interface async error handling when OllamaResponseError occurs."""
-    mock_ollama = get_mock_ollama()
-    mock_import.return_value = mock_ollama
-    mock_ollama.Message = MagicMock()
-
-    async def mock_chat_async_error(*_args: Any, **_kwargs: Any) -> None:
-        raise ollama.ResponseError("Async Ollama error")
-
-    mock_ollama.AsyncClient.return_value.chat = mock_chat_async_error
-
-    model = "llama2"
-    messages: list[LLMMessage] = [
-        {"role": "user", "content": "This will cause an async error."},
-    ]
-
-    llm = OllamaLLM(model_name=model)
-
-    with pytest.raises(LLMGenerationError):
-        await llm.ainvoke(messages)
-
-
-@patch("builtins.__import__")
-def test_ollama_llm_input_type_switching_string(mock_import: Mock) -> None:
-    """Test that string input correctly routes to legacy invoke method."""
-    mock_ollama = get_mock_ollama()
-    mock_import.return_value = mock_ollama
-    mock_ollama.Client.return_value.chat.return_value = MagicMock(
-        message=MagicMock(content="legacy response"),
-    )
-
-    model = "llama2"
-    question = "What is graph RAG?"
-
-    llm = OllamaLLM(model_name=model)
-    res = llm.invoke(question)
-
-    assert isinstance(res, LLMResponse)
-    assert res.content == "legacy response"
-
-    # Verify legacy method was used (messages should be built via get_messages)
-    _as_mock(llm.client.chat).assert_called_once()
-    call_args = _as_mock(llm.client.chat).call_args[1]
-    assert call_args["model"] == model
-    assert len(call_args["messages"]) == 1
-    assert call_args["messages"][0]["role"] == "user"
-    assert call_args["messages"][0]["content"] == question
-
-
-@patch("builtins.__import__")
-def test_ollama_llm_input_type_switching_list(mock_import: Mock) -> None:
-    """Test that List[LLMMessage] input correctly routes to V2 invoke method."""
-    mock_ollama = get_mock_ollama()
-    mock_import.return_value = mock_ollama
-    mock_ollama.Client.return_value.chat.return_value = MagicMock(
-        message=MagicMock(content="v2 response"),
-    )
-    mock_ollama.Message = MagicMock()
-
-    model = "llama2"
-    messages: list[LLMMessage] = [
-        {"role": "user", "content": "What is graph RAG?"},
-    ]
-
-    llm = OllamaLLM(model_name=model)
-    res = llm.invoke(messages)
-
-    assert isinstance(res, LLMResponse)
-    assert res.content == "v2 response"
-
-    # Verify V2 method was used (ollama.Message should be called)
-    mock_ollama.Message.assert_called_once_with(**messages[0])
-
-
-@patch("builtins.__import__")
-def test_ollama_llm_invalid_input_type(mock_import: Mock) -> None:
-    """Test that invalid input type raises ValueError."""
-    mock_ollama = get_mock_ollama()
-    mock_import.return_value = mock_ollama
-
-    llm = OllamaLLM(model_name="llama2")
-
-    # Test with invalid input type (neither string nor list)
-    with pytest.raises(ValueError) as exc_info:
-        llm.invoke(123)  # type: ignore
-    assert "Invalid input type for invoke method" in str(exc_info.value)
-
-
-@pytest.mark.asyncio
-@patch("builtins.__import__")
-async def test_ollama_llm_ainvoke_invalid_input_type(mock_import: Mock) -> None:
-    """Test that invalid input type raises ValueError in async method."""
-    mock_ollama = get_mock_ollama()
-    mock_import.return_value = mock_ollama
-
-    llm = OllamaLLM(model_name="llama2")
-
-    # Test with invalid input type (neither string nor list)
-    with pytest.raises(ValueError) as exc_info:
-        await llm.ainvoke({"invalid": "dict"})  # type: ignore
-    assert "Invalid input type for ainvoke method" in str(exc_info.value)
-
-
-@patch("builtins.__import__")
-def test_ollama_llm_get_brand_new_messages_all_roles(mock_import: Mock) -> None:
-    """Test get_brand_new_messages method handles all message roles correctly."""
+def test_ollama_llm_get_messages_all_roles(mock_import: Mock) -> None:
+    """Test build_llm_messages method handles all message roles correctly."""
     mock_ollama = get_mock_ollama()
     mock_import.return_value = mock_ollama
     mock_ollama.Message = MagicMock()
@@ -491,7 +302,7 @@ def test_ollama_llm_get_brand_new_messages_all_roles(mock_import: Mock) -> None:
     ]
 
     llm = OllamaLLM(model_name="llama2")
-    result_messages = llm.get_messages_v2(messages)
+    result_messages = llm.build_llm_messages(messages)
 
     # Convert to list for easier testing
     result_list = list(result_messages)
@@ -734,8 +545,8 @@ class _TestModelForOllama(BaseModel):
 
 
 @patch("builtins.__import__")
-def test_ollama_invoke_v2_with_response_format_raises_error(mock_import: Mock) -> None:
-    """Test V2 interface raises NotImplementedError when response_format is used."""
+def test_ollama_invoke_with_response_format_raises_error(mock_import: Mock) -> None:
+    """Test raises NotImplementedError when response_format is used."""
     mock_ollama = get_mock_ollama()
     mock_import.return_value = mock_ollama
 

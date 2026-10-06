@@ -31,7 +31,7 @@ from neo4j_graphrag.experimental.pipeline.config.pipeline_config import (
     AbstractPipelineConfig,
 )
 from neo4j_graphrag.experimental.pipeline.types.definitions import ComponentDefinition
-from neo4j_graphrag.llm import LLMInterface
+from neo4j_graphrag.llm import BaseLLM
 
 
 @patch(
@@ -160,7 +160,7 @@ def test_abstract_pipeline_config_llm_config_is_a_dict_with_names(
 
 @patch("neo4j_graphrag.experimental.pipeline.config.object_config.LLMConfig.parse")
 def test_abstract_pipeline_config_llm_config_is_a_dict_with_llm(
-    mock_llm_config: Mock, llm: LLMInterface
+    mock_llm_config: Mock, llm: BaseLLM
 ) -> None:
     config = AbstractPipelineConfig.model_validate(
         {
@@ -178,7 +178,7 @@ def test_abstract_pipeline_config_llm_config_is_a_dict_with_llm(
 
 @patch("neo4j_graphrag.experimental.pipeline.config.object_config.LLMConfig.parse")
 def test_abstract_pipeline_config_llm_config_is_a_llm(
-    mock_llm_config: Mock, llm: LLMInterface
+    mock_llm_config: Mock, llm: BaseLLM
 ) -> None:
     config = AbstractPipelineConfig.model_validate(
         {

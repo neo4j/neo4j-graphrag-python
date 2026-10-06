@@ -20,7 +20,7 @@ from unittest.mock import MagicMock
 import neo4j
 
 # Local imports
-from neo4j_graphrag.llm.base import LLMInterface
+from neo4j_graphrag.llm.base import BaseLLM
 from neo4j_graphrag.llm.types import ToolCall, ToolCallResponse
 from neo4j_graphrag.retrievers.tools_retriever import ToolsRetriever
 from neo4j_graphrag.tool import Tool
@@ -37,7 +37,7 @@ def create_mock_driver() -> neo4j.Driver:
 
 
 def create_mock_llm() -> Any:
-    llm = MagicMock(spec=LLMInterface)
+    llm = MagicMock(spec=BaseLLM)
     return llm
 
 

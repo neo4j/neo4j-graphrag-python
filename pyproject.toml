@@ -15,7 +15,7 @@
 
 [project]
 name = "neo4j-graphrag"
-version = "1.21.0"
+version = "1.22.0"
 description = "Python package to allow easy integration to Neo4j's GraphRAG features"
 authors = [
     {name = "Neo4j, Inc", email = "team-gen-ai@neo4j.com"}
@@ -24,9 +24,9 @@ license = {text = "Apache License, Version 2.0"}
 readme = "README.md"
 requires-python = ">=3.10.0,<3.15"
 dependencies = [
-    "neo4j>=5.28.4,<7.0.0",
+    "neo4j>=6.3.1,<7.0.0",
     "pydantic>=2.6.3,<3.0.0",
-    "fsspec>=2024.12.0",
+    "fsspec>=2024.12.0,<2026.9.0",
     "pypdf>=6.19.0,<7.0.0",
     "json-repair>=0.44.1,<1.0.0",
     "pyyaml>=6.0.3,<7.0.0",

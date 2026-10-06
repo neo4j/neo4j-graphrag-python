@@ -51,7 +51,7 @@ is utilizing the `SimpleKGPipeline` interface:
     from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
 
     kg_builder = SimpleKGPipeline(
-        llm=llm, # an LLMInterface for Entity and Relation extraction
+        llm=llm, # a BaseLLM for Entity and Relation extraction
         driver=neo4j_driver,  # a neo4j driver to write results to graph
         embedder=embedder,  # an Embedder for chunks
         from_file=True,   # set to False if parsing an already extracted text
@@ -1056,7 +1056,7 @@ It can be used in this way:
 
     For :ref:`OpenAILLM <openaillm>`, :ref:`VertexAILLM <vertexaillm>` and :ref:`AnthropicLLM <anthropicllm>`, structured output is recommended over ``"response_format": {"type": "json_object"}`` for improved reliability. See :ref:`Using Structured Output <using-structured-output>` below.
 
-The LLM to use can be customized, the only constraint is that it obeys the :ref:`LLMInterface <llminterface>`.
+The LLM to use can be customized, the only constraint is that it obeys the :ref:`BaseLLM <basellm>`.
 
 
 .. _using-structured-output:
@@ -1064,7 +1064,7 @@ The LLM to use can be customized, the only constraint is that it obeys the :ref:
 Using Structured Output
 -----------------------
 
-For improved reliability and type safety with :ref:`OpenAILLM <openaillm>`, :ref:`VertexAILLM <vertexaillm>` or :ref:`AnthropicLLM <anthropicllm>`, enable structured output mode. When `use_structured_output=True`, the extractor uses the LLMInterfaceV2, passing the `Neo4jGraph` Pydantic model as `response_format` to `invoke()`. This ensures the LLM response conforms to the expected graph structure with automatic type validation, reducing the need for JSON repair and error handling.
+For improved reliability and type safety with :ref:`OpenAILLM <openaillm>`, :ref:`VertexAILLM <vertexaillm>` or :ref:`AnthropicLLM <anthropicllm>`, enable structured output mode. When `use_structured_output=True`, the extractor passes the `Neo4jGraph` Pydantic model as `response_format` to `invoke()`. This ensures the LLM response conforms to the expected graph structure with automatic type validation, reducing the need for JSON repair and error handling.
 
 .. code:: python
 

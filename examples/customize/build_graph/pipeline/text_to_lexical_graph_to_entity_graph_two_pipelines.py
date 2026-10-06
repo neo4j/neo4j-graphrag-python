@@ -28,7 +28,7 @@ from neo4j_graphrag.components.text_splitters.fixed_size_splitter import (
 from neo4j_graphrag.components.types import LexicalGraphConfig
 from neo4j_graphrag.experimental.pipeline import Pipeline
 from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
-from neo4j_graphrag.llm import LLMInterface, OpenAILLM
+from neo4j_graphrag.llm import BaseLLM, OpenAILLM
 
 import neo4j
 
@@ -93,7 +93,7 @@ async def build_lexical_graph(
 
 async def read_chunk_and_perform_entity_extraction(
     neo4j_driver: neo4j.Driver,
-    llm: LLMInterface,
+    llm: BaseLLM,
     lexical_graph_config: LexicalGraphConfig,
 ) -> PipelineResult:
     """This is where we define and run the KG builder pipeline, instantiating a few
