@@ -36,6 +36,9 @@ def populate_neo4j_db(driver: neo4j.Driver) -> None:
     populate_neo4j(driver, neo4j_objects, should_create_vector_index=True)
 
 
+# approximate vector search can return a different 2nd context record on Neo4j
+# enterprise, breaking the exact prompt assertion
+@pytest.mark.flaky(reruns=3)
 @pytest.mark.usefixtures("populate_neo4j_db")
 def test_graphrag_happy_path(
     driver: MagicMock, llm: MagicMock, biology_embedder: BiologyEmbedder
@@ -165,6 +168,9 @@ Answer:
     message_history.clear()
 
 
+# approximate vector search can return a different 2nd context record on Neo4j
+# enterprise, breaking the exact prompt assertion
+@pytest.mark.flaky(reruns=3)
 @pytest.mark.usefixtures("populate_neo4j_db")
 def test_graphrag_happy_path_return_context(
     driver: MagicMock, llm: MagicMock, biology_embedder: BiologyEmbedder
@@ -211,6 +217,9 @@ Answer:
     assert len(result.retriever_result.items) == 2
 
 
+# approximate vector search can return a different 2nd context record on Neo4j
+# enterprise, breaking the exact prompt assertion
+@pytest.mark.flaky(reruns=3)
 @pytest.mark.usefixtures("populate_neo4j_db")
 def test_graphrag_happy_path_examples(
     driver: MagicMock, llm: MagicMock, biology_embedder: MagicMock

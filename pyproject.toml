@@ -56,7 +56,17 @@ mistralai = ["mistralai>=2.7.1,<3.0.0"]
 litellm = ["litellm>=1.101.0,<2.0.0"]
 qdrant = ["qdrant-client>=1.11.3,<2.0.0"]
 kg_creation_tools = ["neo4j-viz>=0.4.2,<0.5.0"]
-sentence-transformers = ["sentence-transformers>=3.0.0,<7.0.0"]
+sentence-transformers = [
+    "sentence-transformers>=3.0.0,<7.0.0",
+    # Declared directly: tool.uv.sources only reaches direct dependencies.
+    "torch>=2.5.0,<3.0.0",
+]
+# CUDA torch (cu126) for GPU users; mutually exclusive with the
+# torch-carrying extras via [tool.uv] conflicts below.
+gpu = [
+    "sentence-transformers>=3.0.0,<7.0.0",
+    "torch>=2.5.0,<3.0.0",
+]
 experimental = [
     "langchain-text-splitters>=0.3.0,<2.0.0",
     "neo4j-viz>=0.4.2,<0.5.0",
@@ -66,6 +76,9 @@ experimental = [
 examples = [
     "langchain-openai>=0.2.2,<2.0.0",
     "langchain-huggingface>=0.1.0,<2.0.0",
+    # Declared directly for the same reason as in sentence-transformers
+    # above: gives the CPU source pin a direct dependency to attach to.
+    "torch>=2.5.0,<3.0.0",
     # 14 examples call load_dotenv(); without this it resolves only by accident,
     # transitively through another extra.
     "python-dotenv>=1.0.0,<2.0.0",
@@ -89,10 +102,41 @@ dev = [
     "pre-commit>=3.6.2,<4.0.0; python_version >= '3.9'",
     "sphinx>=7.2.6,<8.0.0; python_version >= '3.9'",
     "enum-tools[sphinx]>=0.12.0,<0.13.0",
+    "pytest-rerunfailures>=16.0,<17.0",
 ]
 
 [tool.uv]
 exclude-newer = "2026-09-18T00:00:00Z"
+# `gpu` provides CUDA torch where the torch-carrying extras provide CPU
+# torch; the two must never be resolved into the same environment, so the
+# extras are declared mutually exclusive. This is what lets the lockfile
+# record both resolutions side by side (see the torch source pins below).
+conflicts = [
+    [{ extra = "gpu" }, { extra = "sentence-transformers" }],
+    [{ extra = "gpu" }, { extra = "examples" }],
+]
+
+# torch resolves CPU-only by default (repo workloads, CI included, never
+# need GPU); the gpu extra flips non-darwin platforms to the cu126 CUDA
+# index, and darwin always stays CPU (PyTorch publishes no CUDA builds for
+# macOS). Lockfile-only: published wheel metadata is unaffected.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu", marker = "sys_platform == 'darwin'" },
+    { index = "pytorch-cu126", extra = "gpu", marker = "sys_platform != 'darwin'" },
+    { index = "pytorch-cpu", extra = "sentence-transformers" },
+    { index = "pytorch-cpu", extra = "examples" },
+]
 
 [build-system]
 requires = ["hatchling"]
