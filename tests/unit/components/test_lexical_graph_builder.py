@@ -431,9 +431,11 @@ async def test_lexical_graph_builder_run_equivalent_to_process_chunk_and_combine
     lexical_graph_builder = LexicalGraphBuilder()
     doc_uid = str(uuid.uuid4())
     document_info = DocumentInfo(path="test_lexical_graph", uid=doc_uid)
+    first = TextChunk(text="text chunk 1", index=0)
+    # As produced by the text splitters: each chunk knows its predecessor
     chunks = [
-        TextChunk(text="text chunk 1", index=0),
-        TextChunk(text="text chunk 1", index=1),
+        first,
+        TextChunk(text="text chunk 1", index=1, prev_chunk_id=first.chunk_id),
     ]
 
     # Freeze the clock so the Document node's createdAt timestamp is
@@ -626,3 +628,42 @@ def test_lexical_graph_builder_combine_graphs_deduplicates() -> None:
     # Inputs are unchanged
     assert graph1.nodes == [node_a]
     assert graph2.nodes == [node_a_duplicate, node_b]
+
+
+def _graph(node_ids: list[str], rels: list[tuple[str, str]]) -> Neo4jGraph:
+    return Neo4jGraph(
+        nodes=[Neo4jNode(id=i, label="Chunk") for i in node_ids],
+        relationships=[
+            Neo4jRelationship(start_node_id=s, end_node_id=e, type="NEXT_CHUNK")
+            for s, e in rels
+        ],
+    )
+
+
+def test_lexical_graph_builder_combine_graphs_is_a_monoid() -> None:
+    builder = LexicalGraphBuilder()
+    g1 = _graph(["a", "b"], [("a", "b")])
+    g2 = _graph(["b", "c"], [("b", "c")])
+    g3 = _graph(["c", "d", "a"], [("b", "c"), ("c", "d")])
+
+    # Associativity
+    assert builder.combine_graphs(
+        builder.combine_graphs(g1, g2), g3
+    ) == builder.combine_graphs(g1, builder.combine_graphs(g2, g3))
+    # Neo4jGraph() is the identity, on either side
+    assert builder.combine_graphs(Neo4jGraph(), g1) == g1
+    assert builder.combine_graphs(g1, Neo4jGraph()) == g1
+    # Idempotent
+    assert builder.combine_graphs(g1, g1) == g1
+
+
+@pytest.mark.asyncio
+async def test_lexical_graph_builder_run_does_not_mutate_chunks() -> None:
+    chunks = [TextChunk(text="a", index=0), TextChunk(text="b", index=1)]
+    result = await LexicalGraphBuilder().run(text_chunks=TextChunks(chunks=chunks))
+
+    assert [c.prev_chunk_id for c in chunks] == [None, None]
+    next_rels = [r for r in result.graph.relationships if r.type == "NEXT_CHUNK"]
+    assert [(r.start_node_id, r.end_node_id) for r in next_rels] == [
+        (chunks[0].chunk_id, chunks[1].chunk_id)
+    ]

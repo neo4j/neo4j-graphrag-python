@@ -68,13 +68,16 @@ class LexicalGraphBuilder(Component):
         if len(text_chunks.chunks) > 0:
             # Ensure chunks are linked so that NEXT_CHUNK relationships can be
             # created from each chunk's prev_chunk_id alone.
+            # Works on copies: the caller's chunks are left untouched.
             prev_chunk_id: Optional[str] = None
             for chunk in text_chunks.chunks:
-                if chunk.prev_chunk_id is None:
-                    chunk.prev_chunk_id = prev_chunk_id
+                linked = (
+                    chunk
+                    if chunk.prev_chunk_id is not None
+                    else chunk.model_copy(update={"prev_chunk_id": prev_chunk_id})
+                )
                 prev_chunk_id = chunk.chunk_id
-            for chunk in text_chunks.chunks:
-                self._add_chunk_to_graph(graph, chunk, document_info)
+                self._add_chunk_to_graph(graph, linked, document_info)
         return GraphResult(
             config=self.config,
             graph=graph,

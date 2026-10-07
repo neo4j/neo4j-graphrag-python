@@ -262,3 +262,16 @@ async def test_no_infinite_loop_on_long_word_without_spaces() -> None:
     assert len(result.chunks) > 0
     for chunk in result.chunks:
         assert len(chunk.text) > 0
+
+
+@pytest.mark.asyncio
+async def test_split_text_sets_prev_chunk_id() -> None:
+    """Chunks yielded by iter_chunks are linked through prev_chunk_id so the
+    lexical graph can be built one chunk at a time."""
+    text = "may thy knife chip and shatter"
+    splitter = FixedSizeSplitter(chunk_size=5, chunk_overlap=0, approximate=False)
+    chunks = await splitter.run(text)
+    assert len(chunks.chunks) > 1
+    assert chunks.chunks[0].prev_chunk_id is None
+    for prev, current in zip(chunks.chunks, chunks.chunks[1:]):
+        assert current.prev_chunk_id == prev.chunk_id
