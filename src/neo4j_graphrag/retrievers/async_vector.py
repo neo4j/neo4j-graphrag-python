@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any, Callable, Optional
 
@@ -37,7 +38,7 @@ from neo4j_graphrag.neo4j_queries import (
     get_search_query,
 )
 from neo4j_graphrag.retrievers.base import AsyncRetriever
-from neo4j_graphrag.utils.version_utils import supports_search_clause
+from neo4j_graphrag.utils.version_utils import supports_search_clause_async
 from neo4j_graphrag.types import (
     AsyncNeo4jDriverModel,
     AsyncVectorRetrieverModel,
@@ -169,13 +170,13 @@ class AsyncVectorRetriever(AsyncRetriever):
                 raise EmbeddingRequiredError(
                     "Embedding method required for text query."
                 )
-            query_vector = self.embedder.embed_query(query_text)
+            query_vector = await asyncio.to_thread(self.embedder.embed_query, query_text)
             parameters["query_vector"] = query_vector
             del parameters["query_text"]
 
         use_search_clause = False
         filter_cls: Optional[FilterClassification] = None
-        if supports_search_clause(self.driver, self.neo4j_database):
+        if await supports_search_clause_async(self.driver, self.neo4j_database):
             if filters:
                 filter_cls = classify_filter_for_search(filters, node_alias="node")
                 missing = extract_filter_field_names(filters) - set(
@@ -331,7 +332,7 @@ class AsyncVectorCypherRetriever(AsyncRetriever):
         )
         self.result_formatter = validated_data.result_formatter
         self._node_label = None
-        self._node_embedding_property = None
+        self._embedding_node_property = None
         self._embedding_dimension = None
         self._filterable_properties: list[str] = []
 
@@ -372,7 +373,7 @@ class AsyncVectorCypherRetriever(AsyncRetriever):
                 raise EmbeddingRequiredError(
                     "Embedding method required for text query."
                 )
-            query_vector = self.embedder.embed_query(query_text)
+            query_vector = await asyncio.to_thread(self.embedder.embed_query, query_text)
             parameters["query_vector"] = query_vector
             del parameters["query_text"]
 
@@ -384,7 +385,7 @@ class AsyncVectorCypherRetriever(AsyncRetriever):
 
         use_search_clause = False
         filter_cls: Optional[FilterClassification] = None
-        if supports_search_clause(self.driver, self.neo4j_database):
+        if await supports_search_clause_async(self.driver, self.neo4j_database):
             if filters:
                 filter_cls = classify_filter_for_search(filters, node_alias="node")
                 missing = extract_filter_field_names(filters) - set(
@@ -423,7 +424,7 @@ class AsyncVectorCypherRetriever(AsyncRetriever):
                 search_type=SearchType.VECTOR,
                 retrieval_query=self.retrieval_query,
                 node_label=self._node_label,
-                embedding_node_property=self._node_embedding_property,
+                embedding_node_property=self._embedding_node_property,
                 embedding_dimension=self._embedding_dimension,
                 filters=filters,
             )
@@ -450,7 +451,7 @@ class AsyncVectorCypherRetriever(AsyncRetriever):
                     search_type=SearchType.VECTOR,
                     retrieval_query=self.retrieval_query,
                     node_label=self._node_label,
-                    embedding_node_property=self._node_embedding_property,
+                    embedding_node_property=self._embedding_node_property,
                     embedding_dimension=self._embedding_dimension,
                     filters=filters,
                 )

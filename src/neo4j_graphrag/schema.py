@@ -920,3 +920,146 @@ def enhance_schema(
             timeout=timeout,
             sanitize=sanitize,
         )
+
+
+async def query_database_async(
+    driver: neo4j.AsyncDriver,
+    query: str,
+    params: Dict[str, Any] = {},
+    database: Optional[str] = None,
+    timeout: Optional[float] = None,
+    sanitize: bool = False,
+) -> List[Dict[str, Any]]:
+    """Async counterpart to query_database, for use with neo4j.AsyncDriver.
+
+    Note: unlike query_database, the session_params code path (custom
+    session configuration) is not implemented here -- only the direct
+    driver.execute_query() path, which is all get_structured_schema_async
+    needs.
+    """
+    data = await driver.execute_query(
+        Query(text=query, timeout=timeout),
+        database_=database,
+        parameters_=params,
+    )
+    json_data = [r.data() for r in data.records]
+    if sanitize:
+        json_data = [_value_sanitize(el) for el in json_data]
+    return json_data
+
+
+async def get_structured_schema_async(
+    driver: neo4j.AsyncDriver,
+    is_enhanced: bool = False,
+    database: Optional[str] = None,
+    timeout: Optional[float] = None,
+    sanitize: bool = False,
+    sample: int = 1000,
+) -> dict[str, Any]:
+    """Async counterpart to get_structured_schema, for use with neo4j.AsyncDriver.
+
+    Note: is_enhanced=True is not yet supported here -- enhance_schema()
+    has no async equivalent -- and will raise NotImplementedError rather
+    than silently returning an unenhanced schema.
+    """
+    if is_enhanced:
+        raise NotImplementedError(
+            "is_enhanced=True is not yet supported for async schema retrieval "
+            "(AsyncText2CypherRetriever / get_schema_async)."
+        )
+
+    node_properties = [
+        data["output"]
+        for data in await query_database_async(
+            driver=driver,
+            query=NODE_PROPERTIES_QUERY,
+            params={
+                "EXCLUDED_LABELS": EXCLUDED_LABELS
+                + [BASE_ENTITY_LABEL, BASE_KG_BUILDER_LABEL],
+                "SAMPLE": sample,
+            },
+            database=database,
+            timeout=timeout,
+            sanitize=sanitize,
+        )
+    ]
+
+    rel_properties = [
+        data["output"]
+        for data in await query_database_async(
+            driver=driver,
+            query=REL_PROPERTIES_QUERY,
+            params={"EXCLUDED_LABELS": EXCLUDED_RELS, "SAMPLE": sample},
+            database=database,
+            timeout=timeout,
+            sanitize=sanitize,
+        )
+    ]
+
+    relationships = [
+        data["output"]
+        for data in await query_database_async(
+            driver=driver,
+            query=REL_QUERY,
+            params={
+                "EXCLUDED_LABELS": EXCLUDED_LABELS
+                + [BASE_ENTITY_LABEL, BASE_KG_BUILDER_LABEL],
+                "SAMPLE": sample,
+            },
+            database=database,
+            timeout=timeout,
+            sanitize=sanitize,
+        )
+    ]
+
+    try:
+        constraint = await query_database_async(
+            driver=driver,
+            query="SHOW CONSTRAINTS",
+            database=database,
+            timeout=timeout,
+            sanitize=sanitize,
+        )
+        index = await query_database_async(
+            driver=driver,
+            query=INDEX_QUERY,
+            database=database,
+            timeout=timeout,
+            sanitize=sanitize,
+        )
+    except ClientError:
+        constraint = []
+        index = []
+
+    structured_schema = {
+        "node_props": {el["label"]: el["properties"] for el in node_properties},
+        "rel_props": {el["type"]: el["properties"] for el in rel_properties},
+        "relationships": relationships,
+        "metadata": {"constraint": constraint, "index": index},
+    }
+    return structured_schema
+
+
+async def get_schema_async(
+    driver: neo4j.AsyncDriver,
+    is_enhanced: bool = False,
+    database: Optional[str] = None,
+    timeout: Optional[float] = None,
+    sanitize: bool = False,
+    sample: int = 1000,
+) -> str:
+    """Async counterpart to get_schema, for use with neo4j.AsyncDriver.
+
+    Fixes: get_schema() called with an AsyncDriver crashed with
+    TypeError, because its underlying query_database() calls
+    driver.execute_query() without awaiting it.
+    """
+    structured_schema = await get_structured_schema_async(
+        driver=driver,
+        is_enhanced=is_enhanced,
+        database=database,
+        timeout=timeout,
+        sanitize=sanitize,
+        sample=sample,
+    )
+    return format_schema(structured_schema, is_enhanced)

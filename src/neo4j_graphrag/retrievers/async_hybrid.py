@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any, Callable, Optional, Union
 
@@ -34,7 +35,7 @@ from neo4j_graphrag.neo4j_queries import (
     get_search_query,
 )
 from neo4j_graphrag.retrievers.base import AsyncRetriever
-from neo4j_graphrag.utils.version_utils import supports_search_clause
+from neo4j_graphrag.utils.version_utils import supports_search_clause_async
 from neo4j_graphrag.types import (
     AsyncNeo4jDriverModel,
     AsyncHybridRetrieverModel,
@@ -153,11 +154,11 @@ class AsyncHybridRetriever(AsyncRetriever):
                 raise EmbeddingRequiredError(
                     "Embedding method required for text query."
                 )
-            query_vector = self.embedder.embed_query(query_text)
+            query_vector = await asyncio.to_thread(self.embedder.embed_query, query_text)
             parameters["query_vector"] = query_vector
 
         use_search_clause = False
-        if supports_search_clause(self.driver, self.neo4j_database):
+        if await supports_search_clause_async(self.driver, self.neo4j_database):
             if self._node_label:
                 use_search_clause = True
 
@@ -322,7 +323,7 @@ class AsyncHybridCypherRetriever(AsyncRetriever):
                 raise EmbeddingRequiredError(
                     "Embedding method required for text query."
                 )
-            query_vector = self.embedder.embed_query(query_text)
+            query_vector = await asyncio.to_thread(self.embedder.embed_query, query_text)
             parameters["query_vector"] = query_vector
 
         if query_params:
@@ -332,7 +333,7 @@ class AsyncHybridCypherRetriever(AsyncRetriever):
             del parameters["query_params"]
 
         use_search_clause = False
-        if supports_search_clause(self.driver, self.neo4j_database):
+        if await supports_search_clause_async(self.driver, self.neo4j_database):
             if self._node_label:
                 use_search_clause = True
 

@@ -479,7 +479,7 @@ class AsyncRetriever(ABC):
             self._embedding_dimension = result["dimensions"]
             self._filterable_properties = result.get("filterable_properties") or []
         except IndexError as e:
-            raise Exception(f"No index with name {self.index_name} found") from e
+            raise Exception(f"No index with name {vector_index_name} found") from e
 
     async def search(self, *args: Any, **kwargs: Any) -> "RetrieverResult":
         """Async search method. Calls get_search_results and formats results."""

@@ -14,6 +14,7 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any, Callable, Dict, Optional
 
@@ -31,7 +32,7 @@ from neo4j_graphrag.generation.prompts import Text2CypherTemplate
 from neo4j_graphrag.llm import LLMInterface
 from neo4j_graphrag.retrievers.base import AsyncRetriever
 from neo4j_graphrag.retrievers.text2cypher import extract_cypher, READ_ONLY_QUERY_TYPE
-from neo4j_graphrag.schema import get_schema
+from neo4j_graphrag.schema import get_schema_async
 from neo4j_graphrag.types import (
     AsyncNeo4jDriverModel,
     AsyncText2CypherRetrieverModel,
@@ -107,7 +108,7 @@ class AsyncText2CypherRetriever(AsyncRetriever):
         """Fetch Neo4j schema if not provided. Must be awaited after construction."""
         if not self.neo4j_schema:
             try:
-                self.neo4j_schema = get_schema(self.driver)
+                self.neo4j_schema = await get_schema_async(self.driver)
             except (Neo4jError, DriverError) as e:
                 error_message = getattr(e, "message", str(e))
                 raise SchemaFetchError(
@@ -163,7 +164,7 @@ class AsyncText2CypherRetriever(AsyncRetriever):
         logger.debug("AsyncText2CypherRetriever prompt: %s", prompt)
 
         try:
-            llm_result = self.llm.invoke(prompt)
+            llm_result = await asyncio.to_thread(self.llm.invoke, prompt)
             t2c_query = extract_cypher(llm_result.content)
             logger.debug("AsyncText2CypherRetriever Cypher query: %s", t2c_query)
 

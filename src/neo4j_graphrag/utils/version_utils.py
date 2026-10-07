@@ -26,6 +26,11 @@ _version_cache: weakref.WeakKeyDictionary[
     neo4j.Driver, tuple[tuple[int, ...], bool, bool]
 ] = weakref.WeakKeyDictionary()
 
+# Separate cache for AsyncDriver instances -- neo4j.Driver and
+# neo4j.AsyncDriver are not related by inheritance, so they can't
+# share one WeakKeyDictionary.
+_version_cache_async: "weakref.WeakKeyDictionary[neo4j.AsyncDriver, tuple[tuple[int, ...], bool, bool]]" = weakref.WeakKeyDictionary()
+
 
 def get_version(
     driver: neo4j.Driver, database: Optional[str] = None
@@ -149,8 +154,9 @@ def get_version_cached(
 
 
 def clear_version_cache() -> None:
-    """Clear the version cache. Useful for testing."""
+    """Clear the version cache (both sync and async). Useful for testing."""
     _version_cache.clear()
+    _version_cache_async.clear()
 
 
 def supports_search_clause(
@@ -170,6 +176,58 @@ def supports_search_clause(
     """
     try:
         version_tuple, _, _ = get_version_cached(driver, database)
+    except Exception:
+        logger.debug(
+            "Failed to detect Neo4j version for SEARCH clause support, "
+            "falling back to procedure path.",
+            exc_info=True,
+        )
+        return False
+    return version_tuple >= (2026, 1, 0)
+
+
+async def get_version_async(
+    driver: neo4j.AsyncDriver, database: Optional[str] = None
+) -> tuple[tuple[int, ...], bool, bool]:
+    """Async counterpart to get_version, for use with neo4j.AsyncDriver."""
+    records, _, _ = await driver.execute_query(
+        "CALL dbms.components()",
+        database_=database,
+        routing_=neo4j.RoutingControl.READ,
+    )
+    version = records[0]["versions"][0]
+    edition = records[0]["edition"]
+    version_main, *_ = version.split("-")
+    version_tuple = tuple(map(int, version_main.split(".")))
+    if len(version_tuple) < 3:
+        version_tuple = (*version_tuple, 0)
+    return version_tuple, "aura" in version, edition == "enterprise"
+
+
+async def get_version_cached_async(
+    driver: neo4j.AsyncDriver, database: Optional[str] = None
+) -> tuple[tuple[int, ...], bool, bool]:
+    """Async counterpart to get_version_cached, for use with neo4j.AsyncDriver."""
+    cached = _version_cache_async.get(driver)
+    if cached is not None:
+        return cached
+    result = await get_version_async(driver, database)
+    _version_cache_async[driver] = result
+    return result
+
+
+async def supports_search_clause_async(
+    driver: neo4j.AsyncDriver, database: Optional[str] = None
+) -> bool:
+    """Async counterpart to supports_search_clause, for use with neo4j.AsyncDriver.
+
+    Fixes: calling the sync supports_search_clause() with an AsyncDriver
+    always silently returned False, because get_version()'s unawaited
+    driver.execute_query() raised a TypeError that got swallowed by the
+    bare except clause.
+    """
+    try:
+        version_tuple, _, _ = await get_version_cached_async(driver, database)
     except Exception:
         logger.debug(
             "Failed to detect Neo4j version for SEARCH clause support, "

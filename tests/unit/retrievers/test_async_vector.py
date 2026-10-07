@@ -101,7 +101,7 @@ async def test_async_vector_retriever_search_with_vector(async_driver: MagicMock
     async_driver.execute_query.return_value = MagicMock(records=[mock_record])
 
     retriever = _make_retriever(async_driver)
-    with patch("neo4j_graphrag.retrievers.async_vector.supports_search_clause", return_value=False):
+    with patch("neo4j_graphrag.retrievers.async_vector.supports_search_clause_async", new=AsyncMock(return_value=False)):
         result = await retriever.search(query_vector=[0.1, 0.2, 0.3], top_k=2)
 
     assert isinstance(result, RetrieverResult)
@@ -115,7 +115,7 @@ async def test_async_vector_retriever_search_with_text(async_driver: MagicMock, 
     async_driver.execute_query.return_value = MagicMock(records=[mock_record])
 
     retriever = _make_retriever(async_driver, embedder=embedder)
-    with patch("neo4j_graphrag.retrievers.async_vector.supports_search_clause", return_value=False):
+    with patch("neo4j_graphrag.retrievers.async_vector.supports_search_clause_async", new=AsyncMock(return_value=False)):
         result = await retriever.search(query_text="find something", top_k=3)
 
     assert isinstance(result, RetrieverResult)
@@ -125,7 +125,7 @@ async def test_async_vector_retriever_search_with_text(async_driver: MagicMock, 
 @pytest.mark.asyncio
 async def test_async_vector_retriever_search_no_embedder_raises(async_driver: MagicMock) -> None:
     retriever = _make_retriever(async_driver)
-    with patch("neo4j_graphrag.retrievers.async_vector.supports_search_clause", return_value=False):
+    with patch("neo4j_graphrag.retrievers.async_vector.supports_search_clause_async", new=AsyncMock(return_value=False)):
         with pytest.raises(EmbeddingRequiredError):
             await retriever.search(query_text="find something")
 
@@ -171,11 +171,11 @@ async def test_async_vector_cypher_retriever_search(async_driver: MagicMock, emb
         embedder=embedder,
     )
     retriever._node_label = "Document"
-    retriever._node_embedding_property = "embedding"
+    retriever._embedding_node_property = "embedding"
     retriever._embedding_dimension = 3
     retriever._filterable_properties = []
 
-    with patch("neo4j_graphrag.retrievers.async_vector.supports_search_clause", return_value=False):
+    with patch("neo4j_graphrag.retrievers.async_vector.supports_search_clause_async", new=AsyncMock(return_value=False)):
         result = await retriever.search(query_vector=[0.1, 0.2, 0.3], top_k=2)
 
     assert isinstance(result, RetrieverResult)
