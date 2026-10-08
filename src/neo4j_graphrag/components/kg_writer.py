@@ -44,6 +44,7 @@ from neo4j_graphrag.components.base import Component, DataModel
 from neo4j_graphrag.neo4j_queries import (
     upsert_node_query,
     upsert_relationship_query,
+    upsert_relationship_to_existing_chunk_query,
     db_cleaning_query,
 )
 from neo4j_graphrag.utils.version_utils import (
@@ -286,6 +287,24 @@ class Neo4jWriter(KGWriter):
             database_=self.neo4j_database,
         )
 
+    def _upsert_relationships_to_existing_chunks(
+        self,
+        rels: list[Neo4jRelationship],
+        lexical_graph_config: LexicalGraphConfig,
+    ) -> None:
+        """Upsert node-to-chunk relationships to chunks already in Neo4j."""
+        parameters = {"rows": self._relationships_to_rows(rels)}
+        query = upsert_relationship_to_existing_chunk_query(
+            support_variable_scope_clause=self.is_version_5_23_or_above,
+            chunk_node_label=lexical_graph_config.chunk_node_label,
+            chunk_id_property=lexical_graph_config.chunk_id_property,
+        )
+        self.driver.execute_query(
+            query,
+            parameters_=parameters,
+            database_=self.neo4j_database,
+        )
+
     def _db_cleaning(self) -> None:
         query = db_cleaning_query(
             support_variable_scope_clause=self.is_version_5_23_or_above,
@@ -312,8 +331,29 @@ class Neo4jWriter(KGWriter):
             for batch in batched(graph.nodes, self.batch_size):
                 self._upsert_nodes(batch, lexical_graph_config)
 
-            for batch in batched(graph.relationships, self.batch_size):
+            current_node_ids = {node.id for node in graph.nodes}
+            regular_relationships = []
+            relationships_to_existing_chunks = []
+            for relationship in graph.relationships:
+                if (
+                    relationship.start_node_id in current_node_ids
+                    and relationship.type
+                    == lexical_graph_config.node_to_chunk_relationship_type
+                    and relationship.end_node_id not in current_node_ids
+                ):
+                    relationships_to_existing_chunks.append(relationship)
+                else:
+                    regular_relationships.append(relationship)
+
+            for batch in batched(regular_relationships, self.batch_size):
                 self._upsert_relationships(batch)
+
+            for batch in batched(
+                relationships_to_existing_chunks, self.batch_size
+            ):
+                self._upsert_relationships_to_existing_chunks(
+                    batch, lexical_graph_config
+                )
 
             if self._clean_db:
                 self._db_cleaning()
