@@ -28,7 +28,7 @@ dependencies = [
     "pydantic>=2.6.3,<3.0.0",
     "fsspec>=2024.12.0,<2026.9.0",
     "pypdf>=6.19.0,<7.0.0",
-    "json-repair>=0.44.1,<1.0.0",
+    "json-repair>=0.63.5,<1.0.0",
     "pyyaml>=6.0.3,<7.0.0",
     "types-pyyaml>=6.0.12.20260906,<7.0.0",
     "numpy>=2.0.0,<3.0.0; python_version >= '3.9' and python_version < '3.13'",
