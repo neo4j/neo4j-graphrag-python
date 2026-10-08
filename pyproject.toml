@@ -33,8 +33,8 @@ dependencies = [
     "types-pyyaml>=6.0.12.20260906,<7.0.0",
     "numpy>=2.0.0,<3.0.0; python_version >= '3.9' and python_version < '3.13'",
     "numpy>=2.1.0,<3.0.0; python_version >= '3.13' and python_version < '3.15'",
-    "scipy>=1.13.0,<2.0.0; python_version >= '3.9' and python_version < '3.13'",
-    "scipy>=1.15.0,<2.0.0; python_version >= '3.13' and python_version < '3.15'",
+    "scipy>=1.18.1,<2.0.0; python_version >= '3.9' and python_version < '3.13'",
+    "scipy>=1.18.1,<2.0.0; python_version >= '3.13' and python_version < '3.15'",
     "tenacity>=9.1.4,<10.0.0",
 ]
 
