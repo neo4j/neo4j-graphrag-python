@@ -2029,6 +2029,95 @@ async def test_schema_from_text_filters_constraint_with_nonexistent_property(
     assert schema.constraints[0].property_names == ("name",)
 
 
+SCHEMA_JSON_WITH_KEY_SUBSUMED_CONSTRAINTS = json.dumps(
+    {
+        "node_types": [
+            {
+                "label": "Person",
+                "properties": [
+                    {"name": "id", "type": "STRING"},
+                    {"name": "name", "type": "STRING"},
+                ],
+            }
+        ],
+        "relationship_types": [],
+        "patterns": [],
+        "constraints": [
+            {
+                "type": "KEY",
+                "node_type": "Person",
+                "property_names": ["id"],
+                "relationship_type": "",
+            },
+            {
+                "type": "EXISTENCE",
+                "node_type": "Person",
+                "property_names": ["id"],
+                "relationship_type": "",
+            },
+            {
+                "type": "UNIQUENESS",
+                "node_type": "Person",
+                "property_names": ["id"],
+                "relationship_type": "",
+            },
+            {
+                "type": "EXISTENCE",
+                "node_type": "Person",
+                "property_names": ["name"],
+                "relationship_type": "",
+            },
+        ],
+    }
+)
+
+
+def _assert_key_subsumed_constraints_dropped(schema: GraphSchema) -> None:
+    assert {(c.type, c.property_names) for c in schema.constraints} == {
+        (GraphConstraintType.KEY, ("id",)),
+        (GraphConstraintType.EXISTENCE, ("name",)),
+    }
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_drops_constraints_subsumed_by_key(
+    schema_from_text: SchemaFromTextExtractor,
+    mock_llm: AsyncMock,
+) -> None:
+    """V1: EXISTENCE/UNIQUENESS redundant with a KEY are dropped instead of failing."""
+    mock_llm.ainvoke.return_value = LLMResponse(
+        content=SCHEMA_JSON_WITH_KEY_SUBSUMED_CONSTRAINTS
+    )
+
+    schema = await schema_from_text.run(text="Sample text for extraction")
+
+    _assert_key_subsumed_constraints_dropped(schema)
+
+
+@pytest.mark.asyncio
+async def test_schema_from_text_structured_output_drops_constraints_subsumed_by_key(
+    mock_llm: AsyncMock,
+) -> None:
+    """V2: EXISTENCE/UNIQUENESS redundant with a KEY are dropped instead of failing."""
+    mock_llm.supports_structured_output = True
+    mock_llm.ainvoke.return_value = LLMResponse(
+        content=SCHEMA_JSON_WITH_KEY_SUBSUMED_CONSTRAINTS
+    )
+    extractor = SchemaFromTextExtractor(llm=mock_llm, use_structured_output=True)
+
+    schema = await extractor.run(text="Sample text for extraction")
+
+    _assert_key_subsumed_constraints_dropped(schema)
+
+
+def test_validate_extraction_dict_drops_constraints_subsumed_by_key() -> None:
+    schema = validate_extraction_dict_to_graph_schema(
+        json.loads(SCHEMA_JSON_WITH_KEY_SUBSUMED_CONSTRAINTS)
+    )
+
+    _assert_key_subsumed_constraints_dropped(schema)
+
+
 @pytest.mark.asyncio
 async def test_schema_from_text_handles_null_constraints(
     schema_from_text: SchemaFromTextExtractor,

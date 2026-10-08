@@ -25,7 +25,11 @@ from neo4j_graphrag.components.graph_schema_extraction import (
     GraphSchemaExtractionOutput,
     wire_extraction_constraints_for_graph_schema,
 )
-from neo4j_graphrag.components.schema import GraphSchema, Pattern
+from neo4j_graphrag.components.schema import (
+    GraphConstraintType,
+    GraphSchema,
+    Pattern,
+)
 
 
 def test_wire_extraction_constraints_keeps_relationship_type_for_uniqueness() -> None:
@@ -359,3 +363,206 @@ def test_extraction_filter_drops_composite_with_nonexistent_property() -> None:
     gs = GraphSchema.from_extraction_output(dto)
     # "surname" doesn't exist on Actor, so the entire composite constraint is dropped
     assert len(gs.constraints) == 0
+
+
+def _subsumption_dto(
+    constraints: list[ExtractedConstraintType],
+) -> GraphSchemaExtractionOutput:
+    """Extraction output with Person/Company nodes and a KNOWS relationship."""
+    return GraphSchemaExtractionOutput(
+        node_types=[
+            ExtractedNodeType(
+                label="Person",
+                properties=[
+                    ExtractedPropertyType(name="id", type="STRING"),
+                    ExtractedPropertyType(name="firstname", type="STRING"),
+                    ExtractedPropertyType(name="surname", type="STRING"),
+                    ExtractedPropertyType(name="email", type="STRING"),
+                ],
+            ),
+            ExtractedNodeType(
+                label="Company",
+                properties=[ExtractedPropertyType(name="id", type="STRING")],
+            ),
+        ],
+        relationship_types=[
+            ExtractedRelationshipType(
+                label="KNOWS",
+                properties=[
+                    ExtractedPropertyType(name="id", type="STRING"),
+                    ExtractedPropertyType(name="since", type="DATE"),
+                ],
+            )
+        ],
+        patterns=[Pattern(source="Person", relationship="KNOWS", target="Person")],
+        constraints=constraints,
+    )
+
+
+def _constraint_tuples(gs: GraphSchema) -> set[tuple[str, str, str, tuple[str, ...]]]:
+    return {
+        (
+            GraphConstraintType(c.type).value,
+            c.node_type or "",
+            c.relationship_type or "",
+            c.property_names,
+        )
+        for c in gs.constraints
+    }
+
+
+def test_extraction_drops_existence_on_key_property() -> None:
+    """EXISTENCE on a KEY property is redundant and dropped instead of failing validation."""
+    gs = GraphSchema.from_extraction_output(
+        _subsumption_dto(
+            [
+                ExtractedConstraintType(
+                    type="KEY", node_type="Person", property_names=["id"]
+                ),
+                ExtractedConstraintType(
+                    type="EXISTENCE", node_type="Person", property_names=["id"]
+                ),
+            ]
+        )
+    )
+    assert _constraint_tuples(gs) == {("KEY", "Person", "", ("id",))}
+
+
+def test_extraction_drops_existence_on_composite_key_member() -> None:
+    gs = GraphSchema.from_extraction_output(
+        _subsumption_dto(
+            [
+                ExtractedConstraintType(
+                    type="KEY",
+                    node_type="Person",
+                    property_names=["firstname", "surname"],
+                ),
+                ExtractedConstraintType(
+                    type="EXISTENCE", node_type="Person", property_names=["firstname"]
+                ),
+            ]
+        )
+    )
+    assert _constraint_tuples(gs) == {("KEY", "Person", "", ("firstname", "surname"))}
+
+
+def test_extraction_drops_uniqueness_on_same_properties_as_key() -> None:
+    gs = GraphSchema.from_extraction_output(
+        _subsumption_dto(
+            [
+                ExtractedConstraintType(
+                    type="UNIQUENESS", node_type="Person", property_names=["id"]
+                ),
+                ExtractedConstraintType(
+                    type="KEY", node_type="Person", property_names=["id"]
+                ),
+            ]
+        )
+    )
+    assert _constraint_tuples(gs) == {("KEY", "Person", "", ("id",))}
+
+
+def test_extraction_drops_uniqueness_on_key_properties_in_different_order() -> None:
+    gs = GraphSchema.from_extraction_output(
+        _subsumption_dto(
+            [
+                ExtractedConstraintType(
+                    type="KEY",
+                    node_type="Person",
+                    property_names=["firstname", "surname"],
+                ),
+                ExtractedConstraintType(
+                    type="UNIQUENESS",
+                    node_type="Person",
+                    property_names=["surname", "firstname"],
+                ),
+            ]
+        )
+    )
+    assert _constraint_tuples(gs) == {("KEY", "Person", "", ("firstname", "surname"))}
+
+
+def test_extraction_drops_existence_on_relationship_key_property() -> None:
+    gs = GraphSchema.from_extraction_output(
+        _subsumption_dto(
+            [
+                ExtractedConstraintType(
+                    type="KEY",
+                    node_type="",
+                    property_names=["since"],
+                    relationship_type="KNOWS",
+                ),
+                ExtractedConstraintType(
+                    type="EXISTENCE",
+                    node_type="",
+                    property_names=["since"],
+                    relationship_type="KNOWS",
+                ),
+            ]
+        )
+    )
+    assert _constraint_tuples(gs) == {("KEY", "", "KNOWS", ("since",))}
+
+
+def test_extraction_keeps_constraints_not_subsumed_by_key() -> None:
+    """Only constraints made redundant by a KEY on the same type are dropped."""
+    gs = GraphSchema.from_extraction_output(
+        _subsumption_dto(
+            [
+                ExtractedConstraintType(
+                    type="KEY", node_type="Company", property_names=["id"]
+                ),
+                ExtractedConstraintType(
+                    type="KEY", node_type="Person", property_names=["firstname"]
+                ),
+                # EXISTENCE on a non-KEY property
+                ExtractedConstraintType(
+                    type="EXISTENCE", node_type="Person", property_names=["email"]
+                ),
+                # Same property name, but KEY is on another node type
+                ExtractedConstraintType(
+                    type="EXISTENCE", node_type="Person", property_names=["id"]
+                ),
+                # Composite UNIQUENESS only partially overlapping the KEY
+                ExtractedConstraintType(
+                    type="UNIQUENESS",
+                    node_type="Person",
+                    property_names=["firstname", "surname"],
+                ),
+                # Relationship property sharing a name with a node KEY property
+                ExtractedConstraintType(
+                    type="EXISTENCE",
+                    node_type="",
+                    property_names=["id"],
+                    relationship_type="KNOWS",
+                ),
+            ]
+        )
+    )
+    assert _constraint_tuples(gs) == {
+        ("KEY", "Company", "", ("id",)),
+        ("KEY", "Person", "", ("firstname",)),
+        ("EXISTENCE", "Person", "", ("email",)),
+        ("EXISTENCE", "Person", "", ("id",)),
+        ("UNIQUENESS", "Person", "", ("firstname", "surname")),
+        ("EXISTENCE", "", "KNOWS", ("id",)),
+    }
+
+
+def test_extraction_invalid_key_does_not_drop_valid_existence() -> None:
+    """A KEY removed by the invalid-constraint filter must not subsume other constraints."""
+    gs = GraphSchema.from_extraction_output(
+        _subsumption_dto(
+            [
+                ExtractedConstraintType(
+                    type="KEY",
+                    node_type="Person",
+                    property_names=["id", "nonexistent"],
+                ),
+                ExtractedConstraintType(
+                    type="EXISTENCE", node_type="Person", property_names=["id"]
+                ),
+            ]
+        )
+    )
+    assert _constraint_tuples(gs) == {("EXISTENCE", "Person", "", ("id",))}
