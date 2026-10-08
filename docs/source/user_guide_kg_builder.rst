@@ -940,8 +940,6 @@ Passing ``properties`` explicitly as an empty list raises a ``ValidationError``:
 
 **Relationship types** with no properties automatically set ``additional_properties=True`` to preserve LLM-extracted properties during graph construction.
 
-**Constraints** made redundant by a ``KEY`` are dropped from LLM-extracted schemas: a ``KEY`` implies both existence and uniqueness, so an ``EXISTENCE`` constraint on a ``KEY`` property, or a ``UNIQUENESS`` constraint on the same properties as a ``KEY``, is removed with an info log. A ``GraphSchema`` constructed directly still rejects these combinations.
-
 
 Schema Visualization
 --------------------

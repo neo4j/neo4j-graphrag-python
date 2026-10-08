@@ -10,7 +10,6 @@
 ### Fixed
 
 - Experimental: LLM-auto-generated schemas now reconcile duplicate `node_types` (entries sharing the same label) by merging them into a single type that carries the union of their properties, emitting a warning log. Direct `GraphSchema` construction rejects remaining duplicate node labels with a clear error instead of a last-write-wins index that could report an undefined constraint property. This reflects that Neo4j node labels are global per name.
-- LLM-extracted schemas (`SchemaFromTextExtractor` with or without structured output, `GraphSchema.from_extraction_output` and `validate_extraction_dict_to_graph_schema`) no longer fail with `SchemaValidationError` when the model emits an `EXISTENCE` constraint on a property already covered by a `KEY`, or a `UNIQUENESS` constraint on the same properties as a `KEY`. The redundant constraint is dropped with an info log, since a `KEY` already implies existence and uniqueness. Direct `GraphSchema` construction still rejects these combinations.
 
 ## 1.22.0
 

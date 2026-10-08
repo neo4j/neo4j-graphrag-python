@@ -1325,15 +1325,6 @@ def _extraction_filter_invalid_patterns(
     return filtered_patterns
 
 
-def _extraction_constraint_property_names(constraint: Dict[str, Any]) -> list[str]:
-    """Resolve property_names from either property_names or property_name."""
-    pns = constraint.get("property_names") or []
-    if pns:
-        return list(pns) if not isinstance(pns, list) else pns
-    pn = constraint.get("property_name") or ""
-    return [pn] if pn else []
-
-
 def _extraction_filter_invalid_constraints(
     constraints: List[Dict[str, Any]],
     node_types: List[Dict[str, Any]],
@@ -1362,6 +1353,14 @@ def _extraction_filter_invalid_constraints(
     valid_node_labels = set(node_type_properties.keys())
     valid_rel_labels = set(rel_type_properties.keys())
 
+    def _resolve_property_names(constraint: Dict[str, Any]) -> list[str]:
+        """Resolve property_names from either property_names or property_name."""
+        pns = constraint.get("property_names") or []
+        if pns:
+            return list(pns) if not isinstance(pns, list) else pns
+        pn = constraint.get("property_name") or ""
+        return [pn] if pn else []
+
     def _all_properties_valid(
         prop_names: list[str], valid: set[str], entity_label: str, entity_kind: str
     ) -> bool:
@@ -1389,7 +1388,7 @@ def _extraction_filter_invalid_constraints(
             )
             continue
 
-        prop_names = _extraction_constraint_property_names(constraint)
+        prop_names = _resolve_property_names(constraint)
         if not prop_names:
             logging.info(
                 f"Filtering out constraint: {constraint}. "
@@ -1495,66 +1494,6 @@ def _extraction_filter_invalid_constraints(
     return filtered_constraints
 
 
-def _extraction_drop_constraints_subsumed_by_key(
-    constraints: List[Dict[str, Any]],
-) -> List[Dict[str, Any]]:
-    """Drop EXISTENCE and UNIQUENESS constraints made redundant by a KEY.
-
-    A KEY implies both existence and uniqueness of its properties, and
-    :class:`GraphSchema` rejects an EXISTENCE on a KEY property or a UNIQUENESS on
-    the same properties as a KEY. LLMs still emit these combinations despite the
-    prompt rules, so the redundant constraint is dropped rather than failing the
-    whole extraction. Expects constraints already cleaned by
-    :func:`_extraction_filter_invalid_constraints` (exactly one of ``node_type``
-    or ``relationship_type`` set).
-    """
-
-    def _scope(constraint: Dict[str, Any]) -> tuple[str, str]:
-        node_type = constraint.get("node_type") or ""
-        if str(node_type).strip():
-            return ("node type", node_type)
-        return ("relationship type", constraint.get("relationship_type") or "")
-
-    key_props: Dict[tuple[str, str], set[str]] = {}
-    key_prop_sets: Dict[tuple[str, str], set[frozenset[str]]] = {}
-    for constraint in constraints:
-        if constraint.get("type") != GraphConstraintType.KEY.value:
-            continue
-        scope = _scope(constraint)
-        prop_names = _extraction_constraint_property_names(constraint)
-        key_props.setdefault(scope, set()).update(prop_names)
-        key_prop_sets.setdefault(scope, set()).add(frozenset(prop_names))
-
-    if not key_props:
-        return constraints
-
-    kept_constraints = []
-    for constraint in constraints:
-        ctype = constraint.get("type")
-        scope = _scope(constraint)
-        prop_names = _extraction_constraint_property_names(constraint)
-        if ctype == GraphConstraintType.EXISTENCE.value and set(prop_names) <= (
-            key_props.get(scope, set())
-        ):
-            logger.info(
-                f"Filtering out constraint: {constraint}. "
-                f"EXISTENCE is implied by a KEY on {scope[0]} '{scope[1]}'."
-            )
-            continue
-        if ctype == GraphConstraintType.UNIQUENESS.value and frozenset(
-            prop_names
-        ) in key_prop_sets.get(scope, set()):
-            logger.info(
-                f"Filtering out constraint: {constraint}. "
-                f"UNIQUENESS is implied by a KEY on the same properties of "
-                f"{scope[0]} '{scope[1]}'."
-            )
-            continue
-        kept_constraints.append(constraint)
-
-    return kept_constraints
-
-
 def _extraction_apply_cross_reference_filters(
     extracted_node_types: List[Dict[str, Any]],
     extracted_relationship_types: Optional[List[Dict[str, Any]]],
@@ -1573,9 +1512,6 @@ def _extraction_apply_cross_reference_filters(
             extracted_constraints,
             extracted_node_types,
             extracted_relationship_types,
-        )
-        extracted_constraints = _extraction_drop_constraints_subsumed_by_key(
-            extracted_constraints
         )
 
     return extracted_patterns, extracted_constraints
