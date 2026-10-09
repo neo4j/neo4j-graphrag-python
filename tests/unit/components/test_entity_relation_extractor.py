@@ -15,10 +15,10 @@
 from __future__ import annotations
 
 import json
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
-from neo4j_graphrag.exceptions import LLMGenerationError
+
 from neo4j_graphrag.components.entity_relation_extractor import (
     LLMEntityRelationExtractor,
     OnError,
@@ -31,10 +31,9 @@ from neo4j_graphrag.components.types import (
     TextChunk,
     TextChunks,
 )
+from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.experimental.pipeline.exceptions import InvalidJSONError
-from neo4j_graphrag.llm import LLMInterface, LLMResponse
-from neo4j_graphrag.llm import OpenAILLM, VertexAILLM
-from unittest.mock import patch
+from neo4j_graphrag.llm import LLMInterface, LLMResponse, OpenAILLM, VertexAILLM
 
 
 @pytest.mark.asyncio
@@ -491,3 +490,38 @@ async def test_extractor_structured_output_false_uses_v1() -> None:
     call_args = llm.ainvoke.call_args
     assert isinstance(call_args[0][0], str)  # First arg is string prompt
     assert "response_format" not in call_args[1]  # No response_format kwarg
+
+
+@pytest.mark.asyncio
+async def test_extractor_with_entity_metadata() -> None:
+    """Test that entity_metadata is merged into every extracted node and relationship,
+    and that caller-supplied keys take precedence over LLM-produced keys."""
+    llm = MagicMock(spec=LLMInterface)
+    llm.ainvoke.return_value = LLMResponse(
+        content='{"nodes": [{"id": "0", "label": "Person", "properties": {"name": "Alice", "source": "llm_source"}}, {"id": "1", "label": "Person", "properties": {"name": "Bob"}}], "relationships": [{"start_node_id": "0", "end_node_id": "1", "type": "KNOWS", "properties": {}}]}'
+    )
+
+    extractor = LLMEntityRelationExtractor(
+        llm=llm,
+        create_lexical_graph=False,
+    )
+    chunks = TextChunks(chunks=[TextChunk(text="some text", index=0)])
+    entity_metadata = {"tenant_id": "acme", "source": "caller_source"}
+    res = await extractor.run(chunks=chunks, entity_metadata=entity_metadata)
+
+    assert len(res.nodes) == 2
+    assert res.nodes[0].properties == {
+        "name": "Alice",
+        "tenant_id": "acme",
+        "source": "caller_source",
+    }
+    assert res.nodes[1].properties == {
+        "name": "Bob",
+        "tenant_id": "acme",
+        "source": "caller_source",
+    }
+    assert len(res.relationships) == 1
+    assert res.relationships[0].properties == {
+        "tenant_id": "acme",
+        "source": "caller_source",
+    }
