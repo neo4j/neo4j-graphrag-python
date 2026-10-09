@@ -89,7 +89,7 @@ Create and activate a Conda environment before installing:
 
 .. code:: bash
 
-    conda create -n graphrag python=3.12
+    conda create -n graphrag
     conda activate graphrag
     conda install -c conda-forge neo4j-graphrag
 
