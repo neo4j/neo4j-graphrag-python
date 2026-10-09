@@ -35,16 +35,29 @@ A list of Neo4j GenAI-related features can also be found at [Neo4j GenAI Ecosyst
 
 ## 📦 Installation
 
-To install the latest stable version, run:
+### pip
+
+To install the latest stable version from PyPI, run this in an activated virtual environment:
 
 ```shell
 pip install neo4j-graphrag
 ```
 
-### Optional Dependencies
+### Conda
+
+The package is also available from [conda-forge](https://anaconda.org/conda-forge/neo4j-graphrag).
+Create and activate a Conda environment before installing:
+
+```shell
+conda create -n graphrag python=3.12
+conda activate graphrag
+conda install -c conda-forge neo4j-graphrag
+```
+
+### Optional Dependencies (pip only)
 
 This package has some optional features that can be enabled using
-the extra dependencies described below:
+the pip extra dependencies described below:
 
 - LLM providers (at least one is required for RAG and KG Builder Pipeline):
     - **ollama**: LLMs from Ollama
