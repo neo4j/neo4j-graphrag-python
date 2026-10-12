@@ -715,11 +715,9 @@ class Neo4jGraphParquetFormatter:
         ``list`` at the top level, so the column is invisible to the check above
         and PyArrow locks ``list<string>`` from the first sample. int/float
         element mixes are left alone (``format_parquet`` promotes those to
-        ``list<float32>``). Any other element mix is written as strings. A single
-        row is still checked, because one list can mix element types.
+        ``list<float32>``). Any other element mix is written as strings.
         """
-        if len(rows) > 1:
-            Neo4jGraphParquetFormatter._coerce_mixed_scalar_columns(rows)
+        Neo4jGraphParquetFormatter._coerce_mixed_scalar_columns(rows)
         Neo4jGraphParquetFormatter._coerce_mixed_list_elements(rows)
 
     @staticmethod
