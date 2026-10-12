@@ -710,10 +710,21 @@ class Neo4jGraphParquetFormatter:
         detects those mismatches and coerces:
         - {int, float} -> float  (lossless numeric promotion)
         - anything else mixed -> str  (universal safe fallback)
-        """
-        if len(rows) <= 1:
-            return
 
+        List values need a second look. ``["1998"]`` and ``[1998]`` are both
+        ``list`` at the top level, so the column is invisible to the check above
+        and PyArrow locks ``list<string>`` from the first sample. int/float
+        element mixes are left alone (``format_parquet`` promotes those to
+        ``list<float32>``). Any other element mix is written as strings. A single
+        row is still checked, because one list can mix element types.
+        """
+        if len(rows) > 1:
+            Neo4jGraphParquetFormatter._coerce_mixed_scalar_columns(rows)
+        Neo4jGraphParquetFormatter._coerce_mixed_list_elements(rows)
+
+    @staticmethod
+    def _coerce_mixed_scalar_columns(rows: list[dict[str, Any]]) -> None:
+        """Coerce columns whose values disagree at the top-level Python type."""
         col_types: dict[str, set[type]] = defaultdict(set)
         for row in rows:
             for key, value in row.items():
@@ -740,6 +751,35 @@ class Neo4jGraphParquetFormatter:
                         row[col] = target_type(row[col])
                     except (ValueError, TypeError):
                         row[col] = str(row[col])
+
+    @staticmethod
+    def _coerce_mixed_list_elements(rows: list[dict[str, Any]]) -> None:
+        """Stringify list elements when one column mixes types PyArrow cannot store."""
+        columns: dict[str, list[list[Any]]] = defaultdict(list)
+        for row in rows:
+            for key, value in row.items():
+                if isinstance(value, list):
+                    columns[key].append(value)
+        for col, lists in columns.items():
+            element_types: set[type] = {
+                type(element)
+                for values in lists
+                for element in values
+                if element is not None
+            }
+            if len(element_types) <= 1 or element_types <= {int, float}:
+                continue
+            logger.warning(
+                "Mixed list element types for property '%s': %s — coercing elements to str",
+                col,
+                {t.__name__ for t in element_types},
+            )
+            for row in rows:
+                value = row.get(col)
+                if isinstance(value, list):
+                    row[col] = [
+                        None if element is None else str(element) for element in value
+                    ]
 
     @staticmethod
     def _serialize_geopoint_values(rows: list[dict[str, Any]]) -> set[str]:
