@@ -35,16 +35,29 @@ A list of Neo4j GenAI-related features can also be found at [Neo4j GenAI Ecosyst
 
 ## 📦 Installation
 
-To install the latest stable version, run:
+### pip
+
+To install the latest stable version from PyPI, run this in an activated virtual environment:
 
 ```shell
 pip install neo4j-graphrag
 ```
 
-### Optional Dependencies
+### Conda
+
+The package is also available from [conda-forge](https://anaconda.org/conda-forge/neo4j-graphrag).
+Create and activate a Conda environment before installing:
+
+```shell
+conda create -n graphrag
+conda activate graphrag
+conda install -c conda-forge neo4j-graphrag
+```
+
+### Optional Dependencies (pip only)
 
 This package has some optional features that can be enabled using
-the extra dependencies described below:
+the pip extra dependencies described below:
 
 - LLM providers (at least one is required for RAG and KG Builder Pipeline):
     - **ollama**: LLMs from Ollama
@@ -383,11 +396,17 @@ When you're finished with your changes, create a pull request (PR) using the fol
 ## 🧪 Tests
 
 To be able to run all tests, all extra packages needs to be installed.
-This is achieved by:
+The `gpu` extra is mutually exclusive with the torch-carrying extras (it
+resolves CUDA torch where they resolve CPU torch), so exclude it:
 
 ```bash
-uv sync --all-extras
+uv sync --all-extras --no-extra gpu
 ```
+
+On a machine where you want `SentenceTransformerEmbeddings` on GPU instead,
+sync with `--extra gpu` (plus any non-torch extras you need). On Linux/Windows
+this resolves torch from the CUDA index; on macOS, where no CUDA builds of
+torch exist, it falls back to the CPU build.
 
 ### Unit Tests
 

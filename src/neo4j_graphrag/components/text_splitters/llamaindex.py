@@ -14,10 +14,12 @@
 #  limitations under the License.
 from __future__ import annotations
 
+from collections.abc import Iterator
+
 from llama_index.core.node_parser import TextSplitter as LlamaIndexTextSplitter
 
 from neo4j_graphrag.components.text_splitters.base import TextSplitter
-from neo4j_graphrag.components.types import TextChunk, TextChunks
+from neo4j_graphrag.components.types import TextChunk
 
 
 class LlamaIndexTextSplitterAdapter(TextSplitter):
@@ -46,19 +48,15 @@ class LlamaIndexTextSplitterAdapter(TextSplitter):
     def __init__(self, text_splitter: LlamaIndexTextSplitter) -> None:
         self.text_splitter = text_splitter
 
-    async def run(self, text: str) -> TextChunks:
+    def iter_chunks(self, text: str) -> Iterator[TextChunk]:
         """
-        Splits text into chunks.
+        Splits text into chunks, yielding them one at a time.
 
         Args:
             text (str): The text to split.
 
         Returns:
-            TextChunks: The text split into chunks.
+            Iterator[TextChunk]: The chunks, in document order.
         """
-        chunks = self.text_splitter.split_text(text)
-        return TextChunks(
-            chunks=[
-                TextChunk(text=chunk, index=index) for index, chunk in enumerate(chunks)
-            ]
-        )
+        for index, chunk in enumerate(self.text_splitter.split_text(text)):
+            yield TextChunk(text=chunk, index=index)

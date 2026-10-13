@@ -1,17 +1,12 @@
+from collections.abc import Iterator
+
 from neo4j_graphrag.components.text_splitters.base import TextSplitter
-from neo4j_graphrag.components.types import (
-    TextChunk,
-    TextChunks,
-)
+from neo4j_graphrag.components.types import TextChunk
 
 
 class MySplitter(TextSplitter):
-    async def run(self, text: str) -> TextChunks:
+    def iter_chunks(self, text: str) -> Iterator[TextChunk]:
         # your logic here
-        return TextChunks(
-            chunks=[
-                TextChunk(text="", index=0),
-                # optional metadata
-                TextChunk(text="", index=1, metadata={"key": "value"}),
-            ]
-        )
+        yield TextChunk(text="", index=0)
+        # optional metadata
+        yield TextChunk(text="", index=1, metadata={"key": "value"})

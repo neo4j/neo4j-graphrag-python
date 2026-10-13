@@ -65,7 +65,11 @@ Installation
 
 This package requires Python (>=3.10).
 
-To install the latest stable version, use:
+~~~
+pip
+~~~
+
+To install the latest stable version from PyPI, use:
 
 .. code:: bash
 
@@ -76,11 +80,24 @@ To install the latest stable version, use:
 
    It is always recommended to install python packages for user space in a virtual environment.
 
+~~~~~
+Conda
+~~~~~
+
+The package is also available from `conda-forge <https://anaconda.org/conda-forge/neo4j-graphrag>`_.
+Create and activate a Conda environment before installing:
+
+.. code:: bash
+
+    conda create -n graphrag
+    conda activate graphrag
+    conda install -c conda-forge neo4j-graphrag
+
 *********************
 Optional Dependencies
 *********************
 
-Extra dependencies can be installed with:
+Extra dependencies can be installed with pip. For example:
 
 .. code:: bash
 
@@ -234,9 +251,17 @@ Development
 Install dependencies
 ********************
 
+The ``gpu`` extra is mutually exclusive with the torch-carrying extras (it
+resolves CUDA torch where they resolve CPU torch), so exclude it:
+
 .. code:: bash
 
-    uv sync --all-extras
+    uv sync --all-extras --no-extra gpu
+
+For ``SentenceTransformerEmbeddings`` on GPU instead, sync with ``--extra
+gpu`` (plus any non-torch extras you need). On Linux/Windows this resolves
+torch from the CUDA index; on macOS, where no CUDA builds of torch exist, it
+falls back to the CPU build.
 
 ***************
 Getting started

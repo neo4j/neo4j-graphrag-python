@@ -381,29 +381,59 @@ def _validate_constraint_property_defined(
                 )
 
 
+def _format_duplicate_type_labels_error(
+    duplicates: dict[str, list[NodeType]] | dict[str, list[RelationshipType]],
+    *,
+    singular: str,
+    guidance: str,
+) -> str:
+    """Build the SchemaValidationError message for duplicate type labels."""
+    parts: list[str] = []
+    for label, entries in duplicates.items():
+        property_sets = ", ".join(
+            "{" + ", ".join(sorted(p.name for p in entry.properties)) + "}"
+            for entry in entries
+            if entry.properties
+        )
+        message = f"Duplicate {singular} '{label}' defined {len(entries)} times"
+        if property_sets:
+            message += f" with property sets: {property_sets}"
+        parts.append(f"{message}.")
+    parts.append(guidance)
+    return "\n".join(parts)
+
+
 def _format_duplicate_relationship_types_error(
     duplicates: dict[str, list[RelationshipType]],
 ) -> str:
     """Build the SchemaValidationError message for duplicate relationship-type labels."""
-    parts: list[str] = []
-    for label, entries in duplicates.items():
-        property_sets = ", ".join(
-            "{" + ", ".join(sorted(p.name for p in rel.properties)) + "}"
-            for rel in entries
-            if rel.properties
-        )
-        message = f"Duplicate relationship type '{label}' defined {len(entries)} times"
-        if property_sets:
-            message += f" with property sets: {property_sets}"
-        parts.append(f"{message}.")
-    parts.append(
-        "In Neo4j a relationship type is global per name: entries sharing a label "
-        "describe the same type, and any constraint on it applies to every instance "
-        "regardless of source/target nodes. Define the relationship type once and reuse it across patterns, "
-        "or use distinct relationship types when patterns need different properties "
-        "or constraints."
+    return _format_duplicate_type_labels_error(
+        duplicates,
+        singular="relationship type",
+        guidance=(
+            "In Neo4j a relationship type is global per name: entries sharing a label "
+            "describe the same type, and any constraint on it applies to every instance "
+            "regardless of source/target nodes. Define the relationship type once and reuse it across patterns, "
+            "or use distinct relationship types when patterns need different properties "
+            "or constraints."
+        ),
     )
-    return "\n".join(parts)
+
+
+def _format_duplicate_node_types_error(
+    duplicates: dict[str, list[NodeType]],
+) -> str:
+    """Build the SchemaValidationError message for duplicate node-type labels."""
+    return _format_duplicate_type_labels_error(
+        duplicates,
+        singular="node type",
+        guidance=(
+            "In Neo4j a node label is global per name: entries sharing a label "
+            "describe the same type, and any constraint on it applies to every instance. "
+            "Define the node type once, or use distinct labels when types need different "
+            "properties or constraints."
+        ),
+    )
 
 
 class Pattern(BaseModel):
@@ -747,6 +777,26 @@ class GraphSchema(DataModel):
             raise SchemaValidationError(
                 _format_duplicate_relationship_types_error(duplicates)
             )
+        return self
+
+    @model_validator(mode="after")
+    def validate_no_duplicate_node_types(self) -> Self:
+        """Reject duplicate ``node_types`` labels.
+
+        In Neo4j a node label is global per name, so two entries sharing the
+        same ``label`` describe the same type and are an invalid model. This
+        check runs before constraint validation so the resulting error is the
+        clear duplicate-label message rather than a misleading "undefined
+        property" constraint error produced by the last-write-wins index.
+        """
+        seen: dict[str, list[NodeType]] = {}
+        for node in self.node_types:
+            seen.setdefault(node.label, []).append(node)
+        duplicates = {
+            label: entries for label, entries in seen.items() if len(entries) > 1
+        }
+        if duplicates:
+            raise SchemaValidationError(_format_duplicate_node_types_error(duplicates))
         return self
 
     @model_validator(mode="after")
@@ -1275,6 +1325,15 @@ def _extraction_filter_invalid_patterns(
     return filtered_patterns
 
 
+def _extraction_constraint_property_names(constraint: Dict[str, Any]) -> list[str]:
+    """Resolve property_names from either property_names or property_name."""
+    pns = constraint.get("property_names") or []
+    if pns:
+        return list(pns) if not isinstance(pns, list) else pns
+    pn = constraint.get("property_name") or ""
+    return [pn] if pn else []
+
+
 def _extraction_filter_invalid_constraints(
     constraints: List[Dict[str, Any]],
     node_types: List[Dict[str, Any]],
@@ -1303,14 +1362,6 @@ def _extraction_filter_invalid_constraints(
     valid_node_labels = set(node_type_properties.keys())
     valid_rel_labels = set(rel_type_properties.keys())
 
-    def _resolve_property_names(constraint: Dict[str, Any]) -> list[str]:
-        """Resolve property_names from either property_names or property_name."""
-        pns = constraint.get("property_names") or []
-        if pns:
-            return list(pns) if not isinstance(pns, list) else pns
-        pn = constraint.get("property_name") or ""
-        return [pn] if pn else []
-
     def _all_properties_valid(
         prop_names: list[str], valid: set[str], entity_label: str, entity_kind: str
     ) -> bool:
@@ -1338,7 +1389,7 @@ def _extraction_filter_invalid_constraints(
             )
             continue
 
-        prop_names = _resolve_property_names(constraint)
+        prop_names = _extraction_constraint_property_names(constraint)
         if not prop_names:
             logging.info(
                 f"Filtering out constraint: {constraint}. "
@@ -1444,6 +1495,66 @@ def _extraction_filter_invalid_constraints(
     return filtered_constraints
 
 
+def _extraction_drop_constraints_subsumed_by_key(
+    constraints: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Drop EXISTENCE and UNIQUENESS constraints made redundant by a KEY.
+
+    A KEY implies both existence and uniqueness of its properties, and
+    :class:`GraphSchema` rejects an EXISTENCE on a KEY property or a UNIQUENESS on
+    the same properties as a KEY. LLMs still emit these combinations despite the
+    prompt rules, so the redundant constraint is dropped rather than failing the
+    whole extraction. Expects constraints already cleaned by
+    :func:`_extraction_filter_invalid_constraints` (exactly one of ``node_type``
+    or ``relationship_type`` set).
+    """
+
+    def _scope(constraint: Dict[str, Any]) -> tuple[str, str]:
+        node_type = constraint.get("node_type") or ""
+        if str(node_type).strip():
+            return ("node type", node_type)
+        return ("relationship type", constraint.get("relationship_type") or "")
+
+    key_props: Dict[tuple[str, str], set[str]] = {}
+    key_prop_sets: Dict[tuple[str, str], set[frozenset[str]]] = {}
+    for constraint in constraints:
+        if constraint.get("type") != GraphConstraintType.KEY.value:
+            continue
+        scope = _scope(constraint)
+        prop_names = _extraction_constraint_property_names(constraint)
+        key_props.setdefault(scope, set()).update(prop_names)
+        key_prop_sets.setdefault(scope, set()).add(frozenset(prop_names))
+
+    if not key_props:
+        return constraints
+
+    kept_constraints = []
+    for constraint in constraints:
+        ctype = constraint.get("type")
+        scope = _scope(constraint)
+        prop_names = _extraction_constraint_property_names(constraint)
+        if ctype == GraphConstraintType.EXISTENCE.value and set(prop_names) <= (
+            key_props.get(scope, set())
+        ):
+            logger.info(
+                f"Filtering out constraint: {constraint}. "
+                f"EXISTENCE is implied by a KEY on {scope[0]} '{scope[1]}'."
+            )
+            continue
+        if ctype == GraphConstraintType.UNIQUENESS.value and frozenset(
+            prop_names
+        ) in key_prop_sets.get(scope, set()):
+            logger.info(
+                f"Filtering out constraint: {constraint}. "
+                f"UNIQUENESS is implied by a KEY on the same properties of "
+                f"{scope[0]} '{scope[1]}'."
+            )
+            continue
+        kept_constraints.append(constraint)
+
+    return kept_constraints
+
+
 def _extraction_apply_cross_reference_filters(
     extracted_node_types: List[Dict[str, Any]],
     extracted_relationship_types: Optional[List[Dict[str, Any]]],
@@ -1463,8 +1574,75 @@ def _extraction_apply_cross_reference_filters(
             extracted_node_types,
             extracted_relationship_types,
         )
+        extracted_constraints = _extraction_drop_constraints_subsumed_by_key(
+            extracted_constraints
+        )
 
     return extracted_patterns, extracted_constraints
+
+
+def _merge_duplicate_labeled_types(
+    type_entries: Optional[List[Dict[str, Any]]],
+    *,
+    kind: str,
+    scope_sentence: str,
+) -> Optional[List[Dict[str, Any]]]:
+    """Merge schema types that share the same label into a single entry.
+
+    Properties are unioned and de-duplicated by name in first-occurrence order
+    (the first definition wins on a name conflict); non-property fields
+    (e.g. ``description``, ``additional_properties``) keep the first entry's
+    values. Entries that are not dicts or have no usable label are left in
+    place untouched. Output ordering is deterministic.
+
+    ``kind`` is the singular noun phrase used in the warning (``"node type"``
+    or ``"relationship type"``). ``scope_sentence`` explains why the label is
+    global.
+    """
+    if not type_entries:
+        return type_entries
+
+    merged: List[Dict[str, Any]] = []
+    index_by_label: Dict[str, int] = {}
+    merged_labels: set[str] = set()
+
+    for entry in type_entries:
+        label = entry.get("label") if isinstance(entry, dict) else None
+        if not isinstance(entry, dict) or not label:
+            merged.append(entry)
+            continue
+
+        if label not in index_by_label:
+            new_entry = dict(entry)
+            new_entry["properties"] = list(entry.get("properties") or [])
+            index_by_label[label] = len(merged)
+            merged.append(new_entry)
+            continue
+
+        merged_labels.add(label)
+        existing = merged[index_by_label[label]]
+        existing_props: List[Dict[str, Any]] = existing["properties"]
+        existing_names = {
+            p.get("name")
+            for p in existing_props
+            if isinstance(p, dict) and p.get("name")
+        }
+        for prop in entry.get("properties") or []:
+            name = prop.get("name") if isinstance(prop, dict) else None
+            if name and name in existing_names:
+                continue
+            existing_props.append(prop)
+            if name:
+                existing_names.add(name)
+
+    for label in sorted(merged_labels):
+        logger.warning(
+            f"Reconciled duplicate {kind} '{label}' from the "
+            f"extracted schema into a single definition (union of properties). "
+            f"{scope_sentence}"
+        )
+
+    return merged
 
 
 def _merge_duplicate_relationship_types(
@@ -1480,51 +1658,37 @@ def _merge_duplicate_relationship_types(
     first entry's values. Entries that are not dicts or have no usable label are
     left in place untouched. Output ordering is deterministic.
     """
-    if not rel_types:
-        return rel_types
+    return _merge_duplicate_labeled_types(
+        rel_types,
+        kind="relationship type",
+        scope_sentence=(
+            "Neo4j relationship types are global per name, so a type cannot be "
+            "defined more than once."
+        ),
+    )
 
-    merged: List[Dict[str, Any]] = []
-    index_by_label: Dict[str, int] = {}
-    merged_labels: set[str] = set()
 
-    for rel_dict in rel_types:
-        label = rel_dict.get("label") if isinstance(rel_dict, dict) else None
-        if not isinstance(rel_dict, dict) or not label:
-            merged.append(rel_dict)
-            continue
+def _merge_duplicate_node_types(
+    node_types: Optional[List[Dict[str, Any]]],
+) -> Optional[List[Dict[str, Any]]]:
+    """Merge node types that share the same label into a single entry.
 
-        if label not in index_by_label:
-            new_entry = dict(rel_dict)
-            new_entry["properties"] = list(rel_dict.get("properties") or [])
-            index_by_label[label] = len(merged)
-            merged.append(new_entry)
-            continue
-
-        merged_labels.add(label)
-        existing = merged[index_by_label[label]]
-        existing_props: List[Dict[str, Any]] = existing["properties"]
-        existing_names = {
-            p.get("name")
-            for p in existing_props
-            if isinstance(p, dict) and p.get("name")
-        }
-        for prop in rel_dict.get("properties") or []:
-            name = prop.get("name") if isinstance(prop, dict) else None
-            if name and name in existing_names:
-                continue
-            existing_props.append(prop)
-            if name:
-                existing_names.add(name)
-
-    for label in sorted(merged_labels):
-        logger.warning(
-            f"Reconciled duplicate relationship type '{label}' from the "
-            f"extracted schema into a single definition (union of properties). "
-            f"Neo4j relationship types are global per name, so a type cannot be "
-            f"defined more than once."
-        )
-
-    return merged
+    Neo4j node labels are global per name, so an LLM-extracted schema that
+    lists the same node type more than once must be reconciled into one
+    definition. Properties are unioned and de-duplicated by name in
+    first-occurrence order (the first definition wins on a name conflict);
+    non-property fields (e.g. ``description``, ``additional_properties``) keep the
+    first entry's values. Entries that are not dicts or have no usable label are
+    left in place untouched. Output ordering is deterministic.
+    """
+    return _merge_duplicate_labeled_types(
+        node_types,
+        kind="node type",
+        scope_sentence=(
+            "Neo4j node labels are global per name, so a type cannot be "
+            "defined more than once."
+        ),
+    )
 
 
 def validate_extraction_dict_to_graph_schema(
@@ -1535,7 +1699,9 @@ def validate_extraction_dict_to_graph_schema(
     Used by :meth:`GraphSchema.from_extraction_output` and
     :class:`SchemaFromTextExtractor` (V1 and V2). Does not require a configured LLM.
     """
-    node_types = extracted_schema.get("node_types") or []
+    node_types = (
+        _merge_duplicate_node_types(extracted_schema.get("node_types") or []) or []
+    )
     rel_types = _merge_duplicate_relationship_types(
         extracted_schema.get("relationship_types")
     )

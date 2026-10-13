@@ -2,6 +2,31 @@
 
 ## Next
 
+### Changed
+
+- `SchemaExtractionTemplate` now tells the model to define each node type once. A node label is global and carries one property and constraint set.
+- Lockfile now uses CPU-only PyTorch wheels by default: the `sentence-transformers` and `examples` extras resolve `torch` from PyTorch's CPU index instead of PyPI (which on linux x86_64 pulls a ~900MB CUDA wheel plus the ~15-package `nvidia-*-cu12` closure the repo never uses). A new `gpu` extra resolves CUDA torch (`cu126`) instead, for `SentenceTransformerEmbeddings` on GPU. `--all-extras` therefore needs `--no-extra gpu` (CI workflows, tox and docs updated).
+
+### Fixed
+
+- Experimental: LLM-auto-generated schemas now reconcile duplicate `node_types` (entries sharing the same label) by merging them into a single type that carries the union of their properties, emitting a warning log. Direct `GraphSchema` construction rejects remaining duplicate node labels with a clear error instead of a last-write-wins index that could report an undefined constraint property. This reflects that Neo4j node labels are global per name.
+- LLM-extracted schemas (`SchemaFromTextExtractor` with or without structured output, `GraphSchema.from_extraction_output` and `validate_extraction_dict_to_graph_schema`) no longer fail with `SchemaValidationError` when the model emits an `EXISTENCE` constraint on a property already covered by a `KEY`, or a `UNIQUENESS` constraint on the same properties as a `KEY`. The redundant constraint is dropped with an info log, since a `KEY` already implies existence and uniqueness. Direct `GraphSchema` construction still rejects these combinations.
+
+## 1.22.0
+
+### Changed
+
+- `SchemaExtractionTemplate` prompt now steers the LLM towards schemas that yield connected graphs: every node type should take part in at least one pattern, patterns should link the node types together, and entities that are only attributes of another entity should become properties rather than standalone node types. The prompt explicitly forbids inventing relationships to force connectivity, so genuinely unrelated subjects may still end up in separate groups. The JSON example in the prompt now also lists the `Company` node type referenced by its `WORKS_FOR` pattern.
+- `neo4j_graphrag.llm` and `neo4j_graphrag.embeddings` now resolve their per-provider classes lazily instead of importing every provider module eagerly. Importing either package no longer pulls in the whole provider-SDK closure — `google.cloud.aiplatform` (via `VertexAILLM`/`VertexAIEmbeddings`), `anthropic`, `boto3` (via Bedrock), `google.genai`, `mistralai`, `cohere`, `openai` and `torch` (via `SentenceTransformerEmbeddings`) — which cost seconds of import time and hundreds of MB of memory for consumers that only use the provider-agnostic base classes. The public import surface is unchanged: `from neo4j_graphrag.llm import OpenAILLM` works exactly as before, `dir()` still lists every export, and a `TYPE_CHECKING` mirror keeps static type checking intact.
+
+### Fixed
+
+- Fixed Parquet output describing relationships whose endpoints referenced nodes that no target existed for, in both cases because a label's sanitized filename stem was treated as the label's identity. Labels sharing a stem — most visibly labels with no ASCII characters at all, which all fall back to `unnamed` — silently overwrote each other in `Neo4jGraphParquetFormatter.format_graph`, and `ParquetWriter` named relationship endpoints after the stem rather than the raw label. Colliding stems now receive a `__2`, `__3`, … suffix and endpoints use the raw label; filenames for labels that do not collide are unchanged.
+
+## 1.21.0
+
+## 1.20.0
+
 ### Added
 
 - Added `StageObserver` and `LoggingStageObserver` to `neo4j_graphrag.pipeline`: hooks for watching items flow through a pipeline without adding logging, metrics or tracing to the transformation functions themselves. `LocalInterpreter(observers=[...])` wraps every operator's output stream, firing `before`/`after` per item per stage boundary as the stream is consumed. `on_error` is reported once, against the stage the failure came from — whether the stage raised fatally or a `Try*` stage (`map_safe` and friends) captured the exception as an `Err`; a failure is not re-reported by the later stages it passes through. Observing a sink reports each `sink.write`, including one that raises. Stages are named by `Operator.name` — the operator class, its position in the chain and the function it applies, e.g. `Map[1](embed)` — or explicitly via the `label` argument now accepted by every `Pipeline`/`ResultPipeline` operator method. `Pipeline.to_sink` also takes an optional `interpreter`, since it drains its own stream and would otherwise give no way to attach observers to a sink-terminated pipeline.
