@@ -1743,6 +1743,11 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
             :class:`~neo4j_graphrag.components.graph_schema_extraction.GraphSchemaExtractionOutput`.
             Only supported for OpenAILLM and VertexAILLM. Defaults to False (uses V1 prompt-based JSON extraction).
 
+        max_input_chars (int): Maximum characters of document text sent to the LLM,
+            including excerpt separators. Defaults to 12000. Longer input is sampled
+            at evenly spaced positions including its beginning and end. This is a
+            character budget, not a token limit, and excludes instructions/examples.
+
     Example with V1 (default, prompt-based JSON):
 
     .. code-block:: python
@@ -1773,6 +1778,7 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         prompt_template: Optional[PromptTemplate] = None,
         llm_params: Optional[Dict[str, Any]] = None,
         use_structured_output: bool = False,
+        max_input_chars: int = 12000,
     ) -> None:
         self._llm: LLMInterface = llm
         self._prompt_template: PromptTemplate = (
@@ -1780,6 +1786,9 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         )
         self._llm_params: dict[str, Any] = llm_params or {}
         self.use_structured_output = use_structured_output
+        if max_input_chars < 1:
+            raise ValueError("max_input_chars must be positive")
+        self.max_input_chars = max_input_chars
 
         # Validate that structured output is only used with supported LLMs
         if use_structured_output and not llm.supports_structured_output:
@@ -2033,7 +2042,17 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
             constructed asynchronously.
         """
         if isinstance(text, list):
-            text = text[0].text if text else ""
+            text = "\n\n".join(chunk.text for chunk in text)
+        if len(text) > self.max_input_chars:
+            # Keep evenly spaced excerpts, including both ends, in a single LLM call.
+            # The budget includes separators, but excludes prompt instructions/examples.
+            count = min(3, (self.max_input_chars + 2) // 3)
+            size = (self.max_input_chars - 2 * (count - 1)) // count
+            excerpts = []
+            for i in range(count):
+                start = (len(text) - size) * i // (count - 1) if count > 1 else 0
+                excerpts.append(text[start : start + size])
+            text = "\n\n".join(excerpts)
         prompt: str = self._prompt_template.format(text=text, examples=examples)
 
         if self.use_structured_output:

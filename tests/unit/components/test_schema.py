@@ -1488,7 +1488,7 @@ async def test_schema_from_text_run_valid_response(
 
 
 @pytest.mark.asyncio
-async def test_schema_from_text_run_uses_first_chunk(
+async def test_schema_from_text_run_uses_all_chunks_within_budget(
     schema_from_text: SchemaFromTextExtractor,
     mock_llm: AsyncMock,
     valid_schema_json: str,
@@ -1498,13 +1498,60 @@ async def test_schema_from_text_run_uses_first_chunk(
     await schema_from_text.run(
         text=[
             TextChunk(text="first chunk for schema", index=0),
-            TextChunk(text="second chunk should not be used", index=1),
+            TextChunk(text="second chunk for schema", index=1),
         ]
     )
 
     prompt_arg = mock_llm.ainvoke.call_args[0][0]
     assert "first chunk for schema" in prompt_arg
-    assert "second chunk should not be used" not in prompt_arg
+    assert "second chunk for schema" in prompt_arg
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("as_chunks", [False, True])
+async def test_schema_from_text_samples_across_document(
+    mock_llm: AsyncMock, valid_schema_json: str, as_chunks: bool
+) -> None:
+    mock_llm.ainvoke.return_value = LLMResponse(content=valid_schema_json)
+    extractor = SchemaFromTextExtractor(
+        llm=mock_llm,
+        prompt_template=PromptTemplate(template="{text}", expected_inputs=["text"]),
+        max_input_chars=34,
+    )
+    sections = ["A" * 100, "B" * 100, "C" * 100]
+    text = (
+        [TextChunk(text=s, index=i) for i, s in enumerate(sections)]
+        if as_chunks
+        else "".join(sections)
+    )
+    await extractor.run(text=text)
+    mock_llm.ainvoke.assert_called_once()
+    sampled = mock_llm.ainvoke.call_args[0][0]
+    assert len(sampled) <= 34
+    assert sampled == "A" * 10 + "\n\n" + "B" * 10 + "\n\n" + "C" * 10
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("budget", [1, 2, 3, 4, 5, 6, 7])
+async def test_schema_from_text_small_budget(
+    mock_llm: AsyncMock, valid_schema_json: str, budget: int
+) -> None:
+    mock_llm.ainvoke.return_value = LLMResponse(content=valid_schema_json)
+    extractor = SchemaFromTextExtractor(
+        llm=mock_llm,
+        prompt_template=PromptTemplate(template="{text}", expected_inputs=["text"]),
+        max_input_chars=budget,
+    )
+    await extractor.run(text="abcdefghijklmnopqrstuvwxyz")
+    assert 0 < len(mock_llm.ainvoke.call_args[0][0]) <= budget
+
+
+@pytest.mark.parametrize("budget", [0, -1])
+def test_schema_from_text_rejects_nonpositive_budget(
+    mock_llm: AsyncMock, budget: int
+) -> None:
+    with pytest.raises(ValueError, match="max_input_chars must be positive"):
+        SchemaFromTextExtractor(llm=mock_llm, max_input_chars=budget)
 
 
 @pytest.mark.asyncio
