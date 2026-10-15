@@ -171,3 +171,7 @@ module = [
     "conftest",
 ]
 ignore_missing_imports = true
+
+[tool.ruff.lint]
+# Keep the rule set that older ruff versions enabled by default
+select = ["E4", "E7", "E9", "F"]

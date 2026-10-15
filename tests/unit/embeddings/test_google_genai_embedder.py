@@ -24,9 +24,10 @@ from neo4j_graphrag.embeddings import GeminiEmbedder
 
 @pytest.fixture
 def mock_genai() -> Generator[Tuple[MagicMock, MagicMock], None, None]:
-    with patch("neo4j_graphrag.embeddings.google_genai.genai") as mock_genai, patch(
-        "neo4j_graphrag.embeddings.google_genai.types"
-    ) as mock_types:
+    with (
+        patch("neo4j_graphrag.embeddings.google_genai.genai") as mock_genai,
+        patch("neo4j_graphrag.embeddings.google_genai.types") as mock_types,
+    ):
         mock_client = MagicMock()
         mock_genai.Client.return_value = mock_client
 

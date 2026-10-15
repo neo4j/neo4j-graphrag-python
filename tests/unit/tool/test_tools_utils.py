@@ -472,9 +472,9 @@ def test_tool_serialization(mock_get_version: MagicMock) -> None:
         "filters",
     }
     actual_properties = set(parameters_dict.get("properties", {}).keys())
-    assert (
-        expected_properties == actual_properties
-    ), f"Expected {expected_properties}, got {actual_properties}"
+    assert expected_properties == actual_properties, (
+        f"Expected {expected_properties}, got {actual_properties}"
+    )
 
     # Check additionalProperties if it exists
     if "additionalProperties" in parameters_dict and not parameters_dict.get(

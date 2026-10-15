@@ -510,9 +510,9 @@ class TestOpenAICompatibilityFix:
 
         # Check individual properties don't have 'required' field
         for prop_name, prop_schema in schema["properties"].items():
-            assert (
-                "required" not in prop_schema
-            ), f"Property {prop_name} should not have 'required' field"
+            assert "required" not in prop_schema, (
+                f"Property {prop_name} should not have 'required' field"
+            )
 
         # Check the specific property that was causing issues
         prompt_params_schema = schema["properties"]["prompt_params"]
@@ -568,6 +568,6 @@ class TestOpenAICompatibilityFix:
         # All nested objects should also have additionalProperties
         for prop_name, prop_schema in tool_params["properties"].items():
             if prop_schema.get("type") == "object":
-                assert (
-                    "additionalProperties" in prop_schema
-                ), f"Nested object {prop_name} missing additionalProperties"
+                assert "additionalProperties" in prop_schema, (
+                    f"Nested object {prop_name} missing additionalProperties"
+                )

@@ -32,9 +32,10 @@ from neo4j_graphrag.types import LLMMessage
 
 @pytest.fixture
 def mock_genai() -> Generator[Tuple[MagicMock, MagicMock], None, None]:
-    with patch("neo4j_graphrag.llm.google_genai_llm.genai") as mock_genai, patch(
-        "neo4j_graphrag.llm.google_genai_llm.types"
-    ) as mock_types:
+    with (
+        patch("neo4j_graphrag.llm.google_genai_llm.genai") as mock_genai,
+        patch("neo4j_graphrag.llm.google_genai_llm.types") as mock_types,
+    ):
         mock_client = MagicMock()
         mock_genai.Client.return_value = mock_client
 

@@ -31,9 +31,9 @@ from ..utils import EMBEDDING_BIOLOGY, build_data_objects, populate_neo4j
 
 
 @pytest.fixture(scope="module")
-def sentence_transformer_embedder() -> (
-    Generator[SentenceTransformerEmbeddings, Any, Any]
-):
+def sentence_transformer_embedder() -> Generator[
+    SentenceTransformerEmbeddings, Any, Any
+]:
     embedder = load_sentence_transformer_with_retry("all-MiniLM-L6-v2")
     yield embedder
 

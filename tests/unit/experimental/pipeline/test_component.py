@@ -33,7 +33,7 @@ def test_component_outputs() -> None:
     outputs = ComponentMultiply.component_outputs
     assert "result" in outputs
     assert outputs["result"]["has_default"] is True
-    assert outputs["result"]["annotation"] == int
+    assert outputs["result"]["annotation"] is int
 
 
 @pytest.mark.asyncio

@@ -51,9 +51,9 @@ by Robert Chen, who joined the company in 2016 after working at TechGiant for 8 
 
 def print_schema_summary(schema: GraphSchema, title: str) -> None:
     """Print a formatted summary of the extracted schema."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"{title}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     print(f"\nNode Types ({len(schema.node_types)}):")
     for node in schema.node_types:
