@@ -37,7 +37,7 @@
         "dependency-groups",
         "project.dependencies"
       ],
-      "rangeStrategy": "bump"
+      "rangeStrategy": "widen"
     },
     {
       "matchManagers": [

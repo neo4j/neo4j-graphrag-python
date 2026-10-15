@@ -65,7 +65,11 @@ Installation
 
 This package requires Python (>=3.10).
 
-To install the latest stable version, use:
+~~~
+pip
+~~~
+
+To install the latest stable version from PyPI, use:
 
 .. code:: bash
 
@@ -76,11 +80,24 @@ To install the latest stable version, use:
 
    It is always recommended to install python packages for user space in a virtual environment.
 
+~~~~~
+Conda
+~~~~~
+
+The package is also available from `conda-forge <https://anaconda.org/conda-forge/neo4j-graphrag>`_.
+Create and activate a Conda environment before installing:
+
+.. code:: bash
+
+    conda create -n graphrag
+    conda activate graphrag
+    conda install -c conda-forge neo4j-graphrag
+
 *********************
 Optional Dependencies
 *********************
 
-Extra dependencies can be installed with:
+Extra dependencies can be installed with pip. For example:
 
 .. code:: bash
 

@@ -26,7 +26,7 @@ requires-python = ">=3.10.0,<3.15"
 dependencies = [
     "neo4j>=6.3.1,<7.0.0",
     "pydantic>=2.6.3,<3.0.0",
-    "fsspec>=2024.12.0,<2026.9.0",
+    "fsspec>=2024.12.0,<2027.0.0",
     "pypdf>=6.19.0,<7.0.0",
     "json-repair>=0.44.1,<1.0.0",
     "pyyaml>=6.0.3,<7.0.0",
@@ -102,6 +102,7 @@ dev = [
     "pre-commit>=3.6.2,<4.0.0; python_version >= '3.9'",
     "sphinx>=7.2.6,<8.0.0; python_version >= '3.9'",
     "enum-tools[sphinx]>=0.12.0,<0.13.0",
+    "pytest-rerunfailures>=16.0,<17.0",
 ]
 
 [tool.uv]
