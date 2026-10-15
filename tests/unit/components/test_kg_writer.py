@@ -1509,6 +1509,44 @@ def test_normalize_column_types_none_ignored() -> None:
     assert rows == [{"age": None}, {"age": 30}]
 
 
+def test_normalize_column_types_mixed_list_elements() -> None:
+    """list[str] and list[int] in one column become lists of strings."""
+    rows: list[dict[str, Any]] = [{"years": ["1998"]}, {"years": [2001]}]
+    Neo4jGraphParquetFormatter._normalize_column_types(rows)
+    assert rows == [{"years": ["1998"]}, {"years": ["2001"]}]
+
+
+def test_normalize_column_types_mixed_elements_inside_one_list() -> None:
+    rows: list[dict[str, Any]] = [{"years": [1998, "1999", None]}]
+    Neo4jGraphParquetFormatter._normalize_column_types(rows)
+    assert rows == [{"years": ["1998", "1999", None]}]
+
+
+def test_normalize_column_types_uniform_and_numeric_lists_unchanged() -> None:
+    strings: list[dict[str, Any]] = [{"years": ["1998"]}, {"years": ["2001"]}]
+    numbers: list[dict[str, Any]] = [{"years": [1998]}, {"years": [2001.0]}]
+    Neo4jGraphParquetFormatter._normalize_column_types(strings)
+    Neo4jGraphParquetFormatter._normalize_column_types(numbers)
+    assert strings == [{"years": ["1998"]}, {"years": ["2001"]}]
+    assert numbers == [{"years": [1998]}, {"years": [2001.0]}]
+
+
+def test_format_parquet_writes_mixed_list_elements() -> None:
+    """The shared node and relationship table builder accepts a mixed LIST column."""
+    pytest.importorskip("pyarrow")
+    import pyarrow.parquet as pq
+
+    rows: list[dict[str, Any]] = [
+        {"name": "Ajax", "years": ["1998"]},
+        {"name": "PSV", "years": [2001]},
+    ]
+    data, _schema = Neo4jGraphParquetFormatter().format_parquet(
+        rows, "node label 'Club'"
+    )
+    years = pq.read_table(BytesIO(data)).column("years").to_pylist()
+    assert years == [["1998"], ["2001"]]
+
+
 @pytest.mark.asyncio
 async def test_parquet_writer_mixed_property_types() -> None:
     """ParquetWriter succeeds when nodes of the same label have mixed property types."""
