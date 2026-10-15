@@ -55,6 +55,7 @@ from neo4j_graphrag.exceptions import (
     SchemaValidationError,
 )
 from neo4j_graphrag.components.base import Component, DataModel
+from neo4j_graphrag.components.types import TextChunk
 from neo4j_graphrag.experimental.pipeline.types.schema import (
     EntityInputType,
     RelationInputType,
@@ -1742,6 +1743,11 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
             :class:`~neo4j_graphrag.components.graph_schema_extraction.GraphSchemaExtractionOutput`.
             Only supported for OpenAILLM and VertexAILLM. Defaults to False (uses V1 prompt-based JSON extraction).
 
+        max_input_chars (int): Maximum characters of document text sent to the LLM,
+            including excerpt separators. Defaults to 12000. Longer input is sampled
+            at evenly spaced positions including its beginning and end. This is a
+            character budget, not a token limit, and excludes instructions/examples.
+
     Example with V1 (default, prompt-based JSON):
 
     .. code-block:: python
@@ -1772,6 +1778,7 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         prompt_template: Optional[PromptTemplate] = None,
         llm_params: Optional[Dict[str, Any]] = None,
         use_structured_output: bool = False,
+        max_input_chars: int = 12000,
     ) -> None:
         self._llm: LLMInterface = llm
         self._prompt_template: PromptTemplate = (
@@ -1779,6 +1786,9 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         )
         self._llm_params: dict[str, Any] = llm_params or {}
         self.use_structured_output = use_structured_output
+        if max_input_chars < 1:
+            raise ValueError("max_input_chars must be positive")
+        self.max_input_chars = max_input_chars
 
         # Validate that structured output is only used with supported LLMs
         if use_structured_output and not llm.supports_structured_output:
@@ -2018,17 +2028,31 @@ class SchemaFromTextExtractor(BaseSchemaBuilder):
         return validate_extraction_dict_to_graph_schema(extracted_schema)
 
     @validate_call
-    async def run(self, text: str, examples: str = "", **kwargs: Any) -> GraphSchema:
+    async def run(
+        self, text: Union[str, List[TextChunk]], examples: str = "", **kwargs: Any
+    ) -> GraphSchema:
         """
         Asynchronously extracts the schema from text and returns a GraphSchema object.
 
         Args:
-            text (str): the text from which the schema will be inferred.
+            text (str | List[TextChunk]): the text from which the schema will be inferred.
             examples (str): examples to guide schema extraction.
         Returns:
             GraphSchema: A configured schema object, extracted automatically and
             constructed asynchronously.
         """
+        if isinstance(text, list):
+            text = "\n\n".join(chunk.text for chunk in text)
+        if len(text) > self.max_input_chars:
+            # Keep evenly spaced excerpts, including both ends, in a single LLM call.
+            # The budget includes separators, but excludes prompt instructions/examples.
+            count = min(3, (self.max_input_chars + 2) // 3)
+            size = (self.max_input_chars - 2 * (count - 1)) // count
+            excerpts = []
+            for i in range(count):
+                start = (len(text) - size) * i // (count - 1) if count > 1 else 0
+                excerpts.append(text[start : start + size])
+            text = "\n\n".join(excerpts)
         prompt: str = self._prompt_template.format(text=text, examples=examples)
 
         if self.use_structured_output:
