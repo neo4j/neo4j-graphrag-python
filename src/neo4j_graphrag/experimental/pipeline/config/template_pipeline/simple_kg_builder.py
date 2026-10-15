@@ -95,8 +95,7 @@ class _DefaultPathDataLoader(DataLoader):
                 filepath=path_str, metadata=metadata, fs=fs
             )
         raise UnsupportedDocumentFormatError(
-            f"Unsupported document format: {suffix!r}. "
-            f"Supported: .pdf, .md, .markdown"
+            f"Unsupported document format: {suffix!r}. Supported: .pdf, .md, .markdown"
         )
 
 

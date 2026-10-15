@@ -1392,8 +1392,7 @@ def _extraction_filter_invalid_constraints(
         prop_names = _extraction_constraint_property_names(constraint)
         if not prop_names:
             logging.info(
-                f"Filtering out constraint: {constraint}. "
-                f"No property names provided."
+                f"Filtering out constraint: {constraint}. No property names provided."
             )
             continue
 

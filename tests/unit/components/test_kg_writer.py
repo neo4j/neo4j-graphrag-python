@@ -588,12 +588,12 @@ def test_get_version(
     )
     driver.execute_query = execute_query_mock
     neo4j_writer = Neo4jWriter(driver=driver)
-    assert (
-        neo4j_writer.is_version_5_23_or_above is is_5_23_or_above
-    ), f"Failed is_version_5_23_or_above test case: {description}"
-    assert (
-        neo4j_writer.is_version_5_24_or_above is is_5_24_or_above
-    ), f"Failed is_version_5_24_or_above test case: {description}"
+    assert neo4j_writer.is_version_5_23_or_above is is_5_23_or_above, (
+        f"Failed is_version_5_23_or_above test case: {description}"
+    )
+    assert neo4j_writer.is_version_5_24_or_above is is_5_24_or_above, (
+        f"Failed is_version_5_24_or_above test case: {description}"
+    )
 
 
 # --- ParquetWriter tests ---
@@ -1639,24 +1639,24 @@ def test_node_embedding_column_present_regardless_of_row_order(
     # The row without an embedding should have a null value
     rows_as_dicts = table.to_pylist()
     rows_by_id = {r[INTERNAL_ID_PROPERTY]: r for r in rows_as_dicts}
-    assert (
-        rows_by_id["node-1"]["embedding"] is None
-    ), "Row without embedding should have null value in the embedding column"
-    assert (
-        rows_by_id["node-2"]["embedding"] is not None
-    ), "Row with embedding should have a non-null value in the embedding column"
+    assert rows_by_id["node-1"]["embedding"] is None, (
+        "Row without embedding should have null value in the embedding column"
+    )
+    assert rows_by_id["node-2"]["embedding"] is not None, (
+        "Row with embedding should have a non-null value in the embedding column"
+    )
 
     # The embedding field type must be a list of floats (variable or fixed-size)
     emb_field = schema.field("embedding")
     emb_type = emb_field.type
     # Because node-1 has null, the formatter must fall back to list_(float32)
-    assert pa.types.is_list(emb_type) or pa.types.is_fixed_size_list(
-        emb_type
-    ), f"Unexpected embedding field type: {emb_type}"
+    assert pa.types.is_list(emb_type) or pa.types.is_fixed_size_list(emb_type), (
+        f"Unexpected embedding field type: {emb_type}"
+    )
     # The value type must be float32
-    assert (
-        emb_type.value_type == pa.float32()
-    ), f"Embedding value type should be float32, got {emb_type.value_type}"
+    assert emb_type.value_type == pa.float32(), (
+        f"Embedding value type should be float32, got {emb_type.value_type}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1726,24 +1726,24 @@ def test_relationship_embedding_column_present_regardless_of_row_order(
     # The row without an embedding should have a null value
     rows_as_dicts = table.to_pylist()
     rows_by_from = {r["from"]: r for r in rows_as_dicts}
-    assert (
-        rows_by_from["node-1"]["embedding"] is None
-    ), "Relationship row without embedding should have null value in the embedding column"
-    assert (
-        rows_by_from["node-3"]["embedding"] is not None
-    ), "Relationship row with embedding should have a non-null value in the embedding column"
+    assert rows_by_from["node-1"]["embedding"] is None, (
+        "Relationship row without embedding should have null value in the embedding column"
+    )
+    assert rows_by_from["node-3"]["embedding"] is not None, (
+        "Relationship row with embedding should have a non-null value in the embedding column"
+    )
 
     # The embedding field type must be a list of floats (variable or fixed-size)
     emb_field = schema.field("embedding")
     emb_type = emb_field.type
     # Because the failed row has null, the formatter must fall back to list_(float32)
-    assert pa.types.is_list(emb_type) or pa.types.is_fixed_size_list(
-        emb_type
-    ), f"Unexpected relationship embedding field type: {emb_type}"
+    assert pa.types.is_list(emb_type) or pa.types.is_fixed_size_list(emb_type), (
+        f"Unexpected relationship embedding field type: {emb_type}"
+    )
     # The value type must be float32
-    assert (
-        emb_type.value_type == pa.float32()
-    ), f"Relationship embedding value type should be float32, got {emb_type.value_type}"
+    assert emb_type.value_type == pa.float32(), (
+        f"Relationship embedding value type should be float32, got {emb_type.value_type}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1770,9 +1770,9 @@ def test_format_parquet_all_rows_missing_embedding_does_not_crash() -> None:
 
     parquet_bytes, schema = formatter.format_parquet(rows, "node label 'Person'")
 
-    assert (
-        "embedding" not in schema.names
-    ), "Embedding column should not appear when no row carries an embedding key"
+    assert "embedding" not in schema.names, (
+        "Embedding column should not appear when no row carries an embedding key"
+    )
 
     table = pq.read_table(BytesIO(parquet_bytes))
     assert table.num_rows == 2
@@ -1814,17 +1814,17 @@ def test_format_parquet_all_rows_empty_list_embedding_does_not_crash() -> None:
 
     parquet_bytes, schema = formatter.format_parquet(rows, "node label 'Person'")
 
-    assert (
-        "embedding" in schema.names
-    ), "Embedding column should be present even when all rows have an empty list"
+    assert "embedding" in schema.names, (
+        "Embedding column should be present even when all rows have an empty list"
+    )
 
     table = pq.read_table(BytesIO(parquet_bytes))
     assert table.num_rows == 2
     assert "embedding" in table.column_names
     for row in table.to_pylist():
-        assert (
-            row["embedding"] == []
-        ), f"Expected empty list for embedding, got {row['embedding']}"
+        assert row["embedding"] == [], (
+            f"Expected empty list for embedding, got {row['embedding']}"
+        )
 
 
 # ---------------------------------------------------------------------------

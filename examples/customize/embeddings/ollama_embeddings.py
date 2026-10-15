@@ -17,8 +17,7 @@ parser.add_argument(
     "model",
     nargs="?",
     default="nomic-embed-text",
-    help="an embedding model you have pulled with `ollama pull` "
-    "(default: %(default)s)",
+    help="an embedding model you have pulled with `ollama pull` (default: %(default)s)",
 )
 args = parser.parse_args()
 
