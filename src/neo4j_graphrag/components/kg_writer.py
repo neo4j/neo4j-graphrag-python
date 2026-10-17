@@ -226,9 +226,12 @@ class Neo4jWriter(KGWriter):
         self.is_version_5_24_or_above = is_version_5_24_or_above(version_tuple)
 
     def _db_setup(self) -> None:
-        self.driver.execute_query("""
+        self.driver.execute_query(
+            """
         CREATE INDEX __entity__tmp_internal_id IF NOT EXISTS FOR (n:__KGBuilder__) ON (n.__tmp_internal_id)
-        """)
+        """,
+            database_=self.neo4j_database,
+        )
 
     @staticmethod
     def _nodes_to_rows(
@@ -291,7 +294,7 @@ class Neo4jWriter(KGWriter):
             support_variable_scope_clause=self.is_version_5_23_or_above,
             batch_size=self.batch_size,
         )
-        with self.driver.session() as session:
+        with self.driver.session(database=self.neo4j_database) as session:
             session.run(query)
 
     @validate_call
