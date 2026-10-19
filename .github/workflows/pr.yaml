@@ -1,6 +1,11 @@
 name: neo4j_graphrag PR
 on: pull_request
 
+# Fail fast if uv.lock is out of sync with pyproject.toml, instead of silently
+# installing a stale lock (--frozen) or re-resolving on the fly.
+env:
+  UV_LOCKED: "1"
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -38,7 +43,7 @@ jobs:
       # be trusted, and the failure surfaces much later as an ImportError inside
       # a test. uv sync is quick when the environment is already correct.
       - name: Install dependencies
-        run: uv sync --frozen --all-extras --no-extra gpu --group dev
+        run: uv sync --all-extras --no-extra gpu --group dev
       - name: Save cached venv
         if: steps.cached-venv.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -50,11 +55,11 @@ jobs:
         run: uv pip install "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
       - name: Check format and linting
         run: |
-          uv run --frozen ruff check .
-          uv run --frozen ruff format --check .
+          uv run ruff check .
+          uv run ruff format --check .
       - name: Run strict mypy check
-        run: uv run --frozen mypy .
+        run: uv run mypy .
       - name: Run unit tests and check coverage
         run: |
-          uv run --frozen coverage run -m pytest tests/unit
-          uv run --frozen coverage report --fail-under=90
+          uv run coverage run -m pytest tests/unit
+          uv run coverage report --fail-under=90
