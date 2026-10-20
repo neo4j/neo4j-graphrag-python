@@ -106,7 +106,9 @@ dev = [
 ]
 
 [tool.uv]
-exclude-newer = "2026-09-18T00:00:00Z"
+# Keep in sync with `minimumReleaseAge` in renovate.json: if Renovate proposes
+# a release younger than this window, it cannot update uv.lock.
+exclude-newer = "1 week"
 # `gpu` provides CUDA torch where the torch-carrying extras provide CPU
 # torch; the two must never be resolved into the same environment, so the
 # extras are declared mutually exclusive. This is what lets the lockfile
