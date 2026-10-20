@@ -30,6 +30,9 @@ experimental component-graph pipeline used by `SimpleKGPipeline`). See also the
 [pipeline observability notebook](pipeline_observability.ipynb).
 
 - [Source, stages and sink](pipeline/01_basic_pipeline.py)
+- [Configuring stages](pipeline/02_configuring_stages.py)
+- [Error handling and observers](pipeline/03_error_handling_and_observers.py)
+- [Composing KG components](pipeline/04_kg_components.py)
 
 ## Retrieve
 
