@@ -685,7 +685,7 @@ wheels = [
 
 [[package]]
 name = "cohere"
-version = "5.20.1"
+version = "7.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "fastavro" },
@@ -697,9 +697,9 @@ dependencies = [
     { name = "types-requests" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4b/ed/bb02083654bdc089ae4ef1cd7691fd2233f1fd9f32bcbfacc80ff57d9775/cohere-5.20.1.tar.gz", hash = "sha256:50973f63d2c6138ff52ce37d8d6f78ccc539af4e8c43865e960d68e0bf835b6f", size = 180820, upload-time = "2025-12-18T16:39:50.975Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/69/49/631a5fac290b704ba0be751d0370f8fb931ad7cb2de3c2f8e4b6a4ffb141/cohere-7.2.0.tar.gz", hash = "sha256:eb74b46882dcff913f826945ae9630cee6b67237ca05d763005c4ad9c4ad5bba", size = 219040, upload-time = "2026-09-28T20:41:03.903Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7a/e3/94eb11ac3ebaaa3a6afb5d2ff23db95d58bc468ae538c388edf49f2f20b5/cohere-5.20.1-py3-none-any.whl", hash = "sha256:d230fd13d95ba92ae927fce3dd497599b169883afc7954fe29b39fb8d5df5fc7", size = 318973, upload-time = "2025-12-18T16:39:49.504Z" },
+    { url = "https://files.pythonhosted.org/packages/4e/a7/823e5bed159b0df507757743db3e0fb8de2deb39271b83bf6e97897e7536/cohere-7.2.0-py3-none-any.whl", hash = "sha256:d35cb91814d13eac6587e62bf78302b7683cdd036e7697a8e173ec76f2fb4e37", size = 370672, upload-time = "2026-09-28T20:41:02.334Z" },
 ]
 
 [[package]]
@@ -3275,7 +3275,7 @@ dev = [
 requires-dist = [
     { name = "anthropic", marker = "extra == 'anthropic'", specifier = ">=0.77.0,<2.0.0" },
     { name = "boto3", marker = "extra == 'bedrock'", specifier = ">=1.35.0,<2.0.0" },
-    { name = "cohere", marker = "extra == 'cohere'", specifier = ">=5.9.0,<6.0.0" },
+    { name = "cohere", marker = "extra == 'cohere'", specifier = ">=7.2.0,<7.3.0" },
     { name = "fsspec", specifier = ">=2024.12.0,<2027.0.0" },
     { name = "google-cloud-aiplatform", marker = "extra == 'google'", specifier = ">=1.66.0,<2.0.0" },
     { name = "google-genai", marker = "extra == 'google-genai'", specifier = ">=1.62.0,<3.0.0" },
